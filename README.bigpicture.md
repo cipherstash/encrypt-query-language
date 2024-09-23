@@ -32,8 +32,9 @@ It is designed for developers and engineers who need to implement robust data se
 
 ### 1.1 What is encryption in use?
 
-Encryption in use refers to the practice of keeping data encrypted even while it's being processed or queried in the database. 
-Unlike traditional encryption methods that secure data only at rest (on disk) or in transit (over the network), encryption in use ensures that data remains encrypted during computation, providing an additional layer of security against unauthorized access.
+Encryption in use is the practice of keeping data encrypted even while it's being processed or queried in the database. 
+Unlike traditional encryption methods that secure data only at rest (on disk) or in transit (over the network), encryption in use keeps the data encrypted while operations are being performed on the data.
+This provides an additional layer of security against unauthorized access — an adversary needs access to the encrypted data _and_ encryption keys. 
 
 ### 1.2 Why use encryption in use?
 
@@ -41,15 +42,15 @@ While encryption at rest and in transit are essential, they don't protect data w
 Encryption in use mitigates this risk by ensuring that:
 
 - **Data remains secure**: Even if the database server is breached, the data remains encrypted and unreadable without the proper keys.
-- **Compliance requirements**: Helps meet stringent regulatory requirements for data protection and privacy.
-- **Enhanced security posture**: Reduces the attack surface and potential impact of data breaches.
+- **Compliance controls are stronger**: When you need stronger data security controls than what SOC2/SOC3 or ISO27001 mandate, encryption in use helps you meet those stringent requirements.
 
 ## 2. CipherStash Proxy
 
 ### 2.1 Overview
 
-CipherStash Proxy is a transparent proxy that sits between your application and your Postgres database.
-It intercepts SQL queries and handles the encryption and decryption of data on-the-fly, enabling encryption in use without significant changes to your application code.
+CipherStash Proxy is a transparent proxy that sits between your application and your PostgreSQL database.
+It intercepts SQL queries and handles the encryption and decryption of data on-the-fly.
+This enables encryption in use without significant changes to your application code.
 
 ### 2.2 How it works
 
@@ -62,20 +63,22 @@ It intercepts SQL queries and handles the encryption and decryption of data on-t
 ### 2.3 Setup and configuration
 
 1. **Getting started**: Follow the official [Getting Started guide](https://cipherstash.com/docs/getting-started/cipherstash-proxy) to install and configure CipherStash Proxy.
-3. **Application Modification**: Update your application's database connection string to point to the Proxy instead of the database directly.
+3. **Application modification**: Update your application's database connection configuration to point to the Proxy instead of the database directly.
 
 **Example connection string update:**
 
 ```plaintext
-Original: postgresql://user:password@postgres.host:5432/mydb
-Updated:  postgresql://user:password@cipherstash-proxy.host:6432/mydb
-```
+# Original
+postgresql://user:password@postgres.host:5432/mydb
+
+# Updated
+postgresql://user:password@cipherstash-proxy.host:6432/mydb
 
 ## 3. Encrypt Query Language (EQL)
 
 ### 3.1 Overview
 
-Encrypt Query Language (EQL) is a set of PostgreSQL functions and data types provided by CipherStash to facilitate working with encrypted data and indexes. 
+Encrypt Query Language (EQL) is a set of PostgreSQL functions and data types provided by CipherStash to work with encrypted data and indexes. 
 EQL allows you to perform queries on encrypted data without decrypting it, supporting operations like equality checks, range queries, and unique constraints.
 
 ### 3.2 Key components
