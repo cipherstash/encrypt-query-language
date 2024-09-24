@@ -134,47 +134,62 @@ Returns `null` if no ore index is present.
 
 ### Data format
 
-Encrypted data and index values are stored as `jsonb`.
+Encrypted columns should be defined as the `cs_encrypted_v1` Domain Type and encrypted data and index values are stored as `jsonb`.
 
-Format is defined by [JSON Schema](https://github.com/cipherstash/cipherstash-suite/blob/main/packages/cipherstash-migrator/sql/payload.schema.json).
+The format is defined as a [JSON Schema](src/cs_encrypted_v1.schema.json).
 
-Encrypted columns should be defined as the `cs_encrypted_v1` Domain Type.
+It should never be necessary to directly interact with the stored `jsonb`.
+Cipherstash proxy handles the encoding, and EQL provides the functions.
 
-Integrity is ensured via `check constraint`.
 
-```sql
+| Field    | Name               | Description
+| -------- | ------------------ | ------------------------------------------------------------
+| s        | Schema version     | JSON Schema version of this json document.
+| v        | Version            | The configuration version that generated this stored value.
+| k        | Kind               | The kind of the data (plaintext/pt, ciphertext/ct, encrypting/et).
+| i.t      | Table identifier   | Name of the table containing encrypted column.
+| i.c      | Column identifier  | Name of the encrypted column.
+| p        | Plaintext          | Plaintext value sent by database client. Required if kind is plaintext/pt or encrypting/et.
+| c        | Ciphertext         | Ciphertext value. Encrypted by proxy. Required if kind is plaintext/pt or encrypting/et.
+| m.1      | Match index        | Ciphertext index value. Encrypted by proxy.
+| o.1      | ORE index          | Ciphertext index value. Encrypted by proxy.
+| u.1      | Uniqueindex        | Ciphertext index value. Encrypted by proxy.
 
-# Plaintext
-# Sent by client when using DSL
+
+```json
+// Plaintext
+// Sent by client
 {
   "v": 1,
   "k": "pt",
-  "p": "a plaintext string for encryption",
-  "e": {
+  "p": "plaintext name",
+  "i": {
     "t": "users",
     "c": "name_encrypted"
   }
 }
 
-# Ciphertext
-# Encoded for storage by proxy
+// Ciphertext
+// Encoded for storage by proxy
 {
   "v": 1,
-	"k": "ct",
+  "k": "ct",
   "c": "XvfWQUrSxKNhkOxiMXvgvkwxIYFfnYTb",
-  "e": {
+  "i": {
     "t": "users",
     "c": "name_encrypted"
   }
 }
 
-// encrypting/migrating schema
+// Encryptindexing
+// Includes both plaintext and ciphertext
+// So original column is kept in sync during initial encryption & migration
 {
   "v": 1,
-	"k": "mt",
-	"p": "a plaintext string for encryption",
+  "k": "et",
+  "p": "plaintext name",
   "c": "XvfWQUrSxKNhkOxiMXvgvkwxIYFfnYTb",
-  "e": {
+  "i": {
     "t": "users",
     "c": "name_encrypted"
   }
