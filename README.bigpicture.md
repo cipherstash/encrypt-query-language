@@ -73,6 +73,7 @@ postgresql://user:password@postgres.host:5432/mydb
 
 # Updated
 postgresql://user:password@cipherstash-proxy.host:6432/mydb
+```
 
 ## 3. Encrypt Query Language (EQL)
 
