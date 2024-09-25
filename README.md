@@ -56,8 +56,8 @@ At a high level:
 ### Reads
 
 1. Wrap references to the encrypted column in the appropriate EQL function
-3. CipherStash Proxy encrypts `plaintext`
-4. SQL statement is executed
+3. CipherStash Proxy encrypts the `plaintext`
+4. PostgreSQL executes the SQL statement
 5. CipherStash Proxy decrypts any returned `ciphertext` data and returns to client
 
 
@@ -75,7 +75,44 @@ At a high level:
 6. Run Cipherstash Proxy
 
 
-{{ MORE }}
+### Add an index
+
+Cipherstash Proxy supports three types of indexes:
+
+- match
+- ore (order revealing encryption)
+- unique
+
+Indexes are managed using EQL functions and can be baked into an existing database migration process.
+
+```sql
+
+-- Add an ore index to users.name
+cs_add_index('users', 'name', 'ore');
+
+-- Remove an ore index from users.name
+cs_remove_index('users', 'name', 'ore');
+```
+
+
+Adding the index to your configuration does not *encrypt* the data.
+
+The encryption process needs to update every row in the target table.
+Depending on the size of the target table, this process can be long-running.
+
+{{LINK TO MIGRATOR DETAILS HERE}}
+
+
+### Add an encrypted column
+
+
+```SQL
+-- Alter tables from the configuration
+cs_create_encrypted_columns_v1()
+
+-- Explicit alter table
+ALTER TABLE users ADD column name_encrypted cs_encrypted_v1;
+```
 
 
 
@@ -98,7 +135,57 @@ CREATE TABLE users
 ```
 
 
-### Functions
+
+### Index Functions
+
+Functions expect a `jsonb` value that conforms to the storage schema.
+
+
+```SQL
+cs_add_index(table_name text, column_name text, index_name text, cast_as text, opts jsonb)
+```
+| Parameter     | Description                                        | Notes
+| ------------- | -------------------------------------------------- | ------------------------------------
+| table_name    | Name of target table                               | Required
+| column_name   | Name of target column                              | Required
+| index_name    | The index kind                                     | Required.
+| cast_as       | The PostgreSQL type decrypted data will be cast to | Optional. Defaults to `text`
+| opts          | Index options                                      | Optional for `match` indexes (see below)
+
+
+#### cast_as
+
+Supported types:
+  - text
+  - int
+  - small_int
+  - big_int
+  - boolean
+  - date
+
+#### match opts
+
+
+
+
+
+
+```SQL
+cs_modify_index(table_name text, column_name text, index_name text, cast_as text, opts jsonb)
+```
+Modifies an existing index configuration.
+Accepts the same parameters as `cs_add_index`
+
+
+```SQL
+cs_remove_index(table_name text, column_name text, index_name text)
+```
+Removes an index configuration from the column.
+
+
+
+
+### Query Functions
 
 Functions expect a `jsonb` value that conforms to the storage schema.
 
@@ -140,7 +227,6 @@ The format is defined as a [JSON Schema](src/cs_encrypted_v1.schema.json).
 
 It should never be necessary to directly interact with the stored `jsonb`.
 Cipherstash proxy handles the encoding, and EQL provides the functions.
-
 
 | Field    | Name               | Description
 | -------- | ------------------ | ------------------------------------------------------------
