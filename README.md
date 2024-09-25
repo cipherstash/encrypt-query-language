@@ -125,6 +125,7 @@ An encrypted column should be defined as the `cs_encrypted_v1` [Domain Type](htt
 The `cs_encrypted_v1` type is based on the PostgreSQL `jsonb` type and adds a check constraint to verify the schema (see below for details).
 
 Example table definition:
+
 ```SQL
 CREATE TABLE users
 (
@@ -133,6 +134,7 @@ CREATE TABLE users
     PRIMARY KEY(id)
 );
 ```
+
 
 
 
@@ -163,11 +165,25 @@ Supported types:
   - boolean
   - date
 
+
 #### match opts
 
+Default Match index options:
 
-
-
+```json
+  {
+    "k": 6,
+    "m": 2048,
+    "include_original": true,
+    "tokenizer": {
+      "kind": "ngram",
+      "token_length": 3
+    }
+    "token_filters": {
+      "kind": "downcase"
+    }
+  }
+```
 
 
 ```SQL
