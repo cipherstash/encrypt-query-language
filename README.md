@@ -264,7 +264,7 @@ Cipherstash proxy handles the encoding, and EQL provides the functions.
 {
   "v": 1,
   "k": "pt",
-  "p": "plaintext name",
+  "p": "column value as plaintext",
   "i": {
     "t": "users",
     "c": "name_encrypted"
