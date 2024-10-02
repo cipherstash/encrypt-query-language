@@ -173,9 +173,3 @@ dist
 
 # Finder (MacOS) folder config
 .DS_Store
-
-# Local config for proxy
-cipherstash-proxy.toml
-
-# turbo repo
-.turbo

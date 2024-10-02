@@ -1,0 +1,17 @@
+{
+	"name": "cipherstash",
+	"private": true,
+	"workspaces": ["apps/*", "packages/*"],
+	"scripts": {
+		"build": "turbo build",
+		"dev": "turbo dev"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "1.8.3",
+		"turbo": "2.1.1"
+	},
+	"packageManager": "bun@1.1.27",
+	"engines": {
+		"node": ">=18"
+	}
+}

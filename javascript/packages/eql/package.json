@@ -1,0 +1,47 @@
+{
+  "name": "@cipherstash/eql",
+  "version": "0.0.0",
+  "description": "CipherStash Encrypted Query Language TypeScript Library",
+  "keywords": [
+    "encrypted",
+    "query",
+    "language",
+    "typescript",
+    "ts",
+    "eql"
+  ],
+  "homepage": "https://github.com/cipherstash/encrypt-query-language/tree/main/packages/ts-eql",
+  "bugs": {
+    "url": "https://github.com/cipherstash/encrypt-query-language/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cipherstash/encrypt-query-language.git"
+  },
+  "license": "MIT",
+  "author": "CipherStash <hello@cipherstash.com>",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "generate-types": "json2ts ../../../src/cs_encrypted_v1.schema.json --output ./cs_encrypted_v1.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "json-schema-to-typescript": "^15.0.2",
+    "tsup": "^8.3.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  }
+}
