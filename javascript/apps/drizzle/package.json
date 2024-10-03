@@ -12,7 +12,8 @@
 	},
 	"peerDependencies": {
 		"typescript": "^5.0.0",
-		"@cipherstash/eql": "workspace:*"
+		"@cipherstash/eql": "workspace:*",
+    "@cipherstash/utils": "workspace:*"
 	},
 	"dependencies": {
 		"drizzle-orm": "^0.33.0",

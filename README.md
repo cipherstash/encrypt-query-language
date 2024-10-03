@@ -34,9 +34,9 @@ EQL provides a data format for transmitting and storing encrypted data & indexes
 EQL enables encryption in use, without significant changes to your application code.
 A variety of searchable encryption techniques are available, including:
 
-- Matching (`a == b` or `a LIKE b`)
-- Comparison using order revealing encryption (`a < b`)
-- Enforcing unique constraints (`there is only a`)
+- **Matching** - Equality or partial matches
+- **Ordering** - comparison operations using order revealing encryption
+- **Uniqueness** - enforcing unique constraints
 
 ### 1.1 What is encryption in use?
 
@@ -108,7 +108,7 @@ Encrypted columns are defined using the `cs_encrypted_v1` domain type, which ext
 ```sql
 CREATE TABLE users (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    name_encrypted cs_encrypted_v1
+    email_encrypted cs_encrypted_v1
 );
 ```
 
@@ -117,7 +117,7 @@ CREATE TABLE users (
 EQL provides specialized functions to interact with encrypted data:
 
 - **`cs_ciphertext_v1(val JSONB)`**: Extracts the ciphertext for decryption by CipherStash Proxy.
-- **`cs_match_v1(val JSONB)`**: Retrieves the match index for equality comparisons.
+- **`cs_match_v1(val JSONB)`**: Enables basic full-text search.
 - **`cs_unique_v1(val JSONB)`**: Retrieves the unique index for enforcing uniqueness.
 - **`cs_ore_v1(val JSONB)`**: Retrieves the Order-Revealing Encryption index for range queries.
 
@@ -329,7 +329,7 @@ CREATE TABLE IF NOT EXISTS "users" (
 When inserting data into the encrypted column, you must wrap the plaintext in the appropriate EQL payload.
 
 ```sql
-INSERT INTO users (name_encrypted) VALUES ('{"v":1,"k":"pt","p":"test@test.com","i":{"t":"users","c":"email_encrypted"}}');
+INSERT INTO users (email_encrypted) VALUES ('{"v":1,"k":"pt","p":"test@test.com","i":{"t":"users","c":"email_encrypted"}}');
 ```
 
 For reference, the EQL payload is defined as a `jsonb` with a specific schema:
@@ -351,9 +351,7 @@ For reference, the EQL payload is defined as a `jsonb` with a specific schema:
 When querying data, you must wrap the encrypted column in the appropriate EQL payload.
 
 ```sql
-SELECT cs_ciphertext_v1(name_encrypted)
-FROM users
-WHERE cs_match_v1(name_encrypted) @> cs_match_v1('{"v":1,"k":"pt","p":"test@test.com","i":{"t":"users","c":"email_encrypted"}}');
+SELECT email_encrypted FROM users WHERE cs_match_v1(email_encrypted) @> cs_match_v1('{"v":1,"k":"pt","p":"test@test.com","i":{"t":"users","c":"email_encrypted"}}');
 ```
 
 For reference, the EQL payload is defined as a `jsonb` with a specific schema:
@@ -370,7 +368,11 @@ For reference, the EQL payload is defined as a `jsonb` with a specific schema:
 }
 ```
 
-## TODO: Add an encrypted column
+---
+
+In progress...
+
+## Add an encrypted column
 
 TODO: Do we need this? 
 
@@ -379,10 +381,10 @@ TODO: Do we need this?
 cs_create_encrypted_columns_v1()
 
 -- Explicit alter table
-ALTER TABLE users ADD column name_encrypted cs_encrypted_v1;
+ALTER TABLE users ADD column email_encrypted cs_encrypted_v1;
 ```
 
-## TODO Add an index for searchability
+## Add an index for searchability
 
 EQL supports three types of indexes:
 
