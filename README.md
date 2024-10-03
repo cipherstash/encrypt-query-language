@@ -101,7 +101,7 @@ Before you get started, it's important to understand some of the key components 
 
 ### 3.1 Encrypted columns
 
-Encrypted columns are defined using the `cs_encrypted_v1` domain type, which extends the `jsonb` type with additional constraints to ensure data integrity.
+Encrypted columns are defined using the `cs_encrypted_v1` [domain type](https://www.postgresql.org/docs/current/domains.html), which extends the `jsonb` type with additional constraints to ensure data integrity.
 
 **Example table definition:**
 
