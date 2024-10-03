@@ -1,7 +1,7 @@
 import { parseArgs } from 'node:util'
 import { eqlPayload } from '@cipherstash/eql'
-import { prisma } from './db'
 import type { InputJsonValue } from '@prisma/client/runtime/library'
+import { prisma } from './db'
 
 const { values, positionals } = parseArgs({
   args: Bun.argv,
