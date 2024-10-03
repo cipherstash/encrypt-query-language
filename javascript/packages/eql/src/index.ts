@@ -2,7 +2,7 @@ export * from './cs_encrypted_v1'
 import type { CsEncryptedV1Schema } from './cs_encrypted_v1'
 
 type EqlPayload = {
-  plaintext: string
+  plaintext: string | undefined
   table: string
   column: string
   version?: number
@@ -19,7 +19,7 @@ export const eqlPayload = ({
     v: version,
     s: 1,
     k: 'pt',
-    p: plaintext,
+    p: plaintext ?? '',
     i: {
       t: table,
       c: column,

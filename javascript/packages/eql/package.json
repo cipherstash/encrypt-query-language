@@ -26,6 +26,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./drizzle": {
+      "types": "./dist/drizzle/index.d.ts",
+      "import": "./dist/drizzle/index.js",
+      "require": "./dist/drizzle/index.cjs"
     }
   },
   "scripts": {
@@ -42,6 +47,6 @@
     "typescript": "^5.0.0"
   },
   "publishConfig": {
-    "access": "restricted"
+    "access": "public"
   }
 }
