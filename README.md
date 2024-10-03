@@ -4,6 +4,31 @@ Encrypt Query Language (EQL) is a set of abstractions for transmitting, storing 
 
 EQL provides a data format for transmitting and storing encrypted data & indexes, and database types & functions to interact with the encrypted material.
 
+## Table of Contents
+
+- [1. Encryption in use](#1-encryption-in-use)
+  - [1.1 What is encryption in use?](#11-what-is-encryption-in-use)
+  - [1.2 Why use encryption in use?](#12-why-use-encryption-in-use)
+- [2. CipherStash Proxy](#2-cipherstash-proxy)
+  - [2.1 Overview](#21-overview)
+  - [2.2 How it works](#22-how-it-works)
+  - [2.3 How EQL works with CipherStash Proxy](#23-how-eql-works-with-cipherstash-proxy)
+    - [2.3.1 Writes](#231-writes)
+    - [2.3.2 Reads](#232-reads)
+- [3. Encrypt Query Language (EQL)](#3-encrypt-query-language-eql)
+  - [3.1 Encrypted columns](#31-encrypted-columns)
+  - [3.2 EQL functions](#32-eql-functions)
+  - [3.3 Index functions](#321-index-functions)
+  - [3.3 Query Functions](#33-query-functions)
+  - [3.4 Data Format](#34-data-format)
+    - [3.4.1 Helper packages](#341-helper-packages)
+- [4. Getting started](#4-getting-started)
+  - [4.1 Prerequisites](#41-prerequisites)
+  - [4.2 Installation](#42-installation)
+  - [4.3 Add a table with encrypted columns](#43-add-a-table-with-encrypted-columns)
+  - [4.4 Inserting data](#44-inserting-data)
+  - [4.5 Querying data](#45-querying-data)
+
 ## 1. Encryption in use
 
 EQL enables encryption in use, without significant changes to your application code.
@@ -96,11 +121,11 @@ EQL provides specialized functions to interact with encrypted data:
 - **`cs_unique_v1(val JSONB)`**: Retrieves the unique index for enforcing uniqueness.
 - **`cs_ore_v1(val JSONB)`**: Retrieves the Order-Revealing Encryption index for range queries.
 
-#### 3.2.1 Index functions
+### 3.3 Index functions
 
 These Functions expect a `jsonb` value that conforms to the storage schema.
 
-##### 3.2.1.1 cs_add_index
+#### 3.3.1 cs_add_index
 
 ```sql
 cs_add_index(table_name text, column_name text, index_name text, cast_as text, opts jsonb)
@@ -145,7 +170,7 @@ Default Match index options:
   }
 ```
 
-##### 3.2.1.2 cs_modify_index
+#### 3.3.2 cs_modify_index
 
 ```sql
 cs_modify_index(table_name text, column_name text, index_name text, cast_as text, opts jsonb)
@@ -154,7 +179,7 @@ cs_modify_index(table_name text, column_name text, index_name text, cast_as text
 Modifies an existing index configuration.
 Accepts the same parameters as `cs_add_index`
 
-##### 3.2.1.3 cs_remove_index
+#### 3.3.3 cs_remove_index
 
 ```sql
 cs_remove_index(table_name text, column_name text, index_name text)
@@ -260,17 +285,20 @@ We have created a few langague specific packages to help you interact with the p
 
 ## 4. Getting started
 
+The following guide assumes you have the prerequisites installed and running, and are running the SQL statements through your CipherStash Proxy instance.
+
 ### 4.1 Prerequisites
 
 - [PostgreSQL 14+](https://www.postgresql.org/download/)
 - [Cipherstash Proxy](https://cipherstash.com/docs/getting-started/cipherstash-proxy)
 - [Cipherstash Encrypt](https://cipherstash.com/docs/getting-started/cipherstash-encrypt)
+  - It's important to have your dataset configured for encryption before you start using EQL.
+  - You can use the `cipherstash/dataset.yml` file in the `cipherstash` directory as a starting point.
 
 EQL relies on [Cipherstash Proxy](https://cipherstash.com/docs/getting-started/cipherstash-proxy) and [Cipherstash Encrypt](https://cipherstash.com/docs/getting-started/cipherstash-encrypt) for low-latency encryption & decryption.
 We plan to support direct language integration in the future.
 
-> Note: An example `dataset.yml` file is provided in the `cipherstash` directory for Encrypt configuration, along with a `start.sh` script to run Cipherstash Proxy locally.
-You will need to modify the `dataset.yml` file to match your environment, and copy the `cipherstash/cipherstash-proxy.toml.example` file to `cipherstash/cipherstash-proxy.toml` before running the script.
+> Note: You will need to copy the `cipherstash/cipherstash-proxy.toml.example` file to `cipherstash/cipherstash-proxy.toml` and update the values to match your environment before running the script.
 
 ### 4.2 Installation
 
@@ -296,7 +324,65 @@ CREATE TABLE IF NOT EXISTS "users" (
 );
 ```
 
-### 4.4 Add an index for searchability
+### 4.4 Inserting data
+
+When inserting data into the encrypted column, you must wrap the plaintext in the appropriate EQL payload.
+
+```sql
+INSERT INTO users (name_encrypted) VALUES ('{"v":1,"k":"pt","p":"test@test.com","i":{"t":"users","c":"email_encrypted"}}');
+```
+
+For reference, the EQL payload is defined as a `jsonb` with a specific schema:
+
+```json
+{
+  "v": 1,
+  "k": "pt",
+  "p": "test@test.com",
+  "i": {
+    "t": "users",
+    "c": "email_encrypted"
+  }
+}
+```
+
+### 4.5 Querying data
+
+When querying data, you must wrap the encrypted column in the appropriate EQL payload.
+
+```sql
+SELECT cs_ciphertext_v1(name_encrypted)
+FROM users
+WHERE cs_match_v1(name_encrypted) @> cs_match_v1('{"v":1,"k":"pt","p":"test@test.com","i":{"t":"users","c":"email_encrypted"}}');
+```
+
+For reference, the EQL payload is defined as a `jsonb` with a specific schema:
+
+```json
+{
+  "v": 1,
+  "k": "ct",
+  "c": "test@test.com",
+  "i": {
+    "t": "users",
+    "c": "email_encrypted"
+  }
+}
+```
+
+## TODO: Add an encrypted column
+
+TODO: Do we need this? 
+
+```SQL
+-- Alter tables from the configuration
+cs_create_encrypted_columns_v1()
+
+-- Explicit alter table
+ALTER TABLE users ADD column name_encrypted cs_encrypted_v1;
+```
+
+## TODO Add an index for searchability
 
 EQL supports three types of indexes:
 
@@ -320,17 +406,5 @@ The encryption process needs to update every row in the target table.
 Depending on the size of the target table, this process can be long-running.
 
 {{LINK TO MIGRATOR DETAILS HERE}}
-
-### Add an encrypted column
-
-TODO: Do we need this? 
-
-```SQL
--- Alter tables from the configuration
-cs_create_encrypted_columns_v1()
-
--- Explicit alter table
-ALTER TABLE users ADD column name_encrypted cs_encrypted_v1;
-```
 
 .... more to come
