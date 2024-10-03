@@ -1,39 +1,28 @@
-import { parseArgs } from 'node:util'
+import { getEmailArg } from '@cipherstash/utils'
 import { eqlPayload } from '@cipherstash/eql'
 import { db } from './db'
 import { users } from './schema'
 
-const { values, positionals } = parseArgs({
-  args: Bun.argv,
-  options: {
-    email: {
-      type: 'string',
-    },
-  },
-  strict: true,
-  allowPositionals: true,
+const email = getEmailArg({
+  required: true,
 })
 
-const email = values.email
+const sql = db.insert(users).values({
+  email: email,
+  email_encrypted: eqlPayload({
+    plaintext: email,
+    table: 'users',
+    column: 'email_encrypted',
+  }),
+})
 
-if (!email) {
-  throw new Error('[ERROR] the email command line argument is required')
-}
+const sqlResult = sql.toSQL()
+console.log('[INFO] SQL statement:', sqlResult)
 
-await db
-  .insert(users)
-  .values({
-    email,
-    email_encrypted: eqlPayload({
-      plaintext: email,
-      table: 'users',
-      column: 'email_encrypted',
-    }),
-  })
-  .execute()
-
+await sql.execute()
 console.log(
   "[INFO] You've inserted a new user with an encrypted email from the plaintext",
   email,
 )
+
 process.exit(0)
