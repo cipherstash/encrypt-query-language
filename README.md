@@ -18,7 +18,7 @@ EQL provides a data format for transmitting and storing encrypted data & indexes
 - [3. Encrypt Query Language (EQL)](#3-encrypt-query-language-eql)
   - [3.1 Encrypted columns](#31-encrypted-columns)
   - [3.2 EQL functions](#32-eql-functions)
-  - [3.3 Index functions](#321-index-functions)
+  - [3.3 Index functions](#33-index-functions)
   - [3.3 Query Functions](#33-query-functions)
   - [3.4 Data Format](#34-data-format)
     - [3.4.1 Helper packages](#341-helper-packages)
@@ -190,11 +190,11 @@ The `ngram` tokenizer splits the text into n-grams and accepts a configuration o
 
 `k` and `m` are optional fields for configuring [bloom filters](https://en.wikipedia.org/wiki/Bloom_filter) that back full text search.
 
-`m` is the size of the bloom filter in bits (also referred to as _m_). `filterSize` must be a power of 2 between `32` and `65536` and defaults to `256`.
+`m` is the size of the bloom filter in bits. `filterSize` must be a power of 2 between `32` and `65536` and defaults to `2048`.
 
-`k` is the number of hash functions to use per term (also referred to as _k_).
+`k` is the number of hash functions to use per term.
 This determines the maximum number of bits that will be set in the bloom filter per term.
-`k` must be an integer from `3` to `16` and defaults to `3`.
+`k` must be an integer from `3` to `16` and defaults to `6`.
 
 **Caveats around n-gram tokenization**
 
