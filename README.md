@@ -18,7 +18,7 @@ EQL provides a data format for transmitting and storing encrypted data & indexes
 - [3. Encrypt Query Language (EQL)](#3-encrypt-query-language-eql)
   - [3.1 Encrypted columns](#31-encrypted-columns)
   - [3.2 EQL functions](#32-eql-functions)
-  - [3.3 Index functions](#321-index-functions)
+  - [3.3 Index functions](#33-index-functions)
   - [3.3 Query Functions](#33-query-functions)
   - [3.4 Data Format](#34-data-format)
     - [3.4.1 Helper packages](#341-helper-packages)
@@ -40,13 +40,13 @@ A variety of searchable encryption techniques are available, including:
 
 ### 1.1 What is encryption in use?
 
-Encryption in use is the practice of keeping data encrypted even while it's being processed or queried in the database. 
+Encryption in use is the practice of keeping data encrypted even while it's being processed or queried in the database.
 Unlike traditional encryption methods that secure data only at rest (on disk) or in transit (over the network), encryption in use keeps the data encrypted while operations are being performed on the data.
-This provides an additional layer of security against unauthorized access — an adversary needs access to the encrypted data _and_ encryption keys. 
+This provides an additional layer of security against unauthorized access — an adversary needs access to the encrypted data _and_ encryption keys.
 
 ### 1.2 Why use encryption in use?
 
-While encryption at rest and in transit are essential, they don't protect data when the database server itself is compromised. 
+While encryption at rest and in transit are essential, they don't protect data when the database server itself is compromised.
 Encryption in use mitigates this risk by ensuring that:
 
 - **Data remains secure**: Even if the database server is breached, the data remains encrypted and unreadable without the proper keys.
@@ -89,9 +89,9 @@ At a high level:
 #### 2.3.2 Reads
 
 1. Wrap references to the encrypted column in the appropriate EQL function
-3. CipherStash Proxy encrypts the `plaintext`
-4. PostgreSQL executes the SQL statement
-5. CipherStash Proxy decrypts any returned `ciphertext` data and returns to client
+2. CipherStash Proxy encrypts the `plaintext`
+3. PostgreSQL executes the SQL statement
+4. CipherStash Proxy decrypts any returned `ciphertext` data and returns to client
 
 ![Select](/diagrams/overview-select.drawio.svg)
 
@@ -150,10 +150,11 @@ Supported types:
   - boolean
   - date
 
-
 ###### match opts
 
-Default Match index options:
+A match index enables full text search across one or more text fields in queries.
+
+The default Match index options are:
 
 ```json
   {
@@ -170,10 +171,44 @@ Default Match index options:
   }
 ```
 
+- `tokenFilters`: a list of filters to apply to normalise tokens before indexing.
+- `tokenizer`: determines how input text is split into tokens.
+- `m`: The size of the backing [bloom filter](https://en.wikipedia.org/wiki/Bloom_filter) in bits. Defaults to `2048`.
+- `k`: The maximum number of bits set in the bloom filter per term. Defaults to `6`.
+
+**Token Filters**
+
+There are currently only two token filters available `downcase` and `upcase`. These are used to normalise the text before indexing and are also applied to query terms. An empty array can also be passed to `tokenFilters` if no normalisation of terms is required.
+
+**Tokenizer**
+
+There are two `tokenizer`s provided: `standard` and `ngram`.
+The `standard` simply splits text into tokens using this regular expression: `/[ ,;:!]/`.
+The `ngram` tokenizer splits the text into n-grams and accepts a configuration object that allows you to specify the `tokenLength`.
+
+**m** and **k**
+
+`k` and `m` are optional fields for configuring [bloom filters](https://en.wikipedia.org/wiki/Bloom_filter) that back full text search.
+
+`m` is the size of the bloom filter in bits. `filterSize` must be a power of 2 between `32` and `65536` and defaults to `2048`.
+
+`k` is the number of hash functions to use per term.
+This determines the maximum number of bits that will be set in the bloom filter per term.
+`k` must be an integer from `3` to `16` and defaults to `6`.
+
+**Caveats around n-gram tokenization**
+
+While using n-grams as a tokenization method allows greater flexibility when doing arbitrary substring matches, it is important to bear in mind the limitations of this approach.
+Specifically, searching for strings _shorter_ than the `tokenLength` parameter will not _generally_ work.
+
+If you're using n-gram as a token filter, then a token that is already shorter than the `tokenLength` parameter will be kept as-is when indexed, and so a search for that short token will match that record.
+However, if that same short string only appears as a part of a larger token, then it will not match that record.
+In general, therefore, you should try to ensure that the string you search for is at least as long as the `tokenLength` of the index, except in the specific case where you know that there are shorter tokens to match, _and_ you are explicitly OK with not returning records that have that short string as part of a larger token.
+
 #### 3.3.2 cs_modify_index
 
 ```sql
-cs_modify_index(table_name text, column_name text, index_name text, cast_as text, opts jsonb)
+_cs_modify_index_v1(table_name text, column_name text, index_name text, cast_as text, opts jsonb)
 ```
 
 Modifies an existing index configuration.
@@ -182,7 +217,7 @@ Accepts the same parameters as `cs_add_index`
 #### 3.3.3 cs_remove_index
 
 ```sql
-cs_remove_index(table_name text, column_name text, index_name text)
+cs_remove_index_v1(table_name text, column_name text, index_name text)
 ```
 
 Removes an index configuration from the column.
@@ -374,7 +409,7 @@ In progress...
 
 ## Add an encrypted column
 
-TODO: Do we need this? 
+TODO: Do we need this?
 
 ```SQL
 -- Alter tables from the configuration
@@ -402,7 +437,7 @@ cs_add_index('users', 'name', 'ore');
 cs_remove_index('users', 'name', 'ore');
 ```
 
-Adding the index to your configuration does not *encrypt* the data.
+Adding the index to your configuration does not _encrypt_ the data.
 
 The encryption process needs to update every row in the target table.
 Depending on the size of the target table, this process can be long-running.
