@@ -21,41 +21,61 @@ func (User) TableName() string {
 }
 
 func main() {
-	connStr := "user=postgres password=postgres port=5432 host=localhost dbname=gotest sslmode=disable"
+	connStr := "user=postgres password=postgres port=5432 host=localhost dbname=postgres sslmode=disable"
 	engine, err := xorm.NewEngine("postgres", connStr)
+
 	if err != nil {
 		log.Fatalf("Could not connect to the database: %v", err)
 	}
 
-	// need to map from struct to postgres snake case lowercase
-	engine.SetMapper(names.SnakeMapper{})
-
 	var exists bool
-	_, err = engine.SQL("SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'gotest')").Get(&exists)
+	_, err = engine.SQL("SELECT EXISTS (SELECT datname FROM pg_catalog.pg_database WHERE datname = 'gotest')").Get(&exists)
 	if err != nil {
-		log.Fatalf("Could not check if database exists: %v", err)
+		log.Fatalf("Error: %v", err)
 	}
 
-	// create db
-	if !exists {
-		_, err = engine.Exec("CREATE DATABASE gotest")
+	if exists {
+		_, err = engine.Exec("DROP DATABASE gotest;")
+		if err != nil {
+			log.Fatalf("Could not drop database: %v", err)
+		}
+		fmt.Println("Database 'gotest' dropped successfully!")
+
+		_, err = engine.Exec("CREATE DATABASE gotest;")
 		if err != nil {
 			log.Fatalf("Could not create database: %v", err)
 		}
 		fmt.Println("Database 'gotest' created successfully!")
 	} else {
-		fmt.Println("Database 'gotest' already exists.")
+		fmt.Println("Database 'gotest' doesn't exist. Creating...")
+		_, err = engine.Exec("CREATE DATABASE gotest;")
+		if err != nil {
+			log.Fatalf("Could not create database: %v", err)
+		}
+		fmt.Println("Database 'gotest' created successfully!")
 	}
 
-	err = engine.Sync2(new(User))
+	devConnStr := "user=postgres password=postgres port=5432 host=localhost dbname=gotest sslmode=disable"
+	dev_engine, err := xorm.NewEngine("postgres", devConnStr)
 
 	if err != nil {
-		log.Fatalf("Could not synchronize the database schema: %v", err)
+		log.Fatalf("Could not connect to the database: %v", err)
 	}
+
+	// need to map from struct to postgres snake case lowercase
+	dev_engine.SetMapper(names.SnakeMapper{})
+
+	err = dev_engine.Sync2(new(User))
+
+	if err != nil {
+		log.Fatalf("Could not create users table: %v", err)
+	}
+
+	InstallEql(dev_engine)
 
 	// Insert
 	newUser := User{Email: "test@test.com"}
-	_, err = engine.Insert(&newUser)
+	_, err = dev_engine.Insert(&newUser)
 	if err != nil {
 		log.Fatalf("Could not insert new user: %v", err)
 	}
@@ -65,7 +85,7 @@ func main() {
 	var user User
 	email := "test@test.com"
 
-	has, err := engine.Where("email = ?", email).Get(&user)
+	has, err := dev_engine.Where("email = ?", email).Get(&user)
 	if err != nil {
 		log.Fatalf("Could not retrieve user: %v", err)
 	}
