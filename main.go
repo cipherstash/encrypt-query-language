@@ -1,10 +1,12 @@
 package main
 
 import (
+	"database/sql"
+	_ "database/sql"
 	"fmt"
 	"log"
 
-	_ "github.com/lib/pq" // PostgreSQL driver
+	_ "github.com/jackc/pgx/stdlib" // PostgreSQL driver
 	"xorm.io/xorm"
 	"xorm.io/xorm/names"
 )
@@ -21,8 +23,9 @@ func (User) TableName() string {
 }
 
 func main() {
+	// connStr := "postgres://postgres:postgres@localhost:5432/postgres"
 	connStr := "user=postgres password=postgres port=5432 host=localhost dbname=postgres sslmode=disable"
-	engine, err := xorm.NewEngine("postgres", connStr)
+	engine, err := xorm.NewEngine("pgx", connStr)
 
 	if err != nil {
 		log.Fatalf("Could not connect to the database: %v", err)
@@ -56,26 +59,34 @@ func main() {
 	}
 
 	devConnStr := "user=postgres password=postgres port=5432 host=localhost dbname=gotest sslmode=disable"
-	dev_engine, err := xorm.NewEngine("postgres", devConnStr)
+	devEngine, err := xorm.NewEngine("pgx", devConnStr)
 
 	if err != nil {
 		log.Fatalf("Could not connect to the database: %v", err)
 	}
+	defer devEngine.Close()
 
 	// need to map from struct to postgres snake case lowercase
-	dev_engine.SetMapper(names.SnakeMapper{})
+	devEngine.SetMapper(names.SnakeMapper{})
+	devEngine.ShowSQL(true)
 
-	err = dev_engine.Sync2(new(User))
+	err = devEngine.Sync2(new(User))
 
 	if err != nil {
 		log.Fatalf("Could not create users table: %v", err)
 	}
 
-	InstallEql(dev_engine)
+	typesConn := "user=postgres password=postgres port=5432 host=localhost dbname=gotest sslmode=disable"
+	types_engine, err := sql.Open("pgx", typesConn)
+	if err != nil {
+		log.Fatalf("Could not connect to the database: %v", err)
+	}
+
+	InstallEql(types_engine)
 
 	// Insert
 	newUser := User{Email: "test@test.com"}
-	_, err = dev_engine.Insert(&newUser)
+	_, err = devEngine.Insert(&newUser)
 	if err != nil {
 		log.Fatalf("Could not insert new user: %v", err)
 	}
@@ -85,7 +96,7 @@ func main() {
 	var user User
 	email := "test@test.com"
 
-	has, err := dev_engine.Where("email = ?", email).Get(&user)
+	has, err := devEngine.Where("email = ?", email).Get(&user)
 	if err != nil {
 		log.Fatalf("Could not retrieve user: %v", err)
 	}
