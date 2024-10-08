@@ -1,10 +1,8 @@
 package main
 
 import (
-	"log"
-
 	"database/sql"
-	_ "database/sql"
+	"log"
 )
 
 func InstallEql(engine *sql.DB) {
@@ -865,6 +863,8 @@ func installDslCore(engine *sql.DB) {
 
 	DROP FUNCTION IF EXISTS _cs_text_to_ore_64_8_v1_term_v1_0;
 
+	DROP FUNCTION IF EXISTS cs_check_encrypted_v1;
+
 	DROP DOMAIN IF EXISTS cs_match_index_v1;
 	DROP DOMAIN IF EXISTS cs_unique_index_v1;
 
@@ -888,21 +888,29 @@ func installDslCore(engine *sql.DB) {
 	RETURN (val->>'k' = 'ct' AND val ? 'c') AND NOT val ? 'p';
 	END;
 
+	CREATE FUNCTION cs_check_encrypted_v1(val jsonb)
+	RETURNS BOOLEAN
+	LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+	BEGIN ATOMIC
+		RETURN (
+			-- version and source are required
+		val ?& array['v'] AND
+
+		-- table and column
+		val->'i' ?& array['t', 'c'] AND
+
+		-- plaintext or ciphertext for kind
+		_cs_encrypted_check_kind(val)
+		);
+	END;
+
 
 	-- drop and reset the check constraint
 	ALTER DOMAIN cs_encrypted_v1 DROP CONSTRAINT IF EXISTS cs_encrypted_v1_check;
 
 	ALTER DOMAIN cs_encrypted_v1
 	ADD CONSTRAINT cs_encrypted_v1_check CHECK (
-		-- version and source are required
-		VALUE ?& array['v'] AND
-
-		-- table and column
-		VALUE->'i' ?& array['t', 'c'] AND
-
-		-- plaintext or ciphertext for kind
-		_cs_encrypted_check_kind(VALUE)
-
+		cs_check_encrypted_v1(VALUE)
 	);
 
 	CREATE OR REPLACE FUNCTION cs_ciphertext_v1_v0_0(col jsonb)
@@ -1230,4 +1238,22 @@ func installDslMatch(engine *sql.DB) {
 	}
 
 	log.Println("dsl match installed!")
+}
+
+func AddIndexes(engine *sql.DB) {
+	sql := `
+	  SELECT cs_add_index_v1('users', 'encrypted_email', 'unique', 'text', '{"token_filters": [{"kind": "downcase"}]}');
+      SELECT cs_add_index_v1('users', 'encrypted_email', 'match', 'text');
+      SELECT cs_add_index_v1('users', 'encrypted_email', 'ore', 'text');
+
+      SELECT cs_encrypt_v1();
+      SELECT cs_activate_v1();
+	`
+
+	_, err := engine.Exec(sql)
+	if err != nil {
+		log.Fatalf("Error dsl match: %v", err)
+	}
+
+	log.Println("config updated")
 }
