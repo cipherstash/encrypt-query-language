@@ -1,0 +1,38 @@
+services:
+  postgres:
+    container_name: cipherstash_getting_started_pg
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cipherstash_getting_started
+    ports:
+      - ${PGPORT:-5432}:5432
+    networks:
+      - my-network
+  proxy:
+    container_name: cipherstash_getting_started_proxy
+    image: cipherstash/cipherstash-proxy:latest
+    depends_on:
+      - postgres
+    ports:
+      - ${CS_PORT:-6432}:${CS_PORT:-6432}
+    environment:
+      CS_WORKSPACE_ID: $CS_WORKSPACE_ID
+      CS_CLIENT_ACCESS_KEY: $CS_CLIENT_ACCESS_KEY
+      CS_ENCRYPTION__CLIENT_ID: $CS_ENCRYPTION__CLIENT_ID
+      CS_ENCRYPTION__CLIENT_KEY: $CS_ENCRYPTION__CLIENT_KEY
+      CS_TEST_ON_CHECKOUT: "true"
+      CS_AUDIT__ENABLED: "false"
+      CS_DATABASE__PORT: 5432
+      CS_DATABASE__USERNAME: postgres
+      CS_DATABASE__PASSWORD: postgres
+      CS_DATABASE__NAME: cipherstash_getting_started
+      CS_DATABASE__HOST: cipherstash_getting_started_pg
+      CS_STATEMENT_HANDLER: mylittleproxy
+    networks:
+      - my-network
+
+networks:
+  my-network:
+    driver: bridge
