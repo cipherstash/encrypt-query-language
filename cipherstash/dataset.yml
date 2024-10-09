@@ -20,3 +20,24 @@ tables:
             kind: ore
           - version: 1
             kind: unique
+  - path: User
+    fields:
+      - name: email_encrypted
+        in_place: false
+        mode: plaintext-duplicate
+        cast_type: utf8-str
+        indexes:
+          - version: 1
+            kind: match
+            tokenizer:
+              kind: ngram
+              token_length: 3
+            token_filters:
+              - kind: downcase
+            k: 6
+            m: 2048
+            include_original: true
+          - version: 1
+            kind: ore
+          - version: 1
+            kind: unique
