@@ -1,26 +1,26 @@
-import { getEmailArg } from '@cipherstash/utils'
-import { eqlPayload } from '@cipherstash/eql'
-import { prisma } from './db'
+import { getEmailArg } from "@cipherstash/utils";
+import { eqlPayload } from "@cipherstash/eql";
+import { prisma } from "./db";
 
 const email = getEmailArg({
-  required: true,
-})
+	required: true,
+});
 
 await prisma.user.create({
-  data: {
-    email: email ?? 'test@test.com',
-    email_encrypted: eqlPayload({
-      plaintext: email,
-      table: 'users',
-      column: 'email_encrypted',
-    }),
-  },
-})
+	data: {
+		email: email ?? "test@test.com",
+		email_encrypted: eqlPayload({
+			plaintext: email,
+			table: "users",
+			column: "email_encrypted",
+		}),
+	},
+});
 
 console.log(
-  "[INFO] You've inserted a new user with an encrypted email from the plaintext",
-  email,
-)
+	"[INFO] You've inserted a new user with an encrypted email from the plaintext",
+	email,
+);
 
-await prisma.$disconnect()
-process.exit(0)
+await prisma.$disconnect();
+process.exit(0);
