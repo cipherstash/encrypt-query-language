@@ -99,6 +99,18 @@ func main() {
 
 	err = devEngine.Sync2(new(User))
 
+	// Alter table users to add constraint for jsonb column
+	sql := `
+	ALTER TABLE users ADD CONSTRAINT encrypted_email_encrypted_check
+	CHECK ( cs_check_encrypted_v1(encrypted_email) );
+	`
+	_, errConstraint := devEngine.Exec(sql)
+	if errConstraint != nil {
+		log.Fatalf("Error dsl core: %v", errConstraint)
+	}
+
+	log.Println("dsl core installed!")
+
 	if err != nil {
 		log.Fatalf("Could not create users table: %v", err)
 	}
