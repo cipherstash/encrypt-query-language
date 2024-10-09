@@ -17,6 +17,7 @@ func WhereQuery(engine *xorm.Engine) {
 		log.Fatalf("Could not retrieve user: %v", err)
 	}
 	if has {
+		// fmt.Printf("User retrieved: %+v\n", user)
 		fmt.Println("User retrieved:", user)
 	} else {
 		fmt.Println("User not found")
@@ -32,11 +33,11 @@ func MatchQuery(engine *xorm.Engine) {
 	}
 
 	// _, err := engine.Exec(`
-	// SELECT "id", "email", "encrypted_email" FROM "users" WHERE (cs_match_v1(encrypted_email) @> cs_match_v1('{"i":{"c":"encrypted_email","t":"users"},"k":"pt","p":"test@test.com","v":1}'));
+	// SELECT * FROM users WHERE (cs_match_v1(encrypted_email) @> cs_match_v1('{"i":{"c":"encrypted_email","t":"users"},"k":"pt","p":"test@test.com","v":1}'::jsonb));
 	// `)
 
 	// if err != nil {
-	// 	log.Fatalf("Error dsl core: %v", err)
+	// 	log.Fatalf("Error retrieving user: %v", err)
 	// }
 
 	has, err := engine.Where("cs_match_v1(encrypted_email) @> cs_match_v1(?)", serializedEmail).Get(&user)
