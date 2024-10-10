@@ -259,7 +259,9 @@ Supported types:
 
 ##### match opts
 
-Default Match index options:
+A match index enables full text search across one or more text fields in queries.
+
+The default Match index options are:
 
 ```json
   {
@@ -279,7 +281,7 @@ Default Match index options:
 #### cs_modify_index
 
 ```sql
-cs_modify_index(table_name text, column_name text, index_name text, cast_as text, opts jsonb)
+_cs_modify_index_v1(table_name text, column_name text, index_name text, cast_as text, opts jsonb)
 ```
 
 Modifies an existing index configuration.
@@ -288,7 +290,7 @@ Accepts the same parameters as `cs_add_index`
 #### cs_remove_index
 
 ```sql
-cs_remove_index(table_name text, column_name text, index_name text)
+cs_remove_index_v1(table_name text, column_name text, index_name text)
 ```
 
 Removes an index configuration from the column.
