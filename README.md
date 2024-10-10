@@ -37,6 +37,7 @@ A variety of searchable encryption techniques are available, including:
 - **Matching** - Equality or partial matches
 - **Ordering** - comparison operations using order revealing encryption
 - **Uniqueness** - enforcing unique constraints
+- **Containment** - containment queries using structured encryption
 
 ### 1.1 What is encryption in use?
 
@@ -138,8 +139,7 @@ cs_add_index(table_name text, column_name text, index_name text, cast_as text, o
 | column_name   | Name of target column                              | Required
 | index_name    | The index kind                                     | Required.
 | cast_as       | The PostgreSQL type decrypted data will be cast to | Optional. Defaults to `text`
-| opts          | Index options                                      | Optional for `match` indexes (see below)
-
+| opts          | Index options                                      | Optional for `match` indexes, required for `ste_vec` indexes (see below)
 
 ###### cast_as
 
