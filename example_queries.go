@@ -182,7 +182,8 @@ func JsonbQuery(engine *xorm.Engine) {
 	if err != nil {
 		log.Fatalf("Error serializing JSON: %v", err)
 	}
-	serializedJsonbQuery, serializeJsonbQueryErr := serialize(jsonQueryData, "examples", "encrypted_text")
+	fmt.Println("$$$$$ json string", string(jsonQueryData))
+	serializedJsonbQuery, serializeJsonbQueryErr := serialize(string(jsonQueryData), "examples", "encrypted_text")
 
 	if serializeJsonbQueryErr != nil {
 		log.Fatalf("Error serializing: %v", serializeJsonbQueryErr)
@@ -202,7 +203,7 @@ func JsonbQuery(engine *xorm.Engine) {
 
 }
 
-func generateJsonbData(value_one string, value_two string, value_three string) json.RawMessage {
+func generateJsonbData(value_one string, value_two string, value_three string) string {
 	data := map[string]any{
 		"top": map[string]any{
 			"nested": []any{value_one, value_two},
@@ -215,6 +216,6 @@ func generateJsonbData(value_one string, value_two string, value_three string) j
 	if err != nil {
 		log.Fatalf("Error serializing JSON: %v", err)
 	}
-
-	return json.RawMessage(jsonData)
+	fmt.Println("generated json data string", string(jsonData))
+	return string(jsonData)
 }
