@@ -209,7 +209,7 @@ In general, therefore, you should try to ensure that the string you search for i
 
 ###### ste_vec opts
 
-An ste_vec index on a encrypted JSONB column enables the use of Postgres's `@>` and `<@` containment operators.
+An ste_vec index on a encrypted JSONB column enables the use of PostgreSQL's `@>` and `<@` [containment operators](https://www.postgresql.org/docs/16/functions-json.html#FUNCTIONS-JSONB-OP-TABLE).
 
 An ste_vec index requires one piece of configuration: the `prefix` (a string) which is functionally similar to a salt for the hashing process.
 
