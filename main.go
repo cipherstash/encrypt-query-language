@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -13,28 +14,39 @@ import (
 // To install types etc and run insert and query user:
 // Run: go run main.go migrations.go
 
+
+type TableColumn struct {
+	T string `json:"t"`
+	C string `json:"c"`
+}
+
+type EncryptedColumn struct {
+	K string      `json:"k"`
+	P string      `json:"p"`
+	I TableColumn `json:"i"`
+	V int         `json:"v"`
+}
+
 type User struct {
-	Id             int64                  `xorm:"pk autoincr"`
-	Email          string                 `xorm:"varchar(100)"`
-	EncryptedEmail map[string]interface{} `json:"encrypted_email" xorm:"jsonb 'encrypted_email'"`
+	Id             int64           `xorm:"pk autoincr"`
+	Email          string          `xorm:"varchar(100)"`
+	EncryptedEmail json.RawMessage `json:"encrypted_email" xorm:"jsonb 'encrypted_email'"`
 }
 
 func (User) TableName() string {
 	return "users"
 }
 
-func serialize(value string) (map[string]interface{}, error) {
-	data := map[string]interface{}{
-		"k": "pt",
-		"p": value,
-		"i": map[string]interface{}{
-			"t": "users",
-			"c": "encrypted_email",
-		},
-		"v": 1,
+func serialize(value string) (json.RawMessage, error) {
+
+	data := EncryptedColumn{"pt", value, TableColumn{"users", "encrypted_email"}, 1}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to serialize data: %v", err)
 	}
 
-	return data, nil
+	return json.RawMessage(jsonData), nil
 }
 
 func main() {
@@ -77,13 +89,13 @@ func main() {
 	// with how xorm interprets `?`.
 	// https://gitea.com/xorm/xorm/issues/2483
 	typesConn := "user=postgres password=postgres port=5432 host=localhost dbname=gotest sslmode=disable"
-	types_engine, err := sql.Open("pgx", typesConn)
+	typesEngine, err := sql.Open("pgx", typesConn)
 	if err != nil {
 		log.Fatalf("Could not connect to the database: %v", err)
 	}
 
-	InstallEql(types_engine)
-	AddIndexes(types_engine)
+	InstallEql(typesEngine)
+	AddIndexes(typesEngine)
 
 	// Connect to proxy
 	devConnStr := "user=postgres password=postgres port=6432 host=localhost dbname=gotest sslmode=disable"
@@ -120,28 +132,25 @@ func main() {
 	devEngine.Exec("SELECT cs_refresh_encrypt_config();")
 
 	// Insert
-	serializedEmail, serializeErr := serialize("test@test.com")
+	serializedEmail, serializeErr := serialize("fionamccawley@test.com")
 	if serializeErr != nil {
 		log.Fatalf("Error serializing: %v", serializeErr)
 	}
-	newUser := User{Email: "test@test.com", EncryptedEmail: serializedEmail}
+	newUser := User{Email: "fionamccawley@test.com", EncryptedEmail: serializedEmail}
 	_, err = devEngine.Insert(&newUser)
 	if err != nil {
 		log.Fatalf("Could not insert new user: %v", err)
 	}
-	fmt.Println("New user inserted:", newUser)
+	fmt.Printf("User inserted: %+v\n", newUser)
+	// fmt.Println("Decrypted email:", newUser.EncryptedEmail["p"])
 
-	// Query
-	var user User
-	email := "test@test.com"
+	// Query on unencrypted column: where clause
+	WhereQuery(devEngine)
 
-	has, err := devEngine.Where("email = ?", email).Get(&user)
-	if err != nil {
-		log.Fatalf("Could not retrieve user: %v", err)
-	}
-	if has {
-		fmt.Println("User retrieved:", user)
-	} else {
-		fmt.Println("User not found")
-	}
+	// Query on encrypted column.
+
+	// // MATCH
+	MatchQuery(devEngine)
+	// ORE
+	// Unique
 }
