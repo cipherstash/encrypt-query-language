@@ -31,15 +31,26 @@ type Example struct {
 	Id            int64           `xorm:"pk autoincr"`
 	Text          string          `xorm:"varchar(100)"`
 	EncryptedText json.RawMessage `json:"encrypted_text" xorm:"jsonb 'encrypted_text'"`
+	DecryptedText string          `xorm:"-"` // This ignores the field and only uses it in memory for the struct. It does not create a field in the table.
+	// EncryptedJsonb json.RawMessage `json:"encrypted_jsonb" xorm:"jsonb 'encrypted_jsonb'"`
 }
 
 func (Example) TableName() string {
 	return "examples"
 }
 
-func serialize(value string) (json.RawMessage, error) {
+func (e *Example) AfterSet(colName string, _ xorm.Cell) {
+	if colName == "encrypted_text" && len(e.EncryptedText) > 0 {
 
-	data := EncryptedColumn{"pt", value, TableColumn{"examples", "encrypted_text"}, 1}
+		text, err := deserialize(e.EncryptedText)
+		if err == nil {
+			e.DecryptedText = text
+		}
+	}
+}
+
+func serialize(value string, table string, column string) (json.RawMessage, error) {
+	data := EncryptedColumn{"pt", value, TableColumn{table, column}, 1}
 
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -47,6 +58,17 @@ func serialize(value string) (json.RawMessage, error) {
 	}
 
 	return json.RawMessage(jsonData), nil
+}
+
+func deserialize(data []byte) (string, error) {
+	var encryptedColumn EncryptedColumn
+	err := json.Unmarshal(data, &encryptedColumn)
+
+	if err != nil {
+		return "", fmt.Errorf("failed to serialize data: %v", err)
+	}
+
+	return encryptedColumn.P, nil
 }
 
 func main() {
@@ -85,18 +107,6 @@ func main() {
 		fmt.Println("Database 'gotest' created successfully!")
 	}
 
-	// To install our custom types we need to use the database/sql package due to an issue
-	// with how xorm interprets `?`.
-	// https://gitea.com/xorm/xorm/issues/2483
-	typesConn := "user=postgres password=postgres port=5432 host=localhost dbname=gotest sslmode=disable"
-	typesEngine, err := sql.Open("pgx", typesConn)
-	if err != nil {
-		log.Fatalf("Could not connect to the database: %v", err)
-	}
-
-	InstallEql(typesEngine)
-	AddIndexes(typesEngine)
-
 	// Connect to proxy
 	devConnStr := "user=postgres password=postgres port=6432 host=localhost dbname=gotest sslmode=disable"
 	devEngine, err := xorm.NewEngine("pgx", devConnStr)
@@ -109,24 +119,25 @@ func main() {
 	devEngine.SetMapper(names.SnakeMapper{})
 	devEngine.ShowSQL(true)
 
+	// Create table
 	err = devEngine.Sync2(new(Example))
-
-	// Alter table examples to add constraint for jsonb column
-	sql := `
-	ALTER TABLE examples ADD CONSTRAINT encrypted_text_encrypted_check
-	CHECK ( cs_check_encrypted_v1(encrypted_text) );
-	`
-	_, errConstraint := devEngine.Exec(sql)
-	if errConstraint != nil {
-		log.Fatalf("Error dsl core: %v", errConstraint)
-	}
-
 	if err != nil {
 		log.Fatalf("Could not create examples table: %v", err)
 	}
 
-	devEngine.SetMapper(names.SnakeMapper{})
-	devEngine.ShowSQL(true)
+	// To install our custom types we need to use the database/sql package due to an issue
+	// with how xorm interprets `?`.
+	// https://gitea.com/xorm/xorm/issues/2483
+	typesConn := "user=postgres password=postgres port=5432 host=localhost dbname=gotest sslmode=disable"
+	typesEngine, err := sql.Open("pgx", typesConn)
+	if err != nil {
+		log.Fatalf("Could not connect to the database: %v", err)
+	}
+
+	InstallEql(typesEngine)
+	AddIndexes(typesEngine)
+	AddConstraint(typesEngine)
+
 	devEngine.Exec("SELECT cs_refresh_encrypt_config();")
 
 	// Query on unencrypted column: where clause
@@ -138,6 +149,9 @@ func main() {
 	MatchQueryLongString(devEngine)
 
 	MatchQueryEmail(devEngine)
+
+	// JSONB data query
+	JsonbData(devEngine)
 	// ORE
 
 	// Unique
