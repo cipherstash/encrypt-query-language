@@ -213,7 +213,9 @@ An ste_vec index on a encrypted JSONB column enables the use of PostgreSQL's `@>
 
 An ste_vec index requires one piece of configuration: the `prefix` (a string) which is functionally similar to a salt for the hashing process.
 
-Within a dataset, encrypted columns indexed using an ste_vec that use different prefixes can never compare as equal and containment queries that manage to mix index terms from multiple columns will never return a positive result. This is by design.
+Within a dataset, encrypted columns indexed using an ste_vec that use different prefixes can never compare as equal. 
+Containment queries that manage to mix index terms from multiple columns will never return a positive result. 
+This is by design.
 
 The index is generated from a JSONB document by first flattening the structure of the document such that a hash can be generated for each unique path prefix to a node.
 
