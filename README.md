@@ -120,6 +120,7 @@ EQL provides specialized functions to interact with encrypted data:
 - **`cs_match_v1(val JSONB)`**: Enables basic full-text search.
 - **`cs_unique_v1(val JSONB)`**: Retrieves the unique index for enforcing uniqueness.
 - **`cs_ore_v1(val JSONB)`**: Retrieves the Order-Revealing Encryption index for range queries.
+- **`cs_ste_vec_v1(val JSONB)`**: Retrieves the Structured Encryption Vector for containment queries.
 
 ### 3.3 Index functions
 
@@ -149,6 +150,7 @@ Supported types:
   - big_int
   - boolean
   - date
+  - jsonb
 
 ###### match opts
 
@@ -204,6 +206,92 @@ Specifically, searching for strings _shorter_ than the `tokenLength` parameter w
 If you're using n-gram as a token filter, then a token that is already shorter than the `tokenLength` parameter will be kept as-is when indexed, and so a search for that short token will match that record.
 However, if that same short string only appears as a part of a larger token, then it will not match that record.
 In general, therefore, you should try to ensure that the string you search for is at least as long as the `tokenLength` of the index, except in the specific case where you know that there are shorter tokens to match, _and_ you are explicitly OK with not returning records that have that short string as part of a larger token.
+
+###### ste_vec opts
+
+An ste_vec index on a encrypted JSONB column enables the use of Postgres's `@>` and `<@` containment operators.
+
+An ste_vec index requires one piece of configuration: the `prefix` (a string) which is functionally similar to a salt for the hashing process.
+
+Within a dataset, encrypted columns indexed using an ste_vec that use different prefixes can never compare as equal and containment queries that manage to mix index terms from multiple columns will never return a positive result. This is by design.
+
+The index is generated from a JSONB document by first flattening the structure of the document such that a hash can be generated for each unique path prefix to a node.
+
+For a document like this:
+
+```json
+{
+  "account": {
+    "email": "alice@example.com",
+    "name": {
+      "first_name": "Alice",
+      "last_name": "McCrypto",
+    },
+    "roles": [
+      "admin",
+      "owner",
+    ]
+  }
+}
+```
+
+Hashes would be produced from the following list of entries:
+
+```json
+[
+  [Obj, Key("account"), Obj, Key("email"), String("alice@example.com")],
+  [Obj, Key("account"), Obj, Key("name"), Obj, Key("first_name"), String("Alice")],
+  [Obj, Key("account"), Obj, Key("name"), Obj, Key("last_name"), String("McCrypto")],
+  [Obj, Key("account"), Obj, Key("roles"), Array, String("admin")],
+  [Obj, Key("account"), Obj, Key("roles"), Array, String("owner")],
+]
+```
+
+Using the first entry to illustrate how an entry is converted to hashes:
+
+```json
+[Obj, Key("account"), Obj, Key("email"), String("alice@example.com")]
+```
+
+The hashes would be generated for all prefixes of the full path to the leaf node.
+
+```json
+[
+  [Obj],
+  [Obj, Key("account")],
+  [Obj, Key("account"), Obj],
+  [Obj, Key("account"), Obj, Key("email")],
+  [Obj, Key("account"), Obj, Key("email"), String("alice@example.com")],
+  // (remaining leaf nodes omitted)
+]
+```
+
+Query terms are processed in the same manner as the input document.
+
+A query prior to encrypting & indexing looks like a structurally similar subset of the encrypted document, for example:
+
+```json
+{ "account": { "email": "alice@example.com", "roles": "admin" }}
+```
+
+The expression `cs_ste_vec_v1(encrypted_account) @> cs_ste_vec_v1($query)` would match all records where the `encrypted_account` column contains a JSONB object with an "account" key containing an object with an "email" key where the value is the string "alice@example.com".
+
+When reduced to a prefix list, it would look like this:
+
+```json
+[
+  [Obj],
+  [Obj, Key("account")],
+  [Obj, Key("account"), Obj],
+  [Obj, Key("account"), Obj, Key("email")],
+  [Obj, Key("account"), Obj, Key("email"), String("alice@example.com")]
+  [Obj, Key("account"), Obj, Key("roles")],
+  [Obj, Key("account"), Obj, Key("roles"), Array],
+  [Obj, Key("account"), Obj, Key("roles"), Array, String("admin")]
+]
+```
+
+Which is then turned into an ste_vec of hashes which can be directly queries against the index.
 
 #### 3.3.2 cs_modify_index
 
@@ -262,6 +350,15 @@ cs_ore_v1(val jsonb)
 Extracts an ore index from the `jsonb` value.
 Returns `null` if no ore index is present.
 
+#### 3.3.5 cs_ste_vec_v1
+
+```sql
+cs_ste_vec_v1(val jsonb)
+```
+
+Extracts an ste_vec index from the `jsonb` value.
+Returns `null` if no ste_vec index is present.
+
 ### 3.4 Data Format
 
 Encrypted data is stored as `jsonb` with a specific schema:
@@ -310,7 +407,8 @@ Cipherstash proxy handles the encoding, and EQL provides the functions.
 | c        | Ciphertext         | Ciphertext value. Encrypted by proxy. Required if kind is plaintext/pt or encrypting/et.
 | m.1      | Match index        | Ciphertext index value. Encrypted by proxy.
 | o.1      | ORE index          | Ciphertext index value. Encrypted by proxy.
-| u.1      | Uniqueindex        | Ciphertext index value. Encrypted by proxy.
+| u.1      | Unique index       | Ciphertext index value. Encrypted by proxy.
+| sv.1     | STE vector index   | Ciphertext index value. Encrypted by proxy.
 
 #### 3.4.1 Helper packages
 
