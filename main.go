@@ -14,15 +14,18 @@ import (
 // To install types etc and run insert and query user:
 // Run: go run main.go migrations.go
 
-// type EncryptedColumn struct {
-// 	K string `json:"k"`
-// 	P string `json:"p"`
-// 	I struct {
-// 		T string `json:"t"`
-// 		C string `json:"c"`
-// 	} `json:"i"`
-// 	V int `json:"v"`
-// }
+
+type TableColumn struct {
+	T string `json:"t"`
+	C string `json:"c"`
+}
+
+type EncryptedColumn struct {
+	K string      `json:"k"`
+	P string      `json:"p"`
+	I TableColumn `json:"i"`
+	V int         `json:"v"`
+}
 
 type User struct {
 	Id             int64           `xorm:"pk autoincr"`
@@ -30,57 +33,13 @@ type User struct {
 	EncryptedEmail json.RawMessage `json:"encrypted_email" xorm:"jsonb 'encrypted_email'"`
 }
 
-// type User struct {
-// 	Id             int64                  `xorm:"pk autoincr"`
-// 	Email          string                 `xorm:"varchar(100)"`
-// 	EncryptedEmail map[string]interface{} `json:"encrypted_email" xorm:"jsonb 'encrypted_email'"`
-// }
-
 func (User) TableName() string {
 	return "users"
 }
 
-// func serialize(value string) (map[string]interface{}, error) {
-// 	data := map[string]interface{}{
-// 		"k": "pt",
-// 		"p": value,
-// 		"i": map[string]interface{}{
-// 			"t": "users",
-// 			"c": "encrypted_email",
-// 		},
-// 		"v": 1,
-// 	}
-
-// 	return data, nil
-// }
-
-// func serialize(value string) (EncryptedColumn, error) {
-// 	encryptedColumn :=
-// 		EncryptedColumn{
-// 			K: "pt",
-// 			P: value,
-// 			I: struct {
-// 				T string `json:"t"`
-// 				C string `json:"c"`
-// 			}{
-// 				T: "users",
-// 				C: "encrypted_email",
-// 			},
-// 			V: 1,
-// 		}
-// 	return encryptedColumn, nil
-// }
-
 func serialize(value string) (json.RawMessage, error) {
-	data := map[string]interface{}{
-		"k": "pt",
-		"p": value,
-		"i": map[string]interface{}{
-			"t": "users",
-			"c": "encrypted_email",
-		},
-		"v": 1,
-	}
+
+	data := EncryptedColumn{"pt", value, TableColumn{"users", "encrypted_email"}, 1}
 
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -89,17 +48,6 @@ func serialize(value string) (json.RawMessage, error) {
 
 	return json.RawMessage(jsonData), nil
 }
-
-// func deserialize(value json.RawMessage) (string, error) {
-// 	var decryptedEmail map[string]interface{}
-// 	err := json.Unmarshal(value, &decryptedEmail)
-// 	if err != nil {
-// 		log.Fatalf("Failed to unmarshal encrypted email: %v", err)
-// 	}
-
-// 	fmt.Printf("Decrypted Email: %+v\n", decryptedEmail)
-// 	return decryptedEmail["p"].(string), nil
-// }
 
 func main() {
 	// Create database
@@ -184,22 +132,25 @@ func main() {
 	devEngine.Exec("SELECT cs_refresh_encrypt_config();")
 
 	// Insert
-	serializedEmail, serializeErr := serialize("test@test.com")
+	serializedEmail, serializeErr := serialize("fionamccawley@test.com")
 	if serializeErr != nil {
 		log.Fatalf("Error serializing: %v", serializeErr)
 	}
-	newUser := User{Email: "test@test.com", EncryptedEmail: serializedEmail}
+	newUser := User{Email: "fionamccawley@test.com", EncryptedEmail: serializedEmail}
 	_, err = devEngine.Insert(&newUser)
 	if err != nil {
 		log.Fatalf("Could not insert new user: %v", err)
 	}
 	fmt.Printf("User inserted: %+v\n", newUser)
+	// fmt.Println("Decrypted email:", newUser.EncryptedEmail["p"])
 
 	// Query on unencrypted column: where clause
 	WhereQuery(devEngine)
 
 	// Query on encrypted column.
 
-	// MATCH
+	// // MATCH
 	MatchQuery(devEngine)
+	// ORE
+	// Unique
 }
