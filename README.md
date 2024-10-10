@@ -217,6 +217,14 @@ Within a dataset, encrypted columns indexed using an ste_vec that use different 
 
 The index is generated from a JSONB document by first flattening the structure of the document such that a hash can be generated for each unique path prefix to a node.
 
+The complete set of JSON types is supported by the indexer. Null values are ignored by the indexer.
+
+- Object `{ ... }`
+- Array `[ ... ]`
+- String `"abc"`
+- Boolean `true`
+- Number `123.45`
+
 For a document like this:
 
 ```json
