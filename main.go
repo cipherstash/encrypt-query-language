@@ -11,12 +11,12 @@ import (
 	"xorm.io/xorm/names"
 )
 
-// To install types etc and run insert and query user:
+// To install types etc and run insert and query example:
 // Run: go run main.go migrations.go
 
-
+// Create types for encrypted column
 type TableColumn struct {
-	T string `json:"t"`
+	T string `json:"t"` // This maps T to t in the json
 	C string `json:"c"`
 }
 
@@ -27,19 +27,19 @@ type EncryptedColumn struct {
 	V int         `json:"v"`
 }
 
-type User struct {
-	Id             int64           `xorm:"pk autoincr"`
-	Email          string          `xorm:"varchar(100)"`
-	EncryptedEmail json.RawMessage `json:"encrypted_email" xorm:"jsonb 'encrypted_email'"`
+type Example struct {
+	Id            int64           `xorm:"pk autoincr"`
+	Text          string          `xorm:"varchar(100)"`
+	EncryptedText json.RawMessage `json:"encrypted_text" xorm:"jsonb 'encrypted_text'"`
 }
 
-func (User) TableName() string {
-	return "users"
+func (Example) TableName() string {
+	return "examples"
 }
 
 func serialize(value string) (json.RawMessage, error) {
 
-	data := EncryptedColumn{"pt", value, TableColumn{"users", "encrypted_email"}, 1}
+	data := EncryptedColumn{"pt", value, TableColumn{"examples", "encrypted_text"}, 1}
 
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -109,40 +109,25 @@ func main() {
 	devEngine.SetMapper(names.SnakeMapper{})
 	devEngine.ShowSQL(true)
 
-	err = devEngine.Sync2(new(User))
+	err = devEngine.Sync2(new(Example))
 
-	// Alter table users to add constraint for jsonb column
+	// Alter table examples to add constraint for jsonb column
 	sql := `
-	ALTER TABLE users ADD CONSTRAINT encrypted_email_encrypted_check
-	CHECK ( cs_check_encrypted_v1(encrypted_email) );
+	ALTER TABLE examples ADD CONSTRAINT encrypted_text_encrypted_check
+	CHECK ( cs_check_encrypted_v1(encrypted_text) );
 	`
 	_, errConstraint := devEngine.Exec(sql)
 	if errConstraint != nil {
 		log.Fatalf("Error dsl core: %v", errConstraint)
 	}
 
-	log.Println("dsl core installed!")
-
 	if err != nil {
-		log.Fatalf("Could not create users table: %v", err)
+		log.Fatalf("Could not create examples table: %v", err)
 	}
 
 	devEngine.SetMapper(names.SnakeMapper{})
 	devEngine.ShowSQL(true)
 	devEngine.Exec("SELECT cs_refresh_encrypt_config();")
-
-	// Insert
-	serializedEmail, serializeErr := serialize("fionamccawley@test.com")
-	if serializeErr != nil {
-		log.Fatalf("Error serializing: %v", serializeErr)
-	}
-	newUser := User{Email: "fionamccawley@test.com", EncryptedEmail: serializedEmail}
-	_, err = devEngine.Insert(&newUser)
-	if err != nil {
-		log.Fatalf("Could not insert new user: %v", err)
-	}
-	fmt.Printf("User inserted: %+v\n", newUser)
-	// fmt.Println("Decrypted email:", newUser.EncryptedEmail["p"])
 
 	// Query on unencrypted column: where clause
 	WhereQuery(devEngine)
@@ -150,7 +135,10 @@ func main() {
 	// Query on encrypted column.
 
 	// // MATCH
-	MatchQuery(devEngine)
+	MatchQueryLongString(devEngine)
+
+	MatchQueryEmail(devEngine)
 	// ORE
+
 	// Unique
 }

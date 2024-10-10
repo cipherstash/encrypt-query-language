@@ -12,8 +12,6 @@ func InstallEql(engine *sql.DB) {
 
 	installDsl(engine)
 
-
-
 }
 
 func installCsCustomTypes(engine *sql.DB) {
@@ -346,24 +344,23 @@ func installCsCustomTypes(engine *sql.DB) {
 }
 
 func installDsl(engine *sql.DB) {
-	sqlFilePath := "./cipherstash-encrypt-dsl.sql"
-	sqlContent, err := os.ReadFile(sqlFilePath)
+	path := "./cipherstash-encrypt-dsl.sql"
+	sql, err := os.ReadFile(path)
 	if err != nil {
 		log.Fatalf("Failed to read SQL file: %v", err)
 	}
 
-	_, err = engine.Exec(string(sqlContent))
+	_, err = engine.Exec(string(sql))
 	if err != nil {
 		log.Fatalf("Failed to execute SQL query: %v", err)
 	}
 }
 
-
 func AddIndexes(engine *sql.DB) {
 	sql := `
-	  SELECT cs_add_index_v1('users', 'encrypted_email', 'unique', 'text', '{"token_filters": [{"kind": "downcase"}]}');
-      SELECT cs_add_index_v1('users', 'encrypted_email', 'match', 'text');
-      SELECT cs_add_index_v1('users', 'encrypted_email', 'ore', 'text');
+	  SELECT cs_add_index_v1('examples', 'encrypted_text', 'unique', 'text', '{"token_filters": [{"kind": "downcase"}]}');
+      SELECT cs_add_index_v1('examples', 'encrypted_text', 'match', 'text', '{"token_filters": [{"kind": "downcase"}], "tokenizer": { "kind": "ngram", "token_length": 3 }}');
+      SELECT cs_add_index_v1('examples', 'encrypted_text', 'ore', 'text');
 
       SELECT cs_encrypt_v1();
       SELECT cs_activate_v1();
