@@ -361,8 +361,8 @@ func AddConstraint(engine *sql.DB) {
 	ALTER TABLE examples ADD CONSTRAINT encrypted_text_encrypted_check
 	CHECK ( cs_check_encrypted_v1(encrypted_text) );
 
-	-- ALTER TABLE examples ADD CONSTRAINT encrypted_jsonb_encrypted_check
-	-- CHECK ( cs_check_encrypted_v1(encrypted_jsonb) );
+	ALTER TABLE examples ADD CONSTRAINT encrypted_jsonb_encrypted_check
+	CHECK ( cs_check_encrypted_v1(encrypted_jsonb) );
 	`
 
 	_, err := engine.Exec(sql)
@@ -376,12 +376,12 @@ func AddIndexes(engine *sql.DB) {
 	  SELECT cs_add_index_v1('examples', 'encrypted_text', 'unique', 'text', '{"token_filters": [{"kind": "downcase"}]}');
       SELECT cs_add_index_v1('examples', 'encrypted_text', 'match', 'text', '{"token_filters": [{"kind": "downcase"}], "tokenizer": { "kind": "ngram", "token_length": 3 }}');
       SELECT cs_add_index_v1('examples', 'encrypted_text', 'ore', 'text');
-	  -- SELECT cs_add_index_v1('examples', 'encrypted_jsonb', 'json', 'jsonb', '{"containment": {"prefix": "some-prefix"}}');
+	  SELECT cs_add_index_v1('examples', 'encrypted_jsonb', 'ste_vec', 'jsonb', '{"prefix": "some-prefix"}');
 
 	  CREATE UNIQUE INDEX ON examples(cs_unique_v1(encrypted_text));
       CREATE INDEX ON examples USING GIN (cs_match_v1(encrypted_text));
       CREATE INDEX ON examples (cs_ore_64_8_v1(encrypted_text));
-      -- CREATE INDEX ON examples USING GIN (cs_stevec_v1(encrypted_jsonb));
+      CREATE INDEX ON examples USING GIN (cs_ste_vec_v1(encrypted_jsonb));
 
       SELECT cs_encrypt_v1();
       SELECT cs_activate_v1();

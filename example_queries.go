@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -16,7 +17,12 @@ func WhereQuery(engine *xorm.Engine) {
 	if serializeErr != nil {
 		log.Fatalf("Error serializing: %v", serializeErr)
 	}
-	newExample := Example{Text: "test@test.com", EncryptedText: serializedEmail}
+	serializedJsonb, serializeJsonbErr := serialize(generateJsonbData("birds and spiders", "fountain", "tree"), "examples", "encrypted_jsonb")
+
+	if serializeJsonbErr != nil {
+		log.Fatalf("Error serializing: %v", serializeJsonbErr)
+	}
+	newExample := Example{Text: "test@test.com", EncryptedText: serializedEmail, EncryptedJsonb: serializedJsonb}
 
 	_, err := engine.Insert(&newExample)
 	if err != nil {
@@ -36,7 +42,7 @@ func WhereQuery(engine *xorm.Engine) {
 	}
 	if has {
 		fmt.Println("Example retrieved:", example)
-		fmt.Println("Example retrieved text:", example.DecryptedText)
+		fmt.Println("Example retrieved text:", example)
 		fmt.Println("")
 		fmt.Println("")
 
@@ -53,7 +59,13 @@ func MatchQueryLongString(engine *xorm.Engine) {
 	if serializeErr != nil {
 		log.Fatalf("Error serializing: %v", serializeErr)
 	}
-	newExample := Example{Text: "this is a long string", EncryptedText: serializedString}
+	serializedJsonb, serializeJsonbErr := serialize(generateJsonbData("bird", "fountain", "tree"), "examples", "encrypted_jsonb")
+
+	if serializeJsonbErr != nil {
+		log.Fatalf("Error serializing: %v", serializeJsonbErr)
+	}
+
+	newExample := Example{Text: "this is a long string", EncryptedText: serializedString, EncryptedJsonb: serializedJsonb}
 
 	_, err := engine.Insert(&newExample)
 	if err != nil {
@@ -72,7 +84,7 @@ func MatchQueryLongString(engine *xorm.Engine) {
 	}
 	if has {
 		fmt.Println("Example match query retrieved:", example)
-		fmt.Println("Example match query long string:", example.DecryptedText)
+		fmt.Println("Example match query long string:", example)
 		fmt.Println("")
 		fmt.Println("")
 	} else {
@@ -88,7 +100,12 @@ func MatchQueryEmail(engine *xorm.Engine) {
 	if serializeErr != nil {
 		log.Fatalf("Error serializing: %v", serializeErr)
 	}
-	newExampleTwo := Example{Text: "testing@test.com", EncryptedText: serializedEmail}
+	serializedJsonb, serializeJsonbErr := serialize(generateJsonbData("bird", "fountain", "tree"), "examples", "encrypted_jsonb")
+
+	if serializeJsonbErr != nil {
+		log.Fatalf("Error serializing: %v", serializeJsonbErr)
+	}
+	newExampleTwo := Example{Text: "testing@test.com", EncryptedText: serializedEmail, EncryptedJsonb: serializedJsonb}
 
 	_, errTwo := engine.Insert(&newExampleTwo)
 	if errTwo != nil {
@@ -107,7 +124,7 @@ func MatchQueryEmail(engine *xorm.Engine) {
 	}
 	if has {
 		fmt.Println("Example match query retrieved:", ExampleTwo)
-		fmt.Println("Example match query email retrieved:", ExampleTwo.DecryptedText)
+		fmt.Println("Example match query email retrieved:", ExampleTwo)
 		fmt.Println("")
 		fmt.Println("")
 	} else {
@@ -115,7 +132,89 @@ func MatchQueryEmail(engine *xorm.Engine) {
 	}
 }
 
-func JsonbData(engine *xorm.Engine) {
+func JsonbQuery(engine *xorm.Engine) {
 	// Insert
+	var example Example
 
+	// Insert 2 examples
+	serializedString, serializeTextErr := serialize("a string!", "examples", "encrypted_text")
+	serializedJsonb, serializeJsonbErr := serialize(generateJsonbData("first", "second", "third"), "examples", "encrypted_jsonb")
+	if serializeTextErr != nil {
+		log.Fatalf("Error serializing: %v", serializeTextErr)
+	}
+	if serializeJsonbErr != nil {
+		log.Fatalf("Error serializing: %v", serializeJsonbErr)
+	}
+	secondSerializedString, secondSerializeTextErr := serialize("a completely different string!", "examples", "encrypted_text")
+	secondSerializedJsonb, secondSerializeJsonbErr := serialize(generateJsonbData("blah", "boo", "bah"), "examples", "encrypted_jsonb")
+
+	if secondSerializeJsonbErr != nil {
+		log.Fatalf("Error serializing: %v", serializeJsonbErr)
+	}
+	if secondSerializeTextErr != nil {
+		log.Fatalf("Error serializing: %v", secondSerializedString)
+	}
+
+	newExample := Example{Text: "a string!", EncryptedText: serializedString, EncryptedJsonb: serializedJsonb}
+	newExampleTwo := Example{Text: "a completely different string!", EncryptedText: secondSerializedString, EncryptedJsonb: secondSerializedJsonb}
+
+	_, errTwo := engine.Insert(&newExample)
+	if errTwo != nil {
+		log.Fatalf("Could not insert jsonb example: %v", errTwo)
+	}
+	fmt.Printf("Example jsonb inserted!: %+v\n", newExample)
+
+	_, errThree := engine.Insert(&newExampleTwo)
+	if errThree != nil {
+		log.Fatalf("Could not insert jsonb example two: %v", errThree)
+	}
+	fmt.Printf("Example two jsonb inserted!: %+v\n", newExample)
+
+	// create a query
+	query := map[string]any{
+		"top": map[string]any{
+			"nested": []any{"first"},
+		},
+	}
+
+	jsonQueryData, err := json.Marshal(query)
+
+	if err != nil {
+		log.Fatalf("Error serializing JSON: %v", err)
+	}
+	serializedJsonbQuery, serializeJsonbQueryErr := serialize(jsonQueryData, "examples", "encrypted_text")
+
+	if serializeJsonbQueryErr != nil {
+		log.Fatalf("Error serializing: %v", serializeJsonbQueryErr)
+	}
+
+	has, err := engine.Where("cs_ste_vec_v1(encrypted_jsonb) @> cs_ste_vec_v1(?)", serializedJsonbQuery).Get(&example)
+	if err != nil {
+		log.Fatalf("Could not retrieve jsonb example: %v", err)
+	}
+	if has {
+		fmt.Println("Example jsonb query retrieved:", example)
+		fmt.Println("")
+		fmt.Println("")
+	} else {
+		fmt.Println("Example two not found")
+	}
+
+}
+
+func generateJsonbData(value_one string, value_two string, value_three string) json.RawMessage {
+	data := map[string]any{
+		"top": map[string]any{
+			"nested": []any{value_one, value_two},
+		},
+		"bottom": value_three,
+	}
+
+	jsonData, err := json.Marshal(data)
+
+	if err != nil {
+		log.Fatalf("Error serializing JSON: %v", err)
+	}
+
+	return json.RawMessage(jsonData)
 }

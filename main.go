@@ -22,7 +22,7 @@ type TableColumn struct {
 
 type EncryptedColumn struct {
 	K string      `json:"k"`
-	P string      `json:"p"`
+	P any         `json:"p"`
 	I TableColumn `json:"i"`
 	V int         `json:"v"`
 }
@@ -31,25 +31,25 @@ type Example struct {
 	Id            int64           `xorm:"pk autoincr"`
 	Text          string          `xorm:"varchar(100)"`
 	EncryptedText json.RawMessage `json:"encrypted_text" xorm:"jsonb 'encrypted_text'"`
-	DecryptedText string          `xorm:"-"` // This ignores the field and only uses it in memory for the struct. It does not create a field in the table.
-	// EncryptedJsonb json.RawMessage `json:"encrypted_jsonb" xorm:"jsonb 'encrypted_jsonb'"`
+	// DecryptedText  string          `xorm:"-"` // This ignores the field and only uses it in memory for the struct. It does not create a field in the table.
+	EncryptedJsonb json.RawMessage `json:"encrypted_jsonb" xorm:"jsonb 'encrypted_jsonb'"`
 }
 
 func (Example) TableName() string {
 	return "examples"
 }
 
-func (e *Example) AfterSet(colName string, _ xorm.Cell) {
-	if colName == "encrypted_text" && len(e.EncryptedText) > 0 {
+// func (e *Example) AfterSet(colName string, _ xorm.Cell) {
+// 	if colName == "encrypted_text" && len(e.EncryptedText) > 0 {
 
-		text, err := deserialize(e.EncryptedText)
-		if err == nil {
-			e.DecryptedText = text
-		}
-	}
-}
+// 		text, err := deserialize(e.EncryptedText)
+// 		if err == nil {
+// 			e.DecryptedText = text
+// 		}
+// 	}
+// }
 
-func serialize(value string, table string, column string) (json.RawMessage, error) {
+func serialize(value any, table string, column string) (json.RawMessage, error) {
 	data := EncryptedColumn{"pt", value, TableColumn{table, column}, 1}
 
 	jsonData, err := json.Marshal(data)
@@ -60,16 +60,16 @@ func serialize(value string, table string, column string) (json.RawMessage, erro
 	return json.RawMessage(jsonData), nil
 }
 
-func deserialize(data []byte) (string, error) {
-	var encryptedColumn EncryptedColumn
-	err := json.Unmarshal(data, &encryptedColumn)
+// func deserialize(data []byte) (string, error) {
+// 	var encryptedColumn EncryptedColumn
+// 	err := json.Unmarshal(data, &encryptedColumn)
 
-	if err != nil {
-		return "", fmt.Errorf("failed to serialize data: %v", err)
-	}
+// 	if err != nil {
+// 		return "", fmt.Errorf("failed to serialize data: %v", err)
+// 	}
 
-	return encryptedColumn.P, nil
-}
+// 	return encryptedColumn.P, nil
+// }
 
 func main() {
 	// Create database
@@ -140,18 +140,18 @@ func main() {
 
 	devEngine.Exec("SELECT cs_refresh_encrypt_config();")
 
-	// Query on unencrypted column: where clause
-	WhereQuery(devEngine)
+	// // Query on unencrypted column: where clause
+	// WhereQuery(devEngine)
 
-	// Query on encrypted column.
+	// // Query on encrypted column.
 
-	// // MATCH
-	MatchQueryLongString(devEngine)
+	// // // MATCH
+	// MatchQueryLongString(devEngine)
 
-	MatchQueryEmail(devEngine)
+	// MatchQueryEmail(devEngine)
 
 	// JSONB data query
-	JsonbData(devEngine)
+	JsonbQuery(devEngine)
 	// ORE
 
 	// Unique

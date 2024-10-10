@@ -21,7 +21,7 @@ DROP DOMAIN IF EXISTS cs_unique_index_v1;
 
 CREATE DOMAIN cs_match_index_v1 AS smallint[];
 CREATE DOMAIN cs_unique_index_v1 AS text;
-CREATE DOMAIN cs_stevec_v1 AS text[];
+CREATE DOMAIN cs_ste_vec_v1 AS text[];
 
 -- cs_encrypted_v1 is a column type and cannot be dropped if in use
 DO $$
@@ -131,25 +131,25 @@ BEGIN ATOMIC
 END;
 
 -- extracts json containment index from an encrypted column
-CREATE OR REPLACE FUNCTION cs_stevec_v1_v0_0(col jsonb)
-  RETURNS cs_stevec_v1
+CREATE OR REPLACE FUNCTION cs_ste_vec_v1_v0_0(col jsonb)
+  RETURNS cs_ste_vec_v1
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
-	SELECT ARRAY(SELECT jsonb_array_elements(col->'sv'))::cs_stevec_v1;
+	SELECT ARRAY(SELECT jsonb_array_elements(col->'sv'))::cs_ste_vec_v1;
 END;
 
-CREATE OR REPLACE FUNCTION cs_stevec_v1_v0(col jsonb)
-  RETURNS cs_stevec_v1
+CREATE OR REPLACE FUNCTION cs_ste_vec_v1_v0(col jsonb)
+  RETURNS cs_ste_vec_v1
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
-	RETURN cs_stevec_v1_v0_0(col);
+	RETURN cs_ste_vec_v1_v0_0(col);
 END;
 
-CREATE OR REPLACE FUNCTION cs_stevec_v1(col jsonb)
-  RETURNS cs_stevec_v1
+CREATE OR REPLACE FUNCTION cs_ste_vec_v1(col jsonb)
+  RETURNS cs_ste_vec_v1
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
-	RETURN cs_stevec_v1_v0_0(col);
+	RETURN cs_ste_vec_v1_v0_0(col);
 END;
 
 -- casts text to ore_64_8_v1_term (bytea)
