@@ -219,7 +219,8 @@ This is by design.
 
 The index is generated from a JSONB document by first flattening the structure of the document such that a hash can be generated for each unique path prefix to a node.
 
-The complete set of JSON types is supported by the indexer. Null values are ignored by the indexer.
+The complete set of JSON types is supported by the indexer. 
+Null values are ignored by the indexer.
 
 - Object `{ ... }`
 - Array `[ ... ]`
