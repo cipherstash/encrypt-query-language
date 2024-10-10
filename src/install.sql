@@ -1,473 +1,3 @@
---
--- PostgreSQL CipherStash Extension
---
-
---
--- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
---
-
--- CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
-
-
---
--- Name: ore_64_8_v1_term; Type: TYPE; Schema: public;
---
-
-CREATE TYPE public.ore_64_8_v1_term AS (
-	bytes bytea
-);
-
---
--- Name: ore_64_8_v1; Type: TYPE; Schema: public;
---
-
-CREATE TYPE public.ore_64_8_v1 AS (
-	terms public.ore_64_8_v1_term[]
-);
-
---
--- Name: compare_ore_64_8_v1(public.ore_64_8_v1, public.ore_64_8_v1); Type: FUNCTION; Schema: public;
---
-
-CREATE FUNCTION public.compare_ore_64_8_v1(a public.ore_64_8_v1, b public.ore_64_8_v1) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-  DECLARE
-    cmp_result integer;
-  BEGIN
-    -- Recursively compare blocks bailing as soon as we can make a decision
-    RETURN compare_ore_array(a.terms, b.terms);
-  END
-$$;
-
---
--- Name: compare_ore_64_8_v1_term(public.ore_64_8_v1_term, public.ore_64_8_v1_term); Type: FUNCTION; Schema: public;
---
-
-CREATE FUNCTION public.compare_ore_64_8_v1_term(a public.ore_64_8_v1_term, b public.ore_64_8_v1_term) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-  DECLARE
-    eq boolean := true;
-    unequal_block smallint := 0;
-    hash_key bytea;
-    target_block bytea;
-
-    left_block_size CONSTANT smallint := 16;
-    right_block_size CONSTANT smallint := 32;
-    right_offset CONSTANT smallint := 136; -- 8 * 17
-
-    indicator smallint := 0;
-  BEGIN
-    IF a IS NULL AND b IS NULL THEN
-      RETURN 0;
-    END IF;
-
-    IF a IS NULL THEN
-      RETURN -1;
-    END IF;
-
-    IF b IS NULL THEN
-      RETURN 1;
-    END IF;
-
-    IF bit_length(a.bytes) != bit_length(b.bytes) THEN
-      RAISE EXCEPTION 'Ciphertexts are different lengths';
-    END IF;
-
-    FOR block IN 0..7 LOOP
-      -- Compare each PRP (byte from the first 8 bytes) and PRF block (8 byte
-      -- chunks of the rest of the value).
-      -- NOTE:
-      -- * Substr is ordinally indexed (hence 1 and not 0, and 9 and not 8).
-      -- * We are not worrying about timing attacks here; don't fret about
-      --   the OR or !=.
-      IF
-        substr(a.bytes, 1 + block, 1) != substr(b.bytes, 1 + block, 1)
-        OR substr(a.bytes, 9 + left_block_size * block, left_block_size) != substr(b.bytes, 9 + left_block_size * BLOCK, left_block_size)
-      THEN
-        -- set the first unequal block we find
-        IF eq THEN
-          unequal_block := block;
-        END IF;
-        eq = false;
-      END IF;
-    END LOOP;
-
-    IF eq THEN
-      RETURN 0::integer;
-    END IF;
-
-    -- Hash key is the IV from the right CT of b
-    hash_key := substr(b.bytes, right_offset + 1, 16);
-
-    -- first right block is at right offset + nonce_size (ordinally indexed)
-    target_block := substr(b.bytes, right_offset + 17 + (unequal_block * right_block_size), right_block_size);
-
-    indicator := (
-      get_bit(
-        encrypt(
-          substr(a.bytes, 9 + (left_block_size * unequal_block), left_block_size),
-          hash_key,
-          'aes-ecb'
-        ),
-        0
-      ) + get_bit(target_block, get_byte(a.bytes, unequal_block))) % 2;
-
-    IF indicator = 1 THEN
-      RETURN 1::integer;
-    ELSE
-      RETURN -1::integer;
-    END IF;
-  END;
-$$;
-
-
---
--- Name: compare_ore_array(public.ore_64_8_v1_term[], public.ore_64_8_v1_term[]); Type: FUNCTION; Schema: public;
---
-
-CREATE FUNCTION public.compare_ore_array(a public.ore_64_8_v1_term[], b public.ore_64_8_v1_term[]) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-  DECLARE
-    cmp_result integer;
-  BEGIN
-    IF (array_length(a, 1) = 0 OR a IS NULL) AND (array_length(b, 1) = 0 OR b IS NULL) THEN
-      RETURN 0;
-    END IF;
-    IF array_length(a, 1) = 0 OR a IS NULL THEN
-      RETURN -1;
-    END IF;
-    IF array_length(b, 1) = 0 OR a IS NULL THEN
-      RETURN 1;
-    END IF;
-
-    cmp_result := compare_ore_64_8_v1_term(a[1], b[1]);
-    IF cmp_result = 0 THEN
-    -- Removes the first element in the array, and calls this fn again to compare the next element/s in the array.
-      RETURN compare_ore_array(a[2:array_length(a,1)], b[2:array_length(b,1)]);
-    END IF;
-
-    RETURN cmp_result;
-  END
-$$;
-
-
---
--- Name: ore_64_8_v1_eq(public.ore_64_8_v1, public.ore_64_8_v1); Type: FUNCTION; Schema: public;
---
-
-CREATE FUNCTION public.ore_64_8_v1_eq(a public.ore_64_8_v1, b public.ore_64_8_v1) RETURNS boolean
-    LANGUAGE sql
-    AS $$
-  SELECT compare_ore_64_8_v1(a, b) = 0
-$$;
-
-
---
--- Name: ore_64_8_v1_gt(public.ore_64_8_v1, public.ore_64_8_v1); Type: FUNCTION; Schema: public;
---
-
-CREATE FUNCTION public.ore_64_8_v1_gt(a public.ore_64_8_v1, b public.ore_64_8_v1) RETURNS boolean
-    LANGUAGE sql
-    AS $$
-  SELECT compare_ore_64_8_v1(a, b) = 1
-$$;
-
-
---
--- Name: ore_64_8_v1_gte(public.ore_64_8_v1, public.ore_64_8_v1); Type: FUNCTION; Schema: public;
---
-
-CREATE FUNCTION public.ore_64_8_v1_gte(a public.ore_64_8_v1, b public.ore_64_8_v1) RETURNS boolean
-    LANGUAGE sql
-    AS $$
-  SELECT compare_ore_64_8_v1(a, b) != -1
-$$;
-
-
---
--- Name: ore_64_8_v1_lt(public.ore_64_8_v1, public.ore_64_8_v1); Type: FUNCTION; Schema: public;
---
-
-CREATE FUNCTION public.ore_64_8_v1_lt(a public.ore_64_8_v1, b public.ore_64_8_v1) RETURNS boolean
-    LANGUAGE sql
-    AS $$
-  SELECT compare_ore_64_8_v1(a, b) = -1
-$$;
-
-
---
--- Name: ore_64_8_v1_lte(public.ore_64_8_v1, public.ore_64_8_v1); Type: FUNCTION; Schema: public;
---
-
-CREATE FUNCTION public.ore_64_8_v1_lte(a public.ore_64_8_v1, b public.ore_64_8_v1) RETURNS boolean
-    LANGUAGE sql
-    AS $$
-  SELECT compare_ore_64_8_v1(a, b) != 1
-$$;
-
-
---
--- Name: ore_64_8_v1_neq(public.ore_64_8_v1, public.ore_64_8_v1); Type: FUNCTION; Schema: public;
---
-
-CREATE FUNCTION public.ore_64_8_v1_neq(a public.ore_64_8_v1, b public.ore_64_8_v1) RETURNS boolean
-    LANGUAGE sql
-    AS $$
-  SELECT compare_ore_64_8_v1(a, b) <> 0
-$$;
-
-
---
--- Name: ore_64_8_v1_term_eq(public.ore_64_8_v1_term, public.ore_64_8_v1_term); Type: FUNCTION; Schema: public;
---
-
-CREATE FUNCTION public.ore_64_8_v1_term_eq(a public.ore_64_8_v1_term, b public.ore_64_8_v1_term) RETURNS boolean
-    LANGUAGE sql
-    AS $$
-  SELECT compare_ore_64_8_v1_term(a, b) = 0
-$$;
-
-
---
--- Name: ore_64_8_v1_term_gt(public.ore_64_8_v1_term, public.ore_64_8_v1_term); Type: FUNCTION; Schema: public;
---
-
-CREATE FUNCTION public.ore_64_8_v1_term_gt(a public.ore_64_8_v1_term, b public.ore_64_8_v1_term) RETURNS boolean
-    LANGUAGE sql
-    AS $$
-  SELECT compare_ore_64_8_v1_term(a, b) = 1
-$$;
-
-
---
--- Name: ore_64_8_v1_term_gte(public.ore_64_8_v1_term, public.ore_64_8_v1_term); Type: FUNCTION; Schema: public;
---
-
-CREATE FUNCTION public.ore_64_8_v1_term_gte(a public.ore_64_8_v1_term, b public.ore_64_8_v1_term) RETURNS boolean
-    LANGUAGE sql
-    AS $$
-  SELECT compare_ore_64_8_v1_term(a, b) != -1
-$$;
-
-
---
--- Name: ore_64_8_v1_term_lt(public.ore_64_8_v1_term, public.ore_64_8_v1_term); Type: FUNCTION; Schema: public;
---
-
-CREATE FUNCTION public.ore_64_8_v1_term_lt(a public.ore_64_8_v1_term, b public.ore_64_8_v1_term) RETURNS boolean
-    LANGUAGE sql
-    AS $$
-  SELECT compare_ore_64_8_v1_term(a, b) = -1
-$$;
-
-
---
--- Name: ore_64_8_v1_term_lte(public.ore_64_8_v1_term, public.ore_64_8_v1_term); Type: FUNCTION; Schema: public;
---
-
-CREATE FUNCTION public.ore_64_8_v1_term_lte(a public.ore_64_8_v1_term, b public.ore_64_8_v1_term) RETURNS boolean
-    LANGUAGE sql
-    AS $$
-  SELECT compare_ore_64_8_v1_term(a, b) != 1
-$$;
-
-
---
--- Name: ore_64_8_v1_term_neq(public.ore_64_8_v1_term, public.ore_64_8_v1_term); Type: FUNCTION; Schema: public;
---
-
-CREATE FUNCTION public.ore_64_8_v1_term_neq(a public.ore_64_8_v1_term, b public.ore_64_8_v1_term) RETURNS boolean
-    LANGUAGE sql
-    AS $$
-  SELECT compare_ore_64_8_v1_term(a, b) <> 0
-$$;
-
-
---
--- Name: <; Type: OPERATOR; Schema: public;
---
-
-CREATE OPERATOR public.< (
-    FUNCTION = public.ore_64_8_v1_term_lt,
-    LEFTARG = public.ore_64_8_v1_term,
-    RIGHTARG = public.ore_64_8_v1_term,
-    COMMUTATOR = OPERATOR(public.>),
-    NEGATOR = OPERATOR(public.>=),
-    RESTRICT = scalarltsel,
-    JOIN = scalarltjoinsel
-);
-
-
---
--- Name: <; Type: OPERATOR; Schema: public;
---
-
-CREATE OPERATOR public.< (
-    FUNCTION = public.ore_64_8_v1_lt,
-    LEFTARG = public.ore_64_8_v1,
-    RIGHTARG = public.ore_64_8_v1,
-    COMMUTATOR = OPERATOR(public.>),
-    NEGATOR = OPERATOR(public.>=),
-    RESTRICT = scalarltsel,
-    JOIN = scalarltjoinsel
-);
-
-
---
--- Name: <=; Type: OPERATOR; Schema: public;
---
-
-CREATE OPERATOR public.<= (
-    FUNCTION = public.ore_64_8_v1_term_lte,
-    LEFTARG = public.ore_64_8_v1_term,
-    RIGHTARG = public.ore_64_8_v1_term,
-    COMMUTATOR = OPERATOR(public.>=),
-    NEGATOR = OPERATOR(public.>),
-    RESTRICT = scalarlesel,
-    JOIN = scalarlejoinsel
-);
-
-
---
--- Name: <=; Type: OPERATOR; Schema: public;
---
-
-CREATE OPERATOR public.<= (
-    FUNCTION = public.ore_64_8_v1_lte,
-    LEFTARG = public.ore_64_8_v1,
-    RIGHTARG = public.ore_64_8_v1,
-    COMMUTATOR = OPERATOR(public.>=),
-    NEGATOR = OPERATOR(public.>),
-    RESTRICT = scalarlesel,
-    JOIN = scalarlejoinsel
-);
-
-
---
--- Name: <>; Type: OPERATOR; Schema: public;
---
-
-CREATE OPERATOR public.<> (
-    FUNCTION = public.ore_64_8_v1_term_neq,
-    LEFTARG = public.ore_64_8_v1_term,
-    RIGHTARG = public.ore_64_8_v1_term,
-    NEGATOR = OPERATOR(public.=),
-    MERGES,
-    HASHES,
-    RESTRICT = eqsel,
-    JOIN = eqjoinsel
-);
-
-
---
--- Name: <>; Type: OPERATOR; Schema: public;
---
-
-CREATE OPERATOR public.<> (
-    FUNCTION = public.ore_64_8_v1_neq,
-    LEFTARG = public.ore_64_8_v1,
-    RIGHTARG = public.ore_64_8_v1,
-    NEGATOR = OPERATOR(public.=),
-    MERGES,
-    HASHES,
-    RESTRICT = eqsel,
-    JOIN = eqjoinsel
-);
-
-
---
--- Name: =; Type: OPERATOR; Schema: public;
---
-
-CREATE OPERATOR public.= (
-    FUNCTION = public.ore_64_8_v1_term_eq,
-    LEFTARG = public.ore_64_8_v1_term,
-    RIGHTARG = public.ore_64_8_v1_term,
-    NEGATOR = OPERATOR(public.<>),
-    MERGES,
-    HASHES,
-    RESTRICT = eqsel,
-    JOIN = eqjoinsel
-);
-
-
---
--- Name: =; Type: OPERATOR; Schema: public;
---
-
-CREATE OPERATOR public.= (
-    FUNCTION = public.ore_64_8_v1_eq,
-    LEFTARG = public.ore_64_8_v1,
-    RIGHTARG = public.ore_64_8_v1,
-    NEGATOR = OPERATOR(public.<>),
-    MERGES,
-    HASHES,
-    RESTRICT = eqsel,
-    JOIN = eqjoinsel
-);
-
---
--- Name: >; Type: OPERATOR; Schema: public;
---
-
-CREATE OPERATOR public.> (
-    FUNCTION = public.ore_64_8_v1_term_gt,
-    LEFTARG = public.ore_64_8_v1_term,
-    RIGHTARG = public.ore_64_8_v1_term,
-    COMMUTATOR = OPERATOR(public.<),
-    NEGATOR = OPERATOR(public.<=),
-    RESTRICT = scalargtsel,
-    JOIN = scalargtjoinsel
-);
-
-
---
--- Name: >; Type: OPERATOR; Schema: public;
---
-
-CREATE OPERATOR public.> (
-    FUNCTION = public.ore_64_8_v1_gt,
-    LEFTARG = public.ore_64_8_v1,
-    RIGHTARG = public.ore_64_8_v1,
-    COMMUTATOR = OPERATOR(public.<),
-    NEGATOR = OPERATOR(public.<=),
-    RESTRICT = scalargtsel,
-    JOIN = scalargtjoinsel
-);
-
-
---
--- Name: >=; Type: OPERATOR; Schema: public;
---
-
-CREATE OPERATOR public.>= (
-    FUNCTION = public.ore_64_8_v1_term_gte,
-    LEFTARG = public.ore_64_8_v1_term,
-    RIGHTARG = public.ore_64_8_v1_term,
-    COMMUTATOR = OPERATOR(public.<=),
-    NEGATOR = OPERATOR(public.<),
-    RESTRICT = scalarlesel,
-    JOIN = scalarlejoinsel
-);
-
-
---
--- Name: >=; Type: OPERATOR; Schema: public;
---
-
-CREATE OPERATOR public.>= (
-    FUNCTION = public.ore_64_8_v1_gte,
-    LEFTARG = public.ore_64_8_v1,
-    RIGHTARG = public.ore_64_8_v1,
-    COMMUTATOR = OPERATOR(public.<=),
-    NEGATOR = OPERATOR(public.<),
-    RESTRICT = scalarlesel,
-    JOIN = scalarlejoinsel
-);
-
 DROP CAST IF EXISTS (text AS ore_64_8_v1_term);
 
 DROP FUNCTION IF EXISTS cs_match_v1;
@@ -489,12 +19,13 @@ DROP DOMAIN IF EXISTS cs_unique_index_v1;
 
 CREATE DOMAIN cs_match_index_v1 AS smallint[];
 CREATE DOMAIN cs_unique_index_v1 AS text;
+CREATE DOMAIN cs_ste_vec_v1 AS text[];
 
 -- cs_encrypted_v1 is a column type and cannot be dropped if in use
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'cs_encrypted_v1') THEN
-        CREATE DOMAIN cs_encrypted_v1 AS JSONB;
+      CREATE DOMAIN cs_encrypted_v1 AS JSONB;
 	  END IF;
 END
 $$;
@@ -504,8 +35,7 @@ CREATE FUNCTION _cs_encrypted_check_kind(val jsonb)
   RETURNS BOOLEAN
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
-    RETURN
-    (val->>'k' = 'ct' AND val ? 'c' AND NOT val ? 'p');
+  RETURN (val->>'k' = 'ct' AND val ? 'c') AND NOT val ? 'p';
 END;
 
 
@@ -590,6 +120,28 @@ BEGIN ATOMIC
 	RETURN cs_unique_v1_v0_0(col);
 END;
 
+-- extracts json containment index from an encrypted column
+CREATE OR REPLACE FUNCTION cs_ste_vec_v1_v0_0(col jsonb)
+  RETURNS cs_ste_vec_v1
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+BEGIN ATOMIC
+	SELECT ARRAY(SELECT jsonb_array_elements(col->'sv'))::cs_ste_vec_v1;
+END;
+
+CREATE OR REPLACE FUNCTION cs_ste_vec_v1_v0(col jsonb)
+  RETURNS cs_ste_vec_v1
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+BEGIN ATOMIC
+	RETURN cs_ste_vec_v1_v0_0(col);
+END;
+
+CREATE OR REPLACE FUNCTION cs_ste_vec_v1(col jsonb)
+  RETURNS cs_ste_vec_v1
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+BEGIN ATOMIC
+	RETURN cs_ste_vec_v1_v0_0(col);
+END;
+
 -- casts text to ore_64_8_v1_term (bytea)
 CREATE FUNCTION _cs_text_to_ore_64_8_v1_term_v1_0(t text)
   RETURNS ore_64_8_v1_term
@@ -671,14 +223,15 @@ CREATE FUNCTION _cs_config_check_indexes(val jsonb)
   RETURNS BOOLEAN
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
-	SELECT jsonb_object_keys(jsonb_path_query(val, '$.tables.*.*.indexes')) = ANY('{match_1, ore_1, ore_1_term, unique_1}');
+	SELECT jsonb_object_keys(jsonb_path_query(val, '$.tables.*.*.indexes')) = ANY('{match, ore, unique, json}');
 END;
+
 
 CREATE FUNCTION _cs_config_check_cast(val jsonb)
   RETURNS BOOLEAN
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
-  SELECT jsonb_array_elements_text(jsonb_path_query_array(val, '$.tables.*.*.cast_as')) = ANY('{text, int}');
+  SELECT jsonb_array_elements_text(jsonb_path_query_array(val, '$.tables.*.*.cast_as')) = ANY('{text, int, small_int, big_int, real, double, boolean, date, jsonb}');
 END;
 
 
@@ -689,7 +242,7 @@ ALTER DOMAIN cs_configuration_data_v1 DROP CONSTRAINT IF EXISTS cs_configuration
 
 ALTER DOMAIN cs_configuration_data_v1
   ADD CONSTRAINT cs_configuration_data_v1_check CHECK (
-    VALUE ?& array['s', 'tables'] AND
+    VALUE ?& array['v', 'tables'] AND
     VALUE->'tables' <> '{}'::jsonb AND
     _cs_config_check_cast(VALUE) AND
     _cs_config_check_indexes(VALUE)
@@ -733,6 +286,8 @@ DROP FUNCTION IF EXISTS cs_encrypt_v1();
 DROP FUNCTION IF EXISTS cs_activate_v1();
 DROP FUNCTION IF EXISTS cs_discard_v1();
 
+DROP FUNCTION IF EXISTS cs_refresh_encrypt_config();
+
 DROP FUNCTION IF EXISTS _cs_config_default();
 DROP FUNCTION IF EXISTS _cs_config_match_1_default();
 
@@ -748,7 +303,7 @@ CREATE FUNCTION _cs_config_default(config jsonb)
 AS $$
   BEGIN
     IF config IS NULL THEN
-      SELECT jsonb_build_object('s', 1, 'tables', '{}') INTO config;
+      SELECT jsonb_build_object('v', 1, 'tables', jsonb_build_object()) INTO config;
     END IF;
     RETURN config;
   END;
@@ -763,7 +318,7 @@ AS $$
     tbl jsonb;
   BEGIN
     IF NOT config #> array['tables'] ? table_name THEN
-      SELECT jsonb_build_object(table_name, '{}') into tbl;
+      SELECT jsonb_build_object(table_name, jsonb_build_object()) into tbl;
       SELECT jsonb_set(config, array['tables'], tbl) INTO config;
     END IF;
     RETURN config;
@@ -780,9 +335,8 @@ AS $$
     col jsonb;
   BEGIN
     IF NOT config #> array['tables', table_name] ? column_name THEN
-      SELECT jsonb_build_object(column_name,
-              jsonb_build_object('indexes', json_build_object())) into col;
-      SELECT jsonb_set(config, array['tables', table_name], col) INTO config;
+      SELECT jsonb_build_object('indexes', jsonb_build_object()) into col;
+      SELECT jsonb_set(config, array['tables', table_name, column_name], col) INTO config;
     END IF;
     RETURN config;
   END;
@@ -824,7 +378,7 @@ BEGIN ATOMIC
             'm', 2048,
             'include_original', true,
             'tokenizer', json_build_object('kind', 'ngram', 'token_length', 3),
-            'token_filters', json_build_object('kind', 'downcase'));
+            'token_filters', json_build_array(json_build_object('kind', 'downcase')));
 END;
 
 --
@@ -846,7 +400,7 @@ AS $$
       RAISE EXCEPTION '% index exists for column: % %', index_name, table_name, column_name;
     END IF;
 
-    IF NOT cast_as = ANY('{text, int}') THEN
+    IF NOT cast_as = ANY('{text, int, small_int, big_int, real, double, boolean, date, jsonb}') THEN
       RAISE EXCEPTION '% is not a valid cast type', cast_as;
     END IF;
 
@@ -952,9 +506,9 @@ CREATE FUNCTION cs_encrypt_v1()
   RETURNS boolean
 AS $$
 	BEGIN
-    IF NOT cs_ready_for_encryption_v1() THEN
-      RAISE EXCEPTION 'Some pending columns do not have an encrypted target';
-    END IF;
+    -- IF NOT cs_ready_for_encryption_v1() THEN
+    --   RAISE EXCEPTION 'Some pending columns do not have an encrypted target';
+    -- END IF;
 
 		IF NOT EXISTS (SELECT FROM cs_configuration_v1 c WHERE c.state = 'pending') THEN
 			RAISE EXCEPTION 'No pending configuration exists to encrypt';
@@ -1083,6 +637,13 @@ AS $$
 
   END;
 $$ LANGUAGE plpgsql;
+
+CREATE FUNCTION cs_refresh_encrypt_config()
+  RETURNS void
+LANGUAGE sql STRICT PARALLEL SAFE
+BEGIN ATOMIC
+  RETURN NULL;
+END;
 
 -- DROP and CREATE functions
 -- Function types cannot be changed after creation so we DROP for flexibility
