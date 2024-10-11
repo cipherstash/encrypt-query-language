@@ -9,7 +9,7 @@ services:
     ports:
       - ${PGPORT:-5432}:5432
     networks:
-      - my-network
+      - cipherstash_getting_started_nw
   proxy:
     container_name: cipherstash_getting_started_proxy
     image: cipherstash/cipherstash-proxy:latest
@@ -31,8 +31,8 @@ services:
       CS_DATABASE__HOST: cipherstash_getting_started_pg
       CS_STATEMENT_HANDLER: mylittleproxy
     networks:
-      - my-network
+      - cipherstash_getting_started_nw
 
 networks:
-  my-network:
+  cipherstash_getting_started_nw:
     driver: bridge
