@@ -43,3 +43,9 @@ CHECK(
     VALUE#>>'{i,t}' = 'examples' AND
     VALUE#>>'{i,c}' = 'encrypted_utf8_str'
 );
+
+CREATE DOMAIN examples__encrypted_jsonb AS cs_encrypted_v1
+CHECK(
+    VALUE#>>'{i,t}' = 'examples' AND
+    VALUE#>>'{i,c}' = 'encrypted_jsonb'
+);
