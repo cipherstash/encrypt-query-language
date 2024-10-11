@@ -11,7 +11,9 @@ import (
 	"xorm.io/xorm/names"
 )
 
-// To setup db, install types etc and run insert and query example:
+// To setup postgres:
+// Run: docker compose up
+// To run examples
 // Run: go run .
 
 // Create types for encrypted column
@@ -86,8 +88,7 @@ func convertToString(value any) (string, error) {
 	}
 }
 
-func main() {
-	// Create database
+func setupDb() {
 	connStr := "user=postgres password=postgres port=5432 host=localhost dbname=postgres sslmode=disable"
 	engine, err := xorm.NewEngine("pgx", connStr)
 
@@ -122,53 +123,78 @@ func main() {
 		fmt.Println("Database 'gotest' created successfully!")
 	}
 
-	// Connect to proxy
-	devConnStr := "user=postgres password=postgres port=6432 host=localhost dbname=gotest sslmode=disable"
-	devEngine, err := xorm.NewEngine("pgx", devConnStr)
+	engine.Close()
+}
+
+func createTable() {
+	connStr := "user=postgres password=postgres port=5432 host=localhost dbname=gotest sslmode=disable"
+	engine, err := xorm.NewEngine("pgx", connStr)
 
 	if err != nil {
-		log.Fatalf("Could not connect to the database: %v", err)
+		log.Fatalf("Could not connect to gotest database: %v", err)
 	}
 
 	// need to map from struct to postgres snake case lowercase
-	devEngine.SetMapper(names.SnakeMapper{})
-	devEngine.ShowSQL(true)
+	engine.SetMapper(names.SnakeMapper{})
+	engine.ShowSQL(true)
 
-	// Create table
-	err = devEngine.Sync2(new(Example))
+	err = engine.Sync(new(Example))
 	if err != nil {
 		log.Fatalf("Could not create examples table: %v", err)
 	}
 
+	fmt.Println("Examples table synced successfully!")
+	engine.Close()
+}
+
+func installEql() {
+	connStr := "user=postgres password=postgres port=5432 host=localhost dbname=gotest sslmode=disable"
+	// Install Eql, custom types, indexes and constraints
 	// To install our custom types we need to use the database/sql package due to an issue
 	// with how xorm interprets `?`.
 	// https://gitea.com/xorm/xorm/issues/2483
-	typesConn := "user=postgres password=postgres port=5432 host=localhost dbname=gotest sslmode=disable"
-	typesEngine, err := sql.Open("pgx", typesConn)
+	engine, err := sql.Open("pgx", connStr)
 	if err != nil {
 		log.Fatalf("Could not connect to the database: %v", err)
 	}
+	InstallEql(engine)
+	AddIndexes(engine)
+	AddConstraint(engine)
 
-	InstallEql(typesEngine)
-	AddIndexes(typesEngine)
-	AddConstraint(typesEngine)
+	// Refresh config with
+	engine.Exec("SELECT cs_refresh_encrypt_config();")
+	engine.Close()
 
-	devEngine.Exec("SELECT cs_refresh_encrypt_config();")
+}
 
+func main() {
+	// Recreate gotest db on each run
+	setupDb()
+
+	// Connect to go test directly and create table
+	createTable()
+
+	// Install EQL and add config
+	installEql()
+
+	// Connect to proxy
+	proxyConnStr := "user=postgres password=postgres port=6432 host=localhost dbname=gotest sslmode=disable"
+	proxyEngine, err := xorm.NewEngine("pgx", proxyConnStr)
+
+	if err != nil {
+		log.Fatalf("Could not connect to the database: %v", err)
+	}
 	// Query on unencrypted column: where clause
-	WhereQuery(devEngine)
+	WhereQuery(proxyEngine)
 
-	// Query on encrypted column.
-
+	// Query on encrypted columns.
 	// // MATCH
-	MatchQueryLongString(devEngine)
-
-	MatchQueryEmail(devEngine)
+	MatchQueryLongString(proxyEngine)
+	MatchQueryEmail(proxyEngine)
 
 	// JSONB data query
-	JsonbQuerySimple(devEngine)
-	JsonbQueryDeepNested(devEngine)
+	JsonbQuerySimple(proxyEngine)
+	JsonbQueryDeepNested(proxyEngine)
 	// ORE
-
 	// Unique
 }

@@ -1,0 +1,10 @@
+services:
+  postgres:
+    image: postgres:16.2-bookworm
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - ${PGPORT:-5432}:5432
+    volumes:
+      - ./init-db:/docker-entrypoint-initdb.d
