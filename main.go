@@ -12,7 +12,7 @@ import (
 )
 
 // To install types etc and run insert and query example:
-// Run: go run main.go migrations.go
+// Run: go run main.go migrations.go example_queries.go
 
 // Create types for encrypted column
 type TableColumn struct {
@@ -22,54 +22,61 @@ type TableColumn struct {
 
 type EncryptedColumn struct {
 	K string      `json:"k"`
-	P any         `json:"p"`
+	P string      `json:"p"`
 	I TableColumn `json:"i"`
 	V int         `json:"v"`
 }
 
 type Example struct {
-	Id            int64           `xorm:"pk autoincr"`
-	Text          string          `xorm:"varchar(100)"`
-	EncryptedText json.RawMessage `json:"encrypted_text" xorm:"jsonb 'encrypted_text'"`
-	// DecryptedText  string          `xorm:"-"` // This ignores the field and only uses it in memory for the struct. It does not create a field in the table.
-	EncryptedJsonb json.RawMessage `json:"encrypted_jsonb" xorm:"jsonb 'encrypted_jsonb'"`
+	Id             int64           `xorm:"pk autoincr"`
+	Text           string          `xorm:"varchar(100)"`
+	EncryptedText  EncryptedColumn `json:"encrypted_text" xorm:"jsonb 'encrypted_text'"`
+	EncryptedJsonb EncryptedColumn `json:"encrypted_jsonb" xorm:"jsonb 'encrypted_jsonb'"`
 }
 
 func (Example) TableName() string {
 	return "examples"
 }
 
-// func (e *Example) AfterSet(colName string, _ xorm.Cell) {
-// 	if colName == "encrypted_text" && len(e.EncryptedText) > 0 {
-
-// 		text, err := deserialize(e.EncryptedText)
-// 		if err == nil {
-// 			e.DecryptedText = text
-// 		}
-// 	}
-// }
-
-func serialize(value any, table string, column string) (json.RawMessage, error) {
-	data := EncryptedColumn{"pt", value, TableColumn{table, column}, 1}
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to serialize data: %v", err)
-	}
-
-	return json.RawMessage(jsonData), nil
+// database data to encrypted column
+func (ec *EncryptedColumn) FromDB(data []byte) error {
+	return json.Unmarshal(data, ec)
 }
 
-// func deserialize(data []byte) (string, error) {
-// 	var encryptedColumn EncryptedColumn
-// 	err := json.Unmarshal(data, &encryptedColumn)
+// encrypted column to database data
+func (ec *EncryptedColumn) ToDB() ([]byte, error) {
+	return json.Marshal(ec)
+}
 
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to serialize data: %v", err)
-// 	}
+func serialize(value any, table string, column string) EncryptedColumn {
+	str, err := convertToString(value)
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
 
-// 	return encryptedColumn.P, nil
-// }
+	data := EncryptedColumn{"pt", str, TableColumn{table, column}, 1}
+
+	return data
+}
+
+func convertToString(value any) (string, error) {
+	switch v := value.(type) {
+	case string:
+		return v, nil
+	case int:
+		return fmt.Sprintf("%d", v), nil
+	case float64:
+		return fmt.Sprintf("%f", v), nil
+	case map[string]interface{}:
+		jsonData, err := json.Marshal(v)
+		if err != nil {
+			return "", fmt.Errorf("error marshaling JSON: %v", err)
+		}
+		return string(jsonData), nil
+	default:
+		return "", fmt.Errorf("unsupported type: %T", v)
+	}
+}
 
 func main() {
 	// Create database
