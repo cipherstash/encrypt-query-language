@@ -19,28 +19,28 @@ DROP DOMAIN IF EXISTS cs_unique_index_v1;
 
 CREATE DOMAIN cs_match_index_v1 AS smallint[];
 CREATE DOMAIN cs_unique_index_v1 AS text;
+CREATE DOMAIN cs_ste_vec_index_v1 AS text[];
 
 -- cs_encrypted_v1 is a column type and cannot be dropped if in use
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'cs_encrypted_v1') THEN
-        CREATE DOMAIN cs_encrypted_v1 AS JSONB;
+      CREATE DOMAIN cs_encrypted_v1 AS JSONB;
 	  END IF;
 END
 $$;
 
-DROP FUNCTION IF EXISTS _cs_encrypted_check_kind(jsonb) CASCADE;
+DROP FUNCTION IF EXISTS _cs_encrypted_check_kind(jsonb);
 CREATE FUNCTION _cs_encrypted_check_kind(val jsonb)
   RETURNS BOOLEAN
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
-    RETURN
-    (val->>'k' = 'ct' AND val ? 'c' AND NOT val ? 'p');
+  RETURN (val->>'k' = 'ct' AND val ? 'c') AND NOT val ? 'p';
 END;
 
 
 -- drop and reset the check constraint
-ALTER DOMAIN cs_encrypted_v1 DROP CONSTRAINT IF EXISTS cs_encrypted_v1_check CASCADE;
+ALTER DOMAIN cs_encrypted_v1 DROP CONSTRAINT IF EXISTS cs_encrypted_v1_check;
 
 ALTER DOMAIN cs_encrypted_v1
   ADD CONSTRAINT cs_encrypted_v1_check CHECK (
@@ -120,6 +120,28 @@ BEGIN ATOMIC
 	RETURN cs_unique_v1_v0_0(col);
 END;
 
+-- extracts json ste_vec index from an encrypted column
+CREATE OR REPLACE FUNCTION cs_ste_vec_v1_v0_0(col jsonb)
+  RETURNS cs_ste_vec_index_v1
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+BEGIN ATOMIC
+	SELECT ARRAY(SELECT jsonb_array_elements(col->'sv'))::cs_ste_vec_index_v1;
+END;
+
+CREATE OR REPLACE FUNCTION cs_ste_vec_v1_v0(col jsonb)
+  RETURNS cs_ste_vec_index_v1
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+BEGIN ATOMIC
+	RETURN cs_ste_vec_v1_v0_0(col);
+END;
+
+CREATE OR REPLACE FUNCTION cs_ste_vec_v1(col jsonb)
+  RETURNS cs_ste_vec_index_v1
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+BEGIN ATOMIC
+	RETURN cs_ste_vec_v1_v0_0(col);
+END;
+
 -- casts text to ore_64_8_v1_term (bytea)
 CREATE FUNCTION _cs_text_to_ore_64_8_v1_term_v1_0(t text)
   RETURNS ore_64_8_v1_term
@@ -196,22 +218,20 @@ $$;
 --
 -- Function types cannot be changed after creation so we always DROP & CREATE for flexibility
 --
-DROP FUNCTION IF EXISTS _cs_config_check_indexes(val jsonb) CASCADE;
+DROP FUNCTION IF EXISTS _cs_config_check_indexes(text, text);
 
 CREATE FUNCTION _cs_config_check_indexes(val jsonb)
   RETURNS BOOLEAN
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
-	SELECT jsonb_object_keys(jsonb_path_query(val, '$.tables.*.*.indexes')) = ANY('{match_1, ore_1, ore_1_term, unique_1}');
+	SELECT jsonb_object_keys(jsonb_path_query(val, '$.tables.*.*.indexes')) = ANY('{match, ore, unique, ste_vec}');
 END;
-
-DROP FUNCTION IF EXISTS _cs_config_check_cast(val jsonb);
 
 CREATE FUNCTION _cs_config_check_cast(val jsonb)
   RETURNS BOOLEAN
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
-  SELECT jsonb_array_elements_text(jsonb_path_query_array(val, '$.tables.*.*.cast_as')) = ANY('{text, int}');
+  SELECT jsonb_array_elements_text(jsonb_path_query_array(val, '$.tables.*.*.cast_as')) = ANY('{text, int, small_int, big_int, real, double, boolean, date, jsonb}');
 END;
 
 
@@ -222,7 +242,7 @@ ALTER DOMAIN cs_configuration_data_v1 DROP CONSTRAINT IF EXISTS cs_configuration
 
 ALTER DOMAIN cs_configuration_data_v1
   ADD CONSTRAINT cs_configuration_data_v1_check CHECK (
-    VALUE ?& array['s', 'tables'] AND
+    VALUE ?& array['v', 'tables'] AND
     VALUE->'tables' <> '{}'::jsonb AND
     _cs_config_check_cast(VALUE) AND
     _cs_config_check_indexes(VALUE)
@@ -258,21 +278,23 @@ CREATE UNIQUE INDEX IF NOT EXISTS cs_configuration_v1_index_encrypting ON cs_con
 
 DROP FUNCTION IF EXISTS cs_add_column_v1(text, text);
 DROP FUNCTION IF EXISTS cs_remove_column_v1(text, text);
-DROP FUNCTION IF EXISTS cs_add_index_v1(table_name text, column_name text, index_name text, cast_as text, opts jsonb);
+DROP FUNCTION IF EXISTS cs_add_index_v1(text, text, text, jsonb);
 DROP FUNCTION IF EXISTS cs_remove_index_v1(text, text, text);
-DROP FUNCTION IF EXISTS cs_modify_index_v1(table_name text, column_name text, index_name text, cast_as text, opts jsonb);
+DROP FUNCTION IF EXISTS cs_modify_index_v1(text, text, text, jsonb);
 
 DROP FUNCTION IF EXISTS cs_encrypt_v1();
 DROP FUNCTION IF EXISTS cs_activate_v1();
 DROP FUNCTION IF EXISTS cs_discard_v1();
 
-DROP FUNCTION IF EXISTS _cs_config_default(config jsonb);
+DROP FUNCTION IF EXISTS cs_refresh_encrypt_config();
+
+DROP FUNCTION IF EXISTS _cs_config_default();
 DROP FUNCTION IF EXISTS _cs_config_match_1_default();
 
-DROP FUNCTION IF EXISTS _cs_config_add_table(table_name text, config jsonb);
-DROP FUNCTION IF EXISTS _cs_config_add_column(table_name text, column_name text, config jsonb);
-DROP FUNCTION IF EXISTS _cs_config_add_cast(table_name text, column_name text, cast_as text, config jsonb);
-DROP FUNCTION IF EXISTS _cs_config_add_index(table_name text, column_name text, index_name text, opts jsonb, config jsonb);
+DROP FUNCTION IF EXISTS _cs_config_add_table(text, json);
+DROP FUNCTION IF EXISTS _cs_config_add_column(text, text, json);
+DROP FUNCTION IF EXISTS _cs_config_add_cast(text, text, text, json);
+DROP FUNCTION IF EXISTS _cs_config_add_index(text, text, text, json, json);
 
 
 CREATE FUNCTION _cs_config_default(config jsonb)
@@ -281,7 +303,7 @@ CREATE FUNCTION _cs_config_default(config jsonb)
 AS $$
   BEGIN
     IF config IS NULL THEN
-      SELECT jsonb_build_object('s', 1, 'tables', '{}') INTO config;
+      SELECT jsonb_build_object('v', 1, 'tables', jsonb_build_object()) INTO config;
     END IF;
     RETURN config;
   END;
@@ -296,7 +318,7 @@ AS $$
     tbl jsonb;
   BEGIN
     IF NOT config #> array['tables'] ? table_name THEN
-      SELECT jsonb_build_object(table_name, '{}') into tbl;
+      SELECT jsonb_build_object(table_name, jsonb_build_object()) into tbl;
       SELECT jsonb_set(config, array['tables'], tbl) INTO config;
     END IF;
     RETURN config;
@@ -313,9 +335,8 @@ AS $$
     col jsonb;
   BEGIN
     IF NOT config #> array['tables', table_name] ? column_name THEN
-      SELECT jsonb_build_object(column_name,
-              jsonb_build_object('indexes', json_build_object())) into col;
-      SELECT jsonb_set(config, array['tables', table_name], col) INTO config;
+      SELECT jsonb_build_object('indexes', jsonb_build_object()) into col;
+      SELECT jsonb_set(config, array['tables', table_name, column_name], col) INTO config;
     END IF;
     RETURN config;
   END;
@@ -357,7 +378,7 @@ BEGIN ATOMIC
             'm', 2048,
             'include_original', true,
             'tokenizer', json_build_object('kind', 'ngram', 'token_length', 3),
-            'token_filters', json_build_object('kind', 'downcase'));
+            'token_filters', json_build_array(json_build_object('kind', 'downcase')));
 END;
 
 --
@@ -379,7 +400,7 @@ AS $$
       RAISE EXCEPTION '% index exists for column: % %', index_name, table_name, column_name;
     END IF;
 
-    IF NOT cast_as = ANY('{text, int}') THEN
+    IF NOT cast_as = ANY('{text, int, small_int, big_int, real, double, boolean, date, jsonb}') THEN
       RAISE EXCEPTION '% is not a valid cast type', cast_as;
     END IF;
 
@@ -485,9 +506,9 @@ CREATE FUNCTION cs_encrypt_v1()
   RETURNS boolean
 AS $$
 	BEGIN
-    IF NOT cs_ready_for_encryption_v1() THEN
-      RAISE EXCEPTION 'Some pending columns do not have an encrypted target';
-    END IF;
+    -- IF NOT cs_ready_for_encryption_v1() THEN
+    --   RAISE EXCEPTION 'Some pending columns do not have an encrypted target';
+    -- END IF;
 
 		IF NOT EXISTS (SELECT FROM cs_configuration_v1 c WHERE c.state = 'pending') THEN
 			RAISE EXCEPTION 'No pending configuration exists to encrypt';
@@ -617,10 +638,16 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+CREATE FUNCTION cs_refresh_encrypt_config()
+  RETURNS void
+LANGUAGE sql STRICT PARALLEL SAFE
+BEGIN ATOMIC
+  RETURN NULL;
+END;
+
 -- DROP and CREATE functions
 -- Function types cannot be changed after creation so we DROP for flexibility
 DROP FUNCTION IF EXISTS cs_select_pending_columns_v1;
-DROP FUNCTION IF EXISTS cs_ready_for_encryption_v1;
 DROP FUNCTION IF EXISTS cs_select_target_columns_v1;
 DROP FUNCTION IF EXISTS cs_count_encrypted_with_active_config_v1;
 DROP FUNCTION IF EXISTS cs_create_encrypted_columns_v1();
