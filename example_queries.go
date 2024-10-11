@@ -155,7 +155,7 @@ func JsonbQuery(engine *xorm.Engine) {
 		log.Fatalf("Error serializing: %v", secondSerializedString)
 	}
 
-	newExample := Example{Text: "a string!", EncryptedText: serializedString, EncryptedJsonb: serializedJsonb}
+	newExample := Example{Text: "this entry should be returned", EncryptedText: serializedString, EncryptedJsonb: serializedJsonb}
 	newExampleTwo := Example{Text: "a completely different string!", EncryptedText: secondSerializedString, EncryptedJsonb: secondSerializedJsonb}
 
 	_, errTwo := engine.Insert(&newExample)
@@ -182,8 +182,8 @@ func JsonbQuery(engine *xorm.Engine) {
 	if err != nil {
 		log.Fatalf("Error serializing JSON: %v", err)
 	}
-	fmt.Println("$$$$$ json string", string(jsonQueryData))
-	serializedJsonbQuery, serializeJsonbQueryErr := serialize(string(jsonQueryData), "examples", "encrypted_text")
+	fmt.Println("$$$$$ json string query", string(jsonQueryData))
+	serializedJsonbQuery, serializeJsonbQueryErr := serialize(string(jsonQueryData), "examples", "encrypted_jsonb")
 
 	if serializeJsonbQueryErr != nil {
 		log.Fatalf("Error serializing: %v", serializeJsonbQueryErr)

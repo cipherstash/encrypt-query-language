@@ -369,6 +369,8 @@ func AddConstraint(engine *sql.DB) {
 	if err != nil {
 		log.Fatalf("Failed to execute SQL query to add constraint: %v", err)
 	}
+
+	log.Println("constraints added")
 }
 
 func AddIndexes(engine *sql.DB) {
@@ -389,7 +391,7 @@ func AddIndexes(engine *sql.DB) {
 
 	_, err := engine.Exec(sql)
 	if err != nil {
-		log.Fatalf("Error dsl match: %v", err)
+		log.Fatalf("Error adding indexes: %v", err)
 	}
 
 	log.Println("config updated")
