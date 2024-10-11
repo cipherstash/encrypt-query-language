@@ -26,6 +26,7 @@ A variety of searchable encryption techniques are available, including:
 - **Matching** - Equality or partial matches
 - **Ordering** - comparison operations using order revealing encryption
 - **Uniqueness** - enforcing unique constraints
+- **Containment** - containment queries using structured encryption
 
 ### What is encryption in use?
 
