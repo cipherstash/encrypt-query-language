@@ -14,6 +14,7 @@ func InstallEql(engine *sql.DB) {
 
 }
 
+// These are our base custom types and functions for ore search.
 func installCsCustomTypes(engine *sql.DB) {
 	sqlBlock := `
 		CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -343,6 +344,7 @@ func installCsCustomTypes(engine *sql.DB) {
 	log.Println("Custom types installed!")
 }
 
+// Installing EQL
 func installDsl(engine *sql.DB) {
 	path := "./cipherstash-encrypt-dsl.sql"
 	sql, err := os.ReadFile(path)
@@ -356,6 +358,10 @@ func installDsl(engine *sql.DB) {
 	}
 }
 
+// We need to add constraints on any column that is encrypted.
+// This checks that all the required json fields are present, and that the data has been encrypted
+// by the proxy before inserting.
+// If this is not the case, then we will receive a postgres constraint violation.
 func AddConstraint(engine *sql.DB) {
 	sql := `
 	ALTER TABLE examples ADD CONSTRAINT encrypted_text_encrypted_check
@@ -373,6 +379,8 @@ func AddConstraint(engine *sql.DB) {
 	log.Println("constraints added")
 }
 
+// This adds the indexes for each column.
+// This configuration is needed to determine how the data is encrypted and how you can query
 func AddIndexes(engine *sql.DB) {
 	sql := `
 	  SELECT cs_add_index_v1('examples', 'encrypted_text', 'unique', 'text', '{"token_filters": [{"kind": "downcase"}]}');

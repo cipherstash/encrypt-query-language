@@ -11,10 +11,16 @@ import (
 	"xorm.io/xorm/names"
 )
 
-// To install types etc and run insert and query example:
-// Run: go run main.go migrations.go example_queries.go
+// To setup db, install types etc and run insert and query example:
+// Run: go run .
 
 // Create types for encrypted column
+//
+// EQL expects a json format that looks like this:
+// '{"k":"pt","p":"a string representation of the plaintext that is being encrypted","i":{"t":"table","c":"column"},"v":1}'
+//
+// Creating a go struct to represent this shape in an app.
+// Stored as jsonb in the db
 type TableColumn struct {
 	T string `json:"t"` // This maps T to t in the json
 	C string `json:"c"`
@@ -38,16 +44,18 @@ func (Example) TableName() string {
 	return "examples"
 }
 
-// database data to encrypted column
+// Using the conversion interface so EncryptedColumn structs are converted to json when being inserted
+// and converting back to EncryptedColumn when retrieved.
+
 func (ec *EncryptedColumn) FromDB(data []byte) error {
 	return json.Unmarshal(data, ec)
 }
 
-// encrypted column to database data
 func (ec *EncryptedColumn) ToDB() ([]byte, error) {
 	return json.Marshal(ec)
 }
 
+// Converts a plaintext value to a string and returns the EncryptedColumn struct to use to insert into the db.
 func serialize(value any, table string, column string) EncryptedColumn {
 	str, err := convertToString(value)
 	if err != nil {
@@ -158,7 +166,8 @@ func main() {
 	MatchQueryEmail(devEngine)
 
 	// JSONB data query
-	JsonbQuery(devEngine)
+	JsonbQuerySimple(devEngine)
+	JsonbQueryDeepNested(devEngine)
 	// ORE
 
 	// Unique

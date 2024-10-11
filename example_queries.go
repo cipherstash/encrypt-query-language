@@ -125,7 +125,7 @@ func MatchQueryEmail(engine *xorm.Engine) {
 	}
 }
 
-func JsonbQuery(engine *xorm.Engine) {
+func JsonbQuerySimple(engine *xorm.Engine) {
 	fmt.Println("Query on jsonb field")
 	fmt.Println("")
 	// Insert
@@ -176,6 +176,73 @@ func JsonbQuery(engine *xorm.Engine) {
 		fmt.Println("")
 	} else {
 		fmt.Println("Example two not found")
+	}
+
+}
+
+func JsonbQueryDeepNested(engine *xorm.Engine) {
+	fmt.Println("Query on deep nested jsonb field")
+	fmt.Println("")
+	// Insert
+	var example Example
+
+	// Insert 2 examples
+	serializedString := serialize("this entry should be returned for deep nested query", "examples", "encrypted_text")
+	secondSerializedString := serialize("the quick brown fox etc", "examples", "encrypted_text")
+
+	// Json with some nesting
+	nestedJson := map[string]any{
+		"key_one": map[string]any{
+			"nested_one": []any{"hello"},
+			"nested_two": map[string]any{
+				"nested_three": "world",
+			},
+		},
+	}
+	serializedJsonb := serialize(nestedJson, "examples", "encrypted_jsonb")
+
+	secondSerializedJsonb := serialize(generateJsonbData("blah", "boo", "bah"), "examples", "encrypted_jsonb")
+
+	newExample := Example{Text: "this entry should be returned for deep nested query", EncryptedText: serializedString, EncryptedJsonb: serializedJsonb}
+	newExampleTwo := Example{Text: "the quick brown fox etc", EncryptedText: secondSerializedString, EncryptedJsonb: secondSerializedJsonb}
+
+	_, errTwo := engine.Insert(&newExample)
+	if errTwo != nil {
+		log.Fatalf("Could not insert jsonb example: %v", errTwo)
+	}
+	fmt.Printf("Example jsonb inserted!: %+v\n", newExample)
+
+	_, errThree := engine.Insert(&newExampleTwo)
+	if errThree != nil {
+		log.Fatalf("Could not insert jsonb example two: %v", errThree)
+	}
+	fmt.Printf("Example two jsonb inserted!: %+v\n", newExample)
+
+	query := map[string]any{
+		"key_one": map[string]any{
+			"nested_two": map[string]any{
+				"nested_three": "world",
+			},
+		},
+	}
+
+	serializedJsonbQuery := serialize(query, "examples", "encrypted_jsonb")
+
+	jsonQueryData, err := json.Marshal(serializedJsonbQuery)
+	if err != nil {
+		log.Fatalf("Could not insert jsonb example two: %v", err)
+	}
+
+	has, err := engine.Where("cs_ste_vec_v1(encrypted_jsonb) @> cs_ste_vec_v1(?)", jsonQueryData).Get(&example)
+	if err != nil {
+		log.Fatalf("Could not retrieve jsonb example: %v", err)
+	}
+	if has {
+		fmt.Println("Example jsonb query retrieved:", example)
+		fmt.Println("")
+		fmt.Println("")
+	} else {
+		fmt.Println("Example not found")
 	}
 
 }
