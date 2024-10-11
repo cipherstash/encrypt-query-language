@@ -140,15 +140,15 @@ func main() {
 
 	devEngine.Exec("SELECT cs_refresh_encrypt_config();")
 
-	// // Query on unencrypted column: where clause
-	// WhereQuery(devEngine)
+	// Query on unencrypted column: where clause
+	WhereQuery(devEngine)
 
-	// // Query on encrypted column.
+	// Query on encrypted column.
 
-	// // // MATCH
-	// MatchQueryLongString(devEngine)
+	// // MATCH
+	MatchQueryLongString(devEngine)
 
-	// MatchQueryEmail(devEngine)
+	MatchQueryEmail(devEngine)
 
 	// JSONB data query
 	JsonbQuery(devEngine)
