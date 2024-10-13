@@ -17,11 +17,11 @@ func WhereQuery(engine *xorm.Engine) {
 	fmt.Println("")
 	fmt.Println("")
 
-	serializedEmail := serialize("test@test.com", "examples", "encrypted_text")
+	// serializedEmail := serialize("test@test.com", "examples", "encrypted_text")
 
-	serializedJsonb := serialize(generateJsonbData("birds and spiders", "fountain", "tree"), "examples", "encrypted_jsonb")
+	// serializedJsonb := serialize(generateJsonbData("birds and spiders", "fountain", "tree"), "examples", "encrypted_jsonb")
 
-	newExample := Example{Text: "test@test.com", EncryptedText: serializedEmail, EncryptedJsonb: serializedJsonb}
+	newExample := Example{NonEncryptedField: "sydney", EncryptedText: "test@test.com", EncryptedJsonb: generateJsonbData("birds and spiders", "fountain", "tree")}
 
 	_, err := engine.Insert(&newExample)
 	if err != nil {
@@ -33,9 +33,9 @@ func WhereQuery(engine *xorm.Engine) {
 
 	// Query
 	var example Example
-	text := "test@test.com"
+	text := "sydney"
 
-	has, err := engine.Where("text = ?", text).Get(&example)
+	has, err := engine.Where("non_encrypted_field = ?", text).Get(&example)
 	if err != nil {
 		log.Fatalf("Could not retrieve example: %v", err)
 	}
@@ -55,11 +55,7 @@ func MatchQueryLongString(engine *xorm.Engine) {
 	fmt.Println("")
 	var example Example
 
-	serializedString := serialize("this is a long string", "examples", "encrypted_text")
-
-	serializedJsonb := serialize(generateJsonbData("bird", "fountain", "tree"), "examples", "encrypted_jsonb")
-
-	newExample := Example{Text: "this is a long string", EncryptedText: serializedString, EncryptedJsonb: serializedJsonb}
+	newExample := Example{NonEncryptedField: "sydney", EncryptedText: "this is a long string", EncryptedJsonb: generateJsonbData("bird", "fountain", "tree")}
 
 	_, err := engine.Insert(&newExample)
 	if err != nil {
@@ -93,11 +89,7 @@ func MatchQueryEmail(engine *xorm.Engine) {
 	fmt.Println("")
 	var ExampleTwo Example
 
-	serializedEmail := serialize("testing@testcom", "examples", "encrypted_text")
-
-	serializedJsonb := serialize(generateJsonbData("bird", "fountain", "tree"), "examples", "encrypted_jsonb")
-
-	newExampleTwo := Example{Text: "testing@test.com", EncryptedText: serializedEmail, EncryptedJsonb: serializedJsonb}
+	newExampleTwo := Example{NonEncryptedField: "sydney", EncryptedText: "testing@testcom", EncryptedJsonb: generateJsonbData("bird", "fountain", "tree")}
 
 	_, errTwo := engine.Insert(&newExampleTwo)
 	if errTwo != nil {
@@ -128,18 +120,12 @@ func MatchQueryEmail(engine *xorm.Engine) {
 func JsonbQuerySimple(engine *xorm.Engine) {
 	fmt.Println("Query on jsonb field")
 	fmt.Println("")
-	// Insert
+
 	var example Example
 
 	// Insert 2 examples
-	serializedString := serialize("a string!", "examples", "encrypted_text")
-	serializedJsonb := serialize(generateJsonbData("first", "second", "third"), "examples", "encrypted_jsonb")
-
-	secondSerializedString := serialize("a completely different string!", "examples", "encrypted_text")
-	secondSerializedJsonb := serialize(generateJsonbData("blah", "boo", "bah"), "examples", "encrypted_jsonb")
-
-	newExample := Example{Text: "this entry should be returned", EncryptedText: serializedString, EncryptedJsonb: serializedJsonb}
-	newExampleTwo := Example{Text: "a completely different string!", EncryptedText: secondSerializedString, EncryptedJsonb: secondSerializedJsonb}
+	newExample := Example{NonEncryptedField: "sydney", EncryptedText: "this entry should be returned", EncryptedJsonb: generateJsonbData("first", "second", "third")}
+	newExampleTwo := Example{NonEncryptedField: "melbourne", EncryptedText: "a completely different string!", EncryptedJsonb: generateJsonbData("blah", "boo", "bah")}
 
 	_, errTwo := engine.Insert(&newExample)
 	if errTwo != nil {
@@ -183,12 +169,9 @@ func JsonbQuerySimple(engine *xorm.Engine) {
 func JsonbQueryDeepNested(engine *xorm.Engine) {
 	fmt.Println("Query on deep nested jsonb field")
 	fmt.Println("")
-	// Insert
 	var example Example
 
 	// Insert 2 examples
-	serializedString := serialize("this entry should be returned for deep nested query", "examples", "encrypted_text")
-	secondSerializedString := serialize("the quick brown fox etc", "examples", "encrypted_text")
 
 	// Json with some nesting
 	nestedJson := map[string]any{
@@ -199,12 +182,9 @@ func JsonbQueryDeepNested(engine *xorm.Engine) {
 			},
 		},
 	}
-	serializedJsonb := serialize(nestedJson, "examples", "encrypted_jsonb")
 
-	secondSerializedJsonb := serialize(generateJsonbData("blah", "boo", "bah"), "examples", "encrypted_jsonb")
-
-	newExample := Example{Text: "this entry should be returned for deep nested query", EncryptedText: serializedString, EncryptedJsonb: serializedJsonb}
-	newExampleTwo := Example{Text: "the quick brown fox etc", EncryptedText: secondSerializedString, EncryptedJsonb: secondSerializedJsonb}
+	newExample := Example{NonEncryptedField: "sydney", EncryptedText: "this entry should be returned for deep nested query", EncryptedJsonb: nestedJson}
+	newExampleTwo := Example{NonEncryptedField: "melbourne", EncryptedText: "the quick brown fox etc", EncryptedJsonb: generateJsonbData("blah", "boo", "bah")}
 
 	_, errTwo := engine.Insert(&newExample)
 	if errTwo != nil {
