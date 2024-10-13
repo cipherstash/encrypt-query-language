@@ -21,8 +21,7 @@ import (
 // EQL expects a json format that looks like this:
 // '{"k":"pt","p":"a string representation of the plaintext that is being encrypted","i":{"t":"table","c":"column"},"v":1}'
 //
-// Creating a go struct to represent this shape in an app.
-// Stored as jsonb in the db
+// Creating a go struct to represent this shape to use for serialization.
 type TableColumn struct {
 	T string `json:"t"` // This maps T to t in the json
 	C string `json:"c"`
@@ -35,26 +34,71 @@ type EncryptedColumn struct {
 	V int         `json:"v"`
 }
 
+// Creating custom types for encrypted fields
+// This way we can use the conversion interface to convert from the type used in the app, to
+// the underlying jsonb shape that EQL expects
+// '{"k":"pt","p":"a string representation of the plaintext that is being encrypted","i":{"t":"table","c":"column"},"v":1}'
+// And then be able to convert back from the EQL jsonb shape back to the expected type to be used in the Go app.
+type EncryptedText string
+type EncryptedJsonb map[string]interface{}
+
 type Example struct {
-	Id             int64           `xorm:"pk autoincr"`
-	Text           string          `xorm:"varchar(100)"`
-	EncryptedText  EncryptedColumn `json:"encrypted_text" xorm:"jsonb 'encrypted_text'"`
-	EncryptedJsonb EncryptedColumn `json:"encrypted_jsonb" xorm:"jsonb 'encrypted_jsonb'"`
+	Id                int64          `xorm:"pk autoincr"`
+	NonEncryptedField string         `xorm:"varchar(100)"`
+	EncryptedText     EncryptedText  `json:"encrypted_text" xorm:"jsonb 'encrypted_text'"`
+	EncryptedJsonb    EncryptedJsonb `json:"encrypted_jsonb" xorm:"jsonb 'encrypted_jsonb'"`
 }
 
 func (Example) TableName() string {
 	return "examples"
 }
 
-// Using the conversion interface so EncryptedColumn structs are converted to json when being inserted
-// and converting back to EncryptedColumn when retrieved.
+// Using the conversion interface so Encrypted* structs are converted to json when being inserted
+// and converting back to the original type when retrieved.
 
-func (ec *EncryptedColumn) FromDB(data []byte) error {
-	return json.Unmarshal(data, ec)
+// encrypted text conversion
+func (et *EncryptedText) FromDB(data []byte) error {
+	var jsonData map[string]interface{}
+	if err := json.Unmarshal(data, &jsonData); err != nil {
+		return err
+	}
+	fmt.Println("json data", jsonData)
+	if pValue, ok := jsonData["p"].(string); ok {
+		*et = EncryptedText(pValue)
+		return nil
+	}
+
+	return fmt.Errorf("invalid format: missing 'p' field in JSONB")
 }
 
-func (ec *EncryptedColumn) ToDB() ([]byte, error) {
-	return json.Marshal(ec)
+func (et EncryptedText) ToDB() ([]byte, error) {
+	val := serialize(string(et), "examples", "encrypted_text")
+	return json.Marshal(val)
+}
+
+// Encrypted jsonb conversion
+func (ej *EncryptedJsonb) FromDB(data []byte) error {
+	var jsonData map[string]interface{}
+	if err := json.Unmarshal(data, &jsonData); err != nil {
+		return err
+	}
+
+	if pValue, ok := jsonData["p"].(string); ok {
+		var pData map[string]interface{}
+		if err := json.Unmarshal([]byte(pValue), &pData); err != nil {
+			return fmt.Errorf("error unmarshaling 'p' JSON string: %v", err)
+		}
+
+		*ej = EncryptedJsonb(pData)
+		return nil
+	}
+
+	return fmt.Errorf("invalid format: missing 'p' field in JSONB")
+}
+
+func (ej EncryptedJsonb) ToDB() ([]byte, error) {
+	val := serialize(map[string]any(ej), "examples", "encrypted_jsonb")
+	return json.Marshal(val)
 }
 
 // Converts a plaintext value to a string and returns the EncryptedColumn struct to use to insert into the db.
@@ -77,7 +121,7 @@ func convertToString(value any) (string, error) {
 		return fmt.Sprintf("%d", v), nil
 	case float64:
 		return fmt.Sprintf("%f", v), nil
-	case map[string]interface{}:
+	case map[string]any:
 		jsonData, err := json.Marshal(v)
 		if err != nil {
 			return "", fmt.Errorf("error marshaling JSON: %v", err)
@@ -188,7 +232,7 @@ func main() {
 	WhereQuery(proxyEngine)
 
 	// Query on encrypted columns.
-	// // MATCH
+	// MATCH
 	MatchQueryLongString(proxyEngine)
 	MatchQueryEmail(proxyEngine)
 
