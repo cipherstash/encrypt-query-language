@@ -229,6 +229,8 @@ EQL provides specialized functions to interact with encrypted data:
 - **`cs_unique_v1(val JSONB)`**: Retrieves the unique index for enforcing uniqueness.
 - **`cs_ore_v1(val JSONB)`**: Retrieves the Order-Revealing Encryption index for range queries.
 - **`cs_ste_vec_v1(val JSONB)`**: Retrieves the Structured Encryption Vector for containment queries.
+- **`cs_rich_jsonb_v1(val JSONB)`**: Retrieves the encryptyed materialised JSONB index for rich JSONB queries.
+
 
 ### Index functions
 
@@ -320,13 +322,13 @@ An ste_vec index on a encrypted JSONB column enables the use of PostgreSQL's `@>
 
 An ste_vec index requires one piece of configuration: the `prefix` (a string) which is functionally similar to a salt for the hashing process.
 
-Within a dataset, encrypted columns indexed using an ste_vec that use different prefixes can never compare as equal. 
-Containment queries that manage to mix index terms from multiple columns will never return a positive result. 
+Within a dataset, encrypted columns indexed using an ste_vec that use different prefixes can never compare as equal.
+Containment queries that manage to mix index terms from multiple columns will never return a positive result.
 This is by design.
 
 The index is generated from a JSONB document by first flattening the structure of the document such that a hash can be generated for each unique path prefix to a node.
 
-The complete set of JSON types is supported by the indexer. 
+The complete set of JSON types is supported by the indexer.
 Null values are ignored by the indexer.
 
 - Object `{ ... }`
@@ -373,7 +375,7 @@ Using the first entry to illustrate how an entry is converted to hashes:
 
 The hashes would be generated for all prefixes of the full path to the leaf node.
 
-```json
+```rust
 [
   [Obj],
   [Obj, Key("account")],
@@ -396,7 +398,7 @@ The expression `cs_ste_vec_v1(encrypted_account) @> cs_ste_vec_v1($query)` would
 
 When reduced to a prefix list, it would look like this:
 
-```json
+```rust
 [
   [Obj],
   [Obj, Key("account")],
@@ -410,6 +412,62 @@ When reduced to a prefix list, it would look like this:
 ```
 
 Which is then turned into an ste_vec of hashes which can be directly queries against the index.
+
+##### rich_jsonb opts
+
+A rich_jsonb index supports a richer set of JSONB functions and operators than an ste_vec index.
+
+Leaf nodes of the indexed JSONB document are also stored inline in the index which means that subsets of the document (down to individual fields and array elements) can be selected and returned to the client, avoiding the need for the client application to fetch the entire JSONB document.
+
+###### Supported functions & operators
+
+`cs_binop_v1(jsonb, '->', integer)`
+
+Extracts n'th element of JSON array (array elements are indexed from zero, but negative integers count from the end).
+
+`cs_binop_v1(jsonb, '->', text)`
+
+Extracts JSON object field with the given key.
+
+`cs_binop_v1(jsonb, '->>', integer)`
+
+Extracts n'th element of JSON array, as text.
+
+`cs_binop_v1(jsonb, '->>', text)`
+
+Extracts JSON object field with the given key, as text.
+
+`cs_binop_v1(jsonb, '<', jsonb)`
+
+Returns `true` if left jsonb is less than right jsonb, else `false`.
+
+Left jsonb and right jsonb must be materialised values with an associated ORE index.
+
+`cs_binop_v1(jsonb, '>', jsonb)`
+
+Returns `true` if left jsonb is greater than right jsonb, else `false`.
+
+Left jsonb and right jsonb must be values with an associated ORE index.
+
+`cs_binop_v1(jsonb, '<=', jsonb)`
+
+Returns `true` if left jsonb is less than or equal right jsonb, else `false`.
+
+Left jsonb and right jsonb must be values with an associated ORE index.
+
+`cs_binop_v1(jsonb, '>=', jsonb)`
+
+Returns `true` if left jsonb is greater than or equal to right jsonb, else `false`.
+
+Left jsonb and right jsonb must be values with an associated ORE index.
+
+`cs_jsonb_array_elements_v1(jsonb)` → setof jsonb
+
+Expands the top-level JSON array into a set of JSON values.
+
+`cs_jsonb_array_elements_text_v1(jsonb)` → setof text
+
+Expands the top-level JSON array into a set of text values.
 
 #### cs_modify_index
 
