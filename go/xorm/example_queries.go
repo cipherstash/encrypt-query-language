@@ -323,10 +323,9 @@ func OreBoolQuery(engine *xorm.Engine) {
 	fmt.Println("Example2 inserted!", example2)
 	fmt.Println("Example3 inserted!", example3)
 
+	// Query
 	serializedOreBoolQuery := serialize(false, "examples", "encrypted_bool")
 	query, _ := json.Marshal(serializedOreBoolQuery)
-
-	// Query
 
 	// var example Example
 	var allExamples []Example
@@ -336,6 +335,44 @@ func OreBoolQuery(engine *xorm.Engine) {
 	}
 
 	fmt.Println("Example ore range query retrieved:", allExamples)
+	fmt.Println("")
+	fmt.Println("")
+}
+
+func UniqueStringQuery(engine *xorm.Engine) {
+	fmt.Println("Unique string query")
+	fmt.Println("")
+
+	example1 := Example{EncryptedBool: false, NonEncryptedField: "", EncryptedInt: 23, EncryptedText: "test one", EncryptedJsonb: generateJsonbData("blah", "boo", "bah")}
+	example2 := Example{EncryptedBool: true, NonEncryptedField: "expected result unique string query", EncryptedInt: 23, EncryptedText: "test two", EncryptedJsonb: generateJsonbData("blah", "boo", "bah")}
+	example3 := Example{EncryptedBool: false, NonEncryptedField: "", EncryptedInt: 23, EncryptedText: "test three", EncryptedJsonb: generateJsonbData("blah", "boo", "bah")}
+
+	_, errExample1 := engine.Insert(&example1)
+	if errExample1 != nil {
+		log.Fatalf("Could not insert example: %v", errExample1)
+	}
+	_, errExample2 := engine.Insert(&example2)
+	if errExample2 != nil {
+		log.Fatalf("Could not insert example: %v", errExample2)
+	}
+	_, errExample3 := engine.Insert(&example3)
+	if errExample3 != nil {
+		log.Fatalf("Could not insert example: %v", errExample3)
+	}
+	fmt.Println("Example1 inserted!", example1)
+	fmt.Println("Example2 inserted!", example2)
+	fmt.Println("Example3 inserted!", example3)
+
+	var allExamples []Example
+	serializedStringQuery := serialize("test two", "examples", "encrypted_text")
+
+	query, _ := json.Marshal(serializedStringQuery)
+	queryErr := engine.Where("cs_unique_v1(encrypted_text) = cs_unique_v1($1)", query).Find(&allExamples)
+	if queryErr != nil {
+		log.Fatalf("Could not retrieve unique example: %v", queryErr)
+	}
+
+	fmt.Println("Example unique query retrieved:", allExamples)
 	fmt.Println("")
 	fmt.Println("")
 }
