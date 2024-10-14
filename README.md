@@ -355,7 +355,7 @@ For a document like this:
 
 Hashes would be produced from the following list of entries:
 
-```json
+```js
 [
   [Obj, Key("account"), Obj, Key("email"), String("alice@example.com")],
   [Obj, Key("account"), Obj, Key("name"), Obj, Key("first_name"), String("Alice")],
@@ -367,13 +367,13 @@ Hashes would be produced from the following list of entries:
 
 Using the first entry to illustrate how an entry is converted to hashes:
 
-```json
+```js
 [Obj, Key("account"), Obj, Key("email"), String("alice@example.com")]
 ```
 
 The hashes would be generated for all prefixes of the full path to the leaf node.
 
-```json
+```js
 [
   [Obj],
   [Obj, Key("account")],
