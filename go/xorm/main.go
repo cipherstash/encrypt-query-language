@@ -117,11 +117,6 @@ func (ei *EncryptedInt) FromDB(data []byte) error {
 		return err
 	}
 
-	fmt.Println("json data", jsonData)
-	fmt.Println("p value", jsonData["p"])
-	// p value is returned as a string
-	fmt.Printf("p value type: %T\n", jsonData["p"])
-
 	if pValue, ok := jsonData["p"].(string); ok {
 		parsedValue, err := strconv.Atoi(pValue) // Convert string to int
 		if err != nil {
@@ -145,10 +140,6 @@ func (eb *EncryptedBool) FromDB(data []byte) error {
 	if err := json.Unmarshal(data, &jsonData); err != nil {
 		return err
 	}
-
-	fmt.Println("json data", jsonData)
-	fmt.Println("p value", jsonData["p"])
-	fmt.Printf("p bool value type: %T\n", jsonData["p"])
 
 	if pValue, ok := jsonData["p"].(string); ok {
 		parsedValue, err := strconv.ParseBool(pValue)
@@ -316,10 +307,11 @@ func main() {
 	OreIntRangeQuery(proxyEngine)
 	// Bool
 	OreBoolQuery(proxyEngine)
-	// Date
+	// Date - todo
 
 	// UNIQUE
 	// String
+	UniqueStringQuery(proxyEngine)
 	// Int
 	// Bool
 
