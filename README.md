@@ -318,9 +318,11 @@ In general, therefore, you should try to ensure that the string you search for i
 
 An ste_vec index on a encrypted JSONB column enables the use of PostgreSQL's `@>` and `<@` [containment operators](https://www.postgresql.org/docs/16/functions-json.html#FUNCTIONS-JSONB-OP-TABLE).
 
-An ste_vec index requires one piece of configuration: the `prefix` (a string) which is functionally similar to a salt for the hashing process.
+An ste_vec index requires one piece of configuration: the `context` (a string) which is passed as an info string to a MAC (Message Authenticated Code).
+This ensures that all of the encrypted values are unique to that context.
+It is generally recommended to use the table and column name as a the context (e.g. `users/name`).
 
-Within a dataset, encrypted columns indexed using an ste_vec that use different prefixes can never compare as equal. 
+Within a dataset, encrypted columns indexed using an `ste_vec` that use different contexts cannot be compared. 
 Containment queries that manage to mix index terms from multiple columns will never return a positive result. 
 This is by design.
 
