@@ -222,17 +222,94 @@ CREATE TABLE users (
 
 ### EQL functions
 
-EQL provides specialized functions to interact with encrypted data:
+EQL provides specialized functions to interact with encrypted data.
+These Functions expect an encrypted domain type (which is effectively just JSONB).
 
 - **`cs_ciphertext_v1(val JSONB)`**: Extracts the ciphertext for decryption by CipherStash Proxy.
 - **`cs_match_v1(val JSONB)`**: Enables basic full-text search.
 - **`cs_unique_v1(val JSONB)`**: Retrieves the unique index for enforcing uniqueness.
 - **`cs_ore_v1(val JSONB)`**: Retrieves the Order-Revealing Encryption index for range queries.
-- **`cs_ste_vec_v1(val JSONB)`**: Retrieves the Structured Encryption Vector for containment queries.
+
+
+#### `cs_ste_vec_v1(val JSONB)`
+
+Retrieves the Structured Encryption Vector for containment queries.
+
+**Example:**
+
+```rb
+# Serialize a JSONB value bound to the users table column
+term = User::ENCRYPTED_JSONB.serialize({field: "value"})
+User.where("cs_ste_vec_v1(attrs) @> cs_ste_vec_v1(?)", term)
+```
+
+Which will execute on the server as:
+
+```sql
+SELECT * FROM users WHERE cs_ste_vec_v1(attrs) @> '53T8dtvW4HhofDp9BJnUkw';
+```
+
+And is the EQL equivalent of the following plaintext query.
+
+```sql
+SELECT * FROM users WHERE attrs @> '{"field": "value"}`;
+```
+
+#### `cs_ste_term_v1(val JSONB, epath TEXT)`
+
+Retrieves the encrypted index term associated with the encrypted JSON path, `epath`.
+
+This is useful for sorting or filtering on integers in encrypted JSON objects.
+
+**Example:**
+
+```rb
+# Serialize a JSONB value bound to the users table column
+path = EJSON_PATH.serialize("$.login_count")
+term = User::ENCRYPTED_INT.serialize(100)
+User.where("cs_ste_term_v1(attrs, ?) > cs_ore_64_8_v1(?)", path, term)
+```
+
+Which will execute on the server as:
+
+```sql
+SELECT * FROM users WHERE cs_ste_term_v1(attrs, 'DQ1rbhWJXmmqi/+niUG6qw') > 'QAJ3HezijfTHaKrhdKxUEg';
+```
+
+And is the EQL equivalent of the following plaintext query.
+
+```sql
+SELECT * FROM users WHERE attrs->'login_count' > 10; 
+```
+
+#### `cs_ste_value_v1(val JSONB, epath TEXT)`
+
+Retrieves the encrypted *value* associated with the encrypted JSON path, `epath`.
+
+**Example:**
+
+```rb
+# Serialize a JSONB value bound to the users table column
+path = EJSON_PATH.serialize("$.login_count")
+User.find_by_sql(["SELECT cs_ste_value_v1(attrs, ?) FROM users", path])
+```
+
+Which will execute on the server as:
+
+```sql
+SELECT cs_ste_value_v1(attrs, 'DQ1rbhWJXmmqi/+niUG6qw') FROM users;
+```
+
+And is the EQL equivalent of the following plaintext query.
+
+```sql
+SELECT attrs->'login_count' FROM users; 
+```
+
 
 ### Index functions
 
-These Functions expect a `jsonb` value that conforms to the storage schema.
+These functions expect a `jsonb` value that conforms to the storage schema.
 
 #### cs_add_index
 
@@ -242,22 +319,22 @@ cs_add_index(table_name text, column_name text, index_name text, cast_as text, o
 
 | Parameter     | Description                                        | Notes
 | ------------- | -------------------------------------------------- | ------------------------------------
-| table_name    | Name of target table                               | Required
-| column_name   | Name of target column                              | Required
-| index_name    | The index kind                                     | Required.
-| cast_as       | The PostgreSQL type decrypted data will be cast to | Optional. Defaults to `text`
-| opts          | Index options                                      | Optional for `match` indexes, required for `ste_vec` indexes (see below)
+| `table_name`    | Name of target table                               | Required
+| `column_name`   | Name of target column                              | Required
+| `index_name`    | The index kind                                     | Required.
+| `cast_as`       | The PostgreSQL type decrypted data will be cast to | Optional. Defaults to `text`
+| `opts`          | Index options                                      | Optional for `match` indexes, required for `ste_vec` indexes (see below)
 
 ##### cast_as
 
 Supported types:
-  - text
-  - int
-  - small_int
-  - big_int
-  - boolean
-  - date
-  - jsonb
+  - `text`
+  - `int`
+  - `small_int`
+  - `big_int`
+  - `boolean`
+  - `date`
+  - `jsonb`
 
 ##### match opts
 
