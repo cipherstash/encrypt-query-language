@@ -21,7 +21,7 @@ func WhereQuery(engine *xorm.Engine) {
 
 	// serializedJsonb := serialize(generateJsonbData("birds and spiders", "fountain", "tree"), "examples", "encrypted_jsonb")
 
-	newExample := Example{NonEncryptedField: "sydney", EncryptedText: "test@test.com", EncryptedJsonb: generateJsonbData("birds and spiders", "fountain", "tree")}
+	newExample := Example{NonEncryptedField: "sydney", EncryptedInt: 23, EncryptedText: "test@test.com", EncryptedJsonb: generateJsonbData("birds and spiders", "fountain", "tree")}
 
 	_, err := engine.Insert(&newExample)
 	if err != nil {
@@ -89,7 +89,7 @@ func MatchQueryEmail(engine *xorm.Engine) {
 	fmt.Println("")
 	var ExampleTwo Example
 
-	newExampleTwo := Example{NonEncryptedField: "sydney", EncryptedText: "testing@testcom", EncryptedJsonb: generateJsonbData("bird", "fountain", "tree")}
+	newExampleTwo := Example{NonEncryptedField: "sydney", EncryptedText: "somename@gmail.com", EncryptedJsonb: generateJsonbData("bird", "fountain", "tree")}
 
 	_, errTwo := engine.Insert(&newExampleTwo)
 	if errTwo != nil {
@@ -97,7 +97,7 @@ func MatchQueryEmail(engine *xorm.Engine) {
 	}
 	fmt.Printf("Example two inserted!: %+v\n", newExampleTwo)
 
-	serializedEmailQuery := serialize("test", "examples", "encrypted_text")
+	serializedEmailQuery := serialize("some", "examples", "encrypted_text")
 	query, err := json.Marshal(serializedEmailQuery)
 
 	if err != nil {
@@ -225,6 +225,119 @@ func JsonbQueryDeepNested(engine *xorm.Engine) {
 		fmt.Println("Example not found")
 	}
 
+}
+
+func OreStringRangeQuery(engine *xorm.Engine) {
+	fmt.Println("Ore String query")
+	fmt.Println("")
+
+	example1 := Example{NonEncryptedField: "expected result", EncryptedText: "whale", EncryptedJsonb: generateJsonbData("test_one", "test_two", "test_three")}
+	example2 := Example{NonEncryptedField: "", EncryptedText: "apple", EncryptedJsonb: generateJsonbData("blah", "boo", "bah")}
+
+	_, errExample1 := engine.Insert(&example1)
+	if errExample1 != nil {
+		log.Fatalf("Could not insert example: %v", errExample1)
+	}
+	_, errExample2 := engine.Insert(&example2)
+	if errExample2 != nil {
+		log.Fatalf("Could not insert example: %v", errExample2)
+	}
+	fmt.Println("Examples inserted!")
+
+	// Query
+	serializedOreStringQuery := serialize("tree", "examples", "encrypted_text")
+	jsonQueryData, _ := json.Marshal(serializedOreStringQuery)
+
+	var example Example
+
+	has, queryErr := engine.Where("cs_ore_64_8_v1(encrypted_text) > cs_ore_64_8_v1(?)", jsonQueryData).Get(&example)
+	if queryErr != nil {
+		log.Fatalf("Could not retrieve ore example: %v", queryErr)
+	}
+	if has {
+		fmt.Println("Example ore range query retrieved:", example)
+		fmt.Println("")
+		fmt.Println("")
+	} else {
+		fmt.Println("Example not found")
+	}
+}
+
+func OreIntRangeQuery(engine *xorm.Engine) {
+	fmt.Println("Ore Int query")
+	fmt.Println("")
+
+	example1 := Example{NonEncryptedField: "expected ore in range query", EncryptedInt: 42, EncryptedText: "some string", EncryptedJsonb: generateJsonbData("test_one", "test_two", "test_three")}
+	example2 := Example{NonEncryptedField: "", EncryptedInt: 23, EncryptedText: "another string", EncryptedJsonb: generateJsonbData("blah", "boo", "bah")}
+
+	_, errExample1 := engine.Insert(&example1)
+	if errExample1 != nil {
+		log.Fatalf("Could not insert example: %v", errExample1)
+	}
+	_, errExample2 := engine.Insert(&example2)
+	if errExample2 != nil {
+		log.Fatalf("Could not insert example: %v", errExample2)
+	}
+	fmt.Println("Examples inserted!", example1)
+	fmt.Println("Examples inserted!", example2)
+
+	serializedOreIntQuery := serialize(32, "examples", "encrypted_int")
+	query, _ := json.Marshal(serializedOreIntQuery)
+
+	// Query
+
+	// var example Example
+	var allExamples []Example
+	queryErr := engine.Where("cs_ore_64_8_v1(encrypted_int) > cs_ore_64_8_v1(?)", query).Find(&allExamples)
+	// has, queryErr := engine.Where("cs_ore_64_8_v1(encrypted_int) > cs_ore_64_8_v1(?)", query).Find(&allExamples)
+	if queryErr != nil {
+		log.Fatalf("Could not retrieve ore example: %v", queryErr)
+	}
+
+	fmt.Println("Example ore range query retrieved:", allExamples)
+	fmt.Println("")
+	fmt.Println("")
+}
+
+func OreBoolQuery(engine *xorm.Engine) {
+	fmt.Println("Ore bool query")
+	fmt.Println("")
+
+	example1 := Example{EncryptedBool: false, NonEncryptedField: "", EncryptedInt: 23, EncryptedText: "test_one", EncryptedJsonb: generateJsonbData("blah", "boo", "bah")}
+	example2 := Example{EncryptedBool: true, NonEncryptedField: "expected result ore bool query", EncryptedInt: 23, EncryptedText: "test_two", EncryptedJsonb: generateJsonbData("blah", "boo", "bah")}
+	example3 := Example{EncryptedBool: false, NonEncryptedField: "", EncryptedInt: 23, EncryptedText: "test_three", EncryptedJsonb: generateJsonbData("blah", "boo", "bah")}
+
+	_, errExample1 := engine.Insert(&example1)
+	if errExample1 != nil {
+		log.Fatalf("Could not insert example: %v", errExample1)
+	}
+	_, errExample2 := engine.Insert(&example2)
+	if errExample2 != nil {
+		log.Fatalf("Could not insert example: %v", errExample2)
+	}
+	_, errExample3 := engine.Insert(&example3)
+	if errExample3 != nil {
+		log.Fatalf("Could not insert example: %v", errExample3)
+	}
+	fmt.Println("Example1 inserted!", example1)
+	fmt.Println("Example2 inserted!", example2)
+	fmt.Println("Example3 inserted!", example3)
+
+	serializedOreBoolQuery := serialize(false, "examples", "encrypted_bool")
+	query, _ := json.Marshal(serializedOreBoolQuery)
+
+	// Query
+
+	// var example Example
+	var allExamples []Example
+	queryErr := engine.Where("cs_ore_64_8_v1(encrypted_bool) > cs_ore_64_8_v1(?)", query).Find(&allExamples)
+	if queryErr != nil {
+		log.Fatalf("Could not retrieve ore example: %v", queryErr)
+	}
+
+	fmt.Println("Example ore range query retrieved:", allExamples)
+	fmt.Println("")
+	fmt.Println("")
 }
 
 // For testing
