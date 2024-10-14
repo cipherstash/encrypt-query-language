@@ -424,7 +424,7 @@ AS $$
     SELECT _cs_config_add_cast(table_name, column_name, cast_as, _config) INTO _config;
 
     -- set default options for index if opts empty
-    IF index_name = 'match_1' AND opts = '{}' THEN
+    IF index_name = 'match' AND opts = '{}' THEN
       SELECT _cs_config_match_1_default() INTO opts;
     END IF;
 

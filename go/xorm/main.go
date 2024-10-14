@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 
 	_ "github.com/jackc/pgx/stdlib" // PostgreSQL driver
 	"xorm.io/xorm"
@@ -41,12 +42,19 @@ type EncryptedColumn struct {
 // And then be able to convert back from the EQL jsonb shape back to the expected type to be used in the Go app.
 type EncryptedText string
 type EncryptedJsonb map[string]interface{}
+type EncryptedInt int
+type EncryptedBool bool
+
+// type EncryptedDate time.Time
 
 type Example struct {
 	Id                int64          `xorm:"pk autoincr"`
 	NonEncryptedField string         `xorm:"varchar(100)"`
 	EncryptedText     EncryptedText  `json:"encrypted_text" xorm:"jsonb 'encrypted_text'"`
 	EncryptedJsonb    EncryptedJsonb `json:"encrypted_jsonb" xorm:"jsonb 'encrypted_jsonb'"`
+	EncryptedInt      EncryptedInt   `json:"encrypted_int" xorm:"jsonb 'encrypted_int'"`
+	EncryptedBool     EncryptedBool  `json:"encrypted_bool" xorm:"jsonb 'encrypted_bool'"`
+	// EncryptedDate     EncryptedDate  `json:"encrypted_date" xorm:"jsonb 'encrypted_date'"`
 }
 
 func (Example) TableName() string {
@@ -55,6 +63,7 @@ func (Example) TableName() string {
 
 // Using the conversion interface so Encrypted* structs are converted to json when being inserted
 // and converting back to the original type when retrieved.
+// TODO: move these out to a separate module
 
 // encrypted text conversion
 func (et *EncryptedText) FromDB(data []byte) error {
@@ -101,6 +110,64 @@ func (ej EncryptedJsonb) ToDB() ([]byte, error) {
 	return json.Marshal(val)
 }
 
+// encrypted int conversion
+func (ei *EncryptedInt) FromDB(data []byte) error {
+	var jsonData map[string]interface{}
+	if err := json.Unmarshal(data, &jsonData); err != nil {
+		return err
+	}
+
+	fmt.Println("json data", jsonData)
+	fmt.Println("p value", jsonData["p"])
+	// p value is returned as a string
+	fmt.Printf("p value type: %T\n", jsonData["p"])
+
+	if pValue, ok := jsonData["p"].(string); ok {
+		parsedValue, err := strconv.Atoi(pValue) // Convert string to int
+		if err != nil {
+			return fmt.Errorf("invalid number format in 'p' field: %v", err)
+		}
+		*ei = EncryptedInt(parsedValue)
+		return nil
+	}
+
+	return fmt.Errorf("invalid format: missing 'p' field")
+}
+
+func (ei EncryptedInt) ToDB() ([]byte, error) {
+	val := serialize(int(ei), "examples", "encrypted_int")
+	return json.Marshal(val)
+}
+
+// Encrypted bool converesion
+func (eb *EncryptedBool) FromDB(data []byte) error {
+	var jsonData map[string]interface{}
+	if err := json.Unmarshal(data, &jsonData); err != nil {
+		return err
+	}
+
+	fmt.Println("json data", jsonData)
+	fmt.Println("p value", jsonData["p"])
+	fmt.Printf("p bool value type: %T\n", jsonData["p"])
+
+	if pValue, ok := jsonData["p"].(string); ok {
+		parsedValue, err := strconv.ParseBool(pValue)
+		if err != nil {
+			return fmt.Errorf("invalid boolean format in 'p' field: %v", err)
+		}
+		*eb = EncryptedBool(parsedValue)
+		return nil
+	}
+
+	return fmt.Errorf("invalid format: missing 'p' field or unsupported type")
+}
+
+func (eb EncryptedBool) ToDB() ([]byte, error) {
+	val := serialize(bool(eb), "examples", "encrypted_bool")
+
+	return json.Marshal(val)
+}
+
 // Converts a plaintext value to a string and returns the EncryptedColumn struct to use to insert into the db.
 func serialize(value any, table string, column string) EncryptedColumn {
 	str, err := convertToString(value)
@@ -127,6 +194,8 @@ func convertToString(value any) (string, error) {
 			return "", fmt.Errorf("error marshaling JSON: %v", err)
 		}
 		return string(jsonData), nil
+	case bool:
+		return strconv.FormatBool(v), nil
 	default:
 		return "", fmt.Errorf("unsupported type: %T", v)
 	}
@@ -239,6 +308,19 @@ func main() {
 	// JSONB data query
 	JsonbQuerySimple(proxyEngine)
 	JsonbQueryDeepNested(proxyEngine)
+
 	// ORE
-	// Unique
+	// String
+	OreStringRangeQuery(proxyEngine)
+	// Int
+	OreIntRangeQuery(proxyEngine)
+	// Bool
+	OreBoolQuery(proxyEngine)
+	// Date
+
+	// UNIQUE
+	// String
+	// Int
+	// Bool
+
 }
