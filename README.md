@@ -398,7 +398,7 @@ The expression `cs_ste_vec_v1(encrypted_account) @> cs_ste_vec_v1($query)` would
 
 When reduced to a prefix list, it would look like this:
 
-```json
+```js
 [
   [Obj],
   [Obj, Key("account")],
