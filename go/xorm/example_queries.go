@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/encrypt-query-language/go/goeql"
 	"xorm.io/xorm"
 )
 
@@ -17,18 +18,13 @@ func WhereQuery(engine *xorm.Engine) {
 	fmt.Println("")
 	fmt.Println("")
 
-	// serializedEmail := serialize("test@test.com", "examples", "encrypted_text")
-
-	// serializedJsonb := serialize(generateJsonbData("birds and spiders", "fountain", "tree"), "examples", "encrypted_jsonb")
-
-	newExample := Example{NonEncryptedField: "sydney", EncryptedInt: 23, EncryptedText: "test@test.com", EncryptedJsonb: generateJsonbData("birds and spiders", "fountain", "tree")}
+	newExample := Example{NonEncryptedField: "sydney", EncryptedIntField: 23, EncryptedTextField: "test@test.com", EncryptedJsonbField: generateJsonbData("birds and spiders", "fountain", "tree")}
 
 	_, err := engine.Insert(&newExample)
 	if err != nil {
 		log.Fatalf("Could not insert new example: %v", err)
 	}
 	fmt.Println("Example inserted:", newExample)
-	fmt.Println("")
 	fmt.Println("")
 
 	// Query
@@ -49,28 +45,27 @@ func WhereQuery(engine *xorm.Engine) {
 	}
 }
 
-// Match query on encrypted column long string
+// // Match query on encrypted column long string
 func MatchQueryLongString(engine *xorm.Engine) {
 	fmt.Println("Match query on sentence")
 	fmt.Println("")
 	var example Example
 
-	newExample := Example{NonEncryptedField: "sydney", EncryptedText: "this is a long string", EncryptedJsonb: generateJsonbData("bird", "fountain", "tree")}
+	newExample := Example{NonEncryptedField: "sydney", EncryptedTextField: "this is a long string", EncryptedJsonbField: generateJsonbData("bird", "fountain", "tree")}
 
 	_, err := engine.Insert(&newExample)
 	if err != nil {
 		log.Fatalf("Could not insert new example: %v", err)
 	}
 	fmt.Printf("Example one inserted: %+v\n", newExample)
+	fmt.Println("")
 
-	serializedStringQuery := serialize("this", "examples", "encrypted_text")
-	query, err := json.Marshal(serializedStringQuery)
-
+	query, err := goeql.SerializeQuery("this", "examples", "encrypted_text_field")
 	if err != nil {
-		log.Fatalf("Error marshaling encrypted_text: %v", err)
+		log.Fatalf("Error marshaling encrypted_text_field: %v", err)
 	}
 
-	has, err := engine.Where("cs_match_v1(encrypted_text) @> cs_match_v1(?)", query).Get(&example)
+	has, err := engine.Where("cs_match_v1(encrypted_text_field) @> cs_match_v1(?)", query).Get(&example)
 	if err != nil {
 		log.Fatalf("Could not retrieve example: %v", err)
 	}
@@ -83,30 +78,29 @@ func MatchQueryLongString(engine *xorm.Engine) {
 	}
 }
 
-// Match equery on text
+// // Match equery on text
 func MatchQueryEmail(engine *xorm.Engine) {
 	fmt.Println("Match query on email")
 	fmt.Println("")
 	var ExampleTwo Example
 
-	newExampleTwo := Example{NonEncryptedField: "sydney", EncryptedText: "somename@gmail.com", EncryptedJsonb: generateJsonbData("bird", "fountain", "tree")}
+	newExampleTwo := Example{NonEncryptedField: "sydney", EncryptedTextField: "somename@gmail.com", EncryptedJsonbField: generateJsonbData("bird", "fountain", "tree")}
 
-	_, errTwo := engine.Insert(&newExampleTwo)
-	if errTwo != nil {
-		log.Fatalf("Could not insert new example: %v", errTwo)
+	_, err := engine.Insert(&newExampleTwo)
+	if err != nil {
+		log.Fatalf("Could not insert new example: %v", err)
 	}
 	fmt.Printf("Example two inserted!: %+v\n", newExampleTwo)
+	fmt.Println("")
 
-	serializedEmailQuery := serialize("some", "examples", "encrypted_text")
-	query, err := json.Marshal(serializedEmailQuery)
-
-	if err != nil {
-		log.Fatalf("Error marshaling encrypted_text: %v", err)
+	query, errTwo := goeql.SerializeQuery("some", "examples", "encrypted_text_field")
+	if errTwo != nil {
+		log.Fatalf("Error marshaling encrypted_text_field: %v", errTwo)
 	}
 
-	has, err := engine.Where("cs_match_v1(encrypted_text) @> cs_match_v1(?)", query).Get(&ExampleTwo)
-	if err != nil {
-		log.Fatalf("Could not retrieve exampleTwo: %v", err)
+	has, errThree := engine.Where("cs_match_v1(encrypted_text_field) @> cs_match_v1(?)", query).Get(&ExampleTwo)
+	if errThree != nil {
+		log.Fatalf("Could not retrieve exampleTwo: %v", errThree)
 	}
 	if has {
 		fmt.Println("Example match query retrieved:", ExampleTwo)
@@ -124,8 +118,8 @@ func JsonbQuerySimple(engine *xorm.Engine) {
 	var example Example
 
 	// Insert 2 examples
-	newExample := Example{NonEncryptedField: "sydney", EncryptedText: "this entry should be returned", EncryptedJsonb: generateJsonbData("first", "second", "third")}
-	newExampleTwo := Example{NonEncryptedField: "melbourne", EncryptedText: "a completely different string!", EncryptedJsonb: generateJsonbData("blah", "boo", "bah")}
+	newExample := Example{NonEncryptedField: "sydney", EncryptedTextField: "this entry should be returned", EncryptedJsonbField: generateJsonbData("first", "second", "third")}
+	newExampleTwo := Example{NonEncryptedField: "melbourne", EncryptedTextField: "a completely different string!", EncryptedJsonbField: generateJsonbData("foo", "boo", "bah")}
 
 	_, errTwo := engine.Insert(&newExample)
 	if errTwo != nil {
@@ -138,21 +132,21 @@ func JsonbQuerySimple(engine *xorm.Engine) {
 		log.Fatalf("Could not insert jsonb example two: %v", errThree)
 	}
 	fmt.Printf("Example two jsonb inserted!: %+v\n", newExample)
+	fmt.Println("")
 
 	// create a query
-	query := map[string]any{
+	jsonbQuery := map[string]any{
 		"top": map[string]any{
 			"nested": []any{"first"},
 		},
 	}
-	serializedJsonbQuery := serialize(query, "examples", "encrypted_jsonb")
 
-	jsonQueryData, err := json.Marshal(serializedJsonbQuery)
-	if err != nil {
-		log.Fatalf("Could not insert jsonb example two: %v", err)
+	query, errTwo := goeql.SerializeQuery(jsonbQuery, "examples", "encrypted_jsonb_field")
+	if errTwo != nil {
+		log.Fatalf("Error marshaling encrypted_jsonb_field: %v", errTwo)
 	}
 
-	has, err := engine.Where("cs_ste_vec_v1(encrypted_jsonb) @> cs_ste_vec_v1(?)", jsonQueryData).Get(&example)
+	has, err := engine.Where("cs_ste_vec_v1(encrypted_jsonb_field) @> cs_ste_vec_v1(?)", query).Get(&example)
 	if err != nil {
 		log.Fatalf("Could not retrieve jsonb example: %v", err)
 	}
@@ -183,8 +177,8 @@ func JsonbQueryDeepNested(engine *xorm.Engine) {
 		},
 	}
 
-	newExample := Example{NonEncryptedField: "sydney", EncryptedText: "this entry should be returned for deep nested query", EncryptedJsonb: nestedJson}
-	newExampleTwo := Example{NonEncryptedField: "melbourne", EncryptedText: "the quick brown fox etc", EncryptedJsonb: generateJsonbData("blah", "boo", "bah")}
+	newExample := Example{NonEncryptedField: "sydney", EncryptedTextField: "this entry should be returned for deep nested query", EncryptedJsonbField: nestedJson}
+	newExampleTwo := Example{NonEncryptedField: "melbourne", EncryptedTextField: "the quick brown fox etc", EncryptedJsonbField: generateJsonbData("foo", "boo", "bah")}
 
 	_, errTwo := engine.Insert(&newExample)
 	if errTwo != nil {
@@ -197,6 +191,7 @@ func JsonbQueryDeepNested(engine *xorm.Engine) {
 		log.Fatalf("Could not insert jsonb example two: %v", errThree)
 	}
 	fmt.Printf("Example two jsonb inserted!: %+v\n", newExample)
+	fmt.Println("")
 
 	query := map[string]any{
 		"key_one": map[string]any{
@@ -206,14 +201,12 @@ func JsonbQueryDeepNested(engine *xorm.Engine) {
 		},
 	}
 
-	serializedJsonbQuery := serialize(query, "examples", "encrypted_jsonb")
-
-	jsonQueryData, err := json.Marshal(serializedJsonbQuery)
-	if err != nil {
-		log.Fatalf("Could not insert jsonb example two: %v", err)
+	jsonbQuery, errQuery := goeql.SerializeQuery(query, "examples", "encrypted_jsonb_field")
+	if errQuery != nil {
+		log.Fatalf("err: %v", errQuery)
 	}
 
-	has, err := engine.Where("cs_ste_vec_v1(encrypted_jsonb) @> cs_ste_vec_v1(?)", jsonQueryData).Get(&example)
+	has, err := engine.Where("cs_ste_vec_v1(encrypted_jsonb_field) @> cs_ste_vec_v1(?)", jsonbQuery).Get(&example)
 	if err != nil {
 		log.Fatalf("Could not retrieve jsonb example: %v", err)
 	}
@@ -231,8 +224,8 @@ func OreStringRangeQuery(engine *xorm.Engine) {
 	fmt.Println("Ore String query")
 	fmt.Println("")
 
-	example1 := Example{NonEncryptedField: "expected result", EncryptedText: "whale", EncryptedJsonb: generateJsonbData("test_one", "test_two", "test_three")}
-	example2 := Example{NonEncryptedField: "", EncryptedText: "apple", EncryptedJsonb: generateJsonbData("blah", "boo", "bah")}
+	example1 := Example{NonEncryptedField: "expected result", EncryptedTextField: "whale", EncryptedJsonbField: generateJsonbData("test_one", "test_two", "test_three")}
+	example2 := Example{NonEncryptedField: "", EncryptedTextField: "apple", EncryptedJsonbField: generateJsonbData("foo", "boo", "bah")}
 
 	_, errExample1 := engine.Insert(&example1)
 	if errExample1 != nil {
@@ -245,12 +238,14 @@ func OreStringRangeQuery(engine *xorm.Engine) {
 	fmt.Println("Examples inserted!")
 
 	// Query
-	serializedOreStringQuery := serialize("tree", "examples", "encrypted_text")
-	jsonQueryData, _ := json.Marshal(serializedOreStringQuery)
+	query, errQuery := goeql.SerializeQuery("tree", "examples", "encrypted_text_field")
+	if errQuery != nil {
+		log.Fatalf("err: %v", errQuery)
+	}
 
 	var example Example
 
-	has, queryErr := engine.Where("cs_ore_64_8_v1(encrypted_text) > cs_ore_64_8_v1(?)", jsonQueryData).Get(&example)
+	has, queryErr := engine.Where("cs_ore_64_8_v1(encrypted_text_field) > cs_ore_64_8_v1(?)", query).Get(&example)
 	if queryErr != nil {
 		log.Fatalf("Could not retrieve ore example: %v", queryErr)
 	}
@@ -267,8 +262,8 @@ func OreIntRangeQuery(engine *xorm.Engine) {
 	fmt.Println("Ore Int query")
 	fmt.Println("")
 
-	example1 := Example{NonEncryptedField: "expected ore in range query", EncryptedInt: 42, EncryptedText: "some string", EncryptedJsonb: generateJsonbData("test_one", "test_two", "test_three")}
-	example2 := Example{NonEncryptedField: "", EncryptedInt: 23, EncryptedText: "another string", EncryptedJsonb: generateJsonbData("blah", "boo", "bah")}
+	example1 := Example{NonEncryptedField: "expected ore in range query", EncryptedIntField: 42, EncryptedTextField: "some string", EncryptedJsonbField: generateJsonbData("test_one", "test_two", "test_three")}
+	example2 := Example{NonEncryptedField: "", EncryptedIntField: 23, EncryptedTextField: "another string", EncryptedJsonbField: generateJsonbData("foo", "boo", "bah")}
 
 	_, errExample1 := engine.Insert(&example1)
 	if errExample1 != nil {
@@ -281,15 +276,18 @@ func OreIntRangeQuery(engine *xorm.Engine) {
 	fmt.Println("Examples inserted!", example1)
 	fmt.Println("Examples inserted!", example2)
 
-	serializedOreIntQuery := serialize(32, "examples", "encrypted_int")
+	serializedOreIntQuery, errQuery := goeql.SerializeQuery(32, "examples", "encrypted_int_field")
+	if errQuery != nil {
+		log.Fatalf("err: %v", errQuery)
+	}
 	query, _ := json.Marshal(serializedOreIntQuery)
 
 	// Query
 
 	// var example Example
 	var allExamples []Example
-	queryErr := engine.Where("cs_ore_64_8_v1(encrypted_int) > cs_ore_64_8_v1(?)", query).Find(&allExamples)
-	// has, queryErr := engine.Where("cs_ore_64_8_v1(encrypted_int) > cs_ore_64_8_v1(?)", query).Find(&allExamples)
+	queryErr := engine.Where("cs_ore_64_8_v1(encrypted_int_field) > cs_ore_64_8_v1(?)", query).Find(&allExamples)
+	// has, queryErr := engine.Where("cs_ore_64_8_v1(encrypted_int_field) > cs_ore_64_8_v1(?)", query).Find(&allExamples)
 	if queryErr != nil {
 		log.Fatalf("Could not retrieve ore example: %v", queryErr)
 	}
@@ -303,9 +301,9 @@ func OreBoolQuery(engine *xorm.Engine) {
 	fmt.Println("Ore bool query")
 	fmt.Println("")
 
-	example1 := Example{EncryptedBool: false, NonEncryptedField: "", EncryptedInt: 23, EncryptedText: "test_one", EncryptedJsonb: generateJsonbData("blah", "boo", "bah")}
-	example2 := Example{EncryptedBool: true, NonEncryptedField: "expected result ore bool query", EncryptedInt: 23, EncryptedText: "test_two", EncryptedJsonb: generateJsonbData("blah", "boo", "bah")}
-	example3 := Example{EncryptedBool: false, NonEncryptedField: "", EncryptedInt: 23, EncryptedText: "test_three", EncryptedJsonb: generateJsonbData("blah", "boo", "bah")}
+	example1 := Example{EncryptedBoolField: false, NonEncryptedField: "", EncryptedIntField: 23, EncryptedTextField: "test_one", EncryptedJsonbField: generateJsonbData("foo", "boo", "bah")}
+	example2 := Example{EncryptedBoolField: true, NonEncryptedField: "expected result ore bool query", EncryptedIntField: 23, EncryptedTextField: "test_two", EncryptedJsonbField: generateJsonbData("foo", "boo", "bah")}
+	example3 := Example{EncryptedBoolField: false, NonEncryptedField: "", EncryptedIntField: 23, EncryptedTextField: "test_three", EncryptedJsonbField: generateJsonbData("foo", "boo", "bah")}
 
 	_, errExample1 := engine.Insert(&example1)
 	if errExample1 != nil {
@@ -324,12 +322,14 @@ func OreBoolQuery(engine *xorm.Engine) {
 	fmt.Println("Example3 inserted!", example3)
 
 	// Query
-	serializedOreBoolQuery := serialize(false, "examples", "encrypted_bool")
-	query, _ := json.Marshal(serializedOreBoolQuery)
+	query, errQuery := goeql.SerializeQuery(false, "examples", "encrypted_bool_field")
+	if errQuery != nil {
+		log.Fatalf("err: %v", errQuery)
+	}
 
 	// var example Example
 	var allExamples []Example
-	queryErr := engine.Where("cs_ore_64_8_v1(encrypted_bool) > cs_ore_64_8_v1(?)", query).Find(&allExamples)
+	queryErr := engine.Where("cs_ore_64_8_v1(encrypted_bool_field) > cs_ore_64_8_v1(?)", query).Find(&allExamples)
 	if queryErr != nil {
 		log.Fatalf("Could not retrieve ore example: %v", queryErr)
 	}
@@ -343,9 +343,9 @@ func UniqueStringQuery(engine *xorm.Engine) {
 	fmt.Println("Unique string query")
 	fmt.Println("")
 
-	example1 := Example{EncryptedBool: false, NonEncryptedField: "", EncryptedInt: 23, EncryptedText: "test one", EncryptedJsonb: generateJsonbData("blah", "boo", "bah")}
-	example2 := Example{EncryptedBool: true, NonEncryptedField: "expected result unique string query", EncryptedInt: 23, EncryptedText: "test two", EncryptedJsonb: generateJsonbData("blah", "boo", "bah")}
-	example3 := Example{EncryptedBool: false, NonEncryptedField: "", EncryptedInt: 23, EncryptedText: "test three", EncryptedJsonb: generateJsonbData("blah", "boo", "bah")}
+	example1 := Example{EncryptedBoolField: false, NonEncryptedField: "", EncryptedIntField: 23, EncryptedTextField: "test one", EncryptedJsonbField: generateJsonbData("foo", "boo", "bah")}
+	example2 := Example{EncryptedBoolField: true, NonEncryptedField: "expected result unique string query", EncryptedIntField: 23, EncryptedTextField: "test two", EncryptedJsonbField: generateJsonbData("foo", "boo", "bah")}
+	example3 := Example{EncryptedBoolField: false, NonEncryptedField: "", EncryptedIntField: 23, EncryptedTextField: "test three", EncryptedJsonbField: generateJsonbData("foo", "boo", "bah")}
 
 	_, errExample1 := engine.Insert(&example1)
 	if errExample1 != nil {
@@ -364,10 +364,11 @@ func UniqueStringQuery(engine *xorm.Engine) {
 	fmt.Println("Example3 inserted!", example3)
 
 	var allExamples []Example
-	serializedStringQuery := serialize("test two", "examples", "encrypted_text")
-
-	query, _ := json.Marshal(serializedStringQuery)
-	queryErr := engine.Where("cs_unique_v1(encrypted_text) = cs_unique_v1($1)", query).Find(&allExamples)
+	query, errQuery := goeql.SerializeQuery("test two", "examples", "encrypted_text_field")
+	if errQuery != nil {
+		log.Fatalf("err: %v", errQuery)
+	}
+	queryErr := engine.Where("cs_unique_v1(encrypted_text_field) = cs_unique_v1($1)", query).Find(&allExamples)
 	if queryErr != nil {
 		log.Fatalf("Could not retrieve unique example: %v", queryErr)
 	}

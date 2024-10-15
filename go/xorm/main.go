@@ -2,10 +2,10 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log"
-	"strconv"
+
+	"github.com/encrypt-query-language/go/goeql" // imported using local path until published
 
 	_ "github.com/jackc/pgx/stdlib" // PostgreSQL driver
 	"xorm.io/xorm"
@@ -17,179 +17,115 @@ import (
 // To run examples
 // Run: go run .
 
-// Create types for encrypted column
-//
-// EQL expects a json format that looks like this:
-// '{"k":"pt","p":"a string representation of the plaintext that is being encrypted","i":{"t":"table","c":"column"},"v":1}'
-//
-// Creating a go struct to represent this shape to use for serialization.
-type TableColumn struct {
-	T string `json:"t"` // This maps T to t in the json
-	C string `json:"c"`
-}
+// Create a separate custom type for each field that is being encrypted, using the relevant go type.
+// This custom type can then be used to access the conversion interface to use toDB and fromDb.
+type EncryptedTextField string
+type EncryptedJsonbField map[string]interface{}
+type EncryptedIntField int
+type EncryptedBoolField bool
 
-type EncryptedColumn struct {
-	K string      `json:"k"`
-	P string      `json:"p"`
-	I TableColumn `json:"i"`
-	V int         `json:"v"`
-}
-
-// Creating custom types for encrypted fields
-// This way we can use the conversion interface to convert from the type used in the app, to
-// the underlying jsonb shape that EQL expects
-// '{"k":"pt","p":"a string representation of the plaintext that is being encrypted","i":{"t":"table","c":"column"},"v":1}'
-// And then be able to convert back from the EQL jsonb shape back to the expected type to be used in the Go app.
-type EncryptedText string
-type EncryptedJsonb map[string]interface{}
-type EncryptedInt int
-type EncryptedBool bool
-
-// type EncryptedDate time.Time
-
+// 2. Add to struct
 type Example struct {
-	Id                int64          `xorm:"pk autoincr"`
-	NonEncryptedField string         `xorm:"varchar(100)"`
-	EncryptedText     EncryptedText  `json:"encrypted_text" xorm:"jsonb 'encrypted_text'"`
-	EncryptedJsonb    EncryptedJsonb `json:"encrypted_jsonb" xorm:"jsonb 'encrypted_jsonb'"`
-	EncryptedInt      EncryptedInt   `json:"encrypted_int" xorm:"jsonb 'encrypted_int'"`
-	EncryptedBool     EncryptedBool  `json:"encrypted_bool" xorm:"jsonb 'encrypted_bool'"`
-	// EncryptedDate     EncryptedDate  `json:"encrypted_date" xorm:"jsonb 'encrypted_date'"`
+	Id                  int64               `xorm:"pk autoincr"`
+	NonEncryptedField   string              `xorm:"varchar(100)"`
+	EncryptedTextField  EncryptedTextField  `json:"encrypted_text_field" xorm:"jsonb 'encrypted_text_field'"`
+	EncryptedJsonbField EncryptedJsonbField `json:"encrypted_jsonb_field" xorm:"jsonb 'encrypted_jsonb_field'"`
+	EncryptedIntField   EncryptedIntField   `json:"encrypted_int_field" xorm:"jsonb 'encrypted_int_field'"`
+	EncryptedBoolField  EncryptedBoolField  `json:"encrypted_bool_field" xorm:"jsonb 'encrypted_bool_field'"`
 }
 
 func (Example) TableName() string {
 	return "examples"
 }
 
-// Using the conversion interface so Encrypted* structs are converted to json when being inserted
-// and converting back to the original type when retrieved.
-// TODO: move these out to a separate module
+// Use the conversion interface for a custom type.
+// Use goeql serialization/deserialization to convert data to json expected by CipherStash proxy, and convert
+// back to the original field type.
+//
+// When serializing, the table and column for that field needs to be passed.
+// So the json configuration has the correct table and column when passed to the proxy.
+//
+// This setup means that for each field that needs to be encrypted:
+// - a separate custom type needs to be created
+// eg `type EncryptedTextFieldOne string`
+//    `type EncryptedTextFieldTwo string`
+//
+// - ToDB and FromDB needs to be implemented for each custom type.
 
-// encrypted text conversion
-func (et *EncryptedText) FromDB(data []byte) error {
-	var jsonData map[string]interface{}
-	if err := json.Unmarshal(data, &jsonData); err != nil {
-		return err
-	}
-	fmt.Println("json data", jsonData)
-	if pValue, ok := jsonData["p"].(string); ok {
-		*et = EncryptedText(pValue)
-		return nil
-	}
-
-	return fmt.Errorf("invalid format: missing 'p' field in JSONB")
+// encrypted text field conversion
+func (et EncryptedTextField) ToDB() ([]byte, error) {
+	etCs := goeql.EncryptedText(et)
+	return (&etCs).Serialize("examples", "encrypted_text_field")
 }
 
-func (et EncryptedText) ToDB() ([]byte, error) {
-	val := serialize(string(et), "examples", "encrypted_text")
-	return json.Marshal(val)
-}
+func (et *EncryptedTextField) FromDB(data []byte) error {
+	etCs := goeql.EncryptedText(*et)
 
-// Encrypted jsonb conversion
-func (ej *EncryptedJsonb) FromDB(data []byte) error {
-	var jsonData map[string]interface{}
-	if err := json.Unmarshal(data, &jsonData); err != nil {
+	val, err := (&etCs).Deserialize(data)
+	if err != nil {
 		return err
 	}
 
-	if pValue, ok := jsonData["p"].(string); ok {
-		var pData map[string]interface{}
-		if err := json.Unmarshal([]byte(pValue), &pData); err != nil {
-			return fmt.Errorf("error unmarshaling 'p' JSON string: %v", err)
-		}
+	*et = EncryptedTextField(val)
 
-		*ej = EncryptedJsonb(pData)
-		return nil
-	}
-
-	return fmt.Errorf("invalid format: missing 'p' field in JSONB")
+	return nil
 }
 
-func (ej EncryptedJsonb) ToDB() ([]byte, error) {
-	val := serialize(map[string]any(ej), "examples", "encrypted_jsonb")
-	return json.Marshal(val)
+// Encrypted jsonb field conversion
+func (ej EncryptedJsonbField) ToDB() ([]byte, error) {
+	ejCs := goeql.EncryptedJsonb(ej)
+	return (&ejCs).Serialize("examples", "encrypted_jsonb_field")
 }
 
-// encrypted int conversion
-func (ei *EncryptedInt) FromDB(data []byte) error {
-	var jsonData map[string]interface{}
-	if err := json.Unmarshal(data, &jsonData); err != nil {
+func (ej *EncryptedJsonbField) FromDB(data []byte) error {
+	etCs := goeql.EncryptedJsonb(*ej)
+
+	val, err := (&etCs).Deserialize(data)
+	if err != nil {
 		return err
 	}
 
-	if pValue, ok := jsonData["p"].(string); ok {
-		parsedValue, err := strconv.Atoi(pValue) // Convert string to int
-		if err != nil {
-			return fmt.Errorf("invalid number format in 'p' field: %v", err)
-		}
-		*ei = EncryptedInt(parsedValue)
-		return nil
-	}
+	*ej = EncryptedJsonbField(val)
 
-	return fmt.Errorf("invalid format: missing 'p' field")
+	return nil
 }
 
-func (ei EncryptedInt) ToDB() ([]byte, error) {
-	val := serialize(int(ei), "examples", "encrypted_int")
-	return json.Marshal(val)
+// encrypted int field conversion
+func (ei EncryptedIntField) ToDB() ([]byte, error) {
+	eiCs := goeql.EncryptedInt(ei)
+	return (&eiCs).Serialize("examples", "encrypted_int_field")
+}
+
+func (ei *EncryptedIntField) FromDB(data []byte) error {
+	eiCs := goeql.EncryptedInt(*ei)
+
+	val, err := (&eiCs).Deserialize(data)
+	if err != nil {
+		return err
+	}
+
+	*ei = EncryptedIntField(val)
+
+	return nil
 }
 
 // Encrypted bool converesion
-func (eb *EncryptedBool) FromDB(data []byte) error {
-	var jsonData map[string]interface{}
-	if err := json.Unmarshal(data, &jsonData); err != nil {
+func (eb EncryptedBoolField) ToDB() ([]byte, error) {
+	ebCs := goeql.EncryptedBool(eb)
+	return (&ebCs).Serialize("examples", "encrypted_bool_field")
+}
+
+func (eb *EncryptedBoolField) FromDB(data []byte) error {
+	ebCs := goeql.EncryptedBool(*eb)
+
+	val, err := (&ebCs).Deserialize(data)
+	if err != nil {
 		return err
 	}
 
-	if pValue, ok := jsonData["p"].(string); ok {
-		parsedValue, err := strconv.ParseBool(pValue)
-		if err != nil {
-			return fmt.Errorf("invalid boolean format in 'p' field: %v", err)
-		}
-		*eb = EncryptedBool(parsedValue)
-		return nil
-	}
+	*eb = EncryptedBoolField(val)
 
-	return fmt.Errorf("invalid format: missing 'p' field or unsupported type")
-}
-
-func (eb EncryptedBool) ToDB() ([]byte, error) {
-	val := serialize(bool(eb), "examples", "encrypted_bool")
-
-	return json.Marshal(val)
-}
-
-// Converts a plaintext value to a string and returns the EncryptedColumn struct to use to insert into the db.
-func serialize(value any, table string, column string) EncryptedColumn {
-	str, err := convertToString(value)
-	if err != nil {
-		fmt.Println("Error:", err)
-	}
-
-	data := EncryptedColumn{"pt", str, TableColumn{table, column}, 1}
-
-	return data
-}
-
-func convertToString(value any) (string, error) {
-	switch v := value.(type) {
-	case string:
-		return v, nil
-	case int:
-		return fmt.Sprintf("%d", v), nil
-	case float64:
-		return fmt.Sprintf("%f", v), nil
-	case map[string]any:
-		jsonData, err := json.Marshal(v)
-		if err != nil {
-			return "", fmt.Errorf("error marshaling JSON: %v", err)
-		}
-		return string(jsonData), nil
-	case bool:
-		return strconv.FormatBool(v), nil
-	default:
-		return "", fmt.Errorf("unsupported type: %T", v)
-	}
+	return nil
 }
 
 func setupDb() {
@@ -288,6 +224,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not connect to the database: %v", err)
 	}
+
 	// Query on unencrypted column: where clause
 	WhereQuery(proxyEngine)
 
