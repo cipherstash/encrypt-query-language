@@ -395,9 +395,11 @@ In general, therefore, you should try to ensure that the string you search for i
 
 An ste_vec index on a encrypted JSONB column enables the use of PostgreSQL's `@>` and `<@` [containment operators](https://www.postgresql.org/docs/16/functions-json.html#FUNCTIONS-JSONB-OP-TABLE).
 
-An ste_vec index requires one piece of configuration: the `prefix` (a string) which is functionally similar to a salt for the hashing process.
+An ste_vec index requires one piece of configuration: the `context` (a string) which is passed as an info string to a MAC (Message Authenticated Code).
+This ensures that all of the encrypted values are unique to that context.
+It is generally recommended to use the table and column name as a the context (e.g. `users/name`).
 
-Within a dataset, encrypted columns indexed using an ste_vec that use different prefixes can never compare as equal. 
+Within a dataset, encrypted columns indexed using an `ste_vec` that use different contexts cannot be compared. 
 Containment queries that manage to mix index terms from multiple columns will never return a positive result. 
 This is by design.
 
@@ -432,7 +434,7 @@ For a document like this:
 
 Hashes would be produced from the following list of entries:
 
-```json
+```js
 [
   [Obj, Key("account"), Obj, Key("email"), String("alice@example.com")],
   [Obj, Key("account"), Obj, Key("name"), Obj, Key("first_name"), String("Alice")],
@@ -444,13 +446,13 @@ Hashes would be produced from the following list of entries:
 
 Using the first entry to illustrate how an entry is converted to hashes:
 
-```json
+```js
 [Obj, Key("account"), Obj, Key("email"), String("alice@example.com")]
 ```
 
 The hashes would be generated for all prefixes of the full path to the leaf node.
 
-```json
+```js
 [
   [Obj],
   [Obj, Key("account")],
@@ -473,7 +475,7 @@ The expression `cs_ste_vec_v1(encrypted_account) @> cs_ste_vec_v1($query)` would
 
 When reduced to a prefix list, it would look like this:
 
-```json
+```js
 [
   [Obj],
   [Obj, Key("account")],
