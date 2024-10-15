@@ -3,20 +3,55 @@
 > [!NOTE]
 > This section is under construction
 
+## Operations over encrypted JSONB
 
-JSONB objects can be encrypted in EQL using a Structured Encryption Vec (`ste_vec`)
-or a Structured Encryption Map, `ste_map`.
+EQL aims to support a useful subset of the JSONB operations possible in PostgreSQL.
 
-```json
-{
-    <selector>: <term | ciphertext>
-}
+### Containment
+
+Test if a JSONB value is contained within another.
+
+:abc: Plaintext
+```sql
+SELECT * FROM users WHERE attrs @> '{"field": "value"}`;
 ```
 
+:white_check_mark: EQL
+```sql
+SELECT * FROM users WHERE cs_ste_vec_v1(attrs) @> '53T8dtvW4HhofDp9BJnUkw';
+```
 
-## Simplified JSON Path
+### Extraction (in SELECT)
 
-CipherStash EQL supports a simplified JSONPath syntax as follows:
+Extract a field from a JSONB object for use in a `SELECT` statement.
+
+:abc: Plaintext
+```sql
+SELECT attrs->'login_count' FROM users;
+```
+
+:white_check_mark: EQL
+```sql
+SELECT cs_ste_value_v1(attrs, 'DQ1rbhWJXmmqi/+niUG6qw') FROM users;
+```
+
+### Extraction (in WHERE, ORDER BY)
+
+:abc: Plaintext
+```sql
+SELECT * FROM users WHERE attrs->'login_count' > 10; 
+```
+
+:white_check_mark: EQL
+```sql
+SELECT * FROM users WHERE cs_ste_term_v1(attrs, 'DQ1rbhWJXmmqi/+niUG6qw') > 'QAJ3HezijfTHaKrhdKxUEg';
+```
+
+## eJSONPath
+
+CipherStash EQL supports a simplified JSONPath syntax, called `eJSONPath`.
+It is a subset of the [SQL/JSONPath](https://www.postgresql.org/docs/16/datatype-json.html#DATATYPE-JSONPATH) scheme provided by Postgres
+and supports the following expressions:
 
 | Expression | Description |
 |------------|-------------|
@@ -60,6 +95,18 @@ Below are some paths along with their segment tokenizations:
 * `$.` -> `["."]`
 * `$` -> `["."]` 
 
+## Index Structure
+
+JSONB objects can be encrypted in EQL using a Structured Encryption Map (`ste_map`).
+
+```json
+{
+    <selector>: <term | ciphertext>
+}
+```
+
+An `ste_map` maps [Selectors](#selectors) to either a [Term](#terms) or a [Ciphertext](#ciphertexts).
+Each of these elements is described in the next sections.
 
 ## Selectors
 
@@ -77,10 +124,10 @@ Given:
 * A length parameter `L` which, when passed to `TRUNCATE(x, L)` will truncate X to `L` bytes
 * `+` means string concatenation
 
-The selector is defined as:
+The selector, `S` is defined as:
 
 ```
-TRUNCATE(MAC(<TYPE> + <INFO> + len(<INFO>) + {P(0) + len(P(0))} + ... {P(N) + len(P(N))}), L)
+S = TRUNCATE(MAC(<TYPE> + <INFO> + len(<INFO>) + {P(0) + len(P(0))} + ... {P(N) + len(P(N))}), L)
 ```
 
 ## Examples
@@ -116,6 +163,84 @@ S2 = TRUNCATE(MAC("T" + 0 + "customers/attrs" + 15 + "." + 1 + "scores" + 6 + "[
 ## Terms
 
 
+
+## Ciphertexts
+
+Ciphertexts in EQL JSONB are the encryptions of the leaf values of a plaintext JSONB object.
+
+Given:
+
+* A [Selector](#selectors), `S`,
+* A plaintext value, `V` (at the position defined by `S`)
+* A data key `k`
+* Authenticated Associated Data, `AAD` (e.g. a _descriptor_)
+* And a block cipher `AES256SIV` (AES in SIV mode with 256-bit keys)
+
+The ciphertext, `C` is defined as:
+
+```
+IV = TRUNCATE(S, 12)
+C = AES256SIV(IV, k, V, AAD)
+```
+
+Where `IV` is the 12-byte used for the block-cipher.
+
+
+## Operations
+
+## Generate
+
+TODO
+
+### Extract
+
+A ciphertext value, `C` can be extracted from an `ste_map`.
+
+Given:
+
+* An `ste_map`, `M`
+* A `TYPE`
+* A sub-type, `t`
+* And a selector, `S` generated using `TYPE` and `t`
+
+A _type annotated_ ciphertext `Ct` can be extracted using standard plaintext extraction on `M`.
+The result is an [Encrypted Payload](../README.md#data-format).
+
+Extractions where the result is JSON (using `->`):
+
+```
+Ct = M->S
+```
+
+Returns:
+```json
+// Type annotated ciphertext
+{
+  "iv": "<IV>",
+  "ct": "<C>",
+  "t": "jsonb",
+}
+```
+
+Extractions where the result is TEXT (using `->>`):
+
+```
+Ct = M->>S
+```
+
+Returns:
+```json
+// Type annotated ciphertext
+{
+  "iv": "<IV>",
+  "ct": "<C>",
+  // Target type is text
+  "t": "text",
+}
+```
+
+
+Examples:
 
 
 
