@@ -229,7 +229,7 @@ EQL provides specialized functions to interact with encrypted data:
 - **`cs_unique_v1(val JSONB)`**: Retrieves the unique index for enforcing uniqueness.
 - **`cs_ore_v1(val JSONB)`**: Retrieves the Order-Revealing Encryption index for range queries.
 - **`cs_ste_vec_v1(val JSONB)`**: Retrieves the Structured Encryption Vector for containment queries.
-- **`cs_rich_jsonb_v1(val JSONB)`**: Retrieves the encryptyed materialised JSONB index for rich JSONB queries.
+- **`cs_rich_jsonb_v1(val JSONB)`**: Retrieves the encrypted materialised JSONB index for rich JSONB queries.
 
 
 ### Index functions
