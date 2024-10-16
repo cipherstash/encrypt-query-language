@@ -21,6 +21,11 @@ subproject_setup() {
   go run . setupDev
 }
 
+subproject_teardown() {
+  # start postgres
+  docker compose down
+}
+
 subproject_examples() {
   # reset db
   go run . setupDev
@@ -46,6 +51,10 @@ case $subcommand in
 
   setup)
     subproject_setup
+    ;;
+
+  teardown)
+    subproject_teardown
     ;;
 
   start_proxy)
