@@ -78,7 +78,7 @@ At a high level:
 1. CipherStash Proxy encrypts the `plaintext` and encodes the `ciphertext` value and associated indexes into the `jsonb` payload
 1. The data is written to the encrypted column
 
-![Insert](../diagrams/overview-insert.drawio.svg)
+![Insert](/diagrams/overview-insert.drawio.svg)
 
 ### Reads
 
@@ -87,4 +87,4 @@ At a high level:
 1. PostgreSQL executes the SQL statement
 1. CipherStash Proxy decrypts any returned `ciphertext` data and returns to client
 
-![Select](../diagrams/overview-select.drawio.svg)
+![Select](/diagrams/overview-select.drawio.svg)
