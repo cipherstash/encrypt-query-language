@@ -1,0 +1,20 @@
+
+# Used by both Stash CLI and Proxy
+export CS_WORKSPACE_ID=
+export CS_CLIENT_ACCESS_KEY=
+
+# Used by Stash CLI
+export CS_CLIENT_ID=
+export CS_CLIENT_KEY=
+
+# Used by Proxy
+export CS_ENCRYPTION__CLIENT_ID=
+export CS_ENCRYPTION__CLIENT_KEY=
+export CS_AUDIT__ENABLED=false
+export CS_DATABASE__PORT=5432
+export CS_DATABASE__USERNAME=postgres
+export CS_DATABASE__PASSWORD=postgres
+export CS_DATABASE__NAME=gotest
+export CS_DATABASE__HOST=localhost
+export CS_TEST_ON_CHECKOUT=true
+export CS_STATEMENT_HANDLER=mylittleproxy
