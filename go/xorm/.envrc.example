@@ -1,4 +1,7 @@
+
+# Used by both Stash CLI and Proxy
 export CS_WORKSPACE_ID=
+export CS_CLIENT_ACCESS_KEY=
 
 # Used by Stash CLI
 export CS_CLIENT_ID=
@@ -15,4 +18,3 @@ export CS_DATABASE__NAME=gotest
 export CS_DATABASE__HOST=localhost
 export CS_TEST_ON_CHECKOUT=true
 export CS_STATEMENT_HANDLER=mylittleproxy
-export CS_UNSAFE_LOGGING=true

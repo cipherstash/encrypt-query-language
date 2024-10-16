@@ -14,8 +14,20 @@ if [ "${BASH_SOURCE[0]}" != "./run.sh" ]; then
   exit 1
 fi
 
-subproject_start_postgres() {
+subproject_setup() {
+  # start postgres
   docker compose up -d
+  # setup table, install eql, constraints and indexes
+  go run . setupDev
+}
+
+subproject_examples() {
+  # reset db
+  go run . setupDev
+  # start proxy
+
+  # run examples queries
+  go run . runExamples
 }
 
 subproject_stop_postgres() {
@@ -23,8 +35,7 @@ subproject_stop_postgres() {
 }
 
 subproject_start_proxy() {
-  cd ../../../packages/cipherstash-proxy
-  cargo run
+ docker run --env-file .env -p 6432:6432 cipherstash/cipherstash-proxy:latest
 }
 
 subcommand="${1:-test}"
@@ -33,16 +44,16 @@ case $subcommand in
     subproject_start_postgres
     ;;
 
-  stop_postgres)
-    subproject_stop_postgres
-    ;;
-
-  install_eql)
-    subproject_install_eql
+  setup)
+    subproject_setup
     ;;
 
   start_proxy)
     subproject_start_proxy
+    ;;
+
+  examples)
+    subproject_examples
     ;;
 
   *)
