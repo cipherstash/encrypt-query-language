@@ -13,10 +13,9 @@ EQL provides a data format for transmitting and storing encrypted data & indexes
 - [Encrypted columns](#encrypted-columns)
   - [Inserting data](#inserting-data)
   - [Reading data](#reading-data)
-- [EQL functions for encrypted data](#eql-functions-for-encrypted-data)
-- [EQL functions for encrypted JSONB data](#eql-functions-for-encrypted-jsonb-data)
-- [Index functions](#index-functions)
-- [Query Functions](#query-functions)
+- [Querying data with EQL](#querying-data-with-eql)
+- [Querying JSONB data with EQL](#querying-jsonb-data-with-eql)
+- [Managing indexes with EQL](#managing-indexes-with-eql)
 - [Data Format](#data-format)
 - [Helper packages](#helper-packages)
 
@@ -92,10 +91,9 @@ SELECT email FROM users;
 
 All the data returned from the database is fully decrypted and an audit trail is generated.
 
-## EQL functions for encrypted data
+## Querying data with EQL
 
-EQL provides specialized functions to interact with encrypted data.
-These Functions expect an encrypted domain type (which is effectively just JSONB).
+EQL provides specialized functions to interact with encrypted data to support operations like equality checks, range queries, and unique constraints.
 
 ### `cs_match_v1(val JSONB)`
 
@@ -190,7 +188,7 @@ And is the EQL equivalent of the following plaintext query.
 SELECT id FROM examples ORDER BY field DESC;
 ```
 
-## EQL functions for encrypted JSONB data
+## Querying JSONB data with EQL
 
 ### `cs_ste_term_v1(val JSONB, epath TEXT)`
 
@@ -271,7 +269,7 @@ And is the EQL equivalent of the following plaintext query.
 SELECT attrs->'login_count' FROM users; 
 ```
 
-## Index functions
+## Managing indexes with EQL
 
 These functions expect a `jsonb` value that conforms to the storage schema.
 
@@ -470,55 +468,6 @@ cs_remove_index_v1(table_name text, column_name text, index_name text)
 ```
 
 Removes an index configuration from the column.
-
-## Query Functions
-
-These Functions expect a `jsonb` value that conforms to the storage schema, and are used to perform search operations.
-
-### `cs_ciphertext_v1`
-
-```sql
-cs_ciphertext_v1(val jsonb)
-```
-
-Extracts the ciphertext from the `jsonb` value.
-Ciphertext values are transparently decrypted in transit by Cipherstash Proxy.
-
-### cs_match_v1
-
-```sql
-cs_match_v1(val jsonb)
-```
-
-Extracts a match index from the `jsonb` value.
-Returns `null` if no match index is present.
-
-### cs_unique_v1
-
-```sql
-cs_unique_v1(val jsonb)
-```
-
-Extracts a unique index from the `jsonb` value.
-Returns `null` if no unique index is present.
-
-### cs_ore_v1
-
-```sql
-cs_ore_v1(val jsonb)
-```
-
-Extracts an ore index from the `jsonb` value.
-Returns `null` if no ore index is present.
-
-### cs_ste_vec_v1
-
-```sql
-cs_ste_vec_v1(val jsonb)
-```
-
-Extracts an ste_vec index from the `jsonb` value.
-Returns `null` if no ste_vec index is present.
 
 ## Data Format
 
