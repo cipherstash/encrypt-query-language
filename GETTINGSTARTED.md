@@ -5,7 +5,7 @@ The following guide assumes you have the prerequisites installed and running, an
 ### Prerequisites
 
 - [PostgreSQL 14+](https://www.postgresql.org/download/)
-- [Cipherstash Proxy guide](https://github.com/cipherstash/encrypt-query-language/tree/main/cipherstash-proxy)
+- [Cipherstash Proxy guide](https://github.com/cipherstash/encrypt-query-language/tree/main/PROXY.md)
 
 EQL relies on [Cipherstash Proxy](https://cipherstash.com/docs/getting-started/cipherstash-proxy) for low-latency encryption & decryption.
 We plan to support direct language integration in the future.
