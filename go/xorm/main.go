@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/encrypt-query-language/go/goeql" // imported using local path until published
 
@@ -208,6 +209,24 @@ func installEql() {
 }
 
 func main() {
+	if len(os.Args) < 2 {
+		fmt.Println("Please provide a function name to run.")
+		return
+	}
+
+	fn := os.Args[1]
+
+	switch fn {
+	case "setupDev":
+		setupDev()
+	case "runExamples":
+		runExamples()
+	default:
+		fmt.Println("Unknown function:", fn)
+	}
+}
+
+func setupDev() {
 	// Recreate gotest db on each run
 	setupDb()
 
@@ -216,7 +235,9 @@ func main() {
 
 	// Install EQL and add config
 	installEql()
+}
 
+func runExamples() {
 	// Connect to proxy
 	proxyConnStr := "user=postgres password=postgres port=6432 host=localhost dbname=gotest sslmode=disable"
 	proxyEngine, err := xorm.NewEngine("pgx", proxyConnStr)
@@ -251,5 +272,4 @@ func main() {
 	UniqueStringQuery(proxyEngine)
 	// Int
 	// Bool
-
 }
