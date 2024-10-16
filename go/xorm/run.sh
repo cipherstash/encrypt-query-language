@@ -35,20 +35,12 @@ subproject_examples() {
   go run . runExamples
 }
 
-subproject_stop_postgres() {
-  docker compose down
-}
-
 subproject_start_proxy() {
  docker run --env-file .env -p 6432:6432 cipherstash/cipherstash-proxy:latest
 }
 
 subcommand="${1:-test}"
 case $subcommand in
-  start_postgres)
-    subproject_start_postgres
-    ;;
-
   setup)
     subproject_setup
     ;;
