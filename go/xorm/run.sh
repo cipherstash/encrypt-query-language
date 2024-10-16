@@ -15,7 +15,7 @@ if [ "${BASH_SOURCE[0]}" != "./run.sh" ]; then
 fi
 
 subproject_setup() {
-  # start postgres
+  # start postgres and proxy
   docker compose up -d
   # setup table, install eql, constraints and indexes
   go run . setupDev
