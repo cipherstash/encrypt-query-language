@@ -63,7 +63,7 @@ This enables encryption in use without significant changes to your application c
 Encrypt Query Language (EQL) is a set of PostgreSQL functions and data types provided by CipherStash to work with encrypted data and indexes.
 EQL allows you to perform queries on encrypted data without decrypting it, supporting operations like equality checks, range queries, and unique constraints.
 
-To get started, see the root [README.md](https://github.com/cipherstash/encrypt-query-language?tab=readme-ov-file#getting-started) file.
+To get started, view the [Getting Started](https://github.com/cipherstash/encrypt-query-language/blob/main/GETTINGSTARTED.md) guide.
 
 ## Best Practices
 
@@ -77,7 +77,7 @@ To get started, see the root [README.md](https://github.com/cipherstash/encrypt-
 
 ### Integrating without CipehrStash Proxy
 
-> The SDK approach is currently in development, but if you're interested in contributing, please start a discussion [here](https://github.com/cipherstash/cipherstash).
+> The SDK approach is currently in development, but if you're interested in contributing, please start a discussion [here](https://github.com/cipherstash/encrypt-query-language/discussions).
 
 For advanced users who prefer to handle encryption within their application:
 
@@ -93,6 +93,6 @@ For advanced users who prefer to handle encryption within their application:
 CipherStash's encryption in use solution, comprising CipherStash Proxy and EQL, provides a practical way to enhance data security in Postgres databases. 
 By keeping data encrypted even during processing, you minimize the risk of data breaches and comply with stringent security standards without significant changes to your application logic.
 
-To get started, see the root [README.md](https://github.com/cipherstash/encrypt-query-language?tab=readme-ov-file#getting-started) file.
+To get started, see the [Getting Started](https://github.com/cipherstash/encrypt-query-language/blob/main/GETTINGSTARTED.md) guide.
 
 **Contact Support:** For further assistance, raise an issue [here](https://github.com/cipherstash/encrypt-query-language/issues).
