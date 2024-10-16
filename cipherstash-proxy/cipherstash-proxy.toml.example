@@ -1,0 +1,25 @@
+## For a complete list of configuration options
+## see the documentation at https://cipherstash.com/docs/reference/proxy
+
+## Sign up for an account to create an access key: https://dashboard.cipherstash.com
+workspace_id = "..."
+client_access_key = "..."
+
+prometheus_metrics = true
+query_logging = true
+unsafe_logging = true
+
+[encryption]
+mode = "encrypted"
+client_id = "..."
+client_key = "..."
+
+[audit]
+subscriber = "stdout"
+
+[database]
+name = "..."
+username = "..."
+password = "..."
+host = "..."
+port = 5432
