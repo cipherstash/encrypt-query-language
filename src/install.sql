@@ -19,7 +19,7 @@ DROP DOMAIN IF EXISTS cs_unique_index_v1;
 
 CREATE DOMAIN cs_match_index_v1 AS smallint[];
 CREATE DOMAIN cs_unique_index_v1 AS text;
-CREATE DOMAIN cs_ste_vec_v1 AS text[];
+CREATE DOMAIN cs_ste_vec_index_v1 AS text[];
 
 -- cs_encrypted_v1 is a column type and cannot be dropped if in use
 DO $$
@@ -120,23 +120,23 @@ BEGIN ATOMIC
 	RETURN cs_unique_v1_v0_0(col);
 END;
 
--- extracts json containment index from an encrypted column
+-- extracts json ste_vec index from an encrypted column
 CREATE OR REPLACE FUNCTION cs_ste_vec_v1_v0_0(col jsonb)
-  RETURNS cs_ste_vec_v1
+  RETURNS cs_ste_vec_index_v1
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
-	SELECT ARRAY(SELECT jsonb_array_elements(col->'sv'))::cs_ste_vec_v1;
+	SELECT ARRAY(SELECT jsonb_array_elements(col->'sv'))::cs_ste_vec_index_v1;
 END;
 
 CREATE OR REPLACE FUNCTION cs_ste_vec_v1_v0(col jsonb)
-  RETURNS cs_ste_vec_v1
+  RETURNS cs_ste_vec_index_v1
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
 	RETURN cs_ste_vec_v1_v0_0(col);
 END;
 
 CREATE OR REPLACE FUNCTION cs_ste_vec_v1(col jsonb)
-  RETURNS cs_ste_vec_v1
+  RETURNS cs_ste_vec_index_v1
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
 	RETURN cs_ste_vec_v1_v0_0(col);
@@ -223,7 +223,7 @@ CREATE FUNCTION _cs_config_check_indexes(val jsonb)
   RETURNS BOOLEAN
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
-	SELECT jsonb_object_keys(jsonb_path_query(val, '$.tables.*.*.indexes')) = ANY('{match, ore, unique, json}');
+	SELECT jsonb_object_keys(jsonb_path_query(val, '$.tables.*.*.indexes')) = ANY('{match, ore, unique, ste_vec}');
 END;
 
 
@@ -289,7 +289,7 @@ DROP FUNCTION IF EXISTS cs_discard_v1();
 DROP FUNCTION IF EXISTS cs_refresh_encrypt_config();
 
 DROP FUNCTION IF EXISTS _cs_config_default();
-DROP FUNCTION IF EXISTS _cs_config_match_1_default();
+DROP FUNCTION IF EXISTS _cs_config_match_default();
 
 DROP FUNCTION IF EXISTS _cs_config_add_table(text, json);
 DROP FUNCTION IF EXISTS _cs_config_add_column(text, text, json);
@@ -367,9 +367,9 @@ $$ LANGUAGE plpgsql;
 
 
 --
--- Default options for match_1 index
+-- Default options for match index
 --
-CREATE FUNCTION _cs_config_match_1_default()
+CREATE FUNCTION _cs_config_match_default()
   RETURNS jsonb
 LANGUAGE sql STRICT PARALLEL SAFE
 BEGIN ATOMIC
@@ -414,8 +414,8 @@ AS $$
     SELECT _cs_config_add_cast(table_name, column_name, cast_as, _config) INTO _config;
 
     -- set default options for index if opts empty
-    IF index_name = 'match_1' AND opts = '{}' THEN
-      SELECT _cs_config_match_1_default() INTO opts;
+    IF index_name = 'match' AND opts = '{}' THEN
+      SELECT _cs_config_match_default() INTO opts;
     END IF;
 
     SELECT _cs_config_add_index(table_name, column_name, index_name, opts, _config) INTO _config;
@@ -817,3 +817,4 @@ BEGIN
   	RETURN result;
 END;
 $$ LANGUAGE plpgsql;
+
