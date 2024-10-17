@@ -27,7 +27,7 @@ EQL provides a data format for transmitting and storing encrypted data & indexes
 
 The simplest and fastest way to get up and running with EQL from scratch is to execute the install SQL file directly in your database.
 
-1. Download the [install.sql] file
+1. Download the [install.sql](src/install.sql) file
 2. Run the following command to install the custom types and functions:
 
 ```bash
