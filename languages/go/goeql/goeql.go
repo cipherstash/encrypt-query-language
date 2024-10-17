@@ -53,6 +53,20 @@ func (et *EncryptedText) Deserialize(data []byte) (EncryptedText, error) {
 	return "", fmt.Errorf("invalid format: missing 'p' field in JSONB")
 }
 
+func EncryptedTextToDb(et EncryptedText, table string, column string) ([]byte, error) {
+	return (&et).Serialize(table, column)
+}
+
+func EncryptedTextFromDb(et *EncryptedText, data []byte) (EncryptedText, error) {
+	val, err := et.Deserialize(data)
+	if err != nil {
+		return "", err
+	}
+
+	return val, nil
+
+}
+
 // Jsonb
 func (ej EncryptedJsonb) Serialize(table string, column string) ([]byte, error) {
 	val, err := ToEncryptedColumn(map[string]any(ej), table, column)

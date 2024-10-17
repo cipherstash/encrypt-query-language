@@ -13,14 +13,9 @@ import (
 	"xorm.io/xorm/names"
 )
 
-// To setup postgres:
-// Run: docker compose up
-// To run examples
-// Run: go run .
-
 // Create a separate custom type for each field that is being encrypted, using the relevant go type.
 // This custom type can then be used to access the conversion interface to use toDB and fromDb.
-type EncryptedTextField string
+type EncryptedTextField goeql.EncryptedText
 type EncryptedJsonbField map[string]interface{}
 type EncryptedIntField int
 type EncryptedBoolField bool
@@ -54,15 +49,33 @@ func (Example) TableName() string {
 // - ToDB and FromDB needs to be implemented for each custom type.
 
 // encrypted text field conversion
+// func EncryptedTextToDb(et EncryptedTextField, table string, column string) ([]byte, error) {
+// 	etCs := goeql.EncryptedText(et)
+// 	return (&etCs).Serialize(table, column)
+// }
+
+// func EncryptedTextFromDb(et *EncryptedTextField, data []byte) error {
+// 	etCs := goeql.EncryptedText(*et)
+
+// 	val, err := (&etCs).Deserialize(data)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	*et = EncryptedTextField(val)
+
+// 	return nil
+// }
+
 func (et EncryptedTextField) ToDB() ([]byte, error) {
 	etCs := goeql.EncryptedText(et)
-	return (&etCs).Serialize("examples", "encrypted_text_field")
+	return goeql.EncryptedTextToDb(etCs, "examples", "encrypted_text_field")
 }
 
 func (et *EncryptedTextField) FromDB(data []byte) error {
 	etCs := goeql.EncryptedText(*et)
+	val, err := goeql.EncryptedTextFromDb(&etCs, data)
 
-	val, err := (&etCs).Deserialize(data)
 	if err != nil {
 		return err
 	}
