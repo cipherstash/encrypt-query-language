@@ -15,7 +15,7 @@
     "k": {
       "title": "kind",
       "type": "string",
-      "enum": ["pt", "ct", "en", "qm", "qo", "qu", "qejp", "qsv", "qst", "qwsm"]
+      "enum": ["pt", "ct", "en", "qm", "qo", "qu", "qejp", "qsv"]
     },
     "i": {
       "title": "ident",
@@ -69,6 +69,10 @@
       "items": {
         "type": "string"
       }
+    },
+    "se": {
+      "title": "EJSON path selector",
+      "type": "string"
     }
   },
   "anyOf": [
@@ -144,18 +148,10 @@
     {
       "properties": {
         "k": {
-          "const": "qst"
+          "const": "qejp"
         }
       },
-      "required": ["o"]
-    },
-    {
-      "properties": {
-        "k": {
-          "const": "qwsm"
-        }
-      },
-      "required": ["m"]
+      "required": ["se"]
     }
   ],
   "required": ["v", "k"]
