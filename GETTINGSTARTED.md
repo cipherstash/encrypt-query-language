@@ -71,10 +71,6 @@ You can force CipherStash Proxy to refresh the configuration by running the `cs_
 SELECT cs_refresh_encrypt_config();
 ```
 
-### Activate configuration
-
-By default, the state of the configuration is `pending` after any modifications.
-
 ### Inserting data
 
 When inserting data into the encrypted column, you must wrap the plaintext in the appropriate EQL payload.
