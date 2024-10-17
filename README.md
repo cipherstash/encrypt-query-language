@@ -151,7 +151,7 @@ Which will execute on the server as:
 SELECT email_encrypted FROM users
 WHERE cs_match_v1(email_encrypted) @> cs_match_v1('{
   "v": 1,
-  "k": "ct",
+  "k": "pt",
   "p": "test",
   "i": {
     "t": "users",
@@ -176,7 +176,7 @@ For reference, the EQL payload is defined as a `jsonb` with a specific schema:
 ```json
 {
   "v": 1,
-  "k": "ct",
+  "k": "pt",
   "p": "test@test.com",
   "i": {
     "t": "users",
