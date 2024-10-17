@@ -141,22 +141,52 @@ These statements must be run through the CipherStash Proxy in order to **decrypt
 **Example:**
 
 ```rb
-Users.findAll(&:encrypted_email)
+filter = EQL.for_match("users", "email_encrypted", "test")
+User.select(:email_encrypted).where("cs_match_v1(email_encrypted) @> cs_match_v1(?)", filter)
 ```
 
 Which will execute on the server as:
 
 ```sql
-SELECT encrypted_email FROM users;
+SELECT email_encrypted FROM users
+WHERE cs_match_v1(email_encrypted) @> cs_match_v1('{
+  "v": 1,
+  "k": "ct",
+  "p": "test",
+  "i": {
+    "t": "users",
+    "c": "email_encrypted"
+  },
+  "q": "match"
+}');
 ```
 
-And is the EQL equivalent of the following plaintext query.
+A similar plaintext query (without EQL) could look like:
 
 ```sql
-SELECT email FROM users;
+SELECT email FROM users WHERE email LIKE 'test%';
 ```
 
-All the data returned from the database is fully decrypted and an audit trail is generated.
+Note that plaintext payloads for query operations should set the `"q"` (for query) property.
+This property tells CipherStash Proxy to only perform encryption necessary for a specific operation.
+Otherwise, Proxy will perform source encryption and encryption for all indexes configured for the given column.
+
+For reference, the EQL payload is defined as a `jsonb` with a specific schema:
+
+```json
+{
+  "v": 1,
+  "k": "ct",
+  "p": "test@test.com",
+  "i": {
+    "t": "users",
+    "c": "email_encrypted"
+  },
+  "q": "match"
+}
+```
+
+All the data returned from the database is fully decrypted.
 
 ## Querying data with EQL
 
@@ -170,7 +200,7 @@ Enables basic full-text search.
 
 ```rb
 # Create the EQL payload using helper functions
-payload = eqlPayload("users", "encrpyted_field", "plaintext value")
+payload = EQL.for_match("users", "encrypted_field", "plaintext value")
 
 Users.where("cs_match_v1(field) @> cs_match_v1(?)", payload)
 ```
@@ -178,7 +208,7 @@ Users.where("cs_match_v1(field) @> cs_match_v1(?)", payload)
 Which will execute on the server as:
 
 ```sql
-SELECT * FROM users WHERE cs_match_v1(field) @> cs_match_v1('{"v":1,"k":"pt","p":"plaintext value","i":{"t":"users","c":"encrpyted_field"}}');
+SELECT * FROM users WHERE cs_match_v1(field) @> cs_match_v1('{"v":1,"k":"pt","p":"plaintext value","i":{"t":"users","c":"encrypted_field"},"q":"match"}');
 ```
 
 And is the EQL equivalent of the following plaintext query.
@@ -195,7 +225,7 @@ Retrieves the unique index for enforcing uniqueness.
 
 ```rb
 # Create the EQL payload using helper functions
-payload = eqlPayload("users", "encrpyted_field", "plaintext value")
+payload = EQL.for_unique("users", "encrypted_field", "plaintext value")
 
 Users.where("cs_unique_v1(field) = cs_unique_v1(?)", payload)
 ```
@@ -203,7 +233,7 @@ Users.where("cs_unique_v1(field) = cs_unique_v1(?)", payload)
 Which will execute on the server as:
 
 ```sql
-SELECT * FROM users WHERE cs_unique_v1(field) = cs_unique_v1('{"v":1,"k":"pt","p":"plaintext value","i":{"t":"users","c":"encrpyted_field"}}');
+SELECT * FROM users WHERE cs_unique_v1(field) = cs_unique_v1('{"v":1,"k":"pt","p":"plaintext value","i":{"t":"users","c":"encrypted_field"},"q":"unique"}');
 ```
 
 And is the EQL equivalent of the following plaintext query.
@@ -220,7 +250,7 @@ Retrieves the Order-Revealing Encryption index for range queries.
 
 ```rb
 # Create the EQL payload using helper functions
-eqlPayload("users", "encrypted_date", Time.now)
+date = EQL.for_ore("users", "encrypted_date", Time.now)
 
 User.where("cs_ore_64_8_v1(encrypted_date) < cs_ore_64_8_v1(?)", date)
 ```
@@ -246,7 +276,7 @@ User.order("cs_ore_64_8_v1(encrypted_field)").all().map(&:id)
 Which will execute on the server as:
 
 ```sql
-SELECT id FROM examples ORDER BY cs_ore_64_8_v1(feild) DESC;
+SELECT id FROM examples ORDER BY cs_ore_64_8_v1(encrypted_field) DESC;
 ```
 
 And is the EQL equivalent of the following plaintext query.
@@ -259,7 +289,7 @@ SELECT id FROM examples ORDER BY field DESC;
 
 ### `cs_ste_term_v1(val JSONB, epath TEXT)`
 
-Retrieves the encrypted *term* associated with the encrypted JSON path, `epath`.
+Retrieves the encrypted _term_ associated with the encrypted JSON path, `epath`.
 
 ### `cs_ste_vec_v1(val JSONB)`
 
@@ -269,7 +299,7 @@ Retrieves the Structured Encryption Vector for containment queries.
 
 ```rb
 # Serialize a JSONB value bound to the users table column
-term = User::ENCRYPTED_JSONB.serialize({field: "value"})
+term = EQL.for_ste_vec("users", "attrs", {field: "value"})
 User.where("cs_ste_vec_v1(attrs) @> cs_ste_vec_v1(?)", term)
 ```
 
@@ -295,8 +325,8 @@ This is useful for sorting or filtering on integers in encrypted JSON objects.
 
 ```rb
 # Serialize a JSONB value bound to the users table column
-path = EJSON_PATH.serialize("$.login_count")
-term = User::ENCRYPTED_INT.serialize(100)
+path = EQL.for_ejson_path("users", "attrs", "$.login_count")
+term = EQL.for_ore("users", "attrs", 100)
 User.where("cs_ste_term_v1(attrs, ?) > cs_ore_64_8_v1(?)", path, term)
 ```
 
@@ -309,18 +339,18 @@ SELECT * FROM users WHERE cs_ste_term_v1(attrs, 'DQ1rbhWJXmmqi/+niUG6qw') > 'QAJ
 And is the EQL equivalent of the following plaintext query.
 
 ```sql
-SELECT * FROM users WHERE attrs->'login_count' > 10; 
+SELECT * FROM users WHERE attrs->'login_count' > 10;
 ```
 
 ### `cs_ste_value_v1(val JSONB, epath TEXT)`
 
-Retrieves the encrypted *value* associated with the encrypted JSON path, `epath`.
+Retrieves the encrypted _value_ associated with the encrypted JSON path, `epath`.
 
 **Example:**
 
 ```rb
 # Serialize a JSONB value bound to the users table column
-path = EJSON_PATH.serialize("$.login_count")
+path = EQL.for_ejson_path("users", "attrs", "$.login_count")
 User.find_by_sql(["SELECT cs_ste_value_v1(attrs, ?) FROM users", path])
 ```
 
@@ -333,7 +363,7 @@ SELECT cs_ste_value_v1(attrs, 'DQ1rbhWJXmmqi/+niUG6qw') FROM users;
 And is the EQL equivalent of the following plaintext query.
 
 ```sql
-SELECT attrs->'login_count' FROM users; 
+SELECT attrs->'login_count' FROM users;
 ```
 
 ## Managing indexes with EQL
@@ -346,24 +376,25 @@ These functions expect a `jsonb` value that conforms to the storage schema.
 cs_add_index(table_name text, column_name text, index_name text, cast_as text, opts jsonb)
 ```
 
-| Parameter     | Description                                        | Notes
-| ------------- | -------------------------------------------------- | ------------------------------------
-| `table_name`    | Name of target table                               | Required
-| `column_name`   | Name of target column                              | Required
-| `index_name`    | The index kind                                     | Required.
-| `cast_as`       | The PostgreSQL type decrypted data will be cast to | Optional. Defaults to `text`
-| `opts`          | Index options                                      | Optional for `match` indexes, required for `ste_vec` indexes (see below)
+| Parameter     | Description                                        | Notes                                                                    |
+| ------------- | -------------------------------------------------- | ------------------------------------------------------------------------ |
+| `table_name`  | Name of target table                               | Required                                                                 |
+| `column_name` | Name of target column                              | Required                                                                 |
+| `index_name`  | The index kind                                     | Required.                                                                |
+| `cast_as`     | The PostgreSQL type decrypted data will be cast to | Optional. Defaults to `text`                                             |
+| `opts`        | Index options                                      | Optional for `match` indexes, required for `ste_vec` indexes (see below) |
 
 #### cast_as
 
 Supported types:
-  - `text`
-  - `int`
-  - `small_int`
-  - `big_int`
-  - `boolean`
-  - `date`
-  - `jsonb`
+
+- `text`
+- `int`
+- `small_int`
+- `big_int`
+- `boolean`
+- `date`
+- `jsonb`
 
 #### match opts
 
@@ -428,13 +459,13 @@ An ste_vec index requires one piece of configuration: the `context` (a string) w
 This ensures that all of the encrypted values are unique to that context.
 It is generally recommended to use the table and column name as a the context (e.g. `users/name`).
 
-Within a dataset, encrypted columns indexed using an `ste_vec` that use different contexts cannot be compared. 
-Containment queries that manage to mix index terms from multiple columns will never return a positive result. 
+Within a dataset, encrypted columns indexed using an `ste_vec` that use different contexts cannot be compared.
+Containment queries that manage to mix index terms from multiple columns will never return a positive result.
 This is by design.
 
 The index is generated from a JSONB document by first flattening the structure of the document such that a hash can be generated for each unique path prefix to a node.
 
-The complete set of JSON types is supported by the indexer. 
+The complete set of JSON types is supported by the indexer.
 Null values are ignored by the indexer.
 
 - Object `{ ... }`
@@ -451,12 +482,9 @@ For a document like this:
     "email": "alice@example.com",
     "name": {
       "first_name": "Alice",
-      "last_name": "McCrypto",
+      "last_name": "McCrypto"
     },
-    "roles": [
-      "admin",
-      "owner",
-    ]
+    "roles": ["admin", "owner"]
   }
 }
 ```
@@ -466,17 +494,33 @@ Hashes would be produced from the following list of entries:
 ```js
 [
   [Obj, Key("account"), Obj, Key("email"), String("alice@example.com")],
-  [Obj, Key("account"), Obj, Key("name"), Obj, Key("first_name"), String("Alice")],
-  [Obj, Key("account"), Obj, Key("name"), Obj, Key("last_name"), String("McCrypto")],
+  [
+    Obj,
+    Key("account"),
+    Obj,
+    Key("name"),
+    Obj,
+    Key("first_name"),
+    String("Alice"),
+  ],
+  [
+    Obj,
+    Key("account"),
+    Obj,
+    Key("name"),
+    Obj,
+    Key("last_name"),
+    String("McCrypto"),
+  ],
   [Obj, Key("account"), Obj, Key("roles"), Array, String("admin")],
   [Obj, Key("account"), Obj, Key("roles"), Array, String("owner")],
-]
+];
 ```
 
 Using the first entry to illustrate how an entry is converted to hashes:
 
 ```js
-[Obj, Key("account"), Obj, Key("email"), String("alice@example.com")]
+[Obj, Key("account"), Obj, Key("email"), String("alice@example.com")];
 ```
 
 The hashes would be generated for all prefixes of the full path to the leaf node.
@@ -489,7 +533,7 @@ The hashes would be generated for all prefixes of the full path to the leaf node
   [Obj, Key("account"), Obj, Key("email")],
   [Obj, Key("account"), Obj, Key("email"), String("alice@example.com")],
   // (remaining leaf nodes omitted)
-]
+];
 ```
 
 Query terms are processed in the same manner as the input document.
@@ -497,7 +541,7 @@ Query terms are processed in the same manner as the input document.
 A query prior to encrypting & indexing looks like a structurally similar subset of the encrypted document, for example:
 
 ```json
-{ "account": { "email": "alice@example.com", "roles": "admin" }}
+{ "account": { "email": "alice@example.com", "roles": "admin" } }
 ```
 
 The expression `cs_ste_vec_v1(encrypted_account) @> cs_ste_vec_v1($query)` would match all records where the `encrypted_account` column contains a JSONB object with an "account" key containing an object with an "email" key where the value is the string "alice@example.com".
@@ -510,11 +554,12 @@ When reduced to a prefix list, it would look like this:
   [Obj, Key("account")],
   [Obj, Key("account"), Obj],
   [Obj, Key("account"), Obj, Key("email")],
-  [Obj, Key("account"), Obj, Key("email"), String("alice@example.com")]
-  [Obj, Key("account"), Obj, Key("roles")],
+  [Obj, Key("account"), Obj, Key("email"), String("alice@example.com")][
+    (Obj, Key("account"), Obj, Key("roles"))
+  ],
   [Obj, Key("account"), Obj, Key("roles"), Array],
-  [Obj, Key("account"), Obj, Key("roles"), Array, String("admin")]
-]
+  [Obj, Key("account"), Obj, Key("roles"), Array, String("admin")],
+];
 ```
 
 Which is then turned into an ste_vec of hashes which can be directly queries against the index.
@@ -573,19 +618,20 @@ The format is defined as a [JSON Schema](src/cs_encrypted_v1.schema.json).
 It should never be necessary to directly interact with the stored `jsonb`.
 Cipherstash proxy handles the encoding, and EQL provides the functions.
 
-| Field    | Name               | Description
-| -------- | ------------------ | ------------------------------------------------------------
-| s        | Schema version     | JSON Schema version of this json document.
-| v        | Version            | The configuration version that generated this stored value.
-| k        | Kind               | The kind of the data (plaintext/pt, ciphertext/ct, encrypting/et).
-| i.t      | Table identifier   | Name of the table containing encrypted column.
-| i.c      | Column identifier  | Name of the encrypted column.
-| p        | Plaintext          | Plaintext value sent by database client. Required if kind is plaintext/pt or encrypting/et.
-| c        | Ciphertext         | Ciphertext value. Encrypted by proxy. Required if kind is plaintext/pt or encrypting/et.
-| m.1      | Match index        | Ciphertext index value. Encrypted by proxy.
-| o.1      | ORE index          | Ciphertext index value. Encrypted by proxy.
-| u.1      | Unique index       | Ciphertext index value. Encrypted by proxy.
-| sv.1     | STE vector index   | Ciphertext index value. Encrypted by proxy.
+| Field | Name              | Description                                                                                                                                                                                                                                                               |
+| ----- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| s     | Schema version    | JSON Schema version of this json document.                                                                                                                                                                                                                                |
+| v     | Version           | The configuration version that generated this stored value.                                                                                                                                                                                                               |
+| k     | Kind              | The kind of the data (plaintext/pt, ciphertext/ct, encrypting/et).                                                                                                                                                                                                        |
+| i.t   | Table identifier  | Name of the table containing encrypted column.                                                                                                                                                                                                                            |
+| i.c   | Column identifier | Name of the encrypted column.                                                                                                                                                                                                                                             |
+| p     | Plaintext         | Plaintext value sent by database client. Required if kind is plaintext/pt or encrypting/et.                                                                                                                                                                               |
+| q     | For query         | Specifies that the plaintext should be encrypted for a specific query operation. If `null`, source encryption and encryption for all indexes will be performed. Valid values are `"match"`, `"ore"`, `"unique"`, `"ste_vec"`, `"ejson_path"`, and `"websearch_to_match"`. |
+| c     | Ciphertext        | Ciphertext value. Encrypted by proxy. Required if kind is plaintext/pt or encrypting/et.                                                                                                                                                                                  |
+| m     | Match index       | Ciphertext index value. Encrypted by proxy.                                                                                                                                                                                                                               |
+| o     | ORE index         | Ciphertext index value. Encrypted by proxy.                                                                                                                                                                                                                               |
+| u     | Unique index      | Ciphertext index value. Encrypted by proxy.                                                                                                                                                                                                                               |
+| sv    | STE vector index  | Ciphertext index value. Encrypted by proxy.                                                                                                                                                                                                                               |
 
 ## Helper packages
 
