@@ -15,7 +15,7 @@
     "k": {
       "title": "kind",
       "type": "string",
-      "enum": ["pt", "ct", "en"]
+      "enum": ["pt", "ct", "en", "qm", "qo", "qu", "qejp", "qsv"]
     },
     "i": {
       "title": "ident",
@@ -42,11 +42,11 @@
       "title": "ciphertext",
       "type": "string"
     },
-    "u.1": {
+    "u": {
       "title": "unique index",
       "type": "string"
     },
-    "o.1": {
+    "o": {
       "title": "ore index",
       "type": "array",
       "minItems": 1,
@@ -54,13 +54,25 @@
         "type": "string"
       }
     },
-    "m.1": {
+    "m": {
       "title": "match index",
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "number"
       }
+    },
+    "sv": {
+      "title": "STE vec index",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "se": {
+      "title": "EJSON path selector",
+      "type": "string"
     }
   },
   "anyOf": [
@@ -68,9 +80,22 @@
       "properties": {
         "k": {
           "const": "pt"
+        },
+        "q": {
+          "title": "for query",
+          "description": "Specifies that the plaintext should be encrypted for a specific query operation. If null, source encryption and encryption for all indexes will be performed.",
+          "type": "string",
+          "enum": [
+            "match",
+            "ore",
+            "unique",
+            "ste_vec",
+            "ejson_path",
+            "websearch_to_match"
+          ]
         }
       },
-      "required": ["p"]
+      "required": ["p", "i"]
     },
     {
       "properties": {
@@ -78,7 +103,7 @@
           "const": "ct"
         }
       },
-      "required": ["c"]
+      "required": ["c", "i"]
     },
     {
       "properties": {
@@ -86,8 +111,48 @@
           "const": "en"
         }
       },
-      "required": ["c", "p"]
+      "required": ["c", "p", "i"]
+    },
+    {
+      "properties": {
+        "k": {
+          "const": "qm"
+        }
+      },
+      "required": ["m"]
+    },
+    {
+      "properties": {
+        "k": {
+          "const": "qo"
+        }
+      },
+      "required": ["o"]
+    },
+    {
+      "properties": {
+        "k": {
+          "const": "qu"
+        }
+      },
+      "required": ["u"]
+    },
+    {
+      "properties": {
+        "k": {
+          "const": "qsv"
+        }
+      },
+      "required": ["sv"]
+    },
+    {
+      "properties": {
+        "k": {
+          "const": "qejp"
+        }
+      },
+      "required": ["se"]
     }
   ],
-  "required": ["v", "k", "e"]
+  "required": ["v", "k"]
 }
