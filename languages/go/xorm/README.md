@@ -73,3 +73,9 @@ Run examples:
 ```shell
 ./run.sh examples
 ```
+
+Run tests:
+
+```shell
+./run.sh tests
+```

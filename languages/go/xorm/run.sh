@@ -29,10 +29,21 @@ subproject_teardown() {
 subproject_examples() {
   # reset db
   go run . setupDev
-  # start proxy
 
   # run examples queries
   go run . runExamples
+}
+
+subproject_tests(){
+   # start postgres and proxy
+  docker compose up -d
+  # reset db
+  go run . setupDev
+  #  run e2e tests
+  make gotest
+  #  run goeql tests
+  cd ../goeql
+  go test
 }
 
 subproject_start_proxy() {
@@ -49,12 +60,12 @@ case $subcommand in
     subproject_teardown
     ;;
 
-  start_proxy)
-    subproject_start_proxy
-    ;;
-
   examples)
     subproject_examples
+    ;;
+
+  tests)
+    subproject_tests
     ;;
 
   *)
