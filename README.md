@@ -96,6 +96,15 @@ SELECT cs_activate_v1();
 
 > **Important:** These functions must be run after any modifications to the configuration.
 
+#### Refresh CipherStash Proxy configuration
+
+CipherStash Proxy pings the database every 60 seconds to refresh the configuration.
+You can force CipherStash Proxy to refresh the configuration by running the `cs_refresh_encrypt_config` function.
+
+```sql
+SELECT cs_refresh_encrypt_config();
+```
+
 ### Inserting data
 
 When inserting data into the encrypted column, you must wrap the plaintext in the appropriate EQL payload.
