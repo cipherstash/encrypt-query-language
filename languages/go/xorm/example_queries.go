@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/encrypt-query-language/go/goeql"
+	"github.com/encrypt-query-language/languages/go/goeql"
 	"xorm.io/xorm"
 )
 
