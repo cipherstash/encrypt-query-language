@@ -5,7 +5,7 @@ import (
 	"log"
 	"testing"
 
-	"github.com/encrypt-query-language/go/goeql"
+	"github.com/encrypt-query-language/languages/go/goeql"
 	"github.com/stretchr/testify/assert"
 	"xorm.io/xorm"
 )
