@@ -15,7 +15,7 @@
     "k": {
       "title": "kind",
       "type": "string",
-      "enum": ["pt", "ct", "en"]
+      "enum": ["pt", "ct", "en", "qm", "qo", "qu", "qejp", "qsv", "qst", "qwsm"]
     },
     "i": {
       "title": "ident",
@@ -91,7 +91,7 @@
           ]
         }
       },
-      "required": ["p"]
+      "required": ["p", "i"]
     },
     {
       "properties": {
@@ -99,7 +99,7 @@
           "const": "ct"
         }
       },
-      "required": ["c"]
+      "required": ["c", "i"]
     },
     {
       "properties": {
@@ -107,8 +107,56 @@
           "const": "en"
         }
       },
-      "required": ["c", "p"]
+      "required": ["c", "p", "i"]
+    },
+    {
+      "properties": {
+        "k": {
+          "const": "qm"
+        }
+      },
+      "required": ["m"]
+    },
+    {
+      "properties": {
+        "k": {
+          "const": "qo"
+        }
+      },
+      "required": ["o"]
+    },
+    {
+      "properties": {
+        "k": {
+          "const": "qu"
+        }
+      },
+      "required": ["u"]
+    },
+    {
+      "properties": {
+        "k": {
+          "const": "qsv"
+        }
+      },
+      "required": ["sv"]
+    },
+    {
+      "properties": {
+        "k": {
+          "const": "qst"
+        }
+      },
+      "required": ["o"]
+    },
+    {
+      "properties": {
+        "k": {
+          "const": "qwsm"
+        }
+      },
+      "required": ["m"]
     }
   ],
-  "required": ["v", "k", "e"]
+  "required": ["v", "k"]
 }
