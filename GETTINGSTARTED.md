@@ -40,6 +40,41 @@ CREATE TABLE IF NOT EXISTS "users" (
 
 Some language specific ORMs don't support custom types, so EQL also supports `jsonb` rather than the `cs_encrypted_v1` domain type.
 
+### Configuring the column
+
+In order for CipherStash Proxy to encrypt and decrypt the data, you can initialize the column in the database using the `cs_add_column_v1` function.
+
+```sql
+SELECT cs_add_column_v1('users', 'email_encrypted');
+```
+
+This function will **not** enable searchable encryption, but will allow you to encrypt and decrypt data.
+
+### Activate configuration
+
+By default, the state of the configuration is `pending` after any modifications.
+You can activate the configuration by running the `cs_encrypt_v1` and `cs_activate_v1` function.
+
+```sql
+SELECT cs_encrypt_v1();
+SELECT cs_activate_v1();
+```
+
+> **Important:** These functions must be run after any modifications to the configuration.
+
+#### Refresh CipherStash Proxy configuration
+
+CipherStash Proxy pings the database every 60 seconds to refresh the configuration.
+You can force CipherStash Proxy to refresh the configuration by running the `cs_refresh_encrypt_config` function.
+
+```sql
+SELECT cs_refresh_encrypt_config();
+```
+
+### Activate configuration
+
+By default, the state of the configuration is `pending` after any modifications.
+
 ### Inserting data
 
 When inserting data into the encrypted column, you must wrap the plaintext in the appropriate EQL payload.
