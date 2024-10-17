@@ -74,6 +74,14 @@ class CsText(CsValue):
     def value_from_db_format(cls, s: str):
         return s
 
+class CsJsonb(CsValue):
+    def value_in_db_format(self):
+        return json.dumps(self.value)
+
+    @classmethod
+    def value_from_db_format(cls, s: str):
+        return json.loads(s)
+
 def id_map(x):
     return x
 
