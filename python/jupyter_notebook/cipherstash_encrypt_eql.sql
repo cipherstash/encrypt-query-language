@@ -175,7 +175,6 @@ CREATE FUNCTION cs_ore_64_8_v1(col jsonb)
 BEGIN ATOMIC
 	RETURN cs_ore_64_8_v1_v0_0(col);
 END;
-
 --
 -- Configuration Schema
 --
@@ -226,6 +225,7 @@ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
 	SELECT jsonb_object_keys(jsonb_path_query(val, '$.tables.*.*.indexes')) = ANY('{match, ore, unique, ste_vec}');
 END;
+
 
 CREATE FUNCTION _cs_config_check_cast(val jsonb)
   RETURNS BOOLEAN
@@ -289,7 +289,7 @@ DROP FUNCTION IF EXISTS cs_discard_v1();
 DROP FUNCTION IF EXISTS cs_refresh_encrypt_config();
 
 DROP FUNCTION IF EXISTS _cs_config_default();
-DROP FUNCTION IF EXISTS _cs_config_match_1_default();
+DROP FUNCTION IF EXISTS _cs_config_match_default();
 
 DROP FUNCTION IF EXISTS _cs_config_add_table(text, json);
 DROP FUNCTION IF EXISTS _cs_config_add_column(text, text, json);
@@ -367,9 +367,9 @@ $$ LANGUAGE plpgsql;
 
 
 --
--- Default options for match_1 index
+-- Default options for match index
 --
-CREATE FUNCTION _cs_config_match_1_default()
+CREATE FUNCTION _cs_config_match_default()
   RETURNS jsonb
 LANGUAGE sql STRICT PARALLEL SAFE
 BEGIN ATOMIC
@@ -414,8 +414,8 @@ AS $$
     SELECT _cs_config_add_cast(table_name, column_name, cast_as, _config) INTO _config;
 
     -- set default options for index if opts empty
-    IF index_name = 'match_1' AND opts = '{}' THEN
-      SELECT _cs_config_match_1_default() INTO opts;
+    IF index_name = 'match' AND opts = '{}' THEN
+      SELECT _cs_config_match_default() INTO opts;
     END IF;
 
     SELECT _cs_config_add_index(table_name, column_name, index_name, opts, _config) INTO _config;
