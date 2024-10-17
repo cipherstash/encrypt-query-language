@@ -91,7 +91,8 @@ class CsRow:
         'encrypted_boolean': CsBool.from_parsed_json,
         'encrypted_date': CsDate.from_parsed_json,
         'encrypted_float': CsFloat.from_parsed_json,
-        'encrypted_utf8_str': CsText.from_parsed_json
+        'encrypted_utf8_str': CsText.from_parsed_json,
+        'encrypted_jsonb': CsText.from_parsed_json
     }
 
     def __init__(self, row):
