@@ -10,6 +10,8 @@ EQL provides a data format for transmitting and storing encrypted data & indexes
 
 ## Table of Contents
 
+- [Installation](#installation)
+- [Usage](#usage)
 - [Encrypted columns](#encrypted-columns)
   - [Inserting data](#inserting-data)
   - [Reading data](#reading-data)
@@ -20,6 +22,35 @@ EQL provides a data format for transmitting and storing encrypted data & indexes
 - [Helper packages](#helper-packages)
 
 ---
+
+## Installation
+
+The simplest and fastest way to get up and running with EQL from scratch is to execute the install SQL file directly in your database.
+
+1. Download the [install.sql] file
+2. Run the following command to install the custom types and functions:
+
+```bash
+psql -f install.sql
+```
+
+## Usage
+
+Once the custom types and functions are installed, you can start using EQL in your queries.
+
+1. Create a table with a column of type `cs_encrypted_v1` which will store your encrypted data.
+1. Use EQL functions to add indexes for the columns you want to encrypt.
+  - Indexes are used by Cipherstash Proxy to understand what cryptography schemes are required for your use case.
+1. Initialize Cipherstash Proxy for cryptographic operations.
+  - The Proxy will dynamically encrypt data on the way in and decrypt data on the way out based on the indexes you have defined.
+1. Insert data into the defined columns using a specific payload format.
+  - The payload format is defined in the [data format](#data-format) section.
+1. Query the data using the EQL functions defined in the [querying data with EQL](#querying-data-with-eql) section.
+  - No modifications are required to simply `SELECT` data from your encrypted columns.
+  - In order to perform `WHERE` and `ORDER BY` queries, you must wrap the queries in the EQL functions defined in the [querying data with EQL](#querying-data-with-eql) section.
+1. Integrate with your application via the [helper packages](#helper-packages) to interact with the encrypted data.
+
+You can find a full getting started guide in the [GETTINGSTARTED.md](GETTINGSTARTED.md) file.
 
 ## Encrypted columns
 
