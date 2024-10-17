@@ -483,6 +483,8 @@ P = D(k, c, iv, aad) as JSON
 Where `aad` is the same as that which was provided during encryption and `D` is the `AES-256-SIV` decryption function
 coresponding to the encryption function described above.
 
+The output JSON here is called the _Annotated Ciphertext_.
+
 #### Extract ciphertext as TEXT
 
 This process is identical to extracting a ciphertext intended for `JSON`, as described in the previous
@@ -506,6 +508,60 @@ IV = TRUNCATE(s, 12)
 P = D(k, c, iv, aad) as TEXT
 ```
 
+#### Extract a term of any type
+
+The process is the same as the extraction methods described above, except:
+
+1. The _Term_ element of the relevant tuple in `V` is returned (rather than the ciphertext)
+2. The _Term_ is output directly instead of as a structured type
+
+#### Extract a term of a specific type
+
+The process is the same as the extraction method described in the previous section, except:
+
+1. A target _Term_ type is specified
+1. The _Term_ element of the relevant tuple in `V` is returned only if `TYPE` matches the value specified
+2. The _Term_ is output directly but with the `TYPE` byte removed
+
+
+### Enumeration
+
+An `ste_vec` defined the following enumerations:
+
+1. Enumerate the _Selectors_
+2. Enumerate the _Terms_ (of any type)
+3. Enumerate the _Terms_ (of a specific type)
+4. Enumerate the `_Ciphertext_ values as _Annotated Ciphertexts_ which should be interpreted as a specific type
+
+#### Enumerate the _Selectors_
+
+Selectors are enumerated by returning a vector containing the first element of each tuple.
+
+#### Enumerate the _Terms_
+
+Terms are enumerated by returning a vector containing the second element of each tuple.
+
+#### Enumerate the _Terms_ of a specific type
+
+Terms of a specific type are enumerated by returning a vector containing the second element of each tuple
+where the `TYPE` byte matches the specified type and is removed.
+
+#### Enumerate the _Annotated Ciphertexts_
+
+Annotated Ciphertexts are enumerated by constructing a vector of JSON objects of the following form:
+
+```js
+{
+    "c" = Ci,
+    "s" = si,
+    "type": <specified-type>
+}
+```
+
+Where `Ci` and `si` are the Ciphertext and selector of the `ith` tuple respectively.
+
+This function is the EQL analogue of `jsonb_array_elements` where the specified type is `JSON`
+and `jsonb_array_elements_text` where the specified type is `TEXT`.
 
 
 
