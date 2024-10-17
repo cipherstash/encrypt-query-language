@@ -108,7 +108,7 @@ An `ste_vec` is an array of 2-element arrays containing a "Posting" and a "ciphe
 
 A _Posting_ comprises a selector and a _Term_.
 
-``
+```
 POSTING = SELECTOR <> TERM
 ```
 
