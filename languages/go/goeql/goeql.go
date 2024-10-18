@@ -1,10 +1,15 @@
 package goeql
 
-// This package contains helpers to use with Go/Xorm to serialize/deserialize values
-// into the shape EQL and the CipherStash proxy needs to enable encryption/decryption.
+// goeql is a collection of helpers for serializing and deserializing values
+// into the shape EQL and the CipherStash Proxy needs to enable encryption and
+// decryption of values, and search of those encrypted values while keeping them
+// encrypted at all times.
 
 // EQL expects a json format that looks like this:
+//
 // '{"k":"pt","p":"a string representation of the plaintext that is being encrypted","i":{"t":"table","c":"column"},"v":1}'
+//
+// More documentation on this format can be found at https://github.com/cipherstash/encrypt-query-language#data-format
 
 import (
 	"encoding/json"
