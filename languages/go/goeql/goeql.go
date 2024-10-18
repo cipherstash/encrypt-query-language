@@ -1,10 +1,15 @@
 package goeql
 
-// This package contains helpers to use with Go/Xorm to serialize/deserialize values
-// into the shape EQL and the CipherStash proxy needs to enable encryption/decryption.
+// goeql is a collection of helpers for serializing and deserializing values
+// into the shape EQL and the CipherStash Proxy needs to enable encryption and
+// decryption of values, and search of those encrypted values while keeping them
+// encrypted at all times.
 
 // EQL expects a json format that looks like this:
+//
 // '{"k":"pt","p":"a string representation of the plaintext that is being encrypted","i":{"t":"table","c":"column"},"v":1}'
+//
+// More documentation on this format can be found at https://github.com/cipherstash/encrypt-query-language#data-format
 
 import (
 	"encoding/json"
@@ -12,11 +17,13 @@ import (
 	"strconv"
 )
 
+// TableColumn represents the table and column an encrypted value belongs to
 type TableColumn struct {
 	T string `json:"t"`
 	C string `json:"c"`
 }
 
+// EncryptedColumn represents the plaintext value sent by a database client
 type EncryptedColumn struct {
 	K string      `json:"k"`
 	P string      `json:"p"`
@@ -24,14 +31,19 @@ type EncryptedColumn struct {
 	V int         `json:"v"`
 }
 
-// Creating custom types for encrypted fields to enable creating methods for
-// serialization/deserialization of these types.
+// EncryptedText is a string value to be encrypted
 type EncryptedText string
+
+// EncryptedJsonb is a jsonb value to be encrypted
 type EncryptedJsonb map[string]interface{}
+
+// EncryptedInt is a int value to be encrypted
 type EncryptedInt int
+
+// EncryptedBool is a bool value to be encrypted
 type EncryptedBool bool
 
-// Text
+// Serialize turns a EncryptedText value into a jsonb payload for CipherStash Proxy
 func (et EncryptedText) Serialize(table string, column string) ([]byte, error) {
 	val, err := ToEncryptedColumn(string(et), table, column)
 	if err != nil {
@@ -40,6 +52,7 @@ func (et EncryptedText) Serialize(table string, column string) ([]byte, error) {
 	return json.Marshal(val)
 }
 
+// Deserialize turns a jsonb payload from CipherStash Proxy into an EncryptedText value
 func (et *EncryptedText) Deserialize(data []byte) (EncryptedText, error) {
 	var jsonData map[string]interface{}
 	if err := json.Unmarshal(data, &jsonData); err != nil {
@@ -53,7 +66,7 @@ func (et *EncryptedText) Deserialize(data []byte) (EncryptedText, error) {
 	return "", fmt.Errorf("invalid format: missing 'p' field in JSONB")
 }
 
-// Jsonb
+// Serialize turns a EncryptedJsonb value into a jsonb payload for CipherStash Proxy
 func (ej EncryptedJsonb) Serialize(table string, column string) ([]byte, error) {
 	val, err := ToEncryptedColumn(map[string]any(ej), table, column)
 	if err != nil {
@@ -62,6 +75,7 @@ func (ej EncryptedJsonb) Serialize(table string, column string) ([]byte, error) 
 	return json.Marshal(val)
 }
 
+// Deserialize turns a jsonb payload from CipherStash Proxy into an EncryptedJsonb value
 func (ej *EncryptedJsonb) Deserialize(data []byte) (EncryptedJsonb, error) {
 	var jsonData map[string]interface{}
 	if err := json.Unmarshal(data, &jsonData); err != nil {
@@ -80,7 +94,7 @@ func (ej *EncryptedJsonb) Deserialize(data []byte) (EncryptedJsonb, error) {
 	return nil, fmt.Errorf("invalid format: missing 'p' field in JSONB")
 }
 
-// Int
+// Serialize turns a EncryptedInt value into a jsonb payload for CipherStash Proxy
 func (et EncryptedInt) Serialize(table string, column string) ([]byte, error) {
 	val, err := ToEncryptedColumn(int(et), table, column)
 	if err != nil {
@@ -89,6 +103,7 @@ func (et EncryptedInt) Serialize(table string, column string) ([]byte, error) {
 	return json.Marshal(val)
 }
 
+// Deserialize turns a jsonb payload from CipherStash Proxy into an EncryptedInt value
 func (et *EncryptedInt) Deserialize(data []byte) (EncryptedInt, error) {
 	var jsonData map[string]interface{}
 	if err := json.Unmarshal(data, &jsonData); err != nil {
@@ -106,7 +121,7 @@ func (et *EncryptedInt) Deserialize(data []byte) (EncryptedInt, error) {
 	return 0, fmt.Errorf("invalid format: missing 'p' field")
 }
 
-// Bool
+// Serialize turns a EncryptedBool value into a jsonb payload for CipherStash Proxy
 func (eb EncryptedBool) Serialize(table string, column string) ([]byte, error) {
 	val, err := ToEncryptedColumn(bool(eb), table, column)
 	if err != nil {
@@ -115,7 +130,8 @@ func (eb EncryptedBool) Serialize(table string, column string) ([]byte, error) {
 	return json.Marshal(val)
 }
 
-func (et *EncryptedBool) Deserialize(data []byte) (EncryptedBool, error) {
+// Deserialize turns a jsonb payload from CipherStash Proxy into an EncryptedBool value
+func (eb *EncryptedBool) Deserialize(data []byte) (EncryptedBool, error) {
 	var jsonData map[string]interface{}
 	if err := json.Unmarshal(data, &jsonData); err != nil {
 		// TODO: Check the best return values for these.
@@ -133,8 +149,7 @@ func (et *EncryptedBool) Deserialize(data []byte) (EncryptedBool, error) {
 	return false, fmt.Errorf("invalid format: missing 'p' field")
 }
 
-// Serialize a query
-
+// SerializeQuery produces a jsonb payload used by EQL query functions to perform search operations like equality checks, range queries, and unique constraints.
 func SerializeQuery(value any, table string, column string) ([]byte, error) {
 	query, err := ToEncryptedColumn(value, table, column)
 	if err != nil {
@@ -149,7 +164,7 @@ func SerializeQuery(value any, table string, column string) ([]byte, error) {
 
 }
 
-// Converts a plaintext value to a string and returns the EncryptedColumn struct to use to insert into the db.
+// ToEncryptedColumn converts a plaintext value to a string, and returns the EncryptedColumn struct for inserting into a database.
 func ToEncryptedColumn(value any, table string, column string) (EncryptedColumn, error) {
 	str, err := convertToString(value)
 	if err != nil {
