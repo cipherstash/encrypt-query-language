@@ -40,14 +40,14 @@ Once the custom types and functions are installed, you can start using EQL in yo
 
 1. Create a table with a column of type `cs_encrypted_v1` which will store your encrypted data.
 1. Use EQL functions to add indexes for the columns you want to encrypt.
-    - Indexes are used by Cipherstash Proxy to understand what cryptography schemes are required for your use case.
+   - Indexes are used by Cipherstash Proxy to understand what cryptography schemes are required for your use case.
 1. Initialize Cipherstash Proxy for cryptographic operations.
-    - The Proxy will dynamically encrypt data on the way in and decrypt data on the way out based on the indexes you have defined.
+   - The Proxy will dynamically encrypt data on the way in and decrypt data on the way out based on the indexes you have defined.
 1. Insert data into the defined columns using a specific payload format.
-    - The payload format is defined in the [data format](#data-format) section.
+   - The payload format is defined in the [data format](#data-format) section.
 1. Query the data using the EQL functions defined in the [querying data with EQL](#querying-data-with-eql) section.
-    - No modifications are required to simply `SELECT` data from your encrypted columns.
-    - In order to perform `WHERE` and `ORDER BY` queries, you must wrap the queries in the EQL functions defined in the [querying data with EQL](#querying-data-with-eql) section.
+   - No modifications are required to simply `SELECT` data from your encrypted columns.
+   - In order to perform `WHERE` and `ORDER BY` queries, you must wrap the queries in the EQL functions defined in the [querying data with EQL](#querying-data-with-eql) section.
 1. Integrate with your application via the [helper packages](#helper-packages) to interact with the encrypted data.
 
 You can find a full getting started guide in the [GETTINGSTARTED.md](GETTINGSTARTED.md) file.
@@ -141,49 +141,19 @@ These statements must be run through the CipherStash Proxy in order to **decrypt
 **Example:**
 
 ```rb
-filter = EQL.for_match("users", "email_encrypted", "test")
-User.select(:email_encrypted).where("cs_match_v1(email_encrypted) @> cs_match_v1(?)", filter)
+Users.findAll(&:encrypted_email)
 ```
 
 Which will execute on the server as:
 
 ```sql
-SELECT email_encrypted FROM users
-WHERE cs_match_v1(email_encrypted) @> cs_match_v1('{
-  "v": 1,
-  "k": "pt",
-  "p": "test",
-  "i": {
-    "t": "users",
-    "c": "email_encrypted"
-  },
-  "q": "match"
-}');
+SELECT encrypted_email FROM users;
 ```
 
-A similar plaintext query (without EQL) could look like:
+And is the EQL equivalent of the following plaintext query:
 
 ```sql
-SELECT email FROM users WHERE email LIKE 'test%';
-```
-
-Note that plaintext payloads for query operations should set the `"q"` (for query) property.
-This property tells CipherStash Proxy to only perform encryption necessary for a specific operation.
-Otherwise, Proxy will perform source encryption and encryption for all indexes configured for the given column.
-
-For reference, the EQL payload is defined as a `jsonb` with a specific schema:
-
-```json
-{
-  "v": 1,
-  "k": "pt",
-  "p": "test@test.com",
-  "i": {
-    "t": "users",
-    "c": "email_encrypted"
-  },
-  "q": "match"
-}
+SELECT email FROM users;
 ```
 
 All the data returned from the database is fully decrypted.
