@@ -130,7 +130,7 @@ BEGIN ATOMIC
 	RETURN cs_unique_v1_v0_0(col);
 END;
 
--- extracts json containment index from an encrypted column
+-- extracts json ste_vec index from an encrypted column
 CREATE OR REPLACE FUNCTION cs_ste_vec_v1_v0_0(col jsonb)
   RETURNS cs_ste_vec_index_v1
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -233,7 +233,7 @@ CREATE FUNCTION _cs_config_check_indexes(val jsonb)
   RETURNS BOOLEAN
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
-	SELECT jsonb_object_keys(jsonb_path_query(val, '$.tables.*.*.indexes')) = ANY('{match, ore, unique, json}');
+	SELECT jsonb_object_keys(jsonb_path_query(val, '$.tables.*.*.indexes')) = ANY('{match, ore, unique, ste_vec}');
 END;
 
 
@@ -299,7 +299,7 @@ DROP FUNCTION IF EXISTS cs_discard_v1();
 DROP FUNCTION IF EXISTS cs_refresh_encrypt_config();
 
 DROP FUNCTION IF EXISTS _cs_config_default();
-DROP FUNCTION IF EXISTS _cs_config_match_1_default();
+DROP FUNCTION IF EXISTS _cs_config_match_default();
 
 DROP FUNCTION IF EXISTS _cs_config_add_table(text, json);
 DROP FUNCTION IF EXISTS _cs_config_add_column(text, text, json);
@@ -328,8 +328,7 @@ AS $$
     tbl jsonb;
   BEGIN
     IF NOT config #> array['tables'] ? table_name THEN
-      SELECT jsonb_build_object(table_name, jsonb_build_object()) into tbl;
-      SELECT jsonb_set(config, array['tables'], tbl) INTO config;
+      SELECT jsonb_insert(config, array['tables', table_name], jsonb_build_object()) INTO config;
     END IF;
     RETURN config;
   END;
@@ -377,9 +376,9 @@ $$ LANGUAGE plpgsql;
 
 
 --
--- Default options for match_1 index
+-- Default options for match index
 --
-CREATE FUNCTION _cs_config_match_1_default()
+CREATE FUNCTION _cs_config_match_default()
   RETURNS jsonb
 LANGUAGE sql STRICT PARALLEL SAFE
 BEGIN ATOMIC
@@ -425,7 +424,7 @@ AS $$
 
     -- set default options for index if opts empty
     IF index_name = 'match' AND opts = '{}' THEN
-      SELECT _cs_config_match_1_default() INTO opts;
+      SELECT _cs_config_match_default() INTO opts;
     END IF;
 
     SELECT _cs_config_add_index(table_name, column_name, index_name, opts, _config) INTO _config;
