@@ -16,9 +16,9 @@ test_dsl:
   PGPASSWORD=$CS_DATABASE__PASSWORD psql $connection_url -f sql/dsl-encryptindex.sql
 
   # tests
-  # PGPASSWORD=$CS_DATABASE__PASSWORD psql $connection_url -f tests/core.sql
+  PGPASSWORD=$CS_DATABASE__PASSWORD psql $connection_url -f tests/core.sql
   PGPASSWORD=$CS_DATABASE__PASSWORD psql $connection_url -f tests/config.sql
-  # PGPASSWORD=$CS_DATABASE__PASSWORD psql $connection_url -f tests/encryptindex.sql
+  PGPASSWORD=$CS_DATABASE__PASSWORD psql $connection_url -f tests/encryptindex.sql
 
   dropdb --username $CS_DATABASE__USERNAME --port $CS_DATABASE__PORT cs_migrator_test
 
