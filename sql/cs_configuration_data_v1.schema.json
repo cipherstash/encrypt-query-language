@@ -1,0 +1,133 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+        "s": {
+            "title": "Schema version",
+            "description": "The schema version of this json document ",
+            "type": "integer",
+            "enum": [
+                1
+            ]
+        },
+        "tables": {
+            "type": "object",
+            "additionalProperties": {
+                "$ref": "#/$defs/table"
+            }
+        }
+    },
+    "required": [
+        "s",
+        "tables"
+    ],
+    "$defs": {
+        "table": {
+            "title": "Table configuration",
+            "type": "object",
+            "additionalProperties": {
+                "$ref": "#/$defs/column"
+            }
+        },
+        "column": {
+            "title": "Column configuration",
+            "type": "object",
+            "properties": {
+                "cast_as": {
+                    "title": "cast as type",
+                    "description": "The type the decrypted column value will be cast as",
+                    "type": "string",
+                    "enum": [
+                        "text",
+                        "int"
+                    ]
+                },
+                "indexes": {
+                    "title": "Table configuration",
+                    "type": "object",
+                    "properties": {
+                        "match_1": {
+                            "$ref": "#/$defs/match_1"
+                        },
+                        "ore_1": {
+                            "$ref": "#/$defs/ore_1"
+                        },
+                        "unique_1": {
+                            "$ref": "#/$defs/unique_1"
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            }
+        },
+        "token_filters": {
+            "title": "Token filters",
+            "token_filters": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "downcase",
+                            "upcase"
+                        ]
+                    }
+                }
+            }
+        },
+        "ore_1": {
+            "title": "Index configuration",
+            "type": "object",
+            "additionalProperties": false
+        },
+        "unique_1": {
+            "title": "Unique index v1",
+            "type": "object",
+            "properties": {
+                "token_filters": {
+                    "$ref": "#/$defs/token_filters"
+                }
+            }
+        },
+        "match_1": {
+            "title": "Index configuration",
+            "type": "object",
+            "properties": {
+                "k": {
+                    "type": "integer"
+                },
+                "m": {
+                    "type": "integer"
+                },
+                "tokenizer": {
+                    "type": "object",
+                    "properties": {
+                        "kind": {
+                            "type": "string",
+                            "enum": [
+                                "edge-ngram",
+                                "ngram"
+                            ]
+                        },
+                        "min_gram": {
+                            "type": "integer"
+                        },
+                        "max_gram": {
+                            "type": "integer"
+                        },
+                        "include_original": {
+                            "type": "boolean"
+                        }
+                    }
+                },
+                "token_filters": {
+                    "$ref": "#/$defs/token_filters"
+                }
+            },
+            "required": [
+                "k",
+                "m"
+            ]
+        }
+    }
+}

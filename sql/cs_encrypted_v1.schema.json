@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "s": {
+      "title": "Schema version",
+      "description": "The schema version of this json document ",
+      "type": "integer",
+      "enum": [
+        1
+      ]
+    },
+    "v": {
+      "title": "Configuration version",
+      "type": "integer"
+    },
+    "k": {
+      "title": "kind",
+      "type": "string",
+      "enum": [
+        "pt",
+        "ct",
+        "en"
+      ]
+    },
+    "i": {
+      "title": "ident",
+      "type": "object",
+      "properties": {
+        "t": {
+          "title": "table",
+          "type": "string",
+          "pattern": "^[a-zA-Z_]{1}[0-9a-zA-Z_]*$"
+        },
+        "c": {
+          "title": "column",
+          "type": "string",
+          "pattern": "^[a-zA-Z_]{1}[0-9a-zA-Z_]*$"
+        }
+      },
+      "required": [
+        "t",
+        "c"
+      ]
+    },
+    "p": {
+      "title": "plaintext",
+      "type": "string"
+    },
+    "c": {
+      "title": "ciphertext",
+      "type": "string"
+    },
+    "u": {
+      "title": "unique index",
+      "type": "string"
+    },
+    "o": {
+      "title": "ore index",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "m": {
+      "title": "match index",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "number"
+      }
+    }
+  },
+  "anyOf": [
+    {
+      "properties": {
+        "k": {
+          "const": "pt"
+        }
+      },
+      "required": [
+        "p"
+      ]
+    },
+    {
+      "properties": {
+        "k": {
+          "const": "ct"
+        }
+      },
+      "required": [
+        "c"
+      ]
+    },
+    {
+      "properties": {
+        "k": {
+          "const": "en"
+        }
+      },
+      "required": [
+        "c",
+        "p"
+      ]
+    }
+  ],
+  "required": [
+    "v",
+    "k",
+    "e"
+  ]
+}
