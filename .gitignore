@@ -180,3 +180,6 @@ cipherstash-proxy.toml
 
 # turbo repo
 .turbo
+
+# ignore release folder
+release/
