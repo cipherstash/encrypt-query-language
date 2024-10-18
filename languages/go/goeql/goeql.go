@@ -131,7 +131,7 @@ func (eb EncryptedBool) Serialize(table string, column string) ([]byte, error) {
 }
 
 // Deserialize turns a jsonb payload from CipherStash Proxy into an EncryptedBool value
-func (et *EncryptedBool) Deserialize(data []byte) (EncryptedBool, error) {
+func (eb *EncryptedBool) Deserialize(data []byte) (EncryptedBool, error) {
 	var jsonData map[string]interface{}
 	if err := json.Unmarshal(data, &jsonData); err != nil {
 		// TODO: Check the best return values for these.
