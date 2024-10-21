@@ -328,7 +328,7 @@ func TestToEncryptedColumn(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		ec, err := ToEncryptedColumn(tt.value, tt.table, tt.column, nil)
+		ec, err := ToEncryptedColumn(tt.value, tt.table, tt.column)
 		if err != nil {
 			t.Fatalf("ToEncryptedColumn returned error: %v", err)
 		}
