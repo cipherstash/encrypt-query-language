@@ -104,7 +104,7 @@ func TestMatchQueryLongString(t *testing.T) {
 
 	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
 
-	query, err := goeql.SerializeQuery("this", "examples", "encrypted_text_field")
+	query, err := goeql.SerializeMatchQuery("this", "examples", "encrypted_text_field")
 	if err != nil {
 		log.Fatalf("Error marshaling encrypted_text_field query: %v", err)
 	}
@@ -157,7 +157,7 @@ func TestMatchQueryEmail(t *testing.T) {
 
 	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
 
-	query, err := goeql.SerializeQuery("test", "examples", "encrypted_text_field")
+	query, err := goeql.SerializeMatchQuery("test", "examples", "encrypted_text_field")
 	if err != nil {
 		log.Fatalf("Error marshaling encrypted_text_field query: %v", err)
 	}
@@ -218,7 +218,7 @@ func TestJsonbQuerySimple(t *testing.T) {
 		},
 	}
 
-	query, errTwo := goeql.SerializeQuery(jsonbQuery, "examples", "encrypted_jsonb_field")
+	query, errTwo := goeql.SerializeJsonbQuery(jsonbQuery, "examples", "encrypted_jsonb_field")
 	if errTwo != nil {
 		log.Fatalf("Error marshaling encrypted_jsonb_field: %v", errTwo)
 	}
@@ -284,7 +284,7 @@ func TestJsonbQueryNested(t *testing.T) {
 		},
 	}
 
-	query, errTwo := goeql.SerializeQuery(jsonbQuery, "examples", "encrypted_jsonb_field")
+	query, errTwo := goeql.SerializeJsonbQuery(jsonbQuery, "examples", "encrypted_jsonb_field")
 	if errTwo != nil {
 		log.Fatalf("Error marshaling encrypted_jsonb_field: %v", errTwo)
 	}
@@ -331,7 +331,7 @@ func TestOreStringRangeQuery(t *testing.T) {
 	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
 
 	// Query
-	query, errQuery := goeql.SerializeQuery("tree", "examples", "encrypted_text_field")
+	query, errQuery := goeql.SerializeOreQuery("tree", "examples", "encrypted_text_field")
 	if errQuery != nil {
 		log.Fatalf("err: %v", errQuery)
 	}
@@ -378,7 +378,7 @@ func TestOreIntRangeQuery(t *testing.T) {
 	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
 
 	// Query
-	query, errQuery := goeql.SerializeQuery(32, "examples", "encrypted_int_field")
+	query, errQuery := goeql.SerializeOreQuery(32, "examples", "encrypted_int_field")
 	if errQuery != nil {
 		log.Fatalf("err: %v", errQuery)
 	}
@@ -434,7 +434,7 @@ func TestOreBoolRangeQuery(t *testing.T) {
 	assert.Equal(t, int64(3), inserted, "Expected to insert 3 rows")
 
 	// Query
-	query, errQuery := goeql.SerializeQuery(false, "examples", "encrypted_bool_field")
+	query, errQuery := goeql.SerializeOreQuery(false, "examples", "encrypted_bool_field")
 	if errQuery != nil {
 		log.Fatalf("err: %v", errQuery)
 	}
@@ -490,7 +490,7 @@ func TestUniqueStringQuery(t *testing.T) {
 	assert.Equal(t, int64(3), inserted, "Expected to insert 3 rows")
 
 	// Query
-	query, errQuery := goeql.SerializeQuery("testing two", "examples", "encrypted_text_field")
+	query, errQuery := goeql.SerializeUniqueQuery("testing two", "examples", "encrypted_text_field")
 	if errQuery != nil {
 		log.Fatalf("err: %v", errQuery)
 	}
