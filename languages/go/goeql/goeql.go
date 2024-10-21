@@ -191,7 +191,7 @@ func ToEncryptedColumn(value any, table string, column string, queryType any) (E
 	if err != nil {
 		return EncryptedColumn{}, fmt.Errorf("error: %v", err)
 	}
-	data := EncryptedColumn{K: "pt", P: str, I: TableColumn{T: table, C: column}, V: 1, Q: nil}
+	data := EncryptedColumn{K: "pt", P: str, I: TableColumn{T: table, C: column}, V: 1}
 	if queryType != nil {
 		data.Q = queryType
 	}
