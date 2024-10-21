@@ -32,6 +32,41 @@ type EncryptedColumn struct {
 }
 
 // EncryptedText is a string value to be encrypted
+// def for_match(value)
+//     for_query(value, "match")
+//   end
+
+//   def for_ore(value)
+//     for_query(value, "ore")
+//   end
+
+//   def for_unique(value)
+//     for_query(value, "unique")
+//   end
+
+//   def for_ste_vec(value)
+//     for_query(value, "ste_vec")
+//   end
+
+//   def for_query(value, for_query)
+//     eql_payload(value, for_query).to_json()
+//   end
+
+//	def eql_payload(value, for_query)
+//	  {
+//	    k: "pt",
+//	    p: serialize_plaintext_value(value),
+//	    i: {
+//	      t: table,
+//	      c: column
+//	    },
+//	    v: 1,
+//	    q: for_query,
+//	  }
+//	end
+//
+// Creating custom types for encrypted fields to enable creating methods for
+// serialization/deserialization of these types.
 type EncryptedText string
 
 // EncryptedJsonb is a jsonb value to be encrypted
