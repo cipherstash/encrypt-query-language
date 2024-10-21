@@ -2,12 +2,10 @@ module go-xorm-app
 
 go 1.21.3
 
-require (
-	github.com/encrypt-query-language/languages/go/goeql v0.0.0-00010101000000-000000000000
-	github.com/stretchr/testify v1.9.0
-)
+require github.com/stretchr/testify v1.9.0
 
 require (
+	github.com/cipherstash/goeql v0.1.1
 	github.com/cockroachdb/apd v1.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect
@@ -32,5 +30,3 @@ require (
 	xorm.io/builder v0.3.11-0.20220531020008-1bd24a7dc978 // indirect
 	xorm.io/xorm v1.3.9
 )
-
-replace github.com/encrypt-query-language/languages/go/goeql => ../goeql
