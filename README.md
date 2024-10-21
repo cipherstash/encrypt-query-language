@@ -583,7 +583,7 @@ Encrypted data is stored as `jsonb` with a specific schema:
   }
   ```
 
-The format is defined as a [JSON Schema](src/cs_encrypted_v1.schema.json).
+The format is defined as a [JSON Schema](./cs_encrypted_v1.schema.json).
 
 It should never be necessary to directly interact with the stored `jsonb`.
 Cipherstash proxy handles the encoding, and EQL provides the functions.
