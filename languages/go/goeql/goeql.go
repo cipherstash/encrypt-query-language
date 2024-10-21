@@ -29,6 +29,7 @@ type EncryptedColumn struct {
 	P string      `json:"p"`
 	I TableColumn `json:"i"`
 	V int         `json:"v"`
+	Q string      `json:"q"`
 }
 
 // EncryptedText is a string value to be encrypted
@@ -149,9 +150,29 @@ func (eb *EncryptedBool) Deserialize(data []byte) (EncryptedBool, error) {
 	return false, fmt.Errorf("invalid format: missing 'p' field")
 }
 
-// SerializeQuery produces a jsonb payload used by EQL query functions to perform search operations like equality checks, range queries, and unique constraints.
-func SerializeQuery(value any, table string, column string) ([]byte, error) {
-	query, err := ToEncryptedColumn(value, table, column)
+// MatchQuery serializes a plaintext value used in a match query
+func MatchQuery(value any, table string, column string) ([]byte, error) {
+	return serializeQuery(value, table, column, "match")
+}
+
+// OreQuery serializes a plaintext value used in an ore query
+func OreQuery(value any, table string, column string) ([]byte, error) {
+	return serializeQuery(value, table, column, "ore")
+}
+
+// UniqueQuery serializes a plaintext value used in a unique query
+func UniqueQuery(value any, table string, column string) ([]byte, error) {
+	return serializeQuery(value, table, column, "unique")
+}
+
+// JsonbQuery serializes a plaintext value used in a jsonb query
+func JsonbQuery(value any, table string, column string) ([]byte, error) {
+	return serializeQuery(value, table, column, "ste_vec")
+}
+
+// serializeQuery produces a jsonb payload used by EQL query functions to perform search operations like equality checks, range queries, and unique constraints.
+func serializeQuery(value any, table string, column string, queryType string) ([]byte, error) {
+	query, err := ToEncryptedColumn(value, table, column, queryType)
 	if err != nil {
 		return nil, fmt.Errorf("error converting to EncryptedColumn: %v", err)
 	}
@@ -165,14 +186,15 @@ func SerializeQuery(value any, table string, column string) ([]byte, error) {
 }
 
 // ToEncryptedColumn converts a plaintext value to a string, and returns the EncryptedColumn struct for inserting into a database.
-func ToEncryptedColumn(value any, table string, column string) (EncryptedColumn, error) {
+func ToEncryptedColumn(value any, table string, column string, queryType ...string) (EncryptedColumn, error) {
 	str, err := convertToString(value)
 	if err != nil {
 		return EncryptedColumn{}, fmt.Errorf("error: %v", err)
 	}
-
 	data := EncryptedColumn{K: "pt", P: str, I: TableColumn{T: table, C: column}, V: 1}
-
+	if queryType != nil {
+		data.Q = queryType[0]
+	}
 	return data, nil
 }
 
