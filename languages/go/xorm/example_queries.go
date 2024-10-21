@@ -60,7 +60,7 @@ func MatchQueryLongString(engine *xorm.Engine) {
 	fmt.Printf("Example one inserted: %+v\n", newExample)
 	fmt.Println("")
 
-	query, err := goeql.SerializeQuery("this", "examples", "encrypted_text_field")
+	query, err := goeql.MatchQuery("this", "examples", "encrypted_text_field")
 	if err != nil {
 		log.Fatalf("Error marshaling encrypted_text_field: %v", err)
 	}
@@ -93,7 +93,7 @@ func MatchQueryEmail(engine *xorm.Engine) {
 	fmt.Printf("Example two inserted!: %+v\n", newExampleTwo)
 	fmt.Println("")
 
-	query, errTwo := goeql.SerializeQuery("some", "examples", "encrypted_text_field")
+	query, errTwo := goeql.MatchQuery("some", "examples", "encrypted_text_field")
 	if errTwo != nil {
 		log.Fatalf("Error marshaling encrypted_text_field: %v", errTwo)
 	}
@@ -141,7 +141,7 @@ func JsonbQuerySimple(engine *xorm.Engine) {
 		},
 	}
 
-	query, errTwo := goeql.SerializeQuery(jsonbQuery, "examples", "encrypted_jsonb_field")
+	query, errTwo := goeql.JsonbQuery(jsonbQuery, "examples", "encrypted_jsonb_field")
 	if errTwo != nil {
 		log.Fatalf("Error marshaling encrypted_jsonb_field: %v", errTwo)
 	}
@@ -201,7 +201,7 @@ func JsonbQueryDeepNested(engine *xorm.Engine) {
 		},
 	}
 
-	jsonbQuery, errQuery := goeql.SerializeQuery(query, "examples", "encrypted_jsonb_field")
+	jsonbQuery, errQuery := goeql.JsonbQuery(query, "examples", "encrypted_jsonb_field")
 	if errQuery != nil {
 		log.Fatalf("err: %v", errQuery)
 	}
@@ -238,7 +238,7 @@ func OreStringRangeQuery(engine *xorm.Engine) {
 	fmt.Println("Examples inserted!")
 
 	// Query
-	query, errQuery := goeql.SerializeQuery("tree", "examples", "encrypted_text_field")
+	query, errQuery := goeql.OreQuery("tree", "examples", "encrypted_text_field")
 	if errQuery != nil {
 		log.Fatalf("err: %v", errQuery)
 	}
@@ -276,7 +276,7 @@ func OreIntRangeQuery(engine *xorm.Engine) {
 	fmt.Println("Examples inserted!", example1)
 	fmt.Println("Examples inserted!", example2)
 
-	serializedOreIntQuery, errQuery := goeql.SerializeQuery(32, "examples", "encrypted_int_field")
+	serializedOreIntQuery, errQuery := goeql.OreQuery(32, "examples", "encrypted_int_field")
 	if errQuery != nil {
 		log.Fatalf("err: %v", errQuery)
 	}
@@ -322,7 +322,7 @@ func OreBoolQuery(engine *xorm.Engine) {
 	fmt.Println("Example3 inserted!", example3)
 
 	// Query
-	query, errQuery := goeql.SerializeQuery(false, "examples", "encrypted_bool_field")
+	query, errQuery := goeql.OreQuery(false, "examples", "encrypted_bool_field")
 	if errQuery != nil {
 		log.Fatalf("err: %v", errQuery)
 	}
@@ -364,7 +364,7 @@ func UniqueStringQuery(engine *xorm.Engine) {
 	fmt.Println("Example3 inserted!", example3)
 
 	var allExamples []Example
-	query, errQuery := goeql.SerializeQuery("test two", "examples", "encrypted_text_field")
+	query, errQuery := goeql.UniqueQuery("test two", "examples", "encrypted_text_field")
 	if errQuery != nil {
 		log.Fatalf("err: %v", errQuery)
 	}
