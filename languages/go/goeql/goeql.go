@@ -29,44 +29,10 @@ type EncryptedColumn struct {
 	P string      `json:"p"`
 	I TableColumn `json:"i"`
 	V int         `json:"v"`
+	Q any         `json:"q"`
 }
 
 // EncryptedText is a string value to be encrypted
-// def for_match(value)
-//     for_query(value, "match")
-//   end
-
-//   def for_ore(value)
-//     for_query(value, "ore")
-//   end
-
-//   def for_unique(value)
-//     for_query(value, "unique")
-//   end
-
-//   def for_ste_vec(value)
-//     for_query(value, "ste_vec")
-//   end
-
-//   def for_query(value, for_query)
-//     eql_payload(value, for_query).to_json()
-//   end
-
-//	def eql_payload(value, for_query)
-//	  {
-//	    k: "pt",
-//	    p: serialize_plaintext_value(value),
-//	    i: {
-//	      t: table,
-//	      c: column
-//	    },
-//	    v: 1,
-//	    q: for_query,
-//	  }
-//	end
-//
-// Creating custom types for encrypted fields to enable creating methods for
-// serialization/deserialization of these types.
 type EncryptedText string
 
 // EncryptedJsonb is a jsonb value to be encrypted
@@ -80,7 +46,7 @@ type EncryptedBool bool
 
 // Serialize turns a EncryptedText value into a jsonb payload for CipherStash Proxy
 func (et EncryptedText) Serialize(table string, column string) ([]byte, error) {
-	val, err := ToEncryptedColumn(string(et), table, column)
+	val, err := ToEncryptedColumn(string(et), table, column, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error serializing: %v", err)
 	}
@@ -103,7 +69,7 @@ func (et *EncryptedText) Deserialize(data []byte) (EncryptedText, error) {
 
 // Serialize turns a EncryptedJsonb value into a jsonb payload for CipherStash Proxy
 func (ej EncryptedJsonb) Serialize(table string, column string) ([]byte, error) {
-	val, err := ToEncryptedColumn(map[string]any(ej), table, column)
+	val, err := ToEncryptedColumn(map[string]any(ej), table, column, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error serializing: %v", err)
 	}
@@ -131,7 +97,7 @@ func (ej *EncryptedJsonb) Deserialize(data []byte) (EncryptedJsonb, error) {
 
 // Serialize turns a EncryptedInt value into a jsonb payload for CipherStash Proxy
 func (et EncryptedInt) Serialize(table string, column string) ([]byte, error) {
-	val, err := ToEncryptedColumn(int(et), table, column)
+	val, err := ToEncryptedColumn(int(et), table, column, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error serializing: %v", err)
 	}
@@ -158,7 +124,7 @@ func (et *EncryptedInt) Deserialize(data []byte) (EncryptedInt, error) {
 
 // Serialize turns a EncryptedBool value into a jsonb payload for CipherStash Proxy
 func (eb EncryptedBool) Serialize(table string, column string) ([]byte, error) {
-	val, err := ToEncryptedColumn(bool(eb), table, column)
+	val, err := ToEncryptedColumn(bool(eb), table, column, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error serializing: %v", err)
 	}
@@ -184,9 +150,22 @@ func (eb *EncryptedBool) Deserialize(data []byte) (EncryptedBool, error) {
 	return false, fmt.Errorf("invalid format: missing 'p' field")
 }
 
+func SerializeMatchQuery(value any, table string, column string) ([]byte, error) {
+	return SerializeQuery(value, table, column, "match")
+}
+func SerializeOreQuery(value any, table string, column string) ([]byte, error) {
+	return SerializeQuery(value, table, column, "ore")
+}
+func SerializeUniqueQuery(value any, table string, column string) ([]byte, error) {
+	return SerializeQuery(value, table, column, "unique")
+}
+func SerializeJsonbQuery(value any, table string, column string) ([]byte, error) {
+	return SerializeQuery(value, table, column, "ste_vec")
+}
+
 // SerializeQuery produces a jsonb payload used by EQL query functions to perform search operations like equality checks, range queries, and unique constraints.
-func SerializeQuery(value any, table string, column string) ([]byte, error) {
-	query, err := ToEncryptedColumn(value, table, column)
+func SerializeQuery(value any, table string, column string, queryType any) ([]byte, error) {
+	query, err := ToEncryptedColumn(value, table, column, queryType)
 	if err != nil {
 		return nil, fmt.Errorf("error converting to EncryptedColumn: %v", err)
 	}
@@ -200,15 +179,26 @@ func SerializeQuery(value any, table string, column string) ([]byte, error) {
 }
 
 // ToEncryptedColumn converts a plaintext value to a string, and returns the EncryptedColumn struct for inserting into a database.
-func ToEncryptedColumn(value any, table string, column string) (EncryptedColumn, error) {
-	str, err := convertToString(value)
-	if err != nil {
-		return EncryptedColumn{}, fmt.Errorf("error: %v", err)
+func ToEncryptedColumn(value any, table string, column string, queryType any) (EncryptedColumn, error) {
+	if queryType == nil {
+		str, err := convertToString(value)
+		if err != nil {
+			return EncryptedColumn{}, fmt.Errorf("error: %v", err)
+		}
+
+		data := EncryptedColumn{K: "pt", P: str, I: TableColumn{T: table, C: column}, V: 1, Q: nil}
+
+		return data, nil
+	} else {
+		str, err := convertToString(value)
+		if err != nil {
+			return EncryptedColumn{}, fmt.Errorf("error: %v", err)
+		}
+
+		data := EncryptedColumn{K: "pt", P: str, I: TableColumn{T: table, C: column}, V: 1, Q: queryType}
+
+		return data, nil
 	}
-
-	data := EncryptedColumn{K: "pt", P: str, I: TableColumn{T: table, C: column}, V: 1}
-
-	return data, nil
 }
 
 func convertToString(value any) (string, error) {

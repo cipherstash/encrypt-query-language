@@ -225,7 +225,7 @@ func TestSerializeQuery(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		serializedData, err := SerializeQuery(tt.value, tt.table, tt.column)
+		serializedData, err := SerializeQuery(tt.value, tt.table, tt.column, nil)
 		if err != nil {
 			t.Fatalf("SerializeQuery returned error: %v", err)
 		}
@@ -257,7 +257,7 @@ func TestToEncryptedColumn(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		ec, err := ToEncryptedColumn(tt.value, tt.table, tt.column)
+		ec, err := ToEncryptedColumn(tt.value, tt.table, tt.column, nil)
 		if err != nil {
 			t.Fatalf("ToEncryptedColumn returned error: %v", err)
 		}
