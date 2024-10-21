@@ -30,7 +30,7 @@ func installCsCustomTypes(engine *sql.DB) {
 
 // Installing EQL
 func installDsl(engine *sql.DB) {
-	path := "./cipherstash-encrypt-dsl.sql"
+	path := "../../../release/cipherstash-encrypt-dsl.sql"
 	sql, err := os.ReadFile(path)
 	if err != nil {
 		log.Fatalf("Failed to read SQL file: %v", err)
