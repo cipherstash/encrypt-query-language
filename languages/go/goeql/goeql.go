@@ -150,16 +150,16 @@ func (eb *EncryptedBool) Deserialize(data []byte) (EncryptedBool, error) {
 	return false, fmt.Errorf("invalid format: missing 'p' field")
 }
 
-func SerializeMatchQuery(value any, table string, column string) ([]byte, error) {
+func MatchQuery(value any, table string, column string) ([]byte, error) {
 	return SerializeQuery(value, table, column, "match")
 }
-func SerializeOreQuery(value any, table string, column string) ([]byte, error) {
+func OreQuery(value any, table string, column string) ([]byte, error) {
 	return SerializeQuery(value, table, column, "ore")
 }
-func SerializeUniqueQuery(value any, table string, column string) ([]byte, error) {
+func UniqueQuery(value any, table string, column string) ([]byte, error) {
 	return SerializeQuery(value, table, column, "unique")
 }
-func SerializeJsonbQuery(value any, table string, column string) ([]byte, error) {
+func JsonbQuery(value any, table string, column string) ([]byte, error) {
 	return SerializeQuery(value, table, column, "ste_vec")
 }
 
