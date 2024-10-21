@@ -15,12 +15,12 @@ We plan to support direct language integration in the future.
 ### Installation
 
 In order to use EQL, you must first install the EQL extension in your PostgreSQL database.
-You can do this by running the following command, which will execute the SQL from the `src/install.sql` file:
 
-Update the database credentials based on your environment.
+1. Download the [cipherstash-encrypt-dsl.sql](./release/cipherstash-encrypt-dsl.sql) file
+2. Run the following command to install the custom types and functions:
 
 ```bash
-psql -U postgres -d postgres -f src/install.sql
+psql -U postgres -d postgres -f cipherstash-encrypt-dsl.sql
 ```
 
 > Note: We also have direct language specific ORM support for installing the extension. See the `languages` directory for more information.
