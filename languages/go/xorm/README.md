@@ -209,7 +209,7 @@ Example:
 
 Inserting data remains the same.
 
-The toDB() function that was setup in [this earlier step](README.md#integrating-eql-into-a-xorm-app), serializes the plaintext value into the json payload CipherStash Proxy expects.
+The `toDB()` function that was setup in [this earlier step](README.md#integrating-eql-into-a-xorm-app), serializes the plaintext value into the json payload CipherStash Proxy expects.
 
 Retrieving data remains the same as well.
 
