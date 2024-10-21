@@ -20,6 +20,7 @@ EQL provides a data format for transmitting and storing encrypted data & indexes
 - [Managing indexes with EQL](#managing-indexes-with-eql)
 - [Data Format](#data-format)
 - [Helper packages](#helper-packages)
+- [Releasing](#releasing)
 
 ---
 
@@ -609,3 +610,15 @@ We have created a few langague specific packages to help you interact with the p
 
 - [@cipherstash/eql](https://github.com/cipherstash/encrypt-query-language/tree/main/languages/javascript/packages/eql): This is a TypeScript implementation of EQL.
 - [github.com/encrypt-query-language/go/goeql](https://github.com/cipherstash/encrypt-query-language/tree/main/languages/go/goeql): This is a Go implementation of EQL.
+
+## Releasing
+
+To cut a [release](https://github.com/cipherstash/encrypt-query-language/releases) of EQL:
+
+1. Draft a [new release](https://github.com/cipherstash/encrypt-query-language/releases/new) on GitHub
+1. Choose a tag, and create a new one with the prefix `eql-` followed by a [semver](https://semver.org/) (for example, `eql-1.2.3`)
+1. Generate the release notes
+1. Optionally set the release to be the latest (you can set a release to be latest later on if you are testing out a release first)
+1. Click the `Publish release` button
+
+This will trigger a run of the [Release EQL](https://github.com/cipherstash/encrypt-query-language/actions/workflows/release-eql.yml) workflow, which will build and attach artifacts to the release.
