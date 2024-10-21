@@ -4,7 +4,7 @@ on:
   release:
     types:
       - published
-  pull_request:
+  pull_request: # runs everything but the last step
     branches:
       - main
     paths:
