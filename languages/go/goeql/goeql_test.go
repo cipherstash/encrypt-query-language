@@ -210,34 +210,105 @@ func TestEncryptedBool_Deserialize(t *testing.T) {
 	}
 }
 
-// Test SerializeQuery Function
-func TestSerializeQuery(t *testing.T) {
-	tests := []struct {
-		value     interface{}
-		table     string
-		column    string
-		expectedP string
-	}{
-		{value: "test_string", table: "table1", column: "column1", expectedP: "test_string"},
-		{value: 123, table: "table2", column: "column2", expectedP: "123"},
-		{value: true, table: "table3", column: "column3", expectedP: "true"},
-		{value: map[string]interface{}{"key": "value"}, table: "table4", column: "column4", expectedP: `{"key":"value"}`},
+func TestMatchQuerySerialization(t *testing.T) {
+	value := "test_string"
+	table := "table1"
+	column := "column1"
+	expectedP := "test_string"
+	expectedQ := "match"
+
+	serializedData, err := MatchQuery(value, table, column)
+	if err != nil {
+		t.Fatalf("SerializeQuery returned error: %v", err)
 	}
 
-	for _, tt := range tests {
-		serializedData, err := SerializeQuery(tt.value, tt.table, tt.column, nil)
-		if err != nil {
-			t.Fatalf("SerializeQuery returned error: %v", err)
-		}
+	var ec EncryptedColumn
+	if err := json.Unmarshal(serializedData, &ec); err != nil {
+		t.Fatalf("Error unmarshaling serialized data: %v", err)
+	}
 
-		var ec EncryptedColumn
-		if err := json.Unmarshal(serializedData, &ec); err != nil {
-			t.Fatalf("Error unmarshaling serialized data: %v", err)
-		}
+	if ec.P != expectedP {
+		t.Errorf("Expected P to be '%s', got '%s'", expectedP, ec.P)
+	}
 
-		if ec.P != tt.expectedP {
-			t.Errorf("Expected P to be '%s', got '%s'", tt.expectedP, ec.P)
-		}
+	if ec.Q != expectedQ {
+		t.Errorf("Expected Q to be '%s', got '%s'", expectedQ, ec.Q)
+	}
+}
+func TestOreQuerySerialization(t *testing.T) {
+	value := 123
+	table := "table1"
+	column := "column1"
+	expectedP := "123"
+	expectedQ := "ore"
+
+	serializedData, err := OreQuery(value, table, column)
+	if err != nil {
+		t.Fatalf("SerializeQuery returned error: %v", err)
+	}
+
+	var ec EncryptedColumn
+	if err := json.Unmarshal(serializedData, &ec); err != nil {
+		t.Fatalf("Error unmarshaling serialized data: %v", err)
+	}
+
+	if ec.P != expectedP {
+		t.Errorf("Expected P to be '%s', got '%s'", expectedP, ec.P)
+	}
+
+	if ec.Q != expectedQ {
+		t.Errorf("Expected Q to be '%s', got '%s'", expectedQ, ec.Q)
+	}
+}
+
+func TestUniqueQuerySerialization(t *testing.T) {
+	value := true
+	table := "table1"
+	column := "column1"
+	expectedP := "true"
+	expectedQ := "unique"
+
+	serializedData, err := UniqueQuery(value, table, column)
+	if err != nil {
+		t.Fatalf("SerializeQuery returned error: %v", err)
+	}
+
+	var ec EncryptedColumn
+	if err := json.Unmarshal(serializedData, &ec); err != nil {
+		t.Fatalf("Error unmarshaling serialized data: %v", err)
+	}
+
+	if ec.P != expectedP {
+		t.Errorf("Expected P to be '%s', got '%s'", expectedP, ec.P)
+	}
+
+	if ec.Q != expectedQ {
+		t.Errorf("Expected Q to be '%s', got '%s'", expectedQ, ec.Q)
+	}
+}
+
+func TestJsonbQuerySerialization(t *testing.T) {
+	value := map[string]interface{}{"key": "value"}
+	table := "table1"
+	column := "column1"
+	expectedP := `{"key":"value"}`
+	expectedQ := "ste_vec"
+
+	serializedData, err := JsonbQuery(value, table, column)
+	if err != nil {
+		t.Fatalf("SerializeQuery returned error: %v", err)
+	}
+
+	var ec EncryptedColumn
+	if err := json.Unmarshal(serializedData, &ec); err != nil {
+		t.Fatalf("Error unmarshaling serialized data: %v", err)
+	}
+
+	if ec.P != expectedP {
+		t.Errorf("Expected P to be '%s', got '%s'", expectedP, ec.P)
+	}
+	if ec.Q != expectedQ {
+		t.Errorf("Expected Q to be '%s', got '%s'", expectedQ, ec.Q)
 	}
 }
 
