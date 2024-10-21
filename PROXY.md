@@ -25,14 +25,13 @@ Before you can start using the proxy, you'll need to upload an empty dataset. Yo
 
 1. [Create a dataset.](https://cipherstash.com/docs/how-to/creating-datasets)
 1. [Create a client key for cryptographic operations.](https://cipherstash.com/docs/how-to/creating-clients)
+1. Upload an empty dataset:
 
 ```bash
 stash datasets config upload --file dataset.yml --client-id client_id --client-key client_key
 ```
 
-> Note: We plan to remove the need for this step in the future.
-
-This will upload an empty dataset to your default workspace.
+> Note: CipherStash Proxy will be unable to initialize unless an empty dataset is uploaded. You will see the error `ZeroKMSError("Failed to send request: NotFound: Server returned a not found response: Status: 404 Not Found`
 
 ## Configuring CipherStash Proxy
 
