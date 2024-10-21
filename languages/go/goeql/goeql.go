@@ -150,21 +150,28 @@ func (eb *EncryptedBool) Deserialize(data []byte) (EncryptedBool, error) {
 	return false, fmt.Errorf("invalid format: missing 'p' field")
 }
 
+// serializes a plaintext value used in a match query
 func MatchQuery(value any, table string, column string) ([]byte, error) {
-	return SerializeQuery(value, table, column, "match")
-}
-func OreQuery(value any, table string, column string) ([]byte, error) {
-	return SerializeQuery(value, table, column, "ore")
-}
-func UniqueQuery(value any, table string, column string) ([]byte, error) {
-	return SerializeQuery(value, table, column, "unique")
-}
-func JsonbQuery(value any, table string, column string) ([]byte, error) {
-	return SerializeQuery(value, table, column, "ste_vec")
+	return serializeQuery(value, table, column, "match")
 }
 
-// SerializeQuery produces a jsonb payload used by EQL query functions to perform search operations like equality checks, range queries, and unique constraints.
-func SerializeQuery(value any, table string, column string, queryType any) ([]byte, error) {
+// serializes a plaintext value used in an ore query
+func OreQuery(value any, table string, column string) ([]byte, error) {
+	return serializeQuery(value, table, column, "ore")
+}
+
+// serializes a plaintext value used in a unique query
+func UniqueQuery(value any, table string, column string) ([]byte, error) {
+	return serializeQuery(value, table, column, "unique")
+}
+
+// serializes a plaintext value used in a jsonb query
+func JsonbQuery(value any, table string, column string) ([]byte, error) {
+	return serializeQuery(value, table, column, "ste_vec")
+}
+
+// serializeQuery produces a jsonb payload used by EQL query functions to perform search operations like equality checks, range queries, and unique constraints.
+func serializeQuery(value any, table string, column string, queryType any) ([]byte, error) {
 	query, err := ToEncryptedColumn(value, table, column, queryType)
 	if err != nil {
 		return nil, fmt.Errorf("error converting to EncryptedColumn: %v", err)
