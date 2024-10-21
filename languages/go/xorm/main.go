@@ -6,8 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/encrypt-query-language/languages/go/goeql" // imported using local path until published
-
+	"github.com/cipherstash/goeql"
 	_ "github.com/jackc/pgx/stdlib" // PostgreSQL driver
 	"xorm.io/xorm"
 	"xorm.io/xorm/names"
