@@ -29,7 +29,7 @@ type EncryptedColumn struct {
 	P string      `json:"p"`
 	I TableColumn `json:"i"`
 	V int         `json:"v"`
-	Q any         `json:"q"`
+	Q string      `json:"q"`
 }
 
 // EncryptedText is a string value to be encrypted
@@ -46,7 +46,7 @@ type EncryptedBool bool
 
 // Serialize turns a EncryptedText value into a jsonb payload for CipherStash Proxy
 func (et EncryptedText) Serialize(table string, column string) ([]byte, error) {
-	val, err := ToEncryptedColumn(string(et), table, column, nil)
+	val, err := ToEncryptedColumn(string(et), table, column)
 	if err != nil {
 		return nil, fmt.Errorf("error serializing: %v", err)
 	}
@@ -69,7 +69,7 @@ func (et *EncryptedText) Deserialize(data []byte) (EncryptedText, error) {
 
 // Serialize turns a EncryptedJsonb value into a jsonb payload for CipherStash Proxy
 func (ej EncryptedJsonb) Serialize(table string, column string) ([]byte, error) {
-	val, err := ToEncryptedColumn(map[string]any(ej), table, column, nil)
+	val, err := ToEncryptedColumn(map[string]any(ej), table, column)
 	if err != nil {
 		return nil, fmt.Errorf("error serializing: %v", err)
 	}
@@ -97,7 +97,7 @@ func (ej *EncryptedJsonb) Deserialize(data []byte) (EncryptedJsonb, error) {
 
 // Serialize turns a EncryptedInt value into a jsonb payload for CipherStash Proxy
 func (et EncryptedInt) Serialize(table string, column string) ([]byte, error) {
-	val, err := ToEncryptedColumn(int(et), table, column, nil)
+	val, err := ToEncryptedColumn(int(et), table, column)
 	if err != nil {
 		return nil, fmt.Errorf("error serializing: %v", err)
 	}
@@ -124,7 +124,7 @@ func (et *EncryptedInt) Deserialize(data []byte) (EncryptedInt, error) {
 
 // Serialize turns a EncryptedBool value into a jsonb payload for CipherStash Proxy
 func (eb EncryptedBool) Serialize(table string, column string) ([]byte, error) {
-	val, err := ToEncryptedColumn(bool(eb), table, column, nil)
+	val, err := ToEncryptedColumn(bool(eb), table, column)
 	if err != nil {
 		return nil, fmt.Errorf("error serializing: %v", err)
 	}
@@ -171,7 +171,7 @@ func JsonbQuery(value any, table string, column string) ([]byte, error) {
 }
 
 // serializeQuery produces a jsonb payload used by EQL query functions to perform search operations like equality checks, range queries, and unique constraints.
-func serializeQuery(value any, table string, column string, queryType any) ([]byte, error) {
+func serializeQuery(value any, table string, column string, queryType string) ([]byte, error) {
 	query, err := ToEncryptedColumn(value, table, column, queryType)
 	if err != nil {
 		return nil, fmt.Errorf("error converting to EncryptedColumn: %v", err)
@@ -186,14 +186,14 @@ func serializeQuery(value any, table string, column string, queryType any) ([]by
 }
 
 // ToEncryptedColumn converts a plaintext value to a string, and returns the EncryptedColumn struct for inserting into a database.
-func ToEncryptedColumn(value any, table string, column string, queryType any) (EncryptedColumn, error) {
+func ToEncryptedColumn(value any, table string, column string, queryType ...string) (EncryptedColumn, error) {
 	str, err := convertToString(value)
 	if err != nil {
 		return EncryptedColumn{}, fmt.Errorf("error: %v", err)
 	}
 	data := EncryptedColumn{K: "pt", P: str, I: TableColumn{T: table, C: column}, V: 1}
 	if queryType != nil {
-		data.Q = queryType
+		data.Q = queryType[0]
 	}
 	return data, nil
 }
