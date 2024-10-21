@@ -336,6 +336,35 @@ And is the EQL equivalent of the following plaintext query.
 SELECT attrs->'login_count' FROM users;
 ```
 
+### Field extraction
+
+Extract a field from a JSONB object in a `SELECT` statement:
+
+```sql
+SELECT cs_ste_value_v1(attrs, 'DQ1rbhWJXmmqi/+niUG6qw') FROM users;
+```
+
+The above is the equivalent to this SQL query:
+
+```sql
+SELECT attrs->'login_count' FROM users;
+```
+
+
+### Extraction (in WHERE, ORDER BY)
+
+Select rows that match a field in a JSONB object:
+
+```sql
+SELECT * FROM users WHERE cs_ste_term_v1(attrs, 'DQ1rbhWJXmmqi/+niUG6qw') > 'QAJ3HezijfTHaKrhdKxUEg';
+```
+
+The above is the equivalent to this SQL query:
+
+```sql
+SELECT * FROM users WHERE attrs->'login_count' > 10; 
+```
+
 ## Managing indexes with EQL
 
 These functions expect a `jsonb` value that conforms to the storage schema.
