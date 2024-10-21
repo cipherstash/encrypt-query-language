@@ -1,0 +1,45 @@
+name: "Release EQL"
+
+on:
+  release:
+    types:
+      - published
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/release-eql.yml
+  # Useful for debugging
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    name: Build EQL
+    if: ${{ github.event_name != 'release' || contains(github.event.release.tag_name, 'eql') }}
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install asdf & tools
+        uses: asdf-vm/actions/install@v3
+
+      - name: Build EQL release
+        run: |
+          just build
+          mv release/cipherstash-encrypt-dsl.sql release/cipherstash-eql.sql
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: release/cipherstash-eql.sql
