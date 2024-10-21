@@ -187,25 +187,15 @@ func serializeQuery(value any, table string, column string, queryType any) ([]by
 
 // ToEncryptedColumn converts a plaintext value to a string, and returns the EncryptedColumn struct for inserting into a database.
 func ToEncryptedColumn(value any, table string, column string, queryType any) (EncryptedColumn, error) {
-	if queryType == nil {
-		str, err := convertToString(value)
-		if err != nil {
-			return EncryptedColumn{}, fmt.Errorf("error: %v", err)
-		}
-
-		data := EncryptedColumn{K: "pt", P: str, I: TableColumn{T: table, C: column}, V: 1, Q: nil}
-
-		return data, nil
-	} else {
-		str, err := convertToString(value)
-		if err != nil {
-			return EncryptedColumn{}, fmt.Errorf("error: %v", err)
-		}
-
-		data := EncryptedColumn{K: "pt", P: str, I: TableColumn{T: table, C: column}, V: 1, Q: queryType}
-
-		return data, nil
+	str, err := convertToString(value)
+	if err != nil {
+		return EncryptedColumn{}, fmt.Errorf("error: %v", err)
 	}
+	data := EncryptedColumn{K: "pt", P: str, I: TableColumn{T: table, C: column}, V: 1, Q: nil}
+	if queryType != nil {
+		data.Q = queryType
+	}
+	return data, nil
 }
 
 func convertToString(value any) (string, error) {
