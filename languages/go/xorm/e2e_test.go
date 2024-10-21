@@ -51,10 +51,10 @@ func TestWhereQueryOnUnencryptedColumn(t *testing.T) {
 		t.Fatalf("Could not insert new example: %v", err)
 	}
 
-	var example Example
+	var returnedExample Example
 	text := "sydney"
 
-	has, err := engine.Where("non_encrypted_field = ?", text).Get(&example)
+	has, err := engine.Where("non_encrypted_field = ?", text).Get(&returnedExample)
 	if err != nil {
 		t.Fatalf("Could not retrieve example: %v", err)
 	}
@@ -63,10 +63,10 @@ func TestWhereQueryOnUnencryptedColumn(t *testing.T) {
 		t.Errorf("Expected has to equal true, got: %v", has)
 	}
 
-	assert.Equal(t, newExample.NonEncryptedField, example.NonEncryptedField, "NonEncryptedField does not match")
-	assert.Equal(t, newExample.EncryptedIntField, example.EncryptedIntField, "EncryptedIntField does not match")
-	assert.Equal(t, newExample.EncryptedTextField, example.EncryptedTextField, "EncryptedTextField does not match")
-	assert.Equal(t, newExample.EncryptedJsonbField, example.EncryptedJsonbField, "EncryptedJsonbField does not match")
+	assert.Equal(t, newExample.NonEncryptedField, returnedExample.NonEncryptedField, "NonEncryptedField does not match")
+	assert.Equal(t, newExample.EncryptedIntField, returnedExample.EncryptedIntField, "EncryptedIntField does not match")
+	assert.Equal(t, newExample.EncryptedTextField, returnedExample.EncryptedTextField, "EncryptedTextField does not match")
+	assert.Equal(t, newExample.EncryptedJsonbField, returnedExample.EncryptedJsonbField, "EncryptedJsonbField does not match")
 }
 
 func TestMatchQueryLongString(t *testing.T) {
@@ -82,6 +82,12 @@ func TestMatchQueryLongString(t *testing.T) {
 	}
 
 	examples := []Example{
+		{
+			NonEncryptedField:   "brisbane",
+			EncryptedIntField:   23,
+			EncryptedTextField:  "another string that shouldn't be returned",
+			EncryptedJsonbField: jsonData,
+		},
 		{
 			NonEncryptedField:   "sydney",
 			EncryptedIntField:   23,
@@ -102,9 +108,9 @@ func TestMatchQueryLongString(t *testing.T) {
 		t.Errorf("Error inserting examples: %v", err)
 	}
 
-	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
+	assert.Equal(t, int64(3), inserted, "Expected to insert 2 rows")
 
-	query, err := goeql.SerializeMatchQuery("this", "examples", "encrypted_text_field")
+	query, err := goeql.MatchQuery("this", "examples", "encrypted_text_field")
 	if err != nil {
 		log.Fatalf("Error marshaling encrypted_text_field query: %v", err)
 	}
@@ -119,7 +125,7 @@ func TestMatchQueryLongString(t *testing.T) {
 		t.Errorf("Expected has to equal true, got: %v", has)
 	}
 
-	assert.Equal(t, returnedExample.EncryptedTextField, EncryptedTextField("this is a long string"), "EncryptedTextField should match")
+	assert.Equal(t, EncryptedTextField("this is a long string"), returnedExample.EncryptedTextField, "EncryptedTextField should match")
 }
 
 func TestMatchQueryEmail(t *testing.T) {
@@ -157,7 +163,7 @@ func TestMatchQueryEmail(t *testing.T) {
 
 	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
 
-	query, err := goeql.SerializeMatchQuery("test", "examples", "encrypted_text_field")
+	query, err := goeql.MatchQuery("test", "examples", "encrypted_text_field")
 	if err != nil {
 		log.Fatalf("Error marshaling encrypted_text_field query: %v", err)
 	}
@@ -172,7 +178,7 @@ func TestMatchQueryEmail(t *testing.T) {
 		t.Errorf("Expected has to equal true, got: %v", has)
 	}
 
-	assert.Equal(t, returnedExample.EncryptedTextField, EncryptedTextField("testemail@test.com"), "EncryptedTextField should match")
+	assert.Equal(t, EncryptedTextField("testemail@test.com"), returnedExample.EncryptedTextField, "EncryptedTextField should match")
 }
 
 func TestJsonbQuerySimple(t *testing.T) {
@@ -218,7 +224,7 @@ func TestJsonbQuerySimple(t *testing.T) {
 		},
 	}
 
-	query, errTwo := goeql.SerializeJsonbQuery(jsonbQuery, "examples", "encrypted_jsonb_field")
+	query, errTwo := goeql.JsonbQuery(jsonbQuery, "examples", "encrypted_jsonb_field")
 	if errTwo != nil {
 		log.Fatalf("Error marshaling encrypted_jsonb_field: %v", errTwo)
 	}
@@ -233,7 +239,7 @@ func TestJsonbQuerySimple(t *testing.T) {
 		t.Errorf("Expected has to equal true, got: %v", has)
 	}
 
-	assert.Equal(t, returnedExample.EncryptedJsonbField, EncryptedJsonbField(expectedJson), "EncryptedJsonb field should match")
+	assert.Equal(t, EncryptedJsonbField(expectedJson), returnedExample.EncryptedJsonbField, "EncryptedJsonb field should match")
 }
 
 func TestJsonbQueryNested(t *testing.T) {
@@ -284,7 +290,7 @@ func TestJsonbQueryNested(t *testing.T) {
 		},
 	}
 
-	query, errTwo := goeql.SerializeJsonbQuery(jsonbQuery, "examples", "encrypted_jsonb_field")
+	query, errTwo := goeql.JsonbQuery(jsonbQuery, "examples", "encrypted_jsonb_field")
 	if errTwo != nil {
 		log.Fatalf("Error marshaling encrypted_jsonb_field: %v", errTwo)
 	}
@@ -299,7 +305,7 @@ func TestJsonbQueryNested(t *testing.T) {
 		t.Errorf("Expected has to equal true, got: %v", has)
 	}
 
-	assert.Equal(t, returnedExample.EncryptedJsonbField, EncryptedJsonbField(expectedJson), "EncryptedJsonb field should match")
+	assert.Equal(t, EncryptedJsonbField(expectedJson), returnedExample.EncryptedJsonbField, "EncryptedJsonb field should match")
 }
 
 func TestOreStringRangeQuery(t *testing.T) {
@@ -331,7 +337,7 @@ func TestOreStringRangeQuery(t *testing.T) {
 	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
 
 	// Query
-	query, errQuery := goeql.SerializeOreQuery("tree", "examples", "encrypted_text_field")
+	query, errQuery := goeql.OreQuery("tree", "examples", "encrypted_text_field")
 	if errQuery != nil {
 		log.Fatalf("err: %v", errQuery)
 	}
@@ -346,7 +352,7 @@ func TestOreStringRangeQuery(t *testing.T) {
 		t.Errorf("Expected has to equal true, got: %v", has)
 	}
 
-	assert.Equal(t, returnedExample.EncryptedTextField, expected, "EncryptedText field should match")
+	assert.Equal(t, expected, returnedExample.EncryptedTextField, "EncryptedText field should match")
 }
 
 func TestOreIntRangeQuery(t *testing.T) {
@@ -378,7 +384,7 @@ func TestOreIntRangeQuery(t *testing.T) {
 	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
 
 	// Query
-	query, errQuery := goeql.SerializeOreQuery(32, "examples", "encrypted_int_field")
+	query, errQuery := goeql.OreQuery(32, "examples", "encrypted_int_field")
 	if errQuery != nil {
 		log.Fatalf("err: %v", errQuery)
 	}
@@ -393,7 +399,7 @@ func TestOreIntRangeQuery(t *testing.T) {
 		t.Errorf("Expected has to equal true, got: %v", has)
 	}
 
-	assert.Equal(t, returnedExample.EncryptedIntField, expected, "EncryptedInt field should match")
+	assert.Equal(t, expected, returnedExample.EncryptedIntField, "EncryptedInt field should match")
 }
 
 func TestOreBoolRangeQuery(t *testing.T) {
@@ -434,7 +440,7 @@ func TestOreBoolRangeQuery(t *testing.T) {
 	assert.Equal(t, int64(3), inserted, "Expected to insert 3 rows")
 
 	// Query
-	query, errQuery := goeql.SerializeOreQuery(false, "examples", "encrypted_bool_field")
+	query, errQuery := goeql.OreQuery(false, "examples", "encrypted_bool_field")
 	if errQuery != nil {
 		log.Fatalf("err: %v", errQuery)
 	}
@@ -449,7 +455,7 @@ func TestOreBoolRangeQuery(t *testing.T) {
 		t.Errorf("Expected has to equal true, got: %v", has)
 	}
 
-	assert.Equal(t, returnedExample.EncryptedBoolField, expected, "EncryptedBool field should match")
+	assert.Equal(t, expected, returnedExample.EncryptedBoolField, "EncryptedBool field should match")
 }
 
 func TestUniqueStringQuery(t *testing.T) {
@@ -490,7 +496,7 @@ func TestUniqueStringQuery(t *testing.T) {
 	assert.Equal(t, int64(3), inserted, "Expected to insert 3 rows")
 
 	// Query
-	query, errQuery := goeql.SerializeUniqueQuery("testing two", "examples", "encrypted_text_field")
+	query, errQuery := goeql.UniqueQuery("testing two", "examples", "encrypted_text_field")
 	if errQuery != nil {
 		log.Fatalf("err: %v", errQuery)
 	}
@@ -505,5 +511,5 @@ func TestUniqueStringQuery(t *testing.T) {
 		t.Errorf("Expected has to equal true, got: %v", has)
 	}
 
-	assert.Equal(t, returnedExample.EncryptedTextField, expected, "EncryptedText field should match")
+	assert.Equal(t, expected, returnedExample.EncryptedTextField, "EncryptedText field should match")
 }
