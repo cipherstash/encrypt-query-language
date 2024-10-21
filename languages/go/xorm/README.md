@@ -213,7 +213,7 @@ The `toDB()` function that was setup in [this earlier step](README.md#integratin
 
 Retrieving data remains the same as well.
 
-The fromDb() function for the relevant encrypted field will deserialize the json payload returned from CipherStash Proxy and return the plaintext value
+The `fromDb()` function for the relevant encrypted field will deserialize the json payload returned from CipherStash Proxy and return the plaintext value
 
 ## Querying
 
