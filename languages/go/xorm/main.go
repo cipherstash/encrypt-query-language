@@ -13,11 +13,6 @@ import (
 	"xorm.io/xorm/names"
 )
 
-// To setup postgres:
-// Run: docker compose up
-// To run examples
-// Run: go run .
-
 // Create a separate custom type for each field that is being encrypted, using the relevant go type.
 // This custom type can then be used to access the conversion interface to use toDB and fromDb.
 type EncryptedTextField string
