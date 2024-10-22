@@ -638,7 +638,7 @@ Cipherstash proxy handles the encoding, and EQL provides the functions.
 We have created a few langague specific packages to help you interact with the payloads:
 
 - [@cipherstash/eql](https://github.com/cipherstash/encrypt-query-language/tree/main/languages/javascript/packages/eql): This is a TypeScript implementation of EQL.
-- [github.com/encrypt-query-language/go/goeql](https://github.com/cipherstash/encrypt-query-language/tree/main/languages/go/goeql): This is a Go implementation of EQL.
+- [github.com/cipherstash/goeql](https://github.com/cipherstash/goeql): This is a Go implementation of EQL
 
 ## Releasing
 
