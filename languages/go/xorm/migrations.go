@@ -8,24 +8,8 @@ import (
 
 func InstallEql(engine *sql.DB) {
 	log.Println("Start installing custom types and function")
-	installCsCustomTypes(engine)
 	installDsl(engine)
 
-}
-
-// These are our base custom types and functions for ore search.
-func installCsCustomTypes(engine *sql.DB) {
-	path := "./custom-types.sql"
-	sql, err := os.ReadFile(path)
-	if err != nil {
-		log.Fatalf("Failed to read custom types SQL file: %v", err)
-	}
-
-	_, err = engine.Exec(string(sql))
-	if err != nil {
-		log.Fatalf("Failed to execute SQL query: %v", err)
-	}
-	log.Println("Custom types installed!")
 }
 
 // Installing EQL
