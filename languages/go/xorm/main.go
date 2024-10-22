@@ -22,12 +22,13 @@ type EncryptedBoolField bool
 
 // 2. Add to struct
 type Example struct {
-	Id                  int64               `xorm:"pk autoincr"`
-	NonEncryptedField   string              `xorm:"varchar(100)"`
-	EncryptedTextField  EncryptedTextField  `json:"encrypted_text_field" xorm:"jsonb 'encrypted_text_field'"`
-	EncryptedJsonbField EncryptedJsonbField `json:"encrypted_jsonb_field" xorm:"jsonb 'encrypted_jsonb_field'"`
-	EncryptedIntField   EncryptedIntField   `json:"encrypted_int_field" xorm:"jsonb 'encrypted_int_field'"`
-	EncryptedBoolField  EncryptedBoolField  `json:"encrypted_bool_field" xorm:"jsonb 'encrypted_bool_field'"`
+	Id                  int64                  `xorm:"pk autoincr"`
+	NonEncryptedField   string                 `xorm:"varchar(100)"`
+	EncryptedTextField  EncryptedTextField     `json:"encrypted_text_field" xorm:"jsonb 'encrypted_text_field'"`
+	JsonbField          map[string]interface{} `xorm:"jsonb"`
+	EncryptedJsonbField EncryptedJsonbField    `json:"encrypted_jsonb_field" xorm:"jsonb 'encrypted_jsonb_field'"`
+	EncryptedIntField   EncryptedIntField      `json:"encrypted_int_field" xorm:"jsonb 'encrypted_int_field'"`
+	EncryptedBoolField  EncryptedBoolField     `json:"encrypted_bool_field" xorm:"jsonb 'encrypted_bool_field'"`
 }
 
 func (Example) TableName() string {
