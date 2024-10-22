@@ -389,3 +389,37 @@ func generateJsonbData(value_one string, value_two string, value_three string) m
 
 	return data
 }
+
+// Example of encrypting a plaintext jsonb field into the encrypted jsonb field.
+func EncryptIndexingExample(engine *xorm.Engine, batchSize int) error {
+	offset := 0
+
+	for {
+		// Get all records
+		examples := make([]Example, 0)
+		err := engine.Where("encrypted_jsonb_field IS NULL").
+			Limit(batchSize, offset).Find(&examples)
+		if err != nil {
+			return fmt.Errorf("failed to fetch records: %v", err)
+		}
+
+		if len(examples) == 0 {
+			break
+		}
+
+		// For the proxy to encrypt we need to update each row
+		for _, example := range examples {
+			example.EncryptedJsonbField = EncryptedJsonbField(example.JsonbField)
+
+			_, err = engine.ID(example.Id).Cols("encrypted_jsonb_field").Update(&example)
+			if err != nil {
+				log.Printf("Error updating record with ID %d: %v", example.Id, err)
+				continue
+			}
+		}
+
+		offset += batchSize
+	}
+
+	return nil
+}
