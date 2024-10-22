@@ -27,7 +27,7 @@ build:
   #!/usr/bin/env bash
   set -euxo pipefail
 
-  cat sql/dsl-core.sql sql/dsl-config-schema.sql sql/dsl-config-functions.sql sql/dsl-encryptindex.sql > release/cipherstash-encrypt-dsl.sql
+  cat sql/database-extensions/postgresql/install.sql sql/dsl-core.sql sql/dsl-config-schema.sql sql/dsl-config-functions.sql sql/dsl-encryptindex.sql > release/cipherstash-encrypt-dsl.sql
 
 
 psql:
