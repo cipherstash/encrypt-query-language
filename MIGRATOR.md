@@ -14,7 +14,8 @@ Here’s a draft for the technical usage documentation for the CipherStash Migra
 
 ## Usage
 
-The CipherStash Migrator allows you to specify key-value pairs where the key is the plaintext column, and the value is the corresponding encrypted column. Multiple key-value pairs can be specified, and the tool will perform a migration for each specified column.
+The CipherStash Migrator allows you to specify key-value pairs where the key is the plaintext column, and the value is the corresponding encrypted column.
+Multiple key-value pairs can be specified, and the tool will perform a migration for each specified column.
 
 ### Running the migrator
 
