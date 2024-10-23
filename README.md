@@ -1,8 +1,9 @@
 # CipherStash Encrypt Query Language (EQL)
 
 [![Why we built EQL](https://img.shields.io/badge/concept-Why%20EQL-8A2BE2)](https://github.com/cipherstash/encrypt-query-language/blob/main/WHY.md)
-[![CipherStash Proxy](https://img.shields.io/badge/guide-CipherStash%20Proxy-A48CF3)](https://github.com/cipherstash/encrypt-query-language/blob/main/PROXY.md)
 [![Getting started](https://img.shields.io/badge/guide-Getting%20started-008000)](https://github.com/cipherstash/encrypt-query-language/blob/main/GETTINGSTARTED.md)
+[![CipherStash Proxy](https://img.shields.io/badge/guide-CipherStash%20Proxy-A48CF3)](https://github.com/cipherstash/encrypt-query-language/blob/main/PROXY.md)
+[![CipherStash Migrator](https://img.shields.io/badge/guide-CipherStash%20Migrator-A48CF3)](https://github.com/cipherstash/encrypt-query-language/blob/main/MIGRATOR.md)
 
 Encrypt Query Language (EQL) is a set of abstractions for transmitting, storing & interacting with encrypted data and indexes in PostgreSQL.
 
