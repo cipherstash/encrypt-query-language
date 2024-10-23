@@ -31,9 +31,6 @@ build:
 
   cat sql/dsl-drop.sql > release/cipherstash-encrypt-dsl-uninstall.sql
   grep -h '^DROP' sql/*.sql | tac >> release/cipherstash-encrypt-dsl-uninstall.sql
-  # tac release/cipherstash-encrypt-dsl-uninstall.sql release/cipherstash-encrypt-dsl-uninstall.sql
-
-
 
 psql:
   psql postgresql://$CS_USERNAME:$CS_PASSWORD@localhost:$CS_PORT/$CS_DATABASE__NAME
