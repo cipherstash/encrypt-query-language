@@ -29,6 +29,11 @@ build:
 
   cat sql/database-extensions/postgresql/install.sql sql/dsl-core.sql sql/dsl-config-schema.sql sql/dsl-config-functions.sql sql/dsl-encryptindex.sql > release/cipherstash-encrypt-dsl.sql
 
+  cat sql/dsl-drop.sql > release/cipherstash-encrypt-dsl-uninstall.sql
+  grep -h '^DROP' sql/*.sql | tac >> release/cipherstash-encrypt-dsl-uninstall.sql
+  # tac release/cipherstash-encrypt-dsl-uninstall.sql release/cipherstash-encrypt-dsl-uninstall.sql
+
+
 
 psql:
   psql postgresql://$CS_USERNAME:$CS_PASSWORD@localhost:$CS_PORT/$CS_DATABASE__NAME
