@@ -18,46 +18,21 @@ You will need your PostgreSQL database connection string, which looks like this:
 postgres://[username]:[password]@database.server.com:5432/[database]
 ```
 
-Click **Download** to download the configuration file.
+## 3. Run Proxy
 
-## 3. Clone the EQL repo
+At the end of the guide in dashboard, you will be presented with a few different options for running CipherStash Proxy.
 
-Clone the EQL repo to your local machine.
-
-```bash
-git clone https://github.com/cipherstash/encrypt-query-language.git
-```
-
-## 4. Start CipherStash Proxy
-
-Copy your `cipherstash-proxy.toml` file that you just downloaded to the `encrypt-query-language/cipherstash-proxy` directory.
-
-Start CipherStash Proxy by running the following command:
+1. Download the binary for your operating system and either run with environment variables or config file.
+2. Copy the following docker run command:
 
 ```bash
-docker compose up
+docker run -p 6432:6432 -e CS_WORKSPACE_ID=123 -e CS_CLIENT_ACCESS_KEY=abc -e CS_CLIENT_ID=123 -e CS_CLIENT_KEY=123 -e CS_DATABASE_URL=... cipherstash/proxy:0.1.1
 ```
 
-This will start CipherStash Proxy and connect to your database.
+These processes will also install Encrypt Query Language (EQL) extention in your database by default.
+If you wish to disable the initial installation, pass the following environment variable to the start commands `-e CS_INSTALL_EQL=false`
 
-## 5. Install the EQL extension
-
-By default, CipherStash Proxy will not install the EQL extension.
-To install the EQL extension, you can do one of the following:
-
-- Install the EQL extension manually by running the following command:
-
-```bash
-psql -U postgres -d postgres -f release/cipherstash-encrypt-dsl.sql
-```
-
-- Install the EQL extension through CipherStash Proxy by running the following command:
-
-```bash
-docker exec -it eql-cipherstash-proxy eql-install
-```
-
-## 6. Start using EQL
+## 4. Start using EQL
 
 You are now ready to start using EQL in your PostgreSQL database.
 To get started, see the [README.md](README.md) file.
