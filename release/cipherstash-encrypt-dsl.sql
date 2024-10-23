@@ -336,9 +336,15 @@ DROP FUNCTION IF EXISTS cs_check_encrypted_v1;
 DROP DOMAIN IF EXISTS cs_match_index_v1;
 DROP DOMAIN IF EXISTS cs_unique_index_v1;
 
+DROP DOMAIN IF EXISTS cs_match_index_v1;
 CREATE DOMAIN cs_match_index_v1 AS smallint[];
+
+DROP DOMAIN IF EXISTS cs_unique_index_v1;
 CREATE DOMAIN cs_unique_index_v1 AS text;
+
+DROP DOMAIN IF EXISTS cs_ste_vec_index_v1;
 CREATE DOMAIN cs_ste_vec_index_v1 AS text[];
+
 
 -- cs_encrypted_v1 is a column type and cannot be dropped if in use
 DO $$
@@ -350,12 +356,16 @@ END
 $$;
 
 DROP FUNCTION IF EXISTS _cs_encrypted_check_kind(jsonb);
+
 CREATE FUNCTION _cs_encrypted_check_kind(val jsonb)
   RETURNS BOOLEAN
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
   RETURN (val->>'k' = 'ct' AND val ? 'c') AND NOT val ? 'p';
 END;
+
+
+DROP FUNCTION IF EXISTS cs_check_encrypted_v1(val jsonb);
 
 CREATE FUNCTION cs_check_encrypted_v1(val jsonb)
   RETURNS BOOLEAN
@@ -381,65 +391,92 @@ ALTER DOMAIN cs_encrypted_v1
    cs_check_encrypted_v1(VALUE)
 );
 
-CREATE OR REPLACE FUNCTION cs_ciphertext_v1_v0_0(col jsonb)
+
+DROP FUNCTION IF EXISTS cs_ciphertext_v1_v0_0(col jsonb);
+
+CREATE FUNCTION cs_ciphertext_v1_v0_0(col jsonb)
     RETURNS text
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
 	RETURN col->>'c';
 END;
 
-CREATE OR REPLACE FUNCTION cs_ciphertext_v1_v0(col jsonb)
+
+DROP FUNCTION IF EXISTS cs_ciphertext_v1_v0(col jsonb);
+
+CREATE FUNCTION cs_ciphertext_v1_v0(col jsonb)
     RETURNS text
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
 	RETURN cs_ciphertext_v1_v0_0(col);
 END;
 
-CREATE OR REPLACE FUNCTION cs_ciphertext_v1(col jsonb)
+
+DROP FUNCTION IF EXISTS cs_ciphertext_v1(col jsonb);
+
+CREATE FUNCTION cs_ciphertext_v1(col jsonb)
     RETURNS text
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
 	RETURN cs_ciphertext_v1_v0_0(col);
 END;
+
 
 -- extracts match index from an emcrypted column
-CREATE OR REPLACE FUNCTION cs_match_v1_v0_0(col jsonb)
+DROP FUNCTION IF EXISTS cs_match_v1_v0_0(col jsonb);
+
+CREATE FUNCTION cs_match_v1_v0_0(col jsonb)
   RETURNS cs_match_index_v1
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
 	SELECT ARRAY(SELECT jsonb_array_elements(col->'m'))::cs_match_index_v1;
 END;
 
-CREATE OR REPLACE FUNCTION cs_match_v1_v0(col jsonb)
+
+DROP FUNCTION IF EXISTS  cs_match_v1_v0(col jsonb);
+
+CREATE FUNCTION cs_match_v1_v0(col jsonb)
   RETURNS cs_match_index_v1
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
 	RETURN cs_match_v1_v0_0(col);
 END;
 
-CREATE OR REPLACE FUNCTION cs_match_v1(col jsonb)
+
+DROP FUNCTION IF EXISTS cs_match_v1(col jsonb);
+
+CREATE FUNCTION cs_match_v1(col jsonb)
   RETURNS cs_match_index_v1
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
 	RETURN cs_match_v1_v0_0(col);
 END;
+
 
 -- extracts unique index from an encrypted column
-CREATE OR REPLACE FUNCTION cs_unique_v1_v0_0(col jsonb)
+DROP FUNCTION IF EXISTS  cs_unique_v1_v0_0(col jsonb);
+
+CREATE FUNCTION cs_unique_v1_v0_0(col jsonb)
   RETURNS cs_unique_index_v1
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
 	RETURN col->>'u';
 END;
 
-CREATE OR REPLACE FUNCTION cs_unique_v1_v0(col jsonb)
+
+DROP FUNCTION IF EXISTS  cs_unique_v1_v0(col jsonb);
+
+CREATE FUNCTION cs_unique_v1_v0(col jsonb)
   RETURNS cs_unique_index_v1
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
 	RETURN cs_unique_v1_v0_0(col);
 END;
 
-CREATE OR REPLACE FUNCTION cs_unique_v1(col jsonb)
+
+DROP FUNCTION IF EXISTS  cs_unique_v1(col jsonb);
+
+CREATE FUNCTION cs_unique_v1(col jsonb)
   RETURNS cs_unique_index_v1
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
@@ -447,28 +484,39 @@ BEGIN ATOMIC
 END;
 
 -- extracts json ste_vec index from an encrypted column
-CREATE OR REPLACE FUNCTION cs_ste_vec_v1_v0_0(col jsonb)
+DROP FUNCTION IF EXISTS cs_ste_vec_v1_v0_0(col jsonb);
+
+CREATE FUNCTION cs_ste_vec_v1_v0_0(col jsonb)
   RETURNS cs_ste_vec_index_v1
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
 	SELECT ARRAY(SELECT jsonb_array_elements(col->'sv'))::cs_ste_vec_index_v1;
 END;
 
-CREATE OR REPLACE FUNCTION cs_ste_vec_v1_v0(col jsonb)
+
+DROP FUNCTION IF EXISTS cs_ste_vec_v1_v0(col jsonb);
+
+CREATE FUNCTION cs_ste_vec_v1_v0(col jsonb)
   RETURNS cs_ste_vec_index_v1
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
 	RETURN cs_ste_vec_v1_v0_0(col);
 END;
 
-CREATE OR REPLACE FUNCTION cs_ste_vec_v1(col jsonb)
+
+DROP FUNCTION IF EXISTS cs_ste_vec_v1(col jsonb);
+
+CREATE FUNCTION cs_ste_vec_v1(col jsonb)
   RETURNS cs_ste_vec_index_v1
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
 	RETURN cs_ste_vec_v1_v0_0(col);
 END;
+
 
 -- casts text to ore_64_8_v1_term (bytea)
+DROP FUNCTION IF EXISTS _cs_text_to_ore_64_8_v1_term_v1_0(t text);
+
 CREATE FUNCTION _cs_text_to_ore_64_8_v1_term_v1_0(t text)
   RETURNS ore_64_8_v1_term
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -477,10 +525,15 @@ BEGIN ATOMIC
 END;
 
 -- cast to cleanup ore_64_8_v1 extraction
+DROP CAST IF EXISTS (text AS ore_64_8_v1_term);
+
 CREATE CAST (text AS ore_64_8_v1_term)
 	WITH FUNCTION _cs_text_to_ore_64_8_v1_term_v1_0(text) AS IMPLICIT;
 
+
 -- extracts ore index from an encrypted column
+DROP FUNCTION IF EXISTS cs_ore_64_8_v1_v0_0(val jsonb);
+
 CREATE FUNCTION cs_ore_64_8_v1_v0_0(val jsonb)
   RETURNS ore_64_8_v1
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -488,12 +541,16 @@ BEGIN ATOMIC
   SELECT (val->>'o')::ore_64_8_v1;
 END;
 
+DROP FUNCTION IF EXISTS cs_ore_64_8_v1_v0(col jsonb);
+
 CREATE FUNCTION cs_ore_64_8_v1_v0(col jsonb)
   RETURNS ore_64_8_v1
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
 	RETURN cs_ore_64_8_v1_v0_0(col);
 END;
+
+DROP FUNCTION IF EXISTS cs_ore_64_8_v1(col jsonb);
 
 CREATE FUNCTION cs_ore_64_8_v1(col jsonb)
   RETURNS ore_64_8_v1
@@ -598,30 +655,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS cs_configuration_v1_index_encrypting ON cs_con
 --
 --
 
-
--- DROP and CREATE functions
--- Function types cannot be changed after creation so we DROP for flexibility
-
-DROP FUNCTION IF EXISTS cs_add_column_v1(text, text);
-DROP FUNCTION IF EXISTS cs_remove_column_v1(text, text);
-DROP FUNCTION IF EXISTS cs_add_index_v1(text, text, text, jsonb);
-DROP FUNCTION IF EXISTS cs_remove_index_v1(text, text, text);
-DROP FUNCTION IF EXISTS cs_modify_index_v1(text, text, text, jsonb);
-
-DROP FUNCTION IF EXISTS cs_encrypt_v1();
-DROP FUNCTION IF EXISTS cs_activate_v1();
-DROP FUNCTION IF EXISTS cs_discard_v1();
-
-DROP FUNCTION IF EXISTS cs_refresh_encrypt_config();
-
-DROP FUNCTION IF EXISTS _cs_config_default();
-DROP FUNCTION IF EXISTS _cs_config_match_default();
-
-DROP FUNCTION IF EXISTS _cs_config_add_table(text, json);
-DROP FUNCTION IF EXISTS _cs_config_add_column(text, text, json);
-DROP FUNCTION IF EXISTS _cs_config_add_cast(text, text, text, json);
-DROP FUNCTION IF EXISTS _cs_config_add_index(text, text, text, json, json);
-
+DROP FUNCTION IF EXISTS  _cs_config_default(config jsonb);
 
 CREATE FUNCTION _cs_config_default(config jsonb)
   RETURNS jsonb
@@ -635,6 +669,8 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+
+DROP FUNCTION IF EXISTS _cs_config_add_table(table_name text, config jsonb);
 
 CREATE FUNCTION _cs_config_add_table(table_name text, config jsonb)
   RETURNS jsonb
@@ -652,6 +688,8 @@ $$ LANGUAGE plpgsql;
 
 
 -- Add the column if it doesn't exist
+DROP FUNCTION IF EXISTS _cs_config_add_column(table_name text, column_name text, config jsonb);
+
 CREATE FUNCTION _cs_config_add_column(table_name text, column_name text, config jsonb)
   RETURNS jsonb
   IMMUTABLE PARALLEL SAFE
@@ -667,7 +705,10 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+
 -- Set the cast
+DROP FUNCTION IF EXISTS _cs_config_add_cast(table_name text, column_name text, cast_as text, config jsonb);
+
 CREATE FUNCTION _cs_config_add_cast(table_name text, column_name text, cast_as text, config jsonb)
   RETURNS jsonb
   IMMUTABLE PARALLEL SAFE
@@ -680,6 +721,8 @@ $$ LANGUAGE plpgsql;
 
 
 -- Add the column if it doesn't exist
+DROP FUNCTION IF EXISTS _cs_config_add_index(table_name text, column_name text, index_name text, opts jsonb, config jsonb);
+
 CREATE FUNCTION _cs_config_add_index(table_name text, column_name text, index_name text, opts jsonb, config jsonb)
   RETURNS jsonb
   IMMUTABLE PARALLEL SAFE
@@ -694,6 +737,8 @@ $$ LANGUAGE plpgsql;
 --
 -- Default options for match index
 --
+DROP FUNCTION IF EXISTS _cs_config_match_default();
+
 CREATE FUNCTION _cs_config_match_default()
   RETURNS jsonb
 LANGUAGE sql STRICT PARALLEL SAFE
@@ -709,7 +754,9 @@ END;
 --
 --
 --
-CREATE FUNCTION cs_add_index_v1(table_name text, column_name text, index_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}')
+DROP FUNCTION IF EXISTS cs_add_index_v1(table_name text, column_name text, index_name text, cast_as text, opts jsonb);
+
+CREATE FUNCTION cs_add_index_v1(table_name text, column_name text, index_name text, cast_as text, opts jsonb)
   RETURNS jsonb
 AS $$
   DECLARE
@@ -757,6 +804,8 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+
+DROP FUNCTION IF EXISTS cs_remove_index_v1(table_name text, column_name text, index_name text);
 
 CREATE FUNCTION cs_remove_index_v1(table_name text, column_name text, index_name text)
   RETURNS jsonb
@@ -817,6 +866,8 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
+DROP FUNCTION IF EXISTS cs_modify_index_v1(table_name text, column_name text, index_name text, cast_as text, opts jsonb);
+
 CREATE FUNCTION cs_modify_index_v1(table_name text, column_name text, index_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}')
   RETURNS jsonb
 AS $$
@@ -826,6 +877,8 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+
+DROP FUNCTION IF EXISTS cs_encrypt_v1();
 
 CREATE FUNCTION cs_encrypt_v1()
   RETURNS boolean
@@ -845,7 +898,9 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION cs_activate_v1()
+DROP FUNCTION IF EXISTS cs_activate_v1();
+
+CREATE FUNCTION cs_activate_v1()
   RETURNS boolean
 AS $$
 	BEGIN
@@ -861,7 +916,9 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION cs_discard_v1()
+DROP FUNCTION IF EXISTS cs_discard_v1();
+
+CREATE FUNCTION cs_discard_v1()
   RETURNS boolean
 AS $$
   BEGIN
@@ -874,6 +931,8 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+
+DROP FUNCTION IF EXISTS cs_add_column_v1(table_name text, column_name text);
 
 CREATE FUNCTION cs_add_column_v1(table_name text, column_name text)
   RETURNS jsonb
@@ -909,6 +968,8 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+
+DROP FUNCTION IF EXISTS cs_remove_column_v1(table_name text, column_name text);
 
 CREATE FUNCTION cs_remove_column_v1(table_name text, column_name text)
   RETURNS jsonb
@@ -963,30 +1024,21 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+
+DROP FUNCTION IF EXISTS cs_refresh_encrypt_config();
+
 CREATE FUNCTION cs_refresh_encrypt_config()
   RETURNS void
 LANGUAGE sql STRICT PARALLEL SAFE
 BEGIN ATOMIC
   RETURN NULL;
 END;
-
--- DROP and CREATE functions
--- Function types cannot be changed after creation so we DROP for flexibility
-DROP FUNCTION IF EXISTS cs_select_pending_columns_v1;
-DROP FUNCTION IF EXISTS cs_select_target_columns_v1;
-DROP FUNCTION IF EXISTS cs_count_encrypted_with_active_config_v1;
-DROP FUNCTION IF EXISTS cs_create_encrypted_columns_v1();
-DROP FUNCTION IF EXISTS cs_rename_encrypted_columns_v1();
-
-DROP FUNCTION IF EXISTS _cs_diff_config_v1;
-DROP FUNCTION IF EXISTS _cs_table_from_config_key;
-DROP FUNCTION IF EXISTS _cs_column_from_config_key;
-
-
 -- Return the diff of two configurations
 -- Returns the set of keys in a that have different values to b
 -- The json comparison is on object values held by the key
-CREATE OR REPLACE FUNCTION _cs_diff_config_v1(a JSONB, b JSONB)
+DROP FUNCTION IF EXISTS _cs_diff_config_v1(a JSONB, b JSONB);
+
+CREATE FUNCTION _cs_diff_config_v1(a JSONB, b JSONB)
 	RETURNS TABLE(table_name TEXT, column_name TEXT)
 IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -1017,6 +1069,8 @@ $$ LANGUAGE plpgsql;
 
 -- Returns the set of columns with pending configuration changes
 -- Compares the columns in pending configuration that do not match the active config
+DROP FUNCTION IF EXISTS cs_select_pending_columns_v1();
+
 CREATE FUNCTION cs_select_pending_columns_v1()
 	RETURNS TABLE(table_name TEXT, column_name TEXT)
 AS $$
@@ -1053,6 +1107,8 @@ $$ LANGUAGE plpgsql;
 -- On initial encryption from plaintext the target column will be `{column_name}_encrypted `
 -- OR NULL if the column does not exist
 --
+DROP FUNCTION IF EXISTS cs_select_target_columns_v1();
+
 CREATE FUNCTION cs_select_target_columns_v1()
 	RETURNS TABLE(table_name TEXT, column_name TEXT, target_column TEXT)
 	STABLE STRICT PARALLEL SAFE
@@ -1072,6 +1128,8 @@ $$ LANGUAGE sql;
 
 --
 -- Returns true if all pending columns have a target (encrypted) column
+DROP FUNCTION IF EXISTS cs_ready_for_encryption_v1();
+
 CREATE FUNCTION cs_ready_for_encryption_v1()
 	RETURNS BOOLEAN
 	STABLE STRICT PARALLEL SAFE
@@ -1090,6 +1148,8 @@ $$ LANGUAGE sql;
 -- Executes the ALTER TABLE statement
 --   `ALTER TABLE {target_table} ADD COLUMN {column_name}_encrypted cs_encrypted_v1;`
 --
+DROP FUNCTION IF EXISTS cs_create_encrypted_columns_v1();
+
 CREATE FUNCTION cs_create_encrypted_columns_v1()
 	RETURNS TABLE(table_name TEXT, column_name TEXT)
 AS $$
@@ -1113,6 +1173,8 @@ $$ LANGUAGE plpgsql;
 --   `ALTER TABLE {target_table} RENAME COLUMN {column_name} TO {column_name}_plaintext;
 --   `ALTER TABLE {target_table} RENAME COLUMN {column_name}_encrypted TO {column_name};`
 --
+DROP FUNCTION IF EXISTS cs_rename_encrypted_columns_v1();
+
 CREATE FUNCTION cs_rename_encrypted_columns_v1()
 	RETURNS TABLE(table_name TEXT, column_name TEXT, target_column TEXT)
 AS $$
@@ -1127,6 +1189,8 @@ AS $$
 	END;
 $$ LANGUAGE plpgsql;
 
+
+DROP FUNCTION IF EXISTS cs_count_encrypted_with_active_config_v1(table_name TEXT, column_name TEXT);
 
 CREATE FUNCTION cs_count_encrypted_with_active_config_v1(table_name TEXT, column_name TEXT)
   RETURNS BIGINT
