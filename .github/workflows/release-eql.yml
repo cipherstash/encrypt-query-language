@@ -36,11 +36,10 @@ jobs:
       - name: Build EQL release
         run: |
           just build
+          mv release/cipherstash-encrypt-dsl.sql release/cipherstash-eql.sql
 
       - name: Publish EQL release artifacts
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: |
-            release/cipherstash-eql.sql
-            release/cipherstash-eql-uninstall.sql
+          files: release/cipherstash-eql.sql
