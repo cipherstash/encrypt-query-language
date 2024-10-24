@@ -21,7 +21,6 @@ DROP DOMAIN IF EXISTS cs_unique_index_v1;
 
 CREATE DOMAIN cs_match_index_v1 AS smallint[];
 CREATE DOMAIN cs_unique_index_v1 AS text;
-CREATE DOMAIN cs_ste_vec_index_v1 AS text[];
 
 -- cs_encrypted_v1 is a column type and cannot be dropped if in use
 DO $$
@@ -37,7 +36,10 @@ CREATE FUNCTION _cs_encrypted_check_kind(val jsonb)
   RETURNS BOOLEAN
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
-  RETURN (val->>'k' = 'ct' AND val ? 'c') AND NOT val ? 'p';
+  RETURN (
+    (val->>'k' = 'ct' AND val ? 'c') OR
+    (val->>'k' = 'sv' AND val ? 'sv')
+  ) AND NOT val ? 'p';
 END;
 
 CREATE FUNCTION cs_check_encrypted_v1(val jsonb)
@@ -134,7 +136,7 @@ CREATE OR REPLACE FUNCTION cs_ste_vec_v1_v0_0(col jsonb)
   RETURNS cs_ste_vec_index_v1
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
-	SELECT ARRAY(SELECT jsonb_array_elements(col->'sv'))::cs_ste_vec_index_v1;
+	SELECT (col->'sv')::cs_ste_vec_index_v1;
 END;
 
 CREATE OR REPLACE FUNCTION cs_ste_vec_v1_v0(col jsonb)
