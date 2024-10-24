@@ -27,11 +27,13 @@ build:
   #!/usr/bin/env bash
   set -euxo pipefail
 
-  cat sql/dsl-drop.sql > release/cipherstash-encrypt-uninstall.sql
-  grep -h '^DROP' sql/*.sql | tac >> release/cipherstash-encrypt-uninstall.sql
+  mkdir -p release
+
+  cat sql/666-drop.sql > release/cipherstash-encrypt-uninstall.sql
+  grep -h '^DROP' sql/0*-*.sql | tac >> release/cipherstash-encrypt-uninstall.sql
 
   cat release/cipherstash-encrypt-uninstall.sql > release/cipherstash-encrypt.sql
-  cat sql/dsl-ore.sql sql/dsl-core.sql sql/dsl-config-schema.sql sql/dsl-config-functions.sql sql/dsl-encryptindex.sql >> release/cipherstash-encrypt.sql
+  cat sql/0*-*.sql >> release/cipherstash-encrypt.sql
 
 
 psql:
