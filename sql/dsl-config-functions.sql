@@ -104,7 +104,7 @@ END;
 --
 DROP FUNCTION IF EXISTS cs_add_index_v1(table_name text, column_name text, index_name text, cast_as text, opts jsonb);
 
-CREATE FUNCTION cs_add_index_v1(table_name text, column_name text, index_name text, cast_as text, opts jsonb)
+CREATE FUNCTION cs_add_index_v1(table_name text, column_name text, index_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}')
   RETURNS jsonb
 AS $$
   DECLARE
