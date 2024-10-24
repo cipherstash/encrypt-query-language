@@ -40,7 +40,7 @@ $$;
 --
 -- Function types cannot be changed after creation so we always DROP & CREATE for flexibility
 --
-DROP FUNCTION IF EXISTS _cs_config_check_indexes(text, text);
+DROP FUNCTION IF EXISTS _cs_config_check_indexes(jsonb);
 
 CREATE FUNCTION _cs_config_check_indexes(val jsonb)
   RETURNS BOOLEAN
@@ -49,6 +49,8 @@ BEGIN ATOMIC
 	SELECT jsonb_object_keys(jsonb_path_query(val, '$.tables.*.*.indexes')) = ANY('{match, ore, unique, ste_vec}');
 END;
 
+
+DROP FUNCTION IF EXISTS _cs_config_check_cast(jsonb);
 
 CREATE FUNCTION _cs_config_check_cast(val jsonb)
   RETURNS BOOLEAN
