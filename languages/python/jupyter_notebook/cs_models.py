@@ -7,8 +7,6 @@ import json
 import sys
 import os
 
-from cs_types import CsText, CsJsonb
-
 class CsTypeDecorator(TypeDecorator):
     def __init__(self, table_name, column_name):
         super().__init__()
