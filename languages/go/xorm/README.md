@@ -190,7 +190,7 @@ Example:
     SELECT cs_add_index_v1('examples', 'encrypted_text_field', 'unique', 'text', '{"token_filters": [{"kind": "downcase"}]}');
     SELECT cs_add_index_v1('examples', 'encrypted_text_field', 'match', 'text');
     SELECT cs_add_index_v1('examples', 'encrypted_text_field', 'ore', 'text');
-    SELECT cs_add_index_v1('examples', 'encrypted_jsonb_field', 'ste_vec', 'jsonb', '{"prefix": "some-prefix"}');
+    SELECT cs_add_index_v1('examples', 'encrypted_jsonb_field', 'ste_vec', 'jsonb', '{"prefix": "examples/encrypted_jsonb_field"}');
 
     --   The below indexes will also need to be added to enable full search functionality on the encrypted columns
 
