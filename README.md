@@ -29,12 +29,14 @@ EQL provides a data format for transmitting and storing encrypted data and index
 
 The simplest and fastest way to get up and running with EQL is to execute the install SQL file directly in your database.
 
-1. Download [cipherstash-encrypt-dsl.sql](./release/cipherstash-encrypt-dsl.sql).
-2. Run the following command to install the custom types and functions:
-
-```bash
-psql -f cipherstash-encrypt-dsl.sql
-```
+1. Get the latest EQL install script:
+   ```bash
+    curl -sLo cipherstash-eql.sql https://github.com/cipherstash/encrypt-query-language/releases/latest/download/cipherstash-eql.sql
+   ```
+1. Run this command to install the custom types and functions:
+   ```bash
+   psql -f cipherstash-eql.sql
+   ```
 
 ## Usage
 
