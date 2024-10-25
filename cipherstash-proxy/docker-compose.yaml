@@ -5,7 +5,6 @@ services:
     ports:
       - 6432:6432
     environment:
-      - CS_STATEMENT_HANDLER=mylittleproxy
       - LOG_LEVEL=debug
     volumes:
       - ./cipherstash-proxy.toml:/etc/cipherstash-proxy/cipherstash-proxy.toml
