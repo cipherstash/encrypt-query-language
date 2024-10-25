@@ -1,0 +1,51 @@
+name: "Test EQL"
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/test-eql.yml"
+      - "sql/*.sql"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/test-eql.yml"
+      - "sql/*.sql"
+
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+jobs:
+  test:
+    name: "Test EQL SQL components"
+    runs-on: ubuntu-24.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres-version: [17, 16, 15, 14]
+
+    env:
+      CS_DATABASE__PASSWORD:
+      CS_DATABASE__PORT: 5432
+      CS_DATABASE__NAME: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: extractions/setup-just@v1
+
+      - uses: ankane/setup-postgres@v1
+        with:
+          postgres-version: ${{ matrix.postgres-version }}
+          database: ${{ env.CS_DATABASE__NAME }}
+
+      - name: Test EQL
+        run: |
+          just build test
+

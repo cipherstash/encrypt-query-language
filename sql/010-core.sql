@@ -1,7 +1,4 @@
 DROP DOMAIN IF EXISTS cs_match_index_v1;
-DROP DOMAIN IF EXISTS cs_unique_index_v1;
-
-DROP DOMAIN IF EXISTS cs_match_index_v1;
 CREATE DOMAIN cs_match_index_v1 AS smallint[];
 
 DROP DOMAIN IF EXISTS cs_unique_index_v1;
@@ -48,7 +45,7 @@ BEGIN ATOMIC
     );
 END;
 
--- drop and reset the check constraint
+
 ALTER DOMAIN cs_encrypted_v1 DROP CONSTRAINT IF EXISTS cs_encrypted_v1_check;
 
 ALTER DOMAIN cs_encrypted_v1

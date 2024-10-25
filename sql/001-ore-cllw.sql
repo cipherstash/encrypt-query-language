@@ -10,7 +10,9 @@ CREATE TYPE ore_cllw_8_v1 AS (
 );
 
 
-CREATE OR REPLACE FUNCTION __compare_inner_ore_cllw_8_v1(a ore_cllw_8_v1, b ore_cllw_8_v1)
+DROP FUNCTION IF EXISTS __compare_inner_ore_cllw_8_v1(a ore_cllw_8_v1, b ore_cllw_8_v1);
+
+CREATE FUNCTION __compare_inner_ore_cllw_8_v1(a ore_cllw_8_v1, b ore_cllw_8_v1)
 RETURNS int AS $$
 DECLARE
     len_a INT;
@@ -47,7 +49,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION compare_ore_cllw_8_v1(a ore_cllw_8_v1, b ore_cllw_8_v1)
+DROP FUNCTION IF EXISTS compare_ore_cllw_8_v1(a ore_cllw_8_v1, b ore_cllw_8_v1);
+
+CREATE FUNCTION compare_ore_cllw_8_v1(a ore_cllw_8_v1, b ore_cllw_8_v1)
 RETURNS int AS $$
 DECLARE
     len_a INT;
@@ -69,7 +73,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION compare_lex_ore_cllw_8_v1(a ore_cllw_8_v1, b ore_cllw_8_v1)
+
+DROP FUNCTION IF EXISTS compare_lex_ore_cllw_8_v1(a ore_cllw_8_v1, b ore_cllw_8_v1);
+
+CREATE FUNCTION compare_lex_ore_cllw_8_v1(a ore_cllw_8_v1, b ore_cllw_8_v1)
 RETURNS int AS $$
 DECLARE
     len_a INT;
@@ -110,29 +117,56 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ore_cllw_8_v1_eq(a ore_cllw_8_v1, b ore_cllw_8_v1) RETURNS boolean AS $$
+
+DROP FUNCTION IF EXISTS ore_cllw_8_v1_eq(a ore_cllw_8_v1, b ore_cllw_8_v1);
+
+CREATE FUNCTION ore_cllw_8_v1_eq(a ore_cllw_8_v1, b ore_cllw_8_v1)
+RETURNS boolean AS $$
   SELECT compare_ore_cllw_8_v1(a, b) = 0
 $$ LANGUAGE SQL;
 
-CREATE OR REPLACE FUNCTION ore_cllw_8_v1_neq(a ore_cllw_8_v1, b ore_cllw_8_v1) RETURNS boolean AS $$
+
+DROP FUNCTION IF EXISTS ore_cllw_8_v1_neq(a ore_cllw_8_v1, b ore_cllw_8_v1);
+
+CREATE FUNCTION ore_cllw_8_v1_neq(a ore_cllw_8_v1, b ore_cllw_8_v1)
+RETURNS boolean AS $$
   SELECT compare_ore_cllw_8_v1(a, b) <> 0
 $$ LANGUAGE SQL;
 
-CREATE OR REPLACE FUNCTION ore_cllw_8_v1_lt(a ore_cllw_8_v1, b ore_cllw_8_v1) RETURNS boolean AS $$
+
+DROP FUNCTION IF EXISTS ore_cllw_8_v1_lt(a ore_cllw_8_v1, b ore_cllw_8_v1);
+
+CREATE FUNCTION ore_cllw_8_v1_lt(a ore_cllw_8_v1, b ore_cllw_8_v1)
+RETURNS boolean AS $$
   SELECT compare_ore_cllw_8_v1(a, b) = -1
 $$ LANGUAGE SQL;
 
-CREATE OR REPLACE FUNCTION ore_cllw_8_v1_lte(a ore_cllw_8_v1, b ore_cllw_8_v1) RETURNS boolean AS $$
+
+DROP FUNCTION IF EXISTS ore_cllw_8_v1_lte(a ore_cllw_8_v1, b ore_cllw_8_v1);
+
+CREATE FUNCTION ore_cllw_8_v1_lte(a ore_cllw_8_v1, b ore_cllw_8_v1)
+RETURNS boolean AS $$
   SELECT compare_ore_cllw_8_v1(a, b) != 1
 $$ LANGUAGE SQL;
 
-CREATE OR REPLACE FUNCTION ore_cllw_8_v1_gt(a ore_cllw_8_v1, b ore_cllw_8_v1) RETURNS boolean AS $$
+
+DROP FUNCTION IF EXISTS ore_cllw_8_v1_gt(a ore_cllw_8_v1, b ore_cllw_8_v1);
+
+CREATE FUNCTION ore_cllw_8_v1_gt(a ore_cllw_8_v1, b ore_cllw_8_v1)
+RETURNS boolean AS $$
   SELECT compare_ore_cllw_8_v1(a, b) = 1
 $$ LANGUAGE SQL;
 
-CREATE OR REPLACE FUNCTION ore_cllw_8_v1_gte(a ore_cllw_8_v1, b ore_cllw_8_v1) RETURNS boolean AS $$
+
+DROP FUNCTION IF EXISTS ore_cllw_8_v1_gte(a ore_cllw_8_v1, b ore_cllw_8_v1);
+
+CREATE FUNCTION ore_cllw_8_v1_gte(a ore_cllw_8_v1, b ore_cllw_8_v1)
+RETURNS boolean AS $$
   SELECT compare_ore_cllw_8_v1(a, b) != -1
 $$ LANGUAGE SQL;
+
+
+DROP OPERATOR IF EXISTS = (ore_cllw_8_v1, ore_cllw_8_v1);
 
 CREATE OPERATOR = (
   PROCEDURE="ore_cllw_8_v1_eq",
@@ -145,6 +179,9 @@ CREATE OPERATOR = (
   MERGES
 );
 
+
+DROP OPERATOR IF EXISTS <> (ore_cllw_8_v1, ore_cllw_8_v1);
+
 CREATE OPERATOR <> (
   PROCEDURE="ore_cllw_8_v1_neq",
   LEFTARG=ore_cllw_8_v1,
@@ -155,6 +192,9 @@ CREATE OPERATOR <> (
   HASHES,
   MERGES
 );
+
+
+DROP OPERATOR IF EXISTS > (ore_cllw_8_v1, ore_cllw_8_v1);
 
 CREATE OPERATOR > (
   PROCEDURE="ore_cllw_8_v1_gt",
@@ -167,6 +207,9 @@ CREATE OPERATOR > (
   MERGES
 );
 
+
+DROP OPERATOR IF EXISTS < (ore_cllw_8_v1, ore_cllw_8_v1);
+
 CREATE OPERATOR < (
   PROCEDURE="ore_cllw_8_v1_lt",
   LEFTARG=ore_cllw_8_v1,
@@ -177,6 +220,9 @@ CREATE OPERATOR < (
   HASHES,
   MERGES
 );
+
+
+DROP OPERATOR IF EXISTS >= (ore_cllw_8_v1, ore_cllw_8_v1);
 
 CREATE OPERATOR >= (
   PROCEDURE="ore_cllw_8_v1_gte",
@@ -189,6 +235,9 @@ CREATE OPERATOR >= (
   MERGES
 );
 
+
+DROP OPERATOR IF EXISTS <= (ore_cllw_8_v1, ore_cllw_8_v1);
+
 CREATE OPERATOR <= (
   PROCEDURE="ore_cllw_8_v1_lte",
   LEFTARG=ore_cllw_8_v1,
@@ -200,7 +249,14 @@ CREATE OPERATOR <= (
   MERGES
 );
 
+
+DROP OPERATOR FAMILY IF EXISTS ore_cllw_8_v1_btree_ops USING btree;
+
 CREATE OPERATOR FAMILY ore_cllw_8_v1_btree_ops USING btree;
+
+
+DROP OPERATOR CLASS IF EXISTS ore_cllw_8_v1_btree_ops USING btree;
+
 CREATE OPERATOR CLASS ore_cllw_8_v1_btree_ops DEFAULT FOR TYPE ore_cllw_8_v1 USING btree FAMILY ore_cllw_8_v1_btree_ops  AS
         OPERATOR 1 <,
         OPERATOR 2 <=,
