@@ -60,9 +60,6 @@ BEGIN ATOMIC
 END;
 
 
---
--- Drop and reset the check constraint
---
 ALTER DOMAIN cs_configuration_data_v1 DROP CONSTRAINT IF EXISTS cs_configuration_data_v1_check;
 
 ALTER DOMAIN cs_configuration_data_v1
