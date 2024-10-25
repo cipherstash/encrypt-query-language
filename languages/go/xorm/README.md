@@ -10,6 +10,12 @@
 
 ## Running / Development
 
+Copy over the example `.envrc` file:
+
+```shell
+cp .envrc.example .envrc
+```
+
 Create an [account](https://cipherstash.com/signup).
 
 Install the CLI:
@@ -24,7 +30,7 @@ Login:
 stash login
 ```
 
-Create a [dataset](https://cipherstash.com/docs/how-to/creating-datasets) and [client](https://cipherstash.com/docs/how-to/creating-clients), and record them as `CS_CLIENT_ID` and `CS_CLIENT_KEY`.
+Create a [dataset](https://cipherstash.com/docs/how-to/creating-datasets) and [client](https://cipherstash.com/docs/how-to/creating-clients), and record them as `CS_CLIENT_ID` and `CS_CLIENT_KEY` and `CS_ENCRYPTION__DATASET_ID`.
 
 ```shell
 stash datasets create xorm
@@ -35,12 +41,6 @@ stash clients create xorm --dataset-id $CS_DATASET_ID
 # grab the client key and export CS_CLIENT_KEY=
 ```
 
-Upload the `dataset.yml` file in this directory.
-
-```shell
-stash datasets config upload --file dataset.yml --client-id $CS_CLIENT_ID --client-key $CS_CLIENT_KEY --assume-yes
-```
-
 Create an [access key](https://cipherstash.com/docs/how-to/creating-access-keys) for CipherStash Proxy:
 
 ```shell
@@ -48,12 +48,6 @@ stash workspaces
 # grab the workspace ID and export CS_WORKSPACE_ID=
 stash access-keys create --workspace-id $CS_WORKSPACE_ID xorm
 # grab the client access key and export CS_CLIENT_ACCESS_KEY=
-```
-
-Copy over the example `.envrc` file:
-
-```shell
-cp .envrc.example .envrc
 ```
 
 Update the `.envrc` file with these environment variables `CS_WORKSPACE_ID`, `CS_CLIENT_ACCESS_KEY`, `CS_CLIENT_ID` and `CS_CLIENT_KEY`:
@@ -190,7 +184,7 @@ Example:
     SELECT cs_add_index_v1('examples', 'encrypted_text_field', 'unique', 'text', '{"token_filters": [{"kind": "downcase"}]}');
     SELECT cs_add_index_v1('examples', 'encrypted_text_field', 'match', 'text');
     SELECT cs_add_index_v1('examples', 'encrypted_text_field', 'ore', 'text');
-    SELECT cs_add_index_v1('examples', 'encrypted_jsonb_field', 'ste_vec', 'jsonb', '{"prefix": "some-prefix"}');
+    SELECT cs_add_index_v1('examples', 'encrypted_jsonb_field', 'ste_vec', 'jsonb', '{"prefix": "examples/encrypted_jsonb_field"}');
 
     --   The below indexes will also need to be added to enable full search functionality on the encrypted columns
 
