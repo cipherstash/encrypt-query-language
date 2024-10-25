@@ -114,17 +114,14 @@ $$ LANGUAGE plpgsql;
 
 
 -- -----------------------------------------------
--- Start encryptindexing
--- The schema is validated first.
--- The pending config should now be encrypting
+-- Start encryptindexing wwith no target table
+--
+-- The schema should be validated first.
+-- Users table does not exist, so should fail.
 -- -----------------------------------------------
 DROP TABLE IF EXISTS users;
 TRUNCATE TABLE cs_configuration_v1;
 
--- SELECT cs_add_index_v1('users', 'name', 'match');
--- SELECT cs_encrypt_v1();
-
--- SELECT FROM cs_configuration_v1 c WHERE c.state = 'pending';
 
 DO $$
   BEGIN
@@ -132,11 +129,13 @@ DO $$
 
     BEGIN
       PERFORM cs_encrypt_v1();
+      RAISE NOTICE 'Missinbg users table. Encrypt should have failed.';
       ASSERT false; -- skipped by exception
     EXCEPTION
       WHEN OTHERS THEN
         ASSERT true;
     END;
+    -- configuration state should not be changed
     ASSERT (SELECT EXISTS (SELECT FROM cs_configuration_v1 c WHERE c.state = 'pending'));
     ASSERT (SELECT NOT EXISTS (SELECT FROM cs_configuration_v1 c WHERE c.state = 'encrypting'));
 
