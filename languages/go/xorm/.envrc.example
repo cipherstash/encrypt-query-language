@@ -18,4 +18,3 @@ export CS_DATABASE__PASSWORD=postgres
 export CS_DATABASE__NAME=gotest
 export CS_DATABASE__HOST=localhost
 export CS_TEST_ON_CHECKOUT=true
-export CS_STATEMENT_HANDLER=mylittleproxy

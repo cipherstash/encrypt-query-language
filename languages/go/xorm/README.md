@@ -41,12 +41,6 @@ stash clients create xorm --dataset-id $CS_DATASET_ID
 # grab the client key and export CS_CLIENT_KEY=
 ```
 
-Upload the `dataset.yml` file in this directory.
-
-```shell
-stash datasets config upload --file dataset.yml --client-id $CS_CLIENT_ID --client-key $CS_CLIENT_KEY --assume-yes
-```
-
 Create an [access key](https://cipherstash.com/docs/how-to/creating-access-keys) for CipherStash Proxy:
 
 ```shell
