@@ -30,7 +30,6 @@ services:
       CS_DATABASE__PASSWORD: postgres
       CS_DATABASE__NAME: gotest
       CS_DATABASE__HOST: postgres
-      CS_STATEMENT_HANDLER: mylittleproxy
     networks:
       - my-network
 networks:
