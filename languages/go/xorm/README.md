@@ -10,6 +10,12 @@
 
 ## Running / Development
 
+Copy over the example `.envrc` file:
+
+```shell
+cp .envrc.example .envrc
+```
+
 Create an [account](https://cipherstash.com/signup).
 
 Install the CLI:
@@ -24,7 +30,7 @@ Login:
 stash login
 ```
 
-Create a [dataset](https://cipherstash.com/docs/how-to/creating-datasets) and [client](https://cipherstash.com/docs/how-to/creating-clients), and record them as `CS_CLIENT_ID` and `CS_CLIENT_KEY`.
+Create a [dataset](https://cipherstash.com/docs/how-to/creating-datasets) and [client](https://cipherstash.com/docs/how-to/creating-clients), and record them as `CS_CLIENT_ID` and `CS_CLIENT_KEY` and `CS_ENCRYPTION__DATASET_ID`.
 
 ```shell
 stash datasets create xorm
@@ -48,12 +54,6 @@ stash workspaces
 # grab the workspace ID and export CS_WORKSPACE_ID=
 stash access-keys create --workspace-id $CS_WORKSPACE_ID xorm
 # grab the client access key and export CS_CLIENT_ACCESS_KEY=
-```
-
-Copy over the example `.envrc` file:
-
-```shell
-cp .envrc.example .envrc
 ```
 
 Update the `.envrc` file with these environment variables `CS_WORKSPACE_ID`, `CS_CLIENT_ACCESS_KEY`, `CS_CLIENT_ID` and `CS_CLIENT_KEY`:
