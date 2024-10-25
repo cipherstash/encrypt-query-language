@@ -29,7 +29,6 @@ services:
       CS_DATABASE__PASSWORD: postgres
       CS_DATABASE__NAME: cipherstash_getting_started
       CS_DATABASE__HOST: cipherstash_getting_started_pg
-      CS_STATEMENT_HANDLER: mylittleproxy
     networks:
       - cipherstash_getting_started_nw
 
