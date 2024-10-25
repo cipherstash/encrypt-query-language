@@ -5,9 +5,9 @@
 [![CipherStash Proxy](https://img.shields.io/badge/guide-CipherStash%20Proxy-A48CF3)](https://github.com/cipherstash/encrypt-query-language/blob/main/PROXY.md)
 [![CipherStash Migrator](https://img.shields.io/badge/guide-CipherStash%20Migrator-A48CF3)](https://github.com/cipherstash/encrypt-query-language/blob/main/MIGRATOR.md)
 
-Encrypt Query Language (EQL) is a set of abstractions for transmitting, storing & interacting with encrypted data and indexes in PostgreSQL.
+Encrypt Query Language (EQL) is a set of abstractions for transmitting, storing, and interacting with encrypted data and indexes in PostgreSQL.
 
-EQL provides a data format for transmitting and storing encrypted data & indexes, and database types & functions to interact with the encrypted material.
+EQL provides a data format for transmitting and storing encrypted data and indexes, as well as database types and functions to interact with the encrypted material.
 
 ## Table of Contents
 
@@ -27,14 +27,16 @@ EQL provides a data format for transmitting and storing encrypted data & indexes
 
 ## Installation
 
-The simplest and fastest way to get up and running with EQL from scratch is to execute the install SQL file directly in your database.
+The simplest and fastest way to get up and running with EQL is to execute the install SQL file directly in your database.
 
-1. Download the [cipherstash-encrypt-dsl.sql](./release/cipherstash-encrypt-dsl.sql) file
-2. Run the following command to install the custom types and functions:
-
-```bash
-psql -f cipherstash-encrypt-dsl.sql
-```
+1. Get the latest EQL install script:
+   ```bash
+    curl -sLo cipherstash-eql.sql https://github.com/cipherstash/encrypt-query-language/releases/latest/download/cipherstash-eql.sql
+   ```
+1. Run this command to install the custom types and functions:
+   ```bash
+   psql -f cipherstash-eql.sql
+   ```
 
 ## Usage
 
@@ -42,17 +44,17 @@ Once the custom types and functions are installed, you can start using EQL in yo
 
 1. Create a table with a column of type `cs_encrypted_v1` which will store your encrypted data.
 1. Use EQL functions to add indexes for the columns you want to encrypt.
-   - Indexes are used by Cipherstash Proxy to understand what cryptography schemes are required for your use case.
-1. Initialize Cipherstash Proxy for cryptographic operations.
-   - The Proxy will dynamically encrypt data on the way in and decrypt data on the way out based on the indexes you have defined.
+   - Indexes are used by CipherStash Proxy to understand what cryptography schemes are required for your use case.
+1. Initialize CipherStash Proxy for cryptographic operations.
+   - Proxy will dynamically encrypt data on the way in and decrypt data on the way out, based on the indexes you've defined.
 1. Insert data into the defined columns using a specific payload format.
-   - The payload format is defined in the [data format](#data-format) section.
-1. Query the data using the EQL functions defined in the [querying data with EQL](#querying-data-with-eql) section.
+   - See [data format](#data-format) for the payload format.
+1. Query the data using the EQL functions defined in [querying data with EQL](#querying-data-with-eql).
    - No modifications are required to simply `SELECT` data from your encrypted columns.
-   - In order to perform `WHERE` and `ORDER BY` queries, you must wrap the queries in the EQL functions defined in the [querying data with EQL](#querying-data-with-eql) section.
+   - To perform `WHERE` and `ORDER BY` queries, wrap the queries in the EQL functions defined in [querying data with EQL](#querying-data-with-eql).
 1. Integrate with your application via the [helper packages](#helper-packages) to interact with the encrypted data.
 
-You can find a full getting started guide in the [GETTINGSTARTED.md](GETTINGSTARTED.md) file.
+Read [GETTINGSTARTED.md](GETTINGSTARTED.md) for more detail.
 
 ## Encrypted columns
 
@@ -73,11 +75,11 @@ In some instances, especially when using langugage specific ORMs, EQL also suppo
 
 ### Configuring the column
 
-In order for CipherStash Proxy to encrypt and decrypt the data, you can initialize the column in the database using the `cs_add_column_v1` function.
+So that CipherStash Proxy can encrypt and decrypt the data, initialize the column in the database using the `cs_add_column_v1` function.
 This function takes the following parameters:
 
-- `table_name`: The name of the table containing the encrypted column.
-- `column_name`: The name of the encrypted column.
+- `table_name`: the name of the table containing the encrypted column.
+- `column_name`: the name of the encrypted column.
 
 This function will **not** enable searchable encryption, but will allow you to encrypt and decrypt data.
 See [querying data with EQL](#querying-data-with-eql) for more information on how to enable searchable encryption.
@@ -109,7 +111,7 @@ SELECT cs_refresh_encrypt_config();
 
 ### Inserting data
 
-When inserting data into the encrypted column, you must wrap the plaintext in the appropriate EQL payload.
+When inserting data into the encrypted column, wrap the plaintext in the appropriate EQL payload.
 These statements must be run through the CipherStash Proxy in order to **encrypt** the data.
 
 **Example:**
@@ -137,7 +139,7 @@ All the data stored in the database is fully encrypted and secure.
 
 ### Reading data
 
-When querying data, you must wrap the encrypted column in the appropriate EQL payload.
+When querying data, wrap the encrypted column in the appropriate EQL payload.
 These statements must be run through the CipherStash Proxy in order to **decrypt** the data.
 
 **Example:**
@@ -346,7 +348,7 @@ Extract a field from a JSONB object in a `SELECT` statement:
 SELECT cs_ste_value_v1(attrs, 'DQ1rbhWJXmmqi/+niUG6qw') FROM users;
 ```
 
-The above is the equivalent to this SQL query:
+Which is the equivalent to the following SQL query:
 
 ```sql
 SELECT attrs->'login_count' FROM users;
@@ -361,7 +363,7 @@ Select rows that match a field in a JSONB object:
 SELECT * FROM users WHERE cs_ste_term_v1(attrs, 'DQ1rbhWJXmmqi/+niUG6qw') > 'QAJ3HezijfTHaKrhdKxUEg';
 ```
 
-The above is the equivalent to this SQL query:
+Which is the equivalent to the following SQL query:
 
 ```sql
 SELECT * FROM users WHERE attrs->'login_count' > 10; 
@@ -418,20 +420,20 @@ The default Match index options are:
   }
 ```
 
-- `tokenFilters`: a list of filters to apply to normalise tokens before indexing.
+- `tokenFilters`: a list of filters to apply to normalize tokens before indexing.
 - `tokenizer`: determines how input text is split into tokens.
 - `m`: The size of the backing [bloom filter](https://en.wikipedia.org/wiki/Bloom_filter) in bits. Defaults to `2048`.
 - `k`: The maximum number of bits set in the bloom filter per term. Defaults to `6`.
 
-**Token Filters**
+**Token filters**
 
-There are currently only two token filters available `downcase` and `upcase`. These are used to normalise the text before indexing and are also applied to query terms. An empty array can also be passed to `tokenFilters` if no normalisation of terms is required.
+There are currently only two token filters available: `downcase` and `upcase`. These are used to normalise the text before indexing and are also applied to query terms. An empty array can also be passed to `tokenFilters` if no normalisation of terms is required.
 
 **Tokenizer**
 
 There are two `tokenizer`s provided: `standard` and `ngram`.
-The `standard` simply splits text into tokens using this regular expression: `/[ ,;:!]/`.
-The `ngram` tokenizer splits the text into n-grams and accepts a configuration object that allows you to specify the `tokenLength`.
+`standard` simply splits text into tokens using this regular expression: `/[ ,;:!]/`.
+`ngram` splits the text into n-grams and accepts a configuration object that allows you to specify the `tokenLength`.
 
 **m** and **k**
 
@@ -582,11 +584,11 @@ cs_remove_index_v1(table_name text, column_name text, index_name text)
 
 Removes an index configuration from the column.
 
-## Data Format
+## Data format
 
 Encrypted data is stored as `jsonb` with a specific schema:
 
-- **Plaintext Payload (Client Side):**
+- **Plaintext payload (client side):**
 
   ```json
   {
@@ -600,7 +602,7 @@ Encrypted data is stored as `jsonb` with a specific schema:
   }
   ```
 
-- **Encrypted Payload (Database Side):**
+- **Encrypted payload (database side):**
 
   ```json
   {
@@ -617,7 +619,7 @@ Encrypted data is stored as `jsonb` with a specific schema:
 The format is defined as a [JSON Schema](./cs_encrypted_v1.schema.json).
 
 It should never be necessary to directly interact with the stored `jsonb`.
-Cipherstash proxy handles the encoding, and EQL provides the functions.
+CipherStash Proxy handles the encoding, and EQL provides the functions.
 
 | Field | Name              | Description                                                                                                                                                                                                                                                               |
 | ----- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -628,15 +630,15 @@ Cipherstash proxy handles the encoding, and EQL provides the functions.
 | i.c   | Column identifier | Name of the encrypted column.                                                                                                                                                                                                                                             |
 | p     | Plaintext         | Plaintext value sent by database client. Required if kind is plaintext/pt or encrypting/et.                                                                                                                                                                               |
 | q     | For query         | Specifies that the plaintext should be encrypted for a specific query operation. If `null`, source encryption and encryption for all indexes will be performed. Valid values are `"match"`, `"ore"`, `"unique"`, `"ste_vec"`, `"ejson_path"`, and `"websearch_to_match"`. |
-| c     | Ciphertext        | Ciphertext value. Encrypted by proxy. Required if kind is plaintext/pt or encrypting/et.                                                                                                                                                                                  |
-| m     | Match index       | Ciphertext index value. Encrypted by proxy.                                                                                                                                                                                                                               |
-| o     | ORE index         | Ciphertext index value. Encrypted by proxy.                                                                                                                                                                                                                               |
-| u     | Unique index      | Ciphertext index value. Encrypted by proxy.                                                                                                                                                                                                                               |
-| sv    | STE vector index  | Ciphertext index value. Encrypted by proxy.                                                                                                                                                                                                                               |
+| c     | Ciphertext        | Ciphertext value. Encrypted by Proxy. Required if kind is plaintext/pt or encrypting/et.                                                                                                                                                                                  |
+| m     | Match index       | Ciphertext index value. Encrypted by Proxy.                                                                                                                                                                                                                               |
+| o     | ORE index         | Ciphertext index value. Encrypted by Proxy.                                                                                                                                                                                                                               |
+| u     | Unique index      | Ciphertext index value. Encrypted by Proxy.                                                                                                                                                                                                                               |
+| sv    | STE vector index  | Ciphertext index value. Encrypted by Proxy.                                                                                                                                                                                                                               |
 
 ## Helper packages
 
-We have created a few langague specific packages to help you interact with the payloads:
+We've created a few langague specific packages to help you interact with the payloads:
 
 - [@cipherstash/eql](https://github.com/cipherstash/encrypt-query-language/tree/main/languages/javascript/packages/eql): This is a TypeScript implementation of EQL.
 - [github.com/cipherstash/goeql](https://github.com/cipherstash/goeql): This is a Go implementation of EQL
@@ -645,10 +647,10 @@ We have created a few langague specific packages to help you interact with the p
 
 To cut a [release](https://github.com/cipherstash/encrypt-query-language/releases) of EQL:
 
-1. Draft a [new release](https://github.com/cipherstash/encrypt-query-language/releases/new) on GitHub
-1. Choose a tag, and create a new one with the prefix `eql-` followed by a [semver](https://semver.org/) (for example, `eql-1.2.3`)
-1. Generate the release notes
-1. Optionally set the release to be the latest (you can set a release to be latest later on if you are testing out a release first)
-1. Click the `Publish release` button
+1. Draft a [new release](https://github.com/cipherstash/encrypt-query-language/releases/new) on GitHub.
+1. Choose a tag, and create a new one with the prefix `eql-` followed by a [semver](https://semver.org/) (for example, `eql-1.2.3`).
+1. Generate the release notes.
+1. Optionally set the release to be the latest (you can set a release to be latest later on if you are testing out a release first).
+1. Click `Publish release`.
 
-This will trigger a run of the [Release EQL](https://github.com/cipherstash/encrypt-query-language/actions/workflows/release-eql.yml) workflow, which will build and attach artifacts to the release.
+This will trigger the [Release EQL](https://github.com/cipherstash/encrypt-query-language/actions/workflows/release-eql.yml) workflow, which will build and attach artifacts to [the release](https://github.com/cipherstash/encrypt-query-language/releases/).
