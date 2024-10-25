@@ -651,4 +651,4 @@ To cut a [release](https://github.com/cipherstash/encrypt-query-language/release
 1. Optionally set the release to be the latest (you can set a release to be latest later on if you are testing out a release first).
 1. Click `Publish release`.
 
-This will trigger the [Release EQL](https://github.com/cipherstash/encrypt-query-language/actions/workflows/release-eql.yml) workflow, which will build and attach artifacts to the release.
+This will trigger the [Release EQL](https://github.com/cipherstash/encrypt-query-language/actions/workflows/release-eql.yml) workflow, which will build and attach artifacts to [the release](https://github.com/cipherstash/encrypt-query-language/releases/).
