@@ -1,21 +1,9 @@
-
--- DROP and CREATE functions
--- Function types cannot be changed after creation so we DROP for flexibility
-DROP FUNCTION IF EXISTS cs_select_pending_columns_v1;
-DROP FUNCTION IF EXISTS cs_select_target_columns_v1;
-DROP FUNCTION IF EXISTS cs_count_encrypted_with_active_config_v1;
-DROP FUNCTION IF EXISTS cs_create_encrypted_columns_v1();
-DROP FUNCTION IF EXISTS cs_rename_encrypted_columns_v1();
-
-DROP FUNCTION IF EXISTS _cs_diff_config_v1;
-DROP FUNCTION IF EXISTS _cs_table_from_config_key;
-DROP FUNCTION IF EXISTS _cs_column_from_config_key;
-
-
 -- Return the diff of two configurations
 -- Returns the set of keys in a that have different values to b
 -- The json comparison is on object values held by the key
-CREATE OR REPLACE FUNCTION _cs_diff_config_v1(a JSONB, b JSONB)
+DROP FUNCTION IF EXISTS _cs_diff_config_v1(a JSONB, b JSONB);
+
+CREATE FUNCTION _cs_diff_config_v1(a JSONB, b JSONB)
 	RETURNS TABLE(table_name TEXT, column_name TEXT)
 IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -46,6 +34,8 @@ $$ LANGUAGE plpgsql;
 
 -- Returns the set of columns with pending configuration changes
 -- Compares the columns in pending configuration that do not match the active config
+DROP FUNCTION IF EXISTS cs_select_pending_columns_v1();
+
 CREATE FUNCTION cs_select_pending_columns_v1()
 	RETURNS TABLE(table_name TEXT, column_name TEXT)
 AS $$
@@ -82,6 +72,8 @@ $$ LANGUAGE plpgsql;
 -- On initial encryption from plaintext the target column will be `{column_name}_encrypted `
 -- OR NULL if the column does not exist
 --
+DROP FUNCTION IF EXISTS cs_select_target_columns_v1();
+
 CREATE FUNCTION cs_select_target_columns_v1()
 	RETURNS TABLE(table_name TEXT, column_name TEXT, target_column TEXT)
 	STABLE STRICT PARALLEL SAFE
@@ -101,6 +93,8 @@ $$ LANGUAGE sql;
 
 --
 -- Returns true if all pending columns have a target (encrypted) column
+DROP FUNCTION IF EXISTS cs_ready_for_encryption_v1();
+
 CREATE FUNCTION cs_ready_for_encryption_v1()
 	RETURNS BOOLEAN
 	STABLE STRICT PARALLEL SAFE
@@ -119,6 +113,8 @@ $$ LANGUAGE sql;
 -- Executes the ALTER TABLE statement
 --   `ALTER TABLE {target_table} ADD COLUMN {column_name}_encrypted cs_encrypted_v1;`
 --
+DROP FUNCTION IF EXISTS cs_create_encrypted_columns_v1();
+
 CREATE FUNCTION cs_create_encrypted_columns_v1()
 	RETURNS TABLE(table_name TEXT, column_name TEXT)
 AS $$
@@ -142,6 +138,8 @@ $$ LANGUAGE plpgsql;
 --   `ALTER TABLE {target_table} RENAME COLUMN {column_name} TO {column_name}_plaintext;
 --   `ALTER TABLE {target_table} RENAME COLUMN {column_name}_encrypted TO {column_name};`
 --
+DROP FUNCTION IF EXISTS cs_rename_encrypted_columns_v1();
+
 CREATE FUNCTION cs_rename_encrypted_columns_v1()
 	RETURNS TABLE(table_name TEXT, column_name TEXT, target_column TEXT)
 AS $$
@@ -156,6 +154,8 @@ AS $$
 	END;
 $$ LANGUAGE plpgsql;
 
+
+DROP FUNCTION IF EXISTS cs_count_encrypted_with_active_config_v1(table_name TEXT, column_name TEXT);
 
 CREATE FUNCTION cs_count_encrypted_with_active_config_v1(table_name TEXT, column_name TEXT)
   RETURNS BIGINT

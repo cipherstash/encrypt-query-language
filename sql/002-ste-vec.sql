@@ -2,7 +2,6 @@
 ---
 --- SteVec types, functions, and operators
 ---
-
 CREATE TYPE ste_vec_v1_entry AS (
     tokenized_selector text,
     term ore_cllw_8_v1,
@@ -14,7 +13,9 @@ CREATE TYPE cs_ste_vec_index_v1 AS (
 );
 
 -- Determine if a == b (ignoring ciphertext values)
-CREATE OR REPLACE FUNCTION ste_vec_v1_entry_eq(a ste_vec_v1_entry, b ste_vec_v1_entry)
+DROP FUNCTION IF EXISTS ste_vec_v1_entry_eq(a ste_vec_v1_entry, b ste_vec_v1_entry);
+
+CREATE FUNCTION ste_vec_v1_entry_eq(a ste_vec_v1_entry, b ste_vec_v1_entry)
 RETURNS boolean AS $$
 DECLARE
     sel_cmp int;
@@ -36,7 +37,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Determine if a contains b (ignoring ciphertext values)
-CREATE OR REPLACE FUNCTION ste_vec_v1_logical_contains(a cs_ste_vec_index_v1, b cs_ste_vec_index_v1)
+DROP FUNCTION IF EXISTS ste_vec_v1_logical_contains(a cs_ste_vec_index_v1, b cs_ste_vec_index_v1);
+
+CREATE FUNCTION ste_vec_v1_logical_contains(a cs_ste_vec_index_v1, b cs_ste_vec_index_v1)
 RETURNS boolean AS $$
 DECLARE
     result boolean;
@@ -55,7 +58,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Determine if a contains b (ignoring ciphertext values)
-CREATE OR REPLACE FUNCTION ste_vec_v1_entry_array_contains_entry(a ste_vec_v1_entry[], b ste_vec_v1_entry)
+DROP FUNCTION IF EXISTS ste_vec_v1_entry_array_contains_entry(a ste_vec_v1_entry[], b ste_vec_v1_entry);
+
+CREATE FUNCTION ste_vec_v1_entry_array_contains_entry(a ste_vec_v1_entry[], b ste_vec_v1_entry)
 RETURNS boolean AS $$
 DECLARE
     result boolean;
@@ -75,7 +80,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Determine if a is contained by b (ignoring ciphertext values)
-CREATE OR REPLACE FUNCTION ste_vec_v1_logical_is_contained(a cs_ste_vec_index_v1, b cs_ste_vec_index_v1)
+DROP FUNCTION IF EXISTS ste_vec_v1_logical_is_contained(a cs_ste_vec_index_v1, b cs_ste_vec_index_v1);
+
+CREATE FUNCTION ste_vec_v1_logical_is_contained(a cs_ste_vec_index_v1, b cs_ste_vec_index_v1)
 RETURNS boolean AS $$
 BEGIN
     RETURN ste_vec_v1_logical_contains(b, a);
@@ -83,7 +90,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION jsonb_to_cs_ste_vec_index_v1(input jsonb)
+DROP FUNCTION IF EXISTS jsonb_to_cs_ste_vec_index_v1(input jsonb);
+
+CREATE FUNCTION jsonb_to_cs_ste_vec_index_v1(input jsonb)
 RETURNS cs_ste_vec_index_v1 AS $$
 DECLARE
     vec_entry ste_vec_v1_entry;
@@ -107,8 +116,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP CAST IF EXISTS (jsonb AS cs_ste_vec_index_v1);
+
 CREATE CAST (jsonb AS cs_ste_vec_index_v1)
 	WITH FUNCTION jsonb_to_cs_ste_vec_index_v1(jsonb) AS IMPLICIT;
+
+DROP OPERATOR IF EXISTS @> (cs_ste_vec_index_v1, cs_ste_vec_index_v1);
 
 CREATE OPERATOR @> (
   PROCEDURE="ste_vec_v1_logical_contains",
@@ -116,6 +129,8 @@ CREATE OPERATOR @> (
   RIGHTARG=cs_ste_vec_index_v1,
   COMMUTATOR = <@
 );
+
+DROP OPERATOR IF EXISTS <@ (cs_ste_vec_index_v1, cs_ste_vec_index_v1);
 
 CREATE OPERATOR <@ (
   PROCEDURE="ste_vec_v1_logical_is_contained",
