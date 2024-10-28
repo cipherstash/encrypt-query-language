@@ -232,9 +232,9 @@ CREATE FUNCTION cs_encrypt_v1()
   RETURNS boolean
 AS $$
 	BEGIN
-    IF NOT cs_ready_for_encryption_v1() THEN
-      RAISE EXCEPTION 'Some pending columns do not have an encrypted target';
-    END IF;
+    -- IF NOT cs_ready_for_encryption_v1() THEN
+    --  RAISE EXCEPTION 'Some pending columns do not have an encrypted target';
+    -- END IF;
 
 		IF NOT EXISTS (SELECT FROM cs_configuration_v1 c WHERE c.state = 'pending') THEN
 			RAISE EXCEPTION 'No pending configuration exists to encrypt';
