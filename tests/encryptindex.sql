@@ -114,7 +114,7 @@ $$ LANGUAGE plpgsql;
 
 
 -- -----------------------------------------------
--- Start encryptindexing wwith no target table
+-- Start encryptindexing with no target table
 --
 -- The schema should be validated first.
 -- Users table does not exist, so should fail.
@@ -129,7 +129,7 @@ DO $$
 
     BEGIN
       PERFORM cs_encrypt_v1();
-      RAISE NOTICE 'Missinbg users table. Encrypt should have failed.';
+      RAISE NOTICE 'Missing users table. Encrypt should have failed.';
       ASSERT false; -- skipped by exception
     EXCEPTION
       WHEN OTHERS THEN
@@ -142,6 +142,29 @@ DO $$
   END;
 $$ LANGUAGE plpgsql;
 
+
+-- -----------------------------------------------
+-- FORCE start encryptindexing with no target table
+--
+-- Schema validation is skipped
+-- -----------------------------------------------
+DROP TABLE IF EXISTS users;
+TRUNCATE TABLE cs_configuration_v1;
+
+
+DO $$
+  BEGIN
+    PERFORM cs_add_index_v1('users', 'name', 'match');
+
+    PERFORM cs_encrypt_v1(true);
+    RAISE NOTICE 'Missing users table. Encrypt should have failed.';
+
+    -- configuration state should be changed
+    ASSERT (SELECT NOT EXISTS (SELECT FROM cs_configuration_v1 c WHERE c.state = 'pending'));
+    ASSERT (SELECT EXISTS (SELECT FROM cs_configuration_v1 c WHERE c.state = 'encrypting'));
+
+  END;
+$$ LANGUAGE plpgsql;
 
 
 -- -----------------------------------------------
@@ -171,13 +194,63 @@ INSERT INTO cs_configuration_v1 (state, data) VALUES (
   }'::jsonb
 );
 
--- Create a table with multiple plaintext columns
+-- Create a table with plaintext and encrypted columns
 DROP TABLE IF EXISTS users;
 CREATE TABLE users
 (
     id bigint GENERATED ALWAYS AS IDENTITY,
     name TEXT,
     name_encrypted cs_encrypted_v1,
+    PRIMARY KEY(id)
+);
+
+
+-- An encrypting config should exist
+DO $$
+  BEGIN
+    PERFORM cs_add_index_v1('users', 'name', 'match');
+    PERFORM cs_encrypt_v1();
+
+    ASSERT (SELECT EXISTS (SELECT FROM cs_configuration_v1 c WHERE c.state = 'active'));
+    ASSERT (SELECT EXISTS (SELECT FROM cs_configuration_v1 c WHERE c.state = 'encrypting'));
+    ASSERT (SELECT NOT EXISTS (SELECT FROM cs_configuration_v1 c WHERE c.state = 'pending'));
+  END;
+$$ LANGUAGE plpgsql;
+
+
+-- -----------------------------------------------
+-- With existing active config and an updated schema using a raw JSONB column
+-- Start encryptindexing
+-- The active config is unchanged
+-- The pending config should now be encrypting
+-- -----------------------------------------------
+TRUNCATE TABLE cs_configuration_v1;
+
+-- create an active configuration
+INSERT INTO cs_configuration_v1 (state, data) VALUES (
+  'active',
+  '{
+    "v": 1,
+    "tables": {
+      "users": {
+        "name": {
+          "cast_as": "text",
+          "indexes": {
+            "unique": {}
+          }
+        }
+      }
+    }
+  }'::jsonb
+);
+
+-- Create a table with plaintext and jsonb column
+DROP TABLE IF EXISTS users;
+CREATE TABLE users
+(
+    id bigint GENERATED ALWAYS AS IDENTITY,
+    name TEXT,
+    name_encrypted jsonb,
     PRIMARY KEY(id)
 );
 
