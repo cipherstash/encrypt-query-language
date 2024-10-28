@@ -31,7 +31,7 @@ The simplest and fastest way to get up and running with EQL is to execute the in
 
 1. Get the latest EQL install script:
    ```bash
-    curl -sLo cipherstash-eql.sql https://github.com/cipherstash/encrypt-query-language/releases/latest/download/cipherstash-encrypt.sql
+    curl -sLo cipherstash-encrypt.sql https://github.com/cipherstash/encrypt-query-language/releases/latest/download/cipherstash-encrypt.sql
    ```
 1. Run this command to install the custom types and functions:
    ```bash
