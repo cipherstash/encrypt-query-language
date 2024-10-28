@@ -86,7 +86,7 @@ AS $$
     cs_select_pending_columns_v1() c
   LEFT JOIN information_schema.columns s ON
     s.table_name = c.table_name AND
-    (s.column_name = c.table_name OR s.column_name = c.column_name || '_encrypted') AND
+    (s.column_name = c.column_name OR s.column_name = c.column_name || '_encrypted') AND
     s.domain_name = 'cs_encrypted_v1';
 $$ LANGUAGE sql;
 
