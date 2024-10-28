@@ -6,13 +6,10 @@ test:
   #!/usr/bin/env bash
   set -euxo pipefail
 
-  PGPASSWORD=$CS_DATABASE__PASSWORD dropdb --force --if-exists --username ${CS_DATABASE__USERNAME:-$USER} --port $CS_DATABASE__PORT $CS_DATABASE__NAME
-  PGPASSWORD=$CS_DATABASE__PASSWORD createdb --username ${CS_DATABASE__USERNAME:-$USER} --port $CS_DATABASE__PORT $CS_DATABASE__NAME
+  just build
+  just reset
 
   connection_url=postgresql://${CS_DATABASE__USERNAME:-$USER}:@localhost:$CS_DATABASE__PORT/$CS_DATABASE__NAME
-
-  # Install
-  PGPASSWORD=$CS_DATABASE__PASSWORD psql $connection_url -f release/cipherstash-encrypt.sql
 
   # tests
   PGPASSWORD=$CS_DATABASE__PASSWORD psql $connection_url -f tests/core.sql
@@ -22,7 +19,7 @@ test:
   # Uninstall
   PGPASSWORD=$CS_DATABASE__PASSWORD psql $connection_url -f release/cipherstash-encrypt-uninstall.sql
 
-  dropdb --username ${CS_DATABASE__USERNAME:-$USER} --port $CS_DATABASE__PORT $CS_DATABASE__NAME
+
 
 build:
   #!/usr/bin/env bash
@@ -63,6 +60,8 @@ reset:
 
   PGPASSWORD=$CS_DATABASE__PASSWORD dropdb --force --if-exists --username ${CS_DATABASE__USERNAME:-$USER} --port $CS_DATABASE__PORT $CS_DATABASE__NAME
   PGPASSWORD=$CS_DATABASE__PASSWORD createdb --username ${CS_DATABASE__USERNAME:-$USER} --port $CS_DATABASE__PORT $CS_DATABASE__NAME
+
+  connection_url=postgresql://${CS_DATABASE__USERNAME:-$USER}:@localhost:$CS_DATABASE__PORT/$CS_DATABASE__NAME
 
   PGPASSWORD=$CS_DATABASE__PASSWORD psql $connection_url -f release/cipherstash-encrypt.sql
 
