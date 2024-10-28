@@ -2,6 +2,7 @@ services:
   postgres:
     container_name: cipherstash_getting_started_pg
     image: postgres:latest
+    command: ["postgres", "-c", "log_statement=all"]
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -22,6 +23,7 @@ services:
       CS_CLIENT_ACCESS_KEY: $CS_CLIENT_ACCESS_KEY
       CS_ENCRYPTION__CLIENT_ID: $CS_ENCRYPTION__CLIENT_ID
       CS_ENCRYPTION__CLIENT_KEY: $CS_ENCRYPTION__CLIENT_KEY
+      CS_ENCRYPTION__DATASET_ID: $CS_DATASET_ID
       CS_TEST_ON_CHECKOUT: "true"
       CS_AUDIT__ENABLED: "false"
       CS_DATABASE__PORT: 5432
@@ -29,7 +31,7 @@ services:
       CS_DATABASE__PASSWORD: postgres
       CS_DATABASE__NAME: cipherstash_getting_started
       CS_DATABASE__HOST: cipherstash_getting_started_pg
-      CS_STATEMENT_HANDLER: mylittleproxy
+      CS_UNSAFE_LOGGING: "true"
     networks:
       - cipherstash_getting_started_nw
 
