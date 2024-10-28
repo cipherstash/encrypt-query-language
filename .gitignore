@@ -183,3 +183,5 @@ cipherstash-proxy.toml
 
 # build artifacts
 release/
+
+.mise.*

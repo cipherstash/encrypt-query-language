@@ -40,7 +40,7 @@ $$;
 --
 -- Function types cannot be changed after creation so we always DROP & CREATE for flexibility
 --
-DROP FUNCTION IF EXISTS _cs_config_check_indexes(text, text);
+DROP FUNCTION IF EXISTS _cs_config_check_indexes(jsonb);
 
 CREATE FUNCTION _cs_config_check_indexes(val jsonb)
   RETURNS BOOLEAN
@@ -50,6 +50,8 @@ BEGIN ATOMIC
 END;
 
 
+DROP FUNCTION IF EXISTS _cs_config_check_cast(jsonb);
+
 CREATE FUNCTION _cs_config_check_cast(val jsonb)
   RETURNS BOOLEAN
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -58,9 +60,6 @@ BEGIN ATOMIC
 END;
 
 
---
--- Drop and reset the check constraint
---
 ALTER DOMAIN cs_configuration_data_v1 DROP CONSTRAINT IF EXISTS cs_configuration_data_v1_check;
 
 ALTER DOMAIN cs_configuration_data_v1
