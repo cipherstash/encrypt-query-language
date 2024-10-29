@@ -13,7 +13,7 @@ services:
       - ./init-db:/docker-entrypoint-initdb.d
   proxy:
     container_name: gotest_proxy
-    image: cipherstash/cipherstash-proxy:cipherstash-proxy-v0.1.0
+    image: cipherstash/cipherstash-proxy:cipherstash-proxy-v0.3.1
     depends_on:
       - postgres
     ports:
@@ -23,6 +23,7 @@ services:
       CS_CLIENT_ACCESS_KEY: $CS_CLIENT_ACCESS_KEY
       CS_ENCRYPTION__CLIENT_ID: $CS_ENCRYPTION__CLIENT_ID
       CS_ENCRYPTION__CLIENT_KEY: $CS_ENCRYPTION__CLIENT_KEY
+      CS_ENCRYPTION__DATASET_ID: $CS_ENCRYPTION__DATASET_ID
       CS_TEST_ON_CHECKOUT: "true"
       CS_AUDIT__ENABLED: "false"
       CS_DATABASE__PORT: 5432
