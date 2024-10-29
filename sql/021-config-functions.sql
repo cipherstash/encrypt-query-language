@@ -226,6 +226,18 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
+
+--
+--
+-- Marks the currently `pending` configuration as `encrypting`.
+--
+-- Validates the database schema and raises an exception if the configured columns are not of `jsonb` or `cs_encrypted_v1` type.
+--
+-- Accepts an optional `force` parameter.
+-- If `force` is `true`, the schema validation is skipped.
+--
+-- Raises an exception if the configuration is already `encrypting` or if there is no `pending` configuration to encrypt.
+--
 DROP FUNCTION IF EXISTS cs_encrypt_v1();
 
 CREATE FUNCTION cs_encrypt_v1(force boolean DEFAULT false)
