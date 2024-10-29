@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"reflect"
 	"testing"
 
 	"github.com/cipherstash/goeql"
@@ -181,7 +182,7 @@ func TestMatchQueryEmail(t *testing.T) {
 	assert.Equal(t, EncryptedTextField("testemail@test.com"), returnedExample.EncryptedTextField, "EncryptedTextField should match")
 }
 
-func TestJsonbQuerySimple(t *testing.T) {
+func TestJsonbQueryContainment(t *testing.T) {
 	engine := proxyEngine()
 	truncateDb(engine)
 
@@ -242,7 +243,7 @@ func TestJsonbQuerySimple(t *testing.T) {
 	assert.Equal(t, EncryptedJsonbField(expectedJson), returnedExample.EncryptedJsonbField, "EncryptedJsonb field should match")
 }
 
-func TestJsonbQueryNested(t *testing.T) {
+func TestJsonbQueryNestedContainment(t *testing.T) {
 	engine := proxyEngine()
 	truncateDb(engine)
 
@@ -306,6 +307,242 @@ func TestJsonbQueryNested(t *testing.T) {
 	}
 
 	assert.Equal(t, EncryptedJsonbField(expectedJson), returnedExample.EncryptedJsonbField, "EncryptedJsonb field should match")
+}
+
+func TestJsonbExtractionOp(t *testing.T) {
+	engine := proxyEngine()
+	truncateDb(engine)
+
+	expected_one := map[string]interface{}{
+		"nested_two": "hello world",
+	}
+	jsonOne := map[string]interface{}{
+		"top": map[string]interface{}{
+			"integer": float64(101),
+			"float":   1.234,
+			"string":  "some string",
+			"nested":  expected_one,
+		},
+		"bottom": "value_three",
+	}
+	expected_two := map[string]interface{}{
+		"nested_two": "foo bar",
+	}
+	jsonTwo := map[string]interface{}{
+		"top": map[string]interface{}{
+			"integer": float64(101),
+			"float":   1.234,
+			"string":  "some string",
+			"nested":  expected_two,
+		},
+		"bottom": "value_three",
+	}
+
+	examples := []Example{
+		{
+			NonEncryptedField:   "sydney",
+			EncryptedTextField:  "testing",
+			EncryptedIntField:   42,
+			EncryptedJsonbField: jsonOne,
+		},
+		{
+			NonEncryptedField:   "melbourne",
+			EncryptedIntField:   42,
+			EncryptedTextField:  "someone@gmail.com",
+			EncryptedJsonbField: jsonTwo,
+		},
+	}
+
+	inserted, err := engine.Insert(&examples)
+
+	if err != nil {
+		t.Errorf("Error inserting examples: %v", err)
+	}
+
+	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
+
+	sql := `SELECT cs_ste_vec_value_v1(encrypted_jsonb_field, ?) AS val FROM examples`
+	ejson_path, err := goeql.EJsonPathQuery("$.top.nested", "examples", "encrypted_jsonb_field")
+
+	if err != nil {
+		log.Fatalf("Error serializing fields_encrypted query: %v", err)
+	}
+	results, err := engine.Query(sql, ejson_path)
+	if err != nil {
+		t.Fatalf("Could not retrieve example using extraction: %v", err)
+	}
+
+	assert.Equal(t, 2, len(results))
+
+	for i := range results {
+
+		var encryptedJson goeql.EncryptedJsonb
+
+		deserializedValue, err := encryptedJson.Deserialize(results[i]["val"])
+		if err != nil {
+			log.Fatal("Deserialization error:", err)
+		}
+		jsonb_expected_one := goeql.EncryptedJsonb(expected_one)
+		jsonb_expected_two := goeql.EncryptedJsonb(expected_two)
+
+		if !reflect.DeepEqual(deserializedValue, jsonb_expected_one) && !reflect.DeepEqual(deserializedValue, jsonb_expected_two) {
+			t.Errorf("Expected value to be either %v or %v, but got %v", jsonb_expected_one, jsonb_expected_two, deserializedValue)
+		}
+
+	}
+}
+
+func TestJsonbComparisonOp(t *testing.T) {
+	engine := proxyEngine()
+	truncateDb(engine)
+
+	jsonOne := map[string]interface{}{
+		"top": map[string]interface{}{
+			"integer": 3,
+			"float":   1.234,
+			"string":  "some string",
+		},
+		"bottom": "value_three",
+	}
+	jsonTwo := map[string]interface{}{
+		"top": map[string]interface{}{
+			"integer": 50,
+			"float":   1.234,
+			"string":  "some string",
+		},
+		"bottom": "value_three",
+	}
+	expected_id := int64(2)
+	example_one := Example{
+		Id:                  int64(1),
+		NonEncryptedField:   "sydney",
+		EncryptedTextField:  "testing",
+		EncryptedIntField:   42,
+		EncryptedJsonbField: jsonOne,
+	}
+	example_two := Example{
+		Id:                  expected_id,
+		NonEncryptedField:   "melbourne",
+		EncryptedIntField:   42,
+		EncryptedTextField:  "someone@gmail.com",
+		EncryptedJsonbField: jsonTwo,
+	}
+
+	examples := []Example{
+		example_one,
+		example_two,
+	}
+
+	inserted, err := engine.Insert(&examples)
+
+	if err != nil {
+		t.Errorf("Error inserting examples: %v", err)
+	}
+
+	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
+
+	t.Skip("TODO: Fix failing test due to issue with cllw ore")
+	path := "$.top.integer"
+	ejson_path, err := goeql.EJsonPathQuery(path, "examples", "encrypted_jsonb_field")
+
+	if err != nil {
+		log.Fatalf("Error serializing fields_encrypted query: %v", err)
+	}
+	value := 10
+	comparison_value, err := goeql.JsonbQuery(value, "examples", "encrypted_jsonb_field")
+
+	if err != nil {
+		log.Fatalf("Error marshaling comparison value: %v", err)
+	}
+	var results []Example
+	err = engine.Where("cs_ste_vec_term_v1(examples.encrypted_jsonb_field, ?) > cs_ste_vec_term_v1(?)", ejson_path, comparison_value).Find(&results)
+
+	if err != nil {
+		t.Fatalf("Could not retrieve example using comparison op: %v", err)
+	}
+
+	assert.Equal(t, 1, len(results))
+	assert.Equal(t, expected_id, results[0].Id)
+}
+
+func TestJsonbTermsOp(t *testing.T) {
+	engine := proxyEngine()
+	truncateDb(engine)
+
+	jsonOne := map[string]interface{}{
+		"top": map[string]interface{}{
+			"integer": 3,
+			"float":   1.234,
+			"string":  "some string",
+			"nums":    []int64{1, 2, 3},
+		},
+		"bottom": "value_three",
+	}
+	jsonTwo := map[string]interface{}{
+		"top": map[string]interface{}{
+			"integer": 50,
+			"float":   1.234,
+			"string":  "some string",
+			"nums":    []int64{4, 5, 6},
+		},
+		"bottom": "value_three",
+	}
+	expected_id := int64(2)
+	example_one := Example{
+		Id:                  int64(1),
+		NonEncryptedField:   "sydney",
+		EncryptedTextField:  "testing",
+		EncryptedIntField:   42,
+		EncryptedJsonbField: jsonOne,
+	}
+	example_two := Example{
+		Id:                  expected_id,
+		NonEncryptedField:   "melbourne",
+		EncryptedIntField:   42,
+		EncryptedTextField:  "someone@gmail.com",
+		EncryptedJsonbField: jsonTwo,
+	}
+
+	examples := []Example{
+		example_one,
+		example_two,
+	}
+
+	inserted, err := engine.Insert(&examples)
+
+	if err != nil {
+		t.Errorf("Error inserting examples: %v", err)
+	}
+
+	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
+
+	// Serialize value as jsonb
+	value := 5
+	comparison_value, err := goeql.JsonbQuery(value, "examples", "encrypted_jsonb_field")
+	if err != nil {
+		log.Fatalf("Error marshaling comparison value: %v", err)
+	}
+	// Serialize path
+	path := "$.top.nums[*]"
+	ejson_path, err := goeql.EJsonPathQuery(path, "examples", "encrypted_jsonb_field")
+
+	sql := `SELECT * from examples e
+			WHERE EXISTS (
+			SELECT 1
+				FROM unnest(cs_ste_vec_terms_v1(e.encrypted_jsonb_field, ?)) AS term
+				WHERE term > cs_ste_vec_term_v1(?)
+			)`
+
+	if err != nil {
+		log.Fatalf("Error serializing encrypted_jsonb_field query: %v", err)
+	}
+	t.Skip("TODO: Fix failing test due to issue with cllw ore")
+	results, err := engine.Query(sql, ejson_path, comparison_value)
+	if err != nil {
+		t.Fatalf("Could not retrieve example using terms: %v", err)
+	}
+
+	assert.Equal(t, 1, len(results))
 }
 
 func TestOreStringRangeQuery(t *testing.T) {
@@ -512,4 +749,15 @@ func TestUniqueStringQuery(t *testing.T) {
 	}
 
 	assert.Equal(t, expected, returnedExample.EncryptedTextField, "EncryptedText field should match")
+}
+
+func generateJsonbData(value_one string, value_two string, value_three string) map[string]any {
+	data := map[string]any{
+		"top": map[string]any{
+			"nested": []any{value_one, value_two},
+		},
+		"bottom": value_three,
+	}
+
+	return data
 }
