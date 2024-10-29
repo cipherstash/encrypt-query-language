@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
@@ -43,9 +44,51 @@ func createTable(t *testing.T, db *sqlx.DB) {
 					first_name VARCHAR(50) NOT NULL,
 					last_name VARCHAR(50) NOT NULL,
 					date_of_birth DATE NOT NULL,
-					email VARCHAR(100) NOT NULL UNIQUE
+					email VARCHAR(100) NOT NULL UNIQUE,
+					admin BOOL NOT NULL
 				);`
 	_, err = db.Exec(create)
+	assert.NoError(t, err)
+}
+
+func installEQL(t *testing.T, db *sqlx.DB) {
+	path := "cipherstash-eql-install.sql"
+	sql, err := os.ReadFile(path)
+	assert.NoError(t, err, "try running `make fetch_eql`")
+
+	result, err := db.Exec(string(sql))
+	assert.NoError(t, err)
+	t.Logf("result: %+v\n", result)
+
+	// verify functions are available and working
+	result, err = db.Exec("SELECT cs_refresh_encrypt_config();")
+	t.Logf("result: %+v\n", result)
+	assert.NoError(t, err)
+}
+
+func addEncryptionIndexes(t *testing.T, db *sqlx.DB) {
+	sql := `
+	  SELECT cs_add_index_v1('users', 'first_name', 'unique', 'text', '{"token_filters": [{"kind": "downcase"}]}');
+      SELECT cs_add_index_v1('users', 'first_name', 'match', 'text');
+      SELECT cs_add_index_v1('users', 'first_name', 'ore', 'text');
+
+	  SELECT cs_add_index_v1('users', 'last_name', 'unique', 'text', '{"token_filters": [{"kind": "downcase"}]}');
+      SELECT cs_add_index_v1('users', 'last_name', 'match', 'text');
+      SELECT cs_add_index_v1('users', 'last_name', 'ore', 'text');
+
+      SELECT cs_add_index_v1('users', 'email', 'match', 'text');
+      SELECT cs_add_index_v1('users', 'email', 'ore', 'text');
+
+      SELECT cs_add_index_v1('users', 'date_of_birth', 'ore', 'int');
+
+      SELECT cs_add_index_v1('users', 'admin', 'ore', 'boolean');
+
+      SELECT cs_encrypt_v1();
+      SELECT cs_activate_v1();
+	`
+
+	result, err := db.Exec(sql)
+	t.Logf("result: %+v\n", result)
 	assert.NoError(t, err)
 }
 
@@ -58,6 +101,8 @@ func TestWriteAndReadEncryptedValue(t *testing.T) {
 	assert.NoError(err)
 
 	createTable(t, db)
+	installEQL(t, db)
+	addEncryptionIndexes(t, db)
 
 	v := 42
 	q := fmt.Sprintf("SELECT %d", v)
