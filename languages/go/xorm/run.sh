@@ -41,13 +41,6 @@ subproject_tests(){
   go run . setupDev
   #  run e2e tests
   make gotest
-  #  run goeql tests
-  cd ../goeql
-  go test
-}
-
-subproject_start_proxy() {
- docker run --env-file .env -p 6432:6432 cipherstash/cipherstash-proxy:latest
 }
 
 subcommand="${1:-test}"

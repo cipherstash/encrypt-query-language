@@ -68,12 +68,6 @@ Start Postgres and CipherStash Proxy and install EQL:
 ./run.sh setup
 ```
 
-Run examples:
-
-```shell
-./run.sh examples
-```
-
 Run tests:
 
 ```shell
@@ -229,7 +223,7 @@ Goeql has functions that will serialize a value into the format required by Ciph
 
 [These functions](https://github.com/cipherstash/encrypt-query-language/blob/main/languages/go/goeql/goeql.go#L153-L171) will need to be used for the relevant query.
 
-Examples of how to use these are in the [example_queries.go](./example_queries.go) file.
+Examples of how to use these are in the [e2e_test.go](./e2e_test.go) file.
 
 Below is an example of running a match query on a text field.
 
