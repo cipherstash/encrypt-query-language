@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"reflect"
@@ -441,7 +442,6 @@ func TestJsonbComparisonOp(t *testing.T) {
 
 	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
 
-	t.Skip("TODO: Fix failing test due to issue with cllw ore")
 	path := "$.top.integer"
 	ejson_path, err := goeql.EJsonPathQuery(path, "examples", "encrypted_jsonb_field")
 
@@ -494,6 +494,7 @@ func TestJsonbTermsOp(t *testing.T) {
 		EncryptedTextField:  "testing",
 		EncryptedIntField:   42,
 		EncryptedJsonbField: jsonOne,
+		EncryptedBoolField:  true,
 	}
 	example_two := Example{
 		Id:                  expected_id,
@@ -501,6 +502,7 @@ func TestJsonbTermsOp(t *testing.T) {
 		EncryptedIntField:   42,
 		EncryptedTextField:  "someone@gmail.com",
 		EncryptedJsonbField: jsonTwo,
+		EncryptedBoolField:  false,
 	}
 
 	examples := []Example{
@@ -536,13 +538,20 @@ func TestJsonbTermsOp(t *testing.T) {
 	if err != nil {
 		log.Fatalf("Error serializing encrypted_jsonb_field query: %v", err)
 	}
-	t.Skip("TODO: Fix failing test due to issue with cllw ore")
+
 	results, err := engine.Query(sql, ejson_path, comparison_value)
 	if err != nil {
 		t.Fatalf("Could not retrieve example using terms: %v", err)
 	}
 
 	assert.Equal(t, 1, len(results))
+
+	var jsonData int64
+	if err := json.Unmarshal(results[0]["id"], &jsonData); err != nil {
+		t.Fatalf("Could not unmarshal %v", err)
+	}
+	assert.Equal(t, expected_id, jsonData)
+
 }
 
 func TestOreStringRangeQuery(t *testing.T) {
