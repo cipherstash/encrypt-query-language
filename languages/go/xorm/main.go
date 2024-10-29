@@ -213,8 +213,6 @@ func main() {
 	switch fn {
 	case "setupDev":
 		setupDev()
-	case "runExamples":
-		runExamples()
 	default:
 		fmt.Println("Unknown function:", fn)
 	}
@@ -229,41 +227,4 @@ func setupDev() {
 
 	// Install EQL and add config
 	installEql()
-}
-
-func runExamples() {
-	// Connect to proxy
-	proxyConnStr := "user=postgres password=postgres port=6432 host=localhost dbname=gotest sslmode=disable"
-	proxyEngine, err := xorm.NewEngine("pgx", proxyConnStr)
-
-	if err != nil {
-		log.Fatalf("Could not connect to the database: %v", err)
-	}
-
-	// Query on unencrypted column: where clause
-	WhereQuery(proxyEngine)
-
-	// Query on encrypted columns.
-	// MATCH
-	MatchQueryLongString(proxyEngine)
-	MatchQueryEmail(proxyEngine)
-
-	// JSONB data query
-	JsonbQuerySimple(proxyEngine)
-	JsonbQueryDeepNested(proxyEngine)
-
-	// ORE
-	// String
-	OreStringRangeQuery(proxyEngine)
-	// Int
-	OreIntRangeQuery(proxyEngine)
-	// Bool
-	OreBoolQuery(proxyEngine)
-	// Date - todo
-
-	// UNIQUE
-	// String
-	UniqueStringQuery(proxyEngine)
-	// Int
-	// Bool
 }
