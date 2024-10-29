@@ -87,7 +87,7 @@ AS $$
   LEFT JOIN information_schema.columns s ON
     s.table_name = c.table_name AND
     (s.column_name = c.column_name OR s.column_name = c.column_name || '_encrypted') AND
-    s.domain_name = 'cs_encrypted_v1';
+    (s.domain_name = 'cs_encrypted_v1' OR s.data_type = 'jsonb');
 $$ LANGUAGE sql;
 
 
