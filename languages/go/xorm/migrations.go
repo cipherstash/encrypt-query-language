@@ -3,28 +3,7 @@ package main
 import (
 	"database/sql"
 	"log"
-	"os"
 )
-
-func InstallEql(engine *sql.DB) {
-	log.Println("Start installing custom types and function")
-	installDsl(engine)
-
-}
-
-// Installing EQL
-func installDsl(engine *sql.DB) {
-	path := "../../../release/cipherstash-encrypt-dsl.sql"
-	sql, err := os.ReadFile(path)
-	if err != nil {
-		log.Fatalf("Failed to read SQL file: %v", err)
-	}
-
-	_, err = engine.Exec(string(sql))
-	if err != nil {
-		log.Fatalf("Failed to execute SQL query: %v", err)
-	}
-}
 
 // We need to add constraints on any column that is encrypted.
 // This checks that all the required json fields are present, and that the data has been encrypted

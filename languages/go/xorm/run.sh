@@ -15,9 +15,9 @@ if [ "${BASH_SOURCE[0]}" != "./run.sh" ]; then
 fi
 
 subproject_setup() {
-  # start postgres and proxy
+  # start postgres and proxy (create db and install eql)
   docker compose up -d
-  # setup table, install eql, constraints and indexes
+  # constraints and indexes
   go run . setupDev
 }
 
@@ -26,19 +26,7 @@ subproject_teardown() {
   docker compose down
 }
 
-subproject_examples() {
-  # reset db
-  go run . setupDev
-
-  # run examples queries
-  go run . runExamples
-}
-
 subproject_tests(){
-   # start postgres and proxy
-  docker compose up -d
-  # reset db
-  go run . setupDev
   #  run e2e tests
   make gotest
 }
@@ -51,10 +39,6 @@ case $subcommand in
 
   teardown)
     subproject_teardown
-    ;;
-
-  examples)
-    subproject_examples
     ;;
 
   tests)
