@@ -5,7 +5,7 @@ go 1.21.3
 require github.com/stretchr/testify v1.9.0
 
 require (
-	github.com/cipherstash/goeql v0.1.3
+	github.com/cipherstash/goeql v0.1.4
 	github.com/cockroachdb/apd v1.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect
