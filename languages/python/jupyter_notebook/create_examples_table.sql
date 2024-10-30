@@ -36,5 +36,5 @@ CREATE INDEX ON examples (cs_ore_64_8_v1(encrypted_utf8_str));
 
 -- Transition the Encrypt config state from "pending", to "encrypting", and then "active".
 -- The Encrypt config must be "active" for Proxy to use it.
-SELECT cs_encrypt_v1();
+SELECT cs_encrypt_v1(true);
 SELECT cs_activate_v1();
