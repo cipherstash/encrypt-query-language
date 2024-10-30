@@ -551,7 +551,170 @@ func TestJsonbTermsOp(t *testing.T) {
 		t.Fatalf("Could not unmarshal %v", err)
 	}
 	assert.Equal(t, expected_id, jsonData)
+}
 
+func TestJsonbNullWriteRead(t *testing.T) {
+	engine := proxyEngine()
+	truncateDb(engine)
+
+	example_one := Example{
+		NonEncryptedField:   "sydney",
+		EncryptedTextField:  "test@gmail.com",
+		EncryptedIntField:   42,
+		EncryptedJsonbField: nil,
+		EncryptedBoolField:  true,
+	}
+
+	example_two := Example{
+		NonEncryptedField:   "melbourne",
+		EncryptedIntField:   42,
+		EncryptedTextField:  "someone@gmail.com",
+		EncryptedJsonbField: make(map[string]interface{}),
+		EncryptedBoolField:  false,
+	}
+
+	examples := []Example{
+		example_one,
+		example_two,
+	}
+
+	inserted, err := engine.Insert(&examples)
+
+	if err != nil {
+		t.Errorf("Error inserting examples: %v", err)
+	}
+
+	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
+
+	var returnedExamples []Example
+	err = engine.Where("encrypted_jsonb_field IS NULL").Find(&returnedExamples)
+	if err != nil {
+		t.Fatalf("Could not retrieve example: %v", err)
+	}
+
+	for i := range returnedExamples {
+		assert.Equal(t, EncryptedJsonbField(nil), returnedExamples[i].EncryptedJsonbField)
+	}
+}
+
+func TestTextNullWriteRead(t *testing.T) {
+	engine := proxyEngine()
+	truncateDb(engine)
+
+	example_one := Example{
+		NonEncryptedField:   "sydney",
+		EncryptedIntField:   42,
+		EncryptedJsonbField: generateJsonbData("first", "second", "third"),
+		EncryptedBoolField:  true,
+	}
+
+	example_two := Example{
+		NonEncryptedField:   "melbourne",
+		EncryptedTextField:  "someone@gmail.com",
+		EncryptedIntField:   42,
+		EncryptedJsonbField: make(map[string]interface{}),
+		EncryptedBoolField:  false,
+	}
+
+	examples := []Example{
+		example_one,
+		example_two,
+	}
+
+	inserted, err := engine.Insert(&examples)
+
+	if err != nil {
+		t.Errorf("Error inserting examples: %v", err)
+	}
+
+	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
+
+	results, err := engine.Query("select * from examples")
+	if err != nil {
+		t.Fatalf("Could not retrieve examples: %v", err)
+	}
+
+	assert.Equal(t, 2, len(results))
+}
+
+func TestIntNullWriteRead(t *testing.T) {
+	engine := proxyEngine()
+	truncateDb(engine)
+
+	example_one := Example{
+		NonEncryptedField:   "sydney",
+		EncryptedTextField:  "test@gmail.com",
+		EncryptedJsonbField: generateJsonbData("first", "second", "third"),
+		EncryptedBoolField:  true,
+	}
+
+	example_two := Example{
+		NonEncryptedField:   "melbourne",
+		EncryptedTextField:  "someone@gmail.com",
+		EncryptedIntField:   42,
+		EncryptedJsonbField: make(map[string]interface{}),
+		EncryptedBoolField:  false,
+	}
+
+	examples := []Example{
+		example_one,
+		example_two,
+	}
+
+	inserted, err := engine.Insert(&examples)
+
+	if err != nil {
+		t.Errorf("Error inserting examples: %v", err)
+	}
+
+	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
+
+	results, err := engine.Query("select * from examples")
+	if err != nil {
+		t.Fatalf("Could not retrieve examples: %v", err)
+	}
+
+	assert.Equal(t, 2, len(results))
+}
+
+func TestBooleanNullWriteRead(t *testing.T) {
+	engine := proxyEngine()
+	truncateDb(engine)
+
+	// Remove boolean field
+	example_one := Example{
+		NonEncryptedField:   "sydney",
+		EncryptedTextField:  "test@gmail.com",
+		EncryptedJsonbField: generateJsonbData("first", "second", "third"),
+	}
+
+	example_two := Example{
+		NonEncryptedField:   "melbourne",
+		EncryptedTextField:  "someone@gmail.com",
+		EncryptedIntField:   42,
+		EncryptedJsonbField: make(map[string]interface{}),
+		EncryptedBoolField:  false,
+	}
+
+	examples := []Example{
+		example_one,
+		example_two,
+	}
+
+	inserted, err := engine.Insert(&examples)
+
+	if err != nil {
+		t.Errorf("Error inserting examples: %v", err)
+	}
+
+	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
+
+	results, err := engine.Query("select * from examples")
+	if err != nil {
+		t.Fatalf("Could not retrieve examples: %v", err)
+	}
+
+	assert.Equal(t, 2, len(results))
 }
 
 func TestOreStringRangeQuery(t *testing.T) {
