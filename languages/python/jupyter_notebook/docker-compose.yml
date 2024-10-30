@@ -31,7 +31,8 @@ services:
       CS_DATABASE__PASSWORD: postgres
       CS_DATABASE__NAME: cipherstash_getting_started
       CS_DATABASE__HOST: cipherstash_getting_started_pg
-      CS_UNSAFE_LOGGING: "true"
+      # Enable this to get verbose debugging from Proxy
+      # CS_UNSAFE_LOGGING: "true"
     networks:
       - cipherstash_getting_started_nw
 

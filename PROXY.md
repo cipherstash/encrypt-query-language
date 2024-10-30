@@ -51,10 +51,11 @@ Populate the following fields with your values:
 
 ## Running the Proxy
 
-To run the proxy, you can use the `start.sh` script in this directory. This script will start the proxy using the configuration in the `cipherstash-proxy.toml` file.
+To run the proxy, you can use `docker compose` to start the proxy using the configuration in the `cipherstash-proxy.toml` file.
+Run the following command from the `cipherstash-proxy` directory:
 
 ```bash
-./start.sh
+docker compose up
 ```
 
 ## Using the Proxy
