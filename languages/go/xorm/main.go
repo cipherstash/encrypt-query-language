@@ -123,44 +123,6 @@ func (eb *EncryptedBoolField) FromDB(data []byte) error {
 	return nil
 }
 
-func setupDb() {
-	connStr := "user=postgres password=postgres port=5432 host=localhost dbname=postgres sslmode=disable"
-	engine, err := xorm.NewEngine("pgx", connStr)
-
-	if err != nil {
-		log.Fatalf("Could not connect to the database: %v", err)
-	}
-
-	var exists bool
-	_, err = engine.SQL("SELECT EXISTS (SELECT datname FROM pg_catalog.pg_database WHERE datname = 'gotest')").Get(&exists)
-	if err != nil {
-		log.Fatalf("Error: %v", err)
-	}
-
-	if exists {
-		_, err = engine.Exec("DROP DATABASE gotest WITH (FORCE);")
-		if err != nil {
-			log.Fatalf("Could not drop database: %v", err)
-		}
-		fmt.Println("Database 'gotest' dropped successfully!")
-
-		_, err = engine.Exec("CREATE DATABASE gotest;")
-		if err != nil {
-			log.Fatalf("Could not create database: %v", err)
-		}
-		fmt.Println("Database 'gotest' recreated!")
-	} else {
-		fmt.Println("Database 'gotest' doesn't exist. Creating...")
-		_, err = engine.Exec("CREATE DATABASE gotest;")
-		if err != nil {
-			log.Fatalf("Could not create database: %v", err)
-		}
-		fmt.Println("Database 'gotest' created successfully!")
-	}
-
-	engine.Close()
-}
-
 func createTable() {
 	connStr := "user=postgres password=postgres port=5432 host=localhost dbname=gotest sslmode=disable"
 	engine, err := xorm.NewEngine("pgx", connStr)
@@ -182,7 +144,7 @@ func createTable() {
 	engine.Close()
 }
 
-func installEql() {
+func addIndexesConstraints() {
 	connStr := "user=postgres password=postgres port=5432 host=localhost dbname=gotest sslmode=disable"
 	// Install Eql, custom types, indexes and constraints
 	// To install our custom types we need to use the database/sql package due to an issue
@@ -192,7 +154,7 @@ func installEql() {
 	if err != nil {
 		log.Fatalf("Could not connect to the database: %v", err)
 	}
-	InstallEql(engine)
+
 	AddIndexes(engine)
 	AddConstraint(engine)
 
@@ -219,12 +181,9 @@ func main() {
 }
 
 func setupDev() {
-	// Recreate gotest db on each run
-	setupDb()
-
 	// Connect to go test directly and create table
 	createTable()
 
-	// Install EQL and add config
-	installEql()
+	// Add config
+	addIndexesConstraints()
 }
