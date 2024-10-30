@@ -37,6 +37,14 @@ jobs:
         run: |
           just build
 
+      - name: Upload EQL artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: eql-release
+          path: |
+            release/cipherstash-encrypt.sql
+            release/cipherstash-encrypt-uninstall.sql
+
       - name: Publish EQL release artifacts
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
