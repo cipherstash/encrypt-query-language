@@ -20,7 +20,7 @@ SELECT cs_add_index_v1('examples', 'encrypted_small_int', 'ore', 'small_int');
 SELECT cs_add_index_v1('examples', 'encrypted_utf8_str', 'unique', 'text', '{"token_filters": [{"kind": "downcase"}]}');
 SELECT cs_add_index_v1('examples', 'encrypted_utf8_str', 'match', 'text');
 SELECT cs_add_index_v1('examples', 'encrypted_utf8_str', 'ore', 'text');
-SELECT cs_add_index_v1('examples', 'encrypted_jsonb', 'ste_vec', 'jsonb', '{"prefix": "some-prefix"}');
+SELECT cs_add_index_v1('examples', 'encrypted_jsonb', 'ste_vec', 'jsonb', '{"prefix": "examples/encrypted_jsonb"}');
 
 -- Add corresponding PG indexes for each CipherStash index
 CREATE INDEX ON examples (cs_ore_64_8_v1(encrypted_big_int));
@@ -32,9 +32,9 @@ CREATE INDEX ON examples (cs_ore_64_8_v1(encrypted_small_int));
 CREATE UNIQUE INDEX ON examples(cs_unique_v1(encrypted_utf8_str));
 CREATE INDEX ON examples USING GIN (cs_match_v1(encrypted_utf8_str));
 CREATE INDEX ON examples (cs_ore_64_8_v1(encrypted_utf8_str));
-CREATE INDEX ON examples USING GIN (cs_ste_vec_v1(encrypted_jsonb));
+-- CREATE INDEX ON examples USING GIN (cs_ste_vec_v1(encrypted_jsonb));
 
 -- Transition the Encrypt config state from "pending", to "encrypting", and then "active".
 -- The Encrypt config must be "active" for Proxy to use it.
-SELECT cs_encrypt_v1();
+SELECT cs_encrypt_v1(true);
 SELECT cs_activate_v1();
