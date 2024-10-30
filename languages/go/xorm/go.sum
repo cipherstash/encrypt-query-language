@@ -1,7 +1,7 @@
 gitea.com/xorm/sqlfiddle v0.0.0-20180821085327-62ce714f951a h1:lSA0F4e9A2NcQSqGqTOXqu2aRi/XEQxDCBwM8yJtE6s=
 gitea.com/xorm/sqlfiddle v0.0.0-20180821085327-62ce714f951a/go.mod h1:EXuID2Zs0pAQhH8yz+DNjUbjppKQzKFAn28TMYPB6IU=
-github.com/cipherstash/goeql v0.1.1 h1:FmoPuC2p9k9oXzUm3LR/vka1zUXfaIR4wJ7zJuhIa48=
-github.com/cipherstash/goeql v0.1.1/go.mod h1:ZCxu+TEwv3Zb82EJI/Sm8UrNKLEKg/D19Tkf08D6tCU=
+github.com/cipherstash/goeql v0.1.4 h1:Q/Vx716egrny3Hrmn1u7F9ooIJdd2VHe3qtMpJvMoUk=
+github.com/cipherstash/goeql v0.1.4/go.mod h1:ZCxu+TEwv3Zb82EJI/Sm8UrNKLEKg/D19Tkf08D6tCU=
 github.com/cockroachdb/apd v1.1.0 h1:3LFP3629v+1aKXU5Q37mxmRxX/pIu1nijXydLShEq5I=
 github.com/cockroachdb/apd v1.1.0/go.mod h1:8Sl8LxpKi29FqWXR16WEFZRNSz3SoPzUzeMeY4+DwBQ=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

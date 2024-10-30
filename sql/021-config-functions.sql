@@ -3,30 +3,7 @@
 --
 --
 
-
--- DROP and CREATE functions
--- Function types cannot be changed after creation so we DROP for flexibility
-
-DROP FUNCTION IF EXISTS cs_add_column_v1(text, text);
-DROP FUNCTION IF EXISTS cs_remove_column_v1(text, text);
-DROP FUNCTION IF EXISTS cs_add_index_v1(text, text, text, jsonb);
-DROP FUNCTION IF EXISTS cs_remove_index_v1(text, text, text);
-DROP FUNCTION IF EXISTS cs_modify_index_v1(text, text, text, jsonb);
-
-DROP FUNCTION IF EXISTS cs_encrypt_v1();
-DROP FUNCTION IF EXISTS cs_activate_v1();
-DROP FUNCTION IF EXISTS cs_discard_v1();
-
-DROP FUNCTION IF EXISTS cs_refresh_encrypt_config();
-
-DROP FUNCTION IF EXISTS _cs_config_default();
-DROP FUNCTION IF EXISTS _cs_config_match_default();
-
-DROP FUNCTION IF EXISTS _cs_config_add_table(text, json);
-DROP FUNCTION IF EXISTS _cs_config_add_column(text, text, json);
-DROP FUNCTION IF EXISTS _cs_config_add_cast(text, text, text, json);
-DROP FUNCTION IF EXISTS _cs_config_add_index(text, text, text, json, json);
-
+DROP FUNCTION IF EXISTS  _cs_config_default(config jsonb);
 
 CREATE FUNCTION _cs_config_default(config jsonb)
   RETURNS jsonb
@@ -40,6 +17,8 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+
+DROP FUNCTION IF EXISTS _cs_config_add_table(table_name text, config jsonb);
 
 CREATE FUNCTION _cs_config_add_table(table_name text, config jsonb)
   RETURNS jsonb
@@ -57,6 +36,8 @@ $$ LANGUAGE plpgsql;
 
 
 -- Add the column if it doesn't exist
+DROP FUNCTION IF EXISTS _cs_config_add_column(table_name text, column_name text, config jsonb);
+
 CREATE FUNCTION _cs_config_add_column(table_name text, column_name text, config jsonb)
   RETURNS jsonb
   IMMUTABLE PARALLEL SAFE
@@ -72,7 +53,10 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+
 -- Set the cast
+DROP FUNCTION IF EXISTS _cs_config_add_cast(table_name text, column_name text, cast_as text, config jsonb);
+
 CREATE FUNCTION _cs_config_add_cast(table_name text, column_name text, cast_as text, config jsonb)
   RETURNS jsonb
   IMMUTABLE PARALLEL SAFE
@@ -85,6 +69,8 @@ $$ LANGUAGE plpgsql;
 
 
 -- Add the column if it doesn't exist
+DROP FUNCTION IF EXISTS _cs_config_add_index(table_name text, column_name text, index_name text, opts jsonb, config jsonb);
+
 CREATE FUNCTION _cs_config_add_index(table_name text, column_name text, index_name text, opts jsonb, config jsonb)
   RETURNS jsonb
   IMMUTABLE PARALLEL SAFE
@@ -99,6 +85,8 @@ $$ LANGUAGE plpgsql;
 --
 -- Default options for match index
 --
+DROP FUNCTION IF EXISTS _cs_config_match_default();
+
 CREATE FUNCTION _cs_config_match_default()
   RETURNS jsonb
 LANGUAGE sql STRICT PARALLEL SAFE
@@ -114,6 +102,8 @@ END;
 --
 --
 --
+DROP FUNCTION IF EXISTS cs_add_index_v1(table_name text, column_name text, index_name text, cast_as text, opts jsonb);
+
 CREATE FUNCTION cs_add_index_v1(table_name text, column_name text, index_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}')
   RETURNS jsonb
 AS $$
@@ -162,6 +152,8 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+
+DROP FUNCTION IF EXISTS cs_remove_index_v1(table_name text, column_name text, index_name text);
 
 CREATE FUNCTION cs_remove_index_v1(table_name text, column_name text, index_name text)
   RETURNS jsonb
@@ -222,6 +214,8 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
+DROP FUNCTION IF EXISTS cs_modify_index_v1(table_name text, column_name text, index_name text, cast_as text, opts jsonb);
+
 CREATE FUNCTION cs_modify_index_v1(table_name text, column_name text, index_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}')
   RETURNS jsonb
 AS $$
@@ -232,17 +226,38 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE FUNCTION cs_encrypt_v1()
+
+--
+--
+-- Marks the currently `pending` configuration as `encrypting`.
+--
+-- Validates the database schema and raises an exception if the configured columns are not of `jsonb` or `cs_encrypted_v1` type.
+--
+-- Accepts an optional `force` parameter.
+-- If `force` is `true`, the schema validation is skipped.
+--
+-- Raises an exception if the configuration is already `encrypting` or if there is no `pending` configuration to encrypt.
+--
+DROP FUNCTION IF EXISTS cs_encrypt_v1();
+
+CREATE FUNCTION cs_encrypt_v1(force boolean DEFAULT false)
   RETURNS boolean
 AS $$
 	BEGIN
-    -- IF NOT cs_ready_for_encryption_v1() THEN
-    --   RAISE EXCEPTION 'Some pending columns do not have an encrypted target';
-    -- END IF;
+
+    IF EXISTS (SELECT FROM cs_configuration_v1 c WHERE c.state = 'encrypting') THEN
+      RAISE EXCEPTION 'An encryption is already in progress';
+    END IF;
 
 		IF NOT EXISTS (SELECT FROM cs_configuration_v1 c WHERE c.state = 'pending') THEN
 			RAISE EXCEPTION 'No pending configuration exists to encrypt';
 		END IF;
+
+    IF NOT force THEN
+      IF NOT cs_ready_for_encryption_v1() THEN
+        RAISE EXCEPTION 'Some pending columns do not have an encrypted target';
+      END IF;
+    END IF;
 
     UPDATE cs_configuration_v1 SET state = 'encrypting' WHERE state = 'pending';
 		RETURN true;
@@ -250,7 +265,9 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION cs_activate_v1()
+DROP FUNCTION IF EXISTS cs_activate_v1();
+
+CREATE FUNCTION cs_activate_v1()
   RETURNS boolean
 AS $$
 	BEGIN
@@ -266,7 +283,9 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION cs_discard_v1()
+DROP FUNCTION IF EXISTS cs_discard_v1();
+
+CREATE FUNCTION cs_discard_v1()
   RETURNS boolean
 AS $$
   BEGIN
@@ -279,6 +298,8 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+
+DROP FUNCTION IF EXISTS cs_add_column_v1(table_name text, column_name text);
 
 CREATE FUNCTION cs_add_column_v1(table_name text, column_name text)
   RETURNS jsonb
@@ -314,6 +335,8 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+
+DROP FUNCTION IF EXISTS cs_remove_column_v1(table_name text, column_name text);
 
 CREATE FUNCTION cs_remove_column_v1(table_name text, column_name text)
   RETURNS jsonb
@@ -367,6 +390,9 @@ AS $$
 
   END;
 $$ LANGUAGE plpgsql;
+
+
+DROP FUNCTION IF EXISTS cs_refresh_encrypt_config();
 
 CREATE FUNCTION cs_refresh_encrypt_config()
   RETURNS void
