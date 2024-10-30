@@ -5,6 +5,7 @@ set positional-arguments
 test:
   #!/usr/bin/env bash
   set -euxo pipefail
+  cd "{{justfile_directory()}}"
 
   just build
   just reset
@@ -24,6 +25,7 @@ test:
 build:
   #!/usr/bin/env bash
   set -euxo pipefail
+  cd "{{justfile_directory()}}"
 
   mkdir -p release
 
@@ -64,6 +66,7 @@ build:
 reset:
   #!/usr/bin/env bash
   set -euxo pipefail
+  cd "{{justfile_directory()}}"
 
   PGPASSWORD=$CS_DATABASE__PASSWORD dropdb --force --if-exists --username ${CS_DATABASE__USERNAME:-$USER} --port $CS_DATABASE__PORT $CS_DATABASE__NAME
   PGPASSWORD=$CS_DATABASE__PASSWORD createdb --username ${CS_DATABASE__USERNAME:-$USER} --port $CS_DATABASE__PORT $CS_DATABASE__NAME
