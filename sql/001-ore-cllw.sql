@@ -150,9 +150,9 @@ BEGIN
 
     -- If the bytea comparison is 'equal', compare lengths
     IF len_a < len_b THEN
-        RETURN 1;
-    ELSIF len_a > len_b THEN
         RETURN -1;
+    ELSIF len_a > len_b THEN
+        RETURN 1;
     ELSE
         RETURN 0;
     END IF;
