@@ -301,7 +301,7 @@ $$ LANGUAGE plpgsql;
 
 DROP FUNCTION IF EXISTS cs_add_column_v1(table_name text, column_name text);
 
-CREATE FUNCTION cs_add_column_v1(table_name text, column_name text)
+CREATE FUNCTION cs_add_column_v1(table_name text, column_name text, cast_as text DEFAULT 'text')
   RETURNS jsonb
 AS $$
   DECLARE
@@ -322,6 +322,8 @@ AS $$
     SELECT _cs_config_add_table(table_name, _config) INTO _config;
 
     SELECT _cs_config_add_column(table_name, column_name, _config) INTO _config;
+
+    SELECT _cs_config_add_cast(table_name, column_name, cast_as, _config) INTO _config;
 
     --  create a new pending record if we don't have one
     INSERT INTO cs_configuration_v1 (state, data) VALUES ('pending', _config)
