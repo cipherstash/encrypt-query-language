@@ -84,7 +84,7 @@ INSERT INTO users (name_encrypted) VALUES (
   }'::jsonb
 );
 
--- no source detauils
+-- no ident details
 INSERT INTO users (name_encrypted) VALUES (
   '{
     "v": 1,
@@ -92,6 +92,35 @@ INSERT INTO users (name_encrypted) VALUES (
     "c": "ciphertext"
   }'::jsonb
 );
+
+-- npo kind
+INSERT INTO users (name_encrypted) VALUES (
+  '{
+    "v": 1,
+    "c": "ciphertext",
+    "i": {
+      "t": "users",
+      "c": "name"
+    }
+  }'::jsonb
+);
+
+
+
+-- bad kind
+INSERT INTO users (name_encrypted) VALUES (
+  '{
+    "v": 1,
+    "k": "vtha",
+    "c": "ciphertext",
+    "i": {
+      "t": "users",
+      "c": "name"
+    }
+  }'::jsonb
+);
+
+
 
 -- pt
 INSERT INTO users (name_encrypted) VALUES (

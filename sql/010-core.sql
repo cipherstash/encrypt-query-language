@@ -14,6 +14,21 @@ BEGIN
 END
 $$;
 
+
+-- Should include a kind field
+DROP FUNCTION IF EXISTS _cs_encrypted_check_k(jsonb);
+CREATE FUNCTION _cs_encrypted_check_k(val jsonb)
+  RETURNS boolean
+AS $$
+	BEGIN
+    IF (val->>'k' = ANY('{ct, sv}')) THEN
+      RETURN true;
+    END IF;
+    RAISE 'Invalid kind (%) in Encrypted column. Kind should be one of {ct, sv}', val;
+  END;
+$$ LANGUAGE plpgsql;
+
+
 --
 -- CT payload should include a c field
 --
@@ -26,11 +41,12 @@ AS $$
       IF (val ? 'c') THEN
         RETURN true;
       END IF;
-      RAISE 'Encrypted kind (k) of "ct" missing data field (c):  %', val;
+      RAISE 'Encrypted column kind (k) of "ct" missing data field (c):  %', val;
     END IF;
     RETURN true;
   END;
 $$ LANGUAGE plpgsql;
+
 
 --
 -- SV payload should include an sv field
@@ -44,7 +60,7 @@ AS $$
       IF (val ? 'sv') THEN
         RETURN true;
       END IF;
-      RAISE 'Encrypted kind (k) of "sv" missing data field (sv):  %', val;
+      RAISE 'Encrypted column kind (k) of "sv" missing data field (sv):  %', val;
     END IF;
     RETURN true;
   END;
@@ -60,7 +76,7 @@ AS $$
     IF NOT val ? 'p' THEN
       RETURN true;
     END IF;
-    RAISE 'Encrypted includes plaintext (p) field: %', val;
+    RAISE 'Encrypted column includes plaintext (p) field: %', val;
   END;
 $$ LANGUAGE plpgsql;
 
@@ -73,7 +89,7 @@ AS $$
     IF val ? 'i' THEN
       RETURN true;
     END IF;
-    RAISE 'Encrypted missing ident (i) field: %', val;
+    RAISE 'Encrypted column missing ident (i) field: %', val;
   END;
 $$ LANGUAGE plpgsql;
 
@@ -86,7 +102,7 @@ AS $$
     IF (val->'i' ?& array['t', 'c']) THEN
       RETURN true;
     END IF;
-    RAISE 'Encrypted ident (i) missing table (t) or column (c) fields: %', val;
+    RAISE 'Encrypted column ident (i) missing table (t) or column (c) fields: %', val;
   END;
 $$ LANGUAGE plpgsql;
 
@@ -99,7 +115,7 @@ AS $$
     IF (val ? 'v') THEN
       RETURN true;
     END IF;
-    RAISE 'Encrypted missing version (v) field: %', val;
+    RAISE 'Encrypted column missing version (v) field: %', val;
   END;
 $$ LANGUAGE plpgsql;
 
@@ -113,6 +129,7 @@ BEGIN ATOMIC
     RETURN (
       _cs_encrypted_check_v(val) AND
       _cs_encrypted_check_i(val) AND
+      _cs_encrypted_check_k(val) AND
       _cs_encrypted_check_k_ct(val) AND
       _cs_encrypted_check_k_sv(val) AND
       _cs_encrypted_check_p(val)
