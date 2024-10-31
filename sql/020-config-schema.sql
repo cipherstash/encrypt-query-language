@@ -77,7 +77,7 @@ CREATE FUNCTION _cs_config_check_tables(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
-    IF (val ? 'tables') AND (val->'tables' <> '{"A":"a"}'::jsonb) THEN
+    IF (val ? 'tables') AND (val->'tables' <> '{}'::jsonb) THEN
       RETURN true;
     END IF;
     RAISE 'Configuration missing tables (tables) field: %', val;
