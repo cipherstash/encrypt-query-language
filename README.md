@@ -259,6 +259,16 @@ And is the EQL equivalent of the following plaintext query.
 SELECT id FROM examples ORDER BY field DESC;
 ```
 
+**Grouping example:**
+
+ORE indexes can be used along with the `cs_grouped_value_v1` aggregate function to group by an encrypted column:
+
+```
+SELECT cs_grouped_value_v1(encrypted_field) COUNT(*)
+  FROM users
+  GROUP BY cs_ore_64_8_v1(encrypted_field)
+```
+
 ## Querying JSONB data with EQL
 
 ### `cs_ste_term_v1(val JSONB, epath TEXT)`
@@ -354,7 +364,6 @@ Which is the equivalent to the following SQL query:
 SELECT attrs->'login_count' FROM users;
 ```
 
-
 ### Extraction (in WHERE, ORDER BY)
 
 Select rows that match a field in a JSONB object:
@@ -366,7 +375,20 @@ SELECT * FROM users WHERE cs_ste_term_v1(attrs, 'DQ1rbhWJXmmqi/+niUG6qw') > 'QAJ
 Which is the equivalent to the following SQL query:
 
 ```sql
-SELECT * FROM users WHERE attrs->'login_count' > 10; 
+SELECT * FROM users WHERE attrs->'login_count' > 10;
+```
+
+### Grouping
+
+`cs_ste_vec_term_v1` can be used along with the `cs_grouped_value_v1` aggregate function to group by a field in an encrypted JSONB column:
+
+```
+-- $1 here is a param that containts the EQL payload for an ejson path.
+-- Example EQL payload for the path `$.field_one`:
+--  '{"k": "pt", "p": "$.field_one", "q": "ejson_path", "i": {"t": "users", "c": "attrs"}, "v": 1}'
+SELECT cs_grouped_value_v1(cs_ste_vec_value_v1(attrs), $1) COUNT(*)
+  FROM users
+  GROUP BY cs_ste_vec_term_v1(attrs, $1);
 ```
 
 ## Managing indexes with EQL
