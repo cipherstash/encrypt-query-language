@@ -22,10 +22,13 @@ CREATE FUNCTION _cs_encrypted_check_k_ct(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
-    IF (val->>'k' = 'ct' AND val ? 'c') THEN
-      RETURN true;
+    IF (val->>'k' = 'ct') THEN
+      IF (val ? 'c') THEN
+        RETURN true;
+      END IF;
+      RAISE 'Encrypted kind (k) of "ct" missing data field (c):  %', val;
     END IF;
-    RAISE 'Encrypted kind (k) of "ct" missing data field (c):  %', val;
+    RETURN true;
   END;
 $$ LANGUAGE plpgsql;
 
@@ -37,10 +40,13 @@ CREATE FUNCTION _cs_encrypted_check_k_sv(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
-    IF (val->>'k' = 'sv' AND val ? 'sv') THEN
-      RETURN true;
+    IF (val->>'k' = 'sv') THEN
+      IF (val ? 'sv') THEN
+        RETURN true;
+      END IF;
+      RAISE 'Encrypted kind (k) of "sv" missing data field (sv):  %', val;
     END IF;
-    RAISE 'Encrypted kind (k) of "sv" missing data field (sv):  %', val;
+    RETURN true;
   END;
 $$ LANGUAGE plpgsql;
 
