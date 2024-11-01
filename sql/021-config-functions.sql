@@ -299,7 +299,7 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS cs_add_column_v1(table_name text, column_name text);
+DROP FUNCTION IF EXISTS cs_add_column_v1(table_name text, column_name text, cast_as text);
 
 CREATE FUNCTION cs_add_column_v1(table_name text, column_name text, cast_as text DEFAULT 'text')
   RETURNS jsonb

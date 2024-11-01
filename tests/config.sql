@@ -148,8 +148,12 @@ INSERT INTO cs_configuration_v1 (state, data) VALUES (
         "blah": {
            "cast_as": "text",
            "indexes": {
-            "match": {}
+              "match": {}
            }
+        },
+        "vtha": {
+           "cast_as": "text",
+           "indexes": {}
         }
       }
     }
