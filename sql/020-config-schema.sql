@@ -33,25 +33,38 @@ DO $$
   END
 $$;
 
+
+
+--
+-- Extracts index keys/names from configuration json
+--
+-- Used by the _cs_config_check_indexes as part of the  cs_configuration_data_v1_check constraint
+--
+DROP FUNCTION IF EXISTS _cs_extract_indexes(jsonb);
+CREATE FUNCTION _cs_extract_indexes(val jsonb)
+    RETURNS SETOF text
+    LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+BEGIN ATOMIC
+	SELECT jsonb_object_keys(jsonb_path_query(val,'$.tables.*.*.indexes'));
+END;
+
 --
 -- _cs_check_config_indexes returns true if the table configuration only includes valid index types
 --
 -- Used by the cs_configuration_data_v1_check constraint
 --
--- Function types cannot be changed after creation so we always DROP & CREATE for flexibility
---
 DROP FUNCTION IF EXISTS _cs_config_check_indexes(jsonb);
-
 CREATE FUNCTION _cs_config_check_indexes(val jsonb)
   RETURNS BOOLEAN
 AS $$
 	BEGIN
-    IF jsonb_path_query(val, '$.tables.*.*.indexes') <> '{}':jsonb THEN
-      IF EXISTS (SELECT jsonb_object_keys(jsonb_path_query(val, '$.tables.*.*.indexes')) = ANY('{match, ore, unique, ste_vec}')) THEN
+    IF (SELECT EXISTS (SELECT _cs_extract_indexes(val)))  THEN
+      IF (SELECT bool_and(index = ANY('{match, ore, unique, ste_vec}')) FROM _cs_extract_indexes(val) AS index) THEN
         RETURN true;
       END IF;
       RAISE 'Invalid index (%) in configuration. Index should be one of {match, ore, unique, ste_vec}', val;
     END IF;
+    RETURN true;
   END;
 $$ LANGUAGE plpgsql;
 
