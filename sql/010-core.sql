@@ -93,7 +93,7 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
--- Should include an ident field
+-- Ident field should include table and column
 DROP FUNCTION IF EXISTS _cs_encrypted_check_i_ct(jsonb);
 CREATE FUNCTION _cs_encrypted_check_i_ct(val jsonb)
   RETURNS boolean
