@@ -62,7 +62,7 @@ AS $$
       IF (SELECT bool_and(index = ANY('{match, ore, unique, ste_vec}')) FROM _cs_extract_indexes(val) AS index) THEN
         RETURN true;
       END IF;
-      RAISE 'Invalid index (%) in configuration. Index should be one of {match, ore, unique, ste_vec}', val;
+      RAISE 'Configuration has an invalid index (%). Index should be one of {match, ore, unique, ste_vec}', val;
     END IF;
     RETURN true;
   END;
@@ -78,7 +78,7 @@ AS $$
     IF EXISTS (SELECT jsonb_array_elements_text(jsonb_path_query_array(val, '$.tables.*.*.cast_as')) = ANY('{text, int, small_int, big_int, real, double, boolean, date, jsonb}')) THEN
       RETURN true;
     END IF;
-    RAISE 'Invalid cast (%) in configuration. Cast should be one of {text, int, small_int, big_int, real, double, boolean, date, jsonb}', val;
+    RAISE 'Configuration has an invalid cast_as (%). Cast should be one of {text, int, small_int, big_int, real, double, boolean, date, jsonb}', val;
   END;
 $$ LANGUAGE plpgsql;
 
