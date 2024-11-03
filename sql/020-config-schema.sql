@@ -33,39 +33,90 @@ DO $$
   END
 $$;
 
+
+
+--
+-- Extracts index keys/names from configuration json
+--
+-- Used by the _cs_config_check_indexes as part of the  cs_configuration_data_v1_check constraint
+--
+DROP FUNCTION IF EXISTS _cs_extract_indexes(jsonb);
+CREATE FUNCTION _cs_extract_indexes(val jsonb)
+    RETURNS SETOF text
+    LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+BEGIN ATOMIC
+	SELECT jsonb_object_keys(jsonb_path_query(val,'$.tables.*.*.indexes'));
+END;
+
 --
 -- _cs_check_config_indexes returns true if the table configuration only includes valid index types
 --
 -- Used by the cs_configuration_data_v1_check constraint
 --
--- Function types cannot be changed after creation so we always DROP & CREATE for flexibility
---
 DROP FUNCTION IF EXISTS _cs_config_check_indexes(jsonb);
-
 CREATE FUNCTION _cs_config_check_indexes(val jsonb)
   RETURNS BOOLEAN
-LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	SELECT jsonb_object_keys(jsonb_path_query(val, '$.tables.*.*.indexes')) = ANY('{match, ore, unique, ste_vec}');
-END;
+AS $$
+	BEGIN
+    IF (SELECT EXISTS (SELECT _cs_extract_indexes(val)))  THEN
+      IF (SELECT bool_and(index = ANY('{match, ore, unique, ste_vec}')) FROM _cs_extract_indexes(val) AS index) THEN
+        RETURN true;
+      END IF;
+      RAISE 'Configuration has an invalid index (%). Index should be one of {match, ore, unique, ste_vec}', val;
+    END IF;
+    RETURN true;
+  END;
+$$ LANGUAGE plpgsql;
 
 
 DROP FUNCTION IF EXISTS _cs_config_check_cast(jsonb);
 
 CREATE FUNCTION _cs_config_check_cast(val jsonb)
   RETURNS BOOLEAN
-LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-  SELECT jsonb_array_elements_text(jsonb_path_query_array(val, '$.tables.*.*.cast_as')) = ANY('{text, int, small_int, big_int, real, double, boolean, date, jsonb}');
-END;
+AS $$
+	BEGIN
+    IF EXISTS (SELECT jsonb_array_elements_text(jsonb_path_query_array(val, '$.tables.*.*.cast_as')) = ANY('{text, int, small_int, big_int, real, double, boolean, date, jsonb}')) THEN
+      RETURN true;
+    END IF;
+    RAISE 'Configuration has an invalid cast_as (%). Cast should be one of {text, int, small_int, big_int, real, double, boolean, date, jsonb}', val;
+  END;
+$$ LANGUAGE plpgsql;
+
+--
+-- Should include a tables field
+-- Tables should not be empty
+DROP FUNCTION IF EXISTS _cs_config_check_tables(jsonb);
+CREATE FUNCTION _cs_config_check_tables(val jsonb)
+  RETURNS boolean
+AS $$
+	BEGIN
+    IF (val ? 'tables') AND (val->'tables' <> '{}'::jsonb) THEN
+      RETURN true;
+    END IF;
+    RAISE 'Configuration missing tables (tables) field: %', val;
+  END;
+$$ LANGUAGE plpgsql;
+
+-- Should include a version field
+DROP FUNCTION IF EXISTS _cs_config_check_v(jsonb);
+CREATE FUNCTION _cs_config_check_v(val jsonb)
+  RETURNS boolean
+AS $$
+	BEGIN
+    IF (val ? 'v') THEN
+      RETURN true;
+    END IF;
+    RAISE 'Configuration missing version (v) field: %', val;
+  END;
+$$ LANGUAGE plpgsql;
 
 
 ALTER DOMAIN cs_configuration_data_v1 DROP CONSTRAINT IF EXISTS cs_configuration_data_v1_check;
 
 ALTER DOMAIN cs_configuration_data_v1
   ADD CONSTRAINT cs_configuration_data_v1_check CHECK (
-    VALUE ?& array['v', 'tables'] AND
-    VALUE->'tables' <> '{}'::jsonb AND
+    _cs_config_check_v(VALUE) AND
+    _cs_config_check_tables(VALUE) AND
     _cs_config_check_cast(VALUE) AND
     _cs_config_check_indexes(VALUE)
 );
