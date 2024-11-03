@@ -59,7 +59,7 @@ $$ LANGUAGE plpgsql;
 
 -- -----------------------------------------------
 ---
--- cs_enncrypted)v1 tyoe
+-- cs_encrypted_v1 tyoe
 -- Validate configuration schema
 -- Try and insert many invalid configurations
 -- None should exist
@@ -69,6 +69,12 @@ TRUNCATE TABLE users;
 
 \set ON_ERROR_STOP off
 \set ON_ERROR_ROLLBACK on
+
+DO $$
+  BEGIN
+    RAISE NOTICE 'cs_encrypted_v1 constraint tests: 10 errors expected here';
+  END;
+$$ LANGUAGE plpgsql;
 
 
 -- no version
@@ -84,7 +90,7 @@ INSERT INTO users (name_encrypted) VALUES (
   }'::jsonb
 );
 
--- no source detauils
+-- no ident details
 INSERT INTO users (name_encrypted) VALUES (
   '{
     "v": 1,
@@ -93,10 +99,36 @@ INSERT INTO users (name_encrypted) VALUES (
   }'::jsonb
 );
 
--- pt
+-- no kind
 INSERT INTO users (name_encrypted) VALUES (
   '{
     "v": 1,
+    "c": "ciphertext",
+    "i": {
+      "t": "users",
+      "c": "name"
+    }
+  }'::jsonb
+);
+
+
+
+-- bad kind
+INSERT INTO users (name_encrypted) VALUES (
+  '{
+    "v": 1,
+    "k": "vtha",
+    "c": "ciphertext",
+    "i": {
+      "t": "users",
+      "c": "name"
+    }
+  }'::jsonb
+);
+
+-- pt
+INSERT INTO users (name_encrypted) VALUES (
+  '{
     "v": 1,
     "k": "pt",
     "i": {
@@ -110,7 +142,6 @@ INSERT INTO users (name_encrypted) VALUES (
 INSERT INTO users (name_encrypted) VALUES (
   '{
     "v": 1,
-    "v": 1,
     "k": "pt",
     "c": "ciphertext",
     "i": {
@@ -120,11 +151,9 @@ INSERT INTO users (name_encrypted) VALUES (
   }'::jsonb
 );
 
-
 -- ct without ciphertext
 INSERT INTO users (name_encrypted) VALUES (
   '{
-    "v": 1,
     "v": 1,
     "k": "ct",
     "i": {
@@ -138,7 +167,6 @@ INSERT INTO users (name_encrypted) VALUES (
 -- ct with plaintext
 INSERT INTO users (name_encrypted) VALUES (
   '{
-    "v": 1,
     "v": 1,
     "k": "ct",
     "p": "plaintext",
@@ -154,12 +182,24 @@ INSERT INTO users (name_encrypted) VALUES (
 INSERT INTO users (name_encrypted) VALUES (
   '{
     "v": 1,
-    "v": 1,
     "c": "ciphertext",
     "i": {
       "t": "users",
       "c": "name"
     }
+  }'::jsonb
+);
+
+-- ciphertext with invalid q
+INSERT INTO users (name_encrypted) VALUES (
+  '{
+    "v": 1,
+    "c": "ciphertext",
+    "i": {
+      "t": "users",
+      "c": "name"
+    },
+    "q": "invalid"
   }'::jsonb
 );
 
