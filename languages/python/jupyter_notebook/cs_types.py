@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-
-import psycopg2
 from psycopg2.extras import RealDictCursor
 from pprint import pprint
 from datetime import datetime
@@ -12,30 +9,25 @@ class CsValue:
         self.table = t
         self.column = c
 
-    def to_db_format(self):
+    def to_db_format(self, query_type=None):
         data = {
             "k": "pt",
-            "p": self.value_in_db_format(),
+            "p": self.value_in_db_format(query_type),
             "i": {
               "t": str(self.table),
               "c": str(self.column)
             },
             "v": 1,
+            "q": query_type,
         }
         return json.dumps(data)
-
-    # TODO: Unused at the moment
-    @classmethod
-    def from_json_str(cls, json_str):
-        parsed = json.loads(json_str)
-        return cls.from_parsed_json(parsed)
 
     @classmethod
     def from_parsed_json(cls, parsed):
         return cls.value_from_db_format(parsed["p"])
 
 class CsInt(CsValue):
-    def value_in_db_format(self):
+    def value_in_db_format(self, query_type = None):
         return str(self.value)
 
     @classmethod
@@ -43,7 +35,7 @@ class CsInt(CsValue):
         return int(s)
 
 class CsBool(CsValue):
-    def value_in_db_format(self):
+    def value_in_db_format(self, query_type = None):
         return str(self.value).lower()
 
     @classmethod
@@ -51,15 +43,15 @@ class CsBool(CsValue):
         return s.lower() == 'true'
 
 class CsDate(CsValue):
-    def value_in_db_format(self):
+    def value_in_db_format(self, query_type = None):
         return self.value.isoformat()
 
     @classmethod
     def value_from_db_format(cls, s: str):
-        return datetime.fromisoformat(s)
+        return datetime.fromisoformat(s).date()
 
 class CsFloat(CsValue):
-    def value_in_db_format(self):
+    def value_in_db_format(self, query_type = None):
         return str(self.value)
 
     @classmethod
@@ -67,7 +59,7 @@ class CsFloat(CsValue):
         return float(s)
 
 class CsText(CsValue):
-    def value_in_db_format(self):
+    def value_in_db_format(self, query_type = None):
         return self.value
 
     @classmethod
@@ -75,8 +67,11 @@ class CsText(CsValue):
         return s
 
 class CsJsonb(CsValue):
-    def value_in_db_format(self):
-        return json.dumps(self.value)
+    def value_in_db_format(self, query_type):
+        if query_type == "ejson_path":
+            return self.value
+        else:
+            return json.dumps(self.value)
 
     @classmethod
     def value_from_db_format(cls, s: str):

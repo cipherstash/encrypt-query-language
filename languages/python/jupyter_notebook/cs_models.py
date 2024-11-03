@@ -2,6 +2,7 @@ from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped, sessionmaker
 from sqlalchemy.types import TypeDecorator, String, Integer, Date, Boolean, Float
 from sqlalchemy import create_engine, select, text
 from sqlalchemy.exc import IntegrityError
+from datetime import datetime
 import json
 
 import sys
@@ -23,6 +24,7 @@ class CsTypeDecorator(TypeDecorator):
                     "c": self.column_name
                 },
                 "v": 1,
+                "q": None
             }
             value = json.dumps(value_dict)
         return value
@@ -35,43 +37,51 @@ class CsTypeDecorator(TypeDecorator):
 class EncryptedInt(CsTypeDecorator):
     impl = String
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return int(value['p'])
+
 
 class EncryptedBoolean(CsTypeDecorator):
     impl = String
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
     def process_bind_param(self, value, dialect):
         if value is not None:
             value = str(value).lower()
         return super().process_bind_param(value, dialect)
 
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return value['p'] == 'true'
+
 class EncryptedDate(CsTypeDecorator):
     impl = String
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return datetime.fromisoformat(value['p']).date()
 
 class EncryptedFloat(CsTypeDecorator):
     impl = String
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return float(value['p'])
 
 class EncryptedUtf8Str(CsTypeDecorator):
     impl = String
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
 class EncryptedJsonb(CsTypeDecorator):
     impl = String
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return json.loads(value['p'])
 
 class BaseModel(DeclarativeBase):
     pass
