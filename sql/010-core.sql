@@ -106,7 +106,7 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
--- Should include an ident field
+-- Should include a version field
 DROP FUNCTION IF EXISTS _cs_encrypted_check_v(jsonb);
 CREATE FUNCTION _cs_encrypted_check_v(val jsonb)
   RETURNS boolean
