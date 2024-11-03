@@ -211,7 +211,7 @@ TRUNCATE TABLE cs_configuration_v1;
 
 DO $$
   BEGIN
-    RAISE NOTICE 'Configuration tests: 4 errors expected';
+    RAISE NOTICE 'cs_configuration_v1 constraint tests: 4 errors expected here';
   END;
 $$ LANGUAGE plpgsql;
 --
