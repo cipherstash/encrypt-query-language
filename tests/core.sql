@@ -93,7 +93,7 @@ INSERT INTO users (name_encrypted) VALUES (
   }'::jsonb
 );
 
--- npo kind
+-- no kind
 INSERT INTO users (name_encrypted) VALUES (
   '{
     "v": 1,
