@@ -93,6 +93,19 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+-- Query field should never be present in an encrypted column
+DROP FUNCTION IF EXISTS _cs_encrypted_check_q(jsonb);
+CREATE FUNCTION _cs_encrypted_check_q(val jsonb)
+  RETURNS boolean
+AS $$
+	BEGIN
+    IF val ? 'q'
+      RAISE 'Encrypted column should not have a query (q) field (%).', val->>'q';
+    END IF;
+    RETURN true;
+  END;
+$$ LANGUAGE plpgsql;
+
 -- Ident field should include table and column
 DROP FUNCTION IF EXISTS _cs_encrypted_check_i_ct(jsonb);
 CREATE FUNCTION _cs_encrypted_check_i_ct(val jsonb)
@@ -132,6 +145,7 @@ BEGIN ATOMIC
       _cs_encrypted_check_k(val) AND
       _cs_encrypted_check_k_ct(val) AND
       _cs_encrypted_check_k_sv(val) AND
+      _cs_encrypted_check_q(val) AND
       _cs_encrypted_check_p(val)
     );
 END;
