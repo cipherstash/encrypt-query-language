@@ -195,6 +195,11 @@ DECLARE
   i integer;
 BEGIN
   ste_vec_index := cs_ste_vec_v1(col);
+
+  IF ste_vec_index IS NULL THEN
+    RETURN NULL;
+  END IF;
+
   target_selector := selector->>'svs';
 
   FOR i IN 1..array_length(ste_vec_index.entries, 1) LOOP
@@ -236,6 +241,11 @@ DECLARE
   term_array cs_ste_vec_encrypted_term_v1[];
 BEGIN
   ste_vec_index := cs_ste_vec_v1(col);
+
+  IF ste_vec_index IS NULL THEN
+    RETURN NULL;
+  END IF;
+
   target_selector := selector->>'svs';
 
   FOR i IN 1..array_length(ste_vec_index.entries, 1) LOOP
@@ -268,6 +278,11 @@ DECLARE
   i integer;
 BEGIN
   ste_vec_index := cs_ste_vec_v1(col);
+
+  IF ste_vec_index IS NULL THEN
+    RETURN NULL;
+  END IF;
+
   target_selector := selector->>'svs';
 
   FOR i IN 1..array_length(ste_vec_index.entries, 1) LOOP
@@ -292,6 +307,11 @@ DECLARE
   ste_vec_index cs_ste_vec_index_v1;
 BEGIN
   ste_vec_index := cs_ste_vec_v1(col);
+
+  IF ste_vec_index IS NULL THEN
+    RETURN NULL;
+  END IF;
+
   RETURN ste_vec_index.entries[1].term;
 END;
 $$ LANGUAGE plpgsql;
