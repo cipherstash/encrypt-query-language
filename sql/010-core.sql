@@ -99,7 +99,7 @@ CREATE FUNCTION _cs_encrypted_check_q(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
-    IF val ? 'q'
+    IF val ? 'q' THEN
       RAISE 'Encrypted column includes query (q) field: %', val;
     END IF;
     RETURN true;
@@ -225,10 +225,15 @@ DROP FUNCTION IF EXISTS  cs_unique_v1_v0_0(col jsonb);
 
 CREATE FUNCTION cs_unique_v1_v0_0(col jsonb)
   RETURNS cs_unique_index_v1
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN col->>'u';
-END;
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+	BEGIN
+    IF col ? 'u' THEN
+      RETURN col->>'u';
+    END IF;
+	  RAISE 'json data does not include a unique index';
+  END;
+$$ LANGUAGE plpgsql;
 
 
 DROP FUNCTION IF EXISTS  cs_unique_v1_v0(col jsonb);
@@ -257,6 +262,8 @@ CREATE FUNCTION cs_ste_vec_v1_v0_0(col jsonb)
   RETURNS cs_ste_vec_index_v1
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
+
+
 	SELECT (col->'sv')::cs_ste_vec_index_v1;
 END;
 
