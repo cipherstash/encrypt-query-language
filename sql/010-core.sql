@@ -99,7 +99,7 @@ CREATE FUNCTION _cs_encrypted_check_q(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
-    IF val ? 'q'
+    IF val ? 'q' THEN
       RAISE 'Encrypted column includes query (q) field: %', val;
     END IF;
     RETURN true;
