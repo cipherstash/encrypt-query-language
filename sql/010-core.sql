@@ -351,3 +351,17 @@ CREATE FUNCTION cs_ore_64_8_v1(val jsonb)
 BEGIN ATOMIC
 	RETURN cs_ore_64_8_v1_v0_0(val);
 END;
+
+DROP FUNCTION IF EXISTS _cs_first_grouped_value(jsonb, jsonb);
+
+CREATE FUNCTION _cs_first_grouped_value(jsonb, jsonb)
+RETURNS jsonb AS $$
+  SELECT COALESCE($1, $2);
+$$ LANGUAGE sql IMMUTABLE;
+
+DROP AGGREGATE IF EXISTS cs_grouped_value_v1(jsonb);
+
+CREATE AGGREGATE cs_grouped_value_v1(jsonb) (
+  SFUNC = _cs_first_grouped_value,
+  STYPE = jsonb
+);
