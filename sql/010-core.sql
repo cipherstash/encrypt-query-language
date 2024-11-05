@@ -174,7 +174,6 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-
 DROP FUNCTION IF EXISTS cs_ciphertext_v1_v0(val jsonb);
 
 CREATE FUNCTION cs_ciphertext_v1_v0(val jsonb)
@@ -203,7 +202,6 @@ CREATE FUNCTION cs_match_v1_v0_0(val jsonb)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
-
     IF val ? 'm' THEN
       RETURN ARRAY(SELECT jsonb_array_elements(val->'m'))::cs_match_index_v1;
     END IF;
@@ -212,7 +210,7 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS  cs_match_v1_v0(val jsonb);
+DROP FUNCTION IF EXISTS cs_match_v1_v0(val jsonb);
 
 CREATE FUNCTION cs_match_v1_v0(val jsonb)
   RETURNS cs_match_index_v1
