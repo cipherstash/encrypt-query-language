@@ -403,3 +403,57 @@ WHERE EXISTS (
   "q": "ste_vec"
 }
 ```
+
+## `json_array_length` and `jsonb_array_length`
+
+### Native Postgres JSON(B)
+
+```sql
+-- Both of these examples return the int `3`.
+-- The only difference is the input type.
+SELECT json_array_length('[1, 2, 3]');
+SELECT jsonb_array_length('[1, 2, 3]');
+```
+
+### EQL
+
+The Postgres `array_length` function can be used with `cs_ste_vec_terms_v1` to find the length of an array.
+
+The eJSONPath used with `cs_ste_vec_terms_v1` needs to end with `[*]` (`$.some_array_field[*]` for example).
+
+> [!IMPORTANT]
+> Determining array length with `cs_ste_vec_terms_v1` only works when the given eJSONPath only matches a single array.
+> Attempting to determine array length using `cs_ste_vec_terms_v1` when the eJSONPath matches multiple arrays (for example, when there are nested arrays or multiple arrays at the same depth) can return unexpected results.
+
+Example query:
+
+```sql
+SELECT COALESCE( -- We `COALESCE` because cs_ste_vec_terms_v1 will return `NULL` for empty arrays.
+  array_length( -- `cs_ste_vec_terms_v1` returns an array type (not JSON(B)), so we use `array_length`.
+    cs_ste_vec_terms_v1(encrypted_jsonb, $1), -- Pluck out the array of terms at the path in $1.
+    1 -- The array dimension to find the length of (term array are flat, so this should always be 1).
+  ),
+  0 -- Assume a length of `0` when `cs_ste_vec_terms_v1` returns `NULL`.
+) AS len FROM examples;
+```
+
+Example data and params:
+
+```javascript
+// Assume that examples.encrypted_jsonb has JSON objects with the shape:
+{
+  "val": [1, 2, 3]
+}
+
+// `$1` is the EQL plaintext payload for the eJSONPath `$.val[*]`:
+{
+  "k": "pt",
+  "p": "$.val[*]",
+  "i": {
+    "t": "examples",
+    "c": "encrypted_jsonb"
+  },
+  "v": 1,
+  "q": "ejson_path"
+}
+```
