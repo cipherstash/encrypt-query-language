@@ -4,6 +4,9 @@ from datetime import date
 from cs_types import *
 
 class EqlTest(unittest.TestCase):
+    def setUp(self):
+        self.template_dict = json.loads('{"k": "pt", "p": "1", "i": {"t": "table", "c": "column"}, "v": 1, "q": null}')
+
     def test(self):
         self.assertTrue(True)
 
@@ -14,94 +17,113 @@ class EqlTest(unittest.TestCase):
         )
 
     def test_from_parsed_json_uses_p_value(self):
-        parsed = json.loads('{"k": "pt", "p": "1", "i": {"t": "table", "c": "column"}, "v": 1, "q": null}')
+        self.template_dict["p"] = "1"
         self.assertEqual(
-            CsInt.from_parsed_json(parsed),
+            CsInt.from_parsed_json(self.template_dict),
             1
         )
 
-    def test_cs_int_prints_value(self):
-        cs_int = CsInt(1, "table", "column")
+    def test_cs_int_to_db_format(self):
+        cs_int = CsInt(123, "table", "column")
         self.assertEqual(
-            cs_int.value_in_db_format(),
-            "1"
+            '{"k": "pt", "p": "123", "i": {"t": "table", "c": "column"}, "v": 1, "q": null}',
+            cs_int.to_db_format()
         )
 
-    def test_ces_int_makes_int(self):
+    def test_cs_int_from_parsed_json(self):
+        self.template_dict["p"] = "123"
         self.assertEqual(
-            CsInt.value_from_db_format("1"),
-            1
+            CsInt.from_parsed_json(self.template_dict),
+            123
         )
 
-    def test_cs_bool_prints_value_in_lower_case(self):
+    def test_cs_bool_to_db_format_true(self):
         cs_bool = CsBool(True, "table", "column")
         self.assertEqual(
-            cs_bool.value_in_db_format(),
-            "true"
+            '{"k": "pt", "p": "true", "i": {"t": "table", "c": "column"}, "v": 1, "q": null}',
+            cs_bool.to_db_format()
         )
     
-    def test_cs_bool_returns_bool(self):
+    def test_cs_bool_to_db_format_false(self):
+        cs_bool = CsBool(False, "table", "column")
         self.assertEqual(
-            CsBool.value_from_db_format("true"),
+            '{"k": "pt", "p": "false", "i": {"t": "table", "c": "column"}, "v": 1, "q": null}',
+            cs_bool.to_db_format()
+        )
+    
+    def test_cs_bool_from_parsed_json_true(self):
+        self.template_dict["p"] = "true"
+        self.assertEqual(
+            CsBool.from_parsed_json(self.template_dict),
             True
         )
 
-    def test_cs_date_prints_value(self):
-        cs_date = CsDate(date(2024, 11, 1), "table", "column")
+    def test_cs_bool_from_parsed_json_false(self):
+        self.template_dict["p"] = "false"
         self.assertEqual(
-            cs_date.value_in_db_format(),
-            "2024-11-01"
+            CsBool.from_parsed_json(self.template_dict),
+            False
         )
 
-    def test_cs_date_returns_datetime(self):
+    def test_cs_date_to_db_format(self):
+        cs_date = CsDate(date(2024, 11, 1), "table", "column")
         self.assertEqual(
-            CsDate.value_from_db_format("2024-11-01"),
+            '{"k": "pt", "p": "2024-11-01", "i": {"t": "table", "c": "column"}, "v": 1, "q": null}',
+            cs_date.to_db_format()
+        )
+
+    def test_cs_date_from_parsed_json(self):
+        self.template_dict["p"] = "2024-11-01"
+        self.assertEqual(
+            CsDate.from_parsed_json(self.template_dict),
             date(2024, 11, 1)
         )
 
-    def test_cs_float_prints_value(self):
+    def test_cs_float_to_db_format(self):
         cs_float = CsFloat(1.1, "table", "column")
         self.assertEqual(
-            cs_float.value_in_db_format(),
-            "1.1"
+            '{"k": "pt", "p": "1.1", "i": {"t": "table", "c": "column"}, "v": 1, "q": null}',
+            cs_float.to_db_format()
         )
 
-    def test_cs_float_returns_float(self):
+    def test_cs_float_from_parsed_json(self):
+        self.template_dict["p"] = "1.1"
         self.assertEqual(
-            CsFloat.value_from_db_format("1.1"),
+            CsFloat.from_parsed_json(self.template_dict),
             1.1
         )
 
-    def test_cs_text_prints_value(self):
+    def test_cs_text_to_db_format(self):
         cs_text = CsText("text", "table", "column")
         self.assertEqual(
-            cs_text.value_in_db_format(),
-            "text"
+            '{"k": "pt", "p": "text", "i": {"t": "table", "c": "column"}, "v": 1, "q": null}',
+            cs_text.to_db_format()
         )
     
-    def test_cs_text_returns_value(self):
+    def test_cs_text_from_parsed_json(self):
+        self.template_dict["p"] = "text"
         self.assertEqual(
-            CsText.value_from_db_format("text"),
+            CsText.from_parsed_json(self.template_dict),
             "text"
         )
 
     def test_cs_jsonb_prints_json_string(self):
         cs_jsonb = CsJsonb({"a": 1}, "table", "column")
         self.assertEqual(
-            cs_jsonb.value_in_db_format("ste_vec"),
+            cs_jsonb._value_in_db_format("ste_vec"),
             '{"a": 1}'
         )
 
     def test_cs_jsonb_prints_value_for_ejson_path(self):
         cs_jsonb = CsJsonb("$.a.b", "table", "column")
         self.assertEqual(
-            cs_jsonb.value_in_db_format("ejson_path"),
+            cs_jsonb._value_in_db_format("ejson_path"),
             '$.a.b'
         )
 
     def test_cs_jsonb_returns_value(self):
         self.assertEqual(
-            CsJsonb.value_from_db_format('{"a": 1}'),
+            CsJsonb._value_from_db_format('{"a": 1}'),
             {"a": 1}
         )
 
