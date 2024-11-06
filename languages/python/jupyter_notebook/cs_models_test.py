@@ -4,9 +4,14 @@ from datetime import date
 from cs_models import *
 
 class TestExampleModel(unittest.TestCase):
+    pg_password = os.getenv('PGPASSWORD', 'postgres')
+    pg_user = os.getenv('PGUSER', 'postgres')
+    pg_host = os.getenv('PGHOST', 'localhost')
+    pg_port = os.getenv('PGPORT', '6432')
+    pg_db = os.getenv('PGDATABASE', 'cs_test_db')
+
     def setUp(self):
-        # TODO: configure database URL in environment variable and use a test db (not getting_started)
-        self.engine = create_engine('postgresql://postgres:postgres@localhost:6432/cipherstash_getting_started')
+        self.engine = create_engine(f'postgresql://{self.pg_user}:{self.pg_password}@{self.pg_host}:{self.pg_port}/{self.pg_db}')
         Session = sessionmaker(bind=self.engine)
         self.session = Session()
         BaseModel.metadata.create_all(self.engine)
@@ -41,6 +46,13 @@ class TestExampleModel(unittest.TestCase):
     def test_encrypted_jsonb(self):
         found = self.session.query(Example).filter(Example.id == self.example.id).one()
         self.assertEqual(found.encrypted_jsonb,  {"key": "value"})
+
+    def test_example_prints_value(self):
+        self.example.id = 1
+        self.assertEqual(
+            str(self.example),
+            "<Example(id=1, encrypted_utf8_str=str, encrypted_jsonb={'key': 'value'}, encrypted_int=1, encrypted_float=1.1, encrypted_date=2024-01-01, encrypted_boolean=True)>"
+        )
     
 if __name__ == '__main__':
     unittest.main()
