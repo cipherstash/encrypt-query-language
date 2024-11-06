@@ -27,8 +27,7 @@ SELECT cs_ste_vec_value_v1(encrypted_jsonb, $1) FROM examples;
 ```
 
 ```javascript
-// Assume that examples.encrypted_jsonb has JSON objects with
-// the shape:
+// Assume that examples.encrypted_jsonb has JSON objects with the shape:
 {
   "field_a": 100
 }
@@ -56,8 +55,7 @@ WHERE cs_ste_vec_term_v1(examples.encrypted_jsonb, $1) > cs_ste_vec_term_v1($2)
 ```
 
 ```javascript
-// Assume that examples.encrypted_jsonb has JSON objects with
-// the shape:
+// Assume that examples.encrypted_jsonb has JSON objects with the shape:
 {
   "field_a": 100
 }
@@ -116,8 +114,7 @@ SELECT cs_ste_vec_value_v1(encrypted_jsonb, $1) AS val FROM examples;
 With the params...
 
 ```javascript
-// Assume that examples.encrypted_jsonb has JSON objects with
-// the shape:
+// Assume that examples.encrypted_jsonb has JSON objects with the shape:
 {
   "field_a": [1, 2, 3]
 }
@@ -169,8 +166,7 @@ WHERE (cs_ste_vec_terms_v1(examples.encrypted_jsonb, $1))[1] > cs_ste_vec_term_v
 ```
 
 ```javascript
-// Assume that examples.encrypted_jsonb has JSON objects with
-// the shape:
+// Assume that examples.encrypted_jsonb has JSON objects with the shape:
 {
   "field_a": [4, 5, 6]
 }
@@ -227,8 +223,7 @@ SELECT cs_ste_vec_value_v1(encrypted_jsonb, $1) FROM examples;
 ```
 
 ```javascript
-// Assume that examples.encrypted_jsonb has JSON objects with
-// the shape:
+// Assume that examples.encrypted_jsonb has JSON objects with the shape:
 {
   "field_a": {
     "field_b": 100
@@ -258,8 +253,7 @@ WHERE cs_ste_vec_term_v1(examples.encrypted_jsonb, $1) > cs_ste_vec_term_v1($2)
 ```
 
 ```javascript
-// Assume that examples.encrypted_jsonb has JSON objects with
-// the shape:
+// Assume that examples.encrypted_jsonb has JSON objects with the shape:
 {
   "field_a": {
     "field_b": 100
@@ -328,8 +322,7 @@ SELECT cs_ste_vec_value_v1(encrypted_jsonb, $1) AS val FROM examples;
 With the params...
 
 ```javascript
-// Assume that examples.encrypted_jsonb has JSON objects with
-// the shape:
+// Assume that examples.encrypted_jsonb has JSON objects with the shape:
 {
   "field_a": [1, 2, 3]
 }
@@ -381,8 +374,7 @@ WHERE EXISTS (
 ```
 
 ```javascript
-// Assume that examples.encrypted_jsonb has JSON objects with
-// the shape:
+// Assume that examples.encrypted_jsonb has JSON objects with the shape:
 {
   "field_a": [1, 2, 3]
 }
