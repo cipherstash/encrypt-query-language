@@ -14,9 +14,10 @@ or a Structured Encryption Map, `ste_map`.
 ```
 
 
-## Simplified JSON Path
+## eJSONPath
 
-CipherStash EQL supports a simplified JSONPath syntax as follows:
+CipherStash EQL supports a simplified JSONPath syntax, called `eJSONPath`.
+It is a subset of the [SQL/JSONPath](https://www.postgresql.org/docs/16/datatype-json.html#DATATYPE-JSONPATH) scheme provided by Postgres and supports the following expressions:
 
 | Expression | Description |
 |------------|-------------|
