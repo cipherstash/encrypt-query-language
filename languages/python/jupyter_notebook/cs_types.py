@@ -1,8 +1,6 @@
 from psycopg2.extras import RealDictCursor
-from pprint import pprint
 from datetime import datetime
 import json
-from enum import Enum
 
 class CsValue:
     def __init__(self, v, t: str, c: str):
