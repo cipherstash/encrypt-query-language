@@ -285,6 +285,57 @@ WHERE cs_ste_vec_term_v1(examples.encrypted_jsonb, $1) > cs_ste_vec_term_v1($2)
 }
 ```
 
+## `@>` and `<@`
+
+### Native Postgres JSON(B)
+
+```sql
+-- Checks if the left arg contains the right arg (returns `true` in this example).
+SELECT '{"a":1, "b":2}'::jsonb @> '{"b":2}'::jsonb;
+
+-- Checks if the right arg contains the left arg (returns `true` in this example).
+SELECT '{"b":2}'::jsonb <@ '{"a":1, "b":2}'::jsonb;
+```
+
+### EQL
+
+EQL uses the same operators for containment (`@>` and `<@`) queries, but the args need to be wrapped in `cs_ste_vec_v1`.
+
+Example query:
+
+```sql
+-- Checks if the left arg (the `examples.encrypted_jsonb` column) contains the right arg ($1).
+-- Would return `true` for the example data and param below.
+SELECT * WHERE cs_ste_vec_v1(encrypted_jsonb) @> cs_ste_vec_v1($1) FROM examples;
+
+-- Checks if the the right arg ($1) contains left arg (the `examples.encrypted_jsonb` column).
+-- Would return `false` for the example data and param below.
+SELECT * WHERE cs_ste_vec_v1(encrypted_jsonb) <@ cs_ste_vec_v1($1) FROM examples;
+```
+
+Example params:
+
+```javascript
+// Assume that examples.encrypted_jsonb has JSON objects with the shape:
+{
+  "field_a": {
+    "field_b": [1, 2, 3]
+  }
+}
+
+// `$1` is the EQL plaintext payload for the JSON object `{"field_b": [1, 2, 3]}`:
+{
+  "k": "pt",
+  "p": "{\"field_b\": [1, 2, 3]}",
+  "i": {
+    "t": "examples",
+    "c": "encrypted_jsonb"
+  },
+  "v": 1,
+  "q": "ste_vec"
+}
+```
+
 ## `json_array_elements`, `jsonb_array_elements`, `json_array_elements_text`, and `jsonb_array_elements_text`
 
 ### Native Postgres JSON(B)
