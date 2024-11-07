@@ -20,7 +20,7 @@ EQL JSONB functions accept an eJSONPath as an argument (instead of using `->`/`-
 
 #### Decryption example
 
-`cs_ste_vec_value_v1` returns the Plaintext EQL payload to the client.
+`cs_ste_vec_value_v1` returns the plaintext EQL payload to the client.
 
 ```sql
 SELECT cs_ste_vec_value_v1(encrypted_jsonb, $1) FROM examples;
@@ -216,7 +216,7 @@ Note that these are similar to the examples for `->`/`->>`. The difference in th
 
 #### Decryption example
 
-`cs_ste_vec_value_v1` returns the Plaintext EQL payload to the client.
+`cs_ste_vec_value_v1` returns the plaintext EQL payload to the client.
 
 ```sql
 SELECT cs_ste_vec_value_v1(encrypted_jsonb, $1) FROM examples;
