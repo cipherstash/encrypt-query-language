@@ -212,7 +212,8 @@ SELECT plaintext_jsonb#>>'{field_a,field_b}' FROM examples;
 
 EQL JSONB functions accept an eJSONPath as an argument (instead of using `#>`/`#>>`) for lookups.
 
-Note that these are similar to the examples for `->`/`->>`. The difference in these examples is that the path does a lookup multiple levels deep.
+Note that these are similar to the examples for `->`/`->>`. 
+The difference in these examples is that the path does a lookup multiple levels deep.
 
 #### Decryption example
 
@@ -409,7 +410,8 @@ Would return the EQL plaintext payload with an array (`[1, 2, 3]` for example):
 
 #### Comparison example
 
-`cs_ste_vec_terms_v1` (note that terms is plural) can be used to return an array of ORE terms for comparison. The array can be `unnest`ed to work with a `SETOF` ORE terms for comparison.
+`cs_ste_vec_terms_v1` (note that terms is plural) can be used to return an array of ORE terms for comparison. 
+The array can be `unnest`ed to work with a `SETOF` ORE terms for comparison.
 
 The eJSONPath used with `cs_ste_vec_terms_v1` needs to end with `[*]` (`$.some_array_field[*]` for example).
 
