@@ -105,13 +105,13 @@ EQL JSONB functions accept an eJSONPath as an argument (instead of using `->`/`-
 
 EQL currently doesn't support returning a specific array element for decryption, but `cs_ste_vec_value_v1` can be used to return an array to the client to process.
 
-The query...
+The query:
 
 ```sql
 SELECT cs_ste_vec_value_v1(encrypted_jsonb, $1) AS val FROM examples;
 ```
 
-With the params...
+With the params:
 
 ```javascript
 // Assume that examples.encrypted_jsonb has JSON objects with the shape:
@@ -364,13 +364,13 @@ SELECT * from jsonb_array_elements_text('["a", "b"]');
 
 EQL currently doesn't support returning a `SETOF` values for decryption (for returning a row per item in an array), but `cs_ste_vec_value_v1` can be used to return an array to the client to process.
 
-The query...
+The query:
 
 ```sql
 SELECT cs_ste_vec_value_v1(encrypted_jsonb, $1) AS val FROM examples;
 ```
 
-With the params...
+With the params:
 
 ```javascript
 // Assume that examples.encrypted_jsonb has JSON objects with the shape:
