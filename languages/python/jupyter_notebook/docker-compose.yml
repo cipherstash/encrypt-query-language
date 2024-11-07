@@ -13,7 +13,7 @@ services:
       - cipherstash_getting_started_nw
   proxy:
     container_name: cipherstash_getting_started_proxy
-    image: cipherstash/cipherstash-proxy:cipherstash-proxy-v0.3.1
+    image: cipherstash/cipherstash-proxy:cipherstash-proxy-v0.3.4
     depends_on:
       - postgres
     ports:
@@ -31,8 +31,7 @@ services:
       CS_DATABASE__PASSWORD: postgres
       CS_DATABASE__NAME: cipherstash_getting_started
       CS_DATABASE__HOST: cipherstash_getting_started_pg
-      # Enable this to get verbose debugging from Proxy
-      # CS_UNSAFE_LOGGING: "true"
+      CS_UNSAFE_LOGGING: "true"
     networks:
       - cipherstash_getting_started_nw
 
