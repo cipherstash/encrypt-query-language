@@ -1,25 +1,47 @@
-# CipherStash Encrypt Query Language (EQL)
+# Encrypt Query Language (EQL)
 
-[![Why we built EQL](https://img.shields.io/badge/concept-Why%20EQL-8A2BE2)](https://github.com/cipherstash/encrypt-query-language/blob/main/WHY.md)
-[![Getting started](https://img.shields.io/badge/guide-Getting%20started-008000)](https://github.com/cipherstash/encrypt-query-language/blob/main/GETTINGSTARTED.md)
-[![CipherStash Proxy](https://img.shields.io/badge/guide-CipherStash%20Proxy-A48CF3)](https://github.com/cipherstash/encrypt-query-language/blob/main/PROXY.md)
-[![CipherStash Migrator](https://img.shields.io/badge/guide-CipherStash%20Migrator-A48CF3)](https://github.com/cipherstash/encrypt-query-language/blob/main/MIGRATOR.md)
+[![Why we built EQL](https://img.shields.io/badge/concept-Why%20EQL-8A2BE2)](https://github.com/cipherstash/encrypt-query-language/blob/main/docs/concepts/WHY.md)
+[![Getting started](https://img.shields.io/badge/guide-Getting%20started-008000)](https://github.com/cipherstash/encrypt-query-language/blob/main/docs/tutorials/GETTINGSTARTED.md)
+[![CipherStash Proxy](https://img.shields.io/badge/guide-CipherStash%20Proxy-A48CF3)](https://github.com/cipherstash/encrypt-query-language/blob/main/docs/tutorials/PROXY.md)
+[![CipherStash Migrator](https://img.shields.io/badge/guide-CipherStash%20Migrator-A48CF3)](https://github.com/cipherstash/encrypt-query-language/blob/main/docs/reference/MIGRATOR.md)
 
 Encrypt Query Language (EQL) is a set of abstractions for transmitting, storing, and interacting with encrypted data and indexes in PostgreSQL.
 
-EQL provides a data format for transmitting and storing encrypted data and indexes, as well as database types and functions to interact with the encrypted material.
+Store encrypted data alongside your existing data.
+
+- Encrypted data is stored using a `jsonb` column type
+- Query encrypted data with specialized SQL functions
+- Index encrypted columns to enable searchable encryption
+- Integrate with [CipherStash Proxy](https://github.com/cipherstash/encrypt-query-language/blob/main/docs/tutorials/PROXY.md) for transparent encryption/decryption
 
 ## Table of Contents
 
 - [Installation](#installation)
-- [Usage](#usage)
-- [Encrypted columns](#encrypted-columns)
-  - [Inserting data](#inserting-data)
-  - [Reading data](#reading-data)
-- [Querying data with EQL](#querying-data-with-eql)
-- [Querying JSONB data with EQL](#querying-jsonb-data-with-eql)
-- [Managing indexes with EQL](#managing-indexes-with-eql)
-- [Data Format](#data-format)
+  - [CipherStash Proxy](#cipherstash-proxy)
+- [Getting started](#getting-started)
+  - [Enable encrypted columns](#enable-encrypted-columns)
+  - [Configuring the column](#configuring-the-column)
+  - [Activating configuration](#activating-configuration)
+    - [Refreshing CipherStash Proxy Configuration](#refreshing-cipherstash-proxy-configuration)
+- [Storing data](#storing-data)
+  - [Inserting Data](#inserting-data)
+  - [Reading Data](#reading-data)
+- [Configuring indexes for searching data](#configuring-indexes-for-searching-data)
+  - [Adding an index (`cs_add_index_v1`)](#adding-an-index-cs_add_index_v1)
+- [Searching data with EQL](#searching-data-with-eql)
+  - [Equality search (`cs_unique_v1`)](#equality-search-cs_unique_v1)
+  - [Full-text search (`cs_match_v1`)](#full-text-search-cs_match_v1)
+  - [Range queries (`cs_ore_64_8_v1`)](#range-queries-cs_ore_64_8_v1)
+- [JSON and JSONB support](#json-and-jsonb-support)
+  - [Configuring the index](#configuring-the-index)
+  - [Inserting JSON data](#inserting-json-data)
+  - [Reading JSON data](#reading-json-data)
+  - [Advanced JSON queries](#advanced-json-queries)
+- [EQL payload data format](#eql-payload-data-format)
+- [Frequently Asked Questions](#frequently-asked-questions)
+  - [How do I integrate CipherStash EQL with my application?](#how-do-i-integrate-cipherstash-eql-with-my-application)
+  - [Can I use EQL without the CipherStash Proxy?](#can-i-use-eql-without-the-cipherstash-proxy)
+  - [How is data encrypted in the database?](#how-is-data-encrypted-in-the-database)
 - [Helper packages](#helper-packages)
 - [Releasing](#releasing)
 
@@ -27,42 +49,34 @@ EQL provides a data format for transmitting and storing encrypted data and index
 
 ## Installation
 
-The simplest and fastest way to get up and running with EQL is to execute the install SQL file directly in your database.
+The simplest way to get up and running with EQL is to execute the install SQL file directly in your database.
 
-1. Get the latest EQL install script:
-   ```bash
-    curl -sLo cipherstash-encrypt.sql https://github.com/cipherstash/encrypt-query-language/releases/latest/download/cipherstash-encrypt.sql
+1. Download the latest EQL install script:
+
+   ```sh
+   curl -sLo cipherstash-encrypt.sql https://github.com/cipherstash/encrypt-query-language/releases/latest/download/cipherstash-encrypt.sql
    ```
-1. Run this command to install the custom types and functions:
-   ```bash
+
+2. Run this command to install the custom types and functions:
+
+   ```sh
    psql -f cipherstash-encrypt.sql
    ```
 
-## Usage
+### CipherStash Proxy
+
+EQL relies on [CipherStash Proxy](https://github.com/cipherstash/encrypt-query-language/blob/main/PROXY.md) for low-latency encryption & decryption.
+We plan to support direct language integration in the future.
+
+## Getting started
 
 Once the custom types and functions are installed, you can start using EQL in your queries.
 
-1. Create a table with a column of type `cs_encrypted_v1` which will store your encrypted data.
-1. Use EQL functions to add indexes for the columns you want to encrypt.
-   - Indexes are used by CipherStash Proxy to understand what cryptography schemes are required for your use case.
-1. Initialize CipherStash Proxy for cryptographic operations.
-   - Proxy will dynamically encrypt data on the way in and decrypt data on the way out, based on the indexes you've defined.
-1. Insert data into the defined columns using a specific payload format.
-   - See [data format](#data-format) for the payload format.
-1. Query the data using the EQL functions defined in [querying data with EQL](#querying-data-with-eql).
-   - No modifications are required to simply `SELECT` data from your encrypted columns.
-   - To perform `WHERE` and `ORDER BY` queries, wrap the queries in the EQL functions defined in [querying data with EQL](#querying-data-with-eql).
-1. Integrate with your application via the [helper packages](#helper-packages) to interact with the encrypted data.
+### Enable encrypted columns
 
-Read [GETTINGSTARTED.md](GETTINGSTARTED.md) for more detail.
+Define encrypted columns using the `cs_encrypted_v1` domain type, which extends the `jsonb` type with additional constraints to ensure data integrity.
 
-## Encrypted columns
-
-EQL relies on your database schema to define encrypted columns.
-
-Encrypted columns are defined using the `cs_encrypted_v1` [domain type](https://www.postgresql.org/docs/current/domains.html), which extends the `jsonb` type with additional constraints to ensure data integrity.
-
-**Example table definition:**
+**Example:**
 
 ```sql
 CREATE TABLE users (
@@ -71,542 +85,353 @@ CREATE TABLE users (
 );
 ```
 
-In some instances, especially when using langugage specific ORMs, EQL also supports `jsonb` columns rather than the `cs_encrypted_v1` domain type.
-
 ### Configuring the column
 
-So that CipherStash Proxy can encrypt and decrypt the data, initialize the column in the database using the `cs_add_column_v1` function.
-This function takes the following parameters:
-
-- `table_name`: the name of the table containing the encrypted column.
-- `column_name`: the name of the encrypted column.
-
-This function will **not** enable searchable encryption, but will allow you to encrypt and decrypt data.
-See [querying data with EQL](#querying-data-with-eql) for more information on how to enable searchable encryption.
+Initialize the column using the `cs_add_column_v1` function to enable encryption and decryption via CipherStash Proxy.
 
 ```sql
-SELECT cs_add_column_v1('table', 'column');
+SELECT cs_add_column_v1('users', 'encrypted_email');
 ```
 
-### Activate configuration
+**Note:** This function allows you to encrypt and decrypt data but does not enable searchable encryption. See [Querying Data with EQL](#querying-data-with-eql) for enabling searchable encryption.
 
-By default, the state of the configuration is `pending` after any modifications.
-You can activate the configuration by running the `cs_encrypt_v1` and `cs_activate_v1` function.
+### Activating configuration
+
+After modifying configurations, activate them by running:
 
 ```sql
 SELECT cs_encrypt_v1();
 SELECT cs_activate_v1();
 ```
 
-> **Important:** These functions must be run after any modifications to the configuration.
+**Important:** These functions must be run after any modifications to the configuration.
 
-#### Refresh CipherStash Proxy configuration
+#### Refreshing CipherStash Proxy Configuration
 
-CipherStash Proxy pings the database every 60 seconds to refresh the configuration.
-You can force CipherStash Proxy to refresh the configuration by running the `cs_refresh_encrypt_config` function.
+CipherStash Proxy refreshes the configuration every 60 seconds. To force an immediate refresh, run:
 
 ```sql
 SELECT cs_refresh_encrypt_config();
 ```
 
-### Inserting data
+>Note: This statement must be executed when connected to CipherStash Proxy.
+When connected to the database directly, it is a no-op.
 
-When inserting data into the encrypted column, wrap the plaintext in the appropriate EQL payload.
-These statements must be run through the CipherStash Proxy in order to **encrypt** the data.
+## Storing data
 
-**Example:**
+Encrypted data is stored as `jsonb` values in the database, regardless of the original data type.
 
-```rb
-# Create the EQL payload using helper functions
-payload = eqlPayload("users", "encrypted_email", "test@test.com")
+You can read more about the data format [here][#data-format].
 
-Users.create(encrypted_email: payload)
-```
+### Inserting Data
 
-Which will execute on the server as:
-
-```sql
-INSERT INTO users (encrypted_email) VALUES ('{"v":1,"k":"pt","p":"test@test.com","i":{"t":"users","c":"encrypted_email"}}');
-```
-
-And is the EQL equivalent of the following plaintext query.
-
-```sql
-INSERT INTO users (email) VALUES ('test@test.com');
-```
-
-All the data stored in the database is fully encrypted and secure.
-
-### Reading data
-
-When querying data, wrap the encrypted column in the appropriate EQL payload.
-These statements must be run through the CipherStash Proxy in order to **decrypt** the data.
+When inserting data into the encrypted column, wrap the plaintext in the appropriate EQL payload. These statements must be run through the CipherStash Proxy to **encrypt** the data.
 
 **Example:**
 
-```rb
-Users.findAll(&:encrypted_email)
+```sql
+INSERT INTO users (encrypted_email) VALUES (
+  '{"v":1,"k":"pt","p":"test@example.com","i":{"t":"users","c":"encrypted_email"}}'
+);
 ```
 
-Which will execute on the server as:
+Data is stored in the database as:
+
+```json
+{
+  "c": "generated_ciphertext",
+  "i": {
+    "c": "encrypted_email",
+    "t": "users"
+  },
+  "k": "ct",
+  "m": null,
+  "o": null,
+  "u": null,
+  "v": 1
+}
+```
+
+### Reading Data
+
+When querying data, select the encrypted column. CipherStash Proxy will **decrypt** the data automatically.
+
+**Example:**
 
 ```sql
 SELECT encrypted_email FROM users;
 ```
 
-And is the EQL equivalent of the following plaintext query:
+Data is returned as:
+
+```json
+{
+  "k": "pt",
+  "p": "test@example.com",
+  "i": {
+    "t": "users",
+    "c": "encrypted_email"
+  },
+  "v": 1,
+  "q": null
+}
+```
+
+>Note: If you execute this query directly on the database, you will not see any plaintext data but rather the `jsonb` payload with the ciphertext.
+
+## Configuring indexes for searching data
+
+In order to perform searchable operations on encrypted data, you must configure indexes for the encrypted columns.
+
+> **IMPORTANT:** If you have existing data that's encrypted and you add or modify an index, all the data will need to be re-encrypted.
+This is due to the way CipherStash Proxy handles searchable encryption operations.
+
+### Adding an index (`cs_add_index_v1`)
+
+Add an index to an encrypted column.
+This function also behaves the same as `cs_add_column_v1` but with the additional index configuration.
 
 ```sql
-SELECT email FROM users;
+SELECT cs_add_index_v1(
+  'table_name',       -- Name of the table
+  'column_name',      -- Name of the column
+  'index_name',       -- Index kind ('unique', 'match', 'ore', 'ste_vec')
+  'cast_as',          -- PostgreSQL type to cast decrypted data ('text', 'int', etc.)
+  'opts'              -- Index options as JSONB (optional)
+);
 ```
 
-All the data returned from the database is fully decrypted.
+You can read more about the index configuration options [here][https://github.com/cipherstash/encrypt-query-language/blob/main/docs/reference/INDEX.md].
 
-## Querying data with EQL
-
-EQL provides specialized functions to interact with encrypted data to support operations like equality checks, range queries, and unique constraints.
-
-### `cs_match_v1(val JSONB)`
-
-Enables basic full-text search.
-
-**Example**
-
-```rb
-# Create the EQL payload using helper functions
-payload = EQL.for_match("users", "encrypted_field", "plaintext value")
-
-Users.where("cs_match_v1(field) @> cs_match_v1(?)", payload)
-```
-
-Which will execute on the server as:
+**Example (Unique index):**
 
 ```sql
-SELECT * FROM users WHERE cs_match_v1(field) @> cs_match_v1('{"v":1,"k":"pt","p":"plaintext value","i":{"t":"users","c":"encrypted_field"},"q":"match"}');
+SELECT cs_add_index_v1(
+  'users', 
+  'encrypted_email', 
+  'unique', 
+  'text'
+);
 ```
 
-And is the EQL equivalent of the following plaintext query.
+After adding an index, you have to activate the configuration.
 
 ```sql
-SELECT * FROM users WHERE field LIKE '%plaintext value%';
+SELECT cs_encrypt_v1();
+SELECT cs_activate_v1();
 ```
 
-### `cs_unique_v1(val JSONB)`
+## Searching data with EQL
 
-Retrieves the unique index for enforcing uniqueness.
+EQL provides specialized functions to interact with encrypted data, supporting operations like equality checks, range queries, and unique constraints.
+
+In order to use the specialized functions, you must first configure the corresponding indexes.
+
+### Equality search (`cs_unique_v1`)
+
+Enable equality search on encrypted data.
+
+**Index configuration example:**
+
+```sql
+SELECT cs_add_index_v1(
+  'users', 
+  'encrypted_email', 
+  'unique', 
+  'text'
+);
+```
 
 **Example:**
 
-```rb
-# Create the EQL payload using helper functions
-payload = EQL.for_unique("users", "encrypted_field", "plaintext value")
-
-Users.where("cs_unique_v1(field) = cs_unique_v1(?)", payload)
+```sql
+SELECT * FROM users
+WHERE cs_unique_v1(encrypted_email) = cs_unique_v1(
+  '{"v":1,"k":"pt","p":"test@example.com","i":{"t":"users","c":"encrypted_email"},"q":"unique"}'
+);
 ```
 
-Which will execute on the server as:
+Equivalent plaintext query:
 
 ```sql
-SELECT * FROM users WHERE cs_unique_v1(field) = cs_unique_v1('{"v":1,"k":"pt","p":"plaintext value","i":{"t":"users","c":"encrypted_field"},"q":"unique"}');
+SELECT * FROM users WHERE email = 'test@example.com';
 ```
 
-And is the EQL equivalent of the following plaintext query.
+### Full-text search (`cs_match_v1`)
+
+Enables basic full-text search on encrypted data.
+
+**Index configuration example:**
 
 ```sql
-SELECT * FROM users WHERE field = 'plaintext value';
+SELECT cs_add_index_v1(
+  'users', 
+  'encrypted_email', 
+  'match', 
+  'text', 
+  '{"token_filters": [{"kind": "downcase"}], "tokenizer": { "kind": "ngram", "token_length": 3 }}'
+);
 ```
 
-### `cs_ore_64_8_v1(val JSONB)`
-
-Retrieves the Order-Revealing Encryption index for range queries.
-
-**Sorting example:**
-
-```rb
-# Create the EQL payload using helper functions
-date = EQL.for_ore("users", "encrypted_date", Time.now)
-
-User.where("cs_ore_64_8_v1(encrypted_date) < cs_ore_64_8_v1(?)", date)
-```
-
-Which will execute on the server as:
+**Example:**
 
 ```sql
-SELECT * FROM examples WHERE cs_ore_64_8_v1(encrypted_date) < cs_ore_64_8_v1($1)
+SELECT * FROM users
+WHERE cs_match_v1(encrypted_email) @> cs_match_v1(
+  '{"v":1,"k":"pt","p":"test","i":{"t":"users","c":"encrypted_email"},"q":"match"}'
+);
 ```
 
-And is the EQL equivalent of the following plaintext query:
+Equivalent plaintext query:
 
 ```sql
-SELECT * FROM examples WHERE date < $1;
+SELECT * FROM users WHERE email LIKE '%test%';
 ```
 
-**Ordering example:**
+### Range queries (`cs_ore_64_8_v1`)
 
-```rb
-User.order("cs_ore_64_8_v1(encrypted_field)").all().map(&:id)
-```
+Enable range queries on encrypted data. Supports:
 
-Which will execute on the server as:
+- `ORDER BY`
+- `WHERE`
+
+**Example (Filtering):**
 
 ```sql
-SELECT id FROM examples ORDER BY cs_ore_64_8_v1(encrypted_field) DESC;
+SELECT * FROM users
+WHERE cs_ore_64_8_v1(encrypted_date) < cs_ore_64_8_v1(
+  '{"v":1,"k":"pt","p":"2023-10-05","i":{"t":"users","c":"encrypted_date"},"q":"ore"}'
+);
 ```
 
-And is the EQL equivalent of the following plaintext query.
+Equivalent plaintext query:
 
 ```sql
-SELECT id FROM examples ORDER BY field DESC;
+SELECT * FROM users WHERE date < '2023-10-05';
 ```
 
-**Grouping example:**
+**Example (Ordering):**
 
-ORE indexes can be used along with the `cs_grouped_value_v1` aggregate function to group by an encrypted column:
-
+```sql
+SELECT id FROM users
+ORDER BY cs_ore_64_8_v1(encrypted_field) DESC;
 ```
+
+Equivalent plaintext query:
+
+```sql
+SELECT id FROM users ORDER BY field DESC;
+```
+
+**Example (Grouping):**
+
+```sql
 SELECT cs_grouped_value_v1(encrypted_field) COUNT(*)
   FROM users
   GROUP BY cs_ore_64_8_v1(encrypted_field)
 ```
 
-## Querying JSONB data with EQL
+Equivalent plaintext query:
 
-### `cs_ste_term_v1(val JSONB, epath TEXT)`
+```sql
+SELECT field, COUNT(*) FROM users GROUP BY field;
+```
 
-Retrieves the encrypted _term_ associated with the encrypted JSON path, `epath`.
+## JSON and JSONB support
 
-### `cs_ste_vec_v1(val JSONB)`
+EQL supports encrypting, decrypting, and searching JSON and JSONB objects.
 
-Retrieves the Structured Encryption Vector for containment queries.
+### Configuring the index
+
+Similar to how you configure indexes for text data, you can configure indexes for JSON and JSONB data.
+The only difference is that you need to specify the `cast_as` parameter as `json` or `jsonb`.
+
+```sql
+SELECT cs_add_index_v1(
+  'users', 
+  'encrypted_json', 
+  'ste_vec',
+  'jsonb',
+  '{"prefix": "users/encrypted_json"}' -- The prefix is in the form of "table/column"
+);
+```
+
+You can read more about the index configuration options [here](https://github.com/cipherstash/encrypt-query-language/blob/main/docs/reference/INDEX.md).
+
+### Inserting JSON data
+
+When inserting JSON data, this works the same as inserting text data. 
+You need to wrap the JSON data in the appropriate EQL payload.
+CipherStash Proxy will **encrypt** the data automatically.
 
 **Example:**
 
-```rb
-# Serialize a JSONB value bound to the users table column
-term = EQL.for_ste_vec("users", "attrs", {field: "value"})
-User.where("cs_ste_vec_v1(attrs) @> cs_ste_vec_v1(?)", term)
-```
-
-Which will execute on the server as:
-
-```sql
-SELECT * FROM users WHERE cs_ste_vec_v1(attrs) @> '53T8dtvW4HhofDp9BJnUkw';
-```
-
-And is the EQL equivalent of the following plaintext query.
-
-```sql
-SELECT * FROM users WHERE attrs @> '{"field": "value"}`;
-```
-
-### `cs_ste_term_v1(val JSONB, epath TEXT)`
-
-Retrieves the encrypted index term associated with the encrypted JSON path, `epath`.
-
-This is useful for sorting or filtering on integers in encrypted JSON objects.
-
-**Example:**
-
-```rb
-# Serialize a JSONB value bound to the users table column
-path = EQL.for_ejson_path("users", "attrs", "$.login_count")
-term = EQL.for_ore("users", "attrs", 100)
-User.where("cs_ste_term_v1(attrs, ?) > cs_ore_64_8_v1(?)", path, term)
-```
-
-Which will execute on the server as:
-
-```sql
-SELECT * FROM users WHERE cs_ste_term_v1(attrs, 'DQ1rbhWJXmmqi/+niUG6qw') > 'QAJ3HezijfTHaKrhdKxUEg';
-```
-
-And is the EQL equivalent of the following plaintext query.
-
-```sql
-SELECT * FROM users WHERE attrs->'login_count' > 10;
-```
-
-### `cs_ste_value_v1(val JSONB, epath TEXT)`
-
-Retrieves the encrypted _value_ associated with the encrypted JSON path, `epath`.
-
-**Example:**
-
-```rb
-# Serialize a JSONB value bound to the users table column
-path = EQL.for_ejson_path("users", "attrs", "$.login_count")
-User.find_by_sql(["SELECT cs_ste_value_v1(attrs, ?) FROM users", path])
-```
-
-Which will execute on the server as:
-
-```sql
-SELECT cs_ste_value_v1(attrs, 'DQ1rbhWJXmmqi/+niUG6qw') FROM users;
-```
-
-And is the EQL equivalent of the following plaintext query.
-
-```sql
-SELECT attrs->'login_count' FROM users;
-```
-
-### Field extraction
-
-Extract a field from a JSONB object in a `SELECT` statement:
-
-```sql
-SELECT cs_ste_value_v1(attrs, 'DQ1rbhWJXmmqi/+niUG6qw') FROM users;
-```
-
-Which is the equivalent to the following SQL query:
-
-```sql
-SELECT attrs->'login_count' FROM users;
-```
-
-### Extraction (in WHERE, ORDER BY)
-
-Select rows that match a field in a JSONB object:
-
-```sql
-SELECT * FROM users WHERE cs_ste_term_v1(attrs, 'DQ1rbhWJXmmqi/+niUG6qw') > 'QAJ3HezijfTHaKrhdKxUEg';
-```
-
-Which is the equivalent to the following SQL query:
-
-```sql
-SELECT * FROM users WHERE attrs->'login_count' > 10;
-```
-
-### Grouping
-
-`cs_ste_vec_term_v1` can be used along with the `cs_grouped_value_v1` aggregate function to group by a field in an encrypted JSONB column:
-
-```
--- $1 here is a param that containts the EQL payload for an ejson path.
--- Example EQL payload for the path `$.field_one`:
---  '{"k": "pt", "p": "$.field_one", "q": "ejson_path", "i": {"t": "users", "c": "attrs"}, "v": 1}'
-SELECT cs_grouped_value_v1(cs_ste_vec_value_v1(attrs), $1) COUNT(*)
-  FROM users
-  GROUP BY cs_ste_vec_term_v1(attrs, $1);
-```
-
-## Managing indexes with EQL
-
-These functions expect a `jsonb` value that conforms to the storage schema.
-
-### `cs_add_index`
-
-```sql
-cs_add_index(table_name text, column_name text, index_name text, cast_as text, opts jsonb)
-```
-
-| Parameter     | Description                                        | Notes                                                                    |
-| ------------- | -------------------------------------------------- | ------------------------------------------------------------------------ |
-| `table_name`  | Name of target table                               | Required                                                                 |
-| `column_name` | Name of target column                              | Required                                                                 |
-| `index_name`  | The index kind                                     | Required.                                                                |
-| `cast_as`     | The PostgreSQL type decrypted data will be cast to | Optional. Defaults to `text`                                             |
-| `opts`        | Index options                                      | Optional for `match` indexes, required for `ste_vec` indexes (see below) |
-
-#### cast_as
-
-Supported types:
-
-- `text`
-- `int`
-- `small_int`
-- `big_int`
-- `boolean`
-- `date`
-- `jsonb`
-
-#### match opts
-
-A match index enables full text search across one or more text fields in queries.
-
-The default Match index options are:
-
-```json
-  {
-    "k": 6,
-    "m": 2048,
-    "include_original": true,
-    "tokenizer": {
-      "kind": "ngram",
-      "token_length": 3
-    }
-    "token_filters": {
-      "kind": "downcase"
-    }
-  }
-```
-
-- `tokenFilters`: a list of filters to apply to normalize tokens before indexing.
-- `tokenizer`: determines how input text is split into tokens.
-- `m`: The size of the backing [bloom filter](https://en.wikipedia.org/wiki/Bloom_filter) in bits. Defaults to `2048`.
-- `k`: The maximum number of bits set in the bloom filter per term. Defaults to `6`.
-
-**Token filters**
-
-There are currently only two token filters available: `downcase` and `upcase`. These are used to normalise the text before indexing and are also applied to query terms. An empty array can also be passed to `tokenFilters` if no normalisation of terms is required.
-
-**Tokenizer**
-
-There are two `tokenizer`s provided: `standard` and `ngram`.
-`standard` simply splits text into tokens using this regular expression: `/[ ,;:!]/`.
-`ngram` splits the text into n-grams and accepts a configuration object that allows you to specify the `tokenLength`.
-
-**m** and **k**
-
-`k` and `m` are optional fields for configuring [bloom filters](https://en.wikipedia.org/wiki/Bloom_filter) that back full text search.
-
-`m` is the size of the bloom filter in bits. `filterSize` must be a power of 2 between `32` and `65536` and defaults to `2048`.
-
-`k` is the number of hash functions to use per term.
-This determines the maximum number of bits that will be set in the bloom filter per term.
-`k` must be an integer from `3` to `16` and defaults to `6`.
-
-**Caveats around n-gram tokenization**
-
-While using n-grams as a tokenization method allows greater flexibility when doing arbitrary substring matches, it is important to bear in mind the limitations of this approach.
-Specifically, searching for strings _shorter_ than the `tokenLength` parameter will not _generally_ work.
-
-If you're using n-gram as a token filter, then a token that is already shorter than the `tokenLength` parameter will be kept as-is when indexed, and so a search for that short token will match that record.
-However, if that same short string only appears as a part of a larger token, then it will not match that record.
-In general, therefore, you should try to ensure that the string you search for is at least as long as the `tokenLength` of the index, except in the specific case where you know that there are shorter tokens to match, _and_ you are explicitly OK with not returning records that have that short string as part of a larger token.
-
-#### ste_vec opts
-
-An ste_vec index on a encrypted JSONB column enables the use of PostgreSQL's `@>` and `<@` [containment operators](https://www.postgresql.org/docs/16/functions-json.html#FUNCTIONS-JSONB-OP-TABLE).
-
-An ste_vec index requires one piece of configuration: the `context` (a string) which is passed as an info string to a MAC (Message Authenticated Code).
-This ensures that all of the encrypted values are unique to that context.
-It is generally recommended to use the table and column name as a the context (e.g. `users/name`).
-
-Within a dataset, encrypted columns indexed using an `ste_vec` that use different contexts cannot be compared.
-Containment queries that manage to mix index terms from multiple columns will never return a positive result.
-This is by design.
-
-The index is generated from a JSONB document by first flattening the structure of the document such that a hash can be generated for each unique path prefix to a node.
-
-The complete set of JSON types is supported by the indexer.
-Null values are ignored by the indexer.
-
-- Object `{ ... }`
-- Array `[ ... ]`
-- String `"abc"`
-- Boolean `true`
-- Number `123.45`
-
-For a document like this:
+Assuming you want to store the following JSON data:
 
 ```json
 {
-  "account": {
-    "email": "alice@example.com",
-    "name": {
-      "first_name": "Alice",
-      "last_name": "McCrypto"
-    },
-    "roles": ["admin", "owner"]
+  "name": "John Doe",
+  "metadata": {
+    "age": 42,
   }
 }
 ```
 
-Hashes would be produced from the following list of entries:
+The EQL payload would be:
 
-```js
-[
-  [Obj, Key("account"), Obj, Key("email"), String("alice@example.com")],
-  [
-    Obj,
-    Key("account"),
-    Obj,
-    Key("name"),
-    Obj,
-    Key("first_name"),
-    String("Alice"),
-  ],
-  [
-    Obj,
-    Key("account"),
-    Obj,
-    Key("name"),
-    Obj,
-    Key("last_name"),
-    String("McCrypto"),
-  ],
-  [Obj, Key("account"), Obj, Key("roles"), Array, String("admin")],
-  [Obj, Key("account"), Obj, Key("roles"), Array, String("owner")],
-];
+```sql
+INSERT INTO users (encrypted_json) VALUES (
+  '{"v":1,"k":"pt","p":"{\"name\":\"John Doe\",\"metadata\":{\"age\":42}}","i":{"t":"users","c":"encrypted_json"}}'
+);
 ```
 
-Using the first entry to illustrate how an entry is converted to hashes:
-
-```js
-[Obj, Key("account"), Obj, Key("email"), String("alice@example.com")];
-```
-
-The hashes would be generated for all prefixes of the full path to the leaf node.
-
-```js
-[
-  [Obj],
-  [Obj, Key("account")],
-  [Obj, Key("account"), Obj],
-  [Obj, Key("account"), Obj, Key("email")],
-  [Obj, Key("account"), Obj, Key("email"), String("alice@example.com")],
-  // (remaining leaf nodes omitted)
-];
-```
-
-Query terms are processed in the same manner as the input document.
-
-A query prior to encrypting & indexing looks like a structurally similar subset of the encrypted document, for example:
+Data is stored in the database as:
 
 ```json
-{ "account": { "email": "alice@example.com", "roles": "admin" } }
+{
+  "i": {
+    "c": "encrypted_json",
+    "t": "users"
+  },
+  "k": "sv",
+  "v": 1,
+  "sv": [
+    ...ciphertext...
+  ]
+}
 ```
 
-The expression `cs_ste_vec_v1(encrypted_account) @> cs_ste_vec_v1($query)` would match all records where the `encrypted_account` column contains a JSONB object with an "account" key containing an object with an "email" key where the value is the string "alice@example.com".
+### Reading JSON data
 
-When reduced to a prefix list, it would look like this:
+When querying data, select the encrypted column. CipherStash Proxy will **decrypt** the data automatically.
 
-```js
-[
-  [Obj],
-  [Obj, Key("account")],
-  [Obj, Key("account"), Obj],
-  [Obj, Key("account"), Obj, Key("email")],
-  [Obj, Key("account"), Obj, Key("email"), String("alice@example.com")][
-    (Obj, Key("account"), Obj, Key("roles"))
-  ],
-  [Obj, Key("account"), Obj, Key("roles"), Array],
-  [Obj, Key("account"), Obj, Key("roles"), Array, String("admin")],
-];
-```
-
-Which is then turned into an ste_vec of hashes which can be directly queries against the index.
-
-### `cs_modify_index`
+**Example:**
 
 ```sql
-_cs_modify_index_v1(table_name text, column_name text, index_name text, cast_as text, opts jsonb)
+SELECT encrypted_json FROM users;
 ```
 
-Modifies an existing index configuration.
-Accepts the same parameters as `cs_add_index`
+Data is returned as:
 
-### `cs_remove_index`
-
-```sql
-cs_remove_index_v1(table_name text, column_name text, index_name text)
+```json
+{
+  "k": "pt",
+  "p": "{\"metadata\":{\"age\":42},\"name\":\"John Doe\"}",
+  "i": {
+    "t": "users",
+    "c": "encrypted_json"
+  },
+  "v": 1,
+  "q": null
+}
 ```
 
-Removes an index configuration from the column.
+### Advanced JSON queries
 
-## Data format
+We support a wide range of JSON/JSONB functions and operators.
+You can read more about the JSONB support in the [JSONB reference guide](https://github.com/cipherstash/encrypt-query-language/blob/main/docs/reference/JSON.md).
+
+## EQL payload data format
 
 Encrypted data is stored as `jsonb` with a specific schema:
 
@@ -658,12 +483,30 @@ CipherStash Proxy handles the encoding, and EQL provides the functions.
 | u     | Unique index      | Ciphertext index value. Encrypted by Proxy.                                                                                                                                                                                                       |
 | sv    | STE vector index  | Ciphertext index value. Encrypted by Proxy.                                                                                                                                                                                                       |
 
+## Frequently Asked Questions
+
+### How do I integrate CipherStash EQL with my application?
+
+Use CipherStash Proxy to intercept database queries and handle encryption and decryption automatically. 
+The proxy interacts with the database using the EQL functions and types defined in this documentation.
+
+Use the [helper packages](#helper-packages) to integate EQL functions into your application.
+
+### Can I use EQL without the CipherStash Proxy?
+
+No, CipherStash Proxy is required to handle the encryption and decryption operations based on the configurations and indexes defined.
+
+### How is data encrypted in the database?
+
+Data is encrypted using CipherStash's cryptographic schemes and stored in the `cs_encrypted_v1` column as a JSONB payload.
+Encryption and decryption are handled by CipherStash Proxy.
+
 ## Helper packages
 
 We've created a few langague specific packages to help you interact with the payloads:
 
-- [@cipherstash/eql](https://github.com/cipherstash/encrypt-query-language/tree/main/languages/javascript/packages/eql): This is a TypeScript implementation of EQL.
-- [github.com/cipherstash/goeql](https://github.com/cipherstash/goeql): This is a Go implementation of EQL
+- **JavaScript/TypeScript**: [@cipherstash/eql](https://github.com/cipherstash/encrypt-query-language/tree/main/languages/javascript/packages/eql)
+- **Go**: [github.com/cipherstash/goeql](https://github.com/cipherstash/goeql)
 
 ## Releasing
 
