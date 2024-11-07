@@ -158,7 +158,7 @@ The eJSONPath used with `cs_ste_vec_terms_v1` needs to end with `[*]` (`$.some_a
 > Array access with `cs_ste_vec_terms_v1` only works when the given eJSONPath only matches a single array.
 > Accessing array elements from `cs_ste_vec_terms_v1` when the eJSONPath matches multiple arrays (for example, when there are nested arrays or multiple arrays at the same depth) can return unexpected results.
 
-The following query compares the first item in the array at the eJSONPath in $1 to the value in $2.
+The following query compares the first item in the array at the eJSONPath in `$1` to the value in `$2`.
 
 ```sql
 SELECT * FROM examples
