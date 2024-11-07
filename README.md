@@ -43,16 +43,16 @@ The simplest and fastest way to get up and running with EQL is to execute the in
 Once the custom types and functions are installed, you can start using EQL in your queries.
 
 1. Create a table with a column of type `cs_encrypted_v1` which will store your encrypted data.
-1. Use EQL functions to add indexes for the columns you want to encrypt.
+2. Use EQL functions to add indexes for the columns you want to encrypt.
    - Indexes are used by CipherStash Proxy to understand what cryptography schemes are required for your use case.
-1. Initialize CipherStash Proxy for cryptographic operations.
+3. Initialize CipherStash Proxy for cryptographic operations.
    - Proxy will dynamically encrypt data on the way in and decrypt data on the way out, based on the indexes you've defined.
-1. Insert data into the defined columns using a specific payload format.
+4. Insert data into the defined columns using a specific payload format.
    - See [data format](#data-format) for the payload format.
-1. Query the data using the EQL functions defined in [querying data with EQL](#querying-data-with-eql).
+5. Query the data using the EQL functions defined in [querying data with EQL](#querying-data-with-eql).
    - No modifications are required to simply `SELECT` data from your encrypted columns.
    - To perform `WHERE` and `ORDER BY` queries, wrap the queries in the EQL functions defined in [querying data with EQL](#querying-data-with-eql).
-1. Integrate with your application via the [helper packages](#helper-packages) to interact with the encrypted data.
+6. Integrate with your application via the [helper packages](#helper-packages) to interact with the encrypted data.
 
 Read [GETTINGSTARTED.md](GETTINGSTARTED.md) for more detail.
 
@@ -109,118 +109,412 @@ You can force CipherStash Proxy to refresh the configuration by running the `cs_
 SELECT cs_refresh_encrypt_config();
 ```
 
-### Inserting data
+## How to example
 
-When inserting data into the encrypted column, wrap the plaintext in the appropriate EQL payload.
-These statements must be run through the CipherStash Proxy in order to **encrypt** the data.
+These examples will show how EQL works using raw SQL.
 
-**Example:**
+We are in the process of building out packages to abstract the serializing/deserializing logic needed to handle EQL payloads.
 
-```rb
-# Create the EQL payload using helper functions
-payload = eqlPayload("users", "encrypted_email", "test@test.com")
+#### EQL packages
 
-Users.create(encrypted_email: payload)
-```
+We currently have packages for or examples of how to do this for the below languages/ORM's:
 
-Which will execute on the server as:
+| Language   | ORM         | Example                                                           | Package                                                          |
+| ---------- | ----------- | ----------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Go         | Xorm        | [Xorm examples](./languages/go/xorm/README.md)                    | [goeql](https://github.com/cipherstash/goeql)                    |
+| Typescript | Drizzle     | [Drizzle examples](./languages/javascript/apps/drizzle/README.md) | [cipherstash/eql](./languages/javascript/packages/eql/README.md) |
+| Typescript | Prisma      | [Drizzle examples](./languages/javascript/apps/prisma/README.md)  | [cipherstash/eql](./languages/javascript/packages/eql/README.md) |
+| Python     | SQL Alchemy | [Python examples](./languages/python/jupyter_notebook/README.md)  |                                                                  |
+
+Prerequisites:
+
+- [EQL has been installed](./GETTINGSTARTED.md)
+- [CipherStash proxy is setup](./PROXY.md)
+
+Let's step through an example of how we go from a plaintext text field to an encrypted text field.
+
+This guide will include:
+
+- How to [setup your database](#setup-your-database)
+- How to [add indexes](#adding-indexes)
+- How to [encrypt existing plaintext data](#encrypting-existing-plaintext-data)
+- How to [insert data](#inserting-data)
+- How to [query data](#querying-data)
+
+We will use a `users` table with an email field for this example.
+
+Run:
 
 ```sql
-INSERT INTO users (encrypted_email) VALUES ('{"v":1,"k":"pt","p":"test@test.com","i":{"t":"users","c":"encrypted_email"}}');
+CREATE TABLE users (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    email VARCHAR(100) NOT NULL
+);
 ```
 
-And is the EQL equivalent of the following plaintext query.
+Our `users` schema looks like this:
+
+| Column  | Type                     | Nullable |
+| ------- | ------------------------ | -------- |
+| `id`    | `bigint`                 | not null |
+| `email` | `character varying(100)` | not null |
+
+Seed plaintext data into the users table:
+
+```sql
+INSERT INTO users (email) VALUES
+('adalovelace@example.com'),
+('gracehopper@test.com'),
+('edithclarke@email.com');
+```
+
+### Setup your database
+
+In the previous step we:
+
+- setup a basic users table with a plaintext email field.
+- seeded the db with plaintext emails.
+
+In this part we will add a new column to store our encrypted email data.
+
+When we add the column we use a `Type` of `cs_encrypted_v1`.
+
+This type will enforce constraints on the field to ensure that:
+
+- the payload is in the [format EQL and CipherStash Proxy expects](./sql/schemas/cs_encrypted_v1.schema.json).
+- the payload has been encrypted before inserting.
+
+If there are issues with the payload being inserted into a field with a type of `cs_encrypted_v1`, an error will be returned describing what the issue with the payload is.
+
+To add a new column called `email_encrypted` with a type of `cs_encrypted_v1`:
+
+```sql
+ALTER TABLE users ADD email_encrypted cs_encrypted_v1;
+```
+
+Our `users` schema now looks like this:
+
+| Column            | Type                     | Nullable |
+| ----------------- | ------------------------ | -------- |
+| `id`              | `bigint`                 | not null |
+| `email`           | `character varying(100)` | not null |
+| `email_encrypted` | `cs_encrypted_v1`        |          |
+
+### Adding indexes
+
+We now have our database schema setup to store encrypted data.
+
+In this part we will learn about why we need to add indexes and how to add them.
+
+When you install EQL, a table called `cs_configuration_v1` is created in your database.
+
+Adding indexes updates this table with the details and configuration needed for CipherStash Proxy to know how to encrypt your data, and what types of queries are able to be performed
+
+We will also need to add the relevant native database indexes to be able to perform these queries.
+
+<!-- Point to section describing the different types of indexes. Does this exist? -->
+
+In this example, we want to be able to execute these types of queries on our `email_encrypted` field:
+
+- free text search
+- equality
+- order by
+
+This means that we need to add the below indexes for our new `email_encrypted` field.
+
+For free text queries (e.g `LIKE`, `ILIKE`) we add a `match` index and a GIN index:
+
+<!-- link to match index options/details -->
+
+```sql
+SELECT cs_add_index_v1('users', 'email_encrypted', 'match', 'text');
+CREATE INDEX ON users USING GIN (cs_match_v1(email_encrypted));
+```
+
+For equality queries we add a `unique` index:
+
+```sql
+SELECT cs_add_index_v1('users', 'email_encrypted', 'unique', 'text', '{"token_filters": [{"kind": "downcase"}]}');
+CREATE UNIQUE INDEX ON users(cs_unique_v1(email_encrypted));
+```
+
+For ordering or range queries we add an `ore` index:
+
+```sql
+SELECT cs_add_index_v1('users', 'email_encrypted', 'ore', 'text');
+CREATE INDEX ON users (cs_ore_64_8_v1(email_encrypted));
+```
+
+After adding these indexes, our `cs_configuration_v1` table will look like this:
+
+```bash
+id         | 1
+state      | pending
+data       | {"v": 1, "tables": {"users": {"email_encrypted": {"cast_as": "text", "indexes": {"ore": {}, "match": {"k": 6, "m": 2048, "tokenizer": {"kind": "ngram", "token_length": 3}, "token_filters": [{"kind": "downcase"}], "include_original": true}, "unique": {"token_filters": [{"kind": "downcase"}]}}}}}}
+```
+
+The initial `state` will be set as pending.
+
+To activate this configuration run:
+
+```sql
+SELECT cs_encrypt_v1();
+SELECT cs_activate_v1();
+```
+
+The `cs_configuration_v1` table will now have a state of `active`.
+
+```bash
+id         | 1
+state      | active
+data       | {"v": 1, "tables": {"users": {"email_encrypted": {"cast_as": "text", "indexes": {"ore": {}, "match": {"k": 6, "m": 2048, "tokenizer": {"kind": "ngram", "token_length": 3}, "token_filters": [{"kind": "downcase"}], "include_original": true}, "unique": {"token_filters": [{"kind": "downcase"}]}}}}}}
+```
+
+### Encrypting existing plaintext data
+
+Prerequisites:
+
+- [Database is setup](#setup-your-database)
+- [Indexes added](#adding-indexes)
+- CipherStash Proxy has been setup and is running using the [getting started guide](PROXY.md).
+
+Ensure CipherStash Proxy has the most up to date configuration from the `cs_configuration_v1` table.
+
+CipherStash Proxy pings the database every 60 seconds to refresh the configuration but we can force the refresh by running:
+
+```sql
+SELECT cs_refresh_encrypt_config();
+```
+
+Bundled in with the CipherStash Proxy is a [migrator tool](./MIGRATOR.md).
+
+This tool encrypts the plaintext data from the plaintext `email` field, and inserts it into the encrypted field, `email_encrypted`.
+
+We access the migrator tool by requesting a shell inside the CipherStash Proxy container.
+
+```bash
+docker exec -it eql-cipherstash-proxy bash
+```
+
+In this example the container name for CipherStash Proxy is `eql-cipherstash-proxy`.
+
+To copy plaintext data and encrypt into the enc :
+
+```bash
+cipherstash-migrator --columns email=email_encrypted --table users --database-name postres --username postgres --password postgres
+```
+
+We now have encrypted data in our `email_encrypted` fields that we can query.
+
+### Inserting data
+
+When inserting data into the encrypted column we need to wrap the plaintext in an EQL payload.
+
+The reason for this is that the CipherStash Proxy expects the EQL payload to be able to encrypt the data, and to be able to decrypt the data.
+
+These statements must be run through the CipherStash Proxy in order to **encrypt** the data.
+
+For a plaintext of `test@test.com`.
+
+An EQL payload will look like this:
+
+```json
+{
+  "k": "pt", // The kind of EQL payload. The client will always send through plaintext "pt"
+  "p": "test@test.com", // The plaintext data
+  "i": {
+    "t": "users", // The table
+    "c": "encrypted_email" // The encrypted column
+  },
+  "v": 1,
+  "q": null // Used in queries only.
+}
+```
+
+A query to insert an email into the plaintext `email` field in the `users` table looks like this:
 
 ```sql
 INSERT INTO users (email) VALUES ('test@test.com');
 ```
 
-All the data stored in the database is fully encrypted and secure.
-
-### Reading data
-
-When querying data, wrap the encrypted column in the appropriate EQL payload.
-These statements must be run through the CipherStash Proxy in order to **decrypt** the data.
-
-**Example:**
-
-```rb
-Users.findAll(&:encrypted_email)
-```
-
-Which will execute on the server as:
+The equivalent of this query to insert a plaintext email and encrypt it into the `encrypted_email` column using EQL:
 
 ```sql
-SELECT encrypted_email FROM users;
+INSERT INTO users (encrypted_email) VALUES ('{"v":1,"k":"pt","p":"test@test.com","i":{"t":"users","c":"encrypted_email"}}');
 ```
 
-And is the EQL equivalent of the following plaintext query:
+**What is happening?**
+
+The CipherStash Proxy takes this EQL payload from the client and encrypts the plaintext data.
+
+It creates an EQL payload that looks similar to this and inserts this into the encrypted field in the database.
+
+```json
+{
+  "k": "ct", // The kind of EQL payload. The Proxy will insert a json payload of a ciphertext or "ct".
+  "c": "encrypted test@test.com", // The source ciphertext of the plaintext email.
+  "e": {
+    "t": "users", // Table
+    "c": "email_encrypted" // Encrypted column
+  },
+  "m": [42], // The ciphertext used for free text queries i.e match index
+  "u": "unique ciphertext", // The ciphertext used for unique queries. i.e unique index
+  "o": ["a", "b", "c"], // The ciphertext used for order or range queries. i.e ore index
+  "v": 1
+}
+```
+
+This is what is stored in the `email_encrypted` column.
+
+### Querying data
+
+In this part we will step through how to read our encrypted data.
+
+We will cover:
+
+- simple queries
+- free text search queries
+- exact/unique queries
+- order by and range queries
+
+#### Simple query
+
+If we don't need to execute any searchable operations (free text, exact) on the encrypted field.
+
+The query will look similar to a plaintext query except we will use the encrypted column.
+
+A plaintext query to select all emails from the users table would look like this:
 
 ```sql
 SELECT email FROM users;
 ```
 
-All the data returned from the database is fully decrypted.
+The EQL equivalent of this query is:
 
-## Querying data with EQL
+```sql
+SELECT encrypted_email->>'p' FROM users;
+```
+
+**What is happening?**
+
+We receive an EQL payload for all data returned from encrypted columns:
+
+```json
+{
+  "k": "pt",
+  "p": "test@test.com", // The returned plaintext data
+  "i": {
+    "t": "users",
+    "c": "encrypted_email"
+  },
+  "v": 1,
+  "q": null
+}
+```
+
+We use the `->>` jsonb operator to extract the `"p"` value.
+
+#### Advanced querying
 
 EQL provides specialized functions to interact with encrypted data to support operations like equality checks, range queries, and unique constraints.
 
-### `cs_match_v1(val JSONB)`
+#### Full-text search
 
-Enables basic full-text search.
+In this example we learn how to execute a full-text search on the `email_encrypted` field.
 
-**Example**
+Prerequsite:
 
-```rb
-# Create the EQL payload using helper functions
-payload = EQL.for_match("users", "encrypted_field", "plaintext value")
+- A [match index](#adding-indexes) is needed on the encrypted column to support this operation.
 
-Users.where("cs_match_v1(field) @> cs_match_v1(?)", payload)
+EQL function to use: `cs_match_v1(val JSONB)`
+
+EQL query payload for a match query:
+
+```json
+{
+  "k": "pt",
+  "p": "grace", // The text we want to use for search
+  "i": {
+    "t": "users",
+    "c": "email_encrypted"
+  },
+  "v": 1,
+  "q": "match" // This field is required on queries. This specifies the type of query we are executing.
+}
 ```
 
-Which will execute on the server as:
+A full-text search query on the plaintext email field would look like this:
 
 ```sql
-SELECT * FROM users WHERE cs_match_v1(field) @> cs_match_v1('{"v":1,"k":"pt","p":"plaintext value","i":{"t":"users","c":"encrypted_field"},"q":"match"}');
+SELECT * FROM users WHERE email LIKE '%grace%';
 ```
 
-And is the EQL equivalent of the following plaintext query.
+The equivalent of this query on the encrypted email field using EQL:
 
 ```sql
-SELECT * FROM users WHERE field LIKE '%plaintext value%';
+SELECT * FROM users WHERE cs_match_v1(email_encrypted) @> cs_match_v1('{"v":1,"k":"pt","p":"grace","i":{"t":"users","c":"email_encrypted"},"q":"match"}');
 ```
 
-### `cs_unique_v1(val JSONB)`
+#### Unique or equality query
 
-Retrieves the unique index for enforcing uniqueness.
+In this example we learn how to execute an equality query on the `email_encrypted` field.
 
-**Example:**
+Prerequsite:
 
-```rb
-# Create the EQL payload using helper functions
-payload = EQL.for_unique("users", "encrypted_field", "plaintext value")
+- A [unique index](#adding-indexes) is needed on the encrypted column to support this operation.
 
-Users.where("cs_unique_v1(field) = cs_unique_v1(?)", payload)
+EQL function to use: `cs_unique_v1(val JSONB)`
+
+EQL query payload for a match query:
+
+```json
+{
+  "k": "pt",
+  "p": "gracehopper@test.com", // The text we want to use for the unique/equality query
+  "i": {
+    "t": "users",
+    "c": "email_encrypted"
+  },
+  "v": 1,
+  "q": "unique" // This field is required on queries. This specifies the type of query we are executing.
+}
 ```
 
-Which will execute on the server as:
+An equality query on the plaintext email field would look like this:
 
 ```sql
-SELECT * FROM users WHERE cs_unique_v1(field) = cs_unique_v1('{"v":1,"k":"pt","p":"plaintext value","i":{"t":"users","c":"encrypted_field"},"q":"unique"}');
+SELECT * FROM users WHERE email = 'gracehopper@test.com';
 ```
 
-And is the EQL equivalent of the following plaintext query.
+The equivalent of this query on the encrypted email field using EQL:
 
 ```sql
-SELECT * FROM users WHERE field = 'plaintext value';
+SELECT * FROM users WHERE cs_unique_v1(email_encrypted) = cs_unique_v1('{"v":1,"k":"pt","p":"gracehopper@test.com","i":{"t":"users","c":"email_encrypted"},"q":"unique"}');
 ```
 
-### `cs_ore_64_8_v1(val JSONB)`
+#### Order by query
 
-Retrieves the Order-Revealing Encryption index for range queries.
+In this example we learn how to execute an order by query on the `email_encrypted` field.
 
-**Sorting example:**
+Prerequsite:
+
+- An [ore index](#adding-indexes) is needed on the encrypted column to support this operation.
+
+EQL function to use: `cs_ore_64_8_v1(val JSONB))`
+
+An order by query on the plaintext email field would look like this:
+
+```sql
+SELECT * FROM users WHERE ORDER BY email;
+```
+
+The EQL equivalent of this query on the encrypted email field:
+
+```sql
+SELECT * FROM users ORDER BY cs_ore_64_8_v1(email_encrypted);
+```
+
+#### Comparison query
 
 ```rb
 # Create the EQL payload using helper functions
