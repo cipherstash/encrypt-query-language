@@ -1,10 +1,10 @@
-# Native Postgres JSON(B) Compared to EQL
+# Native PostgreSQL JSON(B) Compared to EQL
 
 EQL supports a subset of functionality supported by the native Postgres JSON(B) functions and operators. The following examples compare native Postres JSON(B) functions and operators to the related functionality in EQL.
 
 ## `json ->> text` → `text` and `json -> text` → `jsonb`/`json`
 
-### Native Postgres JSON(B)
+### Native PostgreSQL JSON(B)
 
 ```sql
 -- `->` (returns JSON(B))
@@ -87,7 +87,7 @@ WHERE cs_ste_vec_term_v1(examples.encrypted_jsonb, $1) > cs_ste_vec_term_v1($2)
 
 ## `json ->> int` → `text` and `json -> int` → `jsonb`/`json`
 
-### Native Postgres JSON(B)
+### Native PostgreSQL JSON(B)
 
 ```sql
 -- `->` (returns JSON(B))
@@ -150,7 +150,7 @@ Would return the EQL plaintext payload with an array (`[1, 2, 3]` for example):
 
 #### Comparison example
 
-`cs_ste_vec_terms_v1` can be used with the native Postgres array access operator to get a term for comparison by array index.
+`cs_ste_vec_terms_v1` can be used with the native PostgreSQL array access operator to get a term for comparison by array index.
 
 The eJSONPath used with `cs_ste_vec_terms_v1` needs to end with `[*]` (`$.some_array_field[*]` for example).
 
@@ -198,7 +198,7 @@ WHERE (cs_ste_vec_terms_v1(examples.encrypted_jsonb, $1))[1] > cs_ste_vec_term_v
 
 ## `json #>> text[]` → `text` and `json #> text[]` → `jsonb`/`json`
 
-### Native Postgres JSON(B)
+### Native PostgreSQL JSON(B)
 
 ```sql
 -- `#>` (returns JSON(B))
@@ -287,7 +287,7 @@ WHERE cs_ste_vec_term_v1(examples.encrypted_jsonb, $1) > cs_ste_vec_term_v1($2)
 
 ## `@>` and `<@`
 
-### Native Postgres JSON(B)
+### Native PostgreSQL JSON(B)
 
 ```sql
 -- Checks if the left arg contains the right arg (returns `true` in this example).
@@ -338,7 +338,7 @@ Example params:
 
 ## `json_array_elements`, `jsonb_array_elements`, `json_array_elements_text`, and `jsonb_array_elements_text`
 
-### Native Postgres JSON(B)
+### Native PostgreSQL JSON(B)
 
 ```sql
 -- Each returns the results...
@@ -457,7 +457,7 @@ WHERE EXISTS (
 
 ## `json_array_length` and `jsonb_array_length`
 
-### Native Postgres JSON(B)
+### Native PostgreSQL JSON(B)
 
 ```sql
 -- Both of these examples return the int `3`.
@@ -468,7 +468,7 @@ SELECT jsonb_array_length('[1, 2, 3]');
 
 ### EQL
 
-The Postgres `array_length` function can be used with `cs_ste_vec_terms_v1` to find the length of an array.
+The PostgreSQL `array_length` function can be used with `cs_ste_vec_terms_v1` to find the length of an array.
 
 The eJSONPath used with `cs_ste_vec_terms_v1` needs to end with `[*]` (`$.some_array_field[*]` for example).
 
