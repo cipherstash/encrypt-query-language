@@ -1,7 +1,10 @@
-# Searchable index configuration
+# EQL index configuration
 
 The following functions allow you to configure indexes for encrypted columns.
 All these functions modify the `cs_configuration_v1` table in your database, and is added during the EQL installation.
+
+> **IMPORTANT:** When you modify or add an index, you must re-encrypt data that's already been stored in the database.
+The CipherStash encryption solution will encrypt the data based on the current state of the configuration.
 
 ### Adding an index (`cs_add_index`)
 
