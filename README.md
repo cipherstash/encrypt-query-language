@@ -32,8 +32,12 @@ Store encrypted data alongside your existing data.
   - [Equality search (`cs_unique_v1`)](#equality-search-cs_unique_v1)
   - [Full-text search (`cs_match_v1`)](#full-text-search-cs_match_v1)
   - [Range queries (`cs_ore_64_8_v1`)](#range-queries-cs_ore_64_8_v1)
-- [JSONB support](#jsonb-support)
-- [Data format](#data-format)
+- [JSON and JSONB support](#json-and-jsonb-support)
+  - [Configuring the index](#configuring-the-index)
+  - [Inserting JSON data](#inserting-json-data)
+  - [Reading JSON data](#reading-json-data)
+  - [Advanced JSON queries](#advanced-json-queries)
+- [EQL payload data format](#eql-payload-data-format)
 - [Frequently Asked Questions](#frequently-asked-questions)
   - [How do I integrate CipherStash EQL with my application?](#how-do-i-integrate-cipherstash-eql-with-my-application)
   - [Can I use EQL without the CipherStash Proxy?](#can-i-use-eql-without-the-cipherstash-proxy)
@@ -333,13 +337,101 @@ Equivalent plaintext query:
 SELECT field, COUNT(*) FROM users GROUP BY field;
 ```
 
-## JSONB support
+## JSON and JSONB support
 
-EQL supports encrypting and decrypting JSONB objects.
-We also support a wide range of JSONB functions and operators.
-You can read more about the JSONB support in the [JSONB reference guide][#jsonb-reference].
+EQL supports encrypting, decrypting, and searching JSON and JSONB objects.
 
-## Data format
+### Configuring the index
+
+Similar to how you configure indexes for text data, you can configure indexes for JSON and JSONB data.
+The only difference is that you need to specify the `cast_as` parameter as `json` or `jsonb`.
+
+```sql
+SELECT cs_add_index_v1(
+  'users', 
+  'encrypted_json', 
+  'ste_vec',
+  'jsonb',
+  '{"prefix": "users/encrypted_json"}' -- The prefix is in the form of "table/column"
+);
+```
+
+You can read more about the index configuration options [here](https://github.com/cipherstash/encrypt-query-language/blob/main/docs/reference/INDEX.md).
+
+### Inserting JSON data
+
+When inserting JSON data, this works the same as inserting text data. 
+You need to wrap the JSON data in the appropriate EQL payload.
+CipherStash Proxy will **encrypt** the data automatically.
+
+**Example:**
+
+Assuming you want to store the following JSON data:
+
+```json
+{
+  "name": "John Doe",
+  "metadata": {
+    "age": 42,
+  }
+}
+```
+
+The EQL payload would be:
+
+```sql
+INSERT INTO users (encrypted_json) VALUES (
+  '{"v":1,"k":"pt","p":"{\"name\":\"John Doe\",\"metadata\":{\"age\":42}}","i":{"t":"users","c":"encrypted_json"}}'
+);
+```
+
+Data is stored in the database as:
+
+```json
+{
+  "i": {
+    "c": "encrypted_json",
+    "t": "users"
+  },
+  "k": "sv",
+  "v": 1,
+  "sv": [
+    ...ciphertext...
+  ]
+}
+```
+
+### Reading JSON data
+
+When querying data, select the encrypted column. CipherStash Proxy will **decrypt** the data automatically.
+
+**Example:**
+
+```sql
+SELECT encrypted_json FROM users;
+```
+
+Data is returned as:
+
+```json
+{
+  "k": "pt",
+  "p": "{\"metadata\":{\"age\":42},\"name\":\"John Doe\"}",
+  "i": {
+    "t": "users",
+    "c": "encrypted_json"
+  },
+  "v": 1,
+  "q": null
+}
+```
+
+### Advanced JSON queries
+
+We support a wide range of JSON/JSONB functions and operators.
+You can read more about the JSONB support in the [JSONB reference guide](https://github.com/cipherstash/encrypt-query-language/blob/main/docs/reference/JSON.md).
+
+## EQL payload data format
 
 Encrypted data is stored as `jsonb` with a specific schema:
 
