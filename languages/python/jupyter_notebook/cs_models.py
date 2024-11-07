@@ -2,16 +2,17 @@ from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped, sessionmaker
 from sqlalchemy.types import TypeDecorator, String, Integer, Date, Boolean, Float
 from sqlalchemy import create_engine, select, text
 from sqlalchemy.exc import IntegrityError
+from datetime import datetime
 import json
 
 import sys
 import os
 
 class CsTypeDecorator(TypeDecorator):
-    def __init__(self, table_name, column_name):
+    def __init__(self, table, column):
         super().__init__()
-        self.table_name = table_name
-        self.column_name = column_name
+        self.table = table
+        self.column = column
 
     def process_bind_param(self, value, dialect):
         if value is not None:
@@ -19,10 +20,11 @@ class CsTypeDecorator(TypeDecorator):
                 "k": "pt",
                 "p": str(value),
                 "i": {
-                    "t": self.table_name,
-                    "c": self.column_name
+                    "t": self.table,
+                    "c": self.column
                 },
                 "v": 1,
+                "q": None
             }
             value = json.dumps(value_dict)
         return value
@@ -35,43 +37,51 @@ class CsTypeDecorator(TypeDecorator):
 class EncryptedInt(CsTypeDecorator):
     impl = String
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return int(value['p'])
+
 
 class EncryptedBoolean(CsTypeDecorator):
     impl = String
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
     def process_bind_param(self, value, dialect):
         if value is not None:
             value = str(value).lower()
         return super().process_bind_param(value, dialect)
 
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return value['p'] == 'true'
+
 class EncryptedDate(CsTypeDecorator):
     impl = String
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return datetime.fromisoformat(value['p']).date()
 
 class EncryptedFloat(CsTypeDecorator):
     impl = String
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return float(value['p'])
 
 class EncryptedUtf8Str(CsTypeDecorator):
     impl = String
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
 class EncryptedJsonb(CsTypeDecorator):
     impl = String
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return json.loads(value['p'])
 
 class BaseModel(DeclarativeBase):
     pass
@@ -96,4 +106,12 @@ class Example(BaseModel):
         self.encrypted_boolean = e_bool
 
     def __repr__(self):
-        return f"<Example(id={self.id}, encrypted_utf8_str={self.encrypted_utf8_str}, encrypted_jsonb={self.encrypted_jsonb}, encrypted_int={self.encrypted_int}, encrypted_float={self.encrypted_float}, encrypted_date={self.encrypted_date}, encrypted_boolean={self.encrypted_boolean})>"
+        return "<Example(" \
+            f"id={self.id}, " \
+            f"encrypted_utf8_str={self.encrypted_utf8_str}, " \
+            f"encrypted_jsonb={self.encrypted_jsonb}, " \
+            f"encrypted_int={self.encrypted_int}, " \
+            f"encrypted_float={self.encrypted_float}, " \
+            f"encrypted_date={self.encrypted_date}, " \
+            f"encrypted_boolean={self.encrypted_boolean}" \
+            ")>"
