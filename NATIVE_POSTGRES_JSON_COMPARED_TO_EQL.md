@@ -1,6 +1,7 @@
 # Native PostgreSQL JSON(B) Compared to EQL
 
-EQL supports a subset of functionality supported by the native Postgres JSON(B) functions and operators. The following examples compare native Postres JSON(B) functions and operators to the related functionality in EQL.
+EQL supports a subset of functionality supported by the native PostgreSQL JSON(B) functions and operators. 
+The following examples compare native PostgreSQL JSON(B) functions and operators to the related functionality in EQL.
 
 ## `json ->> text` → `text` and `json -> text` → `jsonb`/`json`
 
