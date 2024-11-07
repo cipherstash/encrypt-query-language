@@ -1,6 +1,6 @@
 # Native PostgreSQL JSON(B) Compared to EQL
 
-EQL supports a subset of functionality supported by the native PostgreSQL JSON(B) functions and operators. 
+EQL supports a subset of functionality supported by the native PostgreSQL JSON(B) functions and operators.
 The following examples compare native PostgreSQL JSON(B) functions and operators to the related functionality in EQL.
 
 ## `json ->> text` → `text` and `json -> text` → `jsonb`/`json`
@@ -17,7 +17,7 @@ SELECT plaintext_jsonb->>'field_a' FROM examples;
 
 ### EQL
 
-EQL JSONB functions accept an eJSONPath as an argument (instead of using `->`/`->>`) for lookups.
+EQL JSONB functions accept an [eJSONPath](./JSON.md) as an argument (instead of using `->`/`->>`) for lookups.
 
 #### Decryption example
 
@@ -100,7 +100,7 @@ SELECT plaintext_jsonb->>0 FROM examples;
 
 ### EQL
 
-EQL JSONB functions accept an eJSONPath as an argument (instead of using `->`/`->>`) for lookups.
+EQL JSONB functions accept an [eJSONPath](./JSON.md) as an argument (instead of using `->`/`->>`) for lookups.
 
 #### Decryption example
 
@@ -211,9 +211,9 @@ SELECT plaintext_jsonb#>>'{field_a,field_b}' FROM examples;
 
 ### EQL
 
-EQL JSONB functions accept an eJSONPath as an argument (instead of using `#>`/`#>>`) for lookups.
+EQL JSONB functions accept an [eJSONPath](./JSON.md) as an argument (instead of using `#>`/`#>>`) for lookups.
 
-Note that these are similar to the examples for `->`/`->>`. 
+Note that these are similar to the examples for `->`/`->>`.
 The difference in these examples is that the path does a lookup multiple levels deep.
 
 #### Decryption example
@@ -411,7 +411,7 @@ Would return the EQL plaintext payload with an array (`[1, 2, 3]` for example):
 
 #### Comparison example
 
-`cs_ste_vec_terms_v1` (note that terms is plural) can be used to return an array of ORE terms for comparison. 
+`cs_ste_vec_terms_v1` (note that terms is plural) can be used to return an array of ORE terms for comparison.
 The array can be `unnest`ed to work with a `SETOF` ORE terms for comparison.
 
 The eJSONPath used with `cs_ste_vec_terms_v1` needs to end with `[*]` (`$.some_array_field[*]` for example).
