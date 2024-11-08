@@ -43,7 +43,7 @@ Store encrypted data alongside your existing data.
 
 ## Installation
 
-The simplest way to get up and running with EQL is to execute the install SQL file directly in your database.
+The simplest way to get up and running with EQL is to execute the install SQL file directly in your PostgreSQL database.
 
 1. Download the latest EQL install script:
 
@@ -68,7 +68,7 @@ You can read more about the EQL concepts and reference guides in the [documentat
 
 ## Getting started
 
-Once the custom types and functions are installed, you can start using EQL in your queries.
+Once the custom types and functions are installed in your PostgreSQL database, you can start using EQL in your queries.
 
 ### Enable encrypted columns
 
@@ -113,11 +113,11 @@ SELECT cs_refresh_encrypt_config();
 ```
 
 >Note: This statement must be executed when connected to CipherStash Proxy.
-When connected to the database directly, it is a no-op.
+When connected to the PostgreSQL database directly, it is a no-op.
 
 ## Storing data
 
-Encrypted data is stored as `jsonb` values in the database, regardless of the original data type.
+Encrypted data is stored as `jsonb` values in the PostgreSQL database, regardless of the original data type.
 
 You can read more about the data format [here](docs/reference/PAYLOAD.md).
 
@@ -133,7 +133,7 @@ INSERT INTO users (encrypted_email) VALUES (
 );
 ```
 
-Data is stored in the database as:
+Data is stored in the PostgreSQL database as:
 
 ```json
 {
@@ -175,7 +175,7 @@ Data is returned as:
 }
 ```
 
->Note: If you execute this query directly on the database, you will not see any plaintext data but rather the `jsonb` payload with the ciphertext.
+>Note: If you execute this query directly on the PostgreSQL database, you will not see any plaintext data but rather the `jsonb` payload with the ciphertext.
 
 ## Configuring indexes for searching data
 
@@ -345,7 +345,7 @@ You can read more about the JSONB support in the [JSONB reference guide](docs/re
 
 ### How do I integrate CipherStash EQL with my application?
 
-Use CipherStash Proxy to intercept database queries and handle encryption and decryption automatically. 
+Use CipherStash Proxy to intercept PostgreSQL queries and handle encryption and decryption automatically.
 The proxy interacts with the database using the EQL functions and types defined in this documentation.
 
 Use the [helper packages](#helper-packages) to integate EQL functions into your application.
