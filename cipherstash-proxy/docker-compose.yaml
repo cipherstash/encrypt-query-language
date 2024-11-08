@@ -8,4 +8,4 @@ services:
       - LOG_LEVEL=debug
     volumes:
       - ./cipherstash-proxy.toml:/etc/cipherstash-proxy/cipherstash-proxy.toml
-    image: cipherstash/cipherstash-proxy:cipherstash-proxy-v0.1.1
+    image: cipherstash/cipherstash-proxy:cipherstash-proxy-v0.3.4

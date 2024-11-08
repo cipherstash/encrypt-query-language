@@ -15,7 +15,7 @@ services:
       - ./init-db:/docker-entrypoint-initdb.d
   proxy:
     container_name: gotest_proxy
-    image: cipherstash/cipherstash-proxy:cipherstash-proxy-v0.3.1
+    image: cipherstash/cipherstash-proxy:cipherstash-proxy-v0.3.4
     depends_on:
       - postgres
     ports:
