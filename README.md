@@ -1,9 +1,7 @@
 # Encrypt Query Language (EQL)
 
-[![Why we built EQL](https://img.shields.io/badge/concept-Why%20EQL-8A2BE2)](https://github.com/cipherstash/encrypt-query-language/blob/main/docs/concepts/WHY.md)
-[![Getting started](https://img.shields.io/badge/guide-Getting%20started-008000)](https://github.com/cipherstash/encrypt-query-language/blob/main/docs/tutorials/GETTINGSTARTED.md)
-[![CipherStash Proxy](https://img.shields.io/badge/guide-CipherStash%20Proxy-A48CF3)](https://github.com/cipherstash/encrypt-query-language/blob/main/docs/tutorials/PROXY.md)
-[![CipherStash Migrator](https://img.shields.io/badge/guide-CipherStash%20Migrator-A48CF3)](https://github.com/cipherstash/encrypt-query-language/blob/main/docs/reference/MIGRATOR.md)
+[![Test EQL](https://github.com/cipherstash/encrypt-query-language/actions/workflows/test-eql.yml/badge.svg?branch=main)](https://github.com/cipherstash/encrypt-query-language/actions/workflows/test-eql.yml)
+[![Release EQL](https://github.com/cipherstash/encrypt-query-language/actions/workflows/release-eql.yml/badge.svg?branch=main)](https://github.com/cipherstash/encrypt-query-language/actions/workflows/release-eql.yml)
 
 Encrypt Query Language (EQL) is a set of abstractions for transmitting, storing, and interacting with encrypted data and indexes in PostgreSQL.
 
@@ -18,6 +16,7 @@ Store encrypted data alongside your existing data.
 
 - [Installation](#installation)
   - [CipherStash Proxy](#cipherstash-proxy)
+- [Documentation](#documentation)
 - [Getting started](#getting-started)
   - [Enable encrypted columns](#enable-encrypted-columns)
   - [Configuring the column](#configuring-the-column)
@@ -37,7 +36,6 @@ Store encrypted data alongside your existing data.
   - [Inserting JSON data](#inserting-json-data)
   - [Reading JSON data](#reading-json-data)
   - [Advanced JSON queries](#advanced-json-queries)
-- [EQL payload data format](#eql-payload-data-format)
 - [Frequently Asked Questions](#frequently-asked-questions)
   - [How do I integrate CipherStash EQL with my application?](#how-do-i-integrate-cipherstash-eql-with-my-application)
   - [Can I use EQL without the CipherStash Proxy?](#can-i-use-eql-without-the-cipherstash-proxy)
@@ -67,6 +65,10 @@ The simplest way to get up and running with EQL is to execute the install SQL fi
 
 EQL relies on [CipherStash Proxy](https://github.com/cipherstash/encrypt-query-language/blob/main/PROXY.md) for low-latency encryption & decryption.
 We plan to support direct language integration in the future.
+
+## Documentation
+
+You can read more about the EQL concepts and reference guides in the [documentation directory](https://github.com/cipherstash/encrypt-query-language/tree/main/docs).
 
 ## Getting started
 
@@ -121,7 +123,7 @@ When connected to the database directly, it is a no-op.
 
 Encrypted data is stored as `jsonb` values in the database, regardless of the original data type.
 
-You can read more about the data format [here][#data-format].
+You can read more about the data format [here](docs/reference/PAYLOAD.md).
 
 ### Inserting Data
 
@@ -201,7 +203,7 @@ SELECT cs_add_index_v1(
 );
 ```
 
-You can read more about the index configuration options [here][https://github.com/cipherstash/encrypt-query-language/blob/main/docs/reference/INDEX.md].
+You can read more about the index configuration options [here](docs/reference/INDEX.md).
 
 **Example (Unique index):**
 
@@ -396,7 +398,7 @@ Data is stored in the database as:
   "k": "sv",
   "v": 1,
   "sv": [
-    ...ciphertext...
+    ["ciphertext"]
   ]
 }
 ```
@@ -429,59 +431,7 @@ Data is returned as:
 ### Advanced JSON queries
 
 We support a wide range of JSON/JSONB functions and operators.
-You can read more about the JSONB support in the [JSONB reference guide](https://github.com/cipherstash/encrypt-query-language/blob/main/docs/reference/JSON.md).
-
-## EQL payload data format
-
-Encrypted data is stored as `jsonb` with a specific schema:
-
-- **Plaintext payload (client side):**
-
-  ```json
-  {
-    "v": 1,
-    "k": "pt",
-    "p": "plaintext value",
-    "e": {
-      "t": "table_name",
-      "c": "column_name"
-    }
-  }
-  ```
-
-- **Encrypted payload (database side):**
-
-  ```json
-  {
-    "v": 1,
-    "k": "ct",
-    "c": "ciphertext value",
-    "e": {
-      "t": "table_name",
-      "c": "column_name"
-    }
-  }
-  ```
-
-The format is defined as a [JSON Schema](./cs_encrypted_v1.schema.json).
-
-It should never be necessary to directly interact with the stored `jsonb`.
-CipherStash Proxy handles the encoding, and EQL provides the functions.
-
-| Field | Name              | Description                                                                                                                                                                                                                                       |
-| ----- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| s     | Schema version    | JSON Schema version of this json document.                                                                                                                                                                                                        |
-| v     | Version           | The configuration version that generated this stored value.                                                                                                                                                                                       |
-| k     | Kind              | The kind of the data (plaintext/pt, ciphertext/ct, encrypting/et).                                                                                                                                                                                |
-| i.t   | Table identifier  | Name of the table containing encrypted column.                                                                                                                                                                                                    |
-| i.c   | Column identifier | Name of the encrypted column.                                                                                                                                                                                                                     |
-| p     | Plaintext         | Plaintext value sent by database client. Required if kind is plaintext/pt or encrypting/et.                                                                                                                                                       |
-| q     | For query         | Specifies that the plaintext should be encrypted for a specific query operation. If `null`, source encryption and encryption for all indexes will be performed. Valid values are `"match"`, `"ore"`, `"unique"`, `"ste_vec"`, and `"ejson_path"`. |
-| c     | Ciphertext        | Ciphertext value. Encrypted by Proxy. Required if kind is plaintext/pt or encrypting/et.                                                                                                                                                          |
-| m     | Match index       | Ciphertext index value. Encrypted by Proxy.                                                                                                                                                                                                       |
-| o     | ORE index         | Ciphertext index value. Encrypted by Proxy.                                                                                                                                                                                                       |
-| u     | Unique index      | Ciphertext index value. Encrypted by Proxy.                                                                                                                                                                                                       |
-| sv    | STE vector index  | Ciphertext index value. Encrypted by Proxy.                                                                                                                                                                                                       |
+You can read more about the JSONB support in the [JSONB reference guide](docs/reference/JSON.md).
 
 ## Frequently Asked Questions
 
@@ -501,12 +451,23 @@ No, CipherStash Proxy is required to handle the encryption and decryption operat
 Data is encrypted using CipherStash's cryptographic schemes and stored in the `cs_encrypted_v1` column as a JSONB payload.
 Encryption and decryption are handled by CipherStash Proxy.
 
-## Helper packages
+## Helper packages and examples
 
 We've created a few langague specific packages to help you interact with the payloads:
 
-- **JavaScript/TypeScript**: [@cipherstash/eql](https://github.com/cipherstash/encrypt-query-language/tree/main/languages/javascript/packages/eql)
-- **Go**: [github.com/cipherstash/goeql](https://github.com/cipherstash/goeql)
+
+| Language   | ORM         | Example                                                           | Package                                                          |
+| ---------- | ----------- | ----------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Go         | Xorm        | [Go/Xorm examples](./examples/go/xorm/README.md)                 | [goeql](https://github.com/cipherstash/goeql)                    |
+| Typescript | Drizzle     | [Drizzle examples](./examples/javascript/apps/drizzle/README.md) | [cipherstash/eql](./examples/javascript/packages/eql/README.md) |
+| Typescript | Prisma      | [Drizzle examples](./examples/javascript/apps/prisma/README.md)  | [cipherstash/eql](./examples/javascript/packages/eql/README.md) |
+| Python     | SQL Alchemy | [Python examples](./examples/python/jupyter_notebook/README.md)  |                                                                  |
+
+### Language specific packages
+
+- [Go](https://github.com/cipherstash/goeql)
+- [Javascript](https://github.com/cipherstash/encrypt-query-language/tree/main/examples/javascript/packages/eql)
+- Python (coming soon)
 
 ## Releasing
 
