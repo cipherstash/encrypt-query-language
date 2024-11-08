@@ -10,7 +10,7 @@ Store encrypted data alongside your existing data.
 - Encrypted data is stored using a `jsonb` column type
 - Query encrypted data with specialized SQL functions
 - Index encrypted columns to enable searchable encryption
-- Integrate with [CipherStash Proxy](https://github.com/cipherstash/encrypt-query-language/blob/main/docs/tutorials/PROXY.md) for transparent encryption/decryption
+- Integrate with [CipherStash Proxy](/docs/tutorials/PROXY.md) for transparent encryption/decryption
 
 ## Table of Contents
 
@@ -63,12 +63,12 @@ The simplest way to get up and running with EQL is to execute the install SQL fi
 
 ### CipherStash Proxy
 
-EQL relies on [CipherStash Proxy](https://github.com/cipherstash/encrypt-query-language/blob/main/PROXY.md) for low-latency encryption & decryption.
+EQL relies on [CipherStash Proxy](docs/tutorials/PROXY.md) for low-latency encryption & decryption.
 We plan to support direct language integration in the future.
 
 ## Documentation
 
-You can read more about the EQL concepts and reference guides in the [documentation directory](https://github.com/cipherstash/encrypt-query-language/tree/main/docs).
+You can read more about the EQL concepts and reference guides in the [documentation directory](docs/README.md).
 
 ## Getting started
 
@@ -378,7 +378,7 @@ We've created a few langague specific packages to help you interact with the pay
 ### Language specific packages
 
 - [Go](https://github.com/cipherstash/goeql)
-- [Javascript](https://github.com/cipherstash/encrypt-query-language/tree/main/examples/javascript/packages/eql)
+- [Javascript](examples/javascript/packages/eql/README.md)
 - Python (coming soon)
 
 ## Releasing
