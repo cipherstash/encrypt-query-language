@@ -114,8 +114,8 @@ CipherStash Proxy refreshes the configuration every 60 seconds. To force an imme
 SELECT cs_refresh_encrypt_config();
 ```
 
->Note: This statement must be executed when connected to CipherStash Proxy.
-When connected to the database directly, it is a no-op.
+> Note: This statement must be executed when connected to CipherStash Proxy.
+> When connected to the database directly, it is a no-op.
 
 ## Storing data
 
@@ -177,14 +177,14 @@ Data is returned as:
 }
 ```
 
->Note: If you execute this query directly on the database, you will not see any plaintext data but rather the `jsonb` payload with the ciphertext.
+> Note: If you execute this query directly on the database, you will not see any plaintext data but rather the `jsonb` payload with the ciphertext.
 
 ## Configuring indexes for searching data
 
 In order to perform searchable operations on encrypted data, you must configure indexes for the encrypted columns.
 
 > **IMPORTANT:** If you have existing data that's encrypted and you add or modify an index, all the data will need to be re-encrypted.
-This is due to the way CipherStash Proxy handles searchable encryption operations.
+> This is due to the way CipherStash Proxy handles searchable encryption operations.
 
 ### Adding an index (`cs_add_index_v1`)
 
@@ -207,9 +207,9 @@ You can read more about the index configuration options [here][https://github.co
 
 ```sql
 SELECT cs_add_index_v1(
-  'users', 
-  'encrypted_email', 
-  'unique', 
+  'users',
+  'encrypted_email',
+  'unique',
   'text'
 );
 ```
@@ -235,9 +235,9 @@ Enable equality search on encrypted data.
 
 ```sql
 SELECT cs_add_index_v1(
-  'users', 
-  'encrypted_email', 
-  'unique', 
+  'users',
+  'encrypted_email',
+  'unique',
   'text'
 );
 ```
@@ -265,10 +265,10 @@ Enables basic full-text search on encrypted data.
 
 ```sql
 SELECT cs_add_index_v1(
-  'users', 
-  'encrypted_email', 
-  'match', 
-  'text', 
+  'users',
+  'encrypted_email',
+  'match',
+  'text',
   '{"token_filters": [{"kind": "downcase"}], "tokenizer": { "kind": "ngram", "token_length": 3 }}'
 );
 ```
@@ -348,8 +348,8 @@ The only difference is that you need to specify the `cast_as` parameter as `json
 
 ```sql
 SELECT cs_add_index_v1(
-  'users', 
-  'encrypted_json', 
+  'users',
+  'encrypted_json',
   'ste_vec',
   'jsonb',
   '{"prefix": "users/encrypted_json"}' -- The prefix is in the form of "table/column"
@@ -360,7 +360,7 @@ You can read more about the index configuration options [here](https://github.co
 
 ### Inserting JSON data
 
-When inserting JSON data, this works the same as inserting text data. 
+When inserting JSON data, this works the same as inserting text data.
 You need to wrap the JSON data in the appropriate EQL payload.
 CipherStash Proxy will **encrypt** the data automatically.
 
@@ -372,7 +372,7 @@ Assuming you want to store the following JSON data:
 {
   "name": "John Doe",
   "metadata": {
-    "age": 42,
+    "age": 42
   }
 }
 ```
@@ -487,7 +487,7 @@ CipherStash Proxy handles the encoding, and EQL provides the functions.
 
 ### How do I integrate CipherStash EQL with my application?
 
-Use CipherStash Proxy to intercept database queries and handle encryption and decryption automatically. 
+Use CipherStash Proxy to intercept database queries and handle encryption and decryption automatically.
 The proxy interacts with the database using the EQL functions and types defined in this documentation.
 
 Use the [helper packages](#helper-packages) to integate EQL functions into your application.
@@ -503,10 +503,14 @@ Encryption and decryption are handled by CipherStash Proxy.
 
 ## Helper packages
 
-We've created a few langague specific packages to help you interact with the payloads:
+We've created a few langague specific packages to help you interact with the payloads.
 
-- **JavaScript/TypeScript**: [@cipherstash/eql](https://github.com/cipherstash/encrypt-query-language/tree/main/languages/javascript/packages/eql)
-- **Go**: [github.com/cipherstash/goeql](https://github.com/cipherstash/goeql)
+| Language   | ORM         | Example                                                           | Package                                                          |
+| ---------- | ----------- | ----------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Go         | Xorm        | [Go/Xorm examples](./languages/go/xorm/README.md)                 | [goeql](https://github.com/cipherstash/goeql)                    |
+| Typescript | Drizzle     | [Drizzle examples](./languages/javascript/apps/drizzle/README.md) | [cipherstash/eql](./languages/javascript/packages/eql/README.md) |
+| Typescript | Prisma      | [Prisma examples](./languages/javascript/apps/prisma/README.md)   | [cipherstash/eql](./languages/javascript/packages/eql/README.md) |
+| Python     | SQL Alchemy | [Python examples](./languages/python/jupyter_notebook/README.md)  |                                                                  |
 
 ## Releasing
 
