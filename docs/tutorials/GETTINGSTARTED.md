@@ -35,10 +35,10 @@ stash workspaces
 stash access-keys create --workspace-id $CS_WORKSPACE_ID eql-test
 ```
 
-6. Go to the [EQL playground](../../playground) and copy over the example `.envrc` file:
+6. Go to the [EQL playground](../../playground\) and copy over the example `.envrc` file:
 
 ```shell
-cd ../../playground
+cd playground
 cp .envrc.example .envrc
 ```
 
@@ -48,11 +48,19 @@ Update the `.envrc` file with these environment variables `CS_WORKSPACE_ID`, `CS
 source .envrc
 ```
 
-7. Start Postgres and CipherStash Proxy and install EQL:
+7. Start PostgreSQL and CipherStash Proxy and install EQL:
 
 ```shell
 docker compose up
 ```
+
+8. Check PostgreSQL and the Proxy are running:
+
+```shell
+docker ps
+```
+
+You should see 2 containers running, `postgres_proxy` and `eql-playground-pg`.
 
 ## Example
 
@@ -89,7 +97,10 @@ We will use a `users` table with an email field for this example.
 In psql, run:
 
 ```sql
-CREATE TABLE users (email VARCHAR(100));
+CREATE TABLE IF NOT EXISTS users (
+	id serial PRIMARY KEY NOT NULL,
+	email VARCHAR(100)
+);
 ```
 
 Our `users` schema looks like this:
@@ -233,7 +244,7 @@ docker exec -it postgres_proxy bash
 Run:
 
 ```bash
-cipherstash-migrator --columns email=encrypted_email --table users --database-name postres --username postgres --password postgres
+cipherstash-migrator --columns email=email_encrypted --table users --database-name postgres --username postgres --password postgres
 ```
 
 We now have encrypted data in our `email_encrypted` field that we can query.
@@ -266,7 +277,7 @@ An EQL payload will look like this:
   "p": "test@test.com", // The plaintext data
   "i": {
     "t": "users", // The table
-    "c": "encrypted_email" // The encrypted column
+    "c": "email_encrypted" // The encrypted column
   },
   "v": 1,
   "q": null // Used in queries only.
@@ -281,10 +292,10 @@ A query to insert an email into the plaintext `email` field in the `users` table
 INSERT INTO users (email) VALUES ('test@test.com');
 ```
 
-The equivalent of this query to insert a plaintext email and encrypt it into the `encrypted_email` column using EQL:
+The equivalent of this query to insert a plaintext email and encrypt it into the `email_encrypted` column using EQL:
 
 ```sql
-INSERT INTO users (encrypted_email) VALUES ('{"v":1,"k":"pt","p":"test@test.com","i":{"t":"users","c":"encrypted_email"}}');
+INSERT INTO users (email_encrypted) VALUES ('{"v":1,"k":"pt","p":"test@test.com","i":{"t":"users","c":"email_encrypted"}}');
 ```
 
 **What is happening?**
@@ -336,7 +347,7 @@ SELECT email FROM users;
 The EQL equivalent of this query is:
 
 ```sql
-SELECT encrypted_email->>'p' FROM users;
+SELECT email_encrypted FROM users;
 ```
 
 **What is happening?**
@@ -349,14 +360,12 @@ All data returned from CipherStash Proxy for encrypted fields will be in this js
   "p": "test@test.com", // The returned plaintext data
   "i": {
     "t": "users",
-    "c": "encrypted_email"
+    "c": "email_encrypted"
   },
   "v": 1,
   "q": null
 }
 ```
-
-We can use the `->>` jsonb operator to extract the `"p"` value.
 
 #### Advanced querying
 
