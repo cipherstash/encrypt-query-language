@@ -1,170 +1,494 @@
 ## Getting started
 
-The following guide assumes you have the prerequisites installed and running, and are running the SQL statements through your CipherStash Proxy instance.
+## Setup
 
-### Prerequisites
+Before we begin using EQL and the Proxy, we'll need to do some setup to get the necessary keys and configuration.
 
-- [PostgreSQL 14+](https://www.postgresql.org/download/)
-- [Cipherstash Proxy guide](https://github.com/cipherstash/encrypt-query-language/tree/main/PROXY.md)
+1. Create an [account](https://cipherstash.com/signup).
 
-EQL relies on [Cipherstash Proxy](https://cipherstash.com/docs/getting-started/cipherstash-proxy) for low-latency encryption & decryption.
-We plan to support direct language integration in the future.
+2. Install the CLI:
 
-> This guide will use raw SQL statements to demonstrate how to use the EQL extension. See the `languages` directory for more information on using specific language specific ORMs.
+```shell
+brew install cipherstash/tap/stash
+```
 
-### Installation
+3. Login:
 
-In order to use EQL, you must first install the EQL extension in your PostgreSQL database.
+```shell
+stash login
+```
 
-1. Download the [cipherstash-encrypt-dsl.sql](./release/cipherstash-encrypt-dsl.sql) file
-2. Run the following command to install the custom types and functions:
+4. Create a [dataset](https://cipherstash.com/docs/how-to/creating-datasets) and [client](https://cipherstash.com/docs/how-to/creating-clients), and record them as `CS_CLIENT_ID` and `CS_CLIENT_KEY`.
+
+```shell
+stash datasets create eql-test
+# grab dataset ID and export CS_DATASET_ID=
+
+stash clients create eql-test --dataset-id $CS_DATASET_ID
+```
+
+5. Create an [access key](https://cipherstash.com/docs/how-to/creating-access-keys) for CipherStash Proxy:
+
+```shell
+stash workspaces
+# grab the workspace ID and export CS_WORKSPACE_ID=
+stash access-keys create --workspace-id $CS_WORKSPACE_ID eql-test
+```
+
+6. Go to the [EQL playground](../../playground) and copy over the example `.envrc` file:
+
+```shell
+cd ../../playground
+cp .envrc.example .envrc
+```
+
+Update the `.envrc` file with these environment variables `CS_WORKSPACE_ID`, `CS_CLIENT_ACCESS_KEY`, `CS_ENCRYPTION__CLIENT_ID`, `CS_ENCRYPTION__CLIENT_KEY` and `CS_DATASET_ID`:
+
+```shell
+source .envrc
+```
+
+7. Start Postgres and CipherStash Proxy and install EQL:
+
+```shell
+docker compose up
+```
+
+## Example
+
+These examples will show how EQL works using raw SQL.
+
+Prerequisites:
+
+- PostgreSQL and CipherStash Proxy are running in docker containers.
+
+Let's step through an example of how we go from a plaintext text field to an encrypted text field.
+
+This guide will include:
+
+- How to [setup your database](#setup-your-database)
+- How to [add indexes](#adding-indexes)
+- How to [encrypt existing plaintext data](#encrypting-existing-plaintext-data)
+- How to [insert data](#inserting-data)
+- How to [query data](#querying-data)
+
+Connect to your postgres docker container:
 
 ```bash
-psql -U postgres -d postgres -f cipherstash-encrypt-dsl.sql
+docker exec -it eql-playground-pg bash
 ```
 
-> Note: We also have direct language specific ORM support for installing the extension. See the `languages` directory for more information.
+Start `psql`:
 
-### Add a table with encrypted columns
+```bash
+PGPASSWORD=postgres PGUSER=postgres psql
+```
 
-Create a table with encrypted columns.
-For this example, we'll use the `users` table, with a plaintext `email` column and an encrypted `email_encrypted` column.
+We will use a `users` table with an email field for this example.
+
+In psql, run:
 
 ```sql
-CREATE TABLE IF NOT EXISTS "users" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"email" varchar,
-	"email_encrypted" "cs_encrypted_v1"
-);
+CREATE TABLE users (email VARCHAR(100));
 ```
 
-Some language specific ORMs don't support custom types, so EQL also supports `jsonb` rather than the `cs_encrypted_v1` domain type.
+Our `users` schema looks like this:
 
-### Configuring the column
+| Column  | Type                     | Nullable |
+| ------- | ------------------------ | -------- |
+| `email` | `character varying(100)` |          |
 
-In order for CipherStash Proxy to encrypt and decrypt the data, you can initialize the column in the database using the `cs_add_column_v1` function.
+Seed plaintext data into the users table:
 
 ```sql
-SELECT cs_add_column_v1('users', 'email_encrypted');
+INSERT INTO users (email) VALUES
+('adalovelace@example.com'),
+('gracehopper@test.com'),
+('edithclarke@email.com');
 ```
 
-This function will **not** enable searchable encryption, but will allow you to encrypt and decrypt data.
+### Setup your database
 
-### Activate configuration
+In the previous step we:
 
-By default, the state of the configuration is `pending` after any modifications.
-You can activate the configuration by running the `cs_encrypt_v1` and `cs_activate_v1` function.
+- setup a basic users table with a plaintext email (text) field.
+- seeded the db with plaintext emails.
+
+In this part we will add a new column to store our encrypted email data.
+
+When we add the column we use a `Type` of `cs_encrypted_v1`.
+
+This type will enforce constraints on the field to ensure that:
+
+- the payload is in the format EQL and CipherStash Proxy expects.
+- the payload has been encrypted before inserting.
+
+If there are issues with the payload being inserted into a field with a type of `cs_encrypted_v1`, an error will be returned describing what the issue with the payload is.
+
+To add a new column called `email_encrypted` with a type of `cs_encrypted_v1`:
+
+```sql
+ALTER TABLE users ADD email_encrypted cs_encrypted_v1;
+```
+
+Our `users` schema now looks like this:
+
+| Column            | Type                     | Nullable |
+| ----------------- | ------------------------ | -------- |
+| `email`           | `character varying(100)` |          |
+| `email_encrypted` | `cs_encrypted_v1`        |          |
+
+### Adding indexes
+
+We now have our database schema setup to store encrypted data.
+
+In this part we will learn about why we need to add indexes and how to add them.
+
+When you install EQL, a table called `cs_configuration_v1` is created in your database.
+
+Adding indexes updates this table with the details and configuration needed for CipherStash Proxy to know how to encrypt your data, and what types of queries are able to be performed
+
+We will also need to add the relevant native database indexes to be able to perform these queries.
+
+In this example, we want to be able to execute these types of queries on our `email_encrypted` field:
+
+- free text search
+- equality
+- order by
+- comparison
+
+This means that we need to add the below indexes for our new `email_encrypted` field.
+
+For free text queries (e.g `LIKE`, `ILIKE`) we add a `match` index and a GIN index:
+
+```sql
+SELECT cs_add_index_v1('users', 'email_encrypted', 'match', 'text');
+CREATE INDEX ON users USING GIN (cs_match_v1(email_encrypted));
+```
+
+For equality queries we add a `unique` index:
+
+```sql
+SELECT cs_add_index_v1('users', 'email_encrypted', 'unique', 'text', '{"token_filters": [{"kind": "downcase"}]}');
+CREATE UNIQUE INDEX ON users(cs_unique_v1(email_encrypted));
+```
+
+For ordering or comparison queries we add an `ore` index:
+
+```sql
+SELECT cs_add_index_v1('users', 'email_encrypted', 'ore', 'text');
+CREATE INDEX ON users (cs_ore_64_8_v1(email_encrypted));
+```
+
+After adding these indexes, our `cs_configuration_v1` table will look like this:
+
+```bash
+id         | 1
+state      | pending
+data       | {"v": 1, "tables": {"users": {"email_encrypted": {"cast_as": "text", "indexes": {"ore": {}, "match": {"k": 6, "m": 2048, "tokenizer": {"kind": "ngram", "token_length": 3}, "token_filters": [{"kind": "downcase"}], "include_original": true}, "unique": {"token_filters": [{"kind": "downcase"}]}}}}}}
+```
+
+The initial `state` will be set as pending.
+
+To activate this configuration run:
 
 ```sql
 SELECT cs_encrypt_v1();
 SELECT cs_activate_v1();
 ```
 
-> **Important:** These functions must be run after any modifications to the configuration.
+The `cs_configured_v1` table will now have a state of `active`.
 
-#### Refresh CipherStash Proxy configuration
+```bash
+id         | 1
+state      | active
+data       | {"v": 1, "tables": {"users": {"email_encrypted": {"cast_as": "text", "indexes": {"ore": {}, "match": {"k": 6, "m": 2048, "tokenizer": {"kind": "ngram", "token_length": 3}, "token_filters": [{"kind": "downcase"}], "include_original": true}, "unique": {"token_filters": [{"kind": "downcase"}]}}}}}}
+```
 
-CipherStash Proxy pings the database every 60 seconds to refresh the configuration.
-You can force CipherStash Proxy to refresh the configuration by running the `cs_refresh_encrypt_config` function.
+### Encrypting existing plaintext data
+
+Prerequisites:
+
+- [Database is setup](#setup-your-database)
+- [Indexes added](#adding-indexes)
+
+Ensure CipherStash Proxy has the most up to date configuration from the `cs_configuration_v1` table.
+
+CipherStash Proxy pings the database every 60 seconds to refresh the configuration but we can force the refresh by running:
 
 ```sql
 SELECT cs_refresh_encrypt_config();
 ```
 
-### Inserting data
+Bundled in with the CipherStash Proxy is a [migrator tool](./MIGRATOR.md).
 
-When inserting data into the encrypted column, you must wrap the plaintext in the appropriate EQL payload.
-These statements must be run through the CipherStash Proxy in order to **encrypt** the data.
+This tool encrypts the plaintext data from the plaintext `email` field, and inserts it into the encrypted field, `email_encrypted`.
 
-```sql
-INSERT INTO users (email_encrypted) VALUES ('{"v":1,"k":"pt","p":"test@test.com","i":{"t":"users","c":"email_encrypted"}}');
+We access the migrator tool by requesting a shell inside the CipherStash Proxy container.
+
+```bash
+docker exec -it postgres_proxy bash
 ```
 
-For reference, the EQL payload is defined as a `jsonb` with a specific schema:
+Run:
+
+```bash
+cipherstash-migrator --columns email=encrypted_email --table users --database-name postres --username postgres --password postgres
+```
+
+We now have encrypted data in our `email_encrypted` field that we can query.
+
+### Insert a new record
+
+Before inserting or querying any records, we need to connect to our database via the Proxy.
+
+We do this so our data is encrypted and decrypted.
+
+In another terminal run:
+
+```bash
+PGPASSWORD=postgres psql -h localhost -p 6432 -U postgres -d postgres
+```
+
+When inserting data into the encrypted column we need to wrap the plaintext in an EQL payload.
+
+The reason for this is that the CipherStash Proxy expects the EQL payload to be able to encrypt the data, and to be able to decrypt the data.
+
+These statements must be run through the CipherStash Proxy in order to **encrypt** the data.
+
+For a plaintext of `test@test.com`.
+
+An EQL payload will look like this:
 
 ```json
 {
-  "v": 1,
-  "k": "pt",
-  "p": "test@test.com",
+  "k": "pt", // The kind of EQL payload. The client will always send through plaintext "pt"
+  "p": "test@test.com", // The plaintext data
   "i": {
-    "t": "users",
-    "c": "email_encrypted"
-  }
+    "t": "users", // The table
+    "c": "encrypted_email" // The encrypted column
+  },
+  "v": 1,
+  "q": null // Used in queries only.
 }
 ```
+
+**Example:**
+
+A query to insert an email into the plaintext `email` field in the `users` table looks like this:
+
+```sql
+INSERT INTO users (email) VALUES ('test@test.com');
+```
+
+The equivalent of this query to insert a plaintext email and encrypt it into the `encrypted_email` column using EQL:
+
+```sql
+INSERT INTO users (encrypted_email) VALUES ('{"v":1,"k":"pt","p":"test@test.com","i":{"t":"users","c":"encrypted_email"}}');
+```
+
+**What is happening?**
+
+The CipherStash Proxy takes this EQL payload and encrypts the plaintext data.
+
+It creates an EQL payload that looks similar to this and inserts this into the encrypted field in the database.
+
+```json
+{
+  "k": "ct", // The kind of EQL payload. The Proxy will insert a json payload of a ciphertext or "ct".
+  "c": "encrypted test@test.com", // The source ciphertext of the plaintext email.
+  "e": {
+    "t": "users", // Table
+    "c": "email_encrypted" // Encrypted column
+  },
+  "m": [42], // The ciphertext used for free text queries i.e match index
+  "u": "unique ciphertext", // The ciphertext used for unique queries. i.e unique index
+  "o": ["a", "b", "c"], // The ciphertext used for order or comparison queries. i.e ore index
+  "v": 1
+}
+```
+
+This is what is stored in the `email_encrypted` column.
 
 ### Querying data
 
-When querying data, you must wrap the encrypted column in the appropriate EQL payload.
-These statements must be run through the CipherStash Proxy in order to **decrypt** the data.
+In this part we will step through how to read our encrypted data.
+
+We will cover:
+
+- simple queries
+- free text search queries
+- exact/unique queries
+- order by and comparison queries
+
+#### Simple query
+
+If we don't need to execute any searchable operations (free text, exact) on the encrypted field.
+
+The query will look similar to a plaintext query except we will use the encrypted column.
+
+A plaintext query to select all emails from the users table would look like this:
 
 ```sql
-SELECT email_encrypted FROM users;
+SELECT email FROM users;
 ```
 
-The returned value is a `json` object with the decrypted value located in the `p` field.
+The EQL equivalent of this query is:
+
+```sql
+SELECT encrypted_email->>'p' FROM users;
+```
+
+**What is happening?**
+
+All data returned from CipherStash Proxy for encrypted fields will be in this json format:
 
 ```json
 {
-  "v": 1,
-  "k": "ct",
-  "p": "test@test.com",
+  "k": "pt",
+  "p": "test@test.com", // The returned plaintext data
   "i": {
     "t": "users",
-    "c": "email_encrypted"
-  }
+    "c": "encrypted_email"
+  },
+  "v": 1,
+  "q": null
 }
 ```
 
-### Adding an index and enable encryption
+We can use the `->>` jsonb operator to extract the `"p"` value.
 
-To add an index to the encrypted column, you must run the `cs_add_index_v1` function.
-This function takes the following parameters:
+#### Advanced querying
 
-- `table_name`: The name of the table containing the encrypted column.
-- `column_name`: The name of the encrypted column.
-- `index_name`: The name of the index.
-- `cast_as`: The type of the index (text, int, small_int, big_int, real, double, boolean, date, jsonb).
-- `opts`: An optional JSON object containing additional index options.
+EQL provides specialized functions to be able to interact with encrypted data and to support operations like equality checks, comparison queries, and unique constraints.
 
-For the example above, and using a match index, the following statement would be used:
+#### Full-text search
 
-```sql
-SELECT cs_add_index_v1('users', 'email_encrypted', 'match', 'text', '{"token_filters": [{"kind": "downcase"}], "tokenizer": { "kind": "ngram", "token_length": 3 }}');
+Prerequsites:
+
+- A [match index](#adding-indexes) is needed on the encrypted column to support this operation.
+
+EQL function to use: `cs_match_v1(val JSONB)`
+
+EQL query payload for a match query:
+
+```json
+{
+  "k": "pt",
+  "p": "grace", // The text we want to use for search
+  "i": {
+    "t": "users",
+    "c": "email_encrypted"
+  },
+  "v": 1,
+  "q": "match" // This field is required on queries. This specifies the type of query we are executing.
+}
 ```
 
-Once you have added an index, you must enable encryption.
-This will update the encryption configuration to include the new index.
+A plaintext text search query like this:
 
 ```sql
-SELECT cs_encrypt_v1();
-SELECT cs_activate_v1();
+SELECT * FROM users WHERE email LIKE '%grace%';
 ```
 
-In this example `cs_encrypt_v1` and `cs_activate_v1` are called to immediately set the new Encrypt config to **active** for demonstration purposes.
-In a production environment, you will need to consider a migration strategy to ensure the encryption config is updated based on the current state of the database.
-
-See the [reference guide on migrations](https://cipherstash.com/docs/getting-started/cipherstash-encrypt#migrations) for more information.
-
-### Removing an index and disabling encryption
-
-To remove an index from the encrypted column, you must run the `cs_remove_index_v1` function.
-This function takes the following parameters:
-
-- `table_name`: The name of the table containing the encrypted column.
-- `column_name`: The name of the encrypted column.
-- `index_name`: The name of the index.
-
-For the example above, and using a match index, the following statement would be used:
+Would look like this using EQL:
 
 ```sql
-SELECT cs_remove_index_v1('users', 'email_encrypted', 'match');
+SELECT * FROM users WHERE cs_match_v1(email_encrypted) @> cs_match_v1(
+  '{"v":1,"k":"pt","p":"grace","i":{"t":"users","c":"email_encrypted"},"q":"match"}'
+  );
 ```
 
-Once you have removed an index, you must disable encryption.
-This will update the encryption configuration to exclude the removed index.
+#### Equality query
+
+Prerequsites:
+
+- A [unique index](#adding-indexes) is needed on the encrypted column to support this operation.
+
+EQL function to use: `cs_unique_v1(val JSONB)`
+
+EQL query payload for a match query:
+
+```json
+{
+  "k": "pt",
+  "p": "gracehopper@test.com", // The text we want to use for the equality query
+  "i": {
+    "t": "users",
+    "c": "email_encrypted"
+  },
+  "v": 1,
+  "q": "unique" // This field is required on queries. This specifies the type of query we are executing.
+}
+```
+
+A plaintext text equality query like this:
 
 ```sql
-SELECT cs_encrypt_v1();
+SELECT * FROM users WHERE email = 'gracehopper@test.com';
+```
+
+Would look like this using EQL:
+
+```sql
+SELECT * FROM users WHERE cs_unique_v1(email_encrypted) = cs_unique_v1(
+  '{"v":1,"k":"pt","p":"gracehopper@test.com","i":{"t":"users","c":"email_encrypted"},"q":"unique"}'
+  );
+```
+
+#### Order by query
+
+Prerequsites:
+
+- An [ore index](#adding-indexes) is needed on the encrypted column to support this operation.
+
+EQL function to use: `cs_ore_64_8_v1(val JSONB)`.
+
+A plaintext text order by query like this:
+
+```sql
+SELECT * FROM users ORDER BY email ASC;
+```
+
+Would look like this using EQL:
+
+```sql
+SELECT * FROM users ORDER BY cs_ore_64_8_v1(email_encrypted) ASC;
+```
+
+#### Comparison query
+
+Prerequsites:
+
+- A [unique index](#adding-indexes) is needed on the encrypted column to support this operation.
+
+EQL function to use: `cs_ore_64_8_v1(val JSONB)`.
+
+EQL query payload for a comparison query:
+
+```json
+{
+  "k": "pt",
+  "p": "gracehopper@test.com", // The text we want to use for the equality query
+  "i": {
+    "t": "users",
+    "c": "email_encrypted"
+  },
+  "v": 1,
+  "q": "ore" // This field is required on queries. This specifies the type of query we are executing.
+}
+```
+
+A plaintext text comparison query like this:
+
+```sql
+SELECT * FROM users WHERE email > 'gracehopper@test.com';
+```
+
+Would look like this using EQL:
+
+```sql
+SELECT * FROM users WHERE cs_ore_64_8_v1(email_encrypted) > cs_ore_64_8_v1(
+  '{"v":1,"k":"pt","p":"gracehopper@test.com","i":{"t":"users","c":"email_encrypted"},"q":"ore"}'
+  );
 ```
