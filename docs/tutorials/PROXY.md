@@ -5,7 +5,7 @@ The CipherStash Proxy is a lightweight proxy that can be used to encrypt and dec
 ## Table of Contents
 
 - [Getting Started](#getting-started)
-- [Uploading an empty dataset](#uploading-an-empty-dataset)
+- [Create a dataset and client](#create-a-dataset-and-client)
 - [Configuring CipherStash Proxy](#configuring-cipherstash-proxy)
 - [Running the Proxy](#running-the-proxy)
 - [Using the Proxy](#using-the-proxy)
@@ -19,19 +19,14 @@ To get started, you'll need to sign up for a free account at [https://dashboard.
 
 Once you've signed up, you can create an access key from your default workspace.
 
-## Uploading an empty dataset
+## Create a dataset and client
 
-Before you can start using the proxy, you'll need to upload an empty dataset. You can do this using the [CipherStash CLI](https://cipherstash.com/docs/reference/cli)
+Before you can start using the proxy, you'll need to create a dataset and client.
+
+You can do this using the [CipherStash CLI](https://cipherstash.com/docs/reference/cli)
 
 1. [Create a dataset.](https://cipherstash.com/docs/how-to/creating-datasets)
 1. [Create a client key for cryptographic operations.](https://cipherstash.com/docs/how-to/creating-clients)
-1. Upload an empty dataset:
-
-```bash
-stash datasets config upload --file dataset.yml --client-id client_id --client-key client_key
-```
-
-> Note: CipherStash Proxy will be unable to initialize unless an empty dataset is uploaded. You will see the error `ZeroKMSError("Failed to send request: NotFound: Server returned a not found response: Status: 404 Not Found`
 
 ## Configuring CipherStash Proxy
 
