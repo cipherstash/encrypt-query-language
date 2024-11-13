@@ -503,7 +503,7 @@ Encryption and decryption are handled by CipherStash Proxy.
 
 ## Helper packages
 
-We've created a few langague specific packages to help you interact with the payloads.
+We've created a few langague specific packages to help you interact with the payloads:
 
 | Language   | ORM         | Example                                                           | Package                                                          |
 | ---------- | ----------- | ----------------------------------------------------------------- | ---------------------------------------------------------------- |
