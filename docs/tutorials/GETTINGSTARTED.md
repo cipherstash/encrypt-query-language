@@ -54,7 +54,12 @@ source .envrc
 docker compose up
 ```
 
-8. Check PostgreSQL and the Proxy are running:
+This will:
+
+- spin up a docker container for the CipherStash Proxy and Postgres
+- install EQL
+
+8. Check Postgres and the Proxy are running:
 
 ```shell
 docker ps
