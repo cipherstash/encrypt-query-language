@@ -249,6 +249,14 @@ cipherstash-migrator --columns email=email_encrypted --table users --database-na
 
 We now have encrypted data in our `email_encrypted` field that we can query.
 
+Drop the plaintext email column:
+
+```sql
+ALTER TABLE users DROP COLUMN email;
+```
+
+**Note: In production ensure data is backed up before dropping any columns**
+
 ### Insert a new record
 
 Before inserting or querying any records, we need to connect to our database via the Proxy.
@@ -350,9 +358,37 @@ The EQL equivalent of this query is:
 SELECT email_encrypted FROM users;
 ```
 
+Returns:
+
+```bash
+                                         email_encrypted
+-------------------------------------------------------------------------------------------------
+ {"k":"pt","p":"adalovelace@example.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null}
+ {"k":"pt","p":"gracehopper@test.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null}
+ {"k":"pt","p":"edithclarke@email.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null}
+ {"k":"pt","p":"test@test.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null}
+```
+
 **What is happening?**
 
-All data returned from CipherStash Proxy for encrypted fields will be in this json format:
+The json stored in the database looks similar to this:
+
+```json
+{
+  "k": "ct", // The kind of EQL payload. The Proxy will insert a json payload of a ciphertext or "ct".
+  "c": "encrypted test@test.com", // The source ciphertext of the plaintext email.
+  "e": {
+    "t": "users", // Table
+    "c": "email_encrypted" // Encrypted column
+  },
+  "m": [42], // The ciphertext used for free text queries i.e match index
+  "u": "unique ciphertext", // The ciphertext used for unique queries. i.e unique index
+  "o": ["a", "b", "c"], // The ciphertext used for order or comparison queries. i.e ore index
+  "v": 1
+}
+```
+
+The Proxy decrypts the json above and returns a plaintext json payload that looks like this:
 
 ```json
 {
@@ -367,6 +403,10 @@ All data returned from CipherStash Proxy for encrypted fields will be in this js
 }
 ```
 
+> When working with EQL in an application you would likely be using an ORM.
+
+> We are currently building out [packages and examples](../../README.md#helper-packages) to make it easier to work with EQL json payloads.
+
 #### Advanced querying
 
 EQL provides specialized functions to be able to interact with encrypted data and to support operations like equality checks, comparison queries, and unique constraints.
@@ -376,6 +416,7 @@ EQL provides specialized functions to be able to interact with encrypted data an
 Prerequsites:
 
 - A [match index](#adding-indexes) is needed on the encrypted column to support this operation.
+- Connected to the database via the Proxy.
 
 EQL function to use: `cs_match_v1(val JSONB)`
 
@@ -394,19 +435,25 @@ EQL query payload for a match query:
 }
 ```
 
-A plaintext text search query like this:
+A plaintext query, to search for any records that have an email like `grace`, looks like this:
 
 ```sql
 SELECT * FROM users WHERE email LIKE '%grace%';
 ```
 
-Would look like this using EQL:
+The EQL equivalent of this query is:
 
 ```sql
 SELECT * FROM users WHERE cs_match_v1(email_encrypted) @> cs_match_v1(
   '{"v":1,"k":"pt","p":"grace","i":{"t":"users","c":"email_encrypted"},"q":"match"}'
   );
 ```
+
+This query returns:
+
+| id  | email_encrypted                                                                              |
+| --- | -------------------------------------------------------------------------------------------- |
+| 2   | {"k":"pt","p":"gracehopper@test.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null} |
 
 #### Equality query
 
@@ -421,7 +468,7 @@ EQL query payload for a match query:
 ```json
 {
   "k": "pt",
-  "p": "gracehopper@test.com", // The text we want to use for the equality query
+  "p": "adalovelace@example.com", // The text we want to use for the equality query
   "i": {
     "t": "users",
     "c": "email_encrypted"
@@ -431,19 +478,25 @@ EQL query payload for a match query:
 }
 ```
 
-A plaintext text equality query like this:
+A plaintext query to search for any records that equal `adalovelace@example.com` looks like this:
 
 ```sql
-SELECT * FROM users WHERE email = 'gracehopper@test.com';
+SELECT * FROM users WHERE email = 'adalovelace@example.com';
 ```
 
-Would look like this using EQL:
+The EQL equivalent of this query is:
 
 ```sql
 SELECT * FROM users WHERE cs_unique_v1(email_encrypted) = cs_unique_v1(
-  '{"v":1,"k":"pt","p":"gracehopper@test.com","i":{"t":"users","c":"email_encrypted"},"q":"unique"}'
+  '{"v":1,"k":"pt","p":"adalovelace@example.com","i":{"t":"users","c":"email_encrypted"},"q":"unique"}'
   );
 ```
+
+This query returns:
+
+| id  | email_encrypted                                                                                 |
+| --- | ----------------------------------------------------------------------------------------------- |
+| 1   | {"k":"pt","p":"adalovelace@example.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null} |
 
 #### Order by query
 
@@ -453,17 +506,26 @@ Prerequsites:
 
 EQL function to use: `cs_ore_64_8_v1(val JSONB)`.
 
-A plaintext text order by query like this:
+A plaintext query order by email looks like this:
 
 ```sql
 SELECT * FROM users ORDER BY email ASC;
 ```
 
-Would look like this using EQL:
+The EQL equivalent of this query is:
 
 ```sql
 SELECT * FROM users ORDER BY cs_ore_64_8_v1(email_encrypted) ASC;
 ```
+
+This query returns:
+
+| id  | email_encrypted                                                                                 |
+| --- | ----------------------------------------------------------------------------------------------- |
+| 1   | {"k":"pt","p":"adalovelace@example.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null} |
+| 3   | {"k":"pt","p":"edithclarke@email.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null}   |
+| 2   | {"k":"pt","p":"gracehopper@test.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null}    |
+| 4   | {"k":"pt","p":"test@test.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null}           |
 
 #### Comparison query
 
@@ -488,16 +550,22 @@ EQL query payload for a comparison query:
 }
 ```
 
-A plaintext text comparison query like this:
+A plaintext text query to compare email values looks like this:
 
 ```sql
 SELECT * FROM users WHERE email > 'gracehopper@test.com';
 ```
 
-Would look like this using EQL:
+The EQL equivalent of this query is:
 
 ```sql
 SELECT * FROM users WHERE cs_ore_64_8_v1(email_encrypted) > cs_ore_64_8_v1(
   '{"v":1,"k":"pt","p":"gracehopper@test.com","i":{"t":"users","c":"email_encrypted"},"q":"ore"}'
   );
 ```
+
+This query returns:
+
+| id  | email_encrypted                                                                       |
+| --- | ------------------------------------------------------------------------------------- |
+| 4   | {"k":"pt","p":"test@test.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null} |
