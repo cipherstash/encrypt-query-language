@@ -569,3 +569,9 @@ This query returns:
 | id  | email_encrypted                                                                       |
 | --- | ------------------------------------------------------------------------------------- |
 | 4   | {"k":"pt","p":"test@test.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null} |
+
+#### Summary
+
+This tutorial showed how we can go from a plaintext text field to an encrypted field and how to query the encrypted fields.
+
+We have some [examples here](../../README.md#helper-packages) of what this would look like if you are using an ORM.
