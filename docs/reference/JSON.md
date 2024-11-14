@@ -261,7 +261,7 @@ WHERE cs_ste_vec_term_v1(encrypted_json,
   '{
     "v":1,
     "k":"pt",
-    "p":2,
+    "p":"2",
     "i":{"t":"examples","c":"encrypted_json"},
     "q":"ste_vec"
   }'
