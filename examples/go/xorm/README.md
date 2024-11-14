@@ -35,12 +35,6 @@ stash clients create xorm --dataset-id $CS_DATASET_ID
 # grab the client key and export CS_CLIENT_KEY=
 ```
 
-Upload the `dataset.yml` file in this directory.
-
-```shell
-stash datasets config upload --file dataset.yml --client-id $CS_CLIENT_ID --client-key $CS_CLIENT_KEY --assume-yes
-```
-
 Create an [access key](https://cipherstash.com/docs/how-to/creating-access-keys) for CipherStash Proxy:
 
 ```shell
@@ -56,7 +50,7 @@ Copy over the example `.envrc` file:
 cp .envrc.example .envrc
 ```
 
-Update the `.envrc` file with these environment variables `CS_WORKSPACE_ID`, `CS_CLIENT_ACCESS_KEY`, `CS_CLIENT_ID` and `CS_CLIENT_KEY`:
+Update the `.envrc` file with these environment variables `CS_WORKSPACE_ID`, `CS_CLIENT_ACCESS_KEY`, `CS_CLIENT_ID`, `CS_CLIENT_KEY` and `CS_DATASET_ID`:
 
 ```shell
 source .envrc
