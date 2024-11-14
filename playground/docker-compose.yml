@@ -3,7 +3,7 @@ services:
     container_name: eql-playground-pg
     build:
       context: ./db
-    command: [ "postgres", "-c", "log_statement=all" ]
+    command: ["postgres", "-c", "log_statement=all"]
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
