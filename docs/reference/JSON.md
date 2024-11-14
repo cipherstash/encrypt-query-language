@@ -147,7 +147,8 @@ WHERE cs_ste_vec_v1(encrypted_json) @> cs_ste_vec_v1(
     "v":1,
     "k":"pt",
     "p":{"top":{"nested":["a"]}},
-    "i":{"t":"examples","c":"encrypted_json"}
+    "i":{"t":"examples","c":"encrypted_json"},
+    "q":"ste_vec"
   }'
 );
 ```
@@ -174,7 +175,8 @@ WHERE cs_ste_vec_v1(encrypted_json) @> cs_ste_vec_v1(
     "v":1,
     "k":"pt",
     "p":{"top":{"nested":["d"]}},
-    "i":{"t":"examples","c":"encrypted_json"}
+    "i":{"t":"examples","c":"encrypted_json"},
+    "q":"ste_vec"
   }'
 );
 ```
@@ -261,8 +263,9 @@ WHERE cs_ste_vec_term_v1(encrypted_json,
   '{
     "v":1,
     "k":"pt",
-    "p":2,
-    "i":{"t":"examples","c":"encrypted_json"}
+    "p":"2",
+    "i":{"t":"examples","c":"encrypted_json"},
+    "q":"ste_vec"
   }'
 );
 ```
