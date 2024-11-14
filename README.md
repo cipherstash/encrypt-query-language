@@ -112,8 +112,8 @@ CipherStash Proxy refreshes the configuration every 60 seconds. To force an imme
 SELECT cs_refresh_encrypt_config();
 ```
 
->Note: This statement must be executed when connected to CipherStash Proxy.
-When connected to the PostgreSQL database directly, it is a no-op.
+> Note: This statement must be executed when connected to CipherStash Proxy.
+> When connected to the database directly, it is a no-op.
 
 ## Storing data
 
@@ -175,14 +175,14 @@ Data is returned as:
 }
 ```
 
->Note: If you execute this query directly on the PostgreSQL database, you will not see any plaintext data but rather the `jsonb` payload with the ciphertext.
+> Note: If you execute this query directly on the database, you will not see any plaintext data but rather the `jsonb` payload with the ciphertext.
 
 ## Configuring indexes for searching data
 
 In order to perform searchable operations on encrypted data, you must configure indexes for the encrypted columns.
 
 > **IMPORTANT:** If you have existing data that's encrypted and you add or modify an index, all the data will need to be re-encrypted.
-This is due to the way CipherStash Proxy handles searchable encryption operations.
+> This is due to the way CipherStash Proxy handles searchable encryption operations.
 
 ### Adding an index (`cs_add_index_v1`)
 
@@ -205,9 +205,9 @@ You can read more about the index configuration options [here](docs/reference/IN
 
 ```sql
 SELECT cs_add_index_v1(
-  'users', 
-  'encrypted_email', 
-  'unique', 
+  'users',
+  'encrypted_email',
+  'unique',
   'text'
 );
 ```
@@ -233,9 +233,9 @@ Enable equality search on encrypted data.
 
 ```sql
 SELECT cs_add_index_v1(
-  'users', 
-  'encrypted_email', 
-  'unique', 
+  'users',
+  'encrypted_email',
+  'unique',
   'text'
 );
 ```
@@ -263,10 +263,10 @@ Enables basic full-text search on encrypted data.
 
 ```sql
 SELECT cs_add_index_v1(
-  'users', 
-  'encrypted_email', 
-  'match', 
-  'text', 
+  'users',
+  'encrypted_email',
+  'match',
+  'text',
   '{"token_filters": [{"kind": "downcase"}], "tokenizer": { "kind": "ngram", "token_length": 3 }}'
 );
 ```
