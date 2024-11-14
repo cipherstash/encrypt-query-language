@@ -58,7 +58,7 @@
       "required": ["u"]
     },
     {
-      "description": "Structed Encryption vector query",
+      "description": "Structured Encryption vector query",
       "properties": {
         "k": {
           "const": "qsv"
@@ -78,7 +78,7 @@
       "required": ["sv"]
     },
     {
-      "description": "Structed Encryption vector selector query",
+      "description": "Structured Encryption vector selector query",
       "properties": {
         "k": {
           "const": "qsvs"
