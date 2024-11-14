@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/cipherstash/goeql"
-	_ "github.com/jackc/pgx/stdlib" // PostgreSQL driver
+	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver
 	"xorm.io/xorm"
 	"xorm.io/xorm/names"
 )
