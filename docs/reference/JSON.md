@@ -357,7 +357,8 @@ EQL uses an extended JSONPath syntax called EJSONPath for specifying paths in JS
 - Root selector: `$`
 - Dot notation for keys: `$.key`
 - Bracket notation for keys with special characters: `$['key.with.special*chars']`
-- Wildcards and array indexing are supported.
+- Wildcards are supported: `$.some_array_field[*]`
+- Array indexing is **not** supported: `$.some_array_field[0]`
 
 **Example Paths:**
 
