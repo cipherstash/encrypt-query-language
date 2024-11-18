@@ -21,10 +21,10 @@ CREATE FUNCTION _cs_encrypted_check_k(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
-    IF (val->>'k' = ANY('{ct, sv}')) THEN
+    IF (val->>'k' = ANY('{ct, sv, en}')) THEN
       RETURN true;
     END IF;
-    RAISE 'Invalid kind (%) in Encrypted column. Kind should be one of {ct, sv}', val;
+    RAISE 'Invalid kind (%) in Encrypted column. Kind should be one of {ct, sv, en}', val;
   END;
 $$ LANGUAGE plpgsql;
 
@@ -89,7 +89,7 @@ AS $$
     IF val ? 'i' THEN
       RETURN true;
     END IF;
-    RAISE 'Encrypted column missing ident (i) field: %', val;
+    RAISE 'Encrypted column missing identity (i) field: %', val;
   END;
 $$ LANGUAGE plpgsql;
 
@@ -115,7 +115,7 @@ AS $$
     IF (val->'i' ?& array['t', 'c']) THEN
       RETURN true;
     END IF;
-    RAISE 'Encrypted column ident (i) missing table (t) or column (c) fields: %', val;
+    RAISE 'Encrypted column identity (i) missing table (t) or column (c) fields: %', val;
   END;
 $$ LANGUAGE plpgsql;
 
@@ -142,6 +142,7 @@ BEGIN ATOMIC
     RETURN (
       _cs_encrypted_check_v(val) AND
       _cs_encrypted_check_i(val) AND
+      _cs_encrypted_check_i_ct AND
       _cs_encrypted_check_k(val) AND
       _cs_encrypted_check_k_ct(val) AND
       _cs_encrypted_check_k_sv(val) AND
