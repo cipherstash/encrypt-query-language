@@ -72,7 +72,7 @@ TRUNCATE TABLE users;
 
 DO $$
   BEGIN
-    RAISE NOTICE 'cs_encrypted_v1 constraint tests: 10 errors expected here';
+    RAISE NOTICE 'cs_encrypted_v1 constraint tests: 12 errors expected here';
   END;
 $$ LANGUAGE plpgsql;
 
@@ -90,7 +90,7 @@ INSERT INTO users (name_encrypted) VALUES (
   }'::jsonb
 );
 
--- no ident details
+-- no ident
 INSERT INTO users (name_encrypted) VALUES (
   '{
     "v": 1,
@@ -98,6 +98,31 @@ INSERT INTO users (name_encrypted) VALUES (
     "c": "ciphertext"
   }'::jsonb
 );
+
+-- no ident table
+INSERT INTO users (name_encrypted) VALUES (
+  '{
+    "v": 1,
+    "k": "ct",
+    "c": "ciphertext",
+    "i": {
+      "c": "column"
+    }
+  }'::jsonb
+);
+
+-- no ident column
+INSERT INTO users (name_encrypted) VALUES (
+  '{
+    "v": 1,
+    "k": "ct",
+    "c": "ciphertext",
+    "i": {
+      "t": "table"
+    }
+  }'::jsonb
+);
+
 
 -- no kind
 INSERT INTO users (name_encrypted) VALUES (
