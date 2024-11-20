@@ -366,16 +366,16 @@ We've created a few langague specific packages to help you interact with the pay
 
 | Language   | ORM         | Example                                                           | Package                                                          |
 | ---------- | ----------- | ----------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Go         | Xorm        | [Go/Xorm examples](./examples/go/xorm/README.md)                 | [goeql](https://github.com/cipherstash/goeql)                    |
-| Typescript | Drizzle     | [Drizzle examples](./examples/javascript/apps/drizzle/README.md) | [cipherstash/eql](./examples/javascript/packages/eql/README.md) |
-| Typescript | Prisma      | [Drizzle examples](./examples/javascript/apps/prisma/README.md)  | [cipherstash/eql](./examples/javascript/packages/eql/README.md) |
-| Python     | SQL Alchemy | [Python examples](./examples/python/jupyter_notebook/README.md)  |                                                                  |
+| Go         | Xorm        | [Go/Xorm examples](./examples/go/xorm/README.md)                 | [goeql](https://github.com/cipherstash/goeql) |
+| TypeScript | Drizzle     | [Drizzle examples](./examples/javascript/apps/drizzle/README.md) | [jseql](https://github.com/cipherstash/jseql) |
+| TypeScript | Prisma      | [Drizzle examples](./examples/javascript/apps/prisma/README.md)  | [jseql](https://github.com/cipherstash/jseql) |
+| Python     | SQL Alchemy | [Python examples](./examples/python/jupyter_notebook/README.md)  | [eqlpy](https://github.com/cipherstash/eqlpy) |
 
 ### Language specific packages
 
 - [Go](https://github.com/cipherstash/goeql)
-- [Javascript](examples/javascript/packages/eql/README.md)
-- Python (coming soon)
+- [JavaScript/TypeScript](https://github.com/cipherstash/jseql)
+- [Python](https://github.com/cipherstash/eqlpy)
 
 ## Releasing
 
