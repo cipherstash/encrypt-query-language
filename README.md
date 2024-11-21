@@ -5,7 +5,10 @@
 
 Encrypt Query Language (EQL) is a set of abstractions for transmitting, storing, and interacting with encrypted data and indexes in PostgreSQL.
 
-Store encrypted data alongside your existing data.
+> [!TIP]
+> **New to EQL?** Start with the higher level helpers for EQL in [Python](https://github.com/cipherstash/eqlpy), [Go](https://github.com/cipherstash/goeql), or [JavaScript](https://github.com/cipherstash/jseql) and [TypeScript](https://github.com/cipherstash/jseql), or the [examples](#helper-packages-and-examples) for those languages.
+
+Store encrypted data alongside your existing data:
 
 - Encrypted data is stored using a `jsonb` column type
 - Query encrypted data with specialized SQL functions
@@ -36,7 +39,7 @@ Store encrypted data alongside your existing data.
   - [How do I integrate CipherStash EQL with my application?](#how-do-i-integrate-cipherstash-eql-with-my-application)
   - [Can I use EQL without the CipherStash Proxy?](#can-i-use-eql-without-the-cipherstash-proxy)
   - [How is data encrypted in the database?](#how-is-data-encrypted-in-the-database)
-- [Helper packages](#helper-packages)
+- [Helper packages](#helper-packages-and-examples)
 - [Releasing](#releasing)
 
 ---
@@ -361,8 +364,7 @@ Encryption and decryption are handled by CipherStash Proxy.
 
 ## Helper packages and examples
 
-We've created a few langague specific packages to help you interact with the payloads:
-
+We've created a few langauge specific packages to help you interact with the payloads:
 
 | Language   | ORM         | Example                                                           | Package                                                          |
 | ---------- | ----------- | ----------------------------------------------------------------- | ---------------------------------------------------------------- |
