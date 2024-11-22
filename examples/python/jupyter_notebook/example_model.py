@@ -2,7 +2,7 @@ from sqlalchemy.orm import mapped_column, Mapped
 from eqlpy.eqlalchemy import *
 
 class Example(BaseModel):
-    __tablename__ = "examples"
+    __tablename__ = "pyexamples"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     encrypted_int = mapped_column(EncryptedInt(__tablename__, "encrypted_int"))

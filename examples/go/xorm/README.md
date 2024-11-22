@@ -67,8 +67,8 @@ Example for a text field:
 ```go
 func (et EncryptedTextField) ToDB() ([]byte, error) {
 	etCs := goeql.EncryptedText(et)
-    // e.g table name is "examples" and field is "encrypted_text_field"
-	return (&etCs).Serialize("examples", "encrypted_text_field")
+    // e.g table name is "goexamples" and field is "encrypted_text_field"
+	return (&etCs).Serialize("goexamples", "encrypted_text_field")
 }
 
 func (et *EncryptedTextField) FromDB(data []byte) error {
@@ -90,8 +90,8 @@ Example for a jsonb field:
 ```go
 func (ej EncryptedJsonbField) ToDB() ([]byte, error) {
 	ejCs := goeql.EncryptedJsonb(ej)
-    // e.g table name is "examples" and field is "encrypted_jsonb_field"
-	return (&ejCs).Serialize("examples", "encrypted_jsonb_field")
+    // e.g table name is "goexamples" and field is "encrypted_jsonb_field"
+	return (&ejCs).Serialize("goexamples", "encrypted_jsonb_field")
 }
 
 func (ej *EncryptedJsonbField) FromDB(data []byte) error {
@@ -115,10 +115,10 @@ These checks will validate that the json payload is correct and that encrypted d
 Example:
 
 ```sql
-	ALTER TABLE examples ADD CONSTRAINT encrypted_text_field_encrypted_check
+	ALTER TABLE goexamples ADD CONSTRAINT encrypted_text_field_encrypted_check
 	CHECK ( cs_check_encrypted_v1(encrypted_text_field) );
 
-	ALTER TABLE examples ADD CONSTRAINT encrypted_jsonb_encrypted_check
+	ALTER TABLE goexamples ADD CONSTRAINT encrypted_jsonb_encrypted_check
 	CHECK ( cs_check_encrypted_v1(encrypted_jsonb_field) );
 ```
 
@@ -127,17 +127,17 @@ Example:
 Example:
 
 ```sql
-    SELECT cs_add_index_v1('examples', 'encrypted_text_field', 'unique', 'text', '{"token_filters": [{"kind": "downcase"}]}');
-    SELECT cs_add_index_v1('examples', 'encrypted_text_field', 'match', 'text');
-    SELECT cs_add_index_v1('examples', 'encrypted_text_field', 'ore', 'text');
-    SELECT cs_add_index_v1('examples', 'encrypted_jsonb_field', 'ste_vec', 'jsonb', '{"prefix": "examples/encrypted_jsonb_field"}');
+    SELECT cs_add_index_v1('goexamples', 'encrypted_text_field', 'unique', 'text', '{"token_filters": [{"kind": "downcase"}]}');
+    SELECT cs_add_index_v1('goexamples', 'encrypted_text_field', 'match', 'text');
+    SELECT cs_add_index_v1('goexamples', 'encrypted_text_field', 'ore', 'text');
+    SELECT cs_add_index_v1('goexamples', 'encrypted_jsonb_field', 'ste_vec', 'jsonb', '{"prefix": "goexamples/encrypted_jsonb_field"}');
 
     --   The below indexes will also need to be added to enable full search functionality on the encrypted columns
 
-    CREATE UNIQUE INDEX ON examples(cs_unique_v1(encrypted_text_field));
-    CREATE INDEX ON examples USING GIN (cs_match_v1(encrypted_text_field));
-    CREATE INDEX ON examples (cs_ore_64_8_v1(encrypted_text_field));
-    CREATE INDEX ON examples USING GIN (cs_ste_vec_v1(encrypted_jsonb_field));
+    CREATE UNIQUE INDEX ON goexamples(cs_unique_v1(encrypted_text_field));
+    CREATE INDEX ON goexamples USING GIN (cs_match_v1(encrypted_text_field));
+    CREATE INDEX ON goexamples (cs_ore_64_8_v1(encrypted_text_field));
+    CREATE INDEX ON goexamples USING GIN (cs_ste_vec_v1(encrypted_jsonb_field));
 
     --   Run these functions to activate
 
@@ -174,7 +174,7 @@ Examples of how to use these are in the [e2e_test.go](./e2e_test.go) file.
 Below is an example of running a match query on a text field.
 
 ```go
-    query, errTwo := goeql.MatchQuery("some", "examples", "encrypted_text_field")
+    query, errTwo := goeql.MatchQuery("some", "goexamples", "encrypted_text_field")
 	if errTwo != nil {
 		log.Fatalf("Error marshaling encrypted_text_field: %v", errTwo)
 	}

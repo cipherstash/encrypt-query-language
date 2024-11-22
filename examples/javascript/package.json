@@ -1,18 +1,18 @@
 {
-  "name": "cipherstash",
-  "private": true,
-  "workspaces": ["apps/*", "packages/*"],
-  "scripts": {
-    "build": "turbo build",
-    "dev": "turbo dev",
-    "code:fix": "biome check --write"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^1.9.3",
-    "turbo": "2.1.1"
-  },
-  "packageManager": "bun@1.1.27",
-  "engines": {
-    "node": ">=18"
-  }
+	"name": "js-eql-examples",
+	"private": true,
+	"workspaces": ["apps/*", "packages/*"],
+	"scripts": {
+		"build": "turbo build",
+		"dev": "turbo dev",
+		"code:fix": "biome check --write"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.9.3",
+		"turbo": "2.1.1"
+	},
+	"packageManager": "bun@1.1.27",
+	"engines": {
+		"node": ">=18"
+	}
 }
