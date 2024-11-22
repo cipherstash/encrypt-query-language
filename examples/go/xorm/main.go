@@ -30,7 +30,7 @@ type Example struct {
 }
 
 func (Example) TableName() string {
-	return "examples"
+	return "goexamples"
 }
 
 // Use the conversion interface for a custom type.
@@ -50,7 +50,7 @@ func (Example) TableName() string {
 // encrypted text field conversion
 func (et EncryptedTextField) ToDB() ([]byte, error) {
 	etCs := goeql.EncryptedText(et)
-	return (&etCs).Serialize("examples", "encrypted_text_field")
+	return (&etCs).Serialize("goexamples", "encrypted_text_field")
 }
 
 func (et *EncryptedTextField) FromDB(data []byte) error {
@@ -69,7 +69,7 @@ func (et *EncryptedTextField) FromDB(data []byte) error {
 // Encrypted jsonb field conversion
 func (ej EncryptedJsonbField) ToDB() ([]byte, error) {
 	ejCs := goeql.EncryptedJsonb(ej)
-	return (&ejCs).Serialize("examples", "encrypted_jsonb_field")
+	return (&ejCs).Serialize("goexamples", "encrypted_jsonb_field")
 }
 
 func (ej *EncryptedJsonbField) FromDB(data []byte) error {
@@ -88,7 +88,7 @@ func (ej *EncryptedJsonbField) FromDB(data []byte) error {
 // encrypted int field conversion
 func (ei EncryptedIntField) ToDB() ([]byte, error) {
 	eiCs := goeql.EncryptedInt(ei)
-	return (&eiCs).Serialize("examples", "encrypted_int_field")
+	return (&eiCs).Serialize("goexamples", "encrypted_int_field")
 }
 
 func (ei *EncryptedIntField) FromDB(data []byte) error {
@@ -107,7 +107,7 @@ func (ei *EncryptedIntField) FromDB(data []byte) error {
 // Encrypted bool converesion
 func (eb EncryptedBoolField) ToDB() ([]byte, error) {
 	ebCs := goeql.EncryptedBool(eb)
-	return (&ebCs).Serialize("examples", "encrypted_bool_field")
+	return (&ebCs).Serialize("goexamples", "encrypted_bool_field")
 }
 
 func (eb *EncryptedBoolField) FromDB(data []byte) error {
@@ -137,7 +137,7 @@ func createTable() {
 
 	err = engine.Sync(new(Example))
 	if err != nil {
-		log.Fatalf("Could not create examples table: %v", err)
+		log.Fatalf("Could not create goexamples table: %v", err)
 	}
 
 	fmt.Println("Examples table synced successfully!")
