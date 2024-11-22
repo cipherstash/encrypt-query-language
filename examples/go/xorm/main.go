@@ -124,11 +124,11 @@ func (eb *EncryptedBoolField) FromDB(data []byte) error {
 }
 
 func createTable() {
-	connStr := "user=postgres password=postgres port=5432 host=localhost dbname=gotest sslmode=disable"
+	connStr := "user=postgres password=postgres port=5432 host=localhost dbname=postgres sslmode=disable"
 	engine, err := xorm.NewEngine("pgx", connStr)
 
 	if err != nil {
-		log.Fatalf("Could not connect to gotest database: %v", err)
+		log.Fatalf("Could not connect to postgres database: %v", err)
 	}
 
 	// need to map from struct to postgres snake case lowercase
@@ -145,7 +145,7 @@ func createTable() {
 }
 
 func addIndexesConstraints() {
-	connStr := "user=postgres password=postgres port=5432 host=localhost dbname=gotest sslmode=disable"
+	connStr := "user=postgres password=postgres port=5432 host=localhost dbname=postgres sslmode=disable"
 	// Install Eql, custom types, indexes and constraints
 	// To install our custom types we need to use the database/sql package due to an issue
 	// with how xorm interprets `?`.
