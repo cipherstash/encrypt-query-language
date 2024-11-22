@@ -14,7 +14,7 @@ import (
 
 func proxyEngine() *xorm.Engine {
 
-	proxyConnStr := "user=postgres password=postgres port=6432 host=localhost dbname=gotest sslmode=disable"
+	proxyConnStr := "user=postgres password=postgres port=6432 host=localhost dbname=postgres sslmode=disable"
 	proxyEngine, err := xorm.NewEngine("pgx", proxyConnStr)
 
 	if err != nil {
