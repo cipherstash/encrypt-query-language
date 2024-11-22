@@ -1,5 +1,5 @@
 {
-	"name": "@cipherstash/utils",
+	"name": "@cipherstash-jseql-examples/utils",
 	"version": "0.0.0",
 	"description": "CipherStash shared utility functions",
 	"license": "MIT",

@@ -1,33 +1,33 @@
-import { getPlaintext } from "@cipherstash/eql";
-import { prisma } from "./db";
-import { getEmailArg } from "@cipherstash/utils";
-import type { User } from "@prisma/client";
+import { getPlaintext } from '@cipherstash/jseql'
+import { prisma } from './db'
+import { getEmailArg } from '@cipherstash-jseql-examples/utils'
+import type { User } from '@prisma/client'
 
 const email = getEmailArg({
-	required: false,
-});
+  required: false,
+})
 
-let users: User[];
+let users: User[]
 
 if (email) {
-	// TODO: Fix dynamic type of the whereEncrypted method
-	users = (await prisma.user.whereEncrypted(
-		"email_encrypted",
-		email,
-	)) as unknown as User[];
+  // TODO: Fix dynamic type of the whereEncrypted method
+  users = (await prisma.user.whereEncrypted(
+    'email_encrypted',
+    email,
+  )) as unknown as User[]
 } else {
-	users = await prisma.user.findMany();
+  users = await prisma.user.findMany()
 }
 
-console.log("[INFO] All emails have been decrypted by CipherStash Proxy");
+console.log('[INFO] All emails have been decrypted by CipherStash Proxy')
 console.log(
-	"Emails:",
-	JSON.stringify(
-		users.map((row) => getPlaintext(row.email_encrypted)),
-		null,
-		2,
-	),
-);
+  'Emails:',
+  JSON.stringify(
+    users.map((row) => getPlaintext(row.email_encrypted)),
+    null,
+    2,
+  ),
+)
 
-await prisma.$disconnect();
-process.exit(0);
+await prisma.$disconnect()
+process.exit(0)
