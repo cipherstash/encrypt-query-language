@@ -13,7 +13,7 @@ Store encrypted data alongside your existing data:
 - Encrypted data is stored using a `jsonb` column type
 - Query encrypted data with specialized SQL functions
 - Index encrypted columns to enable searchable encryption
-- Integrate with [CipherStash Proxy](/docs/tutorials/PROXY.md) for transparent encryption/decryption
+- Integrate with [CipherStash Proxy](/docs/tutorials/PROXY.md) for transparent encryption/decryption.
 
 ## Table of Contents
 
@@ -64,6 +64,8 @@ The simplest way to get up and running with EQL is to execute the install SQL fi
 
 EQL relies on [CipherStash Proxy](docs/tutorials/PROXY.md) for low-latency encryption & decryption.
 We plan to support direct language integration in the future.
+
+If you want to use CipherStash Proxy with the below examples or the [helper packages](#helper-packages-and-examples), you can use the [playground environment](playground/README.md).
 
 ## Documentation
 
