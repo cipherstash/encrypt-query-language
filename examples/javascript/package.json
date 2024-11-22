@@ -1,5 +1,5 @@
 {
-	"name": "js-eql-examples",
+	"name": "cipherstash-jseql-examples",
 	"private": true,
 	"workspaces": ["apps/*", "packages/*"],
 	"scripts": {
