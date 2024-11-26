@@ -14,7 +14,7 @@ import (
 
 func proxyEngine() *xorm.Engine {
 
-	proxyConnStr := "user=postgres password=postgres port=6432 host=localhost dbname=gotest sslmode=disable"
+	proxyConnStr := "user=postgres password=postgres port=6432 host=localhost dbname=postgres sslmode=disable"
 	proxyEngine, err := xorm.NewEngine("pgx", proxyConnStr)
 
 	if err != nil {
@@ -25,7 +25,7 @@ func proxyEngine() *xorm.Engine {
 }
 
 func truncateDb(engine *xorm.Engine) error {
-	query := "TRUNCATE TABLE examples"
+	query := "TRUNCATE TABLE goexamples"
 	_, err := engine.Exec(query)
 	if err != nil {
 		return fmt.Errorf("failed to truncate table: %v", err)
@@ -83,7 +83,7 @@ func TestMatchQueryLongString(t *testing.T) {
 		"bottom": "value_three",
 	}
 
-	examples := []Example{
+	goexamples := []Example{
 		{
 			NonEncryptedField:   "brisbane",
 			EncryptedIntField:   23,
@@ -104,15 +104,15 @@ func TestMatchQueryLongString(t *testing.T) {
 		},
 	}
 
-	inserted, err := engine.Insert(&examples)
+	inserted, err := engine.Insert(&goexamples)
 
 	if err != nil {
-		t.Errorf("Error inserting examples: %v", err)
+		t.Errorf("Error inserting goexamples: %v", err)
 	}
 
 	assert.Equal(t, int64(3), inserted, "Expected to insert 2 rows")
 
-	query, err := goeql.MatchQuery("this", "examples", "encrypted_text_field")
+	query, err := goeql.MatchQuery("this", "goexamples", "encrypted_text_field")
 	if err != nil {
 		log.Fatalf("Error marshaling encrypted_text_field query: %v", err)
 	}
@@ -142,7 +142,7 @@ func TestMatchQueryEmail(t *testing.T) {
 		"bottom": "value_three",
 	}
 
-	examples := []Example{
+	goexamples := []Example{
 		{
 			NonEncryptedField:   "sydney",
 			EncryptedIntField:   23,
@@ -157,15 +157,15 @@ func TestMatchQueryEmail(t *testing.T) {
 		},
 	}
 
-	inserted, err := engine.Insert(&examples)
+	inserted, err := engine.Insert(&goexamples)
 
 	if err != nil {
-		t.Errorf("Error inserting examples: %v", err)
+		t.Errorf("Error inserting goexamples: %v", err)
 	}
 
 	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
 
-	query, err := goeql.MatchQuery("test", "examples", "encrypted_text_field")
+	query, err := goeql.MatchQuery("test", "goexamples", "encrypted_text_field")
 	if err != nil {
 		log.Fatalf("Error marshaling encrypted_text_field query: %v", err)
 	}
@@ -196,7 +196,7 @@ func TestJsonbQueryContainment(t *testing.T) {
 		"bottom": "value_three",
 	}
 
-	examples := []Example{
+	goexamples := []Example{
 		{
 			NonEncryptedField:   "sydney",
 			EncryptedTextField:  "testing",
@@ -211,10 +211,10 @@ func TestJsonbQueryContainment(t *testing.T) {
 		},
 	}
 
-	inserted, err := engine.Insert(&examples)
+	inserted, err := engine.Insert(&goexamples)
 
 	if err != nil {
-		t.Errorf("Error inserting examples: %v", err)
+		t.Errorf("Error inserting goexamples: %v", err)
 	}
 
 	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
@@ -226,7 +226,7 @@ func TestJsonbQueryContainment(t *testing.T) {
 		},
 	}
 
-	query, errTwo := goeql.JsonbQuery(jsonbQuery, "examples", "encrypted_jsonb_field")
+	query, errTwo := goeql.JsonbQuery(jsonbQuery, "goexamples", "encrypted_jsonb_field")
 	if errTwo != nil {
 		log.Fatalf("Error marshaling encrypted_jsonb_field: %v", errTwo)
 	}
@@ -260,7 +260,7 @@ func TestJsonbQueryNestedContainment(t *testing.T) {
 		"bottom": "value_three",
 	}
 
-	examples := []Example{
+	goexamples := []Example{
 		{
 			NonEncryptedField:   "sydney",
 			EncryptedTextField:  "testing",
@@ -275,10 +275,10 @@ func TestJsonbQueryNestedContainment(t *testing.T) {
 		},
 	}
 
-	inserted, err := engine.Insert(&examples)
+	inserted, err := engine.Insert(&goexamples)
 
 	if err != nil {
-		t.Errorf("Error inserting examples: %v", err)
+		t.Errorf("Error inserting goexamples: %v", err)
 	}
 
 	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
@@ -292,7 +292,7 @@ func TestJsonbQueryNestedContainment(t *testing.T) {
 		},
 	}
 
-	query, errTwo := goeql.JsonbQuery(jsonbQuery, "examples", "encrypted_jsonb_field")
+	query, errTwo := goeql.JsonbQuery(jsonbQuery, "goexamples", "encrypted_jsonb_field")
 	if errTwo != nil {
 		log.Fatalf("Error marshaling encrypted_jsonb_field: %v", errTwo)
 	}
@@ -339,7 +339,7 @@ func TestJsonbExtractionOp(t *testing.T) {
 		"bottom": "value_three",
 	}
 
-	examples := []Example{
+	goexamples := []Example{
 		{
 			NonEncryptedField:   "sydney",
 			EncryptedTextField:  "testing",
@@ -354,16 +354,16 @@ func TestJsonbExtractionOp(t *testing.T) {
 		},
 	}
 
-	inserted, err := engine.Insert(&examples)
+	inserted, err := engine.Insert(&goexamples)
 
 	if err != nil {
-		t.Errorf("Error inserting examples: %v", err)
+		t.Errorf("Error inserting goexamples: %v", err)
 	}
 
 	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
 
-	sql := `SELECT cs_ste_vec_value_v1(encrypted_jsonb_field, ?) AS val FROM examples`
-	ejson_path, err := goeql.EJsonPathQuery("$.top.nested", "examples", "encrypted_jsonb_field")
+	sql := `SELECT cs_ste_vec_value_v1(encrypted_jsonb_field, ?) AS val FROM goexamples`
+	ejson_path, err := goeql.EJsonPathQuery("$.top.nested", "goexamples", "encrypted_jsonb_field")
 
 	if err != nil {
 		log.Fatalf("Error serializing fields_encrypted query: %v", err)
@@ -429,33 +429,33 @@ func TestJsonbComparisonOp(t *testing.T) {
 		EncryptedJsonbField: jsonTwo,
 	}
 
-	examples := []Example{
+	goexamples := []Example{
 		example_one,
 		example_two,
 	}
 
-	inserted, err := engine.Insert(&examples)
+	inserted, err := engine.Insert(&goexamples)
 
 	if err != nil {
-		t.Errorf("Error inserting examples: %v", err)
+		t.Errorf("Error inserting goexamples: %v", err)
 	}
 
 	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
 
 	path := "$.top.integer"
-	ejson_path, err := goeql.EJsonPathQuery(path, "examples", "encrypted_jsonb_field")
+	ejson_path, err := goeql.EJsonPathQuery(path, "goexamples", "encrypted_jsonb_field")
 
 	if err != nil {
 		log.Fatalf("Error serializing fields_encrypted query: %v", err)
 	}
 	value := 10
-	comparison_value, err := goeql.JsonbQuery(value, "examples", "encrypted_jsonb_field")
+	comparison_value, err := goeql.JsonbQuery(value, "goexamples", "encrypted_jsonb_field")
 
 	if err != nil {
 		log.Fatalf("Error marshaling comparison value: %v", err)
 	}
 	var results []Example
-	err = engine.Where("cs_ste_vec_term_v1(examples.encrypted_jsonb_field, ?) > cs_ste_vec_term_v1(?)", ejson_path, comparison_value).Find(&results)
+	err = engine.Where("cs_ste_vec_term_v1(goexamples.encrypted_jsonb_field, ?) > cs_ste_vec_term_v1(?)", ejson_path, comparison_value).Find(&results)
 
 	if err != nil {
 		t.Fatalf("Could not retrieve example using comparison op: %v", err)
@@ -505,30 +505,30 @@ func TestJsonbTermsOp(t *testing.T) {
 		EncryptedBoolField:  false,
 	}
 
-	examples := []Example{
+	goexamples := []Example{
 		example_one,
 		example_two,
 	}
 
-	inserted, err := engine.Insert(&examples)
+	inserted, err := engine.Insert(&goexamples)
 
 	if err != nil {
-		t.Errorf("Error inserting examples: %v", err)
+		t.Errorf("Error inserting goexamples: %v", err)
 	}
 
 	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
 
 	// Serialize value as jsonb
 	value := 5
-	comparison_value, err := goeql.JsonbQuery(value, "examples", "encrypted_jsonb_field")
+	comparison_value, err := goeql.JsonbQuery(value, "goexamples", "encrypted_jsonb_field")
 	if err != nil {
 		log.Fatalf("Error marshaling comparison value: %v", err)
 	}
 	// Serialize path
 	path := "$.top.nums[*]"
-	ejson_path, err := goeql.EJsonPathQuery(path, "examples", "encrypted_jsonb_field")
+	ejson_path, err := goeql.EJsonPathQuery(path, "goexamples", "encrypted_jsonb_field")
 
-	sql := `SELECT * from examples e
+	sql := `SELECT * from goexamples e
 			WHERE EXISTS (
 			SELECT 1
 				FROM unnest(cs_ste_vec_terms_v1(e.encrypted_jsonb_field, ?)) AS term
@@ -573,27 +573,27 @@ func TestJsonbNullWriteRead(t *testing.T) {
 		EncryptedBoolField:  false,
 	}
 
-	examples := []Example{
+	goexamples := []Example{
 		example_one,
 		example_two,
 	}
 
-	inserted, err := engine.Insert(&examples)
+	inserted, err := engine.Insert(&goexamples)
 
 	if err != nil {
-		t.Errorf("Error inserting examples: %v", err)
+		t.Errorf("Error inserting goexamples: %v", err)
 	}
 
 	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
 
-	var returnedExamples []Example
-	err = engine.Where("encrypted_jsonb_field IS NULL").Find(&returnedExamples)
+	var returnedgoExamples []Example
+	err = engine.Where("encrypted_jsonb_field IS NULL").Find(&returnedgoExamples)
 	if err != nil {
 		t.Fatalf("Could not retrieve example: %v", err)
 	}
 
-	for i := range returnedExamples {
-		assert.Equal(t, EncryptedJsonbField(nil), returnedExamples[i].EncryptedJsonbField)
+	for i := range returnedgoExamples {
+		assert.Equal(t, EncryptedJsonbField(nil), returnedgoExamples[i].EncryptedJsonbField)
 	}
 }
 
@@ -616,22 +616,22 @@ func TestTextNullWriteRead(t *testing.T) {
 		EncryptedBoolField:  false,
 	}
 
-	examples := []Example{
+	goexamples := []Example{
 		example_one,
 		example_two,
 	}
 
-	inserted, err := engine.Insert(&examples)
+	inserted, err := engine.Insert(&goexamples)
 
 	if err != nil {
-		t.Errorf("Error inserting examples: %v", err)
+		t.Errorf("Error inserting goexamples: %v", err)
 	}
 
 	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
 
-	results, err := engine.Query("select * from examples")
+	results, err := engine.Query("select * from goexamples")
 	if err != nil {
-		t.Fatalf("Could not retrieve examples: %v", err)
+		t.Fatalf("Could not retrieve goexamples: %v", err)
 	}
 
 	assert.Equal(t, 2, len(results))
@@ -656,22 +656,22 @@ func TestIntNullWriteRead(t *testing.T) {
 		EncryptedBoolField:  false,
 	}
 
-	examples := []Example{
+	goexamples := []Example{
 		example_one,
 		example_two,
 	}
 
-	inserted, err := engine.Insert(&examples)
+	inserted, err := engine.Insert(&goexamples)
 
 	if err != nil {
-		t.Errorf("Error inserting examples: %v", err)
+		t.Errorf("Error inserting goexamples: %v", err)
 	}
 
 	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
 
-	results, err := engine.Query("select * from examples")
+	results, err := engine.Query("select * from goexamples")
 	if err != nil {
-		t.Fatalf("Could not retrieve examples: %v", err)
+		t.Fatalf("Could not retrieve goexamples: %v", err)
 	}
 
 	assert.Equal(t, 2, len(results))
@@ -696,22 +696,22 @@ func TestBooleanNullWriteRead(t *testing.T) {
 		EncryptedBoolField:  false,
 	}
 
-	examples := []Example{
+	goexamples := []Example{
 		example_one,
 		example_two,
 	}
 
-	inserted, err := engine.Insert(&examples)
+	inserted, err := engine.Insert(&goexamples)
 
 	if err != nil {
-		t.Errorf("Error inserting examples: %v", err)
+		t.Errorf("Error inserting goexamples: %v", err)
 	}
 
 	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
 
-	results, err := engine.Query("select * from examples")
+	results, err := engine.Query("select * from goexamples")
 	if err != nil {
-		t.Fatalf("Could not retrieve examples: %v", err)
+		t.Fatalf("Could not retrieve goexamples: %v", err)
 	}
 
 	assert.Equal(t, 2, len(results))
@@ -722,7 +722,7 @@ func TestOreStringRangeQuery(t *testing.T) {
 	truncateDb(engine)
 	expected := EncryptedTextField("whale")
 
-	examples := []Example{
+	goexamples := []Example{
 		{
 			NonEncryptedField:   "sydney",
 			EncryptedTextField:  expected,
@@ -737,16 +737,16 @@ func TestOreStringRangeQuery(t *testing.T) {
 		},
 	}
 
-	inserted, err := engine.Insert(&examples)
+	inserted, err := engine.Insert(&goexamples)
 
 	if err != nil {
-		t.Errorf("Error inserting examples: %v", err)
+		t.Errorf("Error inserting goexamples: %v", err)
 	}
 
 	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
 
 	// Query
-	query, errQuery := goeql.OreQuery("tree", "examples", "encrypted_text_field")
+	query, errQuery := goeql.OreQuery("tree", "goexamples", "encrypted_text_field")
 	if errQuery != nil {
 		log.Fatalf("err: %v", errQuery)
 	}
@@ -769,7 +769,7 @@ func TestOreIntRangeQuery(t *testing.T) {
 	truncateDb(engine)
 	expected := EncryptedIntField(42)
 
-	examples := []Example{
+	goexamples := []Example{
 		{
 			NonEncryptedField:   "sydney",
 			EncryptedTextField:  "whale",
@@ -784,16 +784,16 @@ func TestOreIntRangeQuery(t *testing.T) {
 		},
 	}
 
-	inserted, err := engine.Insert(&examples)
+	inserted, err := engine.Insert(&goexamples)
 
 	if err != nil {
-		t.Errorf("Error inserting examples: %v", err)
+		t.Errorf("Error inserting goexamples: %v", err)
 	}
 
 	assert.Equal(t, int64(2), inserted, "Expected to insert 2 rows")
 
 	// Query
-	query, errQuery := goeql.OreQuery(32, "examples", "encrypted_int_field")
+	query, errQuery := goeql.OreQuery(32, "goexamples", "encrypted_int_field")
 	if errQuery != nil {
 		log.Fatalf("err: %v", errQuery)
 	}
@@ -816,7 +816,7 @@ func TestOreBoolRangeQuery(t *testing.T) {
 	truncateDb(engine)
 	expected := EncryptedBoolField(true)
 
-	examples := []Example{
+	goexamples := []Example{
 		{
 			NonEncryptedField:   "sydney",
 			EncryptedTextField:  "whale",
@@ -840,16 +840,16 @@ func TestOreBoolRangeQuery(t *testing.T) {
 		},
 	}
 
-	inserted, err := engine.Insert(&examples)
+	inserted, err := engine.Insert(&goexamples)
 
 	if err != nil {
-		t.Errorf("Error inserting examples: %v", err)
+		t.Errorf("Error inserting goexamples: %v", err)
 	}
 
 	assert.Equal(t, int64(3), inserted, "Expected to insert 3 rows")
 
 	// Query
-	query, errQuery := goeql.OreQuery(false, "examples", "encrypted_bool_field")
+	query, errQuery := goeql.OreQuery(false, "goexamples", "encrypted_bool_field")
 	if errQuery != nil {
 		log.Fatalf("err: %v", errQuery)
 	}
@@ -872,7 +872,7 @@ func TestUniqueStringQuery(t *testing.T) {
 	truncateDb(engine)
 	expected := EncryptedTextField("testing two")
 
-	examples := []Example{
+	goexamples := []Example{
 		{
 			NonEncryptedField:   "sydney",
 			EncryptedTextField:  "whale",
@@ -896,16 +896,16 @@ func TestUniqueStringQuery(t *testing.T) {
 		},
 	}
 
-	inserted, err := engine.Insert(&examples)
+	inserted, err := engine.Insert(&goexamples)
 
 	if err != nil {
-		t.Errorf("Error inserting examples: %v", err)
+		t.Errorf("Error inserting goexamples: %v", err)
 	}
 
 	assert.Equal(t, int64(3), inserted, "Expected to insert 3 rows")
 
 	// Query
-	query, errQuery := goeql.UniqueQuery("testing two", "examples", "encrypted_text_field")
+	query, errQuery := goeql.UniqueQuery("testing two", "goexamples", "encrypted_text_field")
 	if errQuery != nil {
 		log.Fatalf("err: %v", errQuery)
 	}
