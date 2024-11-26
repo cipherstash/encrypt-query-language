@@ -1,33 +1,29 @@
-# EQL JavaScript Packages and Examples
+# EQL JavaScript Examples
 
-This repository contains the JavaScript implementation of the Encrypted Query Language (EQL) and examples of how to use it.
+All of the JavaScript examples use the [CipherStash JS/TypeScript EQL](https://github.com/cipherstash/jseql) package.
 
-## Packages
+These examples are available:
 
-The following packages are available:
+- [Drizzle ORM](./apps/drizzle)
+- [Prisma](./apps/prisma)
 
-- [@cipherstash/eql](https://github.com/cipherstash/encrypt-query-language/tree/main/packages/eql): This is a TypeScript implementation of EQL.
+## Setup
 
-## Examples
+Build the shared packages:
 
-The following examples are available:
+```bash
+bun run build
+```
 
-- [drizzle-eql](https://github.com/cipherstash/encrypt-query-language/tree/main/apps/drizzle): This is an example using the [drizzle-orm](https://drizzle-orm.com/) library to insert and select encrypted data from a PostgreSQL database using EQL and [CipherStash Proxy](https://docs.cipherstash.com/reference/proxy).
-
-## Development
-
-1. Run the install script to install the dependencies:
+Install the dependencies:
 
 ```bash
 bun install
 ```
 
-2. Listen for local package changes and rebuild the packages:
+## Running the examples
 
-```bash
-bun dev
-```
+To run the examples, you will need to start CipherStash Proxy and PostgreSQL.
 
-## License
+Please set up the [playground environment](../../playground/README.md) to run the the following examples.
 
-This project is licensed under the MIT License.
