@@ -1,16 +1,14 @@
 # CipherStash Migrator
 
-The CipherStash Migrator is a tool that can be used to migrate plaintext data in a database to its encrypted equivalent.
+CipherStash Migrator is a tool that can be used to migrate plaintext data in a database to its encrypted equivalent.
 It works inside the CipherStash Proxy Docker container and can handle different data types such as text, JSONB, integers, booleans, floats, and dates.
-By specifying the relevant columns in your table, the migrator will seamlessly encrypt the existing data and store it in designated encrypted columns.
+By specifying the relevant columns in your table, CipherStash Migrator will seamlessly encrypt the existing data and store it in designated encrypted columns.
 
 ## Prerequisites
 
 - [CipherStash Proxy](PROXY.md)
 - [Have set up EQL in your database](GETTINGSTARTED.md)
   - Ensure that the columns where data will be migrated already exist.
-
-Here’s a draft for the technical usage documentation for the CipherStash Migrator tool:
 
 ## Usage
 
