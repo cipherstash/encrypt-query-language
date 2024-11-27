@@ -1,7 +1,7 @@
 # EQL index configuration
 
 The following functions allow you to configure indexes for encrypted columns.
-All these functions modify the `cs_configuration_v1` table in your database, and is added during the EQL installation.
+All these functions modify the `cs_configuration_v1` table in your database, and are added during the EQL installation.
 
 > **IMPORTANT:** When you modify or add an index, you must re-encrypt data that's already been stored in the database.
 The CipherStash encryption solution will encrypt the data based on the current state of the configuration.
@@ -24,7 +24,7 @@ SELECT cs_add_index_v1(
 | ------------- | -------------------------------------------------- | ------------------------------------------------------------------------ |
 | `table_name`  | Name of target table                               | Required                                                                 |
 | `column_name` | Name of target column                              | Required                                                                 |
-| `index_name`  | The index kind                                     | Required.                                                                |
+| `index_name`  | The index kind                                     | Required                                                                 |
 | `cast_as`     | The PostgreSQL type decrypted data will be cast to | Optional. Defaults to `text`                                             |
 | `opts`        | Index options                                      | Optional for `match` indexes, required for `ste_vec` indexes (see below) |
 
@@ -44,7 +44,7 @@ Supported types:
 
 A match index enables full text search across one or more text fields in queries.
 
-The default Match index options are:
+The default match index options are:
 
 ```json
   {
@@ -93,7 +93,7 @@ Specifically, searching for strings _shorter_ than the `tokenLength` parameter w
 
 If you're using n-gram as a token filter, then a token that is already shorter than the `tokenLength` parameter will be kept as-is when indexed, and so a search for that short token will match that record.
 However, if that same short string only appears as a part of a larger token, then it will not match that record.
-In general, therefore, you should try to ensure that the string you search for is at least as long as the `tokenLength` of the index, except in the specific case where you know that there are shorter tokens to match, _and_ you are explicitly OK with not returning records that have that short string as part of a larger token.
+Try to ensure that the string you search for is at least as long as the `tokenLength` of the index, except in the specific case where you know that there are shorter tokens to match, _and_ you are explicitly OK with not returning records that have that short string as part of a larger token.
 
 #### Options for ste_vec indexes (`opts`)
 
@@ -101,13 +101,13 @@ An ste_vec index on a encrypted JSONB column enables the use of PostgreSQL's `@>
 
 An ste_vec index requires one piece of configuration: the `context` (a string) which is passed as an info string to a MAC (Message Authenticated Code).
 This ensures that all of the encrypted values are unique to that context.
-It is generally recommended to use the table and column name as a the context (e.g. `users/name`).
+We recommend that you use the table and column name as a the context (e.g. `users/name`).
 
-Within a dataset, encrypted columns indexed using an `ste_vec` that use different contexts cannot be compared.
+Within a dataset, encrypted columns indexed using an `ste_vec` that use different contexts can't be compared.
 Containment queries that manage to mix index terms from multiple columns will never return a positive result.
 This is by design.
 
-The index is generated from a JSONB document by first flattening the structure of the document such that a hash can be generated for each unique path prefix to a node.
+The index is generated from a JSONB document by first flattening the structure of the document so that a hash can be generated for each unique path prefix to a node.
 
 The complete set of JSON types is supported by the indexer.
 Null values are ignored by the indexer.
@@ -182,7 +182,7 @@ The hashes would be generated for all prefixes of the full path to the leaf node
 
 Query terms are processed in the same manner as the input document.
 
-A query prior to encrypting & indexing looks like a structurally similar subset of the encrypted document, for example:
+A query prior to encrypting and indexing looks like a structurally similar subset of the encrypted document. For example:
 
 ```json
 { 
