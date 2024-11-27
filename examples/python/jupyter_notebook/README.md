@@ -9,7 +9,7 @@
 
 ## Running / Development
 
-1. Follow the [EQL playground environment setup](../../playground/README.md) to start the EQL playground environment.
+1. Follow the [EQL playground environment setup](../../../playground/README.md) to start the EQL playground environment.
 2. Run the following command to start the Jupyter notebook:
    ```shell
    jupyter notebook
