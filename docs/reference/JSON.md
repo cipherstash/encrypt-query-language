@@ -2,20 +2,19 @@
 
 EQL supports encrypting, decrypting, and searching JSON and JSONB objects.
 
-## Table of contents
+## On this page
 
-- [Configuring the Index](#configuring-the-index)
-  - [Inserting JSON Data](#inserting-json-data)
-  - [Reading JSON Data](#reading-json-data)
-- [Querying JSONB Data with EQL](#querying-jsonb-data-with-eql)
-  - [Containment Queries (`cs_ste_vec_v1`)](#containment-queries-cs_ste_vec_v1)
-  - [Field Extraction (`cs_ste_vec_value_v1`)](#field-extraction-cs_ste_vec_value_v1)
-  - [Field Comparison (`cs_ste_vec_term_v1`)](#field-comparison-cs_ste_vec_term_v1)
-  - [Grouping Data](#grouping-data)
-- [Reference](#reference)
-  - [EQL Functions for JSONB and `ste_vec`](#eql-functions-for-jsonb-and-ste_vec)
-  - [EJSON Paths](#ejson-paths)
-- [Native PostgreSQL JSON(B) Compared to EQL](#native-postgresql-jsonb-compared-to-eql)
+- [Configuring the index](#configuring-the-index)
+  - [Inserting JSON data](#inserting-json-data)
+  - [Reading JSON data](#reading-json-data)
+- [Querying JSONB data with EQL](#querying-jsonb-data-with-eql)
+  - [Containment queries (`cs_ste_vec_v1`)](#containment-queries-cs_ste_vec_v1)
+  - [Field extraction (`cs_ste_vec_value_v1`)](#field-extraction-cs_ste_vec_value_v1)
+  - [Field comparison (`cs_ste_vec_term_v1`)](#field-comparison-cs_ste_vec_term_v1)
+  - [Grouping data](#grouping-data)
+- [EQL functions for JSONB and `ste_vec`](#eql-functions-for-jsonb-and-ste_vec)
+- [EJSON paths](#ejson-paths)
+- [Native PostgreSQL JSON(B) compared to EQL](#native-postgresql-jsonb-compared-to-eql)
   - [`json ->> text` → `text` and `json -> text` → `jsonb`/`json`](#json--text--text-and-json---text--jsonbjson)
     - [Decryption Example](#decryption-example)
     - [Comparison Example](#comparison-example)
@@ -116,15 +115,15 @@ Data is returned as:
 }
 ```
 
-## Querying JSONB Data with EQL
+## Querying JSONB data with EQL
 
 EQL provides specialized functions to interact with encrypted JSONB data, supporting operations like containment queries, field extraction, and comparisons.
 
-### Containment Queries (`cs_ste_vec_v1`)
+### Containment queries (`cs_ste_vec_v1`)
 
 Retrieve the Structured Encryption Vector for JSONB containment queries.
 
-**Example: Containment Query**
+**Example: Containment query**
 
 Suppose we have the following encrypted JSONB data:
 
@@ -138,7 +137,7 @@ Suppose we have the following encrypted JSONB data:
 
 We can query records that contain a specific structure.
 
-**SQL Query:**
+**SQL query:**
 
 ```sql
 SELECT * FROM examples
@@ -162,11 +161,11 @@ WHERE jsonb_column @> '{"top":{"nested":["a"]}}';
 
 **Note:** The `@>` operator checks if the left JSONB value contains the right JSONB value.
 
-**Negative Example:**
+**Negative example:**
 
 If we query for a value that does not exist in the data:
 
-**SQL Query:**
+**SQL query:**
 
 ```sql
 SELECT * FROM examples
@@ -183,7 +182,7 @@ WHERE cs_ste_vec_v1(encrypted_json) @> cs_ste_vec_v1(
 
 This query would return no results, as the value `"d"` is not present in the `"nested"` array.
 
-### Field Extraction (`cs_ste_vec_value_v1`)
+### Field extraction (`cs_ste_vec_value_v1`)
 
 Extract a field from an encrypted JSONB object.
 
@@ -201,7 +200,7 @@ Suppose we have the following encrypted JSONB data:
 
 We can extract the value of the `"top"` key.
 
-**SQL Query:**
+**SQL query:**
 
 ```sql
 SELECT cs_ste_vec_value_v1(encrypted_json, 
@@ -231,7 +230,7 @@ FROM examples;
 }
 ```
 
-### Field Comparison (`cs_ste_vec_term_v1`)
+### Field comparison (`cs_ste_vec_term_v1`)
 
 Select rows based on a field value in an encrypted JSONB object.
 
@@ -247,7 +246,7 @@ Suppose we have encrypted JSONB data with a numeric field:
 
 We can query records where the `"num"` field is greater than `2`.
 
-**SQL Query:**
+**SQL query:**
 
 ```sql
 SELECT * FROM examples
@@ -277,7 +276,7 @@ SELECT * FROM examples
 WHERE (jsonb_column->>'num')::int > 2;
 ```
 
-### Grouping Data
+### Grouping data
 
 Use `cs_ste_vec_term_v1` along with `cs_grouped_value_v1` to group by a field in an encrypted JSONB column.
 
@@ -296,7 +295,7 @@ Suppose we have records with a `"color"` field:
 
 We can group the data by the `"color"` field and count occurrences.
 
-**SQL Query:**
+**SQL query:**
 
 ```sql
 SELECT cs_grouped_value_v1(cs_ste_vec_value_v1(encrypted_json, 
@@ -336,16 +335,14 @@ GROUP BY jsonb_column->>'color';
 | green |   2   |
 | red   |   1   |
 
-## Reference
+## EQL Functions for JSONB and `ste_vec`
 
-### EQL Functions for JSONB and `ste_vec`
-
-- **Index Management**
+- **Index management**
 
   - `cs_add_index_v1(table_name text, column_name text, 'ste_vec', 'jsonb', opts jsonb)`: Adds an `ste_vec` index configuration.
     - `opts` must include the `"context"` key.
   
-- **Query Functions**
+- **Query functions**
 
   - `cs_ste_vec_v1(val jsonb)`: Retrieves the STE vector for JSONB containment queries.
   - `cs_ste_vec_term_v1(val jsonb, epath jsonb)`: Retrieves the encrypted term associated with an encrypted JSON path.
@@ -353,7 +350,7 @@ GROUP BY jsonb_column->>'color';
   - `cs_ste_vec_terms_v1(val jsonb, epath jsonb)`: Retrieves an array of encrypted terms for elements in an array at the given JSON path (used for comparisons).
   - `cs_grouped_value_v1(val jsonb)`: Used with `ste_vec` indexes for grouping.
 
-### EJSON Paths
+## EJSON paths
 
 EQL uses an extended JSONPath syntax called EJSONPath for specifying paths in JSONB data.
 
@@ -363,7 +360,7 @@ EQL uses an extended JSONPath syntax called EJSONPath for specifying paths in JS
 - Wildcards are supported: `$.some_array_field[*]`
 - Array indexing is **not** supported: `$.some_array_field[0]`
 
-**Example Paths:**
+**Example paths:**
 
 - `$.top.nested` selects the `"nested"` key within the `"top"` object.
 - `$.array[*]` selects all elements in the `"array"` array.

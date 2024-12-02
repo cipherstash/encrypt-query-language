@@ -1,16 +1,13 @@
 # Postgres data security with CipherStash
 
-This article gives a high-level overview of CipherStash's encryption in use solution, including the CipherStash Proxy and the Encrypt Query Language (EQL).
+This page gives a high-level overview of CipherStash's encryption in use solution, including CipherStash Proxy and the Encrypt Query Language (EQL). It's designed for developers and engineers who need to implement robust data security in PostgreSQL without sacrificing performance or usability.
 
-It is designed for developers and engineers who need to implement robust data security in PostgreSQL without sacrificing performance or usability.
-
-## Table of Contents
+## On this page
 
 1. [Encryption in use](#encryption-in-use)
    - [What is encryption in use?](#what-is-encryption-in-use)
    - [Why use encryption in use?](#why-use-encryption-in-use)
 2. [CipherStash Proxy](#cipherstash-proxy)
-   - [Proxy overview](#proxy-overview)
    - [How it works](#how-it-works)
 3. [Encrypt Query Language (EQL)](#encrypt-query-language-eql)
 4. [Best practices](#best-practices)
@@ -20,7 +17,8 @@ It is designed for developers and engineers who need to implement robust data se
 
 ## Encryption in use
 
-EQL enables encryption in use, without significant changes to your application code.
+CipherStash's encryption in use solution, comprising CipherStash Proxy and EQL, provides a practical way to enhance data security in Postgres databases. 
+EQL enables encryption in use without significant changes to your application code.
 A variety of searchable encryption techniques are available, including:
 
 - **Matching** - Equality or partial matches
@@ -44,8 +42,6 @@ Encryption in use mitigates this risk by ensuring that:
 
 ## CipherStash Proxy
 
-### Proxy overview
-
 CipherStash Proxy is a transparent proxy that sits between your application and your PostgreSQL database.
 It intercepts SQL queries and handles the encryption and decryption of data on-the-fly.
 This enables encryption in use without significant changes to your application code.
@@ -63,19 +59,19 @@ This enables encryption in use without significant changes to your application c
 Encrypt Query Language (EQL) is a set of PostgreSQL functions and data types provided by CipherStash to work with encrypted data and indexes.
 EQL allows you to perform queries on encrypted data without decrypting it, supporting operations like equality checks, range queries, and unique constraints.
 
-To get started, view the [Getting Started](https://github.com/cipherstash/encrypt-query-language/blob/main/GETTINGSTARTED.md) guide.
+To get started, read the [Getting started](https://github.com/cipherstash/encrypt-query-language/blob/main/GETTINGSTARTED.md) guide.
 
-## Best Practices
+## Best practices
 
-- **Leverage CipherStash Proxy**: Use CipherStash Proxy to handle encryption/decryption transparently.
-- **Utilize EQL functions**: Always use EQL functions when interacting with encrypted data.
-- **Define constraints**: Apply database constraints to maintain data integrity.
-- **Secure key management**: Ensure encryption keys are securely managed and stored.
-- **Monitor performance**: Keep an eye on query performance and optimize as needed.
+- **Use CipherStash Proxy** to handle encryption/decryption transparently.
+- **Use EQL functions** when interacting with encrypted data.
+- **Define database constraints**to maintain data integrity.
+- **Secure key management** of encryption keys.
+- **Monitor query performance** and optimize as needed.
 
-## Advanced Topics
+## Advanced topics
 
-### Integrating without CipehrStash Proxy
+### Integrating without CipherStash Proxy
 
 > The SDK approach is currently in development, but if you're interested in contributing, please start a discussion [here](https://github.com/cipherstash/encrypt-query-language/discussions).
 
@@ -88,11 +84,8 @@ For advanced users who prefer to handle encryption within their application:
 
 **Note**: This approach increases complexity and is recommended only if CipherStash Proxy does not meet specific requirements. 
 
-## Conclusion
+## Getting started
 
-CipherStash's encryption in use solution, comprising CipherStash Proxy and EQL, provides a practical way to enhance data security in Postgres databases. 
-By keeping data encrypted even during processing, you minimize the risk of data breaches and comply with stringent security standards without significant changes to your application logic.
+To get started using CipherStash's encryption is use solution, see the [Getting Started](https://github.com/cipherstash/encrypt-query-language/blob/main/GETTINGSTARTED.md) guide.
 
-To get started, see the [Getting Started](https://github.com/cipherstash/encrypt-query-language/blob/main/GETTINGSTARTED.md) guide.
-
-**Contact Support:** For further assistance, raise an issue [here](https://github.com/cipherstash/encrypt-query-language/issues).
+For further help, raise an issue [here](https://github.com/cipherstash/encrypt-query-language/issues).
