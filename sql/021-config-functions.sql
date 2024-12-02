@@ -117,7 +117,7 @@ AS $$
 
     -- if index exists
     IF _config #> array['tables', table_name, column_name, 'indexes'] ?  index_name THEN
-      RAISE EXCEPTION '% index exists for column: % %', index_name, table_name, column_name;
+      RAISE EXCEPTION 'No % index exists for column: % %', index_name, table_name, column_name;
     END IF;
 
     IF NOT cast_as = ANY('{text, int, small_int, big_int, real, double, boolean, date, jsonb}') THEN
