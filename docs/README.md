@@ -1,25 +1,19 @@
-# EQL Documentation
+# EQL documentation
 
 This directory contains the documentation for the Encrypt Query Language (EQL).
 
-## Concepts
+## About
 
-The following concepts are available:
+- [Postgres data security with CipherStash](concepts/WHY.md)
 
-- [Why we built EQL](concepts/WHY.md)
-
-## Reference
-
-The following reference guides are available:
-
-- [EQL index configuration](reference/INDEX.md)
-- [JSONB and JSON support](reference/JSON.md)
-- [Migrating plaintext data](reference/MIGRATOR.md)
-- [EQL payload data format](reference/PAYLOAD.md)
-
-## Tutorials
-
-The following tutorials are available:
+## How-to guides
 
 - [Getting started](tutorials/GETTINGSTARTED.md)
 - [Using CipherStash Proxy](tutorials/PROXY.md)
+
+## Reference
+
+- [EQL index configuration](reference/INDEX.md)
+- [EQL with JSON and JSONB](reference/JSON.md)
+- [CipherStash Migrator](reference/MIGRATOR.md)
+- [EQL payload data format](reference/PAYLOAD.md)
