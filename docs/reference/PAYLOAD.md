@@ -11,7 +11,7 @@ The plaintext json payload that is sent from the client to CipherStash Proxy in 
   "v": 1,
   "k": "pt",
   "p": "plaintext value",
-  "e": {
+  "i": {
     "t": "table_name",
     "c": "column_name"
   }
@@ -28,7 +28,7 @@ CipherStash Proxy will handle the plaintext payload and create the encrypted pay
   "v": 1,
   "k": "ct",
   "c": "ciphertext value",
-  "e": {
+  "i": {
     "t": "table_name",
     "c": "column_name"
   }
