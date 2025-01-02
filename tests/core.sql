@@ -12,7 +12,7 @@ CREATE TABLE users
 
 TRUNCATE TABLE users;
 
--- no version
+
 INSERT INTO users (name_encrypted) VALUES (
   '{
     "v": 1,
