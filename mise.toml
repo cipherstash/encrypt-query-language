@@ -1,0 +1,19 @@
+[settings]
+# Config for test environments
+# Can be invoked with: mise --env tcp run <task>
+# trusted_config_paths = [
+#     "./tests/mise.toml",
+#     "./tests/mise.tcp.toml",
+#     "./tests/mise.tls.toml",
+# ]
+[task_config]
+includes = ["tasks"]
+
+
+[env]
+# Default configuration for running cipherstash-proxy out of the box
+CS_DATABASE__NAME = "cipherstash"
+CS_DATABASE__USERNAME = "cipherstash"
+CS_DATABASE__PASSWORD = "password"
+CS_DATABASE__HOST = "localhost"
+CS_DATABASE__PORT = "5532"
