@@ -12,7 +12,6 @@ CREATE TABLE users
 
 TRUNCATE TABLE users;
 
-
 INSERT INTO users (name_encrypted) VALUES (
   '{
     "v": 1,
@@ -27,26 +26,6 @@ INSERT INTO users (name_encrypted) VALUES (
     "o": ["a"]
   }'::jsonb
 );
-
-
--- SELECT id FROM users WHERE ARRAY[1,2]::cs_match_index_v1 <@ name_encrypted;
--- SELECT ARRAY[1,2,3,4]::cs_match_index_v1 <@ ARRAY[1,2,3]::cs_match_index_v1;
-
-
--- SELECT id FROM users WHERE name_encrypted @> '{"m":[1,2]}'::jsonb;
--- SELECT id FROM users WHERE name_encrypted @> ARRAY[1,2]::smallint[];
--- SELECT id FROM users WHERE name_encrypted @> ARRAY[1,2]::cs_match_index_v1;
-
--- SELECT id FROM users WHERE name_encrypted @> '{
---             "v": 1,
---             "k": "ct",
---             "c": "ciphertext",
---             "i": {
---             "t": "users",
---             "c": "name"
---             },
---             "m": [1, 2]
---         }'::cs_encrypted_v1;
 
 
 
