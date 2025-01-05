@@ -31,14 +31,19 @@ jobs:
         postgres-version: [17, 16, 15, 14]
 
     env:
-      CS_DATABASE__PASSWORD:
-      CS_DATABASE__PORT: 5432
       CS_DATABASE__NAME: test
+      CS_DATABASE__PASSWORD:
+      CS_DATABASE__PORT: 5532
+
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: extractions/setup-just@v1
+      - uses: jdx/mise-action@v2
+        with:
+          version: 2024.12.11 # [default: latest] mise version to install
+          install: true # [default: true] run `mise install`
+          cache: true # [default: true] cache mise using GitHub's cache
 
       - uses: ankane/setup-postgres@v1
         with:
@@ -47,5 +52,5 @@ jobs:
 
       - name: Test EQL
         run: |
-          just build test
+          mise run test
 
