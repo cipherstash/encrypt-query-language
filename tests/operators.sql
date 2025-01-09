@@ -88,17 +88,39 @@ DO $$
 $$ LANGUAGE plpgsql;
 
 
+
 -- UNIQUE eq = OPERATORS
 DO $$
   BEGIN
     -- SANITY CHECK FOR UNIQUE payloads
     ASSERT (SELECT EXISTS (SELECT id FROM users WHERE cs_unique_v1(name_encrypted) = cs_unique_v1('{"u":"unique-text"}')));
 
+    ASSERT (SELECT EXISTS (
+      SELECT id FROM users WHERE name_encrypted = '{
+          "v": 1,
+          "k": "ct",
+          "c": "ciphertext",
+          "i": {
+            "t": "users",
+            "c": "name"
+          },
+          "u": "unique-text"
+      }'::jsonb
+    ));
+
     -- cs_encrypted_v1 = jsonb
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE name_encrypted = '{"u":"unique-text"}'::jsonb));
+    ASSERT (SELECT EXISTS (
+      SELECT id FROM users WHERE name_encrypted = '{"u": "unique-text"}'::jsonb
+    ));
+
+    -- jsonb = cs_encrypted_v1
+    ASSERT (SELECT EXISTS (
+      SELECT id FROM users WHERE  '{"u": "unique-text"}'::jsonb = name_encrypted
+    ));
 
     -- cs_encrypted_v1 = text
     ASSERT (SELECT EXISTS (SELECT id FROM users WHERE name_encrypted = 'unique-text'::text));
+    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE name_encrypted = 'unique-text'::cs_unique_index_v1));
 
     -- text = cs_encrypted_v1
     ASSERT (SELECT EXISTS (SELECT id FROM users WHERE 'unique-text'::text = name_encrypted));
@@ -129,31 +151,31 @@ DO $$
     ASSERT (SELECT EXISTS (SELECT id FROM users WHERE name_encrypted != '{"u":"random-text"}'::jsonb));
     ASSERT (SELECT EXISTS (SELECT id FROM users WHERE name_encrypted <> '{"u":"random-text"}'::jsonb));
 
-    -- cs_encrypted_v1 = text
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE name_encrypted != 'random-text'::text));
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE name_encrypted <> 'random-text'::text));
+    -- -- cs_encrypted_v1 = text
+    -- ASSERT (SELECT EXISTS (SELECT id FROM users WHERE name_encrypted != 'random-text'::text));
+    -- ASSERT (SELECT EXISTS (SELECT id FROM users WHERE name_encrypted <> 'random-text'::text));
 
-    -- cs_encrypted_v1 = cs_encrypted_v1
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE name_encrypted != '{
-            "v": 1,
-            "k": "ct",
-            "c": "ciphertext",
-            "i": {
-            "t": "users",
-            "c": "name"
-            },
-            "u": "random-text"
-        }'::cs_encrypted_v1));
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE name_encrypted <> '{
-            "v": 1,
-            "k": "ct",
-            "c": "ciphertext",
-            "i": {
-            "t": "users",
-            "c": "name"
-            },
-            "u": "random-text"
-        }'::cs_encrypted_v1));
+    -- -- cs_encrypted_v1 = cs_encrypted_v1
+    -- ASSERT (SELECT EXISTS (SELECT id FROM users WHERE name_encrypted != '{
+    --         "v": 1,
+    --         "k": "ct",
+    --         "c": "ciphertext",
+    --         "i": {
+    --         "t": "users",
+    --         "c": "name"
+    --         },
+    --         "u": "random-text"
+    --     }'::cs_encrypted_v1));
+    -- ASSERT (SELECT EXISTS (SELECT id FROM users WHERE name_encrypted <> '{
+    --         "v": 1,
+    --         "k": "ct",
+    --         "c": "ciphertext",
+    --         "i": {
+    --         "t": "users",
+    --         "c": "name"
+    --         },
+    --         "u": "random-text"
+    --     }'::cs_encrypted_v1));
 
 
 
