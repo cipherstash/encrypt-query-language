@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 #MISE description="Build SQL into single release file"
+
+#!/bin/bash
+
 set -euxo pipefail
 
 mkdir -p release
