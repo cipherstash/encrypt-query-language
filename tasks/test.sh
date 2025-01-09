@@ -1,5 +1,8 @@
   #!/usr/bin/env bash
   #MISE description="Build, reset and run test"
+
+  #!/bin/bash
+
   set -euxo pipefail
 
   mise run build
