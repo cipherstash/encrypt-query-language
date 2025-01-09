@@ -29,6 +29,44 @@ CREATE OPERATOR = (
   MERGES
 );
 
+DROP OPERATOR IF EXISTS = (cs_encrypted_v1, jsonb);
+DROP FUNCTION IF EXISTS cs_encrypted_eq_v1(a cs_encrypted_v1, b jsonb);
+
+CREATE FUNCTION cs_encrypted_eq_v1(a cs_encrypted_v1, b jsonb)
+RETURNS boolean AS $$
+  SELECT cs_unique_v1(a) = cs_unique_v1(b);
+$$ LANGUAGE SQL;
+
+CREATE OPERATOR = (
+  PROCEDURE="cs_encrypted_eq_v1",
+  LEFTARG=cs_encrypted_v1,
+  RIGHTARG=jsonb,
+  NEGATOR = <>,
+  RESTRICT = eqsel,
+  JOIN = eqjoinsel,
+  HASHES,
+  MERGES
+);
+
+DROP OPERATOR IF EXISTS = (jsonb, cs_encrypted_v1);
+DROP FUNCTION IF EXISTS cs_encrypted_eq_v1(a jsonb, b cs_encrypted_v1);
+
+CREATE FUNCTION cs_encrypted_eq_v1(a jsonb, b cs_encrypted_v1)
+RETURNS boolean AS $$
+  SELECT cs_unique_v1(a) = cs_unique_v1(b);
+$$ LANGUAGE SQL;
+
+CREATE OPERATOR = (
+  PROCEDURE="cs_encrypted_eq_v1",
+  LEFTARG=jsonb,
+  RIGHTARG=cs_encrypted_v1,
+  NEGATOR = <>,
+  RESTRICT = eqsel,
+  JOIN = eqjoinsel,
+  HASHES,
+  MERGES
+);
+
 
 DROP OPERATOR IF EXISTS = (cs_encrypted_v1, cs_unique_index_v1);
 DROP FUNCTION IF EXISTS cs_encrypted_eq_v1(a cs_encrypted_v1, b cs_unique_index_v1);
@@ -90,6 +128,47 @@ CREATE OPERATOR <> (
   HASHES,
   MERGES
 );
+
+
+DROP OPERATOR IF EXISTS <> (cs_encrypted_v1, jsonb);
+DROP FUNCTION IF EXISTS cs_encrypted_neq_v1(a cs_encrypted_v1, b jsonb);
+
+CREATE FUNCTION cs_encrypted_neq_v1(a cs_encrypted_v1, b jsonb)
+RETURNS boolean AS $$
+  SELECT cs_unique_v1(a) <> cs_unique_v1(b);
+$$ LANGUAGE SQL;
+
+CREATE OPERATOR <> (
+  PROCEDURE="cs_encrypted_neq_v1",
+  LEFTARG=cs_encrypted_v1,
+  RIGHTARG=jsonb,
+  NEGATOR = =,
+  RESTRICT = eqsel,
+  JOIN = eqjoinsel,
+  HASHES,
+  MERGES
+);
+
+
+DROP OPERATOR IF EXISTS <> (jsonb, cs_encrypted_v1);
+DROP FUNCTION IF EXISTS cs_encrypted_neq_v1(a jsonb, b cs_encrypted_v1);
+
+CREATE FUNCTION cs_encrypted_neq_v1(a jsonb, b cs_encrypted_v1)
+RETURNS boolean AS $$
+  SELECT cs_unique_v1(a) <> cs_unique_v1(b);
+$$ LANGUAGE SQL;
+
+CREATE OPERATOR <> (
+  PROCEDURE="cs_encrypted_neq_v1",
+  LEFTARG=jsonb,
+  RIGHTARG=cs_encrypted_v1,
+  NEGATOR = =,
+  RESTRICT = eqsel,
+  JOIN = eqjoinsel,
+  HASHES,
+  MERGES
+);
+
 
 DROP OPERATOR IF EXISTS <> (cs_encrypted_v1, cs_unique_index_v1);
 DROP FUNCTION IF EXISTS cs_encrypted_neq_v1(a cs_encrypted_v1, b cs_unique_index_v1);
