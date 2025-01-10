@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Build SQL into single release file"
+#MISE sources=["sql/*.sql"]
+#MISE outputs=["release/cipherstash-encrypt.sql","release/cipherstash-encrypt-uninstall.sql"]
 
 #!/bin/bash
 
