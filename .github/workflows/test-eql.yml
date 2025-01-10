@@ -31,9 +31,10 @@ jobs:
         postgres-version: [17, 16, 15, 14]
 
     env:
+      CS_DATABASE__USERNAME: ${USER}
       CS_DATABASE__NAME: test
       CS_DATABASE__PASSWORD:
-      CS_DATABASE__PORT: 5532
+      CS_DATABASE__PORT: 5432
 
 
     steps:
@@ -49,6 +50,7 @@ jobs:
         with:
           postgres-version: ${{ matrix.postgres-version }}
           database: ${{ env.CS_DATABASE__NAME }}
+
 
       - name: Test EQL
         run: |
