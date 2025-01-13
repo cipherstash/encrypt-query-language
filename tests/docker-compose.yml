@@ -28,6 +28,8 @@ services:
     <<: *postgres
     image: postgres:17
     container_name: postgres-17
+    #volumes: # uncomment if you need to inspect the container contents
+    #- ./pg/data-17:/var/lib/postgresql/data
 
   postgres-16:
     <<: *postgres
