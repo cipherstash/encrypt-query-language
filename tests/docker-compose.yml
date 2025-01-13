@@ -6,7 +6,7 @@ services:
       - 5532:5532
     environment:
       - PGPORT=5532
-      - PGUSER=${POSTGRES_USERNAME}
+      - PGUSER=${POSTGRES_USER}
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
