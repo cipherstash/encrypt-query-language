@@ -14,7 +14,7 @@ if [ -z "${POSTGRES_VERSION}" ]; then
   exit 1
 fi
 
-set -ux
+set -u
 
 mise run build
 mise run reset
@@ -22,9 +22,18 @@ mise run reset
 connection_url=postgresql://${POSTGRES_USER:-$USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
 container_name=postgres-${POSTGRES_VERSION}
 
-# # tests
-# PGPASSWORD=$CS_DATABASE__PASSWORD psql $connection_url -f tests/core.sql
-# PGPASSWORD=$CS_DATABASE__PASSWORD psql $connection_url -f tests/core-functions.sql
-# PGPASSWORD=$CS_DATABASE__PASSWORD psql $connection_url -f tests/config.sql
-# PGPASSWORD=$CS_DATABASE__PASSWORD psql $connection_url -f tests/encryptindex.sql
-cat tests/operators.sql | docker exec -i ${container_name} psql ${connection_url} -f-
+run_test () {
+  echo
+  echo '###############################################'
+  echo "# ${1}"
+  echo '###############################################'
+  echo
+  cat $1 | docker exec -i ${container_name} psql $connection_url -f-
+}
+
+# tests
+run_test tests/core.sql
+run_test tests/core-functions.sql
+run_test tests/config.sql
+run_test tests/encryptindex.sql
+run_test tests/operators.sql
