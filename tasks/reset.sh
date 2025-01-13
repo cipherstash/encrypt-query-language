@@ -4,7 +4,7 @@
 #USAGE   choices "14" "15" "16" "17"
 #USAGE }
 
-set -euxo pipefail
+set -euo pipefail
 
 fail_if_postgres_not_running () {
   containers=$(docker ps --filter "name=${container_name}" --quiet)
