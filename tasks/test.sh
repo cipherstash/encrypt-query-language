@@ -3,7 +3,18 @@
 
 #!/bin/bash
 
-set -euxo pipefail
+set -eo pipefail
+
+if [ -z "${POSTGRES_VERSION}" ]; then
+  echo "error: POSTGRES_VERSION not set"
+  echo "Please re-run with a version set:"
+  echo
+  echo "POSTGRES_VERSION=16 mise run test"
+  echo
+  exit 1
+fi
+
+set -ux
 
 mise run build
 mise run reset
