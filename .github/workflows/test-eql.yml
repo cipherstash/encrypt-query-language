@@ -31,11 +31,7 @@ jobs:
         postgres-version: [17, 16, 15, 14]
 
     env:
-      CS_DATABASE__USERNAME: ${USER}
-      CS_DATABASE__NAME: test
-      CS_DATABASE__PASSWORD:
-      CS_DATABASE__PORT: 5432
-
+      POSTGRES_VERSION: ${{ matrix.postgres-version }}
 
     steps:
       - uses: actions/checkout@v4
@@ -46,15 +42,10 @@ jobs:
           install: true # [default: true] run `mise install`
           cache: true # [default: true] cache mise using GitHub's cache
 
-      - uses: ankane/setup-postgres@v1
-        with:
-          postgres-version: ${{ matrix.postgres-version }}
-          database: ${{ env.CS_DATABASE__NAME }}
-
+      - name: Setup database
+        run: |
+          mise run postgres:up postgres-${POSTGRES_VERSION} --extra-args "--detach --wait"
 
       - name: Test EQL
         run: |
-          mise run test
-
-
-
+          mise run --output prefix test
