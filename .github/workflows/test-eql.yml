@@ -6,6 +6,8 @@ on:
     paths:
       - ".github/workflows/test-eql.yml"
       - "sql/*.sql"
+      - "tests/**/*"
+      - "tasks/**/*"
 
   pull_request:
     branches:
@@ -13,6 +15,8 @@ on:
     paths:
       - ".github/workflows/test-eql.yml"
       - "sql/*.sql"
+      - "tests/**/*"
+      - "tasks/**/*"
 
   workflow_dispatch:
 
