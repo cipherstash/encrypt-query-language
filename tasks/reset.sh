@@ -3,10 +3,11 @@
 
 set -euxo pipefail
 
-connection_url=postgresql://${CS_DATABASE__USERNAME:-$USER}:${CS_DATABASE__PASSWORD}@localhost:$CS_DATABASE__PORT/$CS_DATABASE__NAME
+connection_url=postgresql://${POSTGRES_USER:-$USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+container_name=postgres-${POSTGRES_VERSION}
 
 # Uninstall
-psql ${connection_url} -f release/cipherstash-encrypt-uninstall.sql
+cat release/cipherstash-encrypt-uninstall.sql | docker exec -i ${container_name} psql ${connection_url} -f-
 
 # Install
-psql ${connection_url} -f release/cipherstash-encrypt.sql
+cat release/cipherstash-encrypt.sql | docker exec -i ${container_name} psql ${connection_url} -f-
