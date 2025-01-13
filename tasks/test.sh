@@ -8,11 +8,12 @@ set -euxo pipefail
 mise run build
 mise run reset
 
-connection_url=postgresql://${CS_DATABASE__USERNAME:-$USER}:@localhost:$CS_DATABASE__PORT/$CS_DATABASE__NAME
+connection_url=postgresql://${POSTGRES_USER:-$USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+container_name=postgres-${POSTGRES_VERSION}
 
 # # tests
 # PGPASSWORD=$CS_DATABASE__PASSWORD psql $connection_url -f tests/core.sql
 # PGPASSWORD=$CS_DATABASE__PASSWORD psql $connection_url -f tests/core-functions.sql
 # PGPASSWORD=$CS_DATABASE__PASSWORD psql $connection_url -f tests/config.sql
 # PGPASSWORD=$CS_DATABASE__PASSWORD psql $connection_url -f tests/encryptindex.sql
-PGPASSWORD=$CS_DATABASE__PASSWORD psql $connection_url -f tests/operators.sql
+cat tests/operators.sql | docker exec -i ${container_name} psql ${connection_url} -f-
