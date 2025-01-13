@@ -428,11 +428,13 @@ mise run postgres:down
 
 You can run the same tasks for Postgres 14, 15, 16, and 17.
 
+The configuration for the Postgres containers in `tests/docker-compose.yml`.
+
 Limitations:
 
 - **Volumes for Postgres containers are not persistent.**
   If you need to look at data in the container, uncomment a volume in
   `tests/docker-compose.yml`
 - **You can't run multiple Postgres containers at the same time.**
-  All the containers bind to the same port. If you want to run multiple
-  containers at the same time, you'll have to change the ports.
+  All the containers bind to the same port (`7543`). If you want to run
+  multiple containers at the same time, you'll have to change the ports.
