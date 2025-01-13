@@ -6,6 +6,8 @@ on:
     paths:
       - ".github/workflows/test-eql.yml"
       - "sql/*.sql"
+      - "tests/**/*"
+      - "tasks/**/*"
 
   pull_request:
     branches:
@@ -13,6 +15,8 @@ on:
     paths:
       - ".github/workflows/test-eql.yml"
       - "sql/*.sql"
+      - "tests/**/*"
+      - "tasks/**/*"
 
   workflow_dispatch:
 
@@ -23,7 +27,7 @@ defaults:
 jobs:
   test:
     name: "Test EQL SQL components"
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest-m
 
     strategy:
       fail-fast: false
@@ -31,21 +35,21 @@ jobs:
         postgres-version: [17, 16, 15, 14]
 
     env:
-      CS_DATABASE__PASSWORD:
-      CS_DATABASE__PORT: 5432
-      CS_DATABASE__NAME: test
+      POSTGRES_VERSION: ${{ matrix.postgres-version }}
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: extractions/setup-just@v1
-
-      - uses: ankane/setup-postgres@v1
+      - uses: jdx/mise-action@v2
         with:
-          postgres-version: ${{ matrix.postgres-version }}
-          database: ${{ env.CS_DATABASE__NAME }}
+          version: 2025.1.6 # [default: latest] mise version to install
+          install: true # [default: true] run `mise install`
+          cache: true # [default: true] cache mise using GitHub's cache
 
-      - name: Test EQL
+      - name: Setup database (Postgres ${{ matrix.postgres-version }})
         run: |
-          just build test
+          mise run postgres:up postgres-${POSTGRES_VERSION} --extra-args "--detach --wait"
 
+      - name: Test EQL for Postgres ${{ matrix.postgres-version }}
+        run: |
+          mise run --output prefix test --postgres ${POSTGRES_VERSION}

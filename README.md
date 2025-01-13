@@ -392,3 +392,49 @@ To cut a [release](https://github.com/cipherstash/encrypt-query-language/release
 1. Click `Publish release`.
 
 This will trigger the [Release EQL](https://github.com/cipherstash/encrypt-query-language/actions/workflows/release-eql.yml) workflow, which will build and attach artifacts to [the release](https://github.com/cipherstash/encrypt-query-language/releases/).
+
+## Testing
+
+There are tests for EQL for PostgreSQL versions 14–17.
+
+They easiest way to run them is in [GitHub Actions](https://github.com/cipherstash/encrypt-query-language/actions/workflows/test-eql.yml).
+
+### Running tests locally
+
+> [!IMPORTANT]
+> **Before you run the tests** you need to have this software installed:
+>  - [mise](https://mise.jdx.dev/) — see the [installing mise](#installing-mise) instructions
+>  - [Docker](https://www.docker.com/) — see Docker's [documentation for installing](https://docs.docker.com/get-started/get-docker/)
+
+To run tests locally:
+
+``` shell
+# Clone the repo
+git clone https://github.com/cipherstash/encrypt-query-language
+cd encrypt-query-language
+
+# Install dependencies
+mise trust --yes
+
+# Start a postgres instance
+mise run postgres:up postgres-17 --extra-args "--detach --wait"
+
+# Run the tests
+mise run test --postgres 17
+
+# Stop and remove all containers and networks
+mise run postgres:down
+```
+
+You can run the same tasks for Postgres 14, 15, 16, and 17.
+
+The configuration for the Postgres containers in `tests/docker-compose.yml`.
+
+Limitations:
+
+- **Volumes for Postgres containers are not persistent.**
+  If you need to look at data in the container, uncomment a volume in
+  `tests/docker-compose.yml`
+- **You can't run multiple Postgres containers at the same time.**
+  All the containers bind to the same port (`7543`). If you want to run
+  multiple containers at the same time, you'll have to change the ports.
