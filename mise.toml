@@ -7,8 +7,10 @@
 #     "./tests/mise.tls.toml",
 # ]
 [task_config]
-includes = ["tasks"]
-
+includes = [
+  "tasks",
+  "tasks/postgres.toml"
+]
 
 [env]
 # Default configuration for running cipherstash-proxy out of the box
