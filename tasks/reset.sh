@@ -7,7 +7,7 @@
 set -euo pipefail
 
 fail_if_postgres_not_running () {
-  containers=$(docker ps --filter "name=${container_name}" --quiet)
+  containers=$(docker ps --filter "name=^${container_name}$" --quiet)
   if [ -z "${containers}" ]; then
     echo "error: Docker container for PostgreSQL is not running"
     echo "error: Try running 'mise run postgres:up ${container_name}' to start the container"
