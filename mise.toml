@@ -1,0 +1,20 @@
+[settings]
+# Config for test environments
+# Can be invoked with: mise --env tcp run <task>
+# trusted_config_paths = [
+#     "./tests/mise.toml",
+#     "./tests/mise.tcp.toml",
+#     "./tests/mise.tls.toml",
+# ]
+[task_config]
+includes = [
+  "tasks",
+  "tasks/postgres.toml"
+]
+
+[env]
+POSTGRES_DB = "cipherstash"
+POSTGRES_USER = "cipherstash"
+POSTGRES_PASSWORD = "password"
+POSTGRES_HOST = "localhost"
+POSTGRES_PORT = "7432"
