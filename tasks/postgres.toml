@@ -1,0 +1,12 @@
+["postgres:down"]
+description = "Tear down Postgres containers"
+dir = "{{config_root}}/tests"
+run = "docker compose down"
+
+["postgres:up"]
+description = "Run Postgres instances with docker compose"
+dir = "{{config_root}}/tests"
+run = """
+{% set default_service = "postgres-" ~ get_env(name="POSTGRES_VERSION",default="17") %}
+echo docker compose up {{arg(name="service",default=default_service)}} {{option(name="extra-args",default="")}} | bash
+"""
