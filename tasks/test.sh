@@ -31,3 +31,9 @@ run_test tests/core-functions.sql
 run_test tests/config.sql
 run_test tests/encryptindex.sql
 run_test tests/operators.sql
+
+echo
+echo '###############################################'
+echo "# ✅ALL TESTS PASSED "
+echo '###############################################'
+echo
