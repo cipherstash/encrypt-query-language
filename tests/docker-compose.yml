@@ -3,9 +3,9 @@ services:
     container_name: postgres
     image: postgres
     ports:
-      - 5532:5532
+      - 7432:7432
     environment:
-      - PGPORT=5532
+      - PGPORT=${POSTGRES_PORT}
       - PGUSER=${POSTGRES_USER}
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
