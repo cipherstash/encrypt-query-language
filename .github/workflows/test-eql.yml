@@ -46,10 +46,10 @@ jobs:
           install: true # [default: true] run `mise install`
           cache: true # [default: true] cache mise using GitHub's cache
 
-      - name: Setup database
+      - name: Setup database (Postgres ${{ matrix.postgres-version }})
         run: |
           mise run postgres:up postgres-${POSTGRES_VERSION} --extra-args "--detach --wait"
 
-      - name: Test EQL
+      - name: Test EQL for Postgres ${{ matrix.postgres-version }}
         run: |
           mise run --output prefix test
