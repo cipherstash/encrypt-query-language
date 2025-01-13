@@ -1,23 +1,17 @@
 #!/usr/bin/env bash
-#MISE description="Build, reset and run test"
+#MISE description="Build, reset and run tests"
+#USAGE flag "--postgres <version>" help="Run tests for specified Postgres version" default="17" {
+#USAGE   choices "14" "15" "16" "17"
+#USAGE }
 
 #!/bin/bash
 
-set -eo pipefail
+set -euo pipefail
 
-if [ -z "${POSTGRES_VERSION}" ]; then
-  echo "error: POSTGRES_VERSION not set"
-  echo "Please re-run with a version set:"
-  echo
-  echo "POSTGRES_VERSION=16 mise run test"
-  echo
-  exit 1
-fi
-
-set -u
+POSTGRES_VERSION=${usage_postgres}
 
 mise run build
-mise run reset
+mise run reset --postgres ${POSTGRES_VERSION}
 
 connection_url=postgresql://${POSTGRES_USER:-$USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
 container_name=postgres-${POSTGRES_VERSION}
