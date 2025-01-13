@@ -1,0 +1,50 @@
+services:
+  postgres: &postgres
+    container_name: postgres
+    image: postgres
+    ports:
+      - 5532:5532
+    environment:
+      - PGPORT=5532
+      - PGUSER=${POSTGRES_USERNAME}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    networks:
+      - postgres
+    deploy:
+      resources:
+        limits:
+          cpus: "${CPU_LIMIT:-2}"
+          memory: 2048mb
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+
+  postgres-17:
+    <<: *postgres
+    image: postgres:17
+    container_name: postgres-17
+
+  postgres-16:
+    <<: *postgres
+    image: postgres:16
+    container_name: postgres-16
+
+  postgres-15:
+    <<: *postgres
+    image: postgres:15
+    container_name: postgres-15
+
+  postgres-14:
+    <<: *postgres
+    image: postgres:14
+    container_name: postgres-14
+
+networks:
+  postgres:
+    driver: bridge
+
