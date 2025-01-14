@@ -393,6 +393,34 @@ To cut a [release](https://github.com/cipherstash/encrypt-query-language/release
 
 This will trigger the [Release EQL](https://github.com/cipherstash/encrypt-query-language/actions/workflows/release-eql.yml) workflow, which will build and attach artifacts to [the release](https://github.com/cipherstash/encrypt-query-language/releases/).
 
+## Developing
+
+### How this project is organised
+
+Development is managed through [mise](https://mise.jdx.dev/), both locally and [in CI](https://github.com/cipherstash/encrypt-query-language/actions).
+
+mise has tasks for:
+
+- Building EQL install and uninstall scripts (`build`)
+- Starting and stopping PostgreSQL containers (`postgres:up`, `postgres:down`)
+- Running unit and integration tests (`test`, `reset`)
+
+These are the important files in the repo:
+
+```
+.
+├── mise.toml              <-- the main config file for mise
+├── tasks/                 <-- mise tasks
+├── sql/                   <-- The individual SQL components that make up EQL
+├── docs/                  <-- Tutorial, reference, and concept documentation
+├── tests/                 <-- Unit and integration tests
+│   ├── docker-compose.yml <-- Docker configuration for running PostgreSQL instances
+│   └── *.sql              <-- Individual unit and integration tests
+├── release/               <-- Build artifacts produced by the `build` task
+├── examples/              <-- Example uses of EQL in different languages
+└── playground/            <-- Playground enviroment for experimenting with EQL and CipherStash Proxy
+```
+
 ## Testing
 
 There are tests for testing EQL against PostgreSQL versions 14–17.
