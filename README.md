@@ -395,9 +395,14 @@ This will trigger the [Release EQL](https://github.com/cipherstash/encrypt-query
 
 ## Testing
 
-There are tests for EQL for PostgreSQL versions 14–17.
+There are tests for testing EQL against PostgreSQL versions 14–17.
 
-They easiest way to run them is in [GitHub Actions](https://github.com/cipherstash/encrypt-query-language/actions/workflows/test-eql.yml).
+The easiest way to run the tests is in GitHub Actions:
+
+- [Automatically whenever there are changes](./.github/workflows/test-eql.yml) in the `sql/`, `tests/`, or `tasks/` directories
+- By manually running [the workflow](https://github.com/cipherstash/encrypt-query-language/actions/workflows/test-eql.yml)
+
+You can also run the tests locally when doing local development.
 
 ### Running tests locally
 
