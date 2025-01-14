@@ -423,7 +423,12 @@ These are the important files in the repo:
 
 ## Testing
 
-There are tests for testing EQL against PostgreSQL versions 14–17.
+There are tests for testing EQL against PostgreSQL versions 14–17, that verify:
+
+- Adding, removing, and modifying encrypted data and indexes
+- Validating, applying, and removing configuration for encrypted data and encrypted indexes
+- Validating schemas for EQL configuration, encrypted data, and encrypted index
+- Using PostgreSQL operators on encrypted data and indexes (`=`, `<>`, `@>`)
 
 The easiest way to run the tests is in GitHub Actions:
 
