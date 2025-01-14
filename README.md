@@ -41,6 +41,8 @@ Store encrypted data alongside your existing data:
   - [How is data encrypted in the database?](#how-is-data-encrypted-in-the-database)
 - [Helper packages](#helper-packages-and-examples)
 - [Releasing](#releasing)
+- [Developing](#developing)
+- [Testing](#testing)
 
 ---
 
