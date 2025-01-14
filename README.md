@@ -425,14 +425,14 @@ These are the important files in the repo:
 
 ## Testing
 
-There are tests for testing EQL against PostgreSQL versions 14–17, that verify:
+There are tests for checking EQL against PostgreSQL versions 14–17, that verify:
 
 - Adding, removing, and modifying encrypted data and indexes
 - Validating, applying, and removing configuration for encrypted data and encrypted indexes
-- Validating schemas for EQL configuration, encrypted data, and encrypted index
+- Validating schemas for EQL configuration, encrypted data, and encrypted indexes
 - Using PostgreSQL operators on encrypted data and indexes (`=`, `<>`, `@>`)
 
-The easiest way to run the tests [is in GitHub Actions](./.github/workflows/test-eql.yml)
+The easiest way to run the tests [is in GitHub Actions](./.github/workflows/test-eql.yml):
 
 - Automatically whenever there are changes in the `sql/`, `tests/`, or `tasks/` directories
 - By manually running [the workflow](https://github.com/cipherstash/encrypt-query-language/actions/workflows/test-eql.yml)
@@ -506,7 +506,7 @@ stateDiagram-v2
     build_fail --> [*]
 ```
 
-You can also run the tests locally when doing local development.
+You can also [run the tests locally](#running-tests-locally) when doing local development.
 
 ### Running tests locally
 
