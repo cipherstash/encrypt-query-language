@@ -41,3 +41,12 @@ cat sql/666-rename_configuration_table.sql >> release/cipherstash-encrypt-uninst
 # remove the drop file
 rm release/cipherstash-encrypt-tmp-drop-install.sql
 rm release/cipherstash-encrypt-tmp-drop-uninstall.sql
+
+set +x
+echo
+echo '###############################################'
+echo "# ✅Build succeeded"
+echo '###############################################'
+echo
+echo 'Installer:   release/cipherstash-encrypt.sql'
+echo 'Uninstaller: release/cipherstash-encrypt-uninstall.sql'
