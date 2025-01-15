@@ -569,31 +569,33 @@ You can also [run the tests locally](#running-tests-locally) when doing local de
 ### Running tests locally
 
 > [!IMPORTANT]
-> **Before you run the tests** you need to have this software installed:
->  - [mise](https://mise.jdx.dev/) — see the [installing mise](#installing-mise) instructions
->  - [Docker](https://www.docker.com/) — see Docker's [documentation for installing](https://docs.docker.com/get-started/get-docker/)
+> **Before you run the tests locally** you need to [set up a local dev environment](#developing).
 
-To run tests locally:
+To run tests locally with PostgreSQL 17:
 
 ``` shell
-# Clone the repo
-git clone https://github.com/cipherstash/encrypt-query-language
-cd encrypt-query-language
+# Start a postgres instance (defaults to PostgreSQL 17)
+mise run postgres:up --extra-args "--detach --wait"
 
-# Install dependencies
-mise trust --yes
-
-# Start a postgres instance
-mise run postgres:up postgres-17 --extra-args "--detach --wait"
-
-# Run the tests
-mise run test --postgres 17
+# Run the tests (defaults to PostgreSQL 17)
+mise run test
 
 # Stop and remove all containers and networks
 mise run postgres:down
 ```
 
-You can run the same tasks for Postgres 14, 15, 16, and 17.
+You can run the same tasks for Postgres 14, 15, 16, and 17 by specifying arguments:
+
+```shell
+# Start a postgres 14 instance
+mise run postgres:up postgres-14 --extra-args "--detach --wait"
+
+# Run the tests against postgres 14
+mise run test --postgres 14
+
+# Stop postgres and remove all containers and networks
+mise run postgres:down
+```
 
 The configuration for the Postgres containers in `tests/docker-compose.yml`.
 
