@@ -425,6 +425,36 @@ mise run test
 mise run postgres:down
 ```
 
+### Installing mise
+
+> [!IMPORTANT]
+> You must complete this step to set up a local development environment.
+
+Local development and task running in CI is managed through [mise](https://mise.jdx.dev/).
+
+To install mise:
+
+- If you're on macOS, run `brew install mise`
+- If you're on another platform, check out the mise [installation methods documentation](https://mise.jdx.dev/installing-mise.html#installation-methods)
+
+Then add mise to your shell:
+
+```shell
+# If you're running Bash
+echo 'eval "$(mise activate bash)"' >> ~/.bashrc
+
+# If you're running Zsh
+echo 'eval "$(mise activate zsh)"' >> ~/.zshrc
+```
+
+We use [`cargo-binstall`](https://github.com/cargo-bins/cargo-binstall) for faster installation of tools installed via `mise` and Cargo.
+We install `cargo-binstall` via `mise` when installing development and testing dependencies.
+
+> [!TIP]
+> We provide abbreviations for most of the commands that follow.
+> For example, `mise run postgres:setup` can be abbreviated to `mise r s`.
+> Run `mise tasks --extended` to see the task shortcuts.
+
 ### How this project is organised
 
 Development is managed through [mise](https://mise.jdx.dev/), both locally and [in CI](https://github.com/cipherstash/encrypt-query-language/actions).
