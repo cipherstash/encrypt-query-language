@@ -606,4 +606,5 @@ Limitations:
   `tests/docker-compose.yml`
 - **You can't run multiple Postgres containers at the same time.**
   All the containers bind to the same port (`7543`). If you want to run
-  multiple containers at the same time, you'll have to change the ports.
+  multiple containers at the same time, you have to change the ports by
+  editing `tests/docker-compose.yml`
