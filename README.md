@@ -397,6 +397,34 @@ This will trigger the [Release EQL](https://github.com/cipherstash/encrypt-query
 
 ## Developing
 
+> [!IMPORTANT]
+> **Before you follow the quickstart* you need to have this software installed:
+>  - [mise](https://mise.jdx.dev/) — see the [installing mise](#installing-mise) instructions
+>  - [Docker](https://www.docker.com/) — see Docker's [documentation for installing](https://docs.docker.com/get-started/get-docker/)
+
+Local development quickstart:
+
+``` shell
+# Clone the repo
+git clone https://github.com/cipherstash/encrypt-query-language
+cd encrypt-query-language
+
+# Install dependencies
+mise trust --yes
+
+# Build EQL installer and uninstaller, outputting to release/
+mise run build
+
+# Start a postgres instance (defaults to PostgreSQL 17)
+mise run postgres:up --extra-args "--detach --wait"
+
+# Run the tests (defaults to PostgreSQL 17)
+mise run test
+
+# Stop and remove all containers and networks
+mise run postgres:down
+```
+
 ### How this project is organised
 
 Development is managed through [mise](https://mise.jdx.dev/), both locally and [in CI](https://github.com/cipherstash/encrypt-query-language/actions).
