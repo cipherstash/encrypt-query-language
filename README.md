@@ -398,7 +398,7 @@ This will trigger the [Release EQL](https://github.com/cipherstash/encrypt-query
 ## Developing
 
 > [!IMPORTANT]
-> **Before you follow the quickstart* you need to have this software installed:
+> **Before you follow the quickstart** you need to have this software installed:
 >  - [mise](https://mise.jdx.dev/) — see the [installing mise](#installing-mise) instructions
 >  - [Docker](https://www.docker.com/) — see Docker's [documentation for installing](https://docs.docker.com/get-started/get-docker/)
 
