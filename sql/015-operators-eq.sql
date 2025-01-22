@@ -15,7 +15,8 @@ DROP FUNCTION IF EXISTS cs_encrypted_eq_v1(a cs_encrypted_v1, b cs_encrypted_v1)
 
 CREATE FUNCTION cs_encrypted_eq_v1(a cs_encrypted_v1, b cs_encrypted_v1)
 RETURNS boolean AS $$
-  SELECT cs_unique_v1(a) = cs_unique_v1(b);
+  SELECT cs_unique_v1(a) = cs_unique_v1(b) OR
+         cs_ore_64_8_v1(a) = cs_ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR = (
@@ -34,7 +35,8 @@ DROP FUNCTION IF EXISTS cs_encrypted_eq_v1(a cs_encrypted_v1, b jsonb);
 
 CREATE FUNCTION cs_encrypted_eq_v1(a cs_encrypted_v1, b jsonb)
 RETURNS boolean AS $$
-  SELECT cs_unique_v1(a) = cs_unique_v1(b);
+  SELECT cs_unique_v1(a) = cs_unique_v1(b) OR
+         cs_ore_64_8_v1(a) = cs_ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR = (
@@ -53,7 +55,8 @@ DROP FUNCTION IF EXISTS cs_encrypted_eq_v1(a jsonb, b cs_encrypted_v1);
 
 CREATE FUNCTION cs_encrypted_eq_v1(a jsonb, b cs_encrypted_v1)
 RETURNS boolean AS $$
-  SELECT cs_unique_v1(a) = cs_unique_v1(b);
+  SELECT cs_unique_v1(a) = cs_unique_v1(b) OR
+         cs_ore_64_8_v1(a) = cs_ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR = (
@@ -73,7 +76,8 @@ DROP FUNCTION IF EXISTS cs_encrypted_eq_v1(a cs_encrypted_v1, b cs_unique_index_
 
 CREATE FUNCTION cs_encrypted_eq_v1(a cs_encrypted_v1, b cs_unique_index_v1)
 RETURNS boolean AS $$
-  SELECT cs_unique_v1(a) = b;
+  SELECT cs_unique_v1(a) = b OR
+         cs_ore_64_8_v1(a) = b;
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR = (
@@ -92,7 +96,8 @@ DROP FUNCTION IF EXISTS cs_encrypted_eq_v1(a cs_unique_index_v1, b cs_encrypted_
 
 CREATE FUNCTION cs_encrypted_eq_v1(a cs_unique_index_v1, b cs_encrypted_v1)
 RETURNS boolean AS $$
-  SELECT a = cs_unique_v1(b);
+  SELECT a = cs_unique_v1(b) OR
+         a = cs_ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR =(
@@ -115,7 +120,8 @@ DROP FUNCTION IF EXISTS cs_encrypted_neq_v1(a cs_encrypted_v1, b cs_encrypted_v1
 
 CREATE FUNCTION cs_encrypted_neq_v1(a cs_encrypted_v1, b cs_encrypted_v1)
 RETURNS boolean AS $$
-  SELECT cs_unique_v1(a) <> cs_unique_v1(b);
+  SELECT cs_unique_v1(a) <> cs_unique_v1(b) OR
+         cs_ore_64_8_v1(a) <> cs_ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <> (
@@ -135,7 +141,8 @@ DROP FUNCTION IF EXISTS cs_encrypted_neq_v1(a cs_encrypted_v1, b jsonb);
 
 CREATE FUNCTION cs_encrypted_neq_v1(a cs_encrypted_v1, b jsonb)
 RETURNS boolean AS $$
-  SELECT cs_unique_v1(a) <> cs_unique_v1(b);
+  SELECT cs_unique_v1(a) <> cs_unique_v1(b) OR
+         cs_ore_64_8_v1(a) <> cs_ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <> (
@@ -155,7 +162,8 @@ DROP FUNCTION IF EXISTS cs_encrypted_neq_v1(a jsonb, b cs_encrypted_v1);
 
 CREATE FUNCTION cs_encrypted_neq_v1(a jsonb, b cs_encrypted_v1)
 RETURNS boolean AS $$
-  SELECT cs_unique_v1(a) <> cs_unique_v1(b);
+  SELECT cs_unique_v1(a) <> cs_unique_v1(b) OR
+         cs_ore_64_8_v1(a) <> cs_ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <> (
@@ -175,7 +183,8 @@ DROP FUNCTION IF EXISTS cs_encrypted_neq_v1(a cs_encrypted_v1, b cs_unique_index
 
 CREATE FUNCTION cs_encrypted_neq_v1(a cs_encrypted_v1, b cs_unique_index_v1)
 RETURNS boolean AS $$
-  SELECT cs_unique_v1(a) <> b;
+  SELECT cs_unique_v1(a) <> b OR
+         cs_ore_64_8_v1(a) <> b;
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <> (
@@ -195,7 +204,8 @@ DROP FUNCTION IF EXISTS cs_encrypted_neq_v1(a cs_unique_index_v1, b cs_encrypted
 
 CREATE FUNCTION cs_encrypted_neq_v1(a cs_unique_index_v1, b cs_encrypted_v1)
 RETURNS boolean AS $$
-  SELECT a <> cs_unique_v1(b);
+  SELECT a <> cs_unique_v1(b) OR
+         a <> cs_ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <> (
