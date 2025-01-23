@@ -32,7 +32,7 @@ INSERT INTO users (name_encrypted) VALUES (
 -- MATCH @> OPERATORS
 DO $$
   BEGIN
-    -- SANITY CHECK FOR UNIQUE payloads
+    -- SANITY CHECK
     ASSERT (SELECT EXISTS (SELECT id FROM users WHERE cs_match_v1(name_encrypted) @> cs_match_v1('{"m":[1,2]}')));
 
     -- cs_encrypted_v1 = jsonb
@@ -62,7 +62,7 @@ $$ LANGUAGE plpgsql;
 -- MATCH <@ OPERATORS
 DO $$
   BEGIN
-    -- SANITY CHECK FOR UNIQUE payloads
+    -- SANITY CHECK
     ASSERT (SELECT EXISTS (SELECT id FROM users WHERE cs_match_v1('{"m":[1,2]}') <@ cs_match_v1(name_encrypted)));
 
     -- cs_encrypted_v1 = jsonb
