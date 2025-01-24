@@ -41,7 +41,9 @@ run_test tests/core.sql
 run_test tests/core-functions.sql
 run_test tests/config.sql
 run_test tests/encryptindex.sql
-run_test tests/operators.sql
+run_test tests/operators-eq.sql
+run_test tests/operators-match.sql
+run_test tests/operators-ore.sql
 
 echo
 echo '###############################################'
