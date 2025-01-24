@@ -34,7 +34,10 @@ cat sql/666-drop_types.sql >> release/cipherstash-encrypt-tmp-drop-uninstall.sql
 
 # Build cipherstash-encrypt-uninstall.sql
 # prepend the drops to the main sql file
+cat sql/666-drop-operators.sql >> release/cipherstash-encrypt-uninstall.sql
 cat release/cipherstash-encrypt-tmp-drop-uninstall.sql >> release/cipherstash-encrypt-uninstall.sql
+
+
 # uninstall renames configuration table
 cat sql/666-rename_configuration_table.sql >> release/cipherstash-encrypt-uninstall.sql
 
