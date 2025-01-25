@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Build SQL into single release file"
+#MISE alias="b"
 #MISE sources=["sql/*.sql"]
 #MISE outputs=["release/cipherstash-encrypt.sql","release/cipherstash-encrypt-uninstall.sql"]
 
@@ -21,7 +22,8 @@ cat sql/666-drop_types.sql >> release/cipherstash-encrypt-tmp-drop-install.sql
 
 # Build cipherstash-encrypt.sql
 # drop everything first
-cat release/cipherstash-encrypt-tmp-drop-install.sql > release/cipherstash-encrypt.sql
+cat sql/666-drop-operators.sql > release/cipherstash-encrypt.sql
+cat release/cipherstash-encrypt-tmp-drop-install.sql >> release/cipherstash-encrypt.sql
 # cat the rest of the sql files
 cat sql/0*-*.sql >> release/cipherstash-encrypt.sql
 
