@@ -402,3 +402,34 @@ LANGUAGE sql STRICT PARALLEL SAFE
 BEGIN ATOMIC
   RETURN NULL;
 END;
+
+DROP FUNCTION IF EXISTS cs_config();
+
+--
+-- A convenience function to return the configuration in a tabular format, allowing for easier filtering, and querying.
+-- Query using `SELECT * FROM cs_config();`
+--
+CREATE FUNCTION cs_config() RETURNS TABLE (
+    state cs_configuration_state_v1,
+    relation text,
+    col_name text,
+    decrypts_as text,
+    indexes jsonb
+)
+AS $$
+BEGIN
+    RETURN QUERY
+      WITH tables AS (
+          SELECT config.state, tables.key AS table, tables.value AS config
+          FROM cs_configuration_v1 config, jsonb_each(data->'tables') tables
+          WHERE config.data->>'v' = '1'
+      )
+      SELECT
+          tables.state,
+          tables.table,
+          column_config.key,
+          column_config.value->>'cast_as',
+          column_config.value->'indexes'
+      FROM tables, jsonb_each(tables.config) column_config;
+END;
+$$ LANGUAGE plpgsql;
