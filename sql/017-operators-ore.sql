@@ -406,9 +406,7 @@ DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b cs_en
 
 CREATE FUNCTION cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b cs_encrypted_v1)
   RETURNS integer AS $$
-  DECLARE
   BEGIN
-    RAISE NOTICE 'cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b cs_encrypted_v1)';
     RETURN compare_ore_64_8_v1(cs_ore_64_8_v1(a), cs_ore_64_8_v1(b));
   END;
 $$ LANGUAGE plpgsql;
@@ -417,9 +415,7 @@ DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b cs_en
 
 CREATE FUNCTION cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b jsonb)
   RETURNS integer AS $$
-  DECLARE
   BEGIN
-    RAISE NOTICE 'cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b jsonb)';
     RETURN compare_ore_64_8_v1(cs_ore_64_8_v1(a), cs_ore_64_8_v1(jsonb));
   END;
 $$ LANGUAGE plpgsql;
