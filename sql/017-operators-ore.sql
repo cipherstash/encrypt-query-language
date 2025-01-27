@@ -398,8 +398,30 @@ CREATE OPERATOR <=(
   JOIN = scalarlejoinsel
 );
 
+
 -----------------------------------------------------------------------------------------
 
+
+DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b cs_encrypted_v1);
+
+CREATE FUNCTION cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b cs_encrypted_v1)
+  RETURNS integer AS $$
+  BEGIN
+    RETURN compare_ore_64_8_v1(cs_ore_64_8_v1(a), cs_ore_64_8_v1(b));
+  END;
+$$ LANGUAGE plpgsql;
+
+DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b cs_encrypted_v1);
+
+CREATE FUNCTION cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b jsonb)
+  RETURNS integer AS $$
+  BEGIN
+    RETURN compare_ore_64_8_v1(cs_ore_64_8_v1(a), cs_ore_64_8_v1(jsonb));
+  END;
+$$ LANGUAGE plpgsql;
+
+
+-----------------------------------------------------------------------------------------
 
 
 DROP OPERATOR FAMILY IF EXISTS cs_encrypted_ore_64_8_v1_btree_ops_v1 USING btree;
@@ -409,11 +431,12 @@ CREATE OPERATOR FAMILY cs_encrypted_ore_64_8_v1_btree_ops_v1 USING btree;
 
 DROP OPERATOR CLASS IF EXISTS ore_64_8_v1_btree_ops USING btree;
 
-CREATE OPERATOR CLASS cs_encrypted_ore_64_8_v1_btree_ops_v1 DEFAULT FOR TYPE cs_encrypted_v1 USING btree FAMILY cs_encrypted_ore_64_8_v1_btree_ops_v1  AS
-        OPERATOR 1 <,
-        OPERATOR 2 <=,
-        OPERATOR 3 =,
-        OPERATOR 4 >=,
-        OPERATOR 5 >;
-
-
+CREATE OPERATOR CLASS cs_encrypted_ore_64_8_v1_btree_ops_v1 DEFAULT
+FOR TYPE cs_encrypted_v1 USING btree
+  FAMILY cs_encrypted_ore_64_8_v1_btree_ops_v1 AS
+  OPERATOR 1 <,
+  OPERATOR 2 <=,
+  OPERATOR 3 =,
+  OPERATOR 4 >=,
+  OPERATOR 5 >,
+  FUNCTION 1 cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b cs_encrypted_v1);
