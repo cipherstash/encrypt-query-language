@@ -401,24 +401,31 @@ CREATE OPERATOR <=(
 
 -----------------------------------------------------------------------------------------
 
-
 DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b cs_encrypted_v1);
 
 CREATE FUNCTION cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b cs_encrypted_v1)
   RETURNS integer AS $$
+   DECLARE
+    a_ore bytea[];
+    b_ore bytea[];
   BEGIN
-    RETURN compare_ore_64_8_v1(cs_ore_64_8_v1(a), cs_ore_64_8_v1(b));
+    a_ore = ARRAY[(a->>'o')::bytea];
+    b_ore = ARRAY[(b->>'o')::bytea];
+
+    RETURN compare_ore_64_8_v1(a_ore, b_ore);
   END;
+
 $$ LANGUAGE plpgsql;
 
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b cs_encrypted_v1);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b jsonb)
-  RETURNS integer AS $$
-  BEGIN
-    RETURN compare_ore_64_8_v1(cs_ore_64_8_v1(a), cs_ore_64_8_v1(jsonb));
-  END;
-$$ LANGUAGE plpgsql;
+-- DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b cs_encrypted_v1);
+
+-- CREATE FUNCTION cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b jsonb)
+--   RETURNS integer AS $$
+--   BEGIN
+--     RETURN compare_ore_64_8_v1(cs_ore_64_8_v1(a), cs_ore_64_8_v1(jsonb));
+--   END;
+-- $$ LANGUAGE plpgsql;
 
 
 -----------------------------------------------------------------------------------------
@@ -428,8 +435,7 @@ DROP OPERATOR FAMILY IF EXISTS cs_encrypted_ore_64_8_v1_btree_ops_v1 USING btree
 
 CREATE OPERATOR FAMILY cs_encrypted_ore_64_8_v1_btree_ops_v1 USING btree;
 
-
-DROP OPERATOR CLASS IF EXISTS ore_64_8_v1_btree_ops USING btree;
+DROP OPERATOR CLASS IF EXISTS cs_encrypted_ore_64_8_v1_btree_ops_v1 USING btree;
 
 CREATE OPERATOR CLASS cs_encrypted_ore_64_8_v1_btree_ops_v1 DEFAULT
 FOR TYPE cs_encrypted_v1 USING btree
