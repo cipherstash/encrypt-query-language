@@ -9,8 +9,15 @@ CREATE TYPE ore_64_8_v1 AS (
 );
 
 DROP FUNCTION IF EXISTS compare_ore_64_8_v1_term(a ore_64_8_v1_term, b ore_64_8_v1_term);
+DROP FUNCTION IF EXISTS compare_ore_64_8_v1_term(a bytea, b bytea);
 
 CREATE FUNCTION compare_ore_64_8_v1_term(a ore_64_8_v1_term, b ore_64_8_v1_term) returns integer AS $$
+  BEGIN
+    SELECT compare_ore_64_8_v1_term(a.bytes, b.bytes)
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE FUNCTION compare_ore_64_8_v1_term(a bytea, b bytea) returns integer AS $$
   DECLARE
     eq boolean := true;
     unequal_block smallint := 0;
@@ -35,7 +42,7 @@ CREATE FUNCTION compare_ore_64_8_v1_term(a ore_64_8_v1_term, b ore_64_8_v1_term)
       RETURN 1;
     END IF;
 
-    IF bit_length(a.bytes) != bit_length(b.bytes) THEN
+    IF bit_length(a) != bit_length(b) THEN
       RAISE EXCEPTION 'Ciphertexts are different lengths';
     END IF;
 
@@ -47,8 +54,8 @@ CREATE FUNCTION compare_ore_64_8_v1_term(a ore_64_8_v1_term, b ore_64_8_v1_term)
       -- * We are not worrying about timing attacks here; don't fret about
       --   the OR or !=.
       IF
-        substr(a.bytes, 1 + block, 1) != substr(b.bytes, 1 + block, 1)
-        OR substr(a.bytes, 9 + left_block_size * block, left_block_size) != substr(b.bytes, 9 + left_block_size * BLOCK, left_block_size)
+        substr(a, 1 + block, 1) != substr(b, 1 + block, 1)
+        OR substr(a, 9 + left_block_size * block, left_block_size) != substr(b, 9 + left_block_size * BLOCK, left_block_size)
       THEN
         -- set the first unequal block we find
         IF eq THEN
@@ -63,20 +70,20 @@ CREATE FUNCTION compare_ore_64_8_v1_term(a ore_64_8_v1_term, b ore_64_8_v1_term)
     END IF;
 
     -- Hash key is the IV from the right CT of b
-    hash_key := substr(b.bytes, right_offset + 1, 16);
+    hash_key := substr(b, right_offset + 1, 16);
 
     -- first right block is at right offset + nonce_size (ordinally indexed)
-    target_block := substr(b.bytes, right_offset + 17 + (unequal_block * right_block_size), right_block_size);
+    target_block := substr(b, right_offset + 17 + (unequal_block * right_block_size), right_block_size);
 
     indicator := (
       get_bit(
         encrypt(
-          substr(a.bytes, 9 + (left_block_size * unequal_block), left_block_size),
+          substr(a, 9 + (left_block_size * unequal_block), left_block_size),
           hash_key,
           'aes-ecb'
         ),
         0
-      ) + get_bit(target_block, get_byte(a.bytes, unequal_block))) % 2;
+      ) + get_bit(target_block, get_byte(a, unequal_block))) % 2;
 
     IF indicator = 1 THEN
       RETURN 1::integer;
@@ -235,6 +242,13 @@ CREATE OPERATOR CLASS ore_64_8_v1_term_btree_ops DEFAULT FOR TYPE ore_64_8_v1_te
 DROP FUNCTION IF EXISTS compare_ore_array(a ore_64_8_v1_term[], b ore_64_8_v1_term[]);
 
 CREATE FUNCTION compare_ore_array(a ore_64_8_v1_term[], b ore_64_8_v1_term[])
+RETURNS integer AS $$
+  BEGIN
+    SELECT compare_ore_array(a, b);
+  END
+$$ LANGUAGE plpgsql;
+
+CREATE FUNCTION compare_ore_array(a bytea[], b bytea[])
 RETURNS integer AS $$
   DECLARE
     cmp_result integer;
