@@ -272,6 +272,18 @@ RETURNS integer AS $$
   END
 $$ LANGUAGE plpgsql;
 
+DROP FUNCTION IF EXISTS compare_ore_64_8_v1(a bytea[], b bytea[]);
+
+CREATE FUNCTION compare_ore_64_8_v1(a bytea[], b bytea[])
+RETURNS integer AS $$
+  DECLARE
+    cmp_result integer;
+  BEGIN
+    -- Recursively compare blocks bailing as soon as we can make a decision
+    RETURN compare_ore_array(a, b);
+  END
+$$ LANGUAGE plpgsql;
+
 
 DROP FUNCTION IF EXISTS ore_64_8_v1_eq(a ore_64_8_v1, b ore_64_8_v1);
 
