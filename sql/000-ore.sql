@@ -8,6 +8,21 @@ CREATE TYPE ore_64_8_v1 AS (
   terms ore_64_8_v1_term[]
 );
 
+DROP FUNCTION IF EXISTS cs_cast_ore_64_8_v1_term_to_bytea(t ore_64_8_v1_term);
+
+CREATE FUNCTION cs_cast_ore_64_8_v1_term_to_bytea(t ore_64_8_v1_term)
+  RETURNS bytea
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+BEGIN ATOMIC
+	RETURN t.bytes;
+END;
+
+DROP CAST IF EXISTS (ore_64_8_v1_term AS bytea);
+
+CREATE CAST (ore_64_8_v1_term AS bytea)
+	WITH FUNCTION cs_cast_ore_64_8_v1_term_to_bytea(ore_64_8_v1_term) AS IMPLICIT;
+
+
 DROP FUNCTION IF EXISTS compare_ore_64_8_v1_term(a ore_64_8_v1_term, b ore_64_8_v1_term);
 DROP FUNCTION IF EXISTS compare_ore_64_8_v1_term(a bytea, b bytea);
 
@@ -239,14 +254,15 @@ CREATE OPERATOR CLASS ore_64_8_v1_term_btree_ops DEFAULT FOR TYPE ore_64_8_v1_te
 -- doesn't always make sense but it's here for completeness.
 -- If both are non-empty, we compare the first element. If they are equal
 -- we need to consider the next block so we recurse, otherwise we return the comparison result.
-DROP FUNCTION IF EXISTS compare_ore_array(a ore_64_8_v1_term[], b ore_64_8_v1_term[]);
+-- DROP FUNCTION IF EXISTS compare_ore_array(a ore_64_8_v1_term[], b ore_64_8_v1_term[]);
 
-CREATE FUNCTION compare_ore_array(a ore_64_8_v1_term[], b ore_64_8_v1_term[])
-RETURNS integer AS $$
-  BEGIN
-    SELECT compare_ore_array(a, b);
-  END
-$$ LANGUAGE plpgsql;
+-- CREATE FUNCTION compare_ore_array(a ore_64_8_v1_term[], b ore_64_8_v1_term[])
+-- RETURNS integer AS $$
+--   BEGIN
+--     -- SELECT compare_ore_array(a, b);
+--     SELECT compare_ore_array(CAST(a AS bytea[]), CAST(b AS bytea[]));
+--   END
+-- $$ LANGUAGE plpgsql;
 
 CREATE FUNCTION compare_ore_array(a bytea[], b bytea[])
 RETURNS integer AS $$
@@ -282,7 +298,7 @@ RETURNS integer AS $$
     cmp_result integer;
   BEGIN
     -- Recursively compare blocks bailing as soon as we can make a decision
-    RETURN compare_ore_array(a.terms, b.terms);
+    RETURN compare_ore_array(a.terms::bytea[], b.terms::bytea[]);
   END
 $$ LANGUAGE plpgsql;
 
