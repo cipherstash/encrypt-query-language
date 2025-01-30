@@ -45,13 +45,11 @@ INSERT INTO users (name_encrypted) VALUES (
 );
 
 
-
 -- SELECT id FROM users WHERE cs_ore_64_8_v1(name_encrypted) > cs_ore_64_8_v1('{"o":"(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x12121212121259bfe28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd801ff4a28b714e4cde8df10625dce72602fdbdcc53d515857f1119f5912804ce09c6cf6c2d37393a27a465134523b512664582f834e15003b7216cb668480bc3e7d1c069f2572ece7c848b9eb9a28b4e62bfc2b97c93e61b2054154e621c5bbb7bed37de3d7c343bd3dbcf7b4af20128c961351bf55910a855f08a8587c2059a5f05ca8d7a082e695b3dd4ff3ce86694d4fe98972220eea1ab90f5de493ef3a502b74a569f103ee2897ebc9ae9b16a17e7be67415ee830519beb3058ffc1c1eb0e574d66c8b365919f27eb00aa7bce475d7bdaad4ed800f8fc3d626e0eb842e312b0cc22a1ccf89847ebb2cd0a6e18aec21bd2deeec1c47301fc687f7f764bb882b50f553c246a6da5816b78b3530119ea68b08a8403a90e063e58502670563bd4d\\\\\"\")\"\"}\")"}');
 
-SELECT id, name_encrypted FROM users ORDER BY name_encrypted DESC;
+SELECT id, name_encrypted FROM users ORDER BY cs_ore_64_8_v1(name_encrypted) ASC;
 
-
--- SELECT id, name_encrypted FROM users ORDER BY name_encrypted ASC;
+SELECT id, name_encrypted FROM users ORDER BY name_encrypted;
 
 -- SELECT id FROM users WHERE name_encrypted::cs_encrypted_v1 > '{
 --         "v": 1,
