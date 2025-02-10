@@ -140,33 +140,16 @@ BEGIN ATOMIC
 END;
 
 
--- casts text to ore_64_8_v1_term (bytea)
-DROP FUNCTION IF EXISTS _cs_text_to_ore_64_8_v1_term_v1_0(t text);
-
-CREATE FUNCTION _cs_text_to_ore_64_8_v1_term_v1_0(t text)
-  RETURNS ore_64_8_v1_term
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN t::bytea;
-END;
-
--- cast to cleanup ore_64_8_v1 extraction
-DROP CAST IF EXISTS (text AS ore_64_8_v1_term);
-
-CREATE CAST (text AS ore_64_8_v1_term)
-	WITH FUNCTION _cs_text_to_ore_64_8_v1_term_v1_0(text) AS IMPLICIT;
-
-
 -- extracts ore index from an encrypted column
 DROP FUNCTION IF EXISTS cs_ore_64_8_v1_v0_0(val jsonb);
 
 CREATE FUNCTION cs_ore_64_8_v1_v0_0(val jsonb)
-  RETURNS ore_64_8_v1
+  RETURNS bytea[]
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
     IF val ? 'o' THEN
-      RETURN (val->>'o')::ore_64_8_v1;
+      RETURN (val->>'o')::bytea[];
     END IF;
     RAISE 'Expected an ore index (o) value in json: %', val;
   END;
@@ -176,7 +159,7 @@ $$ LANGUAGE plpgsql;
 DROP FUNCTION IF EXISTS cs_ore_64_8_v1_v0(val jsonb);
 
 CREATE FUNCTION cs_ore_64_8_v1_v0(val jsonb)
-  RETURNS ore_64_8_v1
+  RETURNS bytea[]
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
 	RETURN cs_ore_64_8_v1_v0_0(val);
@@ -185,7 +168,7 @@ END;
 DROP FUNCTION IF EXISTS cs_ore_64_8_v1(val jsonb);
 
 CREATE FUNCTION cs_ore_64_8_v1(val jsonb)
-  RETURNS ore_64_8_v1
+  RETURNS bytea[]
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
 	RETURN cs_ore_64_8_v1_v0_0(val);
