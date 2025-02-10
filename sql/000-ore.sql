@@ -8,27 +8,13 @@ CREATE TYPE ore_64_8_v1 AS (
   terms ore_64_8_v1_term[]
 );
 
-DROP FUNCTION IF EXISTS cs_cast_ore_64_8_v1_term_to_bytea(t ore_64_8_v1_term);
-
-CREATE FUNCTION cs_cast_ore_64_8_v1_term_to_bytea(t ore_64_8_v1_term)
-  RETURNS bytea
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN t.bytes;
-END;
-
-DROP CAST IF EXISTS (ore_64_8_v1_term AS bytea);
-
-CREATE CAST (ore_64_8_v1_term AS bytea)
-	WITH FUNCTION cs_cast_ore_64_8_v1_term_to_bytea(ore_64_8_v1_term) AS IMPLICIT;
-
 
 DROP FUNCTION IF EXISTS compare_ore_64_8_v1_term(a ore_64_8_v1_term, b ore_64_8_v1_term);
 DROP FUNCTION IF EXISTS compare_ore_64_8_v1_term(a bytea, b bytea);
 
 CREATE FUNCTION compare_ore_64_8_v1_term(a ore_64_8_v1_term, b ore_64_8_v1_term) returns integer AS $$
   BEGIN
-    SELECT compare_ore_64_8_v1_term(a.bytes, b.bytes)
+    SELECT compare_ore_64_8_v1_term(a.bytes, b.bytes);
   END;
 $$ LANGUAGE plpgsql;
 
