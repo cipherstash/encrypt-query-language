@@ -408,24 +408,20 @@ CREATE FUNCTION cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b cs_encrypted_
    DECLARE
     a_ore bytea[];
     b_ore bytea[];
+    result integer;
   BEGIN
-    a_ore = ARRAY[(a->>'o')::bytea];
-    b_ore = ARRAY[(b->>'o')::bytea];
 
-    RETURN compare_ore_64_8_v1(a_ore, b_ore);
+    SELECT cs_ore_64_8_v1(a) INTO a_ore;
+    SELECT cs_ore_64_8_v1(b) INTO b_ore;
+
+    RAISE NOTICE 'a %', a_ore;
+    RAISE NOTICE 'b %', b_ore;
+
+    SELECT compare_ore_64_8_v1(a_ore, b_ore) INTO RESULT;
+
+    RETURN result;
   END;
-
 $$ LANGUAGE plpgsql;
-
-
--- DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b cs_encrypted_v1);
-
--- CREATE FUNCTION cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b jsonb)
---   RETURNS integer AS $$
---   BEGIN
---     RETURN compare_ore_64_8_v1(cs_ore_64_8_v1(a), cs_ore_64_8_v1(jsonb));
---   END;
--- $$ LANGUAGE plpgsql;
 
 
 -----------------------------------------------------------------------------------------
