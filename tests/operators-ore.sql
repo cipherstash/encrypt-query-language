@@ -1,288 +1,164 @@
 \set ON_ERROR_STOP on
 
-
--- Create a table with a plaintext column
-DROP TABLE IF EXISTS users;
-CREATE TABLE users
+DROP TABLE IF EXISTS encrypted;
+CREATE TABLE encrypted
 (
-    id bigint GENERATED ALWAYS AS IDENTITY,
-    name_encrypted cs_encrypted_v1,
+    id bigint,
+    encrypted_int2 cs_encrypted_v1,
     PRIMARY KEY(id)
 );
 
-TRUNCATE TABLE users;
+
+-- CREATE index ON encrypted (encrypted_int2 cs_encrypted_ore_64_8_v1_btree_ops_v1);
 
 
-TRUNCATE TABLE users;
+-- 99
+INSERT INTO encrypted (id, encrypted_int2) VALUES (99, '{"c": "99", "i": {"table": "encrypted", "column": "encrypted_int2"}, "k": "ct", "o": ["121212121212594be28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd80132248f0640e89761a123fad8155748d771b05d53e9237f5a015095a24dd7447e1e3f27b152b463089f1ed90cdf3fa6f0597a3256edb06196fe0d09d0b188edf0e213f61339c93041f3c8f9e40621e131a1bb9d27f7d2af8a7706dead7858171a52c82b074694d269ad562ba0f793f2f3980b54f76873996e7cd5894c153c339d0137360871fc7ffead9621cbe954bdaf471610f5cb27b18982a6ef333d34bb7c5ffb766a4f77b1063aabbd58a8e76d0f2f7af7bc3c2e868eeeef00537e13d9bdb13d0c30b148f2276189043d48c525744c47644f26d375d18029da11f959734b5e54c15ae235d35db204a6c4e88162f59fc792a6d2f0ac41c3a0d72c59203485e5a5cdd9ec87f50546a3965706829fc63c774078b4a415b68747589c07fbd19a"], "u": "c787c0331d81d7609e828bab7b973ba88c95de0539d1a1d378b4d5cc73c3b875", "v": 1}');
 
--- User with "LOW" value
-INSERT INTO users (name_encrypted) VALUES (
-  '{
-    "v": 1,
-    "k": "ct",
-    "c": "ciphertext",
-    "i": {
-      "t": "users",
-      "c": "name"
-    },
-    "m": [1, 2, 3],
-    "o":"(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x12121212121259bfe28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd801ff4a28b714e4cde8df10625dce72602fdbdcc53d515857f1119f5912804ce09c6cf6c2d37393a27a465134523b512664582f834e15003b7216cb668480bc3e7d1c069f2572ece7c848b9eb9a28b4e62bfc2b97c93e61b2054154e621c5bbb7bed37de3d7c343bd3dbcf7b4af20128c961351bf55910a855f08a8587c2059a5f05ca8d7a082e695b3dd4ff3ce86694d4fe98972220eea1ab90f5de493ef3a502b74a569f103ee2897ebc9ae9b16a17e7be67415ee830519beb3058ffc1c1eb0e574d66c8b365919f27eb00aa7bce475d7bdaad4ed800f8fc3d626e0eb842e312b0cc22a1ccf89847ebb2cd0a6e18aec21bd2deeec1c47301fc687f7f764bb882b50f553c246a6da5816b78b3530119ea68b08a8403a90e063e58502670563bd4d\\\\\"\")\"\"}\")"
-  }'::jsonb
-);
+-- 5 .. 9
+INSERT INTO encrypted (id, encrypted_int2) VALUES (5, '{"c": "5", "i": {"table": "encrypted", "column": "encrypted_int2"}, "k": "ct", "o": ["121212121212591fe28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd801d7a2a8638edc950e921074126382a46dae8bf87cb681a5eeaa7d27c3a71679687677a9f0c4973d0a86100bd6f97be3865659689278109a70532cec5a3bd0564508255506f5043e0e42f8046f878ff3bdb65aabdbe9883d15b4fd6271819fcc46767b1019c95782b3bf03f94abdae0a1b821a9d0a6f44c40fb0249e0078074b5a4692f0735fe70041ad68cf194abe1a33b17fd43e14911513dabd1adca315820c017b85b003cf6807f21a18d8349619885d78004556c4c410916c9e6eb4a6f79d1bf0e77b1ce109445fc8a9d86e471e78894e59af894780fe5b047a280ea5b8a2d1b20400ad886437b551786e99b2cf788a69524d299991f136c7c850cdd5d39a1f7152feebea0ee720d23b0b8514cfc3d8c99e8f44052cfd0134f335ac9fa1fd"], "u": "cdd6248063d3431f3fe010c5728954fd62cbf42b0c515a9991bd4fc673604e26", "v": 1}');
+INSERT INTO encrypted (id, encrypted_int2) VALUES (6, '{"c": "6", "i": {"table": "encrypted", "column": "encrypted_int2"}, "k": "ct", "o": ["121212121212599de28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd801a6afd969a465c445ab35c15e7ef11ebaaa97578179e9cf7e8f186317352ef4316c1fae5079582a0c1195756bc5cb789d2ef48bd1d531c259f3273477f92c642c1a54633ad74987532d2044be59916a3743d5156c7c5e0d1dd256c79fb955023ab1dae725cae77e712d2075cabf46aa33b96d2cefa8b3ea3b2e4fc7c4966c883fd2018f6e1f33b418dadbea80c10b5320090be7d60abf2e19111ee58e75b1ee8e3dee2c133265dfd5179f0b885306addbde51a402adf1d13e34f5d6b67c739ed40cb57e74517bb3e7bf02529790af64de4b19e0d6a0d6d4f0b79ae613266a48165d5a8ef18d605e239e0c57a96072527d0d9d5d2655585adbeac83f7f3fc2381b9e772cab2e65cc9537b8142f105a0f4a3d8c97889255c7b5b2b15061149412ad"], "u": "a97ec70e9e4cc5c6888f1f809ec4fa551aff8633d76cfb26bb20997d4d50ca91", "v": 1}');
+INSERT INTO encrypted (id, encrypted_int2) VALUES (7, '{"c": "7", "i": {"table": "encrypted", "column": "encrypted_int2"}, "k": "ct", "o": ["1212121212125948e28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd801a901168d92ea2d7df254becc59888cf4a411c9f619a77715716200fbc36fb78ed7cd088e647a1d9ea722ae8144f050573024c899a85d6db80fcc6459bece64646a3805bb46bd72c4d27c1917fcdfbfa049a9139f0bb021e5e31bf2b8f0df014d9d09cd9cdc5b6f21fc6f843f506ca773c9a1951e2c5b7aa09e17c8864180163b5f6ec26f5826aef99d0631de5965451e22f24726b6956e4d490f3a5e690c81b30db160b64f455cf07e64e2b57d69719cb6dd1df65a7cf688571c983f75b51846b475b01f56eda9d4bfad849ba3ffa17a1b0bc6ef247da5fb3fc7d49634806acc132caf2a225388c0e0d1dabdf74b9ec8aa44771c789cc919227d9dc4c6465de21614a1a1f33a7a9c8138d06a9eacba64444cc0f98aa7f13ba4d2def340d6250a"], "u": "28f3ec44eae678f9d0d8238c0b3a01a146d56ccc4c1125f0373d394c4e1e95f4", "v": 1}');
+INSERT INTO encrypted (id, encrypted_int2) VALUES (8, '{"c": "8", "i": {"table": "encrypted", "column": "encrypted_int2"}, "k": "ct", "o": ["121212121212594ee28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd801783caa0b75f5aa4c005b423d7518fd4b0d9f553a75636801a6a1cd246227261dcf8eed0caa3defebf4e45e15f6692e38192bbda5913827b59d9eb72cb85e638803f9642cad7225fd45379a283eb51b154d9794df12b0e62b9cab9e7189517a54fc1e5a473d1630092146f53d8700b7661824f175ba7d953a57b8dc7b9b27dd215f75e23a4c3f7318de298da94fcdd17cb4946f1229ef815b7014dc76ee67d2535cba61b05444beebbf35a403a23886d04023adcc5452de4d4c1639fabdba6bbc9a37d4daed7ecc091f0c17a4893b79aa3e250207966cb9fb75055ba615d44609cdaa0f88fda50595a96bed6f13e2d30577ec81a59f49f901ff36e10c251969e30b87144c9ad13073d63e6de7d6f2f78b4ec78118bbe2002bbb7698e22d8c6b96"], "u": "9e80a31275db9e5ebc9a254864971cdef2ca68b0047712d3d106d86516bcfc6a", "v": 1}');
+INSERT INTO encrypted (id, encrypted_int2) VALUES (9, '{"c": "9", "i": {"table": "encrypted", "column": "encrypted_int2"}, "k": "ct", "o": ["12121212121259dae28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd801357205e56d3cf91febac317b171083353fdb3ad88d5525f2ed24157c65616978e3b29d5641bb30e7972173d1225e51c4a648721565e6583ff0e29898885f34bed5803af54254ed48e524e2c53614fb8abd4079daf12c519abe2622aa340eff843798c64ed843dd3528849783573a5e90d05e78aaaf596b58239324f862b8d63028bd78f05410868063963845306c21ccce475a058fa66e03bc0519e434504a1db60a5c1f3dbeac1504e31ae4bc731f5c4860de2952ef10aba433580079303d9724275d355f26bf60b58054522422ff2cb11896092b8ad55e246bcc7c335b2581e156b370bd9c18b93b991440cf52203af64579a8729ea4acb3bbd5ff80d3910ed3431cc48dacd7f70f4504d4686ce023ce0a46fac48f4a7834c2a4a73a220acb"], "u": "94ec6ec3b6a8acb4d1b94f0c3a4a7c6359b11ce5d8fd01a7e4474e5e7a0cca8b", "v": 1}');
 
--- ORE eq < OPERATORS
+-- 1
+INSERT INTO encrypted (id, encrypted_int2) VALUES (1, '{"c": 1, "i": {"table": "encrypted", "column": "encrypted_int2"}, "k": "ct", "o": ["121212121212597ee28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd801f6e268e7ba5a049613d57b000f03353a651f4442c298030a6e752d2776d99cab01b445aca923a25dfa511bbb3ecad11034c9b33facf27b6f8fbe276f2638c2e4aa78aa46c245c45efd918b0c0d029b5979cdbd26bb7e172060917b1d66554045ccc190f797c55ac5c062320f49e1f78a2410482579e4fb74cc8ba9e60d0842bfa08680cde8b0f4bb3090578c67d1e26678f4254559632fa854377c1da9266e3651a9c033a05f7bbabe31fa92b7ca59c48af7f77e9dc63f6d6fd9cd8dbcb86a7f06847f6be4d07474d11c30b99f41b17ef1093918923c9fc17d0b60fdfffb0e9c00f5f2c29b94de6e56f940ff6181a3e2de16729b7d65157cd604f97fa50d3f9363143d3a1356c1e93f7b2a67587b81a1309c6b51f9cfb4338406316e69a2ce2c"], "u": "fd80b0e733ed4ff9fe71434b9474ae434863eb01ceff77d73736ac6600334de3", "v": 1}');
+
+
+-- ORE LT < AND GT > OPERATORS
 DO $$
   DECLARE
-    ore_cs_encrypted cs_encrypted_v1;
-    ore_json jsonb;
-    ore_record text;
+    ore_cs_encrypted_high cs_encrypted_v1;
+    ore_cs_encrypted_low cs_encrypted_v1;
+    ore_json_high jsonb;
+    ore_json_low jsonb;
+    row_count integer;
   BEGIN
-    ore_cs_encrypted :=  '{
-        "v": 1,
-        "k": "ct",
-        "c": "ciphertext",
-        "i": {
-        "t": "users",
-        "c": "name"
-        },
-        "m": [1, 2, 3],
-        "o":"(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x1212121212125932e28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd8011f94b49eaa5fa5a60e1e2adccde4185a7d6c7f83088500b677f897d4ffc276016d614708488f407c01bd3ccf2be653269062cb97f8945a621d049277d19b1c248611f25d047038928d2efeb4323c402af4c19288c7b36911dc06639af5bb34367519b66c1f525bbd3828c12067c9c579aeeb4fb3ae0918125dc1dad5fd518019a5ae67894ce1a7f7bed1a591ba8edda2fdf4cd403761fd981fb1ea5eb0bf806f919350ee60cac16d0a39a491a4d79301781f95ea3870aea82e9946053537360b2fb415b18b61aed0af81d461ad6b923f10c0df79daddc4e279ff543a282bb3a37f9fa03238348b3dac51a453b04bced1f5bd318ddd829bdfe5f37abdbeda730e21441b818302f3c5c2c4d5657accfca4c53d7a80eb3db43946d38965be5f796b\\\\\"\")\"\"}\")"
-    }';
+    ore_cs_encrypted_high := '{"c": "99", "i": {"table": "encrypted", "column": "encrypted_int2"}, "k": "ct", "o": ["121212121212594be28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd80132248f0640e89761a123fad8155748d771b05d53e9237f5a015095a24dd7447e1e3f27b152b463089f1ed90cdf3fa6f0597a3256edb06196fe0d09d0b188edf0e213f61339c93041f3c8f9e40621e131a1bb9d27f7d2af8a7706dead7858171a52c82b074694d269ad562ba0f793f2f3980b54f76873996e7cd5894c153c339d0137360871fc7ffead9621cbe954bdaf471610f5cb27b18982a6ef333d34bb7c5ffb766a4f77b1063aabbd58a8e76d0f2f7af7bc3c2e868eeeef00537e13d9bdb13d0c30b148f2276189043d48c525744c47644f26d375d18029da11f959734b5e54c15ae235d35db204a6c4e88162f59fc792a6d2f0ac41c3a0d72c59203485e5a5cdd9ec87f50546a3965706829fc63c774078b4a415b68747589c07fbd19a"], "u": "c787c0331d81d7609e828bab7b973ba88c95de0539d1a1d378b4d5cc73c3b875", "v": 1}';
+    ore_cs_encrypted_low := '{"c": 1, "i": {"table": "encrypted", "column": "encrypted_int2"}, "k": "ct", "o": ["121212121212597ee28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd801f6e268e7ba5a049613d57b000f03353a651f4442c298030a6e752d2776d99cab01b445aca923a25dfa511bbb3ecad11034c9b33facf27b6f8fbe276f2638c2e4aa78aa46c245c45efd918b0c0d029b5979cdbd26bb7e172060917b1d66554045ccc190f797c55ac5c062320f49e1f78a2410482579e4fb74cc8ba9e60d0842bfa08680cde8b0f4bb3090578c67d1e26678f4254559632fa854377c1da9266e3651a9c033a05f7bbabe31fa92b7ca59c48af7f77e9dc63f6d6fd9cd8dbcb86a7f06847f6be4d07474d11c30b99f41b17ef1093918923c9fc17d0b60fdfffb0e9c00f5f2c29b94de6e56f940ff6181a3e2de16729b7d65157cd604f97fa50d3f9363143d3a1356c1e93f7b2a67587b81a1309c6b51f9cfb4338406316e69a2ce2c"], "u": "fd80b0e733ed4ff9fe71434b9474ae434863eb01ceff77d73736ac6600334de3", "v": 1}';
 
-    ore_json := '{"o":"(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x1212121212125932e28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd8011f94b49eaa5fa5a60e1e2adccde4185a7d6c7f83088500b677f897d4ffc276016d614708488f407c01bd3ccf2be653269062cb97f8945a621d049277d19b1c248611f25d047038928d2efeb4323c402af4c19288c7b36911dc06639af5bb34367519b66c1f525bbd3828c12067c9c579aeeb4fb3ae0918125dc1dad5fd518019a5ae67894ce1a7f7bed1a591ba8edda2fdf4cd403761fd981fb1ea5eb0bf806f919350ee60cac16d0a39a491a4d79301781f95ea3870aea82e9946053537360b2fb415b18b61aed0af81d461ad6b923f10c0df79daddc4e279ff543a282bb3a37f9fa03238348b3dac51a453b04bced1f5bd318ddd829bdfe5f37abdbeda730e21441b818302f3c5c2c4d5657accfca4c53d7a80eb3db43946d38965be5f796b\\\\\"\")\"\"}\")"}';
+    ore_json_high := '{"o": ["121212121212594be28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd80132248f0640e89761a123fad8155748d771b05d53e9237f5a015095a24dd7447e1e3f27b152b463089f1ed90cdf3fa6f0597a3256edb06196fe0d09d0b188edf0e213f61339c93041f3c8f9e40621e131a1bb9d27f7d2af8a7706dead7858171a52c82b074694d269ad562ba0f793f2f3980b54f76873996e7cd5894c153c339d0137360871fc7ffead9621cbe954bdaf471610f5cb27b18982a6ef333d34bb7c5ffb766a4f77b1063aabbd58a8e76d0f2f7af7bc3c2e868eeeef00537e13d9bdb13d0c30b148f2276189043d48c525744c47644f26d375d18029da11f959734b5e54c15ae235d35db204a6c4e88162f59fc792a6d2f0ac41c3a0d72c59203485e5a5cdd9ec87f50546a3965706829fc63c774078b4a415b68747589c07fbd19a"]}';
+    ore_json_low := '{"o": ["121212121212597ee28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd801f6e268e7ba5a049613d57b000f03353a651f4442c298030a6e752d2776d99cab01b445aca923a25dfa511bbb3ecad11034c9b33facf27b6f8fbe276f2638c2e4aa78aa46c245c45efd918b0c0d029b5979cdbd26bb7e172060917b1d66554045ccc190f797c55ac5c062320f49e1f78a2410482579e4fb74cc8ba9e60d0842bfa08680cde8b0f4bb3090578c67d1e26678f4254559632fa854377c1da9266e3651a9c033a05f7bbabe31fa92b7ca59c48af7f77e9dc63f6d6fd9cd8dbcb86a7f06847f6be4d07474d11c30b99f41b17ef1093918923c9fc17d0b60fdfffb0e9c00f5f2c29b94de6e56f940ff6181a3e2de16729b7d65157cd604f97fa50d3f9363143d3a1356c1e93f7b2a67587b81a1309c6b51f9cfb4338406316e69a2ce2c"]}';
 
-    ore_record = '("{""(\\""\\\\\\\\x1212121212125932e28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd8011f94b49eaa5fa5a60e1e2adccde4185a7d6c7f83088500b677f897d4ffc276016d614708488f407c01bd3ccf2be653269062cb97f8945a621d049277d19b1c248611f25d047038928d2efeb4323c402af4c19288c7b36911dc06639af5bb34367519b66c1f525bbd3828c12067c9c579aeeb4fb3ae0918125dc1dad5fd518019a5ae67894ce1a7f7bed1a591ba8edda2fdf4cd403761fd981fb1ea5eb0bf806f919350ee60cac16d0a39a491a4d79301781f95ea3870aea82e9946053537360b2fb415b18b61aed0af81d461ad6b923f10c0df79daddc4e279ff543a282bb3a37f9fa03238348b3dac51a453b04bced1f5bd318ddd829bdfe5f37abdbeda730e21441b818302f3c5c2c4d5657accfca4c53d7a80eb3db43946d38965be5f796b\\"")""}")';
+    -- ------------------------------------------------------------------------------------------------
+    -- -- cs_encrypted_v1 < cs_encrypted_v1
+    SELECT
+      COUNT(id)
+      FROM encrypted WHERE encrypted_int2 < ore_cs_encrypted_high
+    INTO row_count;
+    ASSERT row_count = 6;
+
+    -- -- cs_encrypted_v1 < jsonb
+    SELECT
+      COUNT(id)
+      FROM encrypted WHERE encrypted_int2 < ore_json_high
+    INTO row_count;
+
+    ASSERT row_count = 6;
+
+    -- -- jsonb < cs_encrypted_v1
+    SELECT
+      COUNT(id)
+      FROM encrypted WHERE ore_json_low < encrypted_int2
+    INTO row_count;
+
+    ASSERT row_count = 6;
 
 
-    -- SANITY CHECK
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE cs_ore_64_8_v1(name_encrypted) < cs_ore_64_8_v1(ore_json)));
+    -- -- cs_encrypted_v1 > cs_encrypted_v1
+    SELECT
+      COUNT(id)
+      FROM encrypted WHERE encrypted_int2 > ore_cs_encrypted_low
+    INTO row_count;
+    ASSERT row_count = 6;
 
-    ASSERT (SELECT EXISTS (
-      SELECT id FROM users WHERE name_encrypted < ore_cs_encrypted::jsonb
-    ));
+    -- -- cs_encrypted_v1 > jsonb
+    SELECT
+      COUNT(id)
+      FROM encrypted WHERE encrypted_int2 > ore_json_low
+    INTO row_count;
 
-    -- -- -- cs_encrypted_v1 < jsonb
-    ASSERT (SELECT EXISTS (
-      SELECT id FROM users WHERE name_encrypted < ore_json::jsonb
-    ));
+    ASSERT row_count = 6;
 
-    -- -- -- jsonb < cs_encrypted_v1
-    -- genrating ORE data for tests is fiddly, hence the IS FALSE here
-    ASSERT (SELECT EXISTS (
-      SELECT id FROM users WHERE (ore_json::jsonb < name_encrypted) IS FALSE
-    ));
+    -- -- jsonb > cs_encrypted_v1
+    SELECT
+      COUNT(id)
+      FROM encrypted WHERE ore_json_low > encrypted_int2
+    INTO row_count;
 
-    -- -- -- -- cs_encrypted_v1 < ore_64_8_v1
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE name_encrypted < ore_record::ore_64_8_v1));
+    ASSERT row_count = 0;
 
-    -- -- -- -- -- ore_64_8_v1 < cs_encrypted_v1
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE (ore_record::ore_64_8_v1 < name_encrypted) IS FALSE));
-
-    -- -- -- -- cs_encrypted_v1 <> cs_encrypted_v1
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE name_encrypted < ore_cs_encrypted::cs_encrypted_v1));
 
   END;
 $$ LANGUAGE plpgsql;
 
 
-
--- ORE eq <= OPERATORS
+-- ORE LTE <= AND GTE >= OPERATORS
 DO $$
   DECLARE
-    ore_cs_encrypted cs_encrypted_v1;
-    ore_json jsonb;
-    ore_record text;
+    ore_cs_encrypted_high cs_encrypted_v1;
+    ore_cs_encrypted_low cs_encrypted_v1;
+    ore_json_high jsonb;
+    ore_json_low jsonb;
+    row_count integer;
   BEGIN
-    ore_cs_encrypted :=  '{
-        "v": 1,
-        "k": "ct",
-        "c": "ciphertext",
-        "i": {
-        "t": "users",
-        "c": "name"
-        },
-        "m": [1, 2, 3],
-        "o":"(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x1212121212125932e28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd8011f94b49eaa5fa5a60e1e2adccde4185a7d6c7f83088500b677f897d4ffc276016d614708488f407c01bd3ccf2be653269062cb97f8945a621d049277d19b1c248611f25d047038928d2efeb4323c402af4c19288c7b36911dc06639af5bb34367519b66c1f525bbd3828c12067c9c579aeeb4fb3ae0918125dc1dad5fd518019a5ae67894ce1a7f7bed1a591ba8edda2fdf4cd403761fd981fb1ea5eb0bf806f919350ee60cac16d0a39a491a4d79301781f95ea3870aea82e9946053537360b2fb415b18b61aed0af81d461ad6b923f10c0df79daddc4e279ff543a282bb3a37f9fa03238348b3dac51a453b04bced1f5bd318ddd829bdfe5f37abdbeda730e21441b818302f3c5c2c4d5657accfca4c53d7a80eb3db43946d38965be5f796b\\\\\"\")\"\"}\")"
-    }';
+    ore_cs_encrypted_high := '{"c": "99", "i": {"table": "encrypted", "column": "encrypted_int2"}, "k": "ct", "o": ["121212121212594be28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd80132248f0640e89761a123fad8155748d771b05d53e9237f5a015095a24dd7447e1e3f27b152b463089f1ed90cdf3fa6f0597a3256edb06196fe0d09d0b188edf0e213f61339c93041f3c8f9e40621e131a1bb9d27f7d2af8a7706dead7858171a52c82b074694d269ad562ba0f793f2f3980b54f76873996e7cd5894c153c339d0137360871fc7ffead9621cbe954bdaf471610f5cb27b18982a6ef333d34bb7c5ffb766a4f77b1063aabbd58a8e76d0f2f7af7bc3c2e868eeeef00537e13d9bdb13d0c30b148f2276189043d48c525744c47644f26d375d18029da11f959734b5e54c15ae235d35db204a6c4e88162f59fc792a6d2f0ac41c3a0d72c59203485e5a5cdd9ec87f50546a3965706829fc63c774078b4a415b68747589c07fbd19a"], "u": "c787c0331d81d7609e828bab7b973ba88c95de0539d1a1d378b4d5cc73c3b875", "v": 1}';
+    ore_cs_encrypted_low := '{"c": 1, "i": {"table": "encrypted", "column": "encrypted_int2"}, "k": "ct", "o": ["121212121212597ee28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd801f6e268e7ba5a049613d57b000f03353a651f4442c298030a6e752d2776d99cab01b445aca923a25dfa511bbb3ecad11034c9b33facf27b6f8fbe276f2638c2e4aa78aa46c245c45efd918b0c0d029b5979cdbd26bb7e172060917b1d66554045ccc190f797c55ac5c062320f49e1f78a2410482579e4fb74cc8ba9e60d0842bfa08680cde8b0f4bb3090578c67d1e26678f4254559632fa854377c1da9266e3651a9c033a05f7bbabe31fa92b7ca59c48af7f77e9dc63f6d6fd9cd8dbcb86a7f06847f6be4d07474d11c30b99f41b17ef1093918923c9fc17d0b60fdfffb0e9c00f5f2c29b94de6e56f940ff6181a3e2de16729b7d65157cd604f97fa50d3f9363143d3a1356c1e93f7b2a67587b81a1309c6b51f9cfb4338406316e69a2ce2c"], "u": "fd80b0e733ed4ff9fe71434b9474ae434863eb01ceff77d73736ac6600334de3", "v": 1}';
 
-    ore_json := '{"o":"(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x1212121212125932e28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd8011f94b49eaa5fa5a60e1e2adccde4185a7d6c7f83088500b677f897d4ffc276016d614708488f407c01bd3ccf2be653269062cb97f8945a621d049277d19b1c248611f25d047038928d2efeb4323c402af4c19288c7b36911dc06639af5bb34367519b66c1f525bbd3828c12067c9c579aeeb4fb3ae0918125dc1dad5fd518019a5ae67894ce1a7f7bed1a591ba8edda2fdf4cd403761fd981fb1ea5eb0bf806f919350ee60cac16d0a39a491a4d79301781f95ea3870aea82e9946053537360b2fb415b18b61aed0af81d461ad6b923f10c0df79daddc4e279ff543a282bb3a37f9fa03238348b3dac51a453b04bced1f5bd318ddd829bdfe5f37abdbeda730e21441b818302f3c5c2c4d5657accfca4c53d7a80eb3db43946d38965be5f796b\\\\\"\")\"\"}\")"}';
+    ore_json_high := '{"o": ["121212121212594be28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd80132248f0640e89761a123fad8155748d771b05d53e9237f5a015095a24dd7447e1e3f27b152b463089f1ed90cdf3fa6f0597a3256edb06196fe0d09d0b188edf0e213f61339c93041f3c8f9e40621e131a1bb9d27f7d2af8a7706dead7858171a52c82b074694d269ad562ba0f793f2f3980b54f76873996e7cd5894c153c339d0137360871fc7ffead9621cbe954bdaf471610f5cb27b18982a6ef333d34bb7c5ffb766a4f77b1063aabbd58a8e76d0f2f7af7bc3c2e868eeeef00537e13d9bdb13d0c30b148f2276189043d48c525744c47644f26d375d18029da11f959734b5e54c15ae235d35db204a6c4e88162f59fc792a6d2f0ac41c3a0d72c59203485e5a5cdd9ec87f50546a3965706829fc63c774078b4a415b68747589c07fbd19a"]}';
+    ore_json_low := '{"o": ["121212121212597ee28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd801f6e268e7ba5a049613d57b000f03353a651f4442c298030a6e752d2776d99cab01b445aca923a25dfa511bbb3ecad11034c9b33facf27b6f8fbe276f2638c2e4aa78aa46c245c45efd918b0c0d029b5979cdbd26bb7e172060917b1d66554045ccc190f797c55ac5c062320f49e1f78a2410482579e4fb74cc8ba9e60d0842bfa08680cde8b0f4bb3090578c67d1e26678f4254559632fa854377c1da9266e3651a9c033a05f7bbabe31fa92b7ca59c48af7f77e9dc63f6d6fd9cd8dbcb86a7f06847f6be4d07474d11c30b99f41b17ef1093918923c9fc17d0b60fdfffb0e9c00f5f2c29b94de6e56f940ff6181a3e2de16729b7d65157cd604f97fa50d3f9363143d3a1356c1e93f7b2a67587b81a1309c6b51f9cfb4338406316e69a2ce2c"]}';
 
-    ore_record = '("{""(\\""\\\\\\\\x1212121212125932e28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd8011f94b49eaa5fa5a60e1e2adccde4185a7d6c7f83088500b677f897d4ffc276016d614708488f407c01bd3ccf2be653269062cb97f8945a621d049277d19b1c248611f25d047038928d2efeb4323c402af4c19288c7b36911dc06639af5bb34367519b66c1f525bbd3828c12067c9c579aeeb4fb3ae0918125dc1dad5fd518019a5ae67894ce1a7f7bed1a591ba8edda2fdf4cd403761fd981fb1ea5eb0bf806f919350ee60cac16d0a39a491a4d79301781f95ea3870aea82e9946053537360b2fb415b18b61aed0af81d461ad6b923f10c0df79daddc4e279ff543a282bb3a37f9fa03238348b3dac51a453b04bced1f5bd318ddd829bdfe5f37abdbeda730e21441b818302f3c5c2c4d5657accfca4c53d7a80eb3db43946d38965be5f796b\\"")""}")';
+    -- ------------------------------------------------------------------------------------------------
+    -- -- cs_encrypted_v1 < cs_encrypted_v1
+    SELECT
+      COUNT(id)
+      FROM encrypted WHERE encrypted_int2 <= ore_cs_encrypted_high
+    INTO row_count;
+    ASSERT row_count = 7;
+
+    -- -- cs_encrypted_v1 < jsonb
+    SELECT
+      COUNT(id)
+      FROM encrypted WHERE encrypted_int2 <= ore_json_high
+    INTO row_count;
+
+    ASSERT row_count = 7;
+
+    -- -- jsonb < cs_encrypted_v1
+    SELECT
+      COUNT(id)
+      FROM encrypted WHERE encrypted_int2 <= ore_json_low
+    INTO row_count;
+
+    ASSERT row_count = 1;
 
 
-    -- SANITY CHECK
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE cs_ore_64_8_v1(name_encrypted) <= cs_ore_64_8_v1(ore_json)));
+    -- -- cs_encrypted_v1 >= cs_encrypted_v1
+    SELECT
+      COUNT(id)
+      FROM encrypted WHERE encrypted_int2 >= ore_cs_encrypted_low
+    INTO row_count;
+    ASSERT row_count = 7;
 
-    ASSERT (SELECT EXISTS (
-      SELECT id FROM users WHERE name_encrypted <= ore_cs_encrypted::jsonb
-    ));
+    -- -- cs_encrypted_v1 > jsonb
+    SELECT
+      COUNT(id)
+      FROM encrypted WHERE encrypted_int2 >= ore_json_high
+    INTO row_count;
 
-    -- -- -- cs_encrypted_v1 <= jsonb
-    ASSERT (SELECT EXISTS (
-      SELECT id FROM users WHERE name_encrypted <= ore_json::jsonb
-    ));
+    ASSERT row_count = 1;
 
-    -- -- -- jsonb <= cs_encrypted_v1
-    -- genrating ORE data for tests is fiddly, hence the IS FALSE here
-    ASSERT (SELECT EXISTS (
-      SELECT id FROM users WHERE (ore_json::jsonb <= name_encrypted) IS FALSE
-    ));
+    -- -- jsonb >= cs_encrypted_v1
+    SELECT
+      COUNT(id)
+      FROM encrypted WHERE ore_json_low >= encrypted_int2
+    INTO row_count;
 
-    -- -- -- -- cs_encrypted_v1 <= ore_64_8_v1
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE name_encrypted <= ore_record::ore_64_8_v1));
+    ASSERT row_count = 1;
 
-    -- -- -- -- -- ore_64_8_v1 <= cs_encrypted_v1
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE (ore_record::ore_64_8_v1 <= name_encrypted) IS FALSE));
-
-    -- -- -- -- cs_encrypted_v1 <= cs_encrypted_v1
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE name_encrypted <= ore_cs_encrypted::cs_encrypted_v1));
 
   END;
 $$ LANGUAGE plpgsql;
 
 
-
--- User with "HIGH" value
-INSERT INTO users (name_encrypted) VALUES (
-  '{
-        "v": 1,
-        "k": "ct",
-        "c": "ciphertext",
-        "i": {
-        "t": "users",
-        "c": "name"
-        },
-        "m": [1, 2, 3],
-        "o":"(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x1212121212125932e28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd8011f94b49eaa5fa5a60e1e2adccde4185a7d6c7f83088500b677f897d4ffc276016d614708488f407c01bd3ccf2be653269062cb97f8945a621d049277d19b1c248611f25d047038928d2efeb4323c402af4c19288c7b36911dc06639af5bb34367519b66c1f525bbd3828c12067c9c579aeeb4fb3ae0918125dc1dad5fd518019a5ae67894ce1a7f7bed1a591ba8edda2fdf4cd403761fd981fb1ea5eb0bf806f919350ee60cac16d0a39a491a4d79301781f95ea3870aea82e9946053537360b2fb415b18b61aed0af81d461ad6b923f10c0df79daddc4e279ff543a282bb3a37f9fa03238348b3dac51a453b04bced1f5bd318ddd829bdfe5f37abdbeda730e21441b818302f3c5c2c4d5657accfca4c53d7a80eb3db43946d38965be5f796b\\\\\"\")\"\"}\")"
-    }'::jsonb
-);
-
-
-
--- ORE eq < OPERATORS
-DO $$
-  DECLARE
-    ore_cs_encrypted cs_encrypted_v1;
-    ore_json jsonb;
-    ore_record text;
-  BEGIN
-    ore_cs_encrypted :=  '{
-        "v": 1,
-        "k": "ct",
-        "c": "ciphertext",
-        "i": {
-        "t": "users",
-        "c": "name"
-        },
-        "m": [1, 2, 3],
-        "o":"(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x12121212121259bfe28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd801ff4a28b714e4cde8df10625dce72602fdbdcc53d515857f1119f5912804ce09c6cf6c2d37393a27a465134523b512664582f834e15003b7216cb668480bc3e7d1c069f2572ece7c848b9eb9a28b4e62bfc2b97c93e61b2054154e621c5bbb7bed37de3d7c343bd3dbcf7b4af20128c961351bf55910a855f08a8587c2059a5f05ca8d7a082e695b3dd4ff3ce86694d4fe98972220eea1ab90f5de493ef3a502b74a569f103ee2897ebc9ae9b16a17e7be67415ee830519beb3058ffc1c1eb0e574d66c8b365919f27eb00aa7bce475d7bdaad4ed800f8fc3d626e0eb842e312b0cc22a1ccf89847ebb2cd0a6e18aec21bd2deeec1c47301fc687f7f764bb882b50f553c246a6da5816b78b3530119ea68b08a8403a90e063e58502670563bd4d\\\\\"\")\"\"}\")"
-    }';
-
-    ore_json := '{"o":"(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x12121212121259bfe28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd801ff4a28b714e4cde8df10625dce72602fdbdcc53d515857f1119f5912804ce09c6cf6c2d37393a27a465134523b512664582f834e15003b7216cb668480bc3e7d1c069f2572ece7c848b9eb9a28b4e62bfc2b97c93e61b2054154e621c5bbb7bed37de3d7c343bd3dbcf7b4af20128c961351bf55910a855f08a8587c2059a5f05ca8d7a082e695b3dd4ff3ce86694d4fe98972220eea1ab90f5de493ef3a502b74a569f103ee2897ebc9ae9b16a17e7be67415ee830519beb3058ffc1c1eb0e574d66c8b365919f27eb00aa7bce475d7bdaad4ed800f8fc3d626e0eb842e312b0cc22a1ccf89847ebb2cd0a6e18aec21bd2deeec1c47301fc687f7f764bb882b50f553c246a6da5816b78b3530119ea68b08a8403a90e063e58502670563bd4d\\\\\"\")\"\"}\")"}';
-
-
-    ore_record = '("{""(\\""\\\\\\\\x12121212121259bfe28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd801ff4a28b714e4cde8df10625dce72602fdbdcc53d515857f1119f5912804ce09c6cf6c2d37393a27a465134523b512664582f834e15003b7216cb668480bc3e7d1c069f2572ece7c848b9eb9a28b4e62bfc2b97c93e61b2054154e621c5bbb7bed37de3d7c343bd3dbcf7b4af20128c961351bf55910a855f08a8587c2059a5f05ca8d7a082e695b3dd4ff3ce86694d4fe98972220eea1ab90f5de493ef3a502b74a569f103ee2897ebc9ae9b16a17e7be67415ee830519beb3058ffc1c1eb0e574d66c8b365919f27eb00aa7bce475d7bdaad4ed800f8fc3d626e0eb842e312b0cc22a1ccf89847ebb2cd0a6e18aec21bd2deeec1c47301fc687f7f764bb882b50f553c246a6da5816b78b3530119ea68b08a8403a90e063e58502670563bd4d\\"")""}")';
-
-    -- SANITY CHECK
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE cs_ore_64_8_v1(name_encrypted) > cs_ore_64_8_v1(ore_json)));
-
-    ASSERT (SELECT EXISTS (
-      SELECT id FROM users WHERE name_encrypted > ore_cs_encrypted::jsonb
-    ));
-
-    -- -- -- cs_encrypted_v1 > jsonb
-    ASSERT (SELECT EXISTS (
-      SELECT id FROM users WHERE name_encrypted > ore_json::jsonb
-    ));
-
-    -- -- -- jsonb > cs_encrypted_v1
-    -- genrating ORE data for tests is fiddly, hence the IS FALSE here
-    ASSERT (SELECT EXISTS (
-      SELECT id FROM users WHERE (ore_json::jsonb > name_encrypted) IS FALSE
-    ));
-
-    -- -- -- -- cs_encrypted_v1 > ore_64_8_v1
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE name_encrypted > ore_record::ore_64_8_v1));
-
-    -- -- -- -- -- ore_64_8_v1 > cs_encrypted_v1
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE (ore_record::ore_64_8_v1 > name_encrypted) IS FALSE));
-
-    -- -- -- -- cs_encrypted_v1 >> cs_encrypted_v1
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE name_encrypted > ore_cs_encrypted::cs_encrypted_v1));
-
-  END;
-$$ LANGUAGE plpgsql;
-
-
-
-
--- User with "HIGH" value
-INSERT INTO users (name_encrypted) VALUES (
-  '{
-        "v": 1,
-        "k": "ct",
-        "c": "ciphertext",
-        "i": {
-        "t": "users",
-        "c": "name"
-        },
-        "m": [1, 2, 3],
-        "o":"(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x1212121212125932e28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd8011f94b49eaa5fa5a60e1e2adccde4185a7d6c7f83088500b677f897d4ffc276016d614708488f407c01bd3ccf2be653269062cb97f8945a621d049277d19b1c248611f25d047038928d2efeb4323c402af4c19288c7b36911dc06639af5bb34367519b66c1f525bbd3828c12067c9c579aeeb4fb3ae0918125dc1dad5fd518019a5ae67894ce1a7f7bed1a591ba8edda2fdf4cd403761fd981fb1ea5eb0bf806f919350ee60cac16d0a39a491a4d79301781f95ea3870aea82e9946053537360b2fb415b18b61aed0af81d461ad6b923f10c0df79daddc4e279ff543a282bb3a37f9fa03238348b3dac51a453b04bced1f5bd318ddd829bdfe5f37abdbeda730e21441b818302f3c5c2c4d5657accfca4c53d7a80eb3db43946d38965be5f796b\\\\\"\")\"\"}\")"
-    }'::jsonb
-);
-
-
-
--- ORE eq >= OPERATORS
-DO $$
-  DECLARE
-    ore_cs_encrypted cs_encrypted_v1;
-    ore_json jsonb;
-    ore_record text;
-  BEGIN
-    ore_cs_encrypted :=  '{
-        "v": 1,
-        "k": "ct",
-        "c": "ciphertext",
-        "i": {
-        "t": "users",
-        "c": "name"
-        },
-        "m": [1, 2, 3],
-        "o":"(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x12121212121259bfe28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd801ff4a28b714e4cde8df10625dce72602fdbdcc53d515857f1119f5912804ce09c6cf6c2d37393a27a465134523b512664582f834e15003b7216cb668480bc3e7d1c069f2572ece7c848b9eb9a28b4e62bfc2b97c93e61b2054154e621c5bbb7bed37de3d7c343bd3dbcf7b4af20128c961351bf55910a855f08a8587c2059a5f05ca8d7a082e695b3dd4ff3ce86694d4fe98972220eea1ab90f5de493ef3a502b74a569f103ee2897ebc9ae9b16a17e7be67415ee830519beb3058ffc1c1eb0e574d66c8b365919f27eb00aa7bce475d7bdaad4ed800f8fc3d626e0eb842e312b0cc22a1ccf89847ebb2cd0a6e18aec21bd2deeec1c47301fc687f7f764bb882b50f553c246a6da5816b78b3530119ea68b08a8403a90e063e58502670563bd4d\\\\\"\")\"\"}\")"
-    }';
-
-    ore_json := '{"o":"(\"{\"\"(\\\\\"\"\\\\\\\\\\\\\\\\x12121212121259bfe28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd801ff4a28b714e4cde8df10625dce72602fdbdcc53d515857f1119f5912804ce09c6cf6c2d37393a27a465134523b512664582f834e15003b7216cb668480bc3e7d1c069f2572ece7c848b9eb9a28b4e62bfc2b97c93e61b2054154e621c5bbb7bed37de3d7c343bd3dbcf7b4af20128c961351bf55910a855f08a8587c2059a5f05ca8d7a082e695b3dd4ff3ce86694d4fe98972220eea1ab90f5de493ef3a502b74a569f103ee2897ebc9ae9b16a17e7be67415ee830519beb3058ffc1c1eb0e574d66c8b365919f27eb00aa7bce475d7bdaad4ed800f8fc3d626e0eb842e312b0cc22a1ccf89847ebb2cd0a6e18aec21bd2deeec1c47301fc687f7f764bb882b50f553c246a6da5816b78b3530119ea68b08a8403a90e063e58502670563bd4d\\\\\"\")\"\"}\")"}';
-
-
-    ore_record = '("{""(\\""\\\\\\\\x12121212121259bfe28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd801ff4a28b714e4cde8df10625dce72602fdbdcc53d515857f1119f5912804ce09c6cf6c2d37393a27a465134523b512664582f834e15003b7216cb668480bc3e7d1c069f2572ece7c848b9eb9a28b4e62bfc2b97c93e61b2054154e621c5bbb7bed37de3d7c343bd3dbcf7b4af20128c961351bf55910a855f08a8587c2059a5f05ca8d7a082e695b3dd4ff3ce86694d4fe98972220eea1ab90f5de493ef3a502b74a569f103ee2897ebc9ae9b16a17e7be67415ee830519beb3058ffc1c1eb0e574d66c8b365919f27eb00aa7bce475d7bdaad4ed800f8fc3d626e0eb842e312b0cc22a1ccf89847ebb2cd0a6e18aec21bd2deeec1c47301fc687f7f764bb882b50f553c246a6da5816b78b3530119ea68b08a8403a90e063e58502670563bd4d\\"")""}")';
-
-    -- SANITY CHECK
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE cs_ore_64_8_v1(name_encrypted) >= cs_ore_64_8_v1(ore_json)));
-
-    ASSERT (SELECT EXISTS (
-      SELECT id FROM users WHERE name_encrypted >= ore_cs_encrypted::jsonb
-    ));
-
-    -- -- -- cs_encrypted_v1 >= jsonb
-    ASSERT (SELECT EXISTS (
-      SELECT id FROM users WHERE name_encrypted >= ore_json::jsonb
-    ));
-
-    -- -- -- jsonb >= cs_encrypted_v1
-    -- genrating ORE data for tests is fiddly, hence the IS FALSE here
-    ASSERT (SELECT EXISTS (
-      SELECT id FROM users WHERE (ore_json::jsonb >= name_encrypted) IS FALSE
-    ));
-
-    -- -- -- -- cs_encrypted_v1 >= ore_64_8_v1
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE name_encrypted >= ore_record::ore_64_8_v1));
-
-    -- -- -- -- -- ore_64_8_v1 >= cs_encrypted_v1
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE (ore_record::ore_64_8_v1 >= name_encrypted) IS FALSE));
-
-    -- -- -- -- cs_encrypted_v1 >= cs_encrypted_v1
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE name_encrypted >= ore_cs_encrypted::cs_encrypted_v1));
-
-  END;
-$$ LANGUAGE plpgsql;
