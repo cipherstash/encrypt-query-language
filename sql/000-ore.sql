@@ -1,22 +1,8 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-CREATE TYPE ore_64_8_v1_term AS (
-  bytes bytea
-);
+CREATE DOMAIN ore_64_8_index_v1 AS bytea[];
 
-CREATE TYPE ore_64_8_v1 AS (
-  terms ore_64_8_v1_term[]
-);
-
-
-DROP FUNCTION IF EXISTS compare_ore_64_8_v1_term(a ore_64_8_v1_term, b ore_64_8_v1_term);
 DROP FUNCTION IF EXISTS compare_ore_64_8_v1_term(a bytea, b bytea);
-
-CREATE FUNCTION compare_ore_64_8_v1_term(a ore_64_8_v1_term, b ore_64_8_v1_term) returns integer AS $$
-  BEGIN
-    SELECT compare_ore_64_8_v1_term(a.bytes, b.bytes);
-  END;
-$$ LANGUAGE plpgsql;
 
 CREATE FUNCTION compare_ore_64_8_v1_term(a bytea, b bytea) returns integer AS $$
   DECLARE
@@ -95,144 +81,6 @@ CREATE FUNCTION compare_ore_64_8_v1_term(a bytea, b bytea) returns integer AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS ore_64_8_v1_term_eq(a ore_64_8_v1_term, b ore_64_8_v1_term);
-
-CREATE FUNCTION ore_64_8_v1_term_eq(a ore_64_8_v1_term, b ore_64_8_v1_term)
-RETURNS boolean AS $$
-  SELECT compare_ore_64_8_v1_term(a, b) = 0
-$$ LANGUAGE SQL;
-
-
-DROP FUNCTION IF EXISTS ore_64_8_v1_term_neq(a ore_64_8_v1_term, b ore_64_8_v1_term);
-
-CREATE FUNCTION ore_64_8_v1_term_neq(a ore_64_8_v1_term, b ore_64_8_v1_term)
-RETURNS boolean AS $$
-  SELECT compare_ore_64_8_v1_term(a, b) <> 0
-$$ LANGUAGE SQL;
-
-
-DROP FUNCTION IF EXISTS ore_64_8_v1_term_lt(a ore_64_8_v1_term, b ore_64_8_v1_term);
-
-CREATE FUNCTION ore_64_8_v1_term_lt(a ore_64_8_v1_term, b ore_64_8_v1_term)
-RETURNS boolean AS $$
-  SELECT compare_ore_64_8_v1_term(a, b) = -1
-$$ LANGUAGE SQL;
-
-
-DROP FUNCTION IF EXISTS ore_64_8_v1_term_lte(a ore_64_8_v1_term, b ore_64_8_v1_term);
-
-CREATE FUNCTION ore_64_8_v1_term_lte(a ore_64_8_v1_term, b ore_64_8_v1_term)
-RETURNS boolean AS $$
-  SELECT compare_ore_64_8_v1_term(a, b) != 1
-$$ LANGUAGE SQL;
-
-
-DROP FUNCTION IF EXISTS ore_64_8_v1_term_gt(a ore_64_8_v1_term, b ore_64_8_v1_term);
-
-CREATE FUNCTION ore_64_8_v1_term_gt(a ore_64_8_v1_term, b ore_64_8_v1_term)
-RETURNS boolean AS $$
-  SELECT compare_ore_64_8_v1_term(a, b) = 1
-$$ LANGUAGE SQL;
-
-
-DROP FUNCTION IF EXISTS ore_64_8_v1_term_gte(a ore_64_8_v1_term, b ore_64_8_v1_term);
-
-CREATE FUNCTION ore_64_8_v1_term_gte(a ore_64_8_v1_term, b ore_64_8_v1_term)
-RETURNS boolean AS $$
-  SELECT compare_ore_64_8_v1_term(a, b) != -1
-$$ LANGUAGE SQL;
-
-
-DROP OPERATOR IF EXISTS = (ore_64_8_v1_term, ore_64_8_v1_term);
-
-CREATE OPERATOR = (
-  PROCEDURE="ore_64_8_v1_term_eq",
-  LEFTARG=ore_64_8_v1_term,
-  RIGHTARG=ore_64_8_v1_term,
-  NEGATOR = <>,
-  RESTRICT = eqsel,
-  JOIN = eqjoinsel,
-  HASHES,
-  MERGES
-);
-
-
-DROP OPERATOR IF EXISTS <> (ore_64_8_v1_term, ore_64_8_v1_term);
-
-CREATE OPERATOR <> (
-  PROCEDURE="ore_64_8_v1_term_neq",
-  LEFTARG=ore_64_8_v1_term,
-  RIGHTARG=ore_64_8_v1_term,
-  NEGATOR = =,
-  RESTRICT = eqsel,
-  JOIN = eqjoinsel,
-  HASHES,
-  MERGES
-);
-
-DROP OPERATOR IF EXISTS > (ore_64_8_v1_term, ore_64_8_v1_term);
-
-CREATE OPERATOR > (
-  PROCEDURE="ore_64_8_v1_term_gt",
-  LEFTARG=ore_64_8_v1_term,
-  RIGHTARG=ore_64_8_v1_term,
-  COMMUTATOR = <,
-  NEGATOR = <=,
-  RESTRICT = scalargtsel,
-  JOIN = scalargtjoinsel
-);
-
-DROP OPERATOR IF EXISTS < (ore_64_8_v1_term, ore_64_8_v1_term);
-
-CREATE OPERATOR < (
-  PROCEDURE="ore_64_8_v1_term_lt",
-  LEFTARG=ore_64_8_v1_term,
-  RIGHTARG=ore_64_8_v1_term,
-  COMMUTATOR = >,
-  NEGATOR = >=,
-  RESTRICT = scalarltsel,
-  JOIN = scalarltjoinsel
-);
-
-DROP OPERATOR IF EXISTS <= (ore_64_8_v1_term, ore_64_8_v1_term);
-
-CREATE OPERATOR <= (
-  PROCEDURE="ore_64_8_v1_term_lte",
-  LEFTARG=ore_64_8_v1_term,
-  RIGHTARG=ore_64_8_v1_term,
-  COMMUTATOR = >=,
-  NEGATOR = >,
-  RESTRICT = scalarlesel,
-  JOIN = scalarlejoinsel
-);
-
-DROP OPERATOR IF EXISTS >= (ore_64_8_v1_term, ore_64_8_v1_term);
-
-CREATE OPERATOR >= (
-  PROCEDURE="ore_64_8_v1_term_gte",
-  LEFTARG=ore_64_8_v1_term,
-  RIGHTARG=ore_64_8_v1_term,
-  COMMUTATOR = <=,
-  NEGATOR = <,
-  RESTRICT = scalarlesel,
-  JOIN = scalarlejoinsel
-);
-
-DROP OPERATOR FAMILY IF EXISTS ore_64_8_v1_term_btree_ops USING btree;
-
-CREATE OPERATOR FAMILY ore_64_8_v1_term_btree_ops USING btree;
-
-
-DROP OPERATOR CLASS IF EXISTS ore_64_8_v1_term_btree_ops USING btree;
-
-CREATE OPERATOR CLASS ore_64_8_v1_term_btree_ops DEFAULT FOR TYPE ore_64_8_v1_term USING btree FAMILY ore_64_8_v1_term_btree_ops  AS
-        OPERATOR 1 <,
-        OPERATOR 2 <=,
-        OPERATOR 3 =,
-        OPERATOR 4 >=,
-        OPERATOR 5 >,
-        FUNCTION 1 compare_ore_64_8_v1_term(a ore_64_8_v1_term, b ore_64_8_v1_term);
-
 -- Compare the "head" of each array and recurse if necessary
 -- This function assumes an empty string is "less than" everything else
 -- so if a is empty we return -1, if be is empty and a isn't, we return 1.
@@ -240,32 +88,33 @@ CREATE OPERATOR CLASS ore_64_8_v1_term_btree_ops DEFAULT FOR TYPE ore_64_8_v1_te
 -- doesn't always make sense but it's here for completeness.
 -- If both are non-empty, we compare the first element. If they are equal
 -- we need to consider the next block so we recurse, otherwise we return the comparison result.
--- DROP FUNCTION IF EXISTS compare_ore_array(a ore_64_8_v1_term[], b ore_64_8_v1_term[]);
 
--- CREATE FUNCTION compare_ore_array(a ore_64_8_v1_term[], b ore_64_8_v1_term[])
--- RETURNS integer AS $$
---   BEGIN
---     -- SELECT compare_ore_array(a, b);
---     SELECT compare_ore_array(CAST(a AS bytea[]), CAST(b AS bytea[]));
---   END
--- $$ LANGUAGE plpgsql;
 
 CREATE FUNCTION compare_ore_array(a bytea[], b bytea[])
 RETURNS integer AS $$
   DECLARE
     cmp_result integer;
+    len_a integer;
+    len_b integer;
   BEGIN
+
+    SELECT array_length(a, 1) INTO len_a;
+    SELECT array_length(b, 1) INTO len_b;
+
     IF (array_length(a, 1) = 0 OR a IS NULL) AND (array_length(b, 1) = 0 OR b IS NULL) THEN
       RETURN 0;
     END IF;
+
     IF array_length(a, 1) = 0 OR a IS NULL THEN
       RETURN -1;
     END IF;
+
     IF array_length(b, 1) = 0 OR a IS NULL THEN
       RETURN 1;
     END IF;
 
     cmp_result := compare_ore_64_8_v1_term(a[1], b[1]);
+
     IF cmp_result = 0 THEN
     -- Removes the first element in the array, and calls this fn again to compare the next element/s in the array.
       RETURN compare_ore_array(a[2:array_length(a,1)], b[2:array_length(b,1)]);
@@ -276,24 +125,10 @@ RETURNS integer AS $$
 $$ LANGUAGE plpgsql;
 
 -- This function uses lexicographic comparison
-DROP FUNCTION IF EXISTS compare_ore_64_8_v1(a ore_64_8_v1, b ore_64_8_v1);
+DROP FUNCTION IF EXISTS compare_ore_64_8_v1(a ore_64_8_index_v1, b ore_64_8_index_v1);
 
-CREATE FUNCTION compare_ore_64_8_v1(a ore_64_8_v1, b ore_64_8_v1)
+CREATE FUNCTION compare_ore_64_8_v1(a ore_64_8_index_v1, b ore_64_8_index_v1)
 RETURNS integer AS $$
-  DECLARE
-    cmp_result integer;
-  BEGIN
-    -- Recursively compare blocks bailing as soon as we can make a decision
-    RETURN compare_ore_array(a.terms::bytea[], b.terms::bytea[]);
-  END
-$$ LANGUAGE plpgsql;
-
-DROP FUNCTION IF EXISTS compare_ore_64_8_v1(a bytea[], b bytea[]);
-
-CREATE FUNCTION compare_ore_64_8_v1(a bytea[], b bytea[])
-RETURNS integer AS $$
-  DECLARE
-    cmp_result integer;
   BEGIN
     -- Recursively compare blocks bailing as soon as we can make a decision
     RETURN compare_ore_array(a, b);
@@ -301,55 +136,57 @@ RETURNS integer AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS ore_64_8_v1_eq(a ore_64_8_v1, b ore_64_8_v1);
+DROP FUNCTION IF EXISTS ore_64_8_v1_eq(a ore_64_8_index_v1, b ore_64_8_index_v1);
 
-CREATE FUNCTION ore_64_8_v1_eq(a ore_64_8_v1, b ore_64_8_v1)
+CREATE FUNCTION ore_64_8_v1_eq(a ore_64_8_index_v1, b ore_64_8_index_v1)
 RETURNS boolean AS $$
   SELECT compare_ore_64_8_v1(a, b) = 0
 $$ LANGUAGE SQL;
 
 
-DROP FUNCTION IF EXISTS ore_64_8_v1_neq(a ore_64_8_v1, b ore_64_8_v1);
+DROP FUNCTION IF EXISTS ore_64_8_v1_neq(a ore_64_8_index_v1, b ore_64_8_index_v1);
 
-CREATE FUNCTION ore_64_8_v1_neq(a ore_64_8_v1, b ore_64_8_v1)
+CREATE FUNCTION ore_64_8_v1_neq(a ore_64_8_index_v1, b ore_64_8_index_v1)
 RETURNS boolean AS $$
   SELECT compare_ore_64_8_v1(a, b) <> 0
 $$ LANGUAGE SQL;
 
 
-DROP FUNCTION IF EXISTS ore_64_8_v1_lt(a ore_64_8_v1, b ore_64_8_v1);
+DROP FUNCTION IF EXISTS ore_64_8_v1_lt(a ore_64_8_index_v1, b ore_64_8_index_v1);
 
-CREATE FUNCTION ore_64_8_v1_lt(a ore_64_8_v1, b ore_64_8_v1)
+CREATE FUNCTION ore_64_8_v1_lt(a ore_64_8_index_v1, b ore_64_8_index_v1)
 RETURNS boolean AS $$
   SELECT compare_ore_64_8_v1(a, b) = -1
 $$ LANGUAGE SQL;
 
 
-DROP FUNCTION IF EXISTS ore_64_8_v1_lte(a ore_64_8_v1, b ore_64_8_v1);
+DROP FUNCTION IF EXISTS ore_64_8_v1_lte(a ore_64_8_index_v1, b ore_64_8_index_v1);
 
-CREATE FUNCTION ore_64_8_v1_lte(a ore_64_8_v1, b ore_64_8_v1)
+CREATE FUNCTION ore_64_8_v1_lte(a ore_64_8_index_v1, b ore_64_8_index_v1)
 RETURNS boolean AS $$
   SELECT compare_ore_64_8_v1(a, b) != 1
 $$ LANGUAGE SQL;
 
 
-DROP FUNCTION IF EXISTS ore_64_8_v1_gt(a ore_64_8_v1, b ore_64_8_v1);
+DROP FUNCTION IF EXISTS ore_64_8_v1_gt(a ore_64_8_index_v1, b ore_64_8_index_v1);
 
-CREATE FUNCTION ore_64_8_v1_gt(a ore_64_8_v1, b ore_64_8_v1)
+CREATE FUNCTION ore_64_8_v1_gt(a ore_64_8_index_v1, b ore_64_8_index_v1)
 RETURNS boolean AS $$
-  SELECT compare_ore_64_8_v1(a, b) = 1
-$$ LANGUAGE SQL;
+  BEGIN
+    SELECT compare_ore_64_8_v1(a, b) = 1;
+  END;
+$$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS ore_64_8_v1_gte(a ore_64_8_v1, b ore_64_8_v1);
+DROP FUNCTION IF EXISTS ore_64_8_v1_gte(a ore_64_8_index_v1, b ore_64_8_index_v1);
 
-CREATE FUNCTION ore_64_8_v1_gte(a ore_64_8_v1, b ore_64_8_v1)
+CREATE FUNCTION ore_64_8_v1_gte(a ore_64_8_index_v1, b ore_64_8_index_v1)
 RETURNS boolean AS $$
   SELECT compare_ore_64_8_v1(a, b) != -1
 $$ LANGUAGE SQL;
 
 
-DROP OPERATOR IF EXISTS = (ore_64_8_v1, ore_64_8_v1);
+DROP OPERATOR IF EXISTS = (ore_64_8_index_v1, ore_64_8_index_v1);
 
 CREATE OPERATOR = (
   PROCEDURE="ore_64_8_v1_eq",
@@ -363,7 +200,7 @@ CREATE OPERATOR = (
 );
 
 
-DROP OPERATOR IF EXISTS <> (ore_64_8_v1, ore_64_8_v1);
+DROP OPERATOR IF EXISTS <> (ore_64_8_index_v1, ore_64_8_index_v1);
 
 CREATE OPERATOR <> (
   PROCEDURE="ore_64_8_v1_neq",
@@ -376,7 +213,7 @@ CREATE OPERATOR <> (
   MERGES
 );
 
-DROP OPERATOR IF EXISTS > (ore_64_8_v1, ore_64_8_v1);
+DROP OPERATOR IF EXISTS > (ore_64_8_index_v1, ore_64_8_index_v1);
 
 CREATE OPERATOR > (
   PROCEDURE="ore_64_8_v1_gt",
@@ -389,7 +226,7 @@ CREATE OPERATOR > (
 );
 
 
-DROP OPERATOR IF EXISTS < (ore_64_8_v1, ore_64_8_v1);
+DROP OPERATOR IF EXISTS < (ore_64_8_index_v1, ore_64_8_index_v1);
 
 CREATE OPERATOR < (
   PROCEDURE="ore_64_8_v1_lt",
@@ -402,7 +239,7 @@ CREATE OPERATOR < (
 );
 
 
-DROP OPERATOR IF EXISTS <= (ore_64_8_v1, ore_64_8_v1);
+DROP OPERATOR IF EXISTS <= (ore_64_8_index_v1, ore_64_8_index_v1);
 
 CREATE OPERATOR <= (
   PROCEDURE="ore_64_8_v1_lte",
@@ -415,7 +252,7 @@ CREATE OPERATOR <= (
 );
 
 
-DROP OPERATOR IF EXISTS >= (ore_64_8_v1, ore_64_8_v1);
+DROP OPERATOR IF EXISTS >= (ore_64_8_index_v1, ore_64_8_index_v1);
 
 CREATE OPERATOR >= (
   PROCEDURE="ore_64_8_v1_gte",
@@ -441,4 +278,4 @@ CREATE OPERATOR CLASS ore_64_8_v1_btree_ops DEFAULT FOR TYPE ore_64_8_v1 USING b
         OPERATOR 3 =,
         OPERATOR 4 >=,
         OPERATOR 5 >,
-        FUNCTION 1 compare_ore_64_8_v1(a ore_64_8_v1, b ore_64_8_v1);
+        FUNCTION 1 compare_ore_64_8_v1(a ore_64_8_index_v1, b ore_64_8_index_v1);
