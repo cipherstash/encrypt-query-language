@@ -1,6 +1,6 @@
 DROP FUNCTION IF EXISTS cs_ciphertext_v1_v0_0(val jsonb);
 
-CREATE FUNCTION cs_ciphertext_v1_v0_0(val jsonb)
+CREATE FUNCTION cs_ciphertext_v1(val jsonb)
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -13,30 +13,13 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS cs_ciphertext_v1_v0(val jsonb);
-
-CREATE FUNCTION cs_ciphertext_v1_v0(val jsonb)
-    RETURNS text
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN cs_ciphertext_v1_v0_0(val);
-END;
-
-
-DROP FUNCTION IF EXISTS cs_ciphertext_v1(val jsonb);
-
-CREATE FUNCTION cs_ciphertext_v1(val jsonb)
-    RETURNS text
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN cs_ciphertext_v1_v0_0(val);
-END;
+-----------------------------------------------------------------------------
 
 
 -- extracts match index from an emcrypted column
-DROP FUNCTION IF EXISTS cs_match_v1_v0_0(val jsonb);
+DROP FUNCTION IF EXISTS cs_match_v1(val jsonb);
 
-CREATE FUNCTION cs_match_v1_v0_0(val jsonb)
+CREATE FUNCTION cs_match_v1(val jsonb)
   RETURNS cs_match_index_v1
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -48,31 +31,13 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
-
-DROP FUNCTION IF EXISTS cs_match_v1_v0(val jsonb);
-
-CREATE FUNCTION cs_match_v1_v0(val jsonb)
-  RETURNS cs_match_index_v1
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN cs_match_v1_v0_0(val);
-END;
-
-
-DROP FUNCTION IF EXISTS cs_match_v1(val jsonb);
-
-CREATE FUNCTION cs_match_v1(val jsonb)
-  RETURNS cs_match_index_v1
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN cs_match_v1_v0_0(val);
-END;
+-----------------------------------------------------------------------------
 
 
 -- extracts unique index from an encrypted column
-DROP FUNCTION IF EXISTS  cs_unique_v1_v0_0(val jsonb);
+DROP FUNCTION IF EXISTS  cs_unique_v1(val jsonb);
 
-CREATE FUNCTION cs_unique_v1_v0_0(val jsonb)
+CREATE FUNCTION cs_unique_v1(val jsonb)
   RETURNS cs_unique_index_v1
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -85,29 +50,12 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS  cs_unique_v1_v0(val jsonb);
-
-CREATE FUNCTION cs_unique_v1_v0(val jsonb)
-  RETURNS cs_unique_index_v1
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN cs_unique_v1_v0_0(val);
-END;
-
-
-DROP FUNCTION IF EXISTS cs_unique_v1(val jsonb);
-
-CREATE FUNCTION cs_unique_v1(val jsonb)
-  RETURNS cs_unique_index_v1
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN cs_unique_v1_v0_0(val);
-END;
+-----------------------------------------------------------------------------
 
 -- extracts json ste_vec index from an encrypted column
-DROP FUNCTION IF EXISTS cs_ste_vec_v1_v0_0(val jsonb);
+DROP FUNCTION IF EXISTS cs_ste_vec_v1(val jsonb);
 
-CREATE FUNCTION cs_ste_vec_v1_v0_0(val jsonb)
+CREATE FUNCTION cs_ste_vec_v1(val jsonb)
   RETURNS cs_ste_vec_index_v1
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -119,60 +67,33 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
-
-DROP FUNCTION IF EXISTS cs_ste_vec_v1_v0(val jsonb);
-
-CREATE FUNCTION cs_ste_vec_v1_v0(val jsonb)
-  RETURNS cs_ste_vec_index_v1
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN cs_ste_vec_v1_v0_0(val);
-END;
+-----------------------------------------------------------------------------
 
 
-DROP FUNCTION IF EXISTS cs_ste_vec_v1(val jsonb);
+DROP FUNCTION IF EXISTS jsonb_array_to_bytea_array(val jsonb);
 
-CREATE FUNCTION cs_ste_vec_v1(val jsonb)
-  RETURNS cs_ste_vec_index_v1
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN cs_ste_vec_v1_v0_0(val);
-END;
+CREATE FUNCTION jsonb_array_to_bytea_array(jsonb)
+RETURNS bytea[] AS $$
+    -- SELECT array_agg(decode(term, 'hex'))::bytea[] || ARRAY[]::bytea[] FROM jsonb_array_elements_text($1) t(term);
+    SELECT array_agg(term)::bytea[] || ARRAY[]::bytea[] FROM jsonb_array_elements_text($1) t(term);
+$$ LANGUAGE sql IMMUTABLE;
 
+DROP FUNCTION IF EXISTS cs_ore_64_8_v1(val jsonb);
 
--- extracts ore index from an encrypted column
-DROP FUNCTION IF EXISTS cs_ore_64_8_v1_v0_0(val jsonb);
-
-CREATE FUNCTION cs_ore_64_8_v1_v0_0(val jsonb)
-  RETURNS bytea[]
+CREATE FUNCTION cs_ore_64_8_v1(val jsonb)
+  RETURNS ore_64_8_index_v1
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
     IF val ? 'o' THEN
-      RETURN (val->>'o')::bytea[];
+      RETURN jsonb_array_to_bytea_array(val->'o');
     END IF;
     RAISE 'Expected an ore index (o) value in json: %', val;
   END;
 $$ LANGUAGE plpgsql;
 
+-----------------------------------------------------------------------------
 
-DROP FUNCTION IF EXISTS cs_ore_64_8_v1_v0(val jsonb);
-
-CREATE FUNCTION cs_ore_64_8_v1_v0(val jsonb)
-  RETURNS bytea[]
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN cs_ore_64_8_v1_v0_0(val);
-END;
-
-DROP FUNCTION IF EXISTS cs_ore_64_8_v1(val jsonb);
-
-CREATE FUNCTION cs_ore_64_8_v1(val jsonb)
-  RETURNS bytea[]
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN cs_ore_64_8_v1_v0_0(val);
-END;
 
 DROP FUNCTION IF EXISTS _cs_first_grouped_value(jsonb, jsonb);
 
