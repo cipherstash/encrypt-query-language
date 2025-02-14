@@ -74,7 +74,6 @@ DROP FUNCTION IF EXISTS jsonb_array_to_bytea_array(val jsonb);
 
 CREATE FUNCTION jsonb_array_to_bytea_array(jsonb)
 RETURNS bytea[] AS $$
-    -- SELECT array_agg(decode(term, 'hex'))::bytea[] || ARRAY[]::bytea[] FROM jsonb_array_elements_text($1) t(term);
     SELECT array_agg(term)::bytea[] || ARRAY[]::bytea[] FROM jsonb_array_elements_text($1) t(term);
 $$ LANGUAGE sql IMMUTABLE;
 
