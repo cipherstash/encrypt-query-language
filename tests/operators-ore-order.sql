@@ -21,10 +21,7 @@ INSERT INTO encrypted (id, encrypted_int2) VALUES (9, '{"c": "9", "i": {"table":
 INSERT INTO encrypted (id, encrypted_int2) VALUES (1, '{"c":  "1", "i": {"table": "encrypted", "column": "encrypted_int2"}, "k": "ct", "m": null, "o": ["\\x121212121212597ee28282d03415e7714fccd69eb7eb476c70743e485e20331f59cbc1c848dcdeda716f351eb20588c406a7df5fb8917ebf816739aa1414ac3b8498e493bf0badea5c9fdb3cc34da8b152b995957591880c523beb1d3f12487c38d18f62dd26209a727674e5a5fe3a3e3037860839afd801f6e268e7ba5a049613d57b000f03353a911cce15580808b5a5437e7fe5f4a303847b14979a77af448fac6f39255ec13a949c2378520af48d8e5562957fb84d5f0be62ff2cc4cb4c6de243df329c676af2a0581eb40cd20b63910213afab3fdd6dfe5dc727e051e917428f5d4bca5ccda5bda99f911abffd9e3fec8019c15dad79c485192eabfb16a91af1fa88cf196123c2a6ca46069bb468281b00294bb55e2a6adae2e6549d781d6beb4b5ae35b00eef0701678c1769551eff36ed1060571707244172d212d3e5f457333003f9f4c34e42e2fe7d1cd3367a701500fe0050cbda5d59363dd5a633fb2e067ccbc1db5c33ad25c1e96a62e774ee5672247b5856f48d88ad186e58492e891f32967139ec6fab5290f0f7d0fd6b9538b0669d1597"], "u": "fd80b0e733ed4ff9fe71434b9474ae434863eb01ceff77d73736ac6600334de3", "v": 1}');
 
 
-SELECT * FROM encrypted ORDER BY encrypted_int2;
 
-
--- ORE LT < AND GT > OPERATORS
 DO $$
   DECLARE
     ore_cs_encrypted_high cs_encrypted_v1;
@@ -44,14 +41,28 @@ DO $$
 
     SELECT id FROM encrypted ORDER BY encrypted_int2 DESC LIMIT 1
     INTO result_id;
-
     ASSERT result_id = 99;
 
+    SELECT id FROM encrypted ORDER BY encrypted_int2 DESC LIMIT 1 OFFSET 1
+    INTO result_id;
+    ASSERT result_id = 9;
+
+    SELECT id FROM encrypted ORDER BY encrypted_int2 DESC LIMIT 1 OFFSET 5
+    INTO result_id;
+    ASSERT result_id = 5;
 
     SELECT id FROM encrypted ORDER BY encrypted_int2 ASC LIMIT 1
     INTO result_id;
-
     ASSERT result_id = 1;
+
+    SELECT id FROM encrypted ORDER BY encrypted_int2 ASC LIMIT 1 OFFSET 1
+    INTO result_id;
+    ASSERT result_id = 5;
+
+    SELECT id FROM encrypted ORDER BY encrypted_int2 ASC LIMIT 1 OFFSET 5
+    INTO result_id;
+    ASSERT result_id = 9;
+
 
     SELECT id FROM encrypted
       WHERE encrypted_int2 < ore_cs_encrypted_high
@@ -64,7 +75,6 @@ DO $$
       WHERE encrypted_int2 < ore_cs_encrypted_high
       ORDER BY encrypted_int2 ASC LIMIT 1
     INTO result_id;
-
     ASSERT result_id = 1;
 
 
@@ -72,7 +82,6 @@ DO $$
       WHERE encrypted_int2 > ore_cs_encrypted_low
       ORDER BY encrypted_int2 ASC LIMIT 1
     INTO result_id;
-
     ASSERT result_id = 5;
 
 
@@ -80,9 +89,7 @@ DO $$
       WHERE encrypted_int2 > ore_cs_encrypted_low
       ORDER BY encrypted_int2 DESC LIMIT 1
     INTO result_id;
-
     ASSERT result_id = 99;
-
 
   END;
 $$ LANGUAGE plpgsql;
