@@ -94,13 +94,7 @@ CREATE FUNCTION compare_ore_array(a bytea[], b bytea[])
 RETURNS integer AS $$
   DECLARE
     cmp_result integer;
-    len_a integer;
-    len_b integer;
   BEGIN
-
-    SELECT array_length(a, 1) INTO len_a;
-    SELECT array_length(b, 1) INTO len_b;
-
     IF (array_length(a, 1) = 0 OR a IS NULL) AND (array_length(b, 1) = 0 OR b IS NULL) THEN
       RETURN 0;
     END IF;

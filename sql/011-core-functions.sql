@@ -72,10 +72,12 @@ $$ LANGUAGE plpgsql;
 
 DROP FUNCTION IF EXISTS jsonb_array_to_bytea_array(val jsonb);
 
-CREATE FUNCTION jsonb_array_to_bytea_array(jsonb)
+CREATE FUNCTION jsonb_array_to_bytea_array(val jsonb)
 RETURNS bytea[] AS $$
-    SELECT array_agg(term)::bytea[] || ARRAY[]::bytea[] FROM jsonb_array_elements_text($1) t(term);
-$$ LANGUAGE sql IMMUTABLE;
+    SELECT array_agg(decode(value::text, 'hex'))
+    FROM jsonb_array_elements_text(val) AS value;
+$$ LANGUAGE sql;
+
 
 DROP FUNCTION IF EXISTS cs_ore_64_8_v1(val jsonb);
 
