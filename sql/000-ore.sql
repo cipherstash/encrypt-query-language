@@ -90,7 +90,7 @@ $$ LANGUAGE plpgsql;
 -- we need to consider the next block so we recurse, otherwise we return the comparison result.
 
 
-CREATE FUNCTION compare_ore_array(a bytea[], b bytea[])
+CREATE FUNCTION compare_ore_array(a ore_64_8_index_v1, b ore_64_8_index_v1)
 RETURNS integer AS $$
   DECLARE
     cmp_result integer;
