@@ -184,8 +184,8 @@ DROP OPERATOR IF EXISTS = (ore_64_8_index_v1, ore_64_8_index_v1);
 
 CREATE OPERATOR = (
   PROCEDURE="ore_64_8_v1_eq",
-  LEFTARG=ore_64_8_v1,
-  RIGHTARG=ore_64_8_v1,
+  LEFTARG=ore_64_8_index_v1,
+  RIGHTARG=ore_64_8_index_v1,
   NEGATOR = <>,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
@@ -198,8 +198,8 @@ DROP OPERATOR IF EXISTS <> (ore_64_8_index_v1, ore_64_8_index_v1);
 
 CREATE OPERATOR <> (
   PROCEDURE="ore_64_8_v1_neq",
-  LEFTARG=ore_64_8_v1,
-  RIGHTARG=ore_64_8_v1,
+  LEFTARG=ore_64_8_index_v1,
+  RIGHTARG=ore_64_8_index_v1,
   NEGATOR = =,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
@@ -211,8 +211,8 @@ DROP OPERATOR IF EXISTS > (ore_64_8_index_v1, ore_64_8_index_v1);
 
 CREATE OPERATOR > (
   PROCEDURE="ore_64_8_v1_gt",
-  LEFTARG=ore_64_8_v1,
-  RIGHTARG=ore_64_8_v1,
+  LEFTARG=ore_64_8_index_v1,
+  RIGHTARG=ore_64_8_index_v1,
   COMMUTATOR = <,
   NEGATOR = <=,
   RESTRICT = scalargtsel,
@@ -224,8 +224,8 @@ DROP OPERATOR IF EXISTS < (ore_64_8_index_v1, ore_64_8_index_v1);
 
 CREATE OPERATOR < (
   PROCEDURE="ore_64_8_v1_lt",
-  LEFTARG=ore_64_8_v1,
-  RIGHTARG=ore_64_8_v1,
+  LEFTARG=ore_64_8_index_v1,
+  RIGHTARG=ore_64_8_index_v1,
   COMMUTATOR = >,
   NEGATOR = >=,
   RESTRICT = scalarltsel,
@@ -237,8 +237,8 @@ DROP OPERATOR IF EXISTS <= (ore_64_8_index_v1, ore_64_8_index_v1);
 
 CREATE OPERATOR <= (
   PROCEDURE="ore_64_8_v1_lte",
-  LEFTARG=ore_64_8_v1,
-  RIGHTARG=ore_64_8_v1,
+  LEFTARG=ore_64_8_index_v1,
+  RIGHTARG=ore_64_8_index_v1,
   COMMUTATOR = >=,
   NEGATOR = >,
   RESTRICT = scalarlesel,
@@ -250,8 +250,8 @@ DROP OPERATOR IF EXISTS >= (ore_64_8_index_v1, ore_64_8_index_v1);
 
 CREATE OPERATOR >= (
   PROCEDURE="ore_64_8_v1_gte",
-  LEFTARG=ore_64_8_v1,
-  RIGHTARG=ore_64_8_v1,
+  LEFTARG=ore_64_8_index_v1,
+  RIGHTARG=ore_64_8_index_v1,
   COMMUTATOR = <=,
   NEGATOR = <,
   RESTRICT = scalarlesel,
@@ -266,7 +266,7 @@ CREATE OPERATOR FAMILY ore_64_8_v1_btree_ops USING btree;
 
 DROP OPERATOR CLASS IF EXISTS ore_64_8_v1_btree_ops USING btree;
 
-CREATE OPERATOR CLASS ore_64_8_v1_btree_ops DEFAULT FOR TYPE ore_64_8_v1 USING btree FAMILY ore_64_8_v1_btree_ops  AS
+CREATE OPERATOR CLASS ore_64_8_v1_btree_ops DEFAULT FOR TYPE ore_64_8_index_v1 USING btree FAMILY ore_64_8_v1_btree_ops  AS
         OPERATOR 1 <,
         OPERATOR 2 <=,
         OPERATOR 3 =,
