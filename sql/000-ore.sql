@@ -88,7 +88,7 @@ $$ LANGUAGE plpgsql;
 -- doesn't always make sense but it's here for completeness.
 -- If both are non-empty, we compare the first element. If they are equal
 -- we need to consider the next block so we recurse, otherwise we return the comparison result.
-
+DROP FUNCTION IF EXISTS compare_ore_array(a ore_64_8_index_v1, b ore_64_8_index_v1);
 
 CREATE FUNCTION compare_ore_array(a ore_64_8_index_v1, b ore_64_8_index_v1)
 RETURNS integer AS $$
