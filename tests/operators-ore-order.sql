@@ -8,7 +8,6 @@ CREATE TABLE encrypted
     PRIMARY KEY(id)
 );
 
-
 CREATE index ON encrypted (encrypted_int2 cs_encrypted_ore_64_8_v1_btree_ops_v1);
 
 -- The value of encrypted_int2 == id
@@ -130,3 +129,4 @@ DO $$
 $$ LANGUAGE plpgsql;
 
 
+DROP TABLE IF EXISTS encrypted CASCADE;
