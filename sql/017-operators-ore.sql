@@ -11,28 +11,58 @@ DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_compare_v1(a cs_encrypted_v1, b cs
 
 CREATE FUNCTION cs_encrypted_ore_64_8_compare_v1(a cs_encrypted_v1, b cs_encrypted_v1)
   RETURNS integer AS $$
-    SELECT cs_encrypted_ore_64_8_compare_v1(a::jsonb, b::jsonb)
-$$ LANGUAGE sql;
-
-
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_compare_v1(a jsonb, b jsonb);
-
-CREATE FUNCTION cs_encrypted_ore_64_8_compare_v1(a jsonb, b jsonb)
-  RETURNS integer AS $$
    DECLARE
     a_ore ore_64_8_index_v1;
     b_ore ore_64_8_index_v1;
     result integer;
   BEGIN
 
+    RAISE NOTICE 'a %', a;
+    RAISE NOTICE 'b %', b;
+
     SELECT cs_ore_64_8_v1(a) INTO a_ore;
     SELECT cs_ore_64_8_v1(b) INTO b_ore;
 
-    SELECT compare_ore_64_8_v1(a_ore, b_ore) INTO result;
+    IF array_length(a_ore, 1) = 1 AND array_length(b_ore, 1) = 1 THEN
+      SELECT compare_ore_64_8_v1_term(a_ore[1], b_ore[1]) INTO result;
+    ELSE
+      SELECT compare_ore_64_8_v1(a_ore, b_ore) INTO result;
+    END IF;
+
+    RAISE NOTICE '%', result;
 
     RETURN result;
   END;
 $$ LANGUAGE plpgsql;
+
+
+-- DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_compare_v1(a jsonb, b jsonb);
+
+-- CREATE FUNCTION cs_encrypted_ore_64_8_compare_v1(a jsonb, b jsonb)
+--   RETURNS integer AS $$
+--    DECLARE
+--     a_ore ore_64_8_index_v1;
+--     b_ore ore_64_8_index_v1;
+--     result integer;
+--   BEGIN
+
+--     RAISE NOTICE 'a %', a;
+--     RAISE NOTICE 'b %', b;
+
+--     SELECT cs_ore_64_8_v1(a) INTO a_ore;
+--     SELECT cs_ore_64_8_v1(b) INTO b_ore;
+
+--     IF array_length(a_ore, 1) = 1 AND array_length(b_ore, 1) = 1 THEN
+--       SELECT compare_ore_64_8_v1_term(a_ore[1], b_ore[1]) INTO result;
+--     ELSE
+--       SELECT compare_ore_64_8_v1(a_ore, b_ore) INTO result;
+--     END IF;
+
+--     RAISE NOTICE '%', result;
+
+--     RETURN result;
+--   END;
+-- $$ LANGUAGE plpgsql;
 
 -----------------------------------------------------------------------------------------
 
