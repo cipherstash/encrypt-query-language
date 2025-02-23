@@ -5,6 +5,7 @@ CREATE FUNCTION cs_ciphertext_v1(val jsonb)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
+    RAISE NOTICE 'cs_ciphertext_v1';
     IF val ? 'c' THEN
       RETURN val->>'c';
     END IF;
@@ -86,6 +87,7 @@ CREATE FUNCTION cs_ore_64_8_v1(val jsonb)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
+    RAISE NOTICE 'cs_ore_64_8_v1';
     IF val ? 'o' THEN
       RETURN jsonb_array_to_bytea_array(val->'o');
     END IF;
