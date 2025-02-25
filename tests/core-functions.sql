@@ -6,7 +6,7 @@ DO $$
     ASSERT (SELECT EXISTS (SELECT cs_unique_v1('{"u": "u"}'::jsonb)));
     ASSERT (SELECT EXISTS (SELECT cs_match_v1('{"m": []}'::jsonb)));
     ASSERT (SELECT EXISTS (SELECT cs_ste_vec_v1('{"sv": [[]]}'::jsonb)));
-    ASSERT (SELECT EXISTS (SELECT cs_ore_64_8_v1('{"o": "()"}'::jsonb)));
+    ASSERT (SELECT EXISTS (SELECT cs_ore_64_8_v1('{"o": []}'::jsonb)));
 
   END;
 $$ LANGUAGE plpgsql;
@@ -14,7 +14,7 @@ $$ LANGUAGE plpgsql;
 DO $$
   BEGIN
     -- sanity check
-    PERFORM cs_ore_64_8_v1('{"o": "()"}'::jsonb);
+    PERFORM cs_ore_64_8_v1('{"o": []}'::jsonb);
 
     BEGIN
       PERFORM cs_ore_64_8_v1('{}'::jsonb);
@@ -76,4 +76,3 @@ DO $$
     END;
   END;
 $$ LANGUAGE plpgsql;
-
