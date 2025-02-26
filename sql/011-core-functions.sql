@@ -156,6 +156,28 @@ DROP CAST IF EXISTS (text AS ore_64_8_v1_term);
 CREATE CAST (text AS ore_64_8_v1_term)
 	WITH FUNCTION _cs_text_to_ore_64_8_v1_term_v1_0(text) AS IMPLICIT;
 
+DROP FUNCTION IF EXISTS jsonb_array_to_ore_64_8_v1(val jsonb);
+
+-- Casts a jsonb array of hex-encoded strings to the `ore_64_8_v1` composite type.
+-- In other words, this function takes the ORE index format sent through in the
+-- EQL payload from Proxy and decodes it as the composite type that we use for
+-- ORE operations on the Postgres side.
+CREATE FUNCTION jsonb_array_to_ore_64_8_v1(val jsonb)
+RETURNS ore_64_8_v1 AS $$
+DECLARE
+  terms_arr ore_64_8_v1_term[];
+BEGIN
+  IF jsonb_typeof(val) = 'null' THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT array_agg(ROW(decode(value::text, 'hex'))::ore_64_8_v1_term)
+    INTO terms_arr
+  FROM jsonb_array_elements_text(val) AS value;
+
+  RETURN ROW(terms_arr)::ore_64_8_v1;
+END;
+$$ LANGUAGE plpgsql;
 
 -- extracts ore index from an encrypted column
 DROP FUNCTION IF EXISTS cs_ore_64_8_v1_v0_0(val jsonb);
@@ -166,7 +188,7 @@ CREATE FUNCTION cs_ore_64_8_v1_v0_0(val jsonb)
 AS $$
 	BEGIN
     IF val ? 'o' THEN
-      RETURN (val->>'o')::ore_64_8_v1;
+      RETURN jsonb_array_to_ore_64_8_v1(val->'o');
     END IF;
     RAISE 'Expected an ore index (o) value in json: %', val;
   END;
