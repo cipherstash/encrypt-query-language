@@ -158,6 +158,10 @@ CREATE CAST (text AS ore_64_8_v1_term)
 
 DROP FUNCTION IF EXISTS jsonb_array_to_ore_64_8_v1(val jsonb);
 
+-- Casts a jsonb array of hex-encoded strings to the `ore_64_8_v1` composite type.
+-- In other words, this function takes the ORE index format sent through in the
+-- EQL payload from Proxy and decodes it as the composite type that we use for
+-- ORE operations on the Postgres side.
 CREATE FUNCTION jsonb_array_to_ore_64_8_v1(val jsonb)
 RETURNS ore_64_8_v1 AS $$
 DECLARE
