@@ -24,15 +24,15 @@ CREATE FUNCTION compare_ore_64_8_v1_term(a ore_64_8_v1_term, b ore_64_8_v1_term)
     indicator smallint := 0;
   BEGIN
     IF a IS NULL AND b IS NULL THEN
-      RETURN 0;
+      RETURN NULL;
     END IF;
 
     IF a IS NULL THEN
-      RETURN -1;
+      RETURN NULL;
     END IF;
 
     IF b IS NULL THEN
-      RETURN 1;
+      RETURN NULL;
     END IF;
 
     IF bit_length(a.bytes) != bit_length(b.bytes) THEN
@@ -239,13 +239,27 @@ RETURNS integer AS $$
   DECLARE
     cmp_result integer;
   BEGIN
-    IF (array_length(a, 1) = 0 OR a IS NULL) AND (array_length(b, 1) = 0 OR b IS NULL) THEN
+    IF a IS NULL AND b IS NULL THEN
+      RETURN NULL;
+    END IF;
+
+    IF a IS NULL THEN
+      RETURN NULL;
+    END IF;
+
+    IF b IS NULL THEN
+      RETURN NULL;
+    END IF;
+
+    IF (array_length(a, 1) = 0) AND (array_length(b, 1) = 0) THEN
       RETURN 0;
     END IF;
-    IF array_length(a, 1) = 0 OR a IS NULL THEN
+
+    IF array_length(a, 1) = 0 THEN
       RETURN -1;
     END IF;
-    IF array_length(b, 1) = 0 OR a IS NULL THEN
+
+    IF array_length(b, 1) = 0 THEN
       RETURN 1;
     END IF;
 
