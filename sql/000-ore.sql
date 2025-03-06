@@ -23,15 +23,7 @@ CREATE FUNCTION compare_ore_64_8_v1_term(a ore_64_8_v1_term, b ore_64_8_v1_term)
 
     indicator smallint := 0;
   BEGIN
-    IF a IS NULL AND b IS NULL THEN
-      RETURN NULL;
-    END IF;
-
-    IF a IS NULL THEN
-      RETURN NULL;
-    END IF;
-
-    IF b IS NULL THEN
+    IF a IS NULL OR b IS NULL THEN
       RETURN NULL;
     END IF;
 
@@ -239,15 +231,7 @@ RETURNS integer AS $$
   DECLARE
     cmp_result integer;
   BEGIN
-    IF a IS NULL AND b IS NULL THEN
-      RETURN NULL;
-    END IF;
-
-    IF a IS NULL THEN
-      RETURN NULL;
-    END IF;
-
-    IF b IS NULL THEN
+    IF a IS NULL OR b IS NULL THEN
       RETURN NULL;
     END IF;
 
