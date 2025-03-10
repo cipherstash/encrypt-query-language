@@ -12,8 +12,7 @@ CREATE TABLE users
 
 TRUNCATE TABLE users;
 
-
-TRUNCATE TABLE users;
+INSERT INTO users (name_encrypted) VALUES (NULL);
 
 -- User with "LOW" value
 INSERT INTO users (name_encrypted) VALUES (
@@ -56,6 +55,9 @@ DO $$
 
     -- SANITY CHECK
     ASSERT (SELECT EXISTS (SELECT id FROM users WHERE cs_ore_64_8_v1(name_encrypted) < cs_ore_64_8_v1(ore_json)));
+
+    -- NULL VALUES SHOULD BE IGNORED
+    ASSERT (SELECT (SELECT COUNT(*) FROM (SELECT id FROM users WHERE cs_ore_64_8_v1(name_encrypted) < cs_ore_64_8_v1(ore_json)) as count) = 1);
 
     ASSERT (SELECT EXISTS (
       SELECT id FROM users WHERE name_encrypted < ore_cs_encrypted::jsonb

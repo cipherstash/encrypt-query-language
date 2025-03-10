@@ -239,13 +239,24 @@ RETURNS integer AS $$
   DECLARE
     cmp_result integer;
   BEGIN
-    IF (array_length(a, 1) = 0 OR a IS NULL) AND (array_length(b, 1) = 0 OR b IS NULL) THEN
+
+    -- NULLs are NULL
+    IF a IS NULL OR b IS NULL THEN
+      RETURN NULL;
+    END IF;
+
+    -- empty a and b
+    IF cardinality(a) = 0 AND cardinality(b) = 0 THEN
       RETURN 0;
     END IF;
-    IF array_length(a, 1) = 0 OR a IS NULL THEN
+
+    -- empty a and some b
+    IF (cardinality(a) = 0) AND cardinality(b) > 0 THEN
       RETURN -1;
     END IF;
-    IF array_length(b, 1) = 0 OR a IS NULL THEN
+
+    -- some a and empty b
+    IF cardinality(a) > 0 AND (cardinality(b) = 0) THEN
       RETURN 1;
     END IF;
 
