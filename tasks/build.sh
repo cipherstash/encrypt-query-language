@@ -3,6 +3,7 @@
 #MISE alias="b"
 #MISE sources=["sql/*.sql"]
 #MISE outputs=["release/cipherstash-encrypt.sql","release/cipherstash-encrypt-uninstall.sql"]
+#USAGE flag "--version <version>" help="Specify release version of EQL" default="DEV"
 
 #!/bin/bash
 
@@ -12,6 +13,12 @@ mkdir -p release
 
 rm -f release/cipherstash-encrypt-uninstall.sql
 rm -f release/cipherstash-encrypt.sql
+
+rm -f sql/000-version.sql
+
+RELEASE_VERSION=${usage_version}
+sed "s/\$RELEASE_VERSION/$RELEASE_VERSION/g" tasks/000-version-template.sql > sql/000-version.sql
+
 
 # Collect all the drops
 # In reverse order (tac) so that we drop the constraints before the tables
