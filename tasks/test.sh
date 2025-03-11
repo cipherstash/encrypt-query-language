@@ -37,6 +37,7 @@ mise run build
 mise run reset --postgres ${POSTGRES_VERSION}
 
 # tests
+run_test tests/version.sql
 run_test tests/core.sql
 run_test tests/core-functions.sql
 run_test tests/config.sql

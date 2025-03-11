@@ -37,7 +37,7 @@ jobs:
 
       - name: Build EQL release
         run: |
-          mise run build
+          mise run build --version ${{github.event.release.tag_name}}
 
       - name: Upload EQL artifacts
         uses: actions/upload-artifact@v4
