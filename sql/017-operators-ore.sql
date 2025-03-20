@@ -411,15 +411,22 @@ CREATE FUNCTION cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b cs_encrypted_
   END;
 $$ LANGUAGE plpgsql;
 
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b cs_encrypted_v1);
+DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b jsonb);
 
 CREATE FUNCTION cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b jsonb)
   RETURNS integer AS $$
   BEGIN
-    RETURN compare_ore_64_8_v1(cs_ore_64_8_v1(a), cs_ore_64_8_v1(jsonb));
+    RETURN compare_ore_64_8_v1(cs_ore_64_8_v1(a), cs_ore_64_8_v1(b));
   END;
 $$ LANGUAGE plpgsql;
 
+
+CREATE FUNCTION cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b jsonb)
+  RETURNS integer AS $$
+  BEGIN
+    RETURN compare_ore_64_8_v1(cs_ore_64_8_v1(a), cs_ore_64_8_v1(b));
+  END;
+$$ LANGUAGE plpgsql;
 
 -----------------------------------------------------------------------------------------
 
