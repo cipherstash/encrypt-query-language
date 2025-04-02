@@ -45,6 +45,7 @@ run_test tests/encryptindex.sql
 run_test tests/operators-eq.sql
 run_test tests/operators-match.sql
 run_test tests/operators-ore.sql
+run_test tests/aggregate-ore.sql
 
 echo
 echo '###############################################'
