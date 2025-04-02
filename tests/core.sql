@@ -59,7 +59,7 @@ $$ LANGUAGE plpgsql;
 
 -- -----------------------------------------------
 ---
--- cs_encrypted_v1 tyoe
+-- cs_encrypted_v1 type
 -- Validate configuration schema
 -- Try and insert many invalid configurations
 -- None should exist
