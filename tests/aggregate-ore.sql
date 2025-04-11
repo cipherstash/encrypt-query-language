@@ -5,7 +5,7 @@ DROP TABLE IF EXISTS agg_test;
 CREATE TABLE agg_test
 (
     plain_int integer,
-    enc_int cs_encrypted_v1
+    enc_int eql_v1_encrypted
 );
 
 -- Add data. These are saved from the psql query output connected to Proxy.
@@ -37,16 +37,16 @@ INSERT INTO agg_test (plain_int, enc_int) VALUES
 DO $$
   BEGIN
   -- min null finds null
-  ASSERT ((SELECT cs_min_v1(enc_int) FROM agg_test where enc_int IS NULL) IS NULL);
+  ASSERT ((SELECT eql_v1.min(enc_int) FROM agg_test where enc_int IS NULL) IS NULL);
 
   -- min enc_int finds the minimum (1)
-  ASSERT ((SELECT enc_int FROM agg_test WHERE plain_int = 1) = (SELECT cs_min_v1(enc_int) FROM agg_test));
+  ASSERT ((SELECT enc_int FROM agg_test WHERE plain_int = 1) = (SELECT eql_v1.min(enc_int) FROM agg_test));
 
   -- max null finds null
-  ASSERT ((SELECT cs_max_v1(enc_int) FROM agg_test where enc_int IS NULL) IS NULL);
+  ASSERT ((SELECT eql_v1.max(enc_int) FROM agg_test where enc_int IS NULL) IS NULL);
 
   -- max enc_int finds the maximum (5)
-  ASSERT ((SELECT enc_int FROM agg_test WHERE plain_int = 5) = (SELECT cs_max_v1(enc_int) FROM agg_test));
+  ASSERT ((SELECT enc_int FROM agg_test WHERE plain_int = 5) = (SELECT eql_v1.max(enc_int) FROM agg_test));
   END;
 $$ LANGUAGE plpgsql;
 
@@ -63,7 +63,7 @@ DO $$
     error_message text;
   BEGIN
     -- min enc_int raises exception
-    SELECT cs_min_v1(enc_int) FROM agg_test;
+    SELECT eql_v1.min(enc_int) FROM agg_test;
   EXCEPTION
     WHEN others THEN
       error_message := SQLERRM;
@@ -82,7 +82,7 @@ DO $$
     error_message text;
   BEGIN
     -- max enc_int raises exception
-    SELECT cs_max_v1(enc_int) FROM agg_test;
+    SELECT eql_v1.max(enc_int) FROM agg_test;
   EXCEPTION
     WHEN others THEN
       error_message := SQLERRM;
