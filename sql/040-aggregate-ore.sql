@@ -1,12 +1,13 @@
 -- Aggregate functions for ORE
-DROP FUNCTION IF EXISTS cs_min_encrypted_v1;
-CREATE FUNCTION cs_min_encrypted_v1(a cs_encrypted_v1, b cs_encrypted_v1)
-RETURNS cs_encrypted_v1
+DROP FUNCTION IF EXISTS eql_v1.min_encrypted;
+
+CREATE FUNCTION eql_v1.min_encrypted(a eql_v1_encrypted, b eql_v1_encrypted)
+RETURNS eql_v1_encrypted
 LANGUAGE plpgsql
 STRICT
 AS $$
   BEGIN
-    IF cs_ore_64_8_v1(a) < cs_ore_64_8_v1(b) THEN
+    IF eql_v1.ore_64_8_v1(a) < eql_v1.ore_64_8_v1(b) THEN
       RETURN  a;
     ELSE
       RETURN b;
@@ -14,20 +15,24 @@ AS $$
   END;
 $$;
 
-CREATE AGGREGATE cs_min_v1(cs_encrypted_v1)
+DROP AGGREGATE IF EXISTS eql_v1.min(eql_v1_encrypted);
+CREATE AGGREGATE eql_v1.min(eql_v1_encrypted)
 (
-  sfunc = cs_min_encrypted_v1,
-  stype = cs_encrypted_v1
+  sfunc = eql_v1.min_encrypted,
+  stype = eql_v1_encrypted
 );
 
-DROP FUNCTION IF EXISTS cs_max_encrypted_v1;
-CREATE FUNCTION cs_max_encrypted_v1(a cs_encrypted_v1, b cs_encrypted_v1)
-RETURNS cs_encrypted_v1
+
+
+DROP FUNCTION IF EXISTS eql_v1.max_encrypted;
+
+CREATE FUNCTION eql_v1.max_encrypted(a eql_v1_encrypted, b eql_v1_encrypted)
+RETURNS eql_v1_encrypted
 LANGUAGE plpgsql
 STRICT
 AS $$
   BEGIN
-    IF cs_ore_64_8_v1(a) > cs_ore_64_8_v1(b) THEN
+    IF eql_v1.ore_64_8_v1(a) > eql_v1.ore_64_8_v1(b) THEN
       RETURN  a;
     ELSE
       RETURN b;
@@ -35,8 +40,9 @@ AS $$
   END;
 $$;
 
-CREATE AGGREGATE cs_max_v1(cs_encrypted_v1)
+DROP AGGREGATE IF EXISTS eql_v1.max(eql_v1_encrypted);
+CREATE AGGREGATE eql_v1.max(eql_v1_encrypted)
 (
-  sfunc = cs_max_encrypted_v1,
-  stype = cs_encrypted_v1
+  sfunc = eql_v1.max_encrypted,
+  stype = eql_v1_encrypted
 );
