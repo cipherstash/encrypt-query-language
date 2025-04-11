@@ -8,6 +8,8 @@
 --
 
 DROP OPERATOR IF EXISTS ~~ (eql_v1_encrypted, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS ~~* (eql_v1_encrypted, eql_v1_encrypted);
+
 DROP FUNCTION IF EXISTS eql_v1.encrypted_match(a eql_v1_encrypted, b eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1.encrypted_match(a eql_v1_encrypted, b eql_v1_encrypted)
@@ -16,7 +18,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR ~~(
-  PROCEDURE="eql_v1.encrypted_match",
+  FUNCTION=eql_v1.encrypted_match,
   LEFTARG=eql_v1_encrypted,
   RIGHTARG=eql_v1_encrypted,
   RESTRICT = eqsel,
@@ -26,7 +28,7 @@ CREATE OPERATOR ~~(
 );
 
 CREATE OPERATOR ~~*(
-  PROCEDURE="eql_v1.encrypted_match",
+  FUNCTION=eql_v1.encrypted_match,
   LEFTARG=eql_v1_encrypted,
   RIGHTARG=eql_v1_encrypted,
   RESTRICT = eqsel,
@@ -45,7 +47,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR ~~(
-  PROCEDURE="eql_v1.encrypted_match",
+  FUNCTION=eql_v1.encrypted_match,
   LEFTARG=eql_v1_encrypted,
   RIGHTARG=eql_v1.match_index,
   RESTRICT = eqsel,
@@ -55,7 +57,7 @@ CREATE OPERATOR ~~(
 );
 
 CREATE OPERATOR ~~*(
-  PROCEDURE="eql_v1.encrypted_match",
+  FUNCTION=eql_v1.encrypted_match,
   LEFTARG=eql_v1_encrypted,
   RIGHTARG=eql_v1.match_index,
   RESTRICT = eqsel,
@@ -75,7 +77,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR ~~(
-  PROCEDURE="eql_v1.encrypted_match",
+  FUNCTION=eql_v1.encrypted_match,
   LEFTARG=eql_v1.match_index,
   RIGHTARG=eql_v1_encrypted,
   RESTRICT = eqsel,
@@ -85,7 +87,7 @@ CREATE OPERATOR ~~(
 );
 
 CREATE OPERATOR ~~*(
-  PROCEDURE="eql_v1.encrypted_match",
+  FUNCTION=eql_v1.encrypted_match,
   LEFTARG=eql_v1.match_index,
   RIGHTARG=eql_v1_encrypted,
   RESTRICT = eqsel,
@@ -104,7 +106,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR ~~(
-  PROCEDURE="eql_v1.encrypted_match",
+  FUNCTION=eql_v1.encrypted_match,
   LEFTARG=eql_v1.match_index,
   RIGHTARG=eql_v1.match_index,
   RESTRICT = eqsel,
@@ -114,7 +116,7 @@ CREATE OPERATOR ~~(
 );
 
 CREATE OPERATOR ~~*(
-  PROCEDURE="eql_v1.encrypted_match",
+  FUNCTION=eql_v1.encrypted_match,
   LEFTARG=eql_v1.match_index,
   RIGHTARG=eql_v1.match_index,
   RESTRICT = eqsel,
@@ -133,7 +135,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR ~~(
-  PROCEDURE="eql_v1.encrypted_match",
+  FUNCTION=eql_v1.encrypted_match,
   LEFTARG=eql_v1_encrypted,
   RIGHTARG=jsonb,
   RESTRICT = eqsel,
@@ -143,7 +145,7 @@ CREATE OPERATOR ~~(
 );
 
 CREATE OPERATOR ~~*(
-  PROCEDURE="eql_v1.encrypted_match",
+  FUNCTION=eql_v1.encrypted_match,
   LEFTARG=eql_v1_encrypted,
   RIGHTARG=jsonb,
   RESTRICT = eqsel,
@@ -163,7 +165,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR ~~(
-  PROCEDURE="eql_v1.encrypted_match",
+  FUNCTION=eql_v1.encrypted_match,
   LEFTARG=jsonb,
   RIGHTARG=eql_v1_encrypted,
   RESTRICT = eqsel,
@@ -173,7 +175,7 @@ CREATE OPERATOR ~~(
 );
 
 CREATE OPERATOR ~~*(
-  PROCEDURE="eql_v1.encrypted_match",
+  FUNCTION=eql_v1.encrypted_match,
   LEFTARG=jsonb,
   RIGHTARG=eql_v1_encrypted,
   RESTRICT = eqsel,

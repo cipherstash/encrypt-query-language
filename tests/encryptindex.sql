@@ -47,7 +47,7 @@ DO $$
     ASSERT (SELECT EXISTS (SELECT * FROM information_schema.columns s WHERE s.column_name = 'name_encrypted'));
 
     -- rename columns
-    PERFORM cs_rename_encrypted_columns_v1();
+    PERFORM eql_v1.rename_encrypted_columns();
 
     ASSERT (SELECT EXISTS (SELECT * FROM information_schema.columns s WHERE s.column_name = 'name_plaintext'));
     ASSERT (SELECT EXISTS (SELECT * FROM information_schema.columns s WHERE s.column_name = 'name' and s.domain_name = 'eql_v1_encrypted'));

@@ -81,7 +81,7 @@ $$ LANGUAGE SQL;
 DROP OPERATOR IF EXISTS = (eql_v1.ste_vec_encrypted_term, eql_v1.ste_vec_encrypted_term);
 
 CREATE OPERATOR = (
-  PROCEDURE="eql_v1.ste_vec_encrypted_term_eq",
+  FUNCTION=eql_v1.ste_vec_encrypted_term_eq,
   LEFTARG=eql_v1.ste_vec_encrypted_term,
   RIGHTARG=eql_v1.ste_vec_encrypted_term,
   NEGATOR = <>,
@@ -94,7 +94,7 @@ CREATE OPERATOR = (
 DROP OPERATOR IF EXISTS <> (eql_v1.ste_vec_encrypted_term, eql_v1.ste_vec_encrypted_term);
 
 CREATE OPERATOR <> (
-  PROCEDURE="eql_v1.ste_vec_encrypted_term_neq",
+  FUNCTION=eql_v1.ste_vec_encrypted_term_neq,
   LEFTARG=eql_v1.ste_vec_encrypted_term,
   RIGHTARG=eql_v1.ste_vec_encrypted_term,
   NEGATOR = =,
@@ -107,7 +107,7 @@ CREATE OPERATOR <> (
 DROP OPERATOR IF EXISTS > (eql_v1.ste_vec_encrypted_term, eql_v1.ste_vec_encrypted_term);
 
 CREATE OPERATOR > (
-  PROCEDURE="eql_v1.ste_vec_encrypted_term_gt",
+  FUNCTION=eql_v1.ste_vec_encrypted_term_gt,
   LEFTARG=eql_v1.ste_vec_encrypted_term,
   RIGHTARG=eql_v1.ste_vec_encrypted_term,
   NEGATOR = <=,
@@ -120,7 +120,7 @@ CREATE OPERATOR > (
 DROP OPERATOR IF EXISTS < (eql_v1.ste_vec_encrypted_term_v1, eql_v1.ste_vec_encrypted_term_v1);
 
 CREATE OPERATOR < (
-  PROCEDURE="eql_v1.ste_vec_encrypted_term_lt",
+  FUNCTION=eql_v1.ste_vec_encrypted_term_lt,
   LEFTARG=eql_v1.ste_vec_encrypted_term,
   RIGHTARG=eql_v1.ste_vec_encrypted_term,
   NEGATOR = >=,
@@ -133,7 +133,7 @@ CREATE OPERATOR < (
 DROP OPERATOR IF EXISTS >= (eql_v1.ste_vec_encrypted_term_v1, eql_v1.ste_vec_encrypted_term_v1);
 
 CREATE OPERATOR >= (
-  PROCEDURE="eql_v1.ste_vec_encrypted_term_gte",
+  FUNCTION=eql_v1.ste_vec_encrypted_term_gte,
   LEFTARG=eql_v1.ste_vec_encrypted_term,
   RIGHTARG=eql_v1.ste_vec_encrypted_term,
   NEGATOR = <,
@@ -146,7 +146,7 @@ CREATE OPERATOR >= (
 DROP OPERATOR IF EXISTS <= (eql_v1.ste_vec_encrypted_term_v1, eql_v1.ste_vec_encrypted_term_v1);
 
 CREATE OPERATOR <= (
-  PROCEDURE="eql_v1.ste_vec_encrypted_term_lte",
+  FUNCTION=eql_v1.ste_vec_encrypted_term_lte,
   LEFTARG=eql_v1.ste_vec_encrypted_term,
   RIGHTARG=eql_v1.ste_vec_encrypted_term,
   NEGATOR = >,
@@ -188,7 +188,7 @@ DROP FUNCTION IF EXISTS eql_v1.ste_vec_value(col jsonb, selector jsonb);
 CREATE FUNCTION eql_v1.cs_ste_vec_value(col jsonb, selector jsonb)
 RETURNS jsonb AS $$
 DECLARE
-  ste_vec_index eql_v1.cs_ste_vec_index;
+  ste_vec_index eql_v1.ste_vec_index;
   target_selector text;
   found text;
   ignored text;
@@ -238,7 +238,7 @@ DECLARE
   found eql_v1.ste_vec_encrypted_term;
   ignored eql_v1.ste_vec_encrypted_term;
   i integer;
-  term_array eql_v1.ste_vec_encrypted_term_v1[];
+  term_array eql_v1.ste_vec_encrypted_term[];
 BEGIN
   ste_vec_index := eql_v1.ste_vec(col);
 
@@ -394,17 +394,14 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS eql_v1.jsonb_to_cs_ste_vec_index(input jsonb);
+DROP FUNCTION IF EXISTS eql_v1.jsonb_to_ste_vec_index(input jsonb);
 
-CREATE FUNCTION eql_v1.jsonb_to_cs_ste_vec_index(input jsonb)
+CREATE FUNCTION eql_v1.jsonb_to_ste_vec_index(input jsonb)
 RETURNS eql_v1.ste_vec_index AS $$
 DECLARE
-    vec_entry eql_v1._ste_vec_entry;
-    entry_array eql_v1.ste_vec_v1_entry[];
+    vec_entry eql_v1.ste_vec_entry;
+    entry_array eql_v1.ste_vec_entry[];
     entry_json jsonb;
-    entry_json_array jsonb[];
-    entry_array_length int;
-    i int;
 BEGIN
     FOR entry_json IN SELECT * FROM jsonb_array_elements(input)
     LOOP
@@ -415,7 +412,6 @@ BEGIN
         )::eql_v1.ste_vec_entry;
         entry_array := array_append(entry_array, vec_entry);
     END LOOP;
-
     RETURN ROW(entry_array)::eql_v1.ste_vec_index;
 END;
 $$ LANGUAGE plpgsql;
@@ -428,7 +424,7 @@ CREATE CAST (jsonb AS eql_v1.ste_vec_index)
 DROP OPERATOR IF EXISTS @> (eql_v1.ste_vec_index, eql_v1.ste_vec_index);
 
 CREATE OPERATOR @> (
-  PROCEDURE="eql_v1.ste_vec_logical_contains",
+  FUNCTION=eql_v1.ste_vec_logical_contains,
   LEFTARG=eql_v1.ste_vec_index,
   RIGHTARG=eql_v1.ste_vec_index,
   COMMUTATOR = <@
@@ -437,7 +433,7 @@ CREATE OPERATOR @> (
 DROP OPERATOR IF EXISTS <@ (eql_v1.ste_vec_index, eql_v1.ste_vec_index);
 
 CREATE OPERATOR <@ (
-  PROCEDURE="eql_v1.ste_vec_logical_is_contained",
+  FUNCTION=eql_v1.ste_vec_logical_is_contained,
   LEFTARG=eql_v1.ste_vec_index,
   RIGHTARG=eql_v1.ste_vec_index,
   COMMUTATOR = @>

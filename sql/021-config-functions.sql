@@ -231,7 +231,7 @@ $$ LANGUAGE plpgsql;
 --
 -- Marks the currently `pending` configuration as `encrypting`.
 --
--- Validates the database schema and raises an exception if the configured columns are not of `jsonb` or `cs_encrypted_v1` type.
+-- Validates the database schema and raises an exception if the configured columns are not of `jsonb` or `eql_v1_encrypted` type.
 --
 -- Accepts an optional `force` parameter.
 -- If `force` is `true`, the schema validation is skipped.
