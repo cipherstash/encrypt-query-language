@@ -138,7 +138,7 @@ $$ LANGUAGE SQL;
 DROP OPERATOR IF EXISTS = (eql_v1.ore_64_8_v1_term, eql_v1.ore_64_8_v1_term);
 
 CREATE OPERATOR = (
-  PROCEDURE="eql_v1.ore_64_8_v1_term_eq",
+  FUNCTION=eql_v1.ore_64_8_v1_term_eq,
   LEFTARG=eql_v1.ore_64_8_v1_term,
   RIGHTARG=eql_v1.ore_64_8_v1_term,
   NEGATOR = <>,
@@ -152,7 +152,7 @@ CREATE OPERATOR = (
 DROP OPERATOR IF EXISTS <> (eql_v1.ore_64_8_v1_term, eql_v1.ore_64_8_v1_term);
 
 CREATE OPERATOR <> (
-  PROCEDURE="eql_v1.ore_64_8_v1_term_neq",
+  FUNCTION=eql_v1.ore_64_8_v1_term_neq,
   LEFTARG=eql_v1.ore_64_8_v1_term,
   RIGHTARG=eql_v1.ore_64_8_v1_term,
   NEGATOR = =,
@@ -165,7 +165,7 @@ CREATE OPERATOR <> (
 DROP OPERATOR IF EXISTS > (eql_v1.ore_64_8_v1_term, eql_v1.ore_64_8_v1_term);
 
 CREATE OPERATOR > (
-  PROCEDURE="eql_v1.ore_64_8_v1_term_gt",
+  FUNCTION=eql_v1.ore_64_8_v1_term_gt,
   LEFTARG=eql_v1.ore_64_8_v1_term,
   RIGHTARG=eql_v1.ore_64_8_v1_term,
   COMMUTATOR = <,
@@ -177,7 +177,7 @@ CREATE OPERATOR > (
 DROP OPERATOR IF EXISTS < (eql_v1.ore_64_8_v1_term, eql_v1.ore_64_8_v1_term);
 
 CREATE OPERATOR < (
-  PROCEDURE="eql_v1.ore_64_8_v1_term_lt",
+  FUNCTION=eql_v1.ore_64_8_v1_term_lt,
   LEFTARG=eql_v1.ore_64_8_v1_term,
   RIGHTARG=eql_v1.ore_64_8_v1_term,
   COMMUTATOR = >,
@@ -189,7 +189,7 @@ CREATE OPERATOR < (
 DROP OPERATOR IF EXISTS <= (eql_v1.ore_64_8_v1_term, eql_v1.ore_64_8_v1_term);
 
 CREATE OPERATOR <= (
-  PROCEDURE="eql_v1.ore_64_8_v1_term_lte",
+  FUNCTION=eql_v1.ore_64_8_v1_term_lte,
   LEFTARG=eql_v1.ore_64_8_v1_term,
   RIGHTARG=eql_v1.ore_64_8_v1_term,
   COMMUTATOR = >=,
@@ -201,7 +201,7 @@ CREATE OPERATOR <= (
 DROP OPERATOR IF EXISTS >= (eql_v1.ore_64_8_v1_term, eql_v1.ore_64_8_v1_term);
 
 CREATE OPERATOR >= (
-  PROCEDURE="eql_v1.ore_64_8_v1_term_gte",
+  FUNCTION=eql_v1.ore_64_8_v1_term_gte,
   LEFTARG=eql_v1.ore_64_8_v1_term,
   RIGHTARG=eql_v1.ore_64_8_v1_term,
   COMMUTATOR = <=,
@@ -260,10 +260,10 @@ RETURNS integer AS $$
       RETURN 1;
     END IF;
 
-    cmp_result := compare_ore_64_8_v1_term(a[1], b[1]);
+    cmp_result := eql_v1.compare_ore_64_8_v1_term(a[1], b[1]);
     IF cmp_result = 0 THEN
     -- Removes the first element in the array, and calls this fn again to compare the next element/s in the array.
-      RETURN compare_ore_array(a[2:array_length(a,1)], b[2:array_length(b,1)]);
+      RETURN eql_v1.compare_ore_array(a[2:array_length(a,1)], b[2:array_length(b,1)]);
     END IF;
 
     RETURN cmp_result;
@@ -335,7 +335,7 @@ $$ LANGUAGE SQL;
 DROP OPERATOR IF EXISTS = (eql_v1.ore_64_8_v1, eql_v1.ore_64_8_v1);
 
 CREATE OPERATOR = (
-  PROCEDURE="eql_v1.ore_64_8_v1_eq",
+  FUNCTION=eql_v1.ore_64_8_v1_eq,
   LEFTARG=eql_v1.ore_64_8_v1,
   RIGHTARG=eql_v1.ore_64_8_v1,
   NEGATOR = <>,
@@ -349,7 +349,7 @@ CREATE OPERATOR = (
 DROP OPERATOR IF EXISTS <> (eql_v1.ore_64_8_v1, eql_v1.ore_64_8_v1);
 
 CREATE OPERATOR <> (
-  PROCEDURE="ore_64_8_v1_neq",
+  FUNCTION=eql_v1.ore_64_8_v1_neq,
   LEFTARG=eql_v1.ore_64_8_v1,
   RIGHTARG=eql_v1.ore_64_8_v1,
   NEGATOR = =,
@@ -362,7 +362,7 @@ CREATE OPERATOR <> (
 DROP OPERATOR IF EXISTS > (eql_v1.ore_64_8_v1, eql_v1.ore_64_8_v1);
 
 CREATE OPERATOR > (
-  PROCEDURE="ore_64_8_v1_gt",
+  FUNCTION=eql_v1.ore_64_8_v1_gt,
   LEFTARG=eql_v1.ore_64_8_v1,
   RIGHTARG=eql_v1.ore_64_8_v1,
   COMMUTATOR = <,
@@ -375,7 +375,7 @@ CREATE OPERATOR > (
 DROP OPERATOR IF EXISTS < (eql_v1.ore_64_8_v1, eql_v1.ore_64_8_v1);
 
 CREATE OPERATOR < (
-  PROCEDURE="ore_64_8_v1_lt",
+  FUNCTION=eql_v1.ore_64_8_v1_lt,
   LEFTARG=eql_v1.ore_64_8_v1,
   RIGHTARG=eql_v1.ore_64_8_v1,
   COMMUTATOR = >,
@@ -388,7 +388,7 @@ CREATE OPERATOR < (
 DROP OPERATOR IF EXISTS <= (eql_v1.ore_64_8_v1, eql_v1.ore_64_8_v1);
 
 CREATE OPERATOR <= (
-  PROCEDURE="ore_64_8_v1_lte",
+  FUNCTION=eql_v1.ore_64_8_v1_lte,
   LEFTARG=eql_v1.ore_64_8_v1,
   RIGHTARG=eql_v1.ore_64_8_v1,
   COMMUTATOR = >=,
@@ -401,7 +401,7 @@ CREATE OPERATOR <= (
 DROP OPERATOR IF EXISTS >= (eql_v1.ore_64_8_v1, eql_v1.ore_64_8_v1);
 
 CREATE OPERATOR >= (
-  PROCEDURE="ore_64_8_v1_gte",
+  FUNCTION=eql_v1.ore_64_8_v1_gte,
   LEFTARG=eql_v1.ore_64_8_v1,
   RIGHTARG=eql_v1.ore_64_8_v1,
   COMMUTATOR = <=,

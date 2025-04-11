@@ -211,7 +211,7 @@ $$ LANGUAGE SQL;
 DROP OPERATOR IF EXISTS = (eql_v1.ore_cllw_8_v1, eql_v1.ore_cllw_8_v1);
 
 CREATE OPERATOR = (
-  PROCEDURE="eql_v1.eql_v1.ore_cllw_8_v1_eq",
+  FUNCTION=eql_v1.ore_cllw_8_v1_eq,
   LEFTARG=eql_v1.ore_cllw_8_v1,
   RIGHTARG=eql_v1.ore_cllw_8_v1,
   NEGATOR = <>,
@@ -225,7 +225,7 @@ CREATE OPERATOR = (
 DROP OPERATOR IF EXISTS <> (eql_v1.ore_cllw_8_v1, eql_v1.ore_cllw_8_v1);
 
 CREATE OPERATOR <> (
-  PROCEDURE="eql_v1.ore_cllw_8_v1_neq",
+  FUNCTION=eql_v1.ore_cllw_8_v1_neq,
   LEFTARG=eql_v1.ore_cllw_8_v1,
   RIGHTARG=eql_v1.ore_cllw_8_v1,
   NEGATOR = =,
@@ -239,7 +239,7 @@ CREATE OPERATOR <> (
 DROP OPERATOR IF EXISTS > (eql_v1.ore_cllw_8_v1, eql_v1.ore_cllw_8_v1);
 
 CREATE OPERATOR > (
-  PROCEDURE="eql_v1.ore_cllw_8_v1_gt",
+  FUNCTION=eql_v1.ore_cllw_8_v1_gt,
   LEFTARG=eql_v1.ore_cllw_8_v1,
   RIGHTARG=eql_v1.ore_cllw_8_v1,
   NEGATOR = <=,
@@ -253,7 +253,7 @@ CREATE OPERATOR > (
 DROP OPERATOR IF EXISTS < (eql_v1.ore_cllw_8_v1, eql_v1.ore_cllw_8_v1);
 
 CREATE OPERATOR < (
-  PROCEDURE="eql_v1.ore_cllw_8_v1_lt",
+  FUNCTION=eql_v1.ore_cllw_8_v1_lt,
   LEFTARG=eql_v1.ore_cllw_8_v1,
   RIGHTARG=eql_v1.ore_cllw_8_v1,
   NEGATOR = >=,
@@ -267,7 +267,7 @@ CREATE OPERATOR < (
 DROP OPERATOR IF EXISTS >= (eql_v1.ore_cllw_8_v1, eql_v1.ore_cllw_8_v1);
 
 CREATE OPERATOR >= (
-  PROCEDURE="eql_v1.ore_cllw_8_v1_gte",
+  FUNCTION=eql_v1.ore_cllw_8_v1_gte,
   LEFTARG=eql_v1.ore_cllw_8_v1,
   RIGHTARG=eql_v1.ore_cllw_8_v1,
   NEGATOR = <,
@@ -281,7 +281,7 @@ CREATE OPERATOR >= (
 DROP OPERATOR IF EXISTS <= (eql_v1.ore_cllw_8_v1, eql_v1.ore_cllw_8_v1);
 
 CREATE OPERATOR <= (
-  PROCEDURE="eql_v1.ore_cllw_8_v1_lte",
+  FUNCTION=eql_v1.ore_cllw_8_v1_lte,
   LEFTARG=eql_v1.ore_cllw_8_v1,
   RIGHTARG=eql_v1.ore_cllw_8_v1,
   NEGATOR = >,
@@ -332,7 +332,7 @@ $$ LANGUAGE SQL;
 DROP OPERATOR IF EXISTS = (eql_v1.ore_cllw_8_variable_v1, eql_v1.ore_cllw_8_variable_v1);
 
 CREATE OPERATOR = (
-  PROCEDURE="eql_v1.ore_cllw_8_variable_v1_eq",
+  FUNCTION=eql_v1.ore_cllw_8_variable_v1_eq,
   LEFTARG=eql_v1.ore_cllw_8_variable_v1,
   RIGHTARG=eql_v1.ore_cllw_8_variable_v1,
   NEGATOR = <>,
@@ -345,7 +345,7 @@ CREATE OPERATOR = (
 DROP OPERATOR IF EXISTS <> (eql_v1.ore_cllw_8_variable_v1, eql_v1.ore_cllw_8_variable_v1);
 
 CREATE OPERATOR <> (
-  PROCEDURE="eql_v1.ore_cllw_8_variable_v1_neq",
+  FUNCTION=eql_v1.ore_cllw_8_variable_v1_neq,
   LEFTARG=eql_v1.ore_cllw_8_variable_v1,
   RIGHTARG=eql_v1.ore_cllw_8_variable_v1,
   NEGATOR = =,
@@ -358,7 +358,7 @@ CREATE OPERATOR <> (
 DROP OPERATOR IF EXISTS > (eql_v1.ore_cllw_8_variable_v1, eql_v1.ore_cllw_8_variable_v1);
 
 CREATE OPERATOR > (
-  PROCEDURE="eql_v1.ore_cllw_8_v1_gt_lex",
+  FUNCTION=eql_v1.ore_cllw_8_v1_gt_lex,
   LEFTARG=eql_v1.ore_cllw_8_variable_v1,
   RIGHTARG=eql_v1.ore_cllw_8_variable_v1,
   NEGATOR = <=,
@@ -371,7 +371,7 @@ CREATE OPERATOR > (
 DROP OPERATOR IF EXISTS < (eql_v1.ore_cllw_8_variable_v1, eql_v1.ore_cllw_8_variable_v1);
 
 CREATE OPERATOR < (
-  PROCEDURE="eql_v1.ore_cllw_8_v1_lt_lex",
+  FUNCTION=eql_v1.ore_cllw_8_v1_lt_lex,
   LEFTARG=eql_v1.ore_cllw_8_variable_v1,
   RIGHTARG=eql_v1.ore_cllw_8_variable_v1,
   NEGATOR = >=,
@@ -384,7 +384,7 @@ CREATE OPERATOR < (
 DROP OPERATOR IF EXISTS >= (eql_v1.ore_cllw_8_variable_v1, eql_v1.ore_cllw_8_variable_v1);
 
 CREATE OPERATOR >= (
-  PROCEDURE="eql_v1.ore_cllw_8_v1_gte_lex",
+  FUNCTION=eql_v1.ore_cllw_8_v1_gte_lex,
   LEFTARG=eql_v1.ore_cllw_8_variable_v1,
   RIGHTARG=eql_v1.ore_cllw_8_variable_v1,
   NEGATOR = <,
@@ -397,7 +397,7 @@ CREATE OPERATOR >= (
 DROP OPERATOR IF EXISTS <= (eql_v1.ore_cllw_8_variable_v1, eql_v1.ore_cllw_8_variable_v1);
 
 CREATE OPERATOR <= (
-  PROCEDURE="eql_v1.ore_cllw_8_v1_lte_lex",
+  FUNCTION=eql_v1.ore_cllw_8_v1_lte_lex,
   LEFTARG=eql_v1.ore_cllw_8_variable_v1,
   RIGHTARG=eql_v1.ore_cllw_8_variable_v1,
   NEGATOR = >,
