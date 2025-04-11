@@ -16,8 +16,8 @@
 --
 DO $$
   BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'cs_configuration_data_v1') THEN
-      CREATE DOMAIN cs_configuration_data_v1 AS JSONB;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'eql_v1_configuration_data') THEN
+      CREATE DOMAIN public.eql_v1_configuration_data AS JSONB;
     END IF;
   END
 $$;
@@ -27,8 +27,8 @@ $$;
 --
 DO $$
   BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'cs_configuration_state_v1') THEN
-      CREATE TYPE cs_configuration_state_v1 AS ENUM ('active', 'inactive', 'encrypting', 'pending');
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'eql_v1_configuration_state') THEN
+      CREATE TYPE public.eql_v1_configuration_state AS ENUM ('active', 'inactive', 'encrypting', 'pending');
     END IF;
   END
 $$;
@@ -38,10 +38,10 @@ $$;
 --
 -- Extracts index keys/names from configuration json
 --
--- Used by the _cs_config_check_indexes as part of the  cs_configuration_data_v1_check constraint
+-- Used by the eql_v1.config_check_indexes as part of the  cs_configuration_data_v1_check constraint
 --
-DROP FUNCTION IF EXISTS _cs_extract_indexes(jsonb);
-CREATE FUNCTION _cs_extract_indexes(val jsonb)
+DROP FUNCTION IF EXISTS eql_v1.extract_indexes(jsonb);
+CREATE FUNCTION eql_v1.extract_indexes(val jsonb)
     RETURNS SETOF text
     LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
@@ -53,13 +53,13 @@ END;
 --
 -- Used by the cs_configuration_data_v1_check constraint
 --
-DROP FUNCTION IF EXISTS _cs_config_check_indexes(jsonb);
-CREATE FUNCTION _cs_config_check_indexes(val jsonb)
+DROP FUNCTION IF EXISTS eql_v1.config_check_indexes(jsonb);
+CREATE FUNCTION eql_v1.config_check_indexes(val jsonb)
   RETURNS BOOLEAN
 AS $$
 	BEGIN
-    IF (SELECT EXISTS (SELECT _cs_extract_indexes(val)))  THEN
-      IF (SELECT bool_and(index = ANY('{match, ore, unique, ste_vec}')) FROM _cs_extract_indexes(val) AS index) THEN
+    IF (SELECT EXISTS (SELECT eql_v1.extract_indexes(val)))  THEN
+      IF (SELECT bool_and(index = ANY('{match, ore, unique, ste_vec}')) FROM eql_v1.extract_indexes(val) AS index) THEN
         RETURN true;
       END IF;
       RAISE 'Configuration has an invalid index (%). Index should be one of {match, ore, unique, ste_vec}', val;
@@ -69,9 +69,9 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS _cs_config_check_cast(jsonb);
+DROP FUNCTION IF EXISTS eql_v1.config_check_cast(jsonb);
 
-CREATE FUNCTION _cs_config_check_cast(val jsonb)
+CREATE FUNCTION eql_v1.config_check_cast(val jsonb)
   RETURNS BOOLEAN
 AS $$
 	BEGIN
@@ -85,8 +85,8 @@ $$ LANGUAGE plpgsql;
 --
 -- Should include a tables field
 -- Tables should not be empty
-DROP FUNCTION IF EXISTS _cs_config_check_tables(jsonb);
-CREATE FUNCTION _cs_config_check_tables(val jsonb)
+DROP FUNCTION IF EXISTS eql_v1.config_check_tables(jsonb);
+CREATE FUNCTION eql_v1.config_check_tables(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
@@ -98,8 +98,8 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 -- Should include a version field
-DROP FUNCTION IF EXISTS _cs_config_check_v(jsonb);
-CREATE FUNCTION _cs_config_check_v(val jsonb)
+DROP FUNCTION IF EXISTS eql_v1.config_check_v(jsonb);
+CREATE FUNCTION eql_v1.config_check_v(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
@@ -111,25 +111,25 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-ALTER DOMAIN cs_configuration_data_v1 DROP CONSTRAINT IF EXISTS cs_configuration_data_v1_check;
+ALTER DOMAIN eql_v1_configuration_data DROP CONSTRAINT IF EXISTS eql_v1_configuration_data_check;
 
-ALTER DOMAIN cs_configuration_data_v1
-  ADD CONSTRAINT cs_configuration_data_v1_check CHECK (
-    _cs_config_check_v(VALUE) AND
-    _cs_config_check_tables(VALUE) AND
-    _cs_config_check_cast(VALUE) AND
-    _cs_config_check_indexes(VALUE)
+ALTER DOMAIN eql_v1_configuration_data
+  ADD CONSTRAINT eql_v1_configuration_data_check CHECK (
+    eql_v1.config_check_v(VALUE) AND
+    eql_v1.config_check_tables(VALUE) AND
+    eql_v1.config_check_cast(VALUE) AND
+    eql_v1.config_check_indexes(VALUE)
 );
 
 
 --
 -- CREATE the cs_configuration_v1 TABLE
 --
-CREATE TABLE IF NOT EXISTS cs_configuration_v1
+CREATE TABLE IF NOT EXISTS eql_v1_configuration
 (
     id bigint GENERATED ALWAYS AS IDENTITY,
-    state cs_configuration_state_v1 NOT NULL DEFAULT 'pending',
-    data cs_configuration_data_v1,
+    state eql_v1_configuration_state NOT NULL DEFAULT 'pending',
+    data eql_v1_configuration_data,
     created_at timestamptz not null default current_timestamp,
     PRIMARY KEY(id)
 );
@@ -137,6 +137,6 @@ CREATE TABLE IF NOT EXISTS cs_configuration_v1
 --
 -- Define partial indexes to ensure that there is only one active, pending and encrypting config at a time
 --
-CREATE UNIQUE INDEX IF NOT EXISTS cs_configuration_v1_index_active ON cs_configuration_v1 (state) WHERE state = 'active';
-CREATE UNIQUE INDEX IF NOT EXISTS cs_configuration_v1_index_pending ON cs_configuration_v1 (state) WHERE state = 'pending';
-CREATE UNIQUE INDEX IF NOT EXISTS cs_configuration_v1_index_encrypting ON cs_configuration_v1 (state) WHERE state = 'encrypting';
+CREATE UNIQUE INDEX IF NOT EXISTS eql_v1_configuration_index_active ON eql_v1_configuration (state) WHERE state = 'active';
+CREATE UNIQUE INDEX IF NOT EXISTS eql_v1_configuration_index_pending ON eql_v1_configuration (state) WHERE state = 'pending';
+CREATE UNIQUE INDEX IF NOT EXISTS eql_v1_configuration_index_encrypting ON eql_v1_configuration (state) WHERE state = 'encrypting';

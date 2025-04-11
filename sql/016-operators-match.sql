@@ -1,24 +1,26 @@
--- Operators for match comparisons of cs_encrypted_v1 types
+-- Operators for match comparisons of eql_v1_encrypted types
 --
 -- Support for the following comparisons:
 --
---      cs_encrypted_v1 ~~ cs_encrypted_v1
---      cs_encrypted_v1 ~~ jsonb
---      cs_encrypted_v1 ~~ cs_match_index_v1
+--      eql_v1_encrypted ~~ eql_v1_encrypted
+--      eql_v1_encrypted ~~ jsonb
+--      eql_v1_encrypted ~~ eql_v1.match_index
 --
 
-DROP OPERATOR IF EXISTS ~~ (cs_encrypted_v1, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_match_v1(a cs_encrypted_v1, b cs_encrypted_v1);
+DROP OPERATOR IF EXISTS ~~ (eql_v1_encrypted, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS ~~* (eql_v1_encrypted, eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_match_v1(a cs_encrypted_v1, b cs_encrypted_v1)
+DROP FUNCTION IF EXISTS eql_v1.encrypted_match(a eql_v1_encrypted, b eql_v1_encrypted);
+
+CREATE FUNCTION eql_v1.encrypted_match(a eql_v1_encrypted, b eql_v1_encrypted)
 RETURNS boolean AS $$
-  SELECT cs_match_v1(a) @> cs_match_v1(b);
+  SELECT eql_v1.match(a) @> eql_v1.match(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR ~~(
-  PROCEDURE="cs_encrypted_match_v1",
-  LEFTARG=cs_encrypted_v1,
-  RIGHTARG=cs_encrypted_v1,
+  FUNCTION=eql_v1.encrypted_match,
+  LEFTARG=eql_v1_encrypted,
+  RIGHTARG=eql_v1_encrypted,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
   HASHES,
@@ -26,9 +28,9 @@ CREATE OPERATOR ~~(
 );
 
 CREATE OPERATOR ~~*(
-  PROCEDURE="cs_encrypted_match_v1",
-  LEFTARG=cs_encrypted_v1,
-  RIGHTARG=cs_encrypted_v1,
+  FUNCTION=eql_v1.encrypted_match,
+  LEFTARG=eql_v1_encrypted,
+  RIGHTARG=eql_v1_encrypted,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
   HASHES,
@@ -36,18 +38,18 @@ CREATE OPERATOR ~~*(
 );
 
 
-DROP OPERATOR IF EXISTS ~~ (cs_encrypted_v1, cs_match_index_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_match_v1(a cs_encrypted_v1, b cs_match_index_v1);
+DROP OPERATOR IF EXISTS ~~ (eql_v1_encrypted, eql_v1.match_index);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_match(a eql_v1_encrypted, b eql_v1.match_index);
 
-CREATE FUNCTION cs_encrypted_match_v1(a cs_encrypted_v1, b cs_match_index_v1)
+CREATE FUNCTION eql_v1.encrypted_match(a eql_v1_encrypted, b eql_v1.match_index)
 RETURNS boolean AS $$
-  SELECT cs_match_v1(a) @> b;
+  SELECT eql_v1.match(a) @> b;
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR ~~(
-  PROCEDURE="cs_encrypted_match_v1",
-  LEFTARG=cs_encrypted_v1,
-  RIGHTARG=cs_match_index_v1,
+  FUNCTION=eql_v1.encrypted_match,
+  LEFTARG=eql_v1_encrypted,
+  RIGHTARG=eql_v1.match_index,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
   HASHES,
@@ -55,9 +57,9 @@ CREATE OPERATOR ~~(
 );
 
 CREATE OPERATOR ~~*(
-  PROCEDURE="cs_encrypted_match_v1",
-  LEFTARG=cs_encrypted_v1,
-  RIGHTARG=cs_match_index_v1,
+  FUNCTION=eql_v1.encrypted_match,
+  LEFTARG=eql_v1_encrypted,
+  RIGHTARG=eql_v1.match_index,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
   HASHES,
@@ -66,18 +68,18 @@ CREATE OPERATOR ~~*(
 
 
 
-DROP OPERATOR IF EXISTS ~~ (cs_match_index_v1, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_match_v1(a cs_match_index_v1, b cs_encrypted_v1);
+DROP OPERATOR IF EXISTS ~~ (eql_v1.match_index, eql_v1_encrypted);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_match(a eql_v1.match_index, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_match_v1(a cs_match_index_v1, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_match(a eql_v1.match_index, b eql_v1_encrypted)
 RETURNS boolean AS $$
-  SELECT a @> cs_match_v1(b);
+  SELECT a @> eql_v1.match(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR ~~(
-  PROCEDURE="cs_encrypted_match_v1",
-  LEFTARG=cs_match_index_v1,
-  RIGHTARG=cs_encrypted_v1,
+  FUNCTION=eql_v1.encrypted_match,
+  LEFTARG=eql_v1.match_index,
+  RIGHTARG=eql_v1_encrypted,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
   HASHES,
@@ -85,9 +87,9 @@ CREATE OPERATOR ~~(
 );
 
 CREATE OPERATOR ~~*(
-  PROCEDURE="cs_encrypted_match_v1",
-  LEFTARG=cs_match_index_v1,
-  RIGHTARG=cs_encrypted_v1,
+  FUNCTION=eql_v1.encrypted_match,
+  LEFTARG=eql_v1.match_index,
+  RIGHTARG=eql_v1_encrypted,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
   HASHES,
@@ -95,18 +97,18 @@ CREATE OPERATOR ~~*(
 );
 
 
-DROP OPERATOR IF EXISTS ~~ (cs_match_index_v1, cs_match_index_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_match_v1(a cs_match_index_v1, b cs_match_index_v1);
+DROP OPERATOR IF EXISTS ~~ (eql_v1.match_index, eql_v1.match_index);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_match(a eql_v1.match_index, b eql_v1.match_index);
 
-CREATE FUNCTION cs_encrypted_match_v1(a cs_match_index_v1, b cs_match_index_v1)
+CREATE FUNCTION eql_v1.encrypted_match(a eql_v1.match_index, b eql_v1.match_index)
 RETURNS boolean AS $$
   SELECT a @> b;
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR ~~(
-  PROCEDURE="cs_encrypted_match_v1",
-  LEFTARG=cs_match_index_v1,
-  RIGHTARG=cs_match_index_v1,
+  FUNCTION=eql_v1.encrypted_match,
+  LEFTARG=eql_v1.match_index,
+  RIGHTARG=eql_v1.match_index,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
   HASHES,
@@ -114,9 +116,9 @@ CREATE OPERATOR ~~(
 );
 
 CREATE OPERATOR ~~*(
-  PROCEDURE="cs_encrypted_match_v1",
-  LEFTARG=cs_match_index_v1,
-  RIGHTARG=cs_match_index_v1,
+  FUNCTION=eql_v1.encrypted_match,
+  LEFTARG=eql_v1.match_index,
+  RIGHTARG=eql_v1.match_index,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
   HASHES,
@@ -124,17 +126,17 @@ CREATE OPERATOR ~~*(
 );
 
 
-DROP OPERATOR IF EXISTS ~~ (cs_encrypted_v1, jsonb);
-DROP FUNCTION IF EXISTS cs_encrypted_match_v1(a cs_encrypted_v1, b jsonb);
+DROP OPERATOR IF EXISTS ~~ (eql_v1_encrypted, jsonb);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_match(a eql_v1_encrypted, b jsonb);
 
-CREATE FUNCTION cs_encrypted_match_v1(a cs_encrypted_v1, b jsonb)
+CREATE FUNCTION eql_v1.encrypted_match(a eql_v1_encrypted, b jsonb)
 RETURNS boolean AS $$
-  SELECT cs_match_v1(a) @> cs_match_v1(b);
+  SELECT eql_v1.match(a) @> eql_v1.match(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR ~~(
-  PROCEDURE="cs_encrypted_match_v1",
-  LEFTARG=cs_encrypted_v1,
+  FUNCTION=eql_v1.encrypted_match,
+  LEFTARG=eql_v1_encrypted,
   RIGHTARG=jsonb,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
@@ -143,8 +145,8 @@ CREATE OPERATOR ~~(
 );
 
 CREATE OPERATOR ~~*(
-  PROCEDURE="cs_encrypted_match_v1",
-  LEFTARG=cs_encrypted_v1,
+  FUNCTION=eql_v1.encrypted_match,
+  LEFTARG=eql_v1_encrypted,
   RIGHTARG=jsonb,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
@@ -154,18 +156,18 @@ CREATE OPERATOR ~~*(
 
 
 
-DROP OPERATOR IF EXISTS ~~ (jsonb, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_match_v1(a jsonb, b cs_encrypted_v1);
+DROP OPERATOR IF EXISTS ~~ (jsonb, eql_v1_encrypted);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_match(a jsonb, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_match_v1(a jsonb, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_match(a jsonb, b eql_v1_encrypted)
 RETURNS boolean AS $$
-  SELECT cs_match_v1(a) @> cs_match_v1(b);
+  SELECT eql_v1.match(a) @> eql_v1.match(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR ~~(
-  PROCEDURE="cs_encrypted_match_v1",
+  FUNCTION=eql_v1.encrypted_match,
   LEFTARG=jsonb,
-  RIGHTARG=cs_encrypted_v1,
+  RIGHTARG=eql_v1_encrypted,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
   HASHES,
@@ -173,9 +175,9 @@ CREATE OPERATOR ~~(
 );
 
 CREATE OPERATOR ~~*(
-  PROCEDURE="cs_encrypted_match_v1",
+  FUNCTION=eql_v1.encrypted_match,
   LEFTARG=jsonb,
-  RIGHTARG=cs_encrypted_v1,
+  RIGHTARG=eql_v1_encrypted,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
   HASHES,

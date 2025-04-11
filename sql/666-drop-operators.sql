@@ -1,49 +1,78 @@
-DROP OPERATOR FAMILY IF EXISTS cs_encrypted_ore_64_8_v1_btree_ops_v1 USING btree;
+DROP OPERATOR FAMILY IF EXISTS eql_v1.encrypted_ore_64_8_v1_btree_ops USING btree;
 DROP OPERATOR CLASS IF EXISTS ore_64_8_v1_btree_ops USING btree;
-DROP OPERATOR IF EXISTS @> (cs_encrypted_v1, cs_encrypted_v1);
-DROP OPERATOR IF EXISTS @> (cs_encrypted_v1, cs_match_index_v1);
-DROP OPERATOR IF EXISTS @> (cs_match_index_v1, cs_encrypted_v1);
+DROP OPERATOR IF EXISTS @> (eql_v1_encrypted, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS @> (eql_v1_encrypted, eql_v1.match_index);
+DROP OPERATOR IF EXISTS @> (eql_v1.match_index, eql_v1_encrypted);
 
-DROP OPERATOR IF EXISTS <@ (cs_encrypted_v1, cs_encrypted_v1);
-DROP OPERATOR IF EXISTS <@ (cs_encrypted_v1, cs_match_index_v1);
-DROP OPERATOR IF EXISTS <@ (cs_match_index_v1, cs_encrypted_v1);
 
-DROP OPERATOR IF EXISTS <= (ore_64_8_v1, cs_encrypted_v1);
-DROP OPERATOR IF EXISTS <= (cs_encrypted_v1, ore_64_8_v1);
-DROP OPERATOR IF EXISTS <= (jsonb, cs_encrypted_v1);
-DROP OPERATOR IF EXISTS <= (cs_encrypted_v1, jsonb);
-DROP OPERATOR IF EXISTS <= (cs_encrypted_v1, cs_encrypted_v1);
+DROP OPERATOR IF EXISTS <@ (eql_v1_encrypted, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS <@ (eql_v1_encrypted, eql_v1.match_index);
+DROP OPERATOR IF EXISTS <@ (eql_v1.match_index, eql_v1_encrypted);
 
-DROP OPERATOR IF EXISTS >= (ore_64_8_v1, cs_encrypted_v1);
-DROP OPERATOR IF EXISTS >= (jsonb, cs_encrypted_v1);
-DROP OPERATOR IF EXISTS >= (cs_encrypted_v1, ore_64_8_v1);
-DROP OPERATOR IF EXISTS >= (cs_encrypted_v1, jsonb);
-DROP OPERATOR IF EXISTS >= (cs_encrypted_v1, cs_encrypted_v1);
+DROP OPERATOR IF EXISTS <= (eql_v1.ore_64_8_v1, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS <= (eql_v1_encrypted, eql_v1.ore_64_8_v1);
+DROP OPERATOR IF EXISTS <= (jsonb, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS <= (eql_v1_encrypted, jsonb);
+DROP OPERATOR IF EXISTS <= (eql_v1_encrypted, eql_v1_encrypted);
 
-DROP OPERATOR IF EXISTS < (ore_64_8_v1, cs_encrypted_v1);
-DROP OPERATOR IF EXISTS < (cs_encrypted_v1, ore_64_8_v1);
-DROP OPERATOR IF EXISTS < (jsonb, cs_encrypted_v1);
-DROP OPERATOR IF EXISTS < (cs_encrypted_v1, jsonb);
-DROP OPERATOR IF EXISTS < (cs_encrypted_v1, cs_encrypted_v1);
+DROP OPERATOR IF EXISTS >= (eql_v1.ore_64_8_v1, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS >= (jsonb, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS >= (eql_v1_encrypted, eql_v1.ore_64_8_v1);
+DROP OPERATOR IF EXISTS >= (eql_v1_encrypted, jsonb);
+DROP OPERATOR IF EXISTS >= (eql_v1_encrypted, eql_v1_encrypted);
 
-DROP OPERATOR IF EXISTS > (ore_64_8_v1, cs_encrypted_v1);
-DROP OPERATOR IF EXISTS > (jsonb, cs_encrypted_v1);
-DROP OPERATOR IF EXISTS > (cs_encrypted_v1, ore_64_8_v1);
-DROP OPERATOR IF EXISTS > (cs_encrypted_v1, jsonb);
-DROP OPERATOR IF EXISTS > (cs_encrypted_v1, cs_encrypted_v1);
+DROP OPERATOR IF EXISTS < (eql_v1.ore_64_8_v1, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS < (eql_v1_encrypted, eql_v1.ore_64_8_v1);
+DROP OPERATOR IF EXISTS < (jsonb, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS < (eql_v1_encrypted, jsonb);
+DROP OPERATOR IF EXISTS < (eql_v1_encrypted, eql_v1_encrypted);
 
-DROP OPERATOR IF EXISTS = (cs_encrypted_v1, cs_encrypted_v1);
-DROP OPERATOR IF EXISTS = (cs_encrypted_v1, jsonb);
-DROP OPERATOR IF EXISTS = (jsonb, cs_encrypted_v1);
-DROP OPERATOR IF EXISTS = (cs_encrypted_v1, cs_unique_index_v1);
-DROP OPERATOR IF EXISTS = (cs_unique_index_v1, cs_encrypted_v1);
-DROP OPERATOR IF EXISTS = (cs_encrypted_v1, ore_64_8_v1);
-DROP OPERATOR IF EXISTS = (ore_64_8_v1, cs_encrypted_v1);
+DROP OPERATOR IF EXISTS > (eql_v1.ore_64_8_v1, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS > (jsonb, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS > (eql_v1_encrypted, eql_v1.ore_64_8_v1);
+DROP OPERATOR IF EXISTS > (eql_v1_encrypted, jsonb);
+DROP OPERATOR IF EXISTS > (eql_v1_encrypted, eql_v1_encrypted);
 
-DROP OPERATOR IF EXISTS <> (cs_encrypted_v1, cs_encrypted_v1);
-DROP OPERATOR IF EXISTS <> (cs_encrypted_v1, jsonb);
-DROP OPERATOR IF EXISTS <> (jsonb, cs_encrypted_v1);
-DROP OPERATOR IF EXISTS <> (cs_encrypted_v1, cs_unique_index_v1);
-DROP OPERATOR IF EXISTS <> (cs_unique_index_v1, cs_encrypted_v1);
-DROP OPERATOR IF EXISTS <> (ore_64_8_v1, cs_encrypted_v1);
-DROP OPERATOR IF EXISTS <> (cs_encrypted_v1, ore_64_8_v1);
+DROP OPERATOR IF EXISTS = (eql_v1_encrypted, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS = (eql_v1_encrypted, jsonb);
+DROP OPERATOR IF EXISTS = (jsonb, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS = (eql_v1_encrypted, eql_v1.unique_index);
+DROP OPERATOR IF EXISTS = (eql_v1.unique_index, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS = (eql_v1_encrypted, eql_v1.ore_64_8_v1);
+DROP OPERATOR IF EXISTS = (eql_v1.ore_64_8_v1, eql_v1_encrypted);
+
+DROP OPERATOR IF EXISTS <> (eql_v1_encrypted, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS <> (eql_v1_encrypted, jsonb);
+DROP OPERATOR IF EXISTS <> (jsonb, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS <> (eql_v1_encrypted, eql_v1.unique_index);
+DROP OPERATOR IF EXISTS <> (eql_v1.unique_index, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS <> (eql_v1.ore_64_8_v1, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS <> (eql_v1_encrypted, eql_v1.ore_64_8_v1);
+
+
+
+DROP OPERATOR FAMILY IF EXISTS eql_v1.ste_vec_encrypted_term_btree_ops USING btree;
+DROP OPERATOR CLASS IF EXISTS eql_v1.ste_vec_encrypted_term_btree_ops USING btree;
+
+DROP OPERATOR IF EXISTS = (eql_v1.ste_vec_encrypted_term, eql_v1.ste_vec_encrypted_term);
+DROP OPERATOR IF EXISTS <> (eql_v1.ste_vec_encrypted_term, eql_v1.ste_vec_encrypted_term);
+DROP OPERATOR IF EXISTS > (eql_v1.ste_vec_encrypted_term, eql_v1.ste_vec_encrypted_term);
+DROP OPERATOR IF EXISTS < (eql_v1.ste_vec_encrypted_term_v1, eql_v1.ste_vec_encrypted_term_v1);
+DROP OPERATOR IF EXISTS >= (eql_v1.ste_vec_encrypted_term_v1, eql_v1.ste_vec_encrypted_term_v1);
+DROP OPERATOR IF EXISTS <= (eql_v1.ste_vec_encrypted_term_v1, eql_v1.ste_vec_encrypted_term_v1);
+
+
+DROP OPERATOR IF EXISTS ~~ (eql_v1_encrypted, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS ~~ (eql_v1_encrypted, eql_v1.match_index);
+DROP OPERATOR IF EXISTS ~~ (eql_v1.match_index, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS ~~ (eql_v1.match_index, eql_v1.match_index);
+DROP OPERATOR IF EXISTS ~~ (eql_v1_encrypted, jsonb);
+DROP OPERATOR IF EXISTS ~~ (jsonb, eql_v1_encrypted);
+
+DROP OPERATOR IF EXISTS ~~* (eql_v1_encrypted, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS ~~* (eql_v1_encrypted, eql_v1.match_index);
+DROP OPERATOR IF EXISTS ~~* (eql_v1.match_index, eql_v1_encrypted);
+DROP OPERATOR IF EXISTS ~~* (eql_v1.match_index, eql_v1.match_index);
+DROP OPERATOR IF EXISTS ~~* (eql_v1_encrypted, jsonb);
+DROP OPERATOR IF EXISTS ~~* (jsonb, eql_v1_encrypted);
+

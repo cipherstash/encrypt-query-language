@@ -5,7 +5,7 @@ DROP TABLE IF EXISTS users;
 CREATE TABLE users
 (
     id bigint GENERATED ALWAYS AS IDENTITY,
-    name_encrypted cs_encrypted_v1,
+    name_encrypted eql_v1_encrypted,
     PRIMARY KEY(id)
 );
 
@@ -31,14 +31,14 @@ INSERT INTO users (name_encrypted) VALUES (
 DO $$
   BEGIN
 
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE cs_ciphertext_v1(name_encrypted) = 'ciphertext'));
+    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE eql_v1.ciphertext(name_encrypted) = 'ciphertext'));
 
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE cs_match_v1(name_encrypted) = '{1,1}'));
+    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE eql_v1.match(name_encrypted) = '{1,1}'));
 
-    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE cs_unique_v1(name_encrypted) = 'text'));
+    ASSERT (SELECT EXISTS (SELECT id FROM users WHERE eql_v1.unique(name_encrypted) = 'text'));
 
     -- ORE PAYLOAD ABOUT TO CHANGE
-    -- ASSERT (SELECT EXISTS (SELECT id FROM users WHERE cs_ore_64_8_v1(name_encrypted) = '{a}'));
+    -- ASSERT (SELECT EXISTS (SELECT id FROM users WHERE eql_v1.ore_64_8_v1(name_encrypted) = '{a}'));
 
   END;
 $$ LANGUAGE plpgsql;
@@ -59,7 +59,7 @@ $$ LANGUAGE plpgsql;
 
 -- -----------------------------------------------
 ---
--- cs_encrypted_v1 type
+-- eql_v1_encrypted type
 -- Validate configuration schema
 -- Try and insert many invalid configurations
 -- None should exist
@@ -72,7 +72,7 @@ TRUNCATE TABLE users;
 
 DO $$
   BEGIN
-    RAISE NOTICE 'cs_encrypted_v1 constraint tests: 10 errors expected here';
+    RAISE NOTICE 'eql_v1_encrypted constraint tests: 10 errors expected here';
   END;
 $$ LANGUAGE plpgsql;
 

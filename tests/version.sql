@@ -2,7 +2,7 @@
 
 DO $$
   BEGIN
-    ASSERT (SELECT true WHERE cs_eql_version() = 'DEV');
+    ASSERT (SELECT true WHERE eql_v1.version() = 'DEV');
 
   END;
 $$ LANGUAGE plpgsql;
