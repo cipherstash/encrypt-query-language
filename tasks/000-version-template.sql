@@ -1,6 +1,8 @@
-DROP FUNCTION IF EXISTS cs_eql_version();
+CREATE SCHEMA IF NOT EXISTS eql_v1;
 
-CREATE FUNCTION cs_eql_version()
+DROP FUNCTION IF EXISTS eql_v1.version();
+
+CREATE FUNCTION eql_v1.version()
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
