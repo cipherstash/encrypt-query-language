@@ -10,10 +10,10 @@
 --      cs_encrypted_v1 <> text
 --
 
-DROP OPERATOR IF EXISTS = (cs_encrypted_v1, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_eq_v1(a cs_encrypted_v1, b cs_encrypted_v1);
+DROP OPERATOR IF EXISTS = (eql_v1_encrypted, eql_v1_encrypted);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_eq(a eql_v1_encrypted, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_eq_v1(a cs_encrypted_v1, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_eq(a eql_v1_encrypted, b eql_v1_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -22,13 +22,13 @@ AS $$
     o boolean;
   BEGIN
     BEGIN
-      u := (SELECT cs_unique_v1(a) = cs_unique_v1(b));
+      u := (SELECT eql_v1.unique(a) = eql_v1.unique(b));
     EXCEPTION WHEN OTHERS THEN
       u := false;
     END;
 
     BEGIN
-      o := (SELECT cs_ore_64_8_v1(a) = cs_ore_64_8_v1(b));
+      o := (SELECT eql_v1.eql_v1.ore_64_8_v1(a) = eql_v1.eql_v1.ore_64_8_v1(b));
     EXCEPTION WHEN OTHERS THEN
       o := false;
     END;
@@ -39,9 +39,9 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OPERATOR = (
-  PROCEDURE="cs_encrypted_eq_v1",
-  LEFTARG=cs_encrypted_v1,
-  RIGHTARG=cs_encrypted_v1,
+  PROCEDURE="eql_v1.encrypted_eq_v1",
+  LEFTARG=eql_v1_encrypted,
+  RIGHTARG=eql_v1_encrypted,
   NEGATOR = <>,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
@@ -50,9 +50,9 @@ CREATE OPERATOR = (
 );
 
 DROP OPERATOR IF EXISTS = (cs_encrypted_v1, jsonb);
-DROP FUNCTION IF EXISTS cs_encrypted_eq_v1(a cs_encrypted_v1, b jsonb);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_eq(a eql_v1_encrypted, b jsonb);
 
-CREATE FUNCTION cs_encrypted_eq_v1(a cs_encrypted_v1, b jsonb)
+CREATE FUNCTION eql_v1.encrypted_eq(a eql_v1_encrypted, b jsonb)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -61,13 +61,13 @@ AS $$
     o boolean;
   BEGIN
     BEGIN
-      u := (SELECT cs_unique_v1(a) = cs_unique_v1(b));
+      u := (SELECT eql_v1.unique(a) = eql_v1.unique(b));
     EXCEPTION WHEN OTHERS THEN
       u := false;
     END;
 
     BEGIN
-      o := (SELECT cs_ore_64_8_v1(a) = cs_ore_64_8_v1(b));
+      o := (SELECT eql_v1.cs_ore_64_8(a) = eql_v1.cs_ore_64_8(b));
     EXCEPTION WHEN OTHERS THEN
       o := false;
     END;
@@ -77,8 +77,8 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR = (
-  PROCEDURE="cs_encrypted_eq_v1",
-  LEFTARG=cs_encrypted_v1,
+  PROCEDURE="eql_v1.encrypted_eq_v1",
+  LEFTARG=eql_v1_encrypted,
   RIGHTARG=jsonb,
   NEGATOR = <>,
   RESTRICT = eqsel,
@@ -89,9 +89,9 @@ CREATE OPERATOR = (
 
 
 DROP OPERATOR IF EXISTS = (jsonb, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_eq_v1(a jsonb, b cs_encrypted_v1);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_eq_v1(a jsonb, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_eq_v1(a jsonb, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_eq_v1(a jsonb, b eql_v1_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -100,13 +100,13 @@ AS $$
     o boolean;
   BEGIN
     BEGIN
-      u := (SELECT cs_unique_v1(a) = cs_unique_v1(b));
+      u := (SELECT eql_v1.unique(a) = eql_v1.unique(b));
     EXCEPTION WHEN OTHERS THEN
       u := false;
     END;
 
     BEGIN
-      o := (SELECT cs_ore_64_8_v1(a) = cs_ore_64_8_v1(b));
+      o := (SELECT eql_v1.cs_ore_64_8(a) = eql_v1.cs_ore_64_8(b));
     EXCEPTION WHEN OTHERS THEN
       o := false;
     END;
@@ -117,9 +117,9 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OPERATOR = (
-  PROCEDURE="cs_encrypted_eq_v1",
+  PROCEDURE="eql_v1.encrypted_eq_v1",
   LEFTARG=jsonb,
-  RIGHTARG=cs_encrypted_v1,
+  RIGHTARG=eql_v1_encrypted,
   NEGATOR = <>,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
@@ -128,10 +128,10 @@ CREATE OPERATOR = (
 );
 
 
-DROP OPERATOR IF EXISTS = (cs_encrypted_v1, cs_unique_index_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_eq_v1(a cs_encrypted_v1, b cs_unique_index_v1);
+DROP OPERATOR IF EXISTS = (eql_v1_encrypted, eql_v1.unique_index);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_eq_v1(a eql_v1_encrypted, b eql_v1.unique_index);
 
-CREATE FUNCTION cs_encrypted_eq_v1(a cs_encrypted_v1, b cs_unique_index_v1)
+CREATE FUNCTION eql_v1.encrypted_eq_v1(a eql_v1_encrypted, b eql_v1.unique_index)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -139,7 +139,7 @@ AS $$
     u boolean;
   BEGIN
     BEGIN
-      u := (SELECT cs_unique_v1(a) = b);
+      u := (SELECT eql_v1.unique(a) = b);
     EXCEPTION WHEN OTHERS THEN
       u := false;
     END;
@@ -150,9 +150,9 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OPERATOR = (
-  PROCEDURE="cs_encrypted_eq_v1",
-  LEFTARG=cs_encrypted_v1,
-  RIGHTARG=cs_unique_index_v1,
+  PROCEDURE="eql_v1.encrypted_eq_v1",
+  LEFTARG=eql_v1_encrypted,
+  RIGHTARG=eql_v1.unique_index,
   NEGATOR = <>,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
@@ -160,10 +160,10 @@ CREATE OPERATOR = (
   MERGES
 );
 
-DROP OPERATOR IF EXISTS = (cs_unique_index_v1, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_eq_v1(a cs_unique_index_v1, b cs_encrypted_v1);
+DROP OPERATOR IF EXISTS = (eql_v1.unique_index, cs_encrypted_v1);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_eq_v1(a eql_v1.unique_index, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_eq_v1(a cs_unique_index_v1, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_eq_v1(a eql_v1.unique_index, b eql_v1_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -171,7 +171,7 @@ AS $$
     u boolean;
   BEGIN
     BEGIN
-      u := (SELECT a = cs_unique_v1(b));
+      u := (SELECT a = eql_v1.unique(b));
     EXCEPTION WHEN OTHERS THEN
       u := false;
     END;
@@ -182,9 +182,9 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OPERATOR =(
-  PROCEDURE="cs_encrypted_eq_v1",
-  LEFTARG=cs_unique_index_v1,
-  RIGHTARG=cs_encrypted_v1,
+  PROCEDURE="eql_v1.encrypted_eq_v1",
+  LEFTARG=eql_v1.unique_index,
+  RIGHTARG=eql_v1_encrypted,
   NEGATOR = <>,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
@@ -194,10 +194,10 @@ CREATE OPERATOR =(
 
 
 
-DROP OPERATOR IF EXISTS = (cs_encrypted_v1, ore_64_8_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_eq_v1(a cs_encrypted_v1, b ore_64_8_v1);
+DROP OPERATOR IF EXISTS = (cs_encrypted_v1, eql_v1.ore_64_8_v1);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_eq_v1(a eql_v1_encrypted, b eql_v1.ore_64_8_v1);
 
-CREATE FUNCTION cs_encrypted_eq_v1(a cs_encrypted_v1, b ore_64_8_v1)
+CREATE FUNCTION eql_v1.encrypted_eq_v1(a eql_v1_encrypted, b eql_v1.ore_64_8_v1)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -206,7 +206,7 @@ AS $$
   BEGIN
 
     BEGIN
-      o := (SELECT cs_ore_64_8_v1(a) = b);
+      o := (SELECT eql_v1.cs_ore_64_8(a) = b);
     EXCEPTION WHEN OTHERS THEN
       o := false;
     END;
@@ -217,9 +217,9 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OPERATOR = (
-  PROCEDURE="cs_encrypted_eq_v1",
-  LEFTARG=cs_encrypted_v1,
-  RIGHTARG=ore_64_8_v1,
+  PROCEDURE="eql_v1.encrypted_eq_v1",
+  LEFTARG=eql_v1_encrypted,
+  RIGHTARG=eql_v1.ore_64_8_v1,
   NEGATOR = <>,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
@@ -227,10 +227,10 @@ CREATE OPERATOR = (
   MERGES
 );
 
-DROP OPERATOR IF EXISTS = (ore_64_8_v1, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_eq_v1(a ore_64_8_v1, b cs_encrypted_v1);
+DROP OPERATOR IF EXISTS = (eql_v1.ore_64_8_v1, cs_encrypted_v1);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_eq_v1(a eql_v1.ore_64_8_v1, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_eq_v1(a ore_64_8_v1, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_eq_v1(a eql_v1.ore_64_8_v1, b eql_v1_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -239,7 +239,7 @@ AS $$
   BEGIN
 
     BEGIN
-      o := (SELECT a = cs_ore_64_8_v1(b));
+      o := (SELECT a = eql_v1.cs_ore_64_8(b));
     EXCEPTION WHEN OTHERS THEN
       o := false;
     END;
@@ -250,9 +250,9 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OPERATOR =(
-  PROCEDURE="cs_encrypted_eq_v1",
-  LEFTARG=ore_64_8_v1,
-  RIGHTARG=cs_encrypted_v1,
+  PROCEDURE="eql_v1.encrypted_eq_v1",
+  LEFTARG=eql_v1.ore_64_8_v1,
+  RIGHTARG=eql_v1_encrypted,
   NEGATOR = <>,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
@@ -264,10 +264,10 @@ CREATE OPERATOR =(
 
 --- ------------------------------------------------------------
 
-DROP OPERATOR IF EXISTS <> (cs_encrypted_v1, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_neq_v1(a cs_encrypted_v1, b cs_encrypted_v1);
+DROP OPERATOR IF EXISTS <> (eql_v1_encrypted, eql_v1_encrypted);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_neq(a eql_v1_encrypted, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_neq_v1(a cs_encrypted_v1, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_neq(a eql_v1_encrypted, b eql_v1_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -276,13 +276,13 @@ AS $$
     o boolean;
   BEGIN
     BEGIN
-      u := (SELECT cs_unique_v1(a) <> cs_unique_v1(b));
+      u := (SELECT eql_v1.unique(a) <> eql_v1.unique(b));
     EXCEPTION WHEN OTHERS THEN
       u := false;
     END;
 
     BEGIN
-      o := (SELECT cs_ore_64_8_v1(a) <> cs_ore_64_8_v1(b));
+      o := (SELECT eql_v1.cs_ore_64_8(a) <> eql_v1.cs_ore_64_8(b));
     EXCEPTION WHEN OTHERS THEN
       o := false;
     END;
@@ -292,9 +292,9 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR <> (
-  PROCEDURE="cs_encrypted_neq_v1",
-  LEFTARG=cs_encrypted_v1,
-  RIGHTARG=cs_encrypted_v1,
+  PROCEDURE="eql_v1.encrypted_neq",
+  LEFTARG=eql_v1_encrypted,
+  RIGHTARG=eql_v1_encrypted,
   NEGATOR = =,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
@@ -304,9 +304,9 @@ CREATE OPERATOR <> (
 
 
 DROP OPERATOR IF EXISTS <> (cs_encrypted_v1, jsonb);
-DROP FUNCTION IF EXISTS cs_encrypted_neq_v1(a cs_encrypted_v1, b jsonb);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_neq(a eql_v1_encrypted, b jsonb);
 
-CREATE FUNCTION cs_encrypted_neq_v1(a cs_encrypted_v1, b jsonb)
+CREATE FUNCTION eql_v1.encrypted_neq(a eql_v1_encrypted, b jsonb)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -315,13 +315,13 @@ AS $$
     o boolean;
   BEGIN
     BEGIN
-      u := (SELECT cs_unique_v1(a) <> cs_unique_v1(b));
+      u := (SELECT eql_v1.unique(a) <> eql_v1.unique(b));
     EXCEPTION WHEN OTHERS THEN
       u := false;
     END;
 
     BEGIN
-      o := (SELECT cs_ore_64_8_v1(a) <> cs_ore_64_8_v1(b));
+      o := (SELECT eql_v1.cs_ore_64_8(a) <> eql_v1.cs_ore_64_8(b));
     EXCEPTION WHEN OTHERS THEN
       o := false;
     END;
@@ -331,8 +331,8 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR <> (
-  PROCEDURE="cs_encrypted_neq_v1",
-  LEFTARG=cs_encrypted_v1,
+  PROCEDURE="eql_v1.encrypted_neq",
+  LEFTARG=eql_v1_encrypted,
   RIGHTARG=jsonb,
   NEGATOR = =,
   RESTRICT = eqsel,
@@ -343,9 +343,9 @@ CREATE OPERATOR <> (
 
 
 DROP OPERATOR IF EXISTS <> (jsonb, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_neq_v1(a jsonb, b cs_encrypted_v1);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_neq(a jsonb, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_neq_v1(a jsonb, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_neq(a jsonb, b eql_v1_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -354,13 +354,13 @@ AS $$
     o boolean;
   BEGIN
     BEGIN
-      u := (SELECT cs_unique_v1(a) <> cs_unique_v1(b));
+      u := (SELECT eql_v1.unique(a) <> eql_v1.unique(b));
     EXCEPTION WHEN OTHERS THEN
       u := false;
     END;
 
     BEGIN
-      o := (SELECT cs_ore_64_8_v1(a) <> cs_ore_64_8_v1(b));
+      o := (SELECT eql_v1.cs_ore_64_8(a) <> eql_v1.cs_ore_64_8(b));
     EXCEPTION WHEN OTHERS THEN
       o := false;
     END;
@@ -370,9 +370,9 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR <> (
-  PROCEDURE="cs_encrypted_neq_v1",
+  PROCEDURE="eql_v1.encrypted_neq",
   LEFTARG=jsonb,
-  RIGHTARG=cs_encrypted_v1,
+  RIGHTARG=eql_v1_encrypted,
   NEGATOR = =,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
@@ -381,14 +381,14 @@ CREATE OPERATOR <> (
 );
 
 
-DROP OPERATOR IF EXISTS <> (cs_encrypted_v1, cs_unique_index_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_neq_v1(a cs_encrypted_v1, b cs_unique_index_v1);
+DROP OPERATOR IF EXISTS <> (cs_encrypted_v1, eql_v1.unique_index);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_neq(a eql_v1_encrypted, b eql_v1.unique_index);
 
 --
--- Compare the cs_unique_index_v1 or return FALSE
--- cs_unique_index_v1 cannot be ore_64_8_v1
+-- Compare the eql_v1.unique_index or return FALSE
+-- eql_v1.unique_index cannot be eql_v1.ore_64_8_v1
 --
-CREATE FUNCTION cs_encrypted_neq_v1(a cs_encrypted_v1, b cs_unique_index_v1)
+CREATE FUNCTION eql_v1.encrypted_neq(a eql_v1_encrypted, b eql_v1.unique_index)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -396,7 +396,7 @@ AS $$
     u boolean;
   BEGIN
     BEGIN
-      u := (SELECT cs_unique_v1(a) <> b);
+      u := (SELECT eql_v1.unique(a) <> b);
     EXCEPTION WHEN OTHERS THEN
       u := false;
     END;
@@ -407,9 +407,9 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OPERATOR <> (
-  PROCEDURE="cs_encrypted_neq_v1",
-  LEFTARG=cs_encrypted_v1,
-  RIGHTARG=cs_unique_index_v1,
+  PROCEDURE="eql_v1.encrypted_neq",
+  LEFTARG=eql_v1_encrypted,
+  RIGHTARG=eql_v1.unique_index,
   NEGATOR = =,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
@@ -419,13 +419,13 @@ CREATE OPERATOR <> (
 
 
 --
--- Compare the cs_unique_index_v1 or return FALSE
--- cs_unique_index_v1 cannot be ore_64_8_v1
+-- Compare the eql_v1.unique_index or return FALSE
+-- eql_v1.unique_index cannot be eql_v1.ore_64_8_v1
 --
-DROP OPERATOR IF EXISTS <> (cs_unique_index_v1, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_neq_v1(a cs_unique_index_v1, b cs_encrypted_v1);
+DROP OPERATOR IF EXISTS <> (eql_v1.unique_index, cs_encrypted_v1);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_neq(a eql_v1.unique_index, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_neq_v1(a cs_unique_index_v1, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_neq(a eql_v1.unique_index, b eql_v1_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -433,7 +433,7 @@ AS $$
     u boolean;
   BEGIN
     BEGIN
-      u := (SELECT a <> cs_unique_v1(b));
+      u := (SELECT a <> eql_v1.unique(b));
     EXCEPTION WHEN OTHERS THEN
       u := false;
     END;
@@ -444,9 +444,9 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OPERATOR <> (
-  PROCEDURE="cs_encrypted_neq_v1",
-  LEFTARG=cs_unique_index_v1,
-  RIGHTARG=cs_encrypted_v1,
+  PROCEDURE="eql_v1.encrypted_neq",
+  LEFTARG=eql_v1.unique_index,
+  RIGHTARG=eql_v1_encrypted,
   NEGATOR = =,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
@@ -457,10 +457,10 @@ CREATE OPERATOR <> (
 
 
 
-DROP OPERATOR IF EXISTS <> (cs_encrypted_v1, ore_64_8_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_neq_v1(a cs_encrypted_v1, b ore_64_8_v1);
+DROP OPERATOR IF EXISTS <> (cs_encrypted_v1, eql_v1.ore_64_8_v1);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_neq(a eql_v1_encrypted, b eql_v1.ore_64_8_v1);
 
-CREATE FUNCTION cs_encrypted_neq_v1(a cs_encrypted_v1, b ore_64_8_v1)
+CREATE FUNCTION eql_v1.encrypted_neq(a eql_v1_encrypted, b eql_v1.ore_64_8_v1)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -468,7 +468,7 @@ AS $$
     o boolean;
   BEGIN
     BEGIN
-      o := (SELECT cs_ore_64_8_v1(a) <> b);
+      o := (SELECT eql_v1.cs_ore_64_8(a) <> b);
     EXCEPTION WHEN OTHERS THEN
       o := false;
     END;
@@ -478,9 +478,9 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR <> (
-  PROCEDURE="cs_encrypted_neq_v1",
-  LEFTARG=cs_encrypted_v1,
-  RIGHTARG=ore_64_8_v1,
+  PROCEDURE="eql_v1.encrypted_neq",
+  LEFTARG=eql_v1_encrypted,
+  RIGHTARG=eql_v1.ore_64_8_v1,
   NEGATOR = =,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
@@ -489,10 +489,10 @@ CREATE OPERATOR <> (
 );
 
 
-DROP OPERATOR IF EXISTS <> (ore_64_8_v1, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_neq_v1(a ore_64_8_v1, b cs_encrypted_v1);
+DROP OPERATOR IF EXISTS <> (eql_v1.ore_64_8_v1, cs_encrypted_v1);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_neq(a eql_v1.ore_64_8_v1, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_neq_v1(a ore_64_8_v1, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_neq(a eql_v1.ore_64_8_v1, b eql_v1_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -501,7 +501,7 @@ AS $$
   BEGIN
 
     BEGIN
-      o := (SELECT a <> cs_ore_64_8_v1(b));
+      o := (SELECT a <> eql_v1.cs_ore_64_8(b));
     EXCEPTION WHEN OTHERS THEN
       o := false;
     END;
@@ -511,9 +511,9 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR <> (
-  PROCEDURE="cs_encrypted_neq_v1",
-  LEFTARG=ore_64_8_v1,
-  RIGHTARG=cs_encrypted_v1,
+  PROCEDURE="eql_v1.encrypted_neq",
+  LEFTARG=eql_v1.ore_64_8_v1,
+  RIGHTARG=eql_v1_encrypted,
   NEGATOR = =,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
