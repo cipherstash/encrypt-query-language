@@ -1,6 +1,6 @@
-DROP FUNCTION IF EXISTS cs_ciphertext_v1_v0_0(val jsonb);
+DROP FUNCTION IF EXISTS eql_v1.ciphertext(val jsonb);
 
-CREATE FUNCTION cs_ciphertext_v1_v0_0(val jsonb)
+CREATE FUNCTION eql_v1.ciphertext(val jsonb)
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -13,67 +13,28 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS cs_ciphertext_v1_v0(val jsonb);
-
-CREATE FUNCTION cs_ciphertext_v1_v0(val jsonb)
-    RETURNS text
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN cs_ciphertext_v1_v0_0(val);
-END;
-
-
-DROP FUNCTION IF EXISTS cs_ciphertext_v1(val jsonb);
-
-CREATE FUNCTION cs_ciphertext_v1(val jsonb)
-    RETURNS text
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN cs_ciphertext_v1_v0_0(val);
-END;
-
-
 -- extracts match index from an emcrypted column
-DROP FUNCTION IF EXISTS cs_match_v1_v0_0(val jsonb);
+DROP FUNCTION IF EXISTS eql_v1.match(val jsonb);
 
-CREATE FUNCTION cs_match_v1_v0_0(val jsonb)
-  RETURNS cs_match_index_v1
+CREATE FUNCTION eql_v1.match(val jsonb)
+  RETURNS eql_v1.match_index
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
     IF val ? 'm' THEN
-      RETURN ARRAY(SELECT jsonb_array_elements(val->'m'))::cs_match_index_v1;
+      RETURN ARRAY(SELECT jsonb_array_elements(val->'m'))::eql_v1.match_index;
     END IF;
     RAISE 'Expected a match index (m) value in json: %', val;
   END;
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS cs_match_v1_v0(val jsonb);
-
-CREATE FUNCTION cs_match_v1_v0(val jsonb)
-  RETURNS cs_match_index_v1
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN cs_match_v1_v0_0(val);
-END;
-
-
-DROP FUNCTION IF EXISTS cs_match_v1(val jsonb);
-
-CREATE FUNCTION cs_match_v1(val jsonb)
-  RETURNS cs_match_index_v1
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN cs_match_v1_v0_0(val);
-END;
-
 
 -- extracts unique index from an encrypted column
-DROP FUNCTION IF EXISTS  cs_unique_v1_v0_0(val jsonb);
+DROP FUNCTION IF EXISTS  eql_v1.unique(val jsonb);
 
-CREATE FUNCTION cs_unique_v1_v0_0(val jsonb)
-  RETURNS cs_unique_index_v1
+CREATE FUNCTION eql_v1.unique(val jsonb)
+  RETURNS eql_v1.unique_index
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
@@ -85,144 +46,88 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS  cs_unique_v1_v0(val jsonb);
-
-CREATE FUNCTION cs_unique_v1_v0(val jsonb)
-  RETURNS cs_unique_index_v1
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN cs_unique_v1_v0_0(val);
-END;
-
-
-DROP FUNCTION IF EXISTS cs_unique_v1(val jsonb);
-
-CREATE FUNCTION cs_unique_v1(val jsonb)
-  RETURNS cs_unique_index_v1
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN cs_unique_v1_v0_0(val);
-END;
-
 -- extracts json ste_vec index from an encrypted column
-DROP FUNCTION IF EXISTS cs_ste_vec_v1_v0_0(val jsonb);
+DROP FUNCTION IF EXISTS eql_v1.ste_vec(val jsonb);
 
-CREATE FUNCTION cs_ste_vec_v1_v0_0(val jsonb)
-  RETURNS cs_ste_vec_index_v1
+CREATE FUNCTION eql_v1.ste_vec(val jsonb)
+  RETURNS eql_v1.ste_vec_index
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
     IF val ? 'sv' THEN
-      RETURN (val->'sv')::cs_ste_vec_index_v1;
+      RETURN (val->'sv')::eql_v1.ste_vec_index;
     END IF;
     RAISE 'Expected a structured vector index (sv) value in json: %', val;
   END;
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS cs_ste_vec_v1_v0(val jsonb);
-
-CREATE FUNCTION cs_ste_vec_v1_v0(val jsonb)
-  RETURNS cs_ste_vec_index_v1
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN cs_ste_vec_v1_v0_0(val);
-END;
-
-
-DROP FUNCTION IF EXISTS cs_ste_vec_v1(val jsonb);
-
-CREATE FUNCTION cs_ste_vec_v1(val jsonb)
-  RETURNS cs_ste_vec_index_v1
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN cs_ste_vec_v1_v0_0(val);
-END;
-
-
 -- casts text to ore_64_8_v1_term (bytea)
-DROP FUNCTION IF EXISTS _cs_text_to_ore_64_8_v1_term_v1_0(t text);
+DROP FUNCTION IF EXISTS eql_v1.text_to_ore_64_8_v1_term(t text);
 
-CREATE FUNCTION _cs_text_to_ore_64_8_v1_term_v1_0(t text)
-  RETURNS ore_64_8_v1_term
+CREATE FUNCTION eql_v1.text_to_ore_64_8_v1_term(t text)
+  RETURNS eql_v1.ore_64_8_v1_term
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
 	RETURN t::bytea;
 END;
 
 -- cast to cleanup ore_64_8_v1 extraction
-DROP CAST IF EXISTS (text AS ore_64_8_v1_term);
+DROP CAST IF EXISTS (text AS eql_v1.ore_64_8_v1_term);
 
-CREATE CAST (text AS ore_64_8_v1_term)
-	WITH FUNCTION _cs_text_to_ore_64_8_v1_term_v1_0(text) AS IMPLICIT;
+CREATE CAST (text AS eql_v1.ore_64_8_v1_term)
+	WITH FUNCTION eql_v1.text_to_ore_64_8_v1_term(text) AS IMPLICIT;
 
-DROP FUNCTION IF EXISTS jsonb_array_to_ore_64_8_v1(val jsonb);
+DROP FUNCTION IF EXISTS eql_v1.jsonb_array_to_ore_64_8_v1(val jsonb);
 
 -- Casts a jsonb array of hex-encoded strings to the `ore_64_8_v1` composite type.
 -- In other words, this function takes the ORE index format sent through in the
 -- EQL payload from Proxy and decodes it as the composite type that we use for
 -- ORE operations on the Postgres side.
-CREATE FUNCTION jsonb_array_to_ore_64_8_v1(val jsonb)
-RETURNS ore_64_8_v1 AS $$
+CREATE FUNCTION eql_v1.jsonb_array_to_ore_64_8_v1(val jsonb)
+RETURNS eql_v1.ore_64_8_v1 AS $$
 DECLARE
-  terms_arr ore_64_8_v1_term[];
+  terms_arr eql_v1.ore_64_8_v1_term[];
 BEGIN
   IF jsonb_typeof(val) = 'null' THEN
     RETURN NULL;
   END IF;
 
-  SELECT array_agg(ROW(decode(value::text, 'hex'))::ore_64_8_v1_term)
+  SELECT array_agg(ROW(decode(value::text, 'hex'))::eql_v1.ore_64_8_v1_term)
     INTO terms_arr
   FROM jsonb_array_elements_text(val) AS value;
 
-  RETURN ROW(terms_arr)::ore_64_8_v1;
+  RETURN ROW(terms_arr)::eql_v1.ore_64_8_v1;
 END;
 $$ LANGUAGE plpgsql;
 
 -- extracts ore index from an encrypted column
-DROP FUNCTION IF EXISTS cs_ore_64_8_v1_v0_0(val jsonb);
+DROP FUNCTION IF EXISTS eql_v1.ore_64_8_v1(val jsonb);
 
-CREATE FUNCTION cs_ore_64_8_v1_v0_0(val jsonb)
-  RETURNS ore_64_8_v1
+CREATE FUNCTION eql_v1.ore_64_8_v1(val jsonb)
+  RETURNS eql_v1.ore_64_8_v1
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
     IF val ? 'o' THEN
-      RETURN jsonb_array_to_ore_64_8_v1(val->'o');
+      RETURN eql_v1.jsonb_array_to_ore_64_8_v1(val->'o');
     END IF;
     RAISE 'Expected an ore index (o) value in json: %', val;
   END;
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS cs_ore_64_8_v1_v0(val jsonb);
 
-CREATE FUNCTION cs_ore_64_8_v1_v0(val jsonb)
-  RETURNS ore_64_8_v1
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN cs_ore_64_8_v1_v0_0(val);
-END;
+DROP FUNCTION IF EXISTS eql_v1._first_grouped_value(jsonb, jsonb);
 
-DROP FUNCTION IF EXISTS cs_ore_64_8_v1(val jsonb);
-
-CREATE FUNCTION cs_ore_64_8_v1(val jsonb)
-  RETURNS ore_64_8_v1
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-BEGIN ATOMIC
-	RETURN cs_ore_64_8_v1_v0_0(val);
-END;
-
-DROP FUNCTION IF EXISTS _cs_first_grouped_value(jsonb, jsonb);
-
-CREATE FUNCTION _cs_first_grouped_value(jsonb, jsonb)
+CREATE FUNCTION eql_v1._first_grouped_value(jsonb, jsonb)
 RETURNS jsonb AS $$
   SELECT COALESCE($1, $2);
 $$ LANGUAGE sql IMMUTABLE;
 
-DROP AGGREGATE IF EXISTS cs_grouped_value_v1(jsonb);
+DROP AGGREGATE IF EXISTS eql_v1.cs_grouped_value(jsonb);
 
-CREATE AGGREGATE cs_grouped_value_v1(jsonb) (
-  SFUNC = _cs_first_grouped_value,
+CREATE AGGREGATE eql_v1.cs_grouped_value(jsonb) (
+  SFUNC = eql_v1._first_grouped_value,
   STYPE = jsonb
 );
