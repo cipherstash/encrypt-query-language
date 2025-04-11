@@ -1,23 +1,23 @@
-DROP DOMAIN IF EXISTS cs_match_index_v1;
-CREATE DOMAIN cs_match_index_v1 AS smallint[];
+DROP DOMAIN IF EXISTS eql_v1.match_index;
+CREATE DOMAIN eql_v1.match_index AS smallint[];
 
-DROP DOMAIN IF EXISTS cs_unique_index_v1;
-CREATE DOMAIN cs_unique_index_v1 AS text;
+DROP DOMAIN IF EXISTS eql_v1.unique_index;
+CREATE DOMAIN eql_v1.unique_index AS text;
 
 
 -- cs_encrypted_v1 is a column type and cannot be dropped if in use
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'cs_encrypted_v1') THEN
-      CREATE DOMAIN cs_encrypted_v1 AS JSONB;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'eql_v1_encrypted') THEN
+      CREATE DOMAIN eql_v1_encrypted AS JSONB;
 	  END IF;
 END
 $$;
 
 
 -- Should include a kind field
-DROP FUNCTION IF EXISTS _cs_encrypted_check_k(jsonb);
-CREATE FUNCTION _cs_encrypted_check_k(val jsonb)
+DROP FUNCTION IF EXISTS eql_v1._encrypted_check_k(jsonb);
+CREATE FUNCTION eql_v1._encrypted_check_k(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
@@ -32,8 +32,8 @@ $$ LANGUAGE plpgsql;
 --
 -- CT payload should include a c field
 --
-DROP FUNCTION IF EXISTS _cs_encrypted_check_k_ct(jsonb);
-CREATE FUNCTION _cs_encrypted_check_k_ct(val jsonb)
+DROP FUNCTION IF EXISTS eql_v1._encrypted_check_k_ct(jsonb);
+CREATE FUNCTION eql_v1._encrypted_check_k_ct(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
@@ -51,8 +51,8 @@ $$ LANGUAGE plpgsql;
 --
 -- SV payload should include an sv field
 --
-DROP FUNCTION IF EXISTS _cs_encrypted_check_k_sv(jsonb);
-CREATE FUNCTION _cs_encrypted_check_k_sv(val jsonb)
+DROP FUNCTION IF EXISTS eql_v1._encrypted_check_k_sv(jsonb);
+CREATE FUNCTION eql_v1._encrypted_check_k_sv(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
@@ -68,8 +68,8 @@ $$ LANGUAGE plpgsql;
 
 
 -- Plaintext field should never be present in an encrypted column
-DROP FUNCTION IF EXISTS _cs_encrypted_check_p(jsonb);
-CREATE FUNCTION _cs_encrypted_check_p(val jsonb)
+DROP FUNCTION IF EXISTS eql_v1._encrypted_check_p(jsonb);
+CREATE FUNCTION eql_v1._encrypted_check_p(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
@@ -81,8 +81,8 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 -- Should include an ident field
-DROP FUNCTION IF EXISTS _cs_encrypted_check_i(jsonb);
-CREATE FUNCTION _cs_encrypted_check_i(val jsonb)
+DROP FUNCTION IF EXISTS eql_v1._encrypted_check_i(jsonb);
+CREATE FUNCTION eql_v1._encrypted_check_i(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
@@ -94,8 +94,8 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 -- Query field should never be present in an encrypted column
-DROP FUNCTION IF EXISTS _cs_encrypted_check_q(jsonb);
-CREATE FUNCTION _cs_encrypted_check_q(val jsonb)
+DROP FUNCTION IF EXISTS eql_v1._encrypted_check_q(jsonb);
+CREATE FUNCTION eql_v1._encrypted_check_q(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
@@ -107,8 +107,8 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 -- Ident field should include table and column
-DROP FUNCTION IF EXISTS _cs_encrypted_check_i_ct(jsonb);
-CREATE FUNCTION _cs_encrypted_check_i_ct(val jsonb)
+DROP FUNCTION IF EXISTS eql_v1._encrypted_check_i_ct(jsonb);
+CREATE FUNCTION eql_v1._encrypted_check_i_ct(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
@@ -120,8 +120,8 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 -- Should include a version field
-DROP FUNCTION IF EXISTS _cs_encrypted_check_v(jsonb);
-CREATE FUNCTION _cs_encrypted_check_v(val jsonb)
+DROP FUNCTION IF EXISTS eql_v1._encrypted_check_v(jsonb);
+CREATE FUNCTION eql_v1._encrypted_check_v(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
@@ -133,27 +133,27 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS cs_check_encrypted_v1(val jsonb);
+DROP FUNCTION IF EXISTS eql_v1.check_encrypted(val jsonb);
 
-CREATE FUNCTION cs_check_encrypted_v1(val jsonb)
+CREATE FUNCTION eql_v1.check_encrypted(val jsonb)
   RETURNS BOOLEAN
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
     RETURN (
-      _cs_encrypted_check_v(val) AND
-      _cs_encrypted_check_i(val) AND
-      _cs_encrypted_check_k(val) AND
-      _cs_encrypted_check_k_ct(val) AND
-      _cs_encrypted_check_k_sv(val) AND
-      _cs_encrypted_check_q(val) AND
-      _cs_encrypted_check_p(val)
+      eql_v1._encrypted_check_v(val) AND
+      eql_v1._encrypted_check_i(val) AND
+      eql_v1._encrypted_check_k(val) AND
+      eql_v1._encrypted_check_k_ct(val) AND
+      eql_v1._encrypted_check_k_sv(val) AND
+      eql_v1._encrypted_check_q(val) AND
+      eql_v1._encrypted_check_p(val)
     );
 END;
 
-ALTER DOMAIN cs_encrypted_v1 DROP CONSTRAINT IF EXISTS cs_encrypted_v1_check;
+ALTER DOMAIN eql_v1_encrypted DROP CONSTRAINT IF EXISTS eql_v1_encrypted_check;
 
-ALTER DOMAIN cs_encrypted_v1
-  ADD CONSTRAINT cs_encrypted_v1_check CHECK (
-   cs_check_encrypted_v1(VALUE)
+ALTER DOMAIN eql_v1_encrypted
+  ADD CONSTRAINT eql_v1_encrypted_check CHECK (
+   eql_v1.check_encrypted(VALUE)
 );
 
