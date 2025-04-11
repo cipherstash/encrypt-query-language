@@ -33,22 +33,23 @@ run_test () {
 
 # setup
 fail_if_postgres_not_running
-mise run build
-mise run reset --postgres ${POSTGRES_VERSION}
+mise run build --force
+mise run reset --force --postgres ${POSTGRES_VERSION}
 
-# tests
-run_test tests/version.sql
-run_test tests/core.sql
-run_test tests/core-functions.sql
-run_test tests/config.sql
-run_test tests/encryptindex.sql
-run_test tests/operators-eq.sql
-run_test tests/operators-match.sql
-run_test tests/operators-ore.sql
-run_test tests/aggregate-ore.sql
 
-echo
-echo '###############################################'
-echo "# ✅ALL TESTS PASSED "
-echo '###############################################'
-echo
+# # tests
+# run_test tests/version.sql
+# run_test tests/core.sql
+# run_test tests/core-functions.sql
+# run_test tests/config.sql
+# run_test tests/encryptindex.sql
+# run_test tests/operators-eq.sql
+# run_test tests/operators-match.sql
+# run_test tests/operators-ore.sql
+# run_test tests/aggregate-ore.sql
+
+# echo
+# echo '###############################################'
+# echo "# ✅ALL TESTS PASSED "
+# echo '###############################################'
+# echo

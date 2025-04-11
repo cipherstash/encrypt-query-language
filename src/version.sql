@@ -1,4 +1,6 @@
-CREATE SCHEMA IF NOT EXISTS eql_v1;
+-- AUTOMATICALLY GENERATED FILE
+-- Source is version-template.sql
+-- REQUIRE: src/schema.sql
 
 DROP FUNCTION IF EXISTS eql_v1.version();
 
@@ -6,6 +8,6 @@ CREATE FUNCTION eql_v1.version()
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT '$RELEASE_VERSION';
+  SELECT 'DEV';
 $$ LANGUAGE SQL;
 

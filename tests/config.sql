@@ -1,8 +1,6 @@
 \set ON_ERROR_STOP on
 
 
-
-
 --
 -- Helper function for assertions
 --
@@ -211,7 +209,8 @@ TRUNCATE TABLE eql_v1_configuration;
 
 DO $$
   BEGIN
-    RAISE NOTICE 'eql_v1_configuration constraint tests: 4 errors expected here';
+    RAISE NOTICE '------------------------------------------------------';
+    RAISE NOTICE 'eql_v1_configuration constraint tests: 4 errors follow';
   END;
 $$ LANGUAGE plpgsql;
 --
@@ -277,6 +276,13 @@ INSERT INTO eql_v1_configuration (data) VALUES (
 DO $$
   BEGIN
     ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v1_configuration c WHERE c.state = 'pending'));
+  END;
+$$ LANGUAGE plpgsql;
+
+DO $$
+  BEGIN
+    RAISE NOTICE 'eql_v1_configuration constraint tests: OK';
+    RAISE NOTICE '------------------------------------------------------';
   END;
 $$ LANGUAGE plpgsql;
 

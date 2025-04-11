@@ -1,0 +1,1 @@
+-- REQUIRE: src/encrypted/types.sql

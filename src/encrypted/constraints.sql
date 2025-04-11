@@ -1,0 +1,2 @@
+-- REQUIRE: src/encrypted/types.sql
+-- REQUIRE: src/encrypted/functions.sql

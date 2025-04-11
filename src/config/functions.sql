@@ -1,3 +1,4 @@
+-- REQUIRE: src/config/types.sql
 --
 -- Configuration functions
 --
@@ -22,7 +23,7 @@ DROP FUNCTION IF EXISTS eql_v1.config_add_table(table_name text, config jsonb);
 
 CREATE FUNCTION eql_v1.config_add_table(table_name text, config jsonb)
   RETURNS jsonb
-  -- IMMUTABLE PARALLEL SAFE
+  IMMUTABLE PARALLEL SAFE
 AS $$
   DECLARE
     tbl jsonb;
@@ -100,12 +101,13 @@ BEGIN ATOMIC
 END;
 
 --
---
+-- Adds an index term to the configuration
 --
 DROP FUNCTION IF EXISTS eql_v1.add_index(table_name text, column_name text, index_name text, cast_as text, opts jsonb);
 
 CREATE FUNCTION eql_v1.add_index(table_name text, column_name text, index_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}')
   RETURNS jsonb
+
 AS $$
   DECLARE
     o jsonb;
@@ -113,7 +115,7 @@ AS $$
   BEGIN
 
     -- set the active config
-    SELECT data INTO _config FROM eql_v1_configuration WHERE state = 'active' OR state = 'pending' ORDER BY state DESC;
+    SELECT data INTO _config FROM public.eql_v1_configuration WHERE state = 'active' OR state = 'pending' ORDER BY state DESC;
 
     -- if index exists
     IF _config #> array['tables', table_name, column_name, 'indexes'] ?  index_name THEN
@@ -141,7 +143,7 @@ AS $$
     SELECT eql_v1.config_add_index(table_name, column_name, index_name, opts, _config) INTO _config;
 
     --  create a new pending record if we don't have one
-    INSERT INTO eql_v1_configuration (state, data) VALUES ('pending', _config)
+    INSERT INTO public.eql_v1_configuration (state, data) VALUES ('pending', _config)
     ON CONFLICT (state)
       WHERE state = 'pending'
     DO UPDATE
@@ -163,7 +165,7 @@ AS $$
   BEGIN
 
     -- set the active config
-    SELECT data INTO _config FROM eql_v1_configuration WHERE state = 'active' OR state = 'pending' ORDER BY state DESC;
+    SELECT data INTO _config FROM public.eql_v1_configuration WHERE state = 'active' OR state = 'pending' ORDER BY state DESC;
 
     -- if no config
     IF _config IS NULL THEN
@@ -182,7 +184,7 @@ AS $$
     END IF;
 
     --  create a new pending record if we don't have one
-    INSERT INTO eql_v1_configuration (state, data) VALUES ('pending', _config)
+    INSERT INTO public.eql_v1_configuration (state, data) VALUES ('pending', _config)
     ON CONFLICT (state)
       WHERE state = 'pending'
     DO NOTHING;
@@ -203,9 +205,9 @@ AS $$
     -- if config empty delete
     -- or update the config
     IF _config #> array['tables'] = '{}' THEN
-      DELETE FROM eql_v1_configuration WHERE state = 'pending';
+      DELETE FROM public.eql_v1_configuration WHERE state = 'pending';
     ELSE
-      UPDATE eql_v1_configuration SET data = _config WHERE state = 'pending';
+      UPDATE public.eql_v1_configuration SET data = _config WHERE state = 'pending';
     END IF;
 
     -- exeunt
@@ -231,7 +233,7 @@ $$ LANGUAGE plpgsql;
 --
 -- Marks the currently `pending` configuration as `encrypting`.
 --
--- Validates the database schema and raises an exception if the configured columns are not of `jsonb` or `eql_v1_encrypted` type.
+-- Validates the database schema and raises an exception if the configured columns are not of `jsonb` or `cs_encrypted_v1` type.
 --
 -- Accepts an optional `force` parameter.
 -- If `force` is `true`, the schema validation is skipped.
@@ -245,11 +247,11 @@ CREATE FUNCTION eql_v1.encrypt(force boolean DEFAULT false)
 AS $$
 	BEGIN
 
-    IF EXISTS (SELECT FROM eql_v1_configuration c WHERE c.state = 'encrypting') THEN
+    IF EXISTS (SELECT FROM public.eql_v1_configuration c WHERE c.state = 'encrypting') THEN
       RAISE EXCEPTION 'An encryption is already in progress';
     END IF;
 
-		IF NOT EXISTS (SELECT FROM eql_v1_configuration c WHERE c.state = 'pending') THEN
+		IF NOT EXISTS (SELECT FROM public.eql_v1_configuration c WHERE c.state = 'pending') THEN
 			RAISE EXCEPTION 'No pending configuration exists to encrypt';
 		END IF;
 
@@ -259,7 +261,7 @@ AS $$
       END IF;
     END IF;
 
-    UPDATE eql_v1_configuration SET state = 'encrypting' WHERE state = 'pending';
+    UPDATE cs_configuration_v1 SET state = 'encrypting' WHERE state = 'pending';
 		RETURN true;
   END;
 $$ LANGUAGE plpgsql;
@@ -272,9 +274,9 @@ CREATE FUNCTION eql_v1.activate()
 AS $$
 	BEGIN
 
-	  IF EXISTS (SELECT FROM eql_v1_configuration c WHERE c.state = 'encrypting') THEN
-	  	UPDATE eql_v1_configuration SET state = 'inactive' WHERE state = 'active';
-			UPDATE eql_v1_configuration SET state = 'active' WHERE state = 'encrypting';
+	  IF EXISTS (SELECT FROM public.eql_v1_configuration c WHERE c.state = 'encrypting') THEN
+	  	UPDATE public.eql_v1_configuration SET state = 'inactive' WHERE state = 'active';
+			UPDATE public.eql_v1_configuration SET state = 'active' WHERE state = 'encrypting';
 			RETURN true;
 		ELSE
 			RAISE EXCEPTION 'No encrypting configuration exists to activate';
@@ -289,8 +291,8 @@ CREATE FUNCTION eql_v1.discard()
   RETURNS boolean
 AS $$
   BEGIN
-    IF EXISTS (SELECT FROM eql_v1_configuration c WHERE c.state = 'pending') THEN
-        DELETE FROM eql_v1_configuration WHERE state = 'pending';
+    IF EXISTS (SELECT FROM public.eql_v1_configuration c WHERE c.state = 'pending') THEN
+        DELETE FROM public.eql_v1_configuration WHERE state = 'pending';
       RETURN true;
     ELSE
       RAISE EXCEPTION 'No pending configuration exists to discard';
@@ -309,7 +311,7 @@ AS $$
     _config jsonb;
   BEGIN
     -- set the active config
-    SELECT data INTO _config FROM eql_v1_configuration WHERE state = 'active' OR state = 'pending' ORDER BY state DESC;
+    SELECT data INTO _config FROM public.eql_v1_configuration WHERE state = 'active' OR state = 'pending' ORDER BY state DESC;
 
     -- set default config
     SELECT eql_v1.config_default(_config) INTO _config;
@@ -326,7 +328,7 @@ AS $$
     SELECT eql_v1.config_add_cast(table_name, column_name, cast_as, _config) INTO _config;
 
     --  create a new pending record if we don't have one
-    INSERT INTO eql_v1_configuration (state, data) VALUES ('pending', _config)
+    INSERT INTO public.eql_v1_configuration (state, data) VALUES ('pending', _config)
     ON CONFLICT (state)
       WHERE state = 'pending'
     DO UPDATE
@@ -348,7 +350,7 @@ AS $$
     _config jsonb;
   BEGIN
      -- set the active config
-    SELECT data INTO _config FROM eql_v1_configuration WHERE state = 'active' OR state = 'pending' ORDER BY state DESC;
+    SELECT data INTO _config FROM public.eql_v1_configuration WHERE state = 'active' OR state = 'pending' ORDER BY state DESC;
 
     -- if no config
     IF _config IS NULL THEN
@@ -366,7 +368,7 @@ AS $$
     END IF;
 
     --  create a new pending record if we don't have one
-    INSERT INTO eql_v1_configuration (state, data) VALUES ('pending', _config)
+    INSERT INTO public.eql_v1_configuration (state, data) VALUES ('pending', _config)
     ON CONFLICT (state)
       WHERE state = 'pending'
     DO NOTHING;
@@ -382,9 +384,9 @@ AS $$
     -- if config empty delete
     -- or update the config
     IF _config #> array['tables'] = '{}' THEN
-      DELETE FROM eql_v1_configuration WHERE state = 'pending';
+      DELETE FROM public.eql_v1_configuration WHERE state = 'pending';
     ELSE
-      UPDATE eql_v1_configuration SET data = _config WHERE state = 'pending';
+      UPDATE public.eql_v1_configuration SET data = _config WHERE state = 'pending';
     END IF;
 
     -- exeunt
@@ -394,9 +396,9 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS eql_v1.refresh_encrypt_config();
+DROP FUNCTION IF EXISTS eql_v1.reload_config();
 
-CREATE FUNCTION eql_v1.refresh_encrypt_config()
+CREATE FUNCTION eql_v1.reload_config()
   RETURNS void
 LANGUAGE sql STRICT PARALLEL SAFE
 BEGIN ATOMIC
@@ -405,7 +407,6 @@ END;
 
 DROP FUNCTION IF EXISTS eql_v1.config();
 
---
 -- A convenience function to return the configuration in a tabular format, allowing for easier filtering, and querying.
 -- Query using `SELECT * FROM cs_config();`
 --
