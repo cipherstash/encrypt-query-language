@@ -1,24 +1,24 @@
--- Operators for match comparisons of cs_encrypted_v1 types
+-- Operators for match comparisons of eql_v1_encrypted types
 --
 -- Support for the following comparisons:
 --
---      cs_encrypted_v1 > >= < <=  cs_encrypted_v1
---      cs_encrypted_v1 > jsonb
---      cs_encrypted_v1 > ore_64_8_v1
+--      eql_v1_encrypted > >= < <=  eql_v1_encrypted
+--      eql_v1_encrypted > jsonb
+--      eql_v1_encrypted > ore_64_8_v1
 --
 
-DROP OPERATOR IF EXISTS > (cs_encrypted_v1, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_v1_gt_v1(a cs_encrypted_v1, b cs_encrypted_v1);
+DROP OPERATOR IF EXISTS > (eql_v1_encrypted, eql_v1_encrypted);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_v1_gt(a eql_v1_encrypted, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_v1_gt_v1(a cs_encrypted_v1, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_v1_gt(a eql_v1_encrypted, b eql_v1_encrypted)
 RETURNS boolean AS $$
-  SELECT cs_ore_64_8_v1(a) > cs_ore_64_8_v1(b);
+  SELECT eql_v1.ore_64_8_v1(a) > eql_v1.ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR >(
-  PROCEDURE="cs_encrypted_ore_64_8_v1_gt_v1",
-  LEFTARG=cs_encrypted_v1,
-  RIGHTARG=cs_encrypted_v1,
+  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_gt",
+  LEFTARG=eql_v1_encrypted,
+  RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = <,
   NEGATOR = <=,
   RESTRICT = scalargtsel,
@@ -26,17 +26,17 @@ CREATE OPERATOR >(
 );
 
 
-DROP OPERATOR IF EXISTS > (cs_encrypted_v1, jsonb);
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_v1_gt_v1(a cs_encrypted_v1, b jsonb);
+DROP OPERATOR IF EXISTS > (eql_v1_encrypted, jsonb);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_v1_gt(a eql_v1_encrypted, b jsonb);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_v1_gt_v1(a cs_encrypted_v1, b jsonb)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_v1_gt(a eql_v1_encrypted, b jsonb)
 RETURNS boolean AS $$
-  SELECT cs_ore_64_8_v1(a) > cs_ore_64_8_v1(b);
+  SELECT eql_v1.ore_64_8_v1(a) > eql_v1.ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR >(
-  PROCEDURE="cs_encrypted_ore_64_8_v1_gt_v1",
-  LEFTARG=cs_encrypted_v1,
+  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_gt",
+  LEFTARG=eql_v1_encrypted,
   RIGHTARG=jsonb,
   COMMUTATOR = <,
   NEGATOR = <=,
@@ -45,18 +45,18 @@ CREATE OPERATOR >(
 );
 
 
-DROP OPERATOR IF EXISTS > (cs_encrypted_v1, ore_64_8_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_v1_gt_v1(a cs_encrypted_v1, b ore_64_8_v1);
+DROP OPERATOR IF EXISTS > (eql_v1_encrypted, eql_v1.ore_64_8_v1);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_v1_gt(a eql_v1_encrypted, b eql_v1.ore_64_8_v1);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_v1_gt_v1(a cs_encrypted_v1, b ore_64_8_v1)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_v1_gt(a eql_v1_encrypted, b eql_v1.ore_64_8_v1)
 RETURNS boolean AS $$
-  SELECT cs_ore_64_8_v1(a) > b;
+  SELECT eql_v1.ore_64_8_v1(a) > b;
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR >(
-  PROCEDURE="cs_encrypted_ore_64_8_v1_gt_v1",
-  LEFTARG=cs_encrypted_v1,
-  RIGHTARG=ore_64_8_v1,
+  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_gt",
+  LEFTARG=eql_v1_encrypted,
+  RIGHTARG=eql_v1.ore_64_8_v1,
   COMMUTATOR = <,
   NEGATOR = <=,
   RESTRICT = scalargtsel,
@@ -65,18 +65,18 @@ CREATE OPERATOR >(
 
 
 
-DROP OPERATOR IF EXISTS > (jsonb, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_v1_gt_v1(a jsonb, b cs_encrypted_v1);
+DROP OPERATOR IF EXISTS > (jsonb, eql_v1_encrypted);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_v1_gt(a jsonb, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_v1_gt_v1(a jsonb, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_v1_gt(a jsonb, b eql_v1_encrypted)
 RETURNS boolean AS $$
-  SELECT cs_ore_64_8_v1(a) > cs_ore_64_8_v1(b);
+  SELECT eql_v1.ore_64_8_v1(a) > eql_v1.ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR >(
-  PROCEDURE="cs_encrypted_ore_64_8_v1_gt_v1",
+  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_gt",
   LEFTARG=jsonb,
-  RIGHTARG=cs_encrypted_v1,
+  RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = <,
   NEGATOR = <=,
   RESTRICT = scalargtsel,
@@ -84,18 +84,18 @@ CREATE OPERATOR >(
 );
 
 
-DROP OPERATOR IF EXISTS > (ore_64_8_v1, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_v1_gt_v1(a ore_64_8_v1, b cs_encrypted_v1);
+DROP OPERATOR IF EXISTS > (eql_v1.ore_64_8_v1, eql_v1_encrypted);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_v1_gt(a eql_v1.ore_64_8_v1, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_v1_gt_v1(a ore_64_8_v1, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_v1_gt(a eql_v1.ore_64_8_v1, b eql_v1_encrypted)
 RETURNS boolean AS $$
-  SELECT a > cs_ore_64_8_v1(b);
+  SELECT a > eql_v1.ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR >(
-  PROCEDURE="cs_encrypted_ore_64_8_v1_gt_v1",
-  LEFTARG=ore_64_8_v1,
-  RIGHTARG=cs_encrypted_v1,
+  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_gt",
+  LEFTARG=eql_v1.ore_64_8_v1,
+  RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = <,
   NEGATOR = <=,
   RESTRICT = scalargtsel,
@@ -107,18 +107,18 @@ CREATE OPERATOR >(
 -- LT
 
 
-DROP OPERATOR IF EXISTS < (cs_encrypted_v1, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_v1_lt_v1(a cs_encrypted_v1, b cs_encrypted_v1);
+DROP OPERATOR IF EXISTS < (eql_v1_encrypted, eql_v1_encrypted);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_v1_lt(a eql_v1_encrypted, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_v1_lt_v1(a cs_encrypted_v1, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_v1_lt(a eql_v1_encrypted, b eql_v1_encrypted)
 RETURNS boolean AS $$
-  SELECT cs_ore_64_8_v1(a) < cs_ore_64_8_v1(b);
+  SELECT eql_v1.ore_64_8_v1(a) < eql_v1.ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <(
-  PROCEDURE="cs_encrypted_ore_64_8_v1_lt_v1",
-  LEFTARG=cs_encrypted_v1,
-  RIGHTARG=cs_encrypted_v1,
+  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_lt",
+  LEFTARG=eql_v1_encrypted,
+  RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = >,
   NEGATOR = >=,
   RESTRICT = scalarltsel,
@@ -126,17 +126,17 @@ CREATE OPERATOR <(
 );
 
 
-DROP OPERATOR IF EXISTS < (cs_encrypted_v1, jsonb);
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_v1_lt_v1(a cs_encrypted_v1, b jsonb);
+DROP OPERATOR IF EXISTS < (eql_v1_encrypted, jsonb);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_v1_lt(a eql_v1_encrypted, b jsonb);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_v1_lt_v1(a cs_encrypted_v1, b jsonb)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_v1_lt(a eql_v1_encrypted, b jsonb)
 RETURNS boolean AS $$
-  SELECT cs_ore_64_8_v1(a) < cs_ore_64_8_v1(b);
+  SELECT eql_v1.ore_64_8_v1(a) < eql_v1.ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <(
-  PROCEDURE="cs_encrypted_ore_64_8_v1_lt_v1",
-  LEFTARG=cs_encrypted_v1,
+  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_lt",
+  LEFTARG=eql_v1_encrypted,
   RIGHTARG=jsonb,
   COMMUTATOR = >,
   NEGATOR = >=,
@@ -145,18 +145,18 @@ CREATE OPERATOR <(
 );
 
 
-DROP OPERATOR IF EXISTS < (jsonb, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_v1_lt_v1(a jsonb, b cs_encrypted_v1);
+DROP OPERATOR IF EXISTS < (jsonb, eql_v1_encrypted);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_v1_lt(a jsonb, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_v1_lt_v1(a jsonb, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_v1_lt(a jsonb, b eql_v1_encrypted)
 RETURNS boolean AS $$
-  SELECT cs_ore_64_8_v1(a) < cs_ore_64_8_v1(b);
+  SELECT eql_v1.ore_64_8_v1(a) < eql_v1.ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <(
-  PROCEDURE="cs_encrypted_ore_64_8_v1_lt_v1",
+  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_lt",
   LEFTARG=jsonb,
-  RIGHTARG=cs_encrypted_v1,
+  RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = >,
   NEGATOR = >=,
   RESTRICT = scalarltsel,
@@ -165,18 +165,18 @@ CREATE OPERATOR <(
 
 
 
-DROP OPERATOR IF EXISTS <(cs_encrypted_v1, ore_64_8_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_v1_lt_v1(a cs_encrypted_v1, b ore_64_8_v1);
+DROP OPERATOR IF EXISTS <(eql_v1_encrypted, ore_64_8_v1);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_v1_lt(a eql_v1_encrypted, b eql_v1.ore_64_8_v1);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_v1_lt_v1(a cs_encrypted_v1, b ore_64_8_v1)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_v1_lt(a eql_v1_encrypted, b eql_v1.ore_64_8_v1)
 RETURNS boolean AS $$
-  SELECT cs_ore_64_8_v1(a) < b;
+  SELECT eql_v1.ore_64_8_v1(a) < b;
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <(
-  PROCEDURE="cs_encrypted_ore_64_8_v1_lt_v1",
-  LEFTARG=cs_encrypted_v1,
-  RIGHTARG=ore_64_8_v1,
+  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_lt",
+  LEFTARG=eql_v1_encrypted,
+  RIGHTARG=eql_v1.ore_64_8_v1,
   COMMUTATOR = >,
   NEGATOR = >=,
   RESTRICT = scalarltsel,
@@ -184,18 +184,18 @@ CREATE OPERATOR <(
 );
 
 
-DROP OPERATOR IF EXISTS <(ore_64_8_v1, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_v1_lt_v1(a ore_64_8_v1, b cs_encrypted_v1);
+DROP OPERATOR IF EXISTS <(eql_v1.ore_64_8_v1, eql_v1_encrypted);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_v1_lt(a eql_v1.ore_64_8_v1, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_v1_lt_v1(a ore_64_8_v1, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_v1_lt(a eql_v1.ore_64_8_v1, b eql_v1_encrypted)
 RETURNS boolean AS $$
-  SELECT a < cs_ore_64_8_v1(b);
+  SELECT a < eql_v1.ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <(
-  PROCEDURE="cs_encrypted_ore_64_8_v1_lt_v1",
-  LEFTARG=ore_64_8_v1,
-  RIGHTARG=cs_encrypted_v1,
+  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_lt",
+  LEFTARG=eql_v1.ore_64_8_v1,
+  RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = >,
   NEGATOR = >=,
   RESTRICT = scalarltsel,
@@ -206,18 +206,18 @@ CREATE OPERATOR <(
 -----------------------------------------------------------------------------------------
 
 
-DROP OPERATOR IF EXISTS >=(cs_encrypted_v1, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_v1_gte_v1(a cs_encrypted_v1, b cs_encrypted_v1);
+DROP OPERATOR IF EXISTS >=(eql_v1_encrypted, eql_v1_encrypted);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_v1_gte(a eql_v1_encrypted, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_v1_gte_v1(a cs_encrypted_v1, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_v1_gte(a eql_v1_encrypted, b eql_v1_encrypted)
 RETURNS boolean AS $$
-  SELECT cs_ore_64_8_v1(a) >= cs_ore_64_8_v1(b);
+  SELECT eql_v1.ore_64_8_v1(a) >= eql_v1.ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR >=(
-  PROCEDURE="cs_encrypted_ore_64_8_v1_gte_v1",
-  LEFTARG=cs_encrypted_v1,
-  RIGHTARG=cs_encrypted_v1,
+  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_gte",
+  LEFTARG=eql_v1_encrypted,
+  RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = <=,
   NEGATOR = <,
   RESTRICT = scalarlesel,
@@ -225,17 +225,17 @@ CREATE OPERATOR >=(
 );
 
 
-DROP OPERATOR IF EXISTS >= (cs_encrypted_v1, jsonb);
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_v1_gte_v1(a cs_encrypted_v1, b jsonb);
+DROP OPERATOR IF EXISTS >= (eql_v1_encrypted, jsonb);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_v1_gte(a eql_v1_encrypted, b jsonb);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_v1_gte_v1(a cs_encrypted_v1, b jsonb)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_v1_gte(a eql_v1_encrypted, b jsonb)
 RETURNS boolean AS $$
-  SELECT cs_ore_64_8_v1(a) >= cs_ore_64_8_v1(b);
+  SELECT eql_v1.ore_64_8_v1(a) >= eql_v1.ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR >=(
-  PROCEDURE="cs_encrypted_ore_64_8_v1_gte_v1",
-  LEFTARG=cs_encrypted_v1,
+  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_gte",
+  LEFTARG=eql_v1_encrypted,
   RIGHTARG=jsonb,
   COMMUTATOR = <=,
   NEGATOR = <,
@@ -244,18 +244,18 @@ CREATE OPERATOR >=(
 );
 
 
-DROP OPERATOR IF EXISTS >= (cs_encrypted_v1, ore_64_8_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_v1_gte_v1(a cs_encrypted_v1, b ore_64_8_v1);
+DROP OPERATOR IF EXISTS >= (eql_v1_encrypted, eql_v1.ore_64_8_v1);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_v1_gte(a eql_v1_encrypted, b eql_v1.ore_64_8_v1);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_v1_gte_v1(a cs_encrypted_v1, b ore_64_8_v1)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_v1_gte(a eql_v1_encrypted, b eql_v1.ore_64_8_v1)
 RETURNS boolean AS $$
-  SELECT cs_ore_64_8_v1(a) >= b;
+  SELECT eql_v1.ore_64_8_v1(a) >= b;
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR >=(
-  PROCEDURE="cs_encrypted_ore_64_8_v1_gte_v1",
-  LEFTARG=cs_encrypted_v1,
-  RIGHTARG=ore_64_8_v1,
+  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_gte",
+  LEFTARG=eql_v1_encrypted,
+  RIGHTARG=eql_v1.ore_64_8_v1,
   COMMUTATOR = <=,
   NEGATOR = <,
   RESTRICT = scalarlesel,
@@ -263,18 +263,18 @@ CREATE OPERATOR >=(
 );
 
 
-DROP OPERATOR IF EXISTS >= (jsonb, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_v1_gte_v1(a jsonb, b cs_encrypted_v1);
+DROP OPERATOR IF EXISTS >= (jsonb, eql_v1_encrypted);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_v1_gte(a jsonb, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_v1_gte_v1(a jsonb, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_v1_gte(a jsonb, b eql_v1_encrypted)
 RETURNS boolean AS $$
-  SELECT cs_ore_64_8_v1(a) >= cs_ore_64_8_v1(b);
+  SELECT eql_v1.ore_64_8_v1(a) >= eql_v1.ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR >=(
-  PROCEDURE="cs_encrypted_ore_64_8_v1_gte_v1",
+  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_gte",
   LEFTARG=jsonb,
-  RIGHTARG=cs_encrypted_v1,
+  RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = <=,
   NEGATOR = <,
   RESTRICT = scalarlesel,
@@ -282,18 +282,18 @@ CREATE OPERATOR >=(
 );
 
 
-DROP OPERATOR IF EXISTS >=(ore_64_8_v1, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_v1_gte_v1(a ore_64_8_v1, b cs_encrypted_v1);
+DROP OPERATOR IF EXISTS >=(eql_v1.ore_64_8_v1, eql_v1_encrypted);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_v1_gte(a eql_v1.ore_64_8_v1, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_v1_gte_v1(a ore_64_8_v1, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_v1_gte(a eql_v1.ore_64_8_v1, b eql_v1_encrypted)
 RETURNS boolean AS $$
-  SELECT a >= cs_ore_64_8_v1(b);
+  SELECT a >= eql_v1.ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR >=(
-  PROCEDURE="cs_encrypted_ore_64_8_v1_gte_v1",
-  LEFTARG=ore_64_8_v1,
-  RIGHTARG=cs_encrypted_v1,
+  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_gte",
+  LEFTARG=eql_v1.ore_64_8_v1,
+  RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = <=,
   NEGATOR = <,
   RESTRICT = scalarlesel,
@@ -304,18 +304,18 @@ CREATE OPERATOR >=(
 -----------------------------------------------------------------------------------------
 
 
-DROP OPERATOR IF EXISTS <= (cs_encrypted_v1, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_v1_lte_v1(a cs_encrypted_v1, b cs_encrypted_v1);
+DROP OPERATOR IF EXISTS <= (eql_v1_encrypted, eql_v1_encrypted);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_v1_lte(a eql_v1_encrypted, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_v1_lte_v1(a cs_encrypted_v1, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_v1_lte(a eql_v1_encrypted, b eql_v1_encrypted)
 RETURNS boolean AS $$
-  SELECT cs_ore_64_8_v1(a) <= cs_ore_64_8_v1(b);
+  SELECT eql_v1.ore_64_8_v1(a) <= eql_v1.ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <=(
-  PROCEDURE="cs_encrypted_ore_64_8_v1_lte_v1",
-  LEFTARG=cs_encrypted_v1,
-  RIGHTARG=cs_encrypted_v1,
+  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_lte",
+  LEFTARG=eql_v1_encrypted,
+  RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = >=,
   NEGATOR = >,
   RESTRICT = scalarlesel,
@@ -323,17 +323,17 @@ CREATE OPERATOR <=(
 );
 
 
-DROP OPERATOR IF EXISTS <= (cs_encrypted_v1, jsonb);
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_v1_lte_v1(a cs_encrypted_v1, b jsonb);
+DROP OPERATOR IF EXISTS <= (eql_v1_encrypted, jsonb);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_v1_lte(a eql_v1_encrypted, b jsonb);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_v1_lte_v1(a cs_encrypted_v1, b jsonb)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_v1_lte(a eql_v1_encrypted, b jsonb)
 RETURNS boolean AS $$
-  SELECT cs_ore_64_8_v1(a) <= cs_ore_64_8_v1(b);
+  SELECT eql_v1.ore_64_8_v1(a) <= eql_v1.ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <=(
-  PROCEDURE="cs_encrypted_ore_64_8_v1_lte_v1",
-  LEFTARG=cs_encrypted_v1,
+  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_lte",
+  LEFTARG=eql_v1_encrypted,
   RIGHTARG=jsonb,
   COMMUTATOR = >=,
   NEGATOR = >,
@@ -342,18 +342,18 @@ CREATE OPERATOR <=(
 );
 
 
-DROP OPERATOR IF EXISTS <= (jsonb, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_v1_lte_v1(a jsonb, b cs_encrypted_v1);
+DROP OPERATOR IF EXISTS <= (jsonb, eql_v1_encrypted);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_v1_lte(a jsonb, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_v1_lte_v1(a jsonb, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_v1_lte(a jsonb, b eql_v1_encrypted)
 RETURNS boolean AS $$
-  SELECT cs_ore_64_8_v1(a) <= cs_ore_64_8_v1(b);
+  SELECT eql_v1.ore_64_8_v1(a) <= eql_v1.ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <=(
-  PROCEDURE="cs_encrypted_ore_64_8_v1_lte_v1",
+  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_lte",
   LEFTARG=jsonb,
-  RIGHTARG=cs_encrypted_v1,
+  RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = >=,
   NEGATOR = >,
   RESTRICT = scalarlesel,
@@ -361,18 +361,18 @@ CREATE OPERATOR <=(
 );
 
 
-DROP OPERATOR IF EXISTS <= (cs_encrypted_v1, ore_64_8_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_v1_lte_v1(a cs_encrypted_v1, b ore_64_8_v1);
+DROP OPERATOR IF EXISTS <= (eql_v1_encrypted, ore_64_8_v1);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_v1_lte(a eql_v1_encrypted, b eql_v1.ore_64_8_v1);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_v1_lte_v1(a cs_encrypted_v1, b ore_64_8_v1)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_v1_lte(a eql_v1_encrypted, b eql_v1.ore_64_8_v1)
 RETURNS boolean AS $$
-  SELECT cs_ore_64_8_v1(a) <= b;
+  SELECT eql_v1.ore_64_8_v1(a) <= b;
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <=(
-  PROCEDURE="cs_encrypted_ore_64_8_v1_lte_v1",
-  LEFTARG=cs_encrypted_v1,
-  RIGHTARG=ore_64_8_v1,
+  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_lte",
+  LEFTARG=eql_v1_encrypted,
+  RIGHTARG=eql_v1.ore_64_8_v1,
   COMMUTATOR = >=,
   NEGATOR = >,
   RESTRICT = scalarlesel,
@@ -380,18 +380,18 @@ CREATE OPERATOR <=(
 );
 
 
-DROP OPERATOR IF EXISTS <= (ore_64_8_v1, cs_encrypted_v1);
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_v1_lte_v1(a ore_64_8_v1, b cs_encrypted_v1);
+DROP OPERATOR IF EXISTS <= (eql_v1.ore_64_8_v1, eql_v1_encrypted);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_v1_lte(a eql_v1.ore_64_8_v1, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_v1_lte_v1(a ore_64_8_v1, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_v1_lte(a eql_v1.ore_64_8_v1, b eql_v1_encrypted)
 RETURNS boolean AS $$
-  SELECT a <= cs_ore_64_8_v1(b);
+  SELECT a <= eql_v1.ore_64_8_v1(b);
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <=(
-  PROCEDURE="cs_encrypted_ore_64_8_v1_lte_v1",
-  LEFTARG=ore_64_8_v1,
-  RIGHTARG=cs_encrypted_v1,
+  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_lte",
+  LEFTARG=eql_v1.ore_64_8_v1,
+  RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = >=,
   NEGATOR = >,
   RESTRICT = scalarlesel,
@@ -402,48 +402,48 @@ CREATE OPERATOR <=(
 -----------------------------------------------------------------------------------------
 
 
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b cs_encrypted_v1);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_compare(a eql_v1_encrypted, b eql_v1_encrypted);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b cs_encrypted_v1)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_compare(a eql_v1_encrypted, b eql_v1_encrypted)
   RETURNS integer AS $$
   BEGIN
-    RETURN compare_ore_64_8_v1(cs_ore_64_8_v1(a), cs_ore_64_8_v1(b));
+    RETURN eql_v1.compare_ore_64_8_v1(eql_v1.ore_64_8_v1(a), eql_v1.ore_64_8_v1(b));
   END;
 $$ LANGUAGE plpgsql;
 
-DROP FUNCTION IF EXISTS cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b jsonb);
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_compare(a eql_v1_encrypted, b jsonb);
 
-CREATE FUNCTION cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b jsonb)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_compare(a eql_v1_encrypted, b jsonb)
   RETURNS integer AS $$
   BEGIN
-    RETURN compare_ore_64_8_v1(cs_ore_64_8_v1(a), cs_ore_64_8_v1(b));
+    RETURN eql_v1.compare_ore_64_8_v1(eql_v1.ore_64_8_v1(a), eql_v1.ore_64_8_v1(b));
   END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE FUNCTION cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b jsonb)
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_compare(a eql_v1_encrypted, b jsonb)
   RETURNS integer AS $$
   BEGIN
-    RETURN compare_ore_64_8_v1(cs_ore_64_8_v1(a), cs_ore_64_8_v1(b));
+    RETURN eql_v1.compare_ore_64_8_v1(eql_v1.ore_64_8_v1(a), eql_v1.ore_64_8_v1(b));
   END;
 $$ LANGUAGE plpgsql;
 
 -----------------------------------------------------------------------------------------
 
 
-DROP OPERATOR FAMILY IF EXISTS cs_encrypted_ore_64_8_v1_btree_ops_v1 USING btree;
+DROP OPERATOR FAMILY IF EXISTS eql_v1.encrypted_ore_64_8_v1_btree_op USING btree;
 
-CREATE OPERATOR FAMILY cs_encrypted_ore_64_8_v1_btree_ops_v1 USING btree;
+CREATE OPERATOR FAMILY eql_v1.encrypted_ore_64_8_v1_btree_op USING btree;
 
 
-DROP OPERATOR CLASS IF EXISTS ore_64_8_v1_btree_ops USING btree;
+DROP OPERATOR CLASS IF EXISTS eql_v1.ore_64_8_v1_btree_ops USING btree;
 
-CREATE OPERATOR CLASS cs_encrypted_ore_64_8_v1_btree_ops_v1 DEFAULT
-FOR TYPE cs_encrypted_v1 USING btree
-  FAMILY cs_encrypted_ore_64_8_v1_btree_ops_v1 AS
+CREATE OPERATOR CLASS eql_v1.cs_encrypted_ore_64_8_v1_btree_ops_v1 DEFAULT
+FOR TYPE eql_v1_encrypted USING btree
+  FAMILY eql_v1.cs_encrypted_ore_64_8_v1_btree_ops_v1 AS
   OPERATOR 1 <,
   OPERATOR 2 <=,
   OPERATOR 3 =,
   OPERATOR 4 >=,
   OPERATOR 5 >,
-  FUNCTION 1 cs_encrypted_ore_64_8_compare(a cs_encrypted_v1, b cs_encrypted_v1);
+  FUNCTION 1 eql_v1.encrypted_ore_64_8_compare(a eql_v1_encrypted, b eql_v1_encrypted);
