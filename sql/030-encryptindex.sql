@@ -66,8 +66,8 @@ $$ LANGUAGE plpgsql;
 --
 -- Returns the target columns with pending configuration
 --
--- A `pending` column may be either a plaintext variant or cs_encrypted_v1.
--- A `target` column is always of type cs_encrypted_v1
+-- A `pending` column may be either a plaintext variant or eql_v1_encrypted.
+-- A `target` column is always of type eql_v1_encrypted
 --
 -- On initial encryption from plaintext the target column will be `{column_name}_encrypted `
 -- OR NULL if the column does not exist
@@ -87,7 +87,7 @@ AS $$
   LEFT JOIN information_schema.columns s ON
     s.table_name = c.table_name AND
     (s.column_name = c.column_name OR s.column_name = c.column_name || '_encrypted') AND
-    (s.domain_name = 'cs_encrypted_v1' OR s.data_type = 'jsonb');
+    (s.domain_name = 'eql_v1_encrypted' OR s.data_type = 'jsonb');
 $$ LANGUAGE sql;
 
 
@@ -107,11 +107,11 @@ $$ LANGUAGE sql;
 
 
 --
--- Creates cs_encrypted_v1 columns for any plaintext columns with pending configuration
+-- Creates eql_v1_encrypted columns for any plaintext columns with pending configuration
 -- The new column name is `{column_name}_encrypted`
 --
 -- Executes the ALTER TABLE statement
---   `ALTER TABLE {target_table} ADD COLUMN {column_name}_encrypted cs_encrypted_v1;`
+--   `ALTER TABLE {target_table} ADD COLUMN {column_name}_encrypted eql_v1_encrypted;`
 --
 DROP FUNCTION IF EXISTS eql_v1.create_encrypted_columns();
 
@@ -130,7 +130,7 @@ $$ LANGUAGE plpgsql;
 
 
 --
--- Renames plaintext and cs_encrypted_v1 columns created for the initial encryption.
+-- Renames plaintext and eql_v1_encrypted columns created for the initial encryption.
 -- The source plaintext column is renamed to `{column_name}_plaintext`
 -- The target encrypted column is renamed from `{column_name}_encrypted` to `{column_name}`
 --

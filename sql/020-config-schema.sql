@@ -17,7 +17,7 @@
 DO $$
   BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'eql_v1_configuration_data') THEN
-      CREATE DOMAIN eql_v1_configuration_data AS JSONB;
+      CREATE DOMAIN public.eql_v1_configuration_data AS JSONB;
     END IF;
   END
 $$;
@@ -28,7 +28,7 @@ $$;
 DO $$
   BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'eql_v1_configuration_state') THEN
-      CREATE TYPE eql_v1_configuration_state AS ENUM ('active', 'inactive', 'encrypting', 'pending');
+      CREATE TYPE public.eql_v1_configuration_state AS ENUM ('active', 'inactive', 'encrypting', 'pending');
     END IF;
   END
 $$;

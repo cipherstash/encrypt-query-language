@@ -5,7 +5,7 @@ DROP DOMAIN IF EXISTS eql_v1.unique_index;
 CREATE DOMAIN eql_v1.unique_index AS text;
 
 
--- cs_encrypted_v1 is a column type and cannot be dropped if in use
+-- eql_v1_encrypted is a column type and cannot be dropped if in use
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'eql_v1_encrypted') THEN

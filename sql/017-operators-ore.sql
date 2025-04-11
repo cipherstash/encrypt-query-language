@@ -16,7 +16,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR >(
-  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_gt",
+  FUNCTION=eql_v1.encrypted_ore_64_8_v1_gt,
   LEFTARG=eql_v1_encrypted,
   RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = <,
@@ -35,7 +35,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR >(
-  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_gt",
+  FUNCTION=eql_v1.encrypted_ore_64_8_v1_gt,
   LEFTARG=eql_v1_encrypted,
   RIGHTARG=jsonb,
   COMMUTATOR = <,
@@ -54,7 +54,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR >(
-  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_gt",
+  FUNCTION=eql_v1.encrypted_ore_64_8_v1_gt,
   LEFTARG=eql_v1_encrypted,
   RIGHTARG=eql_v1.ore_64_8_v1,
   COMMUTATOR = <,
@@ -74,7 +74,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR >(
-  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_gt",
+  FUNCTION=eql_v1.encrypted_ore_64_8_v1_gt,
   LEFTARG=jsonb,
   RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = <,
@@ -93,7 +93,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR >(
-  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_gt",
+  FUNCTION=eql_v1.encrypted_ore_64_8_v1_gt,
   LEFTARG=eql_v1.ore_64_8_v1,
   RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = <,
@@ -116,7 +116,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <(
-  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_lt",
+  FUNCTION=eql_v1.encrypted_ore_64_8_v1_lt,
   LEFTARG=eql_v1_encrypted,
   RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = >,
@@ -135,7 +135,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <(
-  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_lt",
+  FUNCTION=eql_v1.encrypted_ore_64_8_v1_lt,
   LEFTARG=eql_v1_encrypted,
   RIGHTARG=jsonb,
   COMMUTATOR = >,
@@ -154,7 +154,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <(
-  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_lt",
+  FUNCTION=eql_v1.encrypted_ore_64_8_v1_lt,
   LEFTARG=jsonb,
   RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = >,
@@ -174,7 +174,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <(
-  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_lt",
+  FUNCTION=eql_v1.encrypted_ore_64_8_v1_lt,
   LEFTARG=eql_v1_encrypted,
   RIGHTARG=eql_v1.ore_64_8_v1,
   COMMUTATOR = >,
@@ -193,7 +193,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <(
-  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_lt",
+  FUNCTION=eql_v1.encrypted_ore_64_8_v1_lt,
   LEFTARG=eql_v1.ore_64_8_v1,
   RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = >,
@@ -215,7 +215,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR >=(
-  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_gte",
+  FUNCTION=eql_v1.encrypted_ore_64_8_v1_gte,
   LEFTARG=eql_v1_encrypted,
   RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = <=,
@@ -234,7 +234,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR >=(
-  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_gte",
+  FUNCTION=eql_v1.encrypted_ore_64_8_v1_gte,
   LEFTARG=eql_v1_encrypted,
   RIGHTARG=jsonb,
   COMMUTATOR = <=,
@@ -253,7 +253,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR >=(
-  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_gte",
+  FUNCTION=eql_v1.encrypted_ore_64_8_v1_gte,
   LEFTARG=eql_v1_encrypted,
   RIGHTARG=eql_v1.ore_64_8_v1,
   COMMUTATOR = <=,
@@ -272,7 +272,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR >=(
-  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_gte",
+  FUNCTION=eql_v1.encrypted_ore_64_8_v1_gte,
   LEFTARG=jsonb,
   RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = <=,
@@ -291,7 +291,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR >=(
-  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_gte",
+  FUNCTION=eql_v1.encrypted_ore_64_8_v1_gte,
   LEFTARG=eql_v1.ore_64_8_v1,
   RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = <=,
@@ -313,7 +313,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <=(
-  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_lte",
+  FUNCTION=eql_v1.encrypted_ore_64_8_v1_lte,
   LEFTARG=eql_v1_encrypted,
   RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = >=,
@@ -332,7 +332,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <=(
-  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_lte",
+  FUNCTION=eql_v1.encrypted_ore_64_8_v1_lte,
   LEFTARG=eql_v1_encrypted,
   RIGHTARG=jsonb,
   COMMUTATOR = >=,
@@ -351,7 +351,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <=(
-  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_lte",
+  FUNCTION=eql_v1.encrypted_ore_64_8_v1_lte,
   LEFTARG=jsonb,
   RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = >=,
@@ -370,7 +370,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <=(
-  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_lte",
+  FUNCTION=eql_v1.encrypted_ore_64_8_v1_lte,
   LEFTARG=eql_v1_encrypted,
   RIGHTARG=eql_v1.ore_64_8_v1,
   COMMUTATOR = >=,
@@ -389,7 +389,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR <=(
-  PROCEDURE="eql_v1.encrypted_ore_64_8_v1_lte",
+  FUNCTION=eql_v1.encrypted_ore_64_8_v1_lte,
   LEFTARG=eql_v1.ore_64_8_v1,
   RIGHTARG=eql_v1_encrypted,
   COMMUTATOR = >=,
@@ -421,7 +421,8 @@ CREATE FUNCTION eql_v1.encrypted_ore_64_8_compare(a eql_v1_encrypted, b jsonb)
 $$ LANGUAGE plpgsql;
 
 
-CREATE FUNCTION eql_v1.encrypted_ore_64_8_compare(a eql_v1_encrypted, b jsonb)
+DROP FUNCTION IF EXISTS eql_v1.encrypted_ore_64_8_compare(a jsonb, b eql_v1_encrypted);
+CREATE FUNCTION eql_v1.encrypted_ore_64_8_compare(a jsonb, b eql_v1_encrypted)
   RETURNS integer AS $$
   BEGIN
     RETURN eql_v1.compare_ore_64_8_v1(eql_v1.ore_64_8_v1(a), eql_v1.ore_64_8_v1(b));
