@@ -3,13 +3,13 @@
 --- SteVec types, functions, and operators
 ---
 
-CREATE TYPE cs_ste_vec_encrypted_term_v1 AS (
+CREATE TYPE eql_v1.ste_vec_encrypted_term AS (
   bytes bytea
 );
 
-DROP FUNCTION IF EXISTS compare_ste_vec_encrypted_term_v1(a cs_ste_vec_encrypted_term_v1, b cs_ste_vec_encrypted_term_v1);
+DROP FUNCTION IF EXISTS eql_v1.compare_ste_vec_encrypted_term(a eql_v1.ste_vec_encrypted_term, b eql_v1.ste_vec_encrypted_term);
 
-CREATE FUNCTION compare_ste_vec_encrypted_term_v1(a cs_ste_vec_encrypted_term_v1, b cs_ste_vec_encrypted_term_v1)
+CREATE FUNCTION eql_v1.compare_ste_vec_encrypted_term(a eql_v1.ste_vec_encrypted_term, b eql_v1.ste_vec_encrypted_term)
 RETURNS INT AS $$
 DECLARE
   header_a INT;
@@ -22,7 +22,7 @@ BEGIN
   header_b := get_byte(b.bytes, 0);
 
   IF header_a != header_b THEN
-    RAISE EXCEPTION 'compare_ste_vec_encrypted_term_v1: expected equal header bytes';
+    RAISE EXCEPTION 'eql_v1.compare_ste_vec_encrypted_term: expected equal header bytes';
   END IF;
 
   -- `substr` is 1-indexed (yes, `subtr` starts at 1 and `get_byte` starts at 0).
@@ -31,59 +31,59 @@ BEGIN
 
   CASE header_a
     WHEN 0 THEN
-      RAISE EXCEPTION 'compare_ste_vec_encrypted_term_v1: can not compare MAC terms';
+      RAISE EXCEPTION 'eql_v1.compare_ste_vec_encrypted_term: can not compare MAC terms';
     WHEN 1 THEN
-      RETURN compare_ore_cllw_8_v1(ROW(body_a)::ore_cllw_8_v1, ROW(body_b)::ore_cllw_8_v1);
+      RETURN eql_v1.compare_ore_cllw_8_v1(ROW(body_a)::eql_v1.ore_cllw_8_v1, ROW(body_b)::eql_v1.ore_cllw_8_v1);
     WHEN 2 THEN
-      RETURN compare_lex_ore_cllw_8_v1(ROW(body_a)::ore_cllw_8_variable_v1, ROW(body_b)::ore_cllw_8_variable_v1);
+      RETURN eql_v1.compare_lex_ore_cllw_8_v1(ROW(body_a)::eql_v1.ore_cllw_8_variable_v1, ROW(body_b)::eql_v1.ore_cllw_8_variable_v1);
     ELSE
-      RAISE EXCEPTION 'compare_ste_vec_encrypted_term_v1: invalid header for cs_ste_vec_encrypted_term_v1: header "%", body "%', header_a, body_a;
+      RAISE EXCEPTION 'eql_v1.compare_ste_vec_encrypted_term: invalid header for ste_vec_encrypted_term: header "%", body "%', header_a, body_a;
   END CASE;
 END;
 $$ LANGUAGE plpgsql;
 
-DROP FUNCTION IF EXISTS cs_ste_vec_encrypted_term_eq(a cs_ste_vec_encrypted_term_v1, b cs_ste_vec_encrypted_term_v1);
+DROP FUNCTION IF EXISTS eql_v1.ste_vec_encrypted_term_eq(a eql_v1.ste_vec_encrypted_term, b eql_v1.ste_vec_encrypted_term);
 
-CREATE FUNCTION cs_ste_vec_encrypted_term_eq(a cs_ste_vec_encrypted_term_v1, b cs_ste_vec_encrypted_term_v1) RETURNS boolean AS $$
-  SELECT __bytea_ct_eq(a.bytes, b.bytes)
+CREATE FUNCTION eql_v1.ste_vec_encrypted_term_eq(a eql_v1.ste_vec_encrypted_term, b eql_v1.ste_vec_encrypted_term) RETURNS boolean AS $$
+  SELECT eql_v1.__bytea_ct_eq(a.bytes, b.bytes)
 $$ LANGUAGE SQL;
 
-DROP FUNCTION IF EXISTS cs_ste_vec_encrypted_term_neq(a cs_ste_vec_encrypted_term_v1, b cs_ste_vec_encrypted_term_v1);
+DROP FUNCTION IF EXISTS eql_v1.ste_vec_encrypted_term_neq(a eql_v1.ste_vec_encrypted_term, b eql_v1.ste_vec_encrypted_term);
 
-CREATE FUNCTION cs_ste_vec_encrypted_term_neq(a cs_ste_vec_encrypted_term_v1, b cs_ste_vec_encrypted_term_v1) RETURNS boolean AS $$
-  SELECT not __bytea_ct_eq(a.bytes, b.bytes)
+CREATE FUNCTION eql_v1.ste_vec_encrypted_term_neq(a eql_v1.ste_vec_encrypted_term, b eql_v1.ste_vec_encrypted_term) RETURNS boolean AS $$
+  SELECT not eql_v1.__bytea_ct_eq(a.bytes, b.bytes)
 $$ LANGUAGE SQL;
 
-DROP FUNCTION IF EXISTS cs_ste_vec_encrypted_term_lt(a cs_ste_vec_encrypted_term_v1, b cs_ste_vec_encrypted_term_v1);
+DROP FUNCTION IF EXISTS eql_v1.ste_vec_encrypted_term_lt(a eql_v1.ste_vec_encrypted_term, b eql_v1.ste_vec_encrypted_term);
 
-CREATE FUNCTION cs_ste_vec_encrypted_term_lt(a cs_ste_vec_encrypted_term_v1, b cs_ste_vec_encrypted_term_v1) RETURNS boolean AS $$
-  SELECT compare_ste_vec_encrypted_term_v1(a, b) = -1
+CREATE FUNCTION eql_v1.ste_vec_encrypted_term_lt(a eql_v1.ste_vec_encrypted_term, b eql_v1.ste_vec_encrypted_term) RETURNS boolean AS $$
+  SELECT eql_v1.compare_ste_vec_encrypted_term(a, b) = -1
 $$ LANGUAGE SQL;
 
-DROP FUNCTION IF EXISTS cs_ste_vec_encrypted_term_lte(a cs_ste_vec_encrypted_term_v1, b cs_ste_vec_encrypted_term_v1);
+DROP FUNCTION IF EXISTS eql_v1.ste_vec_encrypted_term_lte(a eql_v1.ste_vec_encrypted_term, b eql_v1.ste_vec_encrypted_term);
 
-CREATE FUNCTION cs_ste_vec_encrypted_term_lte(a cs_ste_vec_encrypted_term_v1, b cs_ste_vec_encrypted_term_v1) RETURNS boolean AS $$
-  SELECT compare_ste_vec_encrypted_term_v1(a, b) != 1
+CREATE FUNCTION eql_v1.ste_vec_encrypted_term_lte(a eql_v1.ste_vec_encrypted_term, b eql_v1.ste_vec_encrypted_term) RETURNS boolean AS $$
+  SELECT eql_v1.compare_ste_vec_encrypted_term(a, b) != 1
 $$ LANGUAGE SQL;
 
-DROP FUNCTION IF EXISTS cs_ste_vec_encrypted_term_gt(a cs_ste_vec_encrypted_term_v1, b cs_ste_vec_encrypted_term_v1);
+DROP FUNCTION IF EXISTS eql_v1.cs_ste_vec_encrypted_term_gt(a eql_v1.ste_vec_encrypted_term, b eql_v1.ste_vec_encrypted_term);
 
-CREATE FUNCTION cs_ste_vec_encrypted_term_gt(a cs_ste_vec_encrypted_term_v1, b cs_ste_vec_encrypted_term_v1) RETURNS boolean AS $$
-  SELECT compare_ste_vec_encrypted_term_v1(a, b) = 1
+CREATE FUNCTION eql_v1.ste_vec_encrypted_term_gt(a eql_v1.ste_vec_encrypted_term, b eql_v1.ste_vec_encrypted_term) RETURNS boolean AS $$
+  SELECT eql_v1.compare_ste_vec_encrypted_term(a, b) = 1
 $$ LANGUAGE SQL;
 
-DROP FUNCTION IF EXISTS cs_ste_vec_encrypted_term_gte(a cs_ste_vec_encrypted_term_v1, b cs_ste_vec_encrypted_term_v1);
+DROP FUNCTION IF EXISTS eql_v1.ste_vec_encrypted_term_gte(a eql_v1.ste_vec_encrypted_term, b eql_v1.ste_vec_encrypted_term);
 
-CREATE FUNCTION cs_ste_vec_encrypted_term_gte(a cs_ste_vec_encrypted_term_v1, b cs_ste_vec_encrypted_term_v1) RETURNS boolean AS $$
-  SELECT compare_ste_vec_encrypted_term_v1(a, b) != -1
+CREATE FUNCTION eql_v1.ste_vec_encrypted_term_gte(a eql_v1.ste_vec_encrypted_term, b eql_v1.ste_vec_encrypted_term) RETURNS boolean AS $$
+  SELECT eql_v1.compare_ste_vec_encrypted_term(a, b) != -1
 $$ LANGUAGE SQL;
 
-DROP OPERATOR IF EXISTS = (cs_ste_vec_encrypted_term_v1, cs_ste_vec_encrypted_term_v1);
+DROP OPERATOR IF EXISTS = (eql_v1.ste_vec_encrypted_term, eql_v1.ste_vec_encrypted_term);
 
 CREATE OPERATOR = (
-  PROCEDURE="cs_ste_vec_encrypted_term_eq",
-  LEFTARG=cs_ste_vec_encrypted_term_v1,
-  RIGHTARG=cs_ste_vec_encrypted_term_v1,
+  PROCEDURE="eql_v1.ste_vec_encrypted_term_eq",
+  LEFTARG=eql_v1.ste_vec_encrypted_term,
+  RIGHTARG=eql_v1.ste_vec_encrypted_term,
   NEGATOR = <>,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
@@ -91,12 +91,12 @@ CREATE OPERATOR = (
   MERGES
 );
 
-DROP OPERATOR IF EXISTS <> (cs_ste_vec_encrypted_term_v1, cs_ste_vec_encrypted_term_v1);
+DROP OPERATOR IF EXISTS <> (eql_v1.ste_vec_encrypted_term, eql_v1.ste_vec_encrypted_term);
 
 CREATE OPERATOR <> (
-  PROCEDURE="cs_ste_vec_encrypted_term_neq",
-  LEFTARG=cs_ste_vec_encrypted_term_v1,
-  RIGHTARG=cs_ste_vec_encrypted_term_v1,
+  PROCEDURE="eql_v1.ste_vec_encrypted_term_neq",
+  LEFTARG=eql_v1.ste_vec_encrypted_term,
+  RIGHTARG=eql_v1.ste_vec_encrypted_term,
   NEGATOR = =,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
@@ -104,12 +104,12 @@ CREATE OPERATOR <> (
   MERGES
 );
 
-DROP OPERATOR IF EXISTS > (cs_ste_vec_encrypted_term_v1, cs_ste_vec_encrypted_term_v1);
+DROP OPERATOR IF EXISTS > (eql_v1.ste_vec_encrypted_term, eql_v1.ste_vec_encrypted_term);
 
 CREATE OPERATOR > (
-  PROCEDURE="cs_ste_vec_encrypted_term_gt",
-  LEFTARG=cs_ste_vec_encrypted_term_v1,
-  RIGHTARG=cs_ste_vec_encrypted_term_v1,
+  PROCEDURE="eql_v1.ste_vec_encrypted_term_gt",
+  LEFTARG=eql_v1.ste_vec_encrypted_term,
+  RIGHTARG=eql_v1.ste_vec_encrypted_term,
   NEGATOR = <=,
   RESTRICT = scalarltsel,
   JOIN = scalarltjoinsel,
@@ -117,12 +117,12 @@ CREATE OPERATOR > (
   MERGES
 );
 
-DROP OPERATOR IF EXISTS < (cs_ste_vec_encrypted_term_v1, cs_ste_vec_encrypted_term_v1);
+DROP OPERATOR IF EXISTS < (eql_v1.ste_vec_encrypted_term_v1, eql_v1.ste_vec_encrypted_term_v1);
 
 CREATE OPERATOR < (
-  PROCEDURE="cs_ste_vec_encrypted_term_lt",
-  LEFTARG=cs_ste_vec_encrypted_term_v1,
-  RIGHTARG=cs_ste_vec_encrypted_term_v1,
+  PROCEDURE="eql_v1.ste_vec_encrypted_term_lt",
+  LEFTARG=eql_v1.ste_vec_encrypted_term,
+  RIGHTARG=eql_v1.ste_vec_encrypted_term,
   NEGATOR = >=,
   RESTRICT = scalargtsel,
   JOIN = scalargtjoinsel,
@@ -130,12 +130,12 @@ CREATE OPERATOR < (
   MERGES
 );
 
-DROP OPERATOR IF EXISTS >= (cs_ste_vec_encrypted_term_v1, cs_ste_vec_encrypted_term_v1);
+DROP OPERATOR IF EXISTS >= (eql_v1.ste_vec_encrypted_term_v1, eql_v1.ste_vec_encrypted_term_v1);
 
 CREATE OPERATOR >= (
-  PROCEDURE="cs_ste_vec_encrypted_term_gte",
-  LEFTARG=cs_ste_vec_encrypted_term_v1,
-  RIGHTARG=cs_ste_vec_encrypted_term_v1,
+  PROCEDURE="eql_v1.ste_vec_encrypted_term_gte",
+  LEFTARG=eql_v1.ste_vec_encrypted_term,
+  RIGHTARG=eql_v1.ste_vec_encrypted_term,
   NEGATOR = <,
   RESTRICT = scalarltsel,
   JOIN = scalarltjoinsel,
@@ -143,12 +143,12 @@ CREATE OPERATOR >= (
   MERGES
 );
 
-DROP OPERATOR IF EXISTS <= (cs_ste_vec_encrypted_term_v1, cs_ste_vec_encrypted_term_v1);
+DROP OPERATOR IF EXISTS <= (eql_v1.ste_vec_encrypted_term_v1, eql_v1.ste_vec_encrypted_term_v1);
 
 CREATE OPERATOR <= (
-  PROCEDURE="cs_ste_vec_encrypted_term_lte",
-  LEFTARG=cs_ste_vec_encrypted_term_v1,
-  RIGHTARG=cs_ste_vec_encrypted_term_v1,
+  PROCEDURE="eql_v1.ste_vec_encrypted_term_lte",
+  LEFTARG=eql_v1.ste_vec_encrypted_term,
+  RIGHTARG=eql_v1.ste_vec_encrypted_term,
   NEGATOR = >,
   RESTRICT = scalargtsel,
   JOIN = scalargtjoinsel,
@@ -156,45 +156,45 @@ CREATE OPERATOR <= (
   MERGES
 );
 
-DROP OPERATOR FAMILY IF EXISTS cs_ste_vec_encrypted_term_v1_btree_ops USING btree;
+DROP OPERATOR FAMILY IF EXISTS eql_v1.ste_vec_encrypted_term_btree_ops USING btree;
 
-CREATE OPERATOR FAMILY cs_ste_vec_encrypted_term_v1_btree_ops USING btree;
+CREATE OPERATOR FAMILY eql_v1.ste_vec_encrypted_term_btree_ops USING btree;
 
-DROP OPERATOR CLASS IF EXISTS cs_ste_vec_encrypted_term_v1_btree_ops USING btree;
+DROP OPERATOR CLASS IF EXISTS eql_v1.ste_vec_encrypted_term_btree_ops USING btree;
 
-CREATE OPERATOR CLASS cs_ste_vec_encrypted_term_v1_btree_ops DEFAULT FOR TYPE cs_ste_vec_encrypted_term_v1 USING btree FAMILY cs_ste_vec_encrypted_term_v1_btree_ops  AS
+CREATE OPERATOR CLASS eql_v1.ste_vec_encrypted_term_btree_ops DEFAULT FOR TYPE eql_v1.ste_vec_encrypted_term USING btree FAMILY eql_v1.ste_vec_encrypted_term_btree_ops  AS
         OPERATOR 1 <,
         OPERATOR 2 <=,
         OPERATOR 3 =,
         OPERATOR 4 >=,
         OPERATOR 5 >,
-        FUNCTION 1 compare_ste_vec_encrypted_term_v1(a cs_ste_vec_encrypted_term_v1, b cs_ste_vec_encrypted_term_v1);
+        FUNCTION 1 eql_v1.compare_ste_vec_encrypted_term(a eql_v1.ste_vec_encrypted_term, b eql_v1.ste_vec_encrypted_term);
 
-CREATE TYPE cs_ste_vec_v1_entry AS (
+CREATE TYPE eql_v1.ste_vec_entry AS (
     tokenized_selector text,
-    term cs_ste_vec_encrypted_term_v1,
+    term eql_v1.ste_vec_encrypted_term,
     ciphertext text
 );
 
-CREATE TYPE cs_ste_vec_index_v1 AS (
-    entries cs_ste_vec_v1_entry[]
+CREATE TYPE eql_v1.ste_vec_index AS (
+    entries eql_v1.ste_vec_entry[]
 );
 
-DROP FUNCTION IF EXISTS cs_ste_vec_value_v1(col jsonb, selector jsonb);
+DROP FUNCTION IF EXISTS eql_v1.ste_vec_value(col jsonb, selector jsonb);
 
 -- col: already encrypted payload
 -- selector: already encrypted payload
 -- returns a value in the format of our custom jsonb schema that will be decrypted
-CREATE FUNCTION cs_ste_vec_value_v1(col jsonb, selector jsonb)
+CREATE FUNCTION eql_v1.cs_ste_vec_value(col jsonb, selector jsonb)
 RETURNS jsonb AS $$
 DECLARE
-  ste_vec_index cs_ste_vec_index_v1;
+  ste_vec_index eql_v1.cs_ste_vec_index;
   target_selector text;
   found text;
   ignored text;
   i integer;
 BEGIN
-  ste_vec_index := cs_ste_vec_v1(col);
+  ste_vec_index := eql_v1.ste_vec(col);
 
   IF ste_vec_index IS NULL THEN
     RETURN NULL;
@@ -228,19 +228,19 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DROP FUNCTION IF EXISTS cs_ste_vec_terms_v1(col jsonb, selector jsonb);
+DROP FUNCTION IF EXISTS eql_v1.ste_vec_terms(col jsonb, selector jsonb);
 
-CREATE FUNCTION cs_ste_vec_terms_v1(col jsonb, selector jsonb)
-RETURNS cs_ste_vec_encrypted_term_v1[] AS $$
+CREATE FUNCTION eql_v1.ste_vec_terms(col jsonb, selector jsonb)
+RETURNS eql_v1.ste_vec_encrypted_term[] AS $$
 DECLARE
-  ste_vec_index cs_ste_vec_index_v1;
+  ste_vec_index eql_v1.ste_vec_index;
   target_selector text;
-  found cs_ste_vec_encrypted_term_v1;
-  ignored cs_ste_vec_encrypted_term_v1;
+  found eql_v1.ste_vec_encrypted_term;
+  ignored eql_v1.ste_vec_encrypted_term;
   i integer;
-  term_array cs_ste_vec_encrypted_term_v1[];
+  term_array eql_v1.ste_vec_encrypted_term_v1[];
 BEGIN
-  ste_vec_index := cs_ste_vec_v1(col);
+  ste_vec_index := eql_v1.ste_vec(col);
 
   IF ste_vec_index IS NULL THEN
     RETURN NULL;
@@ -263,21 +263,21 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DROP FUNCTION IF EXISTS cs_ste_vec_term_v1(col jsonb, selector jsonb);
+DROP FUNCTION IF EXISTS eql_v1.ste_vec_term(col jsonb, selector jsonb);
 
 -- col: already encrypted payload
 -- selector: already encrypted payload
 -- returns a value that can be used for comparison operations
-CREATE OR REPLACE FUNCTION cs_ste_vec_term_v1(col jsonb, selector jsonb)
-RETURNS cs_ste_vec_encrypted_term_v1 AS $$
+CREATE OR REPLACE FUNCTION eql_v1._ste_vec_term(col jsonb, selector jsonb)
+RETURNS eql_v1.ste_vec_encrypted_term AS $$
 DECLARE
-  ste_vec_index cs_ste_vec_index_v1;
+  ste_vec_index eql_v1.ste_vec_index;
   target_selector text;
-  found cs_ste_vec_encrypted_term_v1;
-  ignored cs_ste_vec_encrypted_term_v1;
+  found eql_v1.ste_vec_encrypted_term;
+  ignored eql_v1.ste_vec_encrypted_term;
   i integer;
 BEGIN
-  ste_vec_index := cs_ste_vec_v1(col);
+  ste_vec_index := eql_v1.ste_vec(col);
 
   IF ste_vec_index IS NULL THEN
     RETURN NULL;
@@ -299,14 +299,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DROP FUNCTION IF EXISTS cs_ste_vec_term_v1(col jsonb);
+DROP FUNCTION IF EXISTS eql_v1.ste_vec_term(col jsonb);
 
-CREATE FUNCTION cs_ste_vec_term_v1(col jsonb)
-RETURNS cs_ste_vec_encrypted_term_v1 AS $$
+CREATE FUNCTION eql_v1.ste_vec_term(col jsonb)
+RETURNS eql_v1.ste_vec_encrypted_term AS $$
 DECLARE
-  ste_vec_index cs_ste_vec_index_v1;
+  ste_vec_index eql_v1.ste_vec_index;
 BEGIN
-  ste_vec_index := cs_ste_vec_v1(col);
+  ste_vec_index := eql_v1.ste_vec(col);
 
   IF ste_vec_index IS NULL THEN
     RETURN NULL;
@@ -317,9 +317,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Determine if a == b (ignoring ciphertext values)
-DROP FUNCTION IF EXISTS cs_ste_vec_v1_entry_eq(a cs_ste_vec_v1_entry, b cs_ste_vec_v1_entry);
+DROP FUNCTION IF EXISTS eql_v1.ste_vec_entry_eq(a eql_v1.ste_vec_entry, b eql_v1.ste_vec_entry);
 
-CREATE FUNCTION cs_ste_vec_v1_entry_eq(a cs_ste_vec_v1_entry, b cs_ste_vec_v1_entry)
+CREATE FUNCTION eql_v1.ste_vec_entry_eq(a eql_v1.ste_vec_entry, b eql_v1.ste_vec_entry)
 RETURNS boolean AS $$
 DECLARE
     sel_cmp int;
@@ -341,9 +341,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Determine if a contains b (ignoring ciphertext values)
-DROP FUNCTION IF EXISTS ste_vec_v1_logical_contains(a cs_ste_vec_index_v1, b cs_ste_vec_index_v1);
+DROP FUNCTION IF EXISTS eql_v1.ste_vec_logical_contains(a eql_v1.ste_vec_index, b eql_v1.ste_vec_index);
 
-CREATE FUNCTION ste_vec_v1_logical_contains(a cs_ste_vec_index_v1, b cs_ste_vec_index_v1)
+CREATE FUNCTION eql_v1.ste_vec_logical_contains(a eql_v1.ste_vec_index, b eql_v1.ste_vec_index)
 RETURNS boolean AS $$
 DECLARE
     result boolean;
@@ -354,7 +354,7 @@ BEGIN
         RETURN result;
     END IF;
     FOR i IN 1..array_length(b.entries, 1) LOOP
-        intermediate_result := cs_ste_vec_v1_entry_array_contains_entry(a.entries, b.entries[i]);
+        intermediate_result := eql_v1.ste_vec_entry_array_contains_entry(a.entries, b.entries[i]);
         result := result AND intermediate_result;
     END LOOP;
     RETURN result;
@@ -362,9 +362,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Determine if a contains b (ignoring ciphertext values)
-DROP FUNCTION IF EXISTS cs_ste_vec_v1_entry_array_contains_entry(a cs_ste_vec_v1_entry[], b cs_ste_vec_v1_entry);
+DROP FUNCTION IF EXISTS eql_v1.ste_vec_entry_array_contains_entry(a eql_v1.ste_vec_entry[], b eql_v1.ste_vec_entry);
 
-CREATE FUNCTION cs_ste_vec_v1_entry_array_contains_entry(a cs_ste_vec_v1_entry[], b cs_ste_vec_v1_entry)
+CREATE FUNCTION eql_v1.ste_vec_entry_array_contains_entry(a eql_v1.ste_vec_entry[], b eql_v1.ste_vec_entry)
 RETURNS boolean AS $$
 DECLARE
     result boolean;
@@ -384,23 +384,23 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Determine if a is contained by b (ignoring ciphertext values)
-DROP FUNCTION IF EXISTS ste_vec_v1_logical_is_contained(a cs_ste_vec_index_v1, b cs_ste_vec_index_v1);
+DROP FUNCTION IF EXISTS eql_v1.ste_vec_logical_is_contained(a eql_v1.ste_vec_index, b eql_v1.ste_vec_index);
 
-CREATE FUNCTION ste_vec_v1_logical_is_contained(a cs_ste_vec_index_v1, b cs_ste_vec_index_v1)
+CREATE FUNCTION eql_v1.ste_vec_logical_is_contained(a eql_v1.ste_vec_index, b eql_v1.ste_vec_index)
 RETURNS boolean AS $$
 BEGIN
-    RETURN ste_vec_v1_logical_contains(b, a);
+    RETURN eql_v1.ste_vec_logical_contains(b, a);
 END;
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS jsonb_to_cs_ste_vec_index_v1(input jsonb);
+DROP FUNCTION IF EXISTS eql_v1.jsonb_to_cs_ste_vec_index(input jsonb);
 
-CREATE FUNCTION jsonb_to_cs_ste_vec_index_v1(input jsonb)
-RETURNS cs_ste_vec_index_v1 AS $$
+CREATE FUNCTION eql_v1.jsonb_to_cs_ste_vec_index(input jsonb)
+RETURNS eql_v1.ste_vec_index AS $$
 DECLARE
-    vec_entry cs_ste_vec_v1_entry;
-    entry_array cs_ste_vec_v1_entry[];
+    vec_entry eql_v1._ste_vec_entry;
+    entry_array eql_v1.ste_vec_v1_entry[];
     entry_json jsonb;
     entry_json_array jsonb[];
     entry_array_length int;
@@ -410,35 +410,35 @@ BEGIN
     LOOP
         vec_entry := ROW(
            entry_json->>0,
-           ROW(decode(entry_json->>1, 'hex'))::cs_ste_vec_encrypted_term_v1,
+           ROW(decode(entry_json->>1, 'hex'))::eql_v1.ste_vec_encrypted_term,
            entry_json->>2
-        )::cs_ste_vec_v1_entry;
+        )::eql_v1.ste_vec_entry;
         entry_array := array_append(entry_array, vec_entry);
     END LOOP;
 
-    RETURN ROW(entry_array)::cs_ste_vec_index_v1;
+    RETURN ROW(entry_array)::eql_v1.ste_vec_index;
 END;
 $$ LANGUAGE plpgsql;
 
-DROP CAST IF EXISTS (jsonb AS cs_ste_vec_index_v1);
+DROP CAST IF EXISTS (jsonb AS eql_v1.ste_vec_index);
 
-CREATE CAST (jsonb AS cs_ste_vec_index_v1)
-	WITH FUNCTION jsonb_to_cs_ste_vec_index_v1(jsonb) AS IMPLICIT;
+CREATE CAST (jsonb AS eql_v1.ste_vec_index)
+	WITH FUNCTION eql_v1.jsonb_to_ste_vec_index(jsonb) AS IMPLICIT;
 
-DROP OPERATOR IF EXISTS @> (cs_ste_vec_index_v1, cs_ste_vec_index_v1);
+DROP OPERATOR IF EXISTS @> (eql_v1.ste_vec_index, eql_v1.ste_vec_index);
 
 CREATE OPERATOR @> (
-  PROCEDURE="ste_vec_v1_logical_contains",
-  LEFTARG=cs_ste_vec_index_v1,
-  RIGHTARG=cs_ste_vec_index_v1,
+  PROCEDURE="eql_v1.ste_vec_logical_contains",
+  LEFTARG=eql_v1.ste_vec_index,
+  RIGHTARG=eql_v1.ste_vec_index,
   COMMUTATOR = <@
 );
 
-DROP OPERATOR IF EXISTS <@ (cs_ste_vec_index_v1, cs_ste_vec_index_v1);
+DROP OPERATOR IF EXISTS <@ (eql_v1.ste_vec_index, eql_v1.ste_vec_index);
 
 CREATE OPERATOR <@ (
-  PROCEDURE="ste_vec_v1_logical_is_contained",
-  LEFTARG=cs_ste_vec_index_v1,
-  RIGHTARG=cs_ste_vec_index_v1,
+  PROCEDURE="eql_v1.ste_vec_logical_is_contained",
+  LEFTARG=eql_v1.ste_vec_index,
+  RIGHTARG=eql_v1.ste_vec_index,
   COMMUTATOR = @>
 );
