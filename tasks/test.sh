@@ -48,9 +48,9 @@ cat release/cipherstash-encrypt.sql
 # cat release/cipherstash-encrypt.sql | docker exec -i ${container_name} psql ${connection_url} -f-
 if cat release/cipherstash-encrypt.sql | docker exec -i ${container_name} psql ${connection_url} -f- | grep -q "ERROR"; then
   echo
-  echo '***********************************************'
-  echo 'ERROR installing release/cipherstash-encrypt.sql'
-  echo '***********************************************'
+  echo '******************************************************'
+  echo '* ❌ ERROR installing release/cipherstash-encrypt.sql'
+  echo '******************************************************'
   echo
 
   exit 1
@@ -71,8 +71,8 @@ else
   done
 fi
 
-# echo
-# echo '###############################################'
-# echo "# ✅ALL TESTS PASSED "
-# echo '###############################################'
-# echo
+echo
+echo '###############################################'
+echo "# ✅ALL TESTS PASSED "
+echo '###############################################'
+echo
