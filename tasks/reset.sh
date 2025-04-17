@@ -27,7 +27,4 @@ fail_if_postgres_not_running
 cat release/cipherstash-encrypt-uninstall.sql | docker exec -i ${container_name} psql ${connection_url} -f-
 
 # Wipe test data
-cat tests/999-wipe-test-data.sql | docker exec -i ${container_name} psql ${connection_url} -f-
-
-# Install
-cat release/cipherstash-encrypt.sql | docker exec -i ${container_name} psql ${connection_url} -f-
+cat tasks/reset.sql | docker exec -i ${container_name} psql ${connection_url} -f-

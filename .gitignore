@@ -1,6 +1,16 @@
+
+
+.DS_Store
+.mise.*
+
+deps.txt
+deps-ordered.txt
+
 # Based on https://raw.githubusercontent.com/github/gitignore/main/Node.gitignore
 
-sql/000-version.sql
+src/version.sql
+
+
 
 # Logs
 
@@ -186,7 +196,7 @@ cipherstash-proxy.toml
 # build artifacts
 release/
 
-.mise.*
+
 
 # jupyter notebook
 .ipynb_checkpoints
