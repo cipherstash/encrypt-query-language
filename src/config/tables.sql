@@ -1,0 +1,15 @@
+-- REQUIRE: src/config/types.sql
+
+--
+--
+-- CREATE the cs_configuration_v1 TABLE
+--
+CREATE TABLE IF NOT EXISTS public.eql_v1_configuration
+(
+    id bigint GENERATED ALWAYS AS IDENTITY,
+    state eql_v1_configuration_state NOT NULL DEFAULT 'pending',
+    data jsonb,
+    created_at timestamptz not null default current_timestamp,
+    PRIMARY KEY(id)
+);
+
