@@ -5,6 +5,7 @@ on:
       - main
     paths:
       - ".github/workflows/test-eql.yml"
+      - "src/*.sql"
       - "sql/*.sql"
       - "tests/**/*"
       - "tasks/**/*"
@@ -14,6 +15,7 @@ on:
       - main
     paths:
       - ".github/workflows/test-eql.yml"
+      - "src/*.sql"
       - "sql/*.sql"
       - "tests/**/*"
       - "tasks/**/*"
