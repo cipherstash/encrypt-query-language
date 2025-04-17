@@ -1,0 +1,1 @@
+-- REQUIRE: src/schema.sql
