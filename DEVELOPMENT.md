@@ -8,6 +8,17 @@
 - [Testing](#testing)
   - [Running tests locally](#running-tests-locally)
 - [Releasing](#releasing)
+- [Building](#building)
+  - [Dependencies](#dependencies)
+  - [Building a release locally](#building-a-release-locally)
+- [Structure](#structure)
+  - [Schema](#schema)
+  - [Types](#types)
+    - [Encrypted column type](#encrypted-column-type)
+    - [Encrypted index term types](#encrypted-index-term-types)
+  - [Operators](#operators)
+    - [Working without operators](#working-without-operators)
+  - [Configuration table](#configuration-table)
 
 ### How this project is organised
 
@@ -25,14 +36,41 @@ These are the important files in the repo:
 .
 ├── mise.toml              <-- the main config file for mise
 ├── tasks/                 <-- mise tasks
-├── sql/                   <-- The individual SQL components that make up EQL
+├── src/                   <-- The individual SQL components that make up EQL
+│   ├── encrypted/         <-- Encrypted column type
+│   ├── operators/         <-- Operators for the encrypted column type
+│   ├── match/             <-- match index term type
+│   ├── unique/            <-- unique index term type
+│   ├── ore/               <-- ore index term type
+│   ├── ore-cllw/          <-- ore-cllw index term type
+│   ├── config/            <-- Configuration management for encrypted columns
+│   ├── schema.sql         <-- Defines the PostgreSQL schema for namespacing EQL
+│   ├── crypto.sql         <-- Installs pg_crypto extension, required by ORE
+│   ├── common.sql         <-- Shared helper functions
+│   └── version.sql        <-- Defines function to query current EQL version - automatically generated on build
 ├── docs/                  <-- Tutorial, reference, and concept documentation
 ├── tests/                 <-- Unit and integration tests
 │   ├── docker-compose.yml <-- Docker configuration for running PostgreSQL instances
-│   └── *.sql              <-- Individual unit and integration tests
+│   └── *.sql              <-- Helpers and test data loaded during test runs
 ├── release/               <-- Build artifacts produced by the `build` task
 ├── examples/              <-- Example uses of EQL in different languages
 └── playground/            <-- Playground enviroment for experimenting with EQL and CipherStash Proxy
+```
+
+Tests live alongside the individual SQL files, with a filename ending with `_test.sql`
+
+We break SQL into small modules named after what they do.
+
+In general, operator functions are thin wrappers around larger functions that do the actual work.
+Put the wrapper functions in `operators.sql` and the larger functions in `functions.sql`.
+
+Dependencies between SQL in `src/` are declared in a comment at the top of each file.
+All SQL files should `REQUIRE` the source file of any other object they reference.
+
+All files must have at least one declaration, and the default is to reference the schema:
+
+```
+-- REQUIRE: src/schema.sql
 ```
 
 ## Set up a local development environment
@@ -123,7 +161,7 @@ stateDiagram-v2
     state "🧍 Human makes changes to EQL sources" as changes
     state sources_fork <<fork>>
     state sources_join <<join>>
-    state "sql/*.sql" as source_sql
+    state "src/*.sql" as source_sql
     state "tasks/**/*" as source_tasks
     state "tests/**/*" as source_tests
     state sources_changed <<choice>>
@@ -235,118 +273,97 @@ To cut a [release](https://github.com/cipherstash/encrypt-query-language/release
 
 This will trigger the [Release EQL](https://github.com/cipherstash/encrypt-query-language/actions/workflows/release-eql.yml) workflow, which will build and attach artifacts to [the release](https://github.com/cipherstash/encrypt-query-language/releases/).
 
+## Building
 
-====
+### Dependencies
 
+SQL sources are split into smaller files in `src/`.
+Dependencies are resolved at build time to construct a single SQL file with the correct ordering.
 
-###
+### Building a release locally
 
-EQL is installed into the `eql_v1` schema.
+To build a release locally, run:
 
+```bash
+mise run build
+```
 
-## Types
+This produces two SQL files in `releases/`:
 
-### `public.eql_v1_encrypted`
+ - An installer (`cipherstash-encrypt.sql`), and
+ - An uninstaller (`cipherstash-encrypt-uninstall.sql`)
 
-Core column type, defined as PostgreSQL composite type.
-In public schema as once used in customer tables it cannot be dropped without dropping data.
+## Structure
 
-### Index terms
+### Schema
 
-Each type of encrypted indexing has an associated type and functions
+EQL is installed into the `eql_v1` PostgreSQL schema.
+
+### Types
+
+#### Encrypted column type
+
+`public.eql_v1_encrypted` is EQL's encrypted column type, defined as PostgreSQL composite type.
+
+This column type is used for storing the encrypted value and any associated indexes for searching.
+The associated indexes are described in the [index term types](#index-term-types) section.
+
+`public.eql_v1_encrypted` is in the public schema, because once it's used by a user in one of their tables, encrypted column types cannot be dropped without dropping data.
+
+#### Encrypted index term types
+
+Each type of encrypted index (`unique`, `match`, `ore`) has an associated type, functions, and operators.
+
+These are transient runtime types, used internally by EQL functions and operators:
 
 - `eql_v1.unique_index`
 - `eql_v1.match`
 - `eql_v1.ore_64_8_v1`
 - `eql_v1.ore_64_8_v1_term`
 
+The data in the column is converted into these types, when any operations are being performed on that encrypted data.
 
-## Operators
+### Operators
 
-Operators are provided for the `eql_v1_encrypted` column type and `jsonb`.
+Searchable encryption functionality is driven by operators on two types:
 
-```
-eql_v1_encrypted - eql_v1_encrypted
-jsonb - eql_v1_encrypted
-eql_v1_encrypted - jsonb
-```
+- EQL's `eql_v1_encrypted` column type
+- PostgreSQL's `jsonb` column type
 
-The index types and functions are internal implementation details and should not need to be exposed as operators on the `eql_v1_encrypted` type.
+For convenience, operators allow comparisons between `eql_v1_encrypted` and `jsonb` column types.
 
+Operators allow comparisons between:
 
---      eql_v1_encrypted = eql_v1_encrypted
---      eql_v1_encrypted = jsonb
---      jsonb = eql_v1_encrypted
---      ore_64_8_v1 = ore_64_8_v1
+- `eql_v1_encrypted` and `eql_v1_encrypted`
+- `jsonb` and `eql_v1_encrypted`
+- `eql_v1_encrypted` and `jsonb`
 
-The jsonb comparison is handy as it automates casting.
-Comparing ore_64_8_v1 index values requires that sides are functionalated:
-eql_v1.ore_64_8_v1(...) = eql_v1.ore_64_8_v1(...)
-In the spirit of aggressive simplification, however, I am not going to add operators to compare eql_v1_encrypted with the ore_64_8_v1 type.
-In an operator world,  the index types and functions are internal implementation details.
-Customers should never need to think about the internals.
-I can't think of a reason to need it that isn't a version of "holding it wrong". (edited)
+The index types and functions are internal implementation details and should not be exposed as operators on the `eql_v1_encrypted` type.
+For example, `eql_v1_encrypted` should not have an operator with the `ore_64_8_v1` type.
+Users should never need to think about or interact with EQL internals.
 
+#### Working without operators
 
+There are scenarios where users are unable to install EQL operators in your database.
+Users will experience this in more restrictive environments like Supabase.
 
+EQL can still be used, but requires the use of functions instead of operators.
 
-## Working without operators
-
-
-### Equality
+For example, to perform an equality query:
 
 ```sql
-eql_v1.eq(a eql_v1_encrypted, b eql_v1_encrypted);
+SELECT email FROM users WHERE eql_v1.eq(email, $1);
 ```
 
+### Configuration table
 
+EQL uses a table for tracking configuration state in the database, called `public.eql_v1_configuration`.
 
+This table should never be dropped, except by a user explicitly uninstalling EQL.
 
-
-## Organisation
-
-Break SQL into small modules, aligned with the core domains and types where possible
-
- - types.sql
- - casts.sql
- - constraints.sql
- - functions.sql
- - operators.sql
-
-Operators are also functions, so some judgement is required.
-The intent is to reduce file size and cognitive load.
-
-In general, operator functions should be thin wrappers around a larger function that does the work.
-Put the wrapper functions in `operators.sql` and the "heavy lifting" functions in `functions.sql`.
-
-Tests should follow a similar pattern.
-
-
-
-### Dependencies
-
-SQL sources are split into smaller files.
-Dependencies are resolved at build time to construct a single SQL file with the correct ordering.
-
-Dependencies between files are declared in a comment at the top of the file.
-All SQL files should `REQUIRE` the source file of any other object they reference.
-
-All files must have at least one declaration, and the default is to reference the schema
-
-```
--- REQUIRE: src/schema.sql
-```
-
-
-
-### Tables
-
-### Configuration
-
-
-`public.eql_v1_configuration`
-
-
+<!--
+TODO(toby): probably move to README
+TODO(toby): include examples of how to get data out of the table
 
 EQL Design Note
 Experimenting with using a Composite type instead of a Domain type for the encrypted column.
@@ -363,4 +380,4 @@ Already built cast helpers so syntax is something like
     INSERT INTO encrypted (e) VALUES (
         '{}'::jsonb::eql_v1_encrypted
     );
-
+-->
