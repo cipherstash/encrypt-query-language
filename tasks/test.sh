@@ -30,11 +30,7 @@ run_test () {
   echo '###############################################'
   echo
 
-
-
   cat $1 | docker exec -i ${container_name} psql --variable ON_ERROR_STOP=1 $connection_url -f-
-
-
 }
 
 # setup
@@ -42,7 +38,10 @@ fail_if_postgres_not_running
 mise run build --force
 mise run reset --force --postgres ${POSTGRES_VERSION}
 
+echo '/////////////////////////////////////////////////////////'
 cat release/cipherstash-encrypt.sql
+echo '/////////////////////////////////////////////////////////'
+
 
 # Install
 # cat release/cipherstash-encrypt.sql | docker exec -i ${container_name} psql ${connection_url} -f-

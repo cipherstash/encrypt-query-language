@@ -25,7 +25,7 @@ DECLARE
     end loop;
 
     -- Partial match
-    e := create_encrypted_json()::jsonb || '{"m": [10, 11]}';
+    e := create_encrypted_json('m')::jsonb || '{"m": [10, 11]}';
 
     PERFORM assert_result(
         'eql_v1_encrypted ~~ eql_v1_encrypted with partial match',
@@ -48,7 +48,7 @@ DECLARE
   BEGIN
 
     for i in 1..3 loop
-      e := create_encrypted_json(i);
+      e := create_encrypted_json(i, 'm');
 
       PERFORM assert_result(
         format('eql_v1_encrypted ~~* eql_v1_encrypted %s of 3', i),
@@ -61,7 +61,7 @@ DECLARE
     end loop;
 
     -- Partial match
-    e := create_encrypted_json()::jsonb || '{"m": [10, 11]}';
+    e := create_encrypted_json('m')::jsonb || '{"m": [10, 11]}';
 
     PERFORM assert_result(
         'eql_v1_encrypted ~~* eql_v1_encrypted with partial match',
@@ -84,7 +84,7 @@ DECLARE
   BEGIN
 
     for i in 1..3 loop
-      e := create_encrypted_json(i);
+      e := create_encrypted_json(i, 'm');
 
       PERFORM assert_result(
         format('eql_v1.match(eql_v1_encrypted, eql_v1_encrypted)', i),
@@ -93,7 +93,7 @@ DECLARE
     end loop;
 
     -- Partial match
-    e := create_encrypted_json()::jsonb || '{"m": [10, 11]}';
+    e := create_encrypted_json('m')::jsonb || '{"m": [10, 11]}';
 
     PERFORM assert_result(
         'eql_v1.match(eql_v1_encrypted, eql_v1_encrypted)',
