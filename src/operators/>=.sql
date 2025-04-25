@@ -26,7 +26,26 @@ CREATE FUNCTION eql_v1.gte(a eql_v1_encrypted, b eql_v1_encrypted)
   RETURNS boolean
 AS $$
   BEGIN
-    RETURN eql_v1.ore_64_8_v1(a) >= eql_v1.ore_64_8_v1(b);
+
+    BEGIN
+      RETURN eql_v1.ore_cllw_u64_8(a) >= eql_v1.ore_cllw_u64_8(b);
+    EXCEPTION WHEN OTHERS THEN
+      -- PERFORM eql_v1.log('eql_v1.gte no ore_cllw_u64_8 index');
+    END;
+
+    BEGIN
+      RETURN eql_v1.ore_cllw_var_8(a) >= eql_v1.ore_cllw_var_8(b);
+    EXCEPTION WHEN OTHERS THEN
+      -- PERFORM eql_v1.log('eql_v1.gte no ore_cllw_var_8 index');
+    END;
+
+    BEGIN
+      RETURN eql_v1.ore_64_8_v1(a) >= eql_v1.ore_64_8_v1(b);
+    EXCEPTION WHEN OTHERS THEN
+      -- PERFORM eql_v1.log('eql_v1.gte no ore_64_8_v1 index');
+    END;
+
+    RETURN false;
   END;
 $$ LANGUAGE plpgsql;
 

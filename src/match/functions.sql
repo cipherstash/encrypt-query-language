@@ -28,5 +28,3 @@ AS $$
     RETURN (SELECT eql_v1.match(val.data));
   END;
 $$ LANGUAGE plpgsql;
-
-

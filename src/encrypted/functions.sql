@@ -19,6 +19,18 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
+DROP FUNCTION IF EXISTS eql_v1.ciphertext(val eql_v1_encrypted);
+
+CREATE FUNCTION eql_v1.ciphertext(val eql_v1_encrypted)
+  RETURNS text
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+	BEGIN
+    RETURN eql_v1.ciphertext(val.data);
+  END;
+$$ LANGUAGE plpgsql;
+
+
 DROP FUNCTION IF EXISTS eql_v1.to_jsonb(val eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1.to_jsonb(val eql_v1_encrypted)

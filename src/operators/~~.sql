@@ -1,3 +1,4 @@
+-- REQUIRE: src/operators/drop.sql
 -- REQUIRE: src/encrypted/types.sql
 -- REQUIRE: src/match/types.sql
 -- REQUIRE: src/match/functions.sql
@@ -126,34 +127,3 @@ CREATE OPERATOR ~~*(
 
 
 -- -----------------------------------------------------------------------------
-
-
-
-
--- DROP OPERATOR IF EXISTS ~~ (eql_v1.match_index, eql_v1.match_index);
--- DROP FUNCTION IF EXISTS eql_v1.encrypted_match(a eql_v1.match_index, b eql_v1.match_index);
-
--- CREATE FUNCTION eql_v1.encrypted_match(a eql_v1.match_index, b eql_v1.match_index)
--- RETURNS boolean AS $$
---   SELECT a @> b;
--- $$ LANGUAGE SQL;
-
--- CREATE OPERATOR ~~(
---   FUNCTION=eql_v1.encrypted_match,
---   LEFTARG=eql_v1.match_index,
---   RIGHTARG=eql_v1.match_index,
---   RESTRICT = eqsel,
---   JOIN = eqjoinsel,
---   HASHES,
---   MERGES
--- );
-
--- CREATE OPERATOR ~~*(
---   FUNCTION=eql_v1.encrypted_match,
---   LEFTARG=eql_v1.match_index,
---   RIGHTARG=eql_v1.match_index,
---   RESTRICT = eqsel,
---   JOIN = eqjoinsel,
---   HASHES,
---   MERGES
--- );
