@@ -1,3 +1,4 @@
+-- REQUIRE: src/schema.sql
 -- REQUIRE: src/unique/types.sql
 
 -- extracts unique index from an encrypted column
