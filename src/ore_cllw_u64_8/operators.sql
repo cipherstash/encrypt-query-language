@@ -3,7 +3,7 @@
 -- REQUIRE: src/ore_cllw_u64_8/types.sql
 -- REQUIRE: src/ore_cllw_u64_8/functions.sql
 
-DROP FUNCTION IF EXISTS eql_v1.ore_cllw_u64_8_eq(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8);
+-- DROP FUNCTION IF EXISTS eql_v1.ore_cllw_u64_8_eq(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8);
 
 CREATE FUNCTION eql_v1.ore_cllw_u64_8_eq(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8)
 RETURNS boolean AS $$
@@ -11,7 +11,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 
-DROP FUNCTION IF EXISTS eql_v1.ore_cllw_u64_8_neq(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8);
+-- DROP FUNCTION IF EXISTS eql_v1.ore_cllw_u64_8_neq(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8);
 
 CREATE FUNCTION eql_v1.ore_cllw_u64_8_neq(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8)
 RETURNS boolean AS $$
@@ -19,7 +19,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 
-DROP FUNCTION IF EXISTS eql_v1.ore_cllw_u64_8_lt(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8);
+-- DROP FUNCTION IF EXISTS eql_v1.ore_cllw_u64_8_lt(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8);
 
 CREATE FUNCTION eql_v1.ore_cllw_u64_8_lt(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8)
 RETURNS boolean
@@ -30,7 +30,7 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS eql_v1.ore_cllw_u64_8_lte(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8);
+-- DROP FUNCTION IF EXISTS eql_v1.ore_cllw_u64_8_lte(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8);
 
 CREATE FUNCTION eql_v1.ore_cllw_u64_8_lte(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8)
 RETURNS boolean AS $$
@@ -38,7 +38,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 
-DROP FUNCTION IF EXISTS eql_v1.ore_cllw_u64_8_gt(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8);
+-- DROP FUNCTION IF EXISTS eql_v1.ore_cllw_u64_8_gt(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8);
 
 CREATE FUNCTION eql_v1.ore_cllw_u64_8_gt(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8)
 RETURNS boolean AS $$
@@ -46,7 +46,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 
-DROP FUNCTION IF EXISTS eql_v1.ore_cllw_u64_8_gte(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8);
+-- DROP FUNCTION IF EXISTS eql_v1.ore_cllw_u64_8_gte(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8);
 
 CREATE FUNCTION eql_v1.ore_cllw_u64_8_gte(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8)
 RETURNS boolean AS $$
@@ -54,7 +54,7 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 
-DROP OPERATOR IF EXISTS = (eql_v1.ore_cllw_u64_8, eql_v1.ore_cllw_u64_8);
+-- DROP OPERATOR IF EXISTS = (eql_v1.ore_cllw_u64_8, eql_v1.ore_cllw_u64_8);
 
 CREATE OPERATOR = (
   FUNCTION=eql_v1.ore_cllw_u64_8_eq,
@@ -68,7 +68,7 @@ CREATE OPERATOR = (
 );
 
 
-DROP OPERATOR IF EXISTS <> (eql_v1.ore_cllw_u64_8, eql_v1.ore_cllw_u64_8);
+-- DROP OPERATOR IF EXISTS <> (eql_v1.ore_cllw_u64_8, eql_v1.ore_cllw_u64_8);
 
 CREATE OPERATOR <> (
   FUNCTION=eql_v1.ore_cllw_u64_8_neq,
@@ -82,7 +82,7 @@ CREATE OPERATOR <> (
 );
 
 
-DROP OPERATOR IF EXISTS > (eql_v1.ore_cllw_u64_8, eql_v1.ore_cllw_u64_8);
+-- DROP OPERATOR IF EXISTS > (eql_v1.ore_cllw_u64_8, eql_v1.ore_cllw_u64_8);
 
 CREATE OPERATOR > (
   FUNCTION=eql_v1.ore_cllw_u64_8_gt,
@@ -96,7 +96,7 @@ CREATE OPERATOR > (
 );
 
 
-DROP OPERATOR IF EXISTS < (eql_v1.ore_cllw_u64_8, eql_v1.ore_cllw_u64_8);
+-- DROP OPERATOR IF EXISTS < (eql_v1.ore_cllw_u64_8, eql_v1.ore_cllw_u64_8);
 
 CREATE OPERATOR < (
   FUNCTION=eql_v1.ore_cllw_u64_8_lt,
@@ -110,7 +110,7 @@ CREATE OPERATOR < (
 );
 
 
-DROP OPERATOR IF EXISTS >= (eql_v1.ore_cllw_u64_8, eql_v1.ore_cllw_u64_8);
+-- DROP OPERATOR IF EXISTS >= (eql_v1.ore_cllw_u64_8, eql_v1.ore_cllw_u64_8);
 
 CREATE OPERATOR >= (
   FUNCTION=eql_v1.ore_cllw_u64_8_gte,
@@ -124,7 +124,7 @@ CREATE OPERATOR >= (
 );
 
 
-DROP OPERATOR IF EXISTS <= (eql_v1.ore_cllw_u64_8, eql_v1.ore_cllw_u64_8);
+-- DROP OPERATOR IF EXISTS <= (eql_v1.ore_cllw_u64_8, eql_v1.ore_cllw_u64_8);
 
 CREATE OPERATOR <= (
   FUNCTION=eql_v1.ore_cllw_u64_8_lte,

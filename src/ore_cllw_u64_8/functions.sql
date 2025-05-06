@@ -5,10 +5,10 @@
 
 
 -- extracts ste_vec index from a jsonb value
-DROP FUNCTION IF EXISTS  eql_v1.ste_vec(val jsonb);
+-- DROP FUNCTION IF EXISTS  eql_v1.ste_vec(val jsonb);
 
 -- extracts ore_cllw_u64_8 index from a jsonb value
-DROP FUNCTION IF EXISTS  eql_v1.ore_cllw_u64_8(val jsonb);
+-- DROP FUNCTION IF EXISTS  eql_v1.ore_cllw_u64_8(val jsonb);
 
 CREATE FUNCTION eql_v1.ore_cllw_u64_8(val jsonb)
   RETURNS eql_v1.ore_cllw_u64_8
@@ -30,7 +30,7 @@ $$ LANGUAGE plpgsql;
 
 
 -- extracts ore_cllw_u64_8 index from an eql_v1_encrypted value
-DROP FUNCTION IF EXISTS  eql_v1.ore_cllw_u64_8(val eql_v1_encrypted);
+-- DROP FUNCTION IF EXISTS  eql_v1.ore_cllw_u64_8(val eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1.ore_cllw_u64_8(val eql_v1_encrypted)
   RETURNS eql_v1.ore_cllw_u64_8
@@ -49,7 +49,7 @@ $$ LANGUAGE plpgsql;
 --
 
 -- DROP FUNCTION IF EXISTS eql_v1.__compare_inner_ore_cllw_u64_8(a bytea, b bytea);
-DROP FUNCTION IF EXISTS eql_v1.compare_ore_cllw(a bytea, b bytea);
+-- DROP FUNCTION IF EXISTS eql_v1.compare_ore_cllw(a bytea, b bytea);
 CREATE FUNCTION eql_v1.compare_ore_cllw(a bytea, b bytea)
 RETURNS int AS $$
 DECLARE
@@ -88,7 +88,7 @@ $$ LANGUAGE plpgsql;
 
 
 
-DROP FUNCTION IF EXISTS eql_v1.compare_ore_cllw_u64_8(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8);
+-- DROP FUNCTION IF EXISTS eql_v1.compare_ore_cllw_u64_8(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8);
 
 CREATE FUNCTION eql_v1.compare_ore_cllw_u64_8(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8)
 RETURNS int AS $$

@@ -2,7 +2,7 @@
 
 --
 --
--- CREATE the cs_configuration_v1 TABLE
+-- CREATE the eql_v1_configuration TABLE
 --
 CREATE TABLE IF NOT EXISTS public.eql_v1_configuration
 (
