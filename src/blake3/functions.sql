@@ -1,6 +1,4 @@
 -- REQUIRE: src/schema.sql
--- REQUIRE: src/mac/types.sql
-
 
 -- extracts ste_vec index from a jsonb value
 DROP FUNCTION IF EXISTS  eql_v1.blake3(val jsonb);
