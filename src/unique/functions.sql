@@ -1,7 +1,8 @@
+-- REQUIRE: src/schema.sql
 -- REQUIRE: src/unique/types.sql
 
 -- extracts unique index from an encrypted column
-DROP FUNCTION IF EXISTS  eql_v1.unique(val jsonb);
+-- DROP FUNCTION IF EXISTS  eql_v1.unique(val jsonb);
 
 CREATE FUNCTION eql_v1.unique(val jsonb)
   RETURNS eql_v1.unique_index
@@ -17,7 +18,7 @@ $$ LANGUAGE plpgsql;
 
 
 -- extracts unique index from an encrypted column
-DROP FUNCTION IF EXISTS  eql_v1.unique(val eql_v1_encrypted);
+-- DROP FUNCTION IF EXISTS  eql_v1.unique(val eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1.unique(val eql_v1_encrypted)
   RETURNS eql_v1.unique_index

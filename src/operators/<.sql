@@ -20,22 +20,39 @@
 --
 --
 
-DROP OPERATOR CLASS IF EXISTS eql_v1.encrypted_operator USING btree;
-DROP OPERATOR FAMILY IF EXISTS eql_v1.encrypted_operator USING btree;
-
-DROP FUNCTION IF EXISTS eql_v1.lt(a eql_v1_encrypted, b eql_v1_encrypted);
+-- DROP FUNCTION IF EXISTS eql_v1.lt(a eql_v1_encrypted, b eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1.lt(a eql_v1_encrypted, b eql_v1_encrypted)
 RETURNS boolean
 AS $$
   BEGIN
-    RETURN eql_v1.ore_64_8_v1(a) < eql_v1.ore_64_8_v1(b);
+
+    BEGIN
+      RETURN eql_v1.ore_cllw_u64_8(a) < eql_v1.ore_cllw_u64_8(b);
+      -- RETURN (eql_v1.unique(a) = eql_v1.unique(b));
+    EXCEPTION WHEN OTHERS THEN
+      -- PERFORM eql_v1.log('eql_v1.lt no ore_cllw_u64_8 index');
+    END;
+
+    BEGIN
+      RETURN eql_v1.ore_cllw_var_8(a) < eql_v1.ore_cllw_var_8(b);
+    EXCEPTION WHEN OTHERS THEN
+      -- PERFORM eql_v1.log('eql_v1.lt no ore_cllw_var_8 index');
+    END;
+
+    BEGIN
+      RETURN eql_v1.ore_64_8_v1(a) < eql_v1.ore_64_8_v1(b);
+    EXCEPTION WHEN OTHERS THEN
+      -- PERFORM eql_v1.log('eql_v1.lt no ore_64_8_v1 index');
+    END;
+
+    RETURN false;
   END;
 $$ LANGUAGE plpgsql;
 
 
-DROP OPERATOR IF EXISTS < (eql_v1_encrypted, eql_v1_encrypted);
-DROP FUNCTION IF EXISTS eql_v1."<"(a eql_v1_encrypted, b eql_v1_encrypted);
+-- DROP OPERATOR IF EXISTS < (eql_v1_encrypted, eql_v1_encrypted);
+-- DROP FUNCTION IF EXISTS eql_v1."<"(a eql_v1_encrypted, b eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1."<"(a eql_v1_encrypted, b eql_v1_encrypted)
 RETURNS boolean
@@ -56,8 +73,8 @@ CREATE OPERATOR <(
 );
 
 
-DROP OPERATOR IF EXISTS < (eql_v1_encrypted, jsonb);
-DROP FUNCTION IF EXISTS eql_v1."<"(a eql_v1_encrypted, b jsonb);
+-- DROP OPERATOR IF EXISTS < (eql_v1_encrypted, jsonb);
+-- DROP FUNCTION IF EXISTS eql_v1."<"(a eql_v1_encrypted, b jsonb);
 
 CREATE FUNCTION eql_v1."<"(a eql_v1_encrypted, b jsonb)
 RETURNS boolean
@@ -78,8 +95,8 @@ CREATE OPERATOR <(
 );
 
 
-DROP OPERATOR IF EXISTS < (jsonb, eql_v1_encrypted);
-DROP FUNCTION IF EXISTS eql_v1."<"(a jsonb, b eql_v1_encrypted);
+-- DROP OPERATOR IF EXISTS < (jsonb, eql_v1_encrypted);
+-- DROP FUNCTION IF EXISTS eql_v1."<"(a jsonb, b eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1."<"(a jsonb, b eql_v1_encrypted)
 RETURNS boolean

@@ -4,7 +4,7 @@
 --
 -- Helper function for assertions
 --
-DROP FUNCTION IF EXISTS _index_exists(text, text, text, text);
+-- DROP FUNCTION IF EXISTS _index_exists(text, text, text, text);
 CREATE FUNCTION _index_exists(table_name text, column_name text, index_name text, state text DEFAULT 'pending')
   RETURNS boolean
 LANGUAGE sql STRICT PARALLEL SAFE
