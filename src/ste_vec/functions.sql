@@ -76,7 +76,6 @@ CREATE FUNCTION eql_v1.is_ste_vec_array(val jsonb)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
-
     IF val ? 'a' THEN
       RETURN (val->>'a')::boolean;
     END IF;
