@@ -27,7 +27,7 @@
 --
 --
 
-DROP FUNCTION IF EXISTS eql_v1.eq(a eql_v1_encrypted, b eql_v1_encrypted);
+-- DROP FUNCTION IF EXISTS eql_v1.eq(a eql_v1_encrypted, b eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1.eq(a eql_v1_encrypted, b eql_v1_encrypted)
   RETURNS boolean
@@ -70,8 +70,8 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP OPERATOR IF EXISTS = (eql_v1_encrypted, eql_v1_encrypted) CASCADE;
-DROP FUNCTION IF EXISTS eql_v1."="(a eql_v1_encrypted, b eql_v1_encrypted);
+-- DROP OPERATOR IF EXISTS = (eql_v1_encrypted, eql_v1_encrypted) CASCADE;
+-- DROP FUNCTION IF EXISTS eql_v1."="(a eql_v1_encrypted, b eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1."="(a eql_v1_encrypted, b eql_v1_encrypted)
   RETURNS boolean
@@ -93,8 +93,8 @@ CREATE OPERATOR = (
   MERGES
 );
 
-DROP OPERATOR IF EXISTS = (eql_v1_encrypted, jsonb);
-DROP FUNCTION IF EXISTS eql_v1."="(a eql_v1_encrypted, b jsonb);
+-- DROP OPERATOR IF EXISTS = (eql_v1_encrypted, jsonb);
+-- DROP FUNCTION IF EXISTS eql_v1."="(a eql_v1_encrypted, b jsonb);
 
 CREATE FUNCTION eql_v1."="(a eql_v1_encrypted, b jsonb)
   RETURNS boolean
@@ -116,8 +116,8 @@ CREATE OPERATOR = (
   MERGES
 );
 
-DROP OPERATOR IF EXISTS = (jsonb, eql_v1_encrypted);
-DROP FUNCTION IF EXISTS eql_v1."="(a jsonb, b eql_v1_encrypted);
+-- DROP OPERATOR IF EXISTS = (jsonb, eql_v1_encrypted);
+-- DROP FUNCTION IF EXISTS eql_v1."="(a jsonb, b eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1."="(a jsonb, b eql_v1_encrypted)
   RETURNS boolean

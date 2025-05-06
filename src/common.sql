@@ -3,7 +3,13 @@
 
 
 -- Constant time comparison of 2 bytea values
-DROP FUNCTION IF EXISTS eql_v1.bytea_eq(a bytea, b bytea);
+
+
+
+
+
+
+-- DROP FUNCTION IF EXISTS eql_v1.bytea_eq(a bytea, b bytea);
 
 CREATE FUNCTION eql_v1.bytea_eq(a bytea, b bytea) RETURNS boolean AS $$
 DECLARE
@@ -29,7 +35,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS eql_v1.jsonb_array_to_bytea_array(val jsonb);
+-- DROP FUNCTION IF EXISTS eql_v1.jsonb_array_to_bytea_array(val jsonb);
 
 -- Casts a jsonb array of hex-encoded strings to an array of bytea.
 CREATE FUNCTION eql_v1.jsonb_array_to_bytea_array(val jsonb)
@@ -54,7 +60,7 @@ $$ LANGUAGE plpgsql;
 --
 -- Convenience function to log a message
 --
-DROP FUNCTION IF EXISTS eql_v1.log(text);
+-- DROP FUNCTION IF EXISTS eql_v1.log(text);
 CREATE FUNCTION eql_v1.log(s text)
     RETURNS void
 AS $$
@@ -67,7 +73,7 @@ $$ LANGUAGE plpgsql;
 --
 -- Convenience function to describe a test
 --
-DROP FUNCTION IF EXISTS eql_v1.log(text, text);
+-- DROP FUNCTION IF EXISTS eql_v1.log(text, text);
 CREATE FUNCTION eql_v1.log(ctx text, s text)
     RETURNS void
 AS $$

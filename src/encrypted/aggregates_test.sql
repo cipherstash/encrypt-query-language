@@ -1,7 +1,7 @@
 \set ON_ERROR_STOP on
 
 -- create table
-DROP TABLE IF EXISTS agg_test;
+-- DROP TABLE IF EXISTS agg_test;
 CREATE TABLE agg_test
 (
     plain_int integer,

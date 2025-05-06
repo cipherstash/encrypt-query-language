@@ -5,19 +5,19 @@
 
 -- Lexical comparison operators
 
-DROP FUNCTION IF EXISTS eql_v1.ore_cllw_var_8_eq(a eql_v1.ore_cllw_var_8, b eql_v1.ore_cllw_var_8);
+-- DROP FUNCTION IF EXISTS eql_v1.ore_cllw_var_8_eq(a eql_v1.ore_cllw_var_8, b eql_v1.ore_cllw_var_8);
 
 CREATE OR REPLACE FUNCTION eql_v1.ore_cllw_var_8_eq(a eql_v1.ore_cllw_var_8, b eql_v1.ore_cllw_var_8) RETURNS boolean AS $$
   SELECT eql_v1.bytea_eq(a.bytes, b.bytes)
 $$ LANGUAGE SQL;
 
-DROP FUNCTION IF EXISTS eql_v1.ore_cllw_var_8_neq(a eql_v1.ore_cllw_var_8, b eql_v1.ore_cllw_var_8);
+-- DROP FUNCTION IF EXISTS eql_v1.ore_cllw_var_8_neq(a eql_v1.ore_cllw_var_8, b eql_v1.ore_cllw_var_8);
 
 CREATE OR REPLACE FUNCTION eql_v1.ore_cllw_var_8_neq(a eql_v1.ore_cllw_var_8, b eql_v1.ore_cllw_var_8) RETURNS boolean AS $$
   SELECT NOT eql_v1.bytea_eq(a.bytes, b.bytes)
 $$ LANGUAGE SQL;
 
-DROP FUNCTION IF EXISTS eql_v1.ore_cllw_var_8_lt(a eql_v1.ore_cllw_var_8, b eql_v1.ore_cllw_var_8);
+-- DROP FUNCTION IF EXISTS eql_v1.ore_cllw_var_8_lt(a eql_v1.ore_cllw_var_8, b eql_v1.ore_cllw_var_8);
 
 CREATE OR REPLACE FUNCTION eql_v1.ore_cllw_var_8_lt(a eql_v1.ore_cllw_var_8, b eql_v1.ore_cllw_var_8)
 RETURNS boolean
@@ -30,25 +30,25 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
-DROP FUNCTION IF EXISTS eql_v1.ore_cllw_var_8_lte(a eql_v1.ore_cllw_var_8, b eql_v1.ore_cllw_var_8);
+-- DROP FUNCTION IF EXISTS eql_v1.ore_cllw_var_8_lte(a eql_v1.ore_cllw_var_8, b eql_v1.ore_cllw_var_8);
 
 CREATE OR REPLACE FUNCTION eql_v1.ore_cllw_var_8_lte(a eql_v1.ore_cllw_var_8, b eql_v1.ore_cllw_var_8) RETURNS boolean AS $$
   SELECT eql_v1.compare_ore_cllw_var_8(a, b) != 1
 $$ LANGUAGE SQL;
 
-DROP FUNCTION IF EXISTS eql_v1.ore_cllw_var_8_gt(a eql_v1.ore_cllw_var_8, b eql_v1.ore_cllw_var_8);
+-- DROP FUNCTION IF EXISTS eql_v1.ore_cllw_var_8_gt(a eql_v1.ore_cllw_var_8, b eql_v1.ore_cllw_var_8);
 
 CREATE OR REPLACE FUNCTION eql_v1.ore_cllw_var_8_gt(a eql_v1.ore_cllw_var_8, b eql_v1.ore_cllw_var_8) RETURNS boolean AS $$
   SELECT eql_v1.compare_ore_cllw_var_8(a, b) = 1
 $$ LANGUAGE SQL;
 
-DROP FUNCTION IF EXISTS eql_v1.ore_cllw_var_8_gte(a eql_v1.ore_cllw_var_8, b eql_v1.ore_cllw_var_8);
+-- DROP FUNCTION IF EXISTS eql_v1.ore_cllw_var_8_gte(a eql_v1.ore_cllw_var_8, b eql_v1.ore_cllw_var_8);
 
 CREATE OR REPLACE FUNCTION eql_v1.ore_cllw_var_8_gte(a eql_v1.ore_cllw_var_8, b eql_v1.ore_cllw_var_8) RETURNS boolean AS $$
   SELECT eql_v1.compare_ore_cllw_var_8(a, b) != -1
 $$ LANGUAGE SQL;
 
-DROP OPERATOR IF EXISTS = (eql_v1.ore_cllw_var_8, eql_v1.ore_cllw_var_8);
+-- DROP OPERATOR IF EXISTS = (eql_v1.ore_cllw_var_8, eql_v1.ore_cllw_var_8);
 
 CREATE OPERATOR = (
   FUNCTION=eql_v1.ore_cllw_var_8_eq,
@@ -61,7 +61,7 @@ CREATE OPERATOR = (
   MERGES
 );
 
-DROP OPERATOR IF EXISTS <> (eql_v1.ore_cllw_var_8, eql_v1.ore_cllw_var_8);
+-- DROP OPERATOR IF EXISTS <> (eql_v1.ore_cllw_var_8, eql_v1.ore_cllw_var_8);
 
 CREATE OPERATOR <> (
   FUNCTION=eql_v1.ore_cllw_var_8_neq,
@@ -74,7 +74,7 @@ CREATE OPERATOR <> (
   MERGES
 );
 
-DROP OPERATOR IF EXISTS > (eql_v1.ore_cllw_var_8, eql_v1.ore_cllw_var_8);
+-- DROP OPERATOR IF EXISTS > (eql_v1.ore_cllw_var_8, eql_v1.ore_cllw_var_8);
 
 CREATE OPERATOR > (
   FUNCTION=eql_v1.ore_cllw_var_8_gt,
@@ -87,7 +87,7 @@ CREATE OPERATOR > (
   MERGES
 );
 
-DROP OPERATOR IF EXISTS < (eql_v1.ore_cllw_var_8, eql_v1.ore_cllw_var_8);
+-- DROP OPERATOR IF EXISTS < (eql_v1.ore_cllw_var_8, eql_v1.ore_cllw_var_8);
 
 CREATE OPERATOR < (
   FUNCTION=eql_v1.ore_cllw_var_8_lt,
@@ -100,7 +100,7 @@ CREATE OPERATOR < (
   MERGES
 );
 
-DROP OPERATOR IF EXISTS >= (eql_v1.ore_cllw_var_8, eql_v1.ore_cllw_var_8);
+-- DROP OPERATOR IF EXISTS >= (eql_v1.ore_cllw_var_8, eql_v1.ore_cllw_var_8);
 
 CREATE OPERATOR >= (
   FUNCTION=eql_v1.ore_cllw_var_8_gte,
@@ -113,7 +113,7 @@ CREATE OPERATOR >= (
   MERGES
 );
 
-DROP OPERATOR IF EXISTS <= (eql_v1.ore_cllw_var_8, eql_v1.ore_cllw_var_8);
+-- DROP OPERATOR IF EXISTS <= (eql_v1.ore_cllw_var_8, eql_v1.ore_cllw_var_8);
 
 CREATE OPERATOR <= (
   FUNCTION=eql_v1.ore_cllw_var_8_lte,
