@@ -1,7 +1,7 @@
 -- Return the diff of two configurations
 -- Returns the set of keys in a that have different values to b
 -- The json comparison is on object values held by the key
-DROP FUNCTION IF EXISTS eql_v1.diff_config(a JSONB, b JSONB);
+-- DROP FUNCTION IF EXISTS eql_v1.diff_config(a JSONB, b JSONB);
 
 CREATE FUNCTION eql_v1.diff_config(a JSONB, b JSONB)
 	RETURNS TABLE(table_name TEXT, column_name TEXT)
@@ -34,7 +34,7 @@ $$ LANGUAGE plpgsql;
 
 -- Returns the set of columns with pending configuration changes
 -- Compares the columns in pending configuration that do not match the active config
-DROP FUNCTION IF EXISTS eql_v1.select_pending_columns();
+-- DROP FUNCTION IF EXISTS eql_v1.select_pending_columns();
 
 CREATE FUNCTION eql_v1.select_pending_columns()
 	RETURNS TABLE(table_name TEXT, column_name TEXT)
@@ -72,7 +72,7 @@ $$ LANGUAGE plpgsql;
 -- On initial encryption from plaintext the target column will be `{column_name}_encrypted `
 -- OR NULL if the column does not exist
 --
-DROP FUNCTION IF EXISTS eql_v1.select_target_columns();
+-- DROP FUNCTION IF EXISTS eql_v1.select_target_columns();
 
 CREATE FUNCTION eql_v1.select_target_columns()
 	RETURNS TABLE(table_name TEXT, column_name TEXT, target_column TEXT)
@@ -93,7 +93,7 @@ $$ LANGUAGE sql;
 
 --
 -- Returns true if all pending columns have a target (encrypted) column
-DROP FUNCTION IF EXISTS eql_v1.ready_for_encryption();
+-- DROP FUNCTION IF EXISTS eql_v1.ready_for_encryption();
 
 CREATE FUNCTION eql_v1.ready_for_encryption()
 	RETURNS BOOLEAN
@@ -113,7 +113,7 @@ $$ LANGUAGE sql;
 -- Executes the ALTER TABLE statement
 --   `ALTER TABLE {target_table} ADD COLUMN {column_name}_encrypted eql_v1_encrypted;`
 --
-DROP FUNCTION IF EXISTS eql_v1.create_encrypted_columns();
+-- DROP FUNCTION IF EXISTS eql_v1.create_encrypted_columns();
 
 CREATE FUNCTION eql_v1.create_encrypted_columns()
 	RETURNS TABLE(table_name TEXT, column_name TEXT)
@@ -138,7 +138,7 @@ $$ LANGUAGE plpgsql;
 --   `ALTER TABLE {target_table} RENAME COLUMN {column_name} TO {column_name}_plaintext;
 --   `ALTER TABLE {target_table} RENAME COLUMN {column_name}_encrypted TO {column_name};`
 --
-DROP FUNCTION IF EXISTS eql_v1.rename_encrypted_columns();
+-- DROP FUNCTION IF EXISTS eql_v1.rename_encrypted_columns();
 
 CREATE FUNCTION eql_v1.rename_encrypted_columns()
 	RETURNS TABLE(table_name TEXT, column_name TEXT, target_column TEXT)
@@ -155,7 +155,7 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS eql_v1.count_encrypted_with_active_config(table_name TEXT, column_name TEXT);
+-- DROP FUNCTION IF EXISTS eql_v1.count_encrypted_with_active_config(table_name TEXT, column_name TEXT);
 
 CREATE FUNCTION eql_v1.count_encrypted_with_active_config(table_name TEXT, column_name TEXT)
   RETURNS BIGINT

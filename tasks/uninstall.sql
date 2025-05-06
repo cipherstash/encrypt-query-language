@@ -5,4 +5,6 @@ BEGIN
 END
 $$;
 
+ALTER TABLE public.eql_v1_configuration DROP CONSTRAINT IF EXISTS eql_v1_configuration_data_check;
+
 DROP SCHEMA IF EXISTS eql_v1 CASCADE;

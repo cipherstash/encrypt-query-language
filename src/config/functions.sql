@@ -4,7 +4,7 @@
 --
 --
 
-DROP FUNCTION IF EXISTS  eql_v1.config_default(config jsonb);
+-- DROP FUNCTION IF EXISTS  eql_v1.config_default(config jsonb);
 
 CREATE FUNCTION eql_v1.config_default(config jsonb)
   RETURNS jsonb
@@ -19,7 +19,7 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS eql_v1.config_add_table(table_name text, config jsonb);
+-- DROP FUNCTION IF EXISTS eql_v1.config_add_table(table_name text, config jsonb);
 
 CREATE FUNCTION eql_v1.config_add_table(table_name text, config jsonb)
   RETURNS jsonb
@@ -37,7 +37,7 @@ $$ LANGUAGE plpgsql;
 
 
 -- Add the column if it doesn't exist
-DROP FUNCTION IF EXISTS eql_v1.config_add_column(table_name text, column_name text, config jsonb);
+-- DROP FUNCTION IF EXISTS eql_v1.config_add_column(table_name text, column_name text, config jsonb);
 
 CREATE FUNCTION eql_v1.config_add_column(table_name text, column_name text, config jsonb)
   RETURNS jsonb
@@ -56,7 +56,7 @@ $$ LANGUAGE plpgsql;
 
 
 -- Set the cast
-DROP FUNCTION IF EXISTS eql_v1.config_add_cast(table_name text, column_name text, cast_as text, config jsonb);
+-- DROP FUNCTION IF EXISTS eql_v1.config_add_cast(table_name text, column_name text, cast_as text, config jsonb);
 
 CREATE FUNCTION eql_v1.config_add_cast(table_name text, column_name text, cast_as text, config jsonb)
   RETURNS jsonb
@@ -70,7 +70,7 @@ $$ LANGUAGE plpgsql;
 
 
 -- Add the column if it doesn't exist
-DROP FUNCTION IF EXISTS eql_v1.config_add_index(table_name text, column_name text, index_name text, opts jsonb, config jsonb);
+-- DROP FUNCTION IF EXISTS eql_v1.config_add_index(table_name text, column_name text, index_name text, opts jsonb, config jsonb);
 
 CREATE FUNCTION eql_v1.config_add_index(table_name text, column_name text, index_name text, opts jsonb, config jsonb)
   RETURNS jsonb
@@ -86,7 +86,7 @@ $$ LANGUAGE plpgsql;
 --
 -- Default options for match index
 --
-DROP FUNCTION IF EXISTS eql_v1.config_match_default();
+-- DROP FUNCTION IF EXISTS eql_v1.config_match_default();
 
 CREATE FUNCTION eql_v1.config_match_default()
   RETURNS jsonb
@@ -103,7 +103,7 @@ END;
 --
 -- Adds an index term to the configuration
 --
-DROP FUNCTION IF EXISTS eql_v1.add_index(table_name text, column_name text, index_name text, cast_as text, opts jsonb);
+-- DROP FUNCTION IF EXISTS eql_v1.add_index(table_name text, column_name text, index_name text, cast_as text, opts jsonb);
 
 CREATE FUNCTION eql_v1.add_index(table_name text, column_name text, index_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}')
   RETURNS jsonb
@@ -155,7 +155,7 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS eql_v1.remove_index(table_name text, column_name text, index_name text);
+-- DROP FUNCTION IF EXISTS eql_v1.remove_index(table_name text, column_name text, index_name text);
 
 CREATE FUNCTION eql_v1.remove_index(table_name text, column_name text, index_name text)
   RETURNS jsonb
@@ -216,7 +216,7 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS eql_v1.modify_index(table_name text, column_name text, index_name text, cast_as text, opts jsonb);
+-- DROP FUNCTION IF EXISTS eql_v1.modify_index(table_name text, column_name text, index_name text, cast_as text, opts jsonb);
 
 CREATE FUNCTION eql_v1.modify_index(table_name text, column_name text, index_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}')
   RETURNS jsonb
@@ -240,7 +240,7 @@ $$ LANGUAGE plpgsql;
 --
 -- Raises an exception if the configuration is already `encrypting` or if there is no `pending` configuration to encrypt.
 --
-DROP FUNCTION IF EXISTS eql_v1.encrypt();
+-- DROP FUNCTION IF EXISTS eql_v1.encrypt();
 
 CREATE FUNCTION eql_v1.encrypt(force boolean DEFAULT false)
   RETURNS boolean
@@ -267,7 +267,7 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS eql_v1.activate();
+-- DROP FUNCTION IF EXISTS eql_v1.activate();
 
 CREATE FUNCTION eql_v1.activate()
   RETURNS boolean
@@ -285,7 +285,7 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS eql_v1.discard();
+-- DROP FUNCTION IF EXISTS eql_v1.discard();
 
 CREATE FUNCTION eql_v1.discard()
   RETURNS boolean
@@ -301,7 +301,7 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS eql_v1.add_column(table_name text, column_name text, cast_as text);
+-- DROP FUNCTION IF EXISTS eql_v1.add_column(table_name text, column_name text, cast_as text);
 
 CREATE FUNCTION eql_v1.add_column(table_name text, column_name text, cast_as text DEFAULT 'text')
   RETURNS jsonb
@@ -340,7 +340,7 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS eql_v1.remove_column(table_name text, column_name text);
+-- DROP FUNCTION IF EXISTS eql_v1.remove_column(table_name text, column_name text);
 
 CREATE FUNCTION eql_v1.remove_column(table_name text, column_name text)
   RETURNS jsonb
@@ -396,7 +396,7 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS eql_v1.reload_config();
+-- DROP FUNCTION IF EXISTS eql_v1.reload_config();
 
 CREATE FUNCTION eql_v1.reload_config()
   RETURNS void
@@ -405,7 +405,7 @@ BEGIN ATOMIC
   RETURN NULL;
 END;
 
-DROP FUNCTION IF EXISTS eql_v1.config();
+-- DROP FUNCTION IF EXISTS eql_v1.config();
 
 -- A convenience function to return the configuration in a tabular format, allowing for easier filtering, and querying.
 -- Query using `SELECT * FROM cs_config();`
