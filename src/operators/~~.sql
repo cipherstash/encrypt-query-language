@@ -1,4 +1,4 @@
--- REQUIRE: src/operators/drop.sql
+-- REQUIRE: src/schema.sql
 -- REQUIRE: src/encrypted/types.sql
 -- REQUIRE: src/match/types.sql
 -- REQUIRE: src/match/functions.sql
