@@ -4,32 +4,52 @@
 -- REQUIRE: src/ore/types.sql
 
 
-DROP FUNCTION IF EXISTS eql_v1.jsonb_array_to_ore_64_8_v1(val jsonb);
+-- DROP FUNCTION IF EXISTS eql_v1.jsonb_array_to_ore_64_8_v1(val jsonb);
 
 -- Casts a jsonb array of hex-encoded strings to the `ore_64_8_v1` composite type.
 -- In other words, this function takes the ORE index format sent through in the
 -- EQL payload from Proxy and decodes it as the composite type that we use for
 -- ORE operations on the Postgres side.
+-- CREATE FUNCTION eql_v1.jsonb_array_to_ore_64_8_v1(val jsonb)
+-- RETURNS eql_v1.ore_64_8_v1 AS $$
+-- DECLARE
+--   terms_arr eql_v1.ore_64_8_v1_term[];
+-- BEGIN
+--   IF jsonb_typeof(val) = 'null' THEN
+--     RETURN NULL;
+--   END IF;
+
+--   SELECT array_agg(ROW(decode(value::text, 'hex'))::eql_v1.ore_64_8_v1_term)
+--     INTO terms_arr
+--   FROM jsonb_array_elements_text(val) AS value;
+
+--   PERFORM eql_v1.log('terms', terms_arr::text);
+
+--   RETURN ROW(terms_arr)::eql_v1.ore_64_8_v1;
+-- END;
+-- $$ LANGUAGE plpgsql;
+
+
 CREATE FUNCTION eql_v1.jsonb_array_to_ore_64_8_v1(val jsonb)
 RETURNS eql_v1.ore_64_8_v1 AS $$
 DECLARE
-  terms_arr eql_v1.ore_64_8_v1_term[];
+  terms eql_v1.ore_64_8_v1_term[];
 BEGIN
   IF jsonb_typeof(val) = 'null' THEN
     RETURN NULL;
   END IF;
 
-  SELECT array_agg(ROW(decode(value::text, 'hex'))::eql_v1.ore_64_8_v1_term)
-    INTO terms_arr
-  FROM jsonb_array_elements_text(val) AS value;
+  SELECT array_agg(ROW(b)::eql_v1.ore_64_8_v1_term)
+  INTO terms
+  FROM unnest(eql_v1.jsonb_array_to_bytea_array(val)) AS b;
 
-  RETURN ROW(terms_arr)::eql_v1.ore_64_8_v1;
+  RETURN ROW(terms)::eql_v1.ore_64_8_v1;
 END;
 $$ LANGUAGE plpgsql;
 
 
 -- extracts ore index from jsonb
-DROP FUNCTION IF EXISTS eql_v1.ore_64_8_v1(val jsonb);
+-- DROP FUNCTION IF EXISTS eql_v1.ore_64_8_v1(val jsonb);
 
 CREATE FUNCTION eql_v1.ore_64_8_v1(val jsonb)
   RETURNS eql_v1.ore_64_8_v1
@@ -45,7 +65,7 @@ $$ LANGUAGE plpgsql;
 
 
 -- extracts ore index from an encrypted column
-DROP FUNCTION IF EXISTS eql_v1.ore_64_8_v1(val eql_v1_encrypted);
+-- DROP FUNCTION IF EXISTS eql_v1.ore_64_8_v1(val eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1.ore_64_8_v1(val eql_v1_encrypted)
   RETURNS eql_v1.ore_64_8_v1
@@ -58,7 +78,7 @@ $$ LANGUAGE plpgsql;
 
 
 -- This function uses lexicographic comparison
-DROP FUNCTION IF EXISTS eql_v1.compare_ore_64_8_v1(a eql_v1.ore_64_8_v1, b eql_v1.ore_64_8_v1);
+-- DROP FUNCTION IF EXISTS eql_v1.compare_ore_64_8_v1(a eql_v1.ore_64_8_v1, b eql_v1.ore_64_8_v1);
 
 CREATE FUNCTION eql_v1.compare_ore_64_8_v1(a eql_v1.ore_64_8_v1, b eql_v1.ore_64_8_v1)
 RETURNS integer AS $$
@@ -69,7 +89,7 @@ RETURNS integer AS $$
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS eql_v1.compare_ore_64_8_v1_term(a eql_v1.ore_64_8_v1_term, b eql_v1.ore_64_8_v1_term);
+-- DROP FUNCTION IF EXISTS eql_v1.compare_ore_64_8_v1_term(a eql_v1.ore_64_8_v1_term, b eql_v1.ore_64_8_v1_term);
 
 CREATE FUNCTION eql_v1.compare_ore_64_8_v1_term(a eql_v1.ore_64_8_v1_term, b eql_v1.ore_64_8_v1_term)
   RETURNS integer
@@ -157,7 +177,7 @@ $$ LANGUAGE plpgsql;
 -- doesn't always make sense but it's here for completeness.
 -- If both are non-empty, we compare the first element. If they are equal
 -- we need to consider the next block so we recurse, otherwise we return the comparison result.
-DROP FUNCTION IF EXISTS eql_v1.compare_ore_array(a eql_v1.ore_64_8_v1_term[], b eql_v1.ore_64_8_v1_term[]);
+-- DROP FUNCTION IF EXISTS eql_v1.compare_ore_array(a eql_v1.ore_64_8_v1_term[], b eql_v1.ore_64_8_v1_term[]);
 
 CREATE FUNCTION eql_v1.compare_ore_array(a eql_v1.ore_64_8_v1_term[], b eql_v1.ore_64_8_v1_term[])
 RETURNS integer AS $$

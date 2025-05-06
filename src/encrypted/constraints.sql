@@ -76,7 +76,7 @@
 -- $$ LANGUAGE plpgsql;
 
 -- Should include an ident field
-DROP FUNCTION IF EXISTS eql_v1._encrypted_check_i(jsonb);
+-- DROP FUNCTION IF EXISTS eql_v1._encrypted_check_i(jsonb);
 CREATE FUNCTION eql_v1._encrypted_check_i(val jsonb)
   RETURNS boolean
 AS $$
@@ -106,7 +106,7 @@ $$ LANGUAGE plpgsql;
 -- $$ LANGUAGE plpgsql;
 
 -- Ident field should include table and column
-DROP FUNCTION IF EXISTS eql_v1._encrypted_check_i_ct(jsonb);
+-- DROP FUNCTION IF EXISTS eql_v1._encrypted_check_i_ct(jsonb);
 CREATE FUNCTION eql_v1._encrypted_check_i_ct(val jsonb)
   RETURNS boolean
 AS $$
@@ -132,7 +132,7 @@ $$ LANGUAGE plpgsql;
 -- $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS eql_v1.check_encrypted(val jsonb);
+-- DROP FUNCTION IF EXISTS eql_v1.check_encrypted(val jsonb);
 
 CREATE FUNCTION eql_v1.check_encrypted(val jsonb)
   RETURNS BOOLEAN

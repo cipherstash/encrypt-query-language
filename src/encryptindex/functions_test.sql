@@ -8,7 +8,7 @@
 TRUNCATE TABLE eql_v1_configuration;
 
 -- Create a table with a plaintext column
-DROP TABLE IF EXISTS users;
+-- DROP TABLE IF EXISTS users;
 CREATE TABLE users
 (
     id bigint GENERATED ALWAYS AS IDENTITY,
@@ -63,7 +63,7 @@ $$ LANGUAGE plpgsql;
 TRUNCATE TABLE eql_v1_configuration;
 
 -- Create a table with multiple plaintext columns
-DROP TABLE IF EXISTS users;
+-- DROP TABLE IF EXISTS users;
 CREATE TABLE users
 (
     id bigint GENERATED ALWAYS AS IDENTITY,
@@ -119,7 +119,7 @@ $$ LANGUAGE plpgsql;
 -- The schema should be validated first.
 -- Users table does not exist, so should fail.
 -- -----------------------------------------------
-DROP TABLE IF EXISTS users;
+-- DROP TABLE IF EXISTS users;
 TRUNCATE TABLE eql_v1_configuration;
 
 
@@ -148,7 +148,7 @@ $$ LANGUAGE plpgsql;
 --
 -- Schema validation is skipped
 -- -----------------------------------------------
-DROP TABLE IF EXISTS users;
+-- DROP TABLE IF EXISTS users;
 TRUNCATE TABLE eql_v1_configuration;
 
 DO $$
@@ -194,7 +194,7 @@ INSERT INTO eql_v1_configuration (state, data) VALUES (
 );
 
 -- Create a table with plaintext and encrypted columns
-DROP TABLE IF EXISTS users;
+-- DROP TABLE IF EXISTS users;
 CREATE TABLE users
 (
     id bigint GENERATED ALWAYS AS IDENTITY,
@@ -244,7 +244,7 @@ INSERT INTO eql_v1_configuration (state, data) VALUES (
 );
 
 -- Create a table with plaintext and jsonb column
-DROP TABLE IF EXISTS users;
+-- DROP TABLE IF EXISTS users;
 CREATE TABLE users
 (
     id bigint GENERATED ALWAYS AS IDENTITY,
@@ -295,7 +295,7 @@ INSERT INTO eql_v1_configuration (state, data) VALUES (
 
 
 -- Create a table with multiple plaintext columns
-DROP TABLE IF EXISTS users;
+-- DROP TABLE IF EXISTS users;
 CREATE TABLE users
 (
     id bigint GENERATED ALWAYS AS IDENTITY,
