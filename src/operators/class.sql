@@ -11,10 +11,10 @@
 
 
 -- DROP ORERATOR CLASS & FAMILY BEFORE FUNCTION
-DROP OPERATOR CLASS IF EXISTS eql_v1.encrypted_operator USING btree;
-DROP OPERATOR FAMILY IF EXISTS eql_v1.encrypted_operator USING btree;
+-- DROP OPERATOR CLASS IF EXISTS eql_v1.encrypted_operator USING btree;
+-- DROP OPERATOR FAMILY IF EXISTS eql_v1.encrypted_operator USING btree;
 
-DROP FUNCTION IF EXISTS eql_v1.compare(a eql_v1_encrypted, b eql_v1_encrypted);
+-- DROP FUNCTION IF EXISTS eql_v1.compare(a eql_v1_encrypted, b eql_v1_encrypted);
 
 --
 -- Comparison function for eql_v1_encrypted

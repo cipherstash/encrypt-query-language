@@ -4,11 +4,11 @@
 -- REQUIRE: src/ore_cllw_u64_8/operators.sql
 
 
-DROP OPERATOR FAMILY IF EXISTS eql_v1.ore_cllw_u64_8_btree_ops USING btree;
+-- DROP OPERATOR FAMILY IF EXISTS eql_v1.ore_cllw_u64_8_btree_ops USING btree;
 
 CREATE OPERATOR FAMILY eql_v1.ore_cllw_u64_8_btree_ops USING btree;
 
-DROP OPERATOR CLASS IF EXISTS eql_v1.ore_cllw_u64_8_btree_ops USING btree;
+-- DROP OPERATOR CLASS IF EXISTS eql_v1.ore_cllw_u64_8_btree_ops USING btree;
 
 CREATE OPERATOR CLASS eql_v1.ore_cllw_u64_8_btree_ops DEFAULT FOR TYPE eql_v1.ore_cllw_u64_8 USING btree FAMILY eql_v1.ore_cllw_u64_8_btree_ops  AS
         OPERATOR 1 <,
