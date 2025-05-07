@@ -580,3 +580,9 @@ This query returns:
 This tutorial showed how we can go from a plaintext text field to an encrypted field and how to query the encrypted fields.
 
 We have some [examples here](../../README.md#helper-packages) of what this would look like if you are using an ORM.
+
+---
+
+### Didn't find what you wanted?
+
+[Click here to let us know what was missing from our docs.](https://github.com/cipherstash/encrypt-query-language/issues/new?template=docs-feedback.yml&title=[Docs:]%20Feedback%20on%20GETTINGSTARTED.md)
