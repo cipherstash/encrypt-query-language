@@ -880,3 +880,8 @@ Example data and params:
   "q": "ejson_path"
 }
 ```
+---
+
+### Didn't find what you wanted?
+
+[Click here to let us know what was missing from our docs.](https://github.com/cipherstash/encrypt-query-language/issues/new?template=docs-feedback.yml&title=[Docs:]%20Feedback%20on%20JSON.md)
