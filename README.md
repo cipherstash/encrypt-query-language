@@ -608,3 +608,9 @@ Limitations:
   All the containers bind to the same port (`7543`). If you want to run
   multiple containers at the same time, you have to change the ports by
   editing `tests/docker-compose.yml`
+
+---
+
+### Didn't find what you wanted?
+
+[Click here to let us know what was missing from our docs.](https://github.com/cipherstash/encrypt-query-language/issues/new?template=docs-feedback.yml&title=[Docs:]%20Feedback%20on%20README.md)
