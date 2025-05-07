@@ -89,3 +89,9 @@ For advanced users who prefer to handle encryption within their application:
 To get started using CipherStash's encryption is use solution, see the [Getting Started](https://github.com/cipherstash/encrypt-query-language/blob/main/GETTINGSTARTED.md) guide.
 
 For further help, raise an issue [here](https://github.com/cipherstash/encrypt-query-language/issues).
+
+---
+
+### Didn't find what you wanted?
+
+[Click here to let us know what was missing from our docs.](https://github.com/cipherstash/encrypt-query-language/issues/new?template=docs-feedback.yml&title=[Docs:]%20Feedback%20on%20WHY.md)
