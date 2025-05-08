@@ -87,8 +87,8 @@ DECLARE
       e := create_encrypted_json(i, 'm');
 
       PERFORM assert_result(
-        format('eql_v1.match(eql_v1_encrypted, eql_v1_encrypted)', i),
-        format('SELECT e FROM encrypted WHERE eql_v1.match(e, %L);', e));
+        format('eql_v1.like(eql_v1_encrypted, eql_v1_encrypted)', i),
+        format('SELECT e FROM encrypted WHERE eql_v1.like(e, %L);', e));
 
     end loop;
 
@@ -96,8 +96,8 @@ DECLARE
     e := create_encrypted_json('m')::jsonb || '{"m": [10, 11]}';
 
     PERFORM assert_result(
-        'eql_v1.match(eql_v1_encrypted, eql_v1_encrypted)',
-        format('SELECT e FROM encrypted WHERE eql_v1.match(e, %L);', e));
+        'eql_v1.like(eql_v1_encrypted, eql_v1_encrypted)',
+        format('SELECT e FROM encrypted WHERE eql_v1.like(e, %L);', e));
 
   END;
 $$ LANGUAGE plpgsql;
