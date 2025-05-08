@@ -6,7 +6,7 @@
 Supabase [does not currently support](https://github.com/supabase/supautils/issues/72) custom operators.
 The EQL operator functions can be used in this situation.
 
-PostgreSQL operators are essentially an alias for the equivalent function, so the implementation and behaviour remains the same.
+In EQL, PostgreSQL operators are an alias for a function, so the implementation and behaviour remains the same across operators and functions.
 
 | Operator | Function                                           | Example                                                           |
 | -------- | -------------------------------------------------- | ----------------------------------------------------------------- |
