@@ -58,7 +58,7 @@ The behaviour of the "match" index term that is used by the encrypted `LIKE` ope
 
 
 
-### Order By
+### `ORDER BY`
 
 Ordering requires wrapping the ordered column in the `eql_v1.order_by` function.
 
