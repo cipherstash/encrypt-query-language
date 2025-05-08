@@ -27,12 +27,12 @@ In EQL, PostgreSQL operators are an alias for a function, so the implementation 
 
 
 **Operator**
-```
+```sql
 SELECT * FROM users WHERE encrypted_email = $1
 ```
 
 **Function**
-```
+```sql
 SELECT * FROM users WHERE eql_v1.eq(encrypted_email, $1)
 ```
 
@@ -41,12 +41,12 @@ SELECT * FROM users WHERE eql_v1.eq(encrypted_email, $1)
 
 
 **Operator**
-```
+```sql
 SELECT * FROM users WHERE encrypted_email LIKE $1
 ```
 
 **Function**
-```
+```sql
 SELECT * FROM users WHERE eql_v1.like(encrypted_email, $1)
 ```
 
@@ -62,7 +62,7 @@ The behaviour of the "match" index term that is used by the encrypted `LIKE` ope
 
 Ordering requires wrapping the ordered column in the `eql_v1.order_by` function, like this:
 
-```
+```sql
 SELECT * FROM users ORDER BY eql_v1.order_by(encrypted_created_at) DESC
 ```
 
