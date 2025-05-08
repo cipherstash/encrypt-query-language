@@ -55,7 +55,7 @@ SELECT * FROM users WHERE eql_v1.like(encrypted_email, $1)
 The EQL `eql_v1.like` and `eql_v1.ilike` functions are equivalent.
 
 The behaviour of the "match" index term that is used by the encrypted `LIKE` operators is slightly different to default PostgreSQL.
-Case sensitivity is determined by the index term configuration.
+Case sensitivity is determined by the [index term configuration](./docs/reference/INDEX.md#options-for-match-indexes-opts) of `match` indexes.
 A `match` index term can be configured to enable case sensitive searches with token filters (for example, `downcase` and `upcase`).
 The data is encrypted based on the configuration.
 The `LIKE` operation is always the same, and the data is different.
