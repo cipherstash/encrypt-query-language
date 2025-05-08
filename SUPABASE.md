@@ -3,7 +3,7 @@
 
 ## No operators, no problems
 
-Supabase does not support custom operators.
+Supabase [does not currently support](https://github.com/supabase/supautils/issues/72) custom operators.
 The EQL operator functions can be used in this situation.
 
 PostgreSQL operators are essentially an alias for the equivalent function, so the implementation and behaviour remains the same.
