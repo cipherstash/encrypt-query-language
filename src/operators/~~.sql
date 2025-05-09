@@ -15,10 +15,21 @@
 
 -- DROP FUNCTION IF EXISTS eql_v1.match(a eql_v1_encrypted, b eql_v1_encrypted);
 
-CREATE FUNCTION eql_v1.match(a eql_v1_encrypted, b eql_v1_encrypted)
+CREATE FUNCTION eql_v1.like(a eql_v1_encrypted, b eql_v1_encrypted)
 RETURNS boolean AS $$
   SELECT eql_v1.match(a) @> eql_v1.match(b);
 $$ LANGUAGE SQL;
+
+
+--
+-- Case sensitivity depends on the index term configuration
+-- Function preserves the SQL semantics
+--
+CREATE FUNCTION eql_v1.ilike(a eql_v1_encrypted, b eql_v1_encrypted)
+RETURNS boolean AS $$
+  SELECT eql_v1.match(a) @> eql_v1.match(b);
+$$ LANGUAGE SQL;
+
 
 
 -- DROP OPERATOR BEFORE FUNCTION
@@ -31,7 +42,7 @@ CREATE FUNCTION eql_v1."~~"(a eql_v1_encrypted, b eql_v1_encrypted)
   RETURNS boolean
 AS $$
   BEGIN
-    RETURN eql_v1.match(a, b);
+    RETURN eql_v1.like(a, b);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -65,7 +76,7 @@ CREATE FUNCTION eql_v1."~~"(a eql_v1_encrypted, b jsonb)
   RETURNS boolean
 AS $$
   BEGIN
-    RETURN eql_v1.match(a, b::eql_v1_encrypted);
+    RETURN eql_v1.like(a, b::eql_v1_encrypted);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -100,7 +111,7 @@ CREATE FUNCTION eql_v1."~~"(a jsonb, b eql_v1_encrypted)
   RETURNS boolean
 AS $$
   BEGIN
-    RETURN eql_v1.match(a::eql_v1_encrypted, b);
+    RETURN eql_v1.like(a::eql_v1_encrypted, b);
   END;
 $$ LANGUAGE plpgsql;
 
