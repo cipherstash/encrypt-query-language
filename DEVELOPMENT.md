@@ -37,12 +37,14 @@ These are the important files in the repo:
 ├── mise.toml              <-- the main config file for mise
 ├── tasks/                 <-- mise tasks
 ├── src/                   <-- The individual SQL components that make up EQL
+│   ├── blake3/            <-- blake3 index term type
 │   ├── encrypted/         <-- Encrypted column type
 │   ├── operators/         <-- Operators for the encrypted column type
 │   ├── match/             <-- match index term type
 │   ├── unique/            <-- unique index term type
 │   ├── ore/               <-- ore index term type
-│   ├── ore-cllw/          <-- ore-cllw index term type
+│   ├── ore_cllw_u64_8/    <-- ore-cllw fixed index term type
+│   ├── ore_cllw_var_8/    <-- ore-cllw variable index term type
 │   ├── config/            <-- Configuration management for encrypted columns
 │   ├── schema.sql         <-- Defines the PostgreSQL schema for namespacing EQL
 │   ├── crypto.sql         <-- Installs pg_crypto extension, required by ORE
@@ -316,8 +318,11 @@ Each type of encrypted index (`unique`, `match`, `ore`) has an associated type, 
 
 These are transient runtime types, used internally by EQL functions and operators:
 
+- `eql_v1.blake3`
 - `eql_v1.unique_index`
 - `eql_v1.match`
+- `eql_v1.ore_cllw_u64_8`
+- `eql_v1.ore_cllw_var_8`
 - `eql_v1.ore_64_8_v1`
 - `eql_v1.ore_64_8_v1_term`
 
@@ -338,9 +343,15 @@ Operators allow comparisons between:
 - `jsonb` and `eql_v1_encrypted`
 - `eql_v1_encrypted` and `jsonb`
 
-The index types and functions are internal implementation details and should not be exposed as operators on the `eql_v1_encrypted` type.
+Operators defined on the `eql_v1_encrypted` dispatch to the underlying index terms based on the most efficient order of operations.
+
+For example, it is possible to have both `unique` and `ore` indexes defined.
+For equality (`=`, `<>`) operations, a `unique` index term is a text comparison and should be preferred over an `ore` index term.
+
+The index term types and functions are internal implementation details and should not be exposed as operators on the `eql_v1_encrypted` type.
 For example, `eql_v1_encrypted` should not have an operator with the `ore_64_8_v1` type.
 Users should never need to think about or interact with EQL internals.
+
 
 #### Working without operators
 
