@@ -38,9 +38,9 @@ RETURNS jsonb AS $$
   SELECT COALESCE($1, $2);
 $$ LANGUAGE sql IMMUTABLE;
 
--- DROP AGGREGATE IF EXISTS eql_v1.cs_grouped_value(jsonb);
+-- DROP AGGREGATE IF EXISTS eql_v1.grouped_value(jsonb);
 
-CREATE AGGREGATE eql_v1.cs_grouped_value(jsonb) (
+CREATE AGGREGATE eql_v1.grouped_value(jsonb) (
   SFUNC = eql_v1._first_grouped_value,
   STYPE = jsonb
 );
