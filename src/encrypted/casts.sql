@@ -20,7 +20,7 @@ $$ LANGUAGE plpgsql;
 -- DROP CAST IF EXISTS (jsonb AS public.eql_v1_encrypted);
 
 CREATE CAST (jsonb AS public.eql_v1_encrypted)
-	WITH FUNCTION eql_v1.to_encrypted(jsonb) AS IMPLICIT;
+	WITH FUNCTION eql_v1.to_encrypted(jsonb) AS ASSIGNMENT;
 
 
 --
@@ -41,7 +41,7 @@ $$ LANGUAGE plpgsql;
 -- DROP CAST IF EXISTS (text AS public.eql_v1_encrypted);
 
 CREATE CAST (text AS public.eql_v1_encrypted)
-	WITH FUNCTION eql_v1.to_encrypted(text) AS IMPLICIT;
+	WITH FUNCTION eql_v1.to_encrypted(text) AS ASSIGNMENT;
 
 
 
