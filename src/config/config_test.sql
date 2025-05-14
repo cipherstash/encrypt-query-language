@@ -4,7 +4,7 @@
 --
 -- Helper function for assertions
 --
--- DROP FUNCTION IF EXISTS _index_exists(text, text, text, text);
+DROP FUNCTION IF EXISTS _index_exists(text, text, text, text);
 CREATE FUNCTION _index_exists(table_name text, column_name text, index_name text, state text DEFAULT 'pending')
   RETURNS boolean
 LANGUAGE sql STRICT PARALLEL SAFE
@@ -21,7 +21,6 @@ END;
 -- -----------------------------------------------
 TRUNCATE TABLE eql_v1_configuration;
 
-
 DO $$
   BEGIN
 
@@ -29,21 +28,21 @@ DO $$
     PERFORM eql_v1.add_index('users', 'name', 'match');
     ASSERT (SELECT _index_exists('users', 'name', 'match'));
 
-    -- -- Add index with cast
-    -- PERFORM eql_v1.add_index('users', 'name', 'unique', 'int');
-    -- ASSERT (SELECT _index_exists('users', 'name', 'unique'));
+    -- Add index with cast
+    PERFORM eql_v1.add_index('users', 'name', 'unique', 'int');
+    ASSERT (SELECT _index_exists('users', 'name', 'unique'));
 
-    -- ASSERT (SELECT EXISTS (SELECT id FROM eql_v1_configuration c
-    --         WHERE c.state = 'pending' AND
-    --         c.data #> array['tables', 'users', 'name'] ? 'cast_as'));
+    ASSERT (SELECT EXISTS (SELECT id FROM eql_v1_configuration c
+            WHERE c.state = 'pending' AND
+            c.data #> array['tables', 'users', 'name'] ? 'cast_as'));
 
-    -- -- Match index removed
-    -- PERFORM eql_v1.remove_index('users', 'name', 'match');
-    -- ASSERT NOT (SELECT _index_exists('users', 'name', 'match'));
+    -- Match index removed
+    PERFORM eql_v1.remove_index('users', 'name', 'match');
+    ASSERT NOT (SELECT _index_exists('users', 'name', 'match'));
 
-    -- -- All indexes removed, delete the emtpty pending config
-    -- PERFORM eql_v1.remove_index('users', 'name', 'unique');
-    -- ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v1_configuration c WHERE c.state = 'pending'));
+    -- All indexes removed, delete the emtpty pending config
+    PERFORM eql_v1.remove_index('users', 'name', 'unique');
+    ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v1_configuration c WHERE c.state = 'pending'));
 
   END;
 $$ LANGUAGE plpgsql;
@@ -96,7 +95,7 @@ DO $$
   END;
 $$ LANGUAGE plpgsql;
 
-SELECT FROM eql_v1_configuration c WHERE c.state = 'pending';
+-- SELECT FROM eql_v1_configuration c WHERE c.state = 'pending';
 
 
 -- -----------------------------------------------
@@ -183,16 +182,46 @@ $$ LANGUAGE plpgsql;
 TRUNCATE TABLE eql_v1_configuration;
 DO $$
   BEGIN
-    -- Create pending configuration
-    PERFORM eql_v1.add_column('user', 'name');
-    ASSERT (SELECT EXISTS (SELECT FROM eql_v1_configuration c WHERE c.state = 'pending'));
 
-    PERFORM eql_v1.remove_column('user', 'name');
+    PERFORM assert_exception(
+        'Cannot add index to column that does not exist',
+        'SELECT eql_v1.add_column(''user'', ''name'')');
 
-    -- Config now empty and removed
-    ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v1_configuration c WHERE c.state = 'pending'));
+    PERFORM assert_no_result(
+        'No configuration was created',
+        'SELECT * FROM eql_v1_configuration');
   END;
 $$ LANGUAGE plpgsql;
+
+
+
+-- -- -----------------------------------------------
+-- -- Add and remove column
+-- --
+-- -- -----------------------------------------------
+TRUNCATE TABLE eql_v1_configuration;
+DO $$
+  BEGIN
+    -- reset the table
+    PERFORM create_table_with_encrypted();
+
+    PERFORM eql_v1.add_column('encrypted', 'e');
+
+    PERFORM assert_count(
+        'Pending configuration was created',
+        'SELECT * FROM eql_v1_configuration c WHERE c.state = ''pending''',
+        1);
+
+
+    PERFORM eql_v1.remove_column('encrypted', 'e');
+
+    PERFORM assert_no_result(
+        'Pending configuration was removed',
+        'SELECT * FROM eql_v1_configuration c WHERE c.state = ''pending''');
+
+  END;
+$$ LANGUAGE plpgsql;
+
 
 -- -----------------------------------------------
 ---
