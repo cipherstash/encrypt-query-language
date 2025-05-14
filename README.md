@@ -331,7 +331,7 @@ SELECT id FROM users ORDER BY field DESC;
 **Example (Grouping):**
 
 ```sql
-SELECT cs_grouped_value_v1(encrypted_field) COUNT(*)
+SELECT grouped_value_v1(encrypted_field) COUNT(*)
   FROM users
   GROUP BY cs_ore_64_8_v1(encrypted_field)
 ```
