@@ -233,7 +233,7 @@ $$ LANGUAGE plpgsql;
 --
 -- Marks the currently `pending` configuration as `encrypting`.
 --
--- Validates the database schema and raises an exception if the configured columns are not of `jsonb` or `cs_encrypted_v1` type.
+-- Validates the database schema and raises an exception if the configured columns are not `cs_encrypted_v1` type.
 --
 -- Accepts an optional `force` parameter.
 -- If `force` is `true`, the schema validation is skipped.
@@ -242,7 +242,7 @@ $$ LANGUAGE plpgsql;
 --
 -- DROP FUNCTION IF EXISTS eql_v1.encrypt();
 
-CREATE FUNCTION eql_v1.encrypt(force boolean DEFAULT false)
+CREATE FUNCTION eql_v1.encrypt()
   RETURNS boolean
 AS $$
 	BEGIN
@@ -255,10 +255,8 @@ AS $$
 			RAISE EXCEPTION 'No pending configuration exists to encrypt';
 		END IF;
 
-    IF NOT force THEN
-      IF NOT eql_v1.ready_for_encryption() THEN
-        RAISE EXCEPTION 'Some pending columns do not have an encrypted target';
-      END IF;
+    IF NOT eql_v1.ready_for_encryption() THEN
+      RAISE EXCEPTION 'Some pending columns do not have an encrypted target';
     END IF;
 
     UPDATE public.eql_v1_configuration SET state = 'encrypting' WHERE state = 'pending';
@@ -334,6 +332,8 @@ AS $$
     DO UPDATE
       SET data = _config;
 
+    PERFORM eql_v1.add_encrypted_constraint(table_name, column_name);
+
     -- exeunt
     RETURN _config;
   END;
@@ -388,6 +388,8 @@ AS $$
     ELSE
       UPDATE public.eql_v1_configuration SET data = _config WHERE state = 'pending';
     END IF;
+
+    PERFORM eql_v1.remove_encrypted_constraint(table_name, column_name);
 
     -- exeunt
     RETURN _config;
