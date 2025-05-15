@@ -125,85 +125,68 @@ AS $$
             "c": "mBbL9j9(QoRD)R+z?=Fvn#=FRIg79JJM`MCq+nE0*U^ca-cViL884d-TInfY&E9HW@X>!U&lkYne2!EecKG8xwLYb0X#y7|05rrPvwh?Ejvk%78G}b+je+xufQA5mSwHSid)iEOkg@>mpuh",
             "s": "bca213de9ccce676fa849ff9c4807963"
         },
-
-
-
         {
-
             "c": "mBbL9j9(QoRD)R+z?=Fvn#=FR6Z{(4c^$CD^7q>z{xl^%5S4=m#2~YM<M@sqoxB-?M`DeE^NN6m0Df6N?oWH#Om&d50PLW^",
             "ocf": "b0c0a7385cb2f7dfe32a2649a9d8294794b8fc05585a240c1315f1e45ee7d9012616db3f01b43fa94351618670a29c24fc75df1392d52764c757b34495888b1c",
             "s": "f510853730e1c3dbd31b86963f029dd5",
             "a": 1
         },
         {
-
             "c": "mBbL9j9(QoRD)R+z?=Fvn#=FR6O>W7y15TC<^_oBO-6ni$TotY#2~YM<M@sqoxB-?M`DeE^NN6m0Df6N?oWH#Om&d50PLW^",
             "ocf": "b0c13d4a4a9ffcb2ef853868eb0b5bfb4f9321f4e94ea52a407246305f5982a4eb935f48b5c94030e8faa84bc0505075aa40c2dbf8c916183c371b5f110d796e",
             "s": "f510853730e1c3dbd31b86963f029dd5",
             "a": 1
         },
         {
-
             "c": "mBbL9j9(QoRD)R+z?=Fvn#=FR6I1D+phqU}j#iX1<;Jw*5%P5k#2~YM<M@sqoxB-?M`DeE^NN6m0Df6N?oWH#Om&d50PLW^",
             "ocf": "b0c13d4a4a9ffcb2ef853868ec9146175332740eb29cb6e7676743c9002d0800bcc8a86def024cc965e1a1113f85840f7c048c85d18deebafb1badbd553f49a8",
             "s": "f510853730e1c3dbd31b86963f029dd5",
             "a": 1
         },
         {
-
             "c": "mBbL9j9(QoRD)R+z?=Fvn#=FR6W-p1W+#!C?F+J)OTGl*bE5q@#2~YM<M@sqoxB-?M`DeE^NN6m0Df6N?oWH#Om&d50PLW^",
             "ocf": "b0c13d4a4a9ffcb2ef85386996861f7f0232e345b1136090999fe886e1e507fc76c7521af695c91e0b4c30b220ea6c0d5c7651f29bd2ec6811f10fc01d454064",
             "s": "f510853730e1c3dbd31b86963f029dd5",
             "a": 1
         },
         {
-
             "c": "mBbL9j9(QoRD)R+z?=Fvn#=FR6SMb-%jgZ0hcbtWu1s`Ve@lL;#2~YM<M@sqoxB-?M`DeE^NN6m0Df6N?oWH#Om&d50PLW^",
             "ocf": "b0c13d4a4a9ffcb2ef853869968725a730f60abc8fe2140c7355410494567a87a486240dece45e3bb42852945074e36e55dab5fd5cf5cdb325d675d64f0b2719",
             "s": "f510853730e1c3dbd31b86963f029dd5",
             "a": 1
         },
 
-
-
         {
-
             "c": "mBbL9j9(QoRD)R+z?=Fvn#=FR6Z{(4c^$CD^7q>z{xl^%5S4=m#2~YM<M@sqoxB-?M`DeE^NN6m0Df6N?oWH#Om&d50PLW^",
             "ocf": "b0c0a7385cb2f7dfe32a2649a9d8294794b8fc05585a240c1315f1e45ee7d9012616db3f01b43fa94351618670a29c24fc75df1392d52764c757b34495888b1c",
             "s": "33743aed3ae636f6bf05cff11ac4b519"
         },
         {
-
             "c": "mBbL9j9(QoRD)R+z?=Fvn#=FR6O>W7y15TC<^_oBO-6ni$TotY#2~YM<M@sqoxB-?M`DeE^NN6m0Df6N?oWH#Om&d50PLW^",
             "ocf": "b0c13d4a4a9ffcb2ef853868eb0b5bfb4f9321f4e94ea52a407246305f5982a4eb935f48b5c94030e8faa84bc0505075aa40c2dbf8c916183c371b5f110d796e",
             "s": "33743aed3ae636f6bf05cff11ac4b519"
         },
         {
-
             "c": "mBbL9j9(QoRD)R+z?=Fvn#=FR6I1D+phqU}j#iX1<;Jw*5%P5k#2~YM<M@sqoxB-?M`DeE^NN6m0Df6N?oWH#Om&d50PLW^",
             "ocf": "b0c13d4a4a9ffcb2ef853868ec9146175332740eb29cb6e7676743c9002d0800bcc8a86def024cc965e1a1113f85840f7c048c85d18deebafb1badbd553f49a8",
             "s": "33743aed3ae636f6bf05cff11ac4b519"
         },
         {
-
             "c": "mBbL9j9(QoRD)R+z?=Fvn#=FR6W-p1W+#!C?F+J)OTGl*bE5q@#2~YM<M@sqoxB-?M`DeE^NN6m0Df6N?oWH#Om&d50PLW^",
             "ocf": "b0c13d4a4a9ffcb2ef85386996861f7f0232e345b1136090999fe886e1e507fc76c7521af695c91e0b4c30b220ea6c0d5c7651f29bd2ec6811f10fc01d454064",
             "s": "33743aed3ae636f6bf05cff11ac4b519"
         },
         {
-
             "c": "mBbL9j9(QoRD)R+z?=Fvn#=FR6SMb-%jgZ0hcbtWu1s`Ve@lL;#2~YM<M@sqoxB-?M`DeE^NN6m0Df6N?oWH#Om&d50PLW^",
             "ocf": "b0c13d4a4a9ffcb2ef853869968725a730f60abc8fe2140c7355410494567a87a486240dece45e3bb42852945074e36e55dab5fd5cf5cdb325d675d64f0b2719",
             "s": "33743aed3ae636f6bf05cff11ac4b519"
         },
         {
-
             "c": "mBbL9j9(QoRD)R+z?=Fvn#=FR7}D3d-^`fltk2Cg%EF6{!Q^!Dq>oG#B*Y-IedG9!9-X`ygGXYGf%A%hh5&w9KkiR^+DvtjvH<L$zy",
             "ocv": "af96e1d969ccd0a03ffe6dfbc7712038903cdc88635994c765b6b7e9a00c0799",
             "s": "a7cea93975ed8c01f861ccb6bd082784"
         },
         {
-
             "c": "mBbL9j9(QoRD)R+z?=Fvn#=FR6lO>G(8jjwtt=6Wr{!%WJ?vt(v&0~?edG9!9-X`ygGXYGf%A%hh5&w9KkiR^+DvtjvH<L$zy",
             "ocf": "b0c13d4a4a9ffcb2ef853959fad91ee86a25329303d62e384c5007a2840ccb81e09bac960add3469d291a9e2eeb1df3245b62ae7eb28507d32095d2844630352",
             "s": "2517068c0d1f9d4d41d2c666211f785e"
@@ -219,22 +202,28 @@ CREATE FUNCTION get_numeric_ste_vec_30()
   RETURNS jsonb
 AS $$
   BEGIN
+
+    e->'$.n' -> '2517068c0d1f9d4d41d2c666211f785e'
+    e->'2517068c0d1f9d4d41d2c666211f785e'
+
+    e->>'2517068c0d1f9d4d41d2c666211f785e' ciphertext/c
+
     RETURN '{
       "sv": [
           {
               "b": "7b4ffe5d60e4e4300dc3e28d9c300c87",
               "c": "mBbM0#UZON2jQ3@LiWcvns2YfD7#?5ZXlp8Wk1R*iA%o6cD0VZWqPY%l%_z!JC9wAR4?XKSouV_AjBXFod39C7TF-SiCD-NgkG)l%Vw=l!tX>H*P<PfE$+0Szy",
-              "s": "bca213de9ccce676fa849ff9c4807963"
+              "s": "bca213de9ccce676fa849ff9c4807963" -> `$`
           },
           {
               "c": "mBbM0#UZON2jQ3@LiWcvns2Yf7wMQ^;8WN>jq@SFR7iRajU#?{(K%x=#2^Zs|F~fm*&w!wSjZQIUaj-XX01=c??f8cq8*Vf?zEu5",
               "ocv": "af96e1dabbec581f36d71e3a48ffb427f54832851b4fefa6989887ccaf7e038f66f8cb40e6959458",
-              "s": "a7cea93975ed8c01f861ccb6bd082784"
+              "s": "a7cea93975ed8c01f861ccb6bd082784" -> `$.hello`
           },
           {
               "c": "mBbM0#UZON2jQ3@LiWcvns2Yf6y3L;hykEh`}*fX#aF;n*=>+*o5Uarod39C7TF-SiCD-NgkG)l%Vw=l!tX>H*P<PfE$+0Szy",
               "ocf": "b0c13d4a4a9ffcb2ef853959fb2d26236337244ed86d66470d08963ed703356a1cee600a9a75a70aaefc1b4ca03b7918a7df25b7cd4ca774fd5b8616e6b9adb8",
-              "s": "2517068c0d1f9d4d41d2c666211f785e"
+              "s": "2517068c0d1f9d4d41d2c666211f785e" -> `$.n`
           }
       ]
     }'::jsonb;
