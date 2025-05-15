@@ -10,16 +10,6 @@
 -- REQUIRE: src/operators/>.sql
 
 
--- DROP ORERATOR CLASS & FAMILY BEFORE FUNCTION
--- DROP OPERATOR CLASS IF EXISTS eql_v1.encrypted_operator USING btree;
--- DROP OPERATOR FAMILY IF EXISTS eql_v1.encrypted_operator USING btree;
-
--- DROP FUNCTION IF EXISTS eql_v1.compare(a eql_v1_encrypted, b eql_v1_encrypted);
-
---
--- Comparison function for eql_v1_encrypted
--- Extracts ORE indexes and uses the appropriate ore compare function
---
 CREATE FUNCTION eql_v1.compare(a eql_v1_encrypted, b eql_v1_encrypted)
   RETURNS integer
   IMMUTABLE STRICT PARALLEL SAFE
@@ -35,7 +25,6 @@ AS $$
     RETURN eql_v1.compare_ore_array(a_ore.terms, b_ore.terms);
   END;
 $$ LANGUAGE plpgsql;
-
 
 CREATE OPERATOR FAMILY eql_v1.encrypted_operator USING btree;
 
