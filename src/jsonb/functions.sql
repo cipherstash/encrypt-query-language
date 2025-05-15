@@ -55,8 +55,7 @@ AS $$
     IF found IS NOT NULL THEN
 
       IF ary THEN
-
-        -- Wrapp found array elements as eql_v1_encrypted
+        -- Wrap found array elements as eql_v1_encrypted
         RETURN NEXT jsonb_build_object(
           'sv', found,
           'a', 1

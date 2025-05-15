@@ -6,6 +6,9 @@
 deps.txt
 deps-ordered.txt
 
+deps-supabase.txt
+deps-ordered-supabase.txt
+
 # Based on https://raw.githubusercontent.com/github/gitignore/main/Node.gitignore
 
 src/version.sql
