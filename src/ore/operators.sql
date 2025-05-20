@@ -4,7 +4,6 @@
 -- REQUIRE: src/ore/functions.sql
 
 
--- DROP FUNCTION IF EXISTS eql_v1.ore_64_8_v1_eq(a eql_v1.ore_64_8_v1, b eql_v1.ore_64_8_v1);
 
 CREATE FUNCTION eql_v1.ore_64_8_v1_eq(a eql_v1.ore_64_8_v1, b eql_v1.ore_64_8_v1)
 RETURNS boolean AS $$
@@ -12,7 +11,6 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 
--- DROP FUNCTION IF EXISTS eql_v1.ore_64_8_v1_neq(a eql_v1.ore_64_8_v1, b eql_v1.ore_64_8_v1);
 
 CREATE FUNCTION eql_v1.ore_64_8_v1_neq(a eql_v1.ore_64_8_v1, b eql_v1.ore_64_8_v1)
 RETURNS boolean AS $$
@@ -20,7 +18,6 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 
--- DROP FUNCTION IF EXISTS eql_v1.ore_64_8_v1_lt(a eql_v1.ore_64_8_v1, b eql_v1.ore_64_8_v1);
 
 CREATE FUNCTION eql_v1.ore_64_8_v1_lt(a eql_v1.ore_64_8_v1, b eql_v1.ore_64_8_v1)
 RETURNS boolean AS $$
@@ -28,7 +25,6 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 
--- DROP FUNCTION IF EXISTS eql_v1.ore_64_8_v1_lte(a eql_v1.ore_64_8_v1, b eql_v1.ore_64_8_v1);
 
 CREATE FUNCTION eql_v1.ore_64_8_v1_lte(a eql_v1.ore_64_8_v1, b eql_v1.ore_64_8_v1)
 RETURNS boolean AS $$
@@ -36,7 +32,6 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 
--- DROP FUNCTION IF EXISTS eql_v1.ore_64_8_v1_gt(a eql_v1.ore_64_8_v1, b eql_v1.ore_64_8_v1);
 
 CREATE FUNCTION eql_v1.ore_64_8_v1_gt(a eql_v1.ore_64_8_v1, b eql_v1.ore_64_8_v1)
 RETURNS boolean AS $$
@@ -44,7 +39,6 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 
--- DROP FUNCTION IF EXISTS eql_v1.ore_64_8_v1_gte(a eql_v1.ore_64_8_v1, b eql_v1.ore_64_8_v1);
 
 CREATE FUNCTION eql_v1.ore_64_8_v1_gte(a eql_v1.ore_64_8_v1, b eql_v1.ore_64_8_v1)
 RETURNS boolean AS $$
@@ -52,7 +46,6 @@ RETURNS boolean AS $$
 $$ LANGUAGE SQL;
 
 
--- DROP OPERATOR IF EXISTS = (eql_v1.ore_64_8_v1, eql_v1.ore_64_8_v1);
 
 CREATE OPERATOR = (
   FUNCTION=eql_v1.ore_64_8_v1_eq,
@@ -66,7 +59,6 @@ CREATE OPERATOR = (
 );
 
 
--- DROP OPERATOR IF EXISTS <> (eql_v1.ore_64_8_v1, eql_v1.ore_64_8_v1);
 
 CREATE OPERATOR <> (
   FUNCTION=eql_v1.ore_64_8_v1_neq,
@@ -79,7 +71,6 @@ CREATE OPERATOR <> (
   MERGES
 );
 
--- DROP OPERATOR IF EXISTS > (eql_v1.ore_64_8_v1, eql_v1.ore_64_8_v1);
 
 CREATE OPERATOR > (
   FUNCTION=eql_v1.ore_64_8_v1_gt,
@@ -92,7 +83,6 @@ CREATE OPERATOR > (
 );
 
 
--- DROP OPERATOR IF EXISTS < (eql_v1.ore_64_8_v1, eql_v1.ore_64_8_v1);
 
 CREATE OPERATOR < (
   FUNCTION=eql_v1.ore_64_8_v1_lt,
@@ -105,7 +95,6 @@ CREATE OPERATOR < (
 );
 
 
--- DROP OPERATOR IF EXISTS <= (eql_v1.ore_64_8_v1, eql_v1.ore_64_8_v1);
 
 CREATE OPERATOR <= (
   FUNCTION=eql_v1.ore_64_8_v1_lte,
@@ -118,7 +107,6 @@ CREATE OPERATOR <= (
 );
 
 
--- DROP OPERATOR IF EXISTS >= (eql_v1.ore_64_8_v1, eql_v1.ore_64_8_v1);
 
 CREATE OPERATOR >= (
   FUNCTION=eql_v1.ore_64_8_v1_gte,

@@ -2,7 +2,6 @@
 -- REQUIRE: src/encrypted/types.sql
 
 
--- DROP FUNCTION IF EXISTS eql_v1.ste_vec(val jsonb);
 --
 CREATE FUNCTION eql_v1.ste_vec(val jsonb)
   RETURNS eql_v1_encrypted[]
@@ -29,7 +28,6 @@ $$ LANGUAGE plpgsql;
 
 
 -- extracts ste_vec index from an eql_v1_encrypted value
--- DROP FUNCTION IF EXISTS eql_v1.ste_vec(val eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1.ste_vec(val eql_v1_encrypted)
   RETURNS eql_v1_encrypted[]
@@ -41,7 +39,6 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- DROP FUNCTION IF EXISTS eql_v1.selector(val jsonb);
 
 CREATE FUNCTION eql_v1.selector(val jsonb)
   RETURNS text
@@ -57,7 +54,6 @@ $$ LANGUAGE plpgsql;
 
 
 -- extracts ste_vec index from an eql_v1_encrypted value
--- DROP FUNCTION IF EXISTS eql_v1.selector(val eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1.selector(val eql_v1_encrypted)
   RETURNS text
@@ -69,7 +65,6 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- DROP FUNCTION IF EXISTS eql_v1.is_ste_vec_array(val jsonb);
 
 CREATE FUNCTION eql_v1.is_ste_vec_array(val jsonb)
   RETURNS boolean
@@ -86,7 +81,6 @@ $$ LANGUAGE plpgsql;
 
 
 -- extracts ste_vec index from an eql_v1_encrypted value
--- DROP FUNCTION IF EXISTS eql_v1.is_ste_vec_array(val eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1.is_ste_vec_array(val eql_v1_encrypted)
   RETURNS boolean
@@ -100,7 +94,6 @@ $$ LANGUAGE plpgsql;
 
 
 -- Returns true if b is contained in any element of a
--- DROP FUNCTION IF EXISTS eql_v1.ste_vec_contains(a eql_v1_encrypted[], b eql_v1_encrypted);
 CREATE FUNCTION eql_v1.ste_vec_contains(a eql_v1_encrypted[], b eql_v1_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
@@ -124,7 +117,6 @@ $$ LANGUAGE plpgsql;
 
 -- Returns truy if a contains b
 -- All values of b must be in a
--- DROP FUNCTION IF EXISTS eql_v1.ste_vec_contains(a eql_v1_encrypted, b eql_v1_encrypted);
 CREATE FUNCTION eql_v1.ste_vec_contains(a eql_v1_encrypted, b eql_v1_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE

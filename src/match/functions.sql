@@ -2,7 +2,6 @@
 
 
 -- extracts match index from an emcrypted column
--- DROP FUNCTION IF EXISTS eql_v1.match(val jsonb);
 
 CREATE FUNCTION eql_v1.match(val jsonb)
   RETURNS eql_v1.match_index
@@ -18,7 +17,6 @@ $$ LANGUAGE plpgsql;
 
 
 -- extracts unique index from an encrypted column
--- DROP FUNCTION IF EXISTS  eql_v1.match(val eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1.match(val eql_v1_encrypted)
   RETURNS eql_v1.match_index

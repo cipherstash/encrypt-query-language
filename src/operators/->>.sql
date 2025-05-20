@@ -3,8 +3,6 @@
 -- REQUIRE: src/encrypted/functions.sql
 
 
--- DROP OPERATOR IF EXISTS ->> (eql_v1_encrypted, text);
--- DROP FUNCTION IF EXISTS eql_v1."->>"(e eql_v1_encrypted, selector text);
 
 CREATE FUNCTION eql_v1."->>"(e eql_v1_encrypted, selector text)
   RETURNS text

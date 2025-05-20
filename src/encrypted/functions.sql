@@ -4,7 +4,6 @@
 -- REQUIRE: src/unique/types.sql
 
 
--- DROP FUNCTION IF EXISTS eql_v1.ciphertext(val jsonb);
 
 CREATE FUNCTION eql_v1.ciphertext(val jsonb)
   RETURNS text
@@ -19,7 +18,6 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- DROP FUNCTION IF EXISTS eql_v1.ciphertext(val eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1.ciphertext(val eql_v1_encrypted)
   RETURNS text
@@ -31,14 +29,12 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- DROP FUNCTION IF EXISTS eql_v1._first_grouped_value(jsonb, jsonb);
 
 CREATE FUNCTION eql_v1._first_grouped_value(jsonb, jsonb)
 RETURNS jsonb AS $$
   SELECT COALESCE($1, $2);
 $$ LANGUAGE sql IMMUTABLE;
 
--- DROP AGGREGATE IF EXISTS eql_v1.grouped_value(jsonb);
 
 CREATE AGGREGATE eql_v1.grouped_value(jsonb) (
   SFUNC = eql_v1._first_grouped_value,
