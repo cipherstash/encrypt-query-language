@@ -4,8 +4,8 @@
 
 -- extracts blake3 index from a jsonb value
 
-CREATE FUNCTION eql_v1.blake3(val jsonb)
-  RETURNS eql_v1.blake3
+CREATE FUNCTION eql_v2.blake3(val jsonb)
+  RETURNS eql_v2.blake3
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
@@ -23,13 +23,13 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- extracts blake3 index from an eql_v1_encrypted value
+-- extracts blake3 index from an eql_v2_encrypted value
 
-CREATE FUNCTION eql_v1.blake3(val eql_v1_encrypted)
-  RETURNS eql_v1.blake3
+CREATE FUNCTION eql_v2.blake3(val eql_v2_encrypted)
+  RETURNS eql_v2.blake3
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
-    RETURN (SELECT eql_v1.blake3(val.data));
+    RETURN (SELECT eql_v2.blake3(val.data));
   END;
 $$ LANGUAGE plpgsql;

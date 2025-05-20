@@ -1,4 +1,4 @@
 -- REQUIRE: src/schema.sql
 
-CREATE DOMAIN eql_v1.match_index AS smallint[];
+CREATE DOMAIN eql_v2.match_index AS smallint[];
 

@@ -5,48 +5,48 @@
 -- REQUIRE: src/ore/functions.sql
 -- REQUIRE: src/operators/=.sql
 
--- Operators for equality comparisons of eql_v1_encrypted types
+-- Operators for equality comparisons of eql_v2_encrypted types
 --
 -- Support for the following comparisons:
 --
---      eql_v1_encrypted <> eql_v1_encrypted
---      eql_v1_encrypted <> jsonb
---      jsonb <> eql_v1_encrypted
+--      eql_v2_encrypted <> eql_v2_encrypted
+--      eql_v2_encrypted <> jsonb
+--      jsonb <> eql_v2_encrypted
 --
 -- There are multiple index terms that provide equality comparisons
 --   - unique
---   - ore_64_8_v1
---   - ore_cllw_8_v1
+--   - ore_64_8_v2
+--   - ore_cllw_8_v2
 --
 -- We check these index terms in this order and use the first one that exists for both parameters
 --
 --
 
-CREATE FUNCTION eql_v1.neq(a eql_v1_encrypted, b eql_v1_encrypted)
+CREATE FUNCTION eql_v2.neq(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
-    RETURN NOT eql_v1.eq(a, b );
+    RETURN NOT eql_v2.eq(a, b );
   END;
 $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v1."<>"(a eql_v1_encrypted, b eql_v1_encrypted)
+CREATE FUNCTION eql_v2."<>"(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
-    RETURN eql_v1.neq(a, b );
+    RETURN eql_v2.neq(a, b );
   END;
 $$ LANGUAGE plpgsql;
 
 
 CREATE OPERATOR <> (
-  FUNCTION=eql_v1."<>",
-  LEFTARG=eql_v1_encrypted,
-  RIGHTARG=eql_v1_encrypted,
+  FUNCTION=eql_v2."<>",
+  LEFTARG=eql_v2_encrypted,
+  RIGHTARG=eql_v2_encrypted,
   NEGATOR = =,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
@@ -55,18 +55,18 @@ CREATE OPERATOR <> (
 );
 
 
-CREATE FUNCTION eql_v1."<>"(a eql_v1_encrypted, b jsonb)
+CREATE FUNCTION eql_v2."<>"(a eql_v2_encrypted, b jsonb)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
-    RETURN eql_v1.neq(a, b::eql_v1_encrypted);
+    RETURN eql_v2.neq(a, b::eql_v2_encrypted);
   END;
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR <> (
-  FUNCTION=eql_v1."<>",
-  LEFTARG=eql_v1_encrypted,
+  FUNCTION=eql_v2."<>",
+  LEFTARG=eql_v2_encrypted,
   RIGHTARG=jsonb,
   NEGATOR = =,
   RESTRICT = eqsel,
@@ -77,19 +77,19 @@ CREATE OPERATOR <> (
 
 
 
-CREATE FUNCTION eql_v1."<>"(a jsonb, b eql_v1_encrypted)
+CREATE FUNCTION eql_v2."<>"(a jsonb, b eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
-    RETURN eql_v1.neq(a::eql_v1_encrypted, b);
+    RETURN eql_v2.neq(a::eql_v2_encrypted, b);
   END;
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR <> (
-  FUNCTION=eql_v1."<>",
+  FUNCTION=eql_v2."<>",
   LEFTARG=jsonb,
-  RIGHTARG=eql_v1_encrypted,
+  RIGHTARG=eql_v2_encrypted,
   NEGATOR = =,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,

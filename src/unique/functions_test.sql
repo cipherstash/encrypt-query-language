@@ -4,11 +4,11 @@ DO $$
   BEGIN
     PERFORM assert_result(
         'Extract unique index term from encrypted',
-        'SELECT eql_v1.unique(''{"u": "u"}''::jsonb)');
+        'SELECT eql_v2.unique(''{"u": "u"}''::jsonb)');
 
     PERFORM assert_exception(
         'Missing unique index term in encrypted raises exception',
-        'SELECT eql_v1.unique(''{}''::jsonb)');
+        'SELECT eql_v2.unique(''{}''::jsonb)');
 
   END;
 $$ LANGUAGE plpgsql;

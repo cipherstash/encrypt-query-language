@@ -4,13 +4,13 @@
 
 -- Aggregate functions for ORE
 
-CREATE FUNCTION eql_v1.min(a eql_v1_encrypted, b eql_v1_encrypted)
-  RETURNS eql_v1_encrypted
+CREATE FUNCTION eql_v2.min(a eql_v2_encrypted, b eql_v2_encrypted)
+  RETURNS eql_v2_encrypted
 STRICT
 AS $$
   BEGIN
-    PERFORM eql_v1.log('eql_v1.min');
-    IF eql_v1.ore_64_8_v1(a) < eql_v1.ore_64_8_v1(b) THEN
+    PERFORM eql_v2.log('eql_v2.min');
+    IF eql_v2.ore_64_8_v2(a) < eql_v2.ore_64_8_v2(b) THEN
       RETURN a;
     ELSE
       RETURN b;
@@ -19,20 +19,20 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE AGGREGATE eql_v1.min(eql_v1_encrypted)
+CREATE AGGREGATE eql_v2.min(eql_v2_encrypted)
 (
-  sfunc = eql_v1.min,
-  stype = eql_v1_encrypted
+  sfunc = eql_v2.min,
+  stype = eql_v2_encrypted
 );
 
 
-CREATE FUNCTION eql_v1.max(a eql_v1_encrypted, b eql_v1_encrypted)
-RETURNS eql_v1_encrypted
+CREATE FUNCTION eql_v2.max(a eql_v2_encrypted, b eql_v2_encrypted)
+RETURNS eql_v2_encrypted
 STRICT
 AS $$
   BEGIN
-    PERFORM eql_v1.log('eql_v1.max');
-    IF eql_v1.ore_64_8_v1(a) > eql_v1.ore_64_8_v1(b) THEN
+    PERFORM eql_v2.log('eql_v2.max');
+    IF eql_v2.ore_64_8_v2(a) > eql_v2.ore_64_8_v2(b) THEN
       RETURN a;
     ELSE
       RETURN b;
@@ -41,8 +41,8 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE AGGREGATE eql_v1.max(eql_v1_encrypted)
+CREATE AGGREGATE eql_v2.max(eql_v2_encrypted)
 (
-  sfunc = eql_v1.max,
-  stype = eql_v1_encrypted
+  sfunc = eql_v2.max,
+  stype = eql_v2_encrypted
 );

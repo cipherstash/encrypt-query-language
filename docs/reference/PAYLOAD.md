@@ -37,7 +37,7 @@ CipherStash Proxy will handle the plaintext payload and create the encrypted pay
 
 ## Data format
 
-The format is defined as a [JSON Schema](../../sql/schemas/cs_encrypted_v1.schema.json).
+The format is defined as a [JSON Schema](../../sql/schemas/cs_encrypted_v2.schema.json).
 
 It should never be necessary to directly interact with the stored `jsonb`.
 CipherStash Proxy handles the encoding, and EQL provides the functions.

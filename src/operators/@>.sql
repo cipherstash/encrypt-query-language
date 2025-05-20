@@ -4,13 +4,13 @@
 
 
 
-CREATE FUNCTION eql_v1."@>"(a eql_v1_encrypted, b eql_v1_encrypted)
+CREATE FUNCTION eql_v2."@>"(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS boolean AS $$
-  SELECT eql_v1.ste_vec_contains(a, b)
+  SELECT eql_v2.ste_vec_contains(a, b)
 $$ LANGUAGE SQL;
 
 CREATE OPERATOR @>(
-  FUNCTION=eql_v1."@>",
-  LEFTARG=eql_v1_encrypted,
-  RIGHTARG=eql_v1_encrypted
+  FUNCTION=eql_v2."@>",
+  LEFTARG=eql_v2_encrypted,
+  RIGHTARG=eql_v2_encrypted
 );

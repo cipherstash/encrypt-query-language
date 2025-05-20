@@ -3,9 +3,9 @@
 --
 -- Extracts index keys/names from configuration json
 --
--- Used by the eql_v1.config_check_indexes as part of the configuration_data_v1 constraint
+-- Used by the eql_v2.config_check_indexes as part of the configuration_data_v2 constraint
 --
-CREATE FUNCTION eql_v1.config_get_indexes(val jsonb)
+CREATE FUNCTION eql_v2.config_get_indexes(val jsonb)
     RETURNS SETOF text
     LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
@@ -15,16 +15,16 @@ END;
 --
 -- _cs_check_config_get_indexes returns true if the table configuration only includes valid index types
 --
--- Used by the cs_configuration_data_v1_check constraint
+-- Used by the cs_configuration_data_v2_check constraint
 --
-CREATE FUNCTION eql_v1.config_check_indexes(val jsonb)
+CREATE FUNCTION eql_v2.config_check_indexes(val jsonb)
   RETURNS BOOLEAN
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
 
-    IF (SELECT EXISTS (SELECT eql_v1.config_get_indexes(val))) THEN
-      IF (SELECT bool_and(index = ANY('{match, ore, unique, ste_vec}')) FROM eql_v1.config_get_indexes(val) AS index) THEN
+    IF (SELECT EXISTS (SELECT eql_v2.config_get_indexes(val))) THEN
+      IF (SELECT bool_and(index = ANY('{match, ore, unique, ste_vec}')) FROM eql_v2.config_get_indexes(val) AS index) THEN
         RETURN true;
       END IF;
       RAISE 'Configuration has an invalid index (%). Index should be one of {match, ore, unique, ste_vec}', val;
@@ -35,7 +35,7 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v1.config_check_cast(val jsonb)
+CREATE FUNCTION eql_v2.config_check_cast(val jsonb)
   RETURNS BOOLEAN
 AS $$
 	BEGIN
@@ -49,7 +49,7 @@ $$ LANGUAGE plpgsql;
 --
 -- Should include a tables field
 -- Tables should not be empty
-CREATE FUNCTION eql_v1.config_check_tables(val jsonb)
+CREATE FUNCTION eql_v2.config_check_tables(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
@@ -61,7 +61,7 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 -- Should include a version field
-CREATE FUNCTION eql_v1.config_check_version(val jsonb)
+CREATE FUNCTION eql_v2.config_check_version(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
@@ -73,14 +73,14 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-ALTER TABLE public.eql_v1_configuration DROP CONSTRAINT IF EXISTS eql_v1_configuration_data_check;
+ALTER TABLE public.eql_v2_configuration DROP CONSTRAINT IF EXISTS eql_v2_configuration_data_check;
 
-ALTER TABLE public.eql_v1_configuration
-  ADD CONSTRAINT eql_v1_configuration_data_check CHECK (
-    eql_v1.config_check_version(data) AND
-    eql_v1.config_check_tables(data) AND
-    eql_v1.config_check_cast(data) AND
-    eql_v1.config_check_indexes(data)
+ALTER TABLE public.eql_v2_configuration
+  ADD CONSTRAINT eql_v2_configuration_data_check CHECK (
+    eql_v2.config_check_version(data) AND
+    eql_v2.config_check_tables(data) AND
+    eql_v2.config_check_cast(data) AND
+    eql_v2.config_check_indexes(data)
 );
 
 

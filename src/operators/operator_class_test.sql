@@ -8,16 +8,16 @@ SELECT seed_encrypted_json();
 --
 DO $$
 DECLARE
-    ore_term eql_v1_encrypted;
+    ore_term eql_v2_encrypted;
   BEGIN
 
       PERFORM assert_id(
-        'ORDER BY eql_v1_encrypted DESC',
+        'ORDER BY eql_v2_encrypted DESC',
         'SELECT id FROM ore ORDER BY e DESC LIMIT 1',
         99);
 
       PERFORM assert_id(
-        'ORDER BY eql_v1_encrypted DESC',
+        'ORDER BY eql_v2_encrypted DESC',
         'SELECT id FROM ore ORDER BY e ASC LIMIT 1',
         1);
 
@@ -25,7 +25,7 @@ DECLARE
       SELECT e FROM ore WHERE id = 42 INTO ore_term;
 
       PERFORM assert_id(
-        'eql_v1_encrypted < eql_v1_encrypted',
+        'eql_v2_encrypted < eql_v2_encrypted',
         format('SELECT id FROM ore WHERE e < %L ORDER BY e DESC LIMIT 1', ore_term),
         41);
 
@@ -50,7 +50,7 @@ DO $$
 
       -- Should be the rows with value of 42
       PERFORM assert_id(
-        'GROUP BY eql_v1_encrypted',
+        'GROUP BY eql_v2_encrypted',
         'SELECT count(id) FROM encrypted GROUP BY e ORDER BY count(id) DESC',
         4);
 

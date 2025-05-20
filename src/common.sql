@@ -4,7 +4,7 @@
 -- Constant time comparison of 2 bytea values
 
 
-CREATE FUNCTION eql_v1.bytea_eq(a bytea, b bytea) RETURNS boolean AS $$
+CREATE FUNCTION eql_v2.bytea_eq(a bytea, b bytea) RETURNS boolean AS $$
 DECLARE
     result boolean;
     differing bytea;
@@ -28,7 +28,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Casts a jsonb array of hex-encoded strings to an array of bytea.
-CREATE FUNCTION eql_v1.jsonb_array_to_bytea_array(val jsonb)
+CREATE FUNCTION eql_v2.jsonb_array_to_bytea_array(val jsonb)
 RETURNS bytea[] AS $$
 DECLARE
   terms_arr bytea[];
@@ -50,7 +50,7 @@ $$ LANGUAGE plpgsql;
 --
 -- Convenience function to log a message
 --
-CREATE FUNCTION eql_v1.log(s text)
+CREATE FUNCTION eql_v2.log(s text)
     RETURNS void
 AS $$
   BEGIN
@@ -62,7 +62,7 @@ $$ LANGUAGE plpgsql;
 --
 -- Convenience function to describe a test
 --
-CREATE FUNCTION eql_v1.log(ctx text, s text)
+CREATE FUNCTION eql_v2.log(ctx text, s text)
     RETURNS void
 AS $$
   BEGIN

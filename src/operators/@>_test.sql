@@ -7,17 +7,17 @@ SELECT seed_encrypted_json();
 -- ------------------------------------------------------------------------
 -- ------------------------------------------------------------------------
 --
--- eql_v1_encrypted contains itself
+-- eql_v2_encrypted contains itself
 --
 --
 DO $$
   DECLARE
-    a eql_v1_encrypted;
-    b eql_v1_encrypted;
+    a eql_v2_encrypted;
+    b eql_v2_encrypted;
   BEGIN
 
-    a := get_numeric_ste_vec_10()::eql_v1_encrypted;
-    b := get_numeric_ste_vec_10()::eql_v1_encrypted;
+    a := get_numeric_ste_vec_10()::eql_v2_encrypted;
+    b := get_numeric_ste_vec_10()::eql_v2_encrypted;
 
     ASSERT a @> b;
     ASSERT b @> a;
@@ -28,18 +28,18 @@ $$ LANGUAGE plpgsql;
 -- ------------------------------------------------------------------------
 -- ------------------------------------------------------------------------
 --
--- eql_v1_encrypted contains a term
+-- eql_v2_encrypted contains a term
 --
 --
 DO $$
   DECLARE
-    a eql_v1_encrypted;
-    b eql_v1_encrypted;
-    term eql_v1_encrypted;
+    a eql_v2_encrypted;
+    b eql_v2_encrypted;
+    term eql_v2_encrypted;
   BEGIN
 
-    a := get_numeric_ste_vec_10()::eql_v1_encrypted;
-    b := get_numeric_ste_vec_10()::eql_v1_encrypted;
+    a := get_numeric_ste_vec_10()::eql_v2_encrypted;
+    b := get_numeric_ste_vec_10()::eql_v2_encrypted;
 
     -- $.n
     term := b->'2517068c0d1f9d4d41d2c666211f785e';
@@ -67,23 +67,23 @@ $$ LANGUAGE plpgsql;
 --
 DO $$
 DECLARE
-    sv eql_v1_encrypted;
-    term eql_v1_encrypted;
+    sv eql_v2_encrypted;
+    term eql_v2_encrypted;
   BEGIN
 
-      -- This extracts the data associated with the field from the test eql_v1_encrypted
-      sv := get_numeric_ste_vec_10()::eql_v1_encrypted;
-      -- extract the term at $.n returned as eql_v1_encrypted
+      -- This extracts the data associated with the field from the test eql_v2_encrypted
+      sv := get_numeric_ste_vec_10()::eql_v2_encrypted;
+      -- extract the term at $.n returned as eql_v2_encrypted
       term := sv->'a7cea93975ed8c01f861ccb6bd082784';
 
       -- -- -- -- $.n
       PERFORM assert_result(
-        format('eql_v1_encrypted = eql_v1_encrypted with ore_cllw_u64_8 index term'),
-        format('SELECT e FROM encrypted WHERE e @> %L::eql_v1_encrypted', term));
+        format('eql_v2_encrypted = eql_v2_encrypted with ore_cllw_u64_8 index term'),
+        format('SELECT e FROM encrypted WHERE e @> %L::eql_v2_encrypted', term));
 
       PERFORM assert_count(
-        format('eql_v1_encrypted = eql_v1_encrypted with ore index term'),
-        format('SELECT e FROM encrypted WHERE e @> %L::eql_v1_encrypted', term),
+        format('eql_v2_encrypted = eql_v2_encrypted with ore index term'),
+        format('SELECT e FROM encrypted WHERE e @> %L::eql_v2_encrypted', term),
         1);
 
   END;

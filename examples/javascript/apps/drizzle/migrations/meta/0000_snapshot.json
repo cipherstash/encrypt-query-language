@@ -22,7 +22,7 @@
         },
         "email_encrypted": {
           "name": "email_encrypted",
-          "type": "cs_encrypted_v1",
+          "type": "cs_encrypted_v2",
           "primaryKey": false,
           "notNull": false
         }
