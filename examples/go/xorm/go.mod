@@ -1,8 +1,8 @@
 module go-xorm-app
 
-go 1.22
+go 1.23.0
 
-toolchain go1.22.9
+toolchain go1.24.2
 
 require (
 	github.com/jackc/pgx/v5 v5.7.1
@@ -17,7 +17,7 @@ require (
 	github.com/onsi/gomega v1.35.1 // indirect
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
 	golang.org/x/mod v0.20.0 // indirect
-	golang.org/x/sync v0.9.0 // indirect
+	golang.org/x/sync v0.11.0 // indirect
 )
 
 require (
@@ -34,8 +34,8 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/syndtr/goleveldb v1.0.0 // indirect
-	golang.org/x/crypto v0.29.0 // indirect
-	golang.org/x/text v0.20.0 // indirect
+	golang.org/x/crypto v0.35.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 	xorm.io/builder v0.3.11-0.20220531020008-1bd24a7dc978 // indirect
 	xorm.io/xorm v1.3.9
 )

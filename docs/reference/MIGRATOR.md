@@ -70,3 +70,9 @@ cipherstash-migrator --columns test_text=encrypted_text test_jsonb=encrypted_jso
 
 - Ensure that the corresponding encrypted columns already exist in the table before running the migration.
 - Data migration operations should be tested in a development environment before being executed in production.
+
+---
+
+### Didn't find what you wanted?
+
+[Click here to let us know what was missing from our docs.](https://github.com/cipherstash/encrypt-query-language/issues/new?template=docs-feedback.yml&title=[Docs:]%20Feedback%20on%20MIGRATOR.md)

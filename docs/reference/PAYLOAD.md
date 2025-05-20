@@ -56,3 +56,9 @@ CipherStash Proxy handles the encoding, and EQL provides the functions.
 | o     | ORE index         | Ciphertext index value. Encrypted by Proxy.                                                                                                                                                                                                       |
 | u     | Unique index      | Ciphertext index value. Encrypted by Proxy.                                                                                                                                                                                                       |
 | sv    | STE vector index  | Ciphertext index value. Encrypted by Proxy.                                                                                                                                                                                                       |
+
+---
+
+### Didn't find what you wanted?
+
+[Click here to let us know what was missing from our docs.](https://github.com/cipherstash/encrypt-query-language/issues/new?template=docs-feedback.yml&title=[Docs:]%20Feedback%20on%20PAYLOAD.md)

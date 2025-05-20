@@ -239,3 +239,8 @@ SELECT cs_remove_index_v1(
   index_name text
 );
 ```
+---
+
+### Didn't find what you wanted?
+
+[Click here to let us know what was missing from our docs.](https://github.com/cipherstash/encrypt-query-language/issues/new?template=docs-feedback.yml&title=[Docs:]%20Feedback%20on%20INDEX.md)
