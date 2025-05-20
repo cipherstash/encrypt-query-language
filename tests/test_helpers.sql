@@ -211,17 +211,17 @@ AS $$
           {
               "b": "7b4ffe5d60e4e4300dc3e28d9c300c87",
               "c": "mBbM0#UZON2jQ3@LiWcvns2YfD7#?5ZXlp8Wk1R*iA%o6cD0VZWqPY%l%_z!JC9wAR4?XKSouV_AjBXFod39C7TF-SiCD-NgkG)l%Vw=l!tX>H*P<PfE$+0Szy",
-              "s": "bca213de9ccce676fa849ff9c4807963" -> `$`
+              "s": "bca213de9ccce676fa849ff9c4807963"
           },
           {
               "c": "mBbM0#UZON2jQ3@LiWcvns2Yf7wMQ^;8WN>jq@SFR7iRajU#?{(K%x=#2^Zs|F~fm*&w!wSjZQIUaj-XX01=c??f8cq8*Vf?zEu5",
               "ocv": "af96e1dabbec581f36d71e3a48ffb427f54832851b4fefa6989887ccaf7e038f66f8cb40e6959458",
-              "s": "a7cea93975ed8c01f861ccb6bd082784" -> `$.hello`
+              "s": "a7cea93975ed8c01f861ccb6bd082784"
           },
           {
               "c": "mBbM0#UZON2jQ3@LiWcvns2Yf6y3L;hykEh`}*fX#aF;n*=>+*o5Uarod39C7TF-SiCD-NgkG)l%Vw=l!tX>H*P<PfE$+0Szy",
               "ocf": "b0c13d4a4a9ffcb2ef853959fb2d26236337244ed86d66470d08963ed703356a1cee600a9a75a70aaefc1b4ca03b7918a7df25b7cd4ca774fd5b8616e6b9adb8",
-              "s": "2517068c0d1f9d4d41d2c666211f785e" -> `$.n`
+              "s": "2517068c0d1f9d4d41d2c666211f785e"
           }
       ]
     }'::jsonb;
