@@ -5,8 +5,7 @@
 
 Encrypt Query Language (EQL) is a set of abstractions for transmitting, storing, and interacting with encrypted data and indexes in PostgreSQL.
 
-> [!TIP]
-> **New to EQL?** Start with the higher level helpers for EQL in [Python](https://github.com/cipherstash/eqlpy), [Go](https://github.com/cipherstash/goeql), or [JavaScript](https://github.com/cipherstash/jseql) and [TypeScript](https://github.com/cipherstash/jseql), or the [examples](#helper-packages-and-examples) for those languages.
+> [!TIP] > **New to EQL?** Start with the higher level helpers for EQL in [Python](https://github.com/cipherstash/eqlpy), [Go](https://github.com/cipherstash/goeql), or [JavaScript](https://github.com/cipherstash/jseql) and [TypeScript](https://github.com/cipherstash/jseql), or the [examples](#helper-packages-and-examples) for those languages.
 
 Store encrypted data alongside your existing data:
 
@@ -29,16 +28,15 @@ Store encrypted data alongside your existing data:
   - [Inserting Data](#inserting-data)
   - [Reading Data](#reading-data)
 - [Configuring indexes for searching data](#configuring-indexes-for-searching-data)
-  - [Adding an index (`cs_add_index_v1`)](#adding-an-index-cs_add_index_v1)
+  - [Adding an index](#adding-an-index)
 - [Searching data with EQL](#searching-data-with-eql)
-  - [Equality search (`cs_unique_v1`)](#equality-search-cs_unique_v1)
-  - [Full-text search (`cs_match_v1`)](#full-text-search-cs_match_v1)
-  - [Range queries (`cs_ore_64_8_v1`)](#range-queries-cs_ore_64_8_v1)
+  - [Equality search](#equality-search)
+  - [Full-text search](#full-text-search)
+  - [Range queries](#range-queries)
+  - [Array Operations](#array-operations)
+  - [JSON Path Operations](#json-path-operations)
 - [JSON and JSONB support](#json-and-jsonb-support)
 - [Frequently Asked Questions](#frequently-asked-questions)
-  - [How do I integrate CipherStash EQL with my application?](#how-do-i-integrate-cipherstash-eql-with-my-application)
-  - [Can I use EQL without the CipherStash Proxy?](#can-i-use-eql-without-the-cipherstash-proxy)
-  - [How is data encrypted in the database?](#how-is-data-encrypted-in-the-database)
 - [Helper packages](#helper-packages-and-examples)
 - [Releasing](#releasing)
 - [Developing](#developing)
@@ -79,34 +77,34 @@ Once the custom types and functions are installed in your PostgreSQL database, y
 
 ### Enable encrypted columns
 
-Define encrypted columns using the `cs_encrypted_v1` domain type, which extends the `jsonb` type with additional constraints to ensure data integrity.
+Define encrypted columns using the `eql_v1_encrypted` type, which extends the `jsonb` type with additional constraints to ensure data integrity.
 
 **Example:**
 
 ```sql
 CREATE TABLE users (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    encrypted_email cs_encrypted_v1
+    encrypted_email eql_v1_encrypted
 );
 ```
 
 ### Configuring the column
 
-Initialize the column using the `cs_add_column_v1` function to enable encryption and decryption via CipherStash Proxy.
+Initialize the column using the `eql_v1.add_column` function to enable encryption and decryption via CipherStash Proxy.
 
 ```sql
-SELECT cs_add_column_v1('users', 'encrypted_email');
+SELECT eql_v1.add_column('users', 'encrypted_email');
 ```
 
-**Note:** This function allows you to encrypt and decrypt data but does not enable searchable encryption. See [Querying Data with EQL](#querying-data-with-eql) for enabling searchable encryption.
+**Note:** This function allows you to encrypt and decrypt data but does not enable searchable encryption. See [Searching data with EQL](#searching-data-with-eql) for enabling searchable encryption.
 
 ### Activating configuration
 
 After modifying configurations, activate them by running:
 
 ```sql
-SELECT cs_encrypt_v1();
-SELECT cs_activate_v1();
+SELECT eql_v1.encrypt();
+SELECT eql_v1.activate();
 ```
 
 **Important:** These functions must be run after any modifications to the configuration.
@@ -116,7 +114,7 @@ SELECT cs_activate_v1();
 CipherStash Proxy refreshes the configuration every 60 seconds. To force an immediate refresh, run:
 
 ```sql
-SELECT cs_refresh_encrypt_config();
+SELECT eql_v1.reload_config();
 ```
 
 > Note: This statement must be executed when connected to CipherStash Proxy.
@@ -191,13 +189,12 @@ In order to perform searchable operations on encrypted data, you must configure 
 > **IMPORTANT:** If you have existing data that's encrypted and you add or modify an index, all the data will need to be re-encrypted.
 > This is due to the way CipherStash Proxy handles searchable encryption operations.
 
-### Adding an index (`cs_add_index_v1`)
+### Adding an index
 
-Add an index to an encrypted column.
-This function also behaves the same as `cs_add_column_v1` but with the additional index configuration.
+Add an index to an encrypted column using the `eql_v1.add_index` function:
 
 ```sql
-SELECT cs_add_index_v1(
+SELECT eql_v1.add_index(
   'table_name',       -- Name of the table
   'column_name',      -- Name of the column
   'index_name',       -- Index kind ('unique', 'match', 'ore', 'ste_vec')
@@ -211,7 +208,7 @@ You can read more about the index configuration options [here](docs/reference/IN
 **Example (Unique index):**
 
 ```sql
-SELECT cs_add_index_v1(
+SELECT eql_v1.add_index(
   'users',
   'encrypted_email',
   'unique',
@@ -219,11 +216,11 @@ SELECT cs_add_index_v1(
 );
 ```
 
-After adding an index, you have to activate the configuration.
+After adding an index, you have to activate the configuration:
 
 ```sql
-SELECT cs_encrypt_v1();
-SELECT cs_activate_v1();
+SELECT eql_v1.encrypt();
+SELECT eql_v1.activate();
 ```
 
 ## Searching data with EQL
@@ -232,14 +229,14 @@ EQL provides specialized functions to interact with encrypted data, supporting o
 
 In order to use the specialized functions, you must first configure the corresponding indexes.
 
-### Equality search (`cs_unique_v1`)
+### Equality search
 
-Enable equality search on encrypted data.
+Enable equality search on encrypted data using the `eql_v1.unique` function.
 
 **Index configuration example:**
 
 ```sql
-SELECT cs_add_index_v1(
+SELECT eql_v1.add_index(
   'users',
   'encrypted_email',
   'unique',
@@ -251,7 +248,7 @@ SELECT cs_add_index_v1(
 
 ```sql
 SELECT * FROM users
-WHERE cs_unique_v1(encrypted_email) = cs_unique_v1(
+WHERE eql_v1.unique(encrypted_email) = eql_v1.unique(
   '{"v":1,"k":"pt","p":"test@example.com","i":{"t":"users","c":"encrypted_email"},"q":"unique"}'
 );
 ```
@@ -262,14 +259,14 @@ Equivalent plaintext query:
 SELECT * FROM users WHERE email = 'test@example.com';
 ```
 
-### Full-text search (`cs_match_v1`)
+### Full-text search
 
-Enables basic full-text search on encrypted data.
+Enables basic full-text search on encrypted data using the `eql_v1.match` function.
 
 **Index configuration example:**
 
 ```sql
-SELECT cs_add_index_v1(
+SELECT eql_v1.add_index(
   'users',
   'encrypted_email',
   'match',
@@ -282,7 +279,7 @@ SELECT cs_add_index_v1(
 
 ```sql
 SELECT * FROM users
-WHERE cs_match_v1(encrypted_email) @> cs_match_v1(
+WHERE eql_v1.match(encrypted_email) @> eql_v1.match(
   '{"v":1,"k":"pt","p":"test","i":{"t":"users","c":"encrypted_email"},"q":"match"}'
 );
 ```
@@ -293,9 +290,9 @@ Equivalent plaintext query:
 SELECT * FROM users WHERE email LIKE '%test%';
 ```
 
-### Range queries (`cs_ore_64_8_v1`)
+### Range queries
 
-Enable range queries on encrypted data. Supports:
+Enable range queries on encrypted data using the `eql_v1.ore_64_8_v1`, `eql_v1.ore_cllw_u64_8`, or `eql_v1.ore_cllw_var_8` functions. Supports:
 
 - `ORDER BY`
 - `WHERE`
@@ -304,7 +301,7 @@ Enable range queries on encrypted data. Supports:
 
 ```sql
 SELECT * FROM users
-WHERE cs_ore_64_8_v1(encrypted_date) < cs_ore_64_8_v1(
+WHERE eql_v1.ore_64_8_v1(encrypted_date) < eql_v1.ore_64_8_v1(
   '{"v":1,"k":"pt","p":"2023-10-05","i":{"t":"users","c":"encrypted_date"},"q":"ore"}'
 );
 ```
@@ -319,7 +316,7 @@ SELECT * FROM users WHERE date < '2023-10-05';
 
 ```sql
 SELECT id FROM users
-ORDER BY cs_ore_64_8_v1(encrypted_field) DESC;
+ORDER BY eql_v1.ore_64_8_v1(encrypted_field) DESC;
 ```
 
 Equivalent plaintext query:
@@ -328,18 +325,31 @@ Equivalent plaintext query:
 SELECT id FROM users ORDER BY field DESC;
 ```
 
-**Example (Grouping):**
+### Array Operations
+
+EQL supports array operations on encrypted data:
 
 ```sql
-SELECT grouped_value_v1(encrypted_field) COUNT(*)
-  FROM users
-  GROUP BY cs_ore_64_8_v1(encrypted_field)
+-- Get array length
+SELECT eql_v1.jsonb_array_length(encrypted_array) FROM users;
+
+-- Get array elements
+SELECT eql_v1.jsonb_array_elements(encrypted_array) FROM users;
+
+-- Get array element ciphertexts
+SELECT eql_v1.jsonb_array_elements_text(encrypted_array) FROM users;
 ```
 
-Equivalent plaintext query:
+### JSON Path Operations
+
+EQL supports JSON path operations on encrypted data using the `->` and `->>` operators:
 
 ```sql
-SELECT field, COUNT(*) FROM users GROUP BY field;
+-- Get encrypted value at path
+SELECT encrypted_data->'$.field' FROM users;
+
+-- Get ciphertext at path
+SELECT encrypted_data->>'$.field' FROM users;
 ```
 
 ## JSON and JSONB support
@@ -363,15 +373,15 @@ No, CipherStash Proxy is required to handle the encryption and decryption operat
 
 ### How is data encrypted in the database?
 
-Data is encrypted using CipherStash's cryptographic schemes and stored in the `cs_encrypted_v1` column as a JSONB payload.
+Data is encrypted using CipherStash's cryptographic schemes and stored in the `eql_v1_encrypted` column as a JSONB payload.
 Encryption and decryption are handled by CipherStash Proxy.
 
 ## Helper packages and examples
 
 We've created a few langauge specific packages to help you interact with the payloads:
 
-| Language   | ORM         | Example                                                           | Package                                                          |
-| ---------- | ----------- | ----------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Language   | ORM         | Example                                                          | Package                                       |
+| ---------- | ----------- | ---------------------------------------------------------------- | --------------------------------------------- |
 | Go         | Xorm        | [Go/Xorm examples](./examples/go/xorm/README.md)                 | [goeql](https://github.com/cipherstash/goeql) |
 | TypeScript | Drizzle     | [Drizzle examples](./examples/javascript/apps/drizzle/README.md) | [jseql](https://github.com/cipherstash/jseql) |
 | TypeScript | Prisma      | [Drizzle examples](./examples/javascript/apps/prisma/README.md)  | [jseql](https://github.com/cipherstash/jseql) |

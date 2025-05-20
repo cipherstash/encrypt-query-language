@@ -1,6 +1,5 @@
 # Supabase
 
-
 ## No operators, no problems
 
 Supabase [does not currently support](https://github.com/supabase/supautils/issues/72) custom operators.
@@ -8,44 +7,77 @@ The EQL operator functions can be used in this situation.
 
 In EQL, PostgreSQL operators are an alias for a function, so the implementation and behaviour remains the same across operators and functions.
 
-| Operator | Function                                           | Example                                                           |
-| -------- | -------------------------------------------------- | ----------------------------------------------------------------- |
-| `=`      | `eql_v1.eq(eql_v1_encrypted, eql_v1_encrypted)`    | `SELECT * FROM users WHERE eql_v1.eq(encrypted_email, $1)`<br>    |
-| `<>`     | `eql_v1.neq(eql_v1_encrypted, eql_v1_encrypted)`   | `SELECT * FROM users WHERE eql_v1.neq(encrypted_email, $1)`<br>   |
-| `<`      | `eql_v1.lt(eql_v1_encrypted, eql_v1_encrypted)`    | `SELECT * FROM users WHERE eql_v1.lt(encrypted_email, $1)`<br>    |
-| `<=`     | `eql_v1.lte(eql_v1_encrypted, eql_v1_encrypted)`   | `SELECT * FROM users WHERE eql_v1.lte(encrypted_email, $1)`<br>   |
-| `>`      | `eql_v1.gt(eql_v1_encrypted, eql_v1_encrypted)`    | `SELECT * FROM users WHERE eql_v1.gt(encrypted_email, $1)`<br>    |
-| `>=`     | `eql_v1.gte(eql_v1_encrypted, eql_v1_encrypted)`   | `SELECT * FROM users WHERE eql_v1.gte(encrypted_email, $1)`<br>   |
-| `~~`     | `eql_v1.like(eql_v1_encrypted, eql_v1_encrypted)`  | `SELECT * FROM users WHERE eql_v1.like(encrypted_email, $1)`<br>  |
-| `~~*`    | `eql_v1.ilike(eql_v1_encrypted, eql_v1_encrypted)` | `SELECT * FROM users WHERE eql_v1.ilike(encrypted_email, $1)`<br> |
-| `LIKE`   | `eql_v1.like(eql_v1_encrypted, eql_v1_encrypted)`  | `SELECT * FROM users WHERE eql_v1.like(encrypted_email, $1)`<br>  |
-| `ILIKE`  | `eql_v1.ilike(eql_v1_encrypted, eql_v1_encrypted)` | `SELECT * FROM users WHERE eql_v1.ilike(encrypted_email, $1)`<br> |
+| Operator | Function                                                      | Example                                                                      |
+| -------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `=`      | `eql_v1.eq(eql_v1_encrypted, eql_v1_encrypted)`               | `SELECT * FROM users WHERE eql_v1.eq(encrypted_email, $1)`<br>               |
+| `<>`     | `eql_v1.neq(eql_v1_encrypted, eql_v1_encrypted)`              | `SELECT * FROM users WHERE eql_v1.neq(encrypted_email, $1)`<br>              |
+| `<`      | `eql_v1.lt(eql_v1_encrypted, eql_v1_encrypted)`               | `SELECT * FROM users WHERE eql_v1.lt(encrypted_email, $1)`<br>               |
+| `<=`     | `eql_v1.lte(eql_v1_encrypted, eql_v1_encrypted)`              | `SELECT * FROM users WHERE eql_v1.lte(encrypted_email, $1)`<br>              |
+| `>`      | `eql_v1.gt(eql_v1_encrypted, eql_v1_encrypted)`               | `SELECT * FROM users WHERE eql_v1.gt(encrypted_email, $1)`<br>               |
+| `>=`     | `eql_v1.gte(eql_v1_encrypted, eql_v1_encrypted)`              | `SELECT * FROM users WHERE eql_v1.gte(encrypted_email, $1)`<br>              |
+| `~~`     | `eql_v1.like(eql_v1_encrypted, eql_v1_encrypted)`             | `SELECT * FROM users WHERE eql_v1.like(encrypted_email, $1)`<br>             |
+| `~~*`    | `eql_v1.ilike(eql_v1_encrypted, eql_v1_encrypted)`            | `SELECT * FROM users WHERE eql_v1.ilike(encrypted_email, $1)`<br>            |
+| `LIKE`   | `eql_v1.like(eql_v1_encrypted, eql_v1_encrypted)`             | `SELECT * FROM users WHERE eql_v1.like(encrypted_email, $1)`<br>             |
+| `ILIKE`  | `eql_v1.ilike(eql_v1_encrypted, eql_v1_encrypted)`            | `SELECT * FROM users WHERE eql_v1.ilike(encrypted_email, $1)`<br>            |
+| `@>`     | `eql_v1.ste_vec_contains(eql_v1_encrypted, eql_v1_encrypted)` | `SELECT * FROM users WHERE eql_v1.ste_vec_contains(encrypted_array, $1)`<br> |
+| `<@`     | `eql_v1.ste_vec_contains(eql_v1_encrypted, eql_v1_encrypted)` | `SELECT * FROM users WHERE eql_v1.ste_vec_contains($1, encrypted_array)`<br> |
+
+### Core Functions
+
+| Function                     | Description                                          | Example                                         |
+| ---------------------------- | ---------------------------------------------------- | ----------------------------------------------- |
+| `eql_v1.ciphertext(val)`     | Extract ciphertext from encrypted value              | `SELECT eql_v1.ciphertext(encrypted_field)`     |
+| `eql_v1.blake3(val)`         | Extract blake3 hash from encrypted value             | `SELECT eql_v1.blake3(encrypted_field)`         |
+| `eql_v1.unique(val)`         | Extract unique index from encrypted value            | `SELECT eql_v1.unique(encrypted_field)`         |
+| `eql_v1.match(val)`          | Extract match index from encrypted value             | `SELECT eql_v1.match(encrypted_field)`          |
+| `eql_v1.ore_64_8_v1(val)`    | Extract ORE index from encrypted value               | `SELECT eql_v1.ore_64_8_v1(encrypted_field)`    |
+| `eql_v1.ore_cllw_u64_8(val)` | Extract CLLW ORE index from encrypted value          | `SELECT eql_v1.ore_cllw_u64_8(encrypted_field)` |
+| `eql_v1.ore_cllw_var_8(val)` | Extract variable CLLW ORE index from encrypted value | `SELECT eql_v1.ore_cllw_var_8(encrypted_field)` |
+
+### Aggregate Functions
+
+| Function          | Description                             | Example                              |
+| ----------------- | --------------------------------------- | ------------------------------------ |
+| `eql_v1.min(val)` | Get minimum value from encrypted column | `SELECT eql_v1.min(encrypted_field)` |
+| `eql_v1.max(val)` | Get maximum value from encrypted column | `SELECT eql_v1.max(encrypted_field)` |
+
+### Configuration Functions
+
+| Function                                                                     | Description                     | Example                                                                   |
+| ---------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------- |
+| `eql_v1.config_default(config)`                                              | Get default configuration       | `SELECT eql_v1.config_default(NULL)`                                      |
+| `eql_v1.config_add_table(table_name, config)`                                | Add table to configuration      | `SELECT eql_v1.config_add_table('users', config)`                         |
+| `eql_v1.config_add_column(table_name, column_name, config)`                  | Add column to configuration     | `SELECT eql_v1.config_add_column('users', 'email', config)`               |
+| `eql_v1.config_add_cast(table_name, column_name, cast_as, config)`           | Add cast configuration          | `SELECT eql_v1.config_add_cast('users', 'email', 'text', config)`         |
+| `eql_v1.config_add_index(table_name, column_name, index_name, opts, config)` | Add index to configuration      | `SELECT eql_v1.config_add_index('users', 'email', 'match', opts, config)` |
+| `eql_v1.config_match_default()`                                              | Get default match index options | `SELECT eql_v1.config_match_default()`                                    |
 
 ### Example SQL Statements
 
 #### Equality `=`
 
-
 **Operator**
+
 ```sql
 SELECT * FROM users WHERE encrypted_email = $1
 ```
 
 **Function**
+
 ```sql
 SELECT * FROM users WHERE eql_v1.eq(encrypted_email, $1)
 ```
 
-
 #### Like & ILIKE `~~, ~~*`
 
-
 **Operator**
+
 ```sql
 SELECT * FROM users WHERE encrypted_email LIKE $1
 ```
 
 **Function**
+
 ```sql
 SELECT * FROM users WHERE eql_v1.like(encrypted_email, $1)
 ```
@@ -70,5 +102,45 @@ Ordering requires wrapping the ordered column in the `eql_v1.order_by` function,
 SELECT * FROM users ORDER BY eql_v1.order_by(encrypted_created_at) DESC
 ```
 
-PostgreSQL uses operators when handling `ORDER BY` operations. The `eql_v1.order_by` function behaves in
+PostgreSQL uses operators when handling `ORDER BY` operations. The `eql_v1.order_by` function behaves in the same way as the comparison operators, using the appropriate index type (ore_64_8_v1, ore_cllw_u64_8, or ore_cllw_var_8) to determine the ordering.
 
+### JSONB Support
+
+All comparison functions also support `jsonb` parameters through automatic type casting. This means you can use either `eql_v1_encrypted` or `jsonb` values in your queries:
+
+```sql
+-- Using eql_v1_encrypted
+SELECT * FROM users WHERE eql_v1.eq(encrypted_email, encrypted_value);
+
+-- Using jsonb
+SELECT * FROM users WHERE eql_v1.eq(encrypted_email, jsonb_value);
+```
+
+The functions will automatically cast the `jsonb` value to `eql_v1_encrypted` before performing the comparison.
+
+### Array Operations
+
+EQL supports array operations on encrypted data:
+
+```sql
+-- Get array length
+SELECT eql_v1.jsonb_array_length(encrypted_array) FROM users;
+
+-- Get array elements
+SELECT eql_v1.jsonb_array_elements(encrypted_array) FROM users;
+
+-- Get array element ciphertexts
+SELECT eql_v1.jsonb_array_elements_text(encrypted_array) FROM users;
+```
+
+### JSON Path Operations
+
+EQL supports JSON path operations on encrypted data:
+
+```sql
+-- Get encrypted value at path
+SELECT encrypted_data->'$.field' FROM users;
+
+-- Get ciphertext at path
+SELECT encrypted_data->>'$.field' FROM users;
+```
