@@ -5,7 +5,6 @@ SELECT create_table_with_encrypted();
 SELECT seed_encrypted_json();
 
 
--- DROP TABLE IF EXISTS unencrypted;
 -- CREATE TABLE unencrypted
 -- (
 --     id bigint GENERATED ALWAYS AS IDENTITY,

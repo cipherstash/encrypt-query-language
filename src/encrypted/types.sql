@@ -14,7 +14,6 @@
 
 -- eql_v1.encrypted is an internal composite type
 -- eql_v1_encrypted data is cast to eql_v1.encrypted for use in EQL functions
--- DROP TYPE IF EXISTS public.eql_v1_encrypted;
 
 --
 -- Create an eql_v1_encrypted type in the public schema

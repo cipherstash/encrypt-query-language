@@ -21,7 +21,6 @@
 -- Multiple matching elements are wrapped into an eql_v1_encrypted with an array flag
 --
 --
--- DROP FUNCTION IF EXISTS eql_v1.jsonb_path_query(val jsonb, selector text);
 
 CREATE FUNCTION eql_v1.jsonb_path_query(val jsonb, selector text)
   RETURNS SETOF eql_v1_encrypted
@@ -72,7 +71,6 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- DROP FUNCTION IF EXISTS eql_v1.jsonb_path_query(val eql_v1_encrypted, selector text);
 
 CREATE FUNCTION eql_v1.jsonb_path_query(val eql_v1_encrypted, selector text)
   RETURNS SETOF eql_v1_encrypted
@@ -85,7 +83,6 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- DROP FUNCTION IF EXISTS eql_v1.jsonb_path_exists(val jsonb, selector text);
 
 CREATE FUNCTION eql_v1.jsonb_path_exists(val jsonb, selector text)
   RETURNS boolean
@@ -99,7 +96,6 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- DROP FUNCTION IF EXISTS eql_v1.jsonb_path_exists(val eql_v1_encrypted, selector text);
 
 CREATE FUNCTION eql_v1.jsonb_path_exists(val eql_v1_encrypted, selector text)
   RETURNS boolean
@@ -115,7 +111,6 @@ $$ LANGUAGE plpgsql;
 
 --
 --
--- DROP FUNCTION IF EXISTS eql_v1.jsonb_path_query_first(val jsonb, selector text);
 
 CREATE FUNCTION eql_v1.jsonb_path_query_first(val jsonb, selector text)
   RETURNS eql_v1_encrypted
@@ -133,7 +128,6 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- DROP FUNCTION IF EXISTS eql_v1.jsonb_path_query_first(val eql_v1_encrypted, selector text);
 
 CREATE FUNCTION eql_v1.jsonb_path_query_first(val eql_v1_encrypted, selector text)
   RETURNS eql_v1_encrypted
@@ -159,7 +153,6 @@ $$ LANGUAGE plpgsql;
 ---
 -- An encrypted is a jsonb array if it contains an "a" field/attribute with a truthy value
 --
--- DROP FUNCTION IF EXISTS eql_v1.jsonb_array_length(val jsonb);
 
 CREATE FUNCTION eql_v1.jsonb_array_length(val jsonb)
   RETURNS integer
@@ -184,7 +177,6 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- DROP FUNCTION IF EXISTS eql_v1.jsonb_array_length(val eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1.jsonb_array_length(val eql_v1_encrypted)
   RETURNS integer
@@ -206,7 +198,6 @@ $$ LANGUAGE plpgsql;
 ---
 -- An encrypted is a jsonb array if it contains an "a" field/attribute with a truthy value
 --
--- DROP FUNCTION IF EXISTS eql_v1.jsonb_array_elements(val jsonb);
 
 CREATE FUNCTION eql_v1.jsonb_array_elements(val jsonb)
   RETURNS SETOF eql_v1_encrypted
@@ -232,7 +223,6 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- DROP FUNCTION IF EXISTS eql_v1.jsonb_array_elements(val eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1.jsonb_array_elements(val eql_v1_encrypted)
   RETURNS SETOF eql_v1_encrypted
@@ -252,7 +242,6 @@ $$ LANGUAGE plpgsql;
 ---
 -- An encrypted is a jsonb array if it contains an "a" field/attribute with a truthy value
 --
--- DROP FUNCTION IF EXISTS eql_v1.jsonb_array_elements_text(val jsonb);
 
 CREATE FUNCTION eql_v1.jsonb_array_elements_text(val jsonb)
   RETURNS SETOF text
@@ -277,7 +266,6 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- DROP FUNCTION IF EXISTS eql_v1.jsonb_array_elements_text(val eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1.jsonb_array_elements_text(val eql_v1_encrypted)
   RETURNS SETOF text

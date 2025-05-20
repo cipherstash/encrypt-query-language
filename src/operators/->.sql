@@ -16,9 +16,7 @@
 --       "sv": [ {"c": "", "s": "", "b": "" } ]
 --     }
 --
--- DROP OPERATOR IF EXISTS -> (eql_v1_encrypted, text);
 
--- DROP FUNCTION IF EXISTS eql_v1."->"(e eql_v1_encrypted, selector text);
 
 CREATE FUNCTION eql_v1."->"(e eql_v1_encrypted, selector text)
   RETURNS eql_v1_encrypted
@@ -49,9 +47,7 @@ $$ LANGUAGE plpgsql;
 --
 
 
--- DROP OPERATOR IF EXISTS -> (eql_v1_encrypted, integer);
 
--- DROP FUNCTION IF EXISTS eql_v1."->"(e eql_v1_encrypted, selector integer);
 
 CREATE FUNCTION eql_v1."->"(e eql_v1_encrypted, selector integer)
   RETURNS eql_v1_encrypted

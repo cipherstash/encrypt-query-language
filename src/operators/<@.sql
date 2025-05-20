@@ -3,8 +3,6 @@
 -- REQUIRE: src/ste_vec/functions.sql
 
 
--- DROP OPERATOR IF EXISTS <@ (eql_v1_encrypted, eql_v1_encrypted);
--- DROP FUNCTION IF EXISTS eql_v1."<@"(e eql_v1_encrypted, b eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1."<@"(a eql_v1_encrypted, b eql_v1_encrypted)
 RETURNS boolean AS $$
