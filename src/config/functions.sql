@@ -5,7 +5,7 @@
 --
 
 
-CREATE FUNCTION eql_v1.config_default(config jsonb)
+CREATE FUNCTION eql_v2.config_default(config jsonb)
   RETURNS jsonb
   IMMUTABLE PARALLEL SAFE
 AS $$
@@ -19,7 +19,7 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v1.config_add_table(table_name text, config jsonb)
+CREATE FUNCTION eql_v2.config_add_table(table_name text, config jsonb)
   RETURNS jsonb
   IMMUTABLE PARALLEL SAFE
 AS $$
@@ -36,7 +36,7 @@ $$ LANGUAGE plpgsql;
 
 -- Add the column if it doesn't exist
 
-CREATE FUNCTION eql_v1.config_add_column(table_name text, column_name text, config jsonb)
+CREATE FUNCTION eql_v2.config_add_column(table_name text, column_name text, config jsonb)
   RETURNS jsonb
   IMMUTABLE PARALLEL SAFE
 AS $$
@@ -54,7 +54,7 @@ $$ LANGUAGE plpgsql;
 
 -- Set the cast
 
-CREATE FUNCTION eql_v1.config_add_cast(table_name text, column_name text, cast_as text, config jsonb)
+CREATE FUNCTION eql_v2.config_add_cast(table_name text, column_name text, cast_as text, config jsonb)
   RETURNS jsonb
   IMMUTABLE PARALLEL SAFE
 AS $$
@@ -67,7 +67,7 @@ $$ LANGUAGE plpgsql;
 
 -- Add the column if it doesn't exist
 
-CREATE FUNCTION eql_v1.config_add_index(table_name text, column_name text, index_name text, opts jsonb, config jsonb)
+CREATE FUNCTION eql_v2.config_add_index(table_name text, column_name text, index_name text, opts jsonb, config jsonb)
   RETURNS jsonb
   IMMUTABLE PARALLEL SAFE
 AS $$
@@ -82,7 +82,7 @@ $$ LANGUAGE plpgsql;
 -- Default options for match index
 --
 
-CREATE FUNCTION eql_v1.config_match_default()
+CREATE FUNCTION eql_v2.config_match_default()
   RETURNS jsonb
 LANGUAGE sql STRICT PARALLEL SAFE
 BEGIN ATOMIC
@@ -98,7 +98,7 @@ END;
 -- Adds an index term to the configuration
 --
 
-CREATE FUNCTION eql_v1.add_index(table_name text, column_name text, index_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}')
+CREATE FUNCTION eql_v2.add_index(table_name text, column_name text, index_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}')
   RETURNS jsonb
 
 AS $$
@@ -108,7 +108,7 @@ AS $$
   BEGIN
 
     -- set the active config
-    SELECT data INTO _config FROM public.eql_v1_configuration WHERE state = 'active' OR state = 'pending' ORDER BY state DESC;
+    SELECT data INTO _config FROM public.eql_v2_configuration WHERE state = 'active' OR state = 'pending' ORDER BY state DESC;
 
     -- if index exists
     IF _config #> array['tables', table_name, column_name, 'indexes'] ?  index_name THEN
@@ -120,23 +120,23 @@ AS $$
     END IF;
 
     -- set default config
-    SELECT eql_v1.config_default(_config) INTO _config;
+    SELECT eql_v2.config_default(_config) INTO _config;
 
-    SELECT eql_v1.config_add_table(table_name, _config) INTO _config;
+    SELECT eql_v2.config_add_table(table_name, _config) INTO _config;
 
-    SELECT eql_v1.config_add_column(table_name, column_name, _config) INTO _config;
+    SELECT eql_v2.config_add_column(table_name, column_name, _config) INTO _config;
 
-    SELECT eql_v1.config_add_cast(table_name, column_name, cast_as, _config) INTO _config;
+    SELECT eql_v2.config_add_cast(table_name, column_name, cast_as, _config) INTO _config;
 
     -- set default options for index if opts empty
     IF index_name = 'match' AND opts = '{}' THEN
-      SELECT eql_v1.config_match_default() INTO opts;
+      SELECT eql_v2.config_match_default() INTO opts;
     END IF;
 
-    SELECT eql_v1.config_add_index(table_name, column_name, index_name, opts, _config) INTO _config;
+    SELECT eql_v2.config_add_index(table_name, column_name, index_name, opts, _config) INTO _config;
 
     --  create a new pending record if we don't have one
-    INSERT INTO public.eql_v1_configuration (state, data) VALUES ('pending', _config)
+    INSERT INTO public.eql_v2_configuration (state, data) VALUES ('pending', _config)
     ON CONFLICT (state)
       WHERE state = 'pending'
     DO UPDATE
@@ -149,7 +149,7 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v1.remove_index(table_name text, column_name text, index_name text)
+CREATE FUNCTION eql_v2.remove_index(table_name text, column_name text, index_name text)
   RETURNS jsonb
 AS $$
   DECLARE
@@ -157,7 +157,7 @@ AS $$
   BEGIN
 
     -- set the active config
-    SELECT data INTO _config FROM public.eql_v1_configuration WHERE state = 'active' OR state = 'pending' ORDER BY state DESC;
+    SELECT data INTO _config FROM public.eql_v2_configuration WHERE state = 'active' OR state = 'pending' ORDER BY state DESC;
 
     -- if no config
     IF _config IS NULL THEN
@@ -176,7 +176,7 @@ AS $$
     END IF;
 
     --  create a new pending record if we don't have one
-    INSERT INTO public.eql_v1_configuration (state, data) VALUES ('pending', _config)
+    INSERT INTO public.eql_v2_configuration (state, data) VALUES ('pending', _config)
     ON CONFLICT (state)
       WHERE state = 'pending'
     DO NOTHING;
@@ -197,9 +197,9 @@ AS $$
     -- if config empty delete
     -- or update the config
     IF _config #> array['tables'] = '{}' THEN
-      DELETE FROM public.eql_v1_configuration WHERE state = 'pending';
+      DELETE FROM public.eql_v2_configuration WHERE state = 'pending';
     ELSE
-      UPDATE public.eql_v1_configuration SET data = _config WHERE state = 'pending';
+      UPDATE public.eql_v2_configuration SET data = _config WHERE state = 'pending';
     END IF;
 
     -- exeunt
@@ -209,12 +209,12 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v1.modify_index(table_name text, column_name text, index_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}')
+CREATE FUNCTION eql_v2.modify_index(table_name text, column_name text, index_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}')
   RETURNS jsonb
 AS $$
   BEGIN
-    PERFORM eql_v1.remove_index(table_name, column_name, index_name);
-    RETURN eql_v1.add_index(table_name, column_name, index_name, cast_as, opts);
+    PERFORM eql_v2.remove_index(table_name, column_name, index_name);
+    RETURN eql_v2.add_index(table_name, column_name, index_name, cast_as, opts);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -224,7 +224,7 @@ $$ LANGUAGE plpgsql;
 --
 -- Marks the currently `pending` configuration as `encrypting`.
 --
--- Validates the database schema and raises an exception if the configured columns are not `cs_encrypted_v1` type.
+-- Validates the database schema and raises an exception if the configured columns are not `cs_encrypted_v2` type.
 --
 -- Accepts an optional `force` parameter.
 -- If `force` is `true`, the schema validation is skipped.
@@ -232,38 +232,38 @@ $$ LANGUAGE plpgsql;
 -- Raises an exception if the configuration is already `encrypting` or if there is no `pending` configuration to encrypt.
 --
 
-CREATE FUNCTION eql_v1.encrypt()
+CREATE FUNCTION eql_v2.encrypt()
   RETURNS boolean
 AS $$
 	BEGIN
 
-    IF EXISTS (SELECT FROM public.eql_v1_configuration c WHERE c.state = 'encrypting') THEN
+    IF EXISTS (SELECT FROM public.eql_v2_configuration c WHERE c.state = 'encrypting') THEN
       RAISE EXCEPTION 'An encryption is already in progress';
     END IF;
 
-		IF NOT EXISTS (SELECT FROM public.eql_v1_configuration c WHERE c.state = 'pending') THEN
+		IF NOT EXISTS (SELECT FROM public.eql_v2_configuration c WHERE c.state = 'pending') THEN
 			RAISE EXCEPTION 'No pending configuration exists to encrypt';
 		END IF;
 
-    IF NOT eql_v1.ready_for_encryption() THEN
+    IF NOT eql_v2.ready_for_encryption() THEN
       RAISE EXCEPTION 'Some pending columns do not have an encrypted target';
     END IF;
 
-    UPDATE public.eql_v1_configuration SET state = 'encrypting' WHERE state = 'pending';
+    UPDATE public.eql_v2_configuration SET state = 'encrypting' WHERE state = 'pending';
 		RETURN true;
   END;
 $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v1.activate()
+CREATE FUNCTION eql_v2.activate()
   RETURNS boolean
 AS $$
 	BEGIN
 
-	  IF EXISTS (SELECT FROM public.eql_v1_configuration c WHERE c.state = 'encrypting') THEN
-	  	UPDATE public.eql_v1_configuration SET state = 'inactive' WHERE state = 'active';
-			UPDATE public.eql_v1_configuration SET state = 'active' WHERE state = 'encrypting';
+	  IF EXISTS (SELECT FROM public.eql_v2_configuration c WHERE c.state = 'encrypting') THEN
+	  	UPDATE public.eql_v2_configuration SET state = 'inactive' WHERE state = 'active';
+			UPDATE public.eql_v2_configuration SET state = 'active' WHERE state = 'encrypting';
 			RETURN true;
 		ELSE
 			RAISE EXCEPTION 'No encrypting configuration exists to activate';
@@ -273,12 +273,12 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v1.discard()
+CREATE FUNCTION eql_v2.discard()
   RETURNS boolean
 AS $$
   BEGIN
-    IF EXISTS (SELECT FROM public.eql_v1_configuration c WHERE c.state = 'pending') THEN
-        DELETE FROM public.eql_v1_configuration WHERE state = 'pending';
+    IF EXISTS (SELECT FROM public.eql_v2_configuration c WHERE c.state = 'pending') THEN
+        DELETE FROM public.eql_v2_configuration WHERE state = 'pending';
       RETURN true;
     ELSE
       RAISE EXCEPTION 'No pending configuration exists to discard';
@@ -288,7 +288,7 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v1.add_column(table_name text, column_name text, cast_as text DEFAULT 'text')
+CREATE FUNCTION eql_v2.add_column(table_name text, column_name text, cast_as text DEFAULT 'text')
   RETURNS jsonb
 AS $$
   DECLARE
@@ -296,30 +296,30 @@ AS $$
     _config jsonb;
   BEGIN
     -- set the active config
-    SELECT data INTO _config FROM public.eql_v1_configuration WHERE state = 'active' OR state = 'pending' ORDER BY state DESC;
+    SELECT data INTO _config FROM public.eql_v2_configuration WHERE state = 'active' OR state = 'pending' ORDER BY state DESC;
 
     -- set default config
-    SELECT eql_v1.config_default(_config) INTO _config;
+    SELECT eql_v2.config_default(_config) INTO _config;
 
     -- if index exists
     IF _config #> array['tables', table_name] ?  column_name THEN
       RAISE EXCEPTION 'Config exists for column: % %', table_name, column_name;
     END IF;
 
-    SELECT eql_v1.config_add_table(table_name, _config) INTO _config;
+    SELECT eql_v2.config_add_table(table_name, _config) INTO _config;
 
-    SELECT eql_v1.config_add_column(table_name, column_name, _config) INTO _config;
+    SELECT eql_v2.config_add_column(table_name, column_name, _config) INTO _config;
 
-    SELECT eql_v1.config_add_cast(table_name, column_name, cast_as, _config) INTO _config;
+    SELECT eql_v2.config_add_cast(table_name, column_name, cast_as, _config) INTO _config;
 
     --  create a new pending record if we don't have one
-    INSERT INTO public.eql_v1_configuration (state, data) VALUES ('pending', _config)
+    INSERT INTO public.eql_v2_configuration (state, data) VALUES ('pending', _config)
     ON CONFLICT (state)
       WHERE state = 'pending'
     DO UPDATE
       SET data = _config;
 
-    PERFORM eql_v1.add_encrypted_constraint(table_name, column_name);
+    PERFORM eql_v2.add_encrypted_constraint(table_name, column_name);
 
     -- exeunt
     RETURN _config;
@@ -328,7 +328,7 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v1.remove_column(table_name text, column_name text)
+CREATE FUNCTION eql_v2.remove_column(table_name text, column_name text)
   RETURNS jsonb
 AS $$
   DECLARE
@@ -336,7 +336,7 @@ AS $$
     _config jsonb;
   BEGIN
      -- set the active config
-    SELECT data INTO _config FROM public.eql_v1_configuration WHERE state = 'active' OR state = 'pending' ORDER BY state DESC;
+    SELECT data INTO _config FROM public.eql_v2_configuration WHERE state = 'active' OR state = 'pending' ORDER BY state DESC;
 
     -- if no config
     IF _config IS NULL THEN
@@ -354,7 +354,7 @@ AS $$
     END IF;
 
     --  create a new pending record if we don't have one
-    INSERT INTO public.eql_v1_configuration (state, data) VALUES ('pending', _config)
+    INSERT INTO public.eql_v2_configuration (state, data) VALUES ('pending', _config)
     ON CONFLICT (state)
       WHERE state = 'pending'
     DO NOTHING;
@@ -370,12 +370,12 @@ AS $$
     -- if config empty delete
     -- or update the config
     IF _config #> array['tables'] = '{}' THEN
-      DELETE FROM public.eql_v1_configuration WHERE state = 'pending';
+      DELETE FROM public.eql_v2_configuration WHERE state = 'pending';
     ELSE
-      UPDATE public.eql_v1_configuration SET data = _config WHERE state = 'pending';
+      UPDATE public.eql_v2_configuration SET data = _config WHERE state = 'pending';
     END IF;
 
-    PERFORM eql_v1.remove_encrypted_constraint(table_name, column_name);
+    PERFORM eql_v2.remove_encrypted_constraint(table_name, column_name);
 
     -- exeunt
     RETURN _config;
@@ -385,7 +385,7 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v1.reload_config()
+CREATE FUNCTION eql_v2.reload_config()
   RETURNS void
 LANGUAGE sql STRICT PARALLEL SAFE
 BEGIN ATOMIC
@@ -396,8 +396,8 @@ END;
 -- A convenience function to return the configuration in a tabular format, allowing for easier filtering, and querying.
 -- Query using `SELECT * FROM cs_config();`
 --
-CREATE FUNCTION eql_v1.config() RETURNS TABLE (
-    state eql_v1_configuration_state,
+CREATE FUNCTION eql_v2.config() RETURNS TABLE (
+    state eql_v2_configuration_state,
     relation text,
     col_name text,
     decrypts_as text,
@@ -408,7 +408,7 @@ BEGIN
     RETURN QUERY
       WITH tables AS (
           SELECT config.state, tables.key AS table, tables.value AS config
-          FROM public.eql_v1_configuration config, jsonb_each(data->'tables') tables
+          FROM public.eql_v2_configuration config, jsonb_each(data->'tables') tables
           WHERE config.data->>'v' = '1'
       )
       SELECT

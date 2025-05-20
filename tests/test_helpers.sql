@@ -18,8 +18,8 @@ AS $$
     CREATE TABLE encrypted
     (
         id bigint GENERATED ALWAYS AS IDENTITY,
-        -- name_encrypted eql_v1_encrypted,
-        e eql_v1_encrypted,
+        -- name_encrypted eql_v2_encrypted,
+        e eql_v2_encrypted,
         PRIMARY KEY(id)
     );
 END;
@@ -100,7 +100,7 @@ $$ LANGUAGE plpgsql;
 --
 --
 -- $.a
--- -> eql_v1_encrypted[]
+-- -> eql_v2_encrypted[]
 -- a [
 --    1
 -- ]
@@ -273,7 +273,7 @@ $$ LANGUAGE plpgsql;
 -- --
 DROP FUNCTION IF EXISTS create_encrypted_json(integer);
 CREATE FUNCTION create_encrypted_json(id integer)
-  RETURNS eql_v1_encrypted
+  RETURNS eql_v2_encrypted
 AS $$
   DECLARE
     s text;
@@ -307,7 +307,7 @@ AS $$
 
     SELECT ore.e FROM ore WHERE ore.id = start INTO ore_term;
 
-    -- PERFORM eql_v1.log('ore_term: ', ore_term::text);
+    -- PERFORM eql_v2.log('ore_term: ', ore_term::text);
 
     s := format(
       '{
@@ -327,16 +327,16 @@ AS $$
 
     s := s::jsonb || sv || ore_term;
 
-    -- PERFORM eql_v1.log('json: %', s);
+    -- PERFORM eql_v2.log('json: %', s);
 
-    RETURN s::eql_v1_encrypted;
+    RETURN s::eql_v2_encrypted;
   END;
 $$ LANGUAGE plpgsql;
 
 
 DROP FUNCTION IF EXISTS create_encrypted_json(integer, VARIADIC indexes text[]);
 CREATE FUNCTION create_encrypted_json(id integer, VARIADIC indexes text[])
-  RETURNS eql_v1_encrypted
+  RETURNS eql_v2_encrypted
 AS $$
   DECLARE
     j jsonb;
@@ -349,7 +349,7 @@ AS $$
         WHERE key = ANY(indexes)
       );
 
-    RETURN j::eql_v1_encrypted;
+    RETURN j::eql_v2_encrypted;
 
   END;
 $$ LANGUAGE plpgsql;
@@ -357,7 +357,7 @@ $$ LANGUAGE plpgsql;
 
 DROP FUNCTION IF EXISTS create_encrypted_json(VARIADIC indexes text[]);
 CREATE FUNCTION create_encrypted_json(VARIADIC indexes text[])
-  RETURNS eql_v1_encrypted
+  RETURNS eql_v2_encrypted
 AS $$
  DECLARE
     default_indexes text[];
@@ -374,7 +374,7 @@ AS $$
         WHERE key = ANY(indexes || default_indexes)
       );
 
-    RETURN j::eql_v1_encrypted;
+    RETURN j::eql_v2_encrypted;
 
   END;
 $$ LANGUAGE plpgsql;
@@ -383,22 +383,22 @@ $$ LANGUAGE plpgsql;
 
 DROP FUNCTION IF EXISTS create_encrypted_ore_json(val integer);
 CREATE FUNCTION create_encrypted_ore_json(val integer)
-  RETURNS eql_v1_encrypted
+  RETURNS eql_v2_encrypted
 AS $$
  DECLARE
-    e eql_v1_encrypted;
+    e eql_v2_encrypted;
     ore_term jsonb;
   BEGIN
     EXECUTE format('SELECT ore.e FROM ore WHERE id = %s', val) INTO ore_term;
     e := create_encrypted_json('o')::jsonb || ore_term;
-    RETURN e::eql_v1_encrypted;
+    RETURN e::eql_v2_encrypted;
   END;
 $$ LANGUAGE plpgsql;
 
 
 DROP FUNCTION IF EXISTS create_encrypted_json();
 CREATE FUNCTION create_encrypted_json()
-  RETURNS eql_v1_encrypted
+  RETURNS eql_v2_encrypted
 AS $$
  DECLARE
     id integer;
@@ -406,13 +406,13 @@ AS $$
   BEGIN
     id := trunc(random() * 1000 + 1);
     j := create_encrypted_json(id);
-    RETURN j::eql_v1_encrypted;
+    RETURN j::eql_v2_encrypted;
   END;
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION IF EXISTS seed_encrypted(eql_v1_encrypted);
-CREATE FUNCTION seed_encrypted(e eql_v1_encrypted)
+DROP FUNCTION IF EXISTS seed_encrypted(eql_v2_encrypted);
+CREATE FUNCTION seed_encrypted(e eql_v2_encrypted)
   RETURNS void
 AS $$
   BEGIN

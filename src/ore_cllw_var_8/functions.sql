@@ -7,8 +7,8 @@
 
 -- extracts ore_cllw_var_8 index from a jsonb value
 
-CREATE FUNCTION eql_v1.ore_cllw_var_8(val jsonb)
-  RETURNS eql_v1.ore_cllw_var_8
+CREATE FUNCTION eql_v2.ore_cllw_var_8(val jsonb)
+  RETURNS eql_v2.ore_cllw_var_8
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
@@ -26,20 +26,20 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- extracts ore_cllw_var_8 index from an eql_v1_encrypted value
+-- extracts ore_cllw_var_8 index from an eql_v2_encrypted value
 
-CREATE FUNCTION eql_v1.ore_cllw_var_8(val eql_v1_encrypted)
-  RETURNS eql_v1.ore_cllw_var_8
+CREATE FUNCTION eql_v2.ore_cllw_var_8(val eql_v2_encrypted)
+  RETURNS eql_v2.ore_cllw_var_8
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
-    RETURN (SELECT eql_v1.ore_cllw_var_8(val.data));
+    RETURN (SELECT eql_v2.ore_cllw_var_8(val.data));
   END;
 $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v1.compare_ore_cllw_var_8(a eql_v1.ore_cllw_var_8, b eql_v1.ore_cllw_var_8)
+CREATE FUNCTION eql_v2.compare_ore_cllw_var_8(a eql_v2.ore_cllw_var_8, b eql_v2.ore_cllw_var_8)
 RETURNS int AS $$
 DECLARE
     len_a INT;
@@ -73,7 +73,7 @@ BEGIN
     END IF;
 
     -- Use the compare_bytea function to compare byte by byte
-    cmp_result := eql_v1.compare_ore_cllw(
+    cmp_result := eql_v2.compare_ore_cllw(
       SUBSTRING(a.bytes FROM 1 FOR common_len),
       SUBSTRING(b.bytes FROM 1 FOR common_len)
     );

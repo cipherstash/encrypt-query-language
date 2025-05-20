@@ -2,9 +2,9 @@
 -- Source is version-template.sql
 -- REQUIRE: src/schema.sql
 
-DROP FUNCTION IF EXISTS eql_v1.version();
+DROP FUNCTION IF EXISTS eql_v2.version();
 
-CREATE FUNCTION eql_v1.version()
+CREATE FUNCTION eql_v2.version()
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$

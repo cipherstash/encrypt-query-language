@@ -2,12 +2,12 @@
 
 --
 --
--- CREATE the eql_v1_configuration TABLE
+-- CREATE the eql_v2_configuration TABLE
 --
-CREATE TABLE IF NOT EXISTS public.eql_v1_configuration
+CREATE TABLE IF NOT EXISTS public.eql_v2_configuration
 (
     id bigint GENERATED ALWAYS AS IDENTITY,
-    state eql_v1_configuration_state NOT NULL DEFAULT 'pending',
+    state eql_v2_configuration_state NOT NULL DEFAULT 'pending',
     data jsonb,
     created_at timestamptz not null default current_timestamp,
     PRIMARY KEY(id)

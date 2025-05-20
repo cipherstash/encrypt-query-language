@@ -3,13 +3,13 @@
 
 
 --
-CREATE FUNCTION eql_v1.ste_vec(val jsonb)
-  RETURNS eql_v1_encrypted[]
+CREATE FUNCTION eql_v2.ste_vec(val jsonb)
+  RETURNS eql_v2_encrypted[]
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   DECLARE
     sv jsonb;
-    ary eql_v1_encrypted[];
+    ary eql_v2_encrypted[];
 	BEGIN
 
     IF val ? 'sv' THEN
@@ -18,7 +18,7 @@ AS $$
       sv := jsonb_build_array(val);
     END IF;
 
-    SELECT array_agg(elem::eql_v1_encrypted)
+    SELECT array_agg(elem::eql_v2_encrypted)
       INTO ary
       FROM jsonb_array_elements(sv) AS elem;
 
@@ -27,20 +27,20 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- extracts ste_vec index from an eql_v1_encrypted value
+-- extracts ste_vec index from an eql_v2_encrypted value
 
-CREATE FUNCTION eql_v1.ste_vec(val eql_v1_encrypted)
-  RETURNS eql_v1_encrypted[]
+CREATE FUNCTION eql_v2.ste_vec(val eql_v2_encrypted)
+  RETURNS eql_v2_encrypted[]
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
-    RETURN (SELECT eql_v1.ste_vec(val.data));
+    RETURN (SELECT eql_v2.ste_vec(val.data));
   END;
 $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v1.selector(val jsonb)
+CREATE FUNCTION eql_v2.selector(val jsonb)
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -53,20 +53,20 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- extracts ste_vec index from an eql_v1_encrypted value
+-- extracts ste_vec index from an eql_v2_encrypted value
 
-CREATE FUNCTION eql_v1.selector(val eql_v1_encrypted)
+CREATE FUNCTION eql_v2.selector(val eql_v2_encrypted)
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
-    RETURN (SELECT eql_v1.selector(val.data));
+    RETURN (SELECT eql_v2.selector(val.data));
   END;
 $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v1.is_ste_vec_array(val jsonb)
+CREATE FUNCTION eql_v2.is_ste_vec_array(val jsonb)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -80,34 +80,34 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- extracts ste_vec index from an eql_v1_encrypted value
+-- extracts ste_vec index from an eql_v2_encrypted value
 
-CREATE FUNCTION eql_v1.is_ste_vec_array(val eql_v1_encrypted)
+CREATE FUNCTION eql_v2.is_ste_vec_array(val eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
-    RETURN (SELECT eql_v1.is_ste_vec_array(val.data));
+    RETURN (SELECT eql_v2.is_ste_vec_array(val.data));
   END;
 $$ LANGUAGE plpgsql;
 
 
 
 -- Returns true if b is contained in any element of a
-CREATE FUNCTION eql_v1.ste_vec_contains(a eql_v1_encrypted[], b eql_v1_encrypted)
+CREATE FUNCTION eql_v2.ste_vec_contains(a eql_v2_encrypted[], b eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   DECLARE
     result boolean;
-    _a eql_v1_encrypted;
+    _a eql_v2_encrypted;
   BEGIN
 
     result := false;
 
     FOR idx IN 1..array_length(a, 1) LOOP
       _a := a[idx];
-      result := result OR (eql_v1.selector(_a) = eql_v1.selector(b) AND _a = b);
+      result := result OR (eql_v2.selector(_a) = eql_v2.selector(b) AND _a = b);
     END LOOP;
 
     RETURN result;
@@ -117,20 +117,20 @@ $$ LANGUAGE plpgsql;
 
 -- Returns truy if a contains b
 -- All values of b must be in a
-CREATE FUNCTION eql_v1.ste_vec_contains(a eql_v1_encrypted, b eql_v1_encrypted)
+CREATE FUNCTION eql_v2.ste_vec_contains(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   DECLARE
     result boolean;
-    sv_a eql_v1_encrypted[];
-    sv_b eql_v1_encrypted[];
-    _b eql_v1_encrypted;
+    sv_a eql_v2_encrypted[];
+    sv_b eql_v2_encrypted[];
+    _b eql_v2_encrypted;
   BEGIN
 
     -- jsonb arrays of ste_vec encrypted values
-    sv_a := eql_v1.ste_vec(a);
-    sv_b := eql_v1.ste_vec(b);
+    sv_a := eql_v2.ste_vec(a);
+    sv_b := eql_v2.ste_vec(b);
 
     -- an empty b is always contained in a
     IF array_length(sv_b, 1) IS NULL THEN
@@ -146,7 +146,7 @@ AS $$
     -- for each element of b check if it is in a
     FOR idx IN 1..array_length(sv_b, 1) LOOP
       _b := sv_b[idx];
-      result := result AND eql_v1.ste_vec_contains(sv_a, _b);
+      result := result AND eql_v2.ste_vec_contains(sv_a, _b);
     END LOOP;
 
     RETURN result;

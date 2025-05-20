@@ -77,14 +77,14 @@ All files must have at least one declaration, and the default is to reference th
 
 ## Set up a local development environment
 
-> [!IMPORTANT]
-> **Before you follow this how-to** you need to have this software installed:
->  - [mise](https://mise.jdx.dev/) — see the [installing mise](#installing-mise) instructions
->  - [Docker](https://www.docker.com/) — see Docker's [documentation for installing](https://docs.docker.com/get-started/get-docker/)
+> [!IMPORTANT] > **Before you follow this how-to** you need to have this software installed:
+>
+> - [mise](https://mise.jdx.dev/) — see the [installing mise](#installing-mise) instructions
+> - [Docker](https://www.docker.com/) — see Docker's [documentation for installing](https://docs.docker.com/get-started/get-docker/)
 
 Local development quickstart:
 
-``` shell
+```shell
 # Clone the repo
 git clone https://github.com/cipherstash/encrypt-query-language
 cd encrypt-query-language
@@ -222,12 +222,11 @@ You can also [run the tests locally](#running-tests-locally) when doing local de
 
 ### Running tests locally
 
-> [!IMPORTANT]
-> **Before you run the tests locally** you need to [set up a local dev environment](#set-up-a-local-development-environment).
+> [!IMPORTANT] > **Before you run the tests locally** you need to [set up a local dev environment](#set-up-a-local-development-environment).
 
 To run tests locally with PostgreSQL 17:
 
-``` shell
+```shell
 # Start a postgres instance (defaults to PostgreSQL 17)
 mise run postgres:up --extra-args "--detach --wait"
 
@@ -292,25 +291,25 @@ mise run build
 
 This produces two SQL files in `releases/`:
 
- - An installer (`cipherstash-encrypt.sql`), and
- - An uninstaller (`cipherstash-encrypt-uninstall.sql`)
+- An installer (`cipherstash-encrypt.sql`), and
+- An uninstaller (`cipherstash-encrypt-uninstall.sql`)
 
 ## Structure
 
 ### Schema
 
-EQL is installed into the `eql_v1` PostgreSQL schema.
+EQL is installed into the `eql_v2` PostgreSQL schema.
 
 ### Types
 
 #### Encrypted column type
 
-`public.eql_v1_encrypted` is EQL's encrypted column type, defined as PostgreSQL composite type.
+`public.eql_v2_encrypted` is EQL's encrypted column type, defined as PostgreSQL composite type.
 
 This column type is used for storing the encrypted value and any associated indexes for searching.
 The associated indexes are described in the [index term types](#index-term-types) section.
 
-`public.eql_v1_encrypted` is in the public schema, because once it's used by a user in one of their tables, encrypted column types cannot be dropped without dropping data.
+`public.eql_v2_encrypted` is in the public schema, because once it's used by a user in one of their tables, encrypted column types cannot be dropped without dropping data.
 
 #### Encrypted index term types
 
@@ -318,13 +317,13 @@ Each type of encrypted index (`unique`, `match`, `ore`) has an associated type, 
 
 These are transient runtime types, used internally by EQL functions and operators:
 
-- `eql_v1.blake3`
-- `eql_v1.unique_index`
-- `eql_v1.match`
-- `eql_v1.ore_cllw_u64_8`
-- `eql_v1.ore_cllw_var_8`
-- `eql_v1.ore_64_8_v1`
-- `eql_v1.ore_64_8_v1_term`
+- `eql_v2.blake3`
+- `eql_v2.unique_index`
+- `eql_v2.match`
+- `eql_v2.ore_cllw_u64_8`
+- `eql_v2.ore_cllw_var_8`
+- `eql_v2.ore_64_8_v2`
+- `eql_v2.ore_64_8_v2_term`
 
 The data in the column is converted into these types, when any operations are being performed on that encrypted data.
 
@@ -332,26 +331,25 @@ The data in the column is converted into these types, when any operations are be
 
 Searchable encryption functionality is driven by operators on two types:
 
-- EQL's `eql_v1_encrypted` column type
+- EQL's `eql_v2_encrypted` column type
 - PostgreSQL's `jsonb` column type
 
-For convenience, operators allow comparisons between `eql_v1_encrypted` and `jsonb` column types.
+For convenience, operators allow comparisons between `eql_v2_encrypted` and `jsonb` column types.
 
 Operators allow comparisons between:
 
-- `eql_v1_encrypted` and `eql_v1_encrypted`
-- `jsonb` and `eql_v1_encrypted`
-- `eql_v1_encrypted` and `jsonb`
+- `eql_v2_encrypted` and `eql_v2_encrypted`
+- `jsonb` and `eql_v2_encrypted`
+- `eql_v2_encrypted` and `jsonb`
 
-Operators defined on the `eql_v1_encrypted` dispatch to the underlying index terms based on the most efficient order of operations.
+Operators defined on the `eql_v2_encrypted` dispatch to the underlying index terms based on the most efficient order of operations.
 
 For example, it is possible to have both `unique` and `ore` indexes defined.
 For equality (`=`, `<>`) operations, a `unique` index term is a text comparison and should be preferred over an `ore` index term.
 
-The index term types and functions are internal implementation details and should not be exposed as operators on the `eql_v1_encrypted` type.
-For example, `eql_v1_encrypted` should not have an operator with the `ore_64_8_v1` type.
+The index term types and functions are internal implementation details and should not be exposed as operators on the `eql_v2_encrypted` type.
+For example, `eql_v2_encrypted` should not have an operator with the `ore_64_8_v2` type.
 Users should never need to think about or interact with EQL internals.
-
 
 #### Working without operators
 
@@ -363,12 +361,12 @@ EQL can still be used, but requires the use of functions instead of operators.
 For example, to perform an equality query:
 
 ```sql
-SELECT email FROM users WHERE eql_v1.eq(email, $1);
+SELECT email FROM users WHERE eql_v2.eq(email, $1);
 ```
 
 ### Configuration table
 
-EQL uses a table for tracking configuration state in the database, called `public.eql_v1_configuration`.
+EQL uses a table for tracking configuration state in the database, called `public.eql_v2_configuration`.
 
 This table should never be dropped, except by a user explicitly uninstalling EQL.
 
@@ -381,14 +379,14 @@ Experimenting with using a Composite type instead of a Domain type for the encry
 Composite types are a bit more capable. Domain types are more like an alias for the underlying type (in this case jsonb)
 The consequence of using a Composite type is that the data is stored in the column as a Tuple - effectively the data is wrapped in ()
 This means
-on insert/update the data needs to be cast to eql_v1_encrypted (proxy mapping will handle)
+on insert/update the data needs to be cast to eql_v2_encrypted (proxy mapping will handle)
 on read the data needs to be cast back to jsonb if a customer needs the raw json (for data lake transfer etc etc)
 Already built cast helpers so syntax is something like
     INSERT INTO encrypted (e) VALUES (
-        eql_v1.to_encrypted('{}')
+        eql_v2.to_encrypted('{}')
     );
 
     INSERT INTO encrypted (e) VALUES (
-        '{}'::jsonb::eql_v1_encrypted
+        '{}'::jsonb::eql_v2_encrypted
     );
 -->

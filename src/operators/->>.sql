@@ -4,24 +4,24 @@
 
 
 
-CREATE FUNCTION eql_v1."->>"(e eql_v1_encrypted, selector text)
+CREATE FUNCTION eql_v2."->>"(e eql_v2_encrypted, selector text)
   RETURNS text
 IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   DECLARE
-    found eql_v1_encrypted;
+    found eql_v2_encrypted;
 	BEGIN
 
-    found = eql_v1."->"(e, selector);
+    found = eql_v2."->"(e, selector);
 
-    RETURN eql_v1.ciphertext(found);
+    RETURN eql_v2.ciphertext(found);
   END;
 $$ LANGUAGE plpgsql;
 
 
 CREATE OPERATOR ->> (
-  FUNCTION=eql_v1."->>",
-  LEFTARG=eql_v1_encrypted,
+  FUNCTION=eql_v2."->>",
+  LEFTARG=eql_v2_encrypted,
   RIGHTARG=text
 );
 

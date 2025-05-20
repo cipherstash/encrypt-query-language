@@ -77,23 +77,23 @@ Once the custom types and functions are installed in your PostgreSQL database, y
 
 ### Enable encrypted columns
 
-Define encrypted columns using the `eql_v1_encrypted` type, which extends the `jsonb` type with additional constraints to ensure data integrity.
+Define encrypted columns using the `eql_v2_encrypted` type, which extends the `jsonb` type with additional constraints to ensure data integrity.
 
 **Example:**
 
 ```sql
 CREATE TABLE users (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    encrypted_email eql_v1_encrypted
+    encrypted_email eql_v2_encrypted
 );
 ```
 
 ### Configuring the column
 
-Initialize the column using the `eql_v1.add_column` function to enable encryption and decryption via CipherStash Proxy.
+Initialize the column using the `eql_v2.add_column` function to enable encryption and decryption via CipherStash Proxy.
 
 ```sql
-SELECT eql_v1.add_column('users', 'encrypted_email');
+SELECT eql_v2.add_column('users', 'encrypted_email');
 ```
 
 **Note:** This function allows you to encrypt and decrypt data but does not enable searchable encryption. See [Searching data with EQL](#searching-data-with-eql) for enabling searchable encryption.
@@ -103,8 +103,8 @@ SELECT eql_v1.add_column('users', 'encrypted_email');
 After modifying configurations, activate them by running:
 
 ```sql
-SELECT eql_v1.encrypt();
-SELECT eql_v1.activate();
+SELECT eql_v2.encrypt();
+SELECT eql_v2.activate();
 ```
 
 **Important:** These functions must be run after any modifications to the configuration.
@@ -114,7 +114,7 @@ SELECT eql_v1.activate();
 CipherStash Proxy refreshes the configuration every 60 seconds. To force an immediate refresh, run:
 
 ```sql
-SELECT eql_v1.reload_config();
+SELECT eql_v2.reload_config();
 ```
 
 > Note: This statement must be executed when connected to CipherStash Proxy.
@@ -191,10 +191,10 @@ In order to perform searchable operations on encrypted data, you must configure 
 
 ### Adding an index
 
-Add an index to an encrypted column using the `eql_v1.add_index` function:
+Add an index to an encrypted column using the `eql_v2.add_index` function:
 
 ```sql
-SELECT eql_v1.add_index(
+SELECT eql_v2.add_index(
   'table_name',       -- Name of the table
   'column_name',      -- Name of the column
   'index_name',       -- Index kind ('unique', 'match', 'ore', 'ste_vec')
@@ -208,7 +208,7 @@ You can read more about the index configuration options [here](docs/reference/IN
 **Example (Unique index):**
 
 ```sql
-SELECT eql_v1.add_index(
+SELECT eql_v2.add_index(
   'users',
   'encrypted_email',
   'unique',
@@ -219,8 +219,8 @@ SELECT eql_v1.add_index(
 After adding an index, you have to activate the configuration:
 
 ```sql
-SELECT eql_v1.encrypt();
-SELECT eql_v1.activate();
+SELECT eql_v2.encrypt();
+SELECT eql_v2.activate();
 ```
 
 ## Searching data with EQL
@@ -231,12 +231,12 @@ In order to use the specialized functions, you must first configure the correspo
 
 ### Equality search
 
-Enable equality search on encrypted data using the `eql_v1.unique` function.
+Enable equality search on encrypted data using the `eql_v2.unique` function.
 
 **Index configuration example:**
 
 ```sql
-SELECT eql_v1.add_index(
+SELECT eql_v2.add_index(
   'users',
   'encrypted_email',
   'unique',
@@ -248,7 +248,7 @@ SELECT eql_v1.add_index(
 
 ```sql
 SELECT * FROM users
-WHERE eql_v1.unique(encrypted_email) = eql_v1.unique(
+WHERE eql_v2.unique(encrypted_email) = eql_v2.unique(
   '{"v":1,"k":"pt","p":"test@example.com","i":{"t":"users","c":"encrypted_email"},"q":"unique"}'
 );
 ```
@@ -261,12 +261,12 @@ SELECT * FROM users WHERE email = 'test@example.com';
 
 ### Full-text search
 
-Enables basic full-text search on encrypted data using the `eql_v1.match` function.
+Enables basic full-text search on encrypted data using the `eql_v2.match` function.
 
 **Index configuration example:**
 
 ```sql
-SELECT eql_v1.add_index(
+SELECT eql_v2.add_index(
   'users',
   'encrypted_email',
   'match',
@@ -279,7 +279,7 @@ SELECT eql_v1.add_index(
 
 ```sql
 SELECT * FROM users
-WHERE eql_v1.match(encrypted_email) @> eql_v1.match(
+WHERE eql_v2.match(encrypted_email) @> eql_v2.match(
   '{"v":1,"k":"pt","p":"test","i":{"t":"users","c":"encrypted_email"},"q":"match"}'
 );
 ```
@@ -292,7 +292,7 @@ SELECT * FROM users WHERE email LIKE '%test%';
 
 ### Range queries
 
-Enable range queries on encrypted data using the `eql_v1.ore_64_8_v1`, `eql_v1.ore_cllw_u64_8`, or `eql_v1.ore_cllw_var_8` functions. Supports:
+Enable range queries on encrypted data using the `eql_v2.ore_64_8_v2`, `eql_v2.ore_cllw_u64_8`, or `eql_v2.ore_cllw_var_8` functions. Supports:
 
 - `ORDER BY`
 - `WHERE`
@@ -301,7 +301,7 @@ Enable range queries on encrypted data using the `eql_v1.ore_64_8_v1`, `eql_v1.o
 
 ```sql
 SELECT * FROM users
-WHERE eql_v1.ore_64_8_v1(encrypted_date) < eql_v1.ore_64_8_v1(
+WHERE eql_v2.ore_64_8_v2(encrypted_date) < eql_v2.ore_64_8_v2(
   '{"v":1,"k":"pt","p":"2023-10-05","i":{"t":"users","c":"encrypted_date"},"q":"ore"}'
 );
 ```
@@ -316,7 +316,7 @@ SELECT * FROM users WHERE date < '2023-10-05';
 
 ```sql
 SELECT id FROM users
-ORDER BY eql_v1.ore_64_8_v1(encrypted_field) DESC;
+ORDER BY eql_v2.ore_64_8_v2(encrypted_field) DESC;
 ```
 
 Equivalent plaintext query:
@@ -331,13 +331,13 @@ EQL supports array operations on encrypted data:
 
 ```sql
 -- Get array length
-SELECT eql_v1.jsonb_array_length(encrypted_array) FROM users;
+SELECT eql_v2.jsonb_array_length(encrypted_array) FROM users;
 
 -- Get array elements
-SELECT eql_v1.jsonb_array_elements(encrypted_array) FROM users;
+SELECT eql_v2.jsonb_array_elements(encrypted_array) FROM users;
 
 -- Get array element ciphertexts
-SELECT eql_v1.jsonb_array_elements_text(encrypted_array) FROM users;
+SELECT eql_v2.jsonb_array_elements_text(encrypted_array) FROM users;
 ```
 
 ### JSON Path Operations
@@ -373,7 +373,7 @@ No, CipherStash Proxy is required to handle the encryption and decryption operat
 
 ### How is data encrypted in the database?
 
-Data is encrypted using CipherStash's cryptographic schemes and stored in the `eql_v1_encrypted` column as a JSONB payload.
+Data is encrypted using CipherStash's cryptographic schemes and stored in the `eql_v2_encrypted` column as a JSONB payload.
 Encryption and decryption are handled by CipherStash Proxy.
 
 ## Helper packages and examples
