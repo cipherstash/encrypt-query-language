@@ -5,7 +5,7 @@
 -- Alter table from config
 --
 -- -----------------------------------------------
-TRUNCATE TABLE eql_v1_configuration;
+TRUNCATE TABLE eql_v2_configuration;
 
 -- Create a table with a plaintext column
 DROP TABLE IF EXISTS users;
@@ -16,7 +16,7 @@ CREATE TABLE users
     PRIMARY KEY(id)
 );
 
-INSERT INTO eql_v1_configuration (data) VALUES (
+INSERT INTO eql_v2_configuration (data) VALUES (
   '{
     "v": 1,
     "tables": {
@@ -36,21 +36,21 @@ DO $$
   BEGIN
 
     -- the column is pending encryptindexing
-    ASSERT (SELECT EXISTS (SELECT * FROM eql_v1.select_pending_columns() AS c WHERE c.column_name = 'name'));
+    ASSERT (SELECT EXISTS (SELECT * FROM eql_v2.select_pending_columns() AS c WHERE c.column_name = 'name'));
 
     -- the target column does not exist
-    ASSERT (SELECT EXISTS (SELECT * FROM eql_v1.select_target_columns() AS c WHERE c.target_column IS NULL));
+    ASSERT (SELECT EXISTS (SELECT * FROM eql_v2.select_target_columns() AS c WHERE c.target_column IS NULL));
 
     -- Add the vtha_encrypted column to the table
-    PERFORM eql_v1.create_encrypted_columns();
+    PERFORM eql_v2.create_encrypted_columns();
 
     ASSERT (SELECT EXISTS (SELECT * FROM information_schema.columns s WHERE s.column_name = 'name_encrypted'));
 
     -- -- rename columns
-    PERFORM eql_v1.rename_encrypted_columns();
+    PERFORM eql_v2.rename_encrypted_columns();
 
     ASSERT (SELECT EXISTS (SELECT * FROM information_schema.columns s WHERE s.column_name = 'name_plaintext'));
-    ASSERT (SELECT EXISTS (SELECT * FROM information_schema.columns s WHERE s.column_name = 'name' and s.udt_name = 'eql_v1_encrypted'));
+    ASSERT (SELECT EXISTS (SELECT * FROM information_schema.columns s WHERE s.column_name = 'name' and s.udt_name = 'eql_v2_encrypted'));
     ASSERT (SELECT NOT EXISTS (SELECT * FROM information_schema.columns s WHERE s.column_name = 'name_encrypted'));
   END;
 $$ LANGUAGE plpgsql;
@@ -60,7 +60,7 @@ $$ LANGUAGE plpgsql;
 -- Create multiple columns
 --
 -- -----------------------------------------------
-TRUNCATE TABLE eql_v1_configuration;
+TRUNCATE TABLE eql_v2_configuration;
 
 -- Create a table with multiple plaintext columns
 DROP TABLE IF EXISTS users;
@@ -72,7 +72,7 @@ CREATE TABLE users
     PRIMARY KEY(id)
 );
 
-INSERT INTO eql_v1_configuration (data) VALUES (
+INSERT INTO eql_v2_configuration (data) VALUES (
   '{
     "v": 1,
     "tables": {
@@ -99,13 +99,13 @@ DO $$
   BEGIN
 
     -- the column is pending encryptindexing
-    ASSERT (SELECT EXISTS (SELECT * FROM eql_v1.select_pending_columns() AS c WHERE c.column_name = 'name'));
+    ASSERT (SELECT EXISTS (SELECT * FROM eql_v2.select_pending_columns() AS c WHERE c.column_name = 'name'));
 
     -- the target column does not exisgt
-    ASSERT (SELECT EXISTS (SELECT * FROM eql_v1.select_target_columns() AS c WHERE c.target_column IS NULL));
+    ASSERT (SELECT EXISTS (SELECT * FROM eql_v2.select_target_columns() AS c WHERE c.target_column IS NULL));
 
     -- create column
-    PERFORM eql_v1.create_encrypted_columns();
+    PERFORM eql_v2.create_encrypted_columns();
 
     ASSERT (SELECT EXISTS (SELECT * FROM information_schema.columns s WHERE s.column_name = 'name_encrypted'));
     ASSERT (SELECT EXISTS (SELECT * FROM information_schema.columns s WHERE s.column_name = 'email_encrypted'));
@@ -120,10 +120,10 @@ $$ LANGUAGE plpgsql;
 -- The active config is unchanged
 -- The pending config should now be encrypting
 -- -----------------------------------------------
-TRUNCATE TABLE eql_v1_configuration;
+TRUNCATE TABLE eql_v2_configuration;
 
 -- create an active configuration
-INSERT INTO eql_v1_configuration (state, data) VALUES (
+INSERT INTO eql_v2_configuration (state, data) VALUES (
   'active',
   '{
     "v": 1,
@@ -146,7 +146,7 @@ CREATE TABLE users
 (
     id bigint GENERATED ALWAYS AS IDENTITY,
     name TEXT,
-    name_encrypted eql_v1_encrypted,
+    name_encrypted eql_v2_encrypted,
     PRIMARY KEY(id)
 );
 
@@ -154,12 +154,12 @@ CREATE TABLE users
 -- An encrypting config should exist
 DO $$
   BEGIN
-    PERFORM eql_v1.add_index('users', 'name', 'match');
-    PERFORM eql_v1.encrypt();
+    PERFORM eql_v2.add_index('users', 'name', 'match');
+    PERFORM eql_v2.encrypt();
 
-    ASSERT (SELECT EXISTS (SELECT FROM eql_v1_configuration c WHERE c.state = 'active'));
-    ASSERT (SELECT EXISTS (SELECT FROM eql_v1_configuration c WHERE c.state = 'encrypting'));
-    ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v1_configuration c WHERE c.state = 'pending'));
+    ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'active'));
+    ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'encrypting'));
+    ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending'));
   END;
 $$ LANGUAGE plpgsql;
 
@@ -170,10 +170,10 @@ $$ LANGUAGE plpgsql;
 -- The active config is unchanged
 -- The pending config should now be encrypting
 -- -----------------------------------------------
-TRUNCATE TABLE eql_v1_configuration;
+TRUNCATE TABLE eql_v2_configuration;
 
 -- create an active configuration
-INSERT INTO eql_v1_configuration (state, data) VALUES (
+INSERT INTO eql_v2_configuration (state, data) VALUES (
   'active',
   '{
     "v": 1,
@@ -196,7 +196,7 @@ CREATE TABLE users
 (
     id bigint GENERATED ALWAYS AS IDENTITY,
     name TEXT,
-    name_encrypted eql_v1_encrypted,
+    name_encrypted eql_v2_encrypted,
     PRIMARY KEY(id)
 );
 
@@ -204,12 +204,12 @@ CREATE TABLE users
 -- An encrypting config should exist
 DO $$
   BEGIN
-    PERFORM eql_v1.add_index('users', 'name', 'match');
-    PERFORM eql_v1.encrypt();
+    PERFORM eql_v2.add_index('users', 'name', 'match');
+    PERFORM eql_v2.encrypt();
 
-    ASSERT (SELECT EXISTS (SELECT FROM eql_v1_configuration c WHERE c.state = 'active'));
-    ASSERT (SELECT EXISTS (SELECT FROM eql_v1_configuration c WHERE c.state = 'encrypting'));
-    ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v1_configuration c WHERE c.state = 'pending'));
+    ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'active'));
+    ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'encrypting'));
+    ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending'));
   END;
 $$ LANGUAGE plpgsql;
 
@@ -220,10 +220,10 @@ $$ LANGUAGE plpgsql;
 -- The active config is now inactive
 -- The encrypting config should now be active
 -- -----------------------------------------------
-TRUNCATE TABLE eql_v1_configuration;
+TRUNCATE TABLE eql_v2_configuration;
 
 -- create an active configuration
-INSERT INTO eql_v1_configuration (state, data) VALUES (
+INSERT INTO eql_v2_configuration (state, data) VALUES (
   'active',
   '{
     "v": 1,
@@ -247,22 +247,22 @@ CREATE TABLE users
 (
     id bigint GENERATED ALWAYS AS IDENTITY,
     name TEXT,
-    name_encrypted eql_v1_encrypted,
+    name_encrypted eql_v2_encrypted,
     PRIMARY KEY(id)
 );
 
 -- An encrypting config should exist
 DO $$
   BEGIN
-    PERFORM eql_v1.add_index('users', 'name', 'match');
+    PERFORM eql_v2.add_index('users', 'name', 'match');
 
-    PERFORM eql_v1.encrypt(); -- need to encrypt first
-    PERFORM eql_v1.activate();
+    PERFORM eql_v2.encrypt(); -- need to encrypt first
+    PERFORM eql_v2.activate();
 
-    ASSERT (SELECT EXISTS (SELECT FROM eql_v1_configuration c WHERE c.state = 'active'));
-    ASSERT (SELECT EXISTS (SELECT FROM eql_v1_configuration c WHERE c.state = 'inactive'));
-    ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v1_configuration c WHERE c.state = 'encrypting'));
-    ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v1_configuration c WHERE c.state = 'pending'));
+    ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'active'));
+    ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'inactive'));
+    ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'encrypting'));
+    ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending'));
 
   END;
 $$ LANGUAGE plpgsql;

@@ -4,7 +4,7 @@
 
 
 -- Should include an ident field
-CREATE FUNCTION eql_v1._encrypted_check_i(val jsonb)
+CREATE FUNCTION eql_v2._encrypted_check_i(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
@@ -17,7 +17,7 @@ $$ LANGUAGE plpgsql;
 
 
 -- Ident field should include table and column
-CREATE FUNCTION eql_v1._encrypted_check_i_ct(val jsonb)
+CREATE FUNCTION eql_v2._encrypted_check_i_ct(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
@@ -29,7 +29,7 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 -- -- Should include a version field
-CREATE FUNCTION eql_v1._encrypted_check_v(val jsonb)
+CREATE FUNCTION eql_v2._encrypted_check_v(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
@@ -42,7 +42,7 @@ $$ LANGUAGE plpgsql;
 
 
 -- -- Should include a ciphertext field
-CREATE FUNCTION eql_v1._encrypted_check_c(val jsonb)
+CREATE FUNCTION eql_v2._encrypted_check_c(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
@@ -54,23 +54,23 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE FUNCTION eql_v1.check_encrypted(val jsonb)
+CREATE FUNCTION eql_v2.check_encrypted(val jsonb)
   RETURNS BOOLEAN
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
     RETURN (
-      eql_v1._encrypted_check_v(val) AND
-      eql_v1._encrypted_check_c(val) AND
-      eql_v1._encrypted_check_i(val) AND
-      eql_v1._encrypted_check_i_ct(val)
+      eql_v2._encrypted_check_v(val) AND
+      eql_v2._encrypted_check_c(val) AND
+      eql_v2._encrypted_check_i(val) AND
+      eql_v2._encrypted_check_i_ct(val)
     );
 END;
 
 
-CREATE FUNCTION eql_v1.check_encrypted(val eql_v1_encrypted)
+CREATE FUNCTION eql_v2.check_encrypted(val eql_v2_encrypted)
   RETURNS BOOLEAN
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
-    RETURN eql_v1.check_encrypted(val.data);
+    RETURN eql_v2.check_encrypted(val.data);
 END;
 

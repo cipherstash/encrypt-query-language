@@ -18,16 +18,16 @@
 -- If the selector is found, the function returns the matching element
 --
 -- Array elements use the same selector
--- Multiple matching elements are wrapped into an eql_v1_encrypted with an array flag
+-- Multiple matching elements are wrapped into an eql_v2_encrypted with an array flag
 --
 --
 
-CREATE FUNCTION eql_v1.jsonb_path_query(val jsonb, selector text)
-  RETURNS SETOF eql_v1_encrypted
+CREATE FUNCTION eql_v2.jsonb_path_query(val jsonb, selector text)
+  RETURNS SETOF eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   DECLARE
-    sv eql_v1_encrypted[];
+    sv eql_v2_encrypted[];
     found jsonb[];
     e jsonb;
     ary boolean;
@@ -37,14 +37,14 @@ AS $$
       RETURN NEXT NULL;
     END IF;
 
-    sv := eql_v1.ste_vec(val);
+    sv := eql_v2.ste_vec(val);
 
     FOR idx IN 1..array_length(sv, 1) LOOP
       e := sv[idx];
 
-      IF eql_v1.selector(e) = selector THEN
+      IF eql_v2.selector(e) = selector THEN
         found := array_append(found, e);
-        IF eql_v1.is_ste_vec_array(e) THEN
+        IF eql_v2.is_ste_vec_array(e) THEN
           ary := true;
         END IF;
 
@@ -54,14 +54,14 @@ AS $$
     IF found IS NOT NULL THEN
 
       IF ary THEN
-        -- Wrap found array elements as eql_v1_encrypted
+        -- Wrap found array elements as eql_v2_encrypted
         RETURN NEXT jsonb_build_object(
           'sv', found,
           'a', 1
-        )::eql_v1_encrypted;
+        )::eql_v2_encrypted;
 
       ELSE
-        RETURN NEXT found[1]::eql_v1_encrypted;
+        RETURN NEXT found[1]::eql_v2_encrypted;
       END IF;
 
     END IF;
@@ -72,38 +72,38 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v1.jsonb_path_query(val eql_v1_encrypted, selector text)
-  RETURNS SETOF eql_v1_encrypted
+CREATE FUNCTION eql_v2.jsonb_path_query(val eql_v2_encrypted, selector text)
+  RETURNS SETOF eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
     RETURN QUERY
-    SELECT * FROM eql_v1.jsonb_path_query(val.data, selector);
+    SELECT * FROM eql_v2.jsonb_path_query(val.data, selector);
   END;
 $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v1.jsonb_path_exists(val jsonb, selector text)
+CREATE FUNCTION eql_v2.jsonb_path_exists(val jsonb, selector text)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
     RETURN EXISTS (
-      SELECT eql_v1.jsonb_path_query(val, selector)
+      SELECT eql_v2.jsonb_path_query(val, selector)
     );
   END;
 $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v1.jsonb_path_exists(val eql_v1_encrypted, selector text)
+CREATE FUNCTION eql_v2.jsonb_path_exists(val eql_v2_encrypted, selector text)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
     RETURN EXISTS (
-      SELECT eql_v1.jsonb_path_query(val, selector)
+      SELECT eql_v2.jsonb_path_query(val, selector)
     );
   END;
 $$ LANGUAGE plpgsql;
@@ -112,15 +112,15 @@ $$ LANGUAGE plpgsql;
 --
 --
 
-CREATE FUNCTION eql_v1.jsonb_path_query_first(val jsonb, selector text)
-  RETURNS eql_v1_encrypted
+CREATE FUNCTION eql_v2.jsonb_path_query_first(val jsonb, selector text)
+  RETURNS eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
     RETURN (
       SELECT (
         SELECT e
-        FROM eql_v1.jsonb_path_query(val.data, selector) AS e
+        FROM eql_v2.jsonb_path_query(val.data, selector) AS e
         LIMIT 1
       )
     );
@@ -129,14 +129,14 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v1.jsonb_path_query_first(val eql_v1_encrypted, selector text)
-  RETURNS eql_v1_encrypted
+CREATE FUNCTION eql_v2.jsonb_path_query_first(val eql_v2_encrypted, selector text)
+  RETURNS eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
     RETURN (
         SELECT e
-        FROM eql_v1.jsonb_path_query(val.data, selector) as e
+        FROM eql_v2.jsonb_path_query(val.data, selector) as e
         LIMIT 1
     );
   END;
@@ -154,21 +154,21 @@ $$ LANGUAGE plpgsql;
 -- An encrypted is a jsonb array if it contains an "a" field/attribute with a truthy value
 --
 
-CREATE FUNCTION eql_v1.jsonb_array_length(val jsonb)
+CREATE FUNCTION eql_v2.jsonb_array_length(val jsonb)
   RETURNS integer
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   DECLARE
-    sv eql_v1_encrypted[];
-    found eql_v1_encrypted[];
+    sv eql_v2_encrypted[];
+    found eql_v2_encrypted[];
   BEGIN
 
     IF val IS NULL THEN
       RETURN NULL;
     END IF;
 
-    IF eql_v1.is_ste_vec_array(val) THEN
-      sv := eql_v1.ste_vec(val);
+    IF eql_v2.is_ste_vec_array(val) THEN
+      sv := eql_v2.ste_vec(val);
       RETURN array_length(sv, 1);
     END IF;
 
@@ -178,13 +178,13 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v1.jsonb_array_length(val eql_v1_encrypted)
+CREATE FUNCTION eql_v2.jsonb_array_length(val eql_v2_encrypted)
   RETURNS integer
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
     RETURN (
-      SELECT eql_v1.jsonb_array_length(val.data)
+      SELECT eql_v2.jsonb_array_length(val.data)
     );
   END;
 $$ LANGUAGE plpgsql;
@@ -199,20 +199,20 @@ $$ LANGUAGE plpgsql;
 -- An encrypted is a jsonb array if it contains an "a" field/attribute with a truthy value
 --
 
-CREATE FUNCTION eql_v1.jsonb_array_elements(val jsonb)
-  RETURNS SETOF eql_v1_encrypted
+CREATE FUNCTION eql_v2.jsonb_array_elements(val jsonb)
+  RETURNS SETOF eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   DECLARE
-    sv eql_v1_encrypted[];
-    found eql_v1_encrypted[];
+    sv eql_v2_encrypted[];
+    found eql_v2_encrypted[];
   BEGIN
 
-    IF NOT eql_v1.is_ste_vec_array(val) THEN
+    IF NOT eql_v2.is_ste_vec_array(val) THEN
       RAISE 'cannot extract elements from non-array';
     END IF;
 
-    sv := eql_v1.ste_vec(val);
+    sv := eql_v2.ste_vec(val);
 
     FOR idx IN 1..array_length(sv, 1) LOOP
       RETURN NEXT sv[idx];
@@ -224,13 +224,13 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v1.jsonb_array_elements(val eql_v1_encrypted)
-  RETURNS SETOF eql_v1_encrypted
+CREATE FUNCTION eql_v2.jsonb_array_elements(val eql_v2_encrypted)
+  RETURNS SETOF eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
     RETURN QUERY
-      SELECT * FROM eql_v1.jsonb_array_elements(val.data);
+      SELECT * FROM eql_v2.jsonb_array_elements(val.data);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -243,22 +243,22 @@ $$ LANGUAGE plpgsql;
 -- An encrypted is a jsonb array if it contains an "a" field/attribute with a truthy value
 --
 
-CREATE FUNCTION eql_v1.jsonb_array_elements_text(val jsonb)
+CREATE FUNCTION eql_v2.jsonb_array_elements_text(val jsonb)
   RETURNS SETOF text
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   DECLARE
-    sv eql_v1_encrypted[];
-    found eql_v1_encrypted[];
+    sv eql_v2_encrypted[];
+    found eql_v2_encrypted[];
   BEGIN
-    IF NOT eql_v1.is_ste_vec_array(val) THEN
+    IF NOT eql_v2.is_ste_vec_array(val) THEN
       RAISE 'cannot extract elements from non-array';
     END IF;
 
-    sv := eql_v1.ste_vec(val);
+    sv := eql_v2.ste_vec(val);
 
     FOR idx IN 1..array_length(sv, 1) LOOP
-      RETURN NEXT eql_v1.ciphertext(sv[idx]);
+      RETURN NEXT eql_v2.ciphertext(sv[idx]);
     END LOOP;
 
     RETURN;
@@ -267,12 +267,12 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v1.jsonb_array_elements_text(val eql_v1_encrypted)
+CREATE FUNCTION eql_v2.jsonb_array_elements_text(val eql_v2_encrypted)
   RETURNS SETOF text
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
     RETURN QUERY
-      SELECT * FROM eql_v1.jsonb_array_elements_text(val.data);
+      SELECT * FROM eql_v2.jsonb_array_elements_text(val.data);
   END;
 $$ LANGUAGE plpgsql;

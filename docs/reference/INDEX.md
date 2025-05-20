@@ -1,17 +1,17 @@
 # EQL index configuration
 
 The following functions allow you to configure indexes for encrypted columns.
-All these functions modify the `cs_configuration_v1` table in your database, and are added during the EQL installation.
+All these functions modify the `cs_configuration_v2` table in your database, and are added during the EQL installation.
 
 > **IMPORTANT:** When you modify or add an index, you must re-encrypt data that's already been stored in the database.
-The CipherStash encryption solution will encrypt the data based on the current state of the configuration.
+> The CipherStash encryption solution will encrypt the data based on the current state of the configuration.
 
 ### Adding an index (`cs_add_index`)
 
 Add an index to an encrypted column.
 
 ```sql
-SELECT cs_add_index_v1(
+SELECT cs_add_index_v2(
   'table_name',       -- Name of the table
   'column_name',      -- Name of the column
   'index_name',       -- Index kind ('unique', 'match', 'ore', 'ste_vec')
@@ -185,15 +185,15 @@ Query terms are processed in the same manner as the input document.
 A query prior to encrypting and indexing looks like a structurally similar subset of the encrypted document. For example:
 
 ```json
-{ 
-  "account": { 
-    "email": "alice@example.com", 
-    "roles": "admin" 
-  } 
+{
+  "account": {
+    "email": "alice@example.com",
+    "roles": "admin"
+  }
 }
 ```
 
-The expression `cs_ste_vec_v1(encrypted_account) @> cs_ste_vec_v1($query)` would match all records where the `encrypted_account` column contains a JSONB object with an "account" key containing an object with an "email" key where the value is the string "alice@example.com".
+The expression `cs_ste_vec_v2(encrypted_account) @> cs_ste_vec_v2($query)` would match all records where the `encrypted_account` column contains a JSONB object with an "account" key containing an object with an "email" key where the value is the string "alice@example.com".
 
 When reduced to a prefix list, it would look like this:
 
@@ -219,11 +219,11 @@ Modifies an existing index configuration.
 Accepts the same parameters as `cs_add_index`
 
 ```sql
-SELECT cs_modify_index_v1(
-  table_name text, 
-  column_name text, 
-  index_name text, 
-  cast_as text, 
+SELECT cs_modify_index_v2(
+  table_name text,
+  column_name text,
+  index_name text,
+  cast_as text,
   opts jsonb
 );
 ```
@@ -233,12 +233,13 @@ SELECT cs_modify_index_v1(
 Removes an index configuration from the column.
 
 ```sql
-SELECT cs_remove_index_v1(
-  table_name text, 
-  column_name text, 
+SELECT cs_remove_index_v2(
+  table_name text,
+  column_name text,
   index_name text
 );
 ```
+
 ---
 
 ### Didn't find what you wanted?

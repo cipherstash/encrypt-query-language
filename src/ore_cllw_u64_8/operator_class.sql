@@ -5,13 +5,13 @@
 
 
 
-CREATE OPERATOR FAMILY eql_v1.ore_cllw_u64_8_btree_ops USING btree;
+CREATE OPERATOR FAMILY eql_v2.ore_cllw_u64_8_btree_ops USING btree;
 
 
-CREATE OPERATOR CLASS eql_v1.ore_cllw_u64_8_btree_ops DEFAULT FOR TYPE eql_v1.ore_cllw_u64_8 USING btree FAMILY eql_v1.ore_cllw_u64_8_btree_ops  AS
+CREATE OPERATOR CLASS eql_v2.ore_cllw_u64_8_btree_ops DEFAULT FOR TYPE eql_v2.ore_cllw_u64_8 USING btree FAMILY eql_v2.ore_cllw_u64_8_btree_ops  AS
         OPERATOR 1 <,
         OPERATOR 2 <=,
         OPERATOR 3 =,
         OPERATOR 4 >=,
         OPERATOR 5 >,
-        FUNCTION 1 eql_v1.compare_ore_cllw_u64_8(a eql_v1.ore_cllw_u64_8, b eql_v1.ore_cllw_u64_8);
+        FUNCTION 1 eql_v2.compare_ore_cllw_u64_8(a eql_v2.ore_cllw_u64_8, b eql_v2.ore_cllw_u64_8);

@@ -1,10 +1,10 @@
 import type { CsPlaintextV1Schema } from '@cipherstash/jseql'
 import { customType, pgTable, serial, varchar } from 'drizzle-orm/pg-core'
 
-const cs_encrypted_v1 = <TData>(name: string) =>
+const cs_encrypted_v2 = <TData>(name: string) =>
   customType<{ data: TData; driverData: string }>({
     dataType() {
-      return 'cs_encrypted_v1'
+      return 'cs_encrypted_v2'
     },
     toDriver(value: TData): string {
       return JSON.stringify(value)
@@ -14,5 +14,5 @@ const cs_encrypted_v1 = <TData>(name: string) =>
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   email: varchar('email').unique(),
-  email_encrypted: cs_encrypted_v1<CsPlaintextV1Schema>('email_encrypted'),
+  email_encrypted: cs_encrypted_v2<CsPlaintextV1Schema>('email_encrypted'),
 })

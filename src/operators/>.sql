@@ -4,49 +4,49 @@
 -- REQUIRE: src/ore/operators.sql
 
 
--- Operators for < less than comparisons of eql_v1_encrypted types
+-- Operators for < less than comparisons of eql_v2_encrypted types
 --
 -- Support for the following comparisons:
 --
---      eql_v1_encrypted = eql_v1_encrypted
---      eql_v1_encrypted = jsonb
---      jsonb = eql_v1_encrypted
+--      eql_v2_encrypted = eql_v2_encrypted
+--      eql_v2_encrypted = jsonb
+--      jsonb = eql_v2_encrypted
 --
 -- There are multiple index terms that provide equality comparisons
---   - ore_64_8_v1
---   - ore_cllw_8_v1
+--   - ore_64_8_v2
+--   - ore_cllw_8_v2
 --
 -- We check these index terms in this order and use the first one that exists for both parameters
 --
 --
 
 -- WHERE a > b
--- WHERE eql_v1.gt(a, b)
+-- WHERE eql_v2.gt(a, b)
 --
 
 
 
-CREATE FUNCTION eql_v1.gt(a eql_v1_encrypted, b eql_v1_encrypted)
+CREATE FUNCTION eql_v2.gt(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS boolean
 AS $$
   BEGIN
 
     BEGIN
-      RETURN eql_v1.ore_cllw_u64_8(a) > eql_v1.ore_cllw_u64_8(b);
+      RETURN eql_v2.ore_cllw_u64_8(a) > eql_v2.ore_cllw_u64_8(b);
     EXCEPTION WHEN OTHERS THEN
-      -- PERFORM eql_v1.log('eql_v1.gt no ore_cllw_u64_8 index');
+      -- PERFORM eql_v2.log('eql_v2.gt no ore_cllw_u64_8 index');
     END;
 
     BEGIN
-      RETURN eql_v1.ore_cllw_var_8(a) > eql_v1.ore_cllw_var_8(b);
+      RETURN eql_v2.ore_cllw_var_8(a) > eql_v2.ore_cllw_var_8(b);
     EXCEPTION WHEN OTHERS THEN
-      -- PERFORM eql_v1.log('eql_v1.gt no ore_cllw_var_8 index');
+      -- PERFORM eql_v2.log('eql_v2.gt no ore_cllw_var_8 index');
     END;
 
     BEGIN
-      RETURN eql_v1.ore_64_8_v1(a) > eql_v1.ore_64_8_v1(b);
+      RETURN eql_v2.ore_64_8_v2(a) > eql_v2.ore_64_8_v2(b);
     EXCEPTION WHEN OTHERS THEN
-      -- PERFORM eql_v1.log('eql_v1.gt no ore_64_8_v1 index');
+      -- PERFORM eql_v2.log('eql_v2.gt no ore_64_8_v2 index');
     END;
 
     RETURN false;
@@ -55,18 +55,18 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v1.">"(a eql_v1_encrypted, b eql_v1_encrypted)
+CREATE FUNCTION eql_v2.">"(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS boolean
 AS $$
   BEGIN
-    RETURN eql_v1.gt(a, b);
+    RETURN eql_v2.gt(a, b);
   END;
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR >(
-  FUNCTION=eql_v1.">",
-  LEFTARG=eql_v1_encrypted,
-  RIGHTARG=eql_v1_encrypted,
+  FUNCTION=eql_v2.">",
+  LEFTARG=eql_v2_encrypted,
+  RIGHTARG=eql_v2_encrypted,
   COMMUTATOR = <,
   NEGATOR = <=,
   RESTRICT = scalarltsel,
@@ -75,17 +75,17 @@ CREATE OPERATOR >(
 
 
 
-CREATE FUNCTION eql_v1.">"(a eql_v1_encrypted, b jsonb)
+CREATE FUNCTION eql_v2.">"(a eql_v2_encrypted, b jsonb)
 RETURNS boolean
 AS $$
   BEGIN
-    RETURN eql_v1.gt(a, b::eql_v1_encrypted);
+    RETURN eql_v2.gt(a, b::eql_v2_encrypted);
   END;
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR >(
-  FUNCTION = eql_v1.">",
-  LEFTARG = eql_v1_encrypted,
+  FUNCTION = eql_v2.">",
+  LEFTARG = eql_v2_encrypted,
   RIGHTARG = jsonb,
   COMMUTATOR = <,
   NEGATOR = <=,
@@ -95,19 +95,19 @@ CREATE OPERATOR >(
 
 
 
-CREATE FUNCTION eql_v1.">"(a jsonb, b eql_v1_encrypted)
+CREATE FUNCTION eql_v2.">"(a jsonb, b eql_v2_encrypted)
 RETURNS boolean
 AS $$
   BEGIN
-    RETURN eql_v1.gt(a::eql_v1_encrypted, b);
+    RETURN eql_v2.gt(a::eql_v2_encrypted, b);
   END;
 $$ LANGUAGE plpgsql;
 
 
 CREATE OPERATOR >(
-  FUNCTION = eql_v1.">",
+  FUNCTION = eql_v2.">",
   LEFTARG = jsonb,
-  RIGHTARG = eql_v1_encrypted,
+  RIGHTARG = eql_v2_encrypted,
   COMMUTATOR = <,
   NEGATOR = <=,
   RESTRICT = scalarltsel,

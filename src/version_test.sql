@@ -3,7 +3,7 @@
 DO $$
   BEGIN
     PERFORM assert_result(
-      'eql_v1.version()',
-      'SELECT true WHERE eql_v1.version() = ''DEV''');
+      'eql_v2.version()',
+      'SELECT true WHERE eql_v2.version() = ''DEV''');
   END;
 $$ LANGUAGE plpgsql;

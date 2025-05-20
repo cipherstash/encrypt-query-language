@@ -3,20 +3,20 @@
 -- REQUIRE: src/match/types.sql
 -- REQUIRE: src/match/functions.sql
 
--- Operators for match comparisons of eql_v1_encrypted types
+-- Operators for match comparisons of eql_v2_encrypted types
 --
 -- Support for the following comparisons:
 --
---      eql_v1_encrypted ~~ eql_v1_encrypted
---      eql_v1_encrypted ~~ jsonb
---      eql_v1_encrypted ~~ eql_v1.match_index
+--      eql_v2_encrypted ~~ eql_v2_encrypted
+--      eql_v2_encrypted ~~ jsonb
+--      eql_v2_encrypted ~~ eql_v2.match_index
 --
 
 
 
-CREATE FUNCTION eql_v1.like(a eql_v1_encrypted, b eql_v1_encrypted)
+CREATE FUNCTION eql_v2.like(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS boolean AS $$
-  SELECT eql_v1.match(a) @> eql_v1.match(b);
+  SELECT eql_v2.match(a) @> eql_v2.match(b);
 $$ LANGUAGE SQL;
 
 
@@ -24,27 +24,27 @@ $$ LANGUAGE SQL;
 -- Case sensitivity depends on the index term configuration
 -- Function preserves the SQL semantics
 --
-CREATE FUNCTION eql_v1.ilike(a eql_v1_encrypted, b eql_v1_encrypted)
+CREATE FUNCTION eql_v2.ilike(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS boolean AS $$
-  SELECT eql_v1.match(a) @> eql_v1.match(b);
+  SELECT eql_v2.match(a) @> eql_v2.match(b);
 $$ LANGUAGE SQL;
 
 
 
 
 
-CREATE FUNCTION eql_v1."~~"(a eql_v1_encrypted, b eql_v1_encrypted)
+CREATE FUNCTION eql_v2."~~"(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS boolean
 AS $$
   BEGIN
-    RETURN eql_v1.like(a, b);
+    RETURN eql_v2.like(a, b);
   END;
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR ~~(
-  FUNCTION=eql_v1."~~",
-  LEFTARG=eql_v1_encrypted,
-  RIGHTARG=eql_v1_encrypted,
+  FUNCTION=eql_v2."~~",
+  LEFTARG=eql_v2_encrypted,
+  RIGHTARG=eql_v2_encrypted,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
   HASHES,
@@ -53,9 +53,9 @@ CREATE OPERATOR ~~(
 
 
 CREATE OPERATOR ~~*(
-  FUNCTION=eql_v1."~~",
-  LEFTARG=eql_v1_encrypted,
-  RIGHTARG=eql_v1_encrypted,
+  FUNCTION=eql_v2."~~",
+  LEFTARG=eql_v2_encrypted,
+  RIGHTARG=eql_v2_encrypted,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
   HASHES,
@@ -64,18 +64,18 @@ CREATE OPERATOR ~~*(
 
 
 
-CREATE FUNCTION eql_v1."~~"(a eql_v1_encrypted, b jsonb)
+CREATE FUNCTION eql_v2."~~"(a eql_v2_encrypted, b jsonb)
   RETURNS boolean
 AS $$
   BEGIN
-    RETURN eql_v1.like(a, b::eql_v1_encrypted);
+    RETURN eql_v2.like(a, b::eql_v2_encrypted);
   END;
 $$ LANGUAGE plpgsql;
 
 
 CREATE OPERATOR ~~(
-  FUNCTION=eql_v1."~~",
-  LEFTARG=eql_v1_encrypted,
+  FUNCTION=eql_v2."~~",
+  LEFTARG=eql_v2_encrypted,
   RIGHTARG=jsonb,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
@@ -84,8 +84,8 @@ CREATE OPERATOR ~~(
 );
 
 CREATE OPERATOR ~~*(
-  FUNCTION=eql_v1."~~",
-  LEFTARG=eql_v1_encrypted,
+  FUNCTION=eql_v2."~~",
+  LEFTARG=eql_v2_encrypted,
   RIGHTARG=jsonb,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
@@ -96,19 +96,19 @@ CREATE OPERATOR ~~*(
 
 
 
-CREATE FUNCTION eql_v1."~~"(a jsonb, b eql_v1_encrypted)
+CREATE FUNCTION eql_v2."~~"(a jsonb, b eql_v2_encrypted)
   RETURNS boolean
 AS $$
   BEGIN
-    RETURN eql_v1.like(a::eql_v1_encrypted, b);
+    RETURN eql_v2.like(a::eql_v2_encrypted, b);
   END;
 $$ LANGUAGE plpgsql;
 
 
 CREATE OPERATOR ~~(
-  FUNCTION=eql_v1."~~",
+  FUNCTION=eql_v2."~~",
   LEFTARG=jsonb,
-  RIGHTARG=eql_v1_encrypted,
+  RIGHTARG=eql_v2_encrypted,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
   HASHES,
@@ -116,9 +116,9 @@ CREATE OPERATOR ~~(
 );
 
 CREATE OPERATOR ~~*(
-  FUNCTION=eql_v1."~~",
+  FUNCTION=eql_v2."~~",
   LEFTARG=jsonb,
-  RIGHTARG=eql_v1_encrypted,
+  RIGHTARG=eql_v2_encrypted,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
   HASHES,

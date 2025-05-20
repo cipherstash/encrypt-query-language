@@ -10,29 +10,29 @@
 -- REQUIRE: src/operators/>.sql
 
 
-CREATE FUNCTION eql_v1.compare(a eql_v1_encrypted, b eql_v1_encrypted)
+CREATE FUNCTION eql_v2.compare(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS integer
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   DECLARE
-    a_ore eql_v1.ore_64_8_v1;
-    b_ore eql_v1.ore_64_8_v1;
+    a_ore eql_v2.ore_64_8_v2;
+    b_ore eql_v2.ore_64_8_v2;
   BEGIN
 
-    a_ore := eql_v1.ore_64_8_v1(a);
-    b_ore := eql_v1.ore_64_8_v1(b);
+    a_ore := eql_v2.ore_64_8_v2(a);
+    b_ore := eql_v2.ore_64_8_v2(b);
 
-    RETURN eql_v1.compare_ore_array(a_ore.terms, b_ore.terms);
+    RETURN eql_v2.compare_ore_array(a_ore.terms, b_ore.terms);
   END;
 $$ LANGUAGE plpgsql;
 
-CREATE OPERATOR FAMILY eql_v1.encrypted_operator USING btree;
+CREATE OPERATOR FAMILY eql_v2.encrypted_operator USING btree;
 
-CREATE OPERATOR CLASS eql_v1.encrypted_operator DEFAULT FOR TYPE eql_v1_encrypted USING btree FAMILY eql_v1.encrypted_operator AS
+CREATE OPERATOR CLASS eql_v2.encrypted_operator DEFAULT FOR TYPE eql_v2_encrypted USING btree FAMILY eql_v2.encrypted_operator AS
   OPERATOR 1 <,
   OPERATOR 2 <=,
   OPERATOR 3 =,
   OPERATOR 4 >=,
   OPERATOR 5 >,
-  FUNCTION 1 eql_v1.compare(a eql_v1_encrypted, b eql_v1_encrypted);
+  FUNCTION 1 eql_v2.compare(a eql_v2_encrypted, b eql_v2_encrypted);
 
