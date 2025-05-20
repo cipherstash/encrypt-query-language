@@ -202,11 +202,9 @@ CREATE FUNCTION get_numeric_ste_vec_30()
   RETURNS jsonb
 AS $$
   BEGIN
-
-    e->'$.n' -> '2517068c0d1f9d4d41d2c666211f785e'
-    e->'2517068c0d1f9d4d41d2c666211f785e'
-
-    e->>'2517068c0d1f9d4d41d2c666211f785e' ciphertext/c
+    -- e->'$.n' -> '2517068c0d1f9d4d41d2c666211f785e'
+    -- e->'2517068c0d1f9d4d41d2c666211f785e'
+    -- e->>'2517068c0d1f9d4d41d2c666211f785e' ciphertext/c
 
     RETURN '{
       "sv": [
