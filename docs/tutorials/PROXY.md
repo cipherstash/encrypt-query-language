@@ -83,3 +83,9 @@ At a high level:
 1. CipherStash Proxy decrypts any returned `ciphertext` data and returns to client
 
 ![Select](/diagrams/overview-select.drawio.svg)
+
+---
+
+### Didn't find what you wanted?
+
+[Click here to let us know what was missing from our docs.](https://github.com/cipherstash/encrypt-query-language/issues/new?template=docs-feedback.yml&title=[Docs:]%20Feedback%20on%20PROXY.md)
