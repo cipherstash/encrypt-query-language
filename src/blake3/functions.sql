@@ -1,10 +1,8 @@
 -- REQUIRE: src/schema.sql
 
 -- extracts ste_vec index from a jsonb value
--- DROP FUNCTION IF EXISTS  eql_v1.blake3(val jsonb);
 
 -- extracts blake3 index from a jsonb value
--- DROP FUNCTION IF EXISTS  eql_v1.blake3(val jsonb);
 
 CREATE FUNCTION eql_v1.blake3(val jsonb)
   RETURNS eql_v1.blake3
@@ -26,7 +24,6 @@ $$ LANGUAGE plpgsql;
 
 
 -- extracts blake3 index from an eql_v1_encrypted value
--- DROP FUNCTION IF EXISTS  eql_v1.blake3(val eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1.blake3(val eql_v1_encrypted)
   RETURNS eql_v1.blake3

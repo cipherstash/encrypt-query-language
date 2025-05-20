@@ -17,7 +17,6 @@
 --
 --
 
--- DROP FUNCTION IF EXISTS eql_v1.order_by(a eql_v1_encrypted, b eql_v1_encrypted);
 
 CREATE FUNCTION eql_v1.order_by(a eql_v1_encrypted)
   RETURNS eql_v1.ore_64_8_v1

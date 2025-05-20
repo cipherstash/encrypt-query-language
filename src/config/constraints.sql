@@ -5,7 +5,6 @@
 --
 -- Used by the eql_v1.config_check_indexes as part of the configuration_data_v1 constraint
 --
--- DROP FUNCTION IF EXISTS eql_v1.config_get_indexes(jsonb);
 CREATE FUNCTION eql_v1.config_get_indexes(val jsonb)
     RETURNS SETOF text
     LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -18,7 +17,6 @@ END;
 --
 -- Used by the cs_configuration_data_v1_check constraint
 --
--- DROP FUNCTION IF EXISTS eql_v1.config_check_indexes(jsonb);
 CREATE FUNCTION eql_v1.config_check_indexes(val jsonb)
   RETURNS BOOLEAN
   IMMUTABLE STRICT PARALLEL SAFE
@@ -36,7 +34,6 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- DROP FUNCTION IF EXISTS eql_v1.config_check_cast(jsonb);
 
 CREATE FUNCTION eql_v1.config_check_cast(val jsonb)
   RETURNS BOOLEAN
@@ -52,7 +49,6 @@ $$ LANGUAGE plpgsql;
 --
 -- Should include a tables field
 -- Tables should not be empty
--- DROP FUNCTION IF EXISTS eql_v1.config_check_tables(jsonb);
 CREATE FUNCTION eql_v1.config_check_tables(val jsonb)
   RETURNS boolean
 AS $$
@@ -65,7 +61,6 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 -- Should include a version field
--- DROP FUNCTION IF EXISTS eql_v1.config_check_version(jsonb);
 CREATE FUNCTION eql_v1.config_check_version(val jsonb)
   RETURNS boolean
 AS $$
