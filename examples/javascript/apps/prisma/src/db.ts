@@ -29,7 +29,7 @@ export const prisma = new PrismaClient().$extends({
         // TODO: Fix Prisma.raw to prevent SQL injection
         return prisma.$queryRaw<
           T[]
-        >`SELECT * FROM "${Prisma.raw(schema)}"."${Prisma.raw(tableName)}" WHERE cs_match_v1(${Prisma.raw(column)}) @> cs_match_v1('${Prisma.raw(payload)}')`
+        >`SELECT * FROM "${Prisma.raw(schema)}"."${Prisma.raw(tableName)}" WHERE cs_match_v2(${Prisma.raw(column)}) @> cs_match_v2('${Prisma.raw(payload)}')`
       },
     },
   },

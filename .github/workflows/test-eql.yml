@@ -5,16 +5,17 @@ on:
       - main
     paths:
       - ".github/workflows/test-eql.yml"
-      - "sql/*.sql"
+      - "src/**/*.sql"
+      - "sql/**/*.sql"
       - "tests/**/*"
       - "tasks/**/*"
 
   pull_request:
-    branches:
-      - main
+    # run on all pull requests
     paths:
       - ".github/workflows/test-eql.yml"
-      - "sql/*.sql"
+      - "src/**/*.sql"
+      - "sql/**/*.sql"
       - "tests/**/*"
       - "tasks/**/*"
 

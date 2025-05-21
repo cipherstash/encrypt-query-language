@@ -1,5 +1,5 @@
 import { getEmailArg } from '@cipherstash-jseql-examples/utils'
-import { cs_match_v1 } from '@cipherstash/jseql/drizzle'
+import { cs_match_v2 } from '@cipherstash/jseql/drizzle'
 import { getPlaintext } from '@cipherstash/jseql'
 import { db } from './db'
 import { users } from './schema'
@@ -15,7 +15,7 @@ const sql = db
   .from(users)
 
 if (email) {
-  sql.where(cs_match_v1(users, users.email_encrypted, email))
+  sql.where(cs_match_v2(users, users.email_encrypted, email))
 }
 
 const sqlResult = sql.toSQL()

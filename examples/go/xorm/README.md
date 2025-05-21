@@ -12,13 +12,13 @@
 
 1. Set up the [playground environment](../../playground/README.md).
 2. Run the setup script:
-	```shell
-	./run.sh setup
-	```
+   ```shell
+   ./run.sh setup
+   ```
 3. Run tests:
    ```shell
    ./run.sh tests
-	 ```
+   ```
 
 ## Integrating EQL into a Xorm app
 
@@ -116,10 +116,10 @@ Example:
 
 ```sql
 	ALTER TABLE goexamples ADD CONSTRAINT encrypted_text_field_encrypted_check
-	CHECK ( cs_check_encrypted_v1(encrypted_text_field) );
+	CHECK ( cs_check_encrypted_v2(encrypted_text_field) );
 
 	ALTER TABLE goexamples ADD CONSTRAINT encrypted_jsonb_encrypted_check
-	CHECK ( cs_check_encrypted_v1(encrypted_jsonb_field) );
+	CHECK ( cs_check_encrypted_v2(encrypted_jsonb_field) );
 ```
 
 5. [Add indexes](../../../README.md#managing-indexes-with-eql):
@@ -127,22 +127,22 @@ Example:
 Example:
 
 ```sql
-    SELECT cs_add_index_v1('goexamples', 'encrypted_text_field', 'unique', 'text', '{"token_filters": [{"kind": "downcase"}]}');
-    SELECT cs_add_index_v1('goexamples', 'encrypted_text_field', 'match', 'text');
-    SELECT cs_add_index_v1('goexamples', 'encrypted_text_field', 'ore', 'text');
-    SELECT cs_add_index_v1('goexamples', 'encrypted_jsonb_field', 'ste_vec', 'jsonb', '{"prefix": "goexamples/encrypted_jsonb_field"}');
+    SELECT cs_add_index_v2('goexamples', 'encrypted_text_field', 'unique', 'text', '{"token_filters": [{"kind": "downcase"}]}');
+    SELECT cs_add_index_v2('goexamples', 'encrypted_text_field', 'match', 'text');
+    SELECT cs_add_index_v2('goexamples', 'encrypted_text_field', 'ore', 'text');
+    SELECT cs_add_index_v2('goexamples', 'encrypted_jsonb_field', 'ste_vec', 'jsonb', '{"prefix": "goexamples/encrypted_jsonb_field"}');
 
     --   The below indexes will also need to be added to enable full search functionality on the encrypted columns
 
-    CREATE UNIQUE INDEX ON goexamples(cs_unique_v1(encrypted_text_field));
-    CREATE INDEX ON goexamples USING GIN (cs_match_v1(encrypted_text_field));
-    CREATE INDEX ON goexamples (cs_ore_64_8_v1(encrypted_text_field));
-    CREATE INDEX ON goexamples USING GIN (cs_ste_vec_v1(encrypted_jsonb_field));
+    CREATE UNIQUE INDEX ON goexamples(cs_unique_v2(encrypted_text_field));
+    CREATE INDEX ON goexamples USING GIN (cs_match_v2(encrypted_text_field));
+    CREATE INDEX ON goexamples (cs_ore_64_8_v2(encrypted_text_field));
+    CREATE INDEX ON goexamples USING GIN (cs_ste_vec_v2(encrypted_jsonb_field));
 
     --   Run these functions to activate
 
-    SELECT cs_encrypt_v1();
-    SELECT cs_activate_v1();
+    SELECT cs_encrypt_v2();
+    SELECT cs_activate_v2();
 ```
 
 ## Inserting
@@ -179,7 +179,7 @@ Below is an example of running a match query on a text field.
 		log.Fatalf("Error marshaling encrypted_text_field: %v", errTwo)
 	}
 
-	has, errThree := engine.Where("cs_match_v1(encrypted_text_field) @> cs_match_v1(?)", query).Get(&ExampleTwo)
+	has, errThree := engine.Where("cs_match_v2(encrypted_text_field) @> cs_match_v2(?)", query).Get(&ExampleTwo)
 	if errThree != nil {
 		log.Fatalf("Could not retrieve exampleTwo: %v", errThree)
 	}
