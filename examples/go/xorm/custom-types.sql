@@ -1,14 +1,14 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-		CREATE TYPE ore_64_8_v1_term AS (
+		CREATE TYPE ore_64_8_v2_term AS (
 		bytes bytea
 		);
 
-		CREATE TYPE ore_64_8_v1 AS (
-		terms ore_64_8_v1_term[]
+		CREATE TYPE ore_64_8_v2 AS (
+		terms ore_64_8_v2_term[]
 		);
 
-		CREATE OR REPLACE FUNCTION compare_ore_64_8_v1_term(a ore_64_8_v1_term, b ore_64_8_v1_term) returns integer AS $$
+		CREATE OR REPLACE FUNCTION compare_ore_64_8_v2_term(a ore_64_8_v2_term, b ore_64_8_v2_term) returns integer AS $$
 		DECLARE
 			eq boolean := true;
 			unequal_block smallint := 0;
@@ -85,34 +85,34 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 		$$ LANGUAGE plpgsql;
 
 
-		CREATE OR REPLACE FUNCTION ore_64_8_v1_term_eq(a ore_64_8_v1_term, b ore_64_8_v1_term) RETURNS boolean AS $$
-		SELECT compare_ore_64_8_v1_term(a, b) = 0
+		CREATE OR REPLACE FUNCTION ore_64_8_v2_term_eq(a ore_64_8_v2_term, b ore_64_8_v2_term) RETURNS boolean AS $$
+		SELECT compare_ore_64_8_v2_term(a, b) = 0
 		$$ LANGUAGE SQL;
 
-		CREATE OR REPLACE FUNCTION ore_64_8_v1_term_neq(a ore_64_8_v1_term, b ore_64_8_v1_term) RETURNS boolean AS $$
-		SELECT compare_ore_64_8_v1_term(a, b) <> 0
+		CREATE OR REPLACE FUNCTION ore_64_8_v2_term_neq(a ore_64_8_v2_term, b ore_64_8_v2_term) RETURNS boolean AS $$
+		SELECT compare_ore_64_8_v2_term(a, b) <> 0
 		$$ LANGUAGE SQL;
 
-		CREATE OR REPLACE FUNCTION ore_64_8_v1_term_lt(a ore_64_8_v1_term, b ore_64_8_v1_term) RETURNS boolean AS $$
-		SELECT compare_ore_64_8_v1_term(a, b) = -1
+		CREATE OR REPLACE FUNCTION ore_64_8_v2_term_lt(a ore_64_8_v2_term, b ore_64_8_v2_term) RETURNS boolean AS $$
+		SELECT compare_ore_64_8_v2_term(a, b) = -1
 		$$ LANGUAGE SQL;
 
-		CREATE OR REPLACE FUNCTION ore_64_8_v1_term_lte(a ore_64_8_v1_term, b ore_64_8_v1_term) RETURNS boolean AS $$
-		SELECT compare_ore_64_8_v1_term(a, b) != 1
+		CREATE OR REPLACE FUNCTION ore_64_8_v2_term_lte(a ore_64_8_v2_term, b ore_64_8_v2_term) RETURNS boolean AS $$
+		SELECT compare_ore_64_8_v2_term(a, b) != 1
 		$$ LANGUAGE SQL;
 
-		CREATE OR REPLACE FUNCTION ore_64_8_v1_term_gt(a ore_64_8_v1_term, b ore_64_8_v1_term) RETURNS boolean AS $$
-		SELECT compare_ore_64_8_v1_term(a, b) = 1
+		CREATE OR REPLACE FUNCTION ore_64_8_v2_term_gt(a ore_64_8_v2_term, b ore_64_8_v2_term) RETURNS boolean AS $$
+		SELECT compare_ore_64_8_v2_term(a, b) = 1
 		$$ LANGUAGE SQL;
 
-		CREATE OR REPLACE FUNCTION ore_64_8_v1_term_gte(a ore_64_8_v1_term, b ore_64_8_v1_term) RETURNS boolean AS $$
-		SELECT compare_ore_64_8_v1_term(a, b) != -1
+		CREATE OR REPLACE FUNCTION ore_64_8_v2_term_gte(a ore_64_8_v2_term, b ore_64_8_v2_term) RETURNS boolean AS $$
+		SELECT compare_ore_64_8_v2_term(a, b) != -1
 		$$ LANGUAGE SQL;
 
 		CREATE OPERATOR = (
-		PROCEDURE="ore_64_8_v1_term_eq",
-		LEFTARG=ore_64_8_v1_term,
-		RIGHTARG=ore_64_8_v1_term,
+		PROCEDURE="ore_64_8_v2_term_eq",
+		LEFTARG=ore_64_8_v2_term,
+		RIGHTARG=ore_64_8_v2_term,
 		NEGATOR = <>,
 		RESTRICT = eqsel,
 		JOIN = eqjoinsel,
@@ -121,9 +121,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 		);
 
 		CREATE OPERATOR <> (
-		PROCEDURE="ore_64_8_v1_term_neq",
-		LEFTARG=ore_64_8_v1_term,
-		RIGHTARG=ore_64_8_v1_term,
+		PROCEDURE="ore_64_8_v2_term_neq",
+		LEFTARG=ore_64_8_v2_term,
+		RIGHTARG=ore_64_8_v2_term,
 		NEGATOR = =,
 		RESTRICT = eqsel,
 		JOIN = eqjoinsel,
@@ -132,9 +132,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 		);
 
 		CREATE OPERATOR > (
-		PROCEDURE="ore_64_8_v1_term_gt",
-		LEFTARG=ore_64_8_v1_term,
-		RIGHTARG=ore_64_8_v1_term,
+		PROCEDURE="ore_64_8_v2_term_gt",
+		LEFTARG=ore_64_8_v2_term,
+		RIGHTARG=ore_64_8_v2_term,
 		COMMUTATOR = <,
 		NEGATOR = <=,
 		RESTRICT = scalargtsel,
@@ -142,9 +142,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 		);
 
 		CREATE OPERATOR < (
-		PROCEDURE="ore_64_8_v1_term_lt",
-		LEFTARG=ore_64_8_v1_term,
-		RIGHTARG=ore_64_8_v1_term,
+		PROCEDURE="ore_64_8_v2_term_lt",
+		LEFTARG=ore_64_8_v2_term,
+		RIGHTARG=ore_64_8_v2_term,
 		COMMUTATOR = >,
 		NEGATOR = >=,
 		RESTRICT = scalarltsel,
@@ -152,9 +152,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 		);
 
 		CREATE OPERATOR <= (
-		PROCEDURE="ore_64_8_v1_term_lte",
-		LEFTARG=ore_64_8_v1_term,
-		RIGHTARG=ore_64_8_v1_term,
+		PROCEDURE="ore_64_8_v2_term_lte",
+		LEFTARG=ore_64_8_v2_term,
+		RIGHTARG=ore_64_8_v2_term,
 		COMMUTATOR = >=,
 		NEGATOR = >,
 		RESTRICT = scalarlesel,
@@ -162,23 +162,23 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 		);
 
 		CREATE OPERATOR >= (
-		PROCEDURE="ore_64_8_v1_term_gte",
-		LEFTARG=ore_64_8_v1_term,
-		RIGHTARG=ore_64_8_v1_term,
+		PROCEDURE="ore_64_8_v2_term_gte",
+		LEFTARG=ore_64_8_v2_term,
+		RIGHTARG=ore_64_8_v2_term,
 		COMMUTATOR = <=,
 		NEGATOR = <,
 		RESTRICT = scalarlesel,
 		JOIN = scalarlejoinsel
 		);
 
-		CREATE OPERATOR FAMILY ore_64_8_v1_term_btree_ops USING btree;
-		CREATE OPERATOR CLASS ore_64_8_v1_term_btree_ops DEFAULT FOR TYPE ore_64_8_v1_term USING btree FAMILY ore_64_8_v1_term_btree_ops  AS
+		CREATE OPERATOR FAMILY ore_64_8_v2_term_btree_ops USING btree;
+		CREATE OPERATOR CLASS ore_64_8_v2_term_btree_ops DEFAULT FOR TYPE ore_64_8_v2_term USING btree FAMILY ore_64_8_v2_term_btree_ops  AS
 				OPERATOR 1 <,
 				OPERATOR 2 <=,
 				OPERATOR 3 =,
 				OPERATOR 4 >=,
 				OPERATOR 5 >,
-				FUNCTION 1 compare_ore_64_8_v1_term(a ore_64_8_v1_term, b ore_64_8_v1_term);
+				FUNCTION 1 compare_ore_64_8_v2_term(a ore_64_8_v2_term, b ore_64_8_v2_term);
 
 		-- Compare the "head" of each array and recurse if necessary
 		-- This function assumes an empty string is "less than" everything else
@@ -187,7 +187,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 		-- doesn't always make sense but it's here for completeness.
 		-- If both are non-empty, we compare the first element. If they are equal
 		-- we need to consider the next block so we recurse, otherwise we return the comparison result.
-		CREATE OR REPLACE FUNCTION compare_ore_array(a ore_64_8_v1_term[], b ore_64_8_v1_term[]) returns integer AS $$
+		CREATE OR REPLACE FUNCTION compare_ore_array(a ore_64_8_v2_term[], b ore_64_8_v2_term[]) returns integer AS $$
 		DECLARE
 			cmp_result integer;
 		BEGIN
@@ -201,7 +201,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 			RETURN 1;
 			END IF;
 
-			cmp_result := compare_ore_64_8_v1_term(a[1], b[1]);
+			cmp_result := compare_ore_64_8_v2_term(a[1], b[1]);
 			IF cmp_result = 0 THEN
 			-- Removes the first element in the array, and calls this fn again to compare the next element/s in the array.
 			RETURN compare_ore_array(a[2:array_length(a,1)], b[2:array_length(b,1)]);
@@ -212,7 +212,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 		$$ LANGUAGE plpgsql;
 
 		-- This function uses lexicographic comparison
-		CREATE OR REPLACE FUNCTION compare_ore_64_8_v1(a ore_64_8_v1, b ore_64_8_v1) returns integer AS $$
+		CREATE OR REPLACE FUNCTION compare_ore_64_8_v2(a ore_64_8_v2, b ore_64_8_v2) returns integer AS $$
 		DECLARE
 			cmp_result integer;
 		BEGIN
@@ -221,34 +221,34 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 		END
 		$$ LANGUAGE plpgsql;
 
-		CREATE OR REPLACE FUNCTION ore_64_8_v1_eq(a ore_64_8_v1, b ore_64_8_v1) RETURNS boolean AS $$
-		SELECT compare_ore_64_8_v1(a, b) = 0
+		CREATE OR REPLACE FUNCTION ore_64_8_v2_eq(a ore_64_8_v2, b ore_64_8_v2) RETURNS boolean AS $$
+		SELECT compare_ore_64_8_v2(a, b) = 0
 		$$ LANGUAGE SQL;
 
-		CREATE OR REPLACE FUNCTION ore_64_8_v1_neq(a ore_64_8_v1, b ore_64_8_v1) RETURNS boolean AS $$
-		SELECT compare_ore_64_8_v1(a, b) <> 0
+		CREATE OR REPLACE FUNCTION ore_64_8_v2_neq(a ore_64_8_v2, b ore_64_8_v2) RETURNS boolean AS $$
+		SELECT compare_ore_64_8_v2(a, b) <> 0
 		$$ LANGUAGE SQL;
 
-		CREATE OR REPLACE FUNCTION ore_64_8_v1_lt(a ore_64_8_v1, b ore_64_8_v1) RETURNS boolean AS $$
-		SELECT compare_ore_64_8_v1(a, b) = -1
+		CREATE OR REPLACE FUNCTION ore_64_8_v2_lt(a ore_64_8_v2, b ore_64_8_v2) RETURNS boolean AS $$
+		SELECT compare_ore_64_8_v2(a, b) = -1
 		$$ LANGUAGE SQL;
 
-		CREATE OR REPLACE FUNCTION ore_64_8_v1_lte(a ore_64_8_v1, b ore_64_8_v1) RETURNS boolean AS $$
-		SELECT compare_ore_64_8_v1(a, b) != 1
+		CREATE OR REPLACE FUNCTION ore_64_8_v2_lte(a ore_64_8_v2, b ore_64_8_v2) RETURNS boolean AS $$
+		SELECT compare_ore_64_8_v2(a, b) != 1
 		$$ LANGUAGE SQL;
 
-		CREATE OR REPLACE FUNCTION ore_64_8_v1_gt(a ore_64_8_v1, b ore_64_8_v1) RETURNS boolean AS $$
-		SELECT compare_ore_64_8_v1(a, b) = 1
+		CREATE OR REPLACE FUNCTION ore_64_8_v2_gt(a ore_64_8_v2, b ore_64_8_v2) RETURNS boolean AS $$
+		SELECT compare_ore_64_8_v2(a, b) = 1
 		$$ LANGUAGE SQL;
 
-		CREATE OR REPLACE FUNCTION ore_64_8_v1_gte(a ore_64_8_v1, b ore_64_8_v1) RETURNS boolean AS $$
-		SELECT compare_ore_64_8_v1(a, b) != -1
+		CREATE OR REPLACE FUNCTION ore_64_8_v2_gte(a ore_64_8_v2, b ore_64_8_v2) RETURNS boolean AS $$
+		SELECT compare_ore_64_8_v2(a, b) != -1
 		$$ LANGUAGE SQL;
 
 		CREATE OPERATOR = (
-		PROCEDURE="ore_64_8_v1_eq",
-		LEFTARG=ore_64_8_v1,
-		RIGHTARG=ore_64_8_v1,
+		PROCEDURE="ore_64_8_v2_eq",
+		LEFTARG=ore_64_8_v2,
+		RIGHTARG=ore_64_8_v2,
 		NEGATOR = <>,
 		RESTRICT = eqsel,
 		JOIN = eqjoinsel,
@@ -257,9 +257,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 		);
 
 		CREATE OPERATOR <> (
-		PROCEDURE="ore_64_8_v1_neq",
-		LEFTARG=ore_64_8_v1,
-		RIGHTARG=ore_64_8_v1,
+		PROCEDURE="ore_64_8_v2_neq",
+		LEFTARG=ore_64_8_v2,
+		RIGHTARG=ore_64_8_v2,
 		NEGATOR = =,
 		RESTRICT = eqsel,
 		JOIN = eqjoinsel,
@@ -268,9 +268,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 		);
 
 		CREATE OPERATOR > (
-		PROCEDURE="ore_64_8_v1_gt",
-		LEFTARG=ore_64_8_v1,
-		RIGHTARG=ore_64_8_v1,
+		PROCEDURE="ore_64_8_v2_gt",
+		LEFTARG=ore_64_8_v2,
+		RIGHTARG=ore_64_8_v2,
 		COMMUTATOR = <,
 		NEGATOR = <=,
 		RESTRICT = scalargtsel,
@@ -278,9 +278,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 		);
 
 		CREATE OPERATOR < (
-		PROCEDURE="ore_64_8_v1_lt",
-		LEFTARG=ore_64_8_v1,
-		RIGHTARG=ore_64_8_v1,
+		PROCEDURE="ore_64_8_v2_lt",
+		LEFTARG=ore_64_8_v2,
+		RIGHTARG=ore_64_8_v2,
 		COMMUTATOR = >,
 		NEGATOR = >=,
 		RESTRICT = scalarltsel,
@@ -288,9 +288,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 		);
 
 		CREATE OPERATOR <= (
-		PROCEDURE="ore_64_8_v1_lte",
-		LEFTARG=ore_64_8_v1,
-		RIGHTARG=ore_64_8_v1,
+		PROCEDURE="ore_64_8_v2_lte",
+		LEFTARG=ore_64_8_v2,
+		RIGHTARG=ore_64_8_v2,
 		COMMUTATOR = >=,
 		NEGATOR = >,
 		RESTRICT = scalarlesel,
@@ -298,20 +298,20 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 		);
 
 		CREATE OPERATOR >= (
-		PROCEDURE="ore_64_8_v1_gte",
-		LEFTARG=ore_64_8_v1,
-		RIGHTARG=ore_64_8_v1,
+		PROCEDURE="ore_64_8_v2_gte",
+		LEFTARG=ore_64_8_v2,
+		RIGHTARG=ore_64_8_v2,
 		COMMUTATOR = <=,
 		NEGATOR = <,
 		RESTRICT = scalarlesel,
 		JOIN = scalarlejoinsel
 		);
 
-		CREATE OPERATOR FAMILY ore_64_8_v1_btree_ops USING btree;
-		CREATE OPERATOR CLASS ore_64_8_v1_btree_ops DEFAULT FOR TYPE ore_64_8_v1 USING btree FAMILY ore_64_8_v1_btree_ops  AS
+		CREATE OPERATOR FAMILY ore_64_8_v2_btree_ops USING btree;
+		CREATE OPERATOR CLASS ore_64_8_v2_btree_ops DEFAULT FOR TYPE ore_64_8_v2 USING btree FAMILY ore_64_8_v2_btree_ops  AS
 				OPERATOR 1 <,
 				OPERATOR 2 <=,
 				OPERATOR 3 =,
 				OPERATOR 4 >=,
 				OPERATOR 5 >,
-				FUNCTION 1 compare_ore_64_8_v1(a ore_64_8_v1, b ore_64_8_v1);
+				FUNCTION 1 compare_ore_64_8_v2(a ore_64_8_v2, b ore_64_8_v2);

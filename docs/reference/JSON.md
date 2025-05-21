@@ -8,9 +8,9 @@ EQL supports encrypting, decrypting, and searching JSON and JSONB objects.
   - [Inserting JSON data](#inserting-json-data)
   - [Reading JSON data](#reading-json-data)
 - [Querying JSONB data with EQL](#querying-jsonb-data-with-eql)
-  - [Containment queries (`cs_ste_vec_v1`)](#containment-queries-cs_ste_vec_v1)
-  - [Field extraction (`cs_ste_vec_value_v1`)](#field-extraction-cs_ste_vec_value_v1)
-  - [Field comparison (`cs_ste_vec_term_v1`)](#field-comparison-cs_ste_vec_term_v1)
+  - [Containment queries (`cs_ste_vec_v2`)](#containment-queries-cs_ste_vec_v2)
+  - [Field extraction (`cs_ste_vec_value_v2`)](#field-extraction-cs_ste_vec_value_v2)
+  - [Field comparison (`cs_ste_vec_term_v2`)](#field-comparison-cs_ste_vec_term_v2)
   - [Grouping data](#grouping-data)
 - [EQL functions for JSONB and `ste_vec`](#eql-functions-for-jsonb-and-ste_vec)
 - [EJSON paths](#ejson-paths)
@@ -36,9 +36,9 @@ Similar to how you configure indexes for text data, you can configure indexes fo
 The only difference is that you need to specify the `cast_as` parameter as `json` or `jsonb`.
 
 ```sql
-SELECT cs_add_index_v1(
-  'users', 
-  'encrypted_json', 
+SELECT cs_add_index_v2(
+  'users',
+  'encrypted_json',
   'ste_vec',
   'jsonb',
   '{"prefix": "users/encrypted_json"}' -- The prefix is in the form of "table/column"
@@ -49,7 +49,7 @@ You can read more about the index configuration options [here](https://github.co
 
 ### Inserting JSON data
 
-When inserting JSON data, this works the same as inserting text data. 
+When inserting JSON data, this works the same as inserting text data.
 You need to wrap the JSON data in the appropriate EQL payload.
 CipherStash Proxy will **encrypt** the data automatically.
 
@@ -61,7 +61,7 @@ Assuming you want to store the following JSON data:
 {
   "name": "John Doe",
   "metadata": {
-    "age": 42,
+    "age": 42
   }
 }
 ```
@@ -84,9 +84,7 @@ Data is stored in the database as:
   },
   "k": "sv",
   "v": 1,
-  "sv": [
-    ["ciphertext"]
-  ]
+  "sv": [["ciphertext"]]
 }
 ```
 
@@ -119,7 +117,7 @@ Data is returned as:
 
 EQL provides specialized functions to interact with encrypted JSONB data, supporting operations like containment queries, field extraction, and comparisons.
 
-### Containment queries (`cs_ste_vec_v1`)
+### Containment queries (`cs_ste_vec_v2`)
 
 Retrieve the Structured Encryption Vector for JSONB containment queries.
 
@@ -141,7 +139,7 @@ We can query records that contain a specific structure.
 
 ```sql
 SELECT * FROM examples
-WHERE cs_ste_vec_v1(encrypted_json) @> cs_ste_vec_v1(
+WHERE cs_ste_vec_v2(encrypted_json) @> cs_ste_vec_v2(
   '{
     "v":1,
     "k":"pt",
@@ -169,7 +167,7 @@ If we query for a value that does not exist in the data:
 
 ```sql
 SELECT * FROM examples
-WHERE cs_ste_vec_v1(encrypted_json) @> cs_ste_vec_v1(
+WHERE cs_ste_vec_v2(encrypted_json) @> cs_ste_vec_v2(
   '{
     "v":1,
     "k":"pt",
@@ -182,7 +180,7 @@ WHERE cs_ste_vec_v1(encrypted_json) @> cs_ste_vec_v1(
 
 This query would return no results, as the value `"d"` is not present in the `"nested"` array.
 
-### Field extraction (`cs_ste_vec_value_v1`)
+### Field extraction (`cs_ste_vec_value_v2`)
 
 Extract a field from an encrypted JSONB object.
 
@@ -203,7 +201,7 @@ We can extract the value of the `"top"` key.
 **SQL query:**
 
 ```sql
-SELECT cs_ste_vec_value_v1(encrypted_json, 
+SELECT cs_ste_vec_value_v2(encrypted_json,
   '{
     "v":1,
     "k":"pt",
@@ -230,7 +228,7 @@ FROM examples;
 }
 ```
 
-### Field comparison (`cs_ste_vec_term_v1`)
+### Field comparison (`cs_ste_vec_term_v2`)
 
 Select rows based on a field value in an encrypted JSONB object.
 
@@ -250,7 +248,7 @@ We can query records where the `"num"` field is greater than `2`.
 
 ```sql
 SELECT * FROM examples
-WHERE cs_ste_vec_term_v1(encrypted_json, 
+WHERE cs_ste_vec_term_v2(encrypted_json,
   '{
     "v":1,
     "k":"pt",
@@ -258,7 +256,7 @@ WHERE cs_ste_vec_term_v1(encrypted_json,
     "i":{"t":"examples","c":"encrypted_json"},
     "q":"ejson_path"
   }'
-) > cs_ste_vec_term_v1(
+) > cs_ste_vec_term_v2(
   '{
     "v":1,
     "k":"pt",
@@ -278,7 +276,7 @@ WHERE (jsonb_column->>'num')::int > 2;
 
 ### Grouping data
 
-Use `cs_ste_vec_term_v1` along with `cs_grouped_value_v1` to group by a field in an encrypted JSONB column.
+Use `cs_ste_vec_term_v2` along with `cs_grouped_value_v2` to group by a field in an encrypted JSONB column.
 
 **Example:**
 
@@ -298,7 +296,7 @@ We can group the data by the `"color"` field and count occurrences.
 **SQL query:**
 
 ```sql
-SELECT cs_grouped_value_v1(cs_ste_vec_value_v1(encrypted_json, 
+SELECT cs_grouped_value_v2(cs_ste_vec_value_v2(encrypted_json,
   '{
     "v":1,
     "k":"pt",
@@ -308,7 +306,7 @@ SELECT cs_grouped_value_v1(cs_ste_vec_value_v1(encrypted_json,
   }'
 )) AS color, COUNT(*)
 FROM examples
-GROUP BY cs_ste_vec_term_v1(encrypted_json, 
+GROUP BY cs_ste_vec_term_v2(encrypted_json,
   '{
     "v":1,
     "k":"pt",
@@ -330,25 +328,25 @@ GROUP BY jsonb_column->>'color';
 **Result:**
 
 | color | count |
-|-------|-------|
-| blue  |   3   |
-| green |   2   |
-| red   |   1   |
+| ----- | ----- |
+| blue  | 3     |
+| green | 2     |
+| red   | 1     |
 
 ## EQL Functions for JSONB and `ste_vec`
 
 - **Index management**
 
-  - `cs_add_index_v1(table_name text, column_name text, 'ste_vec', 'jsonb', opts jsonb)`: Adds an `ste_vec` index configuration.
+  - `cs_add_index_v2(table_name text, column_name text, 'ste_vec', 'jsonb', opts jsonb)`: Adds an `ste_vec` index configuration.
     - `opts` must include the `"context"` key.
-  
+
 - **Query functions**
 
-  - `cs_ste_vec_v1(val jsonb)`: Retrieves the STE vector for JSONB containment queries.
-  - `cs_ste_vec_term_v1(val jsonb, epath jsonb)`: Retrieves the encrypted term associated with an encrypted JSON path.
-  - `cs_ste_vec_value_v1(val jsonb, epath jsonb)`: Retrieves the decrypted value associated with an encrypted JSON path.
-  - `cs_ste_vec_terms_v1(val jsonb, epath jsonb)`: Retrieves an array of encrypted terms for elements in an array at the given JSON path (used for comparisons).
-  - `cs_grouped_value_v1(val jsonb)`: Used with `ste_vec` indexes for grouping.
+  - `cs_ste_vec_v2(val jsonb)`: Retrieves the STE vector for JSONB containment queries.
+  - `cs_ste_vec_term_v2(val jsonb, epath jsonb)`: Retrieves the encrypted term associated with an encrypted JSON path.
+  - `cs_ste_vec_value_v2(val jsonb, epath jsonb)`: Retrieves the decrypted value associated with an encrypted JSON path.
+  - `cs_ste_vec_terms_v2(val jsonb, epath jsonb)`: Retrieves an array of encrypted terms for elements in an array at the given JSON path (used for comparisons).
+  - `cs_grouped_value_v2(val jsonb)`: Used with `ste_vec` indexes for grouping.
 
 ## EJSON paths
 
@@ -390,10 +388,10 @@ EQL JSONB functions accept an [eJSONPath](#ejson-paths) as an argument (instead 
 
 #### Decryption example
 
-`cs_ste_vec_value_v1` returns the plaintext EQL payload to the client.
+`cs_ste_vec_value_v2` returns the plaintext EQL payload to the client.
 
 ```sql
-SELECT cs_ste_vec_value_v1(encrypted_json, $1) FROM examples;
+SELECT cs_ste_vec_value_v2(encrypted_json, $1) FROM examples;
 ```
 
 ```javascript
@@ -417,11 +415,11 @@ SELECT cs_ste_vec_value_v1(encrypted_json, $1) FROM examples;
 
 #### Comparison example
 
-`cs_ste_vec_term_v1` returns an ORE term for comparison.
+`cs_ste_vec_term_v2` returns an ORE term for comparison.
 
 ```sql
 SELECT * FROM examples
-WHERE cs_ste_vec_term_v1(examples.encrypted_json, $1) > cs_ste_vec_term_v1($2)
+WHERE cs_ste_vec_term_v2(examples.encrypted_json, $1) > cs_ste_vec_term_v2($2)
 ```
 
 ```javascript
@@ -473,15 +471,15 @@ EQL JSONB functions accept an [eJSONPath](#ejson-paths) as an argument (instead 
 
 #### Decryption example
 
-EQL currently doesn't support returning a specific array element for decryption, but `cs_ste_vec_value_v1` can be used to return an array to the client to process.
+EQL currently doesn't support returning a specific array element for decryption, but `cs_ste_vec_value_v2` can be used to return an array to the client to process.
 
 The query:
 
 ```sql
-SELECT cs_ste_vec_value_v1(encrypted_json, $1) AS val FROM examples;
+SELECT cs_ste_vec_value_v2(encrypted_json, $1) AS val FROM examples;
 ```
 
-With the params:    
+With the params:
 
 ```javascript
 // Assume that examples.encrypted_json has JSON objects with the shape:
@@ -520,19 +518,19 @@ Would return the EQL plaintext payload with an array (`[1, 2, 3]` for example):
 
 #### Comparison example
 
-`cs_ste_vec_terms_v1` can be used with the native PostgreSQL array access operator to get a term for comparison by array index.
+`cs_ste_vec_terms_v2` can be used with the native PostgreSQL array access operator to get a term for comparison by array index.
 
-The eJSONPath used with `cs_ste_vec_terms_v1` needs to end with `[*]` (`$.some_array_field[*]` for example).
+The eJSONPath used with `cs_ste_vec_terms_v2` needs to end with `[*]` (`$.some_array_field[*]` for example).
 
 > [!IMPORTANT]
-> Array access with `cs_ste_vec_terms_v1` only works when the given eJSONPath only matches a single array.
-> Accessing array elements from `cs_ste_vec_terms_v1` when the eJSONPath matches multiple arrays (for example, when there are nested arrays or multiple arrays at the same depth) can return unexpected results.
+> Array access with `cs_ste_vec_terms_v2` only works when the given eJSONPath only matches a single array.
+> Accessing array elements from `cs_ste_vec_terms_v2` when the eJSONPath matches multiple arrays (for example, when there are nested arrays or multiple arrays at the same depth) can return unexpected results.
 
 The following query compares the first item in the array at the eJSONPath in `$1` to the value in `$2`.
 
 ```sql
 SELECT * FROM examples
-WHERE (cs_ste_vec_terms_v1(examples.encrypted_json, $1))[1] > cs_ste_vec_term_v1($2)
+WHERE (cs_ste_vec_terms_v2(examples.encrypted_json, $1))[1] > cs_ste_vec_term_v2($2)
 ```
 
 ```javascript
@@ -587,10 +585,10 @@ The difference in these examples is that the path does a lookup multiple levels 
 
 #### Decryption example
 
-`cs_ste_vec_value_v1` returns the plaintext EQL payload to the client.
+`cs_ste_vec_value_v2` returns the plaintext EQL payload to the client.
 
 ```sql
-SELECT cs_ste_vec_value_v1(encrypted_json, $1) FROM examples;
+SELECT cs_ste_vec_value_v2(encrypted_json, $1) FROM examples;
 ```
 
 ```javascript
@@ -616,11 +614,11 @@ SELECT cs_ste_vec_value_v1(encrypted_json, $1) FROM examples;
 
 #### Comparison example
 
-`cs_ste_vec_term_v1` returns an ORE term for comparison.
+`cs_ste_vec_term_v2` returns an ORE term for comparison.
 
 ```sql
 SELECT * FROM examples
-WHERE cs_ste_vec_term_v1(examples.encrypted_json, $1) > cs_ste_vec_term_v1($2)
+WHERE cs_ste_vec_term_v2(examples.encrypted_json, $1) > cs_ste_vec_term_v2($2)
 ```
 
 ```javascript
@@ -670,18 +668,18 @@ SELECT '{"b":2}'::jsonb <@ '{"a":1, "b":2}'::jsonb;
 
 **EQL example**
 
-EQL uses the same operators for containment (`@>` and `<@`) queries, but the args need to be wrapped in `cs_ste_vec_v1`.
+EQL uses the same operators for containment (`@>` and `<@`) queries, but the args need to be wrapped in `cs_ste_vec_v2`.
 
 Example query:
 
 ```sql
 -- Checks if the left arg (the `examples.encrypted_json` column) contains the right arg ($1).
 -- Would return `true` for the example data and param below.
-SELECT * WHERE cs_ste_vec_v1(encrypted_json) @> cs_ste_vec_v1($1) FROM examples;
+SELECT * WHERE cs_ste_vec_v2(encrypted_json) @> cs_ste_vec_v2($1) FROM examples;
 
 -- Checks if the the right arg ($1) contains left arg (the `examples.encrypted_json` column).
 -- Would return `false` for the example data and param below.
-SELECT * WHERE cs_ste_vec_v1(encrypted_json) <@ cs_ste_vec_v1($1) FROM examples;
+SELECT * WHERE cs_ste_vec_v2(encrypted_json) <@ cs_ste_vec_v2($1) FROM examples;
 ```
 
 Example params:
@@ -733,12 +731,12 @@ SELECT * from jsonb_array_elements_text('["a", "b"]');
 
 #### Decryption example
 
-EQL currently doesn't support returning a `SETOF` values for decryption (for returning a row per item in an array), but `cs_ste_vec_value_v1` can be used to return an array to the client to process.
+EQL currently doesn't support returning a `SETOF` values for decryption (for returning a row per item in an array), but `cs_ste_vec_value_v2` can be used to return an array to the client to process.
 
 The query:
 
 ```sql
-SELECT cs_ste_vec_value_v1(encrypted_json, $1) AS val FROM examples;
+SELECT cs_ste_vec_value_v2(encrypted_json, $1) AS val FROM examples;
 ```
 
 With the params:
@@ -780,10 +778,10 @@ Would return the EQL plaintext payload with an array (`[1, 2, 3]` for example):
 
 #### Comparison example
 
-`cs_ste_vec_terms_v1` (note that terms is plural) can be used to return an array of ORE terms for comparison.
+`cs_ste_vec_terms_v2` (note that terms is plural) can be used to return an array of ORE terms for comparison.
 The array can be `unnest`ed to work with a `SETOF` ORE terms for comparison.
 
-The eJSONPath used with `cs_ste_vec_terms_v1` needs to end with `[*]` (`$.some_array_field[*]` for example).
+The eJSONPath used with `cs_ste_vec_terms_v2` needs to end with `[*]` (`$.some_array_field[*]` for example).
 
 Example query:
 
@@ -791,8 +789,8 @@ Example query:
 SELECT id FROM examples e
 WHERE EXISTS (
   SELECT 1
-  FROM  unnest(cs_ste_vec_terms_v1(e.encrypted_json, $1)) AS term
-  WHERE term > cs_ste_vec_term_v1($2)
+  FROM  unnest(cs_ste_vec_terms_v2(e.encrypted_json, $1)) AS term
+  WHERE term > cs_ste_vec_term_v2($2)
 );
 ```
 
@@ -840,23 +838,23 @@ SELECT jsonb_array_length('[1, 2, 3]');
 
 **EQL example**
 
-The PostgreSQL `array_length` function can be used with `cs_ste_vec_terms_v1` to find the length of an array.
+The PostgreSQL `array_length` function can be used with `cs_ste_vec_terms_v2` to find the length of an array.
 
-The eJSONPath used with `cs_ste_vec_terms_v1` needs to end with `[*]` (`$.some_array_field[*]` for example).
+The eJSONPath used with `cs_ste_vec_terms_v2` needs to end with `[*]` (`$.some_array_field[*]` for example).
 
 > [!IMPORTANT]
-> Determining array length with `cs_ste_vec_terms_v1` only works when the given eJSONPath only matches a single array.
-> Attempting to determine array length using `cs_ste_vec_terms_v1` when the eJSONPath matches multiple arrays (for example, when there are nested arrays or multiple arrays at the same depth) can return unexpected results.
+> Determining array length with `cs_ste_vec_terms_v2` only works when the given eJSONPath only matches a single array.
+> Attempting to determine array length using `cs_ste_vec_terms_v2` when the eJSONPath matches multiple arrays (for example, when there are nested arrays or multiple arrays at the same depth) can return unexpected results.
 
 Example query:
 
 ```sql
-SELECT COALESCE( -- We `COALESCE` because cs_ste_vec_terms_v1 will return `NULL` for empty arrays.
-  array_length( -- `cs_ste_vec_terms_v1` returns an array type (not JSON(B)), so we use `array_length`.
-    cs_ste_vec_terms_v1(encrypted_json, $1), -- Pluck out the array of terms at the path in $1.
+SELECT COALESCE( -- We `COALESCE` because cs_ste_vec_terms_v2 will return `NULL` for empty arrays.
+  array_length( -- `cs_ste_vec_terms_v2` returns an array type (not JSON(B)), so we use `array_length`.
+    cs_ste_vec_terms_v2(encrypted_json, $1), -- Pluck out the array of terms at the path in $1.
     1 -- The array dimension to find the length of (term array are flat, so this should always be 1).
   ),
-  0 -- Assume a length of `0` when `cs_ste_vec_terms_v1` returns `NULL`.
+  0 -- Assume a length of `0` when `cs_ste_vec_terms_v2` returns `NULL`.
 ) AS len FROM examples;
 ```
 
@@ -880,6 +878,7 @@ Example data and params:
   "q": "ejson_path"
 }
 ```
+
 ---
 
 ### Didn't find what you wanted?

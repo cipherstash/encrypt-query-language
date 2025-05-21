@@ -7,10 +7,7 @@
 #     "./tests/mise.tls.toml",
 # ]
 [task_config]
-includes = [
-  "tasks",
-  "tasks/postgres.toml"
-]
+includes = ["tasks", "tasks/postgres.toml"]
 
 [env]
 POSTGRES_DB = "cipherstash"
@@ -18,3 +15,11 @@ POSTGRES_USER = "cipherstash"
 POSTGRES_PASSWORD = "password"
 POSTGRES_HOST = "localhost"
 POSTGRES_PORT = "7432"
+
+[tasks."clean"]
+alias = 'k'
+description = "Clean release"
+run = """
+  rm -f release/cipherstash-encrypt-uninstall.sql
+  rm -f release/cipherstash-encrypt.sql
+"""
