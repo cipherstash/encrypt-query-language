@@ -132,19 +132,19 @@ In the previous step we:
 
 In this part we will add a new column to store our encrypted email data.
 
-When we add the column we use a `Type` of `cs_encrypted_v1`.
+When we add the column we use a `Type` of `cs_encrypted_v2`.
 
 This type will enforce constraints on the field to ensure that:
 
 - the payload is in the format EQL and CipherStash Proxy expects.
 - the payload has been encrypted before inserting.
 
-If there are issues with the payload being inserted into a field with a type of `cs_encrypted_v1`, an error will be returned describing what the issue with the payload is.
+If there are issues with the payload being inserted into a field with a type of `cs_encrypted_v2`, an error will be returned describing what the issue with the payload is.
 
-To add a new column called `email_encrypted` with a type of `cs_encrypted_v1`:
+To add a new column called `email_encrypted` with a type of `cs_encrypted_v2`:
 
 ```sql
-ALTER TABLE users ADD email_encrypted cs_encrypted_v1;
+ALTER TABLE users ADD email_encrypted cs_encrypted_v2;
 ```
 
 Our `users` schema now looks like this:
@@ -152,7 +152,7 @@ Our `users` schema now looks like this:
 | Column            | Type                     | Nullable |
 | ----------------- | ------------------------ | -------- |
 | `email`           | `character varying(100)` |          |
-| `email_encrypted` | `cs_encrypted_v1`        |          |
+| `email_encrypted` | `cs_encrypted_v2`        |          |
 
 ### Adding indexes
 
@@ -160,7 +160,7 @@ We now have our database schema setup to store encrypted data.
 
 In this part we will learn about why we need to add indexes and how to add them.
 
-When you install EQL, a table called `cs_configuration_v1` is created in your database.
+When you install EQL, a table called `cs_configuration_v2` is created in your database.
 
 Adding indexes updates this table with the details and configuration needed for CipherStash Proxy to know how to encrypt your data, and what types of queries are able to be performed
 
@@ -178,25 +178,25 @@ This means that we need to add the below indexes for our new `email_encrypted` f
 For free text queries (e.g `LIKE`, `ILIKE`) we add a `match` index and a GIN index:
 
 ```sql
-SELECT cs_add_index_v1('users', 'email_encrypted', 'match', 'text');
-CREATE INDEX ON users USING GIN (cs_match_v1(email_encrypted));
+SELECT cs_add_index_v2('users', 'email_encrypted', 'match', 'text');
+CREATE INDEX ON users USING GIN (cs_match_v2(email_encrypted));
 ```
 
 For equality queries we add a `unique` index:
 
 ```sql
-SELECT cs_add_index_v1('users', 'email_encrypted', 'unique', 'text', '{"token_filters": [{"kind": "downcase"}]}');
-CREATE UNIQUE INDEX ON users(cs_unique_v1(email_encrypted));
+SELECT cs_add_index_v2('users', 'email_encrypted', 'unique', 'text', '{"token_filters": [{"kind": "downcase"}]}');
+CREATE UNIQUE INDEX ON users(cs_unique_v2(email_encrypted));
 ```
 
 For ordering or comparison queries we add an `ore` index:
 
 ```sql
-SELECT cs_add_index_v1('users', 'email_encrypted', 'ore', 'text');
-CREATE INDEX ON users (cs_ore_64_8_v1(email_encrypted));
+SELECT cs_add_index_v2('users', 'email_encrypted', 'ore', 'text');
+CREATE INDEX ON users (cs_ore_64_8_v2(email_encrypted));
 ```
 
-After adding these indexes, our `cs_configuration_v1` table will look like this:
+After adding these indexes, our `cs_configuration_v2` table will look like this:
 
 ```bash
 id         | 1
@@ -209,11 +209,11 @@ The initial `state` will be set as pending.
 To activate this configuration run:
 
 ```sql
-SELECT cs_encrypt_v1();
-SELECT cs_activate_v1();
+SELECT cs_encrypt_v2();
+SELECT cs_activate_v2();
 ```
 
-The `cs_configured_v1` table will now have a state of `active`.
+The `cs_configured_v2` table will now have a state of `active`.
 
 ```bash
 id         | 1
@@ -228,7 +228,7 @@ Prerequisites:
 - [Database is setup](#setup-your-database)
 - [Indexes added](#adding-indexes)
 
-Ensure CipherStash Proxy has the most up to date configuration from the `cs_configuration_v1` table.
+Ensure CipherStash Proxy has the most up to date configuration from the `cs_configuration_v2` table.
 
 CipherStash Proxy pings the database every 60 seconds to refresh the configuration but we can force the refresh by running:
 
@@ -423,7 +423,7 @@ Prerequsites:
 - A [match index](#adding-indexes) is needed on the encrypted column to support this operation.
 - Connected to the database via the Proxy.
 
-EQL function to use: `cs_match_v1(val JSONB)`
+EQL function to use: `cs_match_v2(val JSONB)`
 
 EQL query payload for a match query:
 
@@ -449,7 +449,7 @@ SELECT * FROM users WHERE email LIKE '%grace%';
 The EQL equivalent of this query is:
 
 ```sql
-SELECT * FROM users WHERE cs_match_v1(email_encrypted) @> cs_match_v1(
+SELECT * FROM users WHERE cs_match_v2(email_encrypted) @> cs_match_v2(
   '{"v":1,"k":"pt","p":"grace","i":{"t":"users","c":"email_encrypted"},"q":"match"}'
   );
 ```
@@ -466,7 +466,7 @@ Prerequsites:
 
 - A [unique index](#adding-indexes) is needed on the encrypted column to support this operation.
 
-EQL function to use: `cs_unique_v1(val JSONB)`
+EQL function to use: `cs_unique_v2(val JSONB)`
 
 EQL query payload for a match query:
 
@@ -492,7 +492,7 @@ SELECT * FROM users WHERE email = 'adalovelace@example.com';
 The EQL equivalent of this query is:
 
 ```sql
-SELECT * FROM users WHERE cs_unique_v1(email_encrypted) = cs_unique_v1(
+SELECT * FROM users WHERE cs_unique_v2(email_encrypted) = cs_unique_v2(
   '{"v":1,"k":"pt","p":"adalovelace@example.com","i":{"t":"users","c":"email_encrypted"},"q":"unique"}'
   );
 ```
@@ -509,7 +509,7 @@ Prerequsites:
 
 - An [ore index](#adding-indexes) is needed on the encrypted column to support this operation.
 
-EQL function to use: `cs_ore_64_8_v1(val JSONB)`.
+EQL function to use: `cs_ore_64_8_v2(val JSONB)`.
 
 A plaintext query order by email looks like this:
 
@@ -520,7 +520,7 @@ SELECT * FROM users ORDER BY email ASC;
 The EQL equivalent of this query is:
 
 ```sql
-SELECT * FROM users ORDER BY cs_ore_64_8_v1(email_encrypted) ASC;
+SELECT * FROM users ORDER BY cs_ore_64_8_v2(email_encrypted) ASC;
 ```
 
 This query returns:
@@ -538,7 +538,7 @@ Prerequsites:
 
 - A [unique index](#adding-indexes) is needed on the encrypted column to support this operation.
 
-EQL function to use: `cs_ore_64_8_v1(val JSONB)`.
+EQL function to use: `cs_ore_64_8_v2(val JSONB)`.
 
 EQL query payload for a comparison query:
 
@@ -564,7 +564,7 @@ SELECT * FROM users WHERE email > 'gracehopper@test.com';
 The EQL equivalent of this query is:
 
 ```sql
-SELECT * FROM users WHERE cs_ore_64_8_v1(email_encrypted) > cs_ore_64_8_v1(
+SELECT * FROM users WHERE cs_ore_64_8_v2(email_encrypted) > cs_ore_64_8_v2(
   '{"v":1,"k":"pt","p":"gracehopper@test.com","i":{"t":"users","c":"email_encrypted"},"q":"ore"}'
   );
 ```

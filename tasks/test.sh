@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Build, reset and run tests"
+#USAGE flag "--test <test>" help="Test to run" default="false"
 #USAGE flag "--postgres <version>" help="Run tests for specified Postgres version" default="17" {
 #USAGE   choices "14" "15" "16" "17"
 #USAGE }
@@ -25,27 +26,49 @@ fail_if_postgres_not_running () {
 run_test () {
   echo
   echo '###############################################'
-  echo "# ${1}"
+  echo "# Running Test: ${1}"
   echo '###############################################'
   echo
-  cat $1 | docker exec -i ${container_name} psql $connection_url -f-
+
+  cat $1 | docker exec -i ${container_name} psql --variable ON_ERROR_STOP=1 $connection_url -f-
 }
 
 # setup
 fail_if_postgres_not_running
-mise run build
-mise run reset --postgres ${POSTGRES_VERSION}
+mise run build --force
+mise run reset --force --postgres ${POSTGRES_VERSION}
 
-# tests
-run_test tests/version.sql
-run_test tests/core.sql
-run_test tests/core-functions.sql
-run_test tests/config.sql
-run_test tests/encryptindex.sql
-run_test tests/operators-eq.sql
-run_test tests/operators-match.sql
-run_test tests/operators-ore.sql
-run_test tests/aggregate-ore.sql
+echo '/////////////////////////////////////////////////////////'
+cat release/cipherstash-encrypt.sql
+echo '/////////////////////////////////////////////////////////'
+
+
+# Install
+# cat release/cipherstash-encrypt.sql | docker exec -i ${container_name} psql ${connection_url} -f-
+if cat release/cipherstash-encrypt.sql | docker exec -i ${container_name} psql ${connection_url} -f- | grep -q "ERROR"; then
+  echo
+  echo '******************************************************'
+  echo '* ❌ ERROR installing release/cipherstash-encrypt.sql'
+  echo '******************************************************'
+  echo
+
+  exit 1
+fi
+
+
+cat tests/test_helpers.sql | docker exec -i ${container_name} psql ${connection_url} -f-
+cat tests/ore.sql | docker exec -i ${container_name} psql ${connection_url} -f-
+
+if [ $usage_test = "false" ]; then
+  find src -type f -path "*_test.sql" | while read -r sql_file; do
+    echo $sql_file
+    run_test $sql_file
+  done
+else
+  find src -type f -path "*$usage_test*" | while read -r sql_file; do
+    run_test $sql_file
+  done
+fi
 
 echo
 echo '###############################################'

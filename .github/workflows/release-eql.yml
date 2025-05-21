@@ -54,3 +54,5 @@ jobs:
           files: |
             release/cipherstash-encrypt.sql
             release/cipherstash-encrypt-uninstall.sql
+            release/cipherstash-encrypt-supabase.sql
+            release/cipherstash-encrypt-uninstall-supabase.sql
