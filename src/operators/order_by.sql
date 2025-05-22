@@ -11,7 +11,7 @@
 -- There are multiple index terms that provide equality comparisons
 --   - ore_cllw_u64_8
 --   - ore_cllw_var_8
---   - ore_64_8_v2
+--   - ore_block_u64_8_256
 --
 -- We check these index terms in this order and use the first one that exists for both parameters
 --
@@ -19,14 +19,14 @@
 
 
 CREATE FUNCTION eql_v2.order_by(a eql_v2_encrypted)
-  RETURNS eql_v2.ore_64_8_v2
+  RETURNS eql_v2.ore_block_u64_8_256
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
     BEGIN
-      RETURN eql_v2.ore_64_8_v2(a);
+      RETURN eql_v2.ore_block_u64_8_256(a);
     EXCEPTION WHEN OTHERS THEN
-      -- PERFORM eql_v2.log('No ore_64_8_v2 index');
+      -- PERFORM eql_v2.log('No ore_block_u64_8_256 index');
     END;
 
     RETURN false;
@@ -60,9 +60,9 @@ AS $$
     END;
 
     BEGIN
-      result := eql_v2.ore_64_8_v2(e);
+      result := eql_v2.ore_block_u64_8_256(e);
     EXCEPTION WHEN OTHERS THEN
-      -- PERFORM eql_v2.log('No ore_64_8_v2 index');
+      -- PERFORM eql_v2.log('No ore_block_u64_8_256 index');
     END;
 
     RETURN result;
