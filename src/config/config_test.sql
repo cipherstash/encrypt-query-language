@@ -4,8 +4,8 @@
 --
 -- Helper function for assertions
 --
-DROP FUNCTION IF EXISTS _index_exists(text, text, text, text);
-CREATE FUNCTION _index_exists(table_name text, column_name text, index_name text, state text DEFAULT 'pending')
+DROP FUNCTION IF EXISTS _search_config_exists(text, text, text, text);
+CREATE FUNCTION _search_config_exists(table_name text, column_name text, index_name text, state text DEFAULT 'pending')
   RETURNS boolean
 LANGUAGE sql STRICT PARALLEL SAFE
 BEGIN ATOMIC
@@ -25,23 +25,23 @@ DO $$
   BEGIN
 
     -- Add indexes
-    PERFORM eql_v2.add_index('users', 'name', 'match');
-    ASSERT (SELECT _index_exists('users', 'name', 'match'));
+    PERFORM eql_v2.add_search_config('users', 'name', 'match');
+    ASSERT (SELECT _search_config_exists('users', 'name', 'match'));
 
     -- Add index with cast
-    PERFORM eql_v2.add_index('users', 'name', 'unique', 'int');
-    ASSERT (SELECT _index_exists('users', 'name', 'unique'));
+    PERFORM eql_v2.add_search_config('users', 'name', 'unique', 'int');
+    ASSERT (SELECT _search_config_exists('users', 'name', 'unique'));
 
     ASSERT (SELECT EXISTS (SELECT id FROM eql_v2_configuration c
             WHERE c.state = 'pending' AND
             c.data #> array['tables', 'users', 'name'] ? 'cast_as'));
 
     -- Match index removed
-    PERFORM eql_v2.remove_index('users', 'name', 'match');
-    ASSERT NOT (SELECT _index_exists('users', 'name', 'match'));
+    PERFORM eql_v2.remove_search_config('users', 'name', 'match');
+    ASSERT NOT (SELECT _search_config_exists('users', 'name', 'match'));
 
     -- All indexes removed, delete the emtpty pending config
-    PERFORM eql_v2.remove_index('users', 'name', 'unique');
+    PERFORM eql_v2.remove_search_config('users', 'name', 'unique');
     ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending'));
 
   END;
@@ -60,16 +60,16 @@ DO $$
   BEGIN
 
     -- Add indexes
-    PERFORM eql_v2.add_index('users', 'name', 'match');
-    ASSERT (SELECT _index_exists('users', 'name', 'match'));
+    PERFORM eql_v2.add_search_config('users', 'name', 'match');
+    ASSERT (SELECT _search_config_exists('users', 'name', 'match'));
 
     ASSERT (SELECT EXISTS (SELECT id FROM eql_v2_configuration c
             WHERE c.state = 'pending' AND
             c.data #> array['tables', 'users', 'name', 'indexes'] ? 'match'));
 
     -- Add index with cast
-    PERFORM eql_v2.add_index('blah', 'vtha', 'unique', 'int');
-    ASSERT (SELECT _index_exists('blah', 'vtha', 'unique'));
+    PERFORM eql_v2.add_search_config('blah', 'vtha', 'unique', 'int');
+    ASSERT (SELECT _search_config_exists('blah', 'vtha', 'unique'));
 
     ASSERT (SELECT EXISTS (SELECT id FROM eql_v2_configuration c
             WHERE c.state = 'pending' AND
@@ -82,12 +82,12 @@ DO $$
 
 
     -- Match index removed
-    PERFORM eql_v2.remove_index('users', 'name', 'match');
-    ASSERT NOT (SELECT _index_exists('users', 'name', 'match'));
+    PERFORM eql_v2.remove_search_config('users', 'name', 'match');
+    ASSERT NOT (SELECT _search_config_exists('users', 'name', 'match'));
 
     -- Match index removed
-    PERFORM eql_v2.remove_index('blah', 'vtha', 'unique');
-    ASSERT NOT (SELECT _index_exists('users', 'vtha', 'unique'));
+    PERFORM eql_v2.remove_search_config('blah', 'vtha', 'unique');
+    ASSERT NOT (SELECT _search_config_exists('users', 'vtha', 'unique'));
 
     -- All indexes removed, delete the emtpty pending config
     ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending'));
@@ -107,12 +107,12 @@ $$ LANGUAGE plpgsql;
 
 DO $$
   BEGIN
-    PERFORM eql_v2.add_index('users', 'name', 'match');
-    ASSERT (SELECT _index_exists('users', 'name', 'match'));
+    PERFORM eql_v2.add_search_config('users', 'name', 'match');
+    ASSERT (SELECT _search_config_exists('users', 'name', 'match'));
 
     -- Pending configuration contains the path `user/name.match.option`
-    PERFORM eql_v2.modify_index('users', 'name', 'match', 'int', '{"option": "value"}'::jsonb);
-    ASSERT (SELECT _index_exists('users', 'name', 'match'));
+    PERFORM eql_v2.modify_search_config('users', 'name', 'match', 'int', '{"option": "value"}'::jsonb);
+    ASSERT (SELECT _search_config_exists('users', 'name', 'match'));
 
     ASSERT (SELECT EXISTS (SELECT id FROM eql_v2_configuration c
             WHERE c.state = 'pending' AND
@@ -123,7 +123,7 @@ DO $$
             c.data #> array['tables', 'users', 'name'] ? 'cast_as'));
 
     -- All indexes removed, delete the emtpty pending config
-    PERFORM eql_v2.remove_index('users', 'name', 'match');
+    PERFORM eql_v2.remove_search_config('users', 'name', 'match');
     ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending'));
   END;
 $$ LANGUAGE plpgsql;
@@ -160,16 +160,16 @@ INSERT INTO eql_v2_configuration (state, data) VALUES (
 -- An encrypting config should exist
 DO $$
   BEGIN
-    ASSERT (SELECT _index_exists('users', 'blah', 'match', 'active'));
+    ASSERT (SELECT _search_config_exists('users', 'blah', 'match', 'active'));
 
-    PERFORM eql_v2.add_index('users', 'name', 'match');
+    PERFORM eql_v2.add_search_config('users', 'name', 'match');
 
     -- index added to name
-    ASSERT (SELECT _index_exists('users', 'name', 'match' ));
+    ASSERT (SELECT _search_config_exists('users', 'name', 'match' ));
 
     -- pending is a copy of the active config
     -- and the active index still exists
-    ASSERT (SELECT _index_exists('users', 'blah', 'match'));
+    ASSERT (SELECT _search_config_exists('users', 'blah', 'match'));
 
   END;
 $$ LANGUAGE plpgsql;
