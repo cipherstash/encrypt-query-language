@@ -88,7 +88,7 @@ LANGUAGE sql STRICT PARALLEL SAFE
 BEGIN ATOMIC
   SELECT jsonb_build_object(
             'k', 6,
-            'm', 2048,
+            'bf', 2048,
             'include_original', true,
             'tokenizer', json_build_object('kind', 'ngram', 'token_length', 3),
             'token_filters', json_build_array(json_build_object('kind', 'downcase')));

@@ -4,21 +4,22 @@
 
 -- extracts blake3 index from a jsonb value
 
+
 CREATE FUNCTION eql_v2.blake3(val jsonb)
   RETURNS eql_v2.blake3
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
 
-    IF NOT (val ? 'b') NULL THEN
-        RAISE 'Expected a blake3 index (b) value in json: %', val;
+    IF NOT (val ? 'b3') NULL THEN
+        RAISE 'Expected a blake3 index (b3) value in json: %', val;
     END IF;
 
-    IF val->>'b' IS NULL THEN
+    IF val->>'b3' IS NULL THEN
       RETURN NULL;
     END IF;
 
-    RETURN val->>'b';
+    RETURN val->>'b3';
   END;
 $$ LANGUAGE plpgsql;
 
