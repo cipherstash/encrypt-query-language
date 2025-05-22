@@ -24,15 +24,15 @@ In EQL, PostgreSQL operators are an alias for a function, so the implementation 
 
 ### Core Functions
 
-| Function                     | Description                                          | Example                                         |
-| ---------------------------- | ---------------------------------------------------- | ----------------------------------------------- |
-| `eql_v2.ciphertext(val)`     | Extract ciphertext from encrypted value              | `SELECT eql_v2.ciphertext(encrypted_field)`     |
-| `eql_v2.blake3(val)`         | Extract blake3 hash from encrypted value             | `SELECT eql_v2.blake3(encrypted_field)`         |
-| `eql_v2.unique(val)`         | Extract unique index from encrypted value            | `SELECT eql_v2.unique(encrypted_field)`         |
-| `eql_v2.match(val)`          | Extract match index from encrypted value             | `SELECT eql_v2.match(encrypted_field)`          |
-| `eql_v2.ore_64_8_v2(val)`    | Extract ORE index from encrypted value               | `SELECT eql_v2.ore_64_8_v2(encrypted_field)`    |
-| `eql_v2.ore_cllw_u64_8(val)` | Extract CLLW ORE index from encrypted value          | `SELECT eql_v2.ore_cllw_u64_8(encrypted_field)` |
-| `eql_v2.ore_cllw_var_8(val)` | Extract variable CLLW ORE index from encrypted value | `SELECT eql_v2.ore_cllw_var_8(encrypted_field)` |
+| Function                          | Description                                          | Exa     mple                                         |
+| --------------------------------- | --------------------------------------------------------- | ----------------------------------------------- |
+| `eql_v2.ciphertext(val)`          | Extract ciphertext from encrypted value              | `SELECT eql_v2.ciphertext     (encrypted_field)`     |
+| `eql_v2.blake3(val)`              | Extract blake3 hash from encrypted value             | `SELECT eql_v2.blake3(     encrypted_field)`         |
+| `eql_v2.unique(val)`              | Extract unique index from encrypted value            | `SELECT eql_v2.unique(encrypted_fie     ld)`         |
+| `eql_v2.bloom_filter(val)`        | Extract match index from encrypted value             | `SELECT eql_v2.bloom_filter(encrypted_field)`               |
+| `eql_v2.ore_block_u64_8_256(val)` | Extract ORE index from encrypted value               | `SELECT eql_v2.ore_block_u64_8_256(encrypted_field)`   |
+| `eql_v2.ore_cllw_u64_8(val)`      | Extract CLLW ORE index from encrypted value          | `SELECT eql_v2.ore_cllw_u64_8(encrypted_fie     ld)` |
+| `eql_v2.ore_cllw_var_8(val)`      | Extract variable CLLW ORE index from encrypted value | `SELECT eql_v2.ore_cllw_var_8(     encrypted_field)` |
 
 ### Aggregate Functions
 
@@ -90,19 +90,17 @@ The behaviour of EQL's encrypted `LIKE` operators is slightly different to the b
 In EQL, the `LIKE` operator can be used on `match` indexes.
 Case sensitivity is determined by the [index term configuration](./docs/reference/INDEX.md#options-for-match-indexes-opts) of `match` indexes.
 A `match` index term can be configured to enable case sensitive searches with token filters (for example, `downcase` and `upcase`).
-The data is encrypted based on the index term configuration.
-The `LIKE` operation is always the same, even if the data is tokenised differently.
-The different operators are kept to preserve the semantics of SQL statements in client applications.
+The data is encrypted based on the index term configurat     ion.
+The `LIKE` operation is always the same, even if the data is----- tokenised differently.
+The different operators are kept to preserve the semantics of SQL statements in client      applications.
 
-### `ORDER BY`
+### `ORDER      BY`
 
-Ordering requires wrapping the ordered column in the `eql_v2.order_by` function, like this:
+Ordering requires wrapping the ordered column in the `eql_v2.order_by` function, lik     e this:
 
 ```sql
 SELECT * FROM users ORDER BY eql_v2.order_by(encrypted_created_at) DESC
-```
-
-PostgreSQL uses operators when handling `ORDER BY` operations. The `eql_v2.order_by` function behaves in the same way as the comparison operators, using the appropriate index type (ore_64_8_v2, ore_cllw_u64_8, or ore_cllw_var_8) to determine the ordering.
+``     ` PostgreSQL uses operators when handling `ORDER BY` operations. The `eql_v2.order_by` function behaves in the same way as the comparison operators, using the appropriate index type (ore_block_u64_8_256     , ore_cllw_u64_8, or ore_cllw_var_8) to determine the      ordering.
 
 ### JSONB Support
 

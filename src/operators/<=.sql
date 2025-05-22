@@ -39,7 +39,7 @@ AS $$
     END;
 
     BEGIN
-      RETURN eql_v2.ore_64_8_v2(a) <= eql_v2.ore_64_8_v2(b);
+      RETURN eql_v2.ore_block_u64_8_256(a) <= eql_v2.ore_block_u64_8_256(b);
     EXCEPTION WHEN OTHERS THEN
       -- PERFORM eql_v2.log('eql_v2.lte no ore_64_8_v2 index');
     END;

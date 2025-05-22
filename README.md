@@ -149,7 +149,7 @@ Data is stored in the PostgreSQL database as:
   },
   "k": "ct",
   "m": null,
-  "o": null,
+  "ob": null,
   "u": null,
   "v": 1
 }
@@ -261,7 +261,7 @@ SELECT * FROM users WHERE email = 'test@example.com';
 
 ### Full-text search
 
-Enables basic full-text search on encrypted data using the `eql_v2.match` function.
+Enables basic full-text search on encrypted data using the `eql_v2.bloom_filter` function.
 
 **Index configuration example:**
 
@@ -279,7 +279,7 @@ SELECT eql_v2.add_search_config(
 
 ```sql
 SELECT * FROM users
-WHERE eql_v2.match(encrypted_email) @> eql_v2.match(
+WHERE eql_v2.bloom_filter(encrypted_email) @> eql_v2.bloom_filter(
   '{"v":1,"k":"pt","p":"test","i":{"t":"users","c":"encrypted_email"},"q":"match"}'
 );
 ```
@@ -292,7 +292,7 @@ SELECT * FROM users WHERE email LIKE '%test%';
 
 ### Range queries
 
-Enable range queries on encrypted data using the `eql_v2.ore_64_8_v2`, `eql_v2.ore_cllw_u64_8`, or `eql_v2.ore_cllw_var_8` functions. Supports:
+Enable range queries on encrypted data using the `eql_v2.ore_block_u64_8_256`, `eql_v2.ore_cllw_u64_8`, or `eql_v2.ore_cllw_var_8` functions. Supports:
 
 - `ORDER BY`
 - `WHERE`
@@ -301,7 +301,7 @@ Enable range queries on encrypted data using the `eql_v2.ore_64_8_v2`, `eql_v2.o
 
 ```sql
 SELECT * FROM users
-WHERE eql_v2.ore_64_8_v2(encrypted_date) < eql_v2.ore_64_8_v2(
+WHERE eql_v2.ore_block_u64_8_256(encrypted_date) < eql_v2.ore_block_u64_8_256(
   '{"v":1,"k":"pt","p":"2023-10-05","i":{"t":"users","c":"encrypted_date"},"q":"ore"}'
 );
 ```
@@ -316,7 +316,7 @@ SELECT * FROM users WHERE date < '2023-10-05';
 
 ```sql
 SELECT id FROM users
-ORDER BY eql_v2.ore_64_8_v2(encrypted_field) DESC;
+ORDER BY eql_v2.ore_block_u64_8_256(encrypted_field) DESC;
 ```
 
 Equivalent plaintext query:
