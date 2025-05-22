@@ -5,9 +5,9 @@
 
 
 
--- REQUIRE: ore_block_u64_8_256types.sql
--- REQUIRE: ore_block_u64_8_256functions.sql
--- REQUIRE: ore_block_u64_8_256operators.sql
+-- REQUIRE: src/ore_block_u64_8_256/types.sql
+-- REQUIRE: src/ore_block_u64_8_256/functions.sql
+-- REQUIRE: src/ore_block_u64_8_256/operators.sql
 
 
 -- Operators for < less than comparisons of eql_v2_encrypted types
@@ -19,7 +19,7 @@
 --      jsonb = eql_v2_encrypted
 --
 -- There are multiple index terms that provide equality comparisons
---   - ore_64_8_v2
+--   - ore_block_u64_8_256
 --   - ore_cllw_8_v2
 --
 -- We check these index terms in this order and use the first one that exists for both parameters
@@ -47,7 +47,7 @@ AS $$
     BEGIN
       RETURN eql_v2.ore_block_u64_8_256(a) >= eql_v2.ore_block_u64_8_256(b);
     EXCEPTION WHEN OTHERS THEN
-      -- PERFORM eql_v2.log('eql_v2.gte no ore_64_8_v2 index');
+      -- PERFORM eql_v2.log('eql_v2.gte no ore_block_u64_8_256 index');
     END;
 
     RETURN false;

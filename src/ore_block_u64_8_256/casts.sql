@@ -1,5 +1,5 @@
 -- REQUIRE: src/schema.sql
--- REQUIRE: ore_block_u64_8_256types.sql
+-- REQUIRE: src/ore_block_u64_8_256/types.sql
 
 -- casts text to ore_block_u64_8_256_term (bytea)
 

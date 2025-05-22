@@ -193,7 +193,7 @@ For ordering or comparison queries we add an `ore` index:
 
 ```sql
 SELECT cs_add_index_v2('users', 'email_encrypted', 'ore', 'text');
-CREATE INDEX ON users (cs_ore_64_8_v2(email_encrypted));
+CREATE INDEX ON users (ore_block_u64_8_256(email_encrypted));
 ```
 
 After adding these indexes, our `eql_v2_configuration` table will look like this:
@@ -201,7 +201,7 @@ After adding these indexes, our `eql_v2_configuration` table will look like this
 ```bash
 id         | 1
 state      | pending
-data       | {"v": 1, "tables": {"users": {"email_encrypted": {"cast_as": "text", "indexes": {"ore": {}, "match": {"k": 6, "m": 2048, "tokenizer": {"kind": "ngram", "token_length": 3}, "token_filters": [{"kind": "downcase"}], "include_original": true}, "unique": {"token_filters": [{"kind": "downcase"}]}}}}}}
+data       | {"v": 1, "tables": {"users": {"email_encrypted": {"cast_as": "text", "indexes": {"ore": {}, "match": {"k": 6, "bf": 2048, "tokenizer": {"kind": "ngram", "token_length": 3}, "token_filters": [{"kind": "downcase"}], "include_original": true}, "unique": {"token_filters": [{"kind": "downcase"}]}}}}}}
 ```
 
 The initial `state` will be set as pending.
@@ -218,7 +218,7 @@ The `cs_configured_v2` table will now have a state of `active`.
 ```bash
 id         | 1
 state      | active
-data       | {"v": 1, "tables": {"users": {"email_encrypted": {"cast_as": "text", "indexes": {"ore": {}, "match": {"k": 6, "m": 2048, "tokenizer": {"kind": "ngram", "token_length": 3}, "token_filters": [{"kind": "downcase"}], "include_original": true}, "unique": {"token_filters": [{"kind": "downcase"}]}}}}}}
+data       | {"v": 1, "tables": {"users": {"email_encrypted": {"cast_as": "text", "indexes": {"ore": {}, "match": {"k": 6, "bf": 2048, "tokenizer": {"kind": "ngram", "token_length": 3}, "token_filters": [{"kind": "downcase"}], "include_original": true}, "unique": {"token_filters": [{"kind": "downcase"}]}}}}}}
 ```
 
 ### Encrypting existing plaintext data
@@ -325,7 +325,7 @@ It creates an EQL payload that looks similar to this and inserts this into the e
     "t": "users", // Table
     "c": "email_encrypted" // Encrypted column
   },
-  "m": [42], // The ciphertext used for free text queries i.e match index
+  "bf": [42], // The ciphertext used for free text queries i.e match index
   "u": "unique ciphertext", // The ciphertext used for unique queries. i.e unique index
   "ob": ["a", "b", "c"], // The ciphertext used for order or comparison queries. i.e ore index
   "v": 1
@@ -386,7 +386,7 @@ The json stored in the database looks similar to this:
     "t": "users", // Table
     "c": "email_encrypted" // Encrypted column
   },
-  "m": [42], // The ciphertext used for free text queries i.e match index
+  "bf": [42], // The ciphertext used for free text queries i.e match index
   "u": "unique ciphertext", // The ciphertext used for unique queries. i.e unique index
   "ob": ["a", "b", "c"], // The ciphertext used for order or comparison queries. i.e ore index
   "v": 1
@@ -509,7 +509,7 @@ Prerequsites:
 
 - An [ore index](#adding-indexes) is needed on the encrypted column to support this operation.
 
-EQL function to use: `cs_ore_64_8_v2(val JSONB)`.
+EQL function to use: `ore_block_u64_8_256(val JSONB)`.
 
 A plaintext query order by email looks like this:
 
@@ -520,7 +520,7 @@ SELECT * FROM users ORDER BY email ASC;
 The EQL equivalent of this query is:
 
 ```sql
-SELECT * FROM users ORDER BY cs_ore_64_8_v2(email_encrypted) ASC;
+SELECT * FROM users ORDER BY ore_block_u64_8_256(email_encrypted) ASC;
 ```
 
 This query returns:
@@ -538,7 +538,7 @@ Prerequsites:
 
 - A [unique index](#adding-indexes) is needed on the encrypted column to support this operation.
 
-EQL function to use: `cs_ore_64_8_v2(val JSONB)`.
+EQL function to use: `ore_block_u64_8_256(val JSONB)`.
 
 EQL query payload for a comparison query:
 
@@ -564,7 +564,7 @@ SELECT * FROM users WHERE email > 'gracehopper@test.com';
 The EQL equivalent of this query is:
 
 ```sql
-SELECT * FROM users WHERE cs_ore_64_8_v2(email_encrypted) > cs_ore_64_8_v2(
+SELECT * FROM users WHERE ore_block_u64_8_256(email_encrypted) > ore_block_u64_8_256(
   '{"v":1,"k":"pt","p":"gracehopper@test.com","i":{"t":"users","c":"email_encrypted"},"q":"ore"}'
   );
 ```

@@ -1,8 +1,7 @@
 -- REQUIRE: src/schema.sql
 -- REQUIRE: src/crypto.sql
--- REQUIRE: ore_block_u64_8_256types.sql
--- REQUIRE: ore_block_u64_8_256functions.sql
-
+-- REQUIRE: src/ore_block_u64_8_256/types.sql
+-- REQUIRE: src/ore_block_u64_8_256/functions.sql
 
 
 CREATE FUNCTION eql_v2.ore_block_u64_8_256_eq(a eql_v2.ore_block_u64_8_256, b eql_v2.ore_block_u64_8_256)

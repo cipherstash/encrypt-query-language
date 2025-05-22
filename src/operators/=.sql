@@ -1,9 +1,9 @@
 -- REQUIRE: src/encrypted/types.sql
 -- REQUIRE: src/hmac_256/types.sql
 -- REQUIRE: src/hmac_256/functions.sql
--- REQUIRE: ore_block_u64_8_256types.sql
--- REQUIRE: ore_block_u64_8_256functions.sql
--- REQUIRE: ore_block_u64_8_256operators.sql
+-- REQUIRE: src/ore_block_u64_8_256/types.sql
+-- REQUIRE: src/ore_block_u64_8_256/functions.sql
+-- REQUIRE: src/ore_block_u64_8_256/operators.sql
 -- REQUIRE: src/blake3/types.sql
 -- REQUIRE: src/blake3/functions.sql
 -- REQUIRE: src/ore_cllw_u64_8/types.sql
@@ -59,7 +59,7 @@ AS $$
     BEGIN
       RETURN eql_v2.ore_block_u64_8_256(a) = eql_v2.ore_block_u64_8_256(b);
     EXCEPTION WHEN OTHERS THEN
-      -- PERFORM eql_v2.log('No ore_64_8_v2 index');
+      -- PERFORM eql_v2.log('No ore_block_u64_8_256 index');
     END;
 
     RETURN false;

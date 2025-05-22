@@ -13,7 +13,7 @@ DECLARE
   BEGIN
 
     for i in 1..3 loop
-      e := create_encrypted_json(i, 'u');
+      e := create_encrypted_json(i, 'hm');
 
       PERFORM assert_result(
         format('eql_v2_encrypted = eql_v2_encrypted with unique index term %s of 3', i),
@@ -22,7 +22,7 @@ DECLARE
     end loop;
 
     -- remove the ore index term
-    e := create_encrypted_json(91347, 'u');
+    e := create_encrypted_json(91347, 'hm');
 
     PERFORM assert_no_result(
         'eql_v2_encrypted = eql_v2_encrypted with no matching record',

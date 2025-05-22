@@ -1,15 +1,15 @@
 -- REQUIRE: src/schema.sql
 -- REQUIRE: src/encrypted/types.sql
 -- REQUIRE: src/encrypted/functions.sql
--- REQUIRE: ore_block_u64_8_256types.sql
+-- REQUIRE: src/ore_block_u64_8_256/types.sql
 
 
 
--- Casts a jsonb array of hex-encoded strings to the `ore_64_8_v2` composite type.
+-- Casts a jsonb array of hex-encoded strings to the `ore_block_u64_8_256` composite type.
 -- In other words, this function takes the ORE index format sent through in the
 -- EQL payload from Proxy and decodes it as the composite type that we use for
 -- ORE operations on the Postgres side.
--- CREATE FUNCTION eql_v2.jsonb_array_to_ore_64_8_v2(val jsonb)
+-- CREATE FUNCTION eql_v2.jsonb_array_to_ore_block_u64_8_256(val jsonb)
 -- RETURNS eql_v2.ore_block_u64_8_256 AS $$
 -- DECLARE
 --   terms_arr eql_v2.ore_block_u64_8_256_term[];
@@ -29,7 +29,7 @@
 -- $$ LANGUAGE plpgsql;
 
 
-CREATE FUNCTION eql_v2.jsonb_array_to_ore_64_8_v2(val jsonb)
+CREATE FUNCTION eql_v2.jsonb_array_to_ore_block_u64_8_256(val jsonb)
 RETURNS eql_v2.ore_block_u64_8_256 AS $$
 DECLARE
   terms eql_v2.ore_block_u64_8_256_term[];
@@ -55,7 +55,7 @@ CREATE FUNCTION eql_v2.ore_block_u64_8_256(val jsonb)
 AS $$
 	BEGIN
     IF val ? 'ob' THEN
-      RETURN eql_v2.jsonb_array_to_ore_64_8_v2(val->'ob');
+      RETURN eql_v2.jsonb_array_to_ore_block_u64_8_256(val->'ob');
     END IF;
     RAISE 'Expected an ore index (ob) value in json: %', val;
   END;
@@ -76,7 +76,7 @@ $$ LANGUAGE plpgsql;
 
 -- This function uses lexicographic comparison
 
-CREATE FUNCTION eql_v2.compare_ore_64_8_v2(a eql_v2.ore_block_u64_8_256, b eql_v2.ore_block_u64_8_256)
+CREATE FUNCTION eql_v2.compare_ore_block_u64_8_256(a eql_v2.ore_block_u64_8_256, b eql_v2.ore_block_u64_8_256)
 RETURNS integer AS $$
   BEGIN
     -- Recursively compare blocks bailing as soon as we can make a decision
@@ -86,7 +86,7 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v2.compare_ore_64_8_v2_term(a eql_v2.ore_block_u64_8_256_term, b eql_v2.ore_block_u64_8_256_term)
+CREATE FUNCTION eql_v2.ore_block_u64_8_256_term(a eql_v2.ore_block_u64_8_256_term, b eql_v2.ore_block_u64_8_256_term)
   RETURNS integer
 AS $$
   DECLARE
@@ -199,7 +199,7 @@ RETURNS integer AS $$
       RETURN 1;
     END IF;
 
-    cmp_result := eql_v2.compare_ore_64_8_v2_term(a[1], b[1]);
+    cmp_result := eql_v2.ore_block_u64_8_256_term(a[1], b[1]);
     IF cmp_result = 0 THEN
     -- Removes the first element in the array, and calls this fn again to compare the next element/s in the array.
       RETURN eql_v2.compare_ore_array(a[2:array_length(a,1)], b[2:array_length(b,1)]);
