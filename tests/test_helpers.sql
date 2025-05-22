@@ -47,7 +47,7 @@ AS $$
     RETURN '{
       "sv": [
           {
-              "b": "7b4ffe5d60e4e4300dc3e28d9c300c87",
+              "b3": "7b4ffe5d60e4e4300dc3e28d9c300c87",
               "c": "mBbLGB9xHAGzLvUj-`@Wmf=IhD87n7r3ir3n!Sk6AKir_YawR=0c>pk(OydB;ntIEXK~c>V&4>)rNkf<JN7fmlO)c^iBv;-X0+3XyK5d`&&I-oeIEOcwPf<3zy",
               "s": "bca213de9ccce676fa849ff9c4807963"
           },
@@ -76,7 +76,7 @@ AS $$
     RETURN '{
       "sv": [
             {
-                "b": "7b4ffe5d60e4e4300dc3e28d9c300c87",
+                "b3": "7b4ffe5d60e4e4300dc3e28d9c300c87",
                 "c": "mBbJ`WPCW@ifNK3@++t4I%$E#DC8yBXbTwDs-nff1*Ug?f<icvvAaiqXfmPqD#S)r*2IUxCWIn{^28wV{TP}lqWol}K{;1%c;CDw21Y#EyOWiy884b7XQ@e`zy",
                 "s": "bca213de9ccce676fa849ff9c4807963"
             },
@@ -108,7 +108,7 @@ $$ LANGUAGE plpgsql;
 
 -- ORIGINAL $.a encoding
 -- {
---     "b": "8258356162d2415d55244abf49e40da3",
+--     "b3": "8258356162d2415d55244abf49e40da3",
 --     "c": "mBbL9j9(QoRD)R+z?=Fvn#=FR9iI)K4Nzk-ea`~#Lx@wBSDPSmkp-h+tNEHoo@T@#vwh?Ejvk%78G}b+je+xufQA5mSwHSid)iEOkg@>mpuh",
 --     "s": "f510853730e1c3dbd31b86963f029dd5"
 -- },
@@ -121,7 +121,7 @@ AS $$
     RETURN '{
     "sv": [
         {
-            "b": "7b4ffe5d60e4e4300dc3e28d9c300c87",
+            "b3": "7b4ffe5d60e4e4300dc3e28d9c300c87",
             "c": "mBbL9j9(QoRD)R+z?=Fvn#=FRIg79JJM`MCq+nE0*U^ca-cViL884d-TInfY&E9HW@X>!U&lkYne2!EecKG8xwLYb0X#y7|05rrPvwh?Ejvk%78G}b+je+xufQA5mSwHSid)iEOkg@>mpuh",
             "s": "bca213de9ccce676fa849ff9c4807963"
         },
@@ -209,7 +209,7 @@ AS $$
     RETURN '{
       "sv": [
           {
-              "b": "7b4ffe5d60e4e4300dc3e28d9c300c87",
+              "b3": "7b4ffe5d60e4e4300dc3e28d9c300c87",
               "c": "mBbM0#UZON2jQ3@LiWcvns2YfD7#?5ZXlp8Wk1R*iA%o6cD0VZWqPY%l%_z!JC9wAR4?XKSouV_AjBXFod39C7TF-SiCD-NgkG)l%Vw=l!tX>H*P<PfE$+0Szy",
               "s": "bca213de9ccce676fa849ff9c4807963"
           },
@@ -238,7 +238,7 @@ AS $$
       "sv": [
           {
               "c": "mBbK0Cob5dQ5Jki69vRd75f9kDqkudQIbo}$J)f!EYW$7#FJ{kA1^NPL~KtPnCJ^MjEZiv5-P~GgJu!LAm>kiFH&De7C+d}sDugsc?JuI*>$AsG83nsXvrND0-(S",
-              "b": "7b4ffe5d60e4e4300dc3e28d9c300c87",
+              "b3": "7b4ffe5d60e4e4300dc3e28d9c300c87",
               "s": "bca213de9ccce676fa849ff9c4807963"
           },
           {
@@ -318,7 +318,7 @@ AS $$
               "c": "e"
           },
           "u": "unique.%s",
-          "b": "blake3.%s",
+          "b3": "blake3.%s",
           "bf": %s
         }',
         random_key,
