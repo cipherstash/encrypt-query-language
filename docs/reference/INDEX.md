@@ -1,17 +1,17 @@
 # EQL index configuration
 
 The following functions allow you to configure indexes for encrypted columns.
-All these functions modify the `cs_configuration_v2` table in your database, and are added during the EQL installation.
+All these functions modify the `eql_v2_configuration` table in your database, and are added during the EQL installation.
 
-> **IMPORTANT:** When you modify or add an index, you must re-encrypt data that's already been stored in the database.
+> **IMPORTANT:** When you modify or add search configuration  index, you must re-encrypt data that's already been stored in the database.
 > The CipherStash encryption solution will encrypt the data based on the current state of the configuration.
 
-### Adding an index (`cs_add_index`)
+### Configuring search (`eql_v2.add_search_config`)
 
 Add an index to an encrypted column.
 
 ```sql
-SELECT cs_add_index_v2(
+SELECT eql_v2.add_search_config(
   'table_name',       -- Name of the table
   'column_name',      -- Name of the column
   'index_name',       -- Index kind ('unique', 'match', 'ore', 'ste_vec')
