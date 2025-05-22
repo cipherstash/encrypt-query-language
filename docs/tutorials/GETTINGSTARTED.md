@@ -160,7 +160,7 @@ We now have our database schema setup to store encrypted data.
 
 In this part we will learn about why we need to add indexes and how to add them.
 
-When you install EQL, a table called `cs_configuration_v2` is created in your database.
+When you install EQL, a table called `eql_v2_configuration` is created in your database.
 
 Adding indexes updates this table with the details and configuration needed for CipherStash Proxy to know how to encrypt your data, and what types of queries are able to be performed
 
@@ -196,7 +196,7 @@ SELECT cs_add_index_v2('users', 'email_encrypted', 'ore', 'text');
 CREATE INDEX ON users (cs_ore_64_8_v2(email_encrypted));
 ```
 
-After adding these indexes, our `cs_configuration_v2` table will look like this:
+After adding these indexes, our `eql_v2_configuration` table will look like this:
 
 ```bash
 id         | 1
@@ -228,7 +228,7 @@ Prerequisites:
 - [Database is setup](#setup-your-database)
 - [Indexes added](#adding-indexes)
 
-Ensure CipherStash Proxy has the most up to date configuration from the `cs_configuration_v2` table.
+Ensure CipherStash Proxy has the most up to date configuration from the `eql_v2_configuration` table.
 
 CipherStash Proxy pings the database every 60 seconds to refresh the configuration but we can force the refresh by running:
 

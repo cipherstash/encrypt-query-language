@@ -191,10 +191,10 @@ In order to perform searchable operations on encrypted data, you must configure 
 
 ### Adding an index
 
-Add an index to an encrypted column using the `eql_v2.add_index` function:
+Add an index to an encrypted column using the `eql_v2.add_search_config` function:
 
 ```sql
-SELECT eql_v2.add_index(
+SELECT eql_v2.add_search_config(
   'table_name',       -- Name of the table
   'column_name',      -- Name of the column
   'index_name',       -- Index kind ('unique', 'match', 'ore', 'ste_vec')
@@ -208,7 +208,7 @@ You can read more about the index configuration options [here](docs/reference/IN
 **Example (Unique index):**
 
 ```sql
-SELECT eql_v2.add_index(
+SELECT eql_v2.add_search_config(
   'users',
   'encrypted_email',
   'unique',
@@ -236,7 +236,7 @@ Enable equality search on encrypted data using the `eql_v2.unique` function.
 **Index configuration example:**
 
 ```sql
-SELECT eql_v2.add_index(
+SELECT eql_v2.add_search_config(
   'users',
   'encrypted_email',
   'unique',
@@ -266,7 +266,7 @@ Enables basic full-text search on encrypted data using the `eql_v2.match` functi
 **Index configuration example:**
 
 ```sql
-SELECT eql_v2.add_index(
+SELECT eql_v2.add_search_config(
   'users',
   'encrypted_email',
   'match',
