@@ -28,7 +28,7 @@ In EQL, PostgreSQL operators are an alias for a function, so the implementation 
 | --------------------------------- | --------------------------------------------------------- | ----------------------------------------------- |
 | `eql_v2.ciphertext(val)`          | Extract ciphertext from encrypted value              | `SELECT eql_v2.ciphertext     (encrypted_field)`     |
 | `eql_v2.blake3(val)`              | Extract blake3 hash from encrypted value             | `SELECT eql_v2.blake3(     encrypted_field)`         |
-| `eql_v2.unique(val)`              | Extract unique index from encrypted value            | `SELECT eql_v2.unique(encrypted_fie     ld)`         |
+| `eql_v2.hmac_256(val)`            | Extract hmac_256 index from encrypted value            | `SELECT eql_v2.hmac_256(encrypted_fie     ld)`         |
 | `eql_v2.bloom_filter(val)`        | Extract match index from encrypted value             | `SELECT eql_v2.bloom_filter(encrypted_field)`               |
 | `eql_v2.ore_block_u64_8_256(val)` | Extract ORE index from encrypted value               | `SELECT eql_v2.ore_block_u64_8_256(encrypted_field)`   |
 | `eql_v2.ore_cllw_u64_8(val)`      | Extract CLLW ORE index from encrypted value          | `SELECT eql_v2.ore_cllw_u64_8(encrypted_fie     ld)` |

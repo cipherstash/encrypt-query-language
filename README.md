@@ -231,7 +231,7 @@ In order to use the specialized functions, you must first configure the correspo
 
 ### Equality search
 
-Enable equality search on encrypted data using the `eql_v2.unique` function.
+Enable equality search on encrypted data using the `eql_v2.hmac_256` function.
 
 **Index configuration example:**
 
@@ -248,8 +248,8 @@ SELECT eql_v2.add_search_config(
 
 ```sql
 SELECT * FROM users
-WHERE eql_v2.unique(encrypted_email) = eql_v2.unique(
-  '{"v":1,"k":"pt","p":"test@example.com","i":{"t":"users","c":"encrypted_email"},"q":"unique"}'
+WHERE eql_v2.hmac_256(encrypted_email) = eql_v2.hmac_256(
+  '{"v":1,"k":"pt","p":"test@example.com","i":{"t":"users","c":"encrypted_email"},"q":"hmac_256"}'
 );
 ```
 

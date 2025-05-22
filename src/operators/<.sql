@@ -28,7 +28,6 @@ AS $$
 
     BEGIN
       RETURN eql_v2.ore_cllw_u64_8(a) < eql_v2.ore_cllw_u64_8(b);
-      -- RETURN (eql_v2.unique(a) = eql_v2.unique(b));
     EXCEPTION WHEN OTHERS THEN
       -- PERFORM eql_v2.log('eql_v2.lt no ore_cllw_u64_8 index');
     END;
