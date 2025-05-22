@@ -390,7 +390,7 @@ AS $$
     ore_term jsonb;
   BEGIN
     EXECUTE format('SELECT ore.e FROM ore WHERE id = %s', val) INTO ore_term;
-    e := create_encrypted_json('o')::jsonb || ore_term;
+    e := create_encrypted_json('ob')::jsonb || ore_term;
     RETURN e::eql_v2_encrypted;
   END;
 $$ LANGUAGE plpgsql;

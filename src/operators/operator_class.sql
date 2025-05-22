@@ -15,12 +15,12 @@ CREATE FUNCTION eql_v2.compare(a eql_v2_encrypted, b eql_v2_encrypted)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   DECLARE
-    a_ore eql_v2.ore_64_8_v2;
-    b_ore eql_v2.ore_64_8_v2;
+    a_ore eql_v2.ore_block_u64_8_256;
+    b_ore eql_v2.ore_block_u64_8_256;
   BEGIN
 
-    a_ore := eql_v2.ore_64_8_v2(a);
-    b_ore := eql_v2.ore_64_8_v2(b);
+    a_ore := eql_v2.ore_block_u64_8_256(a);
+    b_ore := eql_v2.ore_block_u64_8_256(b);
 
     RETURN eql_v2.compare_ore_array(a_ore.terms, b_ore.terms);
   END;

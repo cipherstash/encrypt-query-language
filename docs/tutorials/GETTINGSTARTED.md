@@ -327,7 +327,7 @@ It creates an EQL payload that looks similar to this and inserts this into the e
   },
   "m": [42], // The ciphertext used for free text queries i.e match index
   "u": "unique ciphertext", // The ciphertext used for unique queries. i.e unique index
-  "o": ["a", "b", "c"], // The ciphertext used for order or comparison queries. i.e ore index
+  "ob": ["a", "b", "c"], // The ciphertext used for order or comparison queries. i.e ore index
   "v": 1
 }
 ```
@@ -388,7 +388,7 @@ The json stored in the database looks similar to this:
   },
   "m": [42], // The ciphertext used for free text queries i.e match index
   "u": "unique ciphertext", // The ciphertext used for unique queries. i.e unique index
-  "o": ["a", "b", "c"], // The ciphertext used for order or comparison queries. i.e ore index
+  "ob": ["a", "b", "c"], // The ciphertext used for order or comparison queries. i.e ore index
   "v": 1
 }
 ```

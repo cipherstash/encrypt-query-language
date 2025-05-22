@@ -319,11 +319,11 @@ These are transient runtime types, used internally by EQL functions and operator
 
 - `eql_v2.blake3`
 - `eql_v2.unique_index`
-- `eql_v2.match`
+- `eql_v2.bloom_filter`
 - `eql_v2.ore_cllw_u64_8`
 - `eql_v2.ore_cllw_var_8`
-- `eql_v2.ore_64_8_v2`
-- `eql_v2.ore_64_8_v2_term`
+- `eql_v2.ore_block_u64_8_256`
+- `eql_v2.ore_block_u64_8_256_term`
 
 The data in the column is converted into these types, when any operations are being performed on that encrypted data.
 
