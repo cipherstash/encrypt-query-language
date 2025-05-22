@@ -1,22 +1,22 @@
 -- REQUIRE: src/schema.sql
--- REQUIRE: src/unique/types.sql
+-- REQUIRE: src/hmac_256/types.sql
 
--- extracts unique index from an encrypted column
+-- extracts hmac_256 index from an encrypted column
 
 CREATE FUNCTION eql_v2.hmac_256(val jsonb)
   RETURNS eql_v2.hmac_256
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
-    IF val ? 'u' THEN
-      RETURN val->>'u';
+    IF val ? 'hm' THEN
+      RETURN val->>'hm';
     END IF;
-    RAISE 'Expected a unique index (u) value in json: %', val;
+    RAISE 'Expected a hmac_256 index (hm) value in json: %', val;
   END;
 $$ LANGUAGE plpgsql;
 
 
--- extracts unique index from an encrypted column
+-- extracts hmac_256 index from an encrypted column
 
 CREATE FUNCTION eql_v2.hmac_256(val eql_v2_encrypted)
   RETURNS eql_v2.hmac_256

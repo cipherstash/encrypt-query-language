@@ -1,6 +1,6 @@
 -- REQUIRE: src/encrypted/types.sql
--- REQUIRE: src/ore/types.sql
--- REQUIRE: src/ore/functions.sql
+-- REQUIRE: ore_block_u64_8_256types.sql
+-- REQUIRE: ore_block_u64_8_256functions.sql
 
 -- Aggregate functions for ORE
 
