@@ -1,5 +1,5 @@
 -- REQUIRE: src/schema.sql
--- REQUIRE: src/ore/types.sql
+-- REQUIRE: ore_block_u64_8_256types.sql
 
 
 CREATE OPERATOR FAMILY eql_v2.ore_block_u64_8_256_btree_ops USING btree;

@@ -1,7 +1,7 @@
 -- REQUIRE: src/encrypted/types.sql
--- REQUIRE: src/ore/types.sql
--- REQUIRE: src/ore/functions.sql
--- REQUIRE: src/ore/operators.sql
+-- REQUIRE: ore_block_u64_8_256types.sql
+-- REQUIRE: ore_block_u64_8_256functions.sql
+-- REQUIRE: ore_block_u64_8_256operators.sql
 
 
 -- Operators for < less than comparisons of eql_v2_encrypted types

@@ -1,7 +1,7 @@
 -- REQUIRE: src/schema.sql
 -- REQUIRE: src/encrypted/types.sql
 -- REQUIRE: src/encrypted/functions.sql
--- REQUIRE: src/ore/types.sql
+-- REQUIRE: ore_block_u64_8_256types.sql
 
 
 
@@ -57,7 +57,7 @@ AS $$
     IF val ? 'ob' THEN
       RETURN eql_v2.jsonb_array_to_ore_64_8_v2(val->'ob');
     END IF;
-    RAISE 'Expected an ore index (o) value in json: %', val;
+    RAISE 'Expected an ore index (ob) value in json: %', val;
   END;
 $$ LANGUAGE plpgsql;
 
