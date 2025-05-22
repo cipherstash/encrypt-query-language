@@ -1,7 +1,7 @@
 -- REQUIRE: src/encrypted/types.sql
--- REQUIRE: src/ore/types.sql
--- REQUIRE: src/ore/functions.sql
--- REQUIRE: src/ore/operators.sql
+-- REQUIRE: ore_block_u64_8_256types.sql
+-- REQUIRE: ore_block_u64_8_256functions.sql
+-- REQUIRE: ore_block_u64_8_256operators.sql
 -- REQUIRE: src/ore_cllw_u64_8/types.sql
 -- REQUIRE: src/ore_cllw_u64_8/functions.sql
 -- REQUIRE: src/ore_cllw_u64_8/operators.sql
