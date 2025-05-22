@@ -319,7 +319,7 @@ AS $$
           },
           "u": "unique.%s",
           "b": "blake3.%s",
-          "m": %s
+          "bf": %s
         }',
         random_key,
         random_val,
