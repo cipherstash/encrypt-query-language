@@ -36,7 +36,7 @@ Similar to how you configure indexes for text data, you can configure indexes fo
 The only difference is that you need to specify the `cast_as` parameter as `json` or `jsonb`.
 
 ```sql
-SELECT cs_add_index_v2(
+SELECT eql_v2.add_search_config(
   'users',
   'encrypted_json',
   'ste_vec',

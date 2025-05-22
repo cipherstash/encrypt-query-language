@@ -154,7 +154,7 @@ CREATE TABLE users
 -- An encrypting config should exist
 DO $$
   BEGIN
-    PERFORM eql_v2.add_index('users', 'name', 'match');
+    PERFORM eql_v2.add_search_config('users', 'name', 'match');
     PERFORM eql_v2.encrypt();
 
     ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'active'));
@@ -204,7 +204,7 @@ CREATE TABLE users
 -- An encrypting config should exist
 DO $$
   BEGIN
-    PERFORM eql_v2.add_index('users', 'name', 'match');
+    PERFORM eql_v2.add_search_config('users', 'name', 'match');
     PERFORM eql_v2.encrypt();
 
     ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'active'));
@@ -254,7 +254,7 @@ CREATE TABLE users
 -- An encrypting config should exist
 DO $$
   BEGIN
-    PERFORM eql_v2.add_index('users', 'name', 'match');
+    PERFORM eql_v2.add_search_config('users', 'name', 'match');
 
     PERFORM eql_v2.encrypt(); -- need to encrypt first
     PERFORM eql_v2.activate();
