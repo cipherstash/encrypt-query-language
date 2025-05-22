@@ -318,12 +318,12 @@ Each type of encrypted index (`unique`, `match`, `ore`) has an associated type, 
 These are transient runtime types, used internally by EQL functions and operators:
 
 - `eql_v2.blake3`
-- `eql_v2.unique_index`
-- `eql_v2.match`
+- `eql_v2.hmac_256`
+- `eql_v2.bloom_filter`
 - `eql_v2.ore_cllw_u64_8`
 - `eql_v2.ore_cllw_var_8`
-- `eql_v2.ore_64_8_v2`
-- `eql_v2.ore_64_8_v2_term`
+- `eql_v2.ore_block_u64_8_256`
+- `eql_v2.ore_block_u64_8_256_term`
 
 The data in the column is converted into these types, when any operations are being performed on that encrypted data.
 
@@ -348,7 +348,7 @@ For example, it is possible to have both `unique` and `ore` indexes defined.
 For equality (`=`, `<>`) operations, a `unique` index term is a text comparison and should be preferred over an `ore` index term.
 
 The index term types and functions are internal implementation details and should not be exposed as operators on the `eql_v2_encrypted` type.
-For example, `eql_v2_encrypted` should not have an operator with the `ore_64_8_v2` type.
+For example, `eql_v2_encrypted` should not have an operator with the `ore_block_u64_8_256` type.
 Users should never need to think about or interact with EQL internals.
 
 #### Working without operators

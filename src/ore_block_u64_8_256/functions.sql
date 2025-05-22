@@ -1,82 +1,82 @@
 -- REQUIRE: src/schema.sql
 -- REQUIRE: src/encrypted/types.sql
 -- REQUIRE: src/encrypted/functions.sql
--- REQUIRE: src/ore/types.sql
+-- REQUIRE: src/ore_block_u64_8_256/types.sql
 
 
 
--- Casts a jsonb array of hex-encoded strings to the `ore_64_8_v2` composite type.
+-- Casts a jsonb array of hex-encoded strings to the `ore_block_u64_8_256` composite type.
 -- In other words, this function takes the ORE index format sent through in the
 -- EQL payload from Proxy and decodes it as the composite type that we use for
 -- ORE operations on the Postgres side.
--- CREATE FUNCTION eql_v2.jsonb_array_to_ore_64_8_v2(val jsonb)
--- RETURNS eql_v2.ore_64_8_v2 AS $$
+-- CREATE FUNCTION eql_v2.jsonb_array_to_ore_block_u64_8_256(val jsonb)
+-- RETURNS eql_v2.ore_block_u64_8_256 AS $$
 -- DECLARE
---   terms_arr eql_v2.ore_64_8_v2_term[];
+--   terms_arr eql_v2.ore_block_u64_8_256_term[];
 -- BEGIN
 --   IF jsonb_typeof(val) = 'null' THEN
 --     RETURN NULL;
 --   END IF;
 
---   SELECT array_agg(ROW(decode(value::text, 'hex'))::eql_v2.ore_64_8_v2_term)
+--   SELECT array_agg(ROW(decode(value::text, 'hex'))::eql_v2.ore_block_u64_8_256_term)
 --     INTO terms_arr
 --   FROM jsonb_array_elements_text(val) AS value;
 
 --   PERFORM eql_v2.log('terms', terms_arr::text);
 
---   RETURN ROW(terms_arr)::eql_v2.ore_64_8_v2;
+--   RETURN ROW(terms_arr)::eql_v2.ore_block_u64_8_256;
 -- END;
 -- $$ LANGUAGE plpgsql;
 
 
-CREATE FUNCTION eql_v2.jsonb_array_to_ore_64_8_v2(val jsonb)
-RETURNS eql_v2.ore_64_8_v2 AS $$
+CREATE FUNCTION eql_v2.jsonb_array_to_ore_block_u64_8_256(val jsonb)
+RETURNS eql_v2.ore_block_u64_8_256 AS $$
 DECLARE
-  terms eql_v2.ore_64_8_v2_term[];
+  terms eql_v2.ore_block_u64_8_256_term[];
 BEGIN
   IF jsonb_typeof(val) = 'null' THEN
     RETURN NULL;
   END IF;
 
-  SELECT array_agg(ROW(b)::eql_v2.ore_64_8_v2_term)
+  SELECT array_agg(ROW(b)::eql_v2.ore_block_u64_8_256_term)
   INTO terms
   FROM unnest(eql_v2.jsonb_array_to_bytea_array(val)) AS b;
 
-  RETURN ROW(terms)::eql_v2.ore_64_8_v2;
+  RETURN ROW(terms)::eql_v2.ore_block_u64_8_256;
 END;
 $$ LANGUAGE plpgsql;
 
 
 -- extracts ore index from jsonb
 
-CREATE FUNCTION eql_v2.ore_64_8_v2(val jsonb)
-  RETURNS eql_v2.ore_64_8_v2
+CREATE FUNCTION eql_v2.ore_block_u64_8_256(val jsonb)
+  RETURNS eql_v2.ore_block_u64_8_256
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
-    IF val ? 'o' THEN
-      RETURN eql_v2.jsonb_array_to_ore_64_8_v2(val->'o');
+    IF val ? 'ob' THEN
+      RETURN eql_v2.jsonb_array_to_ore_block_u64_8_256(val->'ob');
     END IF;
-    RAISE 'Expected an ore index (o) value in json: %', val;
+    RAISE 'Expected an ore index (ob) value in json: %', val;
   END;
 $$ LANGUAGE plpgsql;
 
 
 -- extracts ore index from an encrypted column
 
-CREATE FUNCTION eql_v2.ore_64_8_v2(val eql_v2_encrypted)
-  RETURNS eql_v2.ore_64_8_v2
+CREATE FUNCTION eql_v2.ore_block_u64_8_256(val eql_v2_encrypted)
+  RETURNS eql_v2.ore_block_u64_8_256
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
-    RETURN eql_v2.ore_64_8_v2(val.data);
+    RETURN eql_v2.ore_block_u64_8_256(val.data);
   END;
 $$ LANGUAGE plpgsql;
 
 
 -- This function uses lexicographic comparison
 
-CREATE FUNCTION eql_v2.compare_ore_64_8_v2(a eql_v2.ore_64_8_v2, b eql_v2.ore_64_8_v2)
+CREATE FUNCTION eql_v2.compare_ore_block_u64_8_256(a eql_v2.ore_block_u64_8_256, b eql_v2.ore_block_u64_8_256)
 RETURNS integer AS $$
   BEGIN
     -- Recursively compare blocks bailing as soon as we can make a decision
@@ -86,7 +86,7 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v2.compare_ore_64_8_v2_term(a eql_v2.ore_64_8_v2_term, b eql_v2.ore_64_8_v2_term)
+CREATE FUNCTION eql_v2.ore_block_u64_8_256_term(a eql_v2.ore_block_u64_8_256_term, b eql_v2.ore_block_u64_8_256_term)
   RETURNS integer
 AS $$
   DECLARE
@@ -173,7 +173,7 @@ $$ LANGUAGE plpgsql;
 -- If both are non-empty, we compare the first element. If they are equal
 -- we need to consider the next block so we recurse, otherwise we return the comparison result.
 
-CREATE FUNCTION eql_v2.compare_ore_array(a eql_v2.ore_64_8_v2_term[], b eql_v2.ore_64_8_v2_term[])
+CREATE FUNCTION eql_v2.compare_ore_array(a eql_v2.ore_block_u64_8_256_term[], b eql_v2.ore_block_u64_8_256_term[])
 RETURNS integer AS $$
   DECLARE
     cmp_result integer;
@@ -199,7 +199,7 @@ RETURNS integer AS $$
       RETURN 1;
     END IF;
 
-    cmp_result := eql_v2.compare_ore_64_8_v2_term(a[1], b[1]);
+    cmp_result := eql_v2.ore_block_u64_8_256_term(a[1], b[1]);
     IF cmp_result = 0 THEN
     -- Removes the first element in the array, and calls this fn again to compare the next element/s in the array.
       RETURN eql_v2.compare_ore_array(a[2:array_length(a,1)], b[2:array_length(b,1)]);
