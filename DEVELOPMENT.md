@@ -348,7 +348,7 @@ For example, it is possible to have both `unique` and `ore` indexes defined.
 For equality (`=`, `<>`) operations, a `unique` index term is a text comparison and should be preferred over an `ore` index term.
 
 The index term types and functions are internal implementation details and should not be exposed as operators on the `eql_v2_encrypted` type.
-For example, `eql_v2_encrypted` should not have an operator with the `ore_64_8_v2` type.
+For example, `eql_v2_encrypted` should not have an operator with the `ore_block_u64_8_256` type.
 Users should never need to think about or interact with EQL internals.
 
 #### Working without operators

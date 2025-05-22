@@ -1,8 +1,8 @@
 -- REQUIRE: src/encrypted/types.sql
 -- REQUIRE: src/hmac_256/types.sql
 -- REQUIRE: src/hmac_256/functions.sql
--- REQUIRE: ore_block_u64_8_256types.sql
--- REQUIRE: ore_block_u64_8_256functions.sql
+-- REQUIRE: src/ore_block_u64_8_256/types.sql
+-- REQUIRE: src/ore_block_u64_8_256/functions.sql
 -- REQUIRE: src/operators/=.sql
 
 -- Operators for equality comparisons of eql_v2_encrypted types
@@ -15,7 +15,7 @@
 --
 -- There are multiple index terms that provide equality comparisons
 --   - hmac_256
---   - ore_64_8_v2
+--   - ore_block_u64_8_256
 --   - ore_cllw_8_v2
 --
 -- We check these index terms in this order and use the first one that exists for both parameters

@@ -49,7 +49,7 @@ The default match index options are:
 ```json
   {
     "k": 6,
-    "m": 2048,
+    "bf": 2048,
     "include_original": true,
     "tokenizer": {
       "kind": "ngram",

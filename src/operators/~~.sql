@@ -9,7 +9,7 @@
 --
 --      eql_v2_encrypted ~~ eql_v2_encrypted
 --      eql_v2_encrypted ~~ jsonb
---      eql_v2_encrypted ~~ eql_v2.bloom_filter_index
+--      eql_v2_encrypted ~~ eql_v2.bloom_filter
 --
 
 
