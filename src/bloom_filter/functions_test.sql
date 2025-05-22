@@ -4,7 +4,7 @@ DO $$
   BEGIN
     PERFORM assert_result(
         'Extract match index term from encrypted',
-        'SELECT eql_v2.bloom_filter(''{"m": []}''::jsonb)');
+        'SELECT eql_v2.bloom_filter(''{"bf": []}''::jsonb)');
 
     PERFORM assert_exception(
         'Missing match index term in encrypted raises exception',

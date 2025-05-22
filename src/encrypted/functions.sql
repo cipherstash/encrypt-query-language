@@ -1,6 +1,6 @@
 -- REQUIRE: src/encrypted/types.sql
 -- REQUIRE: src/bloom_filter/types.sql
--- REQUIRE: ore_block_u64_8_256types.sql
+-- REQUIRE: src/ore_block_u64_8_256/types.sql
 -- REQUIRE: src/hmac_256/types.sql
 
 

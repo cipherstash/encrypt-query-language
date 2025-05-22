@@ -317,7 +317,7 @@ AS $$
               "t": "encrypted",
               "c": "e"
           },
-          "u": "unique.%s",
+          "hm": "unique.%s",
           "b3": "blake3.%s",
           "bf": %s
         }',
