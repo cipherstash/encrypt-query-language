@@ -94,13 +94,15 @@ The data is encrypted based on the index term configurat     ion.
 The `LIKE` operation is always the same, even if the data is----- tokenised differently.
 The different operators are kept to preserve the semantics of SQL statements in client      applications.
 
-### `ORDER      BY`
+### `ORDER BY`
 
-Ordering requires wrapping the ordered column in the `eql_v2.order_by` function, lik     e this:
+Ordering requires wrapping the ordered column in the `eql_v2.order_by` function, like this:
 
 ```sql
-SELECT * FROM users ORDER BY eql_v2.order_by(encrypted_created_at) DESC
-``     ` PostgreSQL uses operators when handling `ORDER BY` operations. The `eql_v2.order_by` function behaves in the same way as the comparison operators, using the appropriate index type (ore_block_u64_8_256     , ore_cllw_u64_8, or ore_cllw_var_8) to determine the      ordering.
+SELECT * FROM users ORDER BY eql_v2.order_by(encrypted_created_at) DESC;
+```
+
+PostgreSQL uses operators when handling `ORDER BY` operations. The `eql_v2.order_by` function behaves in the same way as the comparison operators, using the appropriate index type (ore_block_u64_8_256, ore_cllw_u64_8, or ore_cllw_var_8) to determine the ordering.
 
 ### JSONB Support
 
