@@ -1,5 +1,5 @@
 -- REQUIRE: src/encrypted/types.sql
--- REQUIRE: src/match/types.sql
+-- REQUIRE: src/bloom_filter/types.sql
 -- REQUIRE: src/ore/types.sql
 -- REQUIRE: src/unique/types.sql
 
