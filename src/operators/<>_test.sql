@@ -77,7 +77,7 @@ DECLARE
   BEGIN
 
     for i in 1..3 loop
-      e := create_encrypted_json(i, 'b');
+      e := create_encrypted_json(i, 'b3');
 
       PERFORM assert_result(
         format('eql_v2_encrypted <> eql_v2_encrypted with blake3 index term %s of 3', i),
@@ -86,7 +86,7 @@ DECLARE
     end loop;
 
     -- remove the ore index term
-    e := create_encrypted_json(91347, 'b');
+    e := create_encrypted_json(91347, 'b3');
 
     PERFORM assert_no_result(
         'eql_v2_encrypted <> eql_v2_encrypted with no matching record',
@@ -107,7 +107,7 @@ DECLARE
   BEGIN
 
     for i in 1..3 loop
-      e := create_encrypted_json(i, 'b');
+      e := create_encrypted_json(i, 'b3');
 
       PERFORM assert_result(
         format('eql_v2.neq(eql_v2_encrypted, eql_v2_encrypted) with unique index term %s of 3', i),
@@ -115,7 +115,7 @@ DECLARE
     end loop;
 
     -- remove the ore index term
-    e := create_encrypted_json(91347, 'b');
+    e := create_encrypted_json(91347, 'b3');
 
     PERFORM assert_no_result(
         'eql_v2.neq(eql_v2_encrypted, eql_v2_encrypted) with no matching record',
@@ -137,7 +137,7 @@ DECLARE
     for i in 1..3 loop
 
       -- remove the default
-      e := create_encrypted_json(i, 'b');
+      e := create_encrypted_json(i, 'b3');
 
       PERFORM assert_result(
         format('eql_v2_encrypted = jsonb with unique index term %s of 3', i),
@@ -148,7 +148,7 @@ DECLARE
         format('SELECT e FROM encrypted WHERE %L::jsonb = e', e));
     end loop;
 
-    e := create_encrypted_json(91347, 'b');
+    e := create_encrypted_json(91347, 'b3');
 
     PERFORM assert_no_result(
         'eql_v2_encrypted = jsonb with no matching record',
