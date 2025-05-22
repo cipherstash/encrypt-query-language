@@ -1,8 +1,8 @@
 -- REQUIRE: src/encrypted/types.sql
--- REQUIRE: src/unique/types.sql
--- REQUIRE: src/unique/functions.sql
--- REQUIRE: src/ore/types.sql
--- REQUIRE: src/ore/functions.sql
+-- REQUIRE: src/hmac_256/types.sql
+-- REQUIRE: src/hmac_256/functions.sql
+-- REQUIRE: src/ore_block_u64_8_256/types.sql
+-- REQUIRE: src/ore_block_u64_8_256/functions.sql
 -- REQUIRE: src/operators/=.sql
 
 -- Operators for equality comparisons of eql_v2_encrypted types
@@ -14,8 +14,8 @@
 --      jsonb <> eql_v2_encrypted
 --
 -- There are multiple index terms that provide equality comparisons
---   - unique
---   - ore_64_8_v2
+--   - hmac_256
+--   - ore_block_u64_8_256
 --   - ore_cllw_8_v2
 --
 -- We check these index terms in this order and use the first one that exists for both parameters

@@ -1,6 +1,6 @@
 -- REQUIRE: src/encrypted/types.sql
--- REQUIRE: src/ore/types.sql
--- REQUIRE: src/ore/functions.sql
+-- REQUIRE: src/ore_block_u64_8_256/types.sql
+-- REQUIRE: src/ore_block_u64_8_256/functions.sql
 
 -- Aggregate functions for ORE
 
@@ -10,7 +10,7 @@ STRICT
 AS $$
   BEGIN
     PERFORM eql_v2.log('eql_v2.min');
-    IF eql_v2.ore_64_8_v2(a) < eql_v2.ore_64_8_v2(b) THEN
+    IF eql_v2.ore_block_u64_8_256(a) < eql_v2.ore_block_u64_8_256(b) THEN
       RETURN a;
     ELSE
       RETURN b;
@@ -32,7 +32,7 @@ STRICT
 AS $$
   BEGIN
     PERFORM eql_v2.log('eql_v2.max');
-    IF eql_v2.ore_64_8_v2(a) > eql_v2.ore_64_8_v2(b) THEN
+    IF eql_v2.ore_block_u64_8_256(a) > eql_v2.ore_block_u64_8_256(b) THEN
       RETURN a;
     ELSE
       RETURN b;
