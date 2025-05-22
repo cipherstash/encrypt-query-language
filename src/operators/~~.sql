@@ -1,7 +1,7 @@
 -- REQUIRE: src/schema.sql
 -- REQUIRE: src/encrypted/types.sql
--- REQUIRE: src/match/types.sql
--- REQUIRE: src/match/functions.sql
+-- REQUIRE: src/bloom_filter/types.sql
+-- REQUIRE: src/bloom_filter/functions.sql
 
 -- Operators for match comparisons of eql_v2_encrypted types
 --
@@ -9,14 +9,14 @@
 --
 --      eql_v2_encrypted ~~ eql_v2_encrypted
 --      eql_v2_encrypted ~~ jsonb
---      eql_v2_encrypted ~~ eql_v2.match_index
+--      eql_v2_encrypted ~~ eql_v2.bloom_filter
 --
 
 
 
 CREATE FUNCTION eql_v2.like(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS boolean AS $$
-  SELECT eql_v2.match(a) @> eql_v2.match(b);
+  SELECT eql_v2.bloom_filter(a) @> eql_v2.bloom_filter(b);
 $$ LANGUAGE SQL;
 
 
@@ -26,7 +26,7 @@ $$ LANGUAGE SQL;
 --
 CREATE FUNCTION eql_v2.ilike(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS boolean AS $$
-  SELECT eql_v2.match(a) @> eql_v2.match(b);
+  SELECT eql_v2.bloom_filter(a) @> eql_v2.bloom_filter(b);
 $$ LANGUAGE SQL;
 
 

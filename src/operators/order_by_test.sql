@@ -1,7 +1,7 @@
 \set ON_ERROR_STOP on
 
 --
--- ORE - ORDER BY ore_64_8_v2(eql_v2_encrypted)
+-- ORE - ORDER BY ore_block_u64_8_256(eql_v2_encrypted)
 --
 DO $$
 DECLARE

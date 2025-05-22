@@ -1,9 +1,9 @@
 -- REQUIRE: src/encrypted/types.sql
--- REQUIRE: src/unique/types.sql
--- REQUIRE: src/unique/functions.sql
--- REQUIRE: src/ore/types.sql
--- REQUIRE: src/ore/functions.sql
--- REQUIRE: src/ore/operators.sql
+-- REQUIRE: src/hmac_256/types.sql
+-- REQUIRE: src/hmac_256/functions.sql
+-- REQUIRE: src/ore_block_u64_8_256/types.sql
+-- REQUIRE: src/ore_block_u64_8_256/functions.sql
+-- REQUIRE: src/ore_block_u64_8_256/operators.sql
 -- REQUIRE: src/blake3/types.sql
 -- REQUIRE: src/blake3/functions.sql
 -- REQUIRE: src/ore_cllw_u64_8/types.sql
@@ -19,8 +19,6 @@
 --      jsonb = eql_v2_encrypted
 --
 -- There are multiple index terms that provide equality comparisons
---   - unique
---   - ore_64_8_v2
 --
 --
 -- We check these index terms in this order and use the first one that exists for both parameters
@@ -35,9 +33,9 @@ AS $$
   BEGIN
 
     BEGIN
-      RETURN eql_v2.unique(a) = eql_v2.unique(b);
+      RETURN eql_v2.hmac_256(a) = eql_v2.hmac_256(b);
     EXCEPTION WHEN OTHERS THEN
-      -- PERFORM eql_v2.log('No unique index');
+      -- PERFORM eql_v2.log('No hmac_256 index');
     END;
 
     BEGIN
@@ -59,9 +57,9 @@ AS $$
     END;
 
     BEGIN
-      RETURN eql_v2.ore_64_8_v2(a) = eql_v2.ore_64_8_v2(b);
+      RETURN eql_v2.ore_block_u64_8_256(a) = eql_v2.ore_block_u64_8_256(b);
     EXCEPTION WHEN OTHERS THEN
-      -- PERFORM eql_v2.log('No ore_64_8_v2 index');
+      -- PERFORM eql_v2.log('No ore_block_u64_8_256 index');
     END;
 
     RETURN false;
