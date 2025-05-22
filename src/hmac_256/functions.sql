@@ -3,8 +3,8 @@
 
 -- extracts unique index from an encrypted column
 
-CREATE FUNCTION eql_v2.unique(val jsonb)
-  RETURNS eql_v2.unique_index
+CREATE FUNCTION eql_v2.hmac_256(val jsonb)
+  RETURNS eql_v2.hmac_256
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
@@ -18,12 +18,12 @@ $$ LANGUAGE plpgsql;
 
 -- extracts unique index from an encrypted column
 
-CREATE FUNCTION eql_v2.unique(val eql_v2_encrypted)
-  RETURNS eql_v2.unique_index
+CREATE FUNCTION eql_v2.hmac_256(val eql_v2_encrypted)
+  RETURNS eql_v2.hmac_256
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
-    RETURN (SELECT eql_v2.unique(val.data));
+    RETURN (SELECT eql_v2.hmac_256(val.data));
   END;
 $$ LANGUAGE plpgsql;
 

@@ -318,7 +318,7 @@ Each type of encrypted index (`unique`, `match`, `ore`) has an associated type, 
 These are transient runtime types, used internally by EQL functions and operators:
 
 - `eql_v2.blake3`
-- `eql_v2.unique_index`
+- `eql_v2.hmac_256`
 - `eql_v2.bloom_filter`
 - `eql_v2.ore_cllw_u64_8`
 - `eql_v2.ore_cllw_var_8`

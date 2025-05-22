@@ -19,8 +19,6 @@
 --      jsonb = eql_v2_encrypted
 --
 -- There are multiple index terms that provide equality comparisons
---   - unique
---   - ore_64_8_v2
 --
 --
 -- We check these index terms in this order and use the first one that exists for both parameters
@@ -35,7 +33,7 @@ AS $$
   BEGIN
 
     BEGIN
-      RETURN eql_v2.unique(a) = eql_v2.unique(b);
+      RETURN eql_v2.hmac_256(a) = eql_v2.hmac_256(b);
     EXCEPTION WHEN OTHERS THEN
       -- PERFORM eql_v2.log('No unique index');
     END;
