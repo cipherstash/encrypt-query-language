@@ -8,7 +8,7 @@ The plaintext json payload that is sent from the client to CipherStash Proxy in 
 
 ```json
 {
-  "v": 1,
+  "v": 2,
   "k": "pt",
   "p": "plaintext value",
   "i": {
@@ -25,7 +25,7 @@ CipherStash Proxy will handle the plaintext payload and create the encrypted pay
 
 ```json
 {
-  "v": 1,
+  "v": 2,
   "k": "ct",
   "c": "ciphertext value",
   "i": {

@@ -34,6 +34,12 @@ CREATE FUNCTION eql_v2._encrypted_check_v(val jsonb)
 AS $$
 	BEGIN
     IF (val ? 'v') THEN
+
+      IF val->>'v' <> '2' THEN
+        RAISE 'Expected encrypted column version (v) 2';
+        RETURN false;
+      END IF;
+
       RETURN true;
     END IF;
     RAISE 'Encrypted column missing version (v) field: %', val;

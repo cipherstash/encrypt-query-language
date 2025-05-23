@@ -201,7 +201,7 @@ After adding these indexes, our `eql_v2_configuration` table will look like this
 ```bash
 id         | 1
 state      | pending
-data       | {"v": 1, "tables": {"users": {"email_encrypted": {"cast_as": "text", "indexes": {"ore": {}, "match": {"k": 6, "bf": 2048, "tokenizer": {"kind": "ngram", "token_length": 3}, "token_filters": [{"kind": "downcase"}], "include_original": true}, "unique": {"token_filters": [{"kind": "downcase"}]}}}}}}
+data       | {"v": 2, "tables": {"users": {"email_encrypted": {"cast_as": "text", "indexes": {"ore": {}, "match": {"k": 6, "bf": 2048, "tokenizer": {"kind": "ngram", "token_length": 3}, "token_filters": [{"kind": "downcase"}], "include_original": true}, "unique": {"token_filters": [{"kind": "downcase"}]}}}}}}
 ```
 
 The initial `state` will be set as pending.
@@ -218,7 +218,7 @@ The `cs_configured_v2` table will now have a state of `active`.
 ```bash
 id         | 1
 state      | active
-data       | {"v": 1, "tables": {"users": {"email_encrypted": {"cast_as": "text", "indexes": {"ore": {}, "match": {"k": 6, "bf": 2048, "tokenizer": {"kind": "ngram", "token_length": 3}, "token_filters": [{"kind": "downcase"}], "include_original": true}, "unique": {"token_filters": [{"kind": "downcase"}]}}}}}}
+data       | {"v": 2, "tables": {"users": {"email_encrypted": {"cast_as": "text", "indexes": {"ore": {}, "match": {"k": 6, "bf": 2048, "tokenizer": {"kind": "ngram", "token_length": 3}, "token_filters": [{"kind": "downcase"}], "include_original": true}, "unique": {"token_filters": [{"kind": "downcase"}]}}}}}}
 ```
 
 ### Encrypting existing plaintext data
@@ -292,7 +292,7 @@ An EQL payload will look like this:
     "t": "users", // The table
     "c": "email_encrypted" // The encrypted column
   },
-  "v": 1,
+  "v": 2,
   "q": null // Used in queries only.
 }
 ```
@@ -308,7 +308,7 @@ INSERT INTO users (email) VALUES ('test@test.com');
 The equivalent of this query to insert a plaintext email and encrypt it into the `email_encrypted` column using EQL:
 
 ```sql
-INSERT INTO users (email_encrypted) VALUES ('{"v":1,"k":"pt","p":"test@test.com","i":{"t":"users","c":"email_encrypted"}}');
+INSERT INTO users (email_encrypted) VALUES ('{"v":2,"k":"pt","p":"test@test.com","i":{"t":"users","c":"email_encrypted"}}');
 ```
 
 **What is happening?**
@@ -328,7 +328,7 @@ It creates an EQL payload that looks similar to this and inserts this into the e
   "bf": [42], // The ciphertext used for free text queries i.e match index
   "u": "unique ciphertext", // The ciphertext used for unique queries. i.e unique index
   "ob": ["a", "b", "c"], // The ciphertext used for order or comparison queries. i.e ore index
-  "v": 1
+  "v": 2
 }
 ```
 
@@ -368,10 +368,10 @@ Returns:
 ```bash
                                          email_encrypted
 -------------------------------------------------------------------------------------------------
- {"k":"pt","p":"adalovelace@example.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null}
- {"k":"pt","p":"gracehopper@test.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null}
- {"k":"pt","p":"edithclarke@email.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null}
- {"k":"pt","p":"test@test.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null}
+ {"k":"pt","p":"adalovelace@example.com","i":{"t":"users","c":"email_encrypted"},"v":2,"q":null}
+ {"k":"pt","p":"gracehopper@test.com","i":{"t":"users","c":"email_encrypted"},"v":2,"q":null}
+ {"k":"pt","p":"edithclarke@email.com","i":{"t":"users","c":"email_encrypted"},"v":2,"q":null}
+ {"k":"pt","p":"test@test.com","i":{"t":"users","c":"email_encrypted"},"v":2,"q":null}
 ```
 
 **What is happening?**
@@ -389,7 +389,7 @@ The json stored in the database looks similar to this:
   "bf": [42], // The ciphertext used for free text queries i.e match index
   "u": "unique ciphertext", // The ciphertext used for unique queries. i.e unique index
   "ob": ["a", "b", "c"], // The ciphertext used for order or comparison queries. i.e ore index
-  "v": 1
+  "v": 2
 }
 ```
 
@@ -403,7 +403,7 @@ The Proxy decrypts the json above and returns a plaintext json payload that look
     "t": "users",
     "c": "email_encrypted"
   },
-  "v": 1,
+  "v": 2,
   "q": null
 }
 ```
@@ -435,7 +435,7 @@ EQL query payload for a match query:
     "t": "users",
     "c": "email_encrypted"
   },
-  "v": 1,
+  "v": 2,
   "q": "match" // This field is required on queries. This specifies the type of query we are executing.
 }
 ```
@@ -450,7 +450,7 @@ The EQL equivalent of this query is:
 
 ```sql
 SELECT * FROM users WHERE cs_match_v2(email_encrypted) @> cs_match_v2(
-  '{"v":1,"k":"pt","p":"grace","i":{"t":"users","c":"email_encrypted"},"q":"match"}'
+  '{"v":2,"k":"pt","p":"grace","i":{"t":"users","c":"email_encrypted"},"q":"match"}'
   );
 ```
 
@@ -458,7 +458,7 @@ This query returns:
 
 | id  | email_encrypted                                                                              |
 | --- | -------------------------------------------------------------------------------------------- |
-| 2   | {"k":"pt","p":"gracehopper@test.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null} |
+| 2   | {"k":"pt","p":"gracehopper@test.com","i":{"t":"users","c":"email_encrypted"},"v":2,"q":null} |
 
 #### Equality query
 
@@ -478,7 +478,7 @@ EQL query payload for a match query:
     "t": "users",
     "c": "email_encrypted"
   },
-  "v": 1,
+  "v": 2,
   "q": "unique" // This field is required on queries. This specifies the type of query we are executing.
 }
 ```
@@ -493,7 +493,7 @@ The EQL equivalent of this query is:
 
 ```sql
 SELECT * FROM users WHERE cs_unique_v2(email_encrypted) = cs_unique_v2(
-  '{"v":1,"k":"pt","p":"adalovelace@example.com","i":{"t":"users","c":"email_encrypted"},"q":"unique"}'
+  '{"v":2,"k":"pt","p":"adalovelace@example.com","i":{"t":"users","c":"email_encrypted"},"q":"unique"}'
   );
 ```
 
@@ -501,7 +501,7 @@ This query returns:
 
 | id  | email_encrypted                                                                                 |
 | --- | ----------------------------------------------------------------------------------------------- |
-| 1   | {"k":"pt","p":"adalovelace@example.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null} |
+| 1   | {"k":"pt","p":"adalovelace@example.com","i":{"t":"users","c":"email_encrypted"},"v":2,"q":null} |
 
 #### Order by query
 
@@ -527,10 +527,10 @@ This query returns:
 
 | id  | email_encrypted                                                                                 |
 | --- | ----------------------------------------------------------------------------------------------- |
-| 1   | {"k":"pt","p":"adalovelace@example.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null} |
-| 3   | {"k":"pt","p":"edithclarke@email.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null}   |
-| 2   | {"k":"pt","p":"gracehopper@test.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null}    |
-| 4   | {"k":"pt","p":"test@test.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null}           |
+| 1   | {"k":"pt","p":"adalovelace@example.com","i":{"t":"users","c":"email_encrypted"},"v":2,"q":null} |
+| 3   | {"k":"pt","p":"edithclarke@email.com","i":{"t":"users","c":"email_encrypted"},"v":2,"q":null}   |
+| 2   | {"k":"pt","p":"gracehopper@test.com","i":{"t":"users","c":"email_encrypted"},"v":2,"q":null}    |
+| 4   | {"k":"pt","p":"test@test.com","i":{"t":"users","c":"email_encrypted"},"v":2,"q":null}           |
 
 #### Comparison query
 
@@ -550,7 +550,7 @@ EQL query payload for a comparison query:
     "t": "users",
     "c": "email_encrypted"
   },
-  "v": 1,
+  "v": 2,
   "q": "ore" // This field is required on queries. This specifies the type of query we are executing.
 }
 ```
@@ -565,7 +565,7 @@ The EQL equivalent of this query is:
 
 ```sql
 SELECT * FROM users WHERE ore_block_u64_8_256(email_encrypted) > ore_block_u64_8_256(
-  '{"v":1,"k":"pt","p":"gracehopper@test.com","i":{"t":"users","c":"email_encrypted"},"q":"ore"}'
+  '{"v":2,"k":"pt","p":"gracehopper@test.com","i":{"t":"users","c":"email_encrypted"},"q":"ore"}'
   );
 ```
 
@@ -573,7 +573,7 @@ This query returns:
 
 | id  | email_encrypted                                                                       |
 | --- | ------------------------------------------------------------------------------------- |
-| 4   | {"k":"pt","p":"test@test.com","i":{"t":"users","c":"email_encrypted"},"v":1,"q":null} |
+| 4   | {"k":"pt","p":"test@test.com","i":{"t":"users","c":"email_encrypted"},"v":2,"q":null} |
 
 #### Summary
 
