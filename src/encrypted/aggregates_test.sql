@@ -53,7 +53,7 @@ $$ LANGUAGE plpgsql;
 INSERT INTO agg_test (plain_int, enc_int) VALUES
 (
   3,
-  '{"c": "mBbLa7Cm?&jvpfcv1d3hep>s)76qzUbwUky&M&C<M-e2q^@e798gqWcAb{9a>3mjDG_os-_y0MRaMGl@&p#AOuusN|3Lu=mBCcg_V{&<LbY)~;X>N2hzy", "i": {"c": "encrypted_int4", "t": "encrypted"}, "k": "ct", "bf": null, "v": 1}'::jsonb::eql_v2_encrypted
+  '{"c": "mBbLa7Cm?&jvpfcv1d3hep>s)76qzUbwUky&M&C<M-e2q^@e798gqWcAb{9a>3mjDG_os-_y0MRaMGl@&p#AOuusN|3Lu=mBCcg_V{&<LbY)~;X>N2hzy", "i": {"c": "encrypted_int4", "t": "encrypted"}, "k": "ct", "bf": null, "v": 2}'::jsonb::eql_v2_encrypted
 );
 
 -- run exceptional case

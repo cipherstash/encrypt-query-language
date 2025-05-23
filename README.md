@@ -134,7 +134,7 @@ When inserting data into the encrypted column, wrap the plaintext in the appropr
 
 ```sql
 INSERT INTO users (encrypted_email) VALUES (
-  '{"v":1,"k":"pt","p":"test@example.com","i":{"t":"users","c":"encrypted_email"}}'
+  '{"v":2,"k":"pt","p":"test@example.com","i":{"t":"users","c":"encrypted_email"}}'
 );
 ```
 
@@ -151,7 +151,7 @@ Data is stored in the PostgreSQL database as:
   "bf": null,
   "ob": null,
   "u": null,
-  "v": 1
+  "v": 2
 }
 ```
 
@@ -175,7 +175,7 @@ Data is returned as:
     "t": "users",
     "c": "encrypted_email"
   },
-  "v": 1,
+  "v": 2,
   "q": null
 }
 ```
@@ -249,7 +249,7 @@ SELECT eql_v2.add_search_config(
 ```sql
 SELECT * FROM users
 WHERE eql_v2.hmac_256(encrypted_email) = eql_v2.hmac_256(
-  '{"v":1,"k":"pt","p":"test@example.com","i":{"t":"users","c":"encrypted_email"},"q":"hmac_256"}'
+  '{"v":2,"k":"pt","p":"test@example.com","i":{"t":"users","c":"encrypted_email"},"q":"hmac_256"}'
 );
 ```
 
@@ -280,7 +280,7 @@ SELECT eql_v2.add_search_config(
 ```sql
 SELECT * FROM users
 WHERE eql_v2.bloom_filter(encrypted_email) @> eql_v2.bloom_filter(
-  '{"v":1,"k":"pt","p":"test","i":{"t":"users","c":"encrypted_email"},"q":"match"}'
+  '{"v":2,"k":"pt","p":"test","i":{"t":"users","c":"encrypted_email"},"q":"match"}'
 );
 ```
 
@@ -302,7 +302,7 @@ Enable range queries on encrypted data using the `eql_v2.ore_block_u64_8_256`, `
 ```sql
 SELECT * FROM users
 WHERE eql_v2.ore_block_u64_8_256(encrypted_date) < eql_v2.ore_block_u64_8_256(
-  '{"v":1,"k":"pt","p":"2023-10-05","i":{"t":"users","c":"encrypted_date"},"q":"ore"}'
+  '{"v":2,"k":"pt","p":"2023-10-05","i":{"t":"users","c":"encrypted_date"},"q":"ore"}'
 );
 ```
 
