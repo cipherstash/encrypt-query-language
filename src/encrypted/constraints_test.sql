@@ -43,6 +43,37 @@ DO $$
 $$ LANGUAGE plpgsql;
 
 
+-- EQL version is enforced
+DO $$
+  DECLARE
+    e eql_v2_encrypted;
+  BEGIN
+
+    -- reset data
+    PERFORM create_table_with_encrypted();
+
+      -- remove the version field
+    e := create_encrypted_json(1)::jsonb-'v';
+
+    PERFORM assert_exception(
+        'Insert with missing version fails',
+        format('INSERT INTO encrypted (e) VALUES (%s::jsonb::eql_v2_encrypted) RETURNING id', e));
+
+    -- set version to 1
+    e := create_encrypted_json(1)::jsonb || '{"v": 1}';
+
+    PERFORM assert_exception(
+        'Insert with invalid version fails',
+        format('INSERT INTO encrypted (e) VALUES (%s::jsonb::eql_v2_encrypted) RETURNING id', e));
+
+    -- set version to 1
+    e := create_encrypted_json(1);
+
+    PERFORM assert_result(
+        'Insert with valid version is ok',
+        format('INSERT INTO encrypted (e) VALUES (%L) RETURNING id', e));
 
 
+  END;
+$$ LANGUAGE plpgsql;
 
