@@ -70,7 +70,7 @@ The EQL payload would be:
 
 ```sql
 INSERT INTO users (encrypted_json) VALUES (
-  '{"v":1,"k":"pt","p":"{\"name\":\"John Doe\",\"metadata\":{\"age\":42}}","i":{"t":"users","c":"encrypted_json"}}'
+  '{"v":2,"k":"pt","p":"{\"name\":\"John Doe\",\"metadata\":{\"age\":42}}","i":{"t":"users","c":"encrypted_json"}}'
 );
 ```
 
@@ -83,7 +83,7 @@ Data is stored in the database as:
     "t": "users"
   },
   "k": "sv",
-  "v": 1,
+  "v": 2,
   "sv": [["ciphertext"]]
 }
 ```
@@ -108,7 +108,7 @@ Data is returned as:
     "t": "users",
     "c": "encrypted_json"
   },
-  "v": 1,
+  "v": 2,
   "q": null
 }
 ```
@@ -141,7 +141,7 @@ We can query records that contain a specific structure.
 SELECT * FROM examples
 WHERE cs_ste_vec_v2(encrypted_json) @> cs_ste_vec_v2(
   '{
-    "v":1,
+    "v":2,
     "k":"pt",
     "p":{"top":{"nested":["a"]}},
     "i":{"t":"examples","c":"encrypted_json"},
@@ -169,7 +169,7 @@ If we query for a value that does not exist in the data:
 SELECT * FROM examples
 WHERE cs_ste_vec_v2(encrypted_json) @> cs_ste_vec_v2(
   '{
-    "v":1,
+    "v":2,
     "k":"pt",
     "p":{"top":{"nested":["d"]}},
     "i":{"t":"examples","c":"encrypted_json"},
@@ -203,7 +203,7 @@ We can extract the value of the `"top"` key.
 ```sql
 SELECT cs_ste_vec_value_v2(encrypted_json,
   '{
-    "v":1,
+    "v":2,
     "k":"pt",
     "p":"$.top",
     "i":{"t":"examples","c":"encrypted_json"},
@@ -250,7 +250,7 @@ We can query records where the `"num"` field is greater than `2`.
 SELECT * FROM examples
 WHERE cs_ste_vec_term_v2(encrypted_json,
   '{
-    "v":1,
+    "v":2,
     "k":"pt",
     "p":"$.num",
     "i":{"t":"examples","c":"encrypted_json"},
@@ -258,7 +258,7 @@ WHERE cs_ste_vec_term_v2(encrypted_json,
   }'
 ) > cs_ste_vec_term_v2(
   '{
-    "v":1,
+    "v":2,
     "k":"pt",
     "p":"2",
     "i":{"t":"examples","c":"encrypted_json"},
@@ -298,7 +298,7 @@ We can group the data by the `"color"` field and count occurrences.
 ```sql
 SELECT cs_grouped_value_v2(cs_ste_vec_value_v2(encrypted_json,
   '{
-    "v":1,
+    "v":2,
     "k":"pt",
     "p":"$.color",
     "i":{"t":"examples","c":"encrypted_json"},
@@ -308,7 +308,7 @@ SELECT cs_grouped_value_v2(cs_ste_vec_value_v2(encrypted_json,
 FROM examples
 GROUP BY cs_ste_vec_term_v2(encrypted_json,
   '{
-    "v":1,
+    "v":2,
     "k":"pt",
     "p":"$.color",
     "i":{"t":"examples","c":"encrypted_json"},
@@ -408,7 +408,7 @@ SELECT cs_ste_vec_value_v2(encrypted_json, $1) FROM examples;
     "t": "examples",
     "c": "encrypted_json"
   },
-  "v": 1,
+  "v": 2,
   "q": "ejson_path"
 }
 ```
@@ -436,7 +436,7 @@ WHERE cs_ste_vec_term_v2(examples.encrypted_json, $1) > cs_ste_vec_term_v2($2)
     "t": "examples",
     "c": "encrypted_json"
   },
-  "v": 1,
+  "v": 2,
   "q": "ejson_path"
 }
 
@@ -448,7 +448,7 @@ WHERE cs_ste_vec_term_v2(examples.encrypted_json, $1) > cs_ste_vec_term_v2($2)
     "t": "examples",
     "c": "encrypted_json"
   },
-  "v": 1,
+  "v": 2,
   "q": "ste_vec"
 }
 ```
@@ -495,7 +495,7 @@ With the params:
     "t": "examples",
     "c": "encrypted_json"
   },
-  "v": 1,
+  "v": 2,
   "q": "ejson_path"
 }
 ```
@@ -511,7 +511,7 @@ Would return the EQL plaintext payload with an array (`[1, 2, 3]` for example):
     "t": "examples",
     "c": "encrypted_json"
   },
-  "v": 1,
+  "v": 2,
   "q": null
 }
 ```
@@ -547,7 +547,7 @@ WHERE (cs_ste_vec_terms_v2(examples.encrypted_json, $1))[1] > cs_ste_vec_term_v2
     "t": "examples",
     "c": "encrypted_json"
   },
-  "v": 1,
+  "v": 2,
   "q": "ejson_path"
 }
 
@@ -559,7 +559,7 @@ WHERE (cs_ste_vec_terms_v2(examples.encrypted_json, $1))[1] > cs_ste_vec_term_v2
     "t": "examples",
     "c": "encrypted_json"
   },
-  "v": 1,
+  "v": 2,
   "q": "ste_vec"
 }
 ```
@@ -607,7 +607,7 @@ SELECT cs_ste_vec_value_v2(encrypted_json, $1) FROM examples;
     "t": "examples",
     "c": "encrypted_json"
   },
-  "v": 1,
+  "v": 2,
   "q": "ejson_path"
 }
 ```
@@ -637,7 +637,7 @@ WHERE cs_ste_vec_term_v2(examples.encrypted_json, $1) > cs_ste_vec_term_v2($2)
     "t": "examples",
     "c": "encrypted_json"
   },
-  "v": 1,
+  "v": 2,
   "q": "ejson_path"
 }
 
@@ -649,7 +649,7 @@ WHERE cs_ste_vec_term_v2(examples.encrypted_json, $1) > cs_ste_vec_term_v2($2)
     "t": "examples",
     "c": "encrypted_json"
   },
-  "v": 1,
+  "v": 2,
   "q": "ste_vec"
 }
 ```
@@ -700,7 +700,7 @@ Example params:
     "t": "examples",
     "c": "encrypted_json"
   },
-  "v": 1,
+  "v": 2,
   "q": "ste_vec"
 }
 ```
@@ -755,7 +755,7 @@ With the params:
     "t": "examples",
     "c": "encrypted_json"
   },
-  "v": 1,
+  "v": 2,
   "q": "ejson_path"
 }
 ```
@@ -771,7 +771,7 @@ Would return the EQL plaintext payload with an array (`[1, 2, 3]` for example):
     "t": "examples",
     "c": "encrypted_json"
   },
-  "v": 1,
+  "v": 2,
   "q": null
 }
 ```
@@ -808,7 +808,7 @@ WHERE EXISTS (
     "t": "examples",
     "c": "encrypted_json"
   },
-  "v": 1,
+  "v": 2,
   "q": "ejson_path"
 }
 
@@ -820,7 +820,7 @@ WHERE EXISTS (
     "t": "examples",
     "c": "encrypted_json"
   },
-  "v": 1,
+  "v": 2,
   "q": "ste_vec"
 }
 ```
@@ -874,7 +874,7 @@ Example data and params:
     "t": "examples",
     "c": "encrypted_json"
   },
-  "v": 1,
+  "v": 2,
   "q": "ejson_path"
 }
 ```
