@@ -38,10 +38,6 @@ fail_if_postgres_not_running
 mise run build --force
 mise run reset --force --postgres ${POSTGRES_VERSION}
 
-echo '/////////////////////////////////////////////////////////'
-cat release/cipherstash-encrypt.sql
-echo '/////////////////////////////////////////////////////////'
-
 
 # Install
 # cat release/cipherstash-encrypt.sql | docker exec -i ${container_name} psql ${connection_url} -f-
