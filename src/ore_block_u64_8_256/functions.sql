@@ -54,6 +54,10 @@ CREATE FUNCTION eql_v2.ore_block_u64_8_256(val jsonb)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
+    IF val IS NULL THEN
+      RETURN NULL;
+    END IF;
+
     IF val ? 'ob' THEN
       RETURN eql_v2.jsonb_array_to_ore_block_u64_8_256(val->'ob');
     END IF;
