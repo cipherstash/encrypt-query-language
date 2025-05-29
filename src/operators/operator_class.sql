@@ -22,6 +22,18 @@ AS $$
     a_ore := eql_v2.ore_block_u64_8_256(a);
     b_ore := eql_v2.ore_block_u64_8_256(b);
 
+    IF a_ore IS NULL AND b_ore IS NULL THEN
+      RETURN 0;
+    END IF;
+
+    IF a_ore IS NULL THEN
+      RETURN -1;
+    END IF;
+
+    IF b_ore IS NULL THEN
+      RETURN 1;
+    END IF;
+
     RETURN eql_v2.compare_ore_array(a_ore.terms, b_ore.terms);
   END;
 $$ LANGUAGE plpgsql;
