@@ -9,6 +9,10 @@
 CREATE FUNCTION eql_v2.to_encrypted(data jsonb)
 RETURNS public.eql_v2_encrypted AS $$
 BEGIN
+    IF data IS NULL THEN
+        RETURN NULL;
+    END IF;
+
     RETURN ROW(data)::public.eql_v2_encrypted;
 END;
 $$ LANGUAGE plpgsql;
@@ -28,6 +32,10 @@ CREATE CAST (jsonb AS public.eql_v2_encrypted)
 CREATE FUNCTION eql_v2.to_encrypted(data text)
 RETURNS public.eql_v2_encrypted AS $$
 BEGIN
+    IF data IS NULL THEN
+        RETURN NULL;
+    END IF;
+
     RETURN ROW(data::jsonb)::public.eql_v2_encrypted;
 END;
 $$ LANGUAGE plpgsql;
@@ -48,6 +56,10 @@ CREATE CAST (text AS public.eql_v2_encrypted)
 CREATE FUNCTION eql_v2.to_jsonb(e public.eql_v2_encrypted)
 RETURNS jsonb AS $$
 BEGIN
+    IF e IS NULL THEN
+        RETURN NULL;
+    END IF;
+
     RETURN e.data;
 END;
 $$ LANGUAGE plpgsql;
