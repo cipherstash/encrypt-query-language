@@ -73,3 +73,75 @@ DECLARE
 
   END;
 $$ LANGUAGE plpgsql;
+
+
+SELECT create_table_with_encrypted();
+
+--
+-- ORE - ORDER BY NULL handling
+--
+DO $$
+DECLARE
+    e eql_v2_encrypted;
+    ore_term eql_v2_encrypted;
+  BEGIN
+
+      -- Insert records with NULL values
+      -- record with ID=1 and e=NULL
+      INSERT INTO encrypted(e) VALUES (NULL::jsonb::eql_v2_encrypted);
+
+
+      -- Pull records from the ore table and insert
+      SELECT ore.e FROM ore WHERE id = 42 INTO ore_term;
+      -- record with ID=2 and e=42
+      INSERT INTO encrypted(e) VALUES (ore_term);
+
+
+      SELECT ore.e FROM ore WHERE id = 3 INTO ore_term;
+      -- record with ID=3 and e=3
+      INSERT INTO encrypted(e) VALUES (ore_term);
+
+
+      -- record with ID=4 and e=NULL
+      INSERT INTO encrypted(e) VALUES (NULL::jsonb::eql_v2_encrypted);
+
+      PERFORM assert_result(
+        'ORDER BY encrypted',
+        format('SELECT id FROM encrypted ORDER BY e'),
+        '3');
+
+      PERFORM assert_result(
+        'ORDER BY encrypted ASC',
+        format('SELECT id FROM encrypted ORDER BY e ASC'),
+        '3');
+
+      PERFORM assert_result(
+        'ORDER BY eql_v2.order_by(e) ASC NULLS FIRST',
+        format('SELECT id FROM encrypted ORDER BY e ASC NULLS FIRST'),
+        '1');
+
+      PERFORM assert_result(
+        'ORDER BY eql_v2.order_by(e) ASC NULLS LAST',
+        format('SELECT id FROM encrypted ORDER BY e ASC NULLS LAST'),
+        '3');
+
+      -- NULLS FIRST when DESC
+      PERFORM assert_result(
+        'ORDER BY encrypted DESC',
+        format('SELECT id FROM encrypted ORDER BY e DESC'),
+        '1');
+
+      PERFORM assert_result(
+        'ORDER BY eql_v2.order_by(e) DESC NULLS FIRST',
+        format('SELECT id FROM encrypted ORDER BY e DESC NULLS FIRST'),
+        '1');
+
+      PERFORM assert_result(
+        'ORDER BY eql_v2.order_by(e) DESC NULLS LAST',
+        format('SELECT id FROM encrypted ORDER BY e DESC NULLS LAST'),
+        '2');
+
+  END;
+$$ LANGUAGE plpgsql;
+
+PERFORM drop_table_with_encrypted();
