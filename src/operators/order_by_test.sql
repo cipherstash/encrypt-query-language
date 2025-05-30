@@ -144,4 +144,4 @@ DECLARE
   END;
 $$ LANGUAGE plpgsql;
 
-PERFORM drop_table_with_encrypted();
+SELECT drop_table_with_encrypted();
