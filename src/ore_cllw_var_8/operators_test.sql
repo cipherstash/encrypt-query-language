@@ -27,24 +27,24 @@ DECLARE
       sv := get_numeric_ste_vec_20()::eql_v2_encrypted;
 
       -- extract the term at $.n
-      term := sv->'a7cea93975ed8c01f861ccb6bd082784';
+      term := sv->'a7cea93975ed8c01f861ccb6bd082784'::text;
 
       -- -- -- -- $.n
       PERFORM assert_result(
         format('eql_v2_encrypted < eql_v2_encrypted with ore_cllw_var_8 index term'),
-        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''a7cea93975ed8c01f861ccb6bd082784'') < eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term));
+        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''a7cea93975ed8c01f861ccb6bd082784''::text) < eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term));
 
       -- other values are "one" and "three"
       PERFORM assert_count(
         format('eql_v2_encrypted < eql_v2_encrypted with ore_cllw_var_8 index term'),
-        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''a7cea93975ed8c01f861ccb6bd082784'') < eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term),
+        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''a7cea93975ed8c01f861ccb6bd082784''::text) < eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term),
         2);
 
       -- Check the $.n path
       -- Returned encrypted does not have ore_cllw_var_8 and raises an exception
       PERFORM assert_exception(
         format('eql_v2_encrypted < eql_v2_encrypted with ore_cllw_var_8 index term'),
-        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''2517068c0d1f9d4d41d2c666211f785e'') < eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term));
+        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''2517068c0d1f9d4d41d2c666211f785e''::text) < eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term));
 
   END;
 $$ LANGUAGE plpgsql;
@@ -75,23 +75,23 @@ DECLARE
       sv := get_numeric_ste_vec_20()::eql_v2_encrypted;
 
       -- extract the term at $.n
-      term := sv->'a7cea93975ed8c01f861ccb6bd082784';
+      term := sv->'a7cea93975ed8c01f861ccb6bd082784'::text;
 
       -- -- -- -- $.n
       PERFORM assert_result(
         format('eql_v2_encrypted <= eql_v2_encrypted with ore_cllw_var_8 index term'),
-        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''a7cea93975ed8c01f861ccb6bd082784'') <= eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term));
+        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''a7cea93975ed8c01f861ccb6bd082784''::text) <= eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term));
 
       PERFORM assert_count(
         format('eql_v2_encrypted <= eql_v2_encrypted with ore_cllw_var_8 index term'),
-        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''a7cea93975ed8c01f861ccb6bd082784'') <= eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term),
+        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''a7cea93975ed8c01f861ccb6bd082784''::text) <= eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term),
         3);
 
       -- Check the $.hello path
       -- Returned encrypted does not have ore_cllw_var_8
       PERFORM assert_exception(
         format('eql_v2_encrypted <= eql_v2_encrypted with ore_cllw_var_8 index term'),
-        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''2517068c0d1f9d4d41d2c666211f785e'') <= eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term));
+        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''2517068c0d1f9d4d41d2c666211f785e''::text) <= eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term));
 
   END;
 $$ LANGUAGE plpgsql;
@@ -121,23 +121,23 @@ DECLARE
       sv := get_numeric_ste_vec_30()::eql_v2_encrypted;
 
       -- extract the term at $.n
-      term := sv->'a7cea93975ed8c01f861ccb6bd082784';
+      term := sv->'a7cea93975ed8c01f861ccb6bd082784'::text;
 
       -- -- -- -- $.n
       PERFORM assert_result(
         format('eql_v2_encrypted >= eql_v2_encrypted with ore_cllw_var_8 index term'),
-        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''a7cea93975ed8c01f861ccb6bd082784'') >= eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term));
+        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''a7cea93975ed8c01f861ccb6bd082784''::text) >= eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term));
 
       PERFORM assert_count(
         format('eql_v2_encrypted >= eql_v2_encrypted with ore_cllw_var_8 index term'),
-        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''a7cea93975ed8c01f861ccb6bd082784'') >= eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term),
+        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''a7cea93975ed8c01f861ccb6bd082784''::text) >= eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term),
         2);
 
       -- Check the $ path
       -- Returned encrypted does not have ore_cllw_var_8
       PERFORM assert_exception(
         format('eql_v2_encrypted >= eql_v2_encrypted with ore_cllw_var_8 index term'),
-        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''bca213de9ccce676fa849ff9c4807963'') >= eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term));
+        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''bca213de9ccce676fa849ff9c4807963''::text) >= eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term));
 
   END;
 $$ LANGUAGE plpgsql;
@@ -167,23 +167,23 @@ DECLARE
       sv := get_numeric_ste_vec_10()::eql_v2_encrypted;
 
       -- extract the term at $.n
-      term := sv->'a7cea93975ed8c01f861ccb6bd082784';
+      term := sv->'a7cea93975ed8c01f861ccb6bd082784'::text;
 
       -- -- -- -- $.n
       PERFORM assert_result(
         format('eql_v2_encrypted > eql_v2_encrypted with ore_cllw_var_8 index term'),
-        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''a7cea93975ed8c01f861ccb6bd082784'') > eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term));
+        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''a7cea93975ed8c01f861ccb6bd082784''::text) > eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term));
 
       PERFORM assert_count(
         format('eql_v2_encrypted > eql_v2_encrypted with ore_cllw_var_8 index term'),
-        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''a7cea93975ed8c01f861ccb6bd082784'') > eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term),
+        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''a7cea93975ed8c01f861ccb6bd082784''::text) > eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term),
         2);
 
       -- Check the $ path
       -- Returned encrypted does not have ore_cllw_var_8
       PERFORM assert_exception(
         format('eql_v2_encrypted > eql_v2_encrypted with ore_cllw_var_8 index term'),
-        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''bca213de9ccce676fa849ff9c4807963'') > eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term));
+        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''bca213de9ccce676fa849ff9c4807963''::text) > eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term));
 
   END;
 $$ LANGUAGE plpgsql;
@@ -213,22 +213,22 @@ DECLARE
       -- json n: 20
       sv := get_numeric_ste_vec_10()::eql_v2_encrypted;
       -- extract the term at $.n
-      term := sv->'a7cea93975ed8c01f861ccb6bd082784';
+      term := sv->'a7cea93975ed8c01f861ccb6bd082784'::text;
 
       PERFORM assert_result(
         format('eql_v2_encrypted = eql_v2_encrypted with ore_cllw_var_8 index term'),
-        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''a7cea93975ed8c01f861ccb6bd082784'') = eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term));
+        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''a7cea93975ed8c01f861ccb6bd082784''::text) = eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term));
 
       PERFORM assert_count(
         format('eql_v2_encrypted = eql_v2_encrypted with ore_cllw_var_8 index term'),
-        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''a7cea93975ed8c01f861ccb6bd082784'') = eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term),
+        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''a7cea93975ed8c01f861ccb6bd082784''::text) = eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term),
         1);
 
       -- Check the $.n path
       -- Returned encrypted does not have ore_cllw_var_8 and raises exception
       PERFORM assert_exception(
         format('eql_v2_encrypted = eql_v2_encrypted with ore_cllw_var_8 index term'),
-        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''2517068c0d1f9d4d41d2c666211f785e'') = eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term));
+        format('SELECT e FROM encrypted WHERE eql_v2.ore_cllw_var_8(e->''2517068c0d1f9d4d41d2c666211f785e''::text) = eql_v2.ore_cllw_var_8(%L::eql_v2_encrypted)', term));
 
   END;
 $$ LANGUAGE plpgsql;
