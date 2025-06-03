@@ -82,7 +82,8 @@ DO $$
     b := get_numeric_ste_vec_10()::eql_v2_encrypted;
 
     -- $.n
-    term := b->'2517068c0d1f9d4d41d2c666211f785e';
+
+    term := b->('2517068c0d1f9d4d41d2c666211f785e'::text);
 
     ASSERT eql_v2.ste_vec_contains(a, term);
 

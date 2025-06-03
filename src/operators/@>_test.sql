@@ -42,7 +42,7 @@ DO $$
     b := get_numeric_ste_vec_10()::eql_v2_encrypted;
 
     -- $.n
-    term := b->'2517068c0d1f9d4d41d2c666211f785e';
+    term := b->'2517068c0d1f9d4d41d2c666211f785e'::text;
 
     ASSERT a @> term;
 
@@ -74,7 +74,7 @@ DECLARE
       -- This extracts the data associated with the field from the test eql_v2_encrypted
       sv := get_numeric_ste_vec_10()::eql_v2_encrypted;
       -- extract the term at $.n returned as eql_v2_encrypted
-      term := sv->'a7cea93975ed8c01f861ccb6bd082784';
+      term := sv->'a7cea93975ed8c01f861ccb6bd082784'::text;
 
       -- -- -- -- $.n
       PERFORM assert_result(
