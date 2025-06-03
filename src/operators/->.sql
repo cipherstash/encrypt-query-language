@@ -14,6 +14,12 @@
 --       "sv": [ {"c": "", "s": "", "b3": "" } ]
 --     }
 --
+-- Note on oeprator resolution:
+--   Assignment casts are considered for operator resolution (see PostgreSQL docs),
+--   the system may pick the "more specific" one, which is the one with both arguments of the same type.
+--
+-- This means that to use the text operator, the parameter will need to be cast to text
+--
 CREATE FUNCTION eql_v2."->"(e eql_v2_encrypted, selector text)
   RETURNS eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
@@ -44,7 +50,6 @@ CREATE OPERATOR ->(
   LEFTARG=eql_v2_encrypted,
   RIGHTARG=text
 );
-
 
 ---------------------------------------------------
 
