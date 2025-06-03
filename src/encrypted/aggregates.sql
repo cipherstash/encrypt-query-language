@@ -9,7 +9,6 @@ CREATE FUNCTION eql_v2.min(a eql_v2_encrypted, b eql_v2_encrypted)
 STRICT
 AS $$
   BEGIN
-    PERFORM eql_v2.log('eql_v2.min');
     IF eql_v2.ore_block_u64_8_256(a) < eql_v2.ore_block_u64_8_256(b) THEN
       RETURN a;
     ELSE
@@ -31,7 +30,6 @@ RETURNS eql_v2_encrypted
 STRICT
 AS $$
   BEGIN
-    PERFORM eql_v2.log('eql_v2.max');
     IF eql_v2.ore_block_u64_8_256(a) > eql_v2.ore_block_u64_8_256(b) THEN
       RETURN a;
     ELSE
