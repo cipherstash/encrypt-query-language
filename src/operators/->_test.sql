@@ -5,6 +5,7 @@ SELECT create_table_with_encrypted();
 SELECT seed_encrypted_json();
 
 
+
 --
 -- The -> operator returns an encrypted matching the selector
 DO $$
@@ -32,6 +33,27 @@ DO $$
   END;
 $$ LANGUAGE plpgsql;
 
+
+
+--
+-- The -> operator accepts an eql_v2_encrypted as the selector
+--
+DO $$
+ DECLARE
+    term text;
+  BEGIN
+    term := '{"s": "bca213de9ccce676fa849ff9c4807963"}';
+
+    PERFORM assert_result(
+        'Selector -> returns at least one eql_v2_encrypted',
+        format('SELECT e->%L::jsonb::eql_v2_encrypted FROM encrypted;', term));
+
+    PERFORM assert_count(
+        'Selector -> returns all eql_v2_encrypted',
+        format('SELECT e->%L::jsonb::eql_v2_encrypted FROM encrypted;', term),
+        3);
+  END;
+$$ LANGUAGE plpgsql;
 
 
 --
