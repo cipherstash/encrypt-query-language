@@ -5,19 +5,21 @@
 
 
 --
--- The -> operator returns an encrypted matching the selector
+-- The -> operator returns an encrypted matching the provided selector
+--
 -- Encyprted JSON is represented as an array of `eql_v2_encrypted`.
--- Each `eql_v2_encrypted` value has a selector, ciphertext, and an index term of
---   - blake3
---   - ore_cllw_u64_8
---   - ore_cllw_var_8
+-- Each `eql_v2_encrypted` value has a selector, ciphertext, and an index term
 --
 --     {
 --       "sv": [ {"c": "", "s": "", "b3": "" } ]
 --     }
 --
-
-
+-- Note on oeprator resolution:
+--   Assignment casts are considered for operator resolution (see PostgreSQL docs),
+--   the system may pick the "more specific" one, which is the one with both arguments of the same type.
+--
+-- This means that to use the text operator, the parameter will need to be cast to text
+--
 CREATE FUNCTION eql_v2."->"(e eql_v2_encrypted, selector text)
   RETURNS eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
@@ -43,10 +45,34 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+CREATE OPERATOR ->(
+  FUNCTION=eql_v2."->",
+  LEFTARG=eql_v2_encrypted,
+  RIGHTARG=text
+);
 
---
+---------------------------------------------------
 
 
+CREATE FUNCTION eql_v2."->"(e eql_v2_encrypted, selector eql_v2_encrypted)
+  RETURNS eql_v2_encrypted
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+	BEGIN
+    RETURN eql_v2."->"(e, eql_v2.selector(selector));
+  END;
+$$ LANGUAGE plpgsql;
+
+
+
+CREATE OPERATOR ->(
+  FUNCTION=eql_v2."->",
+  LEFTARG=eql_v2_encrypted,
+  RIGHTARG=eql_v2_encrypted
+);
+
+
+---------------------------------------------------
 
 
 CREATE FUNCTION eql_v2."->"(e eql_v2_encrypted, selector integer)
@@ -76,11 +102,7 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE OPERATOR ->(
-  FUNCTION=eql_v2."->",
-  LEFTARG=eql_v2_encrypted,
-  RIGHTARG=text
-);
+
 
 
 CREATE OPERATOR ->(
