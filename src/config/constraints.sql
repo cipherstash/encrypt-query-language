@@ -24,10 +24,10 @@ AS $$
 	BEGIN
 
     IF (SELECT EXISTS (SELECT eql_v2.config_get_indexes(val))) THEN
-      IF (SELECT bool_and(index = ANY('{match, ore, unique, ste_vec}')) FROM eql_v2.config_get_indexes(val) AS index) THEN
+      IF (SELECT bool_and(index = ANY('{hmac_256, ore_block_u64_8_256, bloom_filter, ste_vec}')) FROM eql_v2.config_get_indexes(val) AS index) THEN
         RETURN true;
       END IF;
-      RAISE 'Configuration has an invalid index (%). Index should be one of {match, ore, unique, ste_vec}', val;
+      RAISE 'Configuration has an invalid index (%). Index should be one of {hmac_256, ore_block_u64_8_256, bloom_filter, ste_vec}', val;
     END IF;
     RETURN true;
   END;

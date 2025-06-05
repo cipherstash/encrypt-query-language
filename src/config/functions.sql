@@ -332,3 +332,57 @@ BEGIN
       FROM tables, jsonb_each(tables.config) column_config;
 END;
 $$ LANGUAGE plpgsql;
+
+
+---
+-- Helper function to create equality search using the default "fast" equality algorithm
+-- Default algorithm is `hmac_256`
+--
+CREATE FUNCTION eql_v2.add_equality_search(table_name text, column_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}')
+  RETURNS jsonb
+
+AS $$
+  BEGIN
+    SELECT eql_v2.add_search_config(table_name, column_name, 'hmac_256', cast_as, opts);
+  END;
+$$ LANGUAGE plpgsql;
+
+
+---
+-- Helper function to create comparison search (covering all comparison operators) using the default comparison algorithm
+-- Default algorithm is `ore_block_u64_8_256`
+--
+CREATE FUNCTION eql_v2.add_comparison_search(table_name text, column_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}')
+  RETURNS jsonb
+AS $$
+  BEGIN
+    SELECT eql_v2.add_search_config(table_name, column_name, 'ore_block_u64_8_256', cast_as, opts);
+  END;
+$$ LANGUAGE plpgsql;
+
+
+---
+-- Helper function to create equality search using the default like algorithm
+-- Default algorithm is `bloom_filter`
+--
+CREATE FUNCTION eql_v2.add_like_search(table_name text, column_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}')
+  RETURNS jsonb
+AS $$
+  BEGIN
+    SELECT eql_v2.add_search_config(table_name, column_name, 'bloom_filter', cast_as, opts);
+  END;
+$$ LANGUAGE plpgsql;
+
+
+---
+-- Helper function to create equality search using the default "fast" equality algorithm
+-- Default algorithm is `ste_vec`
+--
+CREATE FUNCTION eql_v2.add_json_search(table_name text, column_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}')
+  RETURNS jsonb
+AS $$
+  BEGIN
+    SELECT eql_v2.add_search_config(table_name, column_name, 'ste_vec', cast_as, opts);
+  END;
+$$ LANGUAGE plpgsql;
+
