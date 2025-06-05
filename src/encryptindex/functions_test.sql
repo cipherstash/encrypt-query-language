@@ -24,7 +24,7 @@ INSERT INTO eql_v2_configuration (data) VALUES (
         "name": {
           "cast_as": "text",
           "indexes": {
-            "ore": {}
+            "ore_block_u64_8_256": {}
           }
         }
       }
@@ -80,14 +80,14 @@ INSERT INTO eql_v2_configuration (data) VALUES (
         "name": {
           "cast_as": "text",
           "indexes": {
-            "ore": {},
-            "unique": {}
+            "ore_block_u64_8_256": {},
+            "hmac_256": {}
           }
         },
         "email": {
           "cast_as": "text",
           "indexes": {
-            "match": {}
+            "bloom_filter": {}
           }
         }
       }
@@ -132,7 +132,7 @@ INSERT INTO eql_v2_configuration (state, data) VALUES (
         "name": {
           "cast_as": "text",
           "indexes": {
-            "unique": {}
+            "hmac_256": {}
           }
         }
       }
@@ -154,7 +154,7 @@ CREATE TABLE users
 -- An encrypting config should exist
 DO $$
   BEGIN
-    PERFORM eql_v2.add_search_config('users', 'name', 'match');
+    PERFORM eql_v2.add_search_config('users', 'name', 'bloom_filter');
     PERFORM eql_v2.encrypt();
 
     ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'active'));
@@ -182,7 +182,7 @@ INSERT INTO eql_v2_configuration (state, data) VALUES (
         "name": {
           "cast_as": "text",
           "indexes": {
-            "unique": {}
+            "hmac_256": {}
           }
         }
       }
@@ -204,7 +204,7 @@ CREATE TABLE users
 -- An encrypting config should exist
 DO $$
   BEGIN
-    PERFORM eql_v2.add_search_config('users', 'name', 'match');
+    PERFORM eql_v2.add_search_config('users', 'name', 'bloom_filter');
     PERFORM eql_v2.encrypt();
 
     ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'active'));
@@ -232,7 +232,7 @@ INSERT INTO eql_v2_configuration (state, data) VALUES (
         "name": {
           "cast_as": "text",
           "indexes": {
-            "unique": {}
+            "hmac_256": {}
           }
         }
       }
@@ -254,7 +254,7 @@ CREATE TABLE users
 -- An encrypting config should exist
 DO $$
   BEGIN
-    PERFORM eql_v2.add_search_config('users', 'name', 'match');
+    PERFORM eql_v2.add_search_config('users', 'name', 'bloom_filter');
 
     PERFORM eql_v2.encrypt(); -- need to encrypt first
     PERFORM eql_v2.activate();

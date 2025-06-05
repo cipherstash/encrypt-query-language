@@ -1,7 +1,7 @@
 -- REQUIRE: src/schema.sql
 
 
--- extracts match index from an emcrypted column
+-- extracts bloom_filter index from an encrypted column
 
 CREATE FUNCTION eql_v2.bloom_filter(val jsonb)
   RETURNS eql_v2.bloom_filter
@@ -16,7 +16,7 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- extracts unique index from an encrypted column
+-- extracts bloom_filter index from an encrypted column
 
 CREATE FUNCTION eql_v2.bloom_filter(val eql_v2_encrypted)
   RETURNS eql_v2.bloom_filter

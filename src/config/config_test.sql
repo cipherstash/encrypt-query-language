@@ -25,23 +25,23 @@ DO $$
   BEGIN
 
     -- Add indexes
-    PERFORM eql_v2.add_search_config('users', 'name', 'match');
-    ASSERT (SELECT _search_config_exists('users', 'name', 'match'));
+    PERFORM eql_v2.add_search_config('users', 'name', 'bloom_filter');
+    ASSERT (SELECT _search_config_exists('users', 'name', 'bloom_filter'));
 
     -- Add index with cast
-    PERFORM eql_v2.add_search_config('users', 'name', 'unique', 'int');
-    ASSERT (SELECT _search_config_exists('users', 'name', 'unique'));
+    PERFORM eql_v2.add_search_config('users', 'name', 'hmac_256', 'int');
+    ASSERT (SELECT _search_config_exists('users', 'name', 'hmac_256'));
 
     ASSERT (SELECT EXISTS (SELECT id FROM eql_v2_configuration c
             WHERE c.state = 'pending' AND
             c.data #> array['tables', 'users', 'name'] ? 'cast_as'));
 
     -- Match index removed
-    PERFORM eql_v2.remove_search_config('users', 'name', 'match');
-    ASSERT NOT (SELECT _search_config_exists('users', 'name', 'match'));
+    PERFORM eql_v2.remove_search_config('users', 'name', 'bloom_filter');
+    ASSERT NOT (SELECT _search_config_exists('users', 'name', 'bloom_filter'));
 
     -- All indexes removed, delete the emtpty pending config
-    PERFORM eql_v2.remove_search_config('users', 'name', 'unique');
+    PERFORM eql_v2.remove_search_config('users', 'name', 'hmac_256');
     ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending'));
 
   END;
@@ -60,34 +60,34 @@ DO $$
   BEGIN
 
     -- Add indexes
-    PERFORM eql_v2.add_search_config('users', 'name', 'match');
-    ASSERT (SELECT _search_config_exists('users', 'name', 'match'));
+    PERFORM eql_v2.add_search_config('users', 'name', 'bloom_filter');
+    ASSERT (SELECT _search_config_exists('users', 'name', 'bloom_filter'));
 
     ASSERT (SELECT EXISTS (SELECT id FROM eql_v2_configuration c
             WHERE c.state = 'pending' AND
-            c.data #> array['tables', 'users', 'name', 'indexes'] ? 'match'));
+            c.data #> array['tables', 'users', 'name', 'indexes'] ? 'bloom_filter'));
 
     -- Add index with cast
-    PERFORM eql_v2.add_search_config('blah', 'vtha', 'unique', 'int');
-    ASSERT (SELECT _search_config_exists('blah', 'vtha', 'unique'));
+    PERFORM eql_v2.add_search_config('blah', 'vtha', 'hmac_256', 'int');
+    ASSERT (SELECT _search_config_exists('blah', 'vtha', 'hmac_256'));
 
     ASSERT (SELECT EXISTS (SELECT id FROM eql_v2_configuration c
             WHERE c.state = 'pending' AND
-            c.data #> array['tables', 'users', 'name', 'indexes'] ? 'match'));
+            c.data #> array['tables', 'users', 'name', 'indexes'] ? 'bloom_filter'));
 
 
     ASSERT (SELECT EXISTS (SELECT id FROM eql_v2_configuration c
             WHERE c.state = 'pending' AND
-            c.data #> array['tables', 'blah', 'vtha', 'indexes'] ? 'unique'));
+            c.data #> array['tables', 'blah', 'vtha', 'indexes'] ? 'hmac_256'));
 
 
     -- Match index removed
-    PERFORM eql_v2.remove_search_config('users', 'name', 'match');
-    ASSERT NOT (SELECT _search_config_exists('users', 'name', 'match'));
+    PERFORM eql_v2.remove_search_config('users', 'name', 'bloom_filter');
+    ASSERT NOT (SELECT _search_config_exists('users', 'name', 'bloom_filter'));
 
     -- Match index removed
-    PERFORM eql_v2.remove_search_config('blah', 'vtha', 'unique');
-    ASSERT NOT (SELECT _search_config_exists('users', 'vtha', 'unique'));
+    PERFORM eql_v2.remove_search_config('blah', 'vtha', 'hmac_256');
+    ASSERT NOT (SELECT _search_config_exists('users', 'vtha', 'hmac_256'));
 
     -- All indexes removed, delete the emtpty pending config
     ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending'));
@@ -107,23 +107,23 @@ $$ LANGUAGE plpgsql;
 
 DO $$
   BEGIN
-    PERFORM eql_v2.add_search_config('users', 'name', 'match');
-    ASSERT (SELECT _search_config_exists('users', 'name', 'match'));
+    PERFORM eql_v2.add_search_config('users', 'name', 'bloom_filter');
+    ASSERT (SELECT _search_config_exists('users', 'name', 'bloom_filter'));
 
     -- Pending configuration contains the path `user/name.match.option`
-    PERFORM eql_v2.modify_search_config('users', 'name', 'match', 'int', '{"option": "value"}'::jsonb);
-    ASSERT (SELECT _search_config_exists('users', 'name', 'match'));
+    PERFORM eql_v2.modify_search_config('users', 'name', 'bloom_filter', 'int', '{"option": "value"}'::jsonb);
+    ASSERT (SELECT _search_config_exists('users', 'name', 'bloom_filter'));
 
     ASSERT (SELECT EXISTS (SELECT id FROM eql_v2_configuration c
             WHERE c.state = 'pending' AND
-            c.data #> array['tables', 'users', 'name', 'indexes', 'match'] ? 'option'));
+            c.data #> array['tables', 'users', 'name', 'indexes', 'bloom_filter'] ? 'option'));
 
     ASSERT (SELECT EXISTS (SELECT id FROM eql_v2_configuration c
             WHERE c.state = 'pending' AND
             c.data #> array['tables', 'users', 'name'] ? 'cast_as'));
 
     -- All indexes removed, delete the emtpty pending config
-    PERFORM eql_v2.remove_search_config('users', 'name', 'match');
+    PERFORM eql_v2.remove_search_config('users', 'name', 'bloom_filter');
     ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending'));
   END;
 $$ LANGUAGE plpgsql;
@@ -145,7 +145,7 @@ INSERT INTO eql_v2_configuration (state, data) VALUES (
         "blah": {
            "cast_as": "text",
            "indexes": {
-              "match": {}
+              "bloom_filter": {}
            }
         },
         "vtha": {
@@ -160,16 +160,16 @@ INSERT INTO eql_v2_configuration (state, data) VALUES (
 -- An encrypting config should exist
 DO $$
   BEGIN
-    ASSERT (SELECT _search_config_exists('users', 'blah', 'match', 'active'));
+    ASSERT (SELECT _search_config_exists('users', 'blah', 'bloom_filter', 'active'));
 
-    PERFORM eql_v2.add_search_config('users', 'name', 'match');
+    PERFORM eql_v2.add_search_config('users', 'name', 'bloom_filter');
 
     -- index added to name
-    ASSERT (SELECT _search_config_exists('users', 'name', 'match' ));
+    ASSERT (SELECT _search_config_exists('users', 'name', 'bloom_filter' ));
 
     -- pending is a copy of the active config
     -- and the active index still exists
-    ASSERT (SELECT _search_config_exists('users', 'blah', 'match'));
+    ASSERT (SELECT _search_config_exists('users', 'blah', 'bloom_filter'));
 
   END;
 $$ LANGUAGE plpgsql;
