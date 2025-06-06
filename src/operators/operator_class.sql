@@ -48,3 +48,45 @@ CREATE OPERATOR CLASS eql_v2.encrypted_operator DEFAULT FOR TYPE eql_v2_encrypte
   OPERATOR 5 >,
   FUNCTION 1 eql_v2.compare(a eql_v2_encrypted, b eql_v2_encrypted);
 
+
+--------------------
+
+
+CREATE FUNCTION eql_v2.compare_hmac(a eql_v2_encrypted, b eql_v2_encrypted)
+  RETURNS integer
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  DECLARE
+    a_hmac eql_v2.hmac_256;
+    b_hmac eql_v2.hmac_256;
+  BEGIN
+
+    a_hmac = eql_v2.hmac_256(a);
+    b_hmac = eql_v2.hmac_256(b);
+
+    IF a_hmac = b_hmac THEN
+      RETURN 0;
+    END IF;
+
+    IF a_hmac < b_hmac THEN
+      RETURN -1;
+    END IF;
+
+    IF a_hmac > b_hmac THEN
+      RETURN 1;
+    END IF;
+
+  END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OPERATOR FAMILY eql_v2.encrypted_hmac_256_operator USING btree;
+
+CREATE OPERATOR CLASS eql_v2.encrypted_hmac_256_operator FOR TYPE eql_v2_encrypted USING btree FAMILY eql_v2.encrypted_hmac_256_operator AS
+  OPERATOR 1 <,
+  OPERATOR 2 <=,
+  OPERATOR 3 =,
+  OPERATOR 4 >=,
+  OPERATOR 5 >,
+  FUNCTION 1 eql_v2.compare_hmac(a eql_v2_encrypted, b eql_v2_encrypted);
+
