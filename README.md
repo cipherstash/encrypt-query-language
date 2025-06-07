@@ -103,8 +103,8 @@ SELECT eql_v2.add_column('users', 'encrypted_email');
 After modifying configurations, activate them by running:
 
 ```sql
-SELECT eql_v2.encrypt();
-SELECT eql_v2.activate();
+SELECT eql_v2.migrate_config();
+SELECT eql_v2.activate_config();
 ```
 
 **Important:** These functions must be run after any modifications to the configuration.
@@ -219,8 +219,8 @@ SELECT eql_v2.add_search_config(
 After adding an index, you have to activate the configuration:
 
 ```sql
-SELECT eql_v2.encrypt();
-SELECT eql_v2.activate();
+SELECT eql_v2.migrate_config();
+SELECT eql_v2.activate_config();
 ```
 
 ## Searching data with EQL

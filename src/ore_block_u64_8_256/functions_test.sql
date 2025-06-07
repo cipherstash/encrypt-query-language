@@ -12,6 +12,21 @@ DO $$
   END;
 $$ LANGUAGE plpgsql;
 
+
+
+DO $$
+  DECLARE
+    ore_term eql_v2_encrypted;
+  BEGIN
+    SELECT ore.e FROM ore WHERE id = 42 INTO ore_term;
+
+    ASSERT eql_v2.has_ore_block_u64_8_256(ore_term);
+
+  END;
+$$ LANGUAGE plpgsql;
+
+
+
 --
 -- ORE - ORDER BY ore_block_u64_8_256(eql_v2_encrypted)
 --
