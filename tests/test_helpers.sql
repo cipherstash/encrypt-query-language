@@ -18,7 +18,6 @@ AS $$
     CREATE TABLE encrypted
     (
         id bigint GENERATED ALWAYS AS IDENTITY,
-        -- name_encrypted eql_v2_encrypted,
         e eql_v2_encrypted,
         PRIMARY KEY(id)
     );
