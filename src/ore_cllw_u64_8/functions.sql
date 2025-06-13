@@ -13,6 +13,9 @@ CREATE FUNCTION eql_v2.ore_cllw_u64_8(val jsonb)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
+    IF val IS NULL THEN
+      RETURN NULL;
+    END IF;
 
     IF NOT (val ? 'ocf') THEN
         RAISE 'Expected a ore_cllw_u64_8 index (ocf) value in json: %', val;
@@ -35,6 +38,26 @@ CREATE FUNCTION eql_v2.ore_cllw_u64_8(val eql_v2_encrypted)
 AS $$
   BEGIN
     RETURN (SELECT eql_v2.ore_cllw_u64_8(val.data));
+  END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE FUNCTION eql_v2.has_ore_cllw_u64_8(val jsonb)
+  RETURNS boolean
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+	BEGIN
+    RETURN val ? 'ocf';
+  END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE FUNCTION eql_v2.has_ore_cllw_u64_8(val eql_v2_encrypted)
+  RETURNS boolean
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+	BEGIN
+    RETURN eql_v2.has_ore_cllw_u64_8(val.data);
   END;
 $$ LANGUAGE plpgsql;
 
