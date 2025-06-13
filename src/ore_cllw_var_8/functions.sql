@@ -13,6 +13,10 @@ CREATE FUNCTION eql_v2.ore_cllw_var_8(val jsonb)
 AS $$
 	BEGIN
 
+    IF val IS NULL THEN
+      RETURN NULL;
+    END IF;
+
     IF NOT (val ? 'ocv') THEN
         RAISE 'Expected a ore_cllw_var_8 index (ocv) value in json: %', val;
     END IF;
@@ -37,6 +41,25 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+
+CREATE FUNCTION eql_v2.has_ore_cllw_var_8(val jsonb)
+  RETURNS boolean
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+	BEGIN
+    RETURN val ? 'ocv';
+  END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE FUNCTION eql_v2.has_ore_cllw_var_8(val eql_v2_encrypted)
+  RETURNS boolean
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+	BEGIN
+    RETURN eql_v2.has_ore_cllw_var_8(val.data);
+  END;
+$$ LANGUAGE plpgsql;
 
 
 CREATE FUNCTION eql_v2.compare_ore_cllw_var_8(a eql_v2.ore_cllw_var_8, b eql_v2.ore_cllw_var_8)

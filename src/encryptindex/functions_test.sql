@@ -155,7 +155,7 @@ CREATE TABLE users
 DO $$
   BEGIN
     PERFORM eql_v2.add_search_config('users', 'name', 'match');
-    PERFORM eql_v2.encrypt();
+    PERFORM eql_v2.migrate_config();
 
     ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'active'));
     ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'encrypting'));
@@ -205,7 +205,7 @@ CREATE TABLE users
 DO $$
   BEGIN
     PERFORM eql_v2.add_search_config('users', 'name', 'match');
-    PERFORM eql_v2.encrypt();
+    PERFORM eql_v2.migrate_config();
 
     ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'active'));
     ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'encrypting'));
@@ -256,8 +256,8 @@ DO $$
   BEGIN
     PERFORM eql_v2.add_search_config('users', 'name', 'match');
 
-    PERFORM eql_v2.encrypt(); -- need to encrypt first
-    PERFORM eql_v2.activate();
+    PERFORM eql_v2.migrate_config(); -- need to encrypt first
+    PERFORM eql_v2.activate_config();
 
     ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'active'));
     ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'inactive'));

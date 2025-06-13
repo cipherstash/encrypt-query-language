@@ -12,3 +12,15 @@ DO $$
 
   END;
 $$ LANGUAGE plpgsql;
+
+
+DO $$
+  DECLARE
+   e eql_v2_encrypted;
+  BEGIN
+    e := create_encrypted_json(1, 'hm');
+
+    ASSERT eql_v2.has_hmac_256(e);
+  END;
+$$ LANGUAGE plpgsql;
+

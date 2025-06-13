@@ -8,9 +8,14 @@ CREATE FUNCTION eql_v2.bloom_filter(val jsonb)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
+    IF val IS NULL THEN
+      RETURN NULL;
+    END IF;
+
     IF val ? 'bf' THEN
       RETURN ARRAY(SELECT jsonb_array_elements(val->'bf'))::eql_v2.bloom_filter;
     END IF;
+
     RAISE 'Expected a match index (bf) value in json: %', val;
   END;
 $$ LANGUAGE plpgsql;
@@ -24,5 +29,25 @@ CREATE FUNCTION eql_v2.bloom_filter(val eql_v2_encrypted)
 AS $$
   BEGIN
     RETURN (SELECT eql_v2.bloom_filter(val.data));
+  END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE FUNCTION eql_v2.has_bloom_filter(val jsonb)
+  RETURNS boolean
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+	BEGIN
+    RETURN val ? 'bf';
+  END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE FUNCTION eql_v2.has_bloom_filter(val eql_v2_encrypted)
+  RETURNS boolean
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+	BEGIN
+    RETURN eql_v2.has_bloom_filter(val.data);
   END;
 $$ LANGUAGE plpgsql;

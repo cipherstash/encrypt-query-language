@@ -10,8 +10,11 @@ CREATE FUNCTION eql_v2.blake3(val jsonb)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
+    IF val IS NULL THEN
+      RETURN NULL;
+    END IF;
 
-    IF NOT (val ? 'b3') NULL THEN
+    IF NOT (val ? 'b3') THEN
         RAISE 'Expected a blake3 index (b3) value in json: %', val;
     END IF;
 
@@ -34,3 +37,24 @@ AS $$
     RETURN (SELECT eql_v2.blake3(val.data));
   END;
 $$ LANGUAGE plpgsql;
+
+
+CREATE FUNCTION eql_v2.has_blake3(val jsonb)
+  RETURNS boolean
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+	BEGIN
+    RETURN val ? 'b3';
+  END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE FUNCTION eql_v2.has_blake3(val eql_v2_encrypted)
+  RETURNS boolean
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+	BEGIN
+    RETURN eql_v2.has_blake3(val.data);
+  END;
+$$ LANGUAGE plpgsql;
+
