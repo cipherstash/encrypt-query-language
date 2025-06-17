@@ -5,70 +5,12 @@ SELECT create_table_with_encrypted();
 SELECT seed_encrypted_json();
 
 
--- CREATE TABLE unencrypted
--- (
---     id bigint GENERATED ALWAYS AS IDENTITY,
---     u jsonb,
---     PRIMARY KEY(id)
--- );
--- INSERT INTO unencrypted (u)
--- VALUES
---     ('{"a": [1, 2, 3] }'),
---     ('{"a": [1, 2, 3, 4] }'),
---     ('{"a": [1, 2, 3, 4, 5] }');
-
--- SELECT *
--- FROM unencrypted
--- WHERE EXISTS (
---   SELECT 1
---   FROM jsonb_array_elements(u->'a') AS elem
---   WHERE elem::int < 2
--- );
-
--- SELECT seed_encrypted(get_array_ste_vec()::eql_v2_encrypted);
--- SELECT *
--- FROM encrypted
--- WHERE EXISTS (
---   SELECT 1
---   FROM eql_v2.jsonb_array_elements(e->'f510853730e1c3dbd31b86963f029dd5') AS elem
---   WHERE elem > '{"ocf": "b0c0a7385cb2f7dfe32a2649a9d8294794b8fc05585a240c1315f1e45ee7d9012616db3f01b43fa94351618670a29c24fc75df1392d52764c757b34495888b1c"}'::jsonb
--- );
-
--- SELECT eql_v2.jsonb_path_query_first(e, '33743aed3ae636f6bf05cff11ac4b519') as e
--- FROM encrypted
--- WHERE eql_v2.jsonb_path_query(e, '33743aed3ae636f6bf05cff11ac4b519') IS NOT NULL;
-
-
-
--- "ocf": "b0c0a7385cb2f7dfe32a2649a9d8294794b8fc05585a240c1315f1e45ee7d9012616db3f01b43fa94351618670a29c24fc75df1392d52764c757b34495888b1c",
-
--- SELECT eql_v2.jsonb_array_elements(eql_v2.jsonb_path_query(e, 'f510853730e1c3dbd31b86963f029dd5')) as e FROM encrypted ;
-
-
-
-
--- -- SELECT eql_v2.jsonb_path_exists(e, ''f510853730e1c3dbd31b86963f029dd5'') FROM encrypted;
--- -- SELECT eql_v2.jsonb_path_query(e, 'f510853730e1c3dbd31b86963f029dd5') FROM encrypted;
-
--- -- SELECT eql_v2.jsonb_path_query(e, 'f510853730e1c3dbd31b86963f029dd5') as e FROM encrypted;
--- -- SELECT eql_v2.jsonb_array_length(eql_v2.jsonb_path_query(e, 'f510853730e1c3dbd31b86963f029dd5')) as e FROM encrypted LIMIT 1;
--- -- SELECT eql_v2.jsonb_array_elements(eql_v2.jsonb_path_query(e, 'f510853730e1c3dbd31b86963f029dd5')) as e FROM encrypted ;
--- -- SELECT eql_v2.jsonb_array_elements_text(eql_v2.jsonb_path_query(e, 'f510853730e1c3dbd31b86963f029dd5')) as e FROM encrypted ;
--- -- SELECT eql_v2.jsonb_array_length(eql_v2.jsonb_path_query(e, 'f510853730e1c3dbd31b86963f029dd5')) as e FROM encrypted LIMIT 1;
--- -- SELECT eql_v2.jsonb_path_query(e, 'f510853730e1c3dbd31b86963f029dd5') as e FROM encrypted;
-
-
-
-
 -- ========================================================================
 --
 -- Selector &.a[*]
 --  -> 33743aed3ae636f6bf05cff11ac4b519
 --
 DO $$
-DECLARE
-    sv eql_v2_encrypted;
-    results eql_v2_encrypted[];
   BEGIN
 
     PERFORM seed_encrypted_json();
@@ -86,6 +28,39 @@ DECLARE
     PERFORM assert_exception(
       'jsonb_array_elements exception if input is not an array',
       'SELECT eql_v2.jsonb_array_elements(eql_v2.jsonb_path_query(e, ''33743aed3ae636f6bf05cff11ac4b519'')) as e FROM encrypted LIMIT 1;');
+
+  END;
+$$ LANGUAGE plpgsql;
+
+--
+-- Selector &.a[*] as eql_v2_encrypted
+--  -> 33743aed3ae636f6bf05cff11ac4b519
+--
+DO $$
+DECLARE
+    selector eql_v2_encrypted;
+
+  BEGIN
+
+    PERFORM seed_encrypted_json();
+    PERFORM seed_encrypted(get_array_ste_vec()::eql_v2_encrypted);
+
+    selector := '{"s": "f510853730e1c3dbd31b86963f029dd5"}'::jsonb::eql_v2_encrypted;
+
+    PERFORM assert_result(
+      'jsonb_array_elements returns array elements from jsonb_path_query result using eql_v2_encrypted selector',
+      format('SELECT eql_v2.jsonb_array_elements_text(eql_v2.jsonb_path_query(e, %L::eql_v2_encrypted)) as e FROM encrypted;', selector));
+
+    PERFORM assert_count(
+      'jsonb_array_elements returns the correct number of array elements from jsonb_path_query result',
+      format('SELECT eql_v2.jsonb_array_elements_text(eql_v2.jsonb_path_query(e, %L::eql_v2_encrypted)) as e FROM encrypted;', selector),
+      5);
+
+    selector := '{"s": "33743aed3ae636f6bf05cff11ac4b519"}'::jsonb::eql_v2_encrypted;
+
+    PERFORM assert_exception(
+      'jsonb_array_elements exception if input is not an array',
+      format('SELECT eql_v2.jsonb_array_elements_text(eql_v2.jsonb_path_query(e, %L::eql_v2_encrypted)) as e FROM encrypted;', selector));
 
   END;
 $$ LANGUAGE plpgsql;
