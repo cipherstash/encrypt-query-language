@@ -71,6 +71,16 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
+CREATE FUNCTION eql_v2.jsonb_path_query(val eql_v2_encrypted, selector eql_v2_encrypted)
+  RETURNS SETOF eql_v2_encrypted
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  BEGIN
+    RETURN QUERY
+    SELECT * FROM eql_v2.jsonb_path_query(val.data, eql_v2.selector(selector));
+  END;
+$$ LANGUAGE plpgsql;
+
 
 CREATE FUNCTION eql_v2.jsonb_path_query(val eql_v2_encrypted, selector text)
   RETURNS SETOF eql_v2_encrypted
@@ -82,6 +92,8 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+
+------------------------------------------------------------------------------------
 
 
 CREATE FUNCTION eql_v2.jsonb_path_exists(val jsonb, selector text)
@@ -96,6 +108,17 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
+CREATE FUNCTION eql_v2.jsonb_path_exists(val eql_v2_encrypted, selector eql_v2_encrypted)
+  RETURNS boolean
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  BEGIN
+    RETURN EXISTS (
+      SELECT eql_v2.jsonb_path_query(val, eql_v2.selector(selector))
+    );
+  END;
+$$ LANGUAGE plpgsql;
+
 
 CREATE FUNCTION eql_v2.jsonb_path_exists(val eql_v2_encrypted, selector text)
   RETURNS boolean
@@ -109,8 +132,8 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
---
---
+------------------------------------------------------------------------------------
+
 
 CREATE FUNCTION eql_v2.jsonb_path_query_first(val jsonb, selector text)
   RETURNS eql_v2_encrypted
@@ -128,6 +151,19 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
+CREATE FUNCTION eql_v2.jsonb_path_query_first(val eql_v2_encrypted, selector eql_v2_encrypted)
+  RETURNS eql_v2_encrypted
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  BEGIN
+    RETURN (
+        SELECT e
+        FROM eql_v2.jsonb_path_query(val.data, eql_v2.selector(selector)) as e
+        LIMIT 1
+    );
+  END;
+$$ LANGUAGE plpgsql;
+
 
 CREATE FUNCTION eql_v2.jsonb_path_query_first(val eql_v2_encrypted, selector text)
   RETURNS eql_v2_encrypted
@@ -144,7 +180,7 @@ $$ LANGUAGE plpgsql;
 
 
 
---
+------------------------------------------------------------------------------------
 
 
 -- =====================================================================
