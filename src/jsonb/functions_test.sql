@@ -193,6 +193,22 @@ $$ LANGUAGE plpgsql;
 
 
 DO $$
+  DECLARE
+    result jsonb;
+  BEGIN
+    PERFORM seed_encrypted_json();
+
+    SELECT eql_v2.jsonb_path_query(e, '2517068c0d1f9d4d41d2c666211f785e')::jsonb FROM encrypted LIMIT 1 INTO result;
+
+    ASSERT result ? 'i';
+    ASSERT result ? 'v';
+
+  END;
+$$ LANGUAGE plpgsql;
+
+
+
+DO $$
   BEGIN
 
     PERFORM seed_encrypted_json();

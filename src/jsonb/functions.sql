@@ -30,12 +30,16 @@ AS $$
     sv eql_v2_encrypted[];
     found jsonb[];
     e jsonb;
+    meta jsonb;
     ary boolean;
   BEGIN
 
     IF val IS NULL THEN
       RETURN NEXT NULL;
     END IF;
+
+    -- Column identifier and version
+    meta := eql_v2.meta_data(val);
 
     sv := eql_v2.ste_vec(val);
 
@@ -55,13 +59,14 @@ AS $$
 
       IF ary THEN
         -- Wrap found array elements as eql_v2_encrypted
-        RETURN NEXT jsonb_build_object(
+
+        RETURN NEXT (meta || jsonb_build_object(
           'sv', found,
           'a', 1
-        )::eql_v2_encrypted;
+        ))::eql_v2_encrypted;
 
       ELSE
-        RETURN NEXT found[1]::eql_v2_encrypted;
+        RETURN NEXT (meta || found[1])::eql_v2_encrypted;
       END IF;
 
     END IF;
