@@ -73,3 +73,15 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
+CREATE FUNCTION eql_v2.meta_data(val jsonb)
+  RETURNS jsonb
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+	BEGIN
+     RETURN jsonb_build_object(
+      'i', val->'i',
+      'v', val->'v'
+    );
+  END;
+$$ LANGUAGE plpgsql;
+
