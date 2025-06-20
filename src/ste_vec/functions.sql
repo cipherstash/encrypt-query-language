@@ -45,6 +45,10 @@ CREATE FUNCTION eql_v2.selector(val jsonb)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
+    IF val IS NULL THEN
+      RETURN NULL;
+    END IF;
+
     IF val ? 's' THEN
       RETURN val->>'s';
     END IF;
