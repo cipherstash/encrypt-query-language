@@ -144,7 +144,7 @@ $$ LANGUAGE plpgsql;
 -- Raises an exception if the configuration is already `encrypting` or if there is no `pending` configuration to encrypt.
 --
 
-CREATE FUNCTION eql_v2.encrypt()
+CREATE FUNCTION eql_v2.migrate_config()
   RETURNS boolean
 AS $$
 	BEGIN
@@ -168,7 +168,7 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v2.activate()
+CREATE FUNCTION eql_v2.activate_config()
   RETURNS boolean
 AS $$
 	BEGIN
