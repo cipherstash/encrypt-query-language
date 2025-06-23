@@ -1,8 +1,8 @@
 -- REQUIRE: src/schema.sql
+-- REQUIRE: src/crypto.sql
 -- REQUIRE: src/encrypted/types.sql
 -- REQUIRE: src/encrypted/functions.sql
 -- REQUIRE: src/ore_block_u64_8_256/types.sql
-
 
 
 -- Casts a jsonb array of hex-encoded strings to the `ore_block_u64_8_256` composite type.
@@ -48,7 +48,6 @@ $$ LANGUAGE plpgsql;
 
 
 -- extracts ore index from jsonb
-
 CREATE FUNCTION eql_v2.ore_block_u64_8_256(val jsonb)
   RETURNS eql_v2.ore_block_u64_8_256
   IMMUTABLE STRICT PARALLEL SAFE
@@ -78,6 +77,29 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
+--
+-- Checks if val contains an ore_block_u64_8_256 search term
+--
+CREATE FUNCTION eql_v2.has_ore_block_u64_8_256(val jsonb)
+  RETURNS boolean
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+	BEGIN
+    RETURN val ? 'ob';
+  END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE FUNCTION eql_v2.has_ore_block_u64_8_256(val eql_v2_encrypted)
+  RETURNS boolean
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+	BEGIN
+    RETURN eql_v2.has_ore_block_u64_8_256(val.data);
+  END;
+$$ LANGUAGE plpgsql;
+
+
 -- This function uses lexicographic comparison
 
 CREATE FUNCTION eql_v2.compare_ore_block_u64_8_256(a eql_v2.ore_block_u64_8_256, b eql_v2.ore_block_u64_8_256)
@@ -97,6 +119,8 @@ AS $$
     eq boolean := true;
     unequal_block smallint := 0;
     hash_key bytea;
+    data_block bytea;
+    encrypt_block bytea;
     target_block bytea;
 
     left_block_size CONSTANT smallint := 16;
@@ -150,13 +174,18 @@ AS $$
     -- first right block is at right offset + nonce_size (ordinally indexed)
     target_block := substr(b.bytes, right_offset + 17 + (unequal_block * right_block_size), right_block_size);
 
+    data_block := substr(a.bytes, 9 + (left_block_size * unequal_block), left_block_size);
+
+    -- PERFORM eql_v2.log('substr', data_block::text);
+    -- PERFORM eql_v2.log('hash_key', hash_key::text);
+    -- PERFORM eql_v2.log('data_block', pg_typeof(data_block)::text);
+    -- PERFORM eql_v2.log('hash_key', pg_typeof(hash_key)::text);
+
+    encrypt_block := public.encrypt(data_block::bytea, hash_key::bytea, 'aes-ecb');
+
     indicator := (
       get_bit(
-        encrypt(
-          substr(a.bytes, 9 + (left_block_size * unequal_block), left_block_size),
-          hash_key,
-          'aes-ecb'
-        ),
+        encrypt_block,
         0
       ) + get_bit(target_block, get_byte(a.bytes, unequal_block))) % 2;
 
