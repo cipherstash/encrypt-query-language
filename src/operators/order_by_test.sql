@@ -121,8 +121,6 @@ $$ LANGUAGE plpgsql;
 
 --
 -- ORE - ORDER BY ore_block_u64_8_256(eql_v2_encrypted)
--- SKIP THIS TEST
--- Individual term operators are currently disabled because we may not need them anymore
 
 DO $$
 DECLARE
