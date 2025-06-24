@@ -316,10 +316,9 @@ AS $$
               "t": "encrypted",
               "c": "e"
           },
-          "hm": "unique.%s",
+          "hm": "hmac.%s",
           "b3": "blake3.%s",
           "bf": %s,
-
           "v": 2
         }',
         random_key,
@@ -392,6 +391,19 @@ AS $$
   BEGIN
     EXECUTE format('SELECT ore.e FROM ore WHERE id = %s', val) INTO ore_term;
     e := create_encrypted_json('ob')::jsonb || ore_term;
+    RETURN e::eql_v2_encrypted;
+  END;
+$$ LANGUAGE plpgsql;
+
+
+DROP FUNCTION IF EXISTS create_encrypted_ste_vec_json(val integer);
+CREATE FUNCTION create_encrypted_ste_vec_json(val integer)
+  RETURNS eql_v2_encrypted
+AS $$
+ DECLARE
+    e eql_v2_encrypted;
+  BEGIN
+    EXECUTE format('SELECT ste_vec.e FROM ste_vec WHERE id = %s', val) INTO e;
     RETURN e::eql_v2_encrypted;
   END;
 $$ LANGUAGE plpgsql;
