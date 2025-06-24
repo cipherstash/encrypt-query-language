@@ -1,33 +1,19 @@
+-- REQUIRE: src/schema.sql
 -- REQUIRE: src/encrypted/types.sql
--- REQUIRE: src/hmac_256/types.sql
--- REQUIRE: src/hmac_256/functions.sql
--- REQUIRE: src/ore_block_u64_8_256/types.sql
--- REQUIRE: src/ore_block_u64_8_256/functions.sql
--- REQUIRE: src/operators/=.sql
+-- REQUIRE: src/operators/compare.sql
 
--- Operators for equality comparisons of eql_v2_encrypted types
---
--- Support for the following comparisons:
---
---      eql_v2_encrypted <> eql_v2_encrypted
---      eql_v2_encrypted <> jsonb
---      jsonb <> eql_v2_encrypted
---
--- There are multiple index terms that provide equality comparisons
---   - hmac_256
---   - ore_block_u64_8_256
---   - ore_cllw_8_v2
---
--- We check these index terms in this order and use the first one that exists for both parameters
---
---
 
+-- Operators for <> not equal comparisons of eql_v2_encrypted types
+--
+-- Uses `eql_v2.compare` for the actual comparison logic.
+--
+--
 CREATE FUNCTION eql_v2.neq(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
-    RETURN NOT eql_v2.eq(a, b );
+    RETURN eql_v2.compare(a, b) <> 0;
   END;
 $$ LANGUAGE plpgsql;
 

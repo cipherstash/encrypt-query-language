@@ -1,68 +1,19 @@
+-- REQUIRE: src/schema.sql
 -- REQUIRE: src/encrypted/types.sql
--- REQUIRE: src/hmac_256/types.sql
--- REQUIRE: src/hmac_256/functions.sql
--- REQUIRE: src/ore_block_u64_8_256/types.sql
--- REQUIRE: src/ore_block_u64_8_256/functions.sql
--- REQUIRE: src/ore_block_u64_8_256/operators.sql
--- REQUIRE: src/blake3/types.sql
--- REQUIRE: src/blake3/functions.sql
--- REQUIRE: src/ore_cllw_u64_8/types.sql
--- REQUIRE: src/ore_cllw_u64_8/functions.sql
--- REQUIRE: src/ore_cllw_u64_8/operators.sql
-
--- Operators for equality comparisons of eql_v2_encrypted types
---
--- Support for the following comparisons:
---
---      eql_v2_encrypted = eql_v2_encrypted
---      eql_v2_encrypted = jsonb
---      jsonb = eql_v2_encrypted
---
--- There are multiple index terms that provide equality comparisons
---
---
--- We check these index terms in this order and use the first one that exists for both parameters
---
---
+-- REQUIRE: src/operators/compare.sql
 
 
+-- Operators for = equality comparisons of eql_v2_encrypted types
+--
+-- Uses `eql_v2.compare` for the actual comparison logic.
+--
+--
 CREATE FUNCTION eql_v2.eq(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
-
-    BEGIN
-      RETURN eql_v2.hmac_256(a) = eql_v2.hmac_256(b);
-    EXCEPTION WHEN OTHERS THEN
-      -- PERFORM eql_v2.log('No hmac_256 index');
-    END;
-
-    BEGIN
-      RETURN eql_v2.blake3(a) = eql_v2.blake3(b);
-    EXCEPTION WHEN OTHERS THEN
-      -- PERFORM eql_v2.log('No blake3 index');
-    END;
-
-    BEGIN
-      RETURN eql_v2.ore_cllw_u64_8(a) = eql_v2.ore_cllw_u64_8(b);
-    EXCEPTION WHEN OTHERS THEN
-      -- PERFORM eql_v2.log('No ore_cllw_u64_8 index');
-    END;
-
-    BEGIN
-      RETURN eql_v2.ore_cllw_var_8(a) = eql_v2.ore_cllw_var_8(b);
-    EXCEPTION WHEN OTHERS THEN
-      -- PERFORM eql_v2.log('No ore_cllw_u64_8 index');
-    END;
-
-    BEGIN
-      RETURN eql_v2.ore_block_u64_8_256(a) = eql_v2.ore_block_u64_8_256(b);
-    EXCEPTION WHEN OTHERS THEN
-      -- PERFORM eql_v2.log('No ore_block_u64_8_256 index');
-    END;
-
-    RETURN false;
+    RETURN eql_v2.compare(a, b) = 0;
   END;
 $$ LANGUAGE plpgsql;
 
