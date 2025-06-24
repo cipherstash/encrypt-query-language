@@ -101,18 +101,17 @@ $$ LANGUAGE plpgsql;
 
 
 -- This function uses lexicographic comparison
-
-CREATE FUNCTION eql_v2.compare_ore_block_u64_8_256(a eql_v2.ore_block_u64_8_256, b eql_v2.ore_block_u64_8_256)
-RETURNS integer AS $$
-  BEGIN
-    -- Recursively compare blocks bailing as soon as we can make a decision
-    RETURN eql_v2.compare_ore_array(a.terms, b.terms);
-  END
-$$ LANGUAGE plpgsql;
-
+-- CREATE FUNCTION eql_v2.compare_ore_block_u64_8_256(a eql_v2.ore_block_u64_8_256, b eql_v2.ore_block_u64_8_256)
+-- RETURNS integer AS $$
+--   BEGIN
+--     -- Recursively compare blocks bailing as soon as we can make a decision
+--     RETURN eql_v2.compare_ore_block_u64_8_256_terms(a.terms, b.terms);
+--   END
+-- $$ LANGUAGE plpgsql;
 
 
-CREATE FUNCTION eql_v2.ore_block_u64_8_256_term(a eql_v2.ore_block_u64_8_256_term, b eql_v2.ore_block_u64_8_256_term)
+
+CREATE FUNCTION eql_v2.compare_ore_block_u64_8_256_term(a eql_v2.ore_block_u64_8_256_term, b eql_v2.ore_block_u64_8_256_term)
   RETURNS integer
 AS $$
   DECLARE
@@ -206,7 +205,7 @@ $$ LANGUAGE plpgsql;
 -- If both are non-empty, we compare the first element. If they are equal
 -- we need to consider the next block so we recurse, otherwise we return the comparison result.
 
-CREATE FUNCTION eql_v2.compare_ore_array(a eql_v2.ore_block_u64_8_256_term[], b eql_v2.ore_block_u64_8_256_term[])
+CREATE FUNCTION eql_v2.compare_ore_block_u64_8_256_terms(a eql_v2.ore_block_u64_8_256_term[], b eql_v2.ore_block_u64_8_256_term[])
 RETURNS integer AS $$
   DECLARE
     cmp_result integer;
@@ -232,10 +231,11 @@ RETURNS integer AS $$
       RETURN 1;
     END IF;
 
-    cmp_result := eql_v2.ore_block_u64_8_256_term(a[1], b[1]);
+    cmp_result := eql_v2.compare_ore_block_u64_8_256_term(a[1], b[1]);
+
     IF cmp_result = 0 THEN
     -- Removes the first element in the array, and calls this fn again to compare the next element/s in the array.
-      RETURN eql_v2.compare_ore_array(a[2:array_length(a,1)], b[2:array_length(b,1)]);
+      RETURN eql_v2.compare_ore_block_u64_8_256_terms(a[2:array_length(a,1)], b[2:array_length(b,1)]);
     END IF;
 
     RETURN cmp_result;
