@@ -5,285 +5,166 @@ SELECT seed_encrypted_json();
 
 
 
--- --
--- -- ORE Index
--- --
--- DO $$
---   DECLARE
---     ore_term eql_v2_encrypted;
---     result text;
---   BEGIN
+--
+-- Confirm index used correctly
+--
+DO $$
+  DECLARE
+    ore_term eql_v2_encrypted;
+    result text;
+  BEGIN
+
+    PERFORM create_table_with_encrypted();
+
+    EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"ob\": \"abc\"}")'';' into result;
+
+    -- PERFORM eql_v2.log('', result);
+
+    IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
+      RAISE EXCEPTION 'Unexpected Bitmap Heap Scan: %', result;
+    ELSE
+      ASSERT true;
+    END IF;
+
+    -- Add index
+    CREATE INDEX ON encrypted (e eql_v2.encrypted_operator_class);
+
+    SELECT ore.e FROM ore WHERE id = 42 INTO ore_term;
+    EXECUTE format('EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = %L::eql_v2_encrypted;', ore_term) into result;
+
+    IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
+      ASSERT true;
+    ELSE
+      RAISE EXCEPTION 'Expected Bitmap Heap Scan: %', result;
+    END IF;
+
+    -- INDEX WILL BE USED
+    EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"hm\": \"abc\"}")'';' into result;
+
+    IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
+      ASSERT true;
+    ELSE
+      RAISE EXCEPTION 'Expected Bitmap Heap Scan: %', result;
+    END IF;
+
+    ---
+    EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"blah\": \"vtha\"}")'';' into result;
+
+    IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
+      ASSERT true;
+    ELSE
+      RAISE EXCEPTION 'Expected Bitmap Heap Scan: %', result;
+    END IF;
+
+  END;
+$$ LANGUAGE plpgsql;
 
---     -- PERFORM create_table_with_encrypted();
-
---     -- EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"ob\": \"abc\"}")'';' into result;
-
---     -- PERFORM eql_v2.log('', result);
-
---     -- IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
---     --   RAISE EXCEPTION 'Unexpected Bitmap Heap Scan: %', result;
---     -- ELSE
---     --   ASSERT true;
---     -- END IF;
-
-
---     -- -- Add index
---     -- CREATE INDEX ON encrypted (e eql_v2.encrypted_operator_ordered);
-
---     -- PERFORM seed_encrypted_json();
-
---     -- SELECT ore.e FROM ore WHERE id = 42 INTO ore_term;
---     -- EXECUTE format('EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = %L::eql_v2_encrypted;', ore_term) into result;
-
---     -- PERFORM eql_v2.log(result);
-
---     -- IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
---     --   ASSERT true;
---     -- ELSE
---     --   RAISE EXCEPTION 'Expected Bitmap Heap Scan: %', result;
---     -- END IF;
-
---     -- EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = '("{\"hm\": \"abc\"}")'::eql_v2_encrypted;
-
---     -- -- INDEX WILL BE USED
---     -- EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"hm\": \"abc\"}")'';' into result;
-
---     -- PERFORM eql_v2.log(result);
-
---     -- IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
---     --   ASSERT true;
---     -- ELSE
---     --   RAISE EXCEPTION 'Expected Bitmap Heap Scan: %', result;
---     -- END IF;
-
-
---     -- ---
---     -- EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"blah\": \"vtha\"}")'';' into result;
-
---     -- IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
---     --   ASSERT true;
---     -- ELSE
---     --   RAISE EXCEPTION 'Expected Bitmap Heap Scan: %', result;
---     -- END IF;
-
---   END;
--- $$ LANGUAGE plpgsql;
-
-
-
--- --
--- -- Adding index to table where values do not have an appropriate search term
--- --
--- DO $$
---   DECLARE
---     ore_term eql_v2_encrypted;
---     result text;
---   BEGIN
-
---     PERFORM create_table_with_encrypted();
-
---     -- Add index
---     -- CREATE INDEX ON encrypted (e);
-
---     -- INSERT INTO encrypted (e) VALUES (''("{\"bf\": \"[1, 2, 3]\"}")'');
---     INSERT INTO encrypted (e) VALUES ('("{\"bf\": \"[1, 2, 3]\"}")');
-
---     CREATE INDEX ON encrypted (e eql_v2.encrypted_operator);
-
---     EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"bf\": \"[1,2,3\"}")'';' into result;
-
---     PERFORM eql_v2.log('', result);
-
---     -- IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
---     --   RAISE EXCEPTION 'Unexpected Bitmap Heap Scan: %', result;
---     -- ELSE
---     --   ASSERT true;
---     -- END IF;
-
---     -- EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"ob\": \"abc\"}")'';' into result;
-
---     -- PERFORM eql_v2.log('', result);
-
---     -- IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
---     --   RAISE EXCEPTION 'Unexpected Bitmap Heap Scan: %', result;
---     -- ELSE
---     --   ASSERT true;
---     -- END IF;
-
-
-
---     -- EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"hm\": \"abc\"}")'';' into result;
-
---     -- PERFORM eql_v2.log(result);
-
---     -- IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
---     --   ASSERT true;
---     -- ELSE
---     --   RAISE EXCEPTION 'Expected Bitmap Heap Scan: %', result;
---     -- END IF;
-
---     -- PERFORM seed_encrypted_json();
-
---     -- SELECT ore.e FROM ore WHERE id = 42 INTO ore_term;
---     -- EXECUTE format('EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = %L::eql_v2_encrypted;', ore_term) into result;
-
---     -- PERFORM eql_v2.log(result);
-
---     -- IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
---     --   ASSERT true;
---     -- ELSE
---     --   RAISE EXCEPTION 'Expected Bitmap Heap Scan: %', result;
---     -- END IF;
-
-
---     -- ---
---     -- EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"blah\": \"vtha\"}")'';' into result;
-
---     -- IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
---     --   ASSERT true;
---     -- ELSE
---     --   RAISE EXCEPTION 'Expected Bitmap Heap Scan: %', result;
---     -- END IF;
-
---   END;
--- $$ LANGUAGE plpgsql;
-
-
-
--- --
--- -- ORE ORDER BY
--- --
--- DO $$
--- DECLARE
---     ore_term eql_v2_encrypted;
---   BEGIN
-
---       PERFORM assert_id(
---         'ORDER BY eql_v2_encrypted DESC',
---         'SELECT id FROM ore ORDER BY e DESC LIMIT 1',
---         99);
-
---       PERFORM assert_id(
---         'ORDER BY eql_v2_encrypted DESC',
---         'SELECT id FROM ore ORDER BY e ASC LIMIT 1',
---         1);
-
-
---       SELECT e FROM ore WHERE id = 42 INTO ore_term;
-
---       PERFORM assert_id(
---         'eql_v2_encrypted < eql_v2_encrypted',
---         format('SELECT id FROM ore WHERE e < %L ORDER BY e DESC LIMIT 1', ore_term),
---         41);
-
---   END;
--- $$ LANGUAGE plpgsql;
-
-
-
--- --
--- -- ORE GROUP BY
--- --
--- DO $$
---   BEGIN
-
---       -- Copy ORE data into encrypted
---       INSERT INTO encrypted(e) SELECT e FROM ore WHERE ore.id=42;
---       INSERT INTO encrypted(e) SELECT e FROM ore WHERE ore.id=42;
---       INSERT INTO encrypted(e) SELECT e FROM ore WHERE ore.id=42;
---       INSERT INTO encrypted(e) SELECT e FROM ore WHERE ore.id=42;
---       INSERT INTO encrypted(e) SELECT e FROM ore WHERE ore.id=99;
---       INSERT INTO encrypted(e) SELECT e FROM ore WHERE ore.id=99;
-
---       -- Should be the rows with value of 42
---       PERFORM assert_id(
---         'GROUP BY eql_v2_encrypted',
---         'SELECT count(id) FROM encrypted GROUP BY e ORDER BY count(id) DESC',
---         4);
-
-
---   END;
--- $$ LANGUAGE plpgsql;
-
-
-    -- SELECT create_table_with_encrypted();
-
-    -- INSERT INTO encrypted (e) VALUES ('("{\"bf\": \"[1, 2, 3]\"}")');
-
-    -- -- Add index
-    -- CREATE INDEX ON encrypted (e);
 
 
 --
--- Default Index - use ore or hmac (in that order) if defined
+-- Adding index to table where values do not have an appropriate search term
 --
--- DO $$
---   DECLARE
---     ore_term eql_v2_encrypted;
---     result text;
---   BEGIN
+DO $$
+  DECLARE
+    ore_term eql_v2_encrypted;
+    result text;
+  BEGIN
 
---     PERFORM create_table_with_encrypted();
+    PERFORM create_table_with_encrypted();
 
---     EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"hm\": \"abc\"}")'';' into result;
+    INSERT INTO encrypted (e) VALUES ('("{\"bf\": \"[1, 2, 3]\"}")');
 
---     IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
---       RAISE EXCEPTION 'Unexpected Bitmap Heap Scan: %', result;
---     ELSE
---       ASSERT true;
---     END IF;
+    -- Add index
+    CREATE INDEX encrypted_index ON encrypted (e eql_v2.encrypted_operator_class);
 
---     EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"ob\": \"abc\"}")'';' into result;
+    EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"bf\": \"[1,2,3\"}")'';' into result;
 
---     IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
---       RAISE EXCEPTION 'Unexpected Bitmap Heap Scan: %', result;
---     ELSE
---       ASSERT true;
---     END IF;
+    -- PERFORM eql_v2.log('', result);
 
+    IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
+      RAISE EXCEPTION 'Unexpected Bitmap Heap Scan: %', result;
+    ELSE
+      ASSERT true;
+    END IF;
 
---     -- Add index
---     CREATE INDEX ON encrypted (e);
+    -- NO INDEX WILL BE USED
+    EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"hm\": \"abc\"}")'';' into result;
 
+    -- PERFORM eql_v2.log('', result);
 
---     EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"hm\": \"abc\"}")'';' into result;
+    IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
+      RAISE EXCEPTION 'Unexpected Bitmap Heap Scan: %', result;
+    ELSE
+      ASSERT true;
+    END IF;
 
---     PERFORM eql_v2.log(result);
+    INSERT INTO encrypted (e) VALUES ('("{\"hm\": \"abc\"}")');
+    INSERT INTO encrypted (e) VALUES ('("{\"hm\": \"def\"}")');
+    INSERT INTO encrypted (e) VALUES ('("{\"hm\": \"ghi\"}")');
 
---     IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
---       ASSERT true;
---     ELSE
---       RAISE EXCEPTION 'Expected Bitmap Heap Scan: %', result;
---     END IF;
+    -- STILL NO INDEX WILL BE USED
+    EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"hm\": \"abc\"}")'';' into result;
 
+    IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
+      RAISE EXCEPTION 'Unexpected Bitmap Heap Scan: %', result;
+    ELSE
+      ASSERT true;
+    END IF;
 
---     PERFORM seed_encrypted_json();
+    DROP INDEX encrypted_index;
+    CREATE INDEX encrypted_index ON encrypted (e eql_v2.encrypted_operator_class);
 
---     SELECT ore.e FROM ore WHERE id = 42 INTO ore_term;
---     EXECUTE format('EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = %L::eql_v2_encrypted;', ore_term) into result;
+    EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"hm\": \"abc\"}")'';' into result;
 
---     PERFORM eql_v2.log(result);
-
---     IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
---       ASSERT true;
---     ELSE
---       RAISE EXCEPTION 'Expected Bitmap Heap Scan: %', result;
---     END IF;
-
---     -- INSERT INTO encrypted (e) VALUES ('("{\"bf\": \"[1, 2, 3]\"}")');
-
---     --- Also uses the index
---     EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"blah\": \"vtha\"}")'';' into result;
-
---     IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
---       ASSERT true;
---     ELSE
---       RAISE EXCEPTION 'Expected Bitmap Heap Scan: %', result;
---     END IF;
-
---   END;
--- $$ LANGUAGE plpgsql;
+    -- AND STILL NOPE
+    IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
+      RAISE EXCEPTION 'Unexpected Bitmap Heap Scan: %', result;
+    ELSE
+      ASSERT true;
+    END IF;
 
 
+    TRUNCATE encrypted;
+    DROP INDEX encrypted_index;
+    CREATE INDEX encrypted_index ON encrypted (e eql_v2.encrypted_operator_class);
 
--- SELECT drop_table_with_encrypted();
+    INSERT INTO encrypted (e) VALUES ('("{\"hm\": \"abc\"}")');
+    INSERT INTO encrypted (e) VALUES ('("{\"hm\": \"def\"}")');
+    INSERT INTO encrypted (e) VALUES ('("{\"hm\": \"ghi\"}")');
+
+    EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"hm\": \"abc\"}")'';' into result;
+
+    IF position('Index Only Scan using encrypted' in result) > 0 THEN
+      ASSERT true;
+    ELSE
+      RAISE EXCEPTION 'Expected Index Only Scan: %', result;
+    END IF;
+
+    --
+    SELECT ore.e FROM ore WHERE id = 42 INTO ore_term;
+    EXECUTE format('EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = %L::eql_v2_encrypted;', ore_term) into result;
+
+    IF position('Index Only Scan using encrypted' in result) > 0 THEN
+      ASSERT true;
+    ELSE
+      RAISE EXCEPTION 'Expected Index Only Scan: %', result;
+    END IF;
+
+
+    TRUNCATE encrypted;
+    PERFORM seed_encrypted_json();
+
+    EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"blah\": \"vtha\"}")'';' into result;
+
+    PERFORM eql_v2.log(result);
+
+     IF position('Index Only Scan using encrypted' in result) > 0 THEN
+      ASSERT true;
+    ELSE
+      RAISE EXCEPTION 'Expected Index Only Scan: %', result;
+    END IF;
+
+  END;
+$$ LANGUAGE plpgsql;
+
+
