@@ -1,7 +1,10 @@
--- REQUIRE: src/schema.sql
--- REQUIRE: src/common.sql
--- REQUIRE: src/ore_cllw_u64_8/types.sql
--- REQUIRE: src/ore_cllw_u64_8/functions.sql
+-- NOTE FILE IS DISABLED
+-- REPLACE `!REQUIRE` with `REQUIRE` to enable in the build
+
+-- !REQUIRE: src/schema.sql
+-- !REQUIRE: src/common.sql
+-- !REQUIRE: src/ore_cllw_u64_8/types.sql
+-- !REQUIRE: src/ore_cllw_u64_8/functions.sql
 
 
 CREATE FUNCTION eql_v2.ore_cllw_u64_8_eq(a eql_v2.ore_cllw_u64_8, b eql_v2.ore_cllw_u64_8)
