@@ -47,10 +47,6 @@ CREATE FUNCTION eql_v2.compare(a eql_v2_encrypted, b eql_v2_encrypted)
 AS $$
   BEGIN
 
-    -- PERFORM eql_v2.log('eql_v2.compare');
-    -- PERFORM eql_v2.log('a', a::text);
-    -- PERFORM eql_v2.log('b', b::text);
-
     IF a IS NULL AND b IS NULL THEN
       RETURN 0;
     END IF;
