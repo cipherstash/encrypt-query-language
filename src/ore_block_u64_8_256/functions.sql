@@ -100,16 +100,6 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- This function uses lexicographic comparison
--- CREATE FUNCTION eql_v2.compare_ore_block_u64_8_256(a eql_v2.ore_block_u64_8_256, b eql_v2.ore_block_u64_8_256)
--- RETURNS integer AS $$
---   BEGIN
---     -- Recursively compare blocks bailing as soon as we can make a decision
---     RETURN eql_v2.compare_ore_block_u64_8_256_terms(a.terms, b.terms);
---   END
--- $$ LANGUAGE plpgsql;
-
-
 
 CREATE FUNCTION eql_v2.compare_ore_block_u64_8_256_term(a eql_v2.ore_block_u64_8_256_term, b eql_v2.ore_block_u64_8_256_term)
   RETURNS integer
@@ -175,11 +165,6 @@ AS $$
 
     data_block := substr(a.bytes, 9 + (left_block_size * unequal_block), left_block_size);
 
-    -- PERFORM eql_v2.log('substr', data_block::text);
-    -- PERFORM eql_v2.log('hash_key', hash_key::text);
-    -- PERFORM eql_v2.log('data_block', pg_typeof(data_block)::text);
-    -- PERFORM eql_v2.log('hash_key', pg_typeof(hash_key)::text);
-
     encrypt_block := public.encrypt(data_block::bytea, hash_key::bytea, 'aes-ecb');
 
     indicator := (
@@ -239,5 +224,13 @@ RETURNS integer AS $$
     END IF;
 
     RETURN cmp_result;
+  END
+$$ LANGUAGE plpgsql;
+
+
+CREATE FUNCTION eql_v2.compare_ore_block_u64_8_256_terms(a eql_v2.ore_block_u64_8_256, b eql_v2.ore_block_u64_8_256)
+RETURNS integer AS $$
+  BEGIN
+    RETURN eql_v2.compare_ore_block_u64_8_256_terms(a.terms, b.terms);
   END
 $$ LANGUAGE plpgsql;
