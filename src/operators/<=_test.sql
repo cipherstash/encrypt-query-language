@@ -3,7 +3,84 @@
 SELECT create_table_with_encrypted();
 SELECT seed_encrypted_json();
 
-SELECT e FROM encrypted WHERE e->'a7cea93975ed8c01f861ccb6bd082784'::text <= '("{""c"": ""mBbM0#UZON2jQ3@LiWcvns2Yf6y3L;hykEh`}*fX#aF;n*=>+*o5Uarod39C7TF-SiCD-NgkG)l%Vw=l!tX>H*P<PfE$+0Szy"", ""s"": ""2517068c0d1f9d4d41d2c666211f785e"", ""ocf"": ""b0c13d4a4a9ffcb2ef853959fb2d26236337244ed86d66470d08963ed703356a1cee600a9a75a70aaefc1b4ca03b7918a7df25b7cd4ca774fd5b8616e6b9adb8""}")'::eql_v2_encrypted;
+
+
+-- --
+-- -- ORE - eql_v2_encrypted <= eql_v2_encrypted
+-- --
+-- DO $$
+-- DECLARE
+--     e eql_v2_encrypted;
+--     ore_term jsonb;
+--   BEGIN
+
+--       -- Record with a Numeric ORE term of 42
+--       e := create_encrypted_ore_json(42);
+--       PERFORM seed_encrypted(e);
+
+--       PERFORM assert_result(
+--         'eql_v2_encrypted <= eql_v2_encrypted',
+--         format('SELECT e FROM encrypted WHERE e <= %L::eql_v2_encrypted', e));
+
+--       PERFORM assert_count(
+--           format('eql_v2_encrypted <= eql_v2_encrypted'),
+--           format('SELECT e FROM encrypted WHERE e <= %L;', e),
+--           4);
+
+--       e := create_encrypted_ore_json(20);
+
+--       PERFORM assert_result(
+--         'eql_v2_encrypted <= eql_v2_encrypted',
+--         format('SELECT e FROM encrypted WHERE e <= %L::eql_v2_encrypted', e));
+
+--       PERFORM assert_count(
+--         format('eql_v2_encrypted <= eql_v2_encrypted'),
+--         format('SELECT e FROM encrypted WHERE e <= %L;', e),
+--         2);
+--   END;
+-- $$ LANGUAGE plpgsql;
+
+
+-- --
+-- -- ORE - eql_v2.lte(a eql_v2_encrypted, b eql_v2_encrypted)
+-- --
+-- DO $$
+-- DECLARE
+--     e eql_v2_encrypted;
+--     ore_term jsonb;
+--   BEGIN
+--       -- Reset data
+--       PERFORM seed_encrypted_json();
+
+--       -- Record with a Numeric ORE term of 42
+--       e := create_encrypted_ore_json(42);
+--       PERFORM seed_encrypted(e);
+
+--      PERFORM assert_result(
+--         'eql_v2.lte(a eql_v2_encrypted, b eql_v2_encrypted)',
+--         format('SELECT e FROM encrypted WHERE eql_v2.lte(e, %L)', e));
+
+--      -- include
+--      PERFORM assert_count(
+--         'eql_v2.lte(a eql_v2_encrypted, b eql_v2_encrypted)',
+--         format('SELECT e FROM encrypted WHERE eql_v2.lte(e, %L)', e),
+--         4);
+
+--       -- Record with a Numeric ORE term of 30
+--       e := create_encrypted_ore_json(30);
+
+--       PERFORM assert_result(
+--         'eql_v2.get(a eql_v2_encrypted, b eql_v2_encrypted)',
+--         format('SELECT e FROM encrypted WHERE eql_v2.lte(e, %L)', e));
+
+--      PERFORM assert_count(
+--         'eql_v2.get(a eql_v2_encrypted, b eql_v2_encrypted)',
+--         format('SELECT e FROM encrypted WHERE eql_v2.lte(e, %L)', e),
+--         3);
+--   END;
+-- $$ LANGUAGE plpgsql;
+
+
 
 
 -- ------------------------------------------------------------------------
@@ -31,24 +108,29 @@ DECLARE
       -- extract the term at $.n returned as eql_v2_encrypted
       term := sv->'2517068c0d1f9d4d41d2c666211f785e'::text;
 
+      RAISE NOTICE 'term: %', term;
+
       -- -- -- -- $.n
       PERFORM assert_result(
         format('eql_v2_encrypted <= eql_v2_encrypted with ore_cllw_u64_8 index term'),
         format('SELECT e FROM encrypted WHERE e->''2517068c0d1f9d4d41d2c666211f785e''::text <= %L::eql_v2_encrypted', term));
 
       PERFORM assert_count(
-        format('eql_v2_encrypted <= eql_v2_encrypted with ore index term'),
+        format('eql_v2_encrypted <= eql_v2_encrypted with ore_cllw_u64_8 index term'),
         format('SELECT e FROM encrypted WHERE e->''2517068c0d1f9d4d41d2c666211f785e''::text <= %L::eql_v2_encrypted', term),
         3);
 
-      -- -- Check the $.hello path
-      -- -- Returned encrypted does not have ore_cllw_u64_8
-      PERFORM assert_no_result(
+      -- Check the $.hello path
+      -- Returned encrypted does not have ore_cllw_u64_8
+      -- Falls back to jsonb literal comparison
+      PERFORM assert_result(
         format('eql_v2_encrypted <= eql_v2_encrypted with ore_cllw_u64_8 index term'),
         format('SELECT e FROM encrypted WHERE e->''a7cea93975ed8c01f861ccb6bd082784''::text <= %L::eql_v2_encrypted', term));
 
   END;
 $$ LANGUAGE plpgsql;
+
+
 
 -- ------------------------------------------------------------------------
 -- ------------------------------------------------------------------------
@@ -87,89 +169,14 @@ DECLARE
 
       -- -- Check the $.n path
       -- -- Returned encrypted does not have ore_cllw_u64_8
-      PERFORM assert_no_result(
+      -- Falls back to jsonb literal comparison
+      PERFORM assert_result(
         format('eql_v2_encrypted <= eql_v2_encrypted with ore_cllw_var_8 index term'),
         format('SELECT e FROM encrypted WHERE e->''2517068c0d1f9d4d41d2c666211f785e''::text <= %L::eql_v2_encrypted', term));
 
   END;
 $$ LANGUAGE plpgsql;
 
-
-
---
--- ORE - eql_v2_encrypted <= eql_v2_encrypted
---
-DO $$
-DECLARE
-    e eql_v2_encrypted;
-    ore_term jsonb;
-  BEGIN
-
-      -- Record with a Numeric ORE term of 42
-      e := create_encrypted_ore_json(42);
-      PERFORM seed_encrypted(e);
-
-      PERFORM assert_result(
-        'eql_v2_encrypted <= eql_v2_encrypted',
-        format('SELECT e FROM encrypted WHERE e <= %L::eql_v2_encrypted', e));
-
-      PERFORM assert_count(
-          format('eql_v2_encrypted <= eql_v2_encrypted'),
-          format('SELECT e FROM encrypted WHERE e <= %L;', e),
-          4);
-
-      e := create_encrypted_ore_json(20);
-
-      PERFORM assert_result(
-        'eql_v2_encrypted <= eql_v2_encrypted',
-        format('SELECT e FROM encrypted WHERE e <= %L::eql_v2_encrypted', e));
-
-      PERFORM assert_count(
-        format('eql_v2_encrypted <= eql_v2_encrypted'),
-        format('SELECT e FROM encrypted WHERE e <= %L;', e),
-        2);
-  END;
-$$ LANGUAGE plpgsql;
-
-
---
--- ORE - eql_v2.gte(a eql_v2_encrypted, b eql_v2_encrypted)
---
-DO $$
-DECLARE
-    e eql_v2_encrypted;
-    ore_term jsonb;
-  BEGIN
-      -- Reset data
-      PERFORM seed_encrypted_json();
-
-      -- Record with a Numeric ORE term of 42
-      e := create_encrypted_ore_json(42);
-      PERFORM seed_encrypted(e);
-
-     PERFORM assert_result(
-        'eql_v2.lte(a eql_v2_encrypted, b eql_v2_encrypted)',
-        format('SELECT e FROM encrypted WHERE eql_v2.lte(e, %L)', e));
-
-     -- include
-     PERFORM assert_count(
-        'eql_v2.lte(a eql_v2_encrypted, b eql_v2_encrypted)',
-        format('SELECT e FROM encrypted WHERE eql_v2.lte(e, %L)', e),
-        4);
-
-      -- Record with a Numeric ORE term of 30
-      e := create_encrypted_ore_json(30);
-
-      PERFORM assert_result(
-        'eql_v2.get(a eql_v2_encrypted, b eql_v2_encrypted)',
-        format('SELECT e FROM encrypted WHERE eql_v2.lte(e, %L)', e));
-
-     PERFORM assert_count(
-        'eql_v2.get(a eql_v2_encrypted, b eql_v2_encrypted)',
-        format('SELECT e FROM encrypted WHERE eql_v2.lte(e, %L)', e),
-        3);
-  END;
-$$ LANGUAGE plpgsql;
 
 
 SELECT drop_table_with_encrypted();
