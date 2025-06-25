@@ -4,7 +4,6 @@ SELECT create_table_with_encrypted();
 SELECT seed_encrypted_json();
 
 
-
 --
 -- Confirm index used correctly
 --
@@ -77,50 +76,52 @@ DO $$
     -- Add index
     CREATE INDEX encrypted_index ON encrypted (e eql_v2.encrypted_operator_class);
 
-    EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"bf\": \"[1,2,3\"}")'';' into result;
+    ANALYZE encrypted;
 
-    -- PERFORM eql_v2.log('', result);
+    EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"bf\": \"[1,2,3]\"}")'';' into result;
 
-    IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
-      RAISE EXCEPTION 'Unexpected Bitmap Heap Scan: %', result;
-    ELSE
+    IF position('Seq Scan on encrypted' in result) > 0 THEN
       ASSERT true;
+    ELSE
+      RAISE EXCEPTION 'Unexpected Seq Scan: %', result;
     END IF;
 
     -- NO INDEX WILL BE USED
     EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"hm\": \"abc\"}")'';' into result;
 
-    -- PERFORM eql_v2.log('', result);
-
-    IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
-      RAISE EXCEPTION 'Unexpected Bitmap Heap Scan: %', result;
-    ELSE
+    IF position('Seq Scan on encrypted' in result) > 0 THEN
       ASSERT true;
+    ELSE
+      RAISE EXCEPTION 'Unexpected Seq Scan: %', result;
     END IF;
 
     INSERT INTO encrypted (e) VALUES ('("{\"hm\": \"abc\"}")');
     INSERT INTO encrypted (e) VALUES ('("{\"hm\": \"def\"}")');
     INSERT INTO encrypted (e) VALUES ('("{\"hm\": \"ghi\"}")');
 
+    ANALYZE encrypted;
+
     -- STILL NO INDEX WILL BE USED
     EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"hm\": \"abc\"}")'';' into result;
 
-    IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
-      RAISE EXCEPTION 'Unexpected Bitmap Heap Scan: %', result;
-    ELSE
+    IF position('Seq Scan on encrypted' in result) > 0 THEN
       ASSERT true;
+    ELSE
+      RAISE EXCEPTION 'Unexpected Seq Scan: %', result;
     END IF;
 
     DROP INDEX encrypted_index;
     CREATE INDEX encrypted_index ON encrypted (e eql_v2.encrypted_operator_class);
 
+    ANALYZE encrypted;
+
     EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"hm\": \"abc\"}")'';' into result;
 
-    -- AND STILL NOPE
-    IF position('Bitmap Heap Scan on encrypted' in result) > 0 THEN
-      RAISE EXCEPTION 'Unexpected Bitmap Heap Scan: %', result;
-    ELSE
+    -- -- AND STILL NOPE
+    IF position('Seq Scan on encrypted' in result) > 0 THEN
       ASSERT true;
+    ELSE
+      RAISE EXCEPTION 'Unexpected Seq Scan: %', result;
     END IF;
 
 
