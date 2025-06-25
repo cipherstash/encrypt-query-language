@@ -1,55 +1,18 @@
+-- REQUIRE: src/schema.sql
 -- REQUIRE: src/encrypted/types.sql
--- REQUIRE: src/ore_block_u64_8_256/types.sql
--- REQUIRE: src/ore_block_u64_8_256/functions.sql
--- REQUIRE: src/ore_block_u64_8_256/operators.sql
+-- REQUIRE: src/operators/compare.sql
 
 
--- Operators for < less than comparisons of eql_v2_encrypted types
+-- Operators for > greater than comparisons of eql_v2_encrypted types
 --
--- Support for the following comparisons:
---
---      eql_v2_encrypted = eql_v2_encrypted
---      eql_v2_encrypted = jsonb
---      jsonb = eql_v2_encrypted
---
--- There are multiple index terms that provide equality comparisons
---   - ore_block_u64_8_256
---   - ore_cllw_8_v2
---
--- We check these index terms in this order and use the first one that exists for both parameters
+-- Uses `eql_v2.compare` for the actual comparison logic.
 --
 --
-
--- WHERE a > b
--- WHERE eql_v2.gt(a, b)
---
-
-
-
 CREATE FUNCTION eql_v2.gt(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS boolean
 AS $$
   BEGIN
-
-    BEGIN
-      RETURN eql_v2.ore_cllw_u64_8(a) > eql_v2.ore_cllw_u64_8(b);
-    EXCEPTION WHEN OTHERS THEN
-      -- PERFORM eql_v2.log('eql_v2.gt no ore_cllw_u64_8 index');
-    END;
-
-    BEGIN
-      RETURN eql_v2.ore_cllw_var_8(a) > eql_v2.ore_cllw_var_8(b);
-    EXCEPTION WHEN OTHERS THEN
-      -- PERFORM eql_v2.log('eql_v2.gt no ore_cllw_var_8 index');
-    END;
-
-    BEGIN
-      RETURN eql_v2.ore_block_u64_8_256(a) > eql_v2.ore_block_u64_8_256(b);
-    EXCEPTION WHEN OTHERS THEN
-      -- PERFORM eql_v2.log('eql_v2.gt no ore_block_u64_8_256 index');
-    END;
-
-    RETURN false;
+    RETURN eql_v2.compare(a, b) = 1;
   END;
 $$ LANGUAGE plpgsql;
 

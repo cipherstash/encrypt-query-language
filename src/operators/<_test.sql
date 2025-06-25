@@ -41,7 +41,8 @@ DECLARE
 
       -- -- Check the $.hello path
       -- -- Returned encrypted does not have ore_cllw_u64_8
-      PERFORM assert_no_result(
+      -- Falls back to jsonb literal comparison
+      PERFORM assert_result(
         format('eql_v2_encrypted < eql_v2_encrypted with ore index term'),
         format('SELECT e FROM encrypted WHERE e->''a7cea93975ed8c01f861ccb6bd082784''::text < %L::eql_v2_encrypted', term));
 
@@ -85,7 +86,8 @@ DECLARE
 
       -- -- Check the $.n path
       -- -- Returned encrypted does not have ore_cllw_var_8
-      PERFORM assert_no_result(
+      -- Falls back to jsonb literal comparison
+      PERFORM assert_result(
         format('eql_v2_encrypted < eql_v2_encrypted with ore_cllw_var_8 index term'),
         format('SELECT e FROM encrypted WHERE e->''2517068c0d1f9d4d41d2c666211f785e''::text < %L::eql_v2_encrypted', term));
 

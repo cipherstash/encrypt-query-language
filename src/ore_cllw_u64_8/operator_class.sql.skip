@@ -1,7 +1,10 @@
--- REQUIRE: src/schema.sql
--- REQUIRE: src/ore_cllw_u64_8/types.sql
--- REQUIRE: src/ore_cllw_u64_8/functions.sql
--- REQUIRE: src/ore_cllw_u64_8/operators.sql
+-- NOTE FILE IS DISABLED
+-- REPLACE `!REQUIRE` with `REQUIRE` to enable in the build
+
+-- !REQUIRE: src/schema.sql
+-- !REQUIRE: src/ore_cllw_u64_8/types.sql
+-- !REQUIRE: src/ore_cllw_u64_8/functions.sql
+-- !REQUIRE: src/ore_cllw_u64_8/operators.sql
 
 
 
