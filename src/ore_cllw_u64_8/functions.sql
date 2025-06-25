@@ -68,16 +68,24 @@ $$ LANGUAGE plpgsql;
 -- Used by both fixed and variable ore cllw variants
 --
 
-CREATE FUNCTION eql_v2.compare_ore_cllw(a bytea, b bytea)
+CREATE FUNCTION eql_v2.compare_ore_cllw_term_bytes(a bytea, b bytea)
 RETURNS int AS $$
 DECLARE
     len_a INT;
+    len_b INT;
     x BYTEA;
     y BYTEA;
     i INT;
-    differing RECORD;
+    differing boolean;
 BEGIN
+
+    -- Check if the lengths of the two bytea arguments are the same
     len_a := LENGTH(a);
+    len_b := LENGTH(b);
+
+    IF len_a != len_b THEN
+      RAISE EXCEPTION 'ore_cllw index terms are not the same length';
+    END IF;
 
     -- Iterate over each byte and compare them
     FOR i IN 1..len_a LOOP
@@ -86,13 +94,13 @@ BEGIN
 
         -- Check if there's a difference
         IF x != y THEN
-            differing := (x, y);
+            differing := true;
             EXIT;
         END IF;
     END LOOP;
 
     -- If a difference is found, compare the bytes as in Rust logic
-    IF differing IS NOT NULL THEN
+    IF differing THEN
         IF (get_byte(y, 0) + 1) % 256 = get_byte(x, 0) THEN
             RETURN 1;
         ELSE
@@ -104,28 +112,4 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-
-
-
-CREATE FUNCTION eql_v2.compare_ore_cllw_u64_8(a eql_v2.ore_cllw_u64_8, b eql_v2.ore_cllw_u64_8)
-RETURNS int AS $$
-DECLARE
-    len_a INT;
-    len_b INT;
-BEGIN
-    IF a IS NULL OR b IS NULL THEN
-      RETURN NULL;
-    END IF;
-
-    -- Check if the lengths of the two bytea arguments are the same
-    len_a := LENGTH(a.bytes);
-    len_b := LENGTH(b.bytes);
-
-    IF len_a != len_b THEN
-      RAISE EXCEPTION 'ore_cllw_u64_8 index terms are not the same length';
-    END IF;
-
-    RETURN eql_v2.compare_ore_cllw(a.bytes, b.bytes);
-END;
-$$ LANGUAGE plpgsql;
 
