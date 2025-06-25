@@ -81,7 +81,6 @@ AS $$
       RETURN eql_v2.compare_blake3(a, b);
     END IF;
 
-
     -- Fallback to literal comparison of the encrypted data
     -- Compare must have consistent ordering for a given state
     -- Without this text fallback, database errors with "lock BufferContent is not held"
