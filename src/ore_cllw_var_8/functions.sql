@@ -62,7 +62,7 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE FUNCTION eql_v2.compare_ore_cllw_var_8(a eql_v2.ore_cllw_var_8, b eql_v2.ore_cllw_var_8)
+CREATE FUNCTION eql_v2.compare_ore_cllw_var_8_term(a eql_v2.ore_cllw_var_8, b eql_v2.ore_cllw_var_8)
 RETURNS int AS $$
 DECLARE
     len_a INT;
@@ -95,8 +95,8 @@ BEGIN
         common_len := len_b;
     END IF;
 
-    -- Use the compare_bytea function to compare byte by byte
-    cmp_result := eql_v2.compare_ore_cllw(
+    -- Use the compare_ore_cllw_term function to compare byte by byte
+    cmp_result := eql_v2.compare_ore_cllw_term_bytes(
       SUBSTRING(a.bytes FROM 1 FOR common_len),
       SUBSTRING(b.bytes FROM 1 FOR common_len)
     );

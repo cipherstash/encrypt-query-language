@@ -1,9 +1,9 @@
--- REQUIRE: src/ore_cllw_var_8/types.sql
--- REQUIRE: src/ore_cllw_var_8/functions.sql
+-- NOTE FILE IS DISABLED
+-- REPLACE `!REQUIRE` with `REQUIRE` to enable in the build
 
+-- !REQUIRE: src/ore_cllw_var_8/types.sql
+-- !REQUIRE: src/ore_cllw_var_8/functions.sql
 
-
--- Lexical comparison operators
 
 
 CREATE OR REPLACE FUNCTION eql_v2.ore_cllw_var_8_eq(a eql_v2.ore_cllw_var_8, b eql_v2.ore_cllw_var_8) RETURNS boolean AS $$
