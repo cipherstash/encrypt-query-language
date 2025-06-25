@@ -1,8 +1,28 @@
 \set ON_ERROR_STOP on
 
-SELECT create_table_with_encrypted();
-SELECT seed_encrypted_json();
+--
+-- ORE GROUP BY
+--
+DO $$
+  BEGIN
 
+      PERFORM create_table_with_encrypted();
+
+      -- Copy ORE data into encrypted
+      INSERT INTO encrypted(e) SELECT e FROM ore WHERE ore.id=42;
+      INSERT INTO encrypted(e) SELECT e FROM ore WHERE ore.id=42;
+      INSERT INTO encrypted(e) SELECT e FROM ore WHERE ore.id=42;
+      INSERT INTO encrypted(e) SELECT e FROM ore WHERE ore.id=42;
+      INSERT INTO encrypted(e) SELECT e FROM ore WHERE ore.id=99;
+      INSERT INTO encrypted(e) SELECT e FROM ore WHERE ore.id=99;
+
+      -- Should be the rows with value of 42
+      PERFORM assert_id(
+        'GROUP BY eql_v2_encrypted',
+        'SELECT count(id) FROM encrypted GROUP BY e ORDER BY count(id) DESC',
+        4);
+  END;
+$$ LANGUAGE plpgsql;
 
 --
 -- Confirm index used correctly
@@ -156,8 +176,6 @@ DO $$
     PERFORM seed_encrypted_json();
 
     EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"blah\": \"vtha\"}")'';' into result;
-
-    PERFORM eql_v2.log(result);
 
      IF position('Index Only Scan using encrypted' in result) > 0 THEN
       ASSERT true;
