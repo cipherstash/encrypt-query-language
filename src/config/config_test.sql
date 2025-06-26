@@ -25,11 +25,11 @@ DO $$
   BEGIN
 
     -- Add indexes
-    PERFORM eql_v2.add_search_config('users', 'name', 'match');
+    PERFORM eql_v2.add_search_config('users', 'name', 'match', migrating => true);
     ASSERT (SELECT _search_config_exists('users', 'name', 'match'));
 
     -- Add index with cast
-    PERFORM eql_v2.add_search_config('users', 'name', 'unique', 'int');
+    PERFORM eql_v2.add_search_config('users', 'name', 'unique', 'int', migrating => true);
     ASSERT (SELECT _search_config_exists('users', 'name', 'unique'));
 
     ASSERT (SELECT EXISTS (SELECT id FROM eql_v2_configuration c
@@ -60,7 +60,7 @@ DO $$
   BEGIN
 
     -- Add indexes
-    PERFORM eql_v2.add_search_config('users', 'name', 'match');
+    PERFORM eql_v2.add_search_config('users', 'name', 'match', migrating => true);
     ASSERT (SELECT _search_config_exists('users', 'name', 'match'));
 
     ASSERT (SELECT EXISTS (SELECT id FROM eql_v2_configuration c
@@ -68,7 +68,7 @@ DO $$
             c.data #> array['tables', 'users', 'name', 'indexes'] ? 'match'));
 
     -- Add index with cast
-    PERFORM eql_v2.add_search_config('blah', 'vtha', 'unique', 'int');
+    PERFORM eql_v2.add_search_config('blah', 'vtha', 'unique', 'int', migrating => true);
     ASSERT (SELECT _search_config_exists('blah', 'vtha', 'unique'));
 
     ASSERT (SELECT EXISTS (SELECT id FROM eql_v2_configuration c
@@ -107,11 +107,11 @@ $$ LANGUAGE plpgsql;
 
 DO $$
   BEGIN
-    PERFORM eql_v2.add_search_config('users', 'name', 'match');
+    PERFORM eql_v2.add_search_config('users', 'name', 'match', migrating => true);
     ASSERT (SELECT _search_config_exists('users', 'name', 'match'));
 
     -- Pending configuration contains the path `user/name.match.option`
-    PERFORM eql_v2.modify_search_config('users', 'name', 'match', 'int', '{"option": "value"}'::jsonb);
+    PERFORM eql_v2.modify_search_config('users', 'name', 'match', 'int', '{"option": "value"}'::jsonb, migrating => true);
     ASSERT (SELECT _search_config_exists('users', 'name', 'match'));
 
     ASSERT (SELECT EXISTS (SELECT id FROM eql_v2_configuration c
@@ -162,7 +162,7 @@ DO $$
   BEGIN
     ASSERT (SELECT _search_config_exists('users', 'blah', 'match', 'active'));
 
-    PERFORM eql_v2.add_search_config('users', 'name', 'match');
+    PERFORM eql_v2.add_search_config('users', 'name', 'match', migrating => true);
 
     -- index added to name
     ASSERT (SELECT _search_config_exists('users', 'name', 'match' ));
@@ -205,7 +205,7 @@ DO $$
     -- reset the table
     PERFORM create_table_with_encrypted();
 
-    PERFORM eql_v2.add_column('encrypted', 'e');
+    PERFORM eql_v2.add_column('encrypted', 'e', migrating => true);
 
     PERFORM assert_count(
         'Pending configuration was created',
@@ -213,7 +213,7 @@ DO $$
         1);
 
 
-    PERFORM eql_v2.remove_column('encrypted', 'e');
+    PERFORM eql_v2.remove_column('encrypted', 'e', migrating => true);
 
     PERFORM assert_no_result(
         'Pending configuration was removed',
