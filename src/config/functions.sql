@@ -1,6 +1,8 @@
 -- REQUIRE: src/config/types.sql
 -- REQUIRE: src/config/functions_private.sql
---
+-- REQUIRE: src/encrypted/functions.sql
+
+
 -- Customer-facing configuration functions
 -- Depends on private functions for implemenation
 --
@@ -10,7 +12,7 @@
 -- Adds an index term to the configuration
 --
 
-CREATE FUNCTION eql_v2.add_search_config(table_name text, column_name text, index_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}')
+CREATE FUNCTION eql_v2.add_search_config(table_name text, column_name text, index_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}', migrating boolean DEFAULT false)
   RETURNS jsonb
 
 AS $$
@@ -53,6 +55,13 @@ AS $$
       WHERE state = 'pending'
     DO UPDATE
       SET data = _config;
+
+    IF NOT migrating THEN
+      PERFORM eql_v2.migrate_config();
+      PERFORM eql_v2.activate_config();
+    END IF;
+
+    -- PERFORM eql_v2.add_encrypted_constraint(table_name, column_name);
 
     -- exeunt
     RETURN _config;
@@ -121,12 +130,12 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v2.modify_search_config(table_name text, column_name text, index_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}')
+CREATE FUNCTION eql_v2.modify_search_config(table_name text, column_name text, index_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}', migrating boolean DEFAULT false)
   RETURNS jsonb
 AS $$
   BEGIN
     PERFORM eql_v2.remove_search_config(table_name, column_name, index_name);
-    RETURN eql_v2.add_search_config(table_name, column_name, index_name, cast_as, opts);
+    RETURN eql_v2.add_search_config(table_name, column_name, index_name, cast_as, opts, migrating);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -200,7 +209,7 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v2.add_column(table_name text, column_name text, cast_as text DEFAULT 'text')
+CREATE FUNCTION eql_v2.add_column(table_name text, column_name text, cast_as text DEFAULT 'text', migrating boolean DEFAULT false)
   RETURNS jsonb
 AS $$
   DECLARE
@@ -231,6 +240,11 @@ AS $$
     DO UPDATE
       SET data = _config;
 
+    IF NOT migrating THEN
+      PERFORM eql_v2.migrate_config();
+      PERFORM eql_v2.activate_config();
+    END IF;
+
     PERFORM eql_v2.add_encrypted_constraint(table_name, column_name);
 
     -- exeunt
@@ -240,7 +254,7 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v2.remove_column(table_name text, column_name text)
+CREATE FUNCTION eql_v2.remove_column(table_name text, column_name text, migrating boolean DEFAULT false)
   RETURNS jsonb
 AS $$
   DECLARE
@@ -288,6 +302,11 @@ AS $$
     END IF;
 
     PERFORM eql_v2.remove_encrypted_constraint(table_name, column_name);
+
+    IF NOT migrating THEN
+      PERFORM eql_v2.migrate_config();
+      PERFORM eql_v2.activate_config();
+    END IF;
 
     -- exeunt
     RETURN _config;
