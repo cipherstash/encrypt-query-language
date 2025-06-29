@@ -154,15 +154,37 @@ CREATE TABLE users
 -- An encrypting config should exist
 DO $$
   BEGIN
-    PERFORM eql_v2.add_search_config('users', 'name', 'match');
+    PERFORM eql_v2.add_search_config('users', 'name', 'match', migrating => true);
     PERFORM eql_v2.migrate_config();
-
     ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'active'));
     ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'encrypting'));
     ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending'));
   END;
 $$ LANGUAGE plpgsql;
 
+
+-- Encrypting config without `migrating = true` is immediately active
+DO $$
+  BEGIN
+    TRUNCATE TABLE eql_v2_configuration;
+    PERFORM eql_v2.add_search_config('users', 'name', 'match');
+    ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'active'));
+  END;
+$$ LANGUAGE plpgsql;
+
+
+-- migrate_config() should raise an exception when no pending configuration exists
+DO $$
+  BEGIN
+    TRUNCATE TABLE eql_v2_configuration;
+    PERFORM eql_v2.add_search_config('users', 'name', 'match');
+
+    PERFORM assert_exception(
+        'eql_v2.migrate_config() should raise an exception when no pending configuration exists',
+        'SELECT eql_v2.migrate_config()'
+    );
+  END;
+$$ LANGUAGE plpgsql;
 
 -- -----------------------------------------------
 -- With existing active config and an updated schema using a raw JSONB column
@@ -204,7 +226,7 @@ CREATE TABLE users
 -- An encrypting config should exist
 DO $$
   BEGIN
-    PERFORM eql_v2.add_search_config('users', 'name', 'match');
+    PERFORM eql_v2.add_search_config('users', 'name', 'match', migrating => true);
     PERFORM eql_v2.migrate_config();
 
     ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'active'));
@@ -254,7 +276,7 @@ CREATE TABLE users
 -- An encrypting config should exist
 DO $$
   BEGIN
-    PERFORM eql_v2.add_search_config('users', 'name', 'match');
+    PERFORM eql_v2.add_search_config('users', 'name', 'match', migrating => true);
 
     PERFORM eql_v2.migrate_config(); -- need to encrypt first
     PERFORM eql_v2.activate_config();
