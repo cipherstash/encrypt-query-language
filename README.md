@@ -98,6 +98,9 @@ SELECT eql_v2.add_column('users', 'encrypted_email');
 
 **Note:** This function allows you to encrypt and decrypt data but does not enable searchable encryption. See [Searching data with EQL](#searching-data-with-eql) for enabling searchable encryption.
 
+<!--
+NOTE: NO LONGER REQUIRED
+      DOCUMENTATION CAN BE UPDATED WHEN/IF ZERO DOWNTIME SUPPORT IS ADDED TO PROXY
 ### Activating configuration
 
 After modifying configurations, activate them by running:
@@ -106,6 +109,7 @@ After modifying configurations, activate them by running:
 SELECT eql_v2.migrate_config();
 SELECT eql_v2.activate_config();
 ```
+-->
 
 **Important:** These functions must be run after any modifications to the configuration.
 
