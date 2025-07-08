@@ -99,3 +99,20 @@ DO $$
   END;
 $$ LANGUAGE plpgsql;
 
+
+--
+-- Field accessor returns column metadata
+--
+DO $$
+  DECLARE
+    result jsonb;
+  BEGIN
+    PERFORM seed_encrypted_json();
+
+    SELECT e->'2517068c0d1f9d4d41d2c666211f785e'::text FROM encrypted LIMIT 1 INTO result;
+
+    ASSERT result ? 'i';
+    ASSERT result ? 'v';
+
+  END;
+$$ LANGUAGE plpgsql;
