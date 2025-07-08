@@ -85,3 +85,13 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+
+CREATE FUNCTION eql_v2.meta_data(val eql_v2_encrypted)
+  RETURNS jsonb
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  BEGIN
+     RETURN eql_v2.meta_data(val.data);
+  END;
+$$ LANGUAGE plpgsql;
+

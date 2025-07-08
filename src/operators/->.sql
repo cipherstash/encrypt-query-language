@@ -25,13 +25,17 @@ CREATE FUNCTION eql_v2."->"(e eql_v2_encrypted, selector text)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   DECLARE
+    meta jsonb;
     sv eql_v2_encrypted[];
-    found eql_v2_encrypted;
+    found jsonb;
 	BEGIN
 
     IF e IS NULL THEN
       RETURN NULL;
     END IF;
+
+    -- Column identifier and version
+    meta := eql_v2.meta_data(e);
 
     sv := eql_v2.ste_vec(e);
 
@@ -41,7 +45,7 @@ AS $$
       END IF;
     END LOOP;
 
-    RETURN found;
+    RETURN (meta || found)::eql_v2_encrypted;
   END;
 $$ LANGUAGE plpgsql;
 
