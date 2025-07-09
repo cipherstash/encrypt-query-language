@@ -1,5 +1,7 @@
 -- REQUIRE: src/schema.sql
 -- REQUIRE: src/encrypted/types.sql
+-- REQUIRE: src/encrypted/casts.sql
+-- REQUIRE: src/encrypted/functions.sql
 
 
 --
@@ -18,7 +20,7 @@ AS $$
       sv := jsonb_build_array(val);
     END IF;
 
-    SELECT array_agg(elem::eql_v2_encrypted)
+    SELECT array_agg(eql_v2.to_encrypted(elem))
       INTO ary
       FROM jsonb_array_elements(sv) AS elem;
 
@@ -38,7 +40,68 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+--
+-- Returns true if val is an SteVec with a single array item.
+-- SteVec value items can be treated as regular eql_encrypted
+--
+CREATE FUNCTION eql_v2.is_ste_vec_value(val jsonb)
+  RETURNS boolean
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+	BEGIN
+    IF val ? 'sv' THEN
+      RETURN jsonb_array_length(val->'sv') = 1;
+    END IF;
 
+    RETURN false;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE FUNCTION eql_v2.is_ste_vec_value(val eql_v2_encrypted)
+  RETURNS boolean
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+	BEGIN
+    RETURN eql_v2.is_ste_vec_value(val.data);
+  END;
+$$ LANGUAGE plpgsql;
+
+--
+-- Returns an SteVec with a single array item as an eql_encrypted
+--
+CREATE FUNCTION eql_v2.to_ste_vec_value(val jsonb)
+  RETURNS eql_v2_encrypted
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  DECLARE
+    meta jsonb;
+    sv jsonb;
+	BEGIN
+
+    IF val IS NULL THEN
+      RETURN NULL;
+    END IF;
+
+    IF eql_v2.is_ste_vec_value(val) THEN
+      meta := eql_v2.meta_data(val);
+      sv := val->'sv';
+      sv := sv[0];
+
+      RETURN eql_v2.to_encrypted(meta || sv);
+    END IF;
+
+    RETURN eql_v2.to_encrypted(val);
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE FUNCTION eql_v2.to_ste_vec_value(val eql_v2_encrypted)
+  RETURNS eql_v2_encrypted
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+	BEGIN
+    RETURN eql_v2.to_ste_vec_value(val.data);
+  END;
+$$ LANGUAGE plpgsql;
 
 CREATE FUNCTION eql_v2.selector(val jsonb)
   RETURNS text
@@ -119,7 +182,7 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- Returns truy if a contains b
+-- Returns true if a contains b
 -- All values of b must be in a
 CREATE FUNCTION eql_v2.ste_vec_contains(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS boolean
