@@ -38,7 +38,68 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+--
+-- Returns true if val is an SteVec with a single array item.
+-- SteVec value items can be treated as regular eql_encrypted
+--
+CREATE FUNCTION eql_v2.is_ste_vec_value(val jsonb)
+  RETURNS boolean
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+	BEGIN
+    IF val ? 'sv' THEN
+      RETURN jsonb_array_length(val->'sv') = 1;
+    END IF;
 
+    RETURN false;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE FUNCTION eql_v2.is_ste_vec_value(val eql_v2_encrypted)
+  RETURNS boolean
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+	BEGIN
+    RETURN eql_v2.is_ste_vec_value(val.data);
+  END;
+$$ LANGUAGE plpgsql;
+
+--
+-- Returns an SteVec with a single array item as an eql_encrypted
+--
+CREATE FUNCTION eql_v2.to_ste_vec_value(val jsonb)
+  RETURNS eql_v2_encrypted
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  DECLARE
+    meta jsonb;
+    sv jsonb;
+	BEGIN
+
+    IF val IS NULL THEN
+      RETURN NULL;
+    END IF;
+
+    IF eql_v2.is_ste_vec _value(val) THEN
+      meta := eql_v2.meta_data(val);
+      sv := val->'sv';
+      sv := sv[0];
+
+      RETURN (meta || sv)::eql_v2_encrypted;
+    END IF;
+
+    RETURN val::eql_v2_encrypted;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE FUNCTION eql_v2.to_ste_vec_value(val eql_v2_encrypted)
+  RETURNS eql_v2_encrypted
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+	BEGIN
+    RETURN eql_v2.to_ste_vec_value(val.data);
+  END;
+$$ LANGUAGE plpgsql;
 
 CREATE FUNCTION eql_v2.selector(val jsonb)
   RETURNS text
@@ -119,7 +180,7 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- Returns truy if a contains b
+-- Returns true if a contains b
 -- All values of b must be in a
 CREATE FUNCTION eql_v2.ste_vec_contains(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS boolean
