@@ -46,20 +46,12 @@ echo
 
 # Install
 cat release/cipherstash-encrypt.sql | docker exec -i ${container_name} psql ${connection_url} -f-
-# if cat release/cipherstash-encrypt.sql | docker exec -i ${container_name} psql ${connection_url} -f- | grep -q "ERROR"; then
-#   echo
-#   echo '******************************************************'
-#   echo '* ❌ ERROR installing release/cipherstash-encrypt.sql'
-#   echo '******************************************************'
-#   echo
-
-#   exit 1
-# fi
 
 
 cat tests/test_helpers.sql | docker exec -i ${container_name} psql ${connection_url} -f-
 cat tests/ore.sql | docker exec -i ${container_name} psql ${connection_url} -f-
 cat tests/ste_vec.sql | docker exec -i ${container_name} psql ${connection_url} -f-
+
 
 if [ $usage_test = "false" ]; then
   find src -type f -path "*_test.sql" | while read -r sql_file; do
