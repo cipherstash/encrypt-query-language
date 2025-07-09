@@ -59,7 +59,9 @@ AS $$
       RETURN 1;
     END IF;
 
-    -- Use ORE if both parameters have ore index
+    a := eql_v2.to_ste_vec_value(a);
+    b := eql_v2.to_ste_vec_value(b);
+
     IF eql_v2.has_ore_block_u64_8_256(a) AND eql_v2.has_ore_block_u64_8_256(b) THEN
       RETURN eql_v2.compare_ore_block_u64_8_256(a, b);
     END IF;
@@ -72,7 +74,6 @@ AS $$
       RETURN eql_v2.compare_ore_cllw_var_8(a, b);
     END IF;
 
-    -- Fallback to hmac if both parameters have hmac index
     IF eql_v2.has_hmac_256(a) AND eql_v2.has_hmac_256(b) THEN
       RETURN eql_v2.compare_hmac_256(a, b);
     END IF;
