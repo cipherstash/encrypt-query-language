@@ -78,7 +78,7 @@ done
 
 cat src/deps-supabase.txt | tsort | tac > src/deps-ordered-supabase.txt
 
-cat src/deps-ordered-supabase.txt | xargs cat | grep -v REQUIRE >> release/cipherstash-encrypt-supabase.sql\
+cat src/deps-ordered-supabase.txt | xargs cat | grep -v REQUIRE >> release/cipherstash-encrypt-supabase.sql
 
 cat src/deps-ordered-supabase.txt | xargs cat | grep -v REQUIRE >> dbdev/eql--0.0.0.sql
 
