@@ -204,3 +204,6 @@ release/
 # jupyter notebook
 .ipynb_checkpoints
 __pycache__
+
+# dbdev
+eql--*.sql
