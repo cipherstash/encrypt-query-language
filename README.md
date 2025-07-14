@@ -69,7 +69,7 @@ CREATE TABLE users (
 
 ## Encrypt configuration
 
-In order to enable searchable encryption, you will need to configure your CipehrStash integration appropriately.
+In order to enable searchable encryption, you will need to configure your CipherStash integration appropriately.
 
 - If you are using [CipherStash Proxy](https://github.com/cipherstash/proxy), see [this guide](docs/tutorials/proxy-configuration.md).
 - If you are using [Protect.js](https://github.com/cipherstash/protectjs), use the [Protect.js schema](https://github.com/cipherstash/protectjs/blob/main/docs/reference/schema.md).
