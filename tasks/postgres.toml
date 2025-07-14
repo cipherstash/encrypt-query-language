@@ -22,5 +22,5 @@ mise run postgres:up --extra-args "--detach --wait"
 description = "Run psql"
 run = """
 {% set default_service = "postgres-" ~ get_env(name="POSTGRES_VERSION",default="17") %}
-psql -U {{arg(name="user",default="cipherstash")}} -d {{arg(name="db",default="cipherstash")}} -h localhost -p {{arg(name="port",default="7432")}}
+psql -U {{arg(name="user",default="cipherstash")}} -d {{arg(name="db",default="cipherstash")}} -h localhost -p {{arg(name="port",default="7432")}} --service {{arg(name="service",default=default_service)}}
 """
