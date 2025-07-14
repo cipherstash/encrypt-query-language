@@ -1,4 +1,8 @@
-# EQL index configuration
+# EQL index configuration for CipherStash Proxy
+
+> [!NOTE]
+> This guide is for CipherStash Proxy.
+> If you are using Protect.js, see the [Protect.js schema](https://github.com/cipherstash/protectjs/blob/main/docs/reference/schema.md).
 
 The following functions allow you to configure indexes for encrypted columns.
 All these functions modify the `eql_v2_configuration` table in your database, and are added during the EQL installation.

@@ -9,11 +9,11 @@ This page gives a high-level overview of CipherStash's encryption in use solutio
    - [Why use encryption in use?](#why-use-encryption-in-use)
 2. [CipherStash Proxy](#cipherstash-proxy)
    - [How it works](#how-it-works)
-3. [Encrypt Query Language (EQL)](#encrypt-query-language-eql)
-4. [Best practices](#best-practices)
-5. [Advanced topics](#advanced-topics)
-   - [Integrating without proxy](#integrating-without-proxy)
-6. [Conclusion](#conclusion)
+3. [Protect.js](#protectjs)
+   - [How it works](#how-it-works-1)
+4. [Encrypt Query Language (EQL)](#encrypt-query-language-eql)
+5. [Best practices](#best-practices)
+6. [Getting started](#getting-started)
 
 ## Encryption in use
 
@@ -52,41 +52,37 @@ This enables encryption in use without significant changes to your application c
 - **Encrypts data**: For write operations, it encrypts the plaintext data before sending it to the database.
 - **Decrypts data**: For read operations, it decrypts the encrypted data retrieved from the database before returning it to the client.
 - **Maintains searchability**: Ensures that the encrypted data is searchable and retrievable without sacrificing performance or application functionality.
-- **Manages encryption keys**: Securely handles encryption keys required for encrypting and decrypting data.
+
+## Protect.js
+
+Protect.js is an NPM package that provides a set of functions to encrypt and decrypt data.
+It is a client-side library that can be used to encrypt and decrypt data in your JS/TS application.
+
+### How it works
+
+- **Encrypts data**: Protect.js encrypts the plaintext data before sending it to the database.
+- **Decrypts data**: Protect.js decrypts the encrypted data retrieved from the database before returning it to the client.
+- **Maintains searchability**: Ensures that the encrypted data is searchable and retrievable without sacrificing performance or application functionality.
 
 ## Encrypt Query Language (EQL)
 
 Encrypt Query Language (EQL) is a set of PostgreSQL functions and data types provided by CipherStash to work with encrypted data and indexes.
 EQL allows you to perform queries on encrypted data without decrypting it, supporting operations like equality checks, range queries, and unique constraints.
 
-To get started, read the [Getting started](https://github.com/cipherstash/encrypt-query-language/blob/main/GETTINGSTARTED.md) guide.
-
 ## Best practices
 
-- **Use CipherStash Proxy** to handle encryption/decryption transparently.
 - **Use EQL functions** when interacting with encrypted data.
 - **Define database constraints**to maintain data integrity.
 - **Secure key management** of encryption keys.
 - **Monitor query performance** and optimize as needed.
 
-## Advanced topics
-
-### Integrating without CipherStash Proxy
-
-> The SDK approach is currently in development, but if you're interested in contributing, please start a discussion [here](https://github.com/cipherstash/encrypt-query-language/discussions).
-
-For advanced users who prefer to handle encryption within their application:
-
-- **SDKs available**: Use CipherStash SDKs (at the moment, Rust and TypeScript) to manage encryption/decryption.
-- **Manual encryption**: Implement encryption logic in your application code.
-- **Data conformity**: Ensure encrypted data matches the expected `jsonb` schema.
-- **Key management**: Handle encryption keys securely within your application.
-
-**Note**: This approach increases complexity and is recommended only if CipherStash Proxy does not meet specific requirements. 
-
 ## Getting started
 
-To get started using CipherStash's encryption is use solution, see the [Getting Started](https://github.com/cipherstash/encrypt-query-language/blob/main/GETTINGSTARTED.md) guide.
+Use one of the CipherStash integrations using EQL to get started.
+
+- [Protect.js](https://github.com/cipherstash/protectjs)
+- [CipherStash Proxy](https://github.com/cipherstash/proxy)
+- [Protect.php](https://github.com/cipherstash/protectphp)
 
 For further help, raise an issue [here](https://github.com/cipherstash/encrypt-query-language/issues).
 
