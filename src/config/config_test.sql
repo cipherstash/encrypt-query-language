@@ -218,9 +218,13 @@ DO $$
 
     PERFORM eql_v2.remove_column('encrypted', 'e', migrating => true);
 
-    PERFORM assert_no_result(
-        'Pending configuration was removed',
-        'SELECT * FROM eql_v2_configuration c WHERE c.state = ''pending''');
+    PERFORM assert_count(
+        'Pending configuration exists but is empty',
+        'SELECT * FROM eql_v2_configuration c WHERE c.state = ''pending''',
+        1);
+    
+    -- Verify the config is empty
+    ASSERT (SELECT data #> array['tables'] = '{}' FROM eql_v2_configuration c WHERE c.state = 'pending');
 
   END;
 $$ LANGUAGE plpgsql;
