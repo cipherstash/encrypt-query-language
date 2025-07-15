@@ -70,7 +70,7 @@ $$ LANGUAGE plpgsql;
 
 
 
-CREATE FUNCTION eql_v2.remove_search_config(table_name text, column_name text, index_name text)
+CREATE FUNCTION eql_v2.remove_search_config(table_name text, column_name text, index_name text, migrating boolean DEFAULT false)
   RETURNS jsonb
 AS $$
   DECLARE
@@ -105,22 +105,12 @@ AS $$
     -- remove the index
     SELECT _config #- array['tables', table_name, column_name, 'indexes', index_name] INTO _config;
 
-    -- if column is now empty, remove the column
-    IF _config #> array['tables', table_name, column_name, 'indexes'] = '{}' THEN
-      SELECT _config #- array['tables', table_name, column_name] INTO _config;
-    END IF;
-
-    -- if table  is now empty, remove the table
-    IF _config #> array['tables', table_name] = '{}' THEN
-      SELECT _config #- array['tables', table_name] INTO _config;
-    END IF;
-
-    -- if config empty delete
-    -- or update the config
-    IF _config #> array['tables'] = '{}' THEN
-      DELETE FROM public.eql_v2_configuration WHERE state = 'pending';
-    ELSE
-      UPDATE public.eql_v2_configuration SET data = _config WHERE state = 'pending';
+    -- update the config and migrate (even if empty)
+    UPDATE public.eql_v2_configuration SET data = _config WHERE state = 'pending';
+    
+    IF NOT migrating THEN
+      PERFORM eql_v2.migrate_config();
+      PERFORM eql_v2.activate_config();
     END IF;
 
     -- exeunt
@@ -134,7 +124,7 @@ CREATE FUNCTION eql_v2.modify_search_config(table_name text, column_name text, i
   RETURNS jsonb
 AS $$
   BEGIN
-    PERFORM eql_v2.remove_search_config(table_name, column_name, index_name);
+    PERFORM eql_v2.remove_search_config(table_name, column_name, index_name, migrating);
     RETURN eql_v2.add_search_config(table_name, column_name, index_name, cast_as, opts, migrating);
   END;
 $$ LANGUAGE plpgsql;
@@ -293,16 +283,11 @@ AS $$
       SELECT _config #- array['tables', table_name] INTO _config;
     END IF;
 
-    -- if config empty delete
-    -- or update the config
-    IF _config #> array['tables'] = '{}' THEN
-      DELETE FROM public.eql_v2_configuration WHERE state = 'pending';
-    ELSE
-      UPDATE public.eql_v2_configuration SET data = _config WHERE state = 'pending';
-    END IF;
-
     PERFORM eql_v2.remove_encrypted_constraint(table_name, column_name);
 
+    -- update the config and migrate (even if empty)
+    UPDATE public.eql_v2_configuration SET data = _config WHERE state = 'pending';
+    
     IF NOT migrating THEN
       PERFORM eql_v2.migrate_config();
       PERFORM eql_v2.activate_config();
