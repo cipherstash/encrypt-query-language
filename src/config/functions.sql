@@ -285,13 +285,15 @@ AS $$
 
     PERFORM eql_v2.remove_encrypted_constraint(table_name, column_name);
 
-    -- if config is completely empty, delete it; otherwise update it
-    IF _config #> array['tables'] = '{}' THEN
-      DELETE FROM public.eql_v2_configuration WHERE state = 'pending';
-    ELSE
-      UPDATE public.eql_v2_configuration SET data = _config WHERE state = 'pending';
-      
-      IF NOT migrating THEN
+    -- update the config (even if empty) and activate
+    UPDATE public.eql_v2_configuration SET data = _config WHERE state = 'pending';
+    
+    IF NOT migrating THEN
+      -- For empty configs, skip migration validation and directly activate
+      IF _config #> array['tables'] = '{}' THEN
+        UPDATE public.eql_v2_configuration SET state = 'inactive' WHERE state = 'active';
+        UPDATE public.eql_v2_configuration SET state = 'active' WHERE state = 'pending';
+      ELSE
         PERFORM eql_v2.migrate_config();
         PERFORM eql_v2.activate_config();
       END IF;
