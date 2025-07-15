@@ -22,7 +22,7 @@ ERROR: Some pending columns do not have an encrypted target
 After creating the encrypted column, initialize it for use with CipherStash Proxy using the `eql_v2.add_column` function:
 
 ```sql
-SELECT eql_v2.add_column('users', 'encrypted_email', 'text'); -- Configure the existing encrypted column
+SELECT eql_v2.add_column('users', 'encrypted_email', 'text'); -- Initialize the new encrypted column
 ```
 
 **Full signature:**
