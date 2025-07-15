@@ -21,6 +21,11 @@ mise run postgres:up --extra-args "--detach --wait"
 ["postgres:psql"]
 description = "Run psql"
 run = """
-{% set default_service = "postgres-" ~ get_env(name="POSTGRES_VERSION",default="17") %}
-psql -U {{arg(name="user",default="cipherstash")}} -d {{arg(name="db",default="cipherstash")}} -h localhost -p {{arg(name="port",default="7432")}} --service {{arg(name="service",default=default_service)}}
+psql -U {{arg(name="user",default="cipherstash")}} -d {{arg(name="db",default="cipherstash")}} -h localhost -p {{arg(name="port",default="7432")}}
+"""
+
+["eql:install"]
+description = "Install EQL to local postgres"
+run = """
+psql -U {{arg(name="user",default="cipherstash")}} -d {{arg(name="db",default="cipherstash")}} -h localhost -p {{arg(name="port",default="7432")}} -f {{arg(name="file",default="release/cipherstash-encrypt.sql")}}
 """

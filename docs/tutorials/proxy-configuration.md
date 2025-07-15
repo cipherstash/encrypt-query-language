@@ -1,14 +1,62 @@
 # CipherStash Proxy Configuration with EQL functions
 
-Initialize the column using the `eql_v2.add_column` function to enable encryption and decryption via CipherStash Proxy.
+## Prerequisites
+
+> [!IMPORTANT] 
+> Before using any EQL configuration functions, you must first create the encrypted column in your database table:
 
 ```sql
-SELECT eql_v2.add_column('users', 'encrypted_email'); -- where users is the table name and encrypted_email is the column name of type eql_v2_encrypted
+-- First, add the encrypted column to your table
+ALTER TABLE users ADD COLUMN encrypted_email eql_v2_encrypted;
+```
+
+The column **must** be of type `eql_v2_encrypted`.
+If you try to configure a column that doesn't exist in the database, you'll get the error:
+
+```
+ERROR: Some pending columns do not have an encrypted target
+```
+
+## Initializing column configuration
+
+After creating the encrypted column, initialize it for use with CipherStash Proxy using the `eql_v2.add_column` function:
+
+```sql
+SELECT eql_v2.add_column('users', 'encrypted_email', 'text'); -- Initialize the new encrypted column
+```
+
+**Full signature:**
+```sql
+SELECT eql_v2.add_column(
+  'table_name',       -- Name of the table
+  'column_name',      -- Name of the encrypted column (must already exist as type eql_v2_encrypted)
+  'cast_as',          -- PostgreSQL type to cast decrypted data [optional, defaults to 'text']
+  migrating           -- If true, stages changes without immediate activation [optional, defaults to false]
+);
 ```
 
 **Note:** This function allows you to encrypt and decrypt data but does not enable searchable encryption. See [Searching data with EQL](#searching-data-with-eql) for enabling searchable encryption.
 
-## Refreshing CipherStash Proxy Configuration
+## Complete setup workflow
+
+Here's the complete workflow to set up an encrypted column with search capabilities:
+
+```sql
+-- Step 1: Create the encrypted column in your table
+ALTER TABLE users ADD COLUMN encrypted_email eql_v2_encrypted;
+
+-- Step 2: Configure the column for encryption/decryption
+SELECT eql_v2.add_column('users', 'encrypted_email', 'text');
+
+-- Step 3: Add search indexes as needed
+SELECT eql_v2.add_search_config('users', 'encrypted_email', 'unique', 'text');
+SELECT eql_v2.add_search_config('users', 'encrypted_email', 'match', 'text');
+
+-- Step 4: Verify configuration
+SELECT * FROM eql_v2.config();
+```
+
+## Refreshing CipherStash Proxy configuration
 
 CipherStash Proxy refreshes the configuration every 60 seconds. To force an immediate refresh, run:
 
@@ -25,7 +73,7 @@ Encrypted data is stored as `jsonb` values in the PostgreSQL database, regardles
 
 You can read more about the data format [here](docs/reference/payload.md).
 
-### Inserting Data
+### Inserting data
 
 When inserting data into the encrypted column, wrap the plaintext in the appropriate EQL payload. These statements must be run through the CipherStash Proxy to **encrypt** the data.
 
@@ -54,7 +102,7 @@ Data is stored in the PostgreSQL database as:
 }
 ```
 
-### Reading Data
+### Reading data
 
 When querying data, select the encrypted column. CipherStash Proxy will **decrypt** the data automatically.
 
@@ -90,6 +138,8 @@ In order to perform searchable operations on encrypted data, you must configure 
 
 ### Adding an index
 
+**Prerequisites:** The encrypted column must already exist in the database (see [Prerequisites](#prerequisites)) and be configured with `eql_v2.add_column`.
+
 Add an index to an encrypted column using the `eql_v2.add_search_config` function:
 
 ```sql
@@ -97,8 +147,9 @@ SELECT eql_v2.add_search_config(
   'table_name',       -- Name of the table
   'column_name',      -- Name of the column
   'index_name',       -- Index kind ('unique', 'match', 'ore', 'ste_vec')
-  'cast_as',          -- PostgreSQL type to cast decrypted data ('text', 'int', etc.)
-  'opts'              -- Index options as JSONB (optional)
+  'cast_as',          -- PostgreSQL type to cast decrypted data ('text', 'int', etc.) [optional, defaults to 'text']
+  'opts',             -- Index options as JSONB [optional, defaults to '{}']
+  migrating           -- If true, stages changes without immediate activation [optional, defaults to false]
 );
 ```
 
@@ -115,7 +166,20 @@ SELECT eql_v2.add_search_config(
 );
 ```
 
-Configuration changes are automatically migrated and activated.
+**Example (With custom options and staging):**
+
+```sql
+SELECT eql_v2.add_search_config(
+  'users',
+  'encrypted_name',
+  'match',
+  'text',
+  '{"k": 6, "bf": 4096}',
+  true  -- Stage changes without immediate activation
+);
+```
+
+Configuration changes are automatically migrated and activated unless the `migrating` parameter is set to `true`.
 
 ## Searching data with EQL
 
@@ -322,9 +386,43 @@ EQL supports the following index types:
 
 Use these functions to manage your EQL configurations:
 
-- `eql_v2.add_column()` - Add a new encrypted column
-- `eql_v2.remove_column()` - Remove an encrypted column
-- `eql_v2.add_search_config()` - Add a search index
-- `eql_v2.remove_search_config()` - Remove a search index
-- `eql_v2.modify_search_config()` - Modify an existing search index
-- `eql_v2.config()` - View current configuration in tabular format
+**Column Management:**
+- `eql_v2.add_column(table_name, column_name, cast_as DEFAULT 'text', migrating DEFAULT false)` - Add a new encrypted column
+- `eql_v2.remove_column(table_name, column_name, migrating DEFAULT false)` - Remove an encrypted column completely
+
+**Index Management:**
+- `eql_v2.add_search_config(table_name, column_name, index_name, cast_as DEFAULT 'text', opts DEFAULT '{}', migrating DEFAULT false)` - Add a search index to a column
+- `eql_v2.remove_search_config(table_name, column_name, index_name, migrating DEFAULT false)` - Remove a specific search index (preserves column configuration)
+- `eql_v2.modify_search_config(table_name, column_name, index_name, cast_as DEFAULT 'text', opts DEFAULT '{}', migrating DEFAULT false)` - Modify an existing search index
+
+**Configuration Management:**
+- `eql_v2.migrate_config()` - Manually migrate pending configuration to encrypting state
+- `eql_v2.activate_config()` - Manually activate encrypting configuration
+- `eql_v2.discard()` - Discard pending configuration changes
+- `eql_v2.config()` - View current configuration in tabular format (returns a table with columns: state, relation, col_name, decrypts_as, indexes)
+
+> [!NOTE]  
+> All configuration functions automatically migrate and activate changes unless `migrating` is set to `true`. 
+>
+> When `migrating` is `true`, changes are staged but not immediately applied, allowing for batch configuration updates.
+
+**Important Behavior Differences:**
+- `remove_search_config()` removes only the specified index but preserves the column configuration (including `cast_as` setting)
+- `remove_column()` removes the entire column configuration including all its indexes
+- Empty configurations (no tables/columns) are automatically maintained as active to reflect the current state
+
+## Troubleshooting
+
+### Common errors
+
+**Error: "Some pending columns do not have an encrypted target"**
+- **Cause**: You're trying to configure a column that doesn't exist as `eql_v2_encrypted` type in the database
+- **Solution**: First create the encrypted column with `ALTER TABLE table_name ADD COLUMN column_name eql_v2_encrypted;`
+
+**Error: "Config exists for column: table_name column_name"**
+- **Cause**: You're trying to add a column that's already configured
+- **Solution**: Use `eql_v2.add_search_config()` to add indexes to existing columns, or `eql_v2.remove_column()` first if you want to reconfigure
+
+**Error: "No configuration exists for column: table_name column_name"**
+- **Cause**: You're trying to add search config to a column that hasn't been configured with `add_column` yet
+- **Solution**: First run `eql_v2.add_column()` to configure the column, then add search indexes
