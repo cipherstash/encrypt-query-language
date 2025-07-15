@@ -39,10 +39,16 @@ CREATE FUNCTION eql_v2.config_check_cast(val jsonb)
   RETURNS BOOLEAN
 AS $$
 	BEGIN
-    IF EXISTS (SELECT jsonb_array_elements_text(jsonb_path_query_array(val, '$.tables.*.*.cast_as')) = ANY('{text, int, small_int, big_int, real, double, boolean, date, jsonb}')) THEN
-      RETURN true;
+    -- If there are cast_as fields, validate them
+    IF EXISTS (SELECT jsonb_array_elements_text(jsonb_path_query_array(val, '$.tables.*.*.cast_as'))) THEN
+      IF (SELECT bool_and(cast_as = ANY('{text, int, small_int, big_int, real, double, boolean, date, jsonb}')) 
+          FROM (SELECT jsonb_array_elements_text(jsonb_path_query_array(val, '$.tables.*.*.cast_as')) AS cast_as) casts) THEN
+        RETURN true;
+      END IF;
+      RAISE 'Configuration has an invalid cast_as (%). Cast should be one of {text, int, small_int, big_int, real, double, boolean, date, jsonb}', val;
     END IF;
-    RAISE 'Configuration has an invalid cast_as (%). Cast should be one of {text, int, small_int, big_int, real, double, boolean, date, jsonb}', val;
+    -- If no cast_as fields exist (empty config), that's valid
+    RETURN true;
   END;
 $$ LANGUAGE plpgsql;
 
@@ -53,7 +59,7 @@ CREATE FUNCTION eql_v2.config_check_tables(val jsonb)
   RETURNS boolean
 AS $$
 	BEGIN
-    IF (val ? 'tables') AND (val->'tables' <> '{}'::jsonb) THEN
+    IF (val ? 'tables') THEN
       RETURN true;
     END IF;
     RAISE 'Configuration missing tables (tables) field: %', val;
