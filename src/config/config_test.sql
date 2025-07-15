@@ -37,12 +37,13 @@ DO $$
             c.data #> array['tables', 'users', 'name'] ? 'cast_as'));
 
     -- Match index removed
-    PERFORM eql_v2.remove_search_config('users', 'name', 'match');
+    PERFORM eql_v2.remove_search_config('users', 'name', 'match', migrating => true);
     ASSERT NOT (SELECT _search_config_exists('users', 'name', 'match'));
 
-    -- All indexes removed, delete the emtpty pending config
-    PERFORM eql_v2.remove_search_config('users', 'name', 'unique');
-    ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending'));
+    -- All indexes removed, but column config preserved
+    PERFORM eql_v2.remove_search_config('users', 'name', 'unique', migrating => true);
+    ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending'));
+    ASSERT (SELECT data #> array['tables', 'users', 'name', 'indexes'] = '{}' FROM eql_v2_configuration c WHERE c.state = 'pending');
 
   END;
 $$ LANGUAGE plpgsql;
@@ -82,15 +83,16 @@ DO $$
 
 
     -- Match index removed
-    PERFORM eql_v2.remove_search_config('users', 'name', 'match');
+    PERFORM eql_v2.remove_search_config('users', 'name', 'match', migrating => true);
     ASSERT NOT (SELECT _search_config_exists('users', 'name', 'match'));
 
     -- Match index removed
-    PERFORM eql_v2.remove_search_config('blah', 'vtha', 'unique');
+    PERFORM eql_v2.remove_search_config('blah', 'vtha', 'unique', migrating => true);
     ASSERT NOT (SELECT _search_config_exists('users', 'vtha', 'unique'));
 
-    -- All indexes removed, delete the emtpty pending config
-    ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending'));
+    -- All indexes removed, but column config preserved  
+    ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending'));
+    ASSERT (SELECT data #> array['tables', 'blah', 'vtha', 'indexes'] = '{}' FROM eql_v2_configuration c WHERE c.state = 'pending');
 
   END;
 $$ LANGUAGE plpgsql;
@@ -122,9 +124,10 @@ DO $$
             WHERE c.state = 'pending' AND
             c.data #> array['tables', 'users', 'name'] ? 'cast_as'));
 
-    -- All indexes removed, delete the emtpty pending config
-    PERFORM eql_v2.remove_search_config('users', 'name', 'match');
-    ASSERT (SELECT NOT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending'));
+    -- All indexes removed, but column config preserved
+    PERFORM eql_v2.remove_search_config('users', 'name', 'match', migrating => true);
+    ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending'));
+    ASSERT (SELECT data #> array['tables', 'users', 'name', 'indexes'] = '{}' FROM eql_v2_configuration c WHERE c.state = 'pending');
   END;
 $$ LANGUAGE plpgsql;
 
