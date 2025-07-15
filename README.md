@@ -84,6 +84,37 @@ These frameworks use EQL to enable searchable encryption functionality in Postgr
 | Protect.php | [Protect.php](https://github.com/cipherstash/protectphp) |
 | CipherStash Proxy | [CipherStash Proxy](https://github.com/cipherstash/proxy) |
 
+## Versioning
+
+You can find the version of EQL installed in your database by running the following query:
+
+```sql
+SELECT eql_v2.version();
+```
+
+### Upgrading
+
+To upgrade to the latest version of EQL, you can simply run the install script again.
+
+1. Download the latest EQL install script:
+
+   ```sh
+   curl -sLo cipherstash-encrypt.sql https://github.com/cipherstash/encrypt-query-language/releases/latest/download/cipherstash-encrypt.sql
+   ```
+
+2. Run this command to install the custom types and functions:
+
+   ```sh
+   psql -f cipherstash-encrypt.sql
+   ```
+
+> [!NOTE]
+> The install script will not remove any existing configurations, so you can safely run it multiple times.
+
+#### Using dbdev?
+
+Follow the instructions in the [dbdev documentation](https://database.dev/cipherstash/eql) to upgrade the extension to your desired version.
+
 ## Developing
 
 See the [development guide](./DEVELOPMENT.md).

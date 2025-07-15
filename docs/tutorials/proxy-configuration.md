@@ -3,7 +3,17 @@
 Initialize the column using the `eql_v2.add_column` function to enable encryption and decryption via CipherStash Proxy.
 
 ```sql
-SELECT eql_v2.add_column('users', 'encrypted_email'); -- where users is the table name and encrypted_email is the column name of type eql_v2_encrypted
+SELECT eql_v2.add_column('users', 'encrypted_email', 'text'); -- where users is the table name and encrypted_email is the column name of type eql_v2_encrypted
+```
+
+**Full signature:**
+```sql
+SELECT eql_v2.add_column(
+  'table_name',       -- Name of the table
+  'column_name',      -- Name of the column (must be of type eql_v2_encrypted)
+  'cast_as',          -- PostgreSQL type to cast decrypted data [optional, defaults to 'text']
+  migrating           -- If true, stages changes without immediate activation [optional, defaults to false]
+);
 ```
 
 **Note:** This function allows you to encrypt and decrypt data but does not enable searchable encryption. See [Searching data with EQL](#searching-data-with-eql) for enabling searchable encryption.
@@ -97,8 +107,9 @@ SELECT eql_v2.add_search_config(
   'table_name',       -- Name of the table
   'column_name',      -- Name of the column
   'index_name',       -- Index kind ('unique', 'match', 'ore', 'ste_vec')
-  'cast_as',          -- PostgreSQL type to cast decrypted data ('text', 'int', etc.)
-  'opts'              -- Index options as JSONB (optional)
+  'cast_as',          -- PostgreSQL type to cast decrypted data ('text', 'int', etc.) [optional, defaults to 'text']
+  'opts',             -- Index options as JSONB [optional, defaults to '{}']
+  migrating           -- If true, stages changes without immediate activation [optional, defaults to false]
 );
 ```
 
@@ -115,7 +126,20 @@ SELECT eql_v2.add_search_config(
 );
 ```
 
-Configuration changes are automatically migrated and activated.
+**Example (With custom options and staging):**
+
+```sql
+SELECT eql_v2.add_search_config(
+  'users',
+  'encrypted_name',
+  'match',
+  'text',
+  '{"k": 6, "bf": 4096}',
+  true  -- Stage changes without immediate activation
+);
+```
+
+Configuration changes are automatically migrated and activated unless the `migrating` parameter is set to `true`.
 
 ## Searching data with EQL
 
@@ -322,9 +346,24 @@ EQL supports the following index types:
 
 Use these functions to manage your EQL configurations:
 
-- `eql_v2.add_column()` - Add a new encrypted column
-- `eql_v2.remove_column()` - Remove an encrypted column
-- `eql_v2.add_search_config()` - Add a search index
-- `eql_v2.remove_search_config()` - Remove a search index
-- `eql_v2.modify_search_config()` - Modify an existing search index
-- `eql_v2.config()` - View current configuration in tabular format
+**Column Management:**
+- `eql_v2.add_column(table_name, column_name, cast_as DEFAULT 'text', migrating DEFAULT false)` - Add a new encrypted column
+- `eql_v2.remove_column(table_name, column_name, migrating DEFAULT false)` - Remove an encrypted column completely
+
+**Index Management:**
+- `eql_v2.add_search_config(table_name, column_name, index_name, cast_as DEFAULT 'text', opts DEFAULT '{}', migrating DEFAULT false)` - Add a search index to a column
+- `eql_v2.remove_search_config(table_name, column_name, index_name, migrating DEFAULT false)` - Remove a specific search index (preserves column configuration)
+- `eql_v2.modify_search_config(table_name, column_name, index_name, cast_as DEFAULT 'text', opts DEFAULT '{}', migrating DEFAULT false)` - Modify an existing search index
+
+**Configuration Management:**
+- `eql_v2.migrate_config()` - Manually migrate pending configuration to encrypting state
+- `eql_v2.activate_config()` - Manually activate encrypting configuration
+- `eql_v2.discard()` - Discard pending configuration changes
+- `eql_v2.config()` - View current configuration in tabular format (returns a table with columns: state, relation, col_name, decrypts_as, indexes)
+
+**Note:** All configuration functions automatically migrate and activate changes unless `migrating` is set to `true`. When `migrating` is `true`, changes are staged but not immediately applied, allowing for batch configuration updates.
+
+**Important Behavior Differences:**
+- `remove_search_config()` removes only the specified index but preserves the column configuration (including `cast_as` setting)
+- `remove_column()` removes the entire column configuration including all its indexes
+- Empty configurations (no tables/columns) are automatically maintained as active to reflect the current state
