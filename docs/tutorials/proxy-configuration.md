@@ -401,7 +401,10 @@ Use these functions to manage your EQL configurations:
 - `eql_v2.discard()` - Discard pending configuration changes
 - `eql_v2.config()` - View current configuration in tabular format (returns a table with columns: state, relation, col_name, decrypts_as, indexes)
 
-**Note:** All configuration functions automatically migrate and activate changes unless `migrating` is set to `true`. When `migrating` is `true`, changes are staged but not immediately applied, allowing for batch configuration updates.
+> [!NOTE]  
+> All configuration functions automatically migrate and activate changes unless `migrating` is set to `true`. 
+>
+> When `migrating` is `true`, changes are staged but not immediately applied, allowing for batch configuration updates.
 
 **Important Behavior Differences:**
 - `remove_search_config()` removes only the specified index but preserves the column configuration (including `cast_as` setting)
