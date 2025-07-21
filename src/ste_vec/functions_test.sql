@@ -28,17 +28,56 @@ $$ LANGUAGE plpgsql;
 DO $$
   DECLARE
     e eql_v2_encrypted;
-    sv eql_v2_encrypted[];
   BEGIN
     e := '{ "a": 1 }'::jsonb::eql_v2_encrypted;
     ASSERT eql_v2.is_ste_vec_array(e);
-
 
     e := '{ "a": 0 }'::jsonb::eql_v2_encrypted;
     ASSERT NOT eql_v2.is_ste_vec_array(e);
 
     e := '{ }'::jsonb::eql_v2_encrypted;
     ASSERT NOT eql_v2.is_ste_vec_array(e);
+  END;
+$$ LANGUAGE plpgsql;
+
+
+DO $$
+  DECLARE
+    e jsonb;
+  BEGIN
+    -- extract the ste_vec array item as an eeql_v2_encrypted
+    e := eql_v2.to_ste_vec_value('{ "i": "i", "v": 2, "sv": [ { "ocf": "ocf" }] }'::jsonb);
+
+    ASSERT e ? 'i';
+    ASSERT e ? 'v';
+    ASSERT e ? 'ocf';
+
+    -- Returns the original if not an stevec value
+    e := eql_v2.to_ste_vec_value('{ "i": "i", "v": 2, "b3": "b3" }'::jsonb);
+
+    ASSERT e ? 'i';
+    ASSERT e ? 'v';
+    ASSERT e ? 'b3';
+
+  END;
+$$ LANGUAGE plpgsql;
+
+
+
+DO $$
+  DECLARE
+    e eql_v2_encrypted;
+    sv eql_v2_encrypted[];
+  BEGIN
+    e := '{ "sv": [1] }'::jsonb::eql_v2_encrypted;
+    ASSERT eql_v2.is_ste_vec_value(e);
+
+    e := '{ "sv": [] }'::jsonb::eql_v2_encrypted;
+    ASSERT NOT eql_v2.is_ste_vec_value(e);
+
+    e := '{ }'::jsonb::eql_v2_encrypted;
+    ASSERT NOT eql_v2.is_ste_vec_value(e);
+
   END;
 $$ LANGUAGE plpgsql;
 
