@@ -49,6 +49,7 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+
 CREATE OPERATOR ->(
   FUNCTION=eql_v2."->",
   LEFTARG=eql_v2_encrypted,

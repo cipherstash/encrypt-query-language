@@ -18,7 +18,6 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-
 CREATE FUNCTION eql_v2.ciphertext(val eql_v2_encrypted)
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
@@ -27,7 +26,6 @@ AS $$
     RETURN eql_v2.ciphertext(val.data);
   END;
 $$ LANGUAGE plpgsql;
-
 
 
 CREATE FUNCTION eql_v2._first_grouped_value(jsonb, jsonb)
