@@ -246,17 +246,22 @@ CREATE FUNCTION eql_v2.jsonb_array_elements(val jsonb)
 AS $$
   DECLARE
     sv eql_v2_encrypted[];
-    found eql_v2_encrypted[];
+    meta jsonb;
+    item jsonb;
   BEGIN
 
     IF NOT eql_v2.is_ste_vec_array(val) THEN
       RAISE 'cannot extract elements from non-array';
     END IF;
 
+    -- Column identifier and version
+    meta := eql_v2.meta_data(val);
+
     sv := eql_v2.ste_vec(val);
 
     FOR idx IN 1..array_length(sv, 1) LOOP
-      RETURN NEXT sv[idx];
+      item = sv[idx];
+      RETURN NEXT (meta || item)::eql_v2_encrypted;
     END LOOP;
 
     RETURN;
