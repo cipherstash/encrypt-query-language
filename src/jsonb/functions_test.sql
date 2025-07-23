@@ -209,6 +209,21 @@ $$ LANGUAGE plpgsql;
 
 
 DO $$
+  DECLARE
+    result jsonb;
+  BEGIN
+    PERFORM seed_encrypted_json();
+    PERFORM seed_encrypted(get_array_ste_vec()::eql_v2_encrypted);
+
+    SELECT eql_v2.jsonb_array_elements(eql_v2.jsonb_path_query(e, 'f510853730e1c3dbd31b86963f029dd5')::jsonb) FROM encrypted INTO result;
+
+    ASSERT result ? 'i';
+    ASSERT result ? 'v';
+  END;
+$$ LANGUAGE plpgsql;
+
+
+DO $$
   BEGIN
 
     PERFORM seed_encrypted_json();
