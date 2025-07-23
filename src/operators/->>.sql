@@ -11,8 +11,9 @@ AS $$
   DECLARE
     found eql_v2_encrypted;
 	BEGIN
-    found = eql_v2."->"(e, selector);
-    RETURN eql_v2.ciphertext(found);
+    -- found = eql_v2."->"(e, selector);
+    -- RETURN eql_v2.ciphertext(found);
+    RETURN eql_v2."->"(e, selector);
   END;
 $$ LANGUAGE plpgsql;
 
