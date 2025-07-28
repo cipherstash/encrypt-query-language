@@ -9,7 +9,7 @@ CREATE FUNCTION eql_v2.min(a eql_v2_encrypted, b eql_v2_encrypted)
 STRICT
 AS $$
   BEGIN
-    IF eql_v2.ore_block_u64_8_256(a) < eql_v2.ore_block_u64_8_256(b) THEN
+    IF a < b THEN
       RETURN a;
     ELSE
       RETURN b;
@@ -30,7 +30,7 @@ RETURNS eql_v2_encrypted
 STRICT
 AS $$
   BEGIN
-    IF eql_v2.ore_block_u64_8_256(a) > eql_v2.ore_block_u64_8_256(b) THEN
+    IF a > b THEN
       RETURN a;
     ELSE
       RETURN b;
