@@ -4,7 +4,6 @@
 -- REQUIRE: src/ore_block_u64_8_256/operators.sql
 -- REQUIRE: src/ore_cllw_u64_8/types.sql
 -- REQUIRE: src/ore_cllw_u64_8/functions.sql
--- REQUIRE: src/ore_cllw_u64_8/operators.sql
 
 -- order_by function for ordering when operators are not available.
 --
