@@ -17,12 +17,8 @@ AS $$
       RETURN NULL;
     END IF;
 
-    IF NOT (val ? 'ocf') THEN
+    IF NOT (eql_v2.has_ore_cllw_u64_8(val)) THEN
         RAISE 'Expected a ore_cllw_u64_8 index (ocf) value in json: %', val;
-    END IF;
-
-    IF val->>'ocf' IS NULL THEN
-      RETURN NULL;
     END IF;
 
     RETURN ROW(decode(val->>'ocf', 'hex'));
@@ -47,7 +43,7 @@ CREATE FUNCTION eql_v2.has_ore_cllw_u64_8(val jsonb)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
-    RETURN val ? 'ocf';
+    RETURN val ->> 'ocf' IS NOT NULL;
   END;
 $$ LANGUAGE plpgsql;
 
