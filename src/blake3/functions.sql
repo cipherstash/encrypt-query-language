@@ -14,7 +14,7 @@ AS $$
       RETURN NULL;
     END IF;
 
-    IF NOT (val ? 'b3') THEN
+    IF NOT eql_v2.has_blake3(val) THEN
         RAISE 'Expected a blake3 index (b3) value in json: %', val;
     END IF;
 
@@ -44,7 +44,7 @@ CREATE FUNCTION eql_v2.has_blake3(val jsonb)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
-    RETURN val ? 'b3';
+    RETURN val ->> 'b3' IS NOT NULL;
   END;
 $$ LANGUAGE plpgsql;
 

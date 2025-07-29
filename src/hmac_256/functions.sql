@@ -12,7 +12,7 @@ AS $$
       RETURN NULL;
     END IF;
 
-    IF val ? 'hm' THEN
+    IF eql_v2.has_hmac_256(val) THEN
       RETURN val->>'hm';
     END IF;
     RAISE 'Expected a hmac_256 index (hm) value in json: %', val;
@@ -25,7 +25,7 @@ CREATE FUNCTION eql_v2.has_hmac_256(val jsonb)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
-    RETURN val ? 'hm';
+    RETURN val ->> 'hm' IS NOT NULL;
   END;
 $$ LANGUAGE plpgsql;
 
