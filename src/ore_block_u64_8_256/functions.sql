@@ -57,7 +57,7 @@ AS $$
       RETURN NULL;
     END IF;
 
-    IF val ? 'ob' THEN
+    IF eql_v2.has_ore_block_u64_8_256(val) THEN
       RETURN eql_v2.jsonb_array_to_ore_block_u64_8_256(val->'ob');
     END IF;
     RAISE 'Expected an ore index (ob) value in json: %', val;
@@ -85,7 +85,7 @@ CREATE FUNCTION eql_v2.has_ore_block_u64_8_256(val jsonb)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
-    RETURN val ? 'ob';
+    RETURN val ->> 'ob' IS NOT NULL;
   END;
 $$ LANGUAGE plpgsql;
 

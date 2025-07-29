@@ -12,7 +12,7 @@ AS $$
       RETURN NULL;
     END IF;
 
-    IF val ? 'bf' THEN
+    IF eql_v2.has_bloom_filter(val) THEN
       RETURN ARRAY(SELECT jsonb_array_elements(val->'bf'))::eql_v2.bloom_filter;
     END IF;
 
@@ -38,7 +38,7 @@ CREATE FUNCTION eql_v2.has_bloom_filter(val jsonb)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
-    RETURN val ? 'bf';
+    RETURN val ->> 'bf' IS NOT NULL;
   END;
 $$ LANGUAGE plpgsql;
 
