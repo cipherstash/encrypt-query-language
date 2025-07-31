@@ -152,8 +152,58 @@ DO $$
     INSERT INTO encrypted (e) VALUES ('("{\"hm\": \"abc\"}")');
     INSERT INTO encrypted (e) VALUES ('("{\"hm\": \"def\"}")');
     INSERT INTO encrypted (e) VALUES ('("{\"hm\": \"ghi\"}")');
+    INSERT INTO encrypted (e) VALUES ('("{\"hm\": \"jkl\"}")');
+    INSERT INTO encrypted (e) VALUES ('("{\"hm\": \"mno\"}")');
 
+    -- Literal row type type thing
     EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''("{\"hm\": \"abc\"}")'';' into result;
+
+    IF position('Index Only Scan using encrypted' in result) > 0 THEN
+      ASSERT true;
+    ELSE
+      RAISE EXCEPTION 'Expected Index Only Scan: %', result;
+    END IF;
+
+    -- Cast to jsonb
+    EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''{"hm": "abc"}''::jsonb;' into result;
+
+     -- INDEX IS NOT USED
+    IF position('Seq Scan on encrypted' in result) > 0 THEN
+      ASSERT true;
+    ELSE
+      RAISE EXCEPTION 'Unexpected Seq Scan: %', result;
+    END IF;
+
+    -- Cast to jsonb to eql_v2_encrypted
+    EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''{"hm": "abc"}''::jsonb::eql_v2_encrypted;' into result;
+
+    IF position('Index Only Scan using encrypted' in result) > 0 THEN
+      ASSERT true;
+    ELSE
+      RAISE EXCEPTION 'Expected Index Only Scan: %', result;
+    END IF;
+
+    -- Cast to text to eql_v2_encrypted
+    EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''{"hm": "abc"}''::text::eql_v2_encrypted;' into result;
+
+    IF position('Index Only Scan using encrypted' in result) > 0 THEN
+      ASSERT true;
+    ELSE
+      RAISE EXCEPTION 'Expected Index Only Scan: %', result;
+    END IF;
+
+    -- Use to_encrypted with jsonb
+    EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = eql_v2.to_encrypted(''{"hm": "abc"}''::jsonb);' into result;
+
+    IF position('Index Only Scan using encrypted' in result) > 0 THEN
+      ASSERT true;
+    ELSE
+      RAISE EXCEPTION 'Expected Index Only Scan: %', result;
+    END IF;
+
+    -- Use to_encrypted with text
+    EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = eql_v2.to_encrypted(''{"hm": "abc"}'');' into result;
+
 
     IF position('Index Only Scan using encrypted' in result) > 0 THEN
       ASSERT true;
