@@ -7,8 +7,8 @@
 --
 
 CREATE FUNCTION eql_v2.to_encrypted(data jsonb)
-RETURNS public.eql_v2_encrypted
-IMMUTABLE STRICT PARALLEL SAFE
+    RETURNS public.eql_v2_encrypted
+    IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 BEGIN
     IF data IS NULL THEN
@@ -33,7 +33,7 @@ CREATE CAST (jsonb AS public.eql_v2_encrypted)
 --
 
 CREATE FUNCTION eql_v2.to_encrypted(data text)
-RETURNS public.eql_v2_encrypted
+    RETURNS public.eql_v2_encrypted
     IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 BEGIN
@@ -60,7 +60,9 @@ CREATE CAST (text AS public.eql_v2_encrypted)
 --
 
 CREATE FUNCTION eql_v2.to_jsonb(e public.eql_v2_encrypted)
-RETURNS jsonb AS $$
+    RETURNS jsonb
+    IMMUTABLE STRICT PARALLEL SAFE
+AS $$
 BEGIN
     IF e IS NULL THEN
         RETURN NULL;
