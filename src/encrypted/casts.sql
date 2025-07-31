@@ -7,7 +7,9 @@
 --
 
 CREATE FUNCTION eql_v2.to_encrypted(data jsonb)
-RETURNS public.eql_v2_encrypted AS $$
+RETURNS public.eql_v2_encrypted
+IMMUTABLE STRICT PARALLEL SAFE
+AS $$
 BEGIN
     IF data IS NULL THEN
         RETURN NULL;
@@ -16,6 +18,7 @@ BEGIN
     RETURN ROW(data)::public.eql_v2_encrypted;
 END;
 $$ LANGUAGE plpgsql;
+
 
 --
 -- Cast jsonb to eql_v2.encrypted
@@ -30,15 +33,18 @@ CREATE CAST (jsonb AS public.eql_v2_encrypted)
 --
 
 CREATE FUNCTION eql_v2.to_encrypted(data text)
-RETURNS public.eql_v2_encrypted AS $$
+RETURNS public.eql_v2_encrypted
+    IMMUTABLE STRICT PARALLEL SAFE
+AS $$
 BEGIN
     IF data IS NULL THEN
         RETURN NULL;
     END IF;
 
-    RETURN ROW(data::jsonb)::public.eql_v2_encrypted;
+    RETURN eql_v2.to_encrypted(data::jsonb);
 END;
 $$ LANGUAGE plpgsql;
+
 
 --
 -- Cast text to eql_v2.encrypted
