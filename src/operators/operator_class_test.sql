@@ -164,6 +164,16 @@ DO $$
       RAISE EXCEPTION 'Expected Index Only Scan: %', result;
     END IF;
 
+    -- Cast to jsonb
+    EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''{"hm": "abc"}''::jsonb;' into result;
+
+     -- INDEX IS NOT USED
+    IF position('Seq Scan on encrypted' in result) > 0 THEN
+      ASSERT true;
+    ELSE
+      RAISE EXCEPTION 'Unexpected Seq Scan: %', result;
+    END IF;
+
     -- Cast to jsonb to eql_v2_encrypted
     EXECUTE 'EXPLAIN ANALYZE SELECT e::jsonb FROM encrypted WHERE e = ''{"hm": "abc"}''::jsonb::eql_v2_encrypted;' into result;
 
