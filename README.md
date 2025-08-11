@@ -6,7 +6,7 @@
 Encrypt Query Language (EQL) is a set of abstractions for transmitting, storing, and interacting with encrypted data and indexes in PostgreSQL.
 
 > [!TIP]
-> **New to EQL?** 
+> **New to EQL?**
 > EQL is the basis for searchable encryption functionality when using [Protect.js](https://github.com/cipherstash/protectjs) and/or [CipherStash Proxy](https://github.com/cipherstash/proxy).
 
 Store encrypted data alongside your existing data:
@@ -42,6 +42,53 @@ The simplest way to get up and running with EQL is to execute the install SQL fi
    ```sh
    psql -f cipherstash-encrypt.sql
    ```
+
+
+## EQL Components
+
+EQL installs and manages the following components
+
+| Name                               | Entity Type
+| ---------------------------------- | --------------- |
+| eql_v2.*                           | Schema          |
+| public.eql_v2_encrypted            | Type            |
+| public.eql_v2_configuration_state  | Type            |
+| public.eql_v2_configuration        | Table           |
+
+
+### `eql_v2` Schema
+
+The `eql_v2` schema holds all of the functions, types and operators required to query and interact with encrypted data.
+The schema is stateless and the schema can be dropped without risk of data loss.
+
+Updating EQL will drop and re-create the schema.
+Unless otherwise documented this is a safe operation that requires no data migration or changes.
+
+
+### Configuration Table & Type
+
+The `public.eql_v2_configuration` table holds the searchable encryption configuration.
+The `public.eql_v2_configuration_state` type is used by the configuration table.
+
+The table and associated type are created in the `public` schema to avoid any risk of data loss when updating or uninstalling EQL.
+
+EQL updates will automatically migrate the configuration if the internal structure changes.
+
+On uninstall the configuration table is renamed with a timestamp suffix
+The table is not automatically dropped to avoid any potential risk of data loss.
+
+Renaming avoids potential conflicts in CI pipelines that may repeatedly install and uninstall EQL.
+
+
+### `public.eql_v2_encrypted` Type
+
+The `public.eql_v2_encrypted` is the type used to define encrypted columns, and is used in customer table definitions.
+The type is created in the `public` schema to avoid any risk of data loss when updating or uninstalling EQL.
+
+Dropping the `public.eql_v2_encrypted` type will remove any associated columns from the database.
+
+Uninstalling EQL will not drop the `public.eql_v2_encrypted` type to avoid risk of data loss.
+
 
 ### dbdev
 
