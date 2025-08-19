@@ -56,3 +56,13 @@ jobs:
             release/cipherstash-encrypt-uninstall.sql
             release/cipherstash-encrypt-supabase.sql
             release/cipherstash-encrypt-uninstall-supabase.sql
+
+      - name: Notify Multitudes
+        if: github.event_name == 'release'
+        run: |
+          curl --request POST \
+            --fail-with-body \
+            --url "https://api.developer.multitudes.co/deployments" \
+            --header "Content-Type: application/json" \
+            --header "Authorization: ${{ secrets.MULTITUDES_ACCESS_TOKEN }}" \
+            --data '{"commitSha": "${{ github.sha }}", "environmentName":"production"}'
