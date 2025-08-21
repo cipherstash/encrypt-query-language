@@ -90,6 +90,76 @@ Dropping the `public.eql_v2_encrypted` type will remove any associated columns f
 Uninstalling EQL will not drop the `public.eql_v2_encrypted` type to avoid risk of data loss.
 
 
+## Database Permissions
+
+EQL requires specific database privileges to install and operate correctly. The permissions needed depend on your deployment pattern.
+
+### Default Permissions (Recommended)
+
+For most use cases, grant the following permissions to the database user that will install and use EQL:
+
+```sql
+-- Database-level permissions
+GRANT CREATE ON DATABASE your_database TO your_eql_user;
+
+-- Schema permissions  
+GRANT USAGE ON SCHEMA public TO your_eql_user;
+GRANT CREATE ON SCHEMA public TO your_eql_user;
+
+-- Configuration table permissions
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.eql_v2_configuration TO your_eql_user;
+
+-- User table permissions (for encrypted column constraints)
+GRANT ALTER ON ALL TABLES IN SCHEMA public TO your_eql_user;
+-- Or grant ALTER on specific tables that will have encrypted columns:
+-- GRANT ALTER ON TABLE your_table TO your_eql_user;
+```
+
+**Why these permissions are needed:**
+
+- **CREATE ON DATABASE**: Required to create the `eql_v2` schema, types, and functions during installation
+- **CREATE ON SCHEMA public**: Required to create types and tables in the public schema
+- **Configuration table access**: EQL manages searchable encryption configuration in `public.eql_v2_configuration`
+- **ALTER on user tables**: EQL adds check constraints to encrypted columns for data validation
+
+### Splitting Read and Write Access
+
+A common production pattern separates setup/migration permissions from runtime permissions:
+
+#### Setup/Migration User (Write Access)
+
+Use during database migrations and EQL installation:
+
+```sql
+-- All default permissions above, plus:
+GRANT CREATE ON DATABASE your_database TO your_migration_user;
+GRANT CREATE ON SCHEMA public TO your_migration_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.eql_v2_configuration TO your_migration_user;
+GRANT ALTER ON ALL TABLES IN SCHEMA public TO your_migration_user;
+```
+
+#### Runtime User (Read Access)
+
+Use for application queries in production:
+
+```sql
+-- Configuration read access
+GRANT SELECT ON TABLE public.eql_v2_configuration TO your_app_user;
+
+-- EQL schema usage
+GRANT USAGE ON SCHEMA eql_v2 TO your_app_user;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA eql_v2 TO your_app_user;
+
+-- User table access (normal application permissions)
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE your_tables TO your_app_user;
+```
+
+**Migration Workflow:**
+1. Use the migration user to install EQL and configure encrypted columns
+2. Use the runtime user for normal application operations
+3. Configuration changes (adding/removing encrypted columns) require the migration user
+
+
 ### dbdev
 
 > [!WARNING]
