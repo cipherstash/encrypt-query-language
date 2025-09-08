@@ -51,8 +51,12 @@ CREATE FUNCTION eql_v2.add_encrypted_constraint(table_name TEXT, column_name TEX
   RETURNS void
 AS $$
 	BEGIN
-		EXECUTE format('ALTER TABLE %I ADD CONSTRAINT eql_v2_encrypted_check_%I CHECK (eql_v2.check_encrypted(%I))', table_name, column_name, column_name);
-	END;
+    EXECUTE format('ALTER TABLE %I ADD CONSTRAINT eql_v2_encrypted_constraint_%I_%I CHECK (eql_v2.check_encrypted(%I))', table_name, table_name, column_name, column_name);
+  EXCEPTION
+    WHEN duplicate_table THEN
+    WHEN duplicate_object THEN
+      RAISE NOTICE 'Constraint `eql_v2_encrypted_constraint_%_%` already exists, skipping', table_name, column_name;
+  END;
 $$ LANGUAGE plpgsql;
 
 
@@ -66,7 +70,7 @@ CREATE FUNCTION eql_v2.remove_encrypted_constraint(table_name TEXT, column_name 
   RETURNS void
 AS $$
 	BEGIN
-		EXECUTE format('ALTER TABLE %I DROP CONSTRAINT IF EXISTS eql_v2_encrypted_check_%I', table_name, column_name);
+		EXECUTE format('ALTER TABLE %I DROP CONSTRAINT IF EXISTS eql_v2_encrypted_constraint_%I_%I', table_name, table_name, column_name);
 	END;
 $$ LANGUAGE plpgsql;
 
