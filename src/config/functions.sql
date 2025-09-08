@@ -61,7 +61,7 @@ AS $$
       PERFORM eql_v2.activate_config();
     END IF;
 
-    -- PERFORM eql_v2.add_encrypted_constraint(table_name, column_name);
+    PERFORM eql_v2.add_encrypted_constraint(table_name, column_name);
 
     -- exeunt
     RETURN _config;
