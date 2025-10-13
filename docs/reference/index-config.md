@@ -40,6 +40,8 @@ Supported types:
 - `int`
 - `small_int`
 - `big_int`
+- `real`
+- `double`
 - `boolean`
 - `date`
 - `jsonb`
@@ -217,30 +219,32 @@ When reduced to a prefix list, it would look like this:
 
 Which is then turned into an ste_vec of hashes which can be directly queries against the index.
 
-### Modifying an index (`cs_modify_index`)
+### Modifying an index (`eql_v2.modify_search_config`)
 
 Modifies an existing index configuration.
-Accepts the same parameters as `cs_add_index`
+Accepts the same parameters as `eql_v2.add_search_config`
 
 ```sql
-SELECT cs_modify_index_v2(
+SELECT eql_v2.modify_search_config(
   table_name text,
   column_name text,
   index_name text,
-  cast_as text,
-  opts jsonb
+  cast_as text DEFAULT 'text',
+  opts jsonb DEFAULT '{}',
+  migrating boolean DEFAULT false
 );
 ```
 
-### Removing an index (`cs_remove_index`)
+### Removing an index (`eql_v2.remove_search_config`)
 
 Removes an index configuration from the column.
 
 ```sql
-SELECT cs_remove_index_v2(
+SELECT eql_v2.remove_search_config(
   table_name text,
   column_name text,
-  index_name text
+  index_name text,
+  migrating boolean DEFAULT false
 );
 ```
 
