@@ -23,7 +23,10 @@ Store encrypted data alongside your existing data:
   - [Enable encrypted columns](#enable-encrypted-columns)
 - [Encrypt configuration](#encrypt-configuration)
 - [CipherStash integrations using EQL](#cipherstash-integrations-using-eql)
-- [Developing](#developing)
+- [Versioning](#versioning)
+  - [Upgrading](#upgrading)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
 
 ---
 
@@ -169,7 +172,7 @@ You can find the EQL extension on [dbdev's extension catalog](https://database.d
 
 ## Getting started
 
-Once the custom types and functions are installed in your PostgreSQL database, you can start using EQL in your queries.
+Once EQL is installed in your PostgreSQL database, you can start using encrypted columns in your tables.
 
 ### Enable encrypted columns
 
@@ -178,11 +181,21 @@ Define encrypted columns using the `eql_v2_encrypted` type, which stores encrypt
 **Example:**
 
 ```sql
+-- Step 1: Create a table with an encrypted column
 CREATE TABLE users (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     encrypted_email eql_v2_encrypted
 );
+
+-- Step 2: Configure the column for encryption/decryption
+SELECT eql_v2.add_column('users', 'encrypted_email', 'text');
+
+-- Step 3: (Optional) Add search indexes
+SELECT eql_v2.add_search_config('users', 'encrypted_email', 'unique', 'text');
 ```
+
+> [!NOTE]
+> You must use [CipherStash Proxy](https://github.com/cipherstash/proxy) or [Protect.js](https://github.com/cipherstash/protectjs) to encrypt and decrypt data. EQL provides the database functions and types, while these tools handle the actual cryptographic operations.
 
 ## Encrypt configuration
 
@@ -232,6 +245,28 @@ To upgrade to the latest version of EQL, you can simply run the install script a
 
 Follow the instructions in the [dbdev documentation](https://database.dev/cipherstash/eql) to upgrade the extension to your desired version.
 
-## Developing
+## Troubleshooting
 
-See the [development guide](./DEVELOPMENT.md).
+### Common Errors
+
+**Error: "Some pending columns do not have an encrypted target"**
+- **Cause**: Trying to configure a column that doesn't exist as `eql_v2_encrypted` type
+- **Solution**: First create the column: `ALTER TABLE table_name ADD COLUMN column_name eql_v2_encrypted;`
+
+**Error: "Config exists for column: table_name column_name"**
+- **Cause**: Attempting to add a column configuration that already exists
+- **Solution**: Use `eql_v2.add_search_config()` to add indexes, or `eql_v2.remove_column()` first to reconfigure
+
+**Error: "No configuration exists for column: table_name column_name"**
+- **Cause**: Trying to add search configuration before configuring the column
+- **Solution**: Run `eql_v2.add_column()` first, then add search indexes
+
+### Getting Help
+
+- Check the [full documentation](./docs/README.md)
+- Review [CipherStash Proxy configuration guide](./docs/tutorials/proxy-configuration.md)
+- Report issues at [https://github.com/cipherstash/encrypt-query-language/issues](https://github.com/cipherstash/encrypt-query-language/issues)
+
+## Contributing
+
+See the [development guide](./DEVELOPMENT.md) for information on developing and extending EQL.
