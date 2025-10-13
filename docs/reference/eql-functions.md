@@ -13,6 +13,7 @@ This document provides a comprehensive reference for all EQL (Encrypt Query Lang
 - [Array Functions](#array-functions)
 - [Helper Functions](#helper-functions)
 - [Aggregate Functions](#aggregate-functions)
+- [Utility Functions](#utility-functions)
 
 ---
 
@@ -125,6 +126,89 @@ eql_v2.config() RETURNS TABLE (
 SELECT * FROM eql_v2.config();
 ```
 
+### `eql_v2.migrate_config()`
+
+Transition pending configuration to encrypting state.
+
+```sql
+eql_v2.migrate_config() RETURNS boolean
+```
+
+**Description:**
+- Validates that all configured columns exist with `eql_v2_encrypted` type
+- Marks the pending configuration as 'encrypting'
+- Required before activating a new configuration
+
+**Raises exception if:**
+- An encryption is already in progress
+- No pending configuration exists
+- Some pending columns don't have encrypted targets
+
+**Example:**
+```sql
+-- Add configuration changes
+SELECT eql_v2.add_search_config('users', 'email', 'unique', 'text', migrating => true);
+
+-- Validate and migrate
+SELECT eql_v2.migrate_config();
+
+-- After re-encrypting data, activate
+SELECT eql_v2.activate_config();
+```
+
+### `eql_v2.activate_config()`
+
+Activate an encrypting configuration.
+
+```sql
+eql_v2.activate_config() RETURNS boolean
+```
+
+**Description:**
+- Moves 'encrypting' configuration to 'active' state
+- Marks previous 'active' configuration as 'inactive'
+- Should be called after data has been re-encrypted with new index terms
+
+**Raises exception if:**
+- No encrypting configuration exists
+
+**Example:**
+```sql
+SELECT eql_v2.activate_config();
+```
+
+### `eql_v2.discard()`
+
+Discard pending configuration without activating.
+
+```sql
+eql_v2.discard() RETURNS boolean
+```
+
+**Description:**
+- Deletes the pending configuration
+- Use when you want to abandon configuration changes
+
+**Raises exception if:**
+- No pending configuration exists
+
+**Example:**
+```sql
+SELECT eql_v2.discard();
+```
+
+### `eql_v2.reload_config()`
+
+Reload active configuration (no-op for compatibility).
+
+```sql
+eql_v2.reload_config() RETURNS void
+```
+
+**Description:**
+- Placeholder function for configuration reload
+- Currently has no effect (configuration is loaded automatically)
+
 ---
 
 ## Query Functions
@@ -215,7 +299,7 @@ eql_v2.neq(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean
 
 #### `eql_v2.like()`
 
-Pattern matching.
+Pattern matching (case-sensitive).
 
 ```sql
 eql_v2.like(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean
@@ -224,6 +308,71 @@ eql_v2.like(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean
 **Example:**
 ```sql
 SELECT * FROM docs WHERE eql_v2.like(encrypted_content, $1::eql_v2_encrypted);
+```
+
+#### `eql_v2.ilike()`
+
+Pattern matching (case-insensitive).
+
+```sql
+eql_v2.ilike(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean
+```
+
+**Example:**
+```sql
+SELECT * FROM docs WHERE eql_v2.ilike(encrypted_content, $1::eql_v2_encrypted);
+```
+
+#### `eql_v2.lt()`
+
+Less than comparison.
+
+```sql
+eql_v2.lt(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean
+```
+
+**Example:**
+```sql
+SELECT * FROM events WHERE eql_v2.lt(encrypted_date, $1::eql_v2_encrypted);
+```
+
+#### `eql_v2.lte()`
+
+Less than or equal comparison.
+
+```sql
+eql_v2.lte(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean
+```
+
+**Example:**
+```sql
+SELECT * FROM events WHERE eql_v2.lte(encrypted_date, $1::eql_v2_encrypted);
+```
+
+#### `eql_v2.gt()`
+
+Greater than comparison.
+
+```sql
+eql_v2.gt(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean
+```
+
+**Example:**
+```sql
+SELECT * FROM events WHERE eql_v2.gt(encrypted_date, $1::eql_v2_encrypted);
+```
+
+#### `eql_v2.gte()`
+
+Greater than or equal comparison.
+
+```sql
+eql_v2.gte(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean
+```
+
+**Example:**
+```sql
+SELECT * FROM events WHERE eql_v2.gte(encrypted_date, $1::eql_v2_encrypted);
 ```
 
 ---
@@ -237,8 +386,8 @@ These functions extract specific index terms from encrypted values. Typically us
 Extract HMAC-256 unique index term.
 
 ```sql
-eql_v2.hmac_256(val eql_v2_encrypted) RETURNS eql_v2_hmac_256
-eql_v2.hmac_256(val jsonb) RETURNS eql_v2_hmac_256
+eql_v2.hmac_256(val eql_v2_encrypted) RETURNS eql_v2.hmac_256
+eql_v2.hmac_256(val jsonb) RETURNS eql_v2.hmac_256
 ```
 
 ### `eql_v2.blake3()`
@@ -246,8 +395,8 @@ eql_v2.hmac_256(val jsonb) RETURNS eql_v2_hmac_256
 Extract Blake3 unique index term.
 
 ```sql
-eql_v2.blake3(val eql_v2_encrypted) RETURNS eql_v2_blake3
-eql_v2.blake3(val jsonb) RETURNS eql_v2_blake3
+eql_v2.blake3(val eql_v2_encrypted) RETURNS eql_v2.blake3
+eql_v2.blake3(val jsonb) RETURNS eql_v2.blake3
 ```
 
 ### `eql_v2.bloom_filter()`
@@ -255,8 +404,8 @@ eql_v2.blake3(val jsonb) RETURNS eql_v2_blake3
 Extract bloom filter match index term.
 
 ```sql
-eql_v2.bloom_filter(val eql_v2_encrypted) RETURNS eql_v2_bloom_filter
-eql_v2.bloom_filter(val jsonb) RETURNS eql_v2_bloom_filter
+eql_v2.bloom_filter(val eql_v2_encrypted) RETURNS eql_v2.bloom_filter
+eql_v2.bloom_filter(val jsonb) RETURNS eql_v2.bloom_filter
 ```
 
 ### `eql_v2.ore_block_u64_8_256()`
@@ -264,8 +413,8 @@ eql_v2.bloom_filter(val jsonb) RETURNS eql_v2_bloom_filter
 Extract ORE (Order-Revealing Encryption) index term.
 
 ```sql
-eql_v2.ore_block_u64_8_256(val eql_v2_encrypted) RETURNS eql_v2_ore_block_u64_8_256_term
-eql_v2.ore_block_u64_8_256(val jsonb) RETURNS eql_v2_ore_block_u64_8_256_term
+eql_v2.ore_block_u64_8_256(val eql_v2_encrypted) RETURNS eql_v2.ore_block_u64_8_256
+eql_v2.ore_block_u64_8_256(val jsonb) RETURNS eql_v2.ore_block_u64_8_256
 ```
 
 ### `eql_v2.ste_vec()`
@@ -290,6 +439,7 @@ Returns all encrypted elements matching a selector.
 ```sql
 eql_v2.jsonb_path_query(val eql_v2_encrypted, selector text) RETURNS SETOF eql_v2_encrypted
 eql_v2.jsonb_path_query(val eql_v2_encrypted, selector eql_v2_encrypted) RETURNS SETOF eql_v2_encrypted
+eql_v2.jsonb_path_query(val jsonb, selector text) RETURNS SETOF eql_v2_encrypted
 ```
 
 **Example:**
@@ -304,6 +454,7 @@ Returns the first encrypted element matching a selector.
 ```sql
 eql_v2.jsonb_path_query_first(val eql_v2_encrypted, selector text) RETURNS eql_v2_encrypted
 eql_v2.jsonb_path_query_first(val eql_v2_encrypted, selector eql_v2_encrypted) RETURNS eql_v2_encrypted
+eql_v2.jsonb_path_query_first(val jsonb, selector text) RETURNS eql_v2_encrypted
 ```
 
 ### `eql_v2.jsonb_path_exists()`
@@ -313,6 +464,7 @@ Checks if any element matches a selector.
 ```sql
 eql_v2.jsonb_path_exists(val eql_v2_encrypted, selector text) RETURNS boolean
 eql_v2.jsonb_path_exists(val eql_v2_encrypted, selector eql_v2_encrypted) RETURNS boolean
+eql_v2.jsonb_path_exists(val jsonb, selector text) RETURNS boolean
 ```
 
 **Example:**
@@ -333,6 +485,7 @@ Returns the length of an encrypted array.
 
 ```sql
 eql_v2.jsonb_array_length(val eql_v2_encrypted) RETURNS integer
+eql_v2.jsonb_array_length(val jsonb) RETURNS integer
 ```
 
 **Example:**
@@ -346,6 +499,7 @@ Returns each array element as an encrypted value.
 
 ```sql
 eql_v2.jsonb_array_elements(val eql_v2_encrypted) RETURNS SETOF eql_v2_encrypted
+eql_v2.jsonb_array_elements(val jsonb) RETURNS SETOF eql_v2_encrypted
 ```
 
 **Example:**
@@ -361,6 +515,7 @@ Returns each array element's ciphertext as text.
 
 ```sql
 eql_v2.jsonb_array_elements_text(val eql_v2_encrypted) RETURNS SETOF text
+eql_v2.jsonb_array_elements_text(val jsonb) RETURNS SETOF text
 ```
 
 ---
@@ -479,6 +634,106 @@ SELECT eql_v2.grouped_value(
 COUNT(*)
 FROM products
 GROUP BY eql_v2.jsonb_path_query_first(encrypted_json, 'color_selector');
+```
+
+### `eql_v2.min()`
+
+Returns the minimum encrypted value in a set (requires `ore` index for ordering).
+
+```sql
+eql_v2.min(eql_v2_encrypted) RETURNS eql_v2_encrypted
+```
+
+**Example:**
+```sql
+SELECT eql_v2.min(encrypted_date) FROM events;
+SELECT eql_v2.min(encrypted_price) FROM products WHERE category = 'electronics';
+```
+
+### `eql_v2.max()`
+
+Returns the maximum encrypted value in a set (requires `ore` index for ordering).
+
+```sql
+eql_v2.max(eql_v2_encrypted) RETURNS eql_v2_encrypted
+```
+
+**Example:**
+```sql
+SELECT eql_v2.max(encrypted_date) FROM events;
+SELECT eql_v2.max(encrypted_price) FROM products WHERE category = 'electronics';
+```
+
+---
+
+## Utility Functions
+
+### `eql_v2.version()`
+
+Get the installed EQL version.
+
+```sql
+eql_v2.version() RETURNS text
+```
+
+**Example:**
+```sql
+SELECT eql_v2.version();
+-- Returns: '2.1.8'
+```
+
+### `eql_v2.to_encrypted()`
+
+Convert jsonb or text to eql_v2_encrypted type.
+
+```sql
+eql_v2.to_encrypted(data jsonb) RETURNS eql_v2_encrypted
+eql_v2.to_encrypted(data text) RETURNS eql_v2_encrypted
+```
+
+**Example:**
+```sql
+-- Convert jsonb payload to encrypted type
+SELECT eql_v2.to_encrypted('{"v":2,"k":"pt","p":"plaintext"}'::jsonb);
+
+-- Convert text payload to encrypted type
+SELECT eql_v2.to_encrypted('{"v":2,"k":"pt","p":"plaintext"}');
+```
+
+### `eql_v2.to_jsonb()`
+
+Convert eql_v2_encrypted to jsonb.
+
+```sql
+eql_v2.to_jsonb(e eql_v2_encrypted) RETURNS jsonb
+```
+
+**Example:**
+```sql
+SELECT eql_v2.to_jsonb(encrypted_column) FROM users;
+```
+
+### `eql_v2.check_encrypted()`
+
+Validate encrypted payload structure (used in constraints).
+
+```sql
+eql_v2.check_encrypted(val jsonb) RETURNS boolean
+eql_v2.check_encrypted(val eql_v2_encrypted) RETURNS boolean
+```
+
+**Description:**
+- Validates that encrypted value has required fields (`v`, `k`, `i`)
+- Returns true if valid, false otherwise
+- Automatically added as constraint when using `eql_v2.add_column()`
+
+**Example:**
+```sql
+SELECT eql_v2.check_encrypted('{"v":2,"k":"pt","p":"test","i":{"t":"users","c":"email"}}'::jsonb);
+-- Returns: true
+
+SELECT eql_v2.check_encrypted('{"invalid":"structure"}'::jsonb);
+-- Returns: false
 ```
 
 ---
