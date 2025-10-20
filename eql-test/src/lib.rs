@@ -54,6 +54,16 @@ impl TestDb {
             })
     }
 
+    /// Execute batch of SQL statements (for loading multi-statement SQL files)
+    pub async fn batch_execute(&self, sql: &str) -> Result<(), DatabaseError> {
+        self.client.batch_execute(sql)
+            .await
+            .map_err(|e| DatabaseError::Query {
+                query: sql.to_string(),
+                source: e,
+            })
+    }
+
     /// Query with single result
     pub async fn query_one(&self, sql: &str) -> Result<Row, DatabaseError> {
         self.client.query_one(sql, &[])
