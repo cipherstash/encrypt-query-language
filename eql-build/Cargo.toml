@@ -1,0 +1,13 @@
+[package]
+name = "eql-build"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "eql-build"
+path = "src/main.rs"
+
+[dependencies]
+eql-core = { path = "../eql-core" }
+eql-postgres = { path = "../eql-postgres" }
+anyhow = { workspace = true }
