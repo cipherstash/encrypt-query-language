@@ -207,3 +207,6 @@ __pycache__
 
 # dbdev
 eql--*.sql
+
+# git worktrees
+.worktrees/
