@@ -16,6 +16,34 @@ impl Component for ConfigTypes {
     }
 }
 
+// Configuration tables
+pub struct ConfigTables;
+
+impl Component for ConfigTables {
+    type Dependencies = ConfigTypes;
+
+    fn sql_file() -> &'static str {
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/sql/config/tables.sql"
+        )
+    }
+}
+
+// Configuration indexes
+pub struct ConfigIndexes;
+
+impl Component for ConfigIndexes {
+    type Dependencies = ConfigTables;
+
+    fn sql_file() -> &'static str {
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/sql/config/indexes.sql"
+        )
+    }
+}
+
 // Private helper functions
 pub struct ConfigPrivateFunctions;
 
@@ -62,7 +90,7 @@ impl Component for AddEncryptedConstraint {
 pub struct MigrateActivate;
 
 impl Component for MigrateActivate {
-    type Dependencies = ConfigTypes;
+    type Dependencies = ConfigIndexes;  // Depends on indexes (which depend on tables)
 
     fn sql_file() -> &'static str {
         concat!(
@@ -77,10 +105,10 @@ pub struct AddColumn;
 
 impl Component for AddColumn {
     type Dependencies = (
-        ConfigTypes,
         ConfigPrivateFunctions,
         MigrateActivate,
         AddEncryptedConstraint,
+        ConfigTypes,  // Last to avoid conflicts
     );
 
     fn sql_file() -> &'static str {
