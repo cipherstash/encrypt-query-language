@@ -265,11 +265,16 @@ SELECT * FROM users WHERE encrypted_data <@ $1::eql_v2_encrypted;
 #### JSON Path Access
 
 ```sql
--- Extract field by selector (returns eql_v2_encrypted)
-SELECT encrypted_json->'selector_hash' FROM users;
+-- Extract field by selector hash (returns eql_v2_encrypted)
+SELECT encrypted_json->'abc123...' FROM users;
+SELECT encrypted_json->encrypted_selector FROM users;
+
+-- Extract field by array index (returns eql_v2_encrypted)
+SELECT encrypted_json->0 FROM users;
 
 -- Extract field as ciphertext (returns text)
-SELECT encrypted_json->>'selector_hash' FROM users;
+SELECT encrypted_json->>'abc123...' FROM users;
+SELECT encrypted_json->>encrypted_selector FROM users;
 ```
 
 ### Function Equivalents
@@ -679,7 +684,7 @@ eql_v2.version() RETURNS text
 **Example:**
 ```sql
 SELECT eql_v2.version();
--- Returns: '2.1.8'
+-- Returns version string (e.g., '2.1.8')
 ```
 
 ### `eql_v2.to_encrypted()`
@@ -723,17 +728,18 @@ eql_v2.check_encrypted(val eql_v2_encrypted) RETURNS boolean
 ```
 
 **Description:**
-- Validates that encrypted value has required fields (`v`, `k`, `i`)
-- Returns true if valid, false otherwise
+- Validates that encrypted value has required fields (`v`, `c`, `i`)
+- Checks that version is `2` and identifier contains table (`t`) and column (`c`) fields
+- Returns true if valid, raises exception if invalid
 - Automatically added as constraint when using `eql_v2.add_column()`
 
 **Example:**
 ```sql
-SELECT eql_v2.check_encrypted('{"v":2,"k":"pt","p":"test","i":{"t":"users","c":"email"}}'::jsonb);
+SELECT eql_v2.check_encrypted('{"v":2,"c":"ciphertext","i":{"t":"users","c":"email"}}'::jsonb);
 -- Returns: true
 
 SELECT eql_v2.check_encrypted('{"invalid":"structure"}'::jsonb);
--- Returns: false
+-- Raises exception: 'Encrypted column missing version (v) field'
 ```
 
 ---
