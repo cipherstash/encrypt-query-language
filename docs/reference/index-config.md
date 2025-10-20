@@ -40,6 +40,8 @@ Supported types:
 - `int`
 - `small_int`
 - `big_int`
+- `real`
+- `double`
 - `boolean`
 - `date`
 - `jsonb`
@@ -103,11 +105,16 @@ Try to ensure that the string you search for is at least as long as the `tokenLe
 
 An ste_vec index on a encrypted JSONB column enables the use of PostgreSQL's `@>` and `<@` [containment operators](https://www.postgresql.org/docs/16/functions-json.html#FUNCTIONS-JSONB-OP-TABLE).
 
-An ste_vec index requires one piece of configuration: the `context` (a string) which is passed as an info string to a MAC (Message Authenticated Code).
-This ensures that all of the encrypted values are unique to that context.
-We recommend that you use the table and column name as a the context (e.g. `users/name`).
+An ste_vec index requires one piece of configuration: the `prefix` (a string) which is passed as an info string to a MAC (Message Authenticated Code).
+This ensures that all of the encrypted values are unique to that prefix.
+We recommend that you use the table and column name as the prefix (e.g. `users/name`).
 
-Within a dataset, encrypted columns indexed using an `ste_vec` that use different contexts can't be compared.
+**Example:**
+```json
+{"prefix": "users/encrypted_json"}
+```
+
+Within a dataset, encrypted columns indexed using an `ste_vec` that use different prefixes can't be compared.
 Containment queries that manage to mix index terms from multiple columns will never return a positive result.
 This is by design.
 
@@ -217,30 +224,32 @@ When reduced to a prefix list, it would look like this:
 
 Which is then turned into an ste_vec of hashes which can be directly queries against the index.
 
-### Modifying an index (`cs_modify_index`)
+### Modifying an index (`eql_v2.modify_search_config`)
 
 Modifies an existing index configuration.
-Accepts the same parameters as `cs_add_index`
+Accepts the same parameters as `eql_v2.add_search_config`
 
 ```sql
-SELECT cs_modify_index_v2(
+SELECT eql_v2.modify_search_config(
   table_name text,
   column_name text,
   index_name text,
-  cast_as text,
-  opts jsonb
+  cast_as text DEFAULT 'text',
+  opts jsonb DEFAULT '{}',
+  migrating boolean DEFAULT false
 );
 ```
 
-### Removing an index (`cs_remove_index`)
+### Removing an index (`eql_v2.remove_search_config`)
 
 Removes an index configuration from the column.
 
 ```sql
-SELECT cs_remove_index_v2(
+SELECT eql_v2.remove_search_config(
   table_name text,
   column_name text,
-  index_name text
+  index_name text,
+  migrating boolean DEFAULT false
 );
 ```
 
