@@ -15,3 +15,4 @@ tokio = { version = "1.35", features = ["full"] }
 tokio-postgres = { version = "0.7", features = ["with-serde_json-1"] }
 anyhow = "1.0"
 thiserror = "1.0"
+paste = "1.0"

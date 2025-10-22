@@ -8,6 +8,12 @@ pub use component::{Component, Dependencies};
 pub use config::Config;
 pub use error::{ComponentError, DatabaseError, EqlError};
 
+// Re-export paste for use in sql_component! macro
+#[doc(hidden)]
+pub use paste;
+
+// Note: sql_component! macro is automatically available at crate root via #[macro_export]
+
 #[cfg(test)]
 mod tests {
     use super::*;

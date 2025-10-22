@@ -4,6 +4,10 @@ use crate::Component;
 
 /// Configuration management functions for encrypted columns
 pub trait Config {
+    type AddColumnComponent: Component;
+    type RemoveColumnComponent: Component;
+    type AddSearchConfigComponent: Component;
+
     /// Add a column for encryption/decryption.
     ///
     /// Initializes a column to work with CipherStash encryption. The column
@@ -29,11 +33,6 @@ pub trait Config {
     /// -- Configure a JSONB column
     /// SELECT eql_v2.add_column('users', 'encrypted_data', 'jsonb');
     /// ```
-    type AddColumnComponent: Component;
-    type RemoveColumnComponent: Component;
-    type AddSearchConfigComponent: Component;
-
-    /// Get the add_column component
     fn add_column() -> &'static Self::AddColumnComponent;
 
     /// Remove column configuration completely.
