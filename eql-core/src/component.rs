@@ -1,5 +1,205 @@
 //! Component trait for SQL file dependencies
 
+/// Declare a SQL component with automatic path inference and boilerplate reduction.
+///
+/// This macro generates a component struct and its `Component` trait implementation,
+/// automatically inferring the SQL file path from the module and component name.
+///
+/// # Syntax
+///
+/// ```ignore
+/// // Infer path from module::ComponentName (converts PascalCase → snake_case)
+/// sql_component!(config::AddColumn);
+/// sql_component!(config::AddColumn, deps: [Dep1, Dep2, ...]);
+///
+/// // Override path when it doesn't match convention
+/// sql_component!(config::ConfigTypes => "types.sql");
+/// sql_component!(config::ConfigTypes => "types.sql", deps: [Dep1]);
+///
+/// // Full custom path
+/// sql_component!(RemoveColumn => "not_implemented.sql");
+/// ```
+///
+/// # Examples
+///
+/// ```ignore
+/// // Simple component, infers "config/add_column.sql"
+/// sql_component!(config::AddColumn, deps: [
+///     ConfigPrivateFunctions,
+///     MigrateActivate,
+/// ]);
+///
+/// // Override filename (still in config/ directory)
+/// sql_component!(config::ConfigTypes => "types.sql");
+///
+/// // Custom path (not following module structure)
+/// sql_component!(Placeholder => "not_implemented.sql");
+/// ```
+#[macro_export]
+macro_rules! sql_component {
+    // Pattern 1: module::Component (no deps, infer path)
+    ($module:ident :: $name:ident) => {
+        $crate::paste::paste! {
+            pub struct $name;
+
+            impl $crate::Component for $name {
+                type Dependencies = ();
+
+                fn sql_file() -> &'static str {
+                    concat!(
+                        env!("CARGO_MANIFEST_DIR"),
+                        "/src/sql/",
+                        stringify!($module),
+                        "/",
+                        stringify!([<$name:snake>]),
+                        ".sql"
+                    )
+                }
+            }
+        }
+    };
+
+    // Pattern 2: module::Component with single dependency (infer path)
+    ($module:ident :: $name:ident, deps: [$dep:ty]) => {
+        $crate::paste::paste! {
+            pub struct $name;
+
+            impl $crate::Component for $name {
+                type Dependencies = $dep;
+
+                fn sql_file() -> &'static str {
+                    concat!(
+                        env!("CARGO_MANIFEST_DIR"),
+                        "/src/sql/",
+                        stringify!($module),
+                        "/",
+                        stringify!([<$name:snake>]),
+                        ".sql"
+                    )
+                }
+            }
+        }
+    };
+
+    // Pattern 3: module::Component with multiple dependencies (infer path)
+    ($module:ident :: $name:ident, deps: [$dep1:ty, $dep2:ty $(, $deps:ty)* $(,)?]) => {
+        $crate::paste::paste! {
+            pub struct $name;
+
+            impl $crate::Component for $name {
+                type Dependencies = ($dep1, $dep2 $(, $deps)*);
+
+                fn sql_file() -> &'static str {
+                    concat!(
+                        env!("CARGO_MANIFEST_DIR"),
+                        "/src/sql/",
+                        stringify!($module),
+                        "/",
+                        stringify!([<$name:snake>]),
+                        ".sql"
+                    )
+                }
+            }
+        }
+    };
+
+    // Pattern 4: module::Component => "filename.sql" (override filename, keep module)
+    ($module:ident :: $name:ident => $filename:literal) => {
+        pub struct $name;
+
+        impl $crate::Component for $name {
+            type Dependencies = ();
+
+            fn sql_file() -> &'static str {
+                concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/src/sql/",
+                    stringify!($module),
+                    "/",
+                    $filename
+                )
+            }
+        }
+    };
+
+    // Pattern 5: module::Component => "filename.sql" with single dependency
+    ($module:ident :: $name:ident => $filename:literal, deps: [$dep:ty]) => {
+        pub struct $name;
+
+        impl $crate::Component for $name {
+            type Dependencies = $dep;
+
+            fn sql_file() -> &'static str {
+                concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/src/sql/",
+                    stringify!($module),
+                    "/",
+                    $filename
+                )
+            }
+        }
+    };
+
+    // Pattern 6: module::Component => "filename.sql" with multiple dependencies
+    ($module:ident :: $name:ident => $filename:literal, deps: [$dep1:ty, $dep2:ty $(, $deps:ty)* $(,)?]) => {
+        pub struct $name;
+
+        impl $crate::Component for $name {
+            type Dependencies = ($dep1, $dep2 $(, $deps)*);
+
+            fn sql_file() -> &'static str {
+                concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/src/sql/",
+                    stringify!($module),
+                    "/",
+                    $filename
+                )
+            }
+        }
+    };
+
+    // Pattern 7: Component => "full/path.sql" (complete path override, no module)
+    ($name:ident => $path:literal) => {
+        pub struct $name;
+
+        impl $crate::Component for $name {
+            type Dependencies = ();
+
+            fn sql_file() -> &'static str {
+                concat!(env!("CARGO_MANIFEST_DIR"), "/src/sql/", $path)
+            }
+        }
+    };
+
+    // Pattern 8: Component => "full/path.sql" with single dependency
+    ($name:ident => $path:literal, deps: [$dep:ty]) => {
+        pub struct $name;
+
+        impl $crate::Component for $name {
+            type Dependencies = $dep;
+
+            fn sql_file() -> &'static str {
+                concat!(env!("CARGO_MANIFEST_DIR"), "/src/sql/", $path)
+            }
+        }
+    };
+
+    // Pattern 9: Component => "full/path.sql" with multiple dependencies
+    ($name:ident => $path:literal, deps: [$dep1:ty, $dep2:ty $(, $deps:ty)* $(,)?]) => {
+        pub struct $name;
+
+        impl $crate::Component for $name {
+            type Dependencies = ($dep1, $dep2 $(, $deps)*);
+
+            fn sql_file() -> &'static str {
+                concat!(env!("CARGO_MANIFEST_DIR"), "/src/sql/", $path)
+            }
+        }
+    };
+}
+
 /// Marker trait for dependency specifications
 pub trait Dependencies {
     /// Collect all dependency SQL files in dependency order (dependencies first)

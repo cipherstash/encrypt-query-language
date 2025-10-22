@@ -1,136 +1,33 @@
 //! PostgreSQL implementation of Config trait
 
-use eql_core::{Component, Config};
+use eql_core::{sql_component, Config};
 
-// Base component: Configuration types
-pub struct ConfigTypes;
+// ============================================
+// SQL Component Declarations
+// ============================================
 
-impl Component for ConfigTypes {
-    type Dependencies = ();
+// Configuration components
+sql_component!(config::ConfigTypes => "types.sql");
+sql_component!(config::ConfigTables => "tables.sql", deps: [ConfigTypes]);
+sql_component!(config::ConfigIndexes => "indexes.sql", deps: [ConfigTables]);
+sql_component!(config::ConfigPrivateFunctions => "functions_private.sql", deps: [ConfigTypes]);
+sql_component!(config::MigrateActivate, deps: [ConfigIndexes]);
 
-    fn sql_file() -> &'static str {
-        concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/src/sql/config/types.sql"
-        )
-    }
-}
+// Encrypted components
+sql_component!(encrypted::CheckEncrypted);
+sql_component!(encrypted::AddEncryptedConstraint, deps: [CheckEncrypted]);
 
-// Configuration tables
-pub struct ConfigTables;
-
-impl Component for ConfigTables {
-    type Dependencies = ConfigTypes;
-
-    fn sql_file() -> &'static str {
-        concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/src/sql/config/tables.sql"
-        )
-    }
-}
-
-// Configuration indexes
-pub struct ConfigIndexes;
-
-impl Component for ConfigIndexes {
-    type Dependencies = ConfigTables;
-
-    fn sql_file() -> &'static str {
-        concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/src/sql/config/indexes.sql"
-        )
-    }
-}
-
-// Private helper functions
-pub struct ConfigPrivateFunctions;
-
-impl Component for ConfigPrivateFunctions {
-    type Dependencies = ConfigTypes;
-
-    fn sql_file() -> &'static str {
-        concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/src/sql/config/functions_private.sql"
-        )
-    }
-}
-
-// Encrypted data validation stub
-pub struct CheckEncrypted;
-
-impl Component for CheckEncrypted {
-    type Dependencies = ();
-
-    fn sql_file() -> &'static str {
-        concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/src/sql/encrypted/check_encrypted.sql"
-        )
-    }
-}
-
-// Add encrypted constraint helper
-pub struct AddEncryptedConstraint;
-
-impl Component for AddEncryptedConstraint {
-    type Dependencies = CheckEncrypted;
-
-    fn sql_file() -> &'static str {
-        concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/src/sql/encrypted/add_encrypted_constraint.sql"
-        )
-    }
-}
-
-// Migration and activation functions
-pub struct MigrateActivate;
-
-impl Component for MigrateActivate {
-    type Dependencies = ConfigIndexes;  // Depends on indexes (which depend on tables)
-
-    fn sql_file() -> &'static str {
-        concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/src/sql/config/migrate_activate.sql"
-        )
-    }
-}
-
-// Main add_column function
-pub struct AddColumn;
-
-impl Component for AddColumn {
-    type Dependencies = (
-        ConfigPrivateFunctions,
-        MigrateActivate,
-        AddEncryptedConstraint,
-        ConfigTypes,  // Last to avoid conflicts
-    );
-
-    fn sql_file() -> &'static str {
-        concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/src/sql/config/add_column.sql"
-        )
-    }
-}
+// Main configuration function
+sql_component!(config::AddColumn, deps: [
+    ConfigPrivateFunctions,
+    MigrateActivate,
+    AddEncryptedConstraint,
+    ConfigTypes,
+]);
 
 // Placeholder components for POC
-pub struct RemoveColumn;
-impl Component for RemoveColumn {
-    type Dependencies = ();
-    fn sql_file() -> &'static str { "not_implemented.sql" }
-}
-
-pub struct AddSearchConfig;
-impl Component for AddSearchConfig {
-    type Dependencies = ();
-    fn sql_file() -> &'static str { "not_implemented.sql" }
-}
+sql_component!(RemoveColumn => "not_implemented.sql");
+sql_component!(AddSearchConfig => "not_implemented.sql");
 
 // PostgreSQL implementation of Config trait
 pub struct PostgresEQL;
