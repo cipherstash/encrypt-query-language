@@ -1,7 +1,11 @@
 services:
   postgres: &postgres
     container_name: postgres
-    image: postgres
+    build:
+      context: .
+      dockerfile: Dockerfile.pgtap
+      args:
+        POSTGRES_VERSION: "17"
     ports:
       - 7432:7432
     environment:
@@ -26,24 +30,40 @@ services:
 
   postgres-17:
     <<: *postgres
-    image: postgres:17
+    build:
+      context: .
+      dockerfile: Dockerfile.pgtap
+      args:
+        POSTGRES_VERSION: "17"
     container_name: postgres-17
     #volumes: # uncomment if you need to inspect the container contents
     #- ./pg/data-17:/var/lib/postgresql/data
 
   postgres-16:
     <<: *postgres
-    image: postgres:16
+    build:
+      context: .
+      dockerfile: Dockerfile.pgtap
+      args:
+        POSTGRES_VERSION: "16"
     container_name: postgres-16
 
   postgres-15:
     <<: *postgres
-    image: postgres:15
+    build:
+      context: .
+      dockerfile: Dockerfile.pgtap
+      args:
+        POSTGRES_VERSION: "15"
     container_name: postgres-15
 
   postgres-14:
     <<: *postgres
-    image: postgres:14
+    build:
+      context: .
+      dockerfile: Dockerfile.pgtap
+      args:
+        POSTGRES_VERSION: "14"
     container_name: postgres-14
 
 networks:
