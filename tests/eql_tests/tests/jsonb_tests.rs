@@ -16,14 +16,10 @@ async fn jsonb_array_elements_returns_array_elements(pool: PgPool) {
         Selectors::ARRAY_ELEMENTS
     );
 
-    QueryAssertion::new(&pool, &sql)
-        .returns_rows()
-        .await;
+    QueryAssertion::new(&pool, &sql).returns_rows().await;
 
     // Also verify count
-    QueryAssertion::new(&pool, &sql)
-        .count(5)
-        .await;
+    QueryAssertion::new(&pool, &sql).count(5).await;
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json", "array_data")))]
@@ -36,9 +32,7 @@ async fn jsonb_array_elements_throws_exception_for_non_array(pool: PgPool) {
         Selectors::ARRAY_ROOT
     );
 
-    QueryAssertion::new(&pool, &sql)
-        .throws_exception()
-        .await;
+    QueryAssertion::new(&pool, &sql).throws_exception().await;
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json", "array_data")))]
@@ -68,9 +62,7 @@ async fn jsonb_array_elements_text_throws_exception_for_non_array(pool: PgPool) 
         Selectors::ARRAY_ROOT
     );
 
-    QueryAssertion::new(&pool, &sql)
-        .throws_exception()
-        .await;
+    QueryAssertion::new(&pool, &sql).throws_exception().await;
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json", "array_data")))]
@@ -83,9 +75,7 @@ async fn jsonb_array_length_returns_array_length(pool: PgPool) {
         Selectors::ARRAY_ELEMENTS
     );
 
-    QueryAssertion::new(&pool, &sql)
-        .returns_int_value(5)
-        .await;
+    QueryAssertion::new(&pool, &sql).returns_int_value(5).await;
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json", "array_data")))]
@@ -98,9 +88,7 @@ async fn jsonb_array_length_throws_exception_for_non_array(pool: PgPool) {
         Selectors::ARRAY_ROOT
     );
 
-    QueryAssertion::new(&pool, &sql)
-        .throws_exception()
-        .await;
+    QueryAssertion::new(&pool, &sql).throws_exception().await;
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
@@ -113,9 +101,7 @@ async fn jsonb_path_query_finds_selector(pool: PgPool) {
         Selectors::N
     );
 
-    QueryAssertion::new(&pool, &sql)
-        .returns_rows()
-        .await;
+    QueryAssertion::new(&pool, &sql).returns_rows().await;
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
@@ -128,9 +114,7 @@ async fn jsonb_path_query_returns_correct_count(pool: PgPool) {
         Selectors::N
     );
 
-    QueryAssertion::new(&pool, &sql)
-        .count(3)
-        .await;
+    QueryAssertion::new(&pool, &sql).count(3).await;
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
@@ -170,7 +154,5 @@ async fn jsonb_path_exists_returns_correct_count(pool: PgPool) {
         Selectors::N
     );
 
-    QueryAssertion::new(&pool, &sql)
-        .count(3)
-        .await;
+    QueryAssertion::new(&pool, &sql).count(3).await;
 }
