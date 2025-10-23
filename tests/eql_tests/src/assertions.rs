@@ -96,6 +96,31 @@ impl<'a> QueryAssertion<'a> {
         self
     }
 
+    /// Assert that query returns a specific integer value in first row, first column
+    ///
+    /// # Panics
+    /// Panics if value doesn't match or query fails
+    pub async fn returns_int_value(self, expected: i32) -> Self {
+        let row = sqlx::query(&self.sql)
+            .fetch_one(self.pool)
+            .await
+            .expect(&format!("Query failed: {}", self.sql));
+
+        let value: i32 = row.try_get(0)
+            .expect("Failed to get column 0");
+
+        assert_eq!(
+            value,
+            expected,
+            "Expected {} but got {}: {}",
+            expected,
+            value,
+            self.sql
+        );
+
+        self
+    }
+
     /// Assert that query throws an exception
     ///
     /// # Panics
