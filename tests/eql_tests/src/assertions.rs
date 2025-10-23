@@ -81,16 +81,12 @@ impl<'a> QueryAssertion<'a> {
             .await
             .expect(&format!("Query failed: {}", self.sql));
 
-        let value: String = row.try_get(0)
-            .expect("Failed to get column 0");
+        let value: String = row.try_get(0).expect("Failed to get column 0");
 
         assert_eq!(
-            value,
-            expected,
+            value, expected,
             "Expected '{}' but got '{}': {}",
-            expected,
-            value,
-            self.sql
+            expected, value, self.sql
         );
 
         self
@@ -106,16 +102,12 @@ impl<'a> QueryAssertion<'a> {
             .await
             .expect(&format!("Query failed: {}", self.sql));
 
-        let value: i32 = row.try_get(0)
-            .expect("Failed to get column 0");
+        let value: i32 = row.try_get(0).expect("Failed to get column 0");
 
         assert_eq!(
-            value,
-            expected,
+            value, expected,
             "Expected {} but got {}: {}",
-            expected,
-            value,
-            self.sql
+            expected, value, self.sql
         );
 
         self
@@ -131,16 +123,12 @@ impl<'a> QueryAssertion<'a> {
             .await
             .expect(&format!("Query failed: {}", self.sql));
 
-        let value: bool = row.try_get(0)
-            .expect("Failed to get column 0");
+        let value: bool = row.try_get(0).expect("Failed to get column 0");
 
         assert_eq!(
-            value,
-            expected,
+            value, expected,
             "Expected {} but got {}: {}",
-            expected,
-            value,
-            self.sql
+            expected, value, self.sql
         );
 
         self
@@ -151,9 +139,7 @@ impl<'a> QueryAssertion<'a> {
     /// # Panics
     /// Panics if query succeeds instead of failing
     pub async fn throws_exception(self) {
-        let result = sqlx::query(&self.sql)
-            .fetch_all(self.pool)
-            .await;
+        let result = sqlx::query(&self.sql).fetch_all(self.pool).await;
 
         assert!(
             result.is_err(),

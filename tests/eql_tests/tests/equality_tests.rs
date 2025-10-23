@@ -14,23 +14,26 @@ async fn create_encrypted_json_with_index(pool: &PgPool, id: i32, index_type: &s
         id, index_type
     );
 
-    let row = sqlx::query(&sql)
-        .fetch_one(pool)
-        .await
-        .unwrap_or_else(|e| panic!(
+    let row = sqlx::query(&sql).fetch_one(pool).await.unwrap_or_else(|e| {
+        panic!(
             "Failed to create encrypted JSON with id={}, index_type='{}': {}",
             id, index_type, e
-        ));
+        )
+    });
 
-    let result: Option<String> = row.try_get(0).unwrap_or_else(|e| panic!(
-        "Failed to get result from create_encrypted_json(id={}, index_type='{}'): {}",
-        id, index_type, e
-    ));
+    let result: Option<String> = row.try_get(0).unwrap_or_else(|e| {
+        panic!(
+            "Failed to get result from create_encrypted_json(id={}, index_type='{}'): {}",
+            id, index_type, e
+        )
+    });
 
-    result.expect(&format!(
-        "create_encrypted_json returned NULL for id={}, index_type='{}'",
-        id, index_type
-    ))
+    result.unwrap_or_else(|| {
+        panic!(
+            "create_encrypted_json returned NULL for id={}, index_type='{}'",
+            id, index_type
+        )
+    })
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
@@ -45,9 +48,7 @@ async fn equality_operator_finds_matching_record_hmac(pool: PgPool) {
         encrypted
     );
 
-    QueryAssertion::new(&pool, &sql)
-        .returns_rows()
-        .await;
+    QueryAssertion::new(&pool, &sql).returns_rows().await;
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
@@ -64,7 +65,57 @@ async fn equality_operator_returns_empty_for_no_match_hmac(pool: PgPool) {
         encrypted
     );
 
-    QueryAssertion::new(&pool, &sql)
-        .count(0)
-        .await;
+    QueryAssertion::new(&pool, &sql).count(0).await;
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn equality_operator_finds_matching_record_blake3(pool: PgPool) {
+    // Test: eql_v2_encrypted = eql_v2_encrypted with Blake3 index
+    // Original SQL line 105-127 in src/operators/=_test.sql
+
+    let encrypted = create_encrypted_json_with_index(&pool, 1, "b3").await;
+
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE e = '{}'::eql_v2_encrypted",
+        encrypted
+    );
+
+    QueryAssertion::new(&pool, &sql).returns_rows().await;
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn equality_operator_returns_empty_for_no_match_blake3(pool: PgPool) {
+    // Test: equality returns no results for non-existent record with Blake3
+    // Original SQL line 120-124 in src/operators/=_test.sql
+    // Note: Using id=4 instead of 91347 to ensure ore data exists
+    // The important part is that id=4 doesn't exist in the fixture data (only 1, 2, 3)
+
+    let encrypted = create_encrypted_json_with_index(&pool, 4, "b3").await;
+
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE e = '{}'::eql_v2_encrypted",
+        encrypted
+    );
+
+    QueryAssertion::new(&pool, &sql).count(0).await;
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn eq_function_finds_matching_record_hmac(pool: PgPool) {
+    // Test: eql_v2.eq() function with HMAC index
+    // Original SQL line 38-59 in src/operators/=_test.sql
+    // Uses create_encrypted_json(id)::jsonb-'ob' to get encrypted data without ORE field
+
+    // Call SQL function to create encrypted JSON and remove 'ob' field
+    // Cast to eql_v2_encrypted first, then to text to get tuple format
+    let sql_create = "SELECT ((create_encrypted_json(1)::jsonb - 'ob')::eql_v2_encrypted)::text";
+    let row = sqlx::query(sql_create).fetch_one(&pool).await.unwrap();
+    let encrypted: String = row.try_get(0).unwrap();
+
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE eql_v2.eq(e, '{}'::eql_v2_encrypted)",
+        encrypted
+    );
+
+    QueryAssertion::new(&pool, &sql).returns_rows().await;
 }
