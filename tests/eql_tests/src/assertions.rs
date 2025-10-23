@@ -18,7 +18,7 @@ impl<'a> QueryAssertion<'a> {
     /// Create new query assertion
     ///
     /// # Example
-    /// ```
+    /// ```ignore
     /// QueryAssertion::new(&pool, "SELECT * FROM encrypted")
     ///     .returns_rows()
     ///     .await;
