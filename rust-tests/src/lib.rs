@@ -1,5 +1,12 @@
 use sqlx::{PgPool, postgres::PgPoolOptions};
-use std::path::Path;
+
+/// Reset pg_stat_user_functions tracking before tests
+pub async fn reset_function_stats(pool: &PgPool) -> anyhow::Result<()> {
+    sqlx::query("SELECT pg_stat_reset()")
+        .execute(pool)
+        .await?;
+    Ok(())
+}
 
 /// Create a test database with EQL extension loaded from release build
 ///
