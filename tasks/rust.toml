@@ -1,0 +1,17 @@
+["test:rust"]
+description = "Run Rust test framework"
+dir = "{{config_root}}/tests/eql_tests"
+run = """
+# Ensure database is running
+mise run postgres:up --extra-args "--detach --wait"
+
+# Run tests
+cargo test
+"""
+
+["test:rust:watch"]
+description = "Run Rust tests in watch mode"
+dir = "{{config_root}}/tests/eql_tests"
+run = """
+cargo watch -x test
+"""
