@@ -102,3 +102,33 @@ async fn jsonb_array_length_throws_exception_for_non_array(pool: PgPool) {
         .throws_exception()
         .await;
 }
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn jsonb_path_query_finds_selector(pool: PgPool) {
+    // Test: jsonb_path_query finds records by selector
+    // Original SQL line 182-189 in src/jsonb/functions_test.sql
+
+    let sql = format!(
+        "SELECT eql_v2.jsonb_path_query(e, '{}') FROM encrypted LIMIT 1",
+        Selectors::N
+    );
+
+    QueryAssertion::new(&pool, &sql)
+        .returns_rows()
+        .await;
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn jsonb_path_query_returns_correct_count(pool: PgPool) {
+    // Test: jsonb_path_query returns correct count
+    // Original SQL line 186-189 in src/jsonb/functions_test.sql
+
+    let sql = format!(
+        "SELECT eql_v2.jsonb_path_query(e, '{}') FROM encrypted",
+        Selectors::N
+    );
+
+    QueryAssertion::new(&pool, &sql)
+        .count(3)
+        .await;
+}
