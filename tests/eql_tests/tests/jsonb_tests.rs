@@ -72,3 +72,33 @@ async fn jsonb_array_elements_text_throws_exception_for_non_array(pool: PgPool) 
         .throws_exception()
         .await;
 }
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json", "array_data")))]
+async fn jsonb_array_length_returns_array_length(pool: PgPool) {
+    // Test: jsonb_array_length returns correct array length
+    // Original SQL line 114-117 in src/jsonb/functions_test.sql
+
+    let sql = format!(
+        "SELECT eql_v2.jsonb_array_length(eql_v2.jsonb_path_query(e, '{}')) as e FROM encrypted LIMIT 1",
+        Selectors::ARRAY_ELEMENTS
+    );
+
+    QueryAssertion::new(&pool, &sql)
+        .returns_int_value(5)
+        .await;
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json", "array_data")))]
+async fn jsonb_array_length_throws_exception_for_non_array(pool: PgPool) {
+    // Test: jsonb_array_length throws exception if input is not an array
+    // Original SQL line 119-121 in src/jsonb/functions_test.sql
+
+    let sql = format!(
+        "SELECT eql_v2.jsonb_array_length(eql_v2.jsonb_path_query(e, '{}')) as e FROM encrypted LIMIT 1",
+        Selectors::ARRAY_ROOT
+    );
+
+    QueryAssertion::new(&pool, &sql)
+        .throws_exception()
+        .await;
+}
