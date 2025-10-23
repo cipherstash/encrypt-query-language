@@ -1,5 +1,3 @@
-\set ON_ERROR_STOP on
-
 --
 -- Various Helper functions
 --

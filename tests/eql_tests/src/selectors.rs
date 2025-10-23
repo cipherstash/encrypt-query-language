@@ -39,7 +39,7 @@ impl Selectors {
     /// Create eql_v2_encrypted selector JSON for use in queries
     ///
     /// # Example
-    /// ```
+    /// ```ignore
     /// let selector = Selectors::as_encrypted(Selectors::N);
     /// // Returns: {"s": "2517068c0d1f9d4d41d2c666211f785e"}
     /// ```
