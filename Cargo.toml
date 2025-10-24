@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "tests/eql_tests",
+    "tests/sqlx",
 ]
 
 resolver = "2"

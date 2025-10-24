@@ -10,6 +10,6 @@ These migrations install EQL and test helpers into the test database.
 To regenerate migrations:
 ```bash
 mise run build
-cp release/cipherstash-encrypt.sql tests/eql_tests/migrations/001_install_eql.sql
-cp tests/test_helpers.sql tests/eql_tests/migrations/002_install_test_helpers.sql
+cp release/cipherstash-encrypt.sql tests/sqlx/migrations/001_install_eql.sql
+cp tests/test_helpers.sql tests/sqlx/migrations/002_install_test_helpers.sql
 ```
