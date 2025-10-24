@@ -207,3 +207,10 @@ __pycache__
 
 # dbdev
 eql--*.sql
+# Documentation files (kept locally but not committed)
+tests/sqlx/TEST_MIGRATION_COVERAGE.md
+tests/sqlx/COVERAGE_IMPROVEMENTS.md
+tests/sqlx/RETROSPECTIVE.md
+docs/retrospectives/
+CODE_REVIEW_BATCH_*.md
+docs/plans/*-complete-*.md
