@@ -119,3 +119,38 @@ async fn eq_function_finds_matching_record_hmac(pool: PgPool) {
 
     QueryAssertion::new(&pool, &sql).returns_rows().await;
 }
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn eq_function_finds_matching_record_blake3(pool: PgPool) {
+    // Test: eql_v2.eq() function with Blake3 index
+    // Original SQL line 135-156 in src/operators/=_test.sql
+
+    // Call SQL function to create encrypted JSON with Blake3 and remove 'ob' field
+    let sql_create = "SELECT ((create_encrypted_json(1, 'b3')::jsonb - 'ob')::eql_v2_encrypted)::text";
+    let row = sqlx::query(sql_create).fetch_one(&pool).await.unwrap();
+    let encrypted: String = row.try_get(0).unwrap();
+
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE eql_v2.eq(e, '{}'::eql_v2_encrypted)",
+        encrypted
+    );
+
+    QueryAssertion::new(&pool, &sql).returns_rows().await;
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn eq_function_returns_empty_for_no_match_blake3(pool: PgPool) {
+    // Test: eql_v2.eq() returns no results for non-existent record with Blake3
+    // Original SQL line 148-153 in src/operators/=_test.sql
+
+    let sql_create = "SELECT ((create_encrypted_json(4, 'b3')::jsonb - 'ob')::eql_v2_encrypted)::text";
+    let row = sqlx::query(sql_create).fetch_one(&pool).await.unwrap();
+    let encrypted: String = row.try_get(0).unwrap();
+
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE eql_v2.eq(e, '{}'::eql_v2_encrypted)",
+        encrypted
+    );
+
+    QueryAssertion::new(&pool, &sql).count(0).await;
+}
