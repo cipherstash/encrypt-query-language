@@ -38,7 +38,7 @@ impl<'a> QueryAssertion<'a> {
         let rows = sqlx::query(&self.sql)
             .fetch_all(self.pool)
             .await
-            .expect(&format!("Query failed: {}", self.sql));
+            .unwrap_or_else(|_| panic!("Query failed: {}", self.sql));
 
         assert!(
             !rows.is_empty(),
@@ -57,7 +57,7 @@ impl<'a> QueryAssertion<'a> {
         let rows = sqlx::query(&self.sql)
             .fetch_all(self.pool)
             .await
-            .expect(&format!("Query failed: {}", self.sql));
+            .unwrap_or_else(|_| panic!("Query failed: {}", self.sql));
 
         assert_eq!(
             rows.len(),
@@ -79,7 +79,7 @@ impl<'a> QueryAssertion<'a> {
         let row = sqlx::query(&self.sql)
             .fetch_one(self.pool)
             .await
-            .expect(&format!("Query failed: {}", self.sql));
+            .unwrap_or_else(|_| panic!("Query failed: {}", self.sql));
 
         let value: String = row.try_get(0).expect("Failed to get column 0");
 
@@ -100,7 +100,7 @@ impl<'a> QueryAssertion<'a> {
         let row = sqlx::query(&self.sql)
             .fetch_one(self.pool)
             .await
-            .expect(&format!("Query failed: {}", self.sql));
+            .unwrap_or_else(|_| panic!("Query failed: {}", self.sql));
 
         let value: i32 = row.try_get(0).expect("Failed to get column 0");
 
@@ -121,7 +121,7 @@ impl<'a> QueryAssertion<'a> {
         let row = sqlx::query(&self.sql)
             .fetch_one(self.pool)
             .await
-            .expect(&format!("Query failed: {}", self.sql));
+            .unwrap_or_else(|_| panic!("Query failed: {}", self.sql));
 
         let value: bool = row.try_get(0).expect("Failed to get column 0");
 
