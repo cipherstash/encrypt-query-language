@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "tests/sqlx",
+]
+
+resolver = "2"

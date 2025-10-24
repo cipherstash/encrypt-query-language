@@ -207,3 +207,6 @@ __pycache__
 
 # dbdev
 eql--*.sql
+
+# Generated SQLx migration (built from src/, never commit)
+tests/sqlx/migrations/001_install_eql.sql

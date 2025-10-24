@@ -270,3 +270,18 @@ Follow the instructions in the [dbdev documentation](https://database.dev/cipher
 ## Contributing
 
 See the [development guide](./DEVELOPMENT.md) for information on developing and extending EQL.
+
+## Test Coverage Tracking
+
+During SQL→SQLx test migration, track coverage with:
+
+```bash
+./tools/check-test-coverage.sh
+```
+
+This generates:
+- Test inventory (which tests ported)
+- Assertion count comparison
+- Function call coverage comparison
+
+See `docs/test-inventory.md` and `docs/assertion-counts.md` for details.

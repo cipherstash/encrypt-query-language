@@ -7,7 +7,7 @@
 #     "./tests/mise.tls.toml",
 # ]
 [task_config]
-includes = ["tasks", "tasks/postgres.toml"]
+includes = ["tasks", "tasks/postgres.toml", "tasks/rust.toml"]
 
 [env]
 POSTGRES_DB = "cipherstash"

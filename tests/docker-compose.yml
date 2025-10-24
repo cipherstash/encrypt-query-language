@@ -1,7 +1,8 @@
 services:
   postgres: &postgres
     container_name: postgres
-    image: postgres
+    image: postgres:17
+    command: postgres -c track_functions=all
     ports:
       - 7432:7432
     environment:
