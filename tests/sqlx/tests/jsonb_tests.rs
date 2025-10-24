@@ -4,7 +4,7 @@
 //! Tests EQL JSONB path query functions with encrypted data
 
 use eql_tests::{QueryAssertion, Selectors};
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json", "array_data")))]
 async fn jsonb_array_elements_returns_array_elements(pool: PgPool) {
@@ -155,4 +155,53 @@ async fn jsonb_path_exists_returns_correct_count(pool: PgPool) {
     );
 
     QueryAssertion::new(&pool, &sql).count(3).await;
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn jsonb_path_query_returns_valid_structure(pool: PgPool) {
+    // Test: jsonb_path_query returns JSONB with correct structure ('i' and 'v' keys)
+    // Original SQL line 195-207 in src/jsonb/functions_test.sql
+    // Important: Validates decrypt-ability of returned data
+
+    let sql = format!(
+        "SELECT eql_v2.jsonb_path_query(e, '{}')::jsonb FROM encrypted LIMIT 1",
+        Selectors::N
+    );
+
+    let row = sqlx::query(&sql).fetch_one(&pool).await.unwrap();
+    let result: serde_json::Value = row.try_get(0).unwrap();
+
+    // Verify structure has 'i' (iv) and 'v' (value) keys required for decryption
+    assert!(
+        result.get("i").is_some(),
+        "Result must contain 'i' key for initialization vector"
+    );
+    assert!(
+        result.get("v").is_some(),
+        "Result must contain 'v' key for encrypted value"
+    );
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json", "array_data")))]
+async fn jsonb_array_elements_returns_valid_structure(pool: PgPool) {
+    // Test: jsonb_array_elements returns elements with correct structure
+    // Original SQL line 211-223 in src/jsonb/functions_test.sql
+
+    let sql = format!(
+        "SELECT eql_v2.jsonb_array_elements(eql_v2.jsonb_path_query(e, '{}'))::jsonb FROM encrypted LIMIT 1",
+        Selectors::ARRAY_ELEMENTS
+    );
+
+    let row = sqlx::query(&sql).fetch_one(&pool).await.unwrap();
+    let result: serde_json::Value = row.try_get(0).unwrap();
+
+    // Verify array elements maintain encryption structure
+    assert!(
+        result.get("i").is_some(),
+        "Array element must contain 'i' key for initialization vector"
+    );
+    assert!(
+        result.get("v").is_some(),
+        "Array element must contain 'v' key for encrypted value"
+    );
 }
