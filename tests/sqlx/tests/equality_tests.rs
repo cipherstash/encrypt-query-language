@@ -154,3 +154,72 @@ async fn eq_function_returns_empty_for_no_match_blake3(pool: PgPool) {
 
     QueryAssertion::new(&pool, &sql).count(0).await;
 }
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn equality_operator_encrypted_equals_jsonb_hmac(pool: PgPool) {
+    // Test: eql_v2_encrypted = jsonb with HMAC index
+    // Original SQL line 65-94 in src/operators/=_test.sql
+
+    // Create encrypted JSON with HMAC, remove 'ob' field for comparison
+    let sql_create = "SELECT (create_encrypted_json(1)::jsonb - 'ob')::text";
+    let row = sqlx::query(sql_create).fetch_one(&pool).await.unwrap();
+    let json_value: String = row.try_get(0).unwrap();
+
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE e = '{}'::jsonb",
+        json_value
+    );
+
+    QueryAssertion::new(&pool, &sql).returns_rows().await;
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn equality_operator_jsonb_equals_encrypted_hmac(pool: PgPool) {
+    // Test: jsonb = eql_v2_encrypted with HMAC index (reverse direction)
+    // Original SQL line 78-81 in src/operators/=_test.sql
+
+    let sql_create = "SELECT (create_encrypted_json(1)::jsonb - 'ob')::text";
+    let row = sqlx::query(sql_create).fetch_one(&pool).await.unwrap();
+    let json_value: String = row.try_get(0).unwrap();
+
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE '{}'::jsonb = e",
+        json_value
+    );
+
+    QueryAssertion::new(&pool, &sql).returns_rows().await;
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn equality_operator_encrypted_equals_jsonb_no_match_hmac(pool: PgPool) {
+    // Test: eql_v2_encrypted = jsonb with no matching record
+    // Original SQL line 83-87 in src/operators/=_test.sql
+
+    let sql_create = "SELECT (create_encrypted_json(4)::jsonb - 'ob')::text";
+    let row = sqlx::query(sql_create).fetch_one(&pool).await.unwrap();
+    let json_value: String = row.try_get(0).unwrap();
+
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE e = '{}'::jsonb",
+        json_value
+    );
+
+    QueryAssertion::new(&pool, &sql).count(0).await;
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn equality_operator_jsonb_equals_encrypted_no_match_hmac(pool: PgPool) {
+    // Test: jsonb = eql_v2_encrypted with no matching record
+    // Original SQL line 89-91 in src/operators/=_test.sql
+
+    let sql_create = "SELECT (create_encrypted_json(4)::jsonb - 'ob')::text";
+    let row = sqlx::query(sql_create).fetch_one(&pool).await.unwrap();
+    let json_value: String = row.try_get(0).unwrap();
+
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE '{}'::jsonb = e",
+        json_value
+    );
+
+    QueryAssertion::new(&pool, &sql).count(0).await;
+}
