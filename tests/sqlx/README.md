@@ -17,9 +17,6 @@ This test crate provides:
 - Equality operators: 16/16 (HMAC + Blake3, operators + functions + JSONB)
 - JSONB functions: 24/24 (arrays, paths, structure validation, encrypted selectors)
 
-See `TEST_MIGRATION_COVERAGE.md` for detailed mapping.
-See `COVERAGE_IMPROVEMENTS.md` for enhancement opportunities.
-
 ## Architecture
 
 - **SQLx `#[sqlx::test]`**: Automatic test isolation (each test gets fresh database)
