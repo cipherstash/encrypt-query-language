@@ -227,3 +227,25 @@ async fn jsonb_path_query_first_filters_non_null(pool: PgPool) {
     // Should return only 1 row (the one with array data)
     QueryAssertion::new(&pool, sql).count(1).await;
 }
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json", "array_data")))]
+async fn jsonb_path_query_with_array_selector_returns_single_result(pool: PgPool) {
+    // Test: jsonb_path_query wraps arrays as single result
+    // Original SQL line 254-274 in src/jsonb/functions_test.sql
+
+    let sql = "SELECT eql_v2.jsonb_path_query(e, 'f510853730e1c3dbd31b86963f029dd5') FROM encrypted";
+
+    // Array should be wrapped and returned as single element
+    QueryAssertion::new(&pool, sql).count(1).await;
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json", "array_data")))]
+async fn jsonb_path_exists_with_array_selector(pool: PgPool) {
+    // Test: jsonb_path_exists works with array selectors
+    // Original SQL line 282-303 in src/jsonb/functions_test.sql
+
+    let sql = "SELECT eql_v2.jsonb_path_exists(e, 'f510853730e1c3dbd31b86963f029dd5') FROM encrypted";
+
+    // Should return 4 rows (3 encrypted_json + 1 array_data)
+    QueryAssertion::new(&pool, sql).count(4).await;
+}
