@@ -10,6 +10,16 @@ This test crate provides:
 - **No magic literals**: Selector constants in `src/selectors.rs`
 - **Fluent assertions**: Chainable query assertions via `QueryAssertion`
 
+## Migration Status
+
+✅ **Like-for-Like Migration: Complete** (40/40 SQL assertions ported)
+
+- Equality operators: 16/16 (HMAC + Blake3, operators + functions + JSONB)
+- JSONB functions: 24/24 (arrays, paths, structure validation, encrypted selectors)
+
+See `TEST_MIGRATION_COVERAGE.md` for detailed mapping.
+See `COVERAGE_IMPROVEMENTS.md` for enhancement opportunities.
+
 ## Architecture
 
 - **SQLx `#[sqlx::test]`**: Automatic test isolation (each test gets fresh database)
@@ -24,17 +34,24 @@ This test crate provides:
 ## Running Tests
 
 ```bash
-# All tests
-cargo test
+# Run all SQLx tests (builds EQL, runs migrations, tests)
+mise run test:sqlx
 
-# Specific test
-cargo test jsonb_array_elements_returns_array_elements
+# Run specific test file
+cd tests/sqlx
+cargo test --test equality_tests
+
+# Run specific test
+cargo test equality_operator_finds_matching_record_hmac -- --nocapture
+
+# Run with coverage tracking
+./tools/count_assertions.sh
 
 # All JSONB tests
-cargo test jsonb_
+cargo test jsonb
 
 # All equality tests
-cargo test equality_
+cargo test equality
 
 # With output
 cargo test -- --nocapture
@@ -170,9 +187,10 @@ async fn test_name(pool: PgPool) {
 
 ### Test Count
 
-- **Total**: 16 tests
-- **JSONB**: 11 tests
-- **Equality**: 5 tests
+- **Total**: 35 tests (34 functional + 1 helper)
+- **JSONB**: 19 tests
+- **Equality**: 15 tests
+- **Helpers**: 1 test
 
 ## Dependencies
 
