@@ -205,3 +205,25 @@ async fn jsonb_array_elements_returns_valid_structure(pool: PgPool) {
         "Array element must contain 'v' key for encrypted value"
     );
 }
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json", "array_data")))]
+async fn jsonb_path_query_first_with_array_selector(pool: PgPool) {
+    // Test: jsonb_path_query_first returns first element from array path
+    // Original SQL line 135-160 in src/jsonb/functions_test.sql
+
+    let sql = "SELECT eql_v2.jsonb_path_query_first(e, '33743aed3ae636f6bf05cff11ac4b519') as e FROM encrypted";
+
+    // Should return 4 total rows (3 from encrypted_json + 1 from array_data)
+    QueryAssertion::new(&pool, sql).count(4).await;
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json", "array_data")))]
+async fn jsonb_path_query_first_filters_non_null(pool: PgPool) {
+    // Test: jsonb_path_query_first can filter by non-null values
+    // Original SQL line 331-333 in src/jsonb/functions_test.sql
+
+    let sql = "SELECT eql_v2.jsonb_path_query_first(e, '33743aed3ae636f6bf05cff11ac4b519') as e FROM encrypted WHERE eql_v2.jsonb_path_query_first(e, '33743aed3ae636f6bf05cff11ac4b519') IS NOT NULL";
+
+    // Should return only 1 row (the one with array data)
+    QueryAssertion::new(&pool, sql).count(1).await;
+}
