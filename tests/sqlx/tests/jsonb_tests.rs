@@ -249,3 +249,43 @@ async fn jsonb_path_exists_with_array_selector(pool: PgPool) {
     // Should return 4 rows (3 encrypted_json + 1 array_data)
     QueryAssertion::new(&pool, sql).count(4).await;
 }
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json", "array_data")))]
+async fn jsonb_array_elements_with_encrypted_selector(pool: PgPool) {
+    // Test: jsonb_array_elements_text accepts eql_v2_encrypted selector
+    // Original SQL line 39-66 in src/jsonb/functions_test.sql
+    // Tests alternative API pattern using encrypted selector
+
+    // Create encrypted selector for array elements path
+    let selector_sql = "SELECT '{\"s\": \"f510853730e1c3dbd31b86963f029dd5\"}'::jsonb::eql_v2_encrypted::text";
+    let row = sqlx::query(selector_sql).fetch_one(&pool).await.unwrap();
+    let encrypted_selector: String = row.try_get(0).unwrap();
+
+    let sql = format!(
+        "SELECT eql_v2.jsonb_array_elements_text(eql_v2.jsonb_path_query(e, '{}'::eql_v2_encrypted)) as e FROM encrypted",
+        encrypted_selector
+    );
+
+    QueryAssertion::new(&pool, &sql)
+        .returns_rows()
+        .await
+        .count(5)
+        .await;
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json", "array_data")))]
+async fn jsonb_array_elements_with_encrypted_selector_throws_for_non_array(pool: PgPool) {
+    // Test: encrypted selector also validates array type
+    // Original SQL line 61-63 in src/jsonb/functions_test.sql
+
+    let selector_sql = "SELECT '{\"s\": \"33743aed3ae636f6bf05cff11ac4b519\"}'::jsonb::eql_v2_encrypted::text";
+    let row = sqlx::query(selector_sql).fetch_one(&pool).await.unwrap();
+    let encrypted_selector: String = row.try_get(0).unwrap();
+
+    let sql = format!(
+        "SELECT eql_v2.jsonb_array_elements_text(eql_v2.jsonb_path_query(e, '{}'::eql_v2_encrypted)) as e FROM encrypted LIMIT 1",
+        encrypted_selector
+    );
+
+    QueryAssertion::new(&pool, &sql).throws_exception().await;
+}
