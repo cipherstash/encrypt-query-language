@@ -211,7 +211,10 @@ async fn jsonb_path_query_first_with_array_selector(pool: PgPool) {
     // Test: jsonb_path_query_first returns first element from array path
     // Original SQL line 135-160 in src/jsonb/functions_test.sql
 
-    let sql = "SELECT eql_v2.jsonb_path_query_first(e, '33743aed3ae636f6bf05cff11ac4b519') as e FROM encrypted";
+    let sql = format!(
+        "SELECT eql_v2.jsonb_path_query_first(e, '{}') as e FROM encrypted",
+        Selectors::ARRAY_ROOT
+    );
 
     // Should return 4 total rows (3 from encrypted_json + 1 from array_data)
     QueryAssertion::new(&pool, sql).count(4).await;
@@ -222,7 +225,11 @@ async fn jsonb_path_query_first_filters_non_null(pool: PgPool) {
     // Test: jsonb_path_query_first can filter by non-null values
     // Original SQL line 331-333 in src/jsonb/functions_test.sql
 
-    let sql = "SELECT eql_v2.jsonb_path_query_first(e, '33743aed3ae636f6bf05cff11ac4b519') as e FROM encrypted WHERE eql_v2.jsonb_path_query_first(e, '33743aed3ae636f6bf05cff11ac4b519') IS NOT NULL";
+    let sql = format!(
+        "SELECT eql_v2.jsonb_path_query_first(e, '{}') as e FROM encrypted WHERE eql_v2.jsonb_path_query_first(e, '{}') IS NOT NULL",
+        Selectors::ARRAY_ROOT,
+        Selectors::ARRAY_ROOT
+    );
 
     // Should return only 1 row (the one with array data)
     QueryAssertion::new(&pool, sql).count(1).await;
@@ -233,7 +240,10 @@ async fn jsonb_path_query_with_array_selector_returns_single_result(pool: PgPool
     // Test: jsonb_path_query wraps arrays as single result
     // Original SQL line 254-274 in src/jsonb/functions_test.sql
 
-    let sql = "SELECT eql_v2.jsonb_path_query(e, 'f510853730e1c3dbd31b86963f029dd5') FROM encrypted";
+    let sql = format!(
+        "SELECT eql_v2.jsonb_path_query(e, '{}') FROM encrypted",
+        Selectors::ARRAY_ELEMENTS
+    );
 
     // Array should be wrapped and returned as single element
     QueryAssertion::new(&pool, sql).count(1).await;
@@ -244,7 +254,10 @@ async fn jsonb_path_exists_with_array_selector(pool: PgPool) {
     // Test: jsonb_path_exists works with array selectors
     // Original SQL line 282-303 in src/jsonb/functions_test.sql
 
-    let sql = "SELECT eql_v2.jsonb_path_exists(e, 'f510853730e1c3dbd31b86963f029dd5') FROM encrypted";
+    let sql = format!(
+        "SELECT eql_v2.jsonb_path_exists(e, '{}') FROM encrypted",
+        Selectors::ARRAY_ELEMENTS
+    );
 
     // Should return 4 rows (3 encrypted_json + 1 array_data)
     QueryAssertion::new(&pool, sql).count(4).await;
@@ -257,8 +270,11 @@ async fn jsonb_array_elements_with_encrypted_selector(pool: PgPool) {
     // Tests alternative API pattern using encrypted selector
 
     // Create encrypted selector for array elements path
-    let selector_sql = "SELECT '{\"s\": \"f510853730e1c3dbd31b86963f029dd5\"}'::jsonb::eql_v2_encrypted::text";
-    let row = sqlx::query(selector_sql).fetch_one(&pool).await.unwrap();
+    let selector_sql = format!(
+        "SELECT '{}'::jsonb::eql_v2_encrypted::text",
+        Selectors::as_encrypted(Selectors::ARRAY_ELEMENTS)
+    );
+    let row = sqlx::query(&selector_sql).fetch_one(&pool).await.unwrap();
     let encrypted_selector: String = row.try_get(0).unwrap();
 
     let sql = format!(
@@ -278,8 +294,11 @@ async fn jsonb_array_elements_with_encrypted_selector_throws_for_non_array(pool:
     // Test: encrypted selector also validates array type
     // Original SQL line 61-63 in src/jsonb/functions_test.sql
 
-    let selector_sql = "SELECT '{\"s\": \"33743aed3ae636f6bf05cff11ac4b519\"}'::jsonb::eql_v2_encrypted::text";
-    let row = sqlx::query(selector_sql).fetch_one(&pool).await.unwrap();
+    let selector_sql = format!(
+        "SELECT '{}'::jsonb::eql_v2_encrypted::text",
+        Selectors::as_encrypted(Selectors::ARRAY_ROOT)
+    );
+    let row = sqlx::query(&selector_sql).fetch_one(&pool).await.unwrap();
     let encrypted_selector: String = row.try_get(0).unwrap();
 
     let sql = format!(
