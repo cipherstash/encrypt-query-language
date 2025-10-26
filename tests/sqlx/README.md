@@ -12,7 +12,10 @@ This test crate provides:
 
 ## Migration Status
 
-Framework infrastructure complete. Test migration in progress.
+**Progress: 24/40 SQL assertions ported**
+
+- ✅ JSONB functions: 24/24 (arrays, paths, structure validation, encrypted selectors)
+- ⏳ Equality operators: 0/16 (pending)
 
 ## Architecture
 
@@ -166,6 +169,20 @@ async fn test_name(pool: PgPool) {
 - **Less verbose**: No DO $$ boilerplate
 - **Better errors**: Rust panic messages show exact assertion failure
 - **Test isolation**: Each test runs in fresh database (SQLx handles this automatically)
+
+## Test Organization
+
+### Current Test Modules
+
+**`tests/jsonb_tests.rs`** - JSONB functions and operators
+- Converted from `src/jsonb/functions_test.sql`
+- Tests: `jsonb_array_elements`, `jsonb_array_elements_text`, `jsonb_array_length`, `jsonb_path_query`, `jsonb_path_exists`, encrypted selector validation
+
+### Test Count
+
+- **Total**: 20 tests (19 functional + 1 helper)
+- **JSONB**: 19 tests
+- **Helpers**: 1 test
 
 ## Dependencies
 
