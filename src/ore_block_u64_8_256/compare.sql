@@ -3,6 +3,23 @@
 -- REQUIRE: src/ore_block_u64_8_256/functions.sql
 
 
+--! @brief Compare two encrypted values using ORE block index terms
+--!
+--! Performs a three-way comparison (returns -1/0/1) of encrypted values using
+--! their ORE block index terms. Used internally by range operators (<, <=, >, >=)
+--! for order-revealing comparisons without decryption.
+--!
+--! @param a eql_v2_encrypted First encrypted value to compare
+--! @param b eql_v2_encrypted Second encrypted value to compare
+--! @return Integer -1 if a < b, 0 if a = b, 1 if a > b
+--!
+--! @note NULL values are sorted before non-NULL values
+--! @note Uses ORE cryptographic protocol for secure comparisons
+--!
+--! @see eql_v2.ore_block_u64_8_256
+--! @see eql_v2.has_ore_block_u64_8_256
+--! @see eql_v2."<"
+--! @see eql_v2.">"
 CREATE FUNCTION eql_v2.compare_ore_block_u64_8_256(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS integer
   IMMUTABLE STRICT PARALLEL SAFE
