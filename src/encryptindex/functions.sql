@@ -198,15 +198,15 @@ $$ LANGUAGE plpgsql;
 --! @brief Count rows encrypted with active configuration
 --! @internal
 --!
---! Counts rows in a table where the encrypted column's version ('v' field)
---! matches the active configuration ID. Used to track encryption progress.
+--! Counts rows in a table where the encrypted column was encrypted using
+--! the currently active configuration. Used to track encryption progress.
 --!
 --! @param table_name text Name of table to check
 --! @param column_name text Name of encrypted column to check
---! @return bigint Count of rows matching active config version
+--! @return bigint Count of rows encrypted with active configuration
 --!
---! @note Checks 'v' field in encrypted JSONB payload
---! @note Compares to active configuration's ID
+--! @note The 'v' field in encrypted payloads stores the payload version ("2"), not the configuration ID
+--! @note Configuration tracking mechanism is implementation-specific
 CREATE FUNCTION eql_v2.count_encrypted_with_active_config(table_name TEXT, column_name TEXT)
   RETURNS BIGINT
 AS $$
