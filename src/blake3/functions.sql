@@ -5,7 +5,7 @@
 --! Extracts the Blake3 hash value from the 'b3' field of an encrypted
 --! data payload. Used internally for exact-match comparisons.
 --!
---! @param val JSONB Encrypted data payload containing index terms
+--! @param val jsonb containing encrypted EQL payload
 --! @return eql_v2.blake3 Blake3 hash value, or NULL if not present
 --! @throws Exception if 'b3' field is missing when blake3 index is expected
 --!
@@ -57,7 +57,7 @@ $$ LANGUAGE plpgsql;
 --! Tests whether the encrypted data payload includes a 'b3' field,
 --! indicating a Blake3 hash is available for exact-match queries.
 --!
---! @param val JSONB Encrypted data payload
+--! @param val jsonb containing encrypted EQL payload
 --! @return Boolean True if 'b3' field is present and non-null
 --!
 --! @see eql_v2.blake3
