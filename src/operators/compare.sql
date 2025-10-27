@@ -17,30 +17,31 @@
 -- REQUIRE: src/ore_cllw_var_8/types.sql
 -- REQUIRE: src/ore_cllw_var_8/functions.sql
 
-
---
--- Compare two eql_v2_encrypted values
---
--- Function is used to implement all operators required for btree indexing"
---      - `<`
---      - `<=`
---      - `=`
---      - `>=`
---      - `>`
---
---
--- Index terms are checked in the following order:
---    - `ore_block_u64_8_256`
---    - `ore_cllw_u64_8`
---    - `ore_cllw_var_8`
---    - `hmac_256`
---    - `blake3`
---
--- The first index term present for both values is used for comparsion.
---
--- If no index terms are found, the encrypted data is compared as a jsonb literal.
--- Btree index must have a consistent ordering for a given state, without this text fallback, database errors with "lock BufferContent is not held"
---
+--! @brief Core comparison function for encrypted values
+--!
+--! Compares two encrypted values using their index terms without decryption.
+--! This function implements all comparison operators required for btree indexing
+--! (<, <=, =, >=, >).
+--!
+--! Index terms are checked in the following priority order:
+--! 1. ore_block_u64_8_256 (Order-Revealing Encryption)
+--! 2. ore_cllw_u64_8 (Order-Revealing Encryption)
+--! 3. ore_cllw_var_8 (Order-Revealing Encryption)
+--! 4. hmac_256 (Hash-based equality)
+--! 5. blake3 (Hash-based equality)
+--!
+--! The first index term type present in both values is used for comparison.
+--! If no matching index terms are found, falls back to JSONB literal comparison
+--! to ensure consistent ordering (required for btree correctness).
+--!
+--! @param a eql_v2_encrypted First encrypted value
+--! @param b eql_v2_encrypted Second encrypted value
+--! @return integer -1 if a < b, 0 if a = b, 1 if a > b
+--!
+--! @note Literal fallback prevents "lock BufferContent is not held" errors
+--! @see eql_v2.compare_ore_block_u64_8_256
+--! @see eql_v2.compare_blake3
+--! @see eql_v2.compare_hmac_256
 CREATE FUNCTION eql_v2.compare(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS integer
   IMMUTABLE STRICT PARALLEL SAFE
