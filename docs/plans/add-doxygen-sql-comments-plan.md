@@ -32,13 +32,116 @@
 
 | Phase | Tasks | Estimated Hours |
 |-------|-------|----------------|
-| Phase 1: Setup & Validation | 3 | 1-2 |
-| Phase 2: Core Modules | 6 | 8-12 |
-| Phase 3: Index Modules | 6 | 6-8 |
-| Phase 4: Supporting Modules | 6 | 3-4 |
-| Phase 5: Quality Assurance | 4 | 2-3 |
-| Phase 6: Documentation & Handoff | 4 | 1-2 |
-| **TOTAL** | **29** | **21-31 hours** |
+| Phase 0: Pre-flight Checks | 1 | 0.25 |
+| Phase 1: Setup & Validation | 5 | 1-2 |
+| Phase 2: Core Modules | 7 | 10-15 |
+| Phase 3: Index Modules (PARALLEL) | 6 | 6-8 |
+| Phase 4: Supporting Modules (PARALLEL) | 6 | 4-5 |
+| Phase 5: Quality Assurance | 5 | 3-4 |
+| Phase 6: Documentation & Handoff | 6 | 2-3 |
+| **TOTAL** | **36** | **26-39 hours** |
+
+**Note:** Phases 3 and 4 can be executed in parallel using subagent-driven-development. See execution strategy below.
+
+---
+
+## Execution Strategy
+
+### PR Strategy
+Create small, reviewable PRs:
+- **PR 1:** Phase 0 + Phase 1 (Setup & validation tooling)
+- **PR 2:** Phase 2.1-2.2 (config module)
+- **PR 3:** Phase 2.3-2.4 (encrypted module)
+- **PR 4:** Phase 2.5-2.6 (operators module)
+- **PR 5:** Phase 3 (all index modules - can use subagents)
+- **PR 6:** Phase 4 (all supporting modules - can use subagents)
+- **PR 7:** Phase 5 + Phase 6 (QA, documentation, CI integration)
+
+### Subagent Usage
+**When to use subagent-driven-development skill:**
+- Phase 3: Dispatch 6 parallel subagents (one per index module)
+- Phase 4: Dispatch 6 parallel subagents (one per supporting module group)
+
+**Subagent task template:**
+```
+Task: Document [module_name] with Doxygen comments
+
+Context:
+- Working in: /Users/tobyhede/src/encrypt-query-language/.worktrees/sql-documentation
+- Branch: add-doxygen-sql-comments
+- Templates: docs/development/sql-documentation-templates.md
+- Standards: docs/development/sql-documentation-standards.md
+
+Files to document: [list files]
+
+CRITICAL: DO NOT modify SQL code implementation. Only add Doxygen comments.
+SQL code is source of truth - document what the code does, not what you think it should do.
+
+Deliverables:
+1. Add @brief, @param, @return tags to all database objects
+2. Validate syntax: psql -f [file] --set ON_ERROR_STOP=1
+3. Verify required tags: grep -c "@brief" [file]
+4. Report completion with file list and object count
+```
+
+---
+
+## Phase 0: Pre-flight Checks (0.25 hours)
+
+### Task 0.1: Verify Environment and Create Backup
+
+**CRITICAL PRINCIPLE: DO NOT MODIFY SQL CODE**
+This plan only adds documentation comments. The SQL implementation is the source of truth.
+If you find bugs, unclear behavior, or discrepancies with reference docs:
+- Document what the code ACTUALLY does (not what it should do)
+- Note issues separately for later review
+- DO NOT fix bugs or change behavior
+
+**Pre-flight checklist:**
+```bash
+# 1. Verify location and branch
+cd /Users/tobyhede/src/encrypt-query-language/.worktrees/sql-documentation
+pwd  # Must be in sql-documentation worktree
+git branch --show-current  # Must be: add-doxygen-sql-comments
+
+# 2. Verify clean state
+git status  # Should show no uncommitted changes
+
+# 3. Create backup branch
+git branch backup/pre-documentation-$(date +%Y%m%d)
+echo "Backup branch created: backup/pre-documentation-$(date +%Y%m%d)"
+
+# 4. Verify database is running
+mise run postgres:up
+psql postgres://cipherstash:password@localhost:7432 -c "SELECT version();"
+
+# 5. Check disk space (need ~500KB for comment additions)
+df -h . | tail -1
+
+# 6. Verify all SQL files are accessible
+echo "Counting SQL implementation files (excluding tests):"
+find src -name "*.sql" -not -name "*_test.sql" | wc -l  # Should be 53
+
+# 7. Test one file syntax validation
+psql postgres://cipherstash:password@localhost:7432 \
+  -f src/version.sql --set ON_ERROR_STOP=1 -q
+
+echo "✅ Pre-flight checks complete"
+```
+
+**Verification:**
+```bash
+# All commands above should succeed
+# Database should be running on localhost:7432
+# Backup branch should exist: git branch --list 'backup/*'
+```
+
+**If any check fails:**
+- Database not running → `mise run postgres:up`
+- Wrong directory → Navigate to correct worktree
+- Wrong branch → `git checkout add-doxygen-sql-comments`
+- Uncommitted changes → Commit or stash first
+- Syntax errors in existing SQL → Note as blocker, investigate before proceeding
 
 ---
 
@@ -369,12 +472,226 @@ echo "- Total CREATE statements: $(find src -name "*.sql" -not -name "*_test.sql
 **Verification:**
 ```bash
 wc -l docs/development/documentation-inventory.md
-grep -c "^##" docs/development/documentation-inventory.md  # Should be 53 + 1 (Summary)
+file_count=$(find src -name "*.sql" -not -name "*_test.sql" | wc -l | xargs)
+echo "Found $file_count SQL implementation files"
 ```
 
 ---
 
-## Phase 2: Core Module Documentation (8-12 hours)
+### Task 1.4: Create Cross-Reference Sync Rules
+**File:** `docs/development/reference-sync-rules.md`
+
+**Content:**
+```markdown
+# Reference Documentation Sync Rules
+
+## CRITICAL PRINCIPLE
+**SQL code implementation is the source of truth.**
+
+During documentation, you will encounter discrepancies between:
+- SQL code behavior
+- Existing SQL comments (if any)
+- Reference documentation in `docs/reference/`
+
+**NEVER modify SQL code to match documentation.**
+**ALWAYS document what the code actually does.**
+
+## Decision Tree for Discrepancies
+
+### Scenario 1: SQL code is more detailed/accurate than reference docs
+**Action:**
+- Document the SQL code behavior accurately
+- Mark reference doc for update in tracking file
+- Continue with documentation
+
+**Add to:** `docs/development/reference-sync-notes.md`
+**Format:**
+```
+- [ ] docs/reference/eql-functions.md:add_column
+      SQL implementation has additional parameter validation not documented
+      SQL shows: validates table exists before adding config
+      Docs show: minimal description
+```
+
+### Scenario 2: Reference docs describe different behavior than SQL implements
+**Action:**
+- Document what the SQL code ACTUALLY does
+- Flag discrepancy for principal engineer review
+- DO NOT change SQL code
+- DO NOT invent behavior to match docs
+
+**Add to:** `docs/development/documentation-questions.md`
+**Format:**
+```
+- [ ] DISCREPANCY: eql_v2.add_column behavior
+      SQL code: raises exception if column already encrypted
+      Reference docs: suggest idempotent behavior
+      Question: Is SQL correct or does it need fixing?
+      For review by: Principal Engineer
+```
+
+### Scenario 3: SQL code appears to have a bug
+**Action:**
+- Document the actual behavior (including the bug)
+- Create GitHub issue for bug investigation
+- Add `@note` tag mentioning the issue number
+- DO NOT fix the bug in this plan
+
+**Example:**
+```sql
+--! @brief Extract ciphertext from encrypted value
+--! @param encrypted JSONB Raw encrypted value
+--! @return Text Extracted ciphertext
+--! @note Issue #XXX: Returns null for malformed input instead of raising error
+CREATE FUNCTION eql_v2.ciphertext(encrypted jsonb) ...
+```
+
+**Add to:** `docs/development/documentation-blockers.md`
+**Format:**
+```
+- [ ] BUG FOUND: eql_v2.ciphertext
+      Issue: Returns null for malformed input instead of raising error
+      GitHub Issue: #XXX
+      Action: Documented actual behavior, flagged for fix
+      Blocking documentation: No (documented as-is)
+```
+
+### Scenario 4: Unclear what code does (complex logic)
+**Action:**
+- Study the test files in `src/**/*_test.sql`
+- Examine test cases to understand intended behavior
+- Document based on test coverage
+- If still unclear, read the code carefully and document what you observe
+- Flag for principal engineer review if high-impact function
+
+**Add to:** `docs/development/documentation-questions.md`
+
+### Scenario 5: Reference docs conflict with each other
+**Action:**
+- SQL code is tiebreaker
+- Document what code does
+- Note conflicting docs in sync notes
+
+## Review Process
+
+**Principal Engineer + Team Code Review** will handle:
+- Discrepancies flagged in `documentation-questions.md`
+- Bugs flagged in `documentation-blockers.md`
+- Reference doc updates listed in `reference-sync-notes.md`
+
+**Timeline:**
+- Flag issues during documentation (Phases 1-4)
+- Review session after Phase 5 (QA)
+- Address critical issues before final PR
+- Schedule reference doc updates as follow-up work
+
+## Tracking Files
+
+Create these files in `docs/development/`:
+
+**reference-sync-notes.md** - Reference docs needing updates
+**documentation-questions.md** - Discrepancies needing review
+**documentation-blockers.md** - Bugs found during documentation
+
+Initialize with:
+```bash
+cat > docs/development/reference-sync-notes.md <<'EOF'
+# Reference Documentation Sync Notes
+
+Items to update in docs/reference/ after documentation complete:
+
+## Format
+- [ ] docs/reference/file.md:section
+      Issue: [what needs updating]
+      SQL shows: [actual behavior]
+      Docs show: [current docs content]
+
+---
+
+EOF
+
+cat > docs/development/documentation-questions.md <<'EOF'
+# Documentation Questions for Review
+
+Discrepancies requiring principal engineer + team review:
+
+## Format
+- [ ] DISCREPANCY: function_name
+      SQL code: [what code does]
+      Reference docs: [what docs say]
+      Question: [specific question]
+      For review by: Principal Engineer
+
+---
+
+EOF
+
+cat > docs/development/documentation-blockers.md <<'EOF'
+# Documentation Blockers
+
+Bugs found during documentation process:
+
+## Format
+- [ ] BUG FOUND: function_name
+      Issue: [description]
+      GitHub Issue: #XXX (if created)
+      Action: [what was done]
+      Blocking documentation: Yes/No
+
+---
+
+EOF
+```
+
+**Verification:**
+```bash
+ls -la docs/development/reference-sync-rules.md
+ls -la docs/development/reference-sync-notes.md
+ls -la docs/development/documentation-questions.md
+ls -la docs/development/documentation-blockers.md
+```
+
+---
+
+### Task 1.5: Commit Phase 1 Setup
+**Action:**
+```bash
+# Verify setup complete
+ls -la docs/development/sql-documentation-standards.md
+ls -la docs/development/sql-documentation-templates.md
+ls -la docs/development/documentation-inventory.md
+ls -la docs/development/reference-sync-rules.md
+
+# Add all setup files
+git add docs/development/
+
+# Commit
+git commit -m "docs(sql): add documentation standards, templates, and tooling (Phase 1)
+
+Setup for SQL Doxygen documentation project:
+- Documentation standards with required tags
+- Templates for all SQL object types
+- Inventory of 53 SQL files to document
+- Cross-reference sync rules (SQL is source of truth)
+- Tracking files for discrepancies and issues
+
+Part of: add-doxygen-sql-comments plan
+PR: Phase 0 + Phase 1 (Setup)
+"
+
+# Verify commit
+git log -1 --stat
+```
+
+**Verification:**
+```bash
+git log -1 --oneline | grep "docs(sql)"
+git status  # Should be clean
+```
+
+---
+
+## Phase 2: Core Module Documentation (10-15 hours)
 
 Document high-value, customer-facing modules first.
 
@@ -603,7 +920,114 @@ done
 
 ---
 
+### Task 2.7: Commit Phase 2 Progress
+**Action:**
+```bash
+# Run validation on completed modules
+./tasks/validate-required-tags.sh 2>&1 | grep -E "(src/config|src/encrypted|src/operators)"
+
+# Count completed files
+completed=$(find src/config src/encrypted src/operators -name "*.sql" -not -name "*_test.sql" | wc -l | xargs)
+echo "Phase 2 complete: $completed files documented"
+
+# Add and commit
+git add src/config/ src/encrypted/ src/operators/
+
+git commit -m "docs(sql): add Doxygen comments to core modules (Phase 2)
+
+Documented core customer-facing modules:
+- src/config/functions.sql: add_column, add_search_config, remove_column, etc.
+- src/config/functions_private.sql: internal config helpers
+- src/encrypted/functions.sql: ciphertext, meta_data, grouped_value, etc.
+- src/encrypted/types.sql: eql_v2_encrypted composite type
+- src/operators/=.sql: equality operator
+- src/operators/~~.sql: LIKE/pattern match operator
+- src/operators/<.sql, <=.sql, >.sql, >=.sql: range operators
+- src/operators/<>.sql: not equal operator
+- src/operators/@>.sql, <@.sql: containment operators
+- src/operators/->.sql, ->>.sql: JSONB access operators
+
+All functions include @brief, @param, @return tags.
+Customer-facing functions include @example tags.
+
+Coverage: $completed/53 files completed
+Part of: add-doxygen-sql-comments plan
+PR: Phase 2 (Core modules)
+"
+
+# Verify commit
+git log -1 --stat
+```
+
+**Verification:**
+```bash
+git log -1 --oneline | grep "Phase 2"
+git diff main --stat | grep -E "(config|encrypted|operators)"
+```
+
+**Create PR for Phase 2:**
+```bash
+# Push branch
+git push origin add-doxygen-sql-comments
+
+# Create PR (adjust based on actual PR structure - may split into 3 PRs)
+gh pr create --title "docs(sql): Add Doxygen comments to core modules" \
+  --body "## Summary
+Documents core EQL modules with Doxygen-style comments:
+- Configuration functions (add_column, add_search_config)
+- Encrypted type and helper functions
+- All operators (=, ~~, <, >, @>, <@, ->, etc.)
+
+## Coverage
+- Files: $completed/53
+- All objects have @brief, @param, @return tags
+- Customer-facing functions include @example tags
+
+## Testing
+- [x] SQL syntax validated
+- [x] Required tags present
+- [x] No SQL code modified (comments only)
+
+## Related
+- Plan: docs/plans/add-doxygen-sql-comments-plan.md
+- RFC: docs/plans/sql-documentation-generation-rfc.md
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>" \
+  --base main
+
+# Or split into smaller PRs:
+# PR 2: config module only
+# PR 3: encrypted module only
+# PR 4: operators module only
+```
+
+---
+
 ## Phase 3: Index Implementation Modules (6-8 hours)
+
+**⚡ PARALLEL EXECUTION RECOMMENDED**
+
+This phase documents 6 independent index modules. Each module can be documented in parallel using the `superpowers:subagent-driven-development` skill.
+
+**Execution approach:**
+```markdown
+Use subagent-driven-development skill to dispatch 6 parallel subagents:
+1. blake3 module → Subagent 1
+2. hmac_256 module → Subagent 2
+3. bloom_filter module → Subagent 3
+4. ore_block_u64_8_256 module → Subagent 4
+5. ore_cllw_u64_8 module → Subagent 5
+6. ore_cllw_var_8 + ste_vec modules → Subagent 6
+
+Each subagent receives:
+- Task description (document module with Doxygen comments)
+- Template reference (docs/development/sql-documentation-templates.md)
+- Standards reference (docs/development/sql-documentation-standards.md)
+- Files to document
+- CRITICAL: Do not modify SQL code, only add comments
+```
 
 ### Task 3.1: Document `src/blake3/`
 **Files:** `types.sql`, `functions.sql`, `compare.sql`
@@ -729,7 +1153,69 @@ grep -c "@brief" src/ste_vec/functions.sql
 
 ---
 
-## Phase 4: Supporting Modules (3-4 hours)
+### Task 3.7: Commit Phase 3 Progress
+**Action:**
+```bash
+# Validate all index modules
+find src/blake3 src/hmac_256 src/bloom_filter src/ore_* src/ste_vec \
+  -name "*.sql" -not -name "*_test.sql" \
+  -exec ./tasks/validate-required-tags.sh {} \;
+
+# Count completed files
+completed=$(find src/blake3 src/hmac_256 src/bloom_filter src/ore_* src/ste_vec \
+  -name "*.sql" -not -name "*_test.sql" | wc -l | xargs)
+echo "Phase 3 complete: $completed index module files documented"
+
+# Add and commit
+git add src/blake3/ src/hmac_256/ src/bloom_filter/ src/ore_*/ src/ste_vec/
+
+git commit -m "docs(sql): add Doxygen comments to index modules (Phase 3)
+
+Documented all index implementation modules:
+- src/blake3/: Blake3 hash index terms (unique index)
+- src/hmac_256/: HMAC-SHA256 index terms
+- src/bloom_filter/: Bloom filter for pattern matching (match index)
+- src/ore_block_u64_8_256/: Order-Revealing Encryption (ore index)
+- src/ore_cllw_u64_8/: ORE CLLW variant
+- src/ore_cllw_var_8/: ORE CLLW variable-length variant
+- src/ste_vec/: Structured encryption for vectors (ste_vec index)
+
+All domain types, functions, and operators documented.
+Includes operator class documentation for B-tree indexes.
+
+Coverage: [X]/53 files completed
+Part of: add-doxygen-sql-comments plan
+PR: Phase 3 (Index modules)
+"
+
+# Verify commit
+git log -1 --stat
+```
+
+**Verification:**
+```bash
+git log -1 --oneline | grep "Phase 3"
+git diff main --stat | grep -E "(blake3|hmac|bloom|ore|ste_vec)"
+```
+
+---
+
+## Phase 4: Supporting Modules (4-5 hours)
+
+**⚡ PARALLEL EXECUTION RECOMMENDED**
+
+This phase documents supporting infrastructure modules. Can be parallelized using `superpowers:subagent-driven-development` skill.
+
+**Execution approach:**
+```markdown
+Use subagent-driven-development skill to dispatch 6 parallel subagents:
+1. operators/compare.sql, order_by.sql, operator_class.sql → Subagent 1
+2. encrypted/aggregates.sql, casts.sql, compare.sql, constraints.sql → Subagent 2
+3. jsonb/functions.sql → Subagent 3
+4. config/types.sql, tables.sql, indexes.sql, constraints.sql → Subagent 4
+5. encryptindex/functions.sql → Subagent 5
+6. common.sql, crypto.sql, schema.sql, version.sql → Subagent 6
+```
 
 ### Task 4.1: Document `src/operators/compare.sql`, `src/operators/order_by.sql`, `src/operators/operator_class.sql`
 **Objects:** Core comparison and ordering infrastructure
@@ -803,7 +1289,63 @@ done
 
 ---
 
-## Phase 5: Quality Assurance (2-3 hours)
+### Task 4.7: Commit Phase 4 Progress
+**Action:**
+```bash
+# Validate all supporting modules
+find src/operators src/encrypted src/jsonb src/config src/encryptindex \
+  -name "*.sql" -not -name "*_test.sql" -not -name "functions.sql" \
+  -exec bash -c 'grep -q "@brief" "$1" 2>/dev/null || echo "Missing: $1"' _ {} \;
+
+# Also validate root-level files
+for file in src/common.sql src/crypto.sql src/schema.sql src/version.sql; do
+  grep -q "@brief" "$file" 2>/dev/null || echo "Missing: $file"
+done
+
+# Count completed files
+total_now=$(find src -name "*.sql" -not -name "*_test.sql" -exec grep -l "@brief" {} \; | wc -l | xargs)
+echo "Phase 4 complete: All 53 files should now be documented"
+echo "Current documented count: $total_now/53"
+
+# Add and commit
+git add src/operators/ src/encrypted/ src/jsonb/ src/config/ src/encryptindex/
+git add src/common.sql src/crypto.sql src/schema.sql src/version.sql
+
+git commit -m "docs(sql): add Doxygen comments to supporting modules (Phase 4)
+
+Documented all supporting infrastructure:
+- src/operators/: compare, order_by, operator_class (core infrastructure)
+- src/encrypted/: aggregates, casts, compare, constraints
+- src/jsonb/: JSONB path extraction functions
+- src/config/: types, tables, indexes, constraints (schema)
+- src/encryptindex/: index management functions
+- src/common.sql: utility functions
+- src/crypto.sql: cryptographic helpers
+- src/schema.sql: schema creation
+- src/version.sql: version tracking
+
+All infrastructure components documented.
+
+Coverage: $total_now/53 files completed
+Part of: add-doxygen-sql-comments plan
+PR: Phase 4 (Supporting modules)
+"
+
+# Verify commit
+git log -1 --stat
+```
+
+**Verification:**
+```bash
+git log -1 --oneline | grep "Phase 4"
+# Verify all files documented
+find src -name "*.sql" -not -name "*_test.sql" | wc -l  # Should be 53
+find src -name "*.sql" -not -name "*_test.sql" -exec grep -l "@brief" {} \; | wc -l  # Should be 53
+```
+
+---
+
+## Phase 5: Quality Assurance (3-4 hours)
 
 ### Task 5.1: Cross-Reference with docs/reference/
 **Files to check against:**
@@ -862,12 +1404,20 @@ validated=0
 for file in $(find src -name "*.sql" -not -name "*_test.sql" | sort); do
   echo -n "Validating $file... "
 
-  if psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" \
-          -f "$file" --set ON_ERROR_STOP=1 -q -o /dev/null 2>&1; then
+  # Capture both stdout and stderr
+  error_output=$(psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" \
+          -f "$file" --set ON_ERROR_STOP=1 -q 2>&1)
+  exit_code=$?
+
+  if [ $exit_code -eq 0 ]; then
     echo "✓"
     validated=$((validated + 1))
   else
     echo "✗ SYNTAX ERROR"
+    echo "  Error in: $file"
+    echo "  Details:"
+    echo "$error_output" | tail -10 | sed 's/^/    /'
+    echo ""
     errors=$((errors + 1))
   fi
 done
@@ -1066,7 +1616,122 @@ chmod +x tasks/validate-required-tags.sh
 
 ---
 
-## Phase 6: Documentation & Handoff (1-2 hours)
+### Task 5.5: Test Doxygen Generation (Early Validation)
+**Purpose:** Verify Doxygen can parse our comments before claiming completion
+
+**Install Doxygen:**
+```bash
+# macOS
+brew install doxygen
+
+# Verify installation
+doxygen --version
+```
+
+**Create minimal Doxyfile:**
+```bash
+cat > Doxyfile.test <<'EOF'
+# Minimal Doxygen config for testing SQL documentation
+
+PROJECT_NAME           = "EQL SQL Documentation Test"
+OUTPUT_DIRECTORY       = docs/doxygen-test
+INPUT                  = src/
+FILE_PATTERNS          = *.sql
+RECURSIVE              = YES
+EXCLUDE_PATTERNS       = *_test.sql
+
+# SQL-specific settings
+EXTENSION_MAPPING      = sql=C++
+OPTIMIZE_OUTPUT_JAVA   = NO
+
+# Comment parsing
+JAVADOC_AUTOBRIEF      = YES
+QT_AUTOBRIEF           = NO
+
+# Generate HTML only (for testing)
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+GENERATE_XML           = NO
+
+# Warning settings (strict)
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = NO
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = YES
+
+# Quiet mode for cleaner output
+QUIET                  = NO
+EOF
+```
+
+**Run Doxygen:**
+```bash
+# Generate documentation
+doxygen Doxyfile.test 2>&1 | tee doxygen-test.log
+
+# Check for errors
+if grep -i "error" doxygen-test.log; then
+  echo "❌ Doxygen encountered errors - review doxygen-test.log"
+  exit 1
+fi
+
+# Check for warnings (excluding undocumented warnings)
+if grep -i "warning" doxygen-test.log | grep -v "undocumented"; then
+  echo "⚠️  Doxygen has warnings - review doxygen-test.log"
+fi
+
+# Verify HTML was generated
+if [ -d "docs/doxygen-test/html" ]; then
+  echo "✅ Doxygen HTML generated successfully"
+  echo "View at: docs/doxygen-test/html/index.html"
+else
+  echo "❌ Doxygen HTML generation failed"
+  exit 1
+fi
+```
+
+**Manual verification:**
+```bash
+# Open generated docs in browser
+open docs/doxygen-test/html/index.html
+
+# Check a few specific functions are documented:
+# - eql_v2.add_column
+# - eql_v2.ciphertext
+# - eql_v2.= operator
+# - eql_v2_encrypted type
+```
+
+**Common Doxygen issues to look for:**
+- Malformed @param tags (wrong parameter names)
+- Missing @return tags for non-void functions
+- Unclosed comment blocks
+- Incorrect @brief syntax
+- Special characters breaking parsing
+
+**If errors found:**
+- Fix formatting issues in SQL files
+- Re-run validation scripts
+- Re-test with Doxygen
+- DO NOT proceed to Phase 6 until Doxygen parses cleanly
+
+**Cleanup (after verification):**
+```bash
+# Keep test config but remove generated output
+rm -rf docs/doxygen-test/
+# Keep Doxyfile.test for future reference
+```
+
+**Verification:**
+```bash
+# Should complete without errors
+doxygen Doxyfile.test 2>&1 | grep -i error
+echo "Exit code: $?"  # Should be 1 (no matches found)
+```
+
+---
+
+## Phase 6: Documentation & Handoff (2-3 hours)
 
 ### Task 6.1: Update DEVELOPMENT.md
 **Add section:**
@@ -1203,6 +1868,229 @@ cat docs/development/sql-documentation-completion-summary.md
 
 ---
 
+### Task 6.5: Add CI Validation Workflow
+**File:** `.github/workflows/validate-sql-docs.yml` (or add to existing workflow)
+
+**Content:**
+```yaml
+name: Validate SQL Documentation
+
+on:
+  pull_request:
+    paths:
+      - 'src/**/*.sql'
+      - 'tasks/validate-*.sh'
+      - 'tasks/check-doc-coverage.sh'
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**/*.sql'
+
+jobs:
+  validate-documentation:
+    name: Validate SQL Doxygen Comments
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: cipherstash
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up environment
+        run: |
+          chmod +x tasks/validate-documented-sql.sh
+          chmod +x tasks/validate-required-tags.sh
+          chmod +x tasks/check-doc-coverage.sh
+
+      - name: Validate SQL syntax
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: cipherstash
+          PGPASSWORD: password
+          PGDATABASE: postgres
+        run: |
+          echo "Validating SQL syntax for all documented files..."
+          ./tasks/validate-documented-sql.sh
+
+      - name: Validate required Doxygen tags
+        run: |
+          echo "Checking for required @brief, @param, @return tags..."
+          ./tasks/validate-required-tags.sh
+
+      - name: Check documentation coverage
+        run: |
+          echo "Verifying documentation coverage..."
+          ./tasks/check-doc-coverage.sh
+
+      - name: Report results
+        if: always()
+        run: |
+          echo "## SQL Documentation Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f docs/development/coverage-report.md ]; then
+            cat docs/development/coverage-report.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # Optional: Doxygen build test
+  test-doxygen-generation:
+    name: Test Doxygen Generation
+    runs-on: ubuntu-latest
+    needs: validate-documentation
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Doxygen
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen
+
+      - name: Test Doxygen generation
+        run: |
+          # Use test config
+          if [ -f Doxyfile.test ]; then
+            doxygen Doxyfile.test 2>&1 | tee doxygen-test.log
+
+            # Check for errors
+            if grep -i "error" doxygen-test.log; then
+              echo "❌ Doxygen generation failed"
+              exit 1
+            fi
+
+            echo "✅ Doxygen generation successful"
+          else
+            echo "⚠️  No Doxyfile.test found - skipping Doxygen test"
+          fi
+```
+
+**Alternative: Add to existing CI workflow**
+If you already have a CI workflow, add these jobs to it instead of creating a new file.
+
+**Verification:**
+```bash
+# Check workflow syntax
+cat .github/workflows/validate-sql-docs.yml
+
+# Test locally (if using act)
+act pull_request -j validate-documentation
+
+# Or push to test branch and verify on GitHub
+git add .github/workflows/validate-sql-docs.yml
+git commit -m "ci: add SQL documentation validation workflow"
+git push origin add-doxygen-sql-comments
+```
+
+**Success criteria:**
+- [ ] CI runs on SQL file changes
+- [ ] Syntax validation passes
+- [ ] Required tags validation passes
+- [ ] Coverage check passes (100%)
+- [ ] Doxygen generation succeeds (optional)
+
+---
+
+### Task 6.6: Final Commit and Summary
+**Action:**
+```bash
+# Run all QA checks one final time
+echo "Running final validation suite..."
+./tasks/validate-documented-sql.sh
+./tasks/validate-required-tags.sh
+./tasks/check-doc-coverage.sh
+
+# Verify 100% coverage
+coverage=$(grep "Coverage:" docs/development/coverage-report.md | grep -oP '\d+')
+if [ "$coverage" -ne 100 ]; then
+  echo "❌ Coverage is $coverage%, not 100%"
+  exit 1
+fi
+
+echo "✅ All validation checks passed"
+echo "✅ 100% documentation coverage achieved"
+
+# Add final documentation and tooling
+git add docs/development/
+git add DEVELOPMENT.md
+git add mise.toml
+git add .github/pull_request_template.md
+git add .github/workflows/validate-sql-docs.yml
+git add Doxyfile.test
+git add tasks/
+
+git commit -m "docs(sql): add QA tooling, CI integration, and completion summary (Phase 5+6)
+
+Quality assurance and handoff:
+- Cross-reference validation with docs/reference/
+- Validation scripts with error reporting
+- Coverage reporting (100% achieved)
+- CI workflow for automated validation
+- mise tasks for local validation
+- PR template with SQL documentation checklist
+- Doxygen test configuration
+- Completion summary and next steps
+
+All 53 SQL implementation files now have comprehensive Doxygen comments.
+
+Coverage: 53/53 files (100%)
+Part of: add-doxygen-sql-comments plan
+PR: Phase 5 + Phase 6 (QA and handoff)
+"
+
+# Verify final state
+git log --oneline -10
+git status
+
+echo ""
+echo "========================================="
+echo "SQL Documentation Project Complete!"
+echo "========================================="
+echo ""
+echo "Summary:"
+find src -name "*.sql" -not -name "*_test.sql" | wc -l | xargs echo "- Total files:"
+find src -name "*.sql" -not -name "*_test.sql" -exec grep -l "@brief" {} \; | wc -l | xargs echo "- Documented:"
+echo "- Coverage: 100%"
+echo ""
+echo "Next steps:"
+echo "1. Create PRs for each phase (see PR strategy)"
+echo "2. Review tracking files:"
+echo "   - docs/development/reference-sync-notes.md"
+echo "   - docs/development/documentation-questions.md"
+echo "   - docs/development/documentation-blockers.md"
+echo "3. Schedule follow-up for reference doc updates"
+echo "4. Implement production Doxygen build process (per RFC)"
+echo ""
+```
+
+**Verification:**
+```bash
+# All validation should pass
+mise run check-doc-coverage
+mise run validate-required-tags
+mise run validate-documented-sql
+
+# Coverage should be 100%
+grep "Coverage: 100%" docs/development/coverage-report.md
+```
+
+---
+
 ## Complete File Checklist (53 files)
 
 ### src/blake3/ (3 files)
@@ -1318,21 +2206,83 @@ Private functions (prefix `_`):
 ```sql
 --! @brief [Brief description]
 --! @internal
+--! @param ...
+--! @return ...
+CREATE FUNCTION eql_v2._internal_function(...)
 ```
 
 Functions with RAISE:
 ```sql
---! @throws Exception if [condition]
+--! @brief [Description]
+--! @param ...
+--! @return ...
+--! @throws Exception if [specific condition that raises]
+CREATE FUNCTION eql_v2.some_function(...)
 ```
 
 Functions with defaults:
 ```sql
+--! @brief [Description]
+--! @param table_name Text name of the table
 --! @param cast_as Text type for casting (default: 'text')
+--! @return ...
+CREATE FUNCTION eql_v2.function_name(table_name text, cast_as text DEFAULT 'text')
 ```
 
-JSONB return structures:
+JSONB return structures (be specific about structure):
 ```sql
+--! @brief [Description]
+--! @param ...
 --! @return JSONB Configuration object with keys: 'table_name', 'column_name', 'cast_as', 'indexes'
+CREATE FUNCTION eql_v2.get_config(...)
+```
+
+Overloaded functions (multiple signatures):
+```sql
+--! @brief Extract ciphertext from encrypted value
+--! @overload JSONB input variant
+--! @param encrypted JSONB Raw encrypted value from database
+--! @return Text Extracted ciphertext string
+CREATE FUNCTION eql_v2.ciphertext(encrypted jsonb)
+  RETURNS text ...
+
+--! @brief Extract ciphertext from encrypted type
+--! @overload Typed input variant
+--! @param encrypted eql_v2_encrypted Encrypted column value
+--! @return Text Extracted ciphertext string
+CREATE FUNCTION eql_v2.ciphertext(encrypted eql_v2_encrypted)
+  RETURNS text ...
+```
+
+Handling existing comments:
+```sql
+-- WRONG: Don't leave old comments mixed with Doxygen
+-- This function does X
+--! @brief This function does X
+CREATE FUNCTION ...
+
+-- CORRECT: Doxygen only, move old comments inside function body
+--! @brief This function does X
+--! @param ...
+--! @return ...
+CREATE FUNCTION eql_v2.some_function(...) AS $$
+BEGIN
+  -- TODO: Optimize this query (old comment moved here)
+  -- Note: This handles edge case Y (implementation note moved here)
+  ...
+END;
+$$;
+```
+
+Dynamic SQL and macros:
+```sql
+--! @brief Create encrypted column index dynamically
+--! @param table_name Text Table name for index creation
+--! @param column_name Text Column name for index creation
+--! @return VOID
+--! @note Uses EXECUTE for dynamic SQL - actual DDL constructed at runtime
+--! @see eql_v2.add_search_config for index type configuration
+CREATE FUNCTION eql_v2._create_index_dynamic(...)
 ```
 
 **Quality Checklist:**
@@ -1351,6 +2301,23 @@ JSONB return structures:
 
 Track progress using this plan as a checklist. Update the checkboxes as tasks are completed.
 
-**Current Status:** Not Started
+**Current Status:** Ready for Execution (Plan Updated with Recommendations)
 
-**Last Updated:** 2025-10-24
+**Last Updated:** 2025-10-27
+
+**Execution Notes:**
+- Use small PRs strategy (7 PRs total)
+- Parallelize Phases 3 and 4 with subagent-driven-development skill
+- Run validation after each phase
+- Create tracking files for discrepancies/questions/blockers
+- SQL code is source of truth - document actual behavior, not intended behavior
+- Principal engineer + team review handles flagged issues
+
+**Phase Completion:**
+- [ ] Phase 0: Pre-flight checks
+- [ ] Phase 1: Setup & validation tooling
+- [ ] Phase 2: Core modules (config, encrypted, operators)
+- [ ] Phase 3: Index modules (blake3, hmac_256, bloom_filter, ore_*, ste_vec)
+- [ ] Phase 4: Supporting modules (compare, aggregates, jsonb, etc.)
+- [ ] Phase 5: Quality assurance
+- [ ] Phase 6: Documentation & handoff + CI integration
