@@ -1,10 +1,13 @@
 -- REQUIRE: src/config/types.sql
---
--- Private configuration functions
--- Internal implemention details that customers should not need to worry about.
---
---
 
+--! @brief Initialize default configuration structure
+--! @internal
+--!
+--! Creates a default configuration object if input is NULL. Used internally
+--! by public configuration functions to ensure consistent structure.
+--!
+--! @param config JSONB Existing configuration or NULL
+--! @return JSONB Configuration with default structure (version 1, empty tables)
 CREATE FUNCTION eql_v2.config_default(config jsonb)
   RETURNS jsonb
   IMMUTABLE PARALLEL SAFE
@@ -17,8 +20,15 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
-
-
+--! @brief Add table to configuration if not present
+--! @internal
+--!
+--! Ensures the specified table exists in the configuration structure.
+--! Creates empty table entry if needed. Idempotent operation.
+--!
+--! @param table_name Text Name of table to add
+--! @param config JSONB Configuration object
+--! @return JSONB Updated configuration with table entry
 CREATE FUNCTION eql_v2.config_add_table(table_name text, config jsonb)
   RETURNS jsonb
   IMMUTABLE PARALLEL SAFE
@@ -33,9 +43,16 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
-
--- Add the column if it doesn't exist
-
+--! @brief Add column to table configuration if not present
+--! @internal
+--!
+--! Ensures the specified column exists in the table's configuration structure.
+--! Creates empty column entry with indexes object if needed. Idempotent operation.
+--!
+--! @param table_name Text Name of parent table
+--! @param column_name Text Name of column to add
+--! @param config JSONB Configuration object
+--! @return JSONB Updated configuration with column entry
 CREATE FUNCTION eql_v2.config_add_column(table_name text, column_name text, config jsonb)
   RETURNS jsonb
   IMMUTABLE PARALLEL SAFE
@@ -51,9 +68,17 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
-
--- Set the cast
-
+--! @brief Set cast type for column in configuration
+--! @internal
+--!
+--! Updates the cast_as field for a column, specifying the PostgreSQL type
+--! that decrypted values should be cast to.
+--!
+--! @param table_name Text Name of parent table
+--! @param column_name Text Name of column
+--! @param cast_as Text PostgreSQL type for casting (e.g., 'text', 'int', 'jsonb')
+--! @param config JSONB Configuration object
+--! @return JSONB Updated configuration with cast_as set
 CREATE FUNCTION eql_v2.config_add_cast(table_name text, column_name text, cast_as text, config jsonb)
   RETURNS jsonb
   IMMUTABLE PARALLEL SAFE
@@ -64,9 +89,18 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
-
--- Add the column if it doesn't exist
-
+--! @brief Add search index to column configuration
+--! @internal
+--!
+--! Inserts a search index entry (unique, match, ore, ste_vec) with its options
+--! into the column's indexes object.
+--!
+--! @param table_name Text Name of parent table
+--! @param column_name Text Name of column
+--! @param index_name Text Type of index to add
+--! @param opts JSONB Index-specific options
+--! @param config JSONB Configuration object
+--! @return JSONB Updated configuration with index added
 CREATE FUNCTION eql_v2.config_add_index(table_name text, column_name text, index_name text, opts jsonb, config jsonb)
   RETURNS jsonb
   IMMUTABLE PARALLEL SAFE
@@ -77,11 +111,13 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
-
---
--- Default options for match index
---
-
+--! @brief Generate default options for match index
+--! @internal
+--!
+--! Returns default configuration for match (LIKE) indexes: k=6, bf=2048,
+--! ngram tokenizer with token_length=3, downcase filter, include_original=true.
+--!
+--! @return JSONB Default match index options
 CREATE FUNCTION eql_v2.config_match_default()
   RETURNS jsonb
 LANGUAGE sql STRICT PARALLEL SAFE

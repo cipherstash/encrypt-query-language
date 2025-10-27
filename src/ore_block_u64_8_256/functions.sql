@@ -5,30 +5,16 @@
 -- REQUIRE: src/ore_block_u64_8_256/types.sql
 
 
--- Casts a jsonb array of hex-encoded strings to the `ore_block_u64_8_256` composite type.
--- In other words, this function takes the ORE index format sent through in the
--- EQL payload from Proxy and decodes it as the composite type that we use for
--- ORE operations on the Postgres side.
--- CREATE FUNCTION eql_v2.jsonb_array_to_ore_block_u64_8_256(val jsonb)
--- RETURNS eql_v2.ore_block_u64_8_256 AS $$
--- DECLARE
---   terms_arr eql_v2.ore_block_u64_8_256_term[];
--- BEGIN
---   IF jsonb_typeof(val) = 'null' THEN
---     RETURN NULL;
---   END IF;
-
---   SELECT array_agg(ROW(decode(value::text, 'hex'))::eql_v2.ore_block_u64_8_256_term)
---     INTO terms_arr
---   FROM jsonb_array_elements_text(val) AS value;
-
---   PERFORM eql_v2.log('terms', terms_arr::text);
-
---   RETURN ROW(terms_arr)::eql_v2.ore_block_u64_8_256;
--- END;
--- $$ LANGUAGE plpgsql;
-
-
+--! @brief Convert JSONB array to ORE block composite type
+--! @internal
+--!
+--! Converts a JSONB array of hex-encoded ORE terms from the CipherStash Proxy
+--! payload into the PostgreSQL composite type used for ORE operations.
+--!
+--! @param val JSONB Array of hex-encoded ORE block terms
+--! @return eql_v2.ore_block_u64_8_256 ORE block composite type, or NULL if input is null
+--!
+--! @see eql_v2.ore_block_u64_8_256(jsonb)
 CREATE FUNCTION eql_v2.jsonb_array_to_ore_block_u64_8_256(val jsonb)
 RETURNS eql_v2.ore_block_u64_8_256 AS $$
 DECLARE
@@ -47,7 +33,17 @@ END;
 $$ LANGUAGE plpgsql;
 
 
--- extracts ore index from jsonb
+--! @brief Extract ORE block index term from JSONB payload
+--!
+--! Extracts the ORE block array from the 'ob' field of an encrypted
+--! data payload. Used internally for range query comparisons.
+--!
+--! @param val jsonb containing encrypted EQL payload
+--! @return eql_v2.ore_block_u64_8_256 ORE block index term
+--! @throws Exception if 'ob' field is missing when ore index is expected
+--!
+--! @see eql_v2.has_ore_block_u64_8_256
+--! @see eql_v2.compare_ore_block_u64_8_256
 CREATE FUNCTION eql_v2.ore_block_u64_8_256(val jsonb)
   RETURNS eql_v2.ore_block_u64_8_256
   IMMUTABLE STRICT PARALLEL SAFE
@@ -65,8 +61,15 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- extracts ore index from an encrypted column
-
+--! @brief Extract ORE block index term from encrypted column value
+--!
+--! Extracts the ORE block from an encrypted column value by accessing
+--! its underlying JSONB data field.
+--!
+--! @param val eql_v2_encrypted Encrypted column value
+--! @return eql_v2.ore_block_u64_8_256 ORE block index term
+--!
+--! @see eql_v2.ore_block_u64_8_256(jsonb)
 CREATE FUNCTION eql_v2.ore_block_u64_8_256(val eql_v2_encrypted)
   RETURNS eql_v2.ore_block_u64_8_256
   IMMUTABLE STRICT PARALLEL SAFE
@@ -77,9 +80,15 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
---
--- Checks if val contains an ore_block_u64_8_256 search term
---
+--! @brief Check if JSONB payload contains ORE block index term
+--!
+--! Tests whether the encrypted data payload includes an 'ob' field,
+--! indicating an ORE block is available for range queries.
+--!
+--! @param val jsonb containing encrypted EQL payload
+--! @return Boolean True if 'ob' field is present and non-null
+--!
+--! @see eql_v2.ore_block_u64_8_256
 CREATE FUNCTION eql_v2.has_ore_block_u64_8_256(val jsonb)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
@@ -90,6 +99,15 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
+--! @brief Check if encrypted column value contains ORE block index term
+--!
+--! Tests whether an encrypted column value includes an ORE block
+--! by checking its underlying JSONB data field.
+--!
+--! @param val eql_v2_encrypted Encrypted column value
+--! @return Boolean True if ORE block is present
+--!
+--! @see eql_v2.has_ore_block_u64_8_256(jsonb)
 CREATE FUNCTION eql_v2.has_ore_block_u64_8_256(val eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
@@ -101,6 +119,20 @@ $$ LANGUAGE plpgsql;
 
 
 
+--! @brief Compare two ORE block terms using cryptographic comparison
+--! @internal
+--!
+--! Performs a three-way comparison (returns -1/0/1) of individual ORE block terms
+--! using the ORE cryptographic protocol. Compares PRP and PRF blocks to determine
+--! ordering without decryption.
+--!
+--! @param a eql_v2.ore_block_u64_8_256_term First ORE term to compare
+--! @param b eql_v2.ore_block_u64_8_256_term Second ORE term to compare
+--! @return Integer -1 if a < b, 0 if a = b, 1 if a > b
+--! @throws Exception if ciphertexts are different lengths
+--!
+--! @note Uses AES-ECB encryption for bit comparisons per ORE protocol
+--! @see eql_v2.compare_ore_block_u64_8_256_terms
 CREATE FUNCTION eql_v2.compare_ore_block_u64_8_256_term(a eql_v2.ore_block_u64_8_256_term, b eql_v2.ore_block_u64_8_256_term)
   RETURNS integer
 AS $$
@@ -182,14 +214,19 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- Compare the "head" of each array and recurse if necessary
--- This function assumes an empty string is "less than" everything else
--- so if a is empty we return -1, if be is empty and a isn't, we return 1.
--- If both are empty we return 0. This cases probably isn't necessary as equality
--- doesn't always make sense but it's here for completeness.
--- If both are non-empty, we compare the first element. If they are equal
--- we need to consider the next block so we recurse, otherwise we return the comparison result.
-
+--! @brief Compare arrays of ORE block terms recursively
+--! @internal
+--!
+--! Recursively compares arrays of ORE block terms element-by-element.
+--! Empty arrays are considered less than non-empty arrays. If the first elements
+--! are equal, recursively compares remaining elements.
+--!
+--! @param a eql_v2.ore_block_u64_8_256_term[] First array of ORE terms
+--! @param b eql_v2.ore_block_u64_8_256_term[] Second array of ORE terms
+--! @return Integer -1 if a < b, 0 if a = b, 1 if a > b, NULL if either array is NULL
+--!
+--! @note Empty arrays sort before non-empty arrays
+--! @see eql_v2.compare_ore_block_u64_8_256_term
 CREATE FUNCTION eql_v2.compare_ore_block_u64_8_256_terms(a eql_v2.ore_block_u64_8_256_term[], b eql_v2.ore_block_u64_8_256_term[])
 RETURNS integer AS $$
   DECLARE
@@ -228,6 +265,17 @@ RETURNS integer AS $$
 $$ LANGUAGE plpgsql;
 
 
+--! @brief Compare ORE block composite types
+--! @internal
+--!
+--! Wrapper function that extracts term arrays from ORE block composite types
+--! and delegates to the array comparison function.
+--!
+--! @param a eql_v2.ore_block_u64_8_256 First ORE block
+--! @param b eql_v2.ore_block_u64_8_256 Second ORE block
+--! @return Integer -1 if a < b, 0 if a = b, 1 if a > b
+--!
+--! @see eql_v2.compare_ore_block_u64_8_256_terms(eql_v2.ore_block_u64_8_256_term[], eql_v2.ore_block_u64_8_256_term[])
 CREATE FUNCTION eql_v2.compare_ore_block_u64_8_256_terms(a eql_v2.ore_block_u64_8_256, b eql_v2.ore_block_u64_8_256)
 RETURNS integer AS $$
   BEGIN
