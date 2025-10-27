@@ -99,8 +99,8 @@ $$ LANGUAGE plpgsql;
 --!
 --! @return TABLE(table_name text, column_name text, target_column text) Column mappings
 --!
---! @note Target column is NULL if encrypted column doesn't exist yet (LEFT JOIN returns NULL when no match)
---! @note Target column type must be eql_v2_encrypted
+--! @note Target column is NULL if no column exists matching either 'column_name' or 'column_name_encrypted' with type eql_v2_encrypted
+--! @note The LEFT JOIN checks both original and '_encrypted' suffix variations with type verification
 --! @see eql_v2.select_pending_columns
 --! @see eql_v2.create_encrypted_columns
 CREATE FUNCTION eql_v2.select_target_columns()
@@ -149,7 +149,7 @@ $$ LANGUAGE sql;
 --!
 --! @return TABLE(table_name text, column_name text) Created encrypted columns
 --!
---! @note Executes ALTER TABLE ADD COLUMN statements dynamically
+--! @warning Executes dynamic DDL (ALTER TABLE ADD COLUMN) - modifies database schema
 --! @note Only creates columns that don't already exist
 --! @see eql_v2.select_target_columns
 --! @see eql_v2.rename_encrypted_columns
@@ -177,7 +177,7 @@ $$ LANGUAGE plpgsql;
 --!
 --! @return TABLE(table_name text, column_name text, target_column text) Renamed columns
 --!
---! @note Executes ALTER TABLE RENAME COLUMN statements dynamically
+--! @warning Executes dynamic DDL (ALTER TABLE RENAME COLUMN) - modifies database schema
 --! @note Only renames columns where target is '{column_name}_encrypted'
 --! @see eql_v2.create_encrypted_columns
 CREATE FUNCTION eql_v2.rename_encrypted_columns()
