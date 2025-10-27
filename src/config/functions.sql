@@ -143,7 +143,7 @@ AS $$
 
     -- update the config and migrate (even if empty)
     UPDATE public.eql_v2_configuration SET data = _config WHERE state = 'pending';
-    
+
     IF NOT migrating THEN
       PERFORM eql_v2.migrate_config();
       PERFORM eql_v2.activate_config();
@@ -158,6 +158,7 @@ $$ LANGUAGE plpgsql;
 --!
 --! Updates an existing search index configuration by removing and re-adding it
 --! with new options. Convenience function that combines remove and add operations.
+--! If index does not exist, it is added.
 --!
 --! @param table_name Text Name of the table containing the column
 --! @param column_name Text Name of the column
@@ -166,7 +167,6 @@ $$ LANGUAGE plpgsql;
 --! @param opts JSONB New index-specific options (default: '{}')
 --! @param migrating Boolean Skip auto-migration if true (default: false)
 --! @return JSONB Updated configuration object
---! @throws Exception if index does not exist
 --!
 --! @example
 --! -- Change match index tokenizer settings
@@ -409,7 +409,7 @@ AS $$
 
     -- update the config (even if empty) and activate
     UPDATE public.eql_v2_configuration SET data = _config WHERE state = 'pending';
-    
+
     IF NOT migrating THEN
       -- For empty configs, skip migration validation and directly activate
       IF _config #> array['tables'] = '{}' THEN
