@@ -8,6 +8,21 @@
 -- REQUIRE: src/operators/>=.sql
 -- REQUIRE: src/operators/>.sql
 
+--! @brief PostgreSQL operator class definitions for encrypted value indexing
+--!
+--! Defines the operator family and operator class required for btree indexing
+--! of encrypted values. This enables PostgreSQL to use encrypted columns in:
+--! - CREATE INDEX statements
+--! - ORDER BY clauses
+--! - Range queries
+--! - Primary key constraints
+--!
+--! The operator class maps the five comparison operators (<, <=, =, >=, >)
+--! to the eql_v2.compare() support function for btree index operations.
+--!
+--! @note This is the default operator class for eql_v2_encrypted type
+--! @see eql_v2.compare
+--! @see PostgreSQL documentation on operator classes
 
 --------------------
 
