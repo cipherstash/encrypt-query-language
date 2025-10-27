@@ -63,23 +63,25 @@ CREATE TABLE encrypted (
 
 ---
 
-## ore_data.sql
+## ore table (from migrations - NOT a fixture)
 
-**Purpose:** Creates `ore` table with ORE-encrypted values 1-99 for comparison/ORDER BY tests.
+**Source:** `tests/sqlx/migrations/002_install_ore_data.sql`
+
+**Purpose:** Provides ORE-encrypted values 1-99 for comparison/ORDER BY tests.
 
 **Schema:**
 ```sql
 CREATE TABLE ore (
-  id INTEGER PRIMARY KEY,
+  id bigint PRIMARY KEY,
   e eql_v2_encrypted
 );
 ```
 
 **Data:**
 - 99 records (ids 1-99)
-- Each record encrypted with ORE64 index: `create_encrypted_json(i, 'ore64')`
-- Enables comparison operator tests (< > <= >=)
-- Supports ORDER BY tests
+- Each record has ONLY `ob` key (ORE block), NOT ore64 index
+- Pre-seeded by migration, available to all tests automatically
+- No fixture needed - table exists from migrations
 
 **Used By:**
 - comparison_tests.rs (< > <= >=)
@@ -87,9 +89,18 @@ CREATE TABLE ore (
 - ore_equality_tests.rs (ORE variants)
 - aggregate_tests.rs (MAX/MIN)
 
+**Helper Functions:**
+- `get_ore_encrypted(pool, id)` - Selects encrypted value from ore table
+- `create_encrypted_json(id)` - Looks up ore table at `id * 10` (valid ids: 1-9 → ore lookups: 10-90)
+
 **Key Property:**
 - Sequential numeric values enable deterministic comparison tests
-- e.g., `WHERE e < encrypted(42)` should return 41 records
+- e.g., `WHERE e < get_ore_encrypted(42)` should return 41 records
+
+**IMPORTANT:**
+- ❌ DO NOT create `ore_data.sql` fixture - table already exists from migrations
+- ❌ DO NOT use `scripts("ore_data")` in test attributes
+- ✅ Use `#[sqlx::test]` without fixtures for ORE tests
 
 ---
 
