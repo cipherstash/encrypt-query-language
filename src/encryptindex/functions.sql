@@ -1,7 +1,28 @@
--- Return the diff of two configurations
--- Returns the set of keys in a that have different values to b
--- The json comparison is on object values held by the key
+--! @file encryptindex/functions.sql
+--! @brief Configuration lifecycle and column encryption management
+--!
+--! Provides functions for managing encryption configuration transitions:
+--! - Comparing configurations to identify changes
+--! - Identifying columns needing encryption
+--! - Creating and renaming encrypted columns during initial setup
+--! - Tracking encryption progress
+--!
+--! These functions support the workflow of activating a pending configuration
+--! and performing the initial encryption of plaintext columns.
 
+
+--! @brief Compare two configurations and find differences
+--! @internal
+--!
+--! Returns table/column pairs where configuration differs between two configs.
+--! Used to identify which columns need encryption when activating a pending config.
+--!
+--! @param a jsonb First configuration to compare
+--! @param b jsonb Second configuration to compare
+--! @return TABLE(table_name text, column_name text) Columns with differing configuration
+--!
+--! @note Compares configuration structure, not just presence/absence
+--! @see eql_v2.select_pending_columns
 CREATE FUNCTION eql_v2.diff_config(a JSONB, b JSONB)
 	RETURNS TABLE(table_name TEXT, column_name TEXT)
 IMMUTABLE STRICT PARALLEL SAFE
@@ -31,9 +52,17 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- Returns the set of columns with pending configuration changes
--- Compares the columns in pending configuration that do not match the active config
-
+--! @brief Get columns with pending configuration changes
+--!
+--! Compares 'pending' and 'active' configurations to identify columns that need
+--! encryption or re-encryption. Returns columns where configuration differs.
+--!
+--! @return TABLE(table_name text, column_name text) Columns needing encryption
+--! @throws Exception if no pending configuration exists
+--!
+--! @note Treats missing active config as empty config
+--! @see eql_v2.diff_config
+--! @see eql_v2.select_target_columns
 CREATE FUNCTION eql_v2.select_pending_columns()
 	RETURNS TABLE(table_name TEXT, column_name TEXT)
 AS $$
@@ -61,16 +90,19 @@ AS $$
 	END;
 $$ LANGUAGE plpgsql;
 
---
--- Returns the target columns with pending configuration
---
--- A `pending` column may be either a plaintext variant or eql_v2_encrypted.
--- A `target` column is always of type eql_v2_encrypted
---
--- On initial encryption from plaintext the target column will be `{column_name}_encrypted `
--- OR NULL if the column does not exist
---
 
+--! @brief Map pending columns to their encrypted target columns
+--!
+--! For each column with pending configuration, identifies the corresponding
+--! encrypted column. During initial encryption, target is '{column_name}_encrypted'.
+--! Returns NULL for target_column if encrypted column doesn't exist yet.
+--!
+--! @return TABLE(table_name text, column_name text, target_column text) Column mappings
+--!
+--! @note Target column is NULL if encrypted column doesn't exist yet
+--! @note Target column type must be eql_v2_encrypted
+--! @see eql_v2.select_pending_columns
+--! @see eql_v2.create_encrypted_columns
 CREATE FUNCTION eql_v2.select_target_columns()
 	RETURNS TABLE(table_name TEXT, column_name TEXT, target_column TEXT)
 	STABLE STRICT PARALLEL SAFE
@@ -88,9 +120,16 @@ AS $$
 $$ LANGUAGE sql;
 
 
---
--- Returns true if all pending columns have a target (encrypted) column
-
+--! @brief Check if database is ready for encryption
+--!
+--! Verifies that all columns with pending configuration have corresponding
+--! encrypted target columns created. Returns true if encryption can proceed.
+--!
+--! @return boolean True if all pending columns have target encrypted columns
+--!
+--! @note Returns false if any pending column lacks encrypted column
+--! @see eql_v2.select_target_columns
+--! @see eql_v2.create_encrypted_columns
 CREATE FUNCTION eql_v2.ready_for_encryption()
 	RETURNS BOOLEAN
 	STABLE STRICT PARALLEL SAFE
@@ -102,14 +141,18 @@ AS $$
 $$ LANGUAGE sql;
 
 
---
--- Creates eql_v2_encrypted columns for any plaintext columns with pending configuration
--- The new column name is `{column_name}_encrypted`
---
--- Executes the ALTER TABLE statement
---   `ALTER TABLE {target_table} ADD COLUMN {column_name}_encrypted eql_v2_encrypted;`
---
-
+--! @brief Create encrypted columns for initial encryption
+--!
+--! For each plaintext column with pending configuration that lacks an encrypted
+--! target column, creates a new column '{column_name}_encrypted' of type
+--! eql_v2_encrypted. This prepares the database schema for initial encryption.
+--!
+--! @return TABLE(table_name text, column_name text) Created encrypted columns
+--!
+--! @note Executes ALTER TABLE ADD COLUMN statements dynamically
+--! @note Only creates columns that don't already exist
+--! @see eql_v2.select_target_columns
+--! @see eql_v2.rename_encrypted_columns
 CREATE FUNCTION eql_v2.create_encrypted_columns()
 	RETURNS TABLE(table_name TEXT, column_name TEXT)
 AS $$
@@ -124,16 +167,19 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
---
--- Renames plaintext and eql_v2_encrypted columns created for the initial encryption.
--- The source plaintext column is renamed to `{column_name}_plaintext`
--- The target encrypted column is renamed from `{column_name}_encrypted` to `{column_name}`
---
--- Executes the ALTER TABLE statements
---   `ALTER TABLE {target_table} RENAME COLUMN {column_name} TO {column_name}_plaintext;
---   `ALTER TABLE {target_table} RENAME COLUMN {column_name}_encrypted TO {column_name};`
---
-
+--! @brief Finalize initial encryption by renaming columns
+--!
+--! After initial encryption completes, renames columns to complete the transition:
+--! - Plaintext column '{column_name}' → '{column_name}_plaintext'
+--! - Encrypted column '{column_name}_encrypted' → '{column_name}'
+--!
+--! This makes the encrypted column the primary column with the original name.
+--!
+--! @return TABLE(table_name text, column_name text, target_column text) Renamed columns
+--!
+--! @note Executes ALTER TABLE RENAME COLUMN statements dynamically
+--! @note Only renames columns where target is '{column_name}_encrypted'
+--! @see eql_v2.create_encrypted_columns
 CREATE FUNCTION eql_v2.rename_encrypted_columns()
 	RETURNS TABLE(table_name TEXT, column_name TEXT, target_column TEXT)
 AS $$
@@ -149,7 +195,18 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-
+--! @brief Count rows encrypted with active configuration
+--! @internal
+--!
+--! Counts rows in a table where the encrypted column's version ('v' field)
+--! matches the active configuration ID. Used to track encryption progress.
+--!
+--! @param table_name text Name of table to check
+--! @param column_name text Name of encrypted column to check
+--! @return bigint Count of rows matching active config version
+--!
+--! @note Checks 'v' field in encrypted JSONB payload
+--! @note Compares to active configuration's ID
 CREATE FUNCTION eql_v2.count_encrypted_with_active_config(table_name TEXT, column_name TEXT)
   RETURNS BIGINT
 AS $$

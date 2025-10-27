@@ -1,21 +1,23 @@
---
--- cs_configuration_data_v2 is a jsonb column that stores the actual configuration
---
--- For some reason CREATE DOMAIN and CREATE TYPE do not support IF NOT EXISTS
--- Types cannot be dropped if used by a table, and we never drop the configuration table
--- DOMAIN constraints are added separately and not tied to DOMAIN creation
---
--- DO $$
---   BEGIN
---     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'configuration_data') THEN
---       CREATE DOMAIN eql_v2.configuration_data AS JSONB;
---     END IF;
---   END
--- $$;
+--! @file config/types.sql
+--! @brief Configuration state type definition
+--!
+--! Defines the ENUM type for tracking encryption configuration lifecycle states.
+--! The configuration table uses this type to manage transitions between states
+--! during setup, activation, and encryption operations.
+--!
+--! @note CREATE TYPE does not support IF NOT EXISTS, so wrapped in DO block
+--! @note Configuration data stored as JSONB directly, not as DOMAIN
+--! @see config/tables.sql
 
---
--- cs_configuration_state_v2 is an ENUM that defines the valid configuration states
--- --
+
+--! @brief Configuration lifecycle state
+--!
+--! Defines valid states for encryption configurations in the eql_v2_configuration table.
+--! Configurations transition through these states during setup and activation.
+--!
+--! @note Only one configuration can be in 'active', 'pending', or 'encrypting' state at once
+--! @see config/indexes.sql for uniqueness enforcement
+--! @see config/tables.sql for usage in eql_v2_configuration table
 DO $$
   BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'eql_v2_configuration_state') THEN
