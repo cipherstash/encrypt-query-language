@@ -4,7 +4,18 @@
 -- REQUIRE: src/encrypted/functions.sql
 
 
---
+--! @brief Extract STE vector index from JSONB payload
+--!
+--! Extracts the STE (Searchable Symmetric Encryption) vector from the 'sv' field
+--! of an encrypted data payload. Returns an array of encrypted values used for
+--! containment queries (@>, <@). If no 'sv' field exists, wraps the entire payload
+--! as a single-element array.
+--!
+--! @param val JSONB Encrypted data payload containing index terms
+--! @return eql_v2_encrypted[] Array of encrypted STE vector elements
+--!
+--! @see eql_v2.ste_vec(eql_v2_encrypted)
+--! @see eql_v2.ste_vec_contains
 CREATE FUNCTION eql_v2.ste_vec(val jsonb)
   RETURNS eql_v2_encrypted[]
   IMMUTABLE STRICT PARALLEL SAFE
@@ -29,8 +40,15 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- extracts ste_vec index from an eql_v2_encrypted value
-
+--! @brief Extract STE vector index from encrypted column value
+--!
+--! Extracts the STE vector from an encrypted column value by accessing its
+--! underlying JSONB data field. Used for containment query operations.
+--!
+--! @param val eql_v2_encrypted Encrypted column value
+--! @return eql_v2_encrypted[] Array of encrypted STE vector elements
+--!
+--! @see eql_v2.ste_vec(jsonb)
 CREATE FUNCTION eql_v2.ste_vec(val eql_v2_encrypted)
   RETURNS eql_v2_encrypted[]
   IMMUTABLE STRICT PARALLEL SAFE
@@ -40,10 +58,15 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
---
--- Returns true if val is an SteVec with a single array item.
--- SteVec value items can be treated as regular eql_encrypted
---
+--! @brief Check if JSONB payload is a single-element STE vector
+--!
+--! Tests whether the encrypted data payload contains an 'sv' field with exactly
+--! one element. Single-element STE vectors can be treated as regular encrypted values.
+--!
+--! @param val JSONB Encrypted data payload
+--! @return Boolean True if 'sv' field exists with exactly one element
+--!
+--! @see eql_v2.to_ste_vec_value
 CREATE FUNCTION eql_v2.is_ste_vec_value(val jsonb)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
@@ -57,6 +80,15 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+--! @brief Check if encrypted column value is a single-element STE vector
+--!
+--! Tests whether an encrypted column value is a single-element STE vector
+--! by checking its underlying JSONB data field.
+--!
+--! @param val eql_v2_encrypted Encrypted column value
+--! @return Boolean True if value is a single-element STE vector
+--!
+--! @see eql_v2.is_ste_vec_value(jsonb)
 CREATE FUNCTION eql_v2.is_ste_vec_value(val eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
@@ -66,9 +98,16 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
---
--- Returns an SteVec with a single array item as an eql_encrypted
---
+--! @brief Convert single-element STE vector to regular encrypted value
+--!
+--! Extracts the single element from a single-element STE vector and returns it
+--! as a regular encrypted value, preserving metadata. If the input is not a
+--! single-element STE vector, returns it unchanged.
+--!
+--! @param val JSONB Encrypted data payload
+--! @return eql_v2_encrypted Regular encrypted value (unwrapped if single-element STE vector)
+--!
+--! @see eql_v2.is_ste_vec_value
 CREATE FUNCTION eql_v2.to_ste_vec_value(val jsonb)
   RETURNS eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
@@ -94,6 +133,15 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+--! @brief Convert single-element STE vector to regular encrypted value (encrypted type)
+--!
+--! Converts an encrypted column value to a regular encrypted value by unwrapping
+--! if it's a single-element STE vector.
+--!
+--! @param val eql_v2_encrypted Encrypted column value
+--! @return eql_v2_encrypted Regular encrypted value (unwrapped if single-element STE vector)
+--!
+--! @see eql_v2.to_ste_vec_value(jsonb)
 CREATE FUNCTION eql_v2.to_ste_vec_value(val eql_v2_encrypted)
   RETURNS eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
@@ -103,6 +151,16 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+--! @brief Extract selector value from JSONB payload
+--!
+--! Extracts the selector ('s') field from an encrypted data payload.
+--! Selectors are used to match STE vector elements during containment queries.
+--!
+--! @param val JSONB Encrypted data payload
+--! @return Text The selector value
+--! @throws Exception if 's' field is missing
+--!
+--! @see eql_v2.ste_vec_contains
 CREATE FUNCTION eql_v2.selector(val jsonb)
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
@@ -120,8 +178,15 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- extracts ste_vec index from an eql_v2_encrypted value
-
+--! @brief Extract selector value from encrypted column value
+--!
+--! Extracts the selector from an encrypted column value by accessing its
+--! underlying JSONB data field.
+--!
+--! @param val eql_v2_encrypted Encrypted column value
+--! @return Text The selector value
+--!
+--! @see eql_v2.selector(jsonb)
 CREATE FUNCTION eql_v2.selector(val eql_v2_encrypted)
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
@@ -133,6 +198,15 @@ $$ LANGUAGE plpgsql;
 
 
 
+--! @brief Check if JSONB payload is marked as an STE vector array
+--!
+--! Tests whether the encrypted data payload has the 'a' (array) flag set to true,
+--! indicating it represents an array for STE vector operations.
+--!
+--! @param val JSONB Encrypted data payload
+--! @return Boolean True if 'a' field is present and true
+--!
+--! @see eql_v2.ste_vec
 CREATE FUNCTION eql_v2.is_ste_vec_array(val jsonb)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
@@ -147,8 +221,15 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- extracts ste_vec index from an eql_v2_encrypted value
-
+--! @brief Check if encrypted column value is marked as an STE vector array
+--!
+--! Tests whether an encrypted column value has the array flag set by checking
+--! its underlying JSONB data field.
+--!
+--! @param val eql_v2_encrypted Encrypted column value
+--! @return Boolean True if value is marked as an STE vector array
+--!
+--! @see eql_v2.is_ste_vec_array(jsonb)
 CREATE FUNCTION eql_v2.is_ste_vec_array(val eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
@@ -160,7 +241,20 @@ $$ LANGUAGE plpgsql;
 
 
 
--- Returns true if b is contained in any element of a
+--! @brief Check if STE vector array contains a specific encrypted element
+--!
+--! Tests whether any element in the STE vector array 'a' contains the encrypted value 'b'.
+--! Matching requires both the selector and encrypted value to be equal.
+--! Used internally by ste_vec_contains(encrypted, encrypted) for array containment checks.
+--!
+--! @param a eql_v2_encrypted[] STE vector array to search within
+--! @param b eql_v2_encrypted Encrypted element to search for
+--! @return Boolean True if b is found in any element of a
+--!
+--! @note Compares both selector and encrypted value for match
+--!
+--! @see eql_v2.selector
+--! @see eql_v2.ste_vec_contains(eql_v2_encrypted, eql_v2_encrypted)
 CREATE FUNCTION eql_v2.ste_vec_contains(a eql_v2_encrypted[], b eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
@@ -182,8 +276,22 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- Returns true if a contains b
--- All values of b must be in a
+--! @brief Check if encrypted value 'a' contains all elements of encrypted value 'b'
+--!
+--! Performs STE vector containment comparison between two encrypted values.
+--! Returns true if all elements in b's STE vector are found in a's STE vector.
+--! Used internally by the @> containment operator for searchable encryption.
+--!
+--! @param a eql_v2_encrypted First encrypted value (container)
+--! @param b eql_v2_encrypted Second encrypted value (elements to find)
+--! @return Boolean True if all elements of b are contained in a
+--!
+--! @note Empty b is always contained in any a
+--! @note Each element of b must match both selector and value in a
+--!
+--! @see eql_v2.ste_vec
+--! @see eql_v2.ste_vec_contains(eql_v2_encrypted[], eql_v2_encrypted)
+--! @see eql_v2."@>"
 CREATE FUNCTION eql_v2.ste_vec_contains(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
