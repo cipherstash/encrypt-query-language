@@ -12,9 +12,10 @@ This test crate provides:
 
 ## Migration Status
 
-**Progress: 24/24 SQL assertions ported**
+✅ **Like-for-Like Migration: Complete** (40/40 SQL assertions ported)
 
-- ✅ JSONB functions: 24/24 (arrays, paths, structure validation, encrypted selectors)
+- Equality operators: 16/16 (HMAC + Blake3, operators + functions + JSONB)
+- JSONB functions: 24/24 (arrays, paths, structure validation, encrypted selectors)
 
 ## Architecture
 
@@ -177,10 +178,15 @@ async fn test_name(pool: PgPool) {
 - Converted from `src/jsonb/functions_test.sql`
 - Tests: `jsonb_array_elements`, `jsonb_array_elements_text`, `jsonb_array_length`, `jsonb_path_query`, `jsonb_path_exists`, encrypted selector validation
 
+**`tests/equality_tests.rs`** - Equality operators and functions
+- Converted from `src/operators/=_test.sql`
+- Tests: HMAC index equality, Blake3 index equality, `eq()` function
+
 ### Test Count
 
-- **Total**: 20 tests (19 functional + 1 helper)
+- **Total**: 35 tests (34 functional + 1 helper)
 - **JSONB**: 19 tests
+- **Equality**: 15 tests
 - **Helpers**: 1 test
 
 ## Dependencies
