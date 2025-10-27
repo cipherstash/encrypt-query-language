@@ -1,6 +1,6 @@
 # Assertion Count Report
 
-Generated: 2025-10-24
+Generated: 2025-10-27
 
 # SQL Test Assertions
 
@@ -51,7 +51,6 @@ Generated: 2025-10-24
 
 | File | assert* | expect* | is_err/is_ok | Total |
 |------|---------|---------|--------------|-------|
-| `rust-tests/tests/add_column_test.rs` | 0 | 0 | 0 | 0 |
-| `rust-tests/tests/test_helpers_test.rs` | 0 | 0 | 0 | 0 |
+| *(no Rust tests yet)* | 0 | 0 | 0 | 0 |
 
-**Total Rust assertions:** 0 across 2 files
+**Total Rust assertions:** 0 across 0 files
