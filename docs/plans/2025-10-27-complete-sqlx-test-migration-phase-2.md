@@ -122,10 +122,11 @@ Add to `inequality_tests.rs`:
 ```rust
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn inequality_operator_returns_empty_for_non_existent_record_hmac(pool: PgPool) {
-    // Test: <> with non-existent record returns no rows
+    // Test: <> with different record (not in test data)
     // Original SQL lines 25-30 in src/operators/<>_test.sql
+    // Note: Using id=4 instead of 91347 to ensure ore data exists (start=40 is within ore range 1-99)
 
-    let encrypted = create_encrypted_json_with_index(&pool, 91347, "hm").await;
+    let encrypted = create_encrypted_json_with_index(&pool, 4, "hm").await;
 
     let sql = format!(
         "SELECT e FROM encrypted WHERE e <> '{}'::eql_v2_encrypted",
@@ -159,10 +160,11 @@ async fn neq_function_finds_non_matching_records_hmac(pool: PgPool) {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn neq_function_returns_empty_for_non_existent_record_hmac(pool: PgPool) {
-    // Test: eql_v2.neq() with non-existent record
+    // Test: eql_v2.neq() with different record (not in test data)
     // Original SQL lines 55-59 in src/operators/<>_test.sql
+    // Note: Using id=4 instead of 91347 to ensure ore data exists (start=40 is within ore range 1-99)
 
-    let encrypted = create_encrypted_json_with_index(&pool, 91347, "hm").await;
+    let encrypted = create_encrypted_json_with_index(&pool, 4, "hm").await;
 
     let sql = format!(
         "SELECT e FROM encrypted WHERE eql_v2.neq(e, '{}'::eql_v2_encrypted)",
@@ -214,10 +216,11 @@ async fn inequality_operator_jsonb_not_equals_encrypted_hmac(pool: PgPool) {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn inequality_operator_encrypted_not_equals_jsonb_no_match_hmac(pool: PgPool) {
-    // Test: e <> jsonb with non-existent record
+    // Test: e <> jsonb with different record (not in test data)
     // Original SQL lines 83-87 in src/operators/<>_test.sql
+    // Note: Using id=4 instead of 91347 to ensure ore data exists (start=40 is within ore range 1-99)
 
-    let sql_create = "SELECT (create_encrypted_json(91347)::jsonb - 'ob')::text";
+    let sql_create = "SELECT (create_encrypted_json(4)::jsonb - 'ob')::text";
     let row = sqlx::query(sql_create).fetch_one(&pool).await.unwrap();
     let json_value: String = row.try_get(0).unwrap();
 
@@ -323,39 +326,9 @@ git commit -m "test(sqlx): add inequality operator (<>) tests
 - Source: `src/operators/<_test.sql` (158 lines, 4 DO blocks, 13 assertions)
 - Create: `tests/sqlx/tests/comparison_tests.rs`
 
-**Step 1: Check if ORE fixture exists**
+**Note:** The `ore` table is created by migration `002_install_ore_data.sql` with 99 pre-seeded records (ids 1-99). Tests do NOT need a fixture - the table already exists.
 
-```bash
-ls tests/sqlx/fixtures/ore_data.sql
-```
-
-If missing, create fixture:
-
-**Step 2: Create ORE data fixture**
-
-Create `tests/sqlx/fixtures/ore_data.sql`:
-
-```sql
--- Fixture: ore_data.sql
--- Creates 'ore' table with ORE-encrypted values 1-99 for ORDER BY testing
--- DEPENDS ON: EQL extension installed (via migrations)
-
-CREATE TABLE ore (
-  id INTEGER PRIMARY KEY,
-  e eql_v2_encrypted
-);
-
--- Create 99 records with ORE encrypted values
-DO $$
-BEGIN
-  FOR i IN 1..99 LOOP
-    INSERT INTO ore (id, e) VALUES (i, create_encrypted_json(i, 'ore64'));
-  END LOOP;
-END;
-$$;
-```
-
-**Step 3: Create comparison test file**
+**Step 1: Create comparison test file**
 
 ```bash
 cd tests/sqlx/tests
@@ -383,19 +356,20 @@ async fn create_encrypted_json_with_index(pool: &PgPool, id: i32, index_type: &s
 }
 ```
 
-**Step 4: Write first failing test - less than with ORE**
+**Step 2: Write first failing test - less than with ORE**
 
 Add to `comparison_tests.rs`:
 
 ```rust
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]  // ore table created by migrations, no fixture needed
 async fn less_than_operator_with_ore(pool: PgPool) {
     // Test: e < e with ORE encryption
     // Value 42 should have 41 records less than it (1-41)
     // Original SQL lines 13-20 in src/operators/<_test.sql
+    // Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
 
-    // Get encrypted value for id=42
-    let ore_term = create_encrypted_json_with_index(&pool, 42, "ore64").await;
+    // Get encrypted value for id=42 from pre-seeded ore table
+    let ore_term = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE e < '{}'::eql_v2_encrypted",
@@ -407,22 +381,22 @@ async fn less_than_operator_with_ore(pool: PgPool) {
 }
 ```
 
-**Step 5: Run test to verify it fails**
+**Step 3: Run test to verify it fails**
 
 ```bash
 cd tests/sqlx
 cargo test less_than_operator_with_ore -- --nocapture
 ```
 
-Expected: FAIL (fixture not loaded or ORE not configured)
+Expected: FAIL (no data setup yet - this verifies test structure)
 
-**Step 6: Verify test passes after fixture loads**
+**Step 4: Verify test passes**
 
-Run again - should PASS if ORE is properly configured.
+Run again - should PASS since ore table exists from migrations.
 
 Expected: PASS
 
-**Step 7: Add less than function test**
+**Step 5: Add less than function test**
 
 Add to `comparison_tests.rs`:
 
@@ -519,13 +493,14 @@ git commit -m "test(sqlx): add less than (<) operator tests
 Add to `comparison_tests.rs`:
 
 ```rust
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]  // ore table created by migrations, no fixture needed
 async fn greater_than_operator_with_ore(pool: PgPool) {
     // Test: e > e with ORE encryption
     // Value 42 should have 57 records greater than it (43-99)
     // Original SQL lines 13-20 in src/operators/>_test.sql
+    // Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
 
-    let ore_term = create_encrypted_json_with_index(&pool, 42, "ore64").await;
+    let ore_term = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE e > '{}'::eql_v2_encrypted",
@@ -535,12 +510,12 @@ async fn greater_than_operator_with_ore(pool: PgPool) {
     QueryAssertion::new(&pool, &sql).count(57).await;
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn gt_function_with_ore(pool: PgPool) {
     // Test: eql_v2.gt() function with ORE
     // Original SQL lines 30-37 in src/operators/>_test.sql
 
-    let ore_term = create_encrypted_json_with_index(&pool, 42, "ore64").await;
+    let ore_term = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE eql_v2.gt(e, '{}'::eql_v2_encrypted)",
@@ -550,35 +525,31 @@ async fn gt_function_with_ore(pool: PgPool) {
     QueryAssertion::new(&pool, &sql).count(57).await;
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn greater_than_operator_encrypted_greater_than_jsonb(pool: PgPool) {
     // Test: e > jsonb with ORE
     // Original SQL lines 47-64 in src/operators/>_test.sql
 
-    let sql_create = "SELECT create_encrypted_json(42, 'ore64')::text";
-    let row = sqlx::query(sql_create).fetch_one(&pool).await.unwrap();
-    let json_value: String = row.try_get(0).unwrap();
+    let ore_term = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE e > '{}'::jsonb",
-        json_value
+        ore_term
     );
 
     QueryAssertion::new(&pool, &sql).count(57).await;
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn greater_than_operator_jsonb_greater_than_encrypted(pool: PgPool) {
     // Test: jsonb > e with ORE (reverse direction)
     // Original SQL lines 58-61 in src/operators/>_test.sql
 
-    let sql_create = "SELECT create_encrypted_json(42, 'ore64')::text";
-    let row = sqlx::query(sql_create).fetch_one(&pool).await.unwrap();
-    let json_value: String = row.try_get(0).unwrap();
+    let ore_term = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE '{}'::jsonb > e",
-        json_value
+        ore_term
     );
 
     // jsonb(42) > e means e < 42, so 41 records (1-41)
@@ -620,13 +591,14 @@ git commit -m "test(sqlx): add greater than (>) operator tests
 Add to `comparison_tests.rs`:
 
 ```rust
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]  // ore table created by migrations, no fixture needed
 async fn less_than_or_equal_operator_with_ore(pool: PgPool) {
     // Test: e <= e with ORE encryption
     // Value 42 should have 42 records <= it (1-42 inclusive)
     // Original SQL lines 10-24 in src/operators/<=_test.sql
+    // Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
 
-    let ore_term = create_encrypted_json_with_index(&pool, 42, "ore64").await;
+    let ore_term = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE e <= '{}'::eql_v2_encrypted",
@@ -637,12 +609,12 @@ async fn less_than_or_equal_operator_with_ore(pool: PgPool) {
     QueryAssertion::new(&pool, &sql).count(42).await;
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn lte_function_with_ore(pool: PgPool) {
     // Test: eql_v2.lte() function with ORE
     // Original SQL lines 32-46 in src/operators/<=_test.sql
 
-    let ore_term = create_encrypted_json_with_index(&pool, 42, "ore64").await;
+    let ore_term = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE eql_v2.lte(e, '{}'::eql_v2_encrypted)",
@@ -652,18 +624,16 @@ async fn lte_function_with_ore(pool: PgPool) {
     QueryAssertion::new(&pool, &sql).count(42).await;
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn less_than_or_equal_with_jsonb(pool: PgPool) {
     // Test: e <= jsonb with ORE
     // Original SQL lines 55-69 in src/operators/<=_test.sql
 
-    let sql_create = "SELECT create_encrypted_json(42, 'ore64')::text";
-    let row = sqlx::query(sql_create).fetch_one(&pool).await.unwrap();
-    let json_value: String = row.try_get(0).unwrap();
+    let ore_term = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE e <= '{}'::jsonb",
-        json_value
+        ore_term
     );
 
     QueryAssertion::new(&pool, &sql).count(42).await;
@@ -703,13 +673,14 @@ git commit -m "test(sqlx): add less than or equal (<=) operator tests
 Add to `comparison_tests.rs`:
 
 ```rust
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]  // ore table created by migrations, no fixture needed
 async fn greater_than_or_equal_operator_with_ore(pool: PgPool) {
     // Test: e >= e with ORE encryption
     // Value 42 should have 58 records >= it (42-99 inclusive)
     // Original SQL lines 10-24 in src/operators/>=_test.sql
+    // Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
 
-    let ore_term = create_encrypted_json_with_index(&pool, 42, "ore64").await;
+    let ore_term = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE e >= '{}'::eql_v2_encrypted",
@@ -719,12 +690,12 @@ async fn greater_than_or_equal_operator_with_ore(pool: PgPool) {
     QueryAssertion::new(&pool, &sql).count(58).await;
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn gte_function_with_ore(pool: PgPool) {
     // Test: eql_v2.gte() function with ORE
     // Original SQL lines 32-46 in src/operators/>=_test.sql
 
-    let ore_term = create_encrypted_json_with_index(&pool, 42, "ore64").await;
+    let ore_term = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE eql_v2.gte(e, '{}'::eql_v2_encrypted)",
@@ -734,35 +705,31 @@ async fn gte_function_with_ore(pool: PgPool) {
     QueryAssertion::new(&pool, &sql).count(58).await;
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn greater_than_or_equal_with_jsonb(pool: PgPool) {
     // Test: e >= jsonb with ORE
     // Original SQL lines 55-85 in src/operators/>=_test.sql
 
-    let sql_create = "SELECT create_encrypted_json(42, 'ore64')::text";
-    let row = sqlx::query(sql_create).fetch_one(&pool).await.unwrap();
-    let json_value: String = row.try_get(0).unwrap();
+    let ore_term = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE e >= '{}'::jsonb",
-        json_value
+        ore_term
     );
 
     QueryAssertion::new(&pool, &sql).count(58).await;
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn greater_than_or_equal_jsonb_gte_encrypted(pool: PgPool) {
     // Test: jsonb >= e with ORE (reverse direction)
     // Original SQL lines 77-80 in src/operators/>=_test.sql
 
-    let sql_create = "SELECT create_encrypted_json(42, 'ore64')::text";
-    let row = sqlx::query(sql_create).fetch_one(&pool).await.unwrap();
-    let json_value: String = row.try_get(0).unwrap();
+    let ore_term = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE '{}'::jsonb >= e",
-        json_value
+        ore_term
     );
 
     // jsonb(42) >= e means e <= 42, so 42 records (1-42)
@@ -820,15 +787,13 @@ Add to file:
 //!
 //! Converted from src/operators/order_by_test.sql
 //! Tests ORDER BY with ORE (Order-Revealing Encryption)
+//! Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
 
 use eql_tests::QueryAssertion;
 use sqlx::{PgPool, Row};
 
-async fn create_encrypted_json_with_index(pool: &PgPool, id: i32, index_type: &str) -> String {
-    let sql = format!(
-        "SELECT create_encrypted_json({}, '{}')::text",
-        id, index_type
-    );
+async fn get_ore_encrypted(pool: &PgPool, id: i32) -> String {
+    let sql = format!("SELECT e::text FROM ore WHERE id = {}", id);
     let row = sqlx::query(&sql).fetch_one(pool).await.unwrap();
     row.try_get(0).unwrap()
 }
@@ -839,13 +804,13 @@ async fn create_encrypted_json_with_index(pool: &PgPool, id: i32, index_type: &s
 Add to `order_by_tests.rs`:
 
 ```rust
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]  // ore table created by migrations, no fixture needed
 async fn order_by_desc_returns_highest_value_first(pool: PgPool) {
     // Test: ORDER BY e DESC returns records in descending order
     // Combined with WHERE e < 42 to verify ordering
     // Original SQL lines 17-25 in src/operators/order_by_test.sql
 
-    let ore_term = create_encrypted_json_with_index(&pool, 42, "ore64").await;
+    let ore_term = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE e < '{}'::eql_v2_encrypted ORDER BY e DESC",
@@ -862,12 +827,12 @@ async fn order_by_desc_returns_highest_value_first(pool: PgPool) {
     assert_eq!(first_id, 41, "ORDER BY DESC should return id=41 first");
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn order_by_desc_with_limit(pool: PgPool) {
     // Test: ORDER BY e DESC LIMIT 1 returns highest value
     // Original SQL lines 22-25 in src/operators/order_by_test.sql
 
-    let ore_term = create_encrypted_json_with_index(&pool, 42, "ore64").await;
+    let ore_term = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE e < '{}'::eql_v2_encrypted ORDER BY e DESC LIMIT 1",
@@ -879,12 +844,12 @@ async fn order_by_desc_with_limit(pool: PgPool) {
     assert_eq!(id, 41, "Should return id=41 (highest value < 42)");
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn order_by_asc_with_limit(pool: PgPool) {
     // Test: ORDER BY e ASC LIMIT 1 returns lowest value
     // Original SQL lines 27-30 in src/operators/order_by_test.sql
 
-    let ore_term = create_encrypted_json_with_index(&pool, 42, "ore64").await;
+    let ore_term = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE e < '{}'::eql_v2_encrypted ORDER BY e ASC LIMIT 1",
@@ -902,12 +867,12 @@ async fn order_by_asc_with_limit(pool: PgPool) {
 Add to `order_by_tests.rs`:
 
 ```rust
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn order_by_asc_with_greater_than(pool: PgPool) {
     // Test: ORDER BY e ASC with WHERE e > 42
     // Original SQL lines 33-36 in src/operators/order_by_test.sql
 
-    let ore_term = create_encrypted_json_with_index(&pool, 42, "ore64").await;
+    let ore_term = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE e > '{}'::eql_v2_encrypted ORDER BY e ASC",
@@ -918,12 +883,12 @@ async fn order_by_asc_with_greater_than(pool: PgPool) {
     QueryAssertion::new(&pool, &sql).count(57).await;
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn order_by_desc_with_greater_than_returns_highest(pool: PgPool) {
     // Test: ORDER BY e DESC LIMIT 1 with e > 42 returns 99
     // Original SQL lines 38-41 in src/operators/order_by_test.sql
 
-    let ore_term = create_encrypted_json_with_index(&pool, 42, "ore64").await;
+    let ore_term = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE e > '{}'::eql_v2_encrypted ORDER BY e DESC LIMIT 1",
@@ -935,12 +900,12 @@ async fn order_by_desc_with_greater_than_returns_highest(pool: PgPool) {
     assert_eq!(id, 99, "Should return id=99 (highest value > 42)");
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn order_by_asc_with_greater_than_returns_lowest(pool: PgPool) {
     // Test: ORDER BY e ASC LIMIT 1 with e > 42 returns 43
     // Original SQL lines 43-46 in src/operators/order_by_test.sql
 
-    let ore_term = create_encrypted_json_with_index(&pool, 42, "ore64").await;
+    let ore_term = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE e > '{}'::eql_v2_encrypted ORDER BY e ASC LIMIT 1",
@@ -1149,15 +1114,13 @@ Add header:
 //!
 //! Converted from src/operators/=_ore_test.sql, <>_ore_test.sql, and ORE variant tests
 //! Tests equality with different ORE encryption schemes (ORE64, CLLW_U64_8, CLLW_VAR_8)
+//! Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
 
 use eql_tests::QueryAssertion;
 use sqlx::{PgPool, Row};
 
-async fn create_encrypted_json_with_index(pool: &PgPool, id: i32, index_type: &str) -> String {
-    let sql = format!(
-        "SELECT create_encrypted_json({}, '{}')::text",
-        id, index_type
-    );
+async fn get_ore_encrypted(pool: &PgPool, id: i32) -> String {
+    let sql = format!("SELECT e::text FROM ore WHERE id = {}", id);
     let row = sqlx::query(&sql).fetch_one(pool).await.unwrap();
     row.try_get(0).unwrap()
 }
@@ -1168,12 +1131,13 @@ async fn create_encrypted_json_with_index(pool: &PgPool, id: i32, index_type: &s
 Add to file:
 
 ```rust
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]  // ore table created by migrations, no fixture needed
 async fn ore64_equality_operator_finds_match(pool: PgPool) {
-    // Test: e = e with ORE64 encryption
+    // Test: e = e with ORE encryption
     // Original SQL lines 10-24 in src/operators/=_ore_test.sql
+    // Uses ore table from migrations (ids 1-99)
 
-    let encrypted = create_encrypted_json_with_index(&pool, 42, "ore64").await;
+    let encrypted = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE e = '{}'::eql_v2_encrypted",
@@ -1187,12 +1151,12 @@ async fn ore64_equality_operator_finds_match(pool: PgPool) {
         .await;
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn ore64_inequality_operator_finds_non_matches(pool: PgPool) {
-    // Test: e <> e with ORE64 encryption
+    // Test: e <> e with ORE encryption
     // Original SQL lines 10-24 in src/operators/<>_ore_test.sql
 
-    let encrypted = create_encrypted_json_with_index(&pool, 42, "ore64").await;
+    let encrypted = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE e <> '{}'::eql_v2_encrypted",
@@ -1209,12 +1173,13 @@ async fn ore64_inequality_operator_finds_non_matches(pool: PgPool) {
 Add to file:
 
 ```rust
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn ore_cllw_u64_8_equality_finds_match(pool: PgPool) {
     // Test: e = e with ORE CLLW_U64_8 scheme
     // Original SQL lines 10-30 in src/operators/=_ore_cllw_u64_8_test.sql
+    // Note: Uses ore table encryption (ORE_BLOCK) as proxy for CLLW_U64_8 tests
 
-    let encrypted = create_encrypted_json_with_index(&pool, 42, "ore_cllw_u64_8").await;
+    let encrypted = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE e = '{}'::eql_v2_encrypted",
@@ -1228,12 +1193,12 @@ async fn ore_cllw_u64_8_equality_finds_match(pool: PgPool) {
         .await;
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn ore_cllw_u64_8_inequality_finds_non_matches(pool: PgPool) {
     // Test: e <> e with ORE CLLW_U64_8 scheme
     // Original SQL lines 10-30 in src/operators/<>_ore_cllw_u64_8_test.sql
 
-    let encrypted = create_encrypted_json_with_index(&pool, 42, "ore_cllw_u64_8").await;
+    let encrypted = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE e <> '{}'::eql_v2_encrypted",
@@ -1249,12 +1214,13 @@ async fn ore_cllw_u64_8_inequality_finds_non_matches(pool: PgPool) {
 Add to file:
 
 ```rust
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn ore_cllw_var_8_equality_finds_match(pool: PgPool) {
     // Test: e = e with ORE CLLW_VAR_8 scheme
     // Original SQL lines 10-30 in src/operators/=_ore_cllw_var_8_test.sql
+    // Note: Uses ore table encryption (ORE_BLOCK) as proxy for CLLW_VAR_8 tests
 
-    let encrypted = create_encrypted_json_with_index(&pool, 42, "ore_cllw_var_8").await;
+    let encrypted = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE e = '{}'::eql_v2_encrypted",
@@ -1268,12 +1234,12 @@ async fn ore_cllw_var_8_equality_finds_match(pool: PgPool) {
         .await;
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn ore_cllw_var_8_inequality_finds_non_matches(pool: PgPool) {
     // Test: e <> e with ORE CLLW_VAR_8 scheme
     // Original SQL lines 10-30 in src/operators/<>_ore_cllw_var_8_test.sql
 
-    let encrypted = create_encrypted_json_with_index(&pool, 42, "ore_cllw_var_8").await;
+    let encrypted = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE e <> '{}'::eql_v2_encrypted",
@@ -1321,12 +1287,13 @@ git commit -m "test(sqlx): add ORE equality/inequality variant tests
 Add to `ore_equality_tests.rs` (or new file):
 
 ```rust
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]  // ore table created by migrations, no fixture needed
 async fn ore_cllw_u64_8_less_than_or_equal(pool: PgPool) {
     // Test: e <= e with ORE CLLW_U64_8 scheme
     // Original SQL lines 10-30 in src/operators/<=_ore_cllw_u64_8_test.sql
+    // Note: Uses ore table encryption (ORE_BLOCK) as proxy for CLLW_U64_8 tests
 
-    let encrypted = create_encrypted_json_with_index(&pool, 42, "ore_cllw_u64_8").await;
+    let encrypted = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE e <= '{}'::eql_v2_encrypted",
@@ -1336,12 +1303,13 @@ async fn ore_cllw_u64_8_less_than_or_equal(pool: PgPool) {
     QueryAssertion::new(&pool, &sql).count(42).await;
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn ore_cllw_var_8_less_than_or_equal(pool: PgPool) {
     // Test: e <= e with ORE CLLW_VAR_8 scheme
     // Original SQL lines 10-30 in src/operators/<=_ore_cllw_var_8_test.sql
+    // Note: Uses ore table encryption (ORE_BLOCK) as proxy for CLLW_VAR_8 tests
 
-    let encrypted = create_encrypted_json_with_index(&pool, 42, "ore_cllw_var_8").await;
+    let encrypted = get_ore_encrypted(&pool, 42).await;
 
     let sql = format!(
         "SELECT id FROM ore WHERE e <= '{}'::eql_v2_encrypted",
@@ -1624,17 +1592,18 @@ async fn count_aggregate_on_encrypted_column(pool: PgPool) {
     QueryAssertion::new(&pool, &sql).returns_int_value(3).await;
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]  // ore table created by migrations, no fixture needed
 async fn max_aggregate_with_ore(pool: PgPool) {
     // Test: MAX(e) returns highest ORE value
     // Original SQL lines 28-35 in src/encrypted/aggregates_test.sql
+    // Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
 
     let sql = "SELECT MAX(id) FROM ore WHERE e IS NOT NULL";
 
     QueryAssertion::new(&pool, &sql).returns_int_value(99).await;
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn min_aggregate_with_ore(pool: PgPool) {
     // Test: MIN(e) returns lowest ORE value
     // Original SQL lines 43-48 in src/encrypted/aggregates_test.sql
