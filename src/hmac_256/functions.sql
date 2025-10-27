@@ -6,7 +6,7 @@
 --! Extracts the HMAC-SHA256 hash value from the 'hm' field of an encrypted
 --! data payload. Used internally for exact-match comparisons.
 --!
---! @param val JSONB Encrypted data payload containing index terms
+--! @param val jsonb containing encrypted EQL payload
 --! @return eql_v2.hmac_256 HMAC-SHA256 hash value
 --! @throws Exception if 'hm' field is missing when hmac_256 index is expected
 --!
@@ -34,7 +34,7 @@ $$ LANGUAGE plpgsql;
 --! Tests whether the encrypted data payload includes an 'hm' field,
 --! indicating an HMAC-SHA256 hash is available for exact-match queries.
 --!
---! @param val JSONB Encrypted data payload
+--! @param val jsonb containing encrypted EQL payload
 --! @return Boolean True if 'hm' field is present and non-null
 --!
 --! @see eql_v2.hmac_256

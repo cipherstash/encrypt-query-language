@@ -8,7 +8,7 @@
 --! Extracts the ciphertext (c field) from a raw JSONB encrypted value.
 --! The ciphertext is the base64-encoded encrypted data.
 --!
---! @param val JSONB Raw encrypted value containing 'c' field
+--! @param val jsonb containing encrypted EQL payload
 --! @return Text Base64-encoded ciphertext string
 --! @throws Exception if 'c' field is not present in JSONB
 --!
@@ -155,7 +155,7 @@ $$ LANGUAGE plpgsql;
 --! Extracts index terms (i) and version (v) from a raw JSONB encrypted value.
 --! Returns metadata object containing searchable index terms without ciphertext.
 --!
---! @param val JSONB Raw encrypted value
+--! @param val jsonb containing encrypted EQL payload
 --! @return JSONB Metadata object with 'i' (index terms) and 'v' (version) fields
 --!
 --! @example

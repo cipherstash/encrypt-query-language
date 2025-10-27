@@ -38,7 +38,7 @@ $$ LANGUAGE plpgsql;
 --! Extracts the ORE block array from the 'ob' field of an encrypted
 --! data payload. Used internally for range query comparisons.
 --!
---! @param val JSONB Encrypted data payload containing index terms
+--! @param val jsonb containing encrypted EQL payload
 --! @return eql_v2.ore_block_u64_8_256 ORE block index term
 --! @throws Exception if 'ob' field is missing when ore index is expected
 --!
@@ -85,7 +85,7 @@ $$ LANGUAGE plpgsql;
 --! Tests whether the encrypted data payload includes an 'ob' field,
 --! indicating an ORE block is available for range queries.
 --!
---! @param val JSONB Encrypted data payload
+--! @param val jsonb containing encrypted EQL payload
 --! @return Boolean True if 'ob' field is present and non-null
 --!
 --! @see eql_v2.ore_block_u64_8_256
