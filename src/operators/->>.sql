@@ -2,10 +2,11 @@
 -- REQUIRE: src/encrypted/types.sql
 -- REQUIRE: src/encrypted/functions.sql
 
---! @brief JSONB field accessor operator returning text (->>)
+--! @brief JSONB field accessor operator alias (->>)
 --!
---! Implements the ->> operator to access fields/elements from encrypted JSONB data,
---! returning the result as text (still encrypted). Text-returning version of -> operator.
+--! Implements the ->> operator as an alias of -> for encrypted JSONB data. This mirrors
+--! PostgreSQL semantics where ->> returns text via implicit casts. The underlying
+--! implementation delegates to eql_v2."->" and allows PostgreSQL to coerce the result.
 --!
 --! Provides two overloads:
 --! - (eql_v2_encrypted, text) - Field name selector
@@ -17,7 +18,7 @@
 --! @brief ->> operator with text selector
 --! @param e eql_v2_encrypted Encrypted JSONB data
 --! @param selector text Field name to extract
---! @return text Encrypted value at selector as text
+--! @return text Encrypted value at selector, implicitly cast from eql_v2_encrypted
 --! @example
 --! SELECT encrypted_json ->> 'field_name' FROM table;
 CREATE FUNCTION eql_v2."->>"(e eql_v2_encrypted, selector text)
@@ -47,7 +48,7 @@ CREATE OPERATOR ->> (
 --! @brief ->> operator with encrypted selector
 --! @param e eql_v2_encrypted Encrypted JSONB data
 --! @param selector eql_v2_encrypted Encrypted field selector
---! @return text Encrypted value at selector as text
+--! @return text Encrypted value at selector, implicitly cast from eql_v2_encrypted
 --! @see eql_v2."->>"(eql_v2_encrypted, text)
 CREATE FUNCTION eql_v2."->>"(e eql_v2_encrypted, selector eql_v2_encrypted)
   RETURNS text
