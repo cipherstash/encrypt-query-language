@@ -8,7 +8,7 @@
 --! Extracts the CLLW ORE ciphertext from the 'ocf' field of an encrypted
 --! data payload. Used internally for range query comparisons.
 --!
---! @param val JSONB Encrypted data payload containing index terms
+--! @param val jsonb containing encrypted EQL payload
 --! @return eql_v2.ore_cllw_u64_8 CLLW ORE ciphertext
 --! @throws Exception if 'ocf' field is missing when ore index is expected
 --!
@@ -56,7 +56,7 @@ $$ LANGUAGE plpgsql;
 --! Tests whether the encrypted data payload includes an 'ocf' field,
 --! indicating a CLLW ORE ciphertext is available for range queries.
 --!
---! @param val JSONB Encrypted data payload
+--! @param val jsonb containing encrypted EQL payload
 --! @return Boolean True if 'ocf' field is present and non-null
 --!
 --! @see eql_v2.ore_cllw_u64_8
