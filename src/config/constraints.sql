@@ -70,6 +70,7 @@ $$ LANGUAGE plpgsql;
 --!
 --! @note Used in CHECK constraint on eql_v2_configuration table
 --! @note Empty configurations (no cast_as fields) are valid
+--! @note Cast type names are EQL's internal representations, not PostgreSQL native types
 CREATE FUNCTION eql_v2.config_check_cast(val jsonb)
   RETURNS BOOLEAN
 AS $$

@@ -24,8 +24,7 @@
 --! @param selector text Path selector to match against encrypted elements
 --! @return SETOF eql_v2_encrypted Matching encrypted elements (may return multiple rows)
 --!
---! @throws Exception if selector is not found (returns empty set instead)
---!
+--! @note Returns empty set if selector is not found (does not throw exception)
 --! @note Array elements use same selector; multiple matches wrapped with 'a' flag
 --! @note Returns NULL if val is NULL, empty set if no matches
 --! @see eql_v2.jsonb_path_query_first
@@ -223,11 +222,9 @@ CREATE FUNCTION eql_v2.jsonb_path_query_first(val jsonb, selector text)
 AS $$
   BEGIN
     RETURN (
-      SELECT (
-        SELECT e
-        FROM eql_v2.jsonb_path_query(val.data, selector) AS e
-        LIMIT 1
-      )
+      SELECT e
+      FROM eql_v2.jsonb_path_query(val.data, selector) AS e
+      LIMIT 1
     );
   END;
 $$ LANGUAGE plpgsql;
@@ -249,9 +246,9 @@ CREATE FUNCTION eql_v2.jsonb_path_query_first(val eql_v2_encrypted, selector eql
 AS $$
   BEGIN
     RETURN (
-        SELECT e
-        FROM eql_v2.jsonb_path_query(val.data, eql_v2.selector(selector)) as e
-        LIMIT 1
+      SELECT e
+      FROM eql_v2.jsonb_path_query(val.data, eql_v2.selector(selector)) AS e
+      LIMIT 1
     );
   END;
 $$ LANGUAGE plpgsql;
@@ -276,9 +273,9 @@ CREATE FUNCTION eql_v2.jsonb_path_query_first(val eql_v2_encrypted, selector tex
 AS $$
   BEGIN
     RETURN (
-        SELECT e
-        FROM eql_v2.jsonb_path_query(val.data, selector) as e
-        LIMIT 1
+      SELECT e
+      FROM eql_v2.jsonb_path_query(val.data, selector) AS e
+      LIMIT 1
     );
   END;
 $$ LANGUAGE plpgsql;
@@ -298,7 +295,7 @@ $$ LANGUAGE plpgsql;
 --! @return integer Number of elements in the array
 --! @throws Exception if value is not an array (missing 'a' flag)
 --!
---! @note Array flag 'a' must be set to truthy value
+--! @note Array flag 'a' must be present and set to true value
 --! @see eql_v2.jsonb_array_elements
 CREATE FUNCTION eql_v2.jsonb_array_length(val jsonb)
   RETURNS integer

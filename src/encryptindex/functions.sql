@@ -99,7 +99,7 @@ $$ LANGUAGE plpgsql;
 --!
 --! @return TABLE(table_name text, column_name text, target_column text) Column mappings
 --!
---! @note Target column is NULL if encrypted column doesn't exist yet
+--! @note Target column is NULL if encrypted column doesn't exist yet (LEFT JOIN returns NULL when no match)
 --! @note Target column type must be eql_v2_encrypted
 --! @see eql_v2.select_pending_columns
 --! @see eql_v2.create_encrypted_columns

@@ -10,7 +10,7 @@
 --! The ident field tracks which table and column the encrypted value belongs to.
 --!
 --! @param val jsonb Encrypted payload to validate
---! @return boolean True if 'i' field is present
+--! @return Boolean True if 'i' field is present
 --! @throws Exception if 'i' field is missing
 --!
 --! @note Used in CHECK constraints to ensure payload structure
@@ -34,7 +34,7 @@ $$ LANGUAGE plpgsql;
 --! subfields, which identify the origin of the encrypted value.
 --!
 --! @param val jsonb Encrypted payload to validate
---! @return boolean True if both 't' and 'c' subfields are present
+--! @return Boolean True if both 't' and 'c' subfields are present
 --! @throws Exception if 't' or 'c' subfields are missing
 --!
 --! @note Used in CHECK constraints to ensure payload structure
@@ -57,7 +57,7 @@ $$ LANGUAGE plpgsql;
 --! the current EQL v2 payload version.
 --!
 --! @param val jsonb Encrypted payload to validate
---! @return boolean True if 'v' field is present and equals '2'
+--! @return Boolean True if 'v' field is present and equals '2'
 --! @throws Exception if 'v' field is missing or not '2'
 --!
 --! @note Used in CHECK constraints to ensure payload structure
@@ -87,7 +87,7 @@ $$ LANGUAGE plpgsql;
 --! which stores the encrypted data.
 --!
 --! @param val jsonb Encrypted payload to validate
---! @return boolean True if 'c' field is present
+--! @return Boolean True if 'c' field is present
 --! @throws Exception if 'c' field is missing
 --!
 --! @note Used in CHECK constraints to ensure payload structure
