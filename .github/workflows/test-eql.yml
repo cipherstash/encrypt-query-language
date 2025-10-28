@@ -26,9 +26,27 @@ defaults:
     shell: bash -l {0}
 
 jobs:
+  validate-docs:
+    name: "Validate SQL Documentation"
+    runs-on: ubuntu-latest-m
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check documentation coverage
+        run: |
+          chmod +x tasks/check-doc-coverage.sh
+          ./tasks/check-doc-coverage.sh
+
+      - name: Validate required Doxygen tags
+        run: |
+          chmod +x tasks/validate-required-tags.sh
+          ./tasks/validate-required-tags.sh
+
   test:
     name: "Test EQL SQL components"
     runs-on: ubuntu-latest-m
+    needs: validate-docs
 
     strategy:
       fail-fast: false
