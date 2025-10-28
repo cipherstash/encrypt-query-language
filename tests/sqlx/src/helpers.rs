@@ -22,3 +22,30 @@ pub async fn get_ore_encrypted(pool: &PgPool, id: i32) -> Result<String> {
 
     result.with_context(|| format!("ore table returned NULL for id={}", id))
 }
+
+/// Extract encrypted term from encrypted table by selector
+///
+/// Extracts a field from the first record in the encrypted table using
+/// the provided selector hash. Used for containment operator tests.
+///
+/// # Arguments
+/// * `pool` - Database connection pool
+/// * `selector` - Selector hash for the field to extract (e.g., from Selectors constants)
+///
+/// # Example
+/// ```
+/// let term = get_encrypted_term(&pool, Selectors::HELLO).await?;
+/// ```
+pub async fn get_encrypted_term(pool: &PgPool, selector: &str) -> Result<String> {
+    let sql = format!("SELECT (e -> '{}')::text FROM encrypted LIMIT 1", selector);
+    let row = sqlx::query(&sql)
+        .fetch_one(pool)
+        .await
+        .with_context(|| format!("extracting encrypted term for selector={}", selector))?;
+
+    let result: Option<String> = row
+        .try_get(0)
+        .with_context(|| format!("getting text column for selector={}", selector))?;
+
+    result.with_context(|| format!("encrypted term extraction returned NULL for selector={}", selector))
+}

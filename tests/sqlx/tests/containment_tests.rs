@@ -4,8 +4,8 @@
 //! Tests encrypted JSONB containment operations
 
 use anyhow::Result;
-use eql_tests::{QueryAssertion, Selectors};
-use sqlx::{PgPool, Row};
+use eql_tests::{get_encrypted_term, QueryAssertion, Selectors};
+use sqlx::PgPool;
 
 // ============================================================================
 // Task 10: Containment Operators (@> and <@)
@@ -41,19 +41,29 @@ async fn contains_operator_with_extracted_term(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn contains_operator_term_does_not_contain_full_value(pool: PgPool) -> Result<()> {
+    // Test: term does NOT contain full encrypted value (asymmetric containment)
+    // Original SQL lines 48-49 in src/operators/@>_test.sql
+    // Verifies that while e @> term is true, term @> e is false
+
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE (e -> '{}') @> e LIMIT 1",
+        Selectors::N
+    );
+
+    // Should return 0 records - extracted term cannot contain the full encrypted value
+    QueryAssertion::new(&pool, &sql).count(0).await;
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn contains_operator_with_encrypted_term(pool: PgPool) -> Result<()> {
     // Test: e @> encrypted_term with encrypted selector
     // Original SQL lines 68-90 in src/operators/@>_test.sql
     // Uses encrypted test data with $.hello selector
 
-    // Get encrypted term by extracting $.hello from first record
-    let sql_create = format!(
-        "SELECT (e -> '{}')::text FROM encrypted LIMIT 1",
-        Selectors::HELLO
-    );
-    let row = sqlx::query(&sql_create).fetch_one(&pool).await?;
-    let term: Option<String> = row.try_get(0)?;
-    let term = term.expect("Should extract encrypted term");
+    let term = get_encrypted_term(&pool, Selectors::HELLO).await?;
 
     let sql = format!(
         "SELECT e FROM encrypted WHERE e @> '{}'::eql_v2_encrypted",
@@ -72,21 +82,15 @@ async fn contains_operator_count_matches(pool: PgPool) -> Result<()> {
     // Original SQL lines 84-87 in src/operators/@>_test.sql
     // Verifies count of records containing the term
 
-    // Get encrypted term for $.hello
-    let sql_create = format!(
-        "SELECT (e -> '{}')::text FROM encrypted LIMIT 1",
-        Selectors::HELLO
-    );
-    let row = sqlx::query(&sql_create).fetch_one(&pool).await?;
-    let term: Option<String> = row.try_get(0)?;
-    let term = term.expect("Should extract encrypted term");
+    let term = get_encrypted_term(&pool, Selectors::HELLO).await?;
 
     let sql = format!(
         "SELECT e FROM encrypted WHERE e @> '{}'::eql_v2_encrypted",
         term
     );
 
-    // All 3 records in encrypted_json fixture have $.hello field
+    // Expects 1 match: containment checks the specific encrypted term value,
+    // not just the presence of the $.hello field
     QueryAssertion::new(&pool, &sql).count(1).await;
 
     Ok(())
@@ -98,14 +102,7 @@ async fn contained_by_operator_with_encrypted_term(pool: PgPool) -> Result<()> {
     // Original SQL lines 19-41 in src/operators/<@_test.sql
     // Tests that extracted term is contained by the original encrypted value
 
-    // Get encrypted term for $.hello
-    let sql_create = format!(
-        "SELECT (e -> '{}')::text FROM encrypted LIMIT 1",
-        Selectors::HELLO
-    );
-    let row = sqlx::query(&sql_create).fetch_one(&pool).await?;
-    let term: Option<String> = row.try_get(0)?;
-    let term = term.expect("Should extract encrypted term");
+    let term = get_encrypted_term(&pool, Selectors::HELLO).await?;
 
     let sql = format!(
         "SELECT e FROM encrypted WHERE '{}'::eql_v2_encrypted <@ e",
@@ -124,14 +121,7 @@ async fn contained_by_operator_count_matches(pool: PgPool) -> Result<()> {
     // Original SQL lines 35-38 in src/operators/<@_test.sql
     // Verifies count of records containing the term
 
-    // Get encrypted term for $.hello
-    let sql_create = format!(
-        "SELECT (e -> '{}')::text FROM encrypted LIMIT 1",
-        Selectors::HELLO
-    );
-    let row = sqlx::query(&sql_create).fetch_one(&pool).await?;
-    let term: Option<String> = row.try_get(0)?;
-    let term = term.expect("Should extract encrypted term");
+    let term = get_encrypted_term(&pool, Selectors::HELLO).await?;
 
     let sql = format!(
         "SELECT e FROM encrypted WHERE '{}'::eql_v2_encrypted <@ e",
