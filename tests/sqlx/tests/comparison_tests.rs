@@ -4,25 +4,8 @@
 //! Tests EQL comparison operators with ORE (Order-Revealing Encryption)
 
 use anyhow::{Context, Result};
-use eql_tests::QueryAssertion;
+use eql_tests::{get_ore_encrypted, QueryAssertion};
 use sqlx::{PgPool, Row};
-
-/// Helper to fetch ORE encrypted value from pre-seeded ore table
-async fn get_ore_encrypted(pool: &PgPool, id: i32) -> Result<String> {
-    let sql = format!("SELECT e::text FROM ore WHERE id = {}", id);
-    let row = sqlx::query(&sql)
-        .fetch_one(pool)
-        .await
-        .with_context(|| format!("fetching ore encrypted value for id={}", id))?;
-
-    let result: Option<String> = row.try_get(0).with_context(|| {
-        format!("extracting text column for id={}", id)
-    })?;
-
-    result.with_context(|| {
-        format!("ore table returned NULL for id={}", id)
-    })
-}
 
 
 /// Helper to fetch ORE encrypted value as JSONB for comparison
@@ -303,6 +286,24 @@ async fn less_than_or_equal_with_jsonb(pool: PgPool) -> Result<()> {
     );
 
     QueryAssertion::new(&pool, &sql).count(42).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn less_than_or_equal_jsonb_lte_encrypted(pool: PgPool) -> Result<()> {
+    // Test: jsonb <= e with ORE (reverse direction)
+    // Complements e <= jsonb test for symmetry with other operators
+
+    let json_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
+
+    let sql = format!(
+        "SELECT id FROM ore WHERE '{}'::jsonb <= e",
+        json_value
+    );
+
+    // jsonb(42) <= e means e >= 42, so 58 records (42-99)
+    QueryAssertion::new(&pool, &sql).count(58).await;
 
     Ok(())
 }
