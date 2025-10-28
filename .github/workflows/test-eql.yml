@@ -33,15 +33,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check documentation coverage
-        run: |
-          chmod +x tasks/check-doc-coverage.sh
-          ./tasks/check-doc-coverage.sh
+      - uses: jdx/mise-action@v2
+        with:
+          version: 2025.1.6
+          install: true
+          cache: true
 
-      - name: Validate required Doxygen tags
+      - name: Validate SQL documentation
         run: |
-          chmod +x tasks/validate-required-tags.sh
-          ./tasks/validate-required-tags.sh
+          mise run docs:validate
 
   test:
     name: "Test EQL SQL components"

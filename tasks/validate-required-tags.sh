@@ -24,7 +24,8 @@ for file in $(find src -name "*.sql" -not -name "*_test.sql"); do
     comment_block=$(sed -n "${start},${line_no}p" "$file" | grep "^--!" | tail -20)
 
     function_sig=$(sed -n "${line_no}p" "$file")
-    function_name=$(echo "$function_sig" | grep -oP 'CREATE FUNCTION \K[^\(]+' | xargs || echo "unknown")
+    # Extract function name (compatible with BSD sed/grep)
+    function_name=$(echo "$function_sig" | sed -n 's/^CREATE FUNCTION[[:space:]]*\([^(]*\).*/\1/p' | xargs || echo "unknown")
 
     # Check for @brief
     if ! echo "$comment_block" | grep -q "@brief"; then
@@ -62,7 +63,8 @@ for file in $(find src -name "*.template"); do
     comment_block=$(sed -n "${start},${line_no}p" "$file" | grep "^--!" | tail -20)
 
     function_sig=$(sed -n "${line_no}p" "$file")
-    function_name=$(echo "$function_sig" | grep -oP 'CREATE FUNCTION \K[^\(]+' | xargs || echo "unknown")
+    # Extract function name (compatible with BSD sed/grep)
+    function_name=$(echo "$function_sig" | sed -n 's/^CREATE FUNCTION[[:space:]]*\([^(]*\).*/\1/p' | xargs || echo "unknown")
 
     if ! echo "$comment_block" | grep -q "@brief"; then
       echo "ERROR: $file:$line_no $function_name - Missing @brief"

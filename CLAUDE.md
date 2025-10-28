@@ -122,11 +122,17 @@ CREATE FUNCTION eql_v2.create_encrypted_index(...)
 
 ### Validation Tools
 
-Use these scripts to verify documentation quality:
+Verify documentation quality:
 
-- `tasks/check-doc-coverage.sh` - Check documentation coverage (should be 100%)
-- `tasks/validate-required-tags.sh` - Verify required tags are present
-- `tasks/validate-documented-sql.sh` - Validate SQL syntax
+```bash
+# Using mise (recommended - validates coverage and tags)
+mise run docs:validate
+
+# Or run individual scripts directly
+tasks/check-doc-coverage.sh      # Check 100% coverage
+tasks/validate-required-tags.sh  # Verify @brief, @param, @return tags
+tasks/validate-documented-sql.sh # Validate SQL syntax (requires database)
+```
 
 ### Template Files
 
