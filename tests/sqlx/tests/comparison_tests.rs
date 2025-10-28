@@ -1,0 +1,250 @@
+//! Comparison operator tests (< > <= >=)
+//!
+//! Converted from src/operators/<_test.sql, >_test.sql, <=_test.sql, >=_test.sql
+//! Tests EQL comparison operators with ORE (Order-Revealing Encryption)
+
+use anyhow::{Context, Result};
+use eql_tests::QueryAssertion;
+use sqlx::{PgPool, Row};
+
+/// Helper to fetch ORE encrypted value from pre-seeded ore table
+async fn get_ore_encrypted(pool: &PgPool, id: i32) -> Result<String> {
+    let sql = format!("SELECT e::text FROM ore WHERE id = {}", id);
+    let row = sqlx::query(&sql)
+        .fetch_one(pool)
+        .await
+        .with_context(|| format!("fetching ore encrypted value for id={}", id))?;
+
+    let result: Option<String> = row.try_get(0).with_context(|| {
+        format!("extracting text column for id={}", id)
+    })?;
+
+    result.with_context(|| {
+        format!("ore table returned NULL for id={}", id)
+    })
+}
+
+
+/// Helper to fetch ORE encrypted value as JSONB for comparison
+///
+/// This creates a JSONB value from the ore table that can be used with JSONB comparison
+/// operators. The ore table values only contain {"ob": [...]}, so we merge in the required
+/// "i" (index metadata) and "v" (version) fields to create a valid eql_v2_encrypted structure.
+async fn get_ore_encrypted_as_jsonb(pool: &PgPool, id: i32) -> Result<String> {
+    let sql = format!(
+        "SELECT (e::jsonb || jsonb_build_object('i', jsonb_build_object('t', 'ore'), 'v', 2))::text FROM ore WHERE id = {}",
+        id
+    );
+
+    let row = sqlx::query(&sql)
+        .fetch_one(pool)
+        .await
+        .with_context(|| format!("fetching ore encrypted as jsonb for id={}", id))?;
+
+    let result: Option<String> = row
+        .try_get(0)
+        .with_context(|| format!("extracting jsonb text for id={}", id))?;
+
+    result.with_context(|| format!("ore table returned NULL for id={}", id))
+}
+
+/// Helper to fetch a single text column from a SQL query
+async fn fetch_text_column(pool: &PgPool, sql: &str) -> Result<String> {
+    let row = sqlx::query(sql)
+        .fetch_one(pool)
+        .await
+        .with_context(|| format!("executing query: {}", sql))?;
+
+    let result: Option<String> = row
+        .try_get(0)
+        .with_context(|| "extracting text column")?;
+
+    result.with_context(|| "query returned NULL")
+}
+
+/// Helper to execute create_encrypted_json SQL function
+#[allow(dead_code)]
+async fn create_encrypted_json_with_index(
+    pool: &PgPool,
+    id: i32,
+    index_type: &str,
+) -> Result<String> {
+    let sql = format!(
+        "SELECT create_encrypted_json({}, '{}')::text",
+        id, index_type
+    );
+
+    let row = sqlx::query(&sql)
+        .fetch_one(pool)
+        .await
+        .with_context(|| format!("fetching create_encrypted_json({}, '{}')", id, index_type))?;
+
+    let result: Option<String> = row.try_get(0).with_context(|| {
+        format!(
+            "extracting text column for id={}, index_type='{}'",
+            id, index_type
+        )
+    })?;
+
+    result.with_context(|| {
+        format!(
+            "create_encrypted_json returned NULL for id={}, index_type='{}'",
+            id, index_type
+        )
+    })
+}
+
+// ============================================================================
+// Task 2: Less Than (<) Operator Tests
+// ============================================================================
+
+#[sqlx::test]
+async fn less_than_operator_with_ore(pool: PgPool) -> Result<()> {
+    // Test: e < e with ORE encryption
+    // Value 42 should have 41 records less than it (1-41)
+    // Original SQL lines 13-20 in src/operators/<_test.sql
+    // Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
+
+    // Get encrypted value for id=42 from pre-seeded ore table
+    let ore_term = get_ore_encrypted(&pool, 42).await?;
+
+    let sql = format!(
+        "SELECT id FROM ore WHERE e < '{}'::eql_v2_encrypted",
+        ore_term
+    );
+
+    // Should return 41 records (ids 1-41)
+    QueryAssertion::new(&pool, &sql).count(41).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn lt_function_with_ore(pool: PgPool) -> Result<()> {
+    // Test: eql_v2.lt() function with ORE
+    // Original SQL lines 30-37 in src/operators/<_test.sql
+
+    let ore_term = get_ore_encrypted(&pool, 42).await?;
+
+    let sql = format!(
+        "SELECT id FROM ore WHERE eql_v2.lt(e, '{}'::eql_v2_encrypted)",
+        ore_term
+    );
+
+    QueryAssertion::new(&pool, &sql).count(41).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn less_than_operator_encrypted_less_than_jsonb(pool: PgPool) -> Result<()> {
+    // Test: e < jsonb with ORE
+    // Tests jsonb variant of < operator (casts jsonb to eql_v2_encrypted)
+    // Get encrypted value for id=42, remove 'ob' field to create comparable JSONB
+
+    let json_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
+
+    let sql = format!(
+        "SELECT id FROM ore WHERE e < '{}'::jsonb",
+        json_value
+    );
+
+    // Records with id < 42 should match (ids 1-41)
+    QueryAssertion::new(&pool, &sql).count(41).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn less_than_operator_jsonb_less_than_encrypted(pool: PgPool) -> Result<()> {
+    // Test: jsonb < e with ORE (reverse direction)
+    // Tests jsonb variant of < operator with operands reversed
+
+    let json_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
+
+    let sql = format!(
+        "SELECT id FROM ore WHERE '{}'::jsonb < e",
+        json_value
+    );
+
+    // jsonb(42) < e means e > 42, so 57 records (43-99)
+    QueryAssertion::new(&pool, &sql).count(57).await;
+
+    Ok(())
+}
+
+// ============================================================================
+// Task 3: Greater Than (>) Operator Tests
+// ============================================================================
+
+#[sqlx::test]
+async fn greater_than_operator_with_ore(pool: PgPool) -> Result<()> {
+    // Test: e > e with ORE encryption
+    // Value 42 should have 57 records greater than it (43-99)
+    // Original SQL lines 13-20 in src/operators/>_test.sql
+    // Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
+
+    let ore_term = get_ore_encrypted(&pool, 42).await?;
+
+    let sql = format!(
+        "SELECT id FROM ore WHERE e > '{}'::eql_v2_encrypted",
+        ore_term
+    );
+
+    QueryAssertion::new(&pool, &sql).count(57).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn gt_function_with_ore(pool: PgPool) -> Result<()> {
+    // Test: eql_v2.gt() function with ORE
+    // Original SQL lines 30-37 in src/operators/>_test.sql
+
+    let ore_term = get_ore_encrypted(&pool, 42).await?;
+
+    let sql = format!(
+        "SELECT id FROM ore WHERE eql_v2.gt(e, '{}'::eql_v2_encrypted)",
+        ore_term
+    );
+
+    QueryAssertion::new(&pool, &sql).count(57).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn greater_than_operator_encrypted_greater_than_jsonb(pool: PgPool) -> Result<()> {
+    // Test: e > jsonb with ORE
+    // Tests jsonb variant of > operator (casts jsonb to eql_v2_encrypted)
+
+    let json_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
+
+    let sql = format!(
+        "SELECT id FROM ore WHERE e > '{}'::jsonb",
+        json_value
+    );
+
+    // Records with id > 42 should match (ids 43-99 = 57 records)
+    QueryAssertion::new(&pool, &sql).count(57).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn greater_than_operator_jsonb_greater_than_encrypted(pool: PgPool) -> Result<()> {
+    // Test: jsonb > e with ORE (reverse direction)
+    // Tests jsonb variant of > operator with operands reversed
+
+    let json_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
+
+    let sql = format!(
+        "SELECT id FROM ore WHERE '{}'::jsonb > e",
+        json_value
+    );
+
+    // jsonb(42) > e means e < 42, so 41 records (1-41)
+    QueryAssertion::new(&pool, &sql).count(41).await;
+
+    Ok(())
+}
