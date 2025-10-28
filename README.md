@@ -22,6 +22,7 @@ Store encrypted data alongside your existing data:
 - [Getting started](#getting-started)
   - [Enable encrypted columns](#enable-encrypted-columns)
 - [Encrypt configuration](#encrypt-configuration)
+- [Documentation](#documentation)
 - [CipherStash integrations using EQL](#cipherstash-integrations-using-eql)
 - [Versioning](#versioning)
   - [Upgrading](#upgrading)
@@ -203,6 +204,49 @@ In order to enable searchable encryption, you will need to configure your Cipher
 
 - If you are using [CipherStash Proxy](https://github.com/cipherstash/proxy), see [this guide](docs/tutorials/proxy-configuration.md).
 - If you are using [Protect.js](https://github.com/cipherstash/protectjs), use the [Protect.js schema](https://github.com/cipherstash/protectjs/blob/main/docs/reference/schema.md).
+
+## Documentation
+
+### API Documentation
+
+All EQL functions and types are fully documented with Doxygen-style comments in the source code.
+
+**Generate API documentation** (requires [Doxygen](https://www.doxygen.nl/)):
+
+```bash
+doxygen Doxyfile
+```
+
+The generated HTML documentation will be available at `docs/api/html/index.html`.
+
+### Documentation Standards
+
+All SQL functions, types, and operators include:
+- **@brief** - Short description of purpose
+- **@param** - Parameter descriptions with types
+- **@return** - Return value description and type
+- **@example** - Usage examples
+- **@throws** - Exception conditions
+- **@note** - Important notes and caveats
+
+For contribution guidelines, see [CLAUDE.md](./CLAUDE.md).
+
+### Validation Tools
+
+Verify documentation quality using these scripts:
+
+```bash
+# Check documentation coverage (should be 100%)
+./tasks/check-doc-coverage.sh
+
+# Validate required Doxygen tags
+./tasks/validate-required-tags.sh
+
+# Validate SQL syntax
+./tasks/validate-documented-sql.sh
+```
+
+Documentation validation runs automatically in CI for all pull requests.
 
 ## CipherStash integrations using EQL
 
