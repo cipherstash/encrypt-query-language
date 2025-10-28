@@ -21,7 +21,7 @@ for file in $(find src -name "*.sql" -not -name "*_test.sql"); do
     start=$((line_no - 50))
     [ "$start" -lt 1 ] && start=1
 
-    comment_block=$(sed -n "${start},${line_no}p" "$file" | grep "^--!" | tail -20)
+    comment_block=$(sed -n "${start},${line_no}p" "$file" | grep "^--!" | tail -100)
 
     function_sig=$(sed -n "${line_no}p" "$file")
     # Extract function name (compatible with BSD sed/grep)
@@ -60,7 +60,7 @@ for file in $(find src -name "*.template"); do
     start=$((line_no - 50))
     [ "$start" -lt 1 ] && start=1
 
-    comment_block=$(sed -n "${start},${line_no}p" "$file" | grep "^--!" | tail -20)
+    comment_block=$(sed -n "${start},${line_no}p" "$file" | grep "^--!" | tail -100)
 
     function_sig=$(sed -n "${line_no}p" "$file")
     # Extract function name (compatible with BSD sed/grep)
