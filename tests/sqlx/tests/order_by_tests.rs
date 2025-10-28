@@ -4,23 +4,9 @@
 //! Tests ORDER BY with ORE (Order-Revealing Encryption)
 //! Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
 
-use anyhow::{Context, Result};
-use eql_tests::QueryAssertion;
+use anyhow::Result;
+use eql_tests::{get_ore_encrypted, QueryAssertion};
 use sqlx::{PgPool, Row};
-
-async fn get_ore_encrypted(pool: &PgPool, id: i32) -> Result<String> {
-    let sql = format!("SELECT e::text FROM ore WHERE id = {}", id);
-    let row = sqlx::query(&sql)
-        .fetch_one(pool)
-        .await
-        .with_context(|| format!("fetching ore encrypted value for id={}", id))?;
-
-    let result: Option<String> = row
-        .try_get(0)
-        .with_context(|| format!("extracting text column for id={}", id))?;
-
-    result.with_context(|| format!("ore table returned NULL for id={}", id))
-}
 
 #[sqlx::test]
 async fn order_by_desc_returns_highest_value_first(pool: PgPool) -> Result<()> {
@@ -36,12 +22,11 @@ async fn order_by_desc_returns_highest_value_first(pool: PgPool) -> Result<()> {
     );
 
     // Should return 41 records, highest first
-    let assertion = QueryAssertion::new(&pool, &sql);
-    assertion.count(41).await;
+    QueryAssertion::new(&pool, &sql).count(41).await;
 
     // First record should be id=41
     let row = sqlx::query(&sql).fetch_one(&pool).await?;
-    let first_id: i32 = row.try_get(0)?;
+    let first_id: i64 = row.try_get(0)?;
     assert_eq!(first_id, 41, "ORDER BY DESC should return id=41 first");
 
     Ok(())
@@ -60,7 +45,7 @@ async fn order_by_desc_with_limit(pool: PgPool) -> Result<()> {
     );
 
     let row = sqlx::query(&sql).fetch_one(&pool).await?;
-    let id: i32 = row.try_get(0)?;
+    let id: i64 = row.try_get(0)?;
     assert_eq!(id, 41, "Should return id=41 (highest value < 42)");
 
     Ok(())
@@ -79,7 +64,7 @@ async fn order_by_asc_with_limit(pool: PgPool) -> Result<()> {
     );
 
     let row = sqlx::query(&sql).fetch_one(&pool).await?;
-    let id: i32 = row.try_get(0)?;
+    let id: i64 = row.try_get(0)?;
     assert_eq!(id, 1, "Should return id=1 (lowest value < 42)");
 
     Ok(())
@@ -116,7 +101,7 @@ async fn order_by_desc_with_greater_than_returns_highest(pool: PgPool) -> Result
     );
 
     let row = sqlx::query(&sql).fetch_one(&pool).await?;
-    let id: i32 = row.try_get(0)?;
+    let id: i64 = row.try_get(0)?;
     assert_eq!(id, 99, "Should return id=99 (highest value > 42)");
 
     Ok(())
@@ -135,7 +120,7 @@ async fn order_by_asc_with_greater_than_returns_lowest(pool: PgPool) -> Result<(
     );
 
     let row = sqlx::query(&sql).fetch_one(&pool).await?;
-    let id: i32 = row.try_get(0)?;
+    let id: i64 = row.try_get(0)?;
     assert_eq!(id, 43, "Should return id=43 (lowest value > 42)");
 
     Ok(())

@@ -5,10 +5,12 @@
 use sqlx::PgPool;
 
 pub mod assertions;
+pub mod helpers;
 pub mod index_types;
 pub mod selectors;
 
 pub use assertions::QueryAssertion;
+pub use helpers::get_ore_encrypted;
 pub use index_types as IndexTypes;
 pub use selectors::Selectors;
 
