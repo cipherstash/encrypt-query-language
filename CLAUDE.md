@@ -12,6 +12,8 @@ This project uses `mise` for task management. Common commands:
 - `mise run postgres:down` - Stop PostgreSQL containers
 - `mise run reset` - Reset database state
 - `mise run clean` (alias: `mise r k`) - Clean release files
+- `mise run docs:generate` - Generate API documentation (requires doxygen)
+- `mise run docs:validate` - Validate documentation coverage and tags
 
 ### Testing
 - Run all tests: `mise run test`

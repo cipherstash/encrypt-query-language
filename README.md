@@ -211,9 +211,25 @@ In order to enable searchable encryption, you will need to configure your Cipher
 
 All EQL functions and types are fully documented with Doxygen-style comments in the source code.
 
-**Generate API documentation** (requires [Doxygen](https://www.doxygen.nl/)):
+**Install Doxygen** (required for documentation generation):
 
 ```bash
+# macOS
+brew install doxygen
+
+# Ubuntu/Debian
+apt-get install doxygen
+
+# Other platforms: https://www.doxygen.nl/download.html
+```
+
+**Generate API documentation:**
+
+```bash
+# Using mise
+mise run docs:generate
+
+# Or directly with doxygen
 doxygen Doxyfile
 ```
 
@@ -236,14 +252,13 @@ For contribution guidelines, see [CLAUDE.md](./CLAUDE.md).
 Verify documentation quality using these scripts:
 
 ```bash
-# Check documentation coverage (should be 100%)
-./tasks/check-doc-coverage.sh
+# Using mise (validates coverage and tags)
+mise run docs:validate
 
-# Validate required Doxygen tags
-./tasks/validate-required-tags.sh
-
-# Validate SQL syntax
-./tasks/validate-documented-sql.sh
+# Or run individual checks
+./tasks/check-doc-coverage.sh      # Check 100% coverage
+./tasks/validate-required-tags.sh  # Validate @brief, @param, @return
+./tasks/validate-documented-sql.sh # Validate SQL syntax
 ```
 
 Documentation validation runs automatically in CI for all pull requests.
