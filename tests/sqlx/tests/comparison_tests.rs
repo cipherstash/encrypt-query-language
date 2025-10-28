@@ -248,3 +248,136 @@ async fn greater_than_operator_jsonb_greater_than_encrypted(pool: PgPool) -> Res
 
     Ok(())
 }
+
+// ============================================================================
+// Task 4: Less Than or Equal (<=) Operator Tests
+// ============================================================================
+
+#[sqlx::test]
+async fn less_than_or_equal_operator_with_ore(pool: PgPool) -> Result<()> {
+    // Test: e <= e with ORE encryption
+    // Value 42 should have 42 records <= it (1-42 inclusive)
+    // Original SQL lines 10-24 in src/operators/<=_test.sql
+    // Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
+
+    let ore_term = get_ore_encrypted(&pool, 42).await?;
+
+    let sql = format!(
+        "SELECT id FROM ore WHERE e <= '{}'::eql_v2_encrypted",
+        ore_term
+    );
+
+    // Should return 42 records (ids 1-42 inclusive)
+    QueryAssertion::new(&pool, &sql).count(42).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn lte_function_with_ore(pool: PgPool) -> Result<()> {
+    // Test: eql_v2.lte() function with ORE
+    // Original SQL lines 32-46 in src/operators/<=_test.sql
+
+    let ore_term = get_ore_encrypted(&pool, 42).await?;
+
+    let sql = format!(
+        "SELECT id FROM ore WHERE eql_v2.lte(e, '{}'::eql_v2_encrypted)",
+        ore_term
+    );
+
+    QueryAssertion::new(&pool, &sql).count(42).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn less_than_or_equal_with_jsonb(pool: PgPool) -> Result<()> {
+    // Test: e <= jsonb with ORE
+    // Original SQL lines 55-69 in src/operators/<=_test.sql
+
+    let json_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
+
+    let sql = format!(
+        "SELECT id FROM ore WHERE e <= '{}'::jsonb",
+        json_value
+    );
+
+    QueryAssertion::new(&pool, &sql).count(42).await;
+
+    Ok(())
+}
+
+// ============================================================================
+// Task 5: Greater Than or Equal (>=) Operator Tests
+// ============================================================================
+
+#[sqlx::test]
+async fn greater_than_or_equal_operator_with_ore(pool: PgPool) -> Result<()> {
+    // Test: e >= e with ORE encryption
+    // Value 42 should have 58 records >= it (42-99 inclusive)
+    // Original SQL lines 10-24 in src/operators/>=_test.sql
+    // Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
+
+    let ore_term = get_ore_encrypted(&pool, 42).await?;
+
+    let sql = format!(
+        "SELECT id FROM ore WHERE e >= '{}'::eql_v2_encrypted",
+        ore_term
+    );
+
+    QueryAssertion::new(&pool, &sql).count(58).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn gte_function_with_ore(pool: PgPool) -> Result<()> {
+    // Test: eql_v2.gte() function with ORE
+    // Original SQL lines 32-46 in src/operators/>=_test.sql
+
+    let ore_term = get_ore_encrypted(&pool, 42).await?;
+
+    let sql = format!(
+        "SELECT id FROM ore WHERE eql_v2.gte(e, '{}'::eql_v2_encrypted)",
+        ore_term
+    );
+
+    QueryAssertion::new(&pool, &sql).count(58).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn greater_than_or_equal_with_jsonb(pool: PgPool) -> Result<()> {
+    // Test: e >= jsonb with ORE
+    // Original SQL lines 55-85 in src/operators/>=_test.sql
+
+    let json_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
+
+    let sql = format!(
+        "SELECT id FROM ore WHERE e >= '{}'::jsonb",
+        json_value
+    );
+
+    QueryAssertion::new(&pool, &sql).count(58).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn greater_than_or_equal_jsonb_gte_encrypted(pool: PgPool) -> Result<()> {
+    // Test: jsonb >= e with ORE (reverse direction)
+    // Original SQL lines 77-80 in src/operators/>=_test.sql
+
+    let json_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
+
+    let sql = format!(
+        "SELECT id FROM ore WHERE '{}'::jsonb >= e",
+        json_value
+    );
+
+    // jsonb(42) >= e means e <= 42, so 42 records (1-42)
+    QueryAssertion::new(&pool, &sql).count(42).await;
+
+    Ok(())
+}
