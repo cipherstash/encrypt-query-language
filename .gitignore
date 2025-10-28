@@ -13,6 +13,9 @@ deps-ordered-supabase.txt
 
 src/version.sql
 
+# Doxygen generated documentation
+docs/api/
+
 
 
 # Logs
