@@ -1,0 +1,60 @@
+# Test tasks for EQL
+# Combines legacy SQL tests and modern SQLx Rust tests
+
+["test:all"]
+description = "Run ALL tests: legacy SQL + SQLx (full test suite)"
+depends = ["build"]
+run = """
+#!/bin/bash
+set -euo pipefail
+
+POSTGRES_VERSION="${POSTGRES_VERSION:-17}"
+
+echo "=========================================="
+echo "Running Complete EQL Test Suite"
+echo "PostgreSQL Version: $POSTGRES_VERSION"
+echo "=========================================="
+echo ""
+
+# Ensure PostgreSQL is running
+echo "→ Starting PostgreSQL $POSTGRES_VERSION..."
+mise run postgres:up postgres-${POSTGRES_VERSION} --extra-args "--detach --wait"
+
+# Run legacy SQL tests
+echo ""
+echo "=========================================="
+echo "1/2: Running Legacy SQL Tests"
+echo "=========================================="
+mise run test:legacy --skip-build --postgres ${POSTGRES_VERSION}
+
+# Run SQLx Rust tests
+echo ""
+echo "=========================================="
+echo "2/2: Running SQLx Rust Tests"
+echo "=========================================="
+mise run test:sqlx
+
+echo ""
+echo "=========================================="
+echo "✅ ALL TESTS PASSED"
+echo "=========================================="
+echo ""
+echo "Summary:"
+echo "  ✓ Legacy SQL tests"
+echo "  ✓ SQLx Rust tests"
+echo ""
+"""
+
+["test:legacy"]
+description = "Run legacy SQL tests (inline test files)"
+alias = "test"
+sources = ["src/**/*_test.sql", "tests/*.sql"]
+run = "{{config_root}}/tasks/test-legacy.sh"
+
+["test:quick"]
+description = "Quick test (skip build, use existing)"
+depends = []
+run = """
+echo "Running quick tests (using existing build)..."
+mise run test:legacy --skip-build
+"""
