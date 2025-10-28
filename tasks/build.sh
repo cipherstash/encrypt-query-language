@@ -23,6 +23,7 @@ rm -f src/deps-ordered-supabase.txt
 
 
 RELEASE_VERSION=${usage_version:-DEV}
+# Generate version.sql from template, preserving Doxygen comments
 sed "s/\$RELEASE_VERSION/$RELEASE_VERSION/g" src/version.template > src/version.sql
 
 

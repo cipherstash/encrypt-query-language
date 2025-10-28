@@ -1,0 +1,101 @@
+#!/bin/bash
+# tasks/validate-required-tags.sh
+# Validates that required Doxygen tags are present
+
+set -e
+
+cd "$(dirname "$0")/.."
+
+echo "Validating required Doxygen tags..."
+echo ""
+
+errors=0
+warnings=0
+
+for file in $(find src -name "*.sql" -not -name "*_test.sql"); do
+  # For each CREATE FUNCTION, check tags
+  functions=$(grep -n "^CREATE FUNCTION" "$file" 2>/dev/null | cut -d: -f1 || echo "")
+
+  for line_no in $functions; do
+    # Find comment block above function (search backwards max 50 lines)
+    start=$((line_no - 50))
+    [ "$start" -lt 1 ] && start=1
+
+    comment_block=$(sed -n "${start},${line_no}p" "$file" | grep "^--!" | tail -20)
+
+    function_sig=$(sed -n "${line_no}p" "$file")
+    function_name=$(echo "$function_sig" | grep -oP 'CREATE FUNCTION \K[^\(]+' | xargs || echo "unknown")
+
+    # Check for @brief
+    if ! echo "$comment_block" | grep -q "@brief"; then
+      echo "ERROR: $file:$line_no $function_name - Missing @brief"
+      errors=$((errors + 1))
+    fi
+
+    # Check for @param (if function has parameters)
+    if echo "$function_sig" | grep -q "(" && \
+       ! echo "$function_sig" | grep -q "()"; then
+      if ! echo "$comment_block" | grep -q "@param"; then
+        echo "WARNING: $file:$line_no $function_name - Missing @param"
+        warnings=$((warnings + 1))
+      fi
+    fi
+
+    # Check for @return (if function returns something other than void)
+    if ! echo "$function_sig" | grep -qi "RETURNS void"; then
+      if ! echo "$comment_block" | grep -q "@return"; then
+        echo "ERROR: $file:$line_no $function_name - Missing @return"
+        errors=$((errors + 1))
+      fi
+    fi
+  done
+done
+
+# Also check template files
+for file in $(find src -name "*.template"); do
+  functions=$(grep -n "^CREATE FUNCTION" "$file" 2>/dev/null | cut -d: -f1 || echo "")
+
+  for line_no in $functions; do
+    start=$((line_no - 50))
+    [ "$start" -lt 1 ] && start=1
+
+    comment_block=$(sed -n "${start},${line_no}p" "$file" | grep "^--!" | tail -20)
+
+    function_sig=$(sed -n "${line_no}p" "$file")
+    function_name=$(echo "$function_sig" | grep -oP 'CREATE FUNCTION \K[^\(]+' | xargs || echo "unknown")
+
+    if ! echo "$comment_block" | grep -q "@brief"; then
+      echo "ERROR: $file:$line_no $function_name - Missing @brief"
+      errors=$((errors + 1))
+    fi
+
+    if echo "$function_sig" | grep -q "(" && \
+       ! echo "$function_sig" | grep -q "()"; then
+      if ! echo "$comment_block" | grep -q "@param"; then
+        echo "WARNING: $file:$line_no $function_name - Missing @param"
+        warnings=$((warnings + 1))
+      fi
+    fi
+
+    if ! echo "$function_sig" | grep -qi "RETURNS void"; then
+      if ! echo "$comment_block" | grep -q "@return"; then
+        echo "ERROR: $file:$line_no $function_name - Missing @return"
+        errors=$((errors + 1))
+      fi
+    fi
+  done
+done
+
+echo ""
+echo "Validation summary:"
+echo "  Errors: $errors"
+echo "  Warnings: $warnings"
+echo ""
+
+if [ "$errors" -gt 0 ]; then
+  echo "❌ Validation failed with $errors errors"
+  exit 1
+else
+  echo "✅ All required tags present"
+  exit 0
+fi

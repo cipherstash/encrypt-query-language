@@ -4,11 +4,11 @@
 
 DROP FUNCTION IF EXISTS eql_v2.version();
 
---! @file version.template
---! @brief EQL version reporting template
+--! @file version.sql
+--! @brief EQL version reporting
 --!
---! Template file for version.sql. The $RELEASE_VERSION placeholder is
---! replaced during build with the actual release version string.
+--! This file is auto-generated from version.template during build.
+--! The version string placeholder is replaced with the actual release version.
 
 --! @brief Get EQL library version string
 --!
@@ -17,8 +17,7 @@ DROP FUNCTION IF EXISTS eql_v2.version();
 --!
 --! @return text Version string (e.g., "2.1.0" or "DEV" for development builds)
 --!
---! @note This file is a template - version.sql is generated during build
---! @note The $RELEASE_VERSION placeholder is replaced at build time
+--! @note Auto-generated during build from version.template
 --!
 --! @example
 --! -- Check installed EQL version
