@@ -4,32 +4,9 @@
 //! and src/operators/<=_ore_cllw_var_8_test.sql
 //! Tests ORE CLLW comparison operators
 
-use anyhow::{Context, Result};
-use eql_tests::{get_ore_encrypted, QueryAssertion};
-use sqlx::{PgPool, Row};
-
-/// Helper to fetch ORE encrypted value as JSONB for comparison
-///
-/// This creates a JSONB value from the ore table that can be used with JSONB comparison
-/// operators. The ore table values only contain {"ob": [...]}, so we merge in the required
-/// "i" (index metadata) and "v" (version) fields to create a valid eql_v2_encrypted structure.
-async fn get_ore_encrypted_as_jsonb(pool: &PgPool, id: i32) -> Result<String> {
-    let sql = format!(
-        "SELECT (e::jsonb || jsonb_build_object('i', jsonb_build_object('t', 'ore'), 'v', 2))::text FROM ore WHERE id = {}",
-        id
-    );
-
-    let row = sqlx::query(&sql)
-        .fetch_one(pool)
-        .await
-        .with_context(|| format!("fetching ore encrypted as jsonb for id={}", id))?;
-
-    let result: Option<String> = row
-        .try_get(0)
-        .with_context(|| format!("extracting jsonb text for id={}", id))?;
-
-    result.with_context(|| format!("ore table returned NULL for id={}", id))
-}
+use anyhow::Result;
+use eql_tests::{get_ore_encrypted, get_ore_encrypted_as_jsonb, QueryAssertion};
+use sqlx::PgPool;
 
 #[sqlx::test]
 async fn lte_operator_cllw_u64_8(pool: PgPool) -> Result<()> {

@@ -4,33 +4,8 @@
 //! Tests EQL comparison operators with ORE (Order-Revealing Encryption)
 
 use anyhow::{Context, Result};
-use eql_tests::{get_ore_encrypted, QueryAssertion};
+use eql_tests::{get_ore_encrypted, get_ore_encrypted_as_jsonb, QueryAssertion};
 use sqlx::{PgPool, Row};
-
-
-/// Helper to fetch ORE encrypted value as JSONB for comparison
-///
-/// This creates a JSONB value from the ore table that can be used with JSONB comparison
-/// operators. The ore table values only contain {"ob": [...]}, so we merge in the required
-/// "i" (index metadata) and "v" (version) fields to create a valid eql_v2_encrypted structure.
-async fn get_ore_encrypted_as_jsonb(pool: &PgPool, id: i32) -> Result<String> {
-    let sql = format!(
-        "SELECT (e::jsonb || jsonb_build_object('i', jsonb_build_object('t', 'ore'), 'v', 2))::text FROM ore WHERE id = {}",
-        id
-    );
-
-    let row = sqlx::query(&sql)
-        .fetch_one(pool)
-        .await
-        .with_context(|| format!("fetching ore encrypted as jsonb for id={}", id))?;
-
-    let result: Option<String> = row
-        .try_get(0)
-        .with_context(|| format!("extracting jsonb text for id={}", id))?;
-
-    result.with_context(|| format!("ore table returned NULL for id={}", id))
-}
-
 
 /// Helper to execute create_encrypted_json SQL function
 #[allow(dead_code)]
@@ -114,10 +89,7 @@ async fn less_than_operator_encrypted_less_than_jsonb(pool: PgPool) -> Result<()
 
     let json_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
 
-    let sql = format!(
-        "SELECT id FROM ore WHERE e < '{}'::jsonb",
-        json_value
-    );
+    let sql = format!("SELECT id FROM ore WHERE e < '{}'::jsonb", json_value);
 
     // Records with id < 42 should match (ids 1-41)
     QueryAssertion::new(&pool, &sql).count(41).await;
@@ -132,10 +104,7 @@ async fn less_than_operator_jsonb_less_than_encrypted(pool: PgPool) -> Result<()
 
     let json_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
 
-    let sql = format!(
-        "SELECT id FROM ore WHERE '{}'::jsonb < e",
-        json_value
-    );
+    let sql = format!("SELECT id FROM ore WHERE '{}'::jsonb < e", json_value);
 
     // jsonb(42) < e means e > 42, so 57 records (43-99)
     QueryAssertion::new(&pool, &sql).count(57).await;
@@ -190,10 +159,7 @@ async fn greater_than_operator_encrypted_greater_than_jsonb(pool: PgPool) -> Res
 
     let json_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
 
-    let sql = format!(
-        "SELECT id FROM ore WHERE e > '{}'::jsonb",
-        json_value
-    );
+    let sql = format!("SELECT id FROM ore WHERE e > '{}'::jsonb", json_value);
 
     // Records with id > 42 should match (ids 43-99 = 57 records)
     QueryAssertion::new(&pool, &sql).count(57).await;
@@ -208,10 +174,7 @@ async fn greater_than_operator_jsonb_greater_than_encrypted(pool: PgPool) -> Res
 
     let json_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
 
-    let sql = format!(
-        "SELECT id FROM ore WHERE '{}'::jsonb > e",
-        json_value
-    );
+    let sql = format!("SELECT id FROM ore WHERE '{}'::jsonb > e", json_value);
 
     // jsonb(42) > e means e < 42, so 41 records (1-41)
     QueryAssertion::new(&pool, &sql).count(41).await;
@@ -267,10 +230,7 @@ async fn less_than_or_equal_with_jsonb(pool: PgPool) -> Result<()> {
 
     let json_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
 
-    let sql = format!(
-        "SELECT id FROM ore WHERE e <= '{}'::jsonb",
-        json_value
-    );
+    let sql = format!("SELECT id FROM ore WHERE e <= '{}'::jsonb", json_value);
 
     QueryAssertion::new(&pool, &sql).count(42).await;
 
@@ -284,10 +244,7 @@ async fn less_than_or_equal_jsonb_lte_encrypted(pool: PgPool) -> Result<()> {
 
     let json_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
 
-    let sql = format!(
-        "SELECT id FROM ore WHERE '{}'::jsonb <= e",
-        json_value
-    );
+    let sql = format!("SELECT id FROM ore WHERE '{}'::jsonb <= e", json_value);
 
     // jsonb(42) <= e means e >= 42, so 58 records (42-99)
     QueryAssertion::new(&pool, &sql).count(58).await;
@@ -342,10 +299,7 @@ async fn greater_than_or_equal_with_jsonb(pool: PgPool) -> Result<()> {
 
     let json_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
 
-    let sql = format!(
-        "SELECT id FROM ore WHERE e >= '{}'::jsonb",
-        json_value
-    );
+    let sql = format!("SELECT id FROM ore WHERE e >= '{}'::jsonb", json_value);
 
     QueryAssertion::new(&pool, &sql).count(58).await;
 
@@ -359,10 +313,7 @@ async fn greater_than_or_equal_jsonb_gte_encrypted(pool: PgPool) -> Result<()> {
 
     let json_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
 
-    let sql = format!(
-        "SELECT id FROM ore WHERE '{}'::jsonb >= e",
-        json_value
-    );
+    let sql = format!("SELECT id FROM ore WHERE '{}'::jsonb >= e", json_value);
 
     // jsonb(42) >= e means e <= 42, so 42 records (1-42)
     QueryAssertion::new(&pool, &sql).count(42).await;

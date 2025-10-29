@@ -39,7 +39,10 @@ pub async fn get_ore_encrypted(pool: &PgPool, id: i32) -> Result<String> {
 pub async fn get_encrypted_term(pool: &PgPool, selector: &str) -> Result<String> {
     // Note: Must cast selector to ::text to disambiguate operator overload
     // The -> operator has multiple signatures (text, eql_v2_encrypted, integer)
-    let sql = format!("SELECT (e -> '{}'::text)::text FROM encrypted LIMIT 1", selector);
+    let sql = format!(
+        "SELECT (e -> '{}'::text)::text FROM encrypted LIMIT 1",
+        selector
+    );
     let row = sqlx::query(&sql)
         .fetch_one(pool)
         .await
@@ -49,5 +52,33 @@ pub async fn get_encrypted_term(pool: &PgPool, selector: &str) -> Result<String>
         .try_get(0)
         .with_context(|| format!("getting text column for selector={}", selector))?;
 
-    result.with_context(|| format!("encrypted term extraction returned NULL for selector={}", selector))
+    result.with_context(|| {
+        format!(
+            "encrypted term extraction returned NULL for selector={}",
+            selector
+        )
+    })
+}
+
+/// Fetch ORE encrypted value as JSONB for comparison
+///
+/// This creates a JSONB value from the ore table that can be used with JSONB comparison
+/// operators. The ore table values only contain {"ob": [...]}, so we merge in the required
+/// "i" (index metadata) and "v" (version) fields to create a valid eql_v2_encrypted structure.
+pub async fn get_ore_encrypted_as_jsonb(pool: &PgPool, id: i32) -> Result<String> {
+    let sql = format!(
+        "SELECT (e::jsonb || jsonb_build_object('i', jsonb_build_object('t', 'ore'), 'v', 2))::text FROM ore WHERE id = {}",
+        id
+    );
+
+    let row = sqlx::query(&sql)
+        .fetch_one(pool)
+        .await
+        .with_context(|| format!("fetching ore encrypted as jsonb for id={}", id))?;
+
+    let result: Option<String> = row
+        .try_get(0)
+        .with_context(|| format!("extracting jsonb text for id={}", id))?;
+
+    result.with_context(|| format!("ore table returned NULL for id={}", id))
 }
