@@ -31,7 +31,7 @@ async fn contains_operator_with_extracted_term(pool: PgPool) -> Result<()> {
     // Tests containment with extracted field ($.n selector)
 
     let sql = format!(
-        "SELECT e FROM encrypted WHERE e @> (e -> '{}') LIMIT 1",
+        "SELECT e FROM encrypted WHERE e @> (e -> '{}'::text) LIMIT 1",
         Selectors::N
     );
 
@@ -47,7 +47,7 @@ async fn contains_operator_term_does_not_contain_full_value(pool: PgPool) -> Res
     // Verifies that while e @> term is true, term @> e is false
 
     let sql = format!(
-        "SELECT e FROM encrypted WHERE (e -> '{}') @> e LIMIT 1",
+        "SELECT e FROM encrypted WHERE (e -> '{}'::text) @> e LIMIT 1",
         Selectors::N
     );
 
