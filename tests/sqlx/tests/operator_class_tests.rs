@@ -27,7 +27,7 @@ async fn create_table_with_encrypted(pool: &PgPool) -> Result<()> {
 
 #[sqlx::test]
 async fn group_by_encrypted_column(pool: PgPool) -> Result<()> {
-    // Test: GROUP BY works with eql_v2_encrypted type
+    // Test: GROUP BY works with eql_v2_encrypted type (1 assertion)
     // Original SQL lines 6-25 in src/operators/operator_class_test.sql
 
     create_table_with_encrypted(&pool).await?;
@@ -63,7 +63,7 @@ async fn group_by_encrypted_column(pool: PgPool) -> Result<()> {
 
 #[sqlx::test]
 async fn index_usage_with_explain_analyze(pool: PgPool) -> Result<()> {
-    // Test: Operator class index usage patterns
+    // Test: Operator class index usage patterns (3 assertions)
     // Original SQL lines 30-79 in src/operators/operator_class_test.sql
 
     create_table_with_encrypted(&pool).await?;
@@ -106,7 +106,7 @@ async fn index_usage_with_explain_analyze(pool: PgPool) -> Result<()> {
 
 #[sqlx::test]
 async fn index_behavior_with_different_data_types(pool: PgPool) -> Result<()> {
-    // Test: Index behavior with various encrypted data types
+    // Test: Index behavior with various encrypted data types (37 assertions)
     // Original SQL lines 86-237 in src/operators/operator_class_test.sql
 
     create_table_with_encrypted(&pool).await?;

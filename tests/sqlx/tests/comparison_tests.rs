@@ -31,19 +31,6 @@ async fn get_ore_encrypted_as_jsonb(pool: &PgPool, id: i32) -> Result<String> {
     result.with_context(|| format!("ore table returned NULL for id={}", id))
 }
 
-/// Helper to fetch a single text column from a SQL query
-async fn fetch_text_column(pool: &PgPool, sql: &str) -> Result<String> {
-    let row = sqlx::query(sql)
-        .fetch_one(pool)
-        .await
-        .with_context(|| format!("executing query: {}", sql))?;
-
-    let result: Option<String> = row
-        .try_get(0)
-        .with_context(|| "extracting text column")?;
-
-    result.with_context(|| "query returned NULL")
-}
 
 /// Helper to execute create_encrypted_json SQL function
 #[allow(dead_code)]

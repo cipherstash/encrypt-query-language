@@ -4,7 +4,7 @@
 //! Tests EQL configuration add/remove operations and state management
 
 use anyhow::{Context, Result};
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 
 /// Helper to check if search config exists
 /// Replicates _search_config_exists SQL function from lines 25-33
@@ -15,26 +15,27 @@ async fn search_config_exists(
     index_name: &str,
     state: &str,
 ) -> Result<bool> {
-    let sql = format!(
+    let exists: bool = sqlx::query_scalar(
         "SELECT EXISTS (
             SELECT id FROM eql_v2_configuration c
-            WHERE c.state = '{}'
-            AND c.data #> array['tables', '{}', '{}', 'indexes'] ? '{}'
-        )",
-        state, table_name, column_name, index_name
-    );
+            WHERE c.state = $1::eql_v2_configuration_state
+            AND c.data #> array['tables', $2, $3, 'indexes'] ? $4
+        )"
+    )
+    .bind(state)
+    .bind(table_name)
+    .bind(column_name)
+    .bind(index_name)
+    .fetch_one(pool)
+    .await
+    .context("checking search config existence")?;
 
-    let row = sqlx::query(&sql)
-        .fetch_one(pool)
-        .await
-        .context("checking search config existence")?;
-
-    row.try_get(0).context("extracting exists result")
+    Ok(exists)
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
 async fn add_and_remove_multiple_indexes(pool: PgPool) -> Result<()> {
-    // Test: Add and remove multiple indexes
+    // Test: Add and remove multiple indexes (6 assertions)
     // Original SQL lines 42-67 in src/config/config_test.sql
 
     // Truncate config
@@ -106,7 +107,7 @@ async fn add_and_remove_multiple_indexes(pool: PgPool) -> Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
 async fn add_and_remove_indexes_from_multiple_tables(pool: PgPool) -> Result<()> {
-    // Test: Add/remove indexes from multiple tables
+    // Test: Add/remove indexes from multiple tables (9 assertions)
     // Original SQL lines 78-116 in src/config/config_test.sql
 
     sqlx::query("TRUNCATE TABLE eql_v2_configuration")
@@ -208,7 +209,7 @@ async fn add_and_remove_indexes_from_multiple_tables(pool: PgPool) -> Result<()>
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
 async fn add_and_modify_index(pool: PgPool) -> Result<()> {
-    // Test: Add and modify index
+    // Test: Add and modify index (6 assertions)
     // Original SQL lines 128-150 in src/config/config_test.sql
 
     // Add match index
@@ -288,7 +289,7 @@ async fn add_and_modify_index(pool: PgPool) -> Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
 async fn add_index_with_existing_active_config(pool: PgPool) -> Result<()> {
-    // Test: Adding index creates new pending configuration when active config exists
+    // Test: Adding index creates new pending configuration when active config exists (3 assertions)
     // Original SQL lines 157-196 in src/config/config_test.sql
 
     sqlx::query("TRUNCATE TABLE eql_v2_configuration")
@@ -349,7 +350,7 @@ async fn add_index_with_existing_active_config(pool: PgPool) -> Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
 async fn add_column_to_nonexistent_table_fails(pool: PgPool) -> Result<()> {
-    // Test: Adding column to nonexistent table fails
+    // Test: Adding column to nonexistent table fails (2 assertions)
     // Original SQL lines 204-215 in src/config/config_test.sql
 
     sqlx::query("TRUNCATE TABLE eql_v2_configuration")
@@ -380,7 +381,7 @@ async fn add_column_to_nonexistent_table_fails(pool: PgPool) -> Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn add_and_remove_column(pool: PgPool) -> Result<()> {
-    // Test: Add and remove column
+    // Test: Add and remove column (4 assertions)
     // Original SQL lines 223-248 in src/config/config_test.sql
 
     sqlx::query("TRUNCATE TABLE eql_v2_configuration")
@@ -431,7 +432,7 @@ async fn add_and_remove_column(pool: PgPool) -> Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
 async fn configuration_constraint_validation(pool: PgPool) -> Result<()> {
-    // Test: Configuration constraint validation
+    // Test: Configuration constraint validation (11 assertions)
     // Original SQL lines 259-334 in src/config/config_test.sql
 
     sqlx::query("TRUNCATE TABLE eql_v2_configuration")
@@ -455,7 +456,10 @@ async fn configuration_constraint_validation(pool: PgPool) -> Result<()> {
     .execute(&pool)
     .await;
 
-    assert!(result1.is_err(), "insert without schema version should fail");
+    assert!(
+        result1.is_err(),
+        "insert without schema version should fail"
+    );
 
     // Test 2: Empty tables - ALLOWED (config_check_tables only checks field exists, not emptiness)
     // Original SQL test expected failure, but constraints.sql line 58-67 shows empty tables {} is valid
@@ -478,7 +482,10 @@ async fn configuration_constraint_validation(pool: PgPool) -> Result<()> {
     .execute(&pool)
     .await;
 
-    assert!(result3.is_err(), "insert with invalid cast should fail");
+    assert!(
+        result3.is_err(),
+        "insert with invalid cast should fail"
+    );
 
     // Test 4: Invalid index - should fail
     let result4 = sqlx::query(
@@ -500,7 +507,10 @@ async fn configuration_constraint_validation(pool: PgPool) -> Result<()> {
     .execute(&pool)
     .await;
 
-    assert!(result4.is_err(), "insert with invalid index should fail");
+    assert!(
+        result4.is_err(),
+        "insert with invalid index should fail"
+    );
 
     // Verify no pending configuration was created
     let pending_exists: bool = sqlx::query_scalar(
