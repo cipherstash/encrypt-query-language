@@ -52,6 +52,7 @@ async fn min_aggregate_on_encrypted_column(pool: PgPool) -> Result<()> {
 async fn group_by_with_encrypted_column(pool: PgPool) -> Result<()> {
     // Test: GROUP BY works with encrypted data
     // Original SQL lines 47-50 in src/encrypted/aggregates_test.sql
+    // Fixture creates 3 distinct encrypted records, each unique
 
     let group_count: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM (
@@ -61,7 +62,10 @@ async fn group_by_with_encrypted_column(pool: PgPool) -> Result<()> {
     .fetch_one(&pool)
     .await?;
 
-    assert!(group_count > 0, "GROUP BY should return groups");
+    assert_eq!(
+        group_count, 3,
+        "GROUP BY should return 3 groups (one per distinct encrypted value in fixture)"
+    );
 
     Ok(())
 }
