@@ -41,6 +41,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install rust
+        shell: /bin/bash -l {0}
+        run: rustup toolchain install stable --profile minimal --no-self-update
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
       - uses: jdx/mise-action@v2
         with:
           version: 2025.1.6 # [default: latest] mise version to install
