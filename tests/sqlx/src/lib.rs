@@ -10,14 +10,12 @@ pub mod index_types;
 pub mod selectors;
 
 pub use assertions::QueryAssertion;
-pub use helpers::{get_encrypted_term, get_ore_encrypted};
+pub use helpers::{get_encrypted_term, get_ore_encrypted, get_ore_encrypted_as_jsonb};
 pub use index_types as IndexTypes;
 pub use selectors::Selectors;
 
 /// Reset pg_stat_user_functions tracking before tests
 pub async fn reset_function_stats(pool: &PgPool) -> anyhow::Result<()> {
-    sqlx::query("SELECT pg_stat_reset()")
-        .execute(pool)
-        .await?;
+    sqlx::query("SELECT pg_stat_reset()").execute(pool).await?;
     Ok(())
 }
