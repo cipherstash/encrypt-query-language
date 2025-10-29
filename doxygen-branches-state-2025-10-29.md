@@ -214,12 +214,49 @@ tasks/validate-required-tags.sh
 
 ## Next Steps (Option 1: Clean Branch)
 
-1. Create new branch from current main
-2. Identify first documentation commit in continue-doxygen-sql-comments
-3. Cherry-pick documentation commits: `<first-doc-commit>..a398dc8`
-4. Copy infrastructure files from phase-4-doxygen
-5. Test that everything works
-6. Create new PR, close PR #146
+1. ✅ Create new branch from current main
+2. ✅ Identify first documentation commit in continue-doxygen-sql-comments
+3. ✅ Cherry-pick documentation commits: `<first-doc-commit>..a398dc8`
+4. ✅ Copy infrastructure files from phase-4-doxygen
+5. ✅ Test that everything works
+6. ✅ Create new PR, close PR #146
+
+## Clean Branch Created: `doxygen-docs-clean`
+
+**Status**: ✅ COMPLETE (2025-10-29)
+
+**Result**: 4 commits ahead of main (vs 681 in continue-doxygen-sql-comments after merge)
+
+### The 4 Clean Commits:
+
+1. **7b85b2e** - docs(sql): add complete Doxygen documentation (Phases 1-4)
+   - Consolidated all SQL documentation from a398dc8
+   - 18 files changed, +738/-267 lines
+
+2. **91aba3e** - docs: add Doxygen infrastructure and tooling
+   - Doxyfile, validation scripts, mise tasks
+   - 6 files changed, +444 lines
+
+3. **4d0698e** - ci: add documentation validation to test workflow
+   - GitHub Actions integration, README updates
+   - 2 files changed, +77 lines
+
+4. **150a85d** - docs(sql): add Doxygen comments to version template
+   - Fixed CI regression (version.template was undocumented)
+   - Source: phase-4-doxygen commits d4c2257, 01ab2f8
+   - 1 file changed, +19 lines
+
+### Key Discovery: version.template Documentation
+
+The initial clean branch had a CI failure due to missing documentation in `src/version.template`.
+
+**Issue**: When restoring files from a398dc8, version.template lacked documentation.
+
+**Solution**: Found documented version in phase-4-doxygen commits:
+- d4c2257: Initial version.template documentation
+- 01ab2f8: Final version with @file pointing to version.sql (the generated file)
+
+**Fix Applied**: Copied from 01ab2f8 to doxygen-docs-clean, restoring 100% coverage.
 
 ## Warning
 
