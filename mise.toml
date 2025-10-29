@@ -23,3 +23,21 @@ run = """
   rm -f release/cipherstash-encrypt-uninstall.sql
   rm -f release/cipherstash-encrypt.sql
 """
+
+[tasks."docs:generate"]
+description = "Generate API documentation with Doxygen"
+run = """
+  echo "Generating API documentation..."
+  doxygen Doxyfile
+  echo "Documentation generated at docs/api/html/index.html"
+"""
+
+[tasks."docs:validate"]
+description = "Validate SQL documentation"
+run = """
+  echo "Checking documentation coverage..."
+  ./tasks/check-doc-coverage.sh
+  echo ""
+  echo "Validating required tags..."
+  ./tasks/validate-required-tags.sh
+"""
