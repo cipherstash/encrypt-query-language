@@ -163,5 +163,66 @@ async fn foreign_key_constraint_with_encrypted(pool: PgPool) -> Result<()> {
 
     assert!(fk_exists, "Foreign key constraint should exist");
 
+    // TEST FK ENFORCEMENT BEHAVIOR:
+    // With deterministic test data, FK constraints DO enforce referential integrity
+    // because we can use the exact same encrypted bytes.
+    //
+    // PRODUCTION LIMITATION: In real-world usage with non-deterministic encryption,
+    // FK constraints don't provide meaningful referential integrity because:
+    // 1. Each encryption of the same plaintext produces different ciphertext
+    // 2. The FK check compares encrypted bytes, not plaintext values
+    // 3. Two encryptions of "1" will have different bytes and won't match
+    //
+    // This test uses deterministic test helpers, so FKs DO work here.
+
+    // Insert a parent record with encrypted value for plaintext "1"
+    sqlx::query("INSERT INTO parent (id) VALUES (create_encrypted_json(1, 'hm'))")
+        .execute(&pool)
+        .await?;
+
+    // Verify parent record exists
+    let parent_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM parent")
+        .fetch_one(&pool)
+        .await?;
+
+    assert_eq!(parent_count, 1, "Should have 1 parent record");
+
+    // Successfully insert child record with FK to same deterministic value
+    // This SUCCEEDS because create_encrypted_json(1, 'hm') returns identical bytes each time
+    sqlx::query(
+        "INSERT INTO child (id, parent_id) VALUES (1, create_encrypted_json(1, 'hm'))",
+    )
+    .execute(&pool)
+    .await?;
+
+    // Verify child record was inserted
+    let child_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM child")
+        .fetch_one(&pool)
+        .await?;
+
+    assert_eq!(
+        child_count, 1,
+        "Child insert should succeed with matching deterministic encrypted value"
+    );
+
+    // Attempt to insert child with different encrypted value (should fail FK check)
+    let different_insert_result = sqlx::query(
+        "INSERT INTO child (id, parent_id) VALUES (2, create_encrypted_json(2, 'hm'))",
+    )
+    .execute(&pool)
+    .await;
+
+    assert!(
+        different_insert_result.is_err(),
+        "FK constraint should reject non-existent parent reference"
+    );
+
+    // Verify child count unchanged
+    let final_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM child")
+        .fetch_one(&pool)
+        .await?;
+
+    assert_eq!(final_count, 1, "FK violation should prevent second child insert");
+
     Ok(())
 }
