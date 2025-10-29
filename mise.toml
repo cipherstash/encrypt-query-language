@@ -7,7 +7,10 @@
 #     "./tests/mise.tls.toml",
 # ]
 [task_config]
-includes = ["tasks", "tasks/postgres.toml", "tasks/rust.toml", "tasks/test.toml"]
+includes = [
+  "tasks",
+  "tasks/postgres.toml",
+]
 
 [env]
 POSTGRES_DB = "cipherstash"
@@ -27,4 +30,79 @@ run = """
 [tasks."test"]
 description = "Run all tests (legacy SQL + SQLx Rust)"
 sources = ["src/**/*_test.sql", "tests/**/*.sql", "tests/sqlx/**/*.rs"]
-run = "{{config_root}}/tasks/test-all.sh"
+usage = '''
+flag "--postgres <version>" help="PostgreSQL version to test against" default="17"
+'''
+run = '''
+#!/bin/bash
+set -euo pipefail
+
+POSTGRES_VERSION=${usage_postgres:-17}
+
+echo "=========================================="
+echo "Running Complete EQL Test Suite"
+echo "PostgreSQL Version: $POSTGRES_VERSION"
+echo "=========================================="
+echo ""
+
+# Check PostgreSQL is running
+{{config_root}}/tasks/check-postgres.sh ${POSTGRES_VERSION}
+
+# Build first
+echo "Building EQL..."
+mise run build --force
+
+# Run legacy SQL tests
+echo ""
+echo "=========================================="
+echo "1/2: Running Legacy SQL Tests"
+echo "=========================================="
+mise run test:legacy --postgres ${POSTGRES_VERSION}
+
+# Run SQLx Rust tests
+echo ""
+echo "=========================================="
+echo "2/2: Running SQLx Rust Tests"
+echo "=========================================="
+mise run test:sqlx
+
+echo ""
+echo "=========================================="
+echo "✅ ALL TESTS PASSED"
+echo "=========================================="
+echo ""
+echo "Summary:"
+echo "  ✓ Legacy SQL tests"
+echo "  ✓ SQLx Rust tests"
+echo ""
+'''
+
+[tasks."test:legacy"]
+description = "Run legacy SQL tests (inline test files)"
+sources = ["src/**/*_test.sql", "tests/*.sql"]
+run = "{{config_root}}/tasks/test-legacy.sh"
+
+[tasks."test:sqlx"]
+description = "Run SQLx tests with hybrid migration approach"
+dir = "{{config_root}}"
+env = { DATABASE_URL = "postgresql://{{get_env(name='POSTGRES_USER', default='cipherstash')}}:{{get_env(name='POSTGRES_PASSWORD', default='password')}}@{{get_env(name='POSTGRES_HOST', default='localhost')}}:{{get_env(name='POSTGRES_PORT', default='7432')}}/{{get_env(name='POSTGRES_DB', default='cipherstash')}}" }
+run = """
+# Copy built SQL to SQLx migrations (EQL install is generated, not static)
+echo "Updating SQLx migrations with built EQL..."
+cp release/cipherstash-encrypt.sql tests/sqlx/migrations/001_install_eql.sql
+
+# Run SQLx migrations and tests
+echo "Running SQLx migrations..."
+cd tests/sqlx
+sqlx migrate run
+
+echo "Running Rust tests..."
+cargo test
+"""
+
+[tasks."test:sqlx:watch"]
+description = "Run SQLx tests in watch mode (rebuild EQL on changes)"
+dir = "{{config_root}}/tests/sqlx"
+run = """
+cargo watch -x test
+"""
