@@ -78,7 +78,7 @@ This design adds automated documentation generation and publishing to GitHub rel
 
 ### Mise Tasks
 
-**Existing tasks** (already implemented in phase-4-docs-clean worktree):
+**Existing tasks** (already implemented in continue-doxygen-sql-comments branch):
 - `docs:validate` - Runs coverage check and validates required tags
   - Script: `tasks/check-doc-coverage.sh`
   - Script: `tasks/validate-required-tags.sh`
@@ -230,18 +230,19 @@ unzip -t release/eql-docs-*.zip
 1. `mise.toml` - Add `docs:package` task definition
 2. `.github/workflows/release-eql.yml` - Add `publish-docs` job
 
-**Files to copy from phase-4-docs-clean worktree** (if not already in main):
-1. `Doxyfile` - Doxygen configuration
-2. `tasks/doxygen-filter.sh` - SQL comment filter for Doxygen
-3. `tasks/check-doc-coverage.sh` - Coverage validation script
-4. `tasks/validate-required-tags.sh` - Tag validation script
-5. Existing `docs:validate` and `docs:generate` task definitions in `mise.toml`
+**Files already merged into continue-doxygen-sql-comments** (ready to merge to main):
+1. `Doxyfile` - Doxygen configuration ✅
+2. `tasks/doxygen-filter.sh` - SQL comment filter for Doxygen ✅
+3. `tasks/check-doc-coverage.sh` - Coverage validation script ✅
+4. `tasks/validate-required-tags.sh` - Tag validation script ✅
+5. `docs:validate` and `docs:generate` task definitions in `mise.toml` ✅
 
 ### Implementation Steps
 
-1. **Merge phase-4-docs work** (if needed)
-   - Ensure Doxyfile and validation scripts are in main branch
-   - Ensure `docs:validate` and `docs:generate` tasks exist
+1. **✅ Merge phase-4-docs work** (COMPLETED)
+   - Infrastructure merged into continue-doxygen-sql-comments branch
+   - Doxyfile and validation scripts now present
+   - `docs:validate` and `docs:generate` tasks added to mise.toml
 
 2. **Create packaging task**
    - Write `tasks/docs-package.sh`
@@ -313,5 +314,6 @@ unzip -t release/eql-docs-*.zip
 
 - Existing workflow: `.github/workflows/release-eql.yml`
 - Existing test workflow: `.github/workflows/test-eql.yml`
-- Phase 4 docs work: `.worktrees/phase-4-docs-clean/`
+- Complete docs branch: `continue-doxygen-sql-comments` (includes merged infrastructure)
 - Doxygen configuration: `Doxyfile`
+- Documentation scripts: `tasks/check-doc-coverage.sh`, `tasks/validate-required-tags.sh`
