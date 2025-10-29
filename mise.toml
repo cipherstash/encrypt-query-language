@@ -41,3 +41,9 @@ run = """
   echo "Validating required tags..."
   ./tasks/validate-required-tags.sh
 """
+
+[tasks."docs:package"]
+description = "Package documentation for release"
+run = """
+  ./tasks/docs-package.sh {{arg(name="version", default="dev")}}
+"""
