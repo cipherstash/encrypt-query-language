@@ -22,6 +22,7 @@ Store encrypted data alongside your existing data:
 - [Getting started](#getting-started)
   - [Enable encrypted columns](#enable-encrypted-columns)
 - [Encrypt configuration](#encrypt-configuration)
+- [Documentation](#documentation)
 - [CipherStash integrations using EQL](#cipherstash-integrations-using-eql)
 - [Versioning](#versioning)
   - [Upgrading](#upgrading)
@@ -203,6 +204,64 @@ In order to enable searchable encryption, you will need to configure your Cipher
 
 - If you are using [CipherStash Proxy](https://github.com/cipherstash/proxy), see [this guide](docs/tutorials/proxy-configuration.md).
 - If you are using [Protect.js](https://github.com/cipherstash/protectjs), use the [Protect.js schema](https://github.com/cipherstash/protectjs/blob/main/docs/reference/schema.md).
+
+## Documentation
+
+### API Documentation
+
+All EQL functions and types are fully documented with Doxygen-style comments in the source code.
+
+**Install Doxygen** (required for documentation generation):
+
+```bash
+# macOS
+brew install doxygen
+
+# Ubuntu/Debian
+apt-get install doxygen
+
+# Other platforms: https://www.doxygen.nl/download.html
+```
+
+**Generate API documentation:**
+
+```bash
+# Using mise
+mise run docs:generate
+
+# Or directly with doxygen
+doxygen Doxyfile
+```
+
+The generated HTML documentation will be available at `docs/api/html/index.html`.
+
+### Documentation Standards
+
+All SQL functions, types, and operators include:
+- **@brief** - Short description of purpose
+- **@param** - Parameter descriptions with types
+- **@return** - Return value description and type
+- **@example** - Usage examples
+- **@throws** - Exception conditions
+- **@note** - Important notes and caveats
+
+For contribution guidelines, see [CLAUDE.md](./CLAUDE.md).
+
+### Validation Tools
+
+Verify documentation quality using these scripts:
+
+```bash
+# Using mise (validates coverage and tags)
+mise run docs:validate
+
+# Or run individual checks
+./tasks/check-doc-coverage.sh      # Check 100% coverage
+./tasks/validate-required-tags.sh  # Validate @brief, @param, @return
+./tasks/validate-documented-sql.sh # Validate SQL syntax
+```
+
+Documentation validation runs automatically in CI for all pull requests.
 
 ## CipherStash integrations using EQL
 
