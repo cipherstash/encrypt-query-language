@@ -116,3 +116,9 @@ run = """
   echo ""
   echo "Extract with: tar -xzf ${ARCHIVE}"
 """
+
+[tasks."docs:package"]
+description = "Package documentation for release"
+run = """
+  ./tasks/docs-package.sh {{arg(name="version", default="dev")}}
+"""
