@@ -1,24 +1,6 @@
 \set ON_ERROR_STOP on
 
 
--- Create tables for adding configuration
-DROP TABLE IF EXISTS users;
-CREATE TABLE users
-(
-    id bigint GENERATED ALWAYS AS IDENTITY,
-    name eql_v2_encrypted,
-    PRIMARY KEY(id)
-);
-
-DROP TABLE IF EXISTS blah;
-CREATE TABLE blah
-(
-    id bigint GENERATED ALWAYS AS IDENTITY,
-    vtha eql_v2_encrypted,
-    PRIMARY KEY(id)
-);
-
-
 --
 -- Helper function for assertions
 --
@@ -108,7 +90,7 @@ DO $$
     PERFORM eql_v2.remove_search_config('blah', 'vtha', 'unique', migrating => true);
     ASSERT NOT (SELECT _search_config_exists('users', 'vtha', 'unique'));
 
-    -- All indexes removed, but column config preserved
+    -- All indexes removed, but column config preserved  
     ASSERT (SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending'));
     ASSERT (SELECT data #> array['tables', 'blah', 'vtha', 'indexes'] = '{}' FROM eql_v2_configuration c WHERE c.state = 'pending');
 
@@ -240,7 +222,7 @@ DO $$
         'Pending configuration exists but is empty',
         'SELECT * FROM eql_v2_configuration c WHERE c.state = ''pending''',
         1);
-
+    
     -- Verify the config is empty
     ASSERT (SELECT data #> array['tables'] = '{}' FROM eql_v2_configuration c WHERE c.state = 'pending');
 
