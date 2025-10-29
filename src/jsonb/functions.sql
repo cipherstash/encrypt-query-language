@@ -26,7 +26,7 @@
 --!
 --! @note Returns empty set if selector is not found (does not throw exception)
 --! @note Array elements use same selector; multiple matches wrapped with 'a' flag
---! @note Returns NULL if val is NULL, empty set if no matches
+--! @note Returns a set containing NULL if val is NULL; returns empty set if no matches found
 --! @see eql_v2.jsonb_path_query_first
 --! @see eql_v2.jsonb_path_exists
 CREATE FUNCTION eql_v2.jsonb_path_query(val jsonb, selector text)
@@ -223,7 +223,7 @@ AS $$
   BEGIN
     RETURN (
       SELECT e
-      FROM eql_v2.jsonb_path_query(val.data, selector) AS e
+      FROM eql_v2.jsonb_path_query(val, selector) AS e
       LIMIT 1
     );
   END;
@@ -293,7 +293,7 @@ $$ LANGUAGE plpgsql;
 --!
 --! @param val jsonb Encrypted JSONB payload representing an array
 --! @return integer Number of elements in the array
---! @throws Exception if value is not an array (missing 'a' flag)
+--! @throws Exception 'cannot get array length of a non-array' if 'a' flag is missing or not true
 --!
 --! @note Array flag 'a' must be present and set to true value
 --! @see eql_v2.jsonb_array_elements
