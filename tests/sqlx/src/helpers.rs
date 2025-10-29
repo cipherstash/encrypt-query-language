@@ -33,11 +33,13 @@ pub async fn get_ore_encrypted(pool: &PgPool, id: i32) -> Result<String> {
 /// * `selector` - Selector hash for the field to extract (e.g., from Selectors constants)
 ///
 /// # Example
-/// ```
+/// ```ignore
 /// let term = get_encrypted_term(&pool, Selectors::HELLO).await?;
 /// ```
 pub async fn get_encrypted_term(pool: &PgPool, selector: &str) -> Result<String> {
-    let sql = format!("SELECT (e -> '{}')::text FROM encrypted LIMIT 1", selector);
+    // Note: Must cast selector to ::text to disambiguate operator overload
+    // The -> operator has multiple signatures (text, eql_v2_encrypted, integer)
+    let sql = format!("SELECT (e -> '{}'::text)::text FROM encrypted LIMIT 1", selector);
     let row = sqlx::query(&sql)
         .fetch_one(pool)
         .await
