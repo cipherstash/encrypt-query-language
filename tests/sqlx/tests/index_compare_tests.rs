@@ -18,6 +18,11 @@ use anyhow::Result;
 use sqlx::PgPool;
 
 // Helper macro to reduce repetition for compare tests
+//
+// Note: Uses format! for SQL construction because test data expressions
+// (like "create_encrypted_json(1, 'b3')") must be evaluated by PostgreSQL,
+// not passed as parameters. SQLx cannot pass PostgreSQL function calls as
+// query parameters - they must be part of the SQL string.
 macro_rules! assert_compare {
     ($pool:expr, $func:expr, $a:expr, $b:expr, $expected:expr, $msg:expr) => {
         let result: i32 = sqlx::query_scalar(&format!("SELECT eql_v2.{}({}, {})", $func, $a, $b))
