@@ -41,7 +41,7 @@ async fn has_pending_column(pool: &PgPool, column_name: &str) -> Result<bool> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encryptindex_tables")))]
 async fn create_encrypted_columns_from_config(pool: PgPool) -> Result<()> {
-    // Test: Create encrypted columns from configuration
+    // Test: Create encrypted columns from configuration (7 assertions)
     // Original SQL lines 8-56 in src/encryptindex/functions_test.sql
     // Verifies: pending columns, target columns, create_encrypted_columns(),
     // rename_encrypted_columns(), and resulting column types
@@ -143,7 +143,7 @@ async fn create_encrypted_columns_from_config(pool: PgPool) -> Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encryptindex_tables")))]
 async fn create_multiple_encrypted_columns(pool: PgPool) -> Result<()> {
-    // Test: Create multiple encrypted columns from configuration
+    // Test: Create multiple encrypted columns from configuration (4 assertions)
     // Original SQL lines 63-119 in src/encryptindex/functions_test.sql
     // Verifies: multiple columns with different indexes
 
@@ -218,7 +218,7 @@ async fn create_multiple_encrypted_columns(pool: PgPool) -> Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encryptindex_tables")))]
 async fn select_pending_columns(pool: PgPool) -> Result<()> {
-    // Test: select_pending_columns() returns correct columns
+    // Test: select_pending_columns() returns correct columns (6 assertions)
     // Original SQL lines 127-148 in src/encryptindex/functions_test.sql
 
     // Truncate config
@@ -299,7 +299,7 @@ async fn select_pending_columns(pool: PgPool) -> Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encryptindex_tables")))]
 async fn select_target_columns(pool: PgPool) -> Result<()> {
-    // Test: select_target_columns() returns correct columns
+    // Test: select_target_columns() returns correct columns (4 assertions)
     // Original SQL lines 156-177 in src/encryptindex/functions_test.sql
 
     // Truncate config
@@ -363,7 +363,7 @@ async fn select_target_columns(pool: PgPool) -> Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encryptindex_tables")))]
 async fn activate_pending_config(pool: PgPool) -> Result<()> {
-    // Test: activate_config() transitions encrypting -> active
+    // Test: activate_config() transitions encrypting -> active (8 assertions)
     // Original SQL lines 185-224 in src/encryptindex/functions_test.sql
 
     // Truncate config
@@ -455,7 +455,7 @@ async fn activate_pending_config(pool: PgPool) -> Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encryptindex_tables")))]
 async fn encrypted_column_index_generation(pool: PgPool) -> Result<()> {
-    // Test: Encrypted columns are created with proper JSONB structure
+    // Test: Encrypted columns are created with proper JSONB structure (5 assertions)
     // Original SQL lines 232-268 in src/encryptindex/functions_test.sql
     // Verifies: JSON structure has required 'i' (index metadata) field
 
@@ -518,7 +518,7 @@ async fn encrypted_column_index_generation(pool: PgPool) -> Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encryptindex_tables")))]
 async fn handle_null_values_in_encrypted_columns(pool: PgPool) -> Result<()> {
-    // Test: Exception raised when pending config exists but no migrate called
+    // Test: Exception raised when pending config exists but no migrate called (7 assertions)
     // Original SQL lines 276-290 in src/encryptindex/functions_test.sql
 
     // Truncate config
