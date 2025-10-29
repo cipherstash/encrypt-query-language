@@ -1,7 +1,0 @@
-# Test tasks for EQL
-# Legacy SQL tests (inline test files)
-
-["test:legacy"]
-description = "Run legacy SQL tests (inline test files)"
-sources = ["src/**/*_test.sql", "tests/*.sql"]
-run = "{{config_root}}/tasks/test-legacy.sh"
