@@ -31,7 +31,9 @@ run = """
 description = "Run all tests (legacy SQL + SQLx Rust)"
 sources = ["src/**/*_test.sql", "tests/**/*.sql", "tests/sqlx/**/*.rs"]
 usage = '''
-flag "--postgres <version>" help="PostgreSQL version to test against" default="17"
+flag "--postgres <version>" help="PostgreSQL version to test against" default="17" {
+  choices "14" "15" "16" "17"
+}
 '''
 run = '''
 #!/bin/bash
