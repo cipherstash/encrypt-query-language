@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
 #MISE description="Run legacy SQL tests (inline test files)"
-#MISE alias="test"
 #USAGE flag "--test <test>" help="Specific test file pattern to run" default="false"
 #USAGE flag "--postgres <version>" help="PostgreSQL version to test against" default="17" {
 #USAGE   choices "14" "15" "16" "17"
 #USAGE }
-#USAGE flag "--skip-build" help="Skip build step (use existing release)" default="false"
-
-#!/bin/bash
 
 set -euo pipefail
 
@@ -16,14 +12,8 @@ POSTGRES_VERSION=${usage_postgres}
 connection_url=postgresql://${POSTGRES_USER:-$USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
 container_name=postgres-${POSTGRES_VERSION}
 
-fail_if_postgres_not_running () {
-  containers=$(docker ps --filter "name=^${container_name}$" --quiet)
-  if [ -z "${containers}" ]; then
-    echo "error: Docker container for PostgreSQL is not running"
-    echo "error: Try running 'mise run postgres:up ${container_name}' to start the container"
-    exit 65
-  fi
-}
+# Check postgres is running (script will exit if not)
+source "$(dirname "$0")/check-postgres.sh" ${POSTGRES_VERSION}
 
 run_test () {
   echo
@@ -35,14 +25,7 @@ run_test () {
   cat $1 | docker exec -i ${container_name} psql --variable ON_ERROR_STOP=1 $connection_url -f-
 }
 
-# Setup
-fail_if_postgres_not_running
-
-# Build (optional)
-if [ "$usage_skip_build" = "false" ]; then
-  mise run build --force
-fi
-
+# Reset database
 mise run reset --force --postgres ${POSTGRES_VERSION}
 
 echo

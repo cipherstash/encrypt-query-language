@@ -3,17 +3,9 @@ description = "Run SQLx tests with hybrid migration approach"
 dir = "{{config_root}}"
 env = { DATABASE_URL = "postgresql://{{get_env(name='POSTGRES_USER', default='cipherstash')}}:{{get_env(name='POSTGRES_PASSWORD', default='password')}}@{{get_env(name='POSTGRES_HOST', default='localhost')}}:{{get_env(name='POSTGRES_PORT', default='7432')}}/{{get_env(name='POSTGRES_DB', default='cipherstash')}}" }
 run = """
-# Build EQL SQL from source
-echo "Building EQL SQL..."
-mise run build --force
-
 # Copy built SQL to SQLx migrations (EQL install is generated, not static)
 echo "Updating SQLx migrations with built EQL..."
 cp release/cipherstash-encrypt.sql tests/sqlx/migrations/001_install_eql.sql
-
-# Ensure PostgreSQL is running
-echo "Starting PostgreSQL..."
-mise run postgres:up --extra-args "--detach --wait"
 
 # Run SQLx migrations and tests
 echo "Running SQLx migrations..."
