@@ -23,3 +23,8 @@ run = """
   rm -f release/cipherstash-encrypt-uninstall.sql
   rm -f release/cipherstash-encrypt.sql
 """
+
+[tasks."test"]
+description = "Run all tests (legacy SQL + SQLx Rust)"
+sources = ["src/**/*_test.sql", "tests/**/*.sql", "tests/sqlx/**/*.rs"]
+run = "{{config_root}}/tasks/test-all.sh"
