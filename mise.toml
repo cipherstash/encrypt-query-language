@@ -6,11 +6,15 @@
 #     "./tests/mise.tcp.toml",
 #     "./tests/mise.tls.toml",
 # ]
+
+[tools]
+rust = "latest"
+"cargo:cargo-binstall" = "latest"
+"cargo:sqlx-cli" = "latest"
+
+
 [task_config]
-includes = [
-  "tasks",
-  "tasks/postgres.toml",
-]
+includes = ["tasks", "tasks/postgres.toml"]
 
 [env]
 POSTGRES_DB = "cipherstash"
