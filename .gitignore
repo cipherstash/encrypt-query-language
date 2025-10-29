@@ -199,6 +199,9 @@ cipherstash-proxy.toml
 # build artifacts
 release/
 
+# Generated documentation
+docs/api/
+
 
 
 # jupyter notebook
