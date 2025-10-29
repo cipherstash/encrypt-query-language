@@ -13,6 +13,11 @@ errors=0
 warnings=0
 
 for file in $(find src -name "*.sql" -not -name "*_test.sql"); do
+  # Skip auto-generated files
+  if grep -q "^-- AUTOMATICALLY GENERATED FILE" "$file" 2>/dev/null; then
+    continue
+  fi
+
   # For each CREATE FUNCTION, check tags
   functions=$(grep -n "^CREATE FUNCTION" "$file" 2>/dev/null | cut -d: -f1 || echo "")
 
