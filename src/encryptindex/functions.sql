@@ -99,8 +99,8 @@ $$ LANGUAGE plpgsql;
 --!
 --! @return TABLE(table_name text, column_name text, target_column text) Column mappings
 --!
---! @note Target column is NULL if encrypted column doesn't exist yet (LEFT JOIN returns NULL when no match)
---! @note Target column type must be eql_v2_encrypted
+--! @note Target column is NULL if no column exists matching either 'column_name' or 'column_name_encrypted' with type eql_v2_encrypted
+--! @note The LEFT JOIN checks both original and '_encrypted' suffix variations with type verification
 --! @see eql_v2.select_pending_columns
 --! @see eql_v2.create_encrypted_columns
 CREATE FUNCTION eql_v2.select_target_columns()
@@ -149,7 +149,7 @@ $$ LANGUAGE sql;
 --!
 --! @return TABLE(table_name text, column_name text) Created encrypted columns
 --!
---! @note Executes ALTER TABLE ADD COLUMN statements dynamically
+--! @warning Executes dynamic DDL (ALTER TABLE ADD COLUMN) - modifies database schema
 --! @note Only creates columns that don't already exist
 --! @see eql_v2.select_target_columns
 --! @see eql_v2.rename_encrypted_columns
@@ -177,7 +177,7 @@ $$ LANGUAGE plpgsql;
 --!
 --! @return TABLE(table_name text, column_name text, target_column text) Renamed columns
 --!
---! @note Executes ALTER TABLE RENAME COLUMN statements dynamically
+--! @warning Executes dynamic DDL (ALTER TABLE RENAME COLUMN) - modifies database schema
 --! @note Only renames columns where target is '{column_name}_encrypted'
 --! @see eql_v2.create_encrypted_columns
 CREATE FUNCTION eql_v2.rename_encrypted_columns()
@@ -198,15 +198,15 @@ $$ LANGUAGE plpgsql;
 --! @brief Count rows encrypted with active configuration
 --! @internal
 --!
---! Counts rows in a table where the encrypted column's version ('v' field)
---! matches the active configuration ID. Used to track encryption progress.
+--! Counts rows in a table where the encrypted column was encrypted using
+--! the currently active configuration. Used to track encryption progress.
 --!
 --! @param table_name text Name of table to check
 --! @param column_name text Name of encrypted column to check
---! @return bigint Count of rows matching active config version
+--! @return bigint Count of rows encrypted with active configuration
 --!
---! @note Checks 'v' field in encrypted JSONB payload
---! @note Compares to active configuration's ID
+--! @note The 'v' field in encrypted payloads stores the payload version ("2"), not the configuration ID
+--! @note Configuration tracking mechanism is implementation-specific
 CREATE FUNCTION eql_v2.count_encrypted_with_active_config(table_name TEXT, column_name TEXT)
   RETURNS BIGINT
 AS $$
