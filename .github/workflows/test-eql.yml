@@ -26,9 +26,27 @@ defaults:
     shell: bash -l {0}
 
 jobs:
+  validate-docs:
+    name: "Validate SQL Documentation"
+    runs-on: ubuntu-latest-m
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v2
+        with:
+          version: 2025.1.6
+          install: true
+          cache: true
+
+      - name: Validate SQL documentation
+        run: |
+          mise run docs:validate
+
   test:
     name: "Test EQL SQL components"
-    runs-on: blacksmith-16vcpu-ubuntu-2204
+    runs-on: ubuntu-latest-m
+    needs: validate-docs
 
     strategy:
       fail-fast: false
@@ -56,3 +74,6 @@ jobs:
           export active_rust_toolchain=$(rustup show active-toolchain | cut -d' ' -f1)
           rustup component add --toolchain ${active_rust_toolchain} rustfmt clippy
           mise run --output prefix test --postgres ${POSTGRES_VERSION}
+
+
+
