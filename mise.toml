@@ -55,3 +55,64 @@ dir = "{{config_root}}/tests/sqlx"
 run = """
 cargo watch -x test
 """
+
+[tasks."docs:generate"]
+description = "Generate API documentation with Doxygen"
+run = """
+  echo "Generating API documentation..."
+  doxygen Doxyfile
+  echo ""
+  echo "✓ Documentation generated:"
+  echo "  - XML (primary): docs/api/xml/"
+  echo "  - HTML (preview): docs/api/html/index.html"
+  echo ""
+  echo "See docs/api/README.md for XML format details"
+"""
+
+[tasks."docs:validate"]
+description = "Validate SQL documentation"
+run = "./tasks/docs/validate.sh"
+
+[tasks."docs:markdown"]
+description = "Generate Markdown from XML documentation"
+run = """
+  echo "Converting XML to Markdown..."
+
+  # Ensure XML exists
+  if [ ! -d "docs/api/xml" ]; then
+    echo "Error: XML documentation not found. Run 'mise run docs:generate' first."
+    exit 1
+  fi
+
+  # Run converter
+  python3 tasks/xml-to-markdown.py docs/api/xml docs/api/markdown
+
+  echo ""
+  echo "✓ Markdown documentation: docs/api/markdown/API.md"
+"""
+
+[tasks."docs:package"]
+description = "Package documentation for distribution"
+run = """
+  echo "Packaging documentation..."
+
+  # Create archive name with version
+  VERSION=$(grep PROJECT_NUMBER Doxyfile | cut -d'"' -f2 | tr -d ' ')
+  ARCHIVE="eql-docs-xml-${VERSION}.tar.gz"
+
+  # Package XML + schemas + README + Markdown
+  cd docs/api
+  tar -czf "../../${ARCHIVE}" \
+    --no-xattrs \
+    xml/*.xml \
+    xml/*.xsd \
+    markdown/API.md \
+    README.md
+  cd ../..
+
+  echo ""
+  echo "✓ Documentation packaged: ${ARCHIVE}"
+  echo "  Contents: XML files, XSD schemas, Markdown API reference, README"
+  echo ""
+  echo "Extract with: tar -xzf ${ARCHIVE}"
+"""
