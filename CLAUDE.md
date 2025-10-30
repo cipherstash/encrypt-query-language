@@ -12,8 +12,17 @@ This project uses `mise` for task management. Common commands:
 - `mise run postgres:down` - Stop PostgreSQL containers
 - `mise run reset` - Reset database state
 - `mise run clean` (alias: `mise r k`) - Clean release files
+
+### Documentation
 - `mise run docs:generate` - Generate API documentation (requires doxygen)
+  - Outputs XML (primary) and HTML (preview) formats
+  - XML suitable for downstream processing/website integration
+  - See `docs/api/README.md` for XML format details
+- `mise run docs:markdown` - Convert XML to Markdown API reference
+  - Generates single-file API reference: `docs/api/markdown/API.md`
+  - Includes 84 documented functions with parameters, return values, and source links
 - `mise run docs:validate` - Validate documentation coverage and tags
+- `mise run docs:package` - Package XML docs for distribution (~230KB archive)
 
 ### Testing
 - Run all tests: `mise run test`
@@ -137,6 +146,18 @@ mise run docs:validate:documented-sql # Validate SQL syntax (requires database)
 ### Template Files
 
 Template files (e.g., `version.template`) must be documented. The Doxygen comments are automatically included in generated files during build.
+
+### Generated Documentation Format
+
+The documentation is generated in **XML format** as the primary output:
+
+- **Location**: `docs/api/xml/`
+- **Format**: Doxygen XML (v1.15.0) with XSD schemas
+- **Usage**: Machine-readable, suitable for downstream processing
+- **Publishing**: Package with `mise run docs:package` → creates `eql-docs-xml-2.x.tar.gz`
+- **Integration**: See `docs/api/README.md` for XML structure and transformation examples
+
+HTML output is also generated in `docs/api/html/` for local preview only.
 
 ## Development Notes
 
