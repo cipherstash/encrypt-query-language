@@ -15,15 +15,30 @@ CREATE_SUBDIRS         = NO
 #---------------------------------------------------------------------------
 # Build Settings
 #---------------------------------------------------------------------------
+# PRIMARY OUTPUT: XML for downstream processing
+# HTML: Optional, for local preview only
+# MARKDOWN: Experimental (may not generate in all Doxygen versions)
 
 GENERATE_HTML          = YES
 GENERATE_LATEX         = NO
-GENERATE_XML           = NO
+GENERATE_XML           = YES
 GENERATE_MAN           = NO
+GENERATE_MARKDOWN      = YES
 
 HTML_OUTPUT            = html
 HTML_FILE_EXTENSION    = .html
 HTML_DYNAMIC_SECTIONS  = YES
+
+# XML Settings - Primary documentation format
+XML_OUTPUT             = xml
+XML_PROGRAMLISTING     = YES
+
+# Markdown generation not supported in Doxygen 1.15.0
+# Use external tools to convert XML to Markdown:
+# - doxybook2 (C++, recommended): https://github.com/matusnovak/doxybook2
+# - moxygen (Node.js): https://github.com/sourcey/moxygen
+# - esp-doxybook (Python): https://pypi.org/project/esp-doxybook/
+# See docs/api/README.md for integration examples
 
 #---------------------------------------------------------------------------
 # Input Settings
@@ -35,12 +50,17 @@ RECURSIVE              = YES
 EXCLUDE_PATTERNS       = *_test.sql
 
 # Treat SQL files as C++ for parsing
+# NOTE: Doxygen has no native SQL support. Parsing as C++ is imperfect but allows
+# extraction of function names and documentation comments.
 EXTENSION_MAPPING      = sql=C++ template=C++
 
 # CRITICAL: Input filter to convert SQL comments (--!) to C++ style (//!)
 # This is REQUIRED for Doxygen to recognize SQL comments
 INPUT_FILTER           = "tasks/docs/doxygen-filter.sh"
 FILTER_SOURCE_FILES    = YES
+
+# Source patterns - treat SQL keywords more gracefully
+FILTER_PATTERNS        =
 
 #---------------------------------------------------------------------------
 # Extraction Settings
@@ -62,6 +82,16 @@ SHOW_NAMESPACES        = YES
 
 JAVADOC_AUTOBRIEF      = YES
 OPTIMIZE_OUTPUT_FOR_C  = YES
+
+# Disable some C++-specific features that don't apply to SQL
+BUILTIN_STL_SUPPORT    = NO
+CPP_CLI_SUPPORT        = NO
+IDL_PROPERTY_SUPPORT   = NO
+
+# Enable better handling of functions/procedures
+EXTRACT_LOCAL_METHODS  = YES
+SORT_MEMBER_DOCS       = YES
+SORT_BRIEF_DOCS        = YES
 
 #---------------------------------------------------------------------------
 # Warning Settings
