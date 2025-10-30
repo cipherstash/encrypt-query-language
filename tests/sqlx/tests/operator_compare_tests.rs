@@ -9,12 +9,10 @@ use sqlx::PgPool;
 // Helper macro to reduce repetition for compare tests
 macro_rules! assert_compare {
     ($pool:expr, $sql_a:expr, $sql_b:expr, $expected:expr, $msg:expr) => {
-        let result: i32 = sqlx::query_scalar(&format!(
-            "SELECT eql_v2.compare({}, {})",
-            $sql_a, $sql_b
-        ))
-        .fetch_one($pool)
-        .await?;
+        let result: i32 =
+            sqlx::query_scalar(&format!("SELECT eql_v2.compare({}, {})", $sql_a, $sql_b))
+                .fetch_one($pool)
+                .await?;
         assert_eq!(result, $expected, $msg);
     };
 }
@@ -30,7 +28,7 @@ async fn compare_ore_cllw_var_8_hello_path(pool: PgPool) -> Result<()> {
     let b = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(2), 'd90b97b5207d30fe867ca816ed0fe4a7')";
     let c = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(3), 'd90b97b5207d30fe867ca816ed0fe4a7')";
 
-    // 9 assertions
+    // 9 assertions: reflexive, transitive, and antisymmetric comparison properties
     assert_compare!(&pool, a, a, 0, "compare(a, a) should equal 0");
     assert_compare!(&pool, a, b, -1, "compare(a, b) should equal -1");
     assert_compare!(&pool, a, c, -1, "compare(a, c) should equal -1");
@@ -55,7 +53,7 @@ async fn compare_ore_cllw_var_8_number_path(pool: PgPool) -> Result<()> {
     let b = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(5), '3dba004f4d7823446e7cb71f6681b344')";
     let c = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(10), '3dba004f4d7823446e7cb71f6681b344')";
 
-    // 9 assertions
+    // 9 assertions: reflexive, transitive, and antisymmetric comparison properties
     assert_compare!(&pool, a, a, 0, "compare(a, a) should equal 0");
     assert_compare!(&pool, a, b, -1, "compare(a, b) should equal -1");
     assert_compare!(&pool, a, c, -1, "compare(a, c) should equal -1");
@@ -78,7 +76,7 @@ async fn compare_ore_block_u64_8_256(pool: PgPool) -> Result<()> {
     let b = "create_encrypted_ore_json(21)";
     let c = "create_encrypted_ore_json(42)";
 
-    // 9 assertions
+    // 9 assertions: reflexive, transitive, and antisymmetric comparison properties
     assert_compare!(&pool, a, a, 0, "compare(a, a) should equal 0");
     assert_compare!(&pool, a, b, -1, "compare(a, b) should equal -1");
     assert_compare!(&pool, a, c, -1, "compare(a, c) should equal -1");
@@ -101,7 +99,7 @@ async fn compare_blake3_index(pool: PgPool) -> Result<()> {
     let b = "create_encrypted_json(2, 'b3')";
     let c = "create_encrypted_json(3, 'b3')";
 
-    // 9 assertions
+    // 9 assertions: reflexive, transitive, and antisymmetric comparison properties
     assert_compare!(&pool, a, a, 0, "compare(a, a) should equal 0");
     assert_compare!(&pool, a, b, -1, "compare(a, b) should equal -1");
     assert_compare!(&pool, a, c, -1, "compare(a, c) should equal -1");
@@ -124,7 +122,7 @@ async fn compare_hmac_256_index(pool: PgPool) -> Result<()> {
     let b = "create_encrypted_json(2, 'hm')";
     let c = "create_encrypted_json(3, 'hm')";
 
-    // 9 assertions
+    // 9 assertions: reflexive, transitive, and antisymmetric comparison properties
     assert_compare!(&pool, a, a, 0, "compare(a, a) should equal 0");
     assert_compare!(&pool, a, b, -1, "compare(a, b) should equal -1");
     assert_compare!(&pool, a, c, -1, "compare(a, c) should equal -1");
@@ -147,7 +145,7 @@ async fn compare_no_index_terms(pool: PgPool) -> Result<()> {
     let b = "'{\"b\": 2}'::jsonb::eql_v2_encrypted";
     let c = "'{\"c\": 3}'::jsonb::eql_v2_encrypted";
 
-    // 9 assertions
+    // 9 assertions: reflexive, transitive, and antisymmetric comparison properties
     assert_compare!(&pool, a, a, 0, "compare(a, a) should equal 0");
     assert_compare!(&pool, a, b, -1, "compare(a, b) should equal -1");
     assert_compare!(&pool, a, c, -1, "compare(a, c) should equal -1");
@@ -175,7 +173,7 @@ async fn compare_hmac_with_null_ore_index(pool: PgPool) -> Result<()> {
     let b = "('{\"ob\": null}'::jsonb || create_encrypted_json(2, 'hm')::jsonb)::eql_v2_encrypted";
     let c = "('{\"ob\": null}'::jsonb || create_encrypted_json(3, 'hm')::jsonb)::eql_v2_encrypted";
 
-    // 9 assertions
+    // 9 assertions: reflexive, transitive, and antisymmetric comparison properties
     assert_compare!(&pool, a, a, 0, "compare(a, a) should equal 0");
     assert_compare!(&pool, a, b, -1, "compare(a, b) should equal -1");
     assert_compare!(&pool, a, c, -1, "compare(a, c) should equal -1");
