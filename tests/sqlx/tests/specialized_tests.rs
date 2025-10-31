@@ -1,6 +1,5 @@
 //! Specialized function tests
 //!
-//! Converted from various specialized test files:
 //! - src/ste_vec/functions_test.sql (18 assertions)
 //! - src/ore_block_u64_8_256/functions_test.sql (8 assertions)
 //! - src/hmac_256/functions_test.sql (3 assertions)
@@ -18,7 +17,6 @@ use sqlx::PgPool;
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn ste_vec_returns_array_with_three_elements(pool: PgPool) -> Result<()> {
     // Test: ste_vec() returns array with 3 elements for encrypted data
-    // Original SQL lines 7-25 in src/ste_vec/functions_test.sql
 
     // ste_vec() returns eql_v2_encrypted[] - use array_length to verify
     let result: Option<i32> = sqlx::query_scalar(
@@ -35,7 +33,6 @@ async fn ste_vec_returns_array_with_three_elements(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn ste_vec_returns_array_for_ste_vec_element(pool: PgPool) -> Result<()> {
     // Test: ste_vec() returns array with 3 elements for ste_vec element itself
-    // Original SQL lines 18-22 in src/ste_vec/functions_test.sql
 
     let result: Option<i32> = sqlx::query_scalar(
         "SELECT array_length(eql_v2.ste_vec(get_numeric_ste_vec_10()::eql_v2_encrypted), 1)"
@@ -51,7 +48,6 @@ async fn ste_vec_returns_array_for_ste_vec_element(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn is_ste_vec_array_returns_true_for_valid_array(pool: PgPool) -> Result<()> {
     // Test: is_ste_vec_array() returns true for valid ste_vec array
-    // Original SQL lines 28-41 in src/ste_vec/functions_test.sql
 
     let result: bool = sqlx::query_scalar(
         "SELECT eql_v2.is_ste_vec_array('{\"a\": 1}'::jsonb::eql_v2_encrypted)"
@@ -67,7 +63,6 @@ async fn is_ste_vec_array_returns_true_for_valid_array(pool: PgPool) -> Result<(
 #[sqlx::test]
 async fn is_ste_vec_array_returns_false_for_invalid_array(pool: PgPool) -> Result<()> {
     // Test: is_ste_vec_array() returns false for invalid arrays
-    // Original SQL lines 35-39 in src/ste_vec/functions_test.sql
 
     let result1: bool = sqlx::query_scalar(
         "SELECT eql_v2.is_ste_vec_array('{\"a\": 0}'::jsonb::eql_v2_encrypted)"
@@ -91,7 +86,6 @@ async fn is_ste_vec_array_returns_false_for_invalid_array(pool: PgPool) -> Resul
 #[sqlx::test]
 async fn to_ste_vec_value_extracts_ste_vec_fields(pool: PgPool) -> Result<()> {
     // Test: to_ste_vec_value() extracts fields from ste_vec structure
-    // Original SQL lines 44-63 in src/ste_vec/functions_test.sql
 
     // to_ste_vec_value() returns eql_v2_encrypted - cast to jsonb for parsing
     let result: serde_json::Value = sqlx::query_scalar(
@@ -112,7 +106,6 @@ async fn to_ste_vec_value_extracts_ste_vec_fields(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn to_ste_vec_value_returns_original_for_non_ste_vec(pool: PgPool) -> Result<()> {
     // Test: to_ste_vec_value() returns original if not ste_vec value
-    // Original SQL lines 55-60 in src/ste_vec/functions_test.sql
 
     let result: serde_json::Value = sqlx::query_scalar(
         "SELECT eql_v2.to_ste_vec_value('{\"i\": \"i\", \"v\": 2, \"b3\": \"b3\"}'::jsonb)::jsonb"
@@ -132,7 +125,6 @@ async fn to_ste_vec_value_returns_original_for_non_ste_vec(pool: PgPool) -> Resu
 #[sqlx::test]
 async fn is_ste_vec_value_returns_true_for_valid_value(pool: PgPool) -> Result<()> {
     // Test: is_ste_vec_value() returns true for valid ste_vec value
-    // Original SQL lines 67-82 in src/ste_vec/functions_test.sql
 
     let result: bool = sqlx::query_scalar(
         "SELECT eql_v2.is_ste_vec_value('{\"sv\": [1]}'::jsonb::eql_v2_encrypted)"
@@ -148,7 +140,6 @@ async fn is_ste_vec_value_returns_true_for_valid_value(pool: PgPool) -> Result<(
 #[sqlx::test]
 async fn is_ste_vec_value_returns_false_for_invalid_values(pool: PgPool) -> Result<()> {
     // Test: is_ste_vec_value() returns false for invalid values
-    // Original SQL lines 74-79 in src/ste_vec/functions_test.sql
 
     let result1: bool = sqlx::query_scalar(
         "SELECT eql_v2.is_ste_vec_value('{\"sv\": []}'::jsonb::eql_v2_encrypted)"
@@ -172,7 +163,6 @@ async fn is_ste_vec_value_returns_false_for_invalid_values(pool: PgPool) -> Resu
 #[sqlx::test]
 async fn ste_vec_contains_self(pool: PgPool) -> Result<()> {
     // Test: ste_vec_contains() returns true when value contains itself
-    // Original SQL lines 91-104 in src/ste_vec/functions_test.sql
 
     let result: bool = sqlx::query_scalar(
         "SELECT eql_v2.ste_vec_contains(
@@ -191,7 +181,6 @@ async fn ste_vec_contains_self(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn ste_vec_contains_term(pool: PgPool) -> Result<()> {
     // Test: ste_vec_contains() returns true when value contains extracted term
-    // Original SQL lines 113-131 in src/ste_vec/functions_test.sql
 
     let result: bool = sqlx::query_scalar(
         "SELECT eql_v2.ste_vec_contains(
@@ -210,7 +199,6 @@ async fn ste_vec_contains_term(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn ste_vec_term_does_not_contain_array(pool: PgPool) -> Result<()> {
     // Test: ste_vec_contains() returns false when term doesn't contain array
-    // Original SQL line 129 in src/ste_vec/functions_test.sql
 
     let result: bool = sqlx::query_scalar(
         "SELECT eql_v2.ste_vec_contains(
@@ -233,7 +221,6 @@ async fn ste_vec_term_does_not_contain_array(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn ore_block_extracts_ore_term(pool: PgPool) -> Result<()> {
     // Test: ore_block_u64_8_256() extracts ore index term from encrypted data
-    // Original SQL lines 3-7 in src/ore_block_u64_8_256/functions_test.sql
 
     // ore_block_u64_8_256() returns custom type - cast to text for verification
     let result: String = sqlx::query_scalar(
@@ -250,7 +237,6 @@ async fn ore_block_extracts_ore_term(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn ore_block_throws_exception_for_missing_term(pool: PgPool) -> Result<()> {
     // Test: ore_block_u64_8_256() throws exception when ore term is missing
-    // Original SQL lines 9-11 in src/ore_block_u64_8_256/functions_test.sql
 
     QueryAssertion::new(&pool, "SELECT eql_v2.ore_block_u64_8_256('{}'::jsonb)")
         .throws_exception()
@@ -262,7 +248,6 @@ async fn ore_block_throws_exception_for_missing_term(pool: PgPool) -> Result<()>
 #[sqlx::test]
 async fn has_ore_block_returns_true_for_ore_data(pool: PgPool) -> Result<()> {
     // Test: has_ore_block_u64_8_256() returns true for data with ore term
-    // Original SQL lines 18-26 in src/ore_block_u64_8_256/functions_test.sql
 
     let result: bool = sqlx::query_scalar(
         "SELECT eql_v2.has_ore_block_u64_8_256(e) FROM ore WHERE id = 42 LIMIT 1"
@@ -282,7 +267,6 @@ async fn has_ore_block_returns_true_for_ore_data(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn hmac_extracts_hmac_term(pool: PgPool) -> Result<()> {
     // Test: hmac_256() extracts hmac index term from encrypted data
-    // Original SQL lines 3-7 in src/hmac_256/functions_test.sql
 
     let result: String = sqlx::query_scalar(
         "SELECT eql_v2.hmac_256('{\"hm\": \"u\"}'::jsonb)"
@@ -299,7 +283,6 @@ async fn hmac_extracts_hmac_term(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn hmac_throws_exception_for_missing_term(pool: PgPool) -> Result<()> {
     // Test: hmac_256() throws exception when hmac term is missing
-    // Original SQL lines 9-12 in src/hmac_256/functions_test.sql
 
     QueryAssertion::new(&pool, "SELECT eql_v2.hmac_256('{}'::jsonb)")
         .throws_exception()
@@ -311,7 +294,6 @@ async fn hmac_throws_exception_for_missing_term(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn has_hmac_returns_true_for_hmac_data(pool: PgPool) -> Result<()> {
     // Test: has_hmac_256() returns true for data with hmac term
-    // Original SQL lines 17-25 in src/hmac_256/functions_test.sql
 
     let result: bool = sqlx::query_scalar(
         "SELECT eql_v2.has_hmac_256(create_encrypted_json(1, 'hm'))"
@@ -331,7 +313,6 @@ async fn has_hmac_returns_true_for_hmac_data(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn bloom_filter_extracts_bloom_term(pool: PgPool) -> Result<()> {
     // Test: bloom_filter() extracts bloom filter term from encrypted data
-    // Original SQL lines 3-7 in src/bloom_filter/functions_test.sql
 
     // bloom_filter() returns smallint[] - cast to text for verification
     let result: String = sqlx::query_scalar(
@@ -348,7 +329,6 @@ async fn bloom_filter_extracts_bloom_term(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn bloom_filter_throws_exception_for_missing_term(pool: PgPool) -> Result<()> {
     // Test: bloom_filter() throws exception when bloom filter term is missing
-    // Original SQL lines 9-12 in src/bloom_filter/functions_test.sql
 
     QueryAssertion::new(&pool, "SELECT eql_v2.bloom_filter('{}'::jsonb)")
         .throws_exception()
@@ -364,7 +344,6 @@ async fn bloom_filter_throws_exception_for_missing_term(pool: PgPool) -> Result<
 #[sqlx::test]
 async fn eql_version_returns_dev_in_test_environment(pool: PgPool) -> Result<()> {
     // Test: version() returns 'DEV' in test environment
-    // Original SQL lines 3-8 in src/version_test.sql
 
     let version: String = sqlx::query_scalar("SELECT eql_v2.version()")
         .fetch_one(&pool)

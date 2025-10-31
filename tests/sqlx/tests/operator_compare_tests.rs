@@ -1,6 +1,5 @@
 //! Operator compare function tests
 //!
-//! Converted from src/operators/compare_test.sql
 //! Tests the main eql_v2.compare() function with all index types
 
 use anyhow::Result;
@@ -20,7 +19,6 @@ macro_rules! assert_compare {
 #[sqlx::test]
 async fn compare_ore_cllw_var_8_hello_path(pool: PgPool) -> Result<()> {
     // Test: compare() with ORE CLLW VAR 8 on $.hello path
-    // Original SQL lines 4-30 in src/operators/compare_test.sql
     // {"hello": "world{N}"}
     // $.hello: d90b97b5207d30fe867ca816ed0fe4a7
 
@@ -45,7 +43,6 @@ async fn compare_ore_cllw_var_8_hello_path(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn compare_ore_cllw_var_8_number_path(pool: PgPool) -> Result<()> {
     // Test: compare() with ORE CLLW VAR 8 on $.number path
-    // Original SQL lines 33-59 in src/operators/compare_test.sql
     // {"number": {N}}
     // $.number: 3dba004f4d7823446e7cb71f6681b344
 
@@ -70,7 +67,6 @@ async fn compare_ore_cllw_var_8_number_path(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn compare_ore_block_u64_8_256(pool: PgPool) -> Result<()> {
     // Test: compare() with ORE Block U64 8 256
-    // Original SQL lines 62-86 in src/operators/compare_test.sql
 
     let a = "create_encrypted_ore_json(1)";
     let b = "create_encrypted_ore_json(21)";
@@ -93,7 +89,6 @@ async fn compare_ore_block_u64_8_256(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn compare_blake3_index(pool: PgPool) -> Result<()> {
     // Test: compare() with Blake3 index
-    // Original SQL lines 89-112 in src/operators/compare_test.sql
 
     let a = "create_encrypted_json(1, 'b3')";
     let b = "create_encrypted_json(2, 'b3')";
@@ -116,7 +111,6 @@ async fn compare_blake3_index(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn compare_hmac_256_index(pool: PgPool) -> Result<()> {
     // Test: compare() with HMAC 256 index
-    // Original SQL lines 115-138 in src/operators/compare_test.sql
 
     let a = "create_encrypted_json(1, 'hm')";
     let b = "create_encrypted_json(2, 'hm')";
@@ -139,7 +133,6 @@ async fn compare_hmac_256_index(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn compare_no_index_terms(pool: PgPool) -> Result<()> {
     // Test: compare() with no index terms (fallback to literal comparison)
-    // Original SQL lines 142-166 in src/operators/compare_test.sql
 
     let a = "'{\"a\": 1}'::jsonb::eql_v2_encrypted";
     let b = "'{\"b\": 2}'::jsonb::eql_v2_encrypted";
@@ -162,7 +155,6 @@ async fn compare_no_index_terms(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn compare_hmac_with_null_ore_index(pool: PgPool) -> Result<()> {
     // Test: compare() with HMAC when record has null ORE index of higher precedence
-    // Original SQL lines 178-207 in src/operators/compare_test.sql
     //
     // BUG FIX COVERAGE:
     // ORE Block indexes 'ob' are used in compare before hmac_256 indexes.

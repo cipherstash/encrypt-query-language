@@ -1,5 +1,4 @@
 -- Fixture for config tests
--- Converted from src/config/config_test.sql lines 4-19
 
 DROP TABLE IF EXISTS users CASCADE;
 CREATE TABLE users (

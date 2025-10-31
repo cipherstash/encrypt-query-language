@@ -1,6 +1,5 @@
 //! Comparison operator tests (< > <= >=)
 //!
-//! Converted from src/operators/<_test.sql, >_test.sql, <=_test.sql, >=_test.sql
 //! Tests EQL comparison operators with ORE (Order-Revealing Encryption)
 
 use anyhow::{Context, Result};
@@ -47,7 +46,6 @@ async fn create_encrypted_json_with_index(
 async fn less_than_operator_with_ore(pool: PgPool) -> Result<()> {
     // Test: e < e with ORE encryption
     // Value 42 should have 41 records less than it (1-41)
-    // Original SQL lines 13-20 in src/operators/<_test.sql
     // Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
 
     // Get encrypted value for id=42 from pre-seeded ore table
@@ -67,7 +65,6 @@ async fn less_than_operator_with_ore(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn lt_function_with_ore(pool: PgPool) -> Result<()> {
     // Test: eql_v2.lt() function with ORE
-    // Original SQL lines 30-37 in src/operators/<_test.sql
 
     let ore_term = get_ore_encrypted(&pool, 42).await?;
 
@@ -120,7 +117,6 @@ async fn less_than_operator_jsonb_less_than_encrypted(pool: PgPool) -> Result<()
 async fn greater_than_operator_with_ore(pool: PgPool) -> Result<()> {
     // Test: e > e with ORE encryption
     // Value 42 should have 57 records greater than it (43-99)
-    // Original SQL lines 13-20 in src/operators/>_test.sql
     // Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
 
     let ore_term = get_ore_encrypted(&pool, 42).await?;
@@ -138,7 +134,6 @@ async fn greater_than_operator_with_ore(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn gt_function_with_ore(pool: PgPool) -> Result<()> {
     // Test: eql_v2.gt() function with ORE
-    // Original SQL lines 30-37 in src/operators/>_test.sql
 
     let ore_term = get_ore_encrypted(&pool, 42).await?;
 
@@ -190,7 +185,6 @@ async fn greater_than_operator_jsonb_greater_than_encrypted(pool: PgPool) -> Res
 async fn less_than_or_equal_operator_with_ore(pool: PgPool) -> Result<()> {
     // Test: e <= e with ORE encryption
     // Value 42 should have 42 records <= it (1-42 inclusive)
-    // Original SQL lines 10-24 in src/operators/<=_test.sql
     // Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
 
     let ore_term = get_ore_encrypted(&pool, 42).await?;
@@ -209,7 +203,6 @@ async fn less_than_or_equal_operator_with_ore(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn lte_function_with_ore(pool: PgPool) -> Result<()> {
     // Test: eql_v2.lte() function with ORE
-    // Original SQL lines 32-46 in src/operators/<=_test.sql
 
     let ore_term = get_ore_encrypted(&pool, 42).await?;
 
@@ -226,7 +219,6 @@ async fn lte_function_with_ore(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn less_than_or_equal_with_jsonb(pool: PgPool) -> Result<()> {
     // Test: e <= jsonb with ORE
-    // Original SQL lines 55-69 in src/operators/<=_test.sql
 
     let json_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
 
@@ -260,7 +252,6 @@ async fn less_than_or_equal_jsonb_lte_encrypted(pool: PgPool) -> Result<()> {
 async fn greater_than_or_equal_operator_with_ore(pool: PgPool) -> Result<()> {
     // Test: e >= e with ORE encryption
     // Value 42 should have 58 records >= it (42-99 inclusive)
-    // Original SQL lines 10-24 in src/operators/>=_test.sql
     // Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
 
     let ore_term = get_ore_encrypted(&pool, 42).await?;
@@ -278,7 +269,6 @@ async fn greater_than_or_equal_operator_with_ore(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn gte_function_with_ore(pool: PgPool) -> Result<()> {
     // Test: eql_v2.gte() function with ORE
-    // Original SQL lines 32-46 in src/operators/>=_test.sql
 
     let ore_term = get_ore_encrypted(&pool, 42).await?;
 
@@ -295,7 +285,6 @@ async fn gte_function_with_ore(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn greater_than_or_equal_with_jsonb(pool: PgPool) -> Result<()> {
     // Test: e >= jsonb with ORE
-    // Original SQL lines 55-85 in src/operators/>=_test.sql
 
     let json_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
 
@@ -309,7 +298,6 @@ async fn greater_than_or_equal_with_jsonb(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn greater_than_or_equal_jsonb_gte_encrypted(pool: PgPool) -> Result<()> {
     // Test: jsonb >= e with ORE (reverse direction)
-    // Original SQL lines 77-80 in src/operators/>=_test.sql
 
     let json_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
 

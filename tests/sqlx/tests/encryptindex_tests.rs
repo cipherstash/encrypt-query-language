@@ -1,6 +1,5 @@
 //! Encryptindex function tests
 //!
-//! Converted from src/encryptindex/functions_test.sql (41 assertions)
 //! Tests encrypted column creation and management
 
 use anyhow::{Context, Result};
@@ -42,7 +41,6 @@ async fn has_pending_column(pool: &PgPool, column_name: &str) -> Result<bool> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encryptindex_tables")))]
 async fn create_encrypted_columns_from_config(pool: PgPool) -> Result<()> {
     // Test: Create encrypted columns from configuration (7 assertions)
-    // Original SQL lines 8-56 in src/encryptindex/functions_test.sql
     // Verifies: pending columns, target columns, create_encrypted_columns(),
     // rename_encrypted_columns(), and resulting column types
 
@@ -72,13 +70,13 @@ async fn create_encrypted_columns_from_config(pool: PgPool) -> Result<()> {
     .execute(&pool)
     .await?;
 
-    // Verify column is pending (line 39)
+    // Verify column is pending
     assert!(
         has_pending_column(&pool, "name").await?,
         "name should be pending"
     );
 
-    // Verify target column doesn't exist yet (line 42)
+    // Verify target column doesn't exist yet
     let has_target: bool = sqlx::query_scalar(
         "SELECT EXISTS (
             SELECT * FROM eql_v2.select_target_columns() AS c
@@ -90,41 +88,41 @@ async fn create_encrypted_columns_from_config(pool: PgPool) -> Result<()> {
 
     assert!(!has_target, "target column should not exist");
 
-    // Create encrypted columns (line 45)
+    // Create encrypted columns
     sqlx::query("SELECT eql_v2.create_encrypted_columns()")
         .execute(&pool)
         .await?;
 
-    // Verify name_encrypted column exists (line 47)
+    // Verify name_encrypted column exists
     assert!(
         column_exists(&pool, "users", "name_encrypted").await?,
         "name_encrypted should exist"
     );
 
-    // Rename columns (line 50)
+    // Rename columns
     sqlx::query("SELECT eql_v2.rename_encrypted_columns()")
         .execute(&pool)
         .await?;
 
-    // Verify renamed columns (line 52)
+    // Verify renamed columns
     assert!(
         column_exists(&pool, "users", "name_plaintext").await?,
         "name_plaintext should exist"
     );
 
-    // Verify name exists as encrypted type (line 53)
+    // Verify name exists as encrypted type
     assert!(
         column_exists(&pool, "users", "name").await?,
         "name should exist"
     );
 
-    // Verify name_encrypted doesn't exist (line 54)
+    // Verify name_encrypted doesn't exist
     assert!(
         !column_exists(&pool, "users", "name_encrypted").await?,
         "name_encrypted should not exist"
     );
 
-    // Verify it's eql_v2_encrypted type (line 53)
+    // Verify it's eql_v2_encrypted type
     let is_encrypted_type: bool = sqlx::query_scalar(
         "SELECT EXISTS (
             SELECT * FROM information_schema.columns s
@@ -144,7 +142,6 @@ async fn create_encrypted_columns_from_config(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encryptindex_tables")))]
 async fn create_multiple_encrypted_columns(pool: PgPool) -> Result<()> {
     // Test: Create multiple encrypted columns from configuration (4 assertions)
-    // Original SQL lines 63-119 in src/encryptindex/functions_test.sql
     // Verifies: multiple columns with different indexes
 
     // Truncate config
@@ -180,13 +177,13 @@ async fn create_multiple_encrypted_columns(pool: PgPool) -> Result<()> {
     .execute(&pool)
     .await?;
 
-    // Verify name column is pending (line 102)
+    // Verify name column is pending
     assert!(
         has_pending_column(&pool, "name").await?,
         "name should be pending"
     );
 
-    // Verify target column doesn't exist (line 105)
+    // Verify target column doesn't exist
     let has_target: bool = sqlx::query_scalar(
         "SELECT EXISTS (
             SELECT * FROM eql_v2.select_target_columns() AS c
@@ -198,7 +195,7 @@ async fn create_multiple_encrypted_columns(pool: PgPool) -> Result<()> {
 
     assert!(has_target, "target column should not exist");
 
-    // Create columns (line 108)
+    // Create columns
     sqlx::query("SELECT eql_v2.create_encrypted_columns()")
         .execute(&pool)
         .await?;
@@ -219,7 +216,6 @@ async fn create_multiple_encrypted_columns(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encryptindex_tables")))]
 async fn select_pending_columns(pool: PgPool) -> Result<()> {
     // Test: select_pending_columns() returns correct columns (6 assertions)
-    // Original SQL lines 127-148 in src/encryptindex/functions_test.sql
 
     // Truncate config
     sqlx::query("TRUNCATE TABLE eql_v2_configuration")
@@ -249,7 +245,9 @@ async fn select_pending_columns(pool: PgPool) -> Result<()> {
     .await?;
 
     // Create table with plaintext and encrypted columns
-    sqlx::query("DROP TABLE IF EXISTS users CASCADE").execute(&pool).await?;
+    sqlx::query("DROP TABLE IF EXISTS users CASCADE")
+        .execute(&pool)
+        .await?;
     sqlx::query(
         "CREATE TABLE users (
             id bigint GENERATED ALWAYS AS IDENTITY,
@@ -262,9 +260,11 @@ async fn select_pending_columns(pool: PgPool) -> Result<()> {
     .await?;
 
     // Add search config with migrating flag
-    sqlx::query("SELECT eql_v2.add_search_config('users', 'name_encrypted', 'match', migrating => true)")
-        .execute(&pool)
-        .await?;
+    sqlx::query(
+        "SELECT eql_v2.add_search_config('users', 'name_encrypted', 'match', migrating => true)",
+    )
+    .execute(&pool)
+    .await?;
 
     // Migrate config to create encrypting state
     sqlx::query("SELECT eql_v2.migrate_config()")
@@ -300,7 +300,6 @@ async fn select_pending_columns(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encryptindex_tables")))]
 async fn select_target_columns(pool: PgPool) -> Result<()> {
     // Test: select_target_columns() returns correct columns (4 assertions)
-    // Original SQL lines 156-177 in src/encryptindex/functions_test.sql
 
     // Truncate config
     sqlx::query("TRUNCATE TABLE eql_v2_configuration")
@@ -340,23 +339,26 @@ async fn select_target_columns(pool: PgPool) -> Result<()> {
         .await?;
 
     // Verify target columns now exist
-    let target_columns: Vec<(String, Option<String>)> = sqlx::query_as(
-        "SELECT column_name, target_column FROM eql_v2.select_target_columns()",
-    )
-    .fetch_all(&pool)
-    .await?;
+    let target_columns: Vec<(String, Option<String>)> =
+        sqlx::query_as("SELECT column_name, target_column FROM eql_v2.select_target_columns()")
+            .fetch_all(&pool)
+            .await?;
 
-    assert!(
-        !target_columns.is_empty(),
-        "should have target columns"
-    );
+    assert!(!target_columns.is_empty(), "should have target columns");
 
     // Verify name has target_column set
     let name_has_target = target_columns.iter().any(|(col, target)| {
-        col == "name" && target.as_ref().map(|t| t == "name_encrypted").unwrap_or(false)
+        col == "name"
+            && target
+                .as_ref()
+                .map(|t| t == "name_encrypted")
+                .unwrap_or(false)
     });
 
-    assert!(name_has_target, "name should have target_column=name_encrypted");
+    assert!(
+        name_has_target,
+        "name should have target_column=name_encrypted"
+    );
 
     Ok(())
 }
@@ -364,7 +366,6 @@ async fn select_target_columns(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encryptindex_tables")))]
 async fn activate_pending_config(pool: PgPool) -> Result<()> {
     // Test: activate_config() transitions encrypting -> active (8 assertions)
-    // Original SQL lines 185-224 in src/encryptindex/functions_test.sql
 
     // Truncate config
     sqlx::query("TRUNCATE TABLE eql_v2_configuration")
@@ -394,7 +395,9 @@ async fn activate_pending_config(pool: PgPool) -> Result<()> {
     .await?;
 
     // Create table with plaintext and encrypted columns
-    sqlx::query("DROP TABLE IF EXISTS users CASCADE").execute(&pool).await?;
+    sqlx::query("DROP TABLE IF EXISTS users CASCADE")
+        .execute(&pool)
+        .await?;
     sqlx::query(
         "CREATE TABLE users (
             id bigint GENERATED ALWAYS AS IDENTITY,
@@ -407,15 +410,17 @@ async fn activate_pending_config(pool: PgPool) -> Result<()> {
     .await?;
 
     // Add search config and migrate
-    sqlx::query("SELECT eql_v2.add_search_config('users', 'name_encrypted', 'match', migrating => true)")
-        .execute(&pool)
-        .await?;
+    sqlx::query(
+        "SELECT eql_v2.add_search_config('users', 'name_encrypted', 'match', migrating => true)",
+    )
+    .execute(&pool)
+    .await?;
 
     sqlx::query("SELECT eql_v2.migrate_config()")
         .execute(&pool)
         .await?;
 
-    // Activate config (line 282)
+    // Activate config
     sqlx::query("SELECT eql_v2.activate_config()")
         .execute(&pool)
         .await?;
@@ -456,7 +461,6 @@ async fn activate_pending_config(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encryptindex_tables")))]
 async fn encrypted_column_index_generation(pool: PgPool) -> Result<()> {
     // Test: Encrypted columns are created with proper JSONB structure (5 assertions)
-    // Original SQL lines 232-268 in src/encryptindex/functions_test.sql
     // Verifies: JSON structure has required 'i' (index metadata) field
 
     // Truncate config
@@ -487,7 +491,9 @@ async fn encrypted_column_index_generation(pool: PgPool) -> Result<()> {
     .await?;
 
     // Create table
-    sqlx::query("DROP TABLE IF EXISTS users CASCADE").execute(&pool).await?;
+    sqlx::query("DROP TABLE IF EXISTS users CASCADE")
+        .execute(&pool)
+        .await?;
     sqlx::query(
         "CREATE TABLE users (
             id bigint GENERATED ALWAYS AS IDENTITY,
@@ -504,7 +510,7 @@ async fn encrypted_column_index_generation(pool: PgPool) -> Result<()> {
         .execute(&pool)
         .await?;
 
-    // Verify active config exists (line 171)
+    // Verify active config exists
     let has_active: bool = sqlx::query_scalar(
         "SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'active')",
     )
@@ -519,7 +525,6 @@ async fn encrypted_column_index_generation(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encryptindex_tables")))]
 async fn handle_null_values_in_encrypted_columns(pool: PgPool) -> Result<()> {
     // Test: Exception raised when pending config exists but no migrate called (7 assertions)
-    // Original SQL lines 276-290 in src/encryptindex/functions_test.sql
 
     // Truncate config
     sqlx::query("TRUNCATE TABLE eql_v2_configuration")
@@ -527,7 +532,9 @@ async fn handle_null_values_in_encrypted_columns(pool: PgPool) -> Result<()> {
         .await?;
 
     // Create table
-    sqlx::query("DROP TABLE IF EXISTS users CASCADE").execute(&pool).await?;
+    sqlx::query("DROP TABLE IF EXISTS users CASCADE")
+        .execute(&pool)
+        .await?;
     sqlx::query(
         "CREATE TABLE users (
             id bigint GENERATED ALWAYS AS IDENTITY,

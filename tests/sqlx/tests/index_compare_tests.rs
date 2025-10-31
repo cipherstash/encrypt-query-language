@@ -7,7 +7,6 @@
 //! - compare_ore_cllw_u64_8()
 //! - compare_ore_cllw_var_8()
 //!
-//! Converted from individual *_test.sql files:
 //! - src/blake3/compare_test.sql
 //! - src/hmac_256/compare_test.sql
 //! - src/ore_block_u64_8_256/compare_test.sql
@@ -39,7 +38,6 @@ macro_rules! assert_compare {
 #[sqlx::test]
 async fn blake3_compare_equal(pool: PgPool) -> Result<()> {
     // Test: compare_blake3() with equal values
-    // Original SQL: src/blake3/compare_test.sql lines 13,17,21
 
     let a = "create_encrypted_json(1, 'b3')";
     let b = "create_encrypted_json(2, 'b3')";
@@ -77,7 +75,6 @@ async fn blake3_compare_equal(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn blake3_compare_less_than(pool: PgPool) -> Result<()> {
     // Test: compare_blake3() with less than comparisons
-    // Original SQL: src/blake3/compare_test.sql lines 14,15,19,23
 
     let a = "create_encrypted_json(1, 'b3')";
     let b = "create_encrypted_json(2, 'b3')";
@@ -115,7 +112,6 @@ async fn blake3_compare_less_than(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn blake3_compare_greater_than(pool: PgPool) -> Result<()> {
     // Test: compare_blake3() with greater than comparisons
-    // Original SQL: src/blake3/compare_test.sql lines 18,22,23
 
     let a = "create_encrypted_json(1, 'b3')";
     let b = "create_encrypted_json(2, 'b3')";
@@ -157,7 +153,6 @@ async fn blake3_compare_greater_than(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn hmac_compare_equal(pool: PgPool) -> Result<()> {
     // Test: compare_hmac_256() with equal values
-    // Original SQL: src/hmac_256/compare_test.sql lines 13,17,21
 
     let a = "create_encrypted_json(1, 'hm')";
     let b = "create_encrypted_json(2, 'hm')";
@@ -195,7 +190,6 @@ async fn hmac_compare_equal(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn hmac_compare_less_than(pool: PgPool) -> Result<()> {
     // Test: compare_hmac_256() with less than comparisons
-    // Original SQL: src/hmac_256/compare_test.sql lines 14,15,19,23
 
     let a = "create_encrypted_json(1, 'hm')";
     let b = "create_encrypted_json(2, 'hm')";
@@ -233,7 +227,6 @@ async fn hmac_compare_less_than(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn hmac_compare_greater_than(pool: PgPool) -> Result<()> {
     // Test: compare_hmac_256() with greater than comparisons
-    // Original SQL: src/hmac_256/compare_test.sql lines 18,22,23
 
     let a = "create_encrypted_json(1, 'hm')";
     let b = "create_encrypted_json(2, 'hm')";
@@ -275,7 +268,6 @@ async fn hmac_compare_greater_than(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn ore_block_compare_equal(pool: PgPool) -> Result<()> {
     // Test: compare_ore_block_u64_8_256() with equal values
-    // Original SQL: src/ore_block_u64_8_256/compare_test.sql lines 14,18,22
 
     let a = "create_encrypted_ore_json(1)";
     let b = "create_encrypted_ore_json(21)";
@@ -313,7 +305,6 @@ async fn ore_block_compare_equal(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn ore_block_compare_less_than(pool: PgPool) -> Result<()> {
     // Test: compare_ore_block_u64_8_256() with less than comparisons
-    // Original SQL: src/ore_block_u64_8_256/compare_test.sql lines 15,16,20,24
 
     let a = "create_encrypted_ore_json(1)";
     let b = "create_encrypted_ore_json(21)";
@@ -351,7 +342,6 @@ async fn ore_block_compare_less_than(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn ore_block_compare_greater_than(pool: PgPool) -> Result<()> {
     // Test: compare_ore_block_u64_8_256() with greater than comparisons
-    // Original SQL: src/ore_block_u64_8_256/compare_test.sql lines 19,23,24
 
     let a = "create_encrypted_ore_json(1)";
     let b = "create_encrypted_ore_json(21)";
@@ -393,7 +383,6 @@ async fn ore_block_compare_greater_than(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn ore_cllw_u64_compare_equal(pool: PgPool) -> Result<()> {
     // Test: compare_ore_cllw_u64_8() with equal values
-    // Original SQL: src/ore_cllw_u64_8/compare_test.sql lines 16,20,24
     //
     // {"number": {N}}
     // $.number: 3dba004f4d7823446e7cb71f6681b344
@@ -434,7 +423,6 @@ async fn ore_cllw_u64_compare_equal(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn ore_cllw_u64_compare_less_than(pool: PgPool) -> Result<()> {
     // Test: compare_ore_cllw_u64_8() with less than comparisons
-    // Original SQL: src/ore_cllw_u64_8/compare_test.sql lines 17,18,22,26
     //
     // {"number": {N}}
     // $.number: 3dba004f4d7823446e7cb71f6681b344
@@ -475,7 +463,6 @@ async fn ore_cllw_u64_compare_less_than(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn ore_cllw_u64_compare_greater_than(pool: PgPool) -> Result<()> {
     // Test: compare_ore_cllw_u64_8() with greater than comparisons
-    // Original SQL: src/ore_cllw_u64_8/compare_test.sql lines 21,25,26
     //
     // {"number": {N}}
     // $.number: 3dba004f4d7823446e7cb71f6681b344
@@ -520,7 +507,6 @@ async fn ore_cllw_u64_compare_greater_than(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn ore_cllw_var_compare_equal(pool: PgPool) -> Result<()> {
     // Test: compare_ore_cllw_var_8() with equal values
-    // Original SQL: src/ore_cllw_var_8/compare_test.sql lines 16,20,24
     //
     // {"hello": "world{N}"}
     // $.hello: d90b97b5207d30fe867ca816ed0fe4a7
@@ -561,7 +547,6 @@ async fn ore_cllw_var_compare_equal(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn ore_cllw_var_compare_less_than(pool: PgPool) -> Result<()> {
     // Test: compare_ore_cllw_var_8() with less than comparisons
-    // Original SQL: src/ore_cllw_var_8/compare_test.sql lines 17,18,22,26
     //
     // {"hello": "world{N}"}
     // $.hello: d90b97b5207d30fe867ca816ed0fe4a7
@@ -602,7 +587,6 @@ async fn ore_cllw_var_compare_less_than(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn ore_cllw_var_compare_greater_than(pool: PgPool) -> Result<()> {
     // Test: compare_ore_cllw_var_8() with greater than comparisons
-    // Original SQL: src/ore_cllw_var_8/compare_test.sql lines 21,25,26
     //
     // {"hello": "world{N}"}
     // $.hello: d90b97b5207d30fe867ca816ed0fe4a7
