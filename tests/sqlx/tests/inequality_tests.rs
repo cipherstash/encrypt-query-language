@@ -56,7 +56,9 @@ async fn inequality_operator_finds_non_matching_records_hmac(pool: PgPool) -> Re
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
-async fn inequality_operator_returns_empty_for_non_existent_record_hmac(pool: PgPool) -> Result<()> {
+async fn inequality_operator_returns_empty_for_non_existent_record_hmac(
+    pool: PgPool,
+) -> Result<()> {
     // Test: <> with different record (not in test data)
     // Note: Using id=4 instead of 91347 to ensure ore data exists (start=40 is within ore range 1-99)
 
@@ -118,10 +120,7 @@ async fn inequality_operator_encrypted_not_equals_jsonb_hmac(pool: PgPool) -> Re
         .context("fetching json value")?;
     let json_value: String = row.try_get(0).context("extracting json text")?;
 
-    let sql = format!(
-        "SELECT e FROM encrypted WHERE e <> '{}'::jsonb",
-        json_value
-    );
+    let sql = format!("SELECT e FROM encrypted WHERE e <> '{}'::jsonb", json_value);
 
     QueryAssertion::new(&pool, &sql).count(2).await;
 
@@ -139,10 +138,7 @@ async fn inequality_operator_jsonb_not_equals_encrypted_hmac(pool: PgPool) -> Re
         .context("fetching json value")?;
     let json_value: String = row.try_get(0).context("extracting json text")?;
 
-    let sql = format!(
-        "SELECT e FROM encrypted WHERE '{}'::jsonb <> e",
-        json_value
-    );
+    let sql = format!("SELECT e FROM encrypted WHERE '{}'::jsonb <> e", json_value);
 
     QueryAssertion::new(&pool, &sql).count(2).await;
 
@@ -161,10 +157,7 @@ async fn inequality_operator_encrypted_not_equals_jsonb_no_match_hmac(pool: PgPo
         .context("fetching json value")?;
     let json_value: String = row.try_get(0).context("extracting json text")?;
 
-    let sql = format!(
-        "SELECT e FROM encrypted WHERE e <> '{}'::jsonb",
-        json_value
-    );
+    let sql = format!("SELECT e FROM encrypted WHERE e <> '{}'::jsonb", json_value);
 
     // Non-existent record: all 3 existing records are NOT equal to id=4
     QueryAssertion::new(&pool, &sql).count(3).await;
@@ -215,10 +208,7 @@ async fn inequality_operator_encrypted_not_equals_jsonb_blake3(pool: PgPool) -> 
         .context("fetching json value")?;
     let json_value: String = row.try_get(0).context("extracting json text")?;
 
-    let sql = format!(
-        "SELECT e FROM encrypted WHERE e <> '{}'::jsonb",
-        json_value
-    );
+    let sql = format!("SELECT e FROM encrypted WHERE e <> '{}'::jsonb", json_value);
 
     QueryAssertion::new(&pool, &sql).count(2).await;
 

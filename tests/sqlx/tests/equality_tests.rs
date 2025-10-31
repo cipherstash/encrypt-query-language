@@ -39,11 +39,13 @@ async fn create_encrypted_json_with_index(
 }
 
 async fn fetch_text_column(pool: &PgPool, sql: &str) -> Result<String> {
-    let row = sqlx::query(sql).fetch_one(pool).await.with_context(|| {
-        format!("executing query for text result: {}", sql)
-    })?;
+    let row = sqlx::query(sql)
+        .fetch_one(pool)
+        .await
+        .with_context(|| format!("executing query for text result: {}", sql))?;
 
-    row.try_get(0).with_context(|| format!("extracting text column for query: {}", sql))
+    row.try_get(0)
+        .with_context(|| format!("extracting text column for query: {}", sql))
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
@@ -139,7 +141,8 @@ async fn eq_function_finds_matching_record_blake3(pool: PgPool) -> Result<()> {
     // Test: eql_v2.eq() function with Blake3 index
 
     // Call SQL function to create encrypted JSON with Blake3 and remove 'ob' field
-    let sql_create = "SELECT ((create_encrypted_json(1, 'b3')::jsonb - 'ob')::eql_v2_encrypted)::text";
+    let sql_create =
+        "SELECT ((create_encrypted_json(1, 'b3')::jsonb - 'ob')::eql_v2_encrypted)::text";
     let encrypted = fetch_text_column(&pool, sql_create).await?;
 
     let sql = format!(
@@ -156,7 +159,8 @@ async fn eq_function_finds_matching_record_blake3(pool: PgPool) -> Result<()> {
 async fn eq_function_returns_empty_for_no_match_blake3(pool: PgPool) -> Result<()> {
     // Test: eql_v2.eq() returns no results for non-existent record with Blake3
 
-    let sql_create = "SELECT ((create_encrypted_json(4, 'b3')::jsonb - 'ob')::eql_v2_encrypted)::text";
+    let sql_create =
+        "SELECT ((create_encrypted_json(4, 'b3')::jsonb - 'ob')::eql_v2_encrypted)::text";
     let encrypted = fetch_text_column(&pool, sql_create).await?;
 
     let sql = format!(
@@ -177,10 +181,7 @@ async fn equality_operator_encrypted_equals_jsonb_hmac(pool: PgPool) -> Result<(
     let sql_create = "SELECT (create_encrypted_json(1)::jsonb - 'ob')::text";
     let json_value = fetch_text_column(&pool, sql_create).await?;
 
-    let sql = format!(
-        "SELECT e FROM encrypted WHERE e = '{}'::jsonb",
-        json_value
-    );
+    let sql = format!("SELECT e FROM encrypted WHERE e = '{}'::jsonb", json_value);
 
     QueryAssertion::new(&pool, &sql).returns_rows().await;
 
@@ -194,10 +195,7 @@ async fn equality_operator_jsonb_equals_encrypted_hmac(pool: PgPool) -> Result<(
     let sql_create = "SELECT (create_encrypted_json(1)::jsonb - 'ob')::text";
     let json_value = fetch_text_column(&pool, sql_create).await?;
 
-    let sql = format!(
-        "SELECT e FROM encrypted WHERE '{}'::jsonb = e",
-        json_value
-    );
+    let sql = format!("SELECT e FROM encrypted WHERE '{}'::jsonb = e", json_value);
 
     QueryAssertion::new(&pool, &sql).returns_rows().await;
 
@@ -211,10 +209,7 @@ async fn equality_operator_encrypted_equals_jsonb_no_match_hmac(pool: PgPool) ->
     let sql_create = "SELECT (create_encrypted_json(4)::jsonb - 'ob')::text";
     let json_value = fetch_text_column(&pool, sql_create).await?;
 
-    let sql = format!(
-        "SELECT e FROM encrypted WHERE e = '{}'::jsonb",
-        json_value
-    );
+    let sql = format!("SELECT e FROM encrypted WHERE e = '{}'::jsonb", json_value);
 
     QueryAssertion::new(&pool, &sql).count(0).await;
 
@@ -228,10 +223,7 @@ async fn equality_operator_jsonb_equals_encrypted_no_match_hmac(pool: PgPool) ->
     let sql_create = "SELECT (create_encrypted_json(4)::jsonb - 'ob')::text";
     let json_value = fetch_text_column(&pool, sql_create).await?;
 
-    let sql = format!(
-        "SELECT e FROM encrypted WHERE '{}'::jsonb = e",
-        json_value
-    );
+    let sql = format!("SELECT e FROM encrypted WHERE '{}'::jsonb = e", json_value);
 
     QueryAssertion::new(&pool, &sql).count(0).await;
 
@@ -245,10 +237,7 @@ async fn equality_operator_encrypted_equals_jsonb_blake3(pool: PgPool) -> Result
     let sql_create = "SELECT create_encrypted_json(1, 'b3')::jsonb::text";
     let json_value = fetch_text_column(&pool, sql_create).await?;
 
-    let sql = format!(
-        "SELECT e FROM encrypted WHERE e = '{}'::jsonb",
-        json_value
-    );
+    let sql = format!("SELECT e FROM encrypted WHERE e = '{}'::jsonb", json_value);
 
     QueryAssertion::new(&pool, &sql).returns_rows().await;
 
@@ -262,10 +251,7 @@ async fn equality_operator_jsonb_equals_encrypted_blake3(pool: PgPool) -> Result
     let sql_create = "SELECT create_encrypted_json(1, 'b3')::jsonb::text";
     let json_value = fetch_text_column(&pool, sql_create).await?;
 
-    let sql = format!(
-        "SELECT e FROM encrypted WHERE '{}'::jsonb = e",
-        json_value
-    );
+    let sql = format!("SELECT e FROM encrypted WHERE '{}'::jsonb = e", json_value);
 
     QueryAssertion::new(&pool, &sql).returns_rows().await;
 
@@ -279,10 +265,7 @@ async fn equality_operator_encrypted_equals_jsonb_no_match_blake3(pool: PgPool) 
     let sql_create = "SELECT create_encrypted_json(4, 'b3')::jsonb::text";
     let json_value = fetch_text_column(&pool, sql_create).await?;
 
-    let sql = format!(
-        "SELECT e FROM encrypted WHERE e = '{}'::jsonb",
-        json_value
-    );
+    let sql = format!("SELECT e FROM encrypted WHERE e = '{}'::jsonb", json_value);
 
     QueryAssertion::new(&pool, &sql).count(0).await;
 
@@ -296,10 +279,7 @@ async fn equality_operator_jsonb_equals_encrypted_no_match_blake3(pool: PgPool) 
     let sql_create = "SELECT create_encrypted_json(4, 'b3')::jsonb::text";
     let json_value = fetch_text_column(&pool, sql_create).await?;
 
-    let sql = format!(
-        "SELECT e FROM encrypted WHERE '{}'::jsonb = e",
-        json_value
-    );
+    let sql = format!("SELECT e FROM encrypted WHERE '{}'::jsonb = e", json_value);
 
     QueryAssertion::new(&pool, &sql).count(0).await;
 

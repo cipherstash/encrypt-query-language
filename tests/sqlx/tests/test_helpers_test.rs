@@ -4,14 +4,15 @@ use sqlx::PgPool;
 #[sqlx::test]
 async fn test_reset_function_stats(pool: PgPool) {
     // Verify function tracking is enabled
-    let tracking_enabled = sqlx::query_scalar::<_, String>(
-        "SHOW track_functions"
-    )
-    .fetch_one(&pool)
-    .await
-    .expect("Failed to check track_functions setting");
+    let tracking_enabled = sqlx::query_scalar::<_, String>("SHOW track_functions")
+        .fetch_one(&pool)
+        .await
+        .expect("Failed to check track_functions setting");
 
-    assert_eq!(tracking_enabled, "all", "track_functions should be set to 'all'");
+    assert_eq!(
+        tracking_enabled, "all",
+        "track_functions should be set to 'all'"
+    );
 
     // Test: Call reset_function_stats and verify it completes without error
     reset_function_stats(&pool)

@@ -19,7 +19,7 @@ async fn search_config_exists(
             SELECT id FROM eql_v2_configuration c
             WHERE c.state = $1::eql_v2_configuration_state
             AND c.data #> array['tables', $2, $3, 'indexes'] ? $4
-        )"
+        )",
     )
     .bind(state)
     .bind(table_name)
@@ -52,9 +52,11 @@ async fn add_and_remove_multiple_indexes(pool: PgPool) -> Result<()> {
     );
 
     // Add unique index with cast
-    sqlx::query("SELECT eql_v2.add_search_config('users', 'name', 'unique', 'int', migrating => true)")
-        .execute(&pool)
-        .await?;
+    sqlx::query(
+        "SELECT eql_v2.add_search_config('users', 'name', 'unique', 'int', migrating => true)",
+    )
+    .execute(&pool)
+    .await?;
 
     assert!(
         search_config_exists(&pool, "users", "name", "unique", "pending").await?,
@@ -67,7 +69,7 @@ async fn add_and_remove_multiple_indexes(pool: PgPool) -> Result<()> {
             SELECT id FROM eql_v2_configuration c
             WHERE c.state = 'pending'
             AND c.data #> array['tables', 'users', 'name'] ? 'cast_as'
-        )"
+        )",
     )
     .fetch_one(&pool)
     .await?;
@@ -93,7 +95,7 @@ async fn add_and_remove_multiple_indexes(pool: PgPool) -> Result<()> {
     let indexes_empty: bool = sqlx::query_scalar(
         "SELECT data #> array['tables', 'users', 'name', 'indexes'] = '{}'
          FROM eql_v2_configuration c
-         WHERE c.state = 'pending'"
+         WHERE c.state = 'pending'",
     )
     .fetch_one(&pool)
     .await?;
@@ -127,7 +129,7 @@ async fn add_and_remove_indexes_from_multiple_tables(pool: PgPool) -> Result<()>
             SELECT id FROM eql_v2_configuration c
             WHERE c.state = 'pending'
             AND c.data #> array['tables', 'users', 'name', 'indexes'] ? 'match'
-        )"
+        )",
     )
     .fetch_one(&pool)
     .await?;
@@ -135,9 +137,11 @@ async fn add_and_remove_indexes_from_multiple_tables(pool: PgPool) -> Result<()>
     assert!(has_match, "users.name.indexes should contain match");
 
     // Add index to blah table
-    sqlx::query("SELECT eql_v2.add_search_config('blah', 'vtha', 'unique', 'int', migrating => true)")
-        .execute(&pool)
-        .await?;
+    sqlx::query(
+        "SELECT eql_v2.add_search_config('blah', 'vtha', 'unique', 'int', migrating => true)",
+    )
+    .execute(&pool)
+    .await?;
 
     assert!(
         search_config_exists(&pool, "blah", "vtha", "unique", "pending").await?,
@@ -155,7 +159,7 @@ async fn add_and_remove_indexes_from_multiple_tables(pool: PgPool) -> Result<()>
             SELECT id FROM eql_v2_configuration c
             WHERE c.state = 'pending'
             AND c.data #> array['tables', 'blah', 'vtha', 'indexes'] ? 'unique'
-        )"
+        )",
     )
     .fetch_one(&pool)
     .await?;
@@ -184,7 +188,7 @@ async fn add_and_remove_indexes_from_multiple_tables(pool: PgPool) -> Result<()>
 
     // Verify config still exists but indexes are empty
     let config_exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending')"
+        "SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending')",
     )
     .fetch_one(&pool)
     .await?;
@@ -194,12 +198,15 @@ async fn add_and_remove_indexes_from_multiple_tables(pool: PgPool) -> Result<()>
     let blah_indexes_empty: bool = sqlx::query_scalar(
         "SELECT data #> array['tables', 'blah', 'vtha', 'indexes'] = '{}'
          FROM eql_v2_configuration c
-         WHERE c.state = 'pending'"
+         WHERE c.state = 'pending'",
     )
     .fetch_one(&pool)
     .await?;
 
-    assert!(blah_indexes_empty, "blah.vtha.indexes should be empty object");
+    assert!(
+        blah_indexes_empty,
+        "blah.vtha.indexes should be empty object"
+    );
 
     Ok(())
 }
@@ -236,7 +243,7 @@ async fn add_and_modify_index(pool: PgPool) -> Result<()> {
             SELECT id FROM eql_v2_configuration c
             WHERE c.state = 'pending'
             AND c.data #> array['tables', 'users', 'name', 'indexes', 'match'] ? 'option'
-        )"
+        )",
     )
     .fetch_one(&pool)
     .await?;
@@ -249,7 +256,7 @@ async fn add_and_modify_index(pool: PgPool) -> Result<()> {
             SELECT id FROM eql_v2_configuration c
             WHERE c.state = 'pending'
             AND c.data #> array['tables', 'users', 'name'] ? 'cast_as'
-        )"
+        )",
     )
     .fetch_one(&pool)
     .await?;
@@ -263,7 +270,7 @@ async fn add_and_modify_index(pool: PgPool) -> Result<()> {
 
     // Verify config exists but indexes empty
     let config_exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending')"
+        "SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending')",
     )
     .fetch_one(&pool)
     .await?;
@@ -273,7 +280,7 @@ async fn add_and_modify_index(pool: PgPool) -> Result<()> {
     let indexes_empty: bool = sqlx::query_scalar(
         "SELECT data #> array['tables', 'users', 'name', 'indexes'] = '{}'
          FROM eql_v2_configuration c
-         WHERE c.state = 'pending'"
+         WHERE c.state = 'pending'",
     )
     .fetch_one(&pool)
     .await?;
@@ -312,7 +319,7 @@ async fn add_index_with_existing_active_config(pool: PgPool) -> Result<()> {
                     }
                 }
             }'::jsonb
-        )"
+        )",
     )
     .execute(&pool)
     .await?;
@@ -362,11 +369,9 @@ async fn add_column_to_nonexistent_table_fails(pool: PgPool) -> Result<()> {
     );
 
     // Verify no configuration was created
-    let config_count: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM eql_v2_configuration"
-    )
-    .fetch_one(&pool)
-    .await?;
+    let config_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM eql_v2_configuration")
+        .fetch_one(&pool)
+        .await?;
 
     assert_eq!(config_count, 0, "no configuration should be created");
 
@@ -387,11 +392,10 @@ async fn add_and_remove_column(pool: PgPool) -> Result<()> {
         .await?;
 
     // Verify pending configuration was created
-    let pending_count: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM eql_v2_configuration c WHERE c.state = 'pending'"
-    )
-    .fetch_one(&pool)
-    .await?;
+    let pending_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM eql_v2_configuration c WHERE c.state = 'pending'")
+            .fetch_one(&pool)
+            .await?;
 
     assert_eq!(pending_count, 1, "pending configuration should be created");
 
@@ -402,7 +406,7 @@ async fn add_and_remove_column(pool: PgPool) -> Result<()> {
 
     // Verify pending configuration still exists but is empty
     let pending_exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending')"
+        "SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending')",
     )
     .fetch_one(&pool)
     .await?;
@@ -413,7 +417,7 @@ async fn add_and_remove_column(pool: PgPool) -> Result<()> {
     let tables_empty: bool = sqlx::query_scalar(
         "SELECT data #> array['tables'] = '{}'
          FROM eql_v2_configuration c
-         WHERE c.state = 'pending'"
+         WHERE c.state = 'pending'",
     )
     .fetch_one(&pool)
     .await?;
@@ -443,7 +447,7 @@ async fn configuration_constraint_validation(pool: PgPool) -> Result<()> {
                         }
                     }
                 }'::jsonb
-        )"
+        )",
     )
     .execute(&pool)
     .await;
@@ -469,15 +473,12 @@ async fn configuration_constraint_validation(pool: PgPool) -> Result<()> {
                         }
                     }
                 }'::jsonb
-        )"
+        )",
     )
     .execute(&pool)
     .await;
 
-    assert!(
-        result3.is_err(),
-        "insert with invalid cast should fail"
-    );
+    assert!(result3.is_err(), "insert with invalid cast should fail");
 
     // Test 4: Invalid index - should fail
     let result4 = sqlx::query(
@@ -494,24 +495,24 @@ async fn configuration_constraint_validation(pool: PgPool) -> Result<()> {
                         }
                     }
                 }'::jsonb
-        )"
+        )",
     )
     .execute(&pool)
     .await;
 
-    assert!(
-        result4.is_err(),
-        "insert with invalid index should fail"
-    );
+    assert!(result4.is_err(), "insert with invalid index should fail");
 
     // Verify no pending configuration was created
     let pending_exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending')"
+        "SELECT EXISTS (SELECT FROM eql_v2_configuration c WHERE c.state = 'pending')",
     )
     .fetch_one(&pool)
     .await?;
 
-    assert!(!pending_exists, "no pending configuration should be created");
+    assert!(
+        !pending_exists,
+        "no pending configuration should be created"
+    );
 
     Ok(())
 }

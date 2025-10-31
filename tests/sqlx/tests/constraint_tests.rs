@@ -184,11 +184,9 @@ async fn foreign_key_constraint_with_encrypted(pool: PgPool) -> Result<()> {
 
     // Successfully insert child record with FK to same deterministic value
     // This SUCCEEDS because create_encrypted_json(1, 'hm') returns identical bytes each time
-    sqlx::query(
-        "INSERT INTO child (id, parent_id) VALUES (1, create_encrypted_json(1, 'hm'))",
-    )
-    .execute(&pool)
-    .await?;
+    sqlx::query("INSERT INTO child (id, parent_id) VALUES (1, create_encrypted_json(1, 'hm'))")
+        .execute(&pool)
+        .await?;
 
     // Verify child record was inserted
     let child_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM child")
@@ -201,11 +199,10 @@ async fn foreign_key_constraint_with_encrypted(pool: PgPool) -> Result<()> {
     );
 
     // Attempt to insert child with different encrypted value (should fail FK check)
-    let different_insert_result = sqlx::query(
-        "INSERT INTO child (id, parent_id) VALUES (2, create_encrypted_json(2, 'hm'))",
-    )
-    .execute(&pool)
-    .await;
+    let different_insert_result =
+        sqlx::query("INSERT INTO child (id, parent_id) VALUES (2, create_encrypted_json(2, 'hm'))")
+            .execute(&pool)
+            .await;
 
     assert!(
         different_insert_result.is_err(),
@@ -217,7 +214,10 @@ async fn foreign_key_constraint_with_encrypted(pool: PgPool) -> Result<()> {
         .fetch_one(&pool)
         .await?;
 
-    assert_eq!(final_count, 1, "FK violation should prevent second child insert");
+    assert_eq!(
+        final_count, 1,
+        "FK violation should prevent second child insert"
+    );
 
     Ok(())
 }
