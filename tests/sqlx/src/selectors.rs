@@ -36,6 +36,18 @@ impl Selectors {
     /// Maps to: array itself as single element
     pub const ARRAY_ROOT: &'static str = "33743aed3ae636f6bf05cff11ac4b519";
 
+    // Nested path selectors
+    // NOTE: These are placeholders - current test data doesn't have nested objects
+    // See tests/ste_vec.sql for actual data structure
+
+    /// Selector for $.nested path (hypothetical nested object)
+    /// Maps to: $.nested (not present in current test data)
+    pub const NESTED_OBJECT: &'static str = "placeholder_nested_object_selector";
+
+    /// Selector for nested field within object (hypothetical)
+    /// Maps to: $.nested.field (not present in current test data)
+    pub const NESTED_FIELD: &'static str = "placeholder_nested_field_selector";
+
     /// Create eql_v2_encrypted selector JSON for use in queries
     ///
     /// # Example

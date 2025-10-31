@@ -2,6 +2,7 @@
 
 .DS_Store
 .mise.*
+.worktrees/
 
 deps.txt
 deps-ordered.txt
@@ -210,3 +211,6 @@ eql--*.sql
 
 # Generated SQLx migration (built from src/, never commit)
 tests/sqlx/migrations/001_install_eql.sql
+
+# Rust build artifacts (using sccache)
+tests/sqlx/target/
