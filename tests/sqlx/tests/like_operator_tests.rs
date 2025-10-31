@@ -1,6 +1,5 @@
 //! LIKE operator tests
 //!
-//! Converted from src/operators/~~_test.sql
 //! Tests pattern matching with encrypted data using LIKE operators
 
 use anyhow::{Context, Result};
@@ -57,10 +56,9 @@ async fn create_encrypted_json_with_index(
 #[sqlx::test(fixtures(path = "../fixtures", scripts("like_data")))]
 async fn like_operator_matches_pattern(pool: PgPool) -> Result<()> {
     // Test: ~~ operator (LIKE) matches encrypted values
-    // Original SQL lines 13-36 in src/operators/~~_test.sql
     // Tests both ~~ operator and LIKE operator (they're equivalent)
     // Plus partial match test
-    // NOTE: First block in original SQL uses create_encrypted_json(i) WITHOUT 'bf' index
+    // NOTE: First block uses create_encrypted_json(i) WITHOUT 'bf' index
 
     // Test 1-3: Loop through records 1-3, test ~~ operator
     for i in 1..=3 {
@@ -86,8 +84,7 @@ async fn like_operator_matches_pattern(pool: PgPool) -> Result<()> {
         QueryAssertion::new(&pool, &sql).returns_rows().await;
     }
 
-    // Note: Skipping partial match tests (lines 27-36 in original SQL)
-    // as they use placeholder stub data that causes query execution errors
+    // FIXME: Skipping partial match tests as they use placeholder stub data that causes query execution errors
 
     Ok(())
 }
@@ -115,7 +112,6 @@ async fn like_operator_no_match(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("like_data")))]
 async fn like_function_matches_pattern(pool: PgPool) -> Result<()> {
     // Test: eql_v2.like() function
-    // Original SQL lines 85-102 in src/operators/~~_test.sql
     // Tests the eql_v2.like() function which wraps bloom filter matching
 
     // Test 7-9: Loop through records 1-3, test eql_v2.like() function
@@ -136,7 +132,6 @@ async fn like_function_matches_pattern(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("like_data")))]
 async fn ilike_operator_case_insensitive_matches(pool: PgPool) -> Result<()> {
     // Test: ~~* operator (ILIKE) matches encrypted values (case-insensitive)
-    // Original SQL lines 42-75 in src/operators/~~_test.sql
     // Tests both ~~* operator and ILIKE operator (they're equivalent)
     // NOTE: Uses create_encrypted_json(i, 'bf') WITH bloom filter index
 
@@ -161,15 +156,7 @@ async fn ilike_operator_case_insensitive_matches(pool: PgPool) -> Result<()> {
         QueryAssertion::new(&pool, &sql).returns_rows().await;
     }
 
-    // Note: Skipping partial match tests (lines 63-72 in original SQL)
-    // as they use placeholder stub data that causes query execution errors
-
-    // Total assertions across all 4 tests:
-    // - like_operator_matches_pattern: 6 assertions (3 ~~ + 3 LIKE)
-    // - like_operator_no_match: 1 assertion
-    // - like_function_matches_pattern: 3 assertions
-    // - ilike_operator_case_insensitive_matches: 6 assertions (3 ~~* + 3 ILIKE)
-    // Total: 6 + 1 + 3 + 6 = 16 assertions
+    // FIXME: Skipping partial match tests as they use placeholder stub data that causes query execution errors
 
     Ok(())
 }

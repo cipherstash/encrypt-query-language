@@ -1,6 +1,5 @@
 //! Constraint tests
 //!
-//! Converted from src/encrypted/constraints_test.sql
 //! Tests UNIQUE, NOT NULL, CHECK constraints on encrypted columns
 
 use anyhow::Result;
@@ -9,7 +8,6 @@ use sqlx::PgPool;
 #[sqlx::test(fixtures(path = "../fixtures", scripts("constraint_tables")))]
 async fn unique_constraint_on_encrypted_column(pool: PgPool) -> Result<()> {
     // Test: UNIQUE constraint enforced on encrypted column (3 assertions)
-    // Original SQL lines 13-35 in src/encrypted/constraints_test.sql
 
     // Insert first record (provide check_field to satisfy its constraint)
     sqlx::query(
@@ -52,7 +50,6 @@ async fn unique_constraint_on_encrypted_column(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("constraint_tables")))]
 async fn not_null_constraint_on_encrypted_column(pool: PgPool) -> Result<()> {
     // Test: NOT NULL constraint enforced (2 assertions)
-    // Original SQL lines 37-52 in src/encrypted/constraints_test.sql
 
     let result = sqlx::query(
         "INSERT INTO constrained (unique_field)
@@ -76,7 +73,6 @@ async fn not_null_constraint_on_encrypted_column(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("constraint_tables")))]
 async fn check_constraint_on_encrypted_column(pool: PgPool) -> Result<()> {
     // Test: CHECK constraint enforced (2 assertions)
-    // Original SQL lines 54-72 in src/encrypted/constraints_test.sql
 
     let result = sqlx::query(
         "INSERT INTO constrained (unique_field, not_null_field, check_field)
@@ -105,7 +101,6 @@ async fn check_constraint_on_encrypted_column(pool: PgPool) -> Result<()> {
 async fn foreign_key_constraint_with_encrypted(pool: PgPool) -> Result<()> {
     // Test: Foreign key constraints can be defined on encrypted columns
     // but don't provide referential integrity since each encryption is unique
-    // Original SQL lines 74-139 in src/encrypted/constraints_test.sql
 
     // Create parent table
     sqlx::query(

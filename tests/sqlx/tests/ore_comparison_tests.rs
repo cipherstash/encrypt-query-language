@@ -1,6 +1,5 @@
 //! ORE comparison variant tests
 //!
-//! Converted from src/operators/<=_ore_cllw_u64_8_test.sql
 //! and src/operators/<=_ore_cllw_var_8_test.sql
 //! Tests ORE CLLW comparison operators
 
@@ -11,7 +10,6 @@ use sqlx::PgPool;
 #[sqlx::test]
 async fn lte_operator_cllw_u64_8(pool: PgPool) -> Result<()> {
     // Test: <= operator with ORE CLLW U64 8
-    // Original SQL lines 13-35 in src/operators/<=_ore_cllw_u64_8_test.sql
     // Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
 
     let ore_term = get_ore_encrypted(&pool, 42).await?;
@@ -30,7 +28,6 @@ async fn lte_operator_cllw_u64_8(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn lte_function_cllw_u64_8(pool: PgPool) -> Result<()> {
     // Test: lte() function with ORE CLLW U64 8
-    // Original SQL lines 37-42 in src/operators/<=_ore_cllw_u64_8_test.sql
 
     let ore_term = get_ore_encrypted(&pool, 42).await?;
 
@@ -47,7 +44,6 @@ async fn lte_function_cllw_u64_8(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn lte_with_jsonb_cllw_u64_8(pool: PgPool) -> Result<()> {
     // Test: <= with JSONB (ORE CLLW U64 8)
-    // Original SQL lines 44-56 in src/operators/<=_ore_cllw_u64_8_test.sql
 
     let json_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
 
@@ -64,7 +60,6 @@ async fn lte_with_jsonb_cllw_u64_8(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn lte_operator_cllw_var_8(pool: PgPool) -> Result<()> {
     // Test: <= operator with ORE CLLW VAR 8
-    // Original SQL lines 13-31 in src/operators/<=_ore_cllw_var_8_test.sql
 
     let ore_term = get_ore_encrypted(&pool, 42).await?;
 
@@ -81,7 +76,6 @@ async fn lte_operator_cllw_var_8(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn lte_function_cllw_var_8(pool: PgPool) -> Result<()> {
     // Test: lte() function with ORE CLLW VAR 8
-    // Original SQL lines 33-38 in src/operators/<=_ore_cllw_var_8_test.sql
 
     let ore_term = get_ore_encrypted(&pool, 42).await?;
 
@@ -98,7 +92,6 @@ async fn lte_function_cllw_var_8(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn lte_with_jsonb_cllw_var_8(pool: PgPool) -> Result<()> {
     // Test: <= with JSONB (ORE CLLW VAR 8)
-    // Original SQL lines 40-52 in src/operators/<=_ore_cllw_var_8_test.sql
 
     let json_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
 

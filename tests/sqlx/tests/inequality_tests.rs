@@ -1,6 +1,5 @@
 //! Inequality operator tests
 //!
-//! Converted from src/operators/<>_test.sql
 //! Tests EQL inequality (<>) operators with encrypted data
 
 use anyhow::{Context, Result};
@@ -42,7 +41,6 @@ async fn create_encrypted_json_with_index(
 async fn inequality_operator_finds_non_matching_records_hmac(pool: PgPool) -> Result<()> {
     // Test: eql_v2_encrypted <> eql_v2_encrypted with HMAC index
     // Should return records that DON'T match the encrypted value
-    // Original SQL lines 15-23 in src/operators/<>_test.sql
 
     let encrypted = create_encrypted_json_with_index(&pool, 1, "hm").await?;
 
@@ -60,7 +58,6 @@ async fn inequality_operator_finds_non_matching_records_hmac(pool: PgPool) -> Re
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn inequality_operator_returns_empty_for_non_existent_record_hmac(pool: PgPool) -> Result<()> {
     // Test: <> with different record (not in test data)
-    // Original SQL lines 25-30 in src/operators/<>_test.sql
     // Note: Using id=4 instead of 91347 to ensure ore data exists (start=40 is within ore range 1-99)
 
     let encrypted = create_encrypted_json_with_index(&pool, 4, "hm").await?;
@@ -79,7 +76,6 @@ async fn inequality_operator_returns_empty_for_non_existent_record_hmac(pool: Pg
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn neq_function_finds_non_matching_records_hmac(pool: PgPool) -> Result<()> {
     // Test: eql_v2.neq() function with HMAC index
-    // Original SQL lines 45-53 in src/operators/<>_test.sql
 
     let encrypted = create_encrypted_json_with_index(&pool, 1, "hm").await?;
 
@@ -96,7 +92,6 @@ async fn neq_function_finds_non_matching_records_hmac(pool: PgPool) -> Result<()
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn neq_function_returns_empty_for_non_existent_record_hmac(pool: PgPool) -> Result<()> {
     // Test: eql_v2.neq() with different record (not in test data)
-    // Original SQL lines 55-59 in src/operators/<>_test.sql
     // Note: Using id=4 instead of 91347 to ensure ore data exists (start=40 is within ore range 1-99)
 
     let encrypted = create_encrypted_json_with_index(&pool, 4, "hm").await?;
@@ -115,7 +110,6 @@ async fn neq_function_returns_empty_for_non_existent_record_hmac(pool: PgPool) -
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn inequality_operator_encrypted_not_equals_jsonb_hmac(pool: PgPool) -> Result<()> {
     // Test: eql_v2_encrypted <> jsonb with HMAC index
-    // Original SQL lines 71-83 in src/operators/<>_test.sql
 
     let sql_create = "SELECT (create_encrypted_json(1)::jsonb - 'ob')::text";
     let row = sqlx::query(sql_create)
@@ -137,7 +131,6 @@ async fn inequality_operator_encrypted_not_equals_jsonb_hmac(pool: PgPool) -> Re
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn inequality_operator_jsonb_not_equals_encrypted_hmac(pool: PgPool) -> Result<()> {
     // Test: jsonb <> eql_v2_encrypted (reverse direction)
-    // Original SQL lines 78-81 in src/operators/<>_test.sql
 
     let sql_create = "SELECT (create_encrypted_json(1)::jsonb - 'ob')::text";
     let row = sqlx::query(sql_create)
@@ -159,7 +152,6 @@ async fn inequality_operator_jsonb_not_equals_encrypted_hmac(pool: PgPool) -> Re
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn inequality_operator_encrypted_not_equals_jsonb_no_match_hmac(pool: PgPool) -> Result<()> {
     // Test: e <> jsonb with different record (not in test data)
-    // Original SQL lines 83-87 in src/operators/<>_test.sql
     // Note: Using id=4 instead of 91347 to ensure ore data exists (start=40 is within ore range 1-99)
 
     let sql_create = "SELECT (create_encrypted_json(4)::jsonb - 'ob')::text";
@@ -183,7 +175,6 @@ async fn inequality_operator_encrypted_not_equals_jsonb_no_match_hmac(pool: PgPo
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn inequality_operator_finds_non_matching_records_blake3(pool: PgPool) -> Result<()> {
     // Test: <> operator with Blake3 index
-    // Original SQL lines 107-115 in src/operators/<>_test.sql
 
     let encrypted = create_encrypted_json_with_index(&pool, 1, "b3").await?;
 
@@ -200,7 +191,6 @@ async fn inequality_operator_finds_non_matching_records_blake3(pool: PgPool) -> 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn neq_function_finds_non_matching_records_blake3(pool: PgPool) -> Result<()> {
     // Test: eql_v2.neq() with Blake3
-    // Original SQL lines 137-145 in src/operators/<>_test.sql
 
     let encrypted = create_encrypted_json_with_index(&pool, 1, "b3").await?;
 
@@ -217,7 +207,6 @@ async fn neq_function_finds_non_matching_records_blake3(pool: PgPool) -> Result<
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn inequality_operator_encrypted_not_equals_jsonb_blake3(pool: PgPool) -> Result<()> {
     // Test: e <> jsonb with Blake3
-    // Original SQL lines 163-175 in src/operators/<>_test.sql
 
     let sql_create = "SELECT (create_encrypted_json(1)::jsonb - 'ob')::text";
     let row = sqlx::query(sql_create)

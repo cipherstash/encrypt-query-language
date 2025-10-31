@@ -1,6 +1,5 @@
 //! Configuration management tests
 //!
-//! Converted from src/config/config_test.sql
 //! Tests EQL configuration add/remove operations and state management
 
 use anyhow::{Context, Result};
@@ -36,7 +35,6 @@ async fn search_config_exists(
 #[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
 async fn add_and_remove_multiple_indexes(pool: PgPool) -> Result<()> {
     // Test: Add and remove multiple indexes (6 assertions)
-    // Original SQL lines 42-67 in src/config/config_test.sql
 
     // Truncate config
     sqlx::query("TRUNCATE TABLE eql_v2_configuration")
@@ -108,7 +106,6 @@ async fn add_and_remove_multiple_indexes(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
 async fn add_and_remove_indexes_from_multiple_tables(pool: PgPool) -> Result<()> {
     // Test: Add/remove indexes from multiple tables (9 assertions)
-    // Original SQL lines 78-116 in src/config/config_test.sql
 
     sqlx::query("TRUNCATE TABLE eql_v2_configuration")
         .execute(&pool)
@@ -210,7 +207,6 @@ async fn add_and_remove_indexes_from_multiple_tables(pool: PgPool) -> Result<()>
 #[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
 async fn add_and_modify_index(pool: PgPool) -> Result<()> {
     // Test: Add and modify index (6 assertions)
-    // Original SQL lines 128-150 in src/config/config_test.sql
 
     // Add match index
     sqlx::query("SELECT eql_v2.add_search_config('users', 'name', 'match', migrating => true)")
@@ -290,7 +286,6 @@ async fn add_and_modify_index(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
 async fn add_index_with_existing_active_config(pool: PgPool) -> Result<()> {
     // Test: Adding index creates new pending configuration when active config exists (3 assertions)
-    // Original SQL lines 157-196 in src/config/config_test.sql
 
     sqlx::query("TRUNCATE TABLE eql_v2_configuration")
         .execute(&pool)
@@ -351,7 +346,6 @@ async fn add_index_with_existing_active_config(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
 async fn add_column_to_nonexistent_table_fails(pool: PgPool) -> Result<()> {
     // Test: Adding column to nonexistent table fails (2 assertions)
-    // Original SQL lines 204-215 in src/config/config_test.sql
 
     sqlx::query("TRUNCATE TABLE eql_v2_configuration")
         .execute(&pool)
@@ -382,7 +376,6 @@ async fn add_column_to_nonexistent_table_fails(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn add_and_remove_column(pool: PgPool) -> Result<()> {
     // Test: Add and remove column (4 assertions)
-    // Original SQL lines 223-248 in src/config/config_test.sql
 
     sqlx::query("TRUNCATE TABLE eql_v2_configuration")
         .execute(&pool)
@@ -433,7 +426,6 @@ async fn add_and_remove_column(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
 async fn configuration_constraint_validation(pool: PgPool) -> Result<()> {
     // Test: Configuration constraint validation (11 assertions)
-    // Original SQL lines 259-334 in src/config/config_test.sql
 
     sqlx::query("TRUNCATE TABLE eql_v2_configuration")
         .execute(&pool)

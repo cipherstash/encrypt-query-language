@@ -1,6 +1,5 @@
 //! JSONB path operator tests (-> and ->>)
 //!
-//! Converted from src/operators/->_test.sql and ->>_test.sql
 //! Tests encrypted JSONB path extraction
 
 use anyhow::Result;
@@ -10,7 +9,6 @@ use sqlx::{PgPool, Row};
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn arrow_operator_extracts_encrypted_path(pool: PgPool) -> Result<()> {
     // Test: e -> 'selector' returns encrypted nested value
-    // Original SQL lines 12-27 in src/operators/->_test.sql
 
     let sql = format!(
         "SELECT e -> '{}'::text FROM encrypted LIMIT 1",
@@ -44,7 +42,6 @@ async fn arrow_operator_with_nested_path(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn arrow_operator_returns_null_for_nonexistent_path(pool: PgPool) -> Result<()> {
     // Test: -> returns NULL for non-existent selector
-    // Original SQL lines 58-73 in src/operators/->_test.sql
 
     let sql = "SELECT e -> 'nonexistent_selector_hash_12345'::text FROM encrypted LIMIT 1";
 
@@ -58,7 +55,6 @@ async fn arrow_operator_returns_null_for_nonexistent_path(pool: PgPool) -> Resul
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn double_arrow_operator_extracts_encrypted_text(pool: PgPool) -> Result<()> {
     // Test: e ->> 'selector' returns encrypted value as text
-    // Original SQL lines 12-27 in src/operators/->>_test.sql
 
     let sql = format!(
         "SELECT e ->> '{}'::text FROM encrypted LIMIT 1",
@@ -73,7 +69,6 @@ async fn double_arrow_operator_extracts_encrypted_text(pool: PgPool) -> Result<(
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn double_arrow_operator_returns_null_for_nonexistent(pool: PgPool) -> Result<()> {
     // Test: ->> returns NULL for non-existent path
-    // Original SQL lines 35-50 in src/operators/->>_test.sql
 
     let sql = "SELECT e ->> 'nonexistent_selector_hash_12345'::text FROM encrypted LIMIT 1";
 
@@ -87,7 +82,6 @@ async fn double_arrow_operator_returns_null_for_nonexistent(pool: PgPool) -> Res
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn double_arrow_in_where_clause(pool: PgPool) -> Result<()> {
     // Test: Using ->> in WHERE clause for filtering
-    // Original SQL lines 58-65 in src/operators/->>_test.sql
 
     let sql = format!(
         "SELECT id FROM encrypted WHERE (e ->> '{}'::text)::text IS NOT NULL",

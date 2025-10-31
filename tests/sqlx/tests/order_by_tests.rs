@@ -1,6 +1,5 @@
 //! ORDER BY tests for ORE-encrypted columns
 //!
-//! Converted from src/operators/order_by_test.sql
 //! Tests ORDER BY with ORE (Order-Revealing Encryption)
 //! Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
 
@@ -12,7 +11,6 @@ use sqlx::{PgPool, Row};
 async fn order_by_desc_returns_highest_value_first(pool: PgPool) -> Result<()> {
     // Test: ORDER BY e DESC returns records in descending order
     // Combined with WHERE e < 42 to verify ordering
-    // Original SQL lines 17-25 in src/operators/order_by_test.sql
 
     let ore_term = get_ore_encrypted(&pool, 42).await?;
 
@@ -35,7 +33,6 @@ async fn order_by_desc_returns_highest_value_first(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn order_by_desc_with_limit(pool: PgPool) -> Result<()> {
     // Test: ORDER BY e DESC LIMIT 1 returns highest value
-    // Original SQL lines 22-25 in src/operators/order_by_test.sql
 
     let ore_term = get_ore_encrypted(&pool, 42).await?;
 
@@ -54,7 +51,6 @@ async fn order_by_desc_with_limit(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn order_by_asc_with_limit(pool: PgPool) -> Result<()> {
     // Test: ORDER BY e ASC LIMIT 1 returns lowest value
-    // Original SQL lines 27-30 in src/operators/order_by_test.sql
 
     let ore_term = get_ore_encrypted(&pool, 42).await?;
 
@@ -73,7 +69,6 @@ async fn order_by_asc_with_limit(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn order_by_asc_with_greater_than(pool: PgPool) -> Result<()> {
     // Test: ORDER BY e ASC with WHERE e > 42
-    // Original SQL lines 33-36 in src/operators/order_by_test.sql
 
     let ore_term = get_ore_encrypted(&pool, 42).await?;
 
@@ -91,7 +86,6 @@ async fn order_by_asc_with_greater_than(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn order_by_desc_with_greater_than_returns_highest(pool: PgPool) -> Result<()> {
     // Test: ORDER BY e DESC LIMIT 1 with e > 42 returns 99
-    // Original SQL lines 38-41 in src/operators/order_by_test.sql
 
     let ore_term = get_ore_encrypted(&pool, 42).await?;
 
@@ -110,7 +104,6 @@ async fn order_by_desc_with_greater_than_returns_highest(pool: PgPool) -> Result
 #[sqlx::test]
 async fn order_by_asc_with_greater_than_returns_lowest(pool: PgPool) -> Result<()> {
     // Test: ORDER BY e ASC LIMIT 1 with e > 42 returns 43
-    // Original SQL lines 43-46 in src/operators/order_by_test.sql
 
     let ore_term = get_ore_encrypted(&pool, 42).await?;
 
