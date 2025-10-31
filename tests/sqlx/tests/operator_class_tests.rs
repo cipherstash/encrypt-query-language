@@ -117,9 +117,7 @@ async fn index_behavior_with_different_data_types(pool: PgPool) -> Result<()> {
         .execute(&pool)
         .await?;
 
-    sqlx::query("ANALYZE encrypted")
-        .execute(&pool)
-        .await?;
+    sqlx::query("ANALYZE encrypted").execute(&pool).await?;
 
     // With only bloom filter data, index may not be used efficiently
     let explain: String = sqlx::query_scalar(
@@ -133,7 +131,9 @@ async fn index_behavior_with_different_data_types(pool: PgPool) -> Result<()> {
 
     // Truncate and add HMAC data
     sqlx::query("TRUNCATE encrypted").execute(&pool).await?;
-    sqlx::query("DROP INDEX encrypted_index").execute(&pool).await?;
+    sqlx::query("DROP INDEX encrypted_index")
+        .execute(&pool)
+        .await?;
     sqlx::query("CREATE INDEX encrypted_index ON encrypted (e eql_v2.encrypted_operator_class)")
         .execute(&pool)
         .await?;
