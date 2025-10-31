@@ -23,26 +23,34 @@ echo ""
 echo "Building EQL..."
 mise run build --force
 
+# Run lints on sqlx tests
+echo ""
+echo "=============================================="
+echo "1/3: Running linting checks on SQLx Rust tests"
+echo "=============================================="
+mise run test:lint
+
 # Run legacy SQL tests
 echo ""
-echo "=========================================="
-echo "1/2: Running Legacy SQL Tests"
-echo "=========================================="
+echo "=============================================="
+echo "2/3: Running Legacy SQL Tests"
+echo "=============================================="
 mise run test:legacy --postgres ${POSTGRES_VERSION}
 
 # Run SQLx Rust tests
 echo ""
-echo "=========================================="
-echo "2/2: Running SQLx Rust Tests"
-echo "=========================================="
+echo "=============================================="
+echo "3/3: Running SQLx Rust Tests"
+echo "=============================================="
 mise run test:sqlx
 
 echo ""
-echo "=========================================="
+echo "=============================================="
 echo "✅ ALL TESTS PASSED"
-echo "=========================================="
+echo "=============================================="
 echo ""
 echo "Summary:"
+echo "  ✓ SQLx Rust lint checks"
 echo "  ✓ Legacy SQL tests"
 echo "  ✓ SQLx Rust tests"
 echo ""
