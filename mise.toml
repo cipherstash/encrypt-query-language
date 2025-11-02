@@ -22,6 +22,7 @@ POSTGRES_USER = "cipherstash"
 POSTGRES_PASSWORD = "password"
 POSTGRES_HOST = "localhost"
 POSTGRES_PORT = "7432"
+DATABASE_URL = "postgresql://cipherstash:password@localhost:7432/cipherstash"
 
 [tasks."clean"]
 alias = 'k'
@@ -31,15 +32,9 @@ run = """
   rm -f release/cipherstash-encrypt.sql
 """
 
-[tasks."test:legacy"]
-description = "Run legacy SQL tests (inline test files)"
-sources = ["src/**/*_test.sql", "tests/*.sql"]
-run = "{{config_root}}/tasks/test-legacy.sh"
-
 [tasks."test:sqlx"]
 description = "Run SQLx tests with hybrid migration approach"
 dir = "{{config_root}}"
-env = { DATABASE_URL = "postgresql://{{get_env(name='POSTGRES_USER', default='cipherstash')}}:{{get_env(name='POSTGRES_PASSWORD', default='password')}}@{{get_env(name='POSTGRES_HOST', default='localhost')}}:{{get_env(name='POSTGRES_PORT', default='7432')}}/{{get_env(name='POSTGRES_DB', default='cipherstash')}}" }
 run = """
 # Copy built SQL to SQLx migrations (EQL install is generated, not static)
 echo "Updating SQLx migrations with built EQL..."

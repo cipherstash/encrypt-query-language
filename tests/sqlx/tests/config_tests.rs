@@ -457,12 +457,8 @@ async fn configuration_constraint_validation(pool: PgPool) -> Result<()> {
         "insert without schema version should fail"
     );
 
-    // Test 2: Empty tables - ALLOWED (config_check_tables only checks field exists, not emptiness)
-    // Original SQL test expected failure, but constraints.sql line 58-67 shows empty tables {} is valid
-    // Skipping this assertion as empty tables is actually allowed by the constraint
-
-    // Test 3: Invalid cast - should fail
-    let result3 = sqlx::query(
+    // Test 2: Invalid cast - should fail
+    let result2 = sqlx::query(
         "INSERT INTO eql_v2_configuration (data) VALUES (
             '{
                 \"v\": 1,
@@ -478,10 +474,10 @@ async fn configuration_constraint_validation(pool: PgPool) -> Result<()> {
     .execute(&pool)
     .await;
 
-    assert!(result3.is_err(), "insert with invalid cast should fail");
+    assert!(result2.is_err(), "insert with invalid cast should fail");
 
-    // Test 4: Invalid index - should fail
-    let result4 = sqlx::query(
+    // Test 3: Invalid index - should fail
+    let result3 = sqlx::query(
         "INSERT INTO eql_v2_configuration (data) VALUES (
             '{
                 \"v\": 1,
@@ -500,7 +496,7 @@ async fn configuration_constraint_validation(pool: PgPool) -> Result<()> {
     .execute(&pool)
     .await;
 
-    assert!(result4.is_err(), "insert with invalid index should fail");
+    assert!(result3.is_err(), "insert with invalid index should fail");
 
     // Verify no pending configuration was created
     let pending_exists: bool = sqlx::query_scalar(
@@ -513,6 +509,20 @@ async fn configuration_constraint_validation(pool: PgPool) -> Result<()> {
         !pending_exists,
         "no pending configuration should be created"
     );
+
+    // Test 4: Empty table - is OK
+    let result4 = sqlx::query(
+        "INSERT INTO eql_v2_configuration (data) VALUES (
+            '{
+                \"v\": 1,
+                \"tables\": {}
+            }'::jsonb
+        )",
+    )
+    .execute(&pool)
+    .await;
+
+    assert!(result4.is_ok(), "insert with empty table should be ok");
 
     Ok(())
 }

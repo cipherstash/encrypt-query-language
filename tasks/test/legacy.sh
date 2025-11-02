@@ -13,7 +13,7 @@ connection_url=postgresql://${POSTGRES_USER:-$USER}:${POSTGRES_PASSWORD}@${POSTG
 container_name=postgres-${POSTGRES_VERSION}
 
 # Check postgres is running (script will exit if not)
-source "$(dirname "$0")/check-postgres.sh" ${POSTGRES_VERSION}
+source "$(dirname "$0")/../postgres/check_container.sh" ${POSTGRES_VERSION}
 
 run_test () {
   echo

@@ -17,7 +17,7 @@ echo "=========================================="
 echo ""
 
 # Check PostgreSQL is running
-"$(dirname "$0")/check-postgres.sh" ${POSTGRES_VERSION}
+"$(dirname "$0")/postgres/check_container.sh" ${POSTGRES_VERSION}
 
 # Build first
 echo "Building EQL..."
