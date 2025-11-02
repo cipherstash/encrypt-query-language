@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 #MISE description="Check if PostgreSQL container is running"
+#USAGE flag "--postgres <version>" help="PostgreSQL version to check" default="17" {
+#USAGE   choices "14" "15" "16" "17"
+#USAGE }
 
 set -euo pipefail
 
-POSTGRES_VERSION=${1:-${POSTGRES_VERSION:-17}}
+POSTGRES_VERSION=${usage_postgres}
 container_name=postgres-${POSTGRES_VERSION}
 
 containers=$(docker ps --filter "name=^${container_name}$" --quiet)

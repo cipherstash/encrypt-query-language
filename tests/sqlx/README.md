@@ -2,36 +2,6 @@
 
 Rust-based test framework for EQL (Encrypt Query Language) using SQLx.
 
-## Migration Status
-
-✅ **SQLx Migration: Complete** (533/517 SQL assertions migrated - 103% of original target!)
-
-### Test Coverage: 100%
-
-| Module | Tests | Assertions | Source SQL |
-|--------|-------|------------|------------|
-| comparison_tests.rs | 16 | 62 | src/operators/comparison_test.sql |
-| inequality_tests.rs | 10 | 14 | src/operators/!=_test.sql |
-| equality_tests.rs | 15 | 28 | src/operators/=_test.sql |
-| order_by_tests.rs | 6 | 20 | src/operators/order_by_test.sql |
-| jsonb_path_operators_tests.rs | 6 | 17 | src/jsonb/path_operators_test.sql |
-| jsonb_tests.rs | 19 | 28 | src/jsonb/functions_test.sql |
-| containment_tests.rs | 7 | 8 | src/operators/containment_test.sql |
-| ore_equality_tests.rs | 14 | 38 | src/operators/ore_equality_test.sql |
-| config_tests.rs | 7 | 41 | src/config/config_test.sql |
-| encryptindex_tests.rs | 7 | 41 | src/encryptindex/functions_test.sql |
-| operator_class_tests.rs | 3 | 41 | src/operators/operator_class_test.sql |
-| ore_comparison_tests.rs | 6 | 12 | src/operators/ore_comparison_test.sql |
-| like_operator_tests.rs | 4 | 16 | src/operators/like_test.sql |
-| aggregate_tests.rs | 4 | 6 | src/encrypted/aggregates_test.sql |
-| constraint_tests.rs | 4 | 14 | src/encrypted/constraints_test.sql |
-| index_compare_tests.rs | 15 | 45 | src/*/compare_test.sql (5 files) |
-| operator_compare_tests.rs | 7 | 63 | src/operators/compare_test.sql |
-| specialized_tests.rs | 20 | 33 | src/*/functions_test.sql (5 files) |
-| test_helpers_test.rs | 1 | 1 | Helper function tests |
-
-**Total:** 171 tests covering 528 assertions (+ pre-existing tests)
-
 ## Overview
 
 This test crate provides:
@@ -95,14 +65,15 @@ cargo test -- --nocapture
 **config_tables.sql**: Tables for configuration management tests
 - Tables: `users`, `blah` with encrypted columns
 
+**constraint_tables.sql**: Tables for constraint testing
+- Table: `constrained` with UNIQUE, NOT NULL, CHECK constraints
+
 **encryptindex_tables.sql**: Tables for encryption workflow tests
 - Table: `users` with plaintext columns for encryption testing
 
 **like_data.sql**: Test data for LIKE operator tests
 - 3 encrypted records with bloom filter indexes
 
-**constraint_tables.sql**: Tables for constraint testing
-- Table: `constrained` with UNIQUE, NOT NULL, CHECK constraints
 
 ### Selectors
 
@@ -192,18 +163,54 @@ let ore_term = get_ore_encrypted(&pool, 42).await?;
 let jsonb_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
 ```
 
+### Test-Specific Helper Functions
+
+Some test modules include specialized helper functions for their specific use cases:
+
+**Configuration State Helpers** (in `config_tests.rs`):
+```rust
+// Check if an index exists in EQL configuration with specific state
+async fn search_config_exists(
+    pool: &PgPool,
+    table_name: &str,
+    column_name: &str,
+    index_name: &str,
+    state: &str,
+) -> Result<bool>
+```
+
+**Schema Inspection Helpers** (in `encryptindex_tests.rs`):
+```rust
+// Check if a column exists in information_schema
+async fn column_exists(
+    pool: &PgPool,
+    table_name: &str,
+    column_name: &str,
+) -> Result<bool>
+
+// Check if a column is in the pending columns list for encryption
+async fn has_pending_column(
+    pool: &PgPool,
+    column_name: &str,
+) -> Result<bool>
+```
+
 ## Test Organization
+
+- Tests live in `tests/`
+- Fixtures live in `fixtures/`
+- Migrations live in `migrations/`
 
 ### Test Module Categories
 
 **Operator Tests:**
-- `comparison_tests.rs` - Comparison operators (<, >, <=, >=)
-- `equality_tests.rs` - Equality operators (=, !=)
+- `comparison_tests.rs` - Comparison operators (`<`, `>`, `<=`, `>=`)
+- `equality_tests.rs` - Equality operators (`=`, `!=`)
 - `inequality_tests.rs` - Inequality operators
 - `ore_equality_tests.rs` - ORE-specific equality tests
 - `ore_comparison_tests.rs` - ORE CLLW comparison tests
-- `like_operator_tests.rs` - Pattern matching (LIKE, ILIKE)
-- `containment_tests.rs` - Containment operators (@>, <@)
+- `like_operator_tests.rs` - Pattern matching (`LIKE`, `ILIKE`)
+- `containment_tests.rs` - Containment operators (`@>`, `<@`)
 - `operator_class_tests.rs` - Operator class definitions
 
 **JSONB Tests:**
@@ -225,52 +232,6 @@ let jsonb_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
 **Helpers:**
 - `test_helpers_test.rs` - Tests for test helper functions
 
-## Comparison to SQL Tests
-
-**Before (SQL)**:
-```sql
-DO $$
-  BEGIN
-    PERFORM seed_encrypted_json();
-    PERFORM assert_result(
-      'test description',
-      'SELECT ... FROM encrypted WHERE e = ''f510853730e1c3dbd31b86963f029dd5''');
-  END;
-$$ LANGUAGE plpgsql;
-```
-
-**After (Rust)**:
-```rust
-#[sqlx::test(fixtures(scripts("encrypted_json")))]
-async fn test_name(pool: PgPool) -> Result<()> {
-    let sql = format!("SELECT ... FROM encrypted WHERE e = '{}'", Selectors::ARRAY_ELEMENTS);
-    QueryAssertion::new(&pool, &sql).returns_rows().await;
-    Ok(())
-}
-```
-
-**Benefits**:
-- **Run individual tests**: `cargo test test_name`
-- **No magic literals**: `Selectors::ARRAY_ELEMENTS` is self-documenting
-- **Self-documenting**: Test name describes behavior
-- **Less verbose**: No DO $$ boilerplate
-- **Better errors**: Rust panic messages show exact assertion failure
-- **Test isolation**: Each test runs in fresh database (SQLx handles this automatically)
-- **Type safety**: Rust compiler catches errors at compile time
-- **Better IDE support**: IntelliSense, refactoring, debugging
-
-## Migration Quality
-
-All migrated tests include:
-- ✅ References to original SQL file and line numbers
-- ✅ Comprehensive error handling with `anyhow::Context`
-- ✅ Clear documentation of test intent
-- ✅ Assertion count tracking in comments
-- ✅ Proper fixture usage
-- ✅ Helper function consolidation
-- ✅ 100% test pass rate
-
-See `FINAL_CODE_REVIEW.md` for detailed quality assessment.
 
 ## Dependencies
 
