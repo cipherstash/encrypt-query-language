@@ -26,8 +26,8 @@ AS $$
       RETURN 1;
     END IF;
 
-    a_data := a.data;
-    b_data := b.data;
+    a_data := a;
+    b_data := b;
 
     IF a_data < b_data THEN
       RETURN -1;

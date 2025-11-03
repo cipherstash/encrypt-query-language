@@ -47,7 +47,7 @@ CREATE FUNCTION eql_v2.blake3(val eql_v2_encrypted)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
-    RETURN (SELECT eql_v2.blake3(val.data));
+    RETURN (SELECT eql_v2.blake3($1));
   END;
 $$ LANGUAGE plpgsql;
 
@@ -85,7 +85,7 @@ CREATE FUNCTION eql_v2.has_blake3(val eql_v2_encrypted)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
-    RETURN eql_v2.has_blake3(val.data);
+    RETURN eql_v2.has_blake3($1);
   END;
 $$ LANGUAGE plpgsql;
 

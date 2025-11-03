@@ -15,7 +15,7 @@ BEGIN
         RETURN NULL;
     END IF;
 
-    RETURN ROW(data)::public.eql_v2_encrypted;
+    RETURN data;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -68,7 +68,7 @@ BEGIN
         RETURN NULL;
     END IF;
 
-    RETURN e.data;
+    RETURN e;
 END;
 $$ LANGUAGE plpgsql;
 

@@ -62,7 +62,7 @@ CREATE FUNCTION eql_v2.has_hmac_256(val eql_v2_encrypted)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
-    RETURN eql_v2.has_hmac_256(val.data);
+    RETURN eql_v2.has_hmac_256($1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -82,7 +82,7 @@ CREATE FUNCTION eql_v2.hmac_256(val eql_v2_encrypted)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
-    RETURN (SELECT eql_v2.hmac_256(val.data));
+    RETURN (SELECT eql_v2.hmac_256($1));
   END;
 $$ LANGUAGE plpgsql;
 

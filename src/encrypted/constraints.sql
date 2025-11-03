@@ -77,6 +77,6 @@ CREATE FUNCTION eql_v2.check_encrypted(val eql_v2_encrypted)
   RETURNS BOOLEAN
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 BEGIN ATOMIC
-    RETURN eql_v2.check_encrypted(val.data);
+    RETURN eql_v2.check_encrypted(val);
 END;
 

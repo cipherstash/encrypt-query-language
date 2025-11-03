@@ -44,7 +44,7 @@ CREATE FUNCTION eql_v2.bloom_filter(val eql_v2_encrypted)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
-    RETURN (SELECT eql_v2.bloom_filter(val.data));
+    RETURN (SELECT eql_v2.bloom_filter($1));
   END;
 $$ LANGUAGE plpgsql;
 
@@ -82,6 +82,6 @@ CREATE FUNCTION eql_v2.has_bloom_filter(val eql_v2_encrypted)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
-    RETURN eql_v2.has_bloom_filter(val.data);
+    RETURN eql_v2.has_bloom_filter($1);
   END;
 $$ LANGUAGE plpgsql;
