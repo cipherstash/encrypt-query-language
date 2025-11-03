@@ -82,7 +82,7 @@ CREATE FUNCTION eql_v2.jsonb_path_query(val eql_v2_encrypted, selector eql_v2_en
 AS $$
   BEGIN
     RETURN QUERY
-    SELECT * FROM eql_v2.jsonb_path_query(val.data, eql_v2.selector(selector));
+    SELECT * FROM eql_v2.jsonb_path_query($1, eql_v2.selector(selector));
   END;
 $$ LANGUAGE plpgsql;
 
@@ -93,7 +93,7 @@ CREATE FUNCTION eql_v2.jsonb_path_query(val eql_v2_encrypted, selector text)
 AS $$
   BEGIN
     RETURN QUERY
-    SELECT * FROM eql_v2.jsonb_path_query(val.data, selector);
+    SELECT * FROM eql_v2.jsonb_path_query($1, selector);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -148,7 +148,7 @@ AS $$
     RETURN (
       SELECT (
         SELECT e
-        FROM eql_v2.jsonb_path_query(val.data, selector) AS e
+        FROM eql_v2.jsonb_path_query($1, selector) AS e
         LIMIT 1
       )
     );
@@ -163,7 +163,7 @@ AS $$
   BEGIN
     RETURN (
         SELECT e
-        FROM eql_v2.jsonb_path_query(val.data, eql_v2.selector(selector)) as e
+        FROM eql_v2.jsonb_path_query($1, eql_v2.selector(selector)) as e
         LIMIT 1
     );
   END;
@@ -177,7 +177,7 @@ AS $$
   BEGIN
     RETURN (
         SELECT e
-        FROM eql_v2.jsonb_path_query(val.data, selector) as e
+        FROM eql_v2.jsonb_path_query($1, selector) as e
         LIMIT 1
     );
   END;
@@ -225,7 +225,7 @@ CREATE FUNCTION eql_v2.jsonb_array_length(val eql_v2_encrypted)
 AS $$
   BEGIN
     RETURN (
-      SELECT eql_v2.jsonb_array_length(val.data)
+      SELECT eql_v2.jsonb_array_length($1)
     );
   END;
 $$ LANGUAGE plpgsql;
@@ -276,7 +276,7 @@ CREATE FUNCTION eql_v2.jsonb_array_elements(val eql_v2_encrypted)
 AS $$
   BEGIN
     RETURN QUERY
-      SELECT * FROM eql_v2.jsonb_array_elements(val.data);
+      SELECT * FROM eql_v2.jsonb_array_elements($1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -319,6 +319,6 @@ CREATE FUNCTION eql_v2.jsonb_array_elements_text(val eql_v2_encrypted)
 AS $$
   BEGIN
     RETURN QUERY
-      SELECT * FROM eql_v2.jsonb_array_elements_text(val.data);
+      SELECT * FROM eql_v2.jsonb_array_elements_text($1);
   END;
 $$ LANGUAGE plpgsql;

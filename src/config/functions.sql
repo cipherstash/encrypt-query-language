@@ -472,7 +472,7 @@ BEGIN
       WITH tables AS (
           SELECT config.state, tables.key AS table, tables.value AS config
           FROM public.eql_v2_configuration config, jsonb_each(data->'tables') tables
-          WHERE config.data->>'v' = '1'
+          WHERE $1->>'v' = '1'
       )
       SELECT
           tables.state,

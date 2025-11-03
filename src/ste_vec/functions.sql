@@ -54,7 +54,7 @@ CREATE FUNCTION eql_v2.ste_vec(val eql_v2_encrypted)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
-    RETURN (SELECT eql_v2.ste_vec(val.data));
+    RETURN (SELECT eql_v2.ste_vec($1));
   END;
 $$ LANGUAGE plpgsql;
 
@@ -94,7 +94,7 @@ CREATE FUNCTION eql_v2.is_ste_vec_value(val eql_v2_encrypted)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
-    RETURN eql_v2.is_ste_vec_value(val.data);
+    RETURN eql_v2.is_ste_vec_value($1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -147,7 +147,7 @@ CREATE FUNCTION eql_v2.to_ste_vec_value(val eql_v2_encrypted)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
-    RETURN eql_v2.to_ste_vec_value(val.data);
+    RETURN eql_v2.to_ste_vec_value($1);
   END;
 $$ LANGUAGE plpgsql;
 
@@ -192,7 +192,7 @@ CREATE FUNCTION eql_v2.selector(val eql_v2_encrypted)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
-    RETURN (SELECT eql_v2.selector(val.data));
+    RETURN (SELECT eql_v2.selector($1));
   END;
 $$ LANGUAGE plpgsql;
 
@@ -235,7 +235,7 @@ CREATE FUNCTION eql_v2.is_ste_vec_array(val eql_v2_encrypted)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
-    RETURN (SELECT eql_v2.is_ste_vec_array(val.data));
+    RETURN (SELECT eql_v2.is_ste_vec_array($1));
   END;
 $$ LANGUAGE plpgsql;
 

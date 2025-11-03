@@ -19,9 +19,7 @@
 DO $$
   BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'eql_v2_encrypted') THEN
-      CREATE TYPE public.eql_v2_encrypted AS (
-        data jsonb
-      );
+      CREATE DOMAIN public.eql_v2_encrypted AS jsonb;
     END IF;
   END
 $$;

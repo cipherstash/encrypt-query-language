@@ -46,7 +46,7 @@ CREATE FUNCTION eql_v2.ore_cllw_u64_8(val eql_v2_encrypted)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
-    RETURN (SELECT eql_v2.ore_cllw_u64_8(val.data));
+    RETURN (SELECT eql_v2.ore_cllw_u64_8($1));
   END;
 $$ LANGUAGE plpgsql;
 
@@ -84,7 +84,7 @@ CREATE FUNCTION eql_v2.has_ore_cllw_u64_8(val eql_v2_encrypted)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 	BEGIN
-    RETURN eql_v2.has_ore_cllw_u64_8(val.data);
+    RETURN eql_v2.has_ore_cllw_u64_8($1);
   END;
 $$ LANGUAGE plpgsql;
 
