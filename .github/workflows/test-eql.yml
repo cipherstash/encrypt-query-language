@@ -28,7 +28,7 @@ defaults:
 jobs:
   test:
     name: "Test EQL SQL components"
-    runs-on: ubuntu-latest-m
+    runs-on: blacksmith-16vcpu-ubuntu-2204
 
     strategy:
       fail-fast: false
