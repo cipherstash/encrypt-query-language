@@ -53,4 +53,6 @@ jobs:
 
       - name: Test EQL for Postgres ${{ matrix.postgres-version }}
         run: |
+          export active_rust_toolchain=$(rustup show active-toolchain | cut -d' ' -f1)
+          rustup component add --toolchain ${active_rust_toolchain} rustfmt clippy
           mise run --output prefix test --postgres ${POSTGRES_VERSION}
