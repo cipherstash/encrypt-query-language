@@ -41,13 +41,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: stable
-          components: rustfmt
-          cache: true
-          cache-all-crates: true
-
       - uses: jdx/mise-action@v2
         with:
           version: 2025.1.6 # [default: latest] mise version to install
