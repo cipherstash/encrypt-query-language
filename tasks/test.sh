@@ -21,7 +21,7 @@ echo ""
 
 # Build first
 echo "Building EQL..."
-mise run build --force
+mise run --output prefix build --force
 
 # Run lints on sqlx tests
 echo ""
@@ -35,14 +35,14 @@ echo ""
 echo "=============================================="
 echo "2/3: Running Legacy SQL Tests"
 echo "=============================================="
-mise run test:legacy --postgres ${POSTGRES_VERSION}
+mise run --output prefix test:legacy --postgres ${POSTGRES_VERSION}
 
 # Run SQLx Rust tests
 echo ""
 echo "=============================================="
 echo "3/3: Running SQLx Rust Tests"
 echo "=============================================="
-mise run test:sqlx
+mise run --output prefix test:sqlx
 
 echo ""
 echo "=============================================="
