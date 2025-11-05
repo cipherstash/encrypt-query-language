@@ -8,7 +8,7 @@
 # ]
 
 [tools]
-rust = "latest"
+"rust" = { version = "latest", components = "rustc,rust-std,cargo,rustfmt,rust-docs,clippy" }
 "cargo:cargo-binstall" = "latest"
 "cargo:sqlx-cli" = "latest"
 
