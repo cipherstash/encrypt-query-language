@@ -23,12 +23,12 @@ echo ""
 echo "Building EQL..."
 mise run build --force
 
-# # Run lints on sqlx tests
-# echo ""
-# echo "=============================================="
-# echo "1/3: Running linting checks on SQLx Rust tests"
-# echo "=============================================="
-# mise run test:lint
+# Run lints on sqlx tests
+echo ""
+echo "=============================================="
+echo "1/3: Running linting checks on SQLx Rust tests"
+echo "=============================================="
+mise run --output prefix test:lint
 
 # Run legacy SQL tests
 echo ""
