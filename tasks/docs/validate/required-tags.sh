@@ -6,7 +6,7 @@ set -e
 echo "Validating required Doxygen tags..."
 echo ""
 
-source_directory="$(pwd)/src"
+source_directory="src"
 errors=0
 warnings=0
 
