@@ -39,6 +39,10 @@ jobs:
           install: true
           cache: true
 
+      - name: Setup database
+        run: |
+          mise run postgres:up --extra-args "--detach --wait"
+
       - name: Validate SQL documentation
         run: |
           mise run docs:validate
