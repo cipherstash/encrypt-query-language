@@ -196,7 +196,9 @@ async fn has_pending_column(
 ```
 
 ## Test Organization
-
+- Tests live in `tests/`
+- Fixtures live in `fixtures/`
+- Migrations live in `migrations/`
 - Tests live in `tests/`
 - Fixtures live in `fixtures/`
 - Migrations live in `migrations/`
