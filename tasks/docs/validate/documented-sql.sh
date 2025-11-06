@@ -1,10 +1,7 @@
 #!/bin/bash
-# tasks/validate-documented-sql.sh
-# Validates SQL syntax for all documented files
+#MISE description="Validates SQL syntax for all documented files"
 
 set -e
-
-cd "$(dirname "$0")/.."
 
 PGHOST=${PGHOST:-localhost}
 PGPORT=${PGPORT:-7432}
