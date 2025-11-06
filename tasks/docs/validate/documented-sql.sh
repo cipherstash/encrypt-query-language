@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #MISE description="Validates SQL syntax for all documented files"
 
 set -e

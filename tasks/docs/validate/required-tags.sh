@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #MISE description="Validates required Doxygen tags are present"
 
 set -e

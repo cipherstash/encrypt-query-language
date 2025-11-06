@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #MISE description="Checks documentation coverage for SQL files"
 
 set -e
