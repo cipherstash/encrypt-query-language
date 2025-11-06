@@ -56,6 +56,7 @@ run = """
 cargo watch -x test
 """
 
+
 [tasks."docs:generate"]
 description = "Generate API documentation with Doxygen"
 run = """
