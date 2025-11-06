@@ -1,10 +1,7 @@
 #!/bin/bash
-# tasks/validate-required-tags.sh
-# Validates that required Doxygen tags are present
+#MISE description="Validates required Doxygen tags are present"
 
 set -e
-
-cd "$(dirname "$0")/.."
 
 echo "Validating required Doxygen tags..."
 echo ""
