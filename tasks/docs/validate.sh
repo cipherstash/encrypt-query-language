@@ -10,3 +10,7 @@ mise run --output prefix docs:validate:coverage
 echo
 echo "Validating required tags..."
 mise run --output prefix docs:validate:required-tags
+
+echo
+echo "Validating SQL in documentation..."
+mise run --output prefix docs:validate:documented-sql
