@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #MISE description="Package documentation for release"
 
 set -e
