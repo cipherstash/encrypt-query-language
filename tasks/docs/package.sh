@@ -1,6 +1,5 @@
 #!/bin/bash
-# tasks/docs-package.sh
-# Package generated documentation for release
+#MISE description="Package documentation for release"
 
 set -e
 

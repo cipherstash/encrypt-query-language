@@ -39,7 +39,7 @@ EXTENSION_MAPPING      = sql=C++ template=C++
 
 # CRITICAL: Input filter to convert SQL comments (--!) to C++ style (//!)
 # This is REQUIRED for Doxygen to recognize SQL comments
-INPUT_FILTER           = "tasks/doxygen-filter.sh"
+INPUT_FILTER           = "tasks/docs/doxygen-filter.sh"
 FILTER_SOURCE_FILES    = YES
 
 #---------------------------------------------------------------------------
