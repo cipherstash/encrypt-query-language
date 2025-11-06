@@ -9,7 +9,6 @@ This test crate provides:
 - **Self-documenting fixtures**: SQL files with inline documentation
 - **No magic literals**: Selector constants in `src/selectors.rs`
 - **Fluent assertions**: Chainable query assertions via `QueryAssertion`
-- **100% SQLx Migration**: All SQL test assertions converted to Rust/SQLx
 
 ## Architecture
 
