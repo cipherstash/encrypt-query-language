@@ -97,7 +97,7 @@ jobs:
 
       - name: Package documentation
         run: |
-          mise run docs-package ${{ github.event.release.tag_name }}
+          mise run docs:package ${{ github.event.release.tag_name }}
 
       - name: Upload documentation artifacts
         uses: actions/upload-artifact@v4
