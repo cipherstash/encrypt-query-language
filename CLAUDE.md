@@ -129,9 +129,9 @@ Verify documentation quality:
 mise run docs:validate
 
 # Or run individual scripts directly
-tasks/check-doc-coverage.sh      # Check 100% coverage
-tasks/validate-required-tags.sh  # Verify @brief, @param, @return tags
-tasks/validate-documented-sql.sh # Validate SQL syntax (requires database)
+mise run docs:validate:coverage       # Check 100% coverage
+mise run docs:validate:required-tags  # Verify @brief, @param, @return tags
+mise run docs:validate:documented-sql # Validate SQL syntax (requires database)
 ```
 
 ### Template Files
