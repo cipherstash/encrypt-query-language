@@ -6,10 +6,16 @@ set -e
 echo "Validating required Doxygen tags..."
 echo ""
 
+source_directory="$(pwd)/src"
 errors=0
 warnings=0
 
-for file in $(find src -name "*.sql" -not -name "*_test.sql"); do
+if [ ! -d $source_directory ]; then
+  echo "error: source directory does not exist: ${source_directory}"
+  exit 2
+fi
+
+for file in $(find $source_directory -name "*.sql" -not -name "*_test.sql"); do
   # Skip auto-generated files
   if grep -q "^-- AUTOMATICALLY GENERATED FILE" "$file" 2>/dev/null; then
     continue
@@ -55,7 +61,7 @@ for file in $(find src -name "*.sql" -not -name "*_test.sql"); do
 done
 
 # Also check template files
-for file in $(find src -name "*.template"); do
+for file in $(find $source_directory -name "*.template"); do
   functions=$(grep -n "^CREATE FUNCTION" "$file" 2>/dev/null | cut -d: -f1 || echo "")
 
   for line_no in $functions; do

@@ -8,6 +8,7 @@ PGPORT=${PGPORT:-7432}
 PGUSER=${PGUSER:-cipherstash}
 PGPASSWORD=${PGPASSWORD:-password}
 PGDATABASE=${PGDATABASE:-postgres}
+source_directory="$(pwd)/src"
 
 echo "Validating SQL syntax for all documented files..."
 echo ""
@@ -15,7 +16,12 @@ echo ""
 errors=0
 validated=0
 
-for file in $(find src -name "*.sql" -not -name "*_test.sql" | sort); do
+if [ ! -d $source_directory ]; then
+  echo "error: source directory does not exist: ${source_directory}"
+  exit 2
+fi
+
+for file in $(find $source_directory -name "*.sql" -not -name "*_test.sql" | sort); do
   echo -n "Validating $file... "
 
   # Capture both stdout and stderr
