@@ -8,11 +8,17 @@ echo ""
 echo "Generated: $(date +"%Y-%m-%dT%H:%M:%S%z")"
 echo ""
 
+source_directory="$(pwd)/src"
 total_sql_files=0
 documented_sql_files=0
 
+if [ ! -d $source_directory ]; then
+  echo "error: source directory does not exist: ${source_directory}"
+  exit 2
+fi
+
 # Check .sql files
-for file in $(find src -name "*.sql" -not -name "*_test.sql" | sort); do
+for file in $(find $source_directory -name "*.sql" -not -name "*_test.sql" | sort); do
   # Skip auto-generated files
   if grep -q "^-- AUTOMATICALLY GENERATED FILE" "$file" 2>/dev/null; then
     echo "- $file: ⊘ Auto-generated (skipped)"
@@ -33,7 +39,7 @@ done
 total_template_files=0
 documented_template_files=0
 
-for file in $(find src -name "*.template" | sort); do
+for file in $(find $source_directory -name "*.template" | sort); do
   total_template_files=$((total_template_files + 1))
 
   if grep -q "^--! @brief" "$file" 2>/dev/null; then
