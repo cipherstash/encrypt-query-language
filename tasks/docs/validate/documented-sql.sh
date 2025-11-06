@@ -8,7 +8,7 @@ PGPORT=${PGPORT:-7432}
 PGUSER=${PGUSER:-cipherstash}
 PGPASSWORD=${PGPASSWORD:-password}
 PGDATABASE=${PGDATABASE:-postgres}
-source_directory="$(pwd)/src"
+source_directory="src"
 
 echo "Validating SQL syntax for all documented files..."
 echo ""

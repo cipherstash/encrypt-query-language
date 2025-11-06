@@ -8,7 +8,7 @@ echo ""
 echo "Generated: $(date +"%Y-%m-%dT%H:%M:%S%z")"
 echo ""
 
-source_directory="$(pwd)/src"
+source_directory="src"
 total_sql_files=0
 documented_sql_files=0
 
