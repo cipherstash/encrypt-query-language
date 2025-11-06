@@ -1,14 +1,11 @@
 #!/bin/bash
-# tasks/check-doc-coverage.sh
-# Checks documentation coverage for SQL files
+#MISE description="Checks documentation coverage for SQL files"
 
 set -e
 
-cd "$(dirname "$0")/.."
-
 echo "# SQL Documentation Coverage Report"
 echo ""
-echo "Generated: $(date)"
+echo "Generated: $(date +"%Y-%m-%dT%H:%M:%S%z")"
 echo ""
 
 total_sql_files=0
