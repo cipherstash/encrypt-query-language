@@ -6,8 +6,15 @@
 #     "./tests/mise.tcp.toml",
 #     "./tests/mise.tls.toml",
 # ]
+
+[tools]
+"rust" = { version = "latest", components = "rustc,rust-std,cargo,rustfmt,rust-docs,clippy" }
+"cargo:cargo-binstall" = "latest"
+"cargo:sqlx-cli" = "latest"
+
+
 [task_config]
-includes = ["tasks", "tasks/postgres.toml", "tasks/rust.toml"]
+includes = ["tasks", "tasks/postgres.toml"]
 
 [env]
 POSTGRES_DB = "cipherstash"
@@ -15,6 +22,7 @@ POSTGRES_USER = "cipherstash"
 POSTGRES_PASSWORD = "password"
 POSTGRES_HOST = "localhost"
 POSTGRES_PORT = "7432"
+DATABASE_URL = "postgresql://cipherstash:password@localhost:7432/cipherstash"
 
 [tasks."clean"]
 alias = 'k'
@@ -22,4 +30,28 @@ description = "Clean release"
 run = """
   rm -f release/cipherstash-encrypt-uninstall.sql
   rm -f release/cipherstash-encrypt.sql
+"""
+
+[tasks."test:sqlx"]
+description = "Run SQLx tests with hybrid migration approach"
+dir = "{{config_root}}"
+run = """
+# Copy built SQL to SQLx migrations (EQL install is generated, not static)
+echo "Updating SQLx migrations with built EQL..."
+cp release/cipherstash-encrypt.sql tests/sqlx/migrations/001_install_eql.sql
+
+# Run SQLx migrations and tests
+echo "Running SQLx migrations..."
+cd tests/sqlx
+sqlx migrate run
+
+echo "Running Rust tests..."
+cargo test
+"""
+
+[tasks."test:sqlx:watch"]
+description = "Run SQLx tests in watch mode (rebuild EQL on changes)"
+dir = "{{config_root}}/tests/sqlx"
+run = """
+cargo watch -x test
 """
