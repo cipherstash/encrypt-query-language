@@ -1,4 +1,4 @@
-# EQL Test Framework
+# EQL SQLx Test Framework
 
 Rust-based test framework for EQL (Encrypt Query Language) using SQLx.
 
@@ -10,13 +10,6 @@ This test crate provides:
 - **No magic literals**: Selector constants in `src/selectors.rs`
 - **Fluent assertions**: Chainable query assertions via `QueryAssertion`
 
-## Migration Status
-
-✅ **Like-for-Like Migration: Complete** (40/40 SQL assertions ported)
-
-- Equality operators: 16/16 (HMAC + Blake3, operators + functions + JSONB)
-- JSONB functions: 24/24 (arrays, paths, structure validation, encrypted selectors)
-
 ## Architecture
 
 - **SQLx `#[sqlx::test]`**: Automatic test isolation (each test gets fresh database)
@@ -27,6 +20,7 @@ This test crate provides:
   - `003_install_ste_vec_data.sql` - Loads STE vector encryption data
   - `004_install_test_helpers.sql` - Creates test helper functions
 - **Assertions**: Builder pattern for common test assertions
+- **Helpers**: Centralized helper functions in `src/helpers.rs`
 
 ## Running Tests
 
@@ -34,15 +28,15 @@ This test crate provides:
 # Run all SQLx tests (builds EQL, runs migrations, tests)
 mise run test:sqlx
 
+# Run from project root
+mise run test
+
 # Run specific test file
 cd tests/sqlx
 cargo test --test equality_tests
 
 # Run specific test
 cargo test equality_operator_finds_matching_record_hmac -- --nocapture
-
-# Run with coverage tracking
-./tools/count_assertions.sh
 
 # All JSONB tests
 cargo test jsonb
@@ -67,6 +61,19 @@ cargo test -- --nocapture
 - **DEPENDS ON**: `encrypted_json.sql` (requires 'encrypted' table to exist)
 - Adds record 4 to the existing table
 
+**config_tables.sql**: Tables for configuration management tests
+- Tables: `users`, `blah` with encrypted columns
+
+**constraint_tables.sql**: Tables for constraint testing
+- Table: `constrained` with UNIQUE, NOT NULL, CHECK constraints
+
+**encryptindex_tables.sql**: Tables for encryption workflow tests
+- Table: `users` with plaintext columns for encryption testing
+
+**like_data.sql**: Test data for LIKE operator tests
+- 3 encrypted records with bloom filter indexes
+
+
 ### Selectors
 
 See `src/selectors.rs` for all selector constants:
@@ -84,7 +91,7 @@ Each selector is an MD5 hash that corresponds to the encrypted path query select
 
 ```rust
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
-async fn my_test(pool: PgPool) {
+async fn my_test(pool: PgPool) -> Result<()> {
     let sql = format!(
         "SELECT * FROM encrypted WHERE e = '{}'",
         Selectors::N
@@ -95,6 +102,8 @@ async fn my_test(pool: PgPool) {
         .await
         .count(3)
         .await;
+
+    Ok(())
 }
 ```
 
@@ -139,55 +148,91 @@ QueryAssertion::new(&pool, &sql)
     .await;
 ```
 
-## Comparison to SQL Tests
+### Helper Functions
 
-**Before (SQL)**:
-```sql
-DO $$
-  BEGIN
-    PERFORM seed_encrypted_json();
-    PERFORM assert_result(
-      'test description',
-      'SELECT ... FROM encrypted WHERE e = ''f510853730e1c3dbd31b86963f029dd5''');
-  END;
-$$ LANGUAGE plpgsql;
-```
+Use centralized helpers from `src/helpers.rs`:
 
-**After (Rust)**:
 ```rust
-#[sqlx::test(fixtures(scripts("encrypted_json")))]
-async fn test_name(pool: PgPool) {
-    let sql = format!("SELECT ... FROM encrypted WHERE e = '{}'", Selectors::ARRAY_ELEMENTS);
-    QueryAssertion::new(&pool, &sql).returns_rows().await;
-}
+use eql_tests::{get_ore_encrypted, get_ore_encrypted_as_jsonb};
+
+// Get encrypted ORE value for comparison
+let ore_term = get_ore_encrypted(&pool, 42).await?;
+
+// Get ORE value as JSONB for operations
+let jsonb_value = get_ore_encrypted_as_jsonb(&pool, 42).await?;
 ```
 
-**Benefits**:
-- **Run individual tests**: `cargo test test_name`
-- **No magic literals**: `Selectors::ARRAY_ELEMENTS` is self-documenting
-- **Self-documenting**: Test name describes behavior
-- **Less verbose**: No DO $$ boilerplate
-- **Better errors**: Rust panic messages show exact assertion failure
-- **Test isolation**: Each test runs in fresh database (SQLx handles this automatically)
+### Test-Specific Helper Functions
+
+Some test modules include specialized helper functions for their specific use cases:
+
+**Configuration State Helpers** (in `config_tests.rs`):
+```rust
+// Check if an index exists in EQL configuration with specific state
+async fn search_config_exists(
+    pool: &PgPool,
+    table_name: &str,
+    column_name: &str,
+    index_name: &str,
+    state: &str,
+) -> Result<bool>
+```
+
+**Schema Inspection Helpers** (in `encryptindex_tests.rs`):
+```rust
+// Check if a column exists in information_schema
+async fn column_exists(
+    pool: &PgPool,
+    table_name: &str,
+    column_name: &str,
+) -> Result<bool>
+
+// Check if a column is in the pending columns list for encryption
+async fn has_pending_column(
+    pool: &PgPool,
+    column_name: &str,
+) -> Result<bool>
+```
 
 ## Test Organization
+- Tests live in `tests/`
+- Fixtures live in `fixtures/`
+- Migrations live in `migrations/`
+- Tests live in `tests/`
+- Fixtures live in `fixtures/`
+- Migrations live in `migrations/`
 
-### Current Test Modules
+### Test Module Categories
 
-**`tests/jsonb_tests.rs`** - JSONB functions and operators
-- Converted from `src/jsonb/functions_test.sql`
-- Tests: `jsonb_array_elements`, `jsonb_array_elements_text`, `jsonb_array_length`, `jsonb_path_query`, `jsonb_path_exists`, encrypted selector validation
+**Operator Tests:**
+- `comparison_tests.rs` - Comparison operators (`<`, `>`, `<=`, `>=`)
+- `equality_tests.rs` - Equality operators (`=`, `!=`)
+- `inequality_tests.rs` - Inequality operators
+- `ore_equality_tests.rs` - ORE-specific equality tests
+- `ore_comparison_tests.rs` - ORE CLLW comparison tests
+- `like_operator_tests.rs` - Pattern matching (`LIKE`, `ILIKE`)
+- `containment_tests.rs` - Containment operators (`@>`, `<@`)
+- `operator_class_tests.rs` - Operator class definitions
 
-**`tests/equality_tests.rs`** - Equality operators and functions
-- Converted from `src/operators/=_test.sql`
-- Tests: HMAC index equality, Blake3 index equality, `eq()` function
+**JSONB Tests:**
+- `jsonb_tests.rs` - JSONB functions and structure validation
+- `jsonb_path_operators_tests.rs` - JSONB path operators
 
-### Test Count
+**Infrastructure Tests:**
+- `config_tests.rs` - Configuration management
+- `encryptindex_tests.rs` - Encrypted column creation workflows
+- `aggregate_tests.rs` - Aggregate functions (COUNT, MAX, MIN, GROUP BY)
+- `constraint_tests.rs` - Database constraints on encrypted columns
+- `order_by_tests.rs` - ORDER BY with encrypted data
 
-- **Total**: 35 tests (34 functional + 1 helper)
-- **JSONB**: 19 tests
-- **Equality**: 15 tests
-- **Helpers**: 1 test
+**Index Tests:**
+- `index_compare_tests.rs` - Index comparison functions (Blake3, HMAC, ORE variants)
+- `operator_compare_tests.rs` - Main compare() function tests
+- `specialized_tests.rs` - Specialized cryptographic functions (STE, ORE, Bloom filter)
+
+**Helpers:**
+- `test_helpers_test.rs` - Tests for test helper functions
+
 
 ## Dependencies
 
@@ -198,6 +243,7 @@ sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "macros"] }
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+anyhow = "1"
 ```
 
 ## Database Configuration
@@ -206,10 +252,11 @@ Tests connect to PostgreSQL database configured by SQLx:
 - Connection managed automatically by `#[sqlx::test]` macro
 - Each test gets isolated database instance
 - Fixtures and migrations run before each test
+- Database URL: `postgresql://cipherstash:password@localhost:7432/encrypt_test`
 
 ## Future Work
 
-- **Fixture generator tool** (see `docs/plans/fixture-generator.md`)
-- **Convert remaining SQL tests**: Many SQL tests still need conversion
-- **Property-based tests**: Add encryption round-trip property tests
-- **Coverage expansion**: ORE indexes, bloom filters, other operators
+- ✅ ~~Convert remaining SQL tests~~ **COMPLETE!**
+- Property-based tests: Add encryption round-trip property tests
+- Performance benchmarks: Measure query performance with encrypted data
+- Integration tests: Test with CipherStash Proxy
