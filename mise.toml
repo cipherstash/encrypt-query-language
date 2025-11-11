@@ -11,7 +11,7 @@
 "rust" = { version = "latest", components = "rustc,rust-std,cargo,rustfmt,rust-docs,clippy" }
 "cargo:cargo-binstall" = "latest"
 "cargo:sqlx-cli" = "latest"
-
+"python" = "latest"
 
 [task_config]
 includes = ["tasks", "tasks/postgres.toml"]
@@ -54,22 +54,4 @@ description = "Run SQLx tests in watch mode (rebuild EQL on changes)"
 dir = "{{config_root}}/tests/sqlx"
 run = """
 cargo watch -x test
-"""
-
-[tasks."docs:markdown"]
-description = "Generate Markdown from XML documentation"
-run = """
-  echo "Converting XML to Markdown..."
-
-  # Ensure XML exists
-  if [ ! -d "docs/api/xml" ]; then
-    echo "Error: XML documentation not found. Run 'mise run docs:generate' first."
-    exit 1
-  fi
-
-  # Run converter
-  python3 tasks/xml-to-markdown.py docs/api/xml docs/api/markdown
-
-  echo ""
-  echo "✓ Markdown documentation: docs/api/markdown/API.md"
 """

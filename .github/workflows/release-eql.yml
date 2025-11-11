@@ -90,7 +90,7 @@ jobs:
       - name: Generate documentation
         run: |
           mise run docs:generate
-          mise run docs:markdown
+          mise run docs:generate:markdown
 
       - name: Package documentation
         run: |

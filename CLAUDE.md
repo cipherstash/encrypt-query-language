@@ -18,7 +18,7 @@ This project uses `mise` for task management. Common commands:
   - Outputs XML (primary) and HTML (preview) formats
   - XML suitable for downstream processing/website integration
   - See `docs/api/README.md` for XML format details
-- `mise run docs:markdown` - Convert XML to Markdown API reference
+- `mise run docs:generate:markdown` - Convert XML to Markdown API reference
   - Generates single-file API reference: `docs/api/markdown/API.md`
   - Includes 84 documented functions with parameters, return values, and source links
 - `mise run docs:validate` - Validate documentation coverage and tags

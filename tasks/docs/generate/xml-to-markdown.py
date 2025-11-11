@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+#MISE hide=true
 """
 Simple Doxygen XML to Markdown converter for SQL function documentation.
 
