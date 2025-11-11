@@ -18,6 +18,25 @@ def clean_text(text):
         return ""
     return re.sub(r'\s+', ' ', text.strip())
 
+def generate_anchor(name):
+    """Generate GitHub-compatible anchor ID from function name"""
+    # GitHub converts headings to anchors by:
+    # 1. Lowercasing
+    # 2. Removing backticks and other special chars
+    # 3. Replacing spaces and underscores with hyphens
+    # 4. Collapsing multiple hyphens
+    anchor = name.lower()
+    # For function names, we want to preserve the exact structure
+    # since they're in code blocks, just lowercase them
+    anchor = anchor.replace('_', '-')
+    # Clean up any special characters that might cause issues
+    anchor = re.sub(r'[^a-z0-9-]', '', anchor)
+    # Collapse multiple hyphens
+    anchor = re.sub(r'-+', '-', anchor)
+    # Remove leading/trailing hyphens
+    anchor = anchor.strip('-')
+    return anchor
+
 def extract_para_text(element):
     """Extract text from para elements, including nested content"""
     if element is None:
@@ -41,7 +60,11 @@ def extract_para_text(element):
         if child.tail:
             parts.append(child.tail)
 
-    return clean_text(''.join(parts))
+    result = ''.join(parts)
+    # Clean up cases where we have back-to-back backticks with no content between
+    # This happens when ref elements are adjacent (e.g., eql_v2.blake3 -> `eql_v2`.`blake3`)
+    result = re.sub(r'`(\s*)`', r'\1', result)
+    return clean_text(result)
 
 def extract_parameter_list(desc_element):
     """Extract structured parameter list from detaileddescription"""
@@ -163,6 +186,12 @@ def process_function(memberdef):
         return None
 
     func_name = name.text
+    
+    # Skip SQL intrinsics that Doxygen incorrectly identifies as functions
+    # These are actually part of CREATE CAST, CREATE TYPE ... AS, CREATE OPERATOR statements
+    sql_intrinsics = ['AS', 'CAST', 'CHECK', 'EXISTS', 'OPERATOR', 'TYPE', 'INDEX', 'CONSTRAINT']
+    if func_name.upper() in sql_intrinsics:
+        return None
 
     # Extract descriptions
     brief = extract_description(memberdef.find('briefdescription'))
@@ -203,7 +232,54 @@ def process_function(memberdef):
     exceptions = extract_exceptions(detailed_elem)
 
     # Extract return type
-    return_type = memberdef.find('type')
+    # For SQL functions, the return type might be in the argsstring element after "RETURNS"
+    argsstring = memberdef.find('argsstring')
+    return_type_text = ''
+    
+    if argsstring is not None and argsstring.text:
+        # Look for RETURNS keyword in argsstring
+        import re
+        returns_match = re.search(r'RETURNS\s+([^\s]+)', argsstring.text)
+        if returns_match:
+            return_type_text = returns_match.group(1)
+            # Debug: Check if already has backticks from XML
+            if return_type_text.startswith('`'):
+                # Already formatted with backticks, just store it
+                pass
+            # Debug print
+            #print(f"DEBUG: Extracted from argsstring: {return_type_text}")
+    
+    # Fallback to type element if not found in argsstring
+    if not return_type_text:
+        return_type = memberdef.find('type')
+        return_type_text = extract_para_text(return_type) if return_type is not None else ''
+        # Clean up return type - remove CREATE FUNCTION prefix if present
+        # Remove common SQL DDL prefixes that shouldn't be in return type
+        # Handle cases with backticks between words (e.g., "CREATE `FUNCTION` `eql_v2`")
+        # First, remove the CREATE FUNCTION part even with backticks
+        return_type_text = re.sub(r'^CREATE\s+(`?FUNCTION`?\s*)+', '', return_type_text)
+        return_type_text = re.sub(r'^CREATE\s+OR\s+REPLACE\s+(`?FUNCTION`?\s*)+', '', return_type_text)
+        # Also handle case where CREATE and FUNCTION are in separate backticks
+        return_type_text = re.sub(r'^`?CREATE`?\s+`?FUNCTION`?\s*', '', return_type_text)
+        # Clean up any leftover backticks that shouldn't be there
+        # Handle case where we have multiple backticks like `eql_v2`.`blake3` -> `eql_v2.blake3`
+        return_type_text = re.sub(r'`\s*\.\s*`', '.', return_type_text)
+        # Handle back-to-back backticks with whitespace: `eql_v2` `blake3` -> `eql_v2.blake3`
+        return_type_text = re.sub(r'`\s+`', '.', return_type_text)
+    return_type_text = re.sub(r'`\s+`', '.', return_type_text)
+    # Clean up and ensure proper backtick formatting
+    return_type_text = return_type_text.strip()
+    
+    # If already has backticks, clean up doubles
+    if '`' in return_type_text:
+        # Clean up double backticks: ``something`` -> `something`
+        return_type_text = re.sub(r'``+', '`', return_type_text)
+        # Remove backticks for now to re-add them properly
+        return_type_text = return_type_text.replace('`', '')
+    
+    # Wrap in single backticks if it looks like a type name
+    if return_type_text and re.match(r'^[a-zA-Z_][a-zA-Z0-9_.]*(\[\])?$', return_type_text):
+        return_type_text = f'`{return_type_text}`'
 
     # Extract location
     location = memberdef.find('location')
@@ -215,7 +291,7 @@ def process_function(memberdef):
         'brief': brief,
         'detailed': detailed,
         'params': params,
-        'return_type': extract_para_text(return_type) if return_type is not None else '',
+        'return_type': return_type_text,
         'return_desc': simplesects.get('return', ''),
         'exceptions': exceptions,
         'notes': simplesects.get('note', ''),
@@ -261,7 +337,11 @@ def generate_markdown(func):
         lines.append("### Returns")
         lines.append("")
         if func['return_type']:
-            lines.append(f"**Type:** `{func['return_type']}`")
+            # Don't add backticks if return_type already has them
+            if func['return_type'].startswith('`') and func['return_type'].endswith('`'):
+                lines.append(f"**Type:** {func['return_type']}")
+            else:
+                lines.append(f"**Type:** `{func['return_type']}`")
             lines.append("")
         lines.append(func['return_desc'])
         lines.append("")
@@ -297,7 +377,25 @@ def generate_markdown(func):
 
     # Source reference
     if func['source']:
-        source_path = func['source'].replace('/Users/tobyhede/src/encrypt-query-language/.worktrees/sql-documentation/', '')
+        # Convert absolute path to relative path
+        source_file = Path(func['source'])
+        # Try to make path relative to common SQL source directories
+        # The source files are typically under src/ or similar directories
+        # We'll extract just the relevant part of the path
+        source_path = func['source']
+        
+        # Handle various possible path patterns by finding common markers
+        # and extracting the relative portion
+        for marker in ['/src/', '/tests/', '/release/', '/.worktrees/']:
+            if marker in source_path:
+                # Get everything after the marker (including the marker folder name)
+                parts = source_path.split(marker, 1)
+                if len(parts) == 2:
+                    source_path = marker[1:] + parts[1]  # Remove leading slash from marker
+                    break
+        else:
+            # If no known marker found, try to use just the filename
+            source_path = source_file.name
         lines.append("### Source")
         lines.append("")
         lines.append(f"[{source_path}:{func['line']}](../../{source_path}#L{func['line']})")
@@ -364,7 +462,8 @@ def main():
     ]
 
     for func in functions:
-        index_lines.append(f"- [`{func['name']}`](#{func['name'].lower().replace('_', '-')}) - {func['brief']}")
+        anchor = generate_anchor(func['name'])
+        index_lines.append(f"- [`{func['name']}`](#{anchor}) - {func['brief']}")
 
     index_lines.append("")
     index_lines.append("---")
