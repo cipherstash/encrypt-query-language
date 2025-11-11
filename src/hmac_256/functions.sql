@@ -6,7 +6,7 @@
 --! Extracts the HMAC-SHA256 hash value from the 'hm' field of an encrypted
 --! data payload. Used internally for exact-match comparisons.
 --!
---! @param val jsonb containing encrypted EQL payload
+--! @param jsonb containing encrypted EQL payload
 --! @return eql_v2.hmac_256 HMAC-SHA256 hash value
 --! @throws Exception if 'hm' field is missing when hmac_256 index is expected
 --!
@@ -34,7 +34,7 @@ $$ LANGUAGE plpgsql;
 --! Tests whether the encrypted data payload includes an 'hm' field,
 --! indicating an HMAC-SHA256 hash is available for exact-match queries.
 --!
---! @param val jsonb containing encrypted EQL payload
+--! @param jsonb containing encrypted EQL payload
 --! @return Boolean True if 'hm' field is present and non-null
 --!
 --! @see eql_v2.hmac_256
@@ -53,7 +53,7 @@ $$ LANGUAGE plpgsql;
 --! Tests whether an encrypted column value includes an HMAC-SHA256 hash
 --! by checking its underlying JSONB data field.
 --!
---! @param val eql_v2_encrypted Encrypted column value
+--! @param eql_v2_encrypted Encrypted column value
 --! @return Boolean True if HMAC-SHA256 hash is present
 --!
 --! @see eql_v2.has_hmac_256(jsonb)
@@ -73,7 +73,7 @@ $$ LANGUAGE plpgsql;
 --! Extracts the HMAC-SHA256 hash from an encrypted column value by accessing
 --! its underlying JSONB data field.
 --!
---! @param val eql_v2_encrypted Encrypted column value
+--! @param eql_v2_encrypted Encrypted column value
 --! @return eql_v2.hmac_256 HMAC-SHA256 hash value
 --!
 --! @see eql_v2.hmac_256(jsonb)
