@@ -4,6 +4,25 @@
 
 DROP FUNCTION IF EXISTS eql_v2.version();
 
+--! @file version.sql
+--! @brief EQL version reporting
+--!
+--! This file is auto-generated from version.template during build.
+--! The version string placeholder is replaced with the actual release version.
+
+--! @brief Get EQL library version string
+--!
+--! Returns the version string for the installed EQL library.
+--! This value is set at build time from the project version.
+--!
+--! @return text Version string (e.g., "2.1.0" or "DEV" for development builds)
+--!
+--! @note Auto-generated during build from version.template
+--!
+--! @example
+--! -- Check installed EQL version
+--! SELECT eql_v2.version();
+--! -- Returns: '2.1.0'
 CREATE FUNCTION eql_v2.version()
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE

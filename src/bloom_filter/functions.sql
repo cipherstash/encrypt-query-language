@@ -6,7 +6,7 @@
 --! Extracts the Bloom filter array from the 'bf' field of an encrypted
 --! data payload. Used internally for pattern-match queries (LIKE operator).
 --!
---! @param val jsonb containing encrypted EQL payload
+--! @param jsonb containing encrypted EQL payload
 --! @return eql_v2.bloom_filter Bloom filter as smallint array
 --! @throws Exception if 'bf' field is missing when bloom_filter index is expected
 --!
@@ -35,7 +35,7 @@ $$ LANGUAGE plpgsql;
 --! Extracts the Bloom filter from an encrypted column value by accessing
 --! its underlying JSONB data field.
 --!
---! @param val eql_v2_encrypted Encrypted column value
+--! @param eql_v2_encrypted Encrypted column value
 --! @return eql_v2.bloom_filter Bloom filter as smallint array
 --!
 --! @see eql_v2.bloom_filter(jsonb)
@@ -54,7 +54,7 @@ $$ LANGUAGE plpgsql;
 --! Tests whether the encrypted data payload includes a 'bf' field,
 --! indicating a Bloom filter is available for pattern-match queries.
 --!
---! @param val jsonb containing encrypted EQL payload
+--! @param jsonb containing encrypted EQL payload
 --! @return Boolean True if 'bf' field is present and non-null
 --!
 --! @see eql_v2.bloom_filter
@@ -73,7 +73,7 @@ $$ LANGUAGE plpgsql;
 --! Tests whether an encrypted column value includes a Bloom filter
 --! by checking its underlying JSONB data field.
 --!
---! @param val eql_v2_encrypted Encrypted column value
+--! @param eql_v2_encrypted Encrypted column value
 --! @return Boolean True if Bloom filter is present
 --!
 --! @see eql_v2.has_bloom_filter(jsonb)

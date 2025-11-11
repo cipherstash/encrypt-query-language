@@ -1,9 +1,28 @@
 -- AUTOMATICALLY GENERATED FILE
 -- REQUIRE: src/schema.sql
 
--- Constant time comparison of 2 bytea values
+--! @file common.sql
+--! @brief Common utility functions
+--!
+--! Provides general-purpose utility functions used across EQL:
+--! - Constant-time bytea comparison for security
+--! - JSONB to bytea array conversion
+--! - Logging helpers for debugging and testing
 
 
+--! @brief Constant-time comparison of bytea values
+--! @internal
+--!
+--! Compares two bytea values in constant time to prevent timing attacks.
+--! Always checks all bytes even after finding differences, maintaining
+--! consistent execution time regardless of where differences occur.
+--!
+--! @param a bytea First value to compare
+--! @param b bytea Second value to compare
+--! @return boolean True if values are equal
+--!
+--! @note Returns false immediately if lengths differ (length is not secret)
+--! @note Used for secure comparison of cryptographic values
 CREATE FUNCTION eql_v2.bytea_eq(a bytea, b bytea) RETURNS boolean AS $$
 DECLARE
     result boolean;
@@ -27,7 +46,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Casts a jsonb array of hex-encoded strings to an array of bytea.
+
+--! @brief Convert JSONB hex array to bytea array
+--! @internal
+--!
+--! Converts a JSONB array of hex-encoded strings into a PostgreSQL bytea array.
+--! Used for deserializing binary data (like ORE terms) from JSONB storage.
+--!
+--! @param jsonb JSONB array of hex-encoded strings
+--! @return bytea[] Array of decoded binary values
+--!
+--! @note Returns NULL if input is JSON null
+--! @note Each array element is hex-decoded to bytea
 CREATE FUNCTION eql_v2.jsonb_array_to_bytea_array(val jsonb)
 RETURNS bytea[] AS $$
 DECLARE
@@ -46,10 +76,15 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-
---
--- Convenience function to log a message
---
+--! @brief Log message for debugging
+--!
+--! Convenience function to emit log messages during testing and debugging.
+--! Uses RAISE NOTICE to output messages to PostgreSQL logs.
+--!
+--! @param text Message to log
+--!
+--! @note Primarily used in tests and development
+--! @see eql_v2.log(text, text) for contextual logging
 CREATE FUNCTION eql_v2.log(s text)
     RETURNS void
 AS $$
@@ -59,9 +94,16 @@ END;
 $$ LANGUAGE plpgsql;
 
 
---
--- Convenience function to describe a test
---
+--! @brief Log message with context
+--!
+--! Overload of log function that includes context label for better
+--! log organization during testing.
+--!
+--! @param ctx text Context label (e.g., test name, module name)
+--! @param s text Message to log
+--!
+--! @note Format: "[LOG] {ctx} {message}"
+--! @see eql_v2.log(text)
 CREATE FUNCTION eql_v2.log(ctx text, s text)
     RETURNS void
 AS $$

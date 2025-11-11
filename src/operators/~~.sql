@@ -63,6 +63,12 @@ $$ LANGUAGE SQL;
 --! SELECT * FROM customers
 --! WHERE encrypted_name ~~ 'John%'::text::eql_v2_encrypted;
 --!
+--! @brief SQL LIKE operator (~~ operator) for encrypted text pattern matching
+--!
+--! @param a eql_v2_encrypted Left operand (encrypted value)
+--! @param b eql_v2_encrypted Right operand (encrypted pattern)
+--! @return boolean True if pattern matches
+--!
 --! @note Requires match index: eql_v2.add_search_config(table, column, 'match')
 --! @see eql_v2.like
 --! @see eql_v2.add_search_config
@@ -111,7 +117,7 @@ CREATE OPERATOR ~~*(
 --! Overload of ~~ operator accepting JSONB on the right side. Automatically
 --! casts JSONB to eql_v2_encrypted for bloom filter pattern matching.
 --!
---! @param a eql_v2_encrypted Haystack (encrypted value)
+--! @param eql_v2_encrypted Haystack (encrypted value)
 --! @param b JSONB Needle (will be cast to eql_v2_encrypted)
 --! @return Boolean True if a contains b as substring
 --!
@@ -154,7 +160,7 @@ CREATE OPERATOR ~~*(
 --! casts JSONB to eql_v2_encrypted for bloom filter pattern matching.
 --!
 --! @param a JSONB Haystack (will be cast to eql_v2_encrypted)
---! @param b eql_v2_encrypted Needle (encrypted pattern)
+--! @param eql_v2_encrypted Needle (encrypted pattern)
 --! @return Boolean True if a contains b as substring
 --!
 --! @example

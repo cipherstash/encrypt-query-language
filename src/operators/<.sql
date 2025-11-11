@@ -65,7 +65,7 @@ CREATE OPERATOR <(
 --! Overload of < operator accepting JSONB on the right side. Automatically
 --! casts JSONB to eql_v2_encrypted for ORE comparison.
 --!
---! @param a eql_v2_encrypted Left operand (encrypted value)
+--! @param eql_v2_encrypted Left operand (encrypted value)
 --! @param b JSONB Right operand (will be cast to eql_v2_encrypted)
 --! @return Boolean True if a < b
 --!
@@ -97,7 +97,7 @@ CREATE OPERATOR <(
 --! casts JSONB to eql_v2_encrypted for ORE comparison.
 --!
 --! @param a JSONB Left operand (will be cast to eql_v2_encrypted)
---! @param b eql_v2_encrypted Right operand (encrypted value)
+--! @param eql_v2_encrypted Right operand (encrypted value)
 --! @return Boolean True if a < b
 --!
 --! @example

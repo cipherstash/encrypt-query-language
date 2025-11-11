@@ -3,7 +3,18 @@
 -- REQUIRE: src/encrypted/functions.sql
 
 
--- Should include an ident field
+--! @brief Validate presence of ident field in encrypted payload
+--! @internal
+--!
+--! Checks that the encrypted JSONB payload contains the required 'i' (ident) field.
+--! The ident field tracks which table and column the encrypted value belongs to.
+--!
+--! @param jsonb Encrypted payload to validate
+--! @return Boolean True if 'i' field is present
+--! @throws Exception if 'i' field is missing
+--!
+--! @note Used in CHECK constraints to ensure payload structure
+--! @see eql_v2.check_encrypted
 CREATE FUNCTION eql_v2._encrypted_check_i(val jsonb)
   RETURNS boolean
 AS $$
@@ -16,7 +27,18 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- Ident field should include table and column
+--! @brief Validate table and column fields in ident
+--! @internal
+--!
+--! Checks that the 'i' (ident) field contains both 't' (table) and 'c' (column)
+--! subfields, which identify the origin of the encrypted value.
+--!
+--! @param jsonb Encrypted payload to validate
+--! @return Boolean True if both 't' and 'c' subfields are present
+--! @throws Exception if 't' or 'c' subfields are missing
+--!
+--! @note Used in CHECK constraints to ensure payload structure
+--! @see eql_v2.check_encrypted
 CREATE FUNCTION eql_v2._encrypted_check_i_ct(val jsonb)
   RETURNS boolean
 AS $$
@@ -28,7 +50,18 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
--- -- Should include a version field
+--! @brief Validate version field in encrypted payload
+--! @internal
+--!
+--! Checks that the encrypted payload has version field 'v' set to '2',
+--! the current EQL v2 payload version.
+--!
+--! @param jsonb Encrypted payload to validate
+--! @return Boolean True if 'v' field is present and equals '2'
+--! @throws Exception if 'v' field is missing or not '2'
+--!
+--! @note Used in CHECK constraints to ensure payload structure
+--! @see eql_v2.check_encrypted
 CREATE FUNCTION eql_v2._encrypted_check_v(val jsonb)
   RETURNS boolean
 AS $$
@@ -47,7 +80,18 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
--- -- Should include a ciphertext field
+--! @brief Validate ciphertext field in encrypted payload
+--! @internal
+--!
+--! Checks that the encrypted payload contains the required 'c' (ciphertext) field
+--! which stores the encrypted data.
+--!
+--! @param jsonb Encrypted payload to validate
+--! @return Boolean True if 'c' field is present
+--! @throws Exception if 'c' field is missing
+--!
+--! @note Used in CHECK constraints to ensure payload structure
+--! @see eql_v2.check_encrypted
 CREATE FUNCTION eql_v2._encrypted_check_c(val jsonb)
   RETURNS boolean
 AS $$
@@ -60,6 +104,28 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
+--! @brief Validate complete encrypted payload structure
+--!
+--! Comprehensive validation function that checks all required fields in an
+--! encrypted JSONB payload: version ('v'), ciphertext ('c'), ident ('i'),
+--! and ident subfields ('t', 'c').
+--!
+--! This function is used in CHECK constraints to ensure encrypted column
+--! data integrity at the database level.
+--!
+--! @param jsonb Encrypted payload to validate
+--! @return Boolean True if all structure checks pass
+--! @throws Exception if any required field is missing or invalid
+--!
+--! @example
+--! -- Add validation constraint to encrypted column
+--! ALTER TABLE users ADD CONSTRAINT check_email_encrypted
+--!   CHECK (eql_v2.check_encrypted(encrypted_email::jsonb));
+--!
+--! @see eql_v2._encrypted_check_v
+--! @see eql_v2._encrypted_check_c
+--! @see eql_v2._encrypted_check_i
+--! @see eql_v2._encrypted_check_i_ct
 CREATE FUNCTION eql_v2.check_encrypted(val jsonb)
   RETURNS BOOLEAN
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -73,6 +139,16 @@ BEGIN ATOMIC
 END;
 
 
+--! @brief Validate encrypted composite type structure
+--!
+--! Validates an eql_v2_encrypted composite type by checking its underlying
+--! JSONB payload. Delegates to eql_v2.check_encrypted(jsonb).
+--!
+--! @param eql_v2_encrypted Encrypted value to validate
+--! @return Boolean True if structure is valid
+--! @throws Exception if any required field is missing or invalid
+--!
+--! @see eql_v2.check_encrypted(jsonb)
 CREATE FUNCTION eql_v2.check_encrypted(val eql_v2_encrypted)
   RETURNS BOOLEAN
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE

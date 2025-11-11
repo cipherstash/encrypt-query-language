@@ -9,7 +9,7 @@
 --! Extracts the variable-width CLLW ORE ciphertext from the 'ocv' field of an encrypted
 --! data payload. Used internally for range query comparisons.
 --!
---! @param val jsonb containing encrypted EQL payload
+--! @param jsonb containing encrypted EQL payload
 --! @return eql_v2.ore_cllw_var_8 Variable-width CLLW ORE ciphertext
 --! @throws Exception if 'ocv' field is missing when ore index is expected
 --!
@@ -39,7 +39,7 @@ $$ LANGUAGE plpgsql;
 --! Extracts the variable-width CLLW ORE ciphertext from an encrypted column value by accessing
 --! its underlying JSONB data field.
 --!
---! @param val eql_v2_encrypted Encrypted column value
+--! @param eql_v2_encrypted Encrypted column value
 --! @return eql_v2.ore_cllw_var_8 Variable-width CLLW ORE ciphertext
 --!
 --! @see eql_v2.ore_cllw_var_8(jsonb)
@@ -58,7 +58,7 @@ $$ LANGUAGE plpgsql;
 --! Tests whether the encrypted data payload includes an 'ocv' field,
 --! indicating a variable-width CLLW ORE ciphertext is available for range queries.
 --!
---! @param val jsonb containing encrypted EQL payload
+--! @param jsonb containing encrypted EQL payload
 --! @return Boolean True if 'ocv' field is present and non-null
 --!
 --! @see eql_v2.ore_cllw_var_8
@@ -77,7 +77,7 @@ $$ LANGUAGE plpgsql;
 --! Tests whether an encrypted column value includes a variable-width CLLW ORE ciphertext
 --! by checking its underlying JSONB data field.
 --!
---! @param val eql_v2_encrypted Encrypted column value
+--! @param eql_v2_encrypted Encrypted column value
 --! @return Boolean True if variable-width CLLW ORE ciphertext is present
 --!
 --! @see eql_v2.has_ore_cllw_var_8(jsonb)

@@ -8,7 +8,7 @@
 --! Extracts the CLLW ORE ciphertext from the 'ocf' field of an encrypted
 --! data payload. Used internally for range query comparisons.
 --!
---! @param val jsonb containing encrypted EQL payload
+--! @param jsonb containing encrypted EQL payload
 --! @return eql_v2.ore_cllw_u64_8 CLLW ORE ciphertext
 --! @throws Exception if 'ocf' field is missing when ore index is expected
 --!
@@ -37,7 +37,7 @@ $$ LANGUAGE plpgsql;
 --! Extracts the CLLW ORE ciphertext from an encrypted column value by accessing
 --! its underlying JSONB data field.
 --!
---! @param val eql_v2_encrypted Encrypted column value
+--! @param eql_v2_encrypted Encrypted column value
 --! @return eql_v2.ore_cllw_u64_8 CLLW ORE ciphertext
 --!
 --! @see eql_v2.ore_cllw_u64_8(jsonb)
@@ -56,7 +56,7 @@ $$ LANGUAGE plpgsql;
 --! Tests whether the encrypted data payload includes an 'ocf' field,
 --! indicating a CLLW ORE ciphertext is available for range queries.
 --!
---! @param val jsonb containing encrypted EQL payload
+--! @param jsonb containing encrypted EQL payload
 --! @return Boolean True if 'ocf' field is present and non-null
 --!
 --! @see eql_v2.ore_cllw_u64_8
@@ -75,7 +75,7 @@ $$ LANGUAGE plpgsql;
 --! Tests whether an encrypted column value includes a CLLW ORE ciphertext
 --! by checking its underlying JSONB data field.
 --!
---! @param val eql_v2_encrypted Encrypted column value
+--! @param eql_v2_encrypted Encrypted column value
 --! @return Boolean True if CLLW ORE ciphertext is present
 --!
 --! @see eql_v2.has_ore_cllw_u64_8(jsonb)
