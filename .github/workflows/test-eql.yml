@@ -26,31 +26,9 @@ defaults:
     shell: bash -l {0}
 
 jobs:
-  validate-docs:
-    name: "Validate SQL Documentation"
-    runs-on: ubuntu-latest-m
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: jdx/mise-action@v2
-        with:
-          version: 2025.1.6
-          install: true
-          cache: true
-
-      - name: Setup database
-        run: |
-          mise run postgres:up --extra-args "--detach --wait"
-
-      - name: Validate SQL documentation
-        run: |
-          mise run docs:validate
-
   test:
-    name: "Test EQL SQL components"
+    name: "Test & Validate EQL (Postgres ${{ matrix.postgres-version }})"
     runs-on: ubuntu-latest-m
-    needs: validate-docs
 
     strategy:
       fail-fast: false
@@ -72,6 +50,10 @@ jobs:
       - name: Setup database (Postgres ${{ matrix.postgres-version }})
         run: |
           mise run postgres:up postgres-${POSTGRES_VERSION} --extra-args "--detach --wait"
+
+      - name: Validate SQL documentation (Postgres ${{ matrix.postgres-version }})
+        run: |
+          mise run docs:validate
 
       - name: Test EQL for Postgres ${{ matrix.postgres-version }}
         run: |
