@@ -9,7 +9,7 @@
 --! Checks that the encrypted JSONB payload contains the required 'i' (ident) field.
 --! The ident field tracks which table and column the encrypted value belongs to.
 --!
---! @param val jsonb Encrypted payload to validate
+--! @param jsonb Encrypted payload to validate
 --! @return Boolean True if 'i' field is present
 --! @throws Exception if 'i' field is missing
 --!
@@ -33,7 +33,7 @@ $$ LANGUAGE plpgsql;
 --! Checks that the 'i' (ident) field contains both 't' (table) and 'c' (column)
 --! subfields, which identify the origin of the encrypted value.
 --!
---! @param val jsonb Encrypted payload to validate
+--! @param jsonb Encrypted payload to validate
 --! @return Boolean True if both 't' and 'c' subfields are present
 --! @throws Exception if 't' or 'c' subfields are missing
 --!
@@ -56,7 +56,7 @@ $$ LANGUAGE plpgsql;
 --! Checks that the encrypted payload has version field 'v' set to '2',
 --! the current EQL v2 payload version.
 --!
---! @param val jsonb Encrypted payload to validate
+--! @param jsonb Encrypted payload to validate
 --! @return Boolean True if 'v' field is present and equals '2'
 --! @throws Exception if 'v' field is missing or not '2'
 --!
@@ -86,7 +86,7 @@ $$ LANGUAGE plpgsql;
 --! Checks that the encrypted payload contains the required 'c' (ciphertext) field
 --! which stores the encrypted data.
 --!
---! @param val jsonb Encrypted payload to validate
+--! @param jsonb Encrypted payload to validate
 --! @return Boolean True if 'c' field is present
 --! @throws Exception if 'c' field is missing
 --!
@@ -113,7 +113,7 @@ $$ LANGUAGE plpgsql;
 --! This function is used in CHECK constraints to ensure encrypted column
 --! data integrity at the database level.
 --!
---! @param val jsonb Encrypted payload to validate
+--! @param jsonb Encrypted payload to validate
 --! @return Boolean True if all structure checks pass
 --! @throws Exception if any required field is missing or invalid
 --!
@@ -144,7 +144,7 @@ END;
 --! Validates an eql_v2_encrypted composite type by checking its underlying
 --! JSONB payload. Delegates to eql_v2.check_encrypted(jsonb).
 --!
---! @param val eql_v2_encrypted Encrypted value to validate
+--! @param eql_v2_encrypted Encrypted value to validate
 --! @return Boolean True if structure is valid
 --! @throws Exception if any required field is missing or invalid
 --!

@@ -117,7 +117,7 @@ CREATE OPERATOR ~~*(
 --! Overload of ~~ operator accepting JSONB on the right side. Automatically
 --! casts JSONB to eql_v2_encrypted for bloom filter pattern matching.
 --!
---! @param a eql_v2_encrypted Haystack (encrypted value)
+--! @param eql_v2_encrypted Haystack (encrypted value)
 --! @param b JSONB Needle (will be cast to eql_v2_encrypted)
 --! @return Boolean True if a contains b as substring
 --!
@@ -160,7 +160,7 @@ CREATE OPERATOR ~~*(
 --! casts JSONB to eql_v2_encrypted for bloom filter pattern matching.
 --!
 --! @param a JSONB Haystack (will be cast to eql_v2_encrypted)
---! @param b eql_v2_encrypted Needle (encrypted pattern)
+--! @param eql_v2_encrypted Needle (encrypted pattern)
 --! @return Boolean True if a contains b as substring
 --!
 --! @example

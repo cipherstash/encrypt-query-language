@@ -20,8 +20,8 @@
 --! the given selector path. Returns all matching encrypted elements. If multiple
 --! matches form an array, they are wrapped with array metadata.
 --!
---! @param val jsonb Encrypted JSONB payload containing STE vector ('sv')
---! @param selector text Path selector to match against encrypted elements
+--! @param jsonb Encrypted JSONB payload containing STE vector ('sv')
+--! @param text Path selector to match against encrypted elements
 --! @return SETOF eql_v2_encrypted Matching encrypted elements (may return multiple rows)
 --!
 --! @note Returns empty set if selector is not found (does not throw exception)
@@ -109,8 +109,8 @@ $$ LANGUAGE plpgsql;
 --! Overload that accepts encrypted JSONB value and text selector,
 --! extracting the JSONB payload before querying.
 --!
---! @param val eql_v2_encrypted Encrypted JSONB value to query
---! @param selector text Path selector to match against
+--! @param eql_v2_encrypted Encrypted JSONB value to query
+--! @param text Path selector to match against
 --! @return SETOF eql_v2_encrypted Matching encrypted elements
 --!
 --! @example
@@ -137,8 +137,8 @@ $$ LANGUAGE plpgsql;
 --! Tests whether any encrypted elements match the given selector path.
 --! More efficient than jsonb_path_query when only existence check is needed.
 --!
---! @param val jsonb Encrypted JSONB payload to check
---! @param selector text Path selector to test
+--! @param jsonb Encrypted JSONB payload to check
+--! @param text Path selector to test
 --! @return boolean True if matching element exists, false otherwise
 --!
 --! @see eql_v2.jsonb_path_query(jsonb, text)
@@ -180,8 +180,8 @@ $$ LANGUAGE plpgsql;
 --!
 --! Overload that accepts encrypted JSONB value and text selector.
 --!
---! @param val eql_v2_encrypted Encrypted JSONB value to check
---! @param selector text Path selector to test
+--! @param eql_v2_encrypted Encrypted JSONB value to check
+--! @param text Path selector to test
 --! @return boolean True if path exists
 --!
 --! @example
@@ -210,8 +210,8 @@ $$ LANGUAGE plpgsql;
 --! or NULL if no match found. More efficient than jsonb_path_query when
 --! only one result is needed.
 --!
---! @param val jsonb Encrypted JSONB payload to query
---! @param selector text Path selector to match
+--! @param jsonb Encrypted JSONB payload to query
+--! @param text Path selector to match
 --! @return eql_v2_encrypted First matching element or NULL
 --!
 --! @note Uses LIMIT 1 internally for efficiency
@@ -258,8 +258,8 @@ $$ LANGUAGE plpgsql;
 --!
 --! Overload that accepts encrypted JSONB value and text selector.
 --!
---! @param val eql_v2_encrypted Encrypted JSONB value to query
---! @param selector text Path selector to match
+--! @param eql_v2_encrypted Encrypted JSONB value to query
+--! @param text Path selector to match
 --! @return eql_v2_encrypted First matching element or NULL
 --!
 --! @example
@@ -291,7 +291,7 @@ $$ LANGUAGE plpgsql;
 --! elements in the STE vector ('sv'). The encrypted value must have the
 --! array flag ('a') set to true.
 --!
---! @param val jsonb Encrypted JSONB payload representing an array
+--! @param jsonb Encrypted JSONB payload representing an array
 --! @return integer Number of elements in the array
 --! @throws Exception 'cannot get array length of a non-array' if 'a' flag is missing or not true
 --!
@@ -325,7 +325,7 @@ $$ LANGUAGE plpgsql;
 --! Overload that accepts encrypted composite type and extracts the
 --! JSONB payload before computing array length.
 --!
---! @param val eql_v2_encrypted Encrypted array value
+--! @param eql_v2_encrypted Encrypted array value
 --! @return integer Number of elements in the array
 --! @throws Exception if value is not an array
 --!
@@ -354,7 +354,7 @@ $$ LANGUAGE plpgsql;
 --! Each element is returned as an eql_v2_encrypted value with metadata
 --! preserved from the parent array.
 --!
---! @param val jsonb Encrypted JSONB payload representing an array
+--! @param jsonb Encrypted JSONB payload representing an array
 --! @return SETOF eql_v2_encrypted One row per array element
 --! @throws Exception if value is not an array (missing 'a' flag)
 --!
@@ -395,7 +395,7 @@ $$ LANGUAGE plpgsql;
 --! Overload that accepts encrypted composite type and extracts each
 --! array element as a separate row.
 --!
---! @param val eql_v2_encrypted Encrypted array value
+--! @param eql_v2_encrypted Encrypted array value
 --! @return SETOF eql_v2_encrypted One row per array element
 --! @throws Exception if value is not an array
 --!
@@ -422,7 +422,7 @@ $$ LANGUAGE plpgsql;
 --! value (text representation). Unlike jsonb_array_elements, this returns
 --! only the ciphertext 'c' field without metadata.
 --!
---! @param val jsonb Encrypted JSONB payload representing an array
+--! @param jsonb Encrypted JSONB payload representing an array
 --! @return SETOF text One ciphertext string per array element
 --! @throws Exception if value is not an array (missing 'a' flag)
 --!
@@ -456,7 +456,7 @@ $$ LANGUAGE plpgsql;
 --! Overload that accepts encrypted composite type and extracts each
 --! array element's ciphertext as text.
 --!
---! @param val eql_v2_encrypted Encrypted array value
+--! @param eql_v2_encrypted Encrypted array value
 --! @return SETOF text One ciphertext string per array element
 --! @throws Exception if value is not an array
 --!

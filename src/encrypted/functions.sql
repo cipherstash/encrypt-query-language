@@ -8,7 +8,7 @@
 --! Extracts the ciphertext (c field) from a raw JSONB encrypted value.
 --! The ciphertext is the base64-encoded encrypted data.
 --!
---! @param val jsonb containing encrypted EQL payload
+--! @param jsonb containing encrypted EQL payload
 --! @return Text Base64-encoded ciphertext string
 --! @throws Exception if 'c' field is not present in JSONB
 --!
@@ -35,7 +35,7 @@ $$ LANGUAGE plpgsql;
 --! Extracts the ciphertext from an encrypted column value. Convenience
 --! overload that unwraps eql_v2_encrypted type and delegates to JSONB version.
 --!
---! @param val eql_v2_encrypted Encrypted column value
+--! @param eql_v2_encrypted Encrypted column value
 --! @return Text Base64-encoded ciphertext string
 --! @throws Exception if encrypted value is malformed
 --!
@@ -159,7 +159,7 @@ $$ LANGUAGE plpgsql;
 --! Extracts index terms (i) and version (v) from a raw JSONB encrypted value.
 --! Returns metadata object containing searchable index terms without ciphertext.
 --!
---! @param val jsonb containing encrypted EQL payload
+--! @param jsonb containing encrypted EQL payload
 --! @return JSONB Metadata object with 'i' (index terms) and 'v' (version) fields
 --!
 --! @example
@@ -187,7 +187,7 @@ $$ LANGUAGE plpgsql;
 --! Convenience overload that unwraps eql_v2_encrypted type and
 --! delegates to JSONB version.
 --!
---! @param val eql_v2_encrypted Encrypted column value
+--! @param eql_v2_encrypted Encrypted column value
 --! @return JSONB Metadata object with 'i' (index terms) and 'v' (version) fields
 --!
 --! @example

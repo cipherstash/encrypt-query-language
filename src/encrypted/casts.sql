@@ -7,7 +7,7 @@
 --! Wraps a JSONB encrypted payload into the eql_v2_encrypted composite type.
 --! Used internally for type conversions and operator implementations.
 --!
---! @param data jsonb JSONB encrypted payload with structure: {"c": "...", "i": {...}, "k": "...", "v": "2"}
+--! @param jsonb JSONB encrypted payload with structure: {"c": "...", "i": {...}, "k": "...", "v": "2"}
 --! @return eql_v2_encrypted Encrypted value wrapped in composite type
 --!
 --! @note This is primarily used for implicit casts in operator expressions
@@ -41,7 +41,7 @@ CREATE CAST (jsonb AS public.eql_v2_encrypted)
 --! Parses a text representation of encrypted JSONB payload and wraps it
 --! in the eql_v2_encrypted composite type.
 --!
---! @param data text Text representation of JSONB encrypted payload
+--! @param text Text representation of JSONB encrypted payload
 --! @return eql_v2_encrypted Encrypted value wrapped in composite type
 --!
 --! @note Delegates to eql_v2.to_encrypted(jsonb) after parsing text as JSON

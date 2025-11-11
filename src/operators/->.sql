@@ -24,8 +24,8 @@
 --! @see eql_v2."->>"
 
 --! @brief -> operator with text selector
---! @param e eql_v2_encrypted Encrypted JSONB data
---! @param selector text Field name to extract
+--! @param eql_v2_encrypted Encrypted JSONB data
+--! @param text Field name to extract
 --! @return eql_v2_encrypted Encrypted value at selector
 --! @example
 --! SELECT encrypted_json -> 'field_name' FROM table;
@@ -93,8 +93,8 @@ CREATE OPERATOR ->(
 ---------------------------------------------------
 
 --! @brief -> operator with integer array index
---! @param e eql_v2_encrypted Encrypted array data
---! @param selector integer Array index (0-based, JSONB convention)
+--! @param eql_v2_encrypted Encrypted array data
+--! @param integer Array index (0-based, JSONB convention)
 --! @return eql_v2_encrypted Encrypted value at array index
 --! @note Array index is 0-based (JSONB standard) despite PostgreSQL arrays being 1-based
 --! @example

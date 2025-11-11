@@ -5,7 +5,7 @@
 --! Extracts the Blake3 hash value from the 'b3' field of an encrypted
 --! data payload. Used internally for exact-match comparisons.
 --!
---! @param val jsonb containing encrypted EQL payload
+--! @param jsonb containing encrypted EQL payload
 --! @return eql_v2.blake3 Blake3 hash value, or NULL if not present
 --! @throws Exception if 'b3' field is missing when blake3 index is expected
 --!
@@ -38,7 +38,7 @@ $$ LANGUAGE plpgsql;
 --! Extracts the Blake3 hash from an encrypted column value by accessing
 --! its underlying JSONB data field.
 --!
---! @param val eql_v2_encrypted Encrypted column value
+--! @param eql_v2_encrypted Encrypted column value
 --! @return eql_v2.blake3 Blake3 hash value, or NULL if not present
 --!
 --! @see eql_v2.blake3(jsonb)
@@ -57,7 +57,7 @@ $$ LANGUAGE plpgsql;
 --! Tests whether the encrypted data payload includes a 'b3' field,
 --! indicating a Blake3 hash is available for exact-match queries.
 --!
---! @param val jsonb containing encrypted EQL payload
+--! @param jsonb containing encrypted EQL payload
 --! @return Boolean True if 'b3' field is present and non-null
 --!
 --! @see eql_v2.blake3
@@ -76,7 +76,7 @@ $$ LANGUAGE plpgsql;
 --! Tests whether an encrypted column value includes a Blake3 hash
 --! by checking its underlying JSONB data field.
 --!
---! @param val eql_v2_encrypted Encrypted column value
+--! @param eql_v2_encrypted Encrypted column value
 --! @return Boolean True if Blake3 hash is present
 --!
 --! @see eql_v2.has_blake3(jsonb)

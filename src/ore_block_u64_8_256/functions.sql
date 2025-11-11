@@ -38,7 +38,7 @@ $$ LANGUAGE plpgsql;
 --! Extracts the ORE block array from the 'ob' field of an encrypted
 --! data payload. Used internally for range query comparisons.
 --!
---! @param val jsonb containing encrypted EQL payload
+--! @param jsonb containing encrypted EQL payload
 --! @return eql_v2.ore_block_u64_8_256 ORE block index term
 --! @throws Exception if 'ob' field is missing when ore index is expected
 --!
@@ -66,7 +66,7 @@ $$ LANGUAGE plpgsql;
 --! Extracts the ORE block from an encrypted column value by accessing
 --! its underlying JSONB data field.
 --!
---! @param val eql_v2_encrypted Encrypted column value
+--! @param eql_v2_encrypted Encrypted column value
 --! @return eql_v2.ore_block_u64_8_256 ORE block index term
 --!
 --! @see eql_v2.ore_block_u64_8_256(jsonb)
@@ -85,7 +85,7 @@ $$ LANGUAGE plpgsql;
 --! Tests whether the encrypted data payload includes an 'ob' field,
 --! indicating an ORE block is available for range queries.
 --!
---! @param val jsonb containing encrypted EQL payload
+--! @param jsonb containing encrypted EQL payload
 --! @return Boolean True if 'ob' field is present and non-null
 --!
 --! @see eql_v2.ore_block_u64_8_256
@@ -104,7 +104,7 @@ $$ LANGUAGE plpgsql;
 --! Tests whether an encrypted column value includes an ORE block
 --! by checking its underlying JSONB data field.
 --!
---! @param val eql_v2_encrypted Encrypted column value
+--! @param eql_v2_encrypted Encrypted column value
 --! @return Boolean True if ORE block is present
 --!
 --! @see eql_v2.has_ore_block_u64_8_256(jsonb)

@@ -84,8 +84,8 @@ CREATE OPERATOR <> (
 
 --! @brief <> operator for JSONB and encrypted value
 --!
---! @param a jsonb Plain JSONB value
---! @param b eql_v2_encrypted Encrypted value
+--! @param jsonb Plain JSONB value
+--! @param eql_v2_encrypted Encrypted value
 --! @return boolean True if values are not equal
 --!
 --! @see eql_v2."<>"(eql_v2_encrypted, eql_v2_encrypted)

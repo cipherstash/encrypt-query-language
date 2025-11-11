@@ -11,7 +11,7 @@
 --! containment queries (@>, <@). If no 'sv' field exists, wraps the entire payload
 --! as a single-element array.
 --!
---! @param val jsonb containing encrypted EQL payload
+--! @param jsonb containing encrypted EQL payload
 --! @return eql_v2_encrypted[] Array of encrypted STE vector elements
 --!
 --! @see eql_v2.ste_vec(eql_v2_encrypted)
@@ -45,7 +45,7 @@ $$ LANGUAGE plpgsql;
 --! Extracts the STE vector from an encrypted column value by accessing its
 --! underlying JSONB data field. Used for containment query operations.
 --!
---! @param val eql_v2_encrypted Encrypted column value
+--! @param eql_v2_encrypted Encrypted column value
 --! @return eql_v2_encrypted[] Array of encrypted STE vector elements
 --!
 --! @see eql_v2.ste_vec(jsonb)
@@ -63,7 +63,7 @@ $$ LANGUAGE plpgsql;
 --! Tests whether the encrypted data payload contains an 'sv' field with exactly
 --! one element. Single-element STE vectors can be treated as regular encrypted values.
 --!
---! @param val jsonb containing encrypted EQL payload
+--! @param jsonb containing encrypted EQL payload
 --! @return Boolean True if 'sv' field exists with exactly one element
 --!
 --! @see eql_v2.to_ste_vec_value
@@ -85,7 +85,7 @@ $$ LANGUAGE plpgsql;
 --! Tests whether an encrypted column value is a single-element STE vector
 --! by checking its underlying JSONB data field.
 --!
---! @param val eql_v2_encrypted Encrypted column value
+--! @param eql_v2_encrypted Encrypted column value
 --! @return Boolean True if value is a single-element STE vector
 --!
 --! @see eql_v2.is_ste_vec_value(jsonb)
@@ -104,7 +104,7 @@ $$ LANGUAGE plpgsql;
 --! as a regular encrypted value, preserving metadata. If the input is not a
 --! single-element STE vector, returns it unchanged.
 --!
---! @param val jsonb containing encrypted EQL payload
+--! @param jsonb containing encrypted EQL payload
 --! @return eql_v2_encrypted Regular encrypted value (unwrapped if single-element STE vector)
 --!
 --! @see eql_v2.is_ste_vec_value
@@ -138,7 +138,7 @@ $$ LANGUAGE plpgsql;
 --! Converts an encrypted column value to a regular encrypted value by unwrapping
 --! if it's a single-element STE vector.
 --!
---! @param val eql_v2_encrypted Encrypted column value
+--! @param eql_v2_encrypted Encrypted column value
 --! @return eql_v2_encrypted Regular encrypted value (unwrapped if single-element STE vector)
 --!
 --! @see eql_v2.to_ste_vec_value(jsonb)
@@ -156,7 +156,7 @@ $$ LANGUAGE plpgsql;
 --! Extracts the selector ('s') field from an encrypted data payload.
 --! Selectors are used to match STE vector elements during containment queries.
 --!
---! @param val jsonb containing encrypted EQL payload
+--! @param jsonb containing encrypted EQL payload
 --! @return Text The selector value
 --! @throws Exception if 's' field is missing
 --!
@@ -183,7 +183,7 @@ $$ LANGUAGE plpgsql;
 --! Extracts the selector from an encrypted column value by accessing its
 --! underlying JSONB data field.
 --!
---! @param val eql_v2_encrypted Encrypted column value
+--! @param eql_v2_encrypted Encrypted column value
 --! @return Text The selector value
 --!
 --! @see eql_v2.selector(jsonb)
@@ -203,7 +203,7 @@ $$ LANGUAGE plpgsql;
 --! Tests whether the encrypted data payload has the 'a' (array) flag set to true,
 --! indicating it represents an array for STE vector operations.
 --!
---! @param val jsonb containing encrypted EQL payload
+--! @param jsonb containing encrypted EQL payload
 --! @return Boolean True if 'a' field is present and true
 --!
 --! @see eql_v2.ste_vec
@@ -226,7 +226,7 @@ $$ LANGUAGE plpgsql;
 --! Tests whether an encrypted column value has the array flag set by checking
 --! its underlying JSONB data field.
 --!
---! @param val eql_v2_encrypted Encrypted column value
+--! @param eql_v2_encrypted Encrypted column value
 --! @return Boolean True if value is marked as an STE vector array
 --!
 --! @see eql_v2.is_ste_vec_array(jsonb)
@@ -247,8 +247,8 @@ $$ LANGUAGE plpgsql;
 --! Matching requires both the selector and encrypted value to be equal.
 --! Used internally by ste_vec_contains(encrypted, encrypted) for array containment checks.
 --!
---! @param a eql_v2_encrypted[] STE vector array to search within
---! @param b eql_v2_encrypted Encrypted element to search for
+--! @param eql_v2_encrypted[] STE vector array to search within
+--! @param eql_v2_encrypted Encrypted element to search for
 --! @return Boolean True if b is found in any element of a
 --!
 --! @note Compares both selector and encrypted value for match
