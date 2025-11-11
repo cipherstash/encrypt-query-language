@@ -94,26 +94,4 @@ run = """
 
 [tasks."docs:package"]
 description = "Package documentation for distribution"
-run = """
-  echo "Packaging documentation..."
-
-  # Create archive name with version
-  VERSION=$(grep PROJECT_NUMBER Doxyfile | cut -d'"' -f2 | tr -d ' ')
-  ARCHIVE="eql-docs-xml-${VERSION}.tar.gz"
-
-  # Package XML + schemas + README + Markdown
-  cd docs/api
-  tar -czf "../../${ARCHIVE}" \
-    --no-xattrs \
-    xml/*.xml \
-    xml/*.xsd \
-    markdown/API.md \
-    README.md
-  cd ../..
-
-  echo ""
-  echo "✓ Documentation packaged: ${ARCHIVE}"
-  echo "  Contents: XML files, XSD schemas, Markdown API reference, README"
-  echo ""
-  echo "Extract with: tar -xzf ${ARCHIVE}"
-"""
+run = "./tasks/docs/package.sh"
