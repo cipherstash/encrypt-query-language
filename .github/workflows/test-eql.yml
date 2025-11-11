@@ -27,8 +27,8 @@ defaults:
 
 jobs:
   test:
-    name: "Test EQL SQL components"
-    runs-on: blacksmith-16vcpu-ubuntu-2204
+    name: "Test & Validate EQL (Postgres ${{ matrix.postgres-version }})"
+    runs-on: ubuntu-latest-m
 
     strategy:
       fail-fast: false
@@ -51,8 +51,15 @@ jobs:
         run: |
           mise run postgres:up postgres-${POSTGRES_VERSION} --extra-args "--detach --wait"
 
+      - name: Validate SQL documentation (Postgres ${{ matrix.postgres-version }})
+        run: |
+          mise run docs:validate
+
       - name: Test EQL for Postgres ${{ matrix.postgres-version }}
         run: |
           export active_rust_toolchain=$(rustup show active-toolchain | cut -d' ' -f1)
           rustup component add --toolchain ${active_rust_toolchain} rustfmt clippy
           mise run --output prefix test --postgres ${POSTGRES_VERSION}
+
+
+

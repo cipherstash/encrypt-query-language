@@ -66,3 +66,48 @@ jobs:
             --header "Content-Type: application/json" \
             --header "Authorization: ${{ secrets.MULTITUDES_ACCESS_TOKEN }}" \
             --data '{"commitSha": "${{ github.sha }}", "environmentName":"production"}'
+
+  publish-docs:
+    runs-on: ubuntu-latest
+    name: Build and Publish Documentation
+    if: ${{ github.event_name != 'release' || contains(github.event.release.tag_name, 'eql') }}
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v2
+        with:
+          version: 2025.1.6 # [default: latest] mise version to install
+          install: true # [default: true] run `mise install`
+          cache: true # [default: true] cache mise using GitHub's cache
+
+      - name: Install Doxygen
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen
+
+      - name: Generate documentation
+        run: |
+          mise run docs:generate
+          mise run docs:generate:markdown
+
+      - name: Package documentation
+        run: |
+          mise run docs:package ${{ github.event.release.tag_name }}
+
+      - name: Upload documentation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: eql-docs
+          path: |
+            release/eql-docs-*.zip
+            release/eql-docs-*.tar.gz
+
+      - name: Publish documentation to release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            release/eql-docs-*.zip
+            release/eql-docs-*.tar.gz
