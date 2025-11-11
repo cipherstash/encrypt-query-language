@@ -16,7 +16,7 @@
 --! Helper function that extracts all index type names from the configuration's
 --! 'indexes' sections across all tables and columns.
 --!
---! @param val jsonb Configuration data to extract from
+--! @param jsonb Configuration data to extract from
 --! @return SETOF text Index type names (e.g., 'match', 'ore', 'unique', 'ste_vec')
 --!
 --! @note Used by config_check_indexes for validation
@@ -35,7 +35,7 @@ END;
 --! Checks that all index types specified in the configuration are valid.
 --! Valid index types are: match, ore, unique, ste_vec.
 --!
---! @param val jsonb Configuration data to validate
+--! @param jsonb Configuration data to validate
 --! @return boolean True if all index types are valid
 --! @throws Exception if any invalid index type found
 --!
@@ -64,7 +64,7 @@ $$ LANGUAGE plpgsql;
 --! Checks that all 'cast_as' types specified in the configuration are valid.
 --! Valid cast types are: text, int, small_int, big_int, real, double, boolean, date, jsonb.
 --!
---! @param val jsonb Configuration data to validate
+--! @param jsonb Configuration data to validate
 --! @return boolean True if all cast types are valid or no cast types specified
 --! @throws Exception if any invalid cast type found
 --!
@@ -95,7 +95,7 @@ $$ LANGUAGE plpgsql;
 --! Ensures the configuration has a 'tables' field, which is required
 --! to specify which database tables contain encrypted columns.
 --!
---! @param val jsonb Configuration data to validate
+--! @param jsonb Configuration data to validate
 --! @return boolean True if 'tables' field exists
 --! @throws Exception if 'tables' field is missing
 --!
@@ -118,7 +118,7 @@ $$ LANGUAGE plpgsql;
 --! Ensures the configuration has a 'v' (version) field, which tracks
 --! the configuration format version.
 --!
---! @param val jsonb Configuration data to validate
+--! @param jsonb Configuration data to validate
 --! @return boolean True if 'v' field exists
 --! @throws Exception if 'v' field is missing
 --!

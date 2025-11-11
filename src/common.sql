@@ -53,7 +53,7 @@ $$ LANGUAGE plpgsql;
 --! Converts a JSONB array of hex-encoded strings into a PostgreSQL bytea array.
 --! Used for deserializing binary data (like ORE terms) from JSONB storage.
 --!
---! @param val jsonb JSONB array of hex-encoded strings
+--! @param jsonb JSONB array of hex-encoded strings
 --! @return bytea[] Array of decoded binary values
 --!
 --! @note Returns NULL if input is JSON null
@@ -81,7 +81,7 @@ $$ LANGUAGE plpgsql;
 --! Convenience function to emit log messages during testing and debugging.
 --! Uses RAISE NOTICE to output messages to PostgreSQL logs.
 --!
---! @param s text Message to log
+--! @param text Message to log
 --!
 --! @note Primarily used in tests and development
 --! @see eql_v2.log(text, text) for contextual logging

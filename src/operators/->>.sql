@@ -16,8 +16,8 @@
 --! @see eql_v2.selector
 
 --! @brief ->> operator with text selector
---! @param e eql_v2_encrypted Encrypted JSONB data
---! @param selector text Field name to extract
+--! @param eql_v2_encrypted Encrypted JSONB data
+--! @param text Field name to extract
 --! @return text Encrypted value at selector, implicitly cast from eql_v2_encrypted
 --! @example
 --! SELECT encrypted_json ->> 'field_name' FROM table;

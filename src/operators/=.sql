@@ -69,7 +69,7 @@ CREATE OPERATOR = (
 --! casts JSONB to eql_v2_encrypted for comparison. Useful for comparing
 --! against JSONB literals or columns.
 --!
---! @param a eql_v2_encrypted Left operand (encrypted value)
+--! @param eql_v2_encrypted Left operand (encrypted value)
 --! @param b JSONB Right operand (will be cast to eql_v2_encrypted)
 --! @return Boolean True if values are equal
 --!
@@ -106,7 +106,7 @@ CREATE OPERATOR = (
 --! equality comparisons.
 --!
 --! @param a JSONB Left operand (will be cast to eql_v2_encrypted)
---! @param b eql_v2_encrypted Right operand (encrypted value)
+--! @param eql_v2_encrypted Right operand (encrypted value)
 --! @return Boolean True if values are equal
 --!
 --! @example
