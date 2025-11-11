@@ -11,5 +11,8 @@ fi
 echo "Generating API documentation..."
 echo
 doxygen Doxyfile
-echo
-echo "Documentation generated at docs/api/html/index.html"
+echo "✓ Documentation generated:"
+echo "  - XML (primary): docs/api/xml/"
+echo "  - HTML (preview): docs/api/html/index.html"
+echo ""
+echo "See docs/api/README.md for XML format details"

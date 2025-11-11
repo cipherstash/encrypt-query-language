@@ -56,24 +56,6 @@ run = """
 cargo watch -x test
 """
 
-
-[tasks."docs:generate"]
-description = "Generate API documentation with Doxygen"
-run = """
-  echo "Generating API documentation..."
-  doxygen Doxyfile
-  echo ""
-  echo "✓ Documentation generated:"
-  echo "  - XML (primary): docs/api/xml/"
-  echo "  - HTML (preview): docs/api/html/index.html"
-  echo ""
-  echo "See docs/api/README.md for XML format details"
-"""
-
-[tasks."docs:validate"]
-description = "Validate SQL documentation"
-run = "./tasks/docs/validate.sh"
-
 [tasks."docs:markdown"]
 description = "Generate Markdown from XML documentation"
 run = """
@@ -91,7 +73,3 @@ run = """
   echo ""
   echo "✓ Markdown documentation: docs/api/markdown/API.md"
 """
-
-[tasks."docs:package"]
-description = "Package documentation for distribution"
-run = "./tasks/docs/package.sh"
