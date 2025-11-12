@@ -16,11 +16,19 @@ if [ ! -f "${DOCS_DIR}/html/index.html" ]; then
   exit 1
 fi
 
-# Validate documentation directory has content
-if [ ! -d "${DOCS_DIR}/html" ] || [ -z "$(ls -A ${DOCS_DIR}/html)" ]; then
-  echo "Error: ${DOCS_DIR}/html is empty or does not exist"
+if [ ! -f "${DOCS_DIR}/markdown/API.md" ]; then
+  echo "Error: ${DOCS_DIR}/markdown/API.md not found"
+  echo "Run 'mise run docs:generate:markdown' first to generate markdown documentation"
   exit 1
 fi
+
+if [ ! -d "${DOCS_DIR}/xml" ] || [ -z "$(ls -A ${DOCS_DIR}/xml/*.xml 2>/dev/null)" ]; then
+  echo "Error: ${DOCS_DIR}/xml/*.xml files not found"
+  echo "Run 'mise run docs:generate' first to generate XML documentation"
+  exit 1
+fi
+
+
 
 # Create output directory
 mkdir -p "${OUTPUT_DIR}"
@@ -29,12 +37,12 @@ mkdir -p "${OUTPUT_DIR}"
 echo "Creating archives..."
 cd "${DOCS_DIR}"
 
-# Create ZIP archive
-zip -r -q "../../${OUTPUT_DIR}/eql-docs-${VERSION}.zip" html/
+# Create ZIP archive with all documentation formats
+zip -r -q "../../${OUTPUT_DIR}/eql-docs-${VERSION}.zip" markdown/API.md xml/*.xml html/
 echo "Created ${OUTPUT_DIR}/eql-docs-${VERSION}.zip"
 
-# Create tarball
-tar czf "../../${OUTPUT_DIR}/eql-docs-${VERSION}.tar.gz" html/
+# Create tarball with all documentation formats
+tar czf "../../${OUTPUT_DIR}/eql-docs-${VERSION}.tar.gz" markdown/API.md xml/ html/
 echo "Created ${OUTPUT_DIR}/eql-docs-${VERSION}.tar.gz"
 
 cd ../..
