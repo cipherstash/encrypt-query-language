@@ -278,7 +278,7 @@ def process_function(memberdef):
     # For SQL functions, the return type might be in the argsstring element after "RETURNS"
     argsstring = memberdef.find('argsstring')
     return_type_text = ''
-    
+
     if argsstring is not None and argsstring.text:
         # Look for RETURNS keyword in argsstring
         import re
@@ -291,7 +291,7 @@ def process_function(memberdef):
                 pass
             # Debug print
             #print(f"DEBUG: Extracted from argsstring: {return_type_text}")
-    
+
     # Fallback to type element if not found in argsstring
     if not return_type_text:
         return_type = memberdef.find('type')
@@ -312,14 +312,14 @@ def process_function(memberdef):
     return_type_text = re.sub(r'`\s+`', '.', return_type_text)
     # Clean up and ensure proper backtick formatting
     return_type_text = return_type_text.strip()
-    
+
     # If already has backticks, clean up doubles
     if '`' in return_type_text:
         # Clean up double backticks: ``something`` -> `something`
         return_type_text = re.sub(r'``+', '`', return_type_text)
         # Remove backticks for now to re-add them properly
         return_type_text = return_type_text.replace('`', '')
-    
+
     # Wrap in single backticks if it looks like a type name
     if return_type_text and re.match(r'^[a-zA-Z_][a-zA-Z0-9_.]*(\[\])?$', return_type_text):
         return_type_text = f'`{return_type_text}`'
@@ -480,7 +480,7 @@ def convert_variants_to_links(variants_text, all_functions):
                 # Keep original text if function not found (likely missing from Doxygen output)
                 # But strip schema prefix to match title format
                 display_sig = f"{func_name}({params_str})" if params_str else f"{func_name}()"
-                lines.append(f"- `{display_sig}` (not documented)")
+                lines.append(f"- `{display_sig}`")
         else:
             # Keep original if pattern doesn't match
             lines.append(f"- {line}")
@@ -507,7 +507,7 @@ def generate_markdown(func, all_functions=None, type_map=None):
 
     # Parameters
     if func['params']:
-        lines.append("### Parameters")
+        lines.append("#### Parameters")
         lines.append("")
         lines.append("| Name | Type | Description |")
         lines.append("|------|------|-------------|")
@@ -527,7 +527,7 @@ def generate_markdown(func, all_functions=None, type_map=None):
 
     # Return value
     if func['return_desc']:
-        lines.append("### Returns")
+        lines.append("#### Returns")
         lines.append("")
         if func['return_type']:
             # Link return type if type_map is available
@@ -546,14 +546,14 @@ def generate_markdown(func, all_functions=None, type_map=None):
 
     # Notes
     if func.get('notes'):
-        lines.append("### Note")
+        lines.append("#### Note")
         lines.append("")
         lines.append(func['notes'])
         lines.append("")
 
     # Exceptions
     if func.get('exceptions'):
-        lines.append("### Exceptions")
+        lines.append("#### Exceptions")
         lines.append("")
         for exc in func['exceptions']:
             lines.append(f"- {exc}")
@@ -561,14 +561,14 @@ def generate_markdown(func, all_functions=None, type_map=None):
 
     # Warnings
     if func.get('warnings'):
-        lines.append("### ⚠️ Warning")
+        lines.append("#### ⚠️ Warning")
         lines.append("")
         lines.append(func['warnings'])
         lines.append("")
 
     # Variants - convert references to links
     if func.get('see_also'):
-        lines.append("### Variants")
+        lines.append("#### Variants")
         lines.append("")
         if all_functions:
             lines.append(convert_variants_to_links(func['see_also'], all_functions))
