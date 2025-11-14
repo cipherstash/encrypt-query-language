@@ -4,7 +4,7 @@ Tests for xml-to-markdown.py parsing
 
 These tests verify critical parsing fixes:
 1. Operator function names extracted from brief description
-2. See Also links don't self-reference when exact match missing
+2. Variants links don't self-reference when exact match missing
 3. Parameter name/type extraction handles SQL backwards syntax
 """
 
@@ -50,12 +50,12 @@ def test_operator_name_extraction():
 
     print("✓ Operator name extraction test passed")
 
-def test_see_also_no_self_reference():
-    """Test that See Also doesn't link to itself when variant missing"""
+def test_variants_no_self_reference():
+    """Test that Variants doesn't link to itself when variant missing"""
 
     # Simulate scenario:
     # - Function: bloom_filter(eql_v2_encrypted)
-    # - See Also: eql_v2.bloom_filter(jsonb)
+    # - Variants: eql_v2.bloom_filter(jsonb)
     # - But bloom_filter(jsonb) doesn't exist in docs
 
     all_functions = [
@@ -88,7 +88,7 @@ def test_see_also_no_self_reference():
     assert 'bloom_filter(eql_v2_encrypted)' in func_by_sig
     assert 'bloom_filter(jsonb)' not in func_by_sig
 
-    print("✓ See Also no self-reference test passed")
+    print("✓ Variants no self-reference test passed")
 
 def test_param_name_type_swap():
     """Test that SQL parameter name/type are correctly swapped"""
@@ -160,7 +160,7 @@ if __name__ == '__main__':
 
     try:
         test_operator_name_extraction()
-        test_see_also_no_self_reference()
+        test_variants_no_self_reference()
         test_param_name_type_swap()
         test_schema_qualified_type()
 
