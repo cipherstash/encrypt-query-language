@@ -417,13 +417,14 @@ def linkify_type(type_text, type_map):
     # No match found, return with backticks
     return f"`{type_text.strip('`')}`"
 
-def convert_see_also_to_links(see_also_text, all_functions):
-    """Convert function references in 'See Also' to markdown links
+def convert_variants_to_links(variants_text, all_functions):
+    """Convert function references in 'Variants' to markdown links
 
     Only creates links for functions that actually exist in the documentation.
     References to missing overloaded functions are kept as plain text.
+    Strips schema prefix to match function title format.
     """
-    if not see_also_text:
+    if not variants_text:
         return ""
 
     # Build a comprehensive map of functions by name and signature
@@ -443,7 +444,7 @@ def convert_see_also_to_links(see_also_text, all_functions):
 
     lines = []
     # Split by newlines and process each reference
-    for line in see_also_text.strip().split('\n'):
+    for line in variants_text.strip().split('\n'):
         line = line.strip()
         if not line:
             continue
@@ -453,7 +454,7 @@ def convert_see_also_to_links(see_also_text, all_functions):
         # Match patterns: schema.function(params) or function(params)
         match = re.match(r'(?:`?([^`\s]+)`?\.)?`?"?([^`"\s(]+)"?`?\(([^)]*)\)?', line)
         if match:
-            schema = match.group(1)  # might be None
+            schema = match.group(1)  # might be None (we'll strip it anyway)
             func_name = match.group(2)
             params_str = match.group(3) if match.group(3) else ""
 
@@ -473,10 +474,13 @@ def convert_see_also_to_links(see_also_text, all_functions):
 
             if matched_func:
                 anchor = generate_anchor(matched_func['signature'])
+                # Use signature without schema prefix to match title format
                 lines.append(f"- [`{matched_func['signature']}`](#{anchor})")
             else:
                 # Keep original text if function not found (likely missing from Doxygen output)
-                lines.append(f"- {line}")
+                # But strip schema prefix to match title format
+                display_sig = f"{func_name}({params_str})" if params_str else f"{func_name}()"
+                lines.append(f"- `{display_sig}` (not documented)")
         else:
             # Keep original if pattern doesn't match
             lines.append(f"- {line}")
@@ -562,12 +566,12 @@ def generate_markdown(func, all_functions=None, type_map=None):
         lines.append(func['warnings'])
         lines.append("")
 
-    # See Also - convert references to links
+    # Variants - convert references to links
     if func.get('see_also'):
-        lines.append("### See Also")
+        lines.append("### Variants")
         lines.append("")
         if all_functions:
-            lines.append(convert_see_also_to_links(func['see_also'], all_functions))
+            lines.append(convert_variants_to_links(func['see_also'], all_functions))
         else:
             lines.append(func['see_also'])
         lines.append("")
