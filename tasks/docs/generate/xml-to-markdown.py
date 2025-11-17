@@ -18,17 +18,17 @@ def clean_text(text):
         return ""
     return re.sub(r'\s+', ' ', text.strip())
 
-def generate_anchor(name):
-    """Generate GitHub-compatible anchor ID from function name"""
+def generate_anchor(signature):
+    """Generate GitHub-compatible anchor ID from function signature"""
     # GitHub converts headings to anchors by:
     # 1. Lowercasing
     # 2. Removing backticks and other special chars
     # 3. Replacing spaces and underscores with hyphens
     # 4. Collapsing multiple hyphens
-    anchor = name.lower()
-    # For function names, we want to preserve the exact structure
-    # since they're in code blocks, just lowercase them
-    anchor = anchor.replace('_', '-')
+    anchor = signature.lower()
+    # Remove parentheses and commas, replace spaces/underscores with hyphens
+    anchor = anchor.replace('(', '').replace(')', '').replace(',', '')
+    anchor = anchor.replace('_', '-').replace(' ', '-')
     # Clean up any special characters that might cause issues
     anchor = re.sub(r'[^a-z0-9-]', '', anchor)
     # Collapse multiple hyphens
@@ -48,12 +48,12 @@ def extract_para_text(element):
 
     for child in element:
         if child.tag == 'ref':
-            # Keep references as inline code
+            # Keep references as plain text (will be wrapped in backticks by caller if needed)
             if child.text:
-                parts.append(f"`{child.text}`")
+                parts.append(child.text)
         elif child.tag == 'computeroutput':
             if child.text:
-                parts.append(f"`{child.text}`")
+                parts.append(child.text)
         else:
             parts.append(extract_para_text(child))
 
@@ -186,12 +186,27 @@ def process_function(memberdef):
         return None
 
     func_name = name.text
-    
+
     # Skip SQL intrinsics that Doxygen incorrectly identifies as functions
     # These are actually part of CREATE CAST, CREATE TYPE ... AS, CREATE OPERATOR statements
     sql_intrinsics = ['AS', 'CAST', 'CHECK', 'EXISTS', 'OPERATOR', 'TYPE', 'INDEX', 'CONSTRAINT']
     if func_name.upper() in sql_intrinsics:
         return None
+
+    # For SQL operators, Doxygen uses schema name as function name
+    # Extract actual operator from brief description
+    brief_elem = memberdef.find('briefdescription')
+    if func_name in ['eql_v2', 'public'] and brief_elem is not None:
+        brief_para = brief_elem.find('para')
+        if brief_para is not None and brief_para.text:
+            # Check if brief starts with an operator (like "->>" or "->")
+            import re
+            op_match = re.match(r'^([^\s]+)\s+operator', brief_para.text.strip())
+            if op_match:
+                func_name = op_match.group(1)  # Use operator as function name
+
+    # Check if this is a private/internal function
+    is_private = func_name.startswith('_')
 
     # Extract descriptions
     brief = extract_description(memberdef.find('briefdescription'))
@@ -202,28 +217,56 @@ def process_function(memberdef):
     if not brief and not detailed:
         return None
 
-    # Extract structured parameter list from @param tags in detaileddescription
+    # Extract parameter descriptions from @param tags in detaileddescription
     param_docs = extract_parameter_list(detailed_elem)
 
-    # Also try to extract params from function signature (fallback)
-    signature_params = []
+    # Extract params from function signature (for actual types)
+    # Merge with documentation descriptions
+    # NOTE: Doxygen parses SQL parameters backwards!
+    # SQL syntax: (name type) but C++ syntax: (type name)
+    # So in the XML: <type> = SQL param name, <declname> = SQL param type
+    params = []
     for param in memberdef.findall('.//param'):
-        param_type = param.find('type')
-        param_name = param.find('declname')
+        param_type_elem = param.find('type')  # Actually contains the param NAME in SQL (in <ref> child)
+        param_declname_elem = param.find('declname')  # Actually contains part of the param TYPE in SQL
 
-        if param_name is not None and param_name.text:
-            # Look for matching doc in param_docs
-            param_doc = next((p for p in param_docs if p['name'] == param_name.text), None)
+        if param_type_elem is not None:
+            # Extract just the parameter name from <ref> child
+            ref_elem = param_type_elem.find('ref')
+            if ref_elem is not None and ref_elem.text:
+                actual_name = ref_elem.text.strip()
+            else:
+                # Fallback to full text if no ref
+                actual_name = extract_para_text(param_type_elem).strip()
 
-            param_info = {
-                'name': param_name.text,
-                'type': extract_para_text(param_type) if param_type is not None else '',
-                'description': param_doc['description'] if param_doc else ''
-            }
-            signature_params.append(param_info)
+            # Build the full type by combining tail text from <type> and <declname>
+            # For schema-qualified types like eql_v2.ore_block_u64_8_256:
+            #   <type><ref>a</ref> eql_v2.</type> <declname>ore_block_u64_8_256</declname>
+            type_parts = []
+            if param_type_elem is not None and ref_elem is not None and ref_elem.tail:
+                type_parts.append(ref_elem.tail.strip())
+            if param_declname_elem is not None:
+                declname_text = extract_para_text(param_declname_elem).strip()
+                if declname_text:
+                    type_parts.append(declname_text)
+            actual_type = ''.join(type_parts)
 
-    # Use documented params if available, otherwise fall back to signature params
-    params = param_docs if param_docs else signature_params
+            if actual_name:  # Only add if we got a name
+                # Look for matching description in param_docs
+                # First try matching by parameter name
+                param_doc = next((p for p in param_docs if p['name'] == actual_name), None)
+
+                # Fallback: match by type (common doc error: @param type description instead of @param name description)
+                if not param_doc and actual_type:
+                    param_doc = next((p for p in param_docs if p['name'] == actual_type), None)
+
+                # Use description from docs, but name and type from signature
+                param_info = {
+                    'name': actual_name,
+                    'type': actual_type,
+                    'description': param_doc['description'] if param_doc else ''
+                }
+                params.append(param_info)
 
     # Extract simplesects (return, note, warning, see, etc.)
     simplesects = extract_simplesects(detailed_elem)
@@ -235,7 +278,7 @@ def process_function(memberdef):
     # For SQL functions, the return type might be in the argsstring element after "RETURNS"
     argsstring = memberdef.find('argsstring')
     return_type_text = ''
-    
+
     if argsstring is not None and argsstring.text:
         # Look for RETURNS keyword in argsstring
         import re
@@ -248,7 +291,7 @@ def process_function(memberdef):
                 pass
             # Debug print
             #print(f"DEBUG: Extracted from argsstring: {return_type_text}")
-    
+
     # Fallback to type element if not found in argsstring
     if not return_type_text:
         return_type = memberdef.find('type')
@@ -269,14 +312,14 @@ def process_function(memberdef):
     return_type_text = re.sub(r'`\s+`', '.', return_type_text)
     # Clean up and ensure proper backtick formatting
     return_type_text = return_type_text.strip()
-    
+
     # If already has backticks, clean up doubles
     if '`' in return_type_text:
         # Clean up double backticks: ``something`` -> `something`
         return_type_text = re.sub(r'``+', '`', return_type_text)
         # Remove backticks for now to re-add them properly
         return_type_text = return_type_text.replace('`', '')
-    
+
     # Wrap in single backticks if it looks like a type name
     if return_type_text and re.match(r'^[a-zA-Z_][a-zA-Z0-9_.]*(\[\])?$', return_type_text):
         return_type_text = f'`{return_type_text}`'
@@ -286,8 +329,18 @@ def process_function(memberdef):
     source_file = location.get('file') if location is not None else ''
     line_num = location.get('line') if location is not None else ''
 
+    # Build function signature
+    param_types = []
+    for param in params:
+        if param.get('type'):
+            param_types.append(param['type'])
+
+    signature = f"{func_name}({', '.join(param_types)})" if param_types else f"{func_name}()"
+
     return {
         'name': func_name,
+        'signature': signature,
+        'is_private': is_private,
         'brief': brief,
         'detailed': detailed,
         'params': params,
@@ -301,12 +354,145 @@ def process_function(memberdef):
         'line': line_num
     }
 
-def generate_markdown(func):
+def build_type_lookup_map(all_functions):
+    """Build a map of type names to function anchors for linking
+
+    Note: Only maps function names, not SQL types like eql_v2.bloom_filter,
+    because types are not extracted as separate documented entities by Doxygen.
+    """
+    type_map = {}
+    for func in all_functions:
+        name = func['name']
+        # Only map exact function name matches (not schema-qualified type names)
+        # This prevents linking types like "eql_v2.bloom_filter" to functions
+        type_map[name] = generate_anchor(func['signature'])
+    return type_map
+
+def linkify_type(type_text, type_map):
+    """Convert type reference to markdown link if it matches a documented function
+
+    Only links to actual documented functions, not SQL types.
+    SQL types like eql_v2.bloom_filter are not extracted by Doxygen as
+    separate entities, so they should remain as plain text.
+    """
+    if not type_text:
+        return ""
+
+    # Remove existing backticks
+    clean_type = type_text.strip('`').strip()
+
+    # Built-in PostgreSQL types that should not be linked
+    builtin_types = {
+        'boolean', 'text', 'jsonb', 'integer', 'bytea', 'void',
+        'smallint', 'bigint', 'real', 'double precision',
+        'BOOLEAN', 'TEXT', 'JSONB', 'INTEGER', 'BYTEA', 'SETOF', 'TABLE',
+        'uuid', 'timestamp', 'date', 'time'
+    }
+
+    # Handle array types (remove [] suffix)
+    is_array = clean_type.endswith('[]')
+    base_type = clean_type.rstrip('[]')
+
+    # Handle composite types like TABLE(...)
+    if base_type.startswith('TABLE') or base_type.startswith('SETOF'):
+        return f"`{type_text.strip('`')}`"
+
+    # Check if it's a built-in type
+    if base_type in builtin_types:
+        return f"`{type_text.strip('`')}`"
+
+    # Don't link schema-qualified type names (e.g., eql_v2.bloom_filter)
+    # These are SQL types, not documented functions
+    if '.' in base_type:
+        return f"`{type_text.strip('`')}`"
+
+    # Try to find a matching function (without schema prefix)
+    if base_type in type_map:
+        anchor = type_map[base_type]
+        if is_array:
+            return f"[`{base_type}`](#{anchor})[]"
+        else:
+            return f"[`{base_type}`](#{anchor})"
+
+    # No match found, return with backticks
+    return f"`{type_text.strip('`')}`"
+
+def convert_variants_to_links(variants_text, all_functions):
+    """Convert function references in 'Variants' to markdown links
+
+    Only creates links for functions that actually exist in the documentation.
+    References to missing overloaded functions are kept as plain text.
+    Strips schema prefix to match function title format.
+    """
+    if not variants_text:
+        return ""
+
+    # Build a comprehensive map of functions by name and signature
+    func_map = {}  # name -> [functions]
+    func_by_sig = {}  # "name(types)" -> function
+
+    for func in all_functions:
+        name = func['name']
+        if name not in func_map:
+            func_map[name] = []
+        func_map[name].append(func)
+
+        # Also index by simplified signature for matching
+        param_types = ', '.join([p['type'] for p in func['params'] if p.get('type')])
+        sig_key = f"{name}({param_types})"
+        func_by_sig[sig_key] = func
+
+    lines = []
+    # Split by newlines and process each reference
+    for line in variants_text.strip().split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+
+        # Try to parse function reference like "eql_v2.blake3(jsonb)" or "`eql_v2`.\"->\""
+        import re
+        # Match patterns: schema.function(params) or function(params)
+        match = re.match(r'(?:`?([^`\s]+)`?\.)?`?"?([^`"\s(]+)"?`?\(([^)]*)\)?', line)
+        if match:
+            schema = match.group(1)  # might be None (we'll strip it anyway)
+            func_name = match.group(2)
+            params_str = match.group(3) if match.group(3) else ""
+
+            # Look for exact match by name and parameter types
+            param_list = [p.strip() for p in params_str.split(',') if p.strip()]
+            sig_key = f"{func_name}({', '.join(param_list)})"
+
+            matched_func = func_by_sig.get(sig_key)
+
+            # If no exact match and no params specified, try matching by name only
+            if not matched_func and not param_list:
+                candidates = func_map.get(func_name, [])
+                if len(candidates) == 1:
+                    # Only auto-match if there's exactly one function with this name
+                    # and no specific parameters were requested
+                    matched_func = candidates[0]
+
+            if matched_func:
+                anchor = generate_anchor(matched_func['signature'])
+                # Use signature without schema prefix to match title format
+                lines.append(f"- [`{matched_func['signature']}`](#{anchor})")
+            else:
+                # Keep original text if function not found (likely missing from Doxygen output)
+                # But strip schema prefix to match title format
+                display_sig = f"{func_name}({params_str})" if params_str else f"{func_name}()"
+                lines.append(f"- `{display_sig}`")
+        else:
+            # Keep original if pattern doesn't match
+            lines.append(f"- {line}")
+
+    return '\n'.join(lines)
+
+def generate_markdown(func, all_functions=None, type_map=None):
     """Generate Markdown for a function"""
     lines = []
 
-    # Function name as heading
-    lines.append(f"## `{func['name']}`")
+    # Function name as heading (h3, with signature)
+    lines.append(f"### `{func['signature']}`")
     lines.append("")
 
     # Brief description
@@ -321,41 +507,53 @@ def generate_markdown(func):
 
     # Parameters
     if func['params']:
-        lines.append("### Parameters")
+        lines.append("#### Parameters")
         lines.append("")
         lines.append("| Name | Type | Description |")
         lines.append("|------|------|-------------|")
         for param in func['params']:
             name = f"`{param['name']}`"
-            param_type = f"`{param['type']}`" if param.get('type') else ""
+            # Link parameter types if type_map is available
+            if param.get('type'):
+                if type_map:
+                    param_type = linkify_type(param['type'], type_map)
+                else:
+                    param_type = f"`{param['type']}`"
+            else:
+                param_type = ""
             description = param.get('description', '')
             lines.append(f"| {name} | {param_type} | {description} |")
         lines.append("")
 
     # Return value
     if func['return_desc']:
-        lines.append("### Returns")
+        lines.append("#### Returns")
         lines.append("")
         if func['return_type']:
-            # Don't add backticks if return_type already has them
-            if func['return_type'].startswith('`') and func['return_type'].endswith('`'):
-                lines.append(f"**Type:** {func['return_type']}")
+            # Link return type if type_map is available
+            if type_map:
+                linked_type = linkify_type(func['return_type'], type_map)
+                lines.append(f"**Type:** {linked_type}")
             else:
-                lines.append(f"**Type:** `{func['return_type']}`")
+                # Don't add backticks if return_type already has them
+                if func['return_type'].startswith('`') and func['return_type'].endswith('`'):
+                    lines.append(f"**Type:** {func['return_type']}")
+                else:
+                    lines.append(f"**Type:** `{func['return_type']}`")
             lines.append("")
         lines.append(func['return_desc'])
         lines.append("")
 
     # Notes
     if func.get('notes'):
-        lines.append("### Note")
+        lines.append("#### Note")
         lines.append("")
         lines.append(func['notes'])
         lines.append("")
 
     # Exceptions
     if func.get('exceptions'):
-        lines.append("### Exceptions")
+        lines.append("#### Exceptions")
         lines.append("")
         for exc in func['exceptions']:
             lines.append(f"- {exc}")
@@ -363,43 +561,22 @@ def generate_markdown(func):
 
     # Warnings
     if func.get('warnings'):
-        lines.append("### ⚠️ Warning")
+        lines.append("#### ⚠️ Warning")
         lines.append("")
         lines.append(func['warnings'])
         lines.append("")
 
-    # See Also
+    # Variants - convert references to links
     if func.get('see_also'):
-        lines.append("### See Also")
+        lines.append("#### Variants")
         lines.append("")
-        lines.append(func['see_also'])
+        if all_functions:
+            lines.append(convert_variants_to_links(func['see_also'], all_functions))
+        else:
+            lines.append(func['see_also'])
         lines.append("")
 
-    # Source reference
-    if func['source']:
-        # Convert absolute path to relative path
-        source_file = Path(func['source'])
-        # Try to make path relative to common SQL source directories
-        # The source files are typically under src/ or similar directories
-        # We'll extract just the relevant part of the path
-        source_path = func['source']
-        
-        # Handle various possible path patterns by finding common markers
-        # and extracting the relative portion
-        for marker in ['/src/', '/tests/', '/release/', '/.worktrees/']:
-            if marker in source_path:
-                # Get everything after the marker (including the marker folder name)
-                parts = source_path.split(marker, 1)
-                if len(parts) == 2:
-                    source_path = marker[1:] + parts[1]  # Remove leading slash from marker
-                    break
-        else:
-            # If no known marker found, try to use just the filename
-            source_path = source_file.name
-        lines.append("### Source")
-        lines.append("")
-        lines.append(f"[{source_path}:{func['line']}](../../{source_path}#L{func['line']})")
-        lines.append("")
+    # Source reference - removed as relative links don't work
 
     lines.append("---")
     lines.append("")
@@ -448,11 +625,21 @@ def main():
         print("No documented functions found!")
         return
 
-    # Sort by name
-    functions.sort(key=lambda f: f['name'])
+    # Separate public and private functions
+    public_functions = [f for f in functions if not f['is_private']]
+    private_functions = [f for f in functions if f['is_private']]
 
-    # Generate index
+    # Sort by name
+    public_functions.sort(key=lambda f: f['name'])
+    private_functions.sort(key=lambda f: f['name'])
+
+    # Generate frontmatter and index
     index_lines = [
+        "---",
+        "title: EQL API Reference",
+        "description: Complete API reference for the Encrypt Query Language (EQL) PostgreSQL extension.",
+        "---",
+        "",
         "# EQL API Reference",
         "",
         "Complete API reference for the Encrypt Query Language (EQL) PostgreSQL extension.",
@@ -461,17 +648,38 @@ def main():
         ""
     ]
 
-    for func in functions:
-        anchor = generate_anchor(func['name'])
-        index_lines.append(f"- [`{func['name']}`](#{anchor}) - {func['brief']}")
+    # Add public functions to index
+    for func in public_functions:
+        anchor = generate_anchor(func['signature'])
+        index_lines.append(f"- [`{func['signature']}`](#{anchor}) - {func['brief']}")
+
+    # Add private functions section to index
+    if private_functions:
+        index_lines.append("")
+        index_lines.append("## Private Functions")
+        index_lines.append("")
+        for func in private_functions:
+            anchor = generate_anchor(func['signature'])
+            index_lines.append(f"- [`{func['signature']}`](#{anchor}) - {func['brief']}")
 
     index_lines.append("")
     index_lines.append("---")
     index_lines.append("")
 
-    # Add all function docs
-    for func in functions:
-        index_lines.append(generate_markdown(func))
+    # Add all public function docs
+    all_funcs = public_functions + private_functions
+    type_map = build_type_lookup_map(all_funcs)
+
+    for func in public_functions:
+        index_lines.append(generate_markdown(func, all_funcs, type_map))
+
+    # Add private function docs at the end
+    if private_functions:
+        index_lines.append("")
+        index_lines.append("## Private Functions")
+        index_lines.append("")
+        for func in private_functions:
+            index_lines.append(generate_markdown(func, all_funcs, type_map))
 
     # Write output
     output_file = output_dir / 'API.md'
