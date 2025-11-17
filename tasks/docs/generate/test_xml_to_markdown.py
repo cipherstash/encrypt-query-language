@@ -51,7 +51,7 @@ def test_operator_name_extraction():
     print("✓ Operator name extraction test passed")
 
 def test_variants_no_self_reference():
-    """Test that Variants doesn't link to itself when variant missing"""
+    """Test that Variants don't link to themselves when variant missing"""
 
     # Simulate scenario:
     # - Function: bloom_filter(eql_v2_encrypted)
