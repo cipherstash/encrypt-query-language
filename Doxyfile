@@ -81,7 +81,9 @@ SHOW_NAMESPACES        = YES
 #---------------------------------------------------------------------------
 
 JAVADOC_AUTOBRIEF      = YES
-OPTIMIZE_OUTPUT_FOR_C  = YES
+# Changed from YES to NO to support SQL function overloading
+# C doesn't support overloading, but SQL does (like C++)
+OPTIMIZE_OUTPUT_FOR_C  = NO
 
 # Disable some C++-specific features that don't apply to SQL
 BUILTIN_STL_SUPPORT    = NO
