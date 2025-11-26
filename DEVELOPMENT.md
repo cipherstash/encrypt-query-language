@@ -274,6 +274,23 @@ To cut a [release](https://github.com/cipherstash/encrypt-query-language/release
 
 This will trigger the [Release EQL](https://github.com/cipherstash/encrypt-query-language/actions/workflows/release-eql.yml) workflow, which will build and attach artifacts to [the release](https://github.com/cipherstash/encrypt-query-language/releases/).
 
+#### Public documentation updates
+
+When a tag with the `eql-` prefix is pushed (for example, `eql-1.2.3`), the workflow at `.github/workflows/rebuild-docs.yml` runs and sends a webhook to our Vercel-hosted public docs site to trigger a rebuild.
+
+What happens end-to-end:
+
+- Release EQL builds EQL artifacts and generates API docs (HTML, XML, Markdown). The Markdown frontmatter includes the release version.
+- Rebuild Docs posts to the `DOCS_WEBHOOK_URL` secret, which Vercel uses to kick off a fresh build of the public docs.
+- The public docs site pulls the latest generated reference (`docs/api/markdown/API.md`) and publishes it under the corresponding version.
+
+Manual triggers and troubleshooting:
+
+- You can re-run the “Rebuild Docs” workflow from the Actions tab if a build fails downstream.
+- Ensure the repository secret `DOCS_WEBHOOK_URL` is set and valid; the workflow simply POSTs to that URL.
+
+This mirrors the process used in the sibling `protect` repository so both products’ documentation stay in sync with releases.
+
 ### dbdev
 
 We publish a Trusted Language Extension for PostgreSQL for use on [dbdev](https://database.dev/).
