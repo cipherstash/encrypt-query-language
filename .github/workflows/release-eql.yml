@@ -90,7 +90,7 @@ jobs:
       - name: Generate documentation
         run: |
           mise run docs:generate
-          mise run docs:generate:markdown
+          mise run docs:generate:markdown -- ${{ github.event.release.tag_name }}
 
       - name: Package documentation
         run: |
