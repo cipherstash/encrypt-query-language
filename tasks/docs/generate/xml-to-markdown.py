@@ -148,10 +148,8 @@ def extract_description(desc_element):
     for para in desc_element.findall('para'):
         # Skip if this para is inside a parameterlist or simplesect
         parent = para
-        skip = False
         while parent is not None:
             if parent.tag in ['parameterlist', 'simplesect']:
-                skip = True
                 break
             parent = list(desc_element.iter()).__contains__(parent)  # Check if still in tree
             parent = None  # Simple approach: only check direct parent
@@ -454,7 +452,6 @@ def convert_variants_to_links(variants_text, all_functions):
         # Match patterns: schema.function(params) or function(params)
         match = re.match(r'(?:`?([^`\s]+)`?\.)?`?"?([^`"\s(]+)"?`?\(([^)]*)\)?', line)
         if match:
-            schema = match.group(1)  # might be None (we'll strip it anyway)
             func_name = match.group(2)
             params_str = match.group(3) if match.group(3) else ""
 
@@ -585,11 +582,12 @@ def generate_markdown(func, all_functions=None, type_map=None):
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: xml-to-markdown.py <xml_dir> [output_dir]")
+        print("Usage: xml-to-markdown.py <xml_dir> [output_dir] [version]")
         sys.exit(1)
 
     xml_dir = Path(sys.argv[1])
     output_dir = Path(sys.argv[2]) if len(sys.argv) > 2 else Path('docs/api/markdown')
+    version = sys.argv[3] if len(sys.argv) > 3 else 'DEV'
 
     if not xml_dir.exists():
         print(f"Error: XML directory not found: {xml_dir}")
@@ -638,16 +636,14 @@ def main():
         "---",
         "title: EQL API Reference",
         "description: Complete API reference for the Encrypt Query Language (EQL) PostgreSQL extension.",
+        f"version: {version}",
         "---",
-        "",
-        "# EQL API Reference",
         "",
         "Complete API reference for the Encrypt Query Language (EQL) PostgreSQL extension.",
         "",
         "## Functions",
         ""
     ]
-
     # Add public functions to index
     for func in public_functions:
         anchor = generate_anchor(func['signature'])
@@ -656,7 +652,7 @@ def main():
     # Add private functions section to index
     if private_functions:
         index_lines.append("")
-        index_lines.append("## Private Functions")
+        index_lines.append("### Private Functions")
         index_lines.append("")
         for func in private_functions:
             anchor = generate_anchor(func['signature'])
@@ -670,6 +666,9 @@ def main():
     all_funcs = public_functions + private_functions
     type_map = build_type_lookup_map(all_funcs)
 
+    index_lines.append("")
+    index_lines.append("## Functions")
+    index_lines.append("")
     for func in public_functions:
         index_lines.append(generate_markdown(func, all_funcs, type_map))
 
