@@ -100,7 +100,6 @@ async fn arrow_operator_returns_metadata_fields(pool: PgPool) -> Result<()> {
     // Test: e -> 'selector' returns JSONB with 'i' (index) and 'v' (version) metadata fields.
     // This verifies that the arrow operator returns the full encrypted metadata structure,
     // not just the value. The metadata includes the index term ('i') and version ('v').
-    // SQL equivalent: src/operators/->_test.sql lines 106-118
     //
     // NOTE: This test uses raw SQLx instead of QueryAssertion because we need to verify
     // specific JSONB field presence. QueryAssertion is designed for row count and basic
@@ -132,7 +131,6 @@ async fn arrow_operator_returns_metadata_fields(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn ciphertext_function_extracts_from_arrow_result(pool: PgPool) -> Result<()> {
     // Test: eql_v2.ciphertext(e -> 'selector') extracts ciphertext value
-    // SQL equivalent: src/operators/->_test.sql lines 60-75
     //
     // The ciphertext() function extracts the 'c' field from the encrypted JSONB structure.
     // When combined with the -> operator, it allows extracting ciphertext from nested paths.
@@ -151,7 +149,6 @@ async fn ciphertext_function_extracts_from_arrow_result(pool: PgPool) -> Result<
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn ciphertext_function_returns_all_rows(pool: PgPool) -> Result<()> {
     // Test: eql_v2.ciphertext() returns ciphertext for all encrypted rows
-    // SQL equivalent: src/operators/->_test.sql lines 70-73
 
     let sql = format!(
         "SELECT eql_v2.ciphertext(e -> '{}'::text) FROM encrypted",
@@ -167,7 +164,6 @@ async fn ciphertext_function_returns_all_rows(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn arrow_operator_with_encrypted_selector(pool: PgPool) -> Result<()> {
     // Test: e -> eql_v2_encrypted selector (encrypted selector)
-    // SQL equivalent: src/operators/->_test.sql lines 39-56
     //
     // The -> operator can accept an eql_v2_encrypted value as the selector.
     // The selector is created from JSONB with structure: {"s": "selector_hash"}
@@ -186,7 +182,6 @@ async fn arrow_operator_with_encrypted_selector(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn arrow_operator_with_encrypted_selector_all_rows(pool: PgPool) -> Result<()> {
     // Test: e -> eql_v2_encrypted selector returns all matching rows
-    // SQL equivalent: src/operators/->_test.sql lines 51-54
 
     let encrypted_selector = Selectors::as_encrypted(Selectors::ROOT);
     let sql = format!(
@@ -203,7 +198,6 @@ async fn arrow_operator_with_encrypted_selector_all_rows(pool: PgPool) -> Result
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn double_arrow_operator_with_encrypted_selector(pool: PgPool) -> Result<()> {
     // Test: e ->> eql_v2_encrypted selector (encrypted selector)
-    // SQL equivalent: src/operators/->>_test.sql lines 50-67
     //
     // The ->> operator can also accept an eql_v2_encrypted value as the selector.
 
@@ -221,7 +215,6 @@ async fn double_arrow_operator_with_encrypted_selector(pool: PgPool) -> Result<(
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn double_arrow_operator_with_encrypted_selector_all_rows(pool: PgPool) -> Result<()> {
     // Test: e ->> eql_v2_encrypted selector returns all matching rows
-    // SQL equivalent: src/operators/->>_test.sql lines 62-65
 
     let encrypted_selector = Selectors::as_encrypted(Selectors::ROOT);
     let sql = format!(
