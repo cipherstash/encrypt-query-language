@@ -88,7 +88,6 @@ async fn group_by_with_encrypted_column(pool: PgPool) -> Result<()> {
 }
 
 // ========== eql_v2.min() and eql_v2.max() Tests ==========
-// Source: src/encrypted/aggregates_test.sql
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("aggregate_minmax_data")))]
 async fn eql_v2_min_with_null_values(pool: PgPool) -> Result<()> {

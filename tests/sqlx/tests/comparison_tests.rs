@@ -321,7 +321,6 @@ async fn greater_than_or_equal_jsonb_gte_encrypted(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn selector_less_than_with_ore_cllw_u64_8(pool: PgPool) -> Result<()> {
     // Test: e->'selector' < term with ore_cllw_u64_8 index
-    // Source SQL: src/operators/<_test.sql (lines 20-50)
     //
     // Uses test data created by seed_encrypted_json() helper which creates:
     // - Three records with n=10, n=20, n=30
@@ -355,7 +354,6 @@ async fn selector_less_than_with_ore_cllw_u64_8(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn selector_less_than_with_ore_cllw_u64_8_fallback(pool: PgPool) -> Result<()> {
     // Test: e->'selector' < term fallback when index missing
-    // Source SQL: src/operators/<_test.sql (lines 42-48)
     //
     // Tests that comparison falls back to JSONB literal comparison
     // when the requested index type is not present on the selector
@@ -387,7 +385,6 @@ async fn selector_less_than_with_ore_cllw_u64_8_fallback(pool: PgPool) -> Result
 #[sqlx::test]
 async fn selector_less_than_with_ore_cllw_var_8(pool: PgPool) -> Result<()> {
     // Test: e->'selector' < term with ore_cllw_var_8 index
-    // Source SQL: src/operators/<_test.sql (lines 66-95)
     //
     // STE vec test data has ore_cllw_var_8 on $.hello selector (a7cea93975ed8c01f861ccb6bd082784)
     // Extract $.hello from ste_vec id=3 and compare
@@ -419,7 +416,6 @@ async fn selector_less_than_with_ore_cllw_var_8(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn selector_greater_than_with_ore_cllw_u64_8(pool: PgPool) -> Result<()> {
     // Test: e->'selector' > term with ore_cllw_u64_8 index
-    // Source SQL: src/operators/>_test.sql (lines 20-50)
     //
     // Extract $.n from ste_vec id=2 (n=20 value) and find records > 20
 
@@ -450,7 +446,6 @@ async fn selector_greater_than_with_ore_cllw_u64_8(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn selector_greater_than_with_ore_cllw_u64_8_fallback(pool: PgPool) -> Result<()> {
     // Test: e->'selector' > term fallback when index missing
-    // Source SQL: src/operators/>_test.sql (lines 42-48)
 
     sqlx::query("SELECT create_table_with_encrypted()")
         .execute(&pool)
@@ -478,7 +473,6 @@ async fn selector_greater_than_with_ore_cllw_u64_8_fallback(pool: PgPool) -> Res
 #[sqlx::test]
 async fn selector_greater_than_with_ore_cllw_var_8(pool: PgPool) -> Result<()> {
     // Test: e->'selector' > term with ore_cllw_var_8 index
-    // Source SQL: src/operators/>_test.sql (lines 66-96)
 
     sqlx::query("SELECT create_table_with_encrypted()")
         .execute(&pool)
@@ -507,7 +501,6 @@ async fn selector_greater_than_with_ore_cllw_var_8(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn selector_greater_than_with_ore_cllw_var_8_fallback(pool: PgPool) -> Result<()> {
     // Test: e->'selector' > term fallback to JSONB comparison
-    // Source SQL: src/operators/>_test.sql (lines 88-94)
     //
     // Tests fallback when selector doesn't have ore_cllw_var_8
 
@@ -540,7 +533,6 @@ async fn selector_greater_than_with_ore_cllw_var_8_fallback(pool: PgPool) -> Res
 #[sqlx::test]
 async fn selector_less_than_or_equal_with_ore_cllw_u64_8(pool: PgPool) -> Result<()> {
     // Test: e->'selector' <= term with ore_cllw_u64_8 index
-    // Source SQL: src/operators/<=_ore_cllw_u64_8_test.sql (lines 23-53)
     //
     // Extract $.n from ste_vec id=2 (n=20) and find records <= 20
 
@@ -571,7 +563,6 @@ async fn selector_less_than_or_equal_with_ore_cllw_u64_8(pool: PgPool) -> Result
 #[sqlx::test]
 async fn selector_less_than_or_equal_with_ore_cllw_u64_8_fallback(pool: PgPool) -> Result<()> {
     // Test: e->'selector' <= term fallback when index missing
-    // Source SQL: src/operators/<=_ore_cllw_u64_8_test.sql (lines 45-51)
 
     sqlx::query("SELECT create_table_with_encrypted()")
         .execute(&pool)
@@ -601,7 +592,6 @@ async fn selector_less_than_or_equal_with_ore_cllw_u64_8_fallback(pool: PgPool) 
 #[sqlx::test]
 async fn selector_greater_than_or_equal_with_ore_cllw_u64_8(pool: PgPool) -> Result<()> {
     // Test: e->'selector' >= term with ore_cllw_u64_8 index
-    // Source SQL: src/operators/>=_test.sql (lines 20-50)
     //
     // Extract $.n from ste_vec id=1 (n=10) and find records >= 10
 
@@ -632,7 +622,6 @@ async fn selector_greater_than_or_equal_with_ore_cllw_u64_8(pool: PgPool) -> Res
 #[sqlx::test]
 async fn selector_greater_than_or_equal_with_ore_cllw_u64_8_fallback(pool: PgPool) -> Result<()> {
     // Test: e->'selector' >= term fallback when index missing
-    // Source SQL: src/operators/>=_test.sql (lines 42-48)
 
     sqlx::query("SELECT create_table_with_encrypted()")
         .execute(&pool)
@@ -660,7 +649,6 @@ async fn selector_greater_than_or_equal_with_ore_cllw_u64_8_fallback(pool: PgPoo
 #[sqlx::test]
 async fn selector_greater_than_or_equal_with_ore_cllw_var_8(pool: PgPool) -> Result<()> {
     // Test: e->'selector' >= term with ore_cllw_var_8 index
-    // Source SQL: src/operators/>=_test.sql (lines 66-96)
 
     sqlx::query("SELECT create_table_with_encrypted()")
         .execute(&pool)
@@ -689,7 +677,6 @@ async fn selector_greater_than_or_equal_with_ore_cllw_var_8(pool: PgPool) -> Res
 #[sqlx::test]
 async fn selector_greater_than_or_equal_with_ore_cllw_var_8_fallback(pool: PgPool) -> Result<()> {
     // Test: e->'selector' >= term fallback to JSONB comparison
-    // Source SQL: src/operators/>=_test.sql (lines 88-94)
 
     sqlx::query("SELECT create_table_with_encrypted()")
         .execute(&pool)

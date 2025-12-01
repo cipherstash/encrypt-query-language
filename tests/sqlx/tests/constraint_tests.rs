@@ -223,13 +223,12 @@ async fn foreign_key_constraint_with_encrypted(pool: PgPool) -> Result<()> {
 }
 
 // ========================================================================
-// EQL-Specific Constraint Tests (from src/encrypted/constraints_test.sql)
+// EQL-Specific Constraint Tests
 // ========================================================================
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn add_encrypted_constraint_prevents_invalid_data(pool: PgPool) -> Result<()> {
     // Test: eql_v2.add_encrypted_constraint() adds validation to encrypted column
-    // Source: constraints_test.sql lines 3-21
 
     // First, verify that insert without constraint works (even with invalid empty JSONB)
     sqlx::query("INSERT INTO encrypted (e) VALUES ('{}'::jsonb::eql_v2_encrypted)")
@@ -281,7 +280,6 @@ async fn add_encrypted_constraint_prevents_invalid_data(pool: PgPool) -> Result<
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn remove_encrypted_constraint_allows_invalid_data(pool: PgPool) -> Result<()> {
     // Test: eql_v2.remove_encrypted_constraint() removes validation from encrypted column
-    // Source: constraints_test.sql lines 24-43
 
     // Add the encrypted constraint first
     sqlx::query("SELECT eql_v2.add_encrypted_constraint('encrypted', 'e')")
@@ -323,7 +321,6 @@ async fn remove_encrypted_constraint_allows_invalid_data(pool: PgPool) -> Result
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn version_metadata_validation_on_insert(pool: PgPool) -> Result<()> {
     // Test: EQL version metadata (v field) is enforced on insert
-    // Source: constraints_test.sql lines 106-138
     //
     // Note: The SQL test doesn't explicitly add a constraint, which suggests
     // version validation is built into the eql_v2_encrypted type itself or

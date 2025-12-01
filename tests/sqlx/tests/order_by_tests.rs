@@ -119,7 +119,7 @@ async fn order_by_asc_with_greater_than_returns_lowest(pool: PgPool) -> Result<(
     Ok(())
 }
 
-// NULL ordering tests - replicating SQL test cases from order_by_test.sql lines 93-116
+// NULL ordering tests
 
 #[sqlx::test]
 async fn order_by_asc_nulls_first_returns_null_record_first(pool: PgPool) -> Result<()> {
@@ -329,7 +329,7 @@ async fn order_by_desc_nulls_last_returns_largest_value_first(pool: PgPool) -> R
     Ok(())
 }
 
-// eql_v2.order_by() helper function tests - from order_by_test.sql lines 133-144
+// eql_v2.order_by() helper function tests
 
 #[sqlx::test]
 async fn order_by_helper_function_desc_returns_correct_count(pool: PgPool) -> Result<()> {
