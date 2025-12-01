@@ -7,39 +7,61 @@ use sqlx::PgPool;
 
 #[sqlx::test]
 async fn count_aggregate_on_encrypted_column(pool: PgPool) -> Result<()> {
-    // Test: COUNT works with encrypted columns
+    // Test: COUNT works on encrypted columns (counts non-NULL encrypted values)
 
-    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM ore")
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(e) FROM ore")
         .fetch_one(&pool)
         .await?;
 
-    assert_eq!(count, 99, "should count all ORE records");
+    assert_eq!(count, 99, "should count all non-NULL encrypted values");
 
     Ok(())
 }
 
 #[sqlx::test]
 async fn max_aggregate_on_encrypted_column(pool: PgPool) -> Result<()> {
-    // Test: MAX returns highest value with ORE
+    // Test: eql_v2.max() returns highest encrypted value
+    // The ore table has id and e columns where e is the encrypted version of id
+    // So eql_v2.max(e) should return the encrypted value corresponding to id=99
 
-    let max_id: i64 = sqlx::query_scalar("SELECT MAX(id) FROM ore WHERE id <= 50")
+    // Get the expected max value (encrypted value where id = 99)
+    let expected: String = sqlx::query_scalar("SELECT e::text FROM ore WHERE id = 99")
         .fetch_one(&pool)
         .await?;
 
-    assert_eq!(max_id, 50, "MAX should return 50");
+    // Get the actual max from eql_v2.max()
+    let actual: String = sqlx::query_scalar("SELECT eql_v2.max(e)::text FROM ore")
+        .fetch_one(&pool)
+        .await?;
+
+    assert_eq!(
+        actual, expected,
+        "eql_v2.max(e) should return the encrypted value where id = 99 (maximum)"
+    );
 
     Ok(())
 }
 
 #[sqlx::test]
 async fn min_aggregate_on_encrypted_column(pool: PgPool) -> Result<()> {
-    // Test: MIN returns lowest value with ORE
+    // Test: eql_v2.min() returns lowest encrypted value
+    // The ore table has id and e columns where e is the encrypted version of id
+    // So eql_v2.min(e) should return the encrypted value corresponding to id=1
 
-    let min_id: i64 = sqlx::query_scalar("SELECT MIN(id) FROM ore WHERE id >= 10")
+    // Get the expected min value (encrypted value where id = 1)
+    let expected: String = sqlx::query_scalar("SELECT e::text FROM ore WHERE id = 1")
         .fetch_one(&pool)
         .await?;
 
-    assert_eq!(min_id, 10, "MIN should return 10");
+    // Get the actual min from eql_v2.min()
+    let actual: String = sqlx::query_scalar("SELECT eql_v2.min(e)::text FROM ore")
+        .fetch_one(&pool)
+        .await?;
+
+    assert_eq!(
+        actual, expected,
+        "eql_v2.min(e) should return the encrypted value where id = 1 (minimum)"
+    );
 
     Ok(())
 }
