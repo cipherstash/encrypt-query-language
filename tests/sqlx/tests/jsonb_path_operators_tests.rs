@@ -113,10 +113,7 @@ async fn arrow_operator_returns_metadata_fields(pool: PgPool) -> Result<()> {
 
     let result: serde_json::Value = sqlx::query_scalar(&sql).fetch_one(&pool).await?;
 
-    assert!(
-        result.is_object(),
-        "-> operator should return JSONB object"
-    );
+    assert!(result.is_object(), "-> operator should return JSONB object");
     let obj = result
         .as_object()
         .expect("Result should be a JSONB object after is_object() check");
