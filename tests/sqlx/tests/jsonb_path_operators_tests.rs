@@ -97,8 +97,14 @@ async fn double_arrow_in_where_clause(pool: PgPool) -> Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn arrow_operator_returns_metadata_fields(pool: PgPool) -> Result<()> {
-    // Test: e -> 'selector' returns JSONB with 'i' (index) and 'v' (version) fields
+    // Test: e -> 'selector' returns JSONB with 'i' (index) and 'v' (version) metadata fields.
+    // This verifies that the arrow operator returns the full encrypted metadata structure,
+    // not just the value. The metadata includes the index term ('i') and version ('v').
     // SQL equivalent: src/operators/->_test.sql lines 106-118
+    //
+    // NOTE: This test uses raw SQLx instead of QueryAssertion because we need to verify
+    // specific JSONB field presence. QueryAssertion is designed for row count and basic
+    // value assertions, but doesn't support introspecting JSONB object structure.
 
     let sql = format!(
         "SELECT (e -> '{}'::text)::jsonb FROM encrypted LIMIT 1",
@@ -111,7 +117,9 @@ async fn arrow_operator_returns_metadata_fields(pool: PgPool) -> Result<()> {
         result.is_object(),
         "-> operator should return JSONB object"
     );
-    let obj = result.as_object().unwrap();
+    let obj = result
+        .as_object()
+        .expect("Result should be a JSONB object after is_object() check");
     assert!(
         obj.contains_key("i"),
         "Result should contain 'i' (index metadata) field"
