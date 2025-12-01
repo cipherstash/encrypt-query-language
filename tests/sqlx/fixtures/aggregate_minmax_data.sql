@@ -4,7 +4,8 @@
 -- Creates table with encrypted integer data including NULL values
 -- to test aggregate functions on encrypted columns
 
--- Create table
+-- Create table (drop first for idempotency)
+DROP TABLE IF EXISTS agg_test;
 CREATE TABLE agg_test
 (
     plain_int integer,
