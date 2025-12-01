@@ -164,13 +164,14 @@ async fn order_by_asc_nulls_first_returns_null_record_first(pool: PgPool) -> Res
         .execute(&pool)
         .await?;
 
-    // Test: NULLS FIRST should return id=1
-    let sql = "SELECT id FROM encrypted ORDER BY e ASC NULLS FIRST";
+    // Test: NULLS FIRST should return a NULL row first
+    // Use tie-breaker (id) to ensure deterministic ordering among NULL rows
+    let sql = "SELECT id FROM encrypted ORDER BY e ASC NULLS FIRST, id";
     let row = sqlx::query(sql).fetch_one(&pool).await?;
     let first_id: i64 = row.try_get(0)?;
     assert_eq!(
         first_id, 1,
-        "ORDER BY e ASC NULLS FIRST should return NULL value (id=1) first"
+        "ORDER BY e ASC NULLS FIRST, id should return NULL value with lowest id (id=1) first"
     );
 
     Ok(())
@@ -265,13 +266,14 @@ async fn order_by_desc_nulls_first_returns_null_value_first(pool: PgPool) -> Res
         .execute(&pool)
         .await?;
 
-    // Test: DESC NULLS FIRST should return id=1
-    let sql = "SELECT id FROM encrypted ORDER BY e DESC NULLS FIRST";
+    // Test: DESC NULLS FIRST should return a NULL row first
+    // Use tie-breaker (id) to ensure deterministic ordering among NULL rows
+    let sql = "SELECT id FROM encrypted ORDER BY e DESC NULLS FIRST, id";
     let row = sqlx::query(sql).fetch_one(&pool).await?;
     let first_id: i64 = row.try_get(0)?;
     assert_eq!(
         first_id, 1,
-        "ORDER BY e DESC NULLS FIRST should return NULL value (id=1) first"
+        "ORDER BY e DESC NULLS FIRST, id should return NULL value with lowest id (id=1) first"
     );
 
     Ok(())
