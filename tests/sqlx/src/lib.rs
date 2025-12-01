@@ -10,7 +10,10 @@ pub mod index_types;
 pub mod selectors;
 
 pub use assertions::QueryAssertion;
-pub use helpers::{get_encrypted_term, get_ore_encrypted, get_ore_encrypted_as_jsonb};
+pub use helpers::{
+    get_encrypted_term, get_ore_encrypted, get_ore_encrypted_as_jsonb, get_ste_vec_encrypted,
+    get_ste_vec_selector_term,
+};
 pub use index_types as IndexTypes;
 pub use selectors::Selectors;
 
