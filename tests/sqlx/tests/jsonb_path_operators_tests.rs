@@ -4,6 +4,7 @@
 
 use anyhow::Result;
 use eql_tests::{QueryAssertion, Selectors};
+use serde_json;
 use sqlx::{PgPool, Row};
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
@@ -90,6 +91,35 @@ async fn double_arrow_in_where_clause(pool: PgPool) -> Result<()> {
 
     // All 3 records have $.n path
     QueryAssertion::new(&pool, &sql).count(3).await;
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn arrow_operator_returns_metadata_fields(pool: PgPool) -> Result<()> {
+    // Test: e -> 'selector' returns JSONB with 'i' (index) and 'v' (version) fields
+    // SQL equivalent: src/operators/->_test.sql lines 106-118
+
+    let sql = format!(
+        "SELECT (e -> '{}'::text)::jsonb FROM encrypted LIMIT 1",
+        Selectors::N
+    );
+
+    let result: serde_json::Value = sqlx::query_scalar(&sql).fetch_one(&pool).await?;
+
+    assert!(
+        result.is_object(),
+        "-> operator should return JSONB object"
+    );
+    let obj = result.as_object().unwrap();
+    assert!(
+        obj.contains_key("i"),
+        "Result should contain 'i' (index metadata) field"
+    );
+    assert!(
+        obj.contains_key("v"),
+        "Result should contain 'v' (version) field"
+    );
 
     Ok(())
 }
