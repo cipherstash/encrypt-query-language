@@ -26,9 +26,9 @@ This project uses `mise` for task management. Common commands:
 
 ### Testing
 - Run all tests: `mise run test`
-- Run specific test: `mise run test --test <test_name>`
-- Run tests against specific PostgreSQL version: `mise run test --postgres 14|15|16|17`
-- Tests are located in `*_test.sql` files alongside source code
+- Run SQLx tests directly: `mise run test:sqlx`
+- Run SQLx tests in watch mode: `mise run test:sqlx:watch`
+- Tests are located in `tests/sqlx/` using Rust and SQLx framework
 
 ### Build System
 - Dependencies are resolved using `-- REQUIRE:` comments in SQL files
@@ -54,7 +54,7 @@ This is the **Encrypt Query Language (EQL)** - a PostgreSQL extension for search
 - `src/config/` - Configuration management functions
 - `src/blake3/`, `src/hmac_256/`, `src/bloom_filter/`, `src/ore_*` - Index implementations
 - `tasks/` - mise task scripts
-- `tests/` - Test files (PostgreSQL 14-17 support)
+- `tests/sqlx/` - Rust/SQLx test framework (PostgreSQL 14-17 support)
 - `release/` - Generated SQL installation files
 
 ### Key Concepts
@@ -65,11 +65,12 @@ This is the **Encrypt Query Language (EQL)** - a PostgreSQL extension for search
 - **CipherStash Proxy**: Required for encryption/decryption operations
 
 ### Testing Infrastructure
+- Tests are written in Rust using SQLx, located in `tests/sqlx/`
 - Tests run against PostgreSQL 14, 15, 16, 17 using Docker containers
+- Use `mise run test --postgres 14|15|16|17` to test against a specific version
 - Container configuration in `tests/docker-compose.yml`
-- Test helpers in `tests/test_helpers.sql`
+- SQL test fixtures and helpers in `tests/test_helpers.sql`
 - Database connection: `localhost:7432` (cipherstash/password)
-- **Rust/SQLx Tests**: Modern test framework in `tests/sqlx/` (see README there)
 
 ## Project Learning & Retrospectives
 
@@ -163,7 +164,6 @@ HTML output is also generated in `docs/api/html/` for local preview only.
 
 - SQL files are modular - put operator wrappers in `operators.sql`, implementation in `functions.sql`
 - All SQL files must have `-- REQUIRE:` dependency declarations
-- Test files end with `_test.sql` and live alongside source files
 - Build system uses `tsort` to resolve dependency order
 - Supabase build excludes operator classes (not supported)
 - **Documentation**: All functions/types must have Doxygen comments (see Documentation Standards above)

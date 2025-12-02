@@ -3,7 +3,10 @@
 //! Tests EQL comparison operators with ORE (Order-Revealing Encryption)
 
 use anyhow::{Context, Result};
-use eql_tests::{get_ore_encrypted, get_ore_encrypted_as_jsonb, QueryAssertion};
+use eql_tests::{
+    get_ore_encrypted, get_ore_encrypted_as_jsonb, get_ste_vec_selector_term, QueryAssertion,
+    Selectors,
+};
 use sqlx::{PgPool, Row};
 
 /// Helper to execute create_encrypted_json SQL function
@@ -305,6 +308,395 @@ async fn greater_than_or_equal_jsonb_gte_encrypted(pool: PgPool) -> Result<()> {
 
     // jsonb(42) >= e means e <= 42, so 42 records (1-42)
     QueryAssertion::new(&pool, &sql).count(42).await;
+
+    Ok(())
+}
+
+// ============================================================================
+// Selector-based Comparison Tests
+// ============================================================================
+// Tests for extracting subterms with e->'selector' and comparing them
+// Covers ore_cllw_u64_8 and ore_cllw_var_8 index types with fallback behavior
+
+#[sqlx::test]
+async fn selector_less_than_with_ore_cllw_u64_8(pool: PgPool) -> Result<()> {
+    // Test: e->'selector' < term with ore_cllw_u64_8 index
+    //
+    // Uses test data created by seed_encrypted_json() helper which creates:
+    // - Three records with n=10, n=20, n=30
+    // - ore_cllw_u64_8 index on $.n selector
+
+    // Create table and seed with test data
+    sqlx::query("SELECT create_table_with_encrypted()")
+        .execute(&pool)
+        .await?;
+
+    sqlx::query("SELECT seed_encrypted_json()")
+        .execute(&pool)
+        .await?;
+
+    // Extract $.n selector term from n=30 test data
+    let term = get_ste_vec_selector_term(&pool, 30, Selectors::N).await?;
+
+    // Query: e->'$.n' < term(30)
+    // Should return 2 records (n=10 and n=20)
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE e->'{}'::text < '{}'::eql_v2_encrypted",
+        Selectors::N,
+        term
+    );
+
+    QueryAssertion::new(&pool, &sql).count(2).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn selector_less_than_with_ore_cllw_u64_8_fallback(pool: PgPool) -> Result<()> {
+    // Test: e->'selector' < term fallback when index missing
+    //
+    // Tests that comparison falls back to JSONB literal comparison
+    // when the requested index type is not present on the selector
+
+    sqlx::query("SELECT create_table_with_encrypted()")
+        .execute(&pool)
+        .await?;
+
+    sqlx::query("SELECT seed_encrypted_json()")
+        .execute(&pool)
+        .await?;
+
+    // Extract $.n selector term from n=30 test data
+    let term = get_ste_vec_selector_term(&pool, 30, Selectors::N).await?;
+
+    // Query with $.hello selector (which has ore_cllw_var_8, not ore_cllw_u64_8)
+    // Falls back to JSONB literal comparison - should still return results
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE e->'{}'::text < '{}'::eql_v2_encrypted",
+        Selectors::HELLO,
+        term
+    );
+
+    QueryAssertion::new(&pool, &sql).returns_rows().await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn selector_less_than_with_ore_cllw_var_8(pool: PgPool) -> Result<()> {
+    // Test: e->'selector' < term with ore_cllw_var_8 index
+    //
+    // STE vec test data has ore_cllw_var_8 on $.hello selector (a7cea93975ed8c01f861ccb6bd082784)
+    // Extract $.hello from ste_vec id=3 and compare
+
+    sqlx::query("SELECT create_table_with_encrypted()")
+        .execute(&pool)
+        .await?;
+
+    sqlx::query("SELECT seed_encrypted_json()")
+        .execute(&pool)
+        .await?;
+
+    // Extract $.hello selector term from n=30 test data (corresponds to "three")
+    let term = get_ste_vec_selector_term(&pool, 30, Selectors::HELLO).await?;
+
+    // Query: e->'$.hello' < term(from ste_vec 3)
+    // Should return 1 record (ste_vec id=1, since "world 1" < "world 3")
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE e->'{}'::text < '{}'::eql_v2_encrypted",
+        Selectors::HELLO,
+        term
+    );
+
+    QueryAssertion::new(&pool, &sql).count(1).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn selector_greater_than_with_ore_cllw_u64_8(pool: PgPool) -> Result<()> {
+    // Test: e->'selector' > term with ore_cllw_u64_8 index
+    //
+    // Extract $.n from ste_vec id=2 (n=20 value) and find records > 20
+
+    sqlx::query("SELECT create_table_with_encrypted()")
+        .execute(&pool)
+        .await?;
+
+    sqlx::query("SELECT seed_encrypted_json()")
+        .execute(&pool)
+        .await?;
+
+    // Extract $.n selector term from n=20 test data
+    let term = get_ste_vec_selector_term(&pool, 20, Selectors::N).await?;
+
+    // Query: e->'$.n' > term(20)
+    // Should return 1 record (n=30)
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE e->'{}'::text > '{}'::eql_v2_encrypted",
+        Selectors::N,
+        term
+    );
+
+    QueryAssertion::new(&pool, &sql).count(1).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn selector_greater_than_with_ore_cllw_u64_8_fallback(pool: PgPool) -> Result<()> {
+    // Test: e->'selector' > term fallback when index missing
+
+    sqlx::query("SELECT create_table_with_encrypted()")
+        .execute(&pool)
+        .await?;
+
+    sqlx::query("SELECT seed_encrypted_json()")
+        .execute(&pool)
+        .await?;
+
+    // Extract $.n selector term from n=20 test data
+    let term = get_ste_vec_selector_term(&pool, 20, Selectors::N).await?;
+
+    // Query with $.hello selector (falls back to JSONB comparison)
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE e->'{}'::text > '{}'::eql_v2_encrypted",
+        Selectors::HELLO,
+        term
+    );
+
+    QueryAssertion::new(&pool, &sql).returns_rows().await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn selector_greater_than_with_ore_cllw_var_8(pool: PgPool) -> Result<()> {
+    // Test: e->'selector' > term with ore_cllw_var_8 index
+
+    sqlx::query("SELECT create_table_with_encrypted()")
+        .execute(&pool)
+        .await?;
+
+    sqlx::query("SELECT seed_encrypted_json()")
+        .execute(&pool)
+        .await?;
+
+    // Extract $.hello selector term from n=30 test data (corresponds to "three")
+    let term = get_ste_vec_selector_term(&pool, 30, Selectors::HELLO).await?;
+
+    // Query: e->'$.hello' > term
+    // Should return 1 record
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE e->'{}'::text > '{}'::eql_v2_encrypted",
+        Selectors::HELLO,
+        term
+    );
+
+    QueryAssertion::new(&pool, &sql).count(1).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn selector_greater_than_with_ore_cllw_var_8_fallback(pool: PgPool) -> Result<()> {
+    // Test: e->'selector' > term fallback to JSONB comparison
+    //
+    // Tests fallback when selector doesn't have ore_cllw_var_8
+
+    sqlx::query("SELECT create_table_with_encrypted()")
+        .execute(&pool)
+        .await?;
+
+    sqlx::query("SELECT seed_encrypted_json()")
+        .execute(&pool)
+        .await?;
+
+    // Extract $.hello selector term from n=30 test data
+    let term = get_ste_vec_selector_term(&pool, 30, Selectors::HELLO).await?;
+
+    // Query with $.n selector (which has ore_cllw_u64_8, not ore_cllw_var_8)
+    // Falls back to JSONB literal comparison - should not return results
+    // because the extracted term is a string selector and $.n expects numeric
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE e->'{}'::text > '{}'::eql_v2_encrypted",
+        Selectors::N,
+        term
+    );
+
+    // The fallback query succeeds but returns no results due to type mismatch
+    QueryAssertion::new(&pool, &sql).count(0).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn selector_less_than_or_equal_with_ore_cllw_u64_8(pool: PgPool) -> Result<()> {
+    // Test: e->'selector' <= term with ore_cllw_u64_8 index
+    //
+    // Extract $.n from ste_vec id=2 (n=20) and find records <= 20
+
+    sqlx::query("SELECT create_table_with_encrypted()")
+        .execute(&pool)
+        .await?;
+
+    sqlx::query("SELECT seed_encrypted_json()")
+        .execute(&pool)
+        .await?;
+
+    // Extract $.n selector term from n=20 test data
+    let term = get_ste_vec_selector_term(&pool, 20, Selectors::N).await?;
+
+    // Query: e->'$.n' <= term(20)
+    // Should return 2 records (n=10 and n=20)
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE e->'{}'::text <= '{}'::eql_v2_encrypted",
+        Selectors::N,
+        term
+    );
+
+    QueryAssertion::new(&pool, &sql).count(2).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn selector_less_than_or_equal_with_ore_cllw_u64_8_fallback(pool: PgPool) -> Result<()> {
+    // Test: e->'selector' <= term fallback when index missing
+
+    sqlx::query("SELECT create_table_with_encrypted()")
+        .execute(&pool)
+        .await?;
+
+    sqlx::query("SELECT seed_encrypted_json()")
+        .execute(&pool)
+        .await?;
+
+    // Extract $.n selector term from n=20 test data
+    let term = get_ste_vec_selector_term(&pool, 20, Selectors::N).await?;
+
+    // Query with $.hello selector (falls back to JSONB comparison)
+    // The extracted term is numeric but $.hello selector expects string
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE e->'{}'::text <= '{}'::eql_v2_encrypted",
+        Selectors::HELLO,
+        term
+    );
+
+    // SQL test behavior: fallback succeeds but returns no results due to type mismatch
+    QueryAssertion::new(&pool, &sql).count(0).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn selector_greater_than_or_equal_with_ore_cllw_u64_8(pool: PgPool) -> Result<()> {
+    // Test: e->'selector' >= term with ore_cllw_u64_8 index
+    //
+    // Extract $.n from ste_vec id=1 (n=10) and find records >= 10
+
+    sqlx::query("SELECT create_table_with_encrypted()")
+        .execute(&pool)
+        .await?;
+
+    sqlx::query("SELECT seed_encrypted_json()")
+        .execute(&pool)
+        .await?;
+
+    // Extract $.n selector term from n=10 test data
+    let term = get_ste_vec_selector_term(&pool, 10, Selectors::N).await?;
+
+    // Query: e->'$.n' >= term(10)
+    // Should return 3 records (n=10, n=20, n=30)
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE e->'{}'::text >= '{}'::eql_v2_encrypted",
+        Selectors::N,
+        term
+    );
+
+    QueryAssertion::new(&pool, &sql).count(3).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn selector_greater_than_or_equal_with_ore_cllw_u64_8_fallback(pool: PgPool) -> Result<()> {
+    // Test: e->'selector' >= term fallback when index missing
+
+    sqlx::query("SELECT create_table_with_encrypted()")
+        .execute(&pool)
+        .await?;
+
+    sqlx::query("SELECT seed_encrypted_json()")
+        .execute(&pool)
+        .await?;
+
+    // Extract $.n selector term from n=10 test data
+    let term = get_ste_vec_selector_term(&pool, 10, Selectors::N).await?;
+
+    // Query with $.hello selector (falls back to JSONB comparison)
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE e->'{}'::text >= '{}'::eql_v2_encrypted",
+        Selectors::HELLO,
+        term
+    );
+
+    QueryAssertion::new(&pool, &sql).returns_rows().await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn selector_greater_than_or_equal_with_ore_cllw_var_8(pool: PgPool) -> Result<()> {
+    // Test: e->'selector' >= term with ore_cllw_var_8 index
+
+    sqlx::query("SELECT create_table_with_encrypted()")
+        .execute(&pool)
+        .await?;
+
+    sqlx::query("SELECT seed_encrypted_json()")
+        .execute(&pool)
+        .await?;
+
+    // Extract $.hello selector term from n=10 test data (corresponds to "one")
+    let term = get_ste_vec_selector_term(&pool, 10, Selectors::HELLO).await?;
+
+    // Query: e->'$.hello' >= term
+    // Should return 3 records (all have "world X" >= "world 1")
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE e->'{}'::text >= '{}'::eql_v2_encrypted",
+        Selectors::HELLO,
+        term
+    );
+
+    QueryAssertion::new(&pool, &sql).count(3).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn selector_greater_than_or_equal_with_ore_cllw_var_8_fallback(pool: PgPool) -> Result<()> {
+    // Test: e->'selector' >= term fallback to JSONB comparison
+
+    sqlx::query("SELECT create_table_with_encrypted()")
+        .execute(&pool)
+        .await?;
+
+    sqlx::query("SELECT seed_encrypted_json()")
+        .execute(&pool)
+        .await?;
+
+    // Extract $.hello selector term from n=10 test data
+    let term = get_ste_vec_selector_term(&pool, 10, Selectors::HELLO).await?;
+
+    // Query with $.n selector (falls back to JSONB comparison)
+    let sql = format!(
+        "SELECT e FROM encrypted WHERE e->'{}'::text >= '{}'::eql_v2_encrypted",
+        Selectors::N,
+        term
+    );
+
+    QueryAssertion::new(&pool, &sql).returns_rows().await;
 
     Ok(())
 }
