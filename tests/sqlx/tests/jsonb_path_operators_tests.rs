@@ -4,6 +4,7 @@
 
 use anyhow::Result;
 use eql_tests::{QueryAssertion, Selectors};
+use serde_json;
 use sqlx::{PgPool, Row};
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
@@ -89,6 +90,139 @@ async fn double_arrow_in_where_clause(pool: PgPool) -> Result<()> {
     );
 
     // All 3 records have $.n path
+    QueryAssertion::new(&pool, &sql).count(3).await;
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn arrow_operator_returns_metadata_fields(pool: PgPool) -> Result<()> {
+    // Test: e -> 'selector' returns JSONB with 'i' (index) and 'v' (version) metadata fields.
+    // This verifies that the arrow operator returns the full encrypted metadata structure,
+    // not just the value. The metadata includes the index term ('i') and version ('v').
+    //
+    // NOTE: This test uses raw SQLx instead of QueryAssertion because we need to verify
+    // specific JSONB field presence. QueryAssertion is designed for row count and basic
+    // value assertions, but doesn't support introspecting JSONB object structure.
+
+    let sql = format!(
+        "SELECT (e -> '{}'::text)::jsonb FROM encrypted LIMIT 1",
+        Selectors::N
+    );
+
+    let result: serde_json::Value = sqlx::query_scalar(&sql).fetch_one(&pool).await?;
+
+    assert!(result.is_object(), "-> operator should return JSONB object");
+    let obj = result
+        .as_object()
+        .expect("Result should be a JSONB object after is_object() check");
+    assert!(
+        obj.contains_key("i"),
+        "Result should contain 'i' (index metadata) field"
+    );
+    assert!(
+        obj.contains_key("v"),
+        "Result should contain 'v' (version) field"
+    );
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn ciphertext_function_extracts_from_arrow_result(pool: PgPool) -> Result<()> {
+    // Test: eql_v2.ciphertext(e -> 'selector') extracts ciphertext value
+    //
+    // The ciphertext() function extracts the 'c' field from the encrypted JSONB structure.
+    // When combined with the -> operator, it allows extracting ciphertext from nested paths.
+
+    let sql = format!(
+        "SELECT eql_v2.ciphertext(e -> '{}'::text) FROM encrypted LIMIT 1",
+        Selectors::N
+    );
+
+    // Should return ciphertext value (a text string)
+    QueryAssertion::new(&pool, &sql).returns_rows().await;
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn ciphertext_function_returns_all_rows(pool: PgPool) -> Result<()> {
+    // Test: eql_v2.ciphertext() returns ciphertext for all encrypted rows
+
+    let sql = format!(
+        "SELECT eql_v2.ciphertext(e -> '{}'::text) FROM encrypted",
+        Selectors::N
+    );
+
+    // All 3 records have $.n path, should return 3 ciphertext values
+    QueryAssertion::new(&pool, &sql).count(3).await;
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn arrow_operator_with_encrypted_selector(pool: PgPool) -> Result<()> {
+    // Test: e -> eql_v2_encrypted selector (encrypted selector)
+    //
+    // The -> operator can accept an eql_v2_encrypted value as the selector.
+    // The selector is created from JSONB with structure: {"s": "selector_hash"}
+
+    let encrypted_selector = Selectors::as_encrypted(Selectors::ROOT);
+    let sql = format!(
+        "SELECT e -> '{}'::jsonb::eql_v2_encrypted FROM encrypted LIMIT 1",
+        encrypted_selector
+    );
+
+    QueryAssertion::new(&pool, &sql).returns_rows().await;
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn arrow_operator_with_encrypted_selector_all_rows(pool: PgPool) -> Result<()> {
+    // Test: e -> eql_v2_encrypted selector returns all matching rows
+
+    let encrypted_selector = Selectors::as_encrypted(Selectors::ROOT);
+    let sql = format!(
+        "SELECT e -> '{}'::jsonb::eql_v2_encrypted FROM encrypted",
+        encrypted_selector
+    );
+
+    // All 3 records should have the root selector
+    QueryAssertion::new(&pool, &sql).count(3).await;
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn double_arrow_operator_with_encrypted_selector(pool: PgPool) -> Result<()> {
+    // Test: e ->> eql_v2_encrypted selector (encrypted selector)
+    //
+    // The ->> operator can also accept an eql_v2_encrypted value as the selector.
+
+    let encrypted_selector = Selectors::as_encrypted(Selectors::ROOT);
+    let sql = format!(
+        "SELECT e ->> '{}'::jsonb::eql_v2_encrypted FROM encrypted LIMIT 1",
+        encrypted_selector
+    );
+
+    QueryAssertion::new(&pool, &sql).returns_rows().await;
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn double_arrow_operator_with_encrypted_selector_all_rows(pool: PgPool) -> Result<()> {
+    // Test: e ->> eql_v2_encrypted selector returns all matching rows
+
+    let encrypted_selector = Selectors::as_encrypted(Selectors::ROOT);
+    let sql = format!(
+        "SELECT e ->> '{}'::jsonb::eql_v2_encrypted FROM encrypted",
+        encrypted_selector
+    );
+
+    // All 3 records should have the root selector
     QueryAssertion::new(&pool, &sql).count(3).await;
 
     Ok(())

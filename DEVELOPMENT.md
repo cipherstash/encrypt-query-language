@@ -59,7 +59,7 @@ These are the important files in the repo:
 └── playground/            <-- Playground enviroment for experimenting with EQL and CipherStash Proxy
 ```
 
-Tests live alongside the individual SQL files, with a filename ending with `_test.sql`
+Tests are in the `tests/sqlx/` directory using Rust and the SQLx framework.
 
 We break SQL into small modules named after what they do.
 
@@ -144,85 +144,19 @@ There are tests for checking EQL against PostgreSQL versions 14–17, that verif
 - Validating schemas for EQL configuration, encrypted data, and encrypted indexes
 - Using PostgreSQL operators on encrypted data and indexes (`=`, `<>`, `@>`)
 
+Tests are written in Rust using the SQLx framework and live in `tests/sqlx/`.
+
 The easiest way to run the tests [is in GitHub Actions](./.github/workflows/test-eql.yml):
 
 - Automatically whenever there are changes in the `sql/`, `tests/`, or `tasks/` directories
 - By manually running [the workflow](https://github.com/cipherstash/encrypt-query-language/actions/workflows/test-eql.yml)
 
-This is how the `test-eql.yml` workflow functions:
-
-```mermaid
----
-title: Testing EQL
----
-stateDiagram-v2
-    direction LR
-    classDef code font-family:monospace;
-
-
-    state "🧍 Human makes changes to EQL sources" as changes
-    state sources_fork <<fork>>
-    state sources_join <<join>>
-    state "src/*.sql" as source_sql
-    state "tasks/**/*" as source_tasks
-    state "tests/**/*" as source_tests
-    state sources_changed <<choice>>
-
-    state "🛠️ Trigger GitHub Actions workflow test-eql.yml" as build_triggered
-    state "Matrix: Test EQL SQL components" as matrix
-    state "Test with Postgres 14" as pg14
-    state "Test with Postgres 15" as pg15
-    state "Test with Postgres 16" as pg16
-    state "Test with Postgres 17" as pg17
-    state "Check build results" as check
-    state if_state <<choice>>
-
-    changes --> sources_fork
-    sources_fork --> source_sql:::code
-    sources_fork --> source_tests:::code
-    sources_fork --> source_tasks:::code
-    source_sql --> sources_join
-    source_tests --> sources_join
-    source_tasks --> sources_join
-    sources_join --> source_changed_check
-    source_changed_check --> sources_changed
-    sources_changed --> build_triggered : Some changes
-    sources_changed --> [*]: No changes
-
-    state "Check source changes" as source_changed_check
-
-    [*] --> changes
-
-    build_triggered --> matrix
-
-    state fork_state <<fork>>
-        matrix --> fork_state
-        fork_state --> pg14
-        fork_state --> pg15
-        fork_state --> pg16
-        fork_state --> pg17
-
-    state join_state <<join>>
-        pg14 --> join_state
-        pg15 --> join_state
-        pg16 --> join_state
-        pg17 --> join_state
-
-    state "✅ Pass build" as build_pass
-    state "❌ Fail build" as build_fail
-    join_state --> check
-    check --> if_state
-    if_state --> build_pass: All success
-    if_state --> build_fail : Any failures
-    build_pass --> [*]
-    build_fail --> [*]
-```
-
 You can also [run the tests locally](#running-tests-locally) when doing local development.
 
 ### Running tests locally
 
-> [!IMPORTANT] > **Before you run the tests locally** you need to [set up a local dev environment](#set-up-a-local-development-environment).
+> [!IMPORTANT]
+> **Before you run the tests locally** you need to [set up a local dev environment](#set-up-a-local-development-environment).
 
 To run tests locally with PostgreSQL 17:
 

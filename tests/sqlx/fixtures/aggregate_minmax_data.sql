@@ -1,13 +1,18 @@
-\set ON_ERROR_STOP on
+-- Fixture: aggregate_minmax_data.sql
+-- Test data for eql_v2.min() and eql_v2.max() aggregate functions
+--
+-- Creates table with encrypted integer data including NULL values
+-- to test aggregate functions on encrypted columns
 
--- create table
+-- Create table (drop first for idempotency)
+DROP TABLE IF EXISTS agg_test;
 CREATE TABLE agg_test
 (
     plain_int integer,
     enc_int eql_v2_encrypted
 );
 
--- Add data. These are saved from the psql query output connected to Proxy.
+-- Add data. These are encrypted values from the SQL test file.
 -- Decrypted `enc_int` value is the same as the `plain_int` value in the same row.
 INSERT INTO agg_test (plain_int, enc_int) VALUES
 (
@@ -31,20 +36,3 @@ INSERT INTO agg_test (plain_int, enc_int) VALUES
   '{"c": "mBbLa7Cm?&jvpfcv1d3hep>s)76qzUbwUky&M&C<M-e2q^@e798gqWcAb{9a>3mjDG_os-_y0MRaMGl@&p#AOuusN|3Lu=mBCcg_V{&<LbY)~;X>N2hzy", "i": {"c": "encrypted_int4", "t": "encrypted"}, "k": "ct", "bf": null, "ob": ["ccccccccb06565ebd23d6a4c3eee512713175e673c6d995ff5d9b1d3492fe8eb289c3eb95029025f5b71fc6e06632b4a1302980e433361c7999724dbdd052739258d9444b0fbd43cc61368e60f4b0d5aeca2aa85c1c89933b53afffcc4eb0632dca75f632bb9bc792d1dbd6bced6253291f0db134552d384e9e378f4f5890c31ca9d115965a0e8fb2c3c60ccce84ffc03bddb22b27a1ce278eec118496fd23f083ebb21bb4b83b89eda8c0bdea50debc5ec4f2b2d91b63a80d39386194ad9d129bee2f5168341cb41ed26dc03466cac5e2dbe7336fdb74c0d37d63b396033ce60002c9950f5ac2970dacf4caace2eef5b81544df88a7ef2a8d69550d25d39c678c8e43a3dcc2857018a2c979b45c6b19dabd28ae7388d62916e6742763d6484d1b45154e6c8e6a66e02b03f64b67ddef24747dded32e226e3a93d5d1a92d11e760403cad04a0dd07c14da336a409739e8bbeb3b3d6b92117fa2d2c941da4996ea61b29ca3fffb4594ddbeab7105a1b4c5e422ec5ab8154db545103d8c2889be2e4591198912446d8b33b8708a4cc959a1e0957dcae6a50c3"], "v": 1}'::jsonb::eql_v2_encrypted
 )
 ;
-
--- run normal cases
-DO $$
-  BEGIN
-  -- min null finds null
-  ASSERT ((SELECT eql_v2.min(enc_int) FROM agg_test where enc_int IS NULL) IS NULL);
-
-  -- min enc_int finds the minimum (1)
-  ASSERT ((SELECT enc_int FROM agg_test WHERE plain_int = 1) = (SELECT eql_v2.min(enc_int) FROM agg_test));
-
-  -- max null finds null
-  ASSERT ((SELECT eql_v2.max(enc_int) FROM agg_test where enc_int IS NULL) IS NULL);
-
-  -- max enc_int finds the maximum (5)
-  ASSERT ((SELECT enc_int FROM agg_test WHERE plain_int = 5) = (SELECT eql_v2.max(enc_int) FROM agg_test));
-  END;
-$$ LANGUAGE plpgsql;
