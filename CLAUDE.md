@@ -34,8 +34,16 @@ This project uses `mise` for task management. Common commands:
 - Dependencies are resolved using `-- REQUIRE:` comments in SQL files
 - Build outputs to `release/` directory:
   - `cipherstash-encrypt.sql` - Main installer
-  - `cipherstash-encrypt-supabase.sql` - Supabase-compatible installer
-  - `cipherstash-encrypt-uninstall.sql` - Uninstaller
+  - `cipherstash-encrypt-supabase.sql` - Supabase-compatible (excludes operator classes)
+  - `cipherstash-encrypt-protect.sql` - ProtectJS variant (excludes config management)
+  - Corresponding uninstallers for each variant
+
+#### Build Variants
+| Variant | Excludes | Use Case |
+|---------|----------|----------|
+| Main | Nothing | Full EQL with all features |
+| Supabase | Operator classes | Supabase compatibility |
+| Protect | `src/config/*`, `src/encryptindex/*` | ProtectJS (no database-side config) |
 
 ## Project Architecture
 
