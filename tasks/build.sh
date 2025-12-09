@@ -2,7 +2,7 @@
 #MISE description="Build SQL into single release file"
 #MISE alias="b"
 #MISE sources=["src/**/*.sql"]
-#MISE outputs=["release/cipherstash-encrypt.sql","release/cipherstash-encrypt-uninstall.sql"]
+#MISE outputs=["release/cipherstash-encrypt.sql","release/cipherstash-encrypt-uninstall.sql","release/cipherstash-encrypt-protect.sql","release/cipherstash-encrypt-protect-uninstall.sql"]
 #USAGE flag "--version <version>" help="Specify release version of EQL" default="DEV"
 
 #!/bin/bash
@@ -17,9 +17,14 @@ rm -f release/cipherstash-encrypt.sql
 rm -f release/cipherstash-encrypt-uninstall-supabase.sql
 rm -f release/cipherstash-encrypt-supabase.sql
 
+rm -f release/cipherstash-encrypt-protect.sql
+rm -f release/cipherstash-encrypt-protect-uninstall.sql
+
 rm -f src/version.sql
 rm -f src/deps-supabase.txt
 rm -f src/deps-ordered-supabase.txt
+rm -f src/deps-protect.txt
+rm -f src/deps-ordered-protect.txt
 
 
 RELEASE_VERSION=${usage_version:-DEV}
@@ -85,6 +90,29 @@ cat src/deps-ordered-supabase.txt | xargs cat | grep -v REQUIRE >> dbdev/eql--0.
 cat tasks/uninstall.sql >> release/cipherstash-encrypt-uninstall-supabase.sql
 
 
+# Protect variant build - excludes config management and encryptindex
+find src -type f -path "*.sql" ! -path "*_test.sql" ! -path "**/config/*" ! -path "**/encryptindex/*" | while IFS= read -r sql_file; do
+    echo $sql_file
+
+    echo "$sql_file $sql_file" >> src/deps-protect.txt
+
+    while IFS= read -r line; do
+        if [[ "$line" == *"-- REQUIRE:"* ]]; then
+            deps=${line#*-- REQUIRE: }
+            for dep in $deps; do
+                echo "$sql_file $dep" >> src/deps-protect.txt
+            done
+        fi
+    done < "$sql_file"
+done
+
+cat src/deps-protect.txt | tsort | tac > src/deps-ordered-protect.txt
+
+cat src/deps-ordered-protect.txt | xargs cat | grep -v REQUIRE >> release/cipherstash-encrypt-protect.sql
+
+cat tasks/uninstall-protect.sql >> release/cipherstash-encrypt-protect-uninstall.sql
+
+
 set +x
 echo
 echo '###############################################'
@@ -94,7 +122,9 @@ echo
 echo 'Installer:'
 echo '    release/cipherstash-encrypt.sql'
 echo '    release/cipherstash-encrypt-supabase.sql'
+echo '    release/cipherstash-encrypt-protect.sql'
 echo
 echo 'Uninstaller:'
 echo '    release/cipherstash-encrypt-uninstall.sql'
 echo '    release/cipherstash-encrypt-uninstall-supabase.sql'
+echo '    release/cipherstash-encrypt-protect-uninstall.sql'
