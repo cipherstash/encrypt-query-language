@@ -115,7 +115,7 @@ ANALYZE examples;
 -- Query using the GIN index
 SELECT * FROM examples
 WHERE eql_v2.jsonb_array(encrypted_json) @>
-      eql_v2.jsonb_array(search_value::eql_v2_encrypted);
+      eql_v2.jsonb_array($1::eql_v2_encrypted);
 ```
 
 See [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment) for complete setup instructions.

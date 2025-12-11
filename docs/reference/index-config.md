@@ -236,7 +236,7 @@ For efficient containment queries on large tables, you can create a GIN index us
 CREATE INDEX idx_encrypted_jsonb ON mytable USING GIN (eql_v2.jsonb_array(encrypted_col));
 
 -- Query using containment (will use the GIN index)
-SELECT * FROM mytable WHERE encrypted_col @> search_value;
+SELECT * FROM mytable WHERE encrypted_col @> $1::eql_v2_encrypted;
 ```
 
 The following helper functions are available for GIN-indexed containment queries:
