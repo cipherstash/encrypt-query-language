@@ -222,10 +222,10 @@ pub async fn get_ste_vec_term_by_id(pool: &PgPool, id: i32, selector: &str) -> R
 // GIN Index Testing Helpers
 // ============================================================================
 
-/// Create a GIN index on the ste_vec_jsonb extraction for a table
+/// Create a GIN index on the jsonb_array extraction for a table
 ///
-/// Creates a functional GIN index on `eql_v2.ste_vec_jsonb(e)` which extracts
-/// the STE vector as a jsonb[] array. Using jsonb[] instead of eql_v2_encrypted[]
+/// Creates a functional GIN index on `eql_v2.jsonb_array(e)` which extracts
+/// the encrypted JSONB as a jsonb[] array. Using jsonb[] instead of eql_v2_encrypted[]
 /// leverages PostgreSQL's native hash support for jsonb elements.
 ///
 /// # Arguments
@@ -235,11 +235,11 @@ pub async fn get_ste_vec_term_by_id(pool: &PgPool, id: i32, selector: &str) -> R
 ///
 /// # Example
 /// ```ignore
-/// create_ste_vec_gin_index(&pool, "ste_vec_vast", "ste_vec_vast_gin_idx").await?;
+/// create_jsonb_gin_index(&pool, "jsonb_table", "jsonb_gin_idx").await?;
 /// ```
-pub async fn create_ste_vec_gin_index(pool: &PgPool, table: &str, index_name: &str) -> Result<()> {
+pub async fn create_jsonb_gin_index(pool: &PgPool, table: &str, index_name: &str) -> Result<()> {
     let sql = format!(
-        "CREATE INDEX IF NOT EXISTS {} ON {} USING GIN (eql_v2.ste_vec_jsonb(e))",
+        "CREATE INDEX IF NOT EXISTS {} ON {} USING GIN (eql_v2.jsonb_array(e))",
         index_name, table
     );
     sqlx::query(&sql)
