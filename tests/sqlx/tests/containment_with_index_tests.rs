@@ -10,8 +10,8 @@
 
 use anyhow::Result;
 use eql_tests::{
-    analyze_table, assert_uses_index, assert_uses_seq_scan, create_jsonb_gin_index,
-    explain_query, get_ste_vec_encrypted,
+    analyze_table, assert_uses_index, assert_uses_seq_scan, create_jsonb_gin_index, explain_query,
+    get_ste_vec_encrypted,
 };
 use sqlx::PgPool;
 
@@ -184,7 +184,6 @@ async fn jsonb_array_count_with_index(pool: PgPool) -> Result<()> {
 
     Ok(())
 }
-
 
 #[sqlx::test]
 async fn jsonb_containment_uses_seq_scan_without_index(pool: PgPool) -> Result<()> {
