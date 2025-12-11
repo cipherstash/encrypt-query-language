@@ -215,5 +215,9 @@ eql--*.sql
 # Generated SQLx migration (built from src/, never commit)
 tests/sqlx/migrations/001_install_eql.sql
 
+# Large generated test data files
+tests/ste_vec_vast.sql
+tests/ste_vec_*M.sql*
+
 # Rust build artifacts (using sccache)
 tests/sqlx/target/
