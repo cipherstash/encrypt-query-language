@@ -9,9 +9,7 @@
 //! Uses the ste_vec_vast table (500 rows) from migration 005_install_ste_vec_vast_data.sql
 
 use anyhow::Result;
-use eql_tests::{
-    analyze_table, assert_uses_index, create_jsonb_gin_index, get_ste_vec_encrypted,
-};
+use eql_tests::{analyze_table, assert_uses_index, create_jsonb_gin_index, get_ste_vec_encrypted};
 use sqlx::PgPool;
 
 // Constants for ste_vec_vast table testing
@@ -31,7 +29,6 @@ async fn setup_ste_vec_vast_gin_index(pool: &PgPool) -> Result<()> {
     analyze_table(pool, STE_VEC_VAST_TABLE).await?;
     Ok(())
 }
-
 
 /// Assert that a containment query returns at least one row
 ///
