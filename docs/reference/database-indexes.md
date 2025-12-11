@@ -218,7 +218,7 @@ B-tree indexes **only work** with:
 
 They **do not work** with:
 - `bf` (bloom_filter) - pattern matching
-- `sv` (ste_vec) - JSONB containment (use [GIN indexes](#gin-indexes-for-jsonb-containment) instead)
+- Data with `sv` field (ste_vec) - JSONB containment uses GIN indexes instead (see [GIN Indexes](#gin-indexes-for-jsonb-containment))
 - Data without any index terms
 
 ### 2. Index Creation Timing

@@ -156,9 +156,14 @@ Use standard PostgreSQL JSON operators on encrypted columns:
 -- Extract field by selector (returns eql_v2_encrypted)
 SELECT encrypted_json->'selector_hash' FROM examples;
 
--- Extract field as text (returns ciphertext)
+-- Extract field as text (returns encrypted value as text)
 SELECT encrypted_json->>'selector_hash' FROM examples;
+
+-- Extract array element by index (0-based, returns eql_v2_encrypted)
+SELECT encrypted_array->0 FROM examples;
 ```
+
+**Note:** The `->` operator supports integer array indexing (e.g., `encrypted_array->0`), but the `->>` operator does not. Use `->` to access array elements by index.
 
 ### Array operations
 
@@ -217,6 +222,9 @@ GROUP BY eql_v2.jsonb_path_query_first(encrypted_json, 'color_selector');
 ## EQL functions for JSONB and `ste_vec`
 
 ### Core Functions
+
+- **`eql_v2.ste_vec(val jsonb) RETURNS eql_v2_encrypted[]`**
+  - Extracts the ste_vec index array from a JSONB payload
 
 - **`eql_v2.ste_vec(val eql_v2_encrypted) RETURNS eql_v2_encrypted[]`**
   - Extracts the ste_vec index array from an encrypted value
