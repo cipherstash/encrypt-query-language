@@ -1,16 +1,16 @@
-//! Containment with index tests (@> and <@) for ste_vec encrypted JSONB
+//! Containment with index tests (@> and <@) for encrypted JSONB
 //!
 //! Tests that encrypted JSONB containment operations work correctly with
-//! GIN indexes using the ste_vec_jsonb() function which returns jsonb[] arrays.
+//! GIN indexes using the jsonb_array() function which returns jsonb[] arrays.
 //!
-//! The ste_vec_jsonb approach leverages PostgreSQL's native hash support for jsonb
+//! The jsonb_array approach leverages PostgreSQL's native hash support for jsonb
 //! elements, enabling efficient GIN indexed containment queries at scale.
 //!
 //! Uses the ste_vec_vast table (500 rows) from migration 005_install_ste_vec_vast_data.sql
 
 use anyhow::Result;
 use eql_tests::{
-    analyze_table, assert_uses_index, create_ste_vec_gin_index, get_ste_vec_encrypted,
+    analyze_table, assert_uses_index, create_jsonb_gin_index, get_ste_vec_encrypted,
 };
 use sqlx::PgPool;
 
@@ -27,7 +27,7 @@ const STE_VEC_VAST_GIN_INDEX: &str = "ste_vec_vast_gin_idx";
 /// Creates the GIN index and runs ANALYZE to ensure query planner
 /// has accurate statistics.
 async fn setup_ste_vec_vast_gin_index(pool: &PgPool) -> Result<()> {
-    create_ste_vec_gin_index(pool, STE_VEC_VAST_TABLE, STE_VEC_VAST_GIN_INDEX).await?;
+    create_jsonb_gin_index(pool, STE_VEC_VAST_TABLE, STE_VEC_VAST_GIN_INDEX).await?;
     analyze_table(pool, STE_VEC_VAST_TABLE).await?;
     Ok(())
 }
@@ -60,7 +60,7 @@ async fn assert_contains(pool: &PgPool, sql: &str) -> Result<()> {
 // ============================================================================
 
 #[sqlx::test]
-async fn ste_vec_identical_values_contain_each_other_uses_index(pool: PgPool) -> Result<()> {
+async fn jsonb_identical_values_contain_each_other_uses_index(pool: PgPool) -> Result<()> {
     // Test: GIN indexed ste_vec containment with identical values
     //
     // 1. Create GIN index on eql_v2.ste_vec(e)
@@ -79,10 +79,10 @@ async fn ste_vec_identical_values_contain_each_other_uses_index(pool: PgPool) ->
 
     // println!("{}", row_b);
 
-    // Test containment: a @> b using ste_vec_jsonb arrays (jsonb[] has native GIN support)
+    // Test containment: a @> b using jsonb_array arrays (jsonb[] has native GIN support)
     // SQL has containment in WHERE clause so GIN index can be used
     let sql = format!(
-        "SELECT 1 FROM {} WHERE eql_v2.ste_vec_jsonb(e) @> eql_v2.ste_vec_jsonb('{}'::eql_v2_encrypted) LIMIT 1",
+        "SELECT 1 FROM {} WHERE eql_v2.jsonb_array(e) @> eql_v2.jsonb_array('{}'::eql_v2_encrypted) LIMIT 1",
         STE_VEC_VAST_TABLE, row_b
     );
 
@@ -93,8 +93,8 @@ async fn ste_vec_identical_values_contain_each_other_uses_index(pool: PgPool) ->
 }
 
 #[sqlx::test]
-async fn ste_vec_contains_jsonb_helper_uses_index(pool: PgPool) -> Result<()> {
-    // Test: The ste_vec_contains_jsonb helper function with GIN index
+async fn jsonb_contains_helper_uses_index(pool: PgPool) -> Result<()> {
+    // Test: The jsonb_contains helper function with GIN index
     //
     // Verifies that the convenience wrapper function works correctly
     // and the underlying query uses the GIN index.
@@ -105,7 +105,7 @@ async fn ste_vec_contains_jsonb_helper_uses_index(pool: PgPool) -> Result<()> {
 
     // Test using the helper function
     let sql = format!(
-        "SELECT 1 FROM {} WHERE eql_v2.ste_vec_contains_jsonb(e, '{}'::eql_v2_encrypted) LIMIT 1",
+        "SELECT 1 FROM {} WHERE eql_v2.jsonb_contains(e, '{}'::eql_v2_encrypted) LIMIT 1",
         STE_VEC_VAST_TABLE, row_b
     );
 
@@ -116,7 +116,7 @@ async fn ste_vec_contains_jsonb_helper_uses_index(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
-async fn ste_vec_jsonb_containment_multiple_rows(pool: PgPool) -> Result<()> {
+async fn jsonb_array_containment_multiple_rows(pool: PgPool) -> Result<()> {
     // Test: Verify containment works for multiple different rows
     //
     // Tests that several different rows can find themselves via containment,
@@ -130,7 +130,7 @@ async fn ste_vec_jsonb_containment_multiple_rows(pool: PgPool) -> Result<()> {
         let row = get_ste_vec_encrypted(&pool, STE_VEC_VAST_TABLE, id).await?;
 
         let sql = format!(
-            "SELECT 1 FROM {} WHERE eql_v2.ste_vec_jsonb(e) @> eql_v2.ste_vec_jsonb('{}'::eql_v2_encrypted) LIMIT 1",
+            "SELECT 1 FROM {} WHERE eql_v2.jsonb_array(e) @> eql_v2.jsonb_array('{}'::eql_v2_encrypted) LIMIT 1",
             STE_VEC_VAST_TABLE, row
         );
 
@@ -141,7 +141,7 @@ async fn ste_vec_jsonb_containment_multiple_rows(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
-async fn ste_vec_jsonb_non_matching_returns_empty(pool: PgPool) -> Result<()> {
+async fn jsonb_array_non_matching_returns_empty(pool: PgPool) -> Result<()> {
     // Test: Non-matching value returns no results
     //
     // Verifies that searching for a non-existent value correctly returns empty.
@@ -150,7 +150,7 @@ async fn ste_vec_jsonb_non_matching_returns_empty(pool: PgPool) -> Result<()> {
     // Create a fake encrypted value that won't match anything
     // We'll use a modified version of an existing row
     let sql = format!(
-        "SELECT count(*) FROM {} WHERE eql_v2.ste_vec_jsonb(e) @> ARRAY['{{\"s\":\"nonexistent\",\"v\":1}}'::jsonb]",
+        "SELECT count(*) FROM {} WHERE eql_v2.jsonb_array(e) @> ARRAY['{{\"s\":\"nonexistent\",\"v\":1}}'::jsonb]",
         STE_VEC_VAST_TABLE
     );
 
@@ -161,7 +161,7 @@ async fn ste_vec_jsonb_non_matching_returns_empty(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
-async fn ste_vec_jsonb_count_with_index(pool: PgPool) -> Result<()> {
+async fn jsonb_array_count_with_index(pool: PgPool) -> Result<()> {
     // Test: Count query uses GIN index efficiently
     //
     // Verifies that counting matches also uses the index.
@@ -171,7 +171,7 @@ async fn ste_vec_jsonb_count_with_index(pool: PgPool) -> Result<()> {
     let row = get_ste_vec_encrypted(&pool, STE_VEC_VAST_TABLE, id).await?;
 
     let sql = format!(
-        "SELECT count(*) FROM {} WHERE eql_v2.ste_vec_jsonb(e) @> eql_v2.ste_vec_jsonb('{}'::eql_v2_encrypted)",
+        "SELECT count(*) FROM {} WHERE eql_v2.jsonb_array(e) @> eql_v2.jsonb_array('{}'::eql_v2_encrypted)",
         STE_VEC_VAST_TABLE, row
     );
 

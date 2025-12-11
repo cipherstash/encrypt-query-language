@@ -241,19 +241,18 @@ $$ LANGUAGE plpgsql;
 
 
 
---! @brief Extract STE vector as JSONB array for GIN indexing
+--! @brief Extract encrypted JSONB as array for GIN indexing
 --!
---! Extracts the STE vector from a JSONB payload and returns it as a native jsonb[]
+--! Extracts the encrypted JSONB data and returns it as a native jsonb[]
 --! array. This enables efficient GIN indexing using PostgreSQL's built-in array_ops
 --! which has native hash support for jsonb elements.
 --!
 --! @param val jsonb containing encrypted EQL payload
---! @return jsonb[] Array of JSONB STE vector elements
+--! @return jsonb[] Array of JSONB elements for indexing
 --!
---! @note Preferred over ste_vec() for GIN indexes as jsonb has native hash support
---! @see eql_v2.ste_vec_jsonb(eql_v2_encrypted)
---! @see eql_v2.ste_vec(jsonb)
-CREATE FUNCTION eql_v2.ste_vec_jsonb(val jsonb)
+--! @note Preferred for GIN indexes as jsonb has native hash support
+--! @see eql_v2.jsonb_array(eql_v2_encrypted)
+CREATE FUNCTION eql_v2.jsonb_array(val jsonb)
 RETURNS jsonb[]
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
@@ -267,38 +266,38 @@ AS $$
 $$;
 
 
---! @brief Extract STE vector as JSONB array from encrypted column value
+--! @brief Extract encrypted JSONB as array from encrypted column value
 --!
---! Extracts the STE vector from an encrypted column value and returns it as a
+--! Extracts the encrypted JSONB data from an encrypted column value and returns it as a
 --! native jsonb[] array for GIN indexing.
 --!
 --! @param val eql_v2_encrypted Encrypted column value
---! @return jsonb[] Array of JSONB STE vector elements
+--! @return jsonb[] Array of JSONB elements for indexing
 --!
 --! @example
 --! -- Create GIN index for containment queries
---! CREATE INDEX idx_ste_vec ON mytable USING GIN (eql_v2.ste_vec_jsonb(encrypted_col));
+--! CREATE INDEX idx_jsonb ON mytable USING GIN (eql_v2.jsonb_array(encrypted_col));
 --!
 --! -- Query using containment
 --! SELECT * FROM mytable
---! WHERE eql_v2.ste_vec_jsonb(encrypted_col) @> eql_v2.ste_vec_jsonb(search_value);
+--! WHERE eql_v2.jsonb_array(encrypted_col) @> eql_v2.jsonb_array(search_value);
 --!
---! @see eql_v2.ste_vec_jsonb(jsonb)
-CREATE FUNCTION eql_v2.ste_vec_jsonb(val eql_v2_encrypted)
+--! @see eql_v2.jsonb_array(jsonb)
+CREATE FUNCTION eql_v2.jsonb_array(val eql_v2_encrypted)
 RETURNS jsonb[]
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
 AS $$
-  SELECT eql_v2.ste_vec_jsonb(val.data);
+  SELECT eql_v2.jsonb_array(val.data);
 $$;
 
 
---! @brief GIN-indexable containment check using jsonb arrays
+--! @brief GIN-indexable JSONB containment check
 --!
---! Checks if encrypted value 'a' contains all STE vector elements from 'b'.
+--! Checks if encrypted value 'a' contains all JSONB elements from 'b'.
 --! Uses jsonb[] arrays internally for native PostgreSQL GIN index support.
 --!
---! This function is designed for use with a GIN index on ste_vec_jsonb(column).
+--! This function is designed for use with a GIN index on jsonb_array(column).
 --! When combined with such an index, PostgreSQL can efficiently search large tables.
 --!
 --! @param a eql_v2_encrypted Container value (typically a table column)
@@ -307,38 +306,38 @@ $$;
 --!
 --! @example
 --! -- Create GIN index for efficient containment queries
---! CREATE INDEX idx ON mytable USING GIN (eql_v2.ste_vec_jsonb(encrypted_col));
+--! CREATE INDEX idx ON mytable USING GIN (eql_v2.jsonb_array(encrypted_col));
 --!
 --! -- Query using the helper function
---! SELECT * FROM mytable WHERE eql_v2.ste_vec_contains_jsonb(encrypted_col, search_value);
+--! SELECT * FROM mytable WHERE eql_v2.jsonb_contains(encrypted_col, search_value);
 --!
---! @see eql_v2.ste_vec_jsonb
-CREATE FUNCTION eql_v2.ste_vec_contains_jsonb(a eql_v2_encrypted, b eql_v2_encrypted)
+--! @see eql_v2.jsonb_array
+CREATE FUNCTION eql_v2.jsonb_contains(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS boolean
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
 AS $$
-  SELECT eql_v2.ste_vec_jsonb(a) @> eql_v2.ste_vec_jsonb(b);
+  SELECT eql_v2.jsonb_array(a) @> eql_v2.jsonb_array(b);
 $$;
 
 
---! @brief GIN-indexable "is contained by" check using jsonb arrays
+--! @brief GIN-indexable JSONB "is contained by" check
 --!
---! Checks if all STE vector elements from 'a' are contained in 'b'.
+--! Checks if all JSONB elements from 'a' are contained in 'b'.
 --! Uses jsonb[] arrays internally for native PostgreSQL GIN index support.
 --!
 --! @param a eql_v2_encrypted Value to check (typically a table column)
 --! @param b eql_v2_encrypted Container value
 --! @return Boolean True if all elements of a are contained in b
 --!
---! @see eql_v2.ste_vec_jsonb
---! @see eql_v2.ste_vec_contains_jsonb
-CREATE FUNCTION eql_v2.ste_vec_is_contained_by_jsonb(a eql_v2_encrypted, b eql_v2_encrypted)
+--! @see eql_v2.jsonb_array
+--! @see eql_v2.jsonb_contains
+CREATE FUNCTION eql_v2.jsonb_contained_by(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS boolean
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
 AS $$
-  SELECT eql_v2.ste_vec_jsonb(a) <@ eql_v2.ste_vec_jsonb(b);
+  SELECT eql_v2.jsonb_array(a) <@ eql_v2.jsonb_array(b);
 $$;
 
 
