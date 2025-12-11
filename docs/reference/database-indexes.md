@@ -10,6 +10,7 @@ EQL supports PostgreSQL B-tree indexes on `eql_v2_encrypted` columns to improve 
 - [Query Patterns That Don't Use Indexes](#query-patterns-that-dont-use-indexes)
 - [Index Limitations](#index-limitations)
 - [Best Practices](#best-practices)
+- [GIN Indexes for JSONB Containment](#gin-indexes-for-jsonb-containment)
 
 ---
 
@@ -217,7 +218,7 @@ B-tree indexes **only work** with:
 
 They **do not work** with:
 - `bf` (bloom_filter) - pattern matching
-- `sv` (ste_vec) - JSONB containment
+- Data with `sv` field (ste_vec) - JSONB containment uses GIN indexes instead (see [GIN Indexes](#gin-indexes-for-jsonb-containment))
 - Data without any index terms
 
 ### 2. Index Creation Timing
@@ -323,6 +324,89 @@ SELECT eql_v2.remove_search_config('users', 'encrypted_email', 'unique');
 -- Drop the PostgreSQL index
 DROP INDEX IF EXISTS idx_users_encrypted_email;
 ```
+
+---
+
+## GIN Indexes for JSONB Containment
+
+While B-tree indexes don't support `ste_vec` (JSONB containment), you can use PostgreSQL GIN indexes for efficient containment queries on encrypted JSONB columns.
+
+### When to Use GIN Indexes
+
+Use GIN indexes when:
+- You need to perform JSONB containment queries (`@>`, `<@`)
+- The table has a significant number of rows (500+ recommended)
+- Query performance on containment operations is important
+
+### Creating a GIN Index
+
+Create a GIN index using the `jsonb_array()` function, which extracts the encrypted JSONB as a native `jsonb[]` array:
+
+```sql
+CREATE INDEX idx_encrypted_jsonb_gin
+ON table_name USING GIN (eql_v2.jsonb_array(encrypted_column));
+
+ANALYZE table_name;
+```
+
+**Important:** Always run `ANALYZE` after creating the index so PostgreSQL's query planner has accurate statistics.
+
+### Query Patterns for GIN Indexes
+
+There are two approaches to write containment queries that use GIN indexes:
+
+#### Approach 1: Using jsonb_array() Function
+
+Convert both sides to `jsonb[]` and use the native containment operator:
+
+```sql
+SELECT * FROM table_name
+WHERE eql_v2.jsonb_array(encrypted_column) @>
+      eql_v2.jsonb_array($1::eql_v2_encrypted);
+```
+
+#### Approach 2: Using Helper Function
+
+Use the convenience function which handles the conversion internally:
+
+```sql
+SELECT * FROM table_name
+WHERE eql_v2.jsonb_contains(encrypted_column, $1::eql_v2_encrypted);
+```
+
+Both approaches produce the same result and use the GIN index.
+
+### Verifying Index Usage
+
+Use `EXPLAIN` to verify the GIN index is being used:
+
+```sql
+EXPLAIN SELECT * FROM table_name
+WHERE eql_v2.jsonb_array(encrypted_column) @>
+      eql_v2.jsonb_array($1::eql_v2_encrypted);
+```
+
+**Expected output:**
+```
+Bitmap Heap Scan on table_name
+  Recheck Cond: (jsonb_array(encrypted_column) @> jsonb_array(...))
+  ->  Bitmap Index Scan on idx_encrypted_jsonb_gin
+        Index Cond: (jsonb_array(encrypted_column) @> jsonb_array(...))
+```
+
+If you see `Seq Scan`, ensure:
+1. The index exists
+2. `ANALYZE` has been run
+3. The table has enough rows (PostgreSQL may choose sequential scan for very small tables)
+
+### GIN vs B-tree Index Comparison
+
+| Feature | B-tree Index | GIN Index |
+|---------|-------------|-----------|
+| **Use case** | Equality, range queries | JSONB containment |
+| **Index terms** | `hm`, `b3`, `ob` | `sv` (via jsonb_array) |
+| **Operators** | `=`, `<`, `>`, `<=`, `>=` | `@>`, `<@` |
+| **Function** | Direct column reference | `eql_v2.jsonb_array()` |
 
 ---
 
