@@ -48,11 +48,10 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.ciphertext(val eql_v2_encrypted)
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
+  LANGUAGE SQL
 AS $$
-	BEGIN
-    RETURN eql_v2.ciphertext(val.data);
-  END;
-$$ LANGUAGE plpgsql;
+    SELECT eql_v2.ciphertext(val.data);
+$$;
 
 --! @brief State transition function for grouped_value aggregate
 --! @internal
@@ -172,14 +171,10 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.meta_data(val jsonb)
   RETURNS jsonb
   IMMUTABLE STRICT PARALLEL SAFE
+  LANGUAGE SQL
 AS $$
-	BEGIN
-     RETURN jsonb_build_object(
-      'i', val->'i',
-      'v', val->'v'
-    );
-  END;
-$$ LANGUAGE plpgsql;
+    SELECT jsonb_build_object('i', val->'i', 'v', val->'v');
+$$;
 
 --! @brief Extract metadata from encrypted column value
 --!
@@ -200,9 +195,8 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.meta_data(val eql_v2_encrypted)
   RETURNS jsonb
   IMMUTABLE STRICT PARALLEL SAFE
+  LANGUAGE SQL
 AS $$
-  BEGIN
-     RETURN eql_v2.meta_data(val.data);
-  END;
-$$ LANGUAGE plpgsql;
+    SELECT eql_v2.meta_data(val.data);
+$$;
 
