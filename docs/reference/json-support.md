@@ -102,6 +102,24 @@ WHERE jsonb_column @> '{"top":{"nested":["a"]}}';
 
 **Note:** The `@>` operator checks if the left value contains the right value. The `<@` operator checks the reverse (if left is contained in right).
 
+#### Indexed Containment Queries
+
+For better performance on large tables, create a GIN index and use the `jsonb_array()` function:
+
+```sql
+-- Create GIN index
+CREATE INDEX idx_encrypted_jsonb_gin
+ON examples USING GIN (eql_v2.jsonb_array(encrypted_json));
+ANALYZE examples;
+
+-- Query using the GIN index
+SELECT * FROM examples
+WHERE eql_v2.jsonb_array(encrypted_json) @>
+      eql_v2.jsonb_array(search_value::eql_v2_encrypted);
+```
+
+See [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment) for complete setup instructions.
+
 ### Field extraction (`jsonb_path_query`)
 
 Extract fields from encrypted JSONB using selector hashes. Selectors are generated during encryption and identify specific JSON paths.
@@ -242,6 +260,22 @@ GROUP BY eql_v2.jsonb_path_query_first(encrypted_json, 'color_selector');
 
 - **`eql_v2.selector(val eql_v2_encrypted) RETURNS text`**
   - Extracts the selector hash from an encrypted value
+
+### GIN-Indexable Functions
+
+These functions enable efficient GIN-indexed containment queries. See [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment) for index setup.
+
+- **`eql_v2.jsonb_array(val eql_v2_encrypted) RETURNS jsonb[]`**
+  - Extracts encrypted JSONB as native PostgreSQL jsonb array for GIN indexing
+  - Create GIN indexes on this function for indexed containment queries
+
+- **`eql_v2.jsonb_contains(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean`**
+  - GIN-indexed containment check: returns true if a contains b
+  - Alternative to `jsonb_array(a) @> jsonb_array(b)`
+
+- **`eql_v2.jsonb_contained_by(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean`**
+  - GIN-indexed reverse containment: returns true if a is contained by b
+  - Alternative to `jsonb_array(a) <@ jsonb_array(b)`
 
 ### Aggregate Functions
 
