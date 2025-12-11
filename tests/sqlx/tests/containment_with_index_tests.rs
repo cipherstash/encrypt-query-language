@@ -9,7 +9,10 @@
 //! Uses the ste_vec_vast table (500 rows) from migration 005_install_ste_vec_vast_data.sql
 
 use anyhow::Result;
-use eql_tests::{analyze_table, assert_uses_index, create_jsonb_gin_index, get_ste_vec_encrypted};
+use eql_tests::{
+    analyze_table, assert_uses_index, assert_uses_seq_scan, create_jsonb_gin_index,
+    explain_query, get_ste_vec_encrypted,
+};
 use sqlx::PgPool;
 
 // Constants for ste_vec_vast table testing
@@ -177,6 +180,41 @@ async fn jsonb_array_count_with_index(pool: PgPool) -> Result<()> {
     assert!(count.0 >= 1, "Expected at least one match, got {}", count.0);
 
     // Verify index is used for count queries too
+    assert_uses_index(&pool, &sql, STE_VEC_VAST_GIN_INDEX).await?;
+
+    Ok(())
+}
+
+
+#[sqlx::test]
+async fn jsonb_containment_uses_seq_scan_without_index(pool: PgPool) -> Result<()> {
+    // Test: Verify sequential scan is used BEFORE GIN index is created
+    //
+    // This test demonstrates that the GIN index actually makes a difference:
+    // 1. Without index: query uses Seq Scan
+    // 2. After creating index: query uses Index Scan
+    //
+    // This is a "before and after" test to prove the index improves query execution.
+
+    // Run ANALYZE first to ensure planner has accurate statistics
+    analyze_table(&pool, STE_VEC_VAST_TABLE).await?;
+
+    let id = 1;
+    let row = get_ste_vec_encrypted(&pool, STE_VEC_VAST_TABLE, id).await?;
+
+    let sql = format!(
+        "SELECT 1 FROM {} WHERE eql_v2.jsonb_array(e) @> eql_v2.jsonb_array('{}'::eql_v2_encrypted) LIMIT 1",
+        STE_VEC_VAST_TABLE, row
+    );
+
+    // BEFORE: Without index, should use Seq Scan
+    let explain_before = explain_query(&pool, &sql).await?;
+    assert_uses_seq_scan(&explain_before);
+
+    // Create the GIN index
+    setup_ste_vec_vast_gin_index(&pool).await?;
+
+    // AFTER: With index, should use the GIN index
     assert_uses_index(&pool, &sql, STE_VEC_VAST_GIN_INDEX).await?;
 
     Ok(())
