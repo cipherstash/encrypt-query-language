@@ -83,26 +83,32 @@ pub async fn get_ore_encrypted_as_jsonb(pool: &PgPool, id: i32) -> Result<String
     result.with_context(|| format!("ore table returned NULL for id={}", id))
 }
 
-/// Fetch STE vec encrypted value from ste_vec table
+/// Fetch STE vec encrypted value from a specified table
 ///
-/// The ste_vec table is created by migration `003_install_ste_vec_data.sql`
-/// and contains 10 pre-seeded records (ids 1-10) with ore_cllw_u64_8 and ore_cllw_var_8 indexes.
+/// Default tables:
+/// - `ste_vec`: Created by migration `003_install_ste_vec_data.sql`, 10 records (ids 1-10)
+/// - `ste_vec_vast`: Created by migration `005_install_ste_vec_vast_data.sql`, 10,000 records
 ///
 /// Test data structure:
 /// - Records have selectors for $.hello (a7cea93975ed8c01f861ccb6bd082784) with ore_cllw_var_8
 /// - Records have selectors for $.n (2517068c0d1f9d4d41d2c666211f785e) with ore_cllw_u64_8
-pub async fn get_ste_vec_encrypted(pool: &PgPool, id: i32) -> Result<String> {
-    let sql = format!("SELECT e::text FROM ste_vec WHERE id = {}", id);
+///
+/// # Arguments
+/// * `pool` - Database connection pool
+/// * `table` - Table name to query (e.g., "ste_vec" or "ste_vec_vast")
+/// * `id` - Row id to fetch
+pub async fn get_ste_vec_encrypted(pool: &PgPool, table: &str, id: i32) -> Result<String> {
+    let sql = format!("SELECT e::text FROM {} WHERE id = {}", table, id);
     let row = sqlx::query(&sql)
         .fetch_one(pool)
         .await
-        .with_context(|| format!("fetching ste_vec encrypted value for id={}", id))?;
+        .with_context(|| format!("fetching {} encrypted value for id={}", table, id))?;
 
     let result: Option<String> = row
         .try_get(0)
         .with_context(|| format!("extracting text column for id={}", id))?;
 
-    result.with_context(|| format!("ste_vec table returned NULL for id={}", id))
+    result.with_context(|| format!("{} table returned NULL for id={}", table, id))
 }
 
 /// Extract selector term using SQL helper functions
@@ -166,4 +172,166 @@ pub async fn get_ste_vec_selector_term(
             selector, value
         )
     })
+}
+
+/// Extract a term from the ste_vec table by id and selector
+///
+/// Queries the ste_vec table (from migration 003_install_ste_vec_data.sql)
+/// and extracts a field using the provided selector hash.
+///
+/// # Arguments
+/// * `pool` - Database connection pool
+/// * `id` - Row id in ste_vec table (1-10)
+/// * `selector` - Selector hash to extract (e.g., Selectors::STE_VEC_HELLO)
+///
+/// # Example
+/// ```ignore
+/// // Extract $.hello selector from ste_vec row 1
+/// let term = get_ste_vec_term_by_id(&pool, 1, Selectors::STE_VEC_HELLO).await?;
+/// ```
+pub async fn get_ste_vec_term_by_id(pool: &PgPool, id: i32, selector: &str) -> Result<String> {
+    // Extract term from ste_vec table using the -> operator
+    let sql = format!(
+        "SELECT (e -> '{}'::text)::text FROM ste_vec WHERE id = {}",
+        selector, id
+    );
+
+    let row = sqlx::query(&sql)
+        .fetch_one(pool)
+        .await
+        .with_context(|| format!("extracting selector '{}' from ste_vec id={}", selector, id))?;
+
+    let result: Option<String> = row.try_get(0).with_context(|| {
+        format!(
+            "getting text column for selector '{}' from id={}",
+            selector, id
+        )
+    })?;
+
+    result.with_context(|| {
+        format!(
+            "ste_vec term extraction returned NULL for selector='{}', id={}",
+            selector, id
+        )
+    })
+}
+
+// ============================================================================
+// GIN Index Testing Helpers
+// ============================================================================
+
+/// Create a GIN index on the jsonb_array extraction for a table
+///
+/// Creates a functional GIN index on `eql_v2.jsonb_array(e)` which extracts
+/// the encrypted JSONB as a jsonb[] array. Using jsonb[] instead of eql_v2_encrypted[]
+/// leverages PostgreSQL's native hash support for jsonb elements.
+///
+/// # Arguments
+/// * `pool` - Database connection pool
+/// * `table` - Table name to create index on
+/// * `index_name` - Name for the index
+///
+/// # Example
+/// ```ignore
+/// create_jsonb_gin_index(&pool, "jsonb_table", "jsonb_gin_idx").await?;
+/// ```
+pub async fn create_jsonb_gin_index(pool: &PgPool, table: &str, index_name: &str) -> Result<()> {
+    let sql = format!(
+        "CREATE INDEX IF NOT EXISTS {} ON {} USING GIN (eql_v2.jsonb_array(e))",
+        index_name, table
+    );
+    sqlx::query(&sql)
+        .execute(pool)
+        .await
+        .with_context(|| format!("creating GIN index {} on {}", index_name, table))?;
+    Ok(())
+}
+
+/// Run ANALYZE on a table to update query planner statistics
+///
+/// Should be called after creating indexes to ensure the query planner
+/// has accurate statistics for choosing optimal query plans.
+///
+/// # Arguments
+/// * `pool` - Database connection pool
+/// * `table` - Table name to analyze
+pub async fn analyze_table(pool: &PgPool, table: &str) -> Result<()> {
+    let sql = format!("ANALYZE {}", table);
+    sqlx::query(&sql)
+        .execute(pool)
+        .await
+        .with_context(|| format!("analyzing table {}", table))?;
+    Ok(())
+}
+
+/// Run EXPLAIN on a query and return the plan as a string
+///
+/// Executes EXPLAIN and concatenates all output rows into a single string.
+/// Useful for verifying index usage in query plans.
+///
+/// # Arguments
+/// * `pool` - Database connection pool
+/// * `query` - SQL query to explain (without EXPLAIN prefix)
+///
+/// # Returns
+/// The EXPLAIN output as a newline-separated string
+///
+/// # Example
+/// ```ignore
+/// let plan = explain_query(&pool, "SELECT * FROM foo WHERE x = 1").await?;
+/// assert!(plan.contains("Index Scan"));
+/// ```
+pub async fn explain_query(pool: &PgPool, query: &str) -> Result<String> {
+    let sql = format!("EXPLAIN {}", query);
+    let rows: Vec<(String,)> = sqlx::query_as(&sql)
+        .fetch_all(pool)
+        .await
+        .with_context(|| format!("running EXPLAIN on query: {}", query))?;
+
+    Ok(rows
+        .iter()
+        .map(|r| r.0.clone())
+        .collect::<Vec<_>>()
+        .join("\n"))
+}
+
+/// Assert that a query uses a specific index
+///
+/// Runs EXPLAIN on the query and verifies the specified index is used.
+/// Follows the same pattern as assert_contains for consistency.
+///
+/// # Arguments
+/// * `pool` - Database connection pool
+/// * `sql` - SQL query with `{}` placeholder for the value
+/// * `value` - Value to substitute into the query
+/// * `index_name` - Expected index name to find in the plan
+///
+/// # Example
+/// ```ignore
+/// let sql = "SELECT * FROM t WHERE eql_v2.ste_vec(e) @> eql_v2.ste_vec('{}'::eql_v2_encrypted)";
+/// assert_uses_index(&pool, sql, &row_b, "my_gin_idx").await?;
+/// ```
+pub async fn assert_uses_index(pool: &PgPool, sql: &str, index_name: &str) -> Result<()> {
+    let explain_output = explain_query(pool, sql).await?;
+    assert!(
+        explain_output.contains(index_name),
+        "Expected index '{}' to be used. EXPLAIN output:\n{}",
+        index_name,
+        explain_output
+    );
+    Ok(())
+}
+
+/// Assert that an EXPLAIN plan uses a sequential scan (no index)
+///
+/// Useful for testing that small tables don't force index usage.
+///
+/// # Arguments
+/// * `explain_output` - Output from explain_query()
+pub fn assert_uses_seq_scan(explain_output: &str) {
+    assert!(
+        explain_output.contains("Seq Scan"),
+        "Expected Seq Scan to be used. EXPLAIN output:\n{}",
+        explain_output
+    );
 }
