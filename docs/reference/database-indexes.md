@@ -362,7 +362,7 @@ Convert both sides to `jsonb[]` and use the native containment operator:
 ```sql
 SELECT * FROM table_name
 WHERE eql_v2.jsonb_array(encrypted_column) @>
-      eql_v2.jsonb_array(search_value::eql_v2_encrypted);
+      eql_v2.jsonb_array($1::eql_v2_encrypted);
 ```
 
 #### Approach 2: Using Helper Function
@@ -371,7 +371,7 @@ Use the convenience function which handles the conversion internally:
 
 ```sql
 SELECT * FROM table_name
-WHERE eql_v2.jsonb_contains(encrypted_column, search_value::eql_v2_encrypted);
+WHERE eql_v2.jsonb_contains(encrypted_column, $1::eql_v2_encrypted);
 ```
 
 Both approaches produce the same result and use the GIN index.
@@ -383,7 +383,7 @@ Use `EXPLAIN` to verify the GIN index is being used:
 ```sql
 EXPLAIN SELECT * FROM table_name
 WHERE eql_v2.jsonb_array(encrypted_column) @>
-      eql_v2.jsonb_array(search_value::eql_v2_encrypted);
+      eql_v2.jsonb_array($1::eql_v2_encrypted);
 ```
 
 **Expected output:**
