@@ -196,12 +196,10 @@ pub async fn get_ste_vec_term_by_id(pool: &PgPool, id: i32, selector: &str) -> R
         selector, id
     );
 
-    let row = sqlx::query(&sql).fetch_one(pool).await.with_context(|| {
-        format!(
-            "extracting selector '{}' from ste_vec id={}",
-            selector, id
-        )
-    })?;
+    let row = sqlx::query(&sql)
+        .fetch_one(pool)
+        .await
+        .with_context(|| format!("extracting selector '{}' from ste_vec id={}", selector, id))?;
 
     let result: Option<String> = row.try_get(0).with_context(|| {
         format!(
@@ -290,7 +288,11 @@ pub async fn explain_query(pool: &PgPool, query: &str) -> Result<String> {
         .await
         .with_context(|| format!("running EXPLAIN on query: {}", query))?;
 
-    Ok(rows.iter().map(|r| r.0.clone()).collect::<Vec<_>>().join("\n"))
+    Ok(rows
+        .iter()
+        .map(|r| r.0.clone())
+        .collect::<Vec<_>>()
+        .join("\n"))
 }
 
 /// Assert that a query uses a specific index
@@ -309,16 +311,13 @@ pub async fn explain_query(pool: &PgPool, query: &str) -> Result<String> {
 /// let sql = "SELECT * FROM t WHERE eql_v2.ste_vec(e) @> eql_v2.ste_vec('{}'::eql_v2_encrypted)";
 /// assert_uses_index(&pool, sql, &row_b, "my_gin_idx").await?;
 /// ```
-pub async fn assert_uses_index(
-    pool: &PgPool,
-    sql: &str,
-    index_name: &str,
-) -> Result<()> {
-    let explain_output = explain_query(pool, &sql).await?;
+pub async fn assert_uses_index(pool: &PgPool, sql: &str, index_name: &str) -> Result<()> {
+    let explain_output = explain_query(pool, sql).await?;
     assert!(
         explain_output.contains(index_name),
         "Expected index '{}' to be used. EXPLAIN output:\n{}",
-        index_name, explain_output
+        index_name,
+        explain_output
     );
     Ok(())
 }
