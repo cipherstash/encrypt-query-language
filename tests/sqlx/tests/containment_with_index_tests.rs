@@ -525,6 +525,23 @@ macro_rules! containment_test {
     };
 }
 
+/// Generate a negative containment test that verifies NO match is returned
+macro_rules! containment_negative_test {
+    ($name:ident, op = $op:ident, lhs = $lhs:ident, rhs = $rhs:ident, $reason:expr) => {
+        #[sqlx::test]
+        async fn $name(pool: PgPool) -> Result<()> {
+            let test_case = ContainmentTestCase {
+                operator: ContainmentOp::$op,
+                lhs: ArgumentType::$lhs,
+                rhs: ArgumentType::$rhs,
+            };
+            test_case
+                .run_negative(&pool, STE_VEC_VAST_TABLE, $reason)
+                .await
+        }
+    };
+}
+
 impl ContainmentOp {
     fn sql_function(&self) -> &'static str {
         match self {
@@ -762,6 +779,57 @@ impl ContainmentTestCase {
 
         Ok(())
     }
+
+    /// Execute a negative test case - verifies NO match is returned
+    ///
+    /// Used for asymmetric containment cases where a partial value (sv_element)
+    /// cannot contain a full value, and vice versa.
+    async fn run_negative(&self, pool: &PgPool, table: &str, reason: &str) -> Result<()> {
+        // 1. Setup GIN index
+        setup_ste_vec_vast_gin_index(pool).await.with_context(|| {
+            format!("setting up GIN index for negative {:?} test", self.operator)
+        })?;
+
+        let id: i64 = 1;
+
+        // 2. Fetch test data
+        let encrypted = get_ste_vec_encrypted(pool, table, id as i32)
+            .await
+            .with_context(|| {
+                format!(
+                    "fetching encrypted value for negative {:?}({:?}, {:?})",
+                    self.operator, self.lhs, self.rhs
+                )
+            })?;
+        let sv_element = get_ste_vec_sv_element(pool, table, id as i32, 0)
+            .await
+            .with_context(|| {
+                format!(
+                    "fetching sv_element for negative {:?}({:?}, {:?})",
+                    self.operator, self.lhs, self.rhs
+                )
+            })?;
+
+        // 3. Build query
+        let (sql, _param_count) = self.build_query(table);
+
+        // 4. Execute query with appropriate bindings
+        let result: Option<(i64,)> = self
+            .execute_with_bindings(pool, &sql, &encrypted, &sv_element, id)
+            .await?;
+
+        // 5. Assert NO match found (negative test)
+        assert!(
+            result.is_none(),
+            "{:?}({:?}, {:?}) should NOT find match - {}",
+            self.operator,
+            self.lhs,
+            self.rhs,
+            reason
+        );
+
+        Ok(())
+    }
 }
 
 // First test: encrypted column contains encrypted parameter (self-containment)
@@ -814,4 +882,30 @@ containment_test!(
     op = ContainedBy,
     lhs = EncryptedParam,
     rhs = EncryptedColumn
+);
+
+// ============================================================================
+// Negative Tests: Asymmetric Containment Cases
+// ============================================================================
+//
+// These tests verify that asymmetric containment relationships correctly
+// return no match. A single sv_element cannot contain a full encrypted value,
+// and a full encrypted value is not contained within a single sv_element.
+
+// SV element param does NOT contain column (element is subset, not superset)
+containment_negative_test!(
+    macro_contains_jsonb_param_encrypted_no_match,
+    op = Contains,
+    lhs = SvElementParam,
+    rhs = EncryptedColumn,
+    "sv_element is a subset of encrypted value, cannot contain the full value"
+);
+
+// Column is NOT contained by sv element param (full value not subset of element)
+containment_negative_test!(
+    macro_contained_by_encrypted_jsonb_param_no_match,
+    op = ContainedBy,
+    lhs = EncryptedColumn,
+    rhs = SvElementParam,
+    "encrypted value has more keys than sv_element, cannot be contained in it"
 );
