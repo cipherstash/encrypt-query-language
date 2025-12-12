@@ -241,18 +241,16 @@ $$ LANGUAGE plpgsql;
 
 
 
---! @brief Extract encrypted JSONB as array for GIN indexing
+--! @brief Extract full encrypted JSONB elements as array
 --!
---! Extracts the encrypted JSONB data and returns it as a native jsonb[]
---! array. This enables efficient GIN indexing using PostgreSQL's built-in array_ops
---! which has native hash support for jsonb elements.
+--! Extracts all JSONB elements from the STE vector including non-deterministic fields.
+--! Use jsonb_array() instead for GIN indexing and containment queries.
 --!
 --! @param val jsonb containing encrypted EQL payload
---! @return jsonb[] Array of JSONB elements for indexing
+--! @return jsonb[] Array of full JSONB elements
 --!
---! @note Preferred for GIN indexes as jsonb has native hash support
---! @see eql_v2.jsonb_array(eql_v2_encrypted)
-CREATE FUNCTION eql_v2.jsonb_array(val jsonb)
+--! @see eql_v2.jsonb_array
+CREATE FUNCTION eql_v2.jsonb_array_from_array_elements(val jsonb)
 RETURNS jsonb[]
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
@@ -266,21 +264,53 @@ AS $$
 $$;
 
 
---! @brief Extract encrypted JSONB as array from encrypted column value
---!
---! Extracts the encrypted JSONB data from an encrypted column value and returns it as a
---! native jsonb[] array for GIN indexing.
+--! @brief Extract full encrypted JSONB elements as array from encrypted column
 --!
 --! @param val eql_v2_encrypted Encrypted column value
---! @return jsonb[] Array of JSONB elements for indexing
+--! @return jsonb[] Array of full JSONB elements
 --!
---! @example
---! -- Create GIN index for containment queries
---! CREATE INDEX idx_jsonb ON mytable USING GIN (eql_v2.jsonb_array(encrypted_col));
+--! @see eql_v2.jsonb_array_from_array_elements(jsonb)
+CREATE FUNCTION eql_v2.jsonb_array_from_array_elements(val eql_v2_encrypted)
+RETURNS jsonb[]
+IMMUTABLE STRICT PARALLEL SAFE
+LANGUAGE SQL
+AS $$
+  SELECT eql_v2.jsonb_array_from_array_elements(val.data);
+$$;
+
+
+--! @brief Extract deterministic fields as array for GIN indexing
 --!
---! -- Query using containment
---! SELECT * FROM mytable
---! WHERE eql_v2.jsonb_array(encrypted_col) @> eql_v2.jsonb_array(search_value);
+--! Extracts only deterministic search term fields (s, b3, hm, ocv, ocf) from each
+--! STE vector element. Excludes non-deterministic ciphertext for correct containment
+--! comparison using PostgreSQL's native @> operator.
+--!
+--! @param val jsonb containing encrypted EQL payload
+--! @return jsonb[] Array of JSONB elements with only deterministic fields
+--!
+--! @note Use this for GIN indexes and containment queries
+--! @see eql_v2.jsonb_contains
+CREATE FUNCTION eql_v2.jsonb_array(val jsonb)
+RETURNS jsonb[]
+IMMUTABLE STRICT PARALLEL SAFE
+LANGUAGE SQL
+AS $$
+  SELECT ARRAY(
+    SELECT jsonb_object_agg(kv.key, kv.value)
+    FROM jsonb_array_elements(
+      CASE WHEN val ? 'sv' THEN val->'sv' ELSE jsonb_build_array(val) END
+    ) AS elem,
+    LATERAL jsonb_each(elem) AS kv(key, value)
+    WHERE kv.key IN ('s', 'b3', 'hm', 'ocv', 'ocf')
+    GROUP BY elem
+  );
+$$;
+
+
+--! @brief Extract deterministic fields as array from encrypted column
+--!
+--! @param val eql_v2_encrypted Encrypted column value
+--! @return jsonb[] Array of JSONB elements with only deterministic fields
 --!
 --! @see eql_v2.jsonb_array(jsonb)
 CREATE FUNCTION eql_v2.jsonb_array(val eql_v2_encrypted)
