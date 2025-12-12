@@ -399,16 +399,24 @@ async fn contained_by_jsonb_param_encrypted(pool: PgPool) -> Result<()> {
     let id = 1;
     let sv_element = get_ste_vec_sv_element(&pool, STE_VEC_VAST_TABLE, id, 0).await?;
 
+    println!("\n=== contained_by_jsonb_param_encrypted ===");
+    println!("Testing: jsonb_contained_by(jsonb_param, encrypted)");
+    println!("Row ID: {}", id);
+    println!("sv_element (jsonb_param): {}", serde_json::to_string_pretty(&sv_element)?);
+
     let sql = format!(
         "SELECT id FROM {} WHERE eql_v2.jsonb_contained_by($1::jsonb, e) AND id = $2",
         STE_VEC_VAST_TABLE
     );
+    println!("SQL: {}", sql);
 
     let result: Option<(i64,)> = sqlx::query_as(&sql)
         .bind(&sv_element)
         .bind(id)
         .fetch_optional(&pool)
         .await?;
+
+    println!("Result: {:?}", result);
 
     assert!(
         result.is_some(),
@@ -421,7 +429,13 @@ async fn contained_by_jsonb_param_encrypted(pool: PgPool) -> Result<()> {
         "SELECT id FROM {} WHERE eql_v2.jsonb_contained_by('{}'::jsonb, e) LIMIT 1",
         STE_VEC_VAST_TABLE, sv_element
     );
+    println!("EXPLAIN SQL: {}", explain_sql);
+
+    let explain_output = crate::explain_query(&pool, &explain_sql).await?;
+    println!("EXPLAIN output:\n{}", explain_output);
+
     assert_uses_index(&pool, &explain_sql, STE_VEC_VAST_GIN_INDEX).await?;
+    println!("=== TEST PASSED ===\n");
 
     Ok(())
 }
@@ -456,3 +470,60 @@ async fn contained_by_encrypted_param_encrypted(pool: PgPool) -> Result<()> {
 
     Ok(())
 }
+
+// ============================================================================
+// Macro-Based Coverage Matrix Tests
+// ============================================================================
+//
+// These tests use a declarative macro pattern to generate containment tests
+// for all operator/type combinations systematically.
+
+/// Containment operator under test
+#[derive(Debug, Clone, Copy)]
+enum ContainmentOp {
+    /// jsonb_contains(lhs, rhs) - LHS contains RHS
+    Contains,
+    /// jsonb_contained_by(lhs, rhs) - LHS is contained by RHS
+    ContainedBy,
+}
+
+/// Argument type for LHS or RHS position in containment query
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum ArgumentType {
+    /// Table column reference: `e`
+    EncryptedColumn,
+    /// Full encrypted value as parameter: `$N::jsonb`
+    EncryptedParam,
+    /// Single sv element as parameter: `$N::jsonb`
+    SvElementParam,
+}
+
+/// Test case configuration for containment operator tests
+struct ContainmentTestCase {
+    operator: ContainmentOp,
+    lhs: ArgumentType,
+    rhs: ArgumentType,
+}
+
+/// Generate a containment test from operator and argument types
+macro_rules! containment_test {
+    ($name:ident, op = $op:ident, lhs = $lhs:ident, rhs = $rhs:ident) => {
+        #[sqlx::test]
+        async fn $name(pool: PgPool) -> Result<()> {
+            let test_case = ContainmentTestCase {
+                operator: ContainmentOp::$op,
+                lhs: ArgumentType::$lhs,
+                rhs: ArgumentType::$rhs,
+            };
+            test_case.run(&pool, STE_VEC_VAST_TABLE, STE_VEC_VAST_GIN_INDEX).await
+        }
+    };
+}
+
+// First test: encrypted column contains encrypted parameter (self-containment)
+containment_test!(
+    macro_contains_encrypted_encrypted_param,
+    op = Contains,
+    lhs = EncryptedColumn,
+    rhs = EncryptedParam
+);
