@@ -59,7 +59,7 @@ async fn sanity_before_after_index_creation(pool: PgPool) -> Result<()> {
     let sql = format!(
         "SELECT 1 FROM {} WHERE eql_v2.jsonb_array(e) @> eql_v2.jsonb_array('{}'::jsonb) LIMIT 1",
         STE_VEC_VAST_TABLE,
-        row.to_string()
+        row
     );
 
     // BEFORE: Without index, should use Seq Scan
@@ -129,7 +129,7 @@ async fn contains_encrypted_jsonb_param(pool: PgPool) -> Result<()> {
     let explain_sql = format!(
         "SELECT id FROM {} WHERE eql_v2.jsonb_contains(e, '{}'::jsonb) LIMIT 1",
         STE_VEC_VAST_TABLE,
-        sv_element.to_string()
+        sv_element
     );
     assert_uses_index(&pool, &explain_sql, STE_VEC_VAST_GIN_INDEX).await?;
 
@@ -422,7 +422,7 @@ async fn contained_by_jsonb_param_encrypted(pool: PgPool) -> Result<()> {
     let explain_sql = format!(
         "SELECT id FROM {} WHERE eql_v2.jsonb_contained_by('{}'::jsonb, e) LIMIT 1",
         STE_VEC_VAST_TABLE,
-        sv_element.to_string()
+        sv_element
     );
     assert_uses_index(&pool, &explain_sql, STE_VEC_VAST_GIN_INDEX).await?;
 
