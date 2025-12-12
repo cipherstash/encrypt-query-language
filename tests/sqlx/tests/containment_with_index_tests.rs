@@ -289,3 +289,38 @@ async fn contained_by_encrypted_encrypted(pool: PgPool) -> Result<()> {
 
     Ok(())
 }
+
+#[sqlx::test]
+async fn contained_by_jsonb_param_encrypted(pool: PgPool) -> Result<()> {
+    // Coverage: jsonb_contained_by(jsonb_param, encrypted)
+    // Is jsonb parameter contained by the encrypted column?
+    // Single sv element should be contained in the full encrypted value
+    setup_ste_vec_vast_gin_index(&pool).await?;
+
+    let id = 1;
+    let sv_element = get_ste_vec_sv_element(&pool, STE_VEC_VAST_TABLE, id, 0).await?;
+
+    let sql = format!(
+        "SELECT id FROM {} WHERE eql_v2.jsonb_contained_by($1::jsonb, e) AND id = $2",
+        STE_VEC_VAST_TABLE
+    );
+
+    let result: Option<(i64,)> = sqlx::query_as(&sql)
+        .bind(&sv_element)
+        .bind(id)
+        .fetch_optional(&pool)
+        .await?;
+
+    assert!(result.is_some(), "jsonb_contained_by(jsonb_param, encrypted) should find match");
+    assert_eq!(result.unwrap().0, id as i64);
+
+    // Verify index usage
+    let explain_sql = format!(
+        "SELECT id FROM {} WHERE eql_v2.jsonb_contained_by('{}'::jsonb, e) LIMIT 1",
+        STE_VEC_VAST_TABLE,
+        sv_element.to_string()
+    );
+    assert_uses_index(&pool, &explain_sql, STE_VEC_VAST_GIN_INDEX).await?;
+
+    Ok(())
+}
