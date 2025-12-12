@@ -84,6 +84,48 @@ async fn sanity_non_matching_returns_empty(pool: PgPool) -> Result<()> {
 }
 
 // ============================================================================
+// Coverage Matrix Tests: All Operator/Type Combinations
+// ============================================================================
+//
+// Each test covers exactly one operator/type combination.
+// Uses parameterized queries (jsonb_param) as the primary pattern
+// since that's what real clients use.
+
+#[sqlx::test]
+async fn contains_encrypted_jsonb_param(pool: PgPool) -> Result<()> {
+    // Coverage: jsonb_contains(encrypted, jsonb_param)
+    // Most common pattern - client sends jsonb parameter
+    setup_ste_vec_vast_gin_index(&pool).await?;
+
+    let id = 1;
+    let sv_element = get_ste_vec_sv_element(&pool, STE_VEC_VAST_TABLE, id, 0).await?;
+
+    let sql = format!(
+        "SELECT id FROM {} WHERE eql_v2.jsonb_contains(e, $1::jsonb) AND id = $2",
+        STE_VEC_VAST_TABLE
+    );
+
+    let result: Option<(i64,)> = sqlx::query_as(&sql)
+        .bind(&sv_element)
+        .bind(id)
+        .fetch_optional(&pool)
+        .await?;
+
+    assert!(result.is_some(), "jsonb_contains(encrypted, jsonb_param) should find match");
+    assert_eq!(result.unwrap().0, id as i64);
+
+    // Verify index usage with literal for EXPLAIN (can't EXPLAIN with params)
+    let explain_sql = format!(
+        "SELECT id FROM {} WHERE eql_v2.jsonb_contains(e, '{}'::jsonb) LIMIT 1",
+        STE_VEC_VAST_TABLE,
+        sv_element.to_string()
+    );
+    assert_uses_index(&pool, &explain_sql, STE_VEC_VAST_GIN_INDEX).await?;
+
+    Ok(())
+}
+
+// ============================================================================
 // Helper Function Tests
 // ============================================================================
 
