@@ -125,6 +125,134 @@ async fn sanity_non_matching_returns_empty(pool: PgPool) -> Result<()> {
 }
 
 // ============================================================================
+// Partial Containment Tests: Array Contains Single Element
+// ============================================================================
+//
+// These tests verify true containment semantics:
+// - An encrypted value's sv array should CONTAIN a single element from that array
+// - jsonb_array(encrypted) returns the sv array: [elem1, elem2, ...]
+// - jsonb_array(single_element) returns: [element] (since no sv field)
+// - PostgreSQL @> should find element in array
+//
+// IMPORTANT: These tests are expected to FAIL initially.
+// They expose a bug where partial containment doesn't work.
+
+#[sqlx::test]
+async fn partial_contains_single_sv_element_literal(pool: PgPool) -> Result<()> {
+    // Test: Encrypted column contains a single element from its sv array
+    // Uses literal string substitution (no subqueries)
+    setup_ste_vec_vast_gin_index(&pool).await?;
+
+    let id = 1;
+
+    // Get the first sv element (index 0) as serde_json::Value
+    let sv_element = get_ste_vec_sv_element(&pool, STE_VEC_VAST_TABLE, id, 0).await?;
+
+    // Query: Does the encrypted column contain this single element?
+    // jsonb_array(e) returns [elem0, elem1, ...]
+    // jsonb_array(sv_element::jsonb) returns [sv_element] (no sv field)
+    // Should find match since sv_element IS IN the sv array
+    let sql = format!(
+        "SELECT 1 FROM {} WHERE eql_v2.jsonb_contains(e, '{}'::jsonb) AND id = {} LIMIT 1",
+        STE_VEC_VAST_TABLE, sv_element.to_string(), id
+    );
+
+    assert_contains(&pool, &sql).await?;
+    assert_uses_index(&pool, &sql, STE_VEC_VAST_GIN_INDEX).await?;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn partial_contains_sv_element_finds_row(pool: PgPool) -> Result<()> {
+    // Test: Search table for rows containing a specific sv element
+    // Should find exactly the row it came from
+    setup_ste_vec_vast_gin_index(&pool).await?;
+
+    let id = 42; // Pick a row in the middle
+
+    // Get sv element from row 42
+    let sv_element = get_ste_vec_sv_element(&pool, STE_VEC_VAST_TABLE, id, 0).await?;
+
+    // Search for rows containing this element (should find row 42)
+    let sql = format!(
+        "SELECT id FROM {} WHERE eql_v2.jsonb_contains(e, '{}'::jsonb) LIMIT 1",
+        STE_VEC_VAST_TABLE, sv_element.to_string()
+    );
+
+    let result: (i64,) = sqlx::query_as(&sql).fetch_one(&pool).await?;
+    assert_eq!(result.0, id as i64, "Should find the row the element came from");
+    assert_uses_index(&pool, &sql, STE_VEC_VAST_GIN_INDEX).await?;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn partial_contains_different_sv_elements(pool: PgPool) -> Result<()> {
+    // Test: Each sv element index should be containable
+    // The sv array has ~6 elements per row
+    setup_ste_vec_vast_gin_index(&pool).await?;
+
+    let id = 1;
+
+    // Test containment for sv elements at indices 0, 1, 2
+    for sv_index in [0, 1, 2] {
+        let sv_element = get_ste_vec_sv_element(&pool, STE_VEC_VAST_TABLE, id, sv_index).await?;
+
+        let sql = format!(
+            "SELECT 1 FROM {} WHERE eql_v2.jsonb_contains(e, '{}'::jsonb) AND id = {} LIMIT 1",
+            STE_VEC_VAST_TABLE, sv_element.to_string(), id
+        );
+
+        assert_contains(&pool, &sql).await?;
+    }
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn partial_contains_multiple_rows_with_index(pool: PgPool) -> Result<()> {
+    // Test: Partial containment works across multiple rows with GIN index
+    setup_ste_vec_vast_gin_index(&pool).await?;
+
+    // Test several rows across the dataset (IDs are 1-500)
+    for id in [1, 10, 50, 100, 250, 500] {
+        let sv_element = get_ste_vec_sv_element(&pool, STE_VEC_VAST_TABLE, id, 0).await?;
+
+        let sql = format!(
+            "SELECT 1 FROM {} WHERE eql_v2.jsonb_contains(e, '{}'::jsonb) LIMIT 1",
+            STE_VEC_VAST_TABLE, sv_element.to_string()
+        );
+
+        assert_contains(&pool, &sql).await?;
+        assert_uses_index(&pool, &sql, STE_VEC_VAST_GIN_INDEX).await?;
+    }
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn partial_contains_count_matches(pool: PgPool) -> Result<()> {
+    // Test: Count of partial containment matches
+    // Each sv element should appear in exactly ONE row
+    setup_ste_vec_vast_gin_index(&pool).await?;
+
+    let id = 1;
+    let sv_element = get_ste_vec_sv_element(&pool, STE_VEC_VAST_TABLE, id, 0).await?;
+
+    let sql = format!(
+        "SELECT count(*) FROM {} WHERE eql_v2.jsonb_contains(e, '{}'::jsonb)",
+        STE_VEC_VAST_TABLE, sv_element.to_string()
+    );
+
+    let count: (i64,) = sqlx::query_as(&sql).fetch_one(&pool).await?;
+    // Should find exactly 1 match (the row it came from)
+    assert_eq!(count.0, 1, "Expected exactly 1 match for unique sv element");
+
+    Ok(())
+}
+
+// ============================================================================
 // Partial Element Containment Tests (proper containment semantics)
 // ============================================================================
 //
