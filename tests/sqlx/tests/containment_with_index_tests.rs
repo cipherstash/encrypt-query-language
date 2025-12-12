@@ -771,3 +771,19 @@ containment_test!(
     lhs = EncryptedColumn,
     rhs = EncryptedParam
 );
+
+// Column contains sv element param (element is subset of full value)
+containment_test!(
+    macro_contains_encrypted_jsonb_param,
+    op = Contains,
+    lhs = EncryptedColumn,
+    rhs = SvElementParam
+);
+
+// Encrypted param contains column (self-containment, param position reversed)
+containment_test!(
+    macro_contains_encrypted_param_encrypted,
+    op = Contains,
+    lhs = EncryptedParam,
+    rhs = EncryptedColumn
+);
