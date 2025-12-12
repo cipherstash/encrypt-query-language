@@ -11,7 +11,7 @@
 use anyhow::Result;
 use eql_tests::{
     analyze_table, assert_uses_index, assert_uses_seq_scan, create_jsonb_gin_index, explain_query,
-    get_ste_vec_encrypted, get_ste_vec_sv_element,
+    get_ste_vec_encrypted, get_ste_vec_encrypted_pair, get_ste_vec_sv_element,
 };
 use sqlx::PgPool;
 
@@ -116,6 +116,21 @@ async fn test_get_ste_vec_sv_element_returns_json_value(pool: PgPool) -> Result<
         sv_element.get("s").is_some(),
         "sv element should have 's' (selector) field"
     );
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn test_get_ste_vec_encrypted_pair_returns_different_rows(pool: PgPool) -> Result<()> {
+    // Test that we can get two different encrypted values for comparison
+    let (enc1, enc2) = get_ste_vec_encrypted_pair(&pool, STE_VEC_VAST_TABLE, 1, 2).await?;
+
+    // They should be different values
+    assert_ne!(enc1, enc2, "Different rows should have different encrypted values");
+
+    // Both should have sv field
+    assert!(enc1.get("sv").is_some(), "enc1 should have sv field");
+    assert!(enc2.get("sv").is_some(), "enc2 should have sv field");
 
     Ok(())
 }
