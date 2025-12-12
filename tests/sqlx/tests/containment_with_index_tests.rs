@@ -253,7 +253,10 @@ async fn contains_encrypted_encrypted_param(pool: PgPool) -> Result<()> {
         .fetch_optional(&pool)
         .await?;
 
-    assert!(result.is_some(), "jsonb_contains(encrypted, encrypted_param) should find match");
+    assert!(
+        result.is_some(),
+        "jsonb_contains(encrypted, encrypted_param) should find match"
+    );
     assert_eq!(result.unwrap().0, id as i64);
 
     Ok(())
@@ -357,7 +360,6 @@ async fn contained_by_encrypted_encrypted(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-
 #[sqlx::test]
 async fn contained_by_encrypted_encrypted_param(pool: PgPool) -> Result<()> {
     // Coverage: jsonb_contained_by(encrypted, encrypted_param)
@@ -380,7 +382,10 @@ async fn contained_by_encrypted_encrypted_param(pool: PgPool) -> Result<()> {
         .fetch_optional(&pool)
         .await?;
 
-    assert!(result.is_some(), "jsonb_contained_by(encrypted, encrypted_param) should find match");
+    assert!(
+        result.is_some(),
+        "jsonb_contained_by(encrypted, encrypted_param) should find match"
+    );
     assert_eq!(result.unwrap().0, id as i64);
 
     Ok(())
@@ -446,7 +451,10 @@ async fn contained_by_encrypted_param_encrypted(pool: PgPool) -> Result<()> {
         .fetch_optional(&pool)
         .await?;
 
-    assert!(result.is_some(), "jsonb_contained_by(encrypted_param, encrypted) should find match");
+    assert!(
+        result.is_some(),
+        "jsonb_contained_by(encrypted_param, encrypted) should find match"
+    );
     assert_eq!(result.unwrap().0, id as i64);
 
     Ok(())
