@@ -321,6 +321,46 @@ AS $$
 $$;
 
 
+--! @brief GIN-indexable JSONB containment check (encrypted, jsonb)
+--!
+--! Checks if encrypted value 'a' contains all JSONB elements from jsonb value 'b'.
+--! Uses jsonb[] arrays internally for native PostgreSQL GIN index support.
+--!
+--! @param a eql_v2_encrypted Container value (typically a table column)
+--! @param b jsonb JSONB value to search for
+--! @return Boolean True if a contains all elements of b
+--!
+--! @see eql_v2.jsonb_array
+--! @see eql_v2.jsonb_contains(eql_v2_encrypted, eql_v2_encrypted)
+CREATE FUNCTION eql_v2.jsonb_contains(a eql_v2_encrypted, b jsonb)
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+LANGUAGE SQL
+AS $$
+  SELECT eql_v2.jsonb_array(a) @> eql_v2.jsonb_array(b);
+$$;
+
+
+--! @brief GIN-indexable JSONB containment check (jsonb, encrypted)
+--!
+--! Checks if jsonb value 'a' contains all JSONB elements from encrypted value 'b'.
+--! Uses jsonb[] arrays internally for native PostgreSQL GIN index support.
+--!
+--! @param a jsonb Container JSONB value
+--! @param b eql_v2_encrypted Encrypted value to search for
+--! @return Boolean True if a contains all elements of b
+--!
+--! @see eql_v2.jsonb_array
+--! @see eql_v2.jsonb_contains(eql_v2_encrypted, eql_v2_encrypted)
+CREATE FUNCTION eql_v2.jsonb_contains(a jsonb, b eql_v2_encrypted)
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+LANGUAGE SQL
+AS $$
+  SELECT eql_v2.jsonb_array(a) @> eql_v2.jsonb_array(b);
+$$;
+
+
 --! @brief GIN-indexable JSONB "is contained by" check
 --!
 --! Checks if all JSONB elements from 'a' are contained in 'b'.
@@ -333,6 +373,46 @@ $$;
 --! @see eql_v2.jsonb_array
 --! @see eql_v2.jsonb_contains
 CREATE FUNCTION eql_v2.jsonb_contained_by(a eql_v2_encrypted, b eql_v2_encrypted)
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+LANGUAGE SQL
+AS $$
+  SELECT eql_v2.jsonb_array(a) <@ eql_v2.jsonb_array(b);
+$$;
+
+
+--! @brief GIN-indexable JSONB "is contained by" check (encrypted, jsonb)
+--!
+--! Checks if all JSONB elements from encrypted value 'a' are contained in jsonb value 'b'.
+--! Uses jsonb[] arrays internally for native PostgreSQL GIN index support.
+--!
+--! @param a eql_v2_encrypted Value to check (typically a table column)
+--! @param b jsonb Container JSONB value
+--! @return Boolean True if all elements of a are contained in b
+--!
+--! @see eql_v2.jsonb_array
+--! @see eql_v2.jsonb_contained_by(eql_v2_encrypted, eql_v2_encrypted)
+CREATE FUNCTION eql_v2.jsonb_contained_by(a eql_v2_encrypted, b jsonb)
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+LANGUAGE SQL
+AS $$
+  SELECT eql_v2.jsonb_array(a) <@ eql_v2.jsonb_array(b);
+$$;
+
+
+--! @brief GIN-indexable JSONB "is contained by" check (jsonb, encrypted)
+--!
+--! Checks if all JSONB elements from jsonb value 'a' are contained in encrypted value 'b'.
+--! Uses jsonb[] arrays internally for native PostgreSQL GIN index support.
+--!
+--! @param a jsonb Value to check
+--! @param b eql_v2_encrypted Container encrypted value
+--! @return Boolean True if all elements of a are contained in b
+--!
+--! @see eql_v2.jsonb_array
+--! @see eql_v2.jsonb_contained_by(eql_v2_encrypted, eql_v2_encrypted)
+CREATE FUNCTION eql_v2.jsonb_contained_by(a jsonb, b eql_v2_encrypted)
 RETURNS boolean
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
