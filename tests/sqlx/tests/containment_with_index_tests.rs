@@ -253,6 +253,89 @@ async fn partial_contains_count_matches(pool: PgPool) -> Result<()> {
 }
 
 // ============================================================================
+// Parameterized Query Tests
+// ============================================================================
+//
+// Tests that verify containment works with prepared statements using .bind()
+// These complement the literal string tests above.
+
+#[sqlx::test]
+async fn partial_contains_parameterized_query(pool: PgPool) -> Result<()> {
+    // Test: Partial containment using parameterized query with .bind()
+    setup_ste_vec_vast_gin_index(&pool).await?;
+
+    let id = 1;
+    // Helper returns serde_json::Value directly - no extra parsing needed
+    let sv_element = get_ste_vec_sv_element(&pool, STE_VEC_VAST_TABLE, id, 0).await?;
+
+    // Use parameterized query with $1 placeholder
+    let sql = format!(
+        "SELECT 1 FROM {} WHERE eql_v2.jsonb_contains(e, $1::jsonb) AND id = $2 LIMIT 1",
+        STE_VEC_VAST_TABLE
+    );
+
+    let result: Option<(i32,)> = sqlx::query_as(&sql)
+        .bind(&sv_element)
+        .bind(id)
+        .fetch_optional(&pool)
+        .await?;
+
+    assert!(result.is_some(), "Parameterized containment query should find match");
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn partial_contains_parameterized_multiple_rows(pool: PgPool) -> Result<()> {
+    // Test: Parameterized containment across multiple rows
+    setup_ste_vec_vast_gin_index(&pool).await?;
+
+    for id in [1, 50, 100, 250] {
+        // Helper returns serde_json::Value directly
+        let sv_element = get_ste_vec_sv_element(&pool, STE_VEC_VAST_TABLE, id, 0).await?;
+
+        let sql = format!(
+            "SELECT id FROM {} WHERE eql_v2.jsonb_contains(e, $1::jsonb) LIMIT 1",
+            STE_VEC_VAST_TABLE
+        );
+
+        let result: (i64,) = sqlx::query_as(&sql)
+            .bind(&sv_element)
+            .fetch_one(&pool)
+            .await?;
+
+        assert_eq!(result.0, id as i64, "Should find the row the element came from");
+    }
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn contained_by_parameterized_query(pool: PgPool) -> Result<()> {
+    // Test: contained_by using parameterized query
+    setup_ste_vec_vast_gin_index(&pool).await?;
+
+    let id = 1;
+    // Helper returns serde_json::Value directly
+    let sv_element = get_ste_vec_sv_element(&pool, STE_VEC_VAST_TABLE, id, 0).await?;
+
+    let sql = format!(
+        "SELECT 1 FROM {} WHERE eql_v2.jsonb_contained_by($1::jsonb, e) AND id = $2 LIMIT 1",
+        STE_VEC_VAST_TABLE
+    );
+
+    let result: Option<(i32,)> = sqlx::query_as(&sql)
+        .bind(&sv_element)
+        .bind(id)
+        .fetch_optional(&pool)
+        .await?;
+
+    assert!(result.is_some(), "Parameterized contained_by query should find match");
+
+    Ok(())
+}
+
+// ============================================================================
 // Partial Element Containment Tests (proper containment semantics)
 // ============================================================================
 //
