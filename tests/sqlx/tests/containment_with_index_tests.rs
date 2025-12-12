@@ -201,6 +201,38 @@ async fn contains_jsonb_param_encrypted(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
+async fn contains_encrypted_param_encrypted(pool: PgPool) -> Result<()> {
+    // Coverage: jsonb_contains(encrypted_param, encrypted)
+    // Check if encrypted parameter contains the encrypted column
+    setup_ste_vec_vast_gin_index(&pool).await?;
+
+    let id = 1;
+    // Get full encrypted value - it contains its own sv elements
+    let encrypted_param = get_ste_vec_encrypted(&pool, STE_VEC_VAST_TABLE, id).await?;
+
+    // Check if the encrypted value (as param) contains the column
+    // Should match because encrypted contains itself
+    let sql = format!(
+        "SELECT id FROM {} WHERE eql_v2.jsonb_contains($1::jsonb, e) AND id = $2",
+        STE_VEC_VAST_TABLE
+    );
+
+    let result: Option<(i64,)> = sqlx::query_as(&sql)
+        .bind(&encrypted_param)
+        .bind(id)
+        .fetch_optional(&pool)
+        .await?;
+
+    assert!(
+        result.is_some(),
+        "jsonb_contains(encrypted_param, encrypted) should find match"
+    );
+    assert_eq!(result.unwrap().0, id as i64);
+
+    Ok(())
+}
+
+#[sqlx::test]
 async fn contains_encrypted_encrypted_param(pool: PgPool) -> Result<()> {
     // Coverage: jsonb_contains(encrypted, encrypted_param)
     // Encrypted column contains an encrypted value passed as parameter
@@ -359,6 +391,34 @@ async fn contained_by_jsonb_param_encrypted(pool: PgPool) -> Result<()> {
         sv_element.to_string()
     );
     assert_uses_index(&pool, &explain_sql, STE_VEC_VAST_GIN_INDEX).await?;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn contained_by_encrypted_param_encrypted(pool: PgPool) -> Result<()> {
+    // Coverage: jsonb_contained_by(encrypted_param, encrypted)
+    // Is encrypted parameter contained by the encrypted column?
+    // True when column equals or is superset of parameter
+    setup_ste_vec_vast_gin_index(&pool).await?;
+
+    let id = 1;
+    // Get full encrypted value - parameter is contained by itself in column
+    let encrypted_param = get_ste_vec_encrypted(&pool, STE_VEC_VAST_TABLE, id).await?;
+
+    let sql = format!(
+        "SELECT id FROM {} WHERE eql_v2.jsonb_contained_by($1::jsonb, e) AND id = $2",
+        STE_VEC_VAST_TABLE
+    );
+
+    let result: Option<(i64,)> = sqlx::query_as(&sql)
+        .bind(&encrypted_param)
+        .bind(id)
+        .fetch_optional(&pool)
+        .await?;
+
+    assert!(result.is_some(), "jsonb_contained_by(encrypted_param, encrypted) should find match");
+    assert_eq!(result.unwrap().0, id as i64);
 
     Ok(())
 }
