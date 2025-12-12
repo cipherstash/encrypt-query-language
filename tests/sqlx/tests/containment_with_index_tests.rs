@@ -535,24 +535,27 @@ async fn jsonb_contains_sv_element_with_different_selector(pool: PgPool) -> Resu
 }
 
 // ============================================================================
-// Mixed Type Containment Tests (encrypted, jsonb)
+// Mixed Type Partial Containment Tests (encrypted, jsonb)
 // ============================================================================
+//
+// Tests for the new function overloads:
+// - jsonb_contains(encrypted, jsonb)
+// - jsonb_contains(jsonb, encrypted)
+// - jsonb_contained_by(encrypted, jsonb)
+// - jsonb_contained_by(jsonb, encrypted)
 
 #[sqlx::test]
-async fn jsonb_contains_encrypted_jsonb_uses_index(pool: PgPool) -> Result<()> {
-    // Test: jsonb_contains(encrypted, jsonb) helper function with GIN index
-    //
-    // Verifies that the mixed-type variant (encrypted, jsonb) works correctly
-    // and uses the GIN index efficiently.
+async fn mixed_contains_encrypted_jsonb_with_sv_element(pool: PgPool) -> Result<()> {
+    // Test: jsonb_contains(encrypted, jsonb) with single sv element
     setup_ste_vec_vast_gin_index(&pool).await?;
 
     let id = 1;
+    let sv_element = get_ste_vec_sv_element(&pool, STE_VEC_VAST_TABLE, id, 0).await?;
 
-    // Test using the helper function with jsonb parameter
-    // We pass the .data field from an encrypted value as the jsonb parameter
+    // Use .to_string() for SQL literal interpolation
     let sql = format!(
-        "SELECT 1 FROM {} t1 WHERE eql_v2.jsonb_contains(t1.e, (SELECT (t2.e).data FROM {} t2 WHERE t2.id = {})) LIMIT 1",
-        STE_VEC_VAST_TABLE, STE_VEC_VAST_TABLE, id
+        "SELECT 1 FROM {} WHERE eql_v2.jsonb_contains(e, '{}'::jsonb) AND id = {} LIMIT 1",
+        STE_VEC_VAST_TABLE, sv_element.to_string(), id
     );
 
     assert_contains(&pool, &sql).await?;
@@ -562,63 +565,17 @@ async fn jsonb_contains_encrypted_jsonb_uses_index(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
-async fn jsonb_contains_jsonb_encrypted_uses_index(pool: PgPool) -> Result<()> {
-    // Test: jsonb_contains(jsonb, encrypted) helper function with GIN index
-    //
-    // Verifies that the mixed-type variant (jsonb, encrypted) works correctly.
-    // Note: This variant is less likely to use an index on the table column
-    // since the column is not on the left side of the containment check.
+async fn mixed_contained_by_jsonb_encrypted_with_sv_element(pool: PgPool) -> Result<()> {
+    // Test: jsonb_contained_by(jsonb, encrypted) - element is contained in encrypted
     setup_ste_vec_vast_gin_index(&pool).await?;
 
     let id = 1;
+    let sv_element = get_ste_vec_sv_element(&pool, STE_VEC_VAST_TABLE, id, 0).await?;
 
-    // Test using the helper function with jsonb as container
+    // contained_by: is jsonb contained in encrypted?
     let sql = format!(
-        "SELECT 1 FROM {} t1 WHERE eql_v2.jsonb_contains((SELECT (t2.e).data FROM {} t2 WHERE t2.id = {}), t1.e) LIMIT 1",
-        STE_VEC_VAST_TABLE, STE_VEC_VAST_TABLE, id
-    );
-
-    assert_contains(&pool, &sql).await?;
-    // Note: This query pattern may or may not use the index depending on planner decisions
-    // We just verify it returns correct results
-
-    Ok(())
-}
-
-#[sqlx::test]
-async fn jsonb_contains_multiple_rows_encrypted_jsonb(pool: PgPool) -> Result<()> {
-    // Test: Verify jsonb_contains(encrypted, jsonb) works for multiple different rows
-    //
-    // Tests that the mixed-type variant works across the dataset.
-    setup_ste_vec_vast_gin_index(&pool).await?;
-
-    // Test several different rows across the 500-row dataset
-    for id in [1, 5, 10, 50, 100, 250, 499] {
-        let sql = format!(
-            "SELECT 1 FROM {} t1 WHERE eql_v2.jsonb_contains(t1.e, (SELECT (t2.e).data FROM {} t2 WHERE t2.id = {})) LIMIT 1",
-            STE_VEC_VAST_TABLE, STE_VEC_VAST_TABLE, id
-        );
-
-        assert_contains(&pool, &sql).await?;
-    }
-
-    Ok(())
-}
-
-#[sqlx::test]
-async fn jsonb_contained_by_encrypted_jsonb_uses_index(pool: PgPool) -> Result<()> {
-    // Test: jsonb_contained_by(encrypted, jsonb) helper function with GIN index
-    //
-    // Verifies that the mixed-type variant (encrypted, jsonb) for contained_by
-    // works correctly and uses the GIN index efficiently.
-    setup_ste_vec_vast_gin_index(&pool).await?;
-
-    let id = 1;
-
-    // Test using the helper function with jsonb parameter
-    let sql = format!(
-        "SELECT 1 FROM {} t1 WHERE eql_v2.jsonb_contained_by(t1.e, (SELECT (t2.e).data FROM {} t2 WHERE t2.id = {})) LIMIT 1",
-        STE_VEC_VAST_TABLE, STE_VEC_VAST_TABLE, id
+        "SELECT 1 FROM {} WHERE eql_v2.jsonb_contained_by('{}'::jsonb, e) AND id = {} LIMIT 1",
+        STE_VEC_VAST_TABLE, sv_element.to_string(), id
     );
 
     assert_contains(&pool, &sql).await?;
@@ -628,59 +585,12 @@ async fn jsonb_contained_by_encrypted_jsonb_uses_index(pool: PgPool) -> Result<(
 }
 
 #[sqlx::test]
-async fn jsonb_contained_by_jsonb_encrypted_uses_index(pool: PgPool) -> Result<()> {
-    // Test: jsonb_contained_by(jsonb, encrypted) helper function with GIN index
-    //
-    // Verifies that the mixed-type variant (jsonb, encrypted) for contained_by
-    // works correctly.
+async fn mixed_contains_non_matching_returns_empty(pool: PgPool) -> Result<()> {
+    // Test: Non-matching jsonb returns no results
     setup_ste_vec_vast_gin_index(&pool).await?;
 
-    let id = 1;
-
-    // Test using the helper function with jsonb as contained value
     let sql = format!(
-        "SELECT 1 FROM {} t1 WHERE eql_v2.jsonb_contained_by((SELECT (t2.e).data FROM {} t2 WHERE t2.id = {}), t1.e) LIMIT 1",
-        STE_VEC_VAST_TABLE, STE_VEC_VAST_TABLE, id
-    );
-
-    assert_contains(&pool, &sql).await?;
-    // Note: This query pattern may or may not use the index depending on planner decisions
-    // We just verify it returns correct results
-
-    Ok(())
-}
-
-#[sqlx::test]
-async fn jsonb_contained_by_multiple_rows_encrypted_jsonb(pool: PgPool) -> Result<()> {
-    // Test: Verify jsonb_contained_by(encrypted, jsonb) works for multiple different rows
-    //
-    // Tests that the mixed-type variant works across the dataset.
-    setup_ste_vec_vast_gin_index(&pool).await?;
-
-    // Test several different rows across the 500-row dataset
-    for id in [1, 5, 10, 50, 100, 250, 499] {
-        let sql = format!(
-            "SELECT 1 FROM {} t1 WHERE eql_v2.jsonb_contained_by(t1.e, (SELECT (t2.e).data FROM {} t2 WHERE t2.id = {})) LIMIT 1",
-            STE_VEC_VAST_TABLE, STE_VEC_VAST_TABLE, id
-        );
-
-        assert_contains(&pool, &sql).await?;
-    }
-
-    Ok(())
-}
-
-#[sqlx::test]
-async fn jsonb_contains_non_matching_encrypted_jsonb_returns_empty(pool: PgPool) -> Result<()> {
-    // Test: Non-matching jsonb_contains(encrypted, jsonb) returns no results
-    //
-    // Verifies that searching for a non-existent value correctly returns empty
-    // with the mixed-type variant.
-    setup_ste_vec_vast_gin_index(&pool).await?;
-
-    // Use a fake encrypted value that won't match anything
-    let sql = format!(
-        "SELECT count(*) FROM {} WHERE eql_v2.jsonb_contains(e, '{{\"s\":\"nonexistent\",\"v\":1}}'::jsonb)",
+        "SELECT count(*) FROM {} WHERE eql_v2.jsonb_contains(e, '{{\"s\":\"nonexistent\"}}'::jsonb)",
         STE_VEC_VAST_TABLE
     );
 
@@ -691,21 +601,21 @@ async fn jsonb_contains_non_matching_encrypted_jsonb_returns_empty(pool: PgPool)
 }
 
 #[sqlx::test]
-async fn jsonb_contained_by_non_matching_encrypted_jsonb_returns_empty(pool: PgPool) -> Result<()> {
-    // Test: Non-matching jsonb_contained_by(encrypted, jsonb) returns no results
-    //
-    // Verifies that searching for a non-existent value correctly returns empty
-    // with the mixed-type variant.
+async fn mixed_contains_multiple_rows(pool: PgPool) -> Result<()> {
+    // Test: Mixed type containment across multiple rows
     setup_ste_vec_vast_gin_index(&pool).await?;
 
-    // Use a fake encrypted value that won't match anything
-    let sql = format!(
-        "SELECT count(*) FROM {} WHERE eql_v2.jsonb_contained_by(e, '{{\"s\":\"nonexistent\",\"v\":1}}'::jsonb)",
-        STE_VEC_VAST_TABLE
-    );
+    for id in [1, 10, 50, 100, 250] {
+        let sv_element = get_ste_vec_sv_element(&pool, STE_VEC_VAST_TABLE, id, 0).await?;
 
-    let count: (i64,) = sqlx::query_as(&sql).fetch_one(&pool).await?;
-    assert_eq!(count.0, 0, "Expected no matches for non-existent value");
+        let sql = format!(
+            "SELECT 1 FROM {} WHERE eql_v2.jsonb_contains(e, '{}'::jsonb) LIMIT 1",
+            STE_VEC_VAST_TABLE, sv_element.to_string()
+        );
+
+        assert_contains(&pool, &sql).await?;
+        assert_uses_index(&pool, &sql, STE_VEC_VAST_GIN_INDEX).await?;
+    }
 
     Ok(())
 }
