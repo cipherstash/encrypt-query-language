@@ -153,6 +153,36 @@ async fn contains_encrypted_encrypted(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
+#[sqlx::test]
+async fn contains_jsonb_param_encrypted(pool: PgPool) -> Result<()> {
+    // Coverage: jsonb_contains(jsonb_param, encrypted)
+    // Check if jsonb parameter contains the encrypted column
+    // This is the inverse - rarely used but must work
+    setup_ste_vec_vast_gin_index(&pool).await?;
+
+    let id = 1;
+    // Get full encrypted value - it contains its own sv elements
+    let encrypted = get_ste_vec_encrypted(&pool, STE_VEC_VAST_TABLE, id).await?;
+
+    // Check if the full encrypted value (as param) contains the column
+    // This should match because encrypted contains itself
+    let sql = format!(
+        "SELECT id FROM {} WHERE eql_v2.jsonb_contains($1::jsonb, e) AND id = $2",
+        STE_VEC_VAST_TABLE
+    );
+
+    let result: Option<(i64,)> = sqlx::query_as(&sql)
+        .bind(&encrypted)
+        .bind(id)
+        .fetch_optional(&pool)
+        .await?;
+
+    assert!(result.is_some(), "jsonb_contains(jsonb_param, encrypted) should find match");
+    assert_eq!(result.unwrap().0, id as i64);
+
+    Ok(())
+}
+
 // ============================================================================
 // Helper Function Tests
 // ============================================================================
