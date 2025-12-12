@@ -787,3 +787,31 @@ containment_test!(
     lhs = EncryptedParam,
     rhs = EncryptedColumn
 );
+
+// ============================================================================
+// ContainedBy Operator Tests via Macro
+// ============================================================================
+
+// Column contained by encrypted param (self-containment)
+containment_test!(
+    macro_contained_by_encrypted_encrypted_param,
+    op = ContainedBy,
+    lhs = EncryptedColumn,
+    rhs = EncryptedParam
+);
+
+// SV element param contained by column (element is subset of full value)
+containment_test!(
+    macro_contained_by_jsonb_param_encrypted,
+    op = ContainedBy,
+    lhs = SvElementParam,
+    rhs = EncryptedColumn
+);
+
+// Encrypted param contained by column (self-containment, param position reversed)
+containment_test!(
+    macro_contained_by_encrypted_param_encrypted,
+    op = ContainedBy,
+    lhs = EncryptedParam,
+    rhs = EncryptedColumn
+);
