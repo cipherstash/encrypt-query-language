@@ -117,6 +117,30 @@ pub async fn get_ste_vec_encrypted(
     Ok(result)
 }
 
+/// Fetch two STE vec encrypted values from the same table
+///
+/// Useful for encrypted-to-encrypted containment tests where we need
+/// two distinct encrypted values from the same table.
+///
+/// # Arguments
+/// * `pool` - Database connection pool
+/// * `table` - Table name to query
+/// * `id1` - First row id
+/// * `id2` - Second row id
+///
+/// # Returns
+/// Tuple of (enc1, enc2) as serde_json::Value
+pub async fn get_ste_vec_encrypted_pair(
+    pool: &PgPool,
+    table: &str,
+    id1: i32,
+    id2: i32,
+) -> Result<(serde_json::Value, serde_json::Value)> {
+    let enc1 = get_ste_vec_encrypted(pool, table, id1).await?;
+    let enc2 = get_ste_vec_encrypted(pool, table, id2).await?;
+    Ok((enc1, enc2))
+}
+
 /// Extract a single SV element from an encrypted value as serde_json::Value
 ///
 /// Fetches an encrypted value from the specified table and extracts
