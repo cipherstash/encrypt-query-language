@@ -3,8 +3,8 @@
 //! Common utilities for working with encrypted data in tests.
 
 use anyhow::{Context, Result};
-use sqlx::{PgPool, Row};
 use serde_json;
+use sqlx::{PgPool, Row};
 
 /// Fetch ORE encrypted value from pre-seeded ore table
 ///
@@ -108,10 +108,7 @@ pub async fn get_ste_vec_encrypted(
     table: &str,
     id: i32,
 ) -> Result<serde_json::Value> {
-    let sql = format!(
-        "SELECT (e).data::jsonb FROM {} WHERE id = {}",
-        table, id
-    );
+    let sql = format!("SELECT (e).data::jsonb FROM {} WHERE id = {}", table, id);
     let result: serde_json::Value = sqlx::query_scalar(&sql)
         .fetch_one(pool)
         .await

@@ -73,7 +73,8 @@ async fn sanity_value_contains_itself_uses_index(pool: PgPool) -> Result<()> {
 
     let sql = format!(
         "SELECT 1 FROM {} WHERE eql_v2.jsonb_contains(e, '{}'::jsonb) LIMIT 1",
-        STE_VEC_VAST_TABLE, row.to_string()
+        STE_VEC_VAST_TABLE,
+        row.to_string()
     );
 
     assert_contains(&pool, &sql).await?;
@@ -92,7 +93,8 @@ async fn sanity_before_after_index_creation(pool: PgPool) -> Result<()> {
 
     let sql = format!(
         "SELECT 1 FROM {} WHERE eql_v2.jsonb_array(e) @> eql_v2.jsonb_array('{}'::jsonb) LIMIT 1",
-        STE_VEC_VAST_TABLE, row.to_string()
+        STE_VEC_VAST_TABLE,
+        row.to_string()
     );
 
     // BEFORE: Without index, should use Seq Scan
@@ -154,7 +156,9 @@ async fn partial_contains_single_sv_element_literal(pool: PgPool) -> Result<()> 
     // Should find match since sv_element IS IN the sv array
     let sql = format!(
         "SELECT 1 FROM {} WHERE eql_v2.jsonb_contains(e, '{}'::jsonb) AND id = {} LIMIT 1",
-        STE_VEC_VAST_TABLE, sv_element.to_string(), id
+        STE_VEC_VAST_TABLE,
+        sv_element.to_string(),
+        id
     );
 
     assert_contains(&pool, &sql).await?;
@@ -177,11 +181,15 @@ async fn partial_contains_sv_element_finds_row(pool: PgPool) -> Result<()> {
     // Search for rows containing this element (should find row 42)
     let sql = format!(
         "SELECT id FROM {} WHERE eql_v2.jsonb_contains(e, '{}'::jsonb) LIMIT 1",
-        STE_VEC_VAST_TABLE, sv_element.to_string()
+        STE_VEC_VAST_TABLE,
+        sv_element.to_string()
     );
 
     let result: (i64,) = sqlx::query_as(&sql).fetch_one(&pool).await?;
-    assert_eq!(result.0, id as i64, "Should find the row the element came from");
+    assert_eq!(
+        result.0, id as i64,
+        "Should find the row the element came from"
+    );
     assert_uses_index(&pool, &sql, STE_VEC_VAST_GIN_INDEX).await?;
 
     Ok(())
@@ -201,7 +209,9 @@ async fn partial_contains_different_sv_elements(pool: PgPool) -> Result<()> {
 
         let sql = format!(
             "SELECT 1 FROM {} WHERE eql_v2.jsonb_contains(e, '{}'::jsonb) AND id = {} LIMIT 1",
-            STE_VEC_VAST_TABLE, sv_element.to_string(), id
+            STE_VEC_VAST_TABLE,
+            sv_element.to_string(),
+            id
         );
 
         assert_contains(&pool, &sql).await?;
@@ -221,7 +231,8 @@ async fn partial_contains_multiple_rows_with_index(pool: PgPool) -> Result<()> {
 
         let sql = format!(
             "SELECT 1 FROM {} WHERE eql_v2.jsonb_contains(e, '{}'::jsonb) LIMIT 1",
-            STE_VEC_VAST_TABLE, sv_element.to_string()
+            STE_VEC_VAST_TABLE,
+            sv_element.to_string()
         );
 
         assert_contains(&pool, &sql).await?;
@@ -242,7 +253,8 @@ async fn partial_contains_count_matches(pool: PgPool) -> Result<()> {
 
     let sql = format!(
         "SELECT count(*) FROM {} WHERE eql_v2.jsonb_contains(e, '{}'::jsonb)",
-        STE_VEC_VAST_TABLE, sv_element.to_string()
+        STE_VEC_VAST_TABLE,
+        sv_element.to_string()
     );
 
     let count: (i64,) = sqlx::query_as(&sql).fetch_one(&pool).await?;
@@ -280,7 +292,10 @@ async fn partial_contains_parameterized_query(pool: PgPool) -> Result<()> {
         .fetch_optional(&pool)
         .await?;
 
-    assert!(result.is_some(), "Parameterized containment query should find match");
+    assert!(
+        result.is_some(),
+        "Parameterized containment query should find match"
+    );
 
     Ok(())
 }
@@ -304,7 +319,10 @@ async fn partial_contains_parameterized_multiple_rows(pool: PgPool) -> Result<()
             .fetch_one(&pool)
             .await?;
 
-        assert_eq!(result.0, id as i64, "Should find the row the element came from");
+        assert_eq!(
+            result.0, id as i64,
+            "Should find the row the element came from"
+        );
     }
 
     Ok(())
@@ -330,7 +348,10 @@ async fn contained_by_parameterized_query(pool: PgPool) -> Result<()> {
         .fetch_optional(&pool)
         .await?;
 
-    assert!(result.is_some(), "Parameterized contained_by query should find match");
+    assert!(
+        result.is_some(),
+        "Parameterized contained_by query should find match"
+    );
 
     Ok(())
 }
@@ -356,7 +377,9 @@ async fn mixed_contains_encrypted_jsonb_with_sv_element(pool: PgPool) -> Result<
     // Use .to_string() for SQL literal interpolation
     let sql = format!(
         "SELECT 1 FROM {} WHERE eql_v2.jsonb_contains(e, '{}'::jsonb) AND id = {} LIMIT 1",
-        STE_VEC_VAST_TABLE, sv_element.to_string(), id
+        STE_VEC_VAST_TABLE,
+        sv_element.to_string(),
+        id
     );
 
     assert_contains(&pool, &sql).await?;
@@ -376,7 +399,9 @@ async fn mixed_contained_by_jsonb_encrypted_with_sv_element(pool: PgPool) -> Res
     // contained_by: is jsonb contained in encrypted?
     let sql = format!(
         "SELECT 1 FROM {} WHERE eql_v2.jsonb_contained_by('{}'::jsonb, e) AND id = {} LIMIT 1",
-        STE_VEC_VAST_TABLE, sv_element.to_string(), id
+        STE_VEC_VAST_TABLE,
+        sv_element.to_string(),
+        id
     );
 
     assert_contains(&pool, &sql).await?;
@@ -411,7 +436,8 @@ async fn mixed_contains_multiple_rows(pool: PgPool) -> Result<()> {
 
         let sql = format!(
             "SELECT 1 FROM {} WHERE eql_v2.jsonb_contains(e, '{}'::jsonb) LIMIT 1",
-            STE_VEC_VAST_TABLE, sv_element.to_string()
+            STE_VEC_VAST_TABLE,
+            sv_element.to_string()
         );
 
         assert_contains(&pool, &sql).await?;
@@ -431,8 +457,14 @@ async fn test_get_ste_vec_encrypted_returns_json_value(pool: PgPool) -> Result<(
     let encrypted = get_ste_vec_encrypted(&pool, STE_VEC_VAST_TABLE, 1).await?;
 
     // Should be an object with expected encrypted structure
-    assert!(encrypted.is_object(), "encrypted value should be a JSON object");
-    assert!(encrypted.get("sv").is_some(), "encrypted value should have 'sv' field");
+    assert!(
+        encrypted.is_object(),
+        "encrypted value should be a JSON object"
+    );
+    assert!(
+        encrypted.get("sv").is_some(),
+        "encrypted value should have 'sv' field"
+    );
 
     Ok(())
 }
@@ -444,7 +476,10 @@ async fn test_get_ste_vec_sv_element_returns_json_value(pool: PgPool) -> Result<
 
     // Should be an object with expected fields
     assert!(sv_element.is_object(), "sv element should be a JSON object");
-    assert!(sv_element.get("s").is_some(), "sv element should have 's' (selector) field");
+    assert!(
+        sv_element.get("s").is_some(),
+        "sv element should have 's' (selector) field"
+    );
 
     Ok(())
 }
