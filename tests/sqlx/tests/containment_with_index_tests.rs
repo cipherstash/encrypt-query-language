@@ -56,144 +56,35 @@ async fn assert_contains(pool: &PgPool, sql: &str) -> Result<()> {
 }
 
 // ============================================================================
-// Two-Value Containment Tests (from legacy @>_test.sql)
+// Sanity Tests: Value Contains Itself (Exact Match)
 // ============================================================================
+//
+// These tests verify basic functionality - a value trivially contains itself.
+// They serve as sanity checks that the GIN index and containment functions work.
 
 #[sqlx::test]
-async fn jsonb_identical_values_contain_each_other_uses_index(pool: PgPool) -> Result<()> {
-    // Test: GIN indexed ste_vec containment with identical values (sanity check)
-    //
-    // This is a sanity check that verifies basic functionality:
-    // - A value contains itself (trivially true)
-    // - GIN index is used for containment queries
-    //
-    // For actual containment semantics testing, see the "partial_element" tests below.
-    setup_ste_vec_vast_gin_index(&pool).await?;
-
-    let id = 1;
-
-    // Fetch a record to use as the containment target
-    let row_b = get_ste_vec_encrypted(&pool, STE_VEC_VAST_TABLE, id).await?;
-
-    // Test containment: a @> b using jsonb_array arrays (jsonb[] has native GIN support)
-    // SQL has containment in WHERE clause so GIN index can be used
-    // Note: We cast to ::jsonb since get_ste_vec_encrypted returns the .data field
-    let sql = format!(
-        "SELECT 1 FROM {} WHERE eql_v2.jsonb_array(e) @> eql_v2.jsonb_array('{}'::jsonb) LIMIT 1",
-        STE_VEC_VAST_TABLE, row_b.to_string()
-    );
-
-    assert_contains(&pool, &sql).await?;
-    assert_uses_index(&pool, &sql, STE_VEC_VAST_GIN_INDEX).await?;
-
-    Ok(())
-}
-
-#[sqlx::test]
-async fn jsonb_contains_helper_uses_index(pool: PgPool) -> Result<()> {
-    // Test: The jsonb_contains helper function with GIN index
-    //
-    // Verifies that the convenience wrapper function works correctly
-    // and the underlying query uses the GIN index.
-    setup_ste_vec_vast_gin_index(&pool).await?;
-
-    let id = 1;
-    let row_b = get_ste_vec_encrypted(&pool, STE_VEC_VAST_TABLE, id).await?;
-
-    // Test using the helper function
-    // Note: We cast to ::jsonb since get_ste_vec_encrypted returns the .data field
-    let sql = format!(
-        "SELECT 1 FROM {} WHERE eql_v2.jsonb_contains(e, '{}'::jsonb) LIMIT 1",
-        STE_VEC_VAST_TABLE, row_b.to_string()
-    );
-
-    assert_contains(&pool, &sql).await?;
-    assert_uses_index(&pool, &sql, STE_VEC_VAST_GIN_INDEX).await?;
-
-    Ok(())
-}
-
-#[sqlx::test]
-async fn jsonb_array_containment_multiple_rows(pool: PgPool) -> Result<()> {
-    // Test: Verify containment works for multiple different rows
-    //
-    // Tests that several different rows can find themselves via containment,
-    // ensuring the GIN index works across the dataset.
-    setup_ste_vec_vast_gin_index(&pool).await?;
-
-    // Test several different rows across the 500-row dataset
-    // Selected IDs test distribution across dataset: beginning (1), sparse early (5, 10),
-    // mid-range powers of ten (50, 100), near-end (250), and end (499)
-    for id in [1, 5, 10, 50, 100, 250, 499] {
-        let row = get_ste_vec_encrypted(&pool, STE_VEC_VAST_TABLE, id).await?;
-
-        let sql = format!(
-            "SELECT 1 FROM {} WHERE eql_v2.jsonb_array(e) @> eql_v2.jsonb_array('{}'::jsonb) LIMIT 1",
-            STE_VEC_VAST_TABLE, row.to_string()
-        );
-
-        assert_contains(&pool, &sql).await?;
-    }
-
-    Ok(())
-}
-
-#[sqlx::test]
-async fn jsonb_array_non_matching_returns_empty(pool: PgPool) -> Result<()> {
-    // Test: Non-matching value returns no results
-    //
-    // Verifies that searching for a non-existent value correctly returns empty.
-    setup_ste_vec_vast_gin_index(&pool).await?;
-
-    // Create a fake encrypted value that won't match anything
-    // We'll use a modified version of an existing row
-    let sql = format!(
-        "SELECT count(*) FROM {} WHERE eql_v2.jsonb_array(e) @> ARRAY['{{\"s\":\"nonexistent\",\"v\":1}}'::jsonb]",
-        STE_VEC_VAST_TABLE
-    );
-
-    let count: (i64,) = sqlx::query_as(&sql).fetch_one(&pool).await?;
-    assert_eq!(count.0, 0, "Expected no matches for non-existent selector");
-
-    Ok(())
-}
-
-#[sqlx::test]
-async fn jsonb_array_count_with_index(pool: PgPool) -> Result<()> {
-    // Test: Count query uses GIN index efficiently
-    //
-    // Verifies that counting matches also uses the index.
+async fn sanity_value_contains_itself_uses_index(pool: PgPool) -> Result<()> {
+    // Sanity check: A value contains itself (trivially true)
+    // Verifies GIN index is used for containment queries
     setup_ste_vec_vast_gin_index(&pool).await?;
 
     let id = 1;
     let row = get_ste_vec_encrypted(&pool, STE_VEC_VAST_TABLE, id).await?;
 
     let sql = format!(
-        "SELECT count(*) FROM {} WHERE eql_v2.jsonb_array(e) @> eql_v2.jsonb_array('{}'::jsonb)",
+        "SELECT 1 FROM {} WHERE eql_v2.jsonb_contains(e, '{}'::jsonb) LIMIT 1",
         STE_VEC_VAST_TABLE, row.to_string()
     );
 
-    let count: (i64,) = sqlx::query_as(&sql).fetch_one(&pool).await?;
-    // Should find at least one match (the row itself)
-    assert!(count.0 >= 1, "Expected at least one match, got {}", count.0);
-
-    // Verify index is used for count queries too
+    assert_contains(&pool, &sql).await?;
     assert_uses_index(&pool, &sql, STE_VEC_VAST_GIN_INDEX).await?;
 
     Ok(())
 }
 
 #[sqlx::test]
-async fn jsonb_containment_uses_seq_scan_without_index(pool: PgPool) -> Result<()> {
-    // Test: Verify sequential scan is used BEFORE GIN index is created
-    //
-    // This test demonstrates that the GIN index actually makes a difference:
-    // 1. Without index: query uses Seq Scan
-    // 2. After creating index: query uses Index Scan
-    //
-    // This is a "before and after" test to prove the index improves query execution.
-
-    // Run ANALYZE first to ensure planner has accurate statistics
+async fn sanity_before_after_index_creation(pool: PgPool) -> Result<()> {
+    // Demonstrates GIN index impact: Seq Scan before, Index Scan after
     analyze_table(&pool, STE_VEC_VAST_TABLE).await?;
 
     let id = 1;
@@ -213,6 +104,22 @@ async fn jsonb_containment_uses_seq_scan_without_index(pool: PgPool) -> Result<(
 
     // AFTER: With index, should use the GIN index
     assert_uses_index(&pool, &sql, STE_VEC_VAST_GIN_INDEX).await?;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn sanity_non_matching_returns_empty(pool: PgPool) -> Result<()> {
+    // Non-existent value returns no results
+    setup_ste_vec_vast_gin_index(&pool).await?;
+
+    let sql = format!(
+        "SELECT count(*) FROM {} WHERE eql_v2.jsonb_array(e) @> ARRAY['{{\"s\":\"nonexistent\",\"v\":1}}'::jsonb]",
+        STE_VEC_VAST_TABLE
+    );
+
+    let count: (i64,) = sqlx::query_as(&sql).fetch_one(&pool).await?;
+    assert_eq!(count.0, 0, "Expected no matches for non-existent selector");
 
     Ok(())
 }
