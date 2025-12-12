@@ -221,3 +221,11 @@ tests/ste_vec_*M.sql*
 
 # Rust build artifacts (using sccache)
 tests/sqlx/target/
+
+# Work files (agent-generated, not for version control)
+.work/
+.serena/
+
+# Build variants - protect variant deps
+src/deps-protect.txt
+src/deps-ordered-protect.txt
