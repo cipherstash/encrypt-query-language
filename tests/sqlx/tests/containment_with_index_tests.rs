@@ -1,17 +1,25 @@
 //! Containment with index tests (@> and <@) for encrypted JSONB
 //!
-//! Tests that encrypted JSONB containment operations work correctly with
-//! GIN indexes using the jsonb_array() function which returns jsonb[] arrays.
+//! Tests cover all operator/type combinations in the coverage matrix:
 //!
-//! The jsonb_array approach leverages PostgreSQL's native hash support for jsonb
-//! elements, enabling efficient GIN indexed containment queries at scale.
+//! | Operator           | LHS          | RHS          | Test                            |
+//! |--------------------|--------------|--------------|----------------------------------|
+//! | jsonb_contains     | encrypted    | jsonb_param  | contains_encrypted_jsonb_param   |
+//! | jsonb_contains     | encrypted    | encrypted    | contains_encrypted_encrypted     |
+//! | jsonb_contains     | jsonb_param  | encrypted    | contains_jsonb_param_encrypted   |
+//! | jsonb_contained_by | encrypted    | jsonb_param  | contained_by_encrypted_jsonb_param |
+//! | jsonb_contained_by | encrypted    | encrypted    | contained_by_encrypted_encrypted |
+//! | jsonb_contained_by | jsonb_param  | encrypted    | contained_by_jsonb_param_encrypted |
+//!
+//! Uses parameterized queries (jsonb_param) as the primary pattern since
+//! that's what real clients use when integrating with EQL.
 //!
 //! Uses the ste_vec_vast table (500 rows) from migration 005_install_ste_vec_vast_data.sql
 
 use anyhow::Result;
 use eql_tests::{
     analyze_table, assert_uses_index, assert_uses_seq_scan, create_jsonb_gin_index, explain_query,
-    get_ste_vec_encrypted, get_ste_vec_encrypted_pair, get_ste_vec_sv_element,
+    get_ste_vec_encrypted, get_ste_vec_sv_element,
 };
 use sqlx::PgPool;
 
@@ -111,7 +119,10 @@ async fn contains_encrypted_jsonb_param(pool: PgPool) -> Result<()> {
         .fetch_optional(&pool)
         .await?;
 
-    assert!(result.is_some(), "jsonb_contains(encrypted, jsonb_param) should find match");
+    assert!(
+        result.is_some(),
+        "jsonb_contains(encrypted, jsonb_param) should find match"
+    );
     assert_eq!(result.unwrap().0, id as i64);
 
     // Verify index usage with literal for EXPLAIN (can't EXPLAIN with params)
@@ -147,7 +158,10 @@ async fn contains_encrypted_encrypted(pool: PgPool) -> Result<()> {
         .fetch_optional(&pool)
         .await?;
 
-    assert!(result.is_some(), "jsonb_contains(encrypted, encrypted) should find match (value contains itself)");
+    assert!(
+        result.is_some(),
+        "jsonb_contains(encrypted, encrypted) should find match (value contains itself)"
+    );
     assert_eq!(result.unwrap().0, id as i64);
 
     Ok(())
@@ -177,7 +191,10 @@ async fn contains_jsonb_param_encrypted(pool: PgPool) -> Result<()> {
         .fetch_optional(&pool)
         .await?;
 
-    assert!(result.is_some(), "jsonb_contains(jsonb_param, encrypted) should find match");
+    assert!(
+        result.is_some(),
+        "jsonb_contains(jsonb_param, encrypted) should find match"
+    );
     assert_eq!(result.unwrap().0, id as i64);
 
     Ok(())
@@ -221,21 +238,6 @@ async fn test_get_ste_vec_sv_element_returns_json_value(pool: PgPool) -> Result<
 }
 
 #[sqlx::test]
-async fn test_get_ste_vec_encrypted_pair_returns_different_rows(pool: PgPool) -> Result<()> {
-    // Test that we can get two different encrypted values for comparison
-    let (enc1, enc2) = get_ste_vec_encrypted_pair(&pool, STE_VEC_VAST_TABLE, 1, 2).await?;
-
-    // They should be different values
-    assert_ne!(enc1, enc2, "Different rows should have different encrypted values");
-
-    // Both should have sv field
-    assert!(enc1.get("sv").is_some(), "enc1 should have sv field");
-    assert!(enc2.get("sv").is_some(), "enc2 should have sv field");
-
-    Ok(())
-}
-
-#[sqlx::test]
 async fn contained_by_encrypted_jsonb_param(pool: PgPool) -> Result<()> {
     // Coverage: jsonb_contained_by(encrypted, jsonb_param)
     // Is encrypted column contained by the jsonb parameter?
@@ -257,7 +259,10 @@ async fn contained_by_encrypted_jsonb_param(pool: PgPool) -> Result<()> {
         .fetch_optional(&pool)
         .await?;
 
-    assert!(result.is_some(), "jsonb_contained_by(encrypted, jsonb_param) should find match");
+    assert!(
+        result.is_some(),
+        "jsonb_contained_by(encrypted, jsonb_param) should find match"
+    );
     assert_eq!(result.unwrap().0, id as i64);
 
     Ok(())
@@ -284,7 +289,10 @@ async fn contained_by_encrypted_encrypted(pool: PgPool) -> Result<()> {
         .fetch_optional(&pool)
         .await?;
 
-    assert!(result.is_some(), "jsonb_contained_by(encrypted, encrypted) should find match");
+    assert!(
+        result.is_some(),
+        "jsonb_contained_by(encrypted, encrypted) should find match"
+    );
     assert_eq!(result.unwrap().0, id as i64);
 
     Ok(())
@@ -311,7 +319,10 @@ async fn contained_by_jsonb_param_encrypted(pool: PgPool) -> Result<()> {
         .fetch_optional(&pool)
         .await?;
 
-    assert!(result.is_some(), "jsonb_contained_by(jsonb_param, encrypted) should find match");
+    assert!(
+        result.is_some(),
+        "jsonb_contained_by(jsonb_param, encrypted) should find match"
+    );
     assert_eq!(result.unwrap().0, id as i64);
 
     // Verify index usage
