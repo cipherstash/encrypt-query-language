@@ -4,7 +4,6 @@
 
 use anyhow::Result;
 use eql_tests::{QueryAssertion, Selectors};
-use serde_json;
 use sqlx::{PgPool, Row};
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
