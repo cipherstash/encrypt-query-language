@@ -71,7 +71,7 @@ The default match index options are:
 - `token_filters`: a list of filters to apply to normalize tokens before indexing.
 - `tokenizer`: determines how input text is split into tokens.
 - `bf`: The size of the backing [bloom filter](https://en.wikipedia.org/wiki/Bloom_filter) in bits. Defaults to `2048`.
-- `k`: The maximum number of bits set in the bloom filter per term. Defaults to `6`.
+- `k`: The number of hash functions to use per term (each sets one bit in the bloom filter). Defaults to `6`.
 
 **Token filters**
 
@@ -92,6 +92,8 @@ There are two `tokenizer`s provided: `standard` and `ngram`.
 `k` is the number of hash functions to use per term.
 This determines the maximum number of bits that will be set in the bloom filter per term.
 `k` must be an integer from `3` to `16` and defaults to `6`.
+
+To calculate optimal values for your use case, see this [Bloom filter calculator](https://di-mgt.com.au/bloom-calculator.html).
 
 **Caveats around n-gram tokenization**
 
