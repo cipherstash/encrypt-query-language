@@ -3,6 +3,7 @@
 //! Common utilities for working with encrypted data in tests.
 
 use anyhow::{Context, Result};
+use serde_json;
 use sqlx::{PgPool, Row};
 
 /// Fetch ORE encrypted value from pre-seeded ore table
@@ -83,7 +84,7 @@ pub async fn get_ore_encrypted_as_jsonb(pool: &PgPool, id: i32) -> Result<String
     result.with_context(|| format!("ore table returned NULL for id={}", id))
 }
 
-/// Fetch STE vec encrypted value from a specified table
+/// Fetch STE vec encrypted value from a specified table as serde_json::Value
 ///
 /// Default tables:
 /// - `ste_vec`: Created by migration `003_install_ste_vec_data.sql`, 10 records (ids 1-10)
@@ -93,22 +94,93 @@ pub async fn get_ore_encrypted_as_jsonb(pool: &PgPool, id: i32) -> Result<String
 /// - Records have selectors for $.hello (a7cea93975ed8c01f861ccb6bd082784) with ore_cllw_var_8
 /// - Records have selectors for $.n (2517068c0d1f9d4d41d2c666211f785e) with ore_cllw_u64_8
 ///
+/// Returns the encrypted value as parsed JSON, allowing callers to:
+/// - Inspect structure programmatically
+/// - Use .to_string() when a literal string is needed
+/// - Avoid double-quoting issues with embedded apostrophes
+///
 /// # Arguments
 /// * `pool` - Database connection pool
 /// * `table` - Table name to query (e.g., "ste_vec" or "ste_vec_vast")
 /// * `id` - Row id to fetch
-pub async fn get_ste_vec_encrypted(pool: &PgPool, table: &str, id: i32) -> Result<String> {
-    let sql = format!("SELECT e::text FROM {} WHERE id = {}", table, id);
-    let row = sqlx::query(&sql)
+pub async fn get_ste_vec_encrypted(
+    pool: &PgPool,
+    table: &str,
+    id: i32,
+) -> Result<serde_json::Value> {
+    let sql = format!("SELECT (e).data::jsonb FROM {} WHERE id = {}", table, id);
+    let result: serde_json::Value = sqlx::query_scalar(&sql)
         .fetch_one(pool)
         .await
         .with_context(|| format!("fetching {} encrypted value for id={}", table, id))?;
 
-    let result: Option<String> = row
-        .try_get(0)
-        .with_context(|| format!("extracting text column for id={}", id))?;
+    Ok(result)
+}
 
-    result.with_context(|| format!("{} table returned NULL for id={}", table, id))
+/// Fetch two STE vec encrypted values from the same table
+///
+/// Useful for encrypted-to-encrypted containment tests where we need
+/// two distinct encrypted values from the same table.
+///
+/// # Arguments
+/// * `pool` - Database connection pool
+/// * `table` - Table name to query
+/// * `id1` - First row id
+/// * `id2` - Second row id
+///
+/// # Returns
+/// Tuple of (enc1, enc2) as serde_json::Value
+pub async fn get_ste_vec_encrypted_pair(
+    pool: &PgPool,
+    table: &str,
+    id1: i32,
+    id2: i32,
+) -> Result<(serde_json::Value, serde_json::Value)> {
+    let enc1 = get_ste_vec_encrypted(pool, table, id1).await?;
+    let enc2 = get_ste_vec_encrypted(pool, table, id2).await?;
+    Ok((enc1, enc2))
+}
+
+/// Extract a single SV element from an encrypted value as serde_json::Value
+///
+/// Fetches an encrypted value from the specified table and extracts
+/// a specific element from its sv array by index.
+///
+/// # Arguments
+/// * `pool` - Database connection pool
+/// * `table` - Table name to query (e.g., "ste_vec" or "ste_vec_vast")
+/// * `id` - Row id to fetch
+/// * `sv_index` - Index into the sv array (0-based)
+///
+/// # Returns
+/// The sv element as serde_json::Value, suitable for use in containment queries
+/// Use .to_string() when a literal string is needed for SQL interpolation
+pub async fn get_ste_vec_sv_element(
+    pool: &PgPool,
+    table: &str,
+    id: i32,
+    sv_index: i32,
+) -> Result<serde_json::Value> {
+    let sql = format!(
+        "SELECT ((e).data->'sv'->{})::jsonb FROM {} WHERE id = {}",
+        sv_index, table, id
+    );
+    let result: Option<serde_json::Value> = sqlx::query_scalar(&sql)
+        .fetch_one(pool)
+        .await
+        .with_context(|| {
+            format!(
+                "extracting sv element {} from {} id={}",
+                sv_index, table, id
+            )
+        })?;
+
+    result.with_context(|| {
+        format!(
+            "{} sv element extraction returned NULL for id={}, index={}",
+            table, id, sv_index
+        )
+    })
 }
 
 /// Extract selector term using SQL helper functions
