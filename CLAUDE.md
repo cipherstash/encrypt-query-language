@@ -175,3 +175,27 @@ HTML output is also generated in `docs/api/html/` for local preview only.
 - Build system uses `tsort` to resolve dependency order
 - Supabase build excludes operator classes (not supported)
 - **Documentation**: All functions/types must have Doxygen comments (see Documentation Standards above)
+
+### Function Language Choice (SQL vs PL/pgSQL)
+
+Prefer `LANGUAGE SQL` over `LANGUAGE plpgsql` unless you need procedural features.
+
+| Aspect            | LANGUAGE SQL                      | LANGUAGE plpgsql        |
+|-------------------|-----------------------------------|-------------------------|
+| Inlining          | ✅ Can be inlined by planner       | ❌ Never inlined         |
+| Call overhead     | Lower (can be optimized away)     | Higher (context switch) |
+| Index performance | Better for GIN index expressions  | Worse                   |
+| Control flow      | CASE expression                   | IF/THEN/ELSE            |
+
+**Why SQL wins for simple functions:**
+
+1. **Inlining** - PostgreSQL can inline simple SQL functions into the calling query, eliminating function call overhead entirely. PL/pgSQL functions are never inlined.
+2. **Index context** - Functions used in index expressions (e.g., `CREATE INDEX ... USING GIN (eql_v2.jsonb_array(col))`) are called on every row insertion/update. Inlining matters.
+3. **Simple logic** - A CASE expression is a single statement. PL/pgSQL's procedural features aren't needed.
+
+**When PL/pgSQL is appropriate:**
+
+- Multiple statements with intermediate variables
+- Exception handling (`BEGIN...EXCEPTION...END`)
+- Complex control flow (loops, early returns)
+- Dynamic SQL (`EXECUTE`)
