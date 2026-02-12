@@ -726,3 +726,134 @@ async fn hash_join_non_matching_returns_zero(pool: PgPool) -> Result<()> {
 
     Ok(())
 }
+
+// ---------------------------------------------------------------------------
+// Mixed-index regression tests (P1 hash/equality contract)
+//
+// These exercise real SQL query paths (hash join, GROUP BY, UNION) where one
+// row has hm+b3 and the other has only b3. compare() falls back to Blake3 as
+// the common term, so hash_encrypted must also use Blake3 for both rows.
+// ---------------------------------------------------------------------------
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn mixed_index_hash_join(pool: PgPool) -> Result<()> {
+    // Test: hash join finds match when left=hm+b3, right=b3-only (same logical value)
+
+    create_hash_test_table(&pool, "mix_join_l").await?;
+    create_hash_test_table(&pool, "mix_join_r").await?;
+
+    // Left table: full hm+b3 for id 1
+    sqlx::query("INSERT INTO mix_join_l(e) VALUES (create_encrypted_json(1, 'hm', 'b3'))")
+        .execute(&pool)
+        .await?;
+
+    // Right table: b3-only for same id 1
+    sqlx::query("INSERT INTO mix_join_r(e) VALUES (create_encrypted_json(1, 'b3'))")
+        .execute(&pool)
+        .await?;
+
+    // Force hash join strategy
+    sqlx::query("SET LOCAL enable_nestloop = off")
+        .execute(&pool)
+        .await?;
+    sqlx::query("SET LOCAL enable_mergejoin = off")
+        .execute(&pool)
+        .await?;
+
+    let count: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM mix_join_l l JOIN mix_join_r r ON l.e = r.e")
+            .fetch_one(&pool)
+            .await
+            .context("mixed-index hash join failed")?;
+
+    assert_eq!(
+        count, 1,
+        "Hash join should match hm+b3 row with b3-only row for same id"
+    );
+
+    // Cleanup
+    sqlx::query("DROP TABLE IF EXISTS mix_join_l, mix_join_r CASCADE")
+        .execute(&pool)
+        .await?;
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn mixed_index_group_by_dedup(pool: PgPool) -> Result<()> {
+    // Test: GROUP BY deduplicates hm+b3 and b3-only rows for same logical value into one group
+
+    create_hash_test_table(&pool, "mix_group").await?;
+
+    // Two rows for the same id with different index term sets
+    sqlx::query("INSERT INTO mix_group(e) VALUES (create_encrypted_json(1, 'hm', 'b3'))")
+        .execute(&pool)
+        .await?;
+    sqlx::query("INSERT INTO mix_group(e) VALUES (create_encrypted_json(1, 'b3'))")
+        .execute(&pool)
+        .await?;
+
+    // A different id to verify grouping still separates distinct values
+    sqlx::query("INSERT INTO mix_group(e) VALUES (create_encrypted_json(2, 'hm', 'b3'))")
+        .execute(&pool)
+        .await?;
+
+    let group_count: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM (SELECT e FROM mix_group GROUP BY e) sub")
+            .fetch_one(&pool)
+            .await
+            .context("mixed-index GROUP BY failed")?;
+
+    assert_eq!(
+        group_count, 2,
+        "GROUP BY should produce 2 groups: id=1 (hm+b3 and b3-only merged) and id=2"
+    );
+
+    // Cleanup
+    sqlx::query("DROP TABLE IF EXISTS mix_group CASCADE")
+        .execute(&pool)
+        .await?;
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn mixed_index_union_dedup(pool: PgPool) -> Result<()> {
+    // Test: UNION deduplicates hm+b3 and b3-only rows for same logical value
+
+    create_hash_test_table(&pool, "mix_union_a").await?;
+    create_hash_test_table(&pool, "mix_union_b").await?;
+
+    // Table A: hm+b3 for id 1
+    sqlx::query("INSERT INTO mix_union_a(e) VALUES (create_encrypted_json(1, 'hm', 'b3'))")
+        .execute(&pool)
+        .await?;
+
+    // Table B: b3-only for same id 1
+    sqlx::query("INSERT INTO mix_union_b(e) VALUES (create_encrypted_json(1, 'b3'))")
+        .execute(&pool)
+        .await?;
+
+    let count: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM (
+            SELECT e FROM mix_union_a
+            UNION
+            SELECT e FROM mix_union_b
+        ) sub",
+    )
+    .fetch_one(&pool)
+    .await
+    .context("mixed-index UNION failed")?;
+
+    assert_eq!(
+        count, 1,
+        "UNION should deduplicate hm+b3 and b3-only into 1 unique row"
+    );
+
+    // Cleanup
+    sqlx::query("DROP TABLE IF EXISTS mix_union_a, mix_union_b CASCADE")
+        .execute(&pool)
+        .await?;
+
+    Ok(())
+}
