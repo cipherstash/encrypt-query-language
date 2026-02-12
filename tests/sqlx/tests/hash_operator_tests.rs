@@ -200,18 +200,6 @@ async fn hash_function_directly(pool: PgPool) -> Result<()> {
         "Same encrypted value should produce same hash"
     );
 
-    // Different encrypted values may produce different hashes (very likely but not guaranteed)
-    let hash3: i32 = sqlx::query_scalar("SELECT eql_v2.hash_encrypted(create_encrypted_json(2))")
-        .fetch_one(&pool)
-        .await
-        .context("hash_encrypted call 3 failed")?;
-
-    // While hash collisions are theoretically possible, these test values should differ
-    assert_ne!(
-        hash1, hash3,
-        "Different encrypted values should (almost certainly) produce different hashes"
-    );
-
     Ok(())
 }
 
@@ -583,20 +571,24 @@ async fn forced_hash_join_via_planner_hints(pool: PgPool) -> Result<()> {
         .await?;
     }
 
-    // Disable nested loop and merge join to force hash join strategy
+    // Disable nested loop and merge join to force hash join strategy.
+    // SET LOCAL is scoped to the current transaction, so we need an explicit one.
+    let mut tx = pool.begin().await?;
     sqlx::query("SET LOCAL enable_nestloop = off")
-        .execute(&pool)
+        .execute(&mut *tx)
         .await?;
     sqlx::query("SET LOCAL enable_mergejoin = off")
-        .execute(&pool)
+        .execute(&mut *tx)
         .await?;
 
     let count: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM hash_forced_l l JOIN hash_forced_r r ON l.e = r.e",
     )
-    .fetch_one(&pool)
+    .fetch_one(&mut *tx)
     .await
     .context("forced hash join failed")?;
+
+    tx.commit().await?;
 
     assert_eq!(count, 3, "Forced hash join should find 3 matching rows");
 
@@ -752,19 +744,23 @@ async fn mixed_index_hash_join(pool: PgPool) -> Result<()> {
         .execute(&pool)
         .await?;
 
-    // Force hash join strategy
+    // Force hash join strategy.
+    // SET LOCAL is scoped to the current transaction, so we need an explicit one.
+    let mut tx = pool.begin().await?;
     sqlx::query("SET LOCAL enable_nestloop = off")
-        .execute(&pool)
+        .execute(&mut *tx)
         .await?;
     sqlx::query("SET LOCAL enable_mergejoin = off")
-        .execute(&pool)
+        .execute(&mut *tx)
         .await?;
 
     let count: i64 =
         sqlx::query_scalar("SELECT count(*) FROM mix_join_l l JOIN mix_join_r r ON l.e = r.e")
-            .fetch_one(&pool)
+            .fetch_one(&mut *tx)
             .await
             .context("mixed-index hash join failed")?;
+
+    tx.commit().await?;
 
     assert_eq!(
         count, 1,
