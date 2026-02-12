@@ -216,17 +216,20 @@ async fn hash_function_directly(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
-async fn hash_function_uses_hmac_first(pool: PgPool) -> Result<()> {
-    // Test: hash_encrypted prefers HMAC over Blake3
+async fn hash_function_uses_blake3_first(pool: PgPool) -> Result<()> {
+    // Test: hash_encrypted prefers Blake3 over HMAC to maintain hash/equality contract.
+    // compare() uses the first index term in BOTH operands (ORE > HMAC > Blake3).
+    // If value A has hm+b3 and value B has only b3, compare uses Blake3.
+    // hash_encrypted must also use Blake3 for A so hash(A) == hash(B).
 
-    // Create value with only HMAC index term
-    let hash_hmac: i32 =
-        sqlx::query_scalar("SELECT eql_v2.hash_encrypted(create_encrypted_json(1, 'hm'))")
+    // Create value with only Blake3 index term
+    let hash_b3: i32 =
+        sqlx::query_scalar("SELECT eql_v2.hash_encrypted(create_encrypted_json(1, 'b3'))")
             .fetch_one(&pool)
             .await
-            .context("hash with hmac-only failed")?;
+            .context("hash with blake3-only failed")?;
 
-    // Create value with both HMAC and Blake3 - should use HMAC (same hash)
+    // Create value with both HMAC and Blake3 - should use Blake3 (same hash)
     let hash_both: i32 =
         sqlx::query_scalar("SELECT eql_v2.hash_encrypted(create_encrypted_json(1, 'hm', 'b3'))")
             .fetch_one(&pool)
@@ -234,22 +237,22 @@ async fn hash_function_uses_hmac_first(pool: PgPool) -> Result<()> {
             .context("hash with hmac+blake3 failed")?;
 
     assert_eq!(
-        hash_hmac, hash_both,
-        "Hash with both indexes should use HMAC (same as HMAC-only)"
+        hash_b3, hash_both,
+        "Hash with both indexes should use Blake3 (same as Blake3-only)"
     );
 
     Ok(())
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
-async fn hash_function_falls_back_to_blake3(pool: PgPool) -> Result<()> {
-    // Test: hash_encrypted uses Blake3 when HMAC is not available
+async fn hash_function_falls_back_to_hmac(pool: PgPool) -> Result<()> {
+    // Test: hash_encrypted uses HMAC when Blake3 is not available
 
     let hash: i32 =
-        sqlx::query_scalar("SELECT eql_v2.hash_encrypted(create_encrypted_json(1, 'b3'))")
+        sqlx::query_scalar("SELECT eql_v2.hash_encrypted(create_encrypted_json(1, 'hm'))")
             .fetch_one(&pool)
             .await
-            .context("hash with blake3-only failed")?;
+            .context("hash with hmac-only failed")?;
 
     // Just verify it returns a value without error
     // The actual hash value is implementation-dependent
@@ -373,9 +376,9 @@ async fn in_subquery_with_encrypted_column(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
-async fn hash_consistency_full_index_matches_hmac_only(pool: PgPool) -> Result<()> {
-    // Test: hash of full-index value matches hash of HMAC-only value
-    // The hash function uses HMAC first, so full value (with hm) should produce same hash as hm-only
+async fn hash_consistency_full_index_matches_blake3_only(pool: PgPool) -> Result<()> {
+    // Test: hash of full-index value matches hash of Blake3-only value
+    // The hash function uses Blake3 first, so full value (with b3) should produce same hash as b3-only
 
     let hash_full: i32 =
         sqlx::query_scalar("SELECT eql_v2.hash_encrypted(create_encrypted_json(1))")
@@ -383,15 +386,15 @@ async fn hash_consistency_full_index_matches_hmac_only(pool: PgPool) -> Result<(
             .await
             .context("hash of full value failed")?;
 
-    let hash_hmac_only: i32 =
-        sqlx::query_scalar("SELECT eql_v2.hash_encrypted(create_encrypted_json(1, 'hm'))")
+    let hash_b3_only: i32 =
+        sqlx::query_scalar("SELECT eql_v2.hash_encrypted(create_encrypted_json(1, 'b3'))")
             .fetch_one(&pool)
             .await
-            .context("hash of hmac-only value failed")?;
+            .context("hash of blake3-only value failed")?;
 
     assert_eq!(
-        hash_full, hash_hmac_only,
-        "Full-index hash should match HMAC-only hash (HMAC priority)"
+        hash_full, hash_b3_only,
+        "Full-index hash should match Blake3-only hash (Blake3 priority)"
     );
 
     Ok(())
