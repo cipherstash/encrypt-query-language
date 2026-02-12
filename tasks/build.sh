@@ -60,7 +60,7 @@ cat tasks/uninstall.sql >> release/cipherstash-encrypt-uninstall.sql
 
 
 # Supabase specific build which excludes operator classes as they are not supported
-find src -type f -path "*.sql" ! -path "*_test.sql" ! -path "**/operator_class.sql" | while IFS= read -r sql_file; do
+find src -type f -path "*.sql" ! -path "*_test.sql" ! -path "**/*operator_class.sql" | while IFS= read -r sql_file; do
     echo $sql_file
 
     echo "$sql_file $sql_file" >> src/deps-supabase.txt
