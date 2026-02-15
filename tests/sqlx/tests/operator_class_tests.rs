@@ -24,30 +24,26 @@ async fn create_table_with_encrypted(pool: &PgPool) -> Result<()> {
     Ok(())
 }
 
-#[sqlx::test]
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn group_by_encrypted_column(pool: PgPool) -> Result<()> {
     // Test: GROUP BY works with eql_v2_encrypted type (1 assertion)
+    // Uses create_encrypted_json which includes hmac/blake3 terms required for hash aggregation
 
     create_table_with_encrypted(&pool).await?;
 
-    // Copy ORE data into encrypted table
-    let ore_42 = get_ore_encrypted(&pool, 42).await?;
-    let ore_99 = get_ore_encrypted(&pool, 99).await?;
+    // Insert values with hmac/blake3 terms: 4x id=1, 2x id=2
+    for _ in 0..4 {
+        sqlx::query("INSERT INTO encrypted(e) VALUES (create_encrypted_json(1))")
+            .execute(&pool)
+            .await?;
+    }
+    for _ in 0..2 {
+        sqlx::query("INSERT INTO encrypted(e) VALUES (create_encrypted_json(2))")
+            .execute(&pool)
+            .await?;
+    }
 
-    sqlx::query(&format!(
-        "INSERT INTO encrypted(e) VALUES
-         ('{}'::eql_v2_encrypted),
-         ('{}'::eql_v2_encrypted),
-         ('{}'::eql_v2_encrypted),
-         ('{}'::eql_v2_encrypted),
-         ('{}'::eql_v2_encrypted),
-         ('{}'::eql_v2_encrypted)",
-        ore_42, ore_42, ore_42, ore_42, ore_99, ore_99
-    ))
-    .execute(&pool)
-    .await?;
-
-    // GROUP BY should work - most common value is 42 (4 occurrences)
+    // GROUP BY should work - most common value is id=1 (4 occurrences)
     let count: i64 = sqlx::query_scalar(
         "SELECT count(id) FROM encrypted GROUP BY e ORDER BY count(id) DESC LIMIT 1",
     )

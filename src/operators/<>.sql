@@ -56,7 +56,6 @@ CREATE OPERATOR <> (
   NEGATOR = =,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
-  HASHES,
   MERGES
 );
 
@@ -78,7 +77,6 @@ CREATE OPERATOR <> (
   NEGATOR = =,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
-  HASHES,
   MERGES
 );
 
@@ -105,7 +103,6 @@ CREATE OPERATOR <> (
   NEGATOR = =,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
-  HASHES,
   MERGES
 );
 
