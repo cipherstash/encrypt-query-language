@@ -86,7 +86,6 @@ CREATE OPERATOR ~~(
   RIGHTARG=eql_v2_encrypted,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
-  HASHES,
   MERGES
 );
 
@@ -108,7 +107,6 @@ CREATE OPERATOR ~~*(
   RIGHTARG=eql_v2_encrypted,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
-  HASHES,
   MERGES
 );
 
@@ -140,7 +138,6 @@ CREATE OPERATOR ~~(
   RIGHTARG=jsonb,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
-  HASHES,
   MERGES
 );
 
@@ -150,7 +147,6 @@ CREATE OPERATOR ~~*(
   RIGHTARG=jsonb,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
-  HASHES,
   MERGES
 );
 
@@ -182,7 +178,6 @@ CREATE OPERATOR ~~(
   RIGHTARG=eql_v2_encrypted,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
-  HASHES,
   MERGES
 );
 
@@ -192,7 +187,6 @@ CREATE OPERATOR ~~*(
   RIGHTARG=eql_v2_encrypted,
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
-  HASHES,
   MERGES
 );
 
