@@ -34,7 +34,65 @@ EQL implements searchable encryption by embedding **index terms** inside encrypt
 
 **Note**: For STE vector payloads (containing `sv`), the index terms are nested inside each `sv[]` element rather than at the top level of the JSONB. The diagram above shows a simplified structural overview.
 
-## 2. The Core Type
+## 2. Supported Index Types
+
+EQL supports three PostgreSQL index types on `eql_v2_encrypted` columns:
+
+### B-tree Index (equality, range, ORDER BY)
+
+```sql
+CREATE INDEX idx_users_email
+ON users (encrypted_email eql_v2.encrypted_operator_class);
+ANALYZE users;
+```
+
+Uses the custom `eql_v2.encrypted_operator_class` (default for `eql_v2_encrypted`). Supports `=`, `<>`, `<`, `<=`, `>`, `>=` operators. Requires index terms in the encrypted data:
+- **Equality** (`=`, `<>`) — requires `hm` (HMAC-256) or `b3` (Blake3) terms
+- **Range** (`<`, `>`, `<=`, `>=`, `ORDER BY`) — requires ORE terms (`ob`, `ocf`, or `ocv`)
+
+### Hash Index (GROUP BY, DISTINCT, hash joins)
+
+```sql
+-- Hash index is used implicitly via the default hash operator class.
+-- PostgreSQL uses it automatically for:
+GROUP BY encrypted_column;
+SELECT DISTINCT encrypted_column;
+```
+
+Uses `eql_v2.encrypted_hash_operator_class` (default for hash access method). Requires `b3` (Blake3) or `hm` (HMAC-256) terms.
+
+### GIN Index (JSONB containment)
+
+```sql
+CREATE INDEX idx_encrypted_gin
+ON users USING GIN (eql_v2.jsonb_array(encrypted_column));
+ANALYZE users;
+```
+
+An expression index using PostgreSQL's built-in `array_ops` GIN operator class (not a custom operator class). Supports `@>` and `<@` containment queries:
+
+```sql
+-- Query using helper function
+SELECT * FROM users
+WHERE eql_v2.jsonb_contains(encrypted_column, $1::eql_v2_encrypted);
+
+-- Or using jsonb_array() directly
+SELECT * FROM users
+WHERE eql_v2.jsonb_array(encrypted_column) @>
+      eql_v2.jsonb_array($1::eql_v2_encrypted);
+```
+
+### Index Type Summary
+
+| Index Type | Operator Class | Operators | Required Terms | Use Case |
+|------------|---------------|-----------|----------------|----------|
+| B-tree | `eql_v2.encrypted_operator_class` | `=`, `<>`, `<`, `<=`, `>`, `>=` | `hm`/`b3` (equality), `ob`/`ocf`/`ocv` (range) | Equality, range, ORDER BY |
+| Hash | `eql_v2.encrypted_hash_operator_class` | `=` | `b3`/`hm` | GROUP BY, DISTINCT, hash joins |
+| GIN | Built-in `array_ops` via `jsonb_array()` | `@>`, `<@` | `s`, `b3`, `hm`, `ocf`, `ocv` | JSONB containment |
+
+**Not supported**: GiST, BRIN, SP-GiST — no operator classes are defined for these access methods.
+
+## 3. The Core Type
 
 Defined in `src/encrypted/types.sql`:
 
@@ -46,13 +104,13 @@ CREATE TYPE public.eql_v2_encrypted AS (
 
 A composite type wrapping a single JSONB field. This is what PostgreSQL stores in table columns. The JSONB payload carries both the ciphertext (`c`) and the index terms used for searching.
 
-## 3. How PostgreSQL Uses Operator Classes
+## 4. How PostgreSQL Uses Operator Classes
 
 PostgreSQL requires **operator classes** to know how to build and search indexes for a given type. Each access method (btree, hash, GIN) needs a specific set of operators and support functions.
 
 **Reference**: [PostgreSQL Operator Classes and Operator Families](https://www.postgresql.org/docs/current/indexes-opclass.html)
 
-### 3.1 B-tree Operator Class
+### 4.1 B-tree Operator Class
 
 Defined in `src/operators/operator_class.sql`:
 
@@ -76,7 +134,7 @@ The five **strategy numbers** (1-5) are defined by the btree access method speci
 
 Because this is `DEFAULT FOR TYPE`, PostgreSQL uses this operator class automatically for any `CREATE INDEX ... ON col` where `col` is `eql_v2_encrypted`.
 
-### 3.2 Hash Operator Class
+### 4.2 Hash Operator Class
 
 Defined in `src/operators/hash_operator_class.sql`:
 
@@ -96,7 +154,7 @@ Hash operator classes require only the equality operator (strategy 1) and a hash
 
 This enables `GROUP BY`, `DISTINCT`, hash joins, and `UNION` on encrypted columns.
 
-## 4. Operator Definitions
+## 5. Operator Definitions
 
 Each operator maps a symbol (`=`, `<`, etc.) to a function. EQL defines three overloads per operator:
 
@@ -134,7 +192,7 @@ The operators and their key properties:
 
 **Reference**: [PostgreSQL Operator Optimization](https://www.postgresql.org/docs/current/xoper-optimization.html) — `NEGATOR`, `COMMUTATOR`, `RESTRICT`, `JOIN` hints help the query planner.
 
-## 5. The Compare Function — Heart of B-tree Indexing
+## 6. The Compare Function — Heart of B-tree Indexing
 
 This is the single most important function. Defined in `src/operators/compare.sql`:
 
@@ -182,7 +240,7 @@ This is the single most important function. Defined in `src/operators/compare.sq
 
 **Reference**: [PostgreSQL B-Tree Behavior](https://www.postgresql.org/docs/current/btree-behavior.html) — B-tree support functions must provide a total order; inconsistent results corrupt the index.
 
-## 6. The Hash Function — Hash/Equality Contract
+## 7. The Hash Function — Hash/Equality Contract
 
 Defined in `src/encrypted/hash.sql`:
 
@@ -219,7 +277,7 @@ If hash used HMAC-256 first for value A, then `hash(A)` would be based on HMAC w
 
 **Reference**: [PostgreSQL Hash Index Implementation](https://www.postgresql.org/docs/current/hash-implementation.html)
 
-## 7. Index Term Types and Their Capabilities
+## 8. Index Term Types and Their Capabilities
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -240,7 +298,7 @@ If hash used HMAC-256 first for value A, then `hash(A)` would be based on HMAC w
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 7.1 Blake3 (`b3`) — `src/blake3/`
+### 8.1 Blake3 (`b3`) — `src/blake3/`
 
 ```sql
 CREATE DOMAIN eql_v2.blake3 AS text;  -- types.sql
@@ -248,7 +306,7 @@ CREATE DOMAIN eql_v2.blake3 AS text;  -- types.sql
 
 A deterministic hash. Two identical plaintexts produce identical Blake3 hashes. Used for `match` index (equality searches). Extracted via `val.data->>'b3'`.
 
-### 7.2 HMAC-256 (`hm`) — `src/hmac_256/`
+### 8.2 HMAC-256 (`hm`) — `src/hmac_256/`
 
 ```sql
 CREATE DOMAIN eql_v2.hmac_256 AS text;  -- types.sql
@@ -256,7 +314,7 @@ CREATE DOMAIN eql_v2.hmac_256 AS text;  -- types.sql
 
 A keyed hash for `unique` index (uniqueness enforcement + equality). Extracted via `val.data->>'hm'`.
 
-### 7.3 Bloom Filter (`bf`) — `src/bloom_filter/`
+### 8.3 Bloom Filter (`bf`) — `src/bloom_filter/`
 
 ```sql
 CREATE DOMAIN eql_v2.bloom_filter AS smallint[];  -- types.sql
@@ -264,7 +322,7 @@ CREATE DOMAIN eql_v2.bloom_filter AS smallint[];  -- types.sql
 
 A probabilistic data structure for substring matching. The `~~` (LIKE) operator checks containment: `bloom_filter(haystack) @> bloom_filter(needle)`. This uses PostgreSQL's native `smallint[]` array containment — no custom operator class needed.
 
-### 7.4 ORE Block (`ob`) — `src/ore_block_u64_8_256/`
+### 8.4 ORE Block (`ob`) — `src/ore_block_u64_8_256/`
 
 ```sql
 CREATE TYPE eql_v2.ore_block_u64_8_256_term AS (bytes bytea);
@@ -293,7 +351,7 @@ For the first unequal block:
 
 **Reference**: [Order-Revealing Encryption](https://eprint.iacr.org/2016/612.pdf) — The underlying cryptographic construction.
 
-### 7.5 ORE CLLW (`ocf`, `ocv`) — `src/ore_cllw_u64_8/`, `src/ore_cllw_var_8/`
+### 8.5 ORE CLLW (`ocf`, `ocv`) — `src/ore_cllw_u64_8/`, `src/ore_cllw_var_8/`
 
 ```sql
 CREATE TYPE eql_v2.ore_cllw_u64_8 AS (bytes bytea);   -- fixed-length
@@ -302,43 +360,47 @@ CREATE TYPE eql_v2.ore_cllw_var_8 AS (bytes bytea);    -- variable-length
 
 Alternative ORE schemes. `ocf` (fixed-width, 8-byte) uses byte-by-byte CLLW cryptographic comparison with modular arithmetic. `ocv` (variable-width) compares the common prefix then falls back to length comparison.
 
-## 8. GIN Indexing for Containment Queries
+## 9. GIN Indexing for Containment Queries
 
-EQL uses GIN indexes through expression indexes, not a custom GIN operator class:
+GIN indexes enable efficient `@>` and `<@` containment queries on encrypted columns. EQL does **not** define a custom GIN operator class — instead, it uses an expression index with PostgreSQL's built-in `array_ops`:
 
 ```sql
--- Create a GIN index on the deterministic fields of the STE vector
 CREATE INDEX idx ON mytable USING GIN (eql_v2.jsonb_array(encrypted_col));
+ANALYZE mytable;
 ```
 
-The key function is `eql_v2.jsonb_array()` (`src/ste_vec/functions.sql`):
+Query using the helper function (recommended):
 
-```
-  eql_v2.jsonb_array(val) → jsonb[]
-       │
-       ├── If val has 'sv' (STE vector):
-       │     Extract each element from sv array
-       │     For each element, keep ONLY deterministic keys:
-       │       's'   (selector)
-       │       'b3'  (blake3)
-       │       'hm'  (hmac_256)
-       │       'ocv' (ore_cllw_var)
-       │       'ocf' (ore_cllw_u64)
-       │     Return jsonb[] of filtered elements
-       │
-       └── Otherwise:
-             Filter single element, return as single-element array
+```sql
+SELECT * FROM mytable
+WHERE eql_v2.jsonb_contains(encrypted_col, $1::eql_v2_encrypted);
 ```
 
-Non-deterministic fields (ciphertext `c`, key `k`, etc.) are stripped because GIN containment (`@>`) requires deterministic values — two GIN entries for the same plaintext must match exactly. Notably, `ob` (ore_block) is also excluded because ORE block ciphertexts contain randomized components, unlike the CLLW ORE variants (`ocf`, `ocv`) which are deterministic.
+Or using `jsonb_array()` directly:
 
-Query functions:
+```sql
+SELECT * FROM mytable
+WHERE eql_v2.jsonb_array(encrypted_col) @> eql_v2.jsonb_array($1::eql_v2_encrypted);
+```
+
+### 9.1 How `jsonb_array()` Works
+
+The `eql_v2.jsonb_array()` function (`src/ste_vec/functions.sql`) converts an encrypted value into a `jsonb[]` array containing only **deterministic** fields — fields where the same plaintext always produces the same ciphertext. This is required because GIN containment (`@>`) compares entries by exact value.
+
+**Included fields**: `s` (selector), `b3` (Blake3), `hm` (HMAC-256), `ocv` (ORE CLLW var), `ocf` (ORE CLLW u64)
+
+**Excluded fields**: `c` (ciphertext), `k` (key ID), `v` (version), `ob` (ORE block — contains randomized components, unlike the deterministic CLLW variants)
+
+For STE vector payloads (containing `sv`), each `sv[]` element is processed independently. For simple encrypted values, the single value is wrapped in a one-element array.
+
+### 9.2 Helper Functions
+
 - `eql_v2.jsonb_contains(a, b)` → `jsonb_array(a) @> jsonb_array(b)` (GIN-indexable)
 - `eql_v2.jsonb_contained_by(a, b)` → `jsonb_array(a) <@ jsonb_array(b)`
 
-**Reference**: [PostgreSQL GIN Indexes](https://www.postgresql.org/docs/current/gin-intro.html) and [GIN Built-in Operator Classes](https://www.postgresql.org/docs/current/gin-builtin-opclasses.html) — `jsonb[]` uses the built-in `array_ops` GIN operator class.
+**Reference**: [PostgreSQL GIN Indexes](https://www.postgresql.org/docs/current/gin-intro.html) and [GIN Built-in Operator Classes](https://www.postgresql.org/docs/current/gin-builtin-opclasses.html)
 
-## 9. STE Vector Containment (`@>`, `<@`)
+## 10. STE Vector Containment (`@>`, `<@`)
 
 The `@>` and `<@` operators use a **separate** containment mechanism that does NOT use GIN. Defined in `src/ste_vec/functions.sql`:
 
@@ -364,9 +426,9 @@ The `<@` operator reverses the arguments:
        └── eql_v2.ste_vec_contains(b, a)   ← note reversed arguments
 ```
 
-## 10. Query Execution Flow — End to End
+## 11. Query Execution Flow — End to End
 
-### 10.1 Equality Query (`WHERE col = ?`)
+### 12.1 Equality Query (`WHERE col = ?`)
 
 ```
   SQL: SELECT * FROM users WHERE encrypted_email = $1::eql_v2_encrypted
@@ -399,7 +461,7 @@ The `<@` operator reverses the arguments:
           (true order) (true)    (true)    (text)     (text)
 ```
 
-### 10.2 Range Query (`WHERE col > ? AND col < ?`)
+### 12.2 Range Query (`WHERE col > ? AND col < ?`)
 
 ```
   SQL: SELECT * FROM users WHERE encrypted_age > $1 AND encrypted_age < $2
@@ -413,7 +475,7 @@ The `<@` operator reverses the arguments:
   Blake3/HMAC ordering is arbitrary (consistent for btree but not meaningful).
 ```
 
-### 10.3 LIKE Query (`WHERE col ~~ ?`)
+### 12.3 LIKE Query (`WHERE col ~~ ?`)
 
 ```
   SQL: SELECT * FROM users WHERE encrypted_name ~~ $1::eql_v2_encrypted
@@ -431,7 +493,7 @@ The `<@` operator reverses the arguments:
                                       containment operator
 ```
 
-### 10.4 GIN Containment Query
+### 11.4 GIN Containment Query
 
 ```
   SQL: SELECT * FROM t
@@ -444,9 +506,9 @@ The `<@` operator reverses the arguments:
   5. Lookup matches on deterministic fields (s, b3, hm, ocv, ocf)
 ```
 
-## 11. The Consistency Invariants
+## 12. The Consistency Invariants
 
-### 11.1 B-tree Total Order Requirement
+### 12.1 B-tree Total Order Requirement
 
 PostgreSQL B-tree indexes require a **strict total order**: for any values a, b, c:
 - `compare(a, a) = 0` (reflexive)
@@ -460,7 +522,7 @@ EQL satisfies this by:
 
 **Reference**: [PostgreSQL B-Tree Behavior](https://www.postgresql.org/docs/current/btree-behavior.html)
 
-### 11.2 Hash/Equality Contract
+### 12.2 Hash/Equality Contract
 
 `a = b → hash(a) = hash(b)` is maintained by:
 1. `hash_encrypted` uses Blake3 first, because blake3 is the broadest common denominator — `compare()` will fall through to blake3 when no higher-priority terms match in both operands, so hash must also use blake3 to maintain the contract
@@ -469,7 +531,7 @@ EQL satisfies this by:
 
 **Reference**: [PostgreSQL Hash Index Support](https://www.postgresql.org/docs/current/hash-intro.html)
 
-### 11.3 IMMUTABLE and PARALLEL SAFE
+### 12.3 IMMUTABLE and PARALLEL SAFE
 
 The core index support functions are declared `IMMUTABLE STRICT PARALLEL SAFE`:
 - `eql_v2.compare()` — the btree support function
@@ -481,7 +543,7 @@ The operator wrapper functions (`eql_v2."<"`, `eql_v2.">"`, etc.) and ordering h
 
 **Reference**: [PostgreSQL Function Volatility](https://www.postgresql.org/docs/current/xfunc-volatility.html) — Index support functions **must** be IMMUTABLE.
 
-## 12. Summary Diagram — The Full Stack
+## 13. Summary Diagram — The Full Stack
 
 ```
                         ┌─────────────────────┐
@@ -523,7 +585,7 @@ The operator wrapper functions (`eql_v2."<"`, `eql_v2.">"`, etc.) and ordering h
   (-1/0/1)  (-1/0/1)   → int32
 ```
 
-## 13. Key PostgreSQL Documentation References
+## 14. Key PostgreSQL Documentation References
 
 | Topic | URL |
 |-------|-----|
