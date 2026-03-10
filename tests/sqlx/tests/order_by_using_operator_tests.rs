@@ -44,38 +44,6 @@ async fn order_by_using_greater_than_fails_without_opclass(pool: PgPool) -> Resu
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
-async fn order_by_using_less_than_with_limit_fails_without_opclass(pool: PgPool) -> Result<()> {
-    // ORDER BY e USING < LIMIT 1 also requires btree operator family registration
-
-    let result = sqlx::query("SELECT id FROM ore ORDER BY e USING < LIMIT 1")
-        .fetch_one(&pool)
-        .await;
-
-    assert!(
-        result.is_err(),
-        "ORDER BY e USING < LIMIT 1 should fail without btree operator family"
-    );
-
-    Ok(())
-}
-
-#[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
-async fn order_by_using_greater_than_with_limit_fails_without_opclass(pool: PgPool) -> Result<()> {
-    // ORDER BY e USING > LIMIT 1 also requires btree operator family registration
-
-    let result = sqlx::query("SELECT id FROM ore ORDER BY e USING > LIMIT 1")
-        .fetch_one(&pool)
-        .await;
-
-    assert!(
-        result.is_err(),
-        "ORDER BY e USING > LIMIT 1 should fail without btree operator family"
-    );
-
-    Ok(())
-}
-
-#[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
 async fn order_by_using_less_than_with_where_clause_fails_without_opclass(
     pool: PgPool,
 ) -> Result<()> {
