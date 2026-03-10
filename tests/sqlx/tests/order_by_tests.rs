@@ -389,3 +389,30 @@ async fn order_by_helper_function_asc_returns_lowest_value_first(pool: PgPool) -
 
     Ok(())
 }
+
+#[sqlx::test]
+async fn order_by_helper_function_without_where_clause(pool: PgPool) -> Result<()> {
+    // Test: ORDER BY eql_v2.order_by(e) DESC without any WHERE clause
+    // Verifies ORE ordering works without relying on comparison operators
+    // Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
+
+    let sql = "SELECT id FROM ore ORDER BY eql_v2.order_by(e) DESC";
+
+    let rows = sqlx::query(sql).fetch_all(&pool).await?;
+
+    // Should return all 99 records
+    assert_eq!(rows.len(), 99, "Should return all 99 records");
+
+    // Verify descending order: every record should have id = 99 - index
+    for (i, row) in rows.iter().enumerate() {
+        let id: i64 = row.try_get(0)?;
+        let expected = (99 - i) as i64;
+        assert_eq!(
+            id, expected,
+            "Row {} should be id={}, got id={}",
+            i, expected, id
+        );
+    }
+
+    Ok(())
+}
