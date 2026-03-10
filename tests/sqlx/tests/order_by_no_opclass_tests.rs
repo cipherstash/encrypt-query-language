@@ -9,7 +9,7 @@
 //! Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
 
 use anyhow::Result;
-use eql_tests::{get_ore_encrypted, QueryAssertion};
+use eql_tests::get_ore_encrypted;
 use sqlx::{PgPool, Row};
 
 // ============================================================================
@@ -251,12 +251,13 @@ async fn correlated_subquery_ranking_with_where_without_opclass(pool: PgPool) ->
         ore_term
     );
 
+    let rows = sqlx::query(&sql).fetch_all(&pool).await?;
+
     // Should return 57 records (ids 43-99)
-    QueryAssertion::new(&pool, &sql).count(57).await;
+    assert_eq!(rows.len(), 57, "Should return 57 records (ids 43-99)");
 
     // First record should be id=43 (lowest rank among filtered rows)
-    let row = sqlx::query(&sql).fetch_one(&pool).await?;
-    let first_id: i64 = row.try_get(0)?;
+    let first_id: i64 = rows[0].try_get(0)?;
     assert_eq!(
         first_id, 43,
         "Correlated subquery ranking with WHERE e > 42 should return id=43 first"

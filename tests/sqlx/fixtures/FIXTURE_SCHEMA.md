@@ -8,6 +8,7 @@ This document defines the structure and dependencies of test fixtures used in th
 EQL Extension (via migrations)
   ├── encrypted_json.sql
   ├── array_data.sql
+  ├── order_by_null_data.sql (depends on ore migration)
   └── ore_data.sql
 ```
 
@@ -60,6 +61,33 @@ CREATE TABLE encrypted (
 
 **Used By:**
 - jsonb_tests.rs (array-specific tests)
+
+---
+
+## order_by_null_data.sql
+
+**Purpose:** Creates `encrypted` table with NULL and ORE-encrypted values for ORDER BY NULL ordering tests.
+
+**Dependencies:**
+- Requires `ore` table from migrations (selects encrypted values for ids 42 and 3)
+
+**Schema:**
+```sql
+CREATE TABLE encrypted (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  e eql_v2_encrypted
+);
+```
+
+**Data:**
+- 4 records:
+  - id=1: NULL
+  - id=2: ORE value for 42 (from ore table)
+  - id=3: ORE value for 3 (from ore table)
+  - id=4: NULL
+
+**Used By:**
+- order_by_tests.rs (NULLS FIRST / NULLS LAST tests)
 
 ---
 

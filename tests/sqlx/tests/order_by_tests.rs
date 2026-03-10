@@ -121,51 +121,11 @@ async fn order_by_asc_with_greater_than_returns_lowest(pool: PgPool) -> Result<(
 
 // NULL ordering tests
 
-#[sqlx::test]
+#[sqlx::test(fixtures(path = "../fixtures", scripts("order_by_null_data")))]
 async fn order_by_asc_nulls_first_returns_null_record_first(pool: PgPool) -> Result<()> {
     // Test: ORDER BY e ASC NULLS FIRST returns NULL values first
-    // Setup: Create table with NULLs and encrypted values
-    //   - ID=1: NULL
-    //   - ID=2: 42
-    //   - ID=3: 3
-    //   - ID=4: NULL
-    // Expected: ORDER BY e ASC NULLS FIRST returns id=1 first
+    // Fixture data: id=1 NULL, id=2 ore(42), id=3 ore(3), id=4 NULL
 
-    // Create test table
-    sqlx::query("CREATE TABLE encrypted(id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, e eql_v2_encrypted)")
-        .execute(&pool)
-        .await?;
-
-    // Insert NULL
-    sqlx::query("INSERT INTO encrypted(e) VALUES (NULL::jsonb::eql_v2_encrypted)")
-        .execute(&pool)
-        .await?;
-
-    // Insert id=42 from ore table
-    let ore_42 = get_ore_encrypted(&pool, 42).await?;
-    sqlx::query(&format!(
-        "INSERT INTO encrypted(e) VALUES ('{}'::eql_v2_encrypted)",
-        ore_42
-    ))
-    .execute(&pool)
-    .await?;
-
-    // Insert id=3 from ore table
-    let ore_3 = get_ore_encrypted(&pool, 3).await?;
-    sqlx::query(&format!(
-        "INSERT INTO encrypted(e) VALUES ('{}'::eql_v2_encrypted)",
-        ore_3
-    ))
-    .execute(&pool)
-    .await?;
-
-    // Insert another NULL
-    sqlx::query("INSERT INTO encrypted(e) VALUES (NULL::jsonb::eql_v2_encrypted)")
-        .execute(&pool)
-        .await?;
-
-    // Test: NULLS FIRST should return a NULL row first
-    // Use tie-breaker (id) to ensure deterministic ordering among NULL rows
     let sql = "SELECT id FROM encrypted ORDER BY e ASC NULLS FIRST, id";
     let row = sqlx::query(sql).fetch_one(&pool).await?;
     let first_id: i64 = row.try_get(0)?;
@@ -177,46 +137,11 @@ async fn order_by_asc_nulls_first_returns_null_record_first(pool: PgPool) -> Res
     Ok(())
 }
 
-#[sqlx::test]
+#[sqlx::test(fixtures(path = "../fixtures", scripts("order_by_null_data")))]
 async fn order_by_asc_nulls_last_returns_smallest_value_first(pool: PgPool) -> Result<()> {
     // Test: ORDER BY e ASC NULLS LAST returns smallest non-NULL value first
-    // Setup: Same as previous test
-    // Expected: ORDER BY e ASC NULLS LAST returns id=3 (value=3) first
+    // Fixture data: id=1 NULL, id=2 ore(42), id=3 ore(3), id=4 NULL
 
-    // Create test table
-    sqlx::query("CREATE TABLE encrypted(id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, e eql_v2_encrypted)")
-        .execute(&pool)
-        .await?;
-
-    // Insert NULL
-    sqlx::query("INSERT INTO encrypted(e) VALUES (NULL::jsonb::eql_v2_encrypted)")
-        .execute(&pool)
-        .await?;
-
-    // Insert id=42 from ore table
-    let ore_42 = get_ore_encrypted(&pool, 42).await?;
-    sqlx::query(&format!(
-        "INSERT INTO encrypted(e) VALUES ('{}'::eql_v2_encrypted)",
-        ore_42
-    ))
-    .execute(&pool)
-    .await?;
-
-    // Insert id=3 from ore table
-    let ore_3 = get_ore_encrypted(&pool, 3).await?;
-    sqlx::query(&format!(
-        "INSERT INTO encrypted(e) VALUES ('{}'::eql_v2_encrypted)",
-        ore_3
-    ))
-    .execute(&pool)
-    .await?;
-
-    // Insert another NULL
-    sqlx::query("INSERT INTO encrypted(e) VALUES (NULL::jsonb::eql_v2_encrypted)")
-        .execute(&pool)
-        .await?;
-
-    // Test: NULLS LAST should return id=3 (smallest value)
     let sql = "SELECT id FROM encrypted ORDER BY e ASC NULLS LAST";
     let row = sqlx::query(sql).fetch_one(&pool).await?;
     let first_id: i64 = row.try_get(0)?;
@@ -228,46 +153,11 @@ async fn order_by_asc_nulls_last_returns_smallest_value_first(pool: PgPool) -> R
     Ok(())
 }
 
-#[sqlx::test]
+#[sqlx::test(fixtures(path = "../fixtures", scripts("order_by_null_data")))]
 async fn order_by_desc_nulls_first_returns_null_value_first(pool: PgPool) -> Result<()> {
     // Test: ORDER BY e DESC NULLS FIRST returns NULL values first
-    // Expected: ORDER BY e DESC NULLS FIRST returns id=1 first
+    // Fixture data: id=1 NULL, id=2 ore(42), id=3 ore(3), id=4 NULL
 
-    // Create test table
-    sqlx::query("CREATE TABLE encrypted(id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, e eql_v2_encrypted)")
-        .execute(&pool)
-        .await?;
-
-    // Insert NULL
-    sqlx::query("INSERT INTO encrypted(e) VALUES (NULL::jsonb::eql_v2_encrypted)")
-        .execute(&pool)
-        .await?;
-
-    // Insert id=42 from ore table
-    let ore_42 = get_ore_encrypted(&pool, 42).await?;
-    sqlx::query(&format!(
-        "INSERT INTO encrypted(e) VALUES ('{}'::eql_v2_encrypted)",
-        ore_42
-    ))
-    .execute(&pool)
-    .await?;
-
-    // Insert id=3 from ore table
-    let ore_3 = get_ore_encrypted(&pool, 3).await?;
-    sqlx::query(&format!(
-        "INSERT INTO encrypted(e) VALUES ('{}'::eql_v2_encrypted)",
-        ore_3
-    ))
-    .execute(&pool)
-    .await?;
-
-    // Insert another NULL
-    sqlx::query("INSERT INTO encrypted(e) VALUES (NULL::jsonb::eql_v2_encrypted)")
-        .execute(&pool)
-        .await?;
-
-    // Test: DESC NULLS FIRST should return a NULL row first
-    // Use tie-breaker (id) to ensure deterministic ordering among NULL rows
     let sql = "SELECT id FROM encrypted ORDER BY e DESC NULLS FIRST, id";
     let row = sqlx::query(sql).fetch_one(&pool).await?;
     let first_id: i64 = row.try_get(0)?;
@@ -279,45 +169,11 @@ async fn order_by_desc_nulls_first_returns_null_value_first(pool: PgPool) -> Res
     Ok(())
 }
 
-#[sqlx::test]
+#[sqlx::test(fixtures(path = "../fixtures", scripts("order_by_null_data")))]
 async fn order_by_desc_nulls_last_returns_largest_value_first(pool: PgPool) -> Result<()> {
     // Test: ORDER BY e DESC NULLS LAST returns largest non-NULL value first
-    // Expected: ORDER BY e DESC NULLS LAST returns id=2 (value=42) first
+    // Fixture data: id=1 NULL, id=2 ore(42), id=3 ore(3), id=4 NULL
 
-    // Create test table
-    sqlx::query("CREATE TABLE encrypted(id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, e eql_v2_encrypted)")
-        .execute(&pool)
-        .await?;
-
-    // Insert NULL
-    sqlx::query("INSERT INTO encrypted(e) VALUES (NULL::jsonb::eql_v2_encrypted)")
-        .execute(&pool)
-        .await?;
-
-    // Insert id=42 from ore table
-    let ore_42 = get_ore_encrypted(&pool, 42).await?;
-    sqlx::query(&format!(
-        "INSERT INTO encrypted(e) VALUES ('{}'::eql_v2_encrypted)",
-        ore_42
-    ))
-    .execute(&pool)
-    .await?;
-
-    // Insert id=3 from ore table
-    let ore_3 = get_ore_encrypted(&pool, 3).await?;
-    sqlx::query(&format!(
-        "INSERT INTO encrypted(e) VALUES ('{}'::eql_v2_encrypted)",
-        ore_3
-    ))
-    .execute(&pool)
-    .await?;
-
-    // Insert another NULL
-    sqlx::query("INSERT INTO encrypted(e) VALUES (NULL::jsonb::eql_v2_encrypted)")
-        .execute(&pool)
-        .await?;
-
-    // Test: DESC NULLS LAST should return id=2 (largest value)
     let sql = "SELECT id FROM encrypted ORDER BY e DESC NULLS LAST";
     let row = sqlx::query(sql).fetch_one(&pool).await?;
     let first_id: i64 = row.try_get(0)?;
@@ -407,6 +263,33 @@ async fn order_by_helper_function_without_where_clause(pool: PgPool) -> Result<(
     for (i, row) in rows.iter().enumerate() {
         let id: i64 = row.try_get(0)?;
         let expected = (99 - i) as i64;
+        assert_eq!(
+            id, expected,
+            "Row {} should be id={}, got id={}",
+            i, expected, id
+        );
+    }
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn order_by_helper_function_without_where_clause_asc(pool: PgPool) -> Result<()> {
+    // Test: ORDER BY eql_v2.order_by(e) ASC without any WHERE clause
+    // Verifies ORE ordering works in ascending direction
+    // Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
+
+    let sql = "SELECT id FROM ore ORDER BY eql_v2.order_by(e) ASC";
+
+    let rows = sqlx::query(sql).fetch_all(&pool).await?;
+
+    // Should return all 99 records
+    assert_eq!(rows.len(), 99, "Should return all 99 records");
+
+    // Verify ascending order: every record should have id = index + 1
+    for (i, row) in rows.iter().enumerate() {
+        let id: i64 = row.try_get(0)?;
+        let expected = (i + 1) as i64;
         assert_eq!(
             id, expected,
             "Row {} should be id={}, got id={}",
