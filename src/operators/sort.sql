@@ -71,6 +71,14 @@ $$ LANGUAGE plpgsql;
 
 --! @internal
 --! @brief Compare an array element against a captured pivot value or ORE key
+--!
+--! @param vals eql_v2_encrypted[] Array of encrypted values
+--! @param keys eql_v2.ore_block_u64_8_256[] Array of pre-extracted ORE order keys
+--! @param idx integer Index of the element to compare
+--! @param pivot_val eql_v2_encrypted Pivot encrypted value (used when use_ore is false)
+--! @param pivot_key eql_v2.ore_block_u64_8_256 Pivot ORE key (used when use_ore is true)
+--! @param use_ore boolean When true compare ORE keys, otherwise compare encrypted values
+--! @return integer -1 if element < pivot, 0 if equal, 1 if element > pivot
 CREATE FUNCTION eql_v2._compare_sort_pivot(
     vals eql_v2_encrypted[],
     keys eql_v2.ore_block_u64_8_256[],
@@ -94,6 +102,16 @@ $$ LANGUAGE plpgsql;
 
 --! @internal
 --! @brief In-place insertion sort on parallel id/value/key arrays
+--!
+--! @param ids bigint[] Array of row identifiers (reordered in place)
+--! @param vals eql_v2_encrypted[] Array of encrypted values (reordered in place)
+--! @param keys eql_v2.ore_block_u64_8_256[] Array of pre-extracted ORE order keys (reordered in place)
+--! @param lo integer Lower bound index (1-based, inclusive)
+--! @param hi integer Upper bound index (1-based, inclusive)
+--! @param use_ore boolean When true compare ORE keys, otherwise compare encrypted values
+--! @return ids bigint[] Sorted array of row identifiers
+--! @return vals eql_v2_encrypted[] Sorted array of encrypted values
+--! @return keys eql_v2.ore_block_u64_8_256[] Sorted array of pre-extracted order keys
 CREATE FUNCTION eql_v2._insertion_sort(
     INOUT ids bigint[],
     INOUT vals eql_v2_encrypted[],
@@ -249,6 +267,11 @@ $$ LANGUAGE plpgsql;
 
 --! @internal
 --! @brief Emit aligned arrays as rows in ASC or DESC order
+--!
+--! @param ids bigint[] Array of sorted row identifiers
+--! @param vals eql_v2_encrypted[] Array of sorted encrypted values
+--! @param direction text Sort direction: 'ASC' (default) or 'DESC'
+--! @return TABLE(id bigint, val eql_v2_encrypted) Rows emitted in the requested order
 CREATE FUNCTION eql_v2._emit_sorted_rows(
     ids bigint[],
     vals eql_v2_encrypted[],
