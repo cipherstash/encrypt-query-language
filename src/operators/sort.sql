@@ -108,22 +108,22 @@ $$ LANGUAGE plpgsql;
 --! @example
 --! -- Sort all rows from an encrypted table
 --! SELECT * FROM eql_v2.sort_compare(
---!   (SELECT array_agg(id) FROM ore),
---!   (SELECT array_agg(e) FROM ore),
+--!   (SELECT array_agg(id ORDER BY id) FROM ore),
+--!   (SELECT array_agg(e ORDER BY id) FROM ore),
 --!   'ASC'
 --! );
 --!
 --! -- Sort with a filter
 --! SELECT * FROM eql_v2.sort_compare(
---!   (SELECT array_agg(id) FROM ore WHERE id > 42),
---!   (SELECT array_agg(e) FROM ore WHERE id > 42),
+--!   (SELECT array_agg(id ORDER BY id) FROM ore WHERE id > 42),
+--!   (SELECT array_agg(e ORDER BY id) FROM ore WHERE id > 42),
 --!   'DESC'
 --! );
 --!
 --! -- Compose with LIMIT
 --! SELECT * FROM eql_v2.sort_compare(
---!   (SELECT array_agg(id) FROM ore),
---!   (SELECT array_agg(e) FROM ore)
+--!   (SELECT array_agg(id ORDER BY id) FROM ore),
+--!   (SELECT array_agg(e ORDER BY id) FROM ore)
 --! ) LIMIT 5;
 --!
 --! @see eql_v2.compare

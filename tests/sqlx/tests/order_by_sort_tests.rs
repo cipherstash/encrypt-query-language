@@ -18,8 +18,8 @@ use std::time::Instant;
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
 async fn sort_compare_asc_returns_correct_order(pool: PgPool) -> Result<()> {
     let sql = "SELECT * FROM eql_v2.sort_compare(
-        (SELECT array_agg(id) FROM ore),
-        (SELECT array_agg(e) FROM ore),
+        (SELECT array_agg(id ORDER BY id) FROM ore),
+        (SELECT array_agg(e ORDER BY id) FROM ore),
         'ASC'
     )";
 
@@ -49,8 +49,8 @@ async fn sort_compare_asc_returns_correct_order(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
 async fn sort_compare_desc_returns_correct_order(pool: PgPool) -> Result<()> {
     let sql = "SELECT * FROM eql_v2.sort_compare(
-        (SELECT array_agg(id) FROM ore),
-        (SELECT array_agg(e) FROM ore),
+        (SELECT array_agg(id ORDER BY id) FROM ore),
+        (SELECT array_agg(e ORDER BY id) FROM ore),
         'DESC'
     )";
 
@@ -79,8 +79,8 @@ async fn sort_compare_with_where_clause(pool: PgPool) -> Result<()> {
 
     let sql = format!(
         "SELECT * FROM eql_v2.sort_compare(
-            (SELECT array_agg(id) FROM ore WHERE e > '{ore}'::eql_v2_encrypted),
-            (SELECT array_agg(e) FROM ore WHERE e > '{ore}'::eql_v2_encrypted),
+            (SELECT array_agg(id ORDER BY id) FROM ore WHERE e > '{ore}'::eql_v2_encrypted),
+            (SELECT array_agg(e ORDER BY id) FROM ore WHERE e > '{ore}'::eql_v2_encrypted),
             'ASC'
         )",
         ore = ore_term
@@ -102,8 +102,8 @@ async fn sort_compare_with_where_clause(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
 async fn sort_compare_with_limit(pool: PgPool) -> Result<()> {
     let sql = "SELECT * FROM eql_v2.sort_compare(
-        (SELECT array_agg(id) FROM ore),
-        (SELECT array_agg(e) FROM ore)
+        (SELECT array_agg(id ORDER BY id) FROM ore),
+        (SELECT array_agg(e ORDER BY id) FROM ore)
     ) LIMIT 5";
 
     let rows = sqlx::query(sql).fetch_all(&pool).await?;
@@ -125,8 +125,8 @@ async fn sort_compare_with_limit(pool: PgPool) -> Result<()> {
 async fn sort_compare_empty_input(pool: PgPool) -> Result<()> {
     // Use a WHERE clause that matches no rows to produce empty arrays
     let sql = "SELECT * FROM eql_v2.sort_compare(
-        (SELECT array_agg(id) FROM ore WHERE id < 0),
-        (SELECT array_agg(e) FROM ore WHERE id < 0)
+        (SELECT array_agg(id ORDER BY id) FROM ore WHERE id < 0),
+        (SELECT array_agg(e ORDER BY id) FROM ore WHERE id < 0)
     )";
 
     let rows = sqlx::query(sql).fetch_all(&pool).await?;
@@ -139,8 +139,8 @@ async fn sort_compare_empty_input(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
 async fn sort_compare_single_element(pool: PgPool) -> Result<()> {
     let sql = "SELECT * FROM eql_v2.sort_compare(
-        (SELECT array_agg(id) FROM ore WHERE id = 42),
-        (SELECT array_agg(e) FROM ore WHERE id = 42)
+        (SELECT array_agg(id ORDER BY id) FROM ore WHERE id = 42),
+        (SELECT array_agg(e ORDER BY id) FROM ore WHERE id = 42)
     )";
 
     let rows = sqlx::query(sql).fetch_all(&pool).await?;
@@ -278,8 +278,8 @@ async fn filtered_inner_query_with_range(pool: PgPool) -> Result<()> {
 async fn sort_compare_faster_than_correlated_subquery(pool: PgPool) -> Result<()> {
     // Warm up: run each query once to populate caches
     let sort_sql = "SELECT * FROM eql_v2.sort_compare(
-        (SELECT array_agg(id) FROM ore),
-        (SELECT array_agg(e) FROM ore)
+        (SELECT array_agg(id ORDER BY id) FROM ore),
+        (SELECT array_agg(e ORDER BY id) FROM ore)
     )";
     let correlated_sql = "SELECT id FROM ore t \
         ORDER BY (SELECT COUNT(*) FROM ore t2 WHERE eql_v2.compare(t.e, t2.e) > 0)";
@@ -408,8 +408,8 @@ async fn sort_compare_performance_at_scale(pool: PgPool) -> Result<()> {
     .await?;
 
     let sort_sql = "SELECT * FROM eql_v2.sort_compare(
-        (SELECT array_agg(id) FROM ore_perf),
-        (SELECT array_agg(e) FROM ore_perf)
+        (SELECT array_agg(id ORDER BY id) FROM ore_perf),
+        (SELECT array_agg(e ORDER BY id) FROM ore_perf)
     )";
     let correlated_sql = "SELECT id FROM ore_perf t \
         ORDER BY (SELECT COUNT(*) FROM ore_perf t2 WHERE eql_v2.compare(t.e, t2.e) > 0)";
