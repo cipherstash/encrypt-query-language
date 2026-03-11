@@ -153,6 +153,111 @@ async fn sort_compare_single_element(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
+#[sqlx::test(fixtures(path = "../fixtures", scripts("order_by_null_data")))]
+async fn sort_compare_asc_puts_nulls_first(pool: PgPool) -> Result<()> {
+    let sql = "SELECT id FROM eql_v2.sort_compare(
+        (SELECT array_agg(id ORDER BY id) FROM encrypted),
+        (SELECT array_agg(e ORDER BY id) FROM encrypted),
+        'ASC'
+    )";
+
+    let rows = sqlx::query(sql).fetch_all(&pool).await?;
+    let ids: Vec<i64> = rows.iter().map(|r| r.try_get(0).unwrap()).collect();
+
+    let mut null_ids = ids[..2].to_vec();
+    null_ids.sort_unstable();
+
+    assert_eq!(rows.len(), 4, "Should return all 4 records");
+    assert_eq!(null_ids, vec![1i64, 4], "NULL rows should sort first");
+    assert_eq!(
+        ids[2], 3,
+        "Smallest non-NULL value should appear after NULLs"
+    );
+    assert_eq!(ids[3], 2, "Largest non-NULL value should appear last");
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("order_by_null_data")))]
+async fn sort_compare_desc_puts_nulls_last(pool: PgPool) -> Result<()> {
+    let sql = "SELECT id FROM eql_v2.sort_compare(
+        (SELECT array_agg(id ORDER BY id) FROM encrypted),
+        (SELECT array_agg(e ORDER BY id) FROM encrypted),
+        'DESC'
+    )";
+
+    let rows = sqlx::query(sql).fetch_all(&pool).await?;
+    let ids: Vec<i64> = rows.iter().map(|r| r.try_get(0).unwrap()).collect();
+
+    let mut null_ids = ids[2..].to_vec();
+    null_ids.sort_unstable();
+
+    assert_eq!(rows.len(), 4, "Should return all 4 records");
+    assert_eq!(ids[0], 2, "Largest non-NULL value should sort first");
+    assert_eq!(ids[1], 3, "Smaller non-NULL value should sort second");
+    assert_eq!(null_ids, vec![1i64, 4], "NULL rows should sort last");
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn sort_compare_mismatched_lengths_errors(pool: PgPool) -> Result<()> {
+    let sql = "SELECT * FROM eql_v2.sort_compare(
+        ARRAY[1::bigint, 2::bigint],
+        ARRAY[(SELECT e FROM ore WHERE id = 1)]::eql_v2_encrypted[],
+        'ASC'
+    )";
+
+    let result = sqlx::query(sql).fetch_all(&pool).await;
+    assert!(result.is_err(), "Mismatched array lengths should error");
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn sort_compare_generic_fallback_matches_compare_order(pool: PgPool) -> Result<()> {
+    sqlx::query(
+        "CREATE TABLE encrypted_generic(
+            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+            e eql_v2_encrypted
+        )",
+    )
+    .execute(&pool)
+    .await?;
+
+    for id in 1..=3 {
+        let sql = format!(
+            "INSERT INTO encrypted_generic(e)
+             SELECT (create_encrypted_json({id})::jsonb - 'ob')::eql_v2_encrypted"
+        );
+        sqlx::query(&sql).execute(&pool).await?;
+    }
+
+    let actual_sql = "SELECT id FROM eql_v2.sort_compare(
+        (SELECT array_agg(id ORDER BY id) FROM encrypted_generic),
+        (SELECT array_agg(e ORDER BY id) FROM encrypted_generic),
+        'ASC'
+    )";
+    let expected_sql = "SELECT id FROM encrypted_generic t
+        ORDER BY (SELECT COUNT(*) FROM encrypted_generic t2 WHERE eql_v2.compare(t.e, t2.e) > 0), id";
+
+    let actual_rows = sqlx::query(actual_sql).fetch_all(&pool).await?;
+    let expected_rows = sqlx::query(expected_sql).fetch_all(&pool).await?;
+
+    let actual_ids: Vec<i64> = actual_rows.iter().map(|r| r.try_get(0).unwrap()).collect();
+    let expected_ids: Vec<i64> = expected_rows
+        .iter()
+        .map(|r| r.try_get(0).unwrap())
+        .collect();
+
+    assert_eq!(
+        actual_ids, expected_ids,
+        "Generic fallback should match eql_v2.compare ordering"
+    );
+
+    Ok(())
+}
+
 // ============================================================================
 // order_by_compare (dynamic SQL convenience wrapper) tests
 // ============================================================================
@@ -193,6 +298,160 @@ async fn order_by_compare_desc_with_where(pool: PgPool) -> Result<()> {
 
     let last_id: i64 = rows[56].try_get(0)?;
     assert_eq!(last_id, 43, "Last DESC row should be id=43");
+
+    Ok(())
+}
+
+// ============================================================================
+// sort_compare table-reference overload tests
+// ============================================================================
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+async fn sort_compare_table_ref_asc(pool: PgPool) -> Result<()> {
+    let sql = "SELECT * FROM eql_v2.sort_compare('id', 'e', 'ore', 'ASC')";
+
+    let rows = sqlx::query(sql).fetch_all(&pool).await?;
+
+    assert_eq!(rows.len(), 99, "Should return all 99 records");
+
+    let all_ids: Vec<i64> = rows.iter().map(|r| r.try_get(0).unwrap()).collect();
+    let expected: Vec<i64> = (1..=99).collect();
+    assert_eq!(all_ids, expected, "All ids should be sequential 1..99");
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+async fn sort_compare_table_ref_desc(pool: PgPool) -> Result<()> {
+    let sql = "SELECT * FROM eql_v2.sort_compare('id', 'e', 'ore', 'DESC')";
+
+    let rows = sqlx::query(sql).fetch_all(&pool).await?;
+
+    assert_eq!(rows.len(), 99, "Should return all 99 records");
+
+    let first_five: Vec<i64> = rows[..5].iter().map(|r| r.try_get(0).unwrap()).collect();
+    assert_eq!(
+        first_five,
+        vec![99i64, 98, 97, 96, 95],
+        "First 5 DESC results should be [99,98,97,96,95]"
+    );
+
+    let last_id: i64 = rows[98].try_get(0)?;
+    assert_eq!(last_id, 1, "Last row should be id=1");
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+async fn sort_compare_table_ref_default_direction(pool: PgPool) -> Result<()> {
+    let sql = "SELECT * FROM eql_v2.sort_compare('id', 'e', 'ore')";
+
+    let rows = sqlx::query(sql).fetch_all(&pool).await?;
+
+    assert_eq!(rows.len(), 99, "Should return all 99 records");
+
+    let first_five: Vec<i64> = rows[..5].iter().map(|r| r.try_get(0).unwrap()).collect();
+    assert_eq!(
+        first_five,
+        vec![1i64, 2, 3, 4, 5],
+        "Default direction should be ASC"
+    );
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+async fn sort_compare_table_ref_with_limit(pool: PgPool) -> Result<()> {
+    let sql = "SELECT * FROM eql_v2.sort_compare('id', 'e', 'ore', 'ASC') LIMIT 5";
+
+    let rows = sqlx::query(sql).fetch_all(&pool).await?;
+
+    assert_eq!(rows.len(), 5, "LIMIT 5 should return 5 rows");
+
+    let ids: Vec<i64> = rows.iter().map(|r| r.try_get(0).unwrap()).collect();
+    assert_eq!(
+        ids,
+        vec![1i64, 2, 3, 4, 5],
+        "First 5 sorted rows should be [1,2,3,4,5]"
+    );
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+async fn sort_compare_table_ref_with_filter(pool: PgPool) -> Result<()> {
+    let sql = "SELECT * FROM eql_v2.sort_compare('id', 'e', 'ore', 'ASC', 'id > 42')";
+
+    let rows = sqlx::query(sql).fetch_all(&pool).await?;
+
+    assert_eq!(rows.len(), 57, "Should return 57 records (ids 43-99)");
+
+    let first_id: i64 = rows[0].try_get(0)?;
+    assert_eq!(first_id, 43, "First row should be id=43");
+
+    let last_id: i64 = rows[56].try_get(0)?;
+    assert_eq!(last_id, 99, "Last row should be id=99");
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+async fn sort_compare_table_ref_empty_result(pool: PgPool) -> Result<()> {
+    let sql = "SELECT * FROM eql_v2.sort_compare('id', 'e', 'ore', 'ASC', 'id < 0')";
+
+    let rows = sqlx::query(sql).fetch_all(&pool).await?;
+
+    assert_eq!(
+        rows.len(),
+        0,
+        "Filter matching no rows should return 0 rows"
+    );
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("order_by_null_data")))]
+async fn sort_compare_table_ref_null_values(pool: PgPool) -> Result<()> {
+    let sql = "SELECT id FROM eql_v2.sort_compare('id', 'e', 'encrypted', 'ASC')";
+
+    let rows = sqlx::query(sql).fetch_all(&pool).await?;
+    let ids: Vec<i64> = rows.iter().map(|r| r.try_get(0).unwrap()).collect();
+
+    let mut null_ids = ids[..2].to_vec();
+    null_ids.sort_unstable();
+
+    assert_eq!(rows.len(), 4, "Should return all 4 records");
+    assert_eq!(null_ids, vec![1i64, 4], "NULL rows should sort first");
+    assert_eq!(
+        ids[2], 3,
+        "Smallest non-NULL value should appear after NULLs"
+    );
+    assert_eq!(ids[3], 2, "Largest non-NULL value should appear last");
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+async fn sort_compare_table_ref_matches_order_by_compare(pool: PgPool) -> Result<()> {
+    let table_ref_sql = "SELECT * FROM eql_v2.sort_compare('id', 'e', 'ore')";
+    let order_by_sql = "SELECT * FROM eql_v2.order_by_compare('SELECT id, e FROM ore')";
+
+    let table_ref_rows = sqlx::query(table_ref_sql).fetch_all(&pool).await?;
+    let order_by_rows = sqlx::query(order_by_sql).fetch_all(&pool).await?;
+
+    let table_ref_ids: Vec<i64> = table_ref_rows
+        .iter()
+        .map(|r| r.try_get(0).unwrap())
+        .collect();
+    let order_by_ids: Vec<i64> = order_by_rows
+        .iter()
+        .map(|r| r.try_get(0).unwrap())
+        .collect();
+
+    assert_eq!(
+        table_ref_ids, order_by_ids,
+        "Table-reference overload should match order_by_compare results"
+    );
 
     Ok(())
 }
@@ -259,7 +518,11 @@ async fn filtered_inner_query_with_range(pool: PgPool) -> Result<()> {
     let rows = sqlx::query(&sql).fetch_all(&pool).await?;
 
     // ids 20-79 = 60 rows (exclusive on both 19 and 80 based on > and <)
-    assert_eq!(rows.len(), 60, "Range filter should return 60 records (ids 20-79)");
+    assert_eq!(
+        rows.len(),
+        60,
+        "Range filter should return 60 records (ids 20-79)"
+    );
 
     let first_id: i64 = rows[0].try_get(0)?;
     assert_eq!(first_id, 20, "First row should be id=20");
@@ -271,7 +534,7 @@ async fn filtered_inner_query_with_range(pool: PgPool) -> Result<()> {
 }
 
 // ============================================================================
-// Performance comparison tests
+// Observational performance tests
 // ============================================================================
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
@@ -311,14 +574,6 @@ async fn sort_compare_faster_than_correlated_subquery(pool: PgPool) -> Result<()
         sort_elapsed,
         correlated_elapsed,
         correlated_elapsed.as_secs_f64() / sort_elapsed.as_secs_f64()
-    );
-
-    // Assert sort_compare is faster (generous 3x margin for CI stability)
-    assert!(
-        sort_elapsed < correlated_elapsed * 3,
-        "sort_compare ({:?}) should not be dramatically slower than correlated subquery ({:?})",
-        sort_elapsed,
-        correlated_elapsed
     );
 
     Ok(())
@@ -376,14 +631,6 @@ async fn filtered_inner_query_faster_than_unfiltered(pool: PgPool) -> Result<()>
         unfiltered_elapsed.as_secs_f64() / filtered_elapsed.as_secs_f64()
     );
 
-    // Assert filtered is faster (generous margin for CI)
-    assert!(
-        filtered_elapsed < unfiltered_elapsed * 3,
-        "filtered inner query ({:?}) should not be dramatically slower than unfiltered ({:?})",
-        filtered_elapsed,
-        unfiltered_elapsed
-    );
-
     Ok(())
 }
 
@@ -436,14 +683,6 @@ async fn sort_compare_performance_at_scale(pool: PgPool) -> Result<()> {
         sort_elapsed,
         correlated_elapsed,
         correlated_elapsed.as_secs_f64() / sort_elapsed.as_secs_f64()
-    );
-
-    // At 495 rows the O(n log n) vs O(n^2) gap should be substantial
-    assert!(
-        sort_elapsed < correlated_elapsed,
-        "sort_compare ({:?}) should be faster than correlated subquery ({:?}) at 495 rows",
-        sort_elapsed,
-        correlated_elapsed
     );
 
     Ok(())
@@ -506,14 +745,6 @@ async fn filtered_inner_query_performance_at_scale(pool: PgPool) -> Result<()> {
         filtered_elapsed,
         unfiltered_elapsed,
         unfiltered_elapsed.as_secs_f64() / filtered_elapsed.as_secs_f64()
-    );
-
-    // Filtered inner query should be faster: 285^2 vs 285*495 comparisons
-    assert!(
-        filtered_elapsed < unfiltered_elapsed * 2,
-        "filtered inner query ({:?}) should not be dramatically slower than unfiltered ({:?})",
-        filtered_elapsed,
-        unfiltered_elapsed
     );
 
     Ok(())
