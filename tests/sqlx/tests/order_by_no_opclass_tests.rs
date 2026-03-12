@@ -6,7 +6,7 @@
 //! produce wrong results because PostgreSQL falls back to record/bytea comparison
 //! instead of ORE-aware comparison.
 //!
-//! Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
+//! Uses ore table from migrations/002_install_ore_data.sql (ids 1-1000)
 
 use anyhow::Result;
 use eql_tests::get_ore_encrypted;
@@ -81,8 +81,8 @@ async fn order_by_helper_desc_wrong_order_without_opclass(pool: PgPool) -> Resul
     let first_id: i64 = row.try_get(0)?;
 
     assert_ne!(
-        first_id, 99,
-        "ORDER BY eql_v2.order_by(e) DESC should NOT return id=99 without operator class \
+        first_id, 1000,
+        "ORDER BY eql_v2.order_by(e) DESC should NOT return id=1000 without operator class \
          (bytea comparison does not match ORE ordering)"
     );
 
@@ -115,11 +115,11 @@ async fn order_by_helper_not_sequential_without_opclass(pool: PgPool) -> Result<
     let rows = sqlx::query(sql).fetch_all(&pool).await?;
 
     let ids: Vec<i64> = rows.iter().map(|r| r.try_get(0).unwrap()).collect();
-    let expected = vec![99i64, 98, 97, 96, 95];
+    let expected = vec![1000i64, 999, 998, 997, 996];
 
     assert_ne!(
         ids, expected,
-        "Top 5 DESC results should NOT be [99,98,97,96,95] without operator class, got {:?}",
+        "Top 5 DESC results should NOT be [1000,999,998,997,996] without operator class, got {:?}",
         ids
     );
 
@@ -157,8 +157,8 @@ async fn direct_order_by_desc_wrong_order_without_opclass(pool: PgPool) -> Resul
     let first_id: i64 = row.try_get(0)?;
 
     assert_ne!(
-        first_id, 99,
-        "Direct ORDER BY e DESC should NOT return id=99 without operator class"
+        first_id, 1000,
+        "Direct ORDER BY e DESC should NOT return id=1000 without operator class"
     );
 
     Ok(())
@@ -179,7 +179,7 @@ async fn correlated_subquery_ranking_asc_without_opclass(pool: PgPool) -> Result
 
     let rows = sqlx::query(sql).fetch_all(&pool).await?;
 
-    assert_eq!(rows.len(), 99, "Should return all 99 records");
+    assert_eq!(rows.len(), 1000, "Should return all 1000 records");
 
     // Verify first 5 ids are in ascending order
     let first_five: Vec<i64> = rows[..5].iter().map(|r| r.try_get(0).unwrap()).collect();
@@ -191,8 +191,8 @@ async fn correlated_subquery_ranking_asc_without_opclass(pool: PgPool) -> Result
     );
 
     // Verify last row
-    let last_id: i64 = rows[98].try_get(0)?;
-    assert_eq!(last_id, 99, "Last row should be id=99");
+    let last_id: i64 = rows[999].try_get(0)?;
+    assert_eq!(last_id, 1000, "Last row should be id=1000");
 
     Ok(())
 }
@@ -206,13 +206,13 @@ async fn correlated_subquery_ranking_desc_without_opclass(pool: PgPool) -> Resul
 
     let rows = sqlx::query(sql).fetch_all(&pool).await?;
 
-    assert_eq!(rows.len(), 99, "Should return all 99 records");
+    assert_eq!(rows.len(), 1000, "Should return all 1000 records");
 
     let first_five: Vec<i64> = rows[..5].iter().map(|r| r.try_get(0).unwrap()).collect();
     assert_eq!(
         first_five,
-        vec![99i64, 98, 97, 96, 95],
-        "First 5 DESC results should be [99,98,97,96,95], got {:?}",
+        vec![1000i64, 999, 998, 997, 996],
+        "First 5 DESC results should be [1000,999,998,997,996], got {:?}",
         first_five
     );
 
@@ -253,8 +253,8 @@ async fn correlated_subquery_ranking_with_where_without_opclass(pool: PgPool) ->
 
     let rows = sqlx::query(&sql).fetch_all(&pool).await?;
 
-    // Should return 57 records (ids 43-99)
-    assert_eq!(rows.len(), 57, "Should return 57 records (ids 43-99)");
+    // Should return 958 records (ids 43-1000)
+    assert_eq!(rows.len(), 958, "Should return 958 records (ids 43-1000)");
 
     // First record should be id=43 (lowest rank among filtered rows)
     let first_id: i64 = rows[0].try_get(0)?;

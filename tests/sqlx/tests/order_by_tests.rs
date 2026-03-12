@@ -1,7 +1,7 @@
 //! ORDER BY tests for ORE-encrypted columns
 //!
 //! Tests ORDER BY with ORE (Order-Revealing Encryption)
-//! Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
+//! Uses ore table from migrations/002_install_ore_data.sql (ids 1-1000)
 
 use anyhow::Result;
 use eql_tests::{get_ore_encrypted, QueryAssertion};
@@ -77,15 +77,15 @@ async fn order_by_asc_with_greater_than(pool: PgPool) -> Result<()> {
         ore_term
     );
 
-    // Should return 57 records (43-99)
-    QueryAssertion::new(&pool, &sql).count(57).await;
+    // Should return 958 records (43-1000)
+    QueryAssertion::new(&pool, &sql).count(958).await;
 
     Ok(())
 }
 
 #[sqlx::test]
 async fn order_by_desc_with_greater_than_returns_highest(pool: PgPool) -> Result<()> {
-    // Test: ORDER BY e DESC LIMIT 1 with e > 42 returns 99
+    // Test: ORDER BY e DESC LIMIT 1 with e > 42 returns 1000
 
     let ore_term = get_ore_encrypted(&pool, 42).await?;
 
@@ -96,7 +96,7 @@ async fn order_by_desc_with_greater_than_returns_highest(pool: PgPool) -> Result
 
     let row = sqlx::query(&sql).fetch_one(&pool).await?;
     let id: i64 = row.try_get(0)?;
-    assert_eq!(id, 99, "Should return id=99 (highest value > 42)");
+    assert_eq!(id, 1000, "Should return id=1000 (highest value > 42)");
 
     Ok(())
 }
@@ -250,19 +250,19 @@ async fn order_by_helper_function_asc_returns_lowest_value_first(pool: PgPool) -
 async fn order_by_helper_function_without_where_clause(pool: PgPool) -> Result<()> {
     // Test: ORDER BY eql_v2.order_by(e) DESC without any WHERE clause
     // Verifies ORE ordering works without relying on comparison operators
-    // Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
+    // Uses ore table from migrations/002_install_ore_data.sql (ids 1-1000)
 
     let sql = "SELECT id FROM ore ORDER BY eql_v2.order_by(e) DESC";
 
     let rows = sqlx::query(sql).fetch_all(&pool).await?;
 
-    // Should return all 99 records
-    assert_eq!(rows.len(), 99, "Should return all 99 records");
+    // Should return all 1000 records
+    assert_eq!(rows.len(), 1000, "Should return all 1000 records");
 
-    // Verify descending order: every record should have id = 99 - index
+    // Verify descending order: every record should have id = 1000 - index
     for (i, row) in rows.iter().enumerate() {
         let id: i64 = row.try_get(0)?;
-        let expected = (99 - i) as i64;
+        let expected = (1000 - i) as i64;
         assert_eq!(
             id, expected,
             "Row {} should be id={}, got id={}",
@@ -277,14 +277,14 @@ async fn order_by_helper_function_without_where_clause(pool: PgPool) -> Result<(
 async fn order_by_helper_function_without_where_clause_asc(pool: PgPool) -> Result<()> {
     // Test: ORDER BY eql_v2.order_by(e) ASC without any WHERE clause
     // Verifies ORE ordering works in ascending direction
-    // Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
+    // Uses ore table from migrations/002_install_ore_data.sql (ids 1-1000)
 
     let sql = "SELECT id FROM ore ORDER BY eql_v2.order_by(e) ASC";
 
     let rows = sqlx::query(sql).fetch_all(&pool).await?;
 
-    // Should return all 99 records
-    assert_eq!(rows.len(), 99, "Should return all 99 records");
+    // Should return all 1000 records
+    assert_eq!(rows.len(), 1000, "Should return all 1000 records");
 
     // Verify ascending order: every record should have id = index + 1
     for (i, row) in rows.iter().enumerate() {
