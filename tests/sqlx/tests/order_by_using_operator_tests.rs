@@ -5,7 +5,7 @@
 //! members of a btree operator family. Dropping the operator family removes those pg_amop
 //! entries, making the operators invalid for ordering even though they still exist.
 //!
-//! Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
+//! Uses ore table from migrations/002_install_ore_data.sql (ids 1-1000)
 
 use anyhow::Result;
 use eql_tests::get_ore_encrypted;

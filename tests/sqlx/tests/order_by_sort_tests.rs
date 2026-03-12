@@ -4,7 +4,7 @@
 //! provide O(n log n) comparison-based sorting as an alternative to the O(n^2) correlated
 //! subquery workaround. Also tests filtered inner query optimization for correlated subqueries.
 //!
-//! Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
+//! Uses ore table from migrations/002_install_ore_data.sql (ids 1-1000)
 
 use anyhow::Result;
 use eql_tests::get_ore_encrypted;
@@ -25,7 +25,7 @@ async fn sort_compare_asc_returns_correct_order(pool: PgPool) -> Result<()> {
 
     let rows = sqlx::query(sql).fetch_all(&pool).await?;
 
-    assert_eq!(rows.len(), 99, "Should return all 99 records");
+    assert_eq!(rows.len(), 1000, "Should return all 1000 records");
 
     let first_five: Vec<i64> = rows[..5].iter().map(|r| r.try_get(0).unwrap()).collect();
     assert_eq!(
@@ -35,13 +35,13 @@ async fn sort_compare_asc_returns_correct_order(pool: PgPool) -> Result<()> {
         first_five
     );
 
-    let last_id: i64 = rows[98].try_get(0)?;
-    assert_eq!(last_id, 99, "Last row should be id=99");
+    let last_id: i64 = rows[999].try_get(0)?;
+    assert_eq!(last_id, 1000, "Last row should be id=1000");
 
     // Verify complete sequential ordering
     let all_ids: Vec<i64> = rows.iter().map(|r| r.try_get(0).unwrap()).collect();
-    let expected: Vec<i64> = (1..=99).collect();
-    assert_eq!(all_ids, expected, "All ids should be sequential 1..99");
+    let expected: Vec<i64> = (1..=1000).collect();
+    assert_eq!(all_ids, expected, "All ids should be sequential 1..1000");
 
     Ok(())
 }
@@ -56,17 +56,17 @@ async fn sort_compare_desc_returns_correct_order(pool: PgPool) -> Result<()> {
 
     let rows = sqlx::query(sql).fetch_all(&pool).await?;
 
-    assert_eq!(rows.len(), 99, "Should return all 99 records");
+    assert_eq!(rows.len(), 1000, "Should return all 1000 records");
 
     let first_five: Vec<i64> = rows[..5].iter().map(|r| r.try_get(0).unwrap()).collect();
     assert_eq!(
         first_five,
-        vec![99i64, 98, 97, 96, 95],
-        "First 5 DESC results should be [99,98,97,96,95], got {:?}",
+        vec![1000i64, 999, 998, 997, 996],
+        "First 5 DESC results should be [1000,999,998,997,996], got {:?}",
         first_five
     );
 
-    let last_id: i64 = rows[98].try_get(0)?;
+    let last_id: i64 = rows[999].try_get(0)?;
     assert_eq!(last_id, 1, "Last row should be id=1");
 
     Ok(())
@@ -88,13 +88,13 @@ async fn sort_compare_with_where_clause(pool: PgPool) -> Result<()> {
 
     let rows = sqlx::query(&sql).fetch_all(&pool).await?;
 
-    assert_eq!(rows.len(), 57, "Should return 57 records (ids 43-99)");
+    assert_eq!(rows.len(), 958, "Should return 958 records (ids 43-1000)");
 
     let first_id: i64 = rows[0].try_get(0)?;
     assert_eq!(first_id, 43, "First row should be id=43");
 
-    let last_id: i64 = rows[56].try_get(0)?;
-    assert_eq!(last_id, 99, "Last row should be id=99");
+    let last_id: i64 = rows[957].try_get(0)?;
+    assert_eq!(last_id, 1000, "Last row should be id=1000");
 
     Ok(())
 }
@@ -268,7 +268,7 @@ async fn order_by_compare_asc_full_table(pool: PgPool) -> Result<()> {
 
     let rows = sqlx::query(sql).fetch_all(&pool).await?;
 
-    assert_eq!(rows.len(), 99, "Should return all 99 records");
+    assert_eq!(rows.len(), 1000, "Should return all 1000 records");
 
     let first_five: Vec<i64> = rows[..5].iter().map(|r| r.try_get(0).unwrap()).collect();
     assert_eq!(
@@ -278,8 +278,8 @@ async fn order_by_compare_asc_full_table(pool: PgPool) -> Result<()> {
         first_five
     );
 
-    let last_id: i64 = rows[98].try_get(0)?;
-    assert_eq!(last_id, 99, "Last row should be id=99");
+    let last_id: i64 = rows[999].try_get(0)?;
+    assert_eq!(last_id, 1000, "Last row should be id=1000");
 
     Ok(())
 }
@@ -291,12 +291,12 @@ async fn order_by_compare_desc_with_where(pool: PgPool) -> Result<()> {
 
     let rows = sqlx::query(sql).fetch_all(&pool).await?;
 
-    assert_eq!(rows.len(), 57, "Should return 57 records (ids 43-99)");
+    assert_eq!(rows.len(), 958, "Should return 958 records (ids 43-1000)");
 
     let first_id: i64 = rows[0].try_get(0)?;
-    assert_eq!(first_id, 99, "First DESC row should be id=99");
+    assert_eq!(first_id, 1000, "First DESC row should be id=1000");
 
-    let last_id: i64 = rows[56].try_get(0)?;
+    let last_id: i64 = rows[957].try_get(0)?;
     assert_eq!(last_id, 43, "Last DESC row should be id=43");
 
     Ok(())
@@ -312,11 +312,11 @@ async fn sort_compare_table_ref_asc(pool: PgPool) -> Result<()> {
 
     let rows = sqlx::query(sql).fetch_all(&pool).await?;
 
-    assert_eq!(rows.len(), 99, "Should return all 99 records");
+    assert_eq!(rows.len(), 1000, "Should return all 1000 records");
 
     let all_ids: Vec<i64> = rows.iter().map(|r| r.try_get(0).unwrap()).collect();
-    let expected: Vec<i64> = (1..=99).collect();
-    assert_eq!(all_ids, expected, "All ids should be sequential 1..99");
+    let expected: Vec<i64> = (1..=1000).collect();
+    assert_eq!(all_ids, expected, "All ids should be sequential 1..1000");
 
     Ok(())
 }
@@ -327,16 +327,16 @@ async fn sort_compare_table_ref_desc(pool: PgPool) -> Result<()> {
 
     let rows = sqlx::query(sql).fetch_all(&pool).await?;
 
-    assert_eq!(rows.len(), 99, "Should return all 99 records");
+    assert_eq!(rows.len(), 1000, "Should return all 1000 records");
 
     let first_five: Vec<i64> = rows[..5].iter().map(|r| r.try_get(0).unwrap()).collect();
     assert_eq!(
         first_five,
-        vec![99i64, 98, 97, 96, 95],
-        "First 5 DESC results should be [99,98,97,96,95]"
+        vec![1000i64, 999, 998, 997, 996],
+        "First 5 DESC results should be [1000,999,998,997,996]"
     );
 
-    let last_id: i64 = rows[98].try_get(0)?;
+    let last_id: i64 = rows[999].try_get(0)?;
     assert_eq!(last_id, 1, "Last row should be id=1");
 
     Ok(())
@@ -348,7 +348,7 @@ async fn sort_compare_table_ref_default_direction(pool: PgPool) -> Result<()> {
 
     let rows = sqlx::query(sql).fetch_all(&pool).await?;
 
-    assert_eq!(rows.len(), 99, "Should return all 99 records");
+    assert_eq!(rows.len(), 1000, "Should return all 1000 records");
 
     let first_five: Vec<i64> = rows[..5].iter().map(|r| r.try_get(0).unwrap()).collect();
     assert_eq!(
@@ -384,13 +384,13 @@ async fn sort_compare_table_ref_with_filter(pool: PgPool) -> Result<()> {
 
     let rows = sqlx::query(sql).fetch_all(&pool).await?;
 
-    assert_eq!(rows.len(), 57, "Should return 57 records (ids 43-99)");
+    assert_eq!(rows.len(), 958, "Should return 958 records (ids 43-1000)");
 
     let first_id: i64 = rows[0].try_get(0)?;
     assert_eq!(first_id, 43, "First row should be id=43");
 
-    let last_id: i64 = rows[56].try_get(0)?;
-    assert_eq!(last_id, 99, "Last row should be id=99");
+    let last_id: i64 = rows[957].try_get(0)?;
+    assert_eq!(last_id, 1000, "Last row should be id=1000");
 
     Ok(())
 }
@@ -477,7 +477,7 @@ async fn filtered_inner_query_correct_order(pool: PgPool) -> Result<()> {
 
     let rows = sqlx::query(&sql).fetch_all(&pool).await?;
 
-    assert_eq!(rows.len(), 57, "Should return 57 records (ids 43-99)");
+    assert_eq!(rows.len(), 958, "Should return 958 records (ids 43-1000)");
 
     let first_id: i64 = rows[0].try_get(0)?;
     assert_eq!(
@@ -485,15 +485,18 @@ async fn filtered_inner_query_correct_order(pool: PgPool) -> Result<()> {
         "Filtered inner query should return id=43 first"
     );
 
-    let last_id: i64 = rows[56].try_get(0)?;
-    assert_eq!(last_id, 99, "Filtered inner query should return id=99 last");
+    let last_id: i64 = rows[957].try_get(0)?;
+    assert_eq!(
+        last_id, 1000,
+        "Filtered inner query should return id=1000 last"
+    );
 
     // Verify complete ordering
     let all_ids: Vec<i64> = rows.iter().map(|r| r.try_get(0).unwrap()).collect();
-    let expected: Vec<i64> = (43..=99).collect();
+    let expected: Vec<i64> = (43..=1000).collect();
     assert_eq!(
         all_ids, expected,
-        "All ids should be sequential 43..99 with filtered inner query"
+        "All ids should be sequential 43..1000 with filtered inner query"
     );
 
     Ok(())
@@ -561,8 +564,8 @@ async fn sort_compare_faster_than_correlated_subquery(pool: PgPool) -> Result<()
     let correlated_elapsed = start.elapsed();
 
     // Both should return correct results
-    assert_eq!(sort_rows.len(), 99);
-    assert_eq!(correlated_rows.len(), 99);
+    assert_eq!(sort_rows.len(), 1000);
+    assert_eq!(correlated_rows.len(), 1000);
 
     let sort_first: i64 = sort_rows[0].try_get(0)?;
     let correlated_first: i64 = correlated_rows[0].try_get(0)?;
@@ -583,7 +586,7 @@ async fn sort_compare_faster_than_correlated_subquery(pool: PgPool) -> Result<()
 async fn filtered_inner_query_faster_than_unfiltered(pool: PgPool) -> Result<()> {
     let ore_term = get_ore_encrypted(&pool, 42).await?;
 
-    // Unfiltered inner query: compares against all 99 rows
+    // Unfiltered inner query: compares against all 1000 rows
     let unfiltered_sql = format!(
         "SELECT id FROM ore t \
          WHERE e > '{ore}'::eql_v2_encrypted \
@@ -591,7 +594,7 @@ async fn filtered_inner_query_faster_than_unfiltered(pool: PgPool) -> Result<()>
         ore = ore_term
     );
 
-    // Filtered inner query: compares against only 57 filtered rows
+    // Filtered inner query: compares against only 958 filtered rows
     let filtered_sql = format!(
         "SELECT id FROM ore t \
          WHERE e > '{ore}'::eql_v2_encrypted \
@@ -615,9 +618,9 @@ async fn filtered_inner_query_faster_than_unfiltered(pool: PgPool) -> Result<()>
     let filtered_rows = sqlx::query(&filtered_sql).fetch_all(&pool).await?;
     let filtered_elapsed = start.elapsed();
 
-    // Both should return 57 rows with correct ordering
-    assert_eq!(unfiltered_rows.len(), 57);
-    assert_eq!(filtered_rows.len(), 57);
+    // Both should return 958 rows with correct ordering
+    assert_eq!(unfiltered_rows.len(), 958);
+    assert_eq!(filtered_rows.len(), 958);
 
     let unfiltered_first: i64 = unfiltered_rows[0].try_get(0)?;
     let filtered_first: i64 = filtered_rows[0].try_get(0)?;
@@ -640,46 +643,31 @@ async fn filtered_inner_query_faster_than_unfiltered(pool: PgPool) -> Result<()>
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
 async fn sort_compare_performance_at_scale(pool: PgPool) -> Result<()> {
-    // Use a single connection so the temp table is visible across all queries
-    let mut conn = pool.acquire().await?;
-
-    // Expand 99 rows to 495 via cross join with generate_series
-    // Duplicates don't affect sort algorithm performance — each eql_v2.compare()
-    // call costs the same regardless of value uniqueness
-    sqlx::query(
-        "CREATE TEMP TABLE ore_perf AS \
-         SELECT (id + (s - 1) * 99)::bigint AS id, e \
-         FROM ore, generate_series(1, 5) s",
-    )
-    .execute(&mut *conn)
-    .await?;
-
+    // 1000 rows is sufficient scale to demonstrate O(n log n) vs O(n²)
     let sort_sql = "SELECT * FROM eql_v2.sort_compare(
-        (SELECT array_agg(id ORDER BY id) FROM ore_perf),
-        (SELECT array_agg(e ORDER BY id) FROM ore_perf)
+        (SELECT array_agg(id ORDER BY id) FROM ore),
+        (SELECT array_agg(e ORDER BY id) FROM ore)
     )";
-    let correlated_sql = "SELECT id FROM ore_perf t \
-        ORDER BY (SELECT COUNT(*) FROM ore_perf t2 WHERE eql_v2.compare(t.e, t2.e) > 0)";
+    let correlated_sql = "SELECT id FROM ore t \
+        ORDER BY (SELECT COUNT(*) FROM ore t2 WHERE eql_v2.compare(t.e, t2.e) > 0)";
 
     // Warm up
-    sqlx::query(sort_sql).fetch_all(&mut *conn).await?;
-    sqlx::query(correlated_sql).fetch_all(&mut *conn).await?;
+    sqlx::query(sort_sql).fetch_all(&pool).await?;
+    sqlx::query(correlated_sql).fetch_all(&pool).await?;
 
-    // Measure sort_compare
     let start = Instant::now();
-    let sort_rows = sqlx::query(sort_sql).fetch_all(&mut *conn).await?;
+    let sort_rows = sqlx::query(sort_sql).fetch_all(&pool).await?;
     let sort_elapsed = start.elapsed();
 
-    // Measure correlated subquery
     let start = Instant::now();
-    let correlated_rows = sqlx::query(correlated_sql).fetch_all(&mut *conn).await?;
+    let correlated_rows = sqlx::query(correlated_sql).fetch_all(&pool).await?;
     let correlated_elapsed = start.elapsed();
 
-    assert_eq!(sort_rows.len(), 495);
-    assert_eq!(correlated_rows.len(), 495);
+    assert_eq!(sort_rows.len(), 1000);
+    assert_eq!(correlated_rows.len(), 1000);
 
     eprintln!(
-        "Performance @495 rows: sort_compare={:?}, correlated={:?}, speedup={:.1}x",
+        "Performance @1000 rows: sort_compare={:?}, correlated={:?}, speedup={:.1}x",
         sort_elapsed,
         correlated_elapsed,
         correlated_elapsed.as_secs_f64() / sort_elapsed.as_secs_f64()
@@ -690,61 +678,72 @@ async fn sort_compare_performance_at_scale(pool: PgPool) -> Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
 async fn filtered_inner_query_performance_at_scale(pool: PgPool) -> Result<()> {
-    // Use a single connection so the temp table is visible across all queries
-    let mut conn = pool.acquire().await?;
-
-    // Expand 99 rows to 495 via cross join with generate_series
-    sqlx::query(
-        "CREATE TEMP TABLE ore_perf AS \
-         SELECT (id + (s - 1) * 99)::bigint AS id, e \
-         FROM ore, generate_series(1, 5) s",
-    )
-    .execute(&mut *conn)
-    .await?;
-
     let ore_term = get_ore_encrypted(&pool, 42).await?;
 
-    // Unfiltered inner query: outer filters to ~285 rows, inner scans all 495
+    // Unfiltered inner query: outer filters to 958 rows, inner scans all 1000
     let unfiltered_sql = format!(
-        "SELECT id FROM ore_perf t \
+        "SELECT id FROM ore t \
          WHERE e > '{ore}'::eql_v2_encrypted \
-         ORDER BY (SELECT COUNT(*) FROM ore_perf t2 WHERE eql_v2.compare(t.e, t2.e) > 0)",
+         ORDER BY (SELECT COUNT(*) FROM ore t2 WHERE eql_v2.compare(t.e, t2.e) > 0)",
         ore = ore_term
     );
 
-    // Filtered inner query: both outer and inner filter to ~285 rows
+    // Filtered inner query: both outer and inner filter to 958 rows
     let filtered_sql = format!(
-        "SELECT id FROM ore_perf t \
+        "SELECT id FROM ore t \
          WHERE e > '{ore}'::eql_v2_encrypted \
-         ORDER BY (SELECT COUNT(*) FROM ore_perf t2 \
+         ORDER BY (SELECT COUNT(*) FROM ore t2 \
                    WHERE e > '{ore}'::eql_v2_encrypted \
                    AND eql_v2.compare(t.e, t2.e) > 0)",
         ore = ore_term
     );
 
     // Warm up
-    sqlx::query(&unfiltered_sql).fetch_all(&mut *conn).await?;
-    sqlx::query(&filtered_sql).fetch_all(&mut *conn).await?;
+    sqlx::query(&unfiltered_sql).fetch_all(&pool).await?;
+    sqlx::query(&filtered_sql).fetch_all(&pool).await?;
 
     // Measure unfiltered
     let start = Instant::now();
-    let unfiltered_rows = sqlx::query(&unfiltered_sql).fetch_all(&mut *conn).await?;
+    let unfiltered_rows = sqlx::query(&unfiltered_sql).fetch_all(&pool).await?;
     let unfiltered_elapsed = start.elapsed();
 
     // Measure filtered
     let start = Instant::now();
-    let filtered_rows = sqlx::query(&filtered_sql).fetch_all(&mut *conn).await?;
+    let filtered_rows = sqlx::query(&filtered_sql).fetch_all(&pool).await?;
     let filtered_elapsed = start.elapsed();
 
-    // Both return rows where e > ore(42): 57 unique values * 5 copies = 285 rows
-    assert_eq!(unfiltered_rows.len(), 285);
-    assert_eq!(filtered_rows.len(), 285);
+    assert_eq!(unfiltered_rows.len(), 958);
+    assert_eq!(filtered_rows.len(), 958);
 
     eprintln!(
-        "Performance @495 rows (filtered to 285): filtered={:?}, unfiltered={:?}, speedup={:.1}x",
+        "Performance @1000 rows (filtered to 958): filtered={:?}, unfiltered={:?}, speedup={:.1}x",
         filtered_elapsed,
         unfiltered_elapsed,
         unfiltered_elapsed.as_secs_f64() / filtered_elapsed.as_secs_f64()
+    );
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+async fn sort_compare_text_performance(pool: PgPool) -> Result<()> {
+    let sort_sql = "SELECT * FROM eql_v2.sort_compare(
+        (SELECT array_agg(id ORDER BY id) FROM ore_text),
+        (SELECT array_agg(e ORDER BY id) FROM ore_text)
+    )";
+
+    // Warm up
+    sqlx::query(sort_sql).fetch_all(&pool).await?;
+
+    let start = Instant::now();
+    let sort_rows = sqlx::query(sort_sql).fetch_all(&pool).await?;
+    let sort_elapsed = start.elapsed();
+
+    assert_eq!(sort_rows.len(), 100);
+
+    eprintln!(
+        "Performance text @100 rows: sort_compare={:?}",
+        sort_elapsed
     );
 
     Ok(())

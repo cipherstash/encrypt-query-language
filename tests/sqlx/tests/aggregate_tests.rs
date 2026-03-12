@@ -13,7 +13,7 @@ async fn count_aggregate_on_encrypted_column(pool: PgPool) -> Result<()> {
         .fetch_one(&pool)
         .await?;
 
-    assert_eq!(count, 99, "should count all non-NULL encrypted values");
+    assert_eq!(count, 1000, "should count all non-NULL encrypted values");
 
     Ok(())
 }
@@ -22,10 +22,10 @@ async fn count_aggregate_on_encrypted_column(pool: PgPool) -> Result<()> {
 async fn max_aggregate_on_encrypted_column(pool: PgPool) -> Result<()> {
     // Test: eql_v2.max() returns highest encrypted value
     // The ore table has id and e columns where e is the encrypted version of id
-    // So eql_v2.max(e) should return the encrypted value corresponding to id=99
+    // So eql_v2.max(e) should return the encrypted value corresponding to id=1000
 
-    // Get the expected max value (encrypted value where id = 99)
-    let expected: String = sqlx::query_scalar("SELECT e::text FROM ore WHERE id = 99")
+    // Get the expected max value (encrypted value where id = 1000)
+    let expected: String = sqlx::query_scalar("SELECT e::text FROM ore WHERE id = 1000")
         .fetch_one(&pool)
         .await?;
 
@@ -36,7 +36,7 @@ async fn max_aggregate_on_encrypted_column(pool: PgPool) -> Result<()> {
 
     assert_eq!(
         actual, expected,
-        "eql_v2.max(e) should return the encrypted value where id = 99 (maximum)"
+        "eql_v2.max(e) should return the encrypted value where id = 1000 (maximum)"
     );
 
     Ok(())
