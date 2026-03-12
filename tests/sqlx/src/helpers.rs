@@ -107,6 +107,29 @@ pub async fn get_ore_encrypted_as_jsonb(pool: &PgPool, id: i32) -> Result<String
     result.with_context(|| format!("ore table returned NULL for id={}", id))
 }
 
+/// Fetch ORE text encrypted value as JSONB for comparison
+///
+/// This creates a JSONB value from the ore_text table that can be used with JSONB comparison
+/// operators. The ore_text table values only contain {"ob": [...]}, so we merge in the required
+/// "i" (index metadata) and "v" (version) fields to create a valid eql_v2_encrypted structure.
+pub async fn get_ore_text_encrypted_as_jsonb(pool: &PgPool, id: i32) -> Result<String> {
+    let sql = format!(
+        "SELECT (e::jsonb || jsonb_build_object('i', jsonb_build_object('t', 'ore'), 'v', 2))::text FROM ore_text WHERE id = {}",
+        id
+    );
+
+    let row = sqlx::query(&sql)
+        .fetch_one(pool)
+        .await
+        .with_context(|| format!("fetching ore_text encrypted as jsonb for id={}", id))?;
+
+    let result: Option<String> = row
+        .try_get(0)
+        .with_context(|| format!("extracting jsonb text for id={}", id))?;
+
+    result.with_context(|| format!("ore_text table returned NULL for id={}", id))
+}
+
 /// Fetch STE vec encrypted value from a specified table as serde_json::Value
 ///
 /// Default tables:
