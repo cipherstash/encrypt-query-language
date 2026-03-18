@@ -1,6 +1,6 @@
-//! ORE text equality, inequality, and comparison operator tests
+//! ORE text operator tests
 //!
-//! Tests equality and comparison operators with text ORE encryption.
+//! Tests equality, comparison, function, JSONB, and edge-case operators with text ORE encryption.
 //! Uses ore_text table from migrations/006_install_ore_text_data.sql (ids 1-100)
 //! Words are lexicographically sorted: id=1 is 'aardvark', id=100 is 'zinc'.
 //!
@@ -265,7 +265,71 @@ async fn ore_text_gte_encrypted_gte_jsonb(pool: PgPool) -> Result<()> {
 }
 
 // ============================================================================
-// JSONB variants: jsonb op e (reverse direction)
+// JSONB variants: e = jsonb, e <> jsonb
+// ============================================================================
+
+#[sqlx::test]
+async fn ore_text_equality_encrypted_eq_jsonb(pool: PgPool) -> Result<()> {
+    // Test: e = jsonb with text ORE
+    // id=56 ('horizon') should match exactly 1 record
+
+    let json_value = get_ore_text_encrypted_as_jsonb(&pool, 56).await?;
+
+    let sql = format!("SELECT id FROM ore_text WHERE e = '{}'::jsonb", json_value);
+
+    QueryAssertion::new(&pool, &sql).count(1).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn ore_text_inequality_encrypted_neq_jsonb(pool: PgPool) -> Result<()> {
+    // Test: e <> jsonb with text ORE
+    // Should return 99 records (all except id=56)
+
+    let json_value = get_ore_text_encrypted_as_jsonb(&pool, 56).await?;
+
+    let sql = format!("SELECT id FROM ore_text WHERE e <> '{}'::jsonb", json_value);
+
+    QueryAssertion::new(&pool, &sql).count(99).await;
+
+    Ok(())
+}
+
+// ============================================================================
+// JSONB variants: jsonb = e, jsonb <> e (reverse direction)
+// ============================================================================
+
+#[sqlx::test]
+async fn ore_text_equality_jsonb_eq_encrypted(pool: PgPool) -> Result<()> {
+    // Test: jsonb = e (reverse direction)
+    // jsonb(56) = e should match exactly 1 record
+
+    let json_value = get_ore_text_encrypted_as_jsonb(&pool, 56).await?;
+
+    let sql = format!("SELECT id FROM ore_text WHERE '{}'::jsonb = e", json_value);
+
+    QueryAssertion::new(&pool, &sql).count(1).await;
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn ore_text_inequality_jsonb_neq_encrypted(pool: PgPool) -> Result<()> {
+    // Test: jsonb <> e (reverse direction)
+    // jsonb(56) <> e should return 99 records (all except id=56)
+
+    let json_value = get_ore_text_encrypted_as_jsonb(&pool, 56).await?;
+
+    let sql = format!("SELECT id FROM ore_text WHERE '{}'::jsonb <> e", json_value);
+
+    QueryAssertion::new(&pool, &sql).count(99).await;
+
+    Ok(())
+}
+
+// ============================================================================
+// JSONB variants: jsonb op e (reverse comparison direction)
 // ============================================================================
 
 #[sqlx::test]
