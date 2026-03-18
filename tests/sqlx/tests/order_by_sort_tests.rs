@@ -302,6 +302,32 @@ async fn order_by_compare_desc_with_where(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
+#[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+async fn order_by_compare_reuses_precomputed_order_keys(pool: PgPool) -> Result<()> {
+    let mut tx = pool.begin().await?;
+    let sql = "SELECT * FROM eql_v2.order_by_compare('SELECT id, e FROM ore')";
+    let rows = sqlx::query(sql).fetch_all(&mut *tx).await?;
+
+    assert_eq!(rows.len(), 1000, "Should return all 1000 records");
+
+    let order_by_calls: i64 = sqlx::query_scalar(
+        "SELECT coalesce(sum(calls), 0)::bigint
+         FROM pg_stat_xact_user_functions
+         WHERE schemaname = 'eql_v2' AND funcname = 'order_by'",
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+
+    assert_eq!(
+        order_by_calls, 1000,
+        "order_by_compare should extract ORE keys once per row"
+    );
+
+    tx.rollback().await?;
+
+    Ok(())
+}
+
 // ============================================================================
 // sort_compare table-reference overload tests
 // ============================================================================
@@ -381,6 +407,41 @@ async fn sort_compare_table_ref_with_limit(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
 async fn sort_compare_table_ref_with_filter(pool: PgPool) -> Result<()> {
     let sql = "SELECT * FROM eql_v2.sort_compare('id', 'e', 'ore', 'ASC', 'id > 42')";
+
+    let rows = sqlx::query(sql).fetch_all(&pool).await?;
+
+    assert_eq!(rows.len(), 958, "Should return 958 records (ids 43-1000)");
+
+    let first_id: i64 = rows[0].try_get(0)?;
+    assert_eq!(first_id, 43, "First row should be id=43");
+
+    let last_id: i64 = rows[957].try_get(0)?;
+    assert_eq!(last_id, 1000, "Last row should be id=1000");
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+async fn sort_compare_table_ref_schema_qualified(pool: PgPool) -> Result<()> {
+    let sql = "SELECT * FROM eql_v2.sort_compare('id', 'e', 'public.ore', 'ASC')";
+
+    let rows = sqlx::query(sql).fetch_all(&pool).await?;
+
+    assert_eq!(rows.len(), 1000, "Should return all 1000 records");
+
+    let all_ids: Vec<i64> = rows.iter().map(|r| r.try_get(0).unwrap()).collect();
+    let expected: Vec<i64> = (1..=1000).collect();
+    assert_eq!(
+        all_ids, expected,
+        "Schema-qualified table name should preserve sorted ordering"
+    );
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+async fn sort_compare_table_ref_schema_qualified_with_filter(pool: PgPool) -> Result<()> {
+    let sql = "SELECT * FROM eql_v2.sort_compare('id', 'e', 'public.ore', 'ASC', 'id > 42')";
 
     let rows = sqlx::query(sql).fetch_all(&pool).await?;
 

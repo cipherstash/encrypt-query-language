@@ -175,6 +175,18 @@ async fn sort_compare_text_table_ref(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+async fn sort_compare_text_table_ref_schema_qualified(pool: PgPool) -> Result<()> {
+    let sql = "SELECT * FROM eql_v2.sort_compare('id', 'e', 'public.ore_text', 'ASC')";
+
+    let rows = sqlx::query(sql).fetch_all(&pool).await?;
+
+    assert_eq!(rows.len(), 100, "Should return all 100 records");
+    assert_sequential_ids(&rows, 1, 100);
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
 async fn sort_compare_text_order_by_compare(pool: PgPool) -> Result<()> {
     let sql = "SELECT * FROM eql_v2.order_by_compare('SELECT id, e FROM ore_text')";
 

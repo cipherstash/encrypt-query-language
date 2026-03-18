@@ -303,6 +303,65 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+--! @internal
+--! @brief Sort encrypted values using precomputed ORE keys when available
+--!
+--! Shared implementation for public sorting entrypoints. When `use_ore` is true
+--! the caller must provide an aligned `keys` array; otherwise `eql_v2.compare()`
+--! is used on the encrypted values directly.
+CREATE FUNCTION eql_v2._sort_compare_precomputed(
+    ids bigint[],
+    vals eql_v2_encrypted[],
+    keys eql_v2.ore_block_u64_8_256[],
+    direction text DEFAULT 'ASC',
+    use_ore boolean DEFAULT true
+)
+RETURNS TABLE(id bigint, val eql_v2_encrypted)
+IMMUTABLE PARALLEL SAFE
+AS $$
+DECLARE
+    n integer;
+    m integer;
+    k integer;
+    sorted_ids bigint[];
+    sorted_vals eql_v2_encrypted[];
+    sorted_keys eql_v2.ore_block_u64_8_256[];
+BEGIN
+    n := coalesce(array_length(ids, 1), 0);
+    m := coalesce(array_length(vals, 1), 0);
+
+    IF n <> m THEN
+        RAISE EXCEPTION 'ids and vals must have the same length';
+    END IF;
+
+    IF use_ore THEN
+        k := coalesce(array_length(keys, 1), 0);
+        IF n <> k THEN
+            RAISE EXCEPTION 'ids and keys must have the same length when use_ore is true';
+        END IF;
+    END IF;
+
+    IF n = 0 THEN
+        RETURN;
+    END IF;
+
+    IF n = 1 THEN
+        id := ids[1];
+        val := vals[1];
+        RETURN NEXT;
+        RETURN;
+    END IF;
+
+    SELECT q.ids, q.vals, q.keys INTO sorted_ids, sorted_vals, sorted_keys
+        FROM eql_v2._quicksort_sorter(ids, vals, keys, 1, n, use_ore) q;
+
+    RETURN QUERY
+        SELECT emitted.id, emitted.val
+        FROM eql_v2._emit_sorted_rows(sorted_ids, sorted_vals, direction) emitted;
+END;
+$$ LANGUAGE plpgsql;
+
+
 --! @brief Sort encrypted values using comparison-based quicksort
 --!
 --! Sorts parallel arrays of identifiers and encrypted values using O(n log n)
@@ -350,30 +409,11 @@ IMMUTABLE STRICT PARALLEL SAFE
 AS $$
 DECLARE
     n integer;
-    m integer;
-    sorted_ids bigint[];
-    sorted_vals eql_v2_encrypted[];
     sorted_keys eql_v2.ore_block_u64_8_256[];
     i integer;
     use_ore boolean := true;
 BEGIN
     n := coalesce(array_length(ids, 1), 0);
-    m := coalesce(array_length(vals, 1), 0);
-
-    IF n <> m THEN
-        RAISE EXCEPTION 'ids and vals must have the same length';
-    END IF;
-
-    IF n = 0 THEN
-        RETURN;
-    END IF;
-
-    IF n = 1 THEN
-        id := ids[1];
-        val := vals[1];
-        RETURN NEXT;
-        RETURN;
-    END IF;
 
     FOR i IN 1..n LOOP
         IF vals[i] IS NULL THEN
@@ -386,12 +426,9 @@ BEGIN
         END IF;
     END LOOP;
 
-    SELECT q.ids, q.vals, q.keys INTO sorted_ids, sorted_vals, sorted_keys
-        FROM eql_v2._quicksort_sorter(ids, vals, sorted_keys, 1, n, use_ore) q;
-
     RETURN QUERY
-        SELECT emitted.id, emitted.val
-        FROM eql_v2._emit_sorted_rows(sorted_ids, sorted_vals, direction) emitted;
+        SELECT sc.id, sc.val
+        FROM eql_v2._sort_compare_precomputed(ids, vals, sorted_keys, direction, use_ore) sc;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -438,8 +475,15 @@ RETURNS TABLE(id bigint, val eql_v2_encrypted)
 AS $$
 DECLARE
     query text;
+    resolved_tbl regclass;
 BEGIN
-    query := format('SELECT %I, %I FROM %I', id_column, val_column, tbl);
+    resolved_tbl := to_regclass(tbl);
+
+    IF resolved_tbl IS NULL THEN
+        RAISE EXCEPTION 'table "%" does not exist', tbl;
+    END IF;
+
+    query := format('SELECT %I, %I FROM %s', id_column, val_column, resolved_tbl);
 
     IF filter IS NOT NULL THEN
         query := query || ' WHERE ' || filter;
@@ -521,6 +565,12 @@ BEGIN
 
     RETURN QUERY
         SELECT sc.id, sc.val
-        FROM eql_v2.sort_compare(all_ids, all_vals, direction) sc;
+        FROM eql_v2._sort_compare_precomputed(
+            all_ids,
+            all_vals,
+            all_keys,
+            direction,
+            all_have_order_keys
+        ) sc;
 END;
 $$ LANGUAGE plpgsql;
