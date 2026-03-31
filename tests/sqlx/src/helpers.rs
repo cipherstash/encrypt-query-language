@@ -448,3 +448,305 @@ pub fn assert_uses_seq_scan(explain_output: &str) {
         explain_output
     );
 }
+
+// ============================================================================
+// Benchmarking / EXPLAIN Helpers
+// ============================================================================
+
+/// Statistics extracted from EXPLAIN ANALYZE JSON output
+///
+/// Contains timing and plan information for benchmarking queries.
+/// Used by `explain_analyze_avg` to return averaged statistics.
+#[derive(Debug, Clone)]
+pub struct ExplainStats {
+    /// Average execution time in milliseconds across runs
+    pub execution_time_ms: f64,
+    /// Average planning time in milliseconds across runs
+    pub planning_time_ms: f64,
+    /// Top-level node type from the query plan (e.g., "Index Scan", "Seq Scan")
+    pub node_type: String,
+}
+
+/// Run EXPLAIN with JSON format on a query and return the parsed plan
+///
+/// Executes `EXPLAIN (FORMAT JSON) {query}` and parses the result.
+/// PostgreSQL returns a single-element JSON array containing the plan tree.
+///
+/// This is distinct from `explain_query()` which returns plain text output.
+/// The JSON format provides structured access to plan nodes, costs, and types.
+///
+/// # Arguments
+/// * `pool` - Database connection pool
+/// * `query` - SQL query to explain (without EXPLAIN prefix)
+///
+/// # Returns
+/// The full EXPLAIN JSON output as a `serde_json::Value`
+///
+/// # Example
+/// ```ignore
+/// let plan = explain_json(&pool, "SELECT * FROM foo WHERE x = 1").await?;
+/// let node_type = plan[0]["Plan"]["Node Type"].as_str().unwrap();
+/// ```
+pub async fn explain_json(pool: &PgPool, query: &str) -> Result<serde_json::Value> {
+    let sql = format!("EXPLAIN (FORMAT JSON) {}", query);
+    let row = sqlx::query(&sql)
+        .fetch_one(pool)
+        .await
+        .with_context(|| format!("running EXPLAIN (FORMAT JSON) on query: {}", query))?;
+
+    let json_str: String = row
+        .try_get(0)
+        .with_context(|| "extracting JSON EXPLAIN output")?;
+
+    let plan: serde_json::Value = serde_json::from_str(&json_str)
+        .with_context(|| format!("parsing EXPLAIN JSON output: {}", json_str))?;
+
+    Ok(plan)
+}
+
+/// Run EXPLAIN ANALYZE multiple times and return averaged statistics
+///
+/// Executes `EXPLAIN (ANALYZE, FORMAT JSON) {query}` the specified number of times
+/// and returns the arithmetic mean of execution and planning times.
+///
+/// **Warning**: EXPLAIN ANALYZE actually executes the query. If the query has
+/// side effects (INSERT, UPDATE, DELETE), those effects will occur on every run.
+///
+/// # Arguments
+/// * `pool` - Database connection pool
+/// * `query` - SQL query to explain and execute (without EXPLAIN prefix)
+/// * `runs` - Number of times to execute (must be >= 1)
+///
+/// # Returns
+/// Averaged `ExplainStats` with mean execution_time_ms, mean planning_time_ms,
+/// and the node_type from the first run's top-level plan node
+///
+/// # Example
+/// ```ignore
+/// let stats = explain_analyze_avg(&pool, "SELECT * FROM foo WHERE x = 1", 5).await?;
+/// assert!(stats.execution_time_ms < 10.0, "Query too slow: {}ms", stats.execution_time_ms);
+/// assert_eq!(stats.node_type, "Index Scan");
+/// ```
+pub async fn explain_analyze_avg(
+    pool: &PgPool,
+    query: &str,
+    runs: usize,
+) -> Result<ExplainStats> {
+    assert!(runs >= 1, "runs must be >= 1, got {}", runs);
+
+    let sql = format!("EXPLAIN (ANALYZE, FORMAT JSON) {}", query);
+
+    let mut total_execution_ms = 0.0_f64;
+    let mut total_planning_ms = 0.0_f64;
+    let mut node_type = String::new();
+
+    for i in 0..runs {
+        let row = sqlx::query(&sql)
+            .fetch_one(pool)
+            .await
+            .with_context(|| {
+                format!(
+                    "running EXPLAIN ANALYZE (run {}/{}) on query: {}",
+                    i + 1,
+                    runs,
+                    query
+                )
+            })?;
+
+        let json_str: String = row
+            .try_get(0)
+            .with_context(|| format!("extracting JSON output on run {}/{}", i + 1, runs))?;
+
+        let plan: serde_json::Value = serde_json::from_str(&json_str)
+            .with_context(|| format!("parsing EXPLAIN ANALYZE JSON on run {}/{}", i + 1, runs))?;
+
+        // EXPLAIN (ANALYZE, FORMAT JSON) returns:
+        // [{"Plan": {...}, "Planning Time": N, "Execution Time": N}]
+        let entry = &plan[0];
+
+        let exec_time = entry["Execution Time"]
+            .as_f64()
+            .with_context(|| format!("extracting Execution Time on run {}/{}", i + 1, runs))?;
+
+        let plan_time = entry["Planning Time"]
+            .as_f64()
+            .with_context(|| format!("extracting Planning Time on run {}/{}", i + 1, runs))?;
+
+        total_execution_ms += exec_time;
+        total_planning_ms += plan_time;
+
+        // Capture node type from first run only
+        if i == 0 {
+            node_type = entry["Plan"]["Node Type"]
+                .as_str()
+                .with_context(|| "extracting Node Type from first run")?
+                .to_string();
+        }
+    }
+
+    let n = runs as f64;
+    Ok(ExplainStats {
+        execution_time_ms: total_execution_ms / n,
+        planning_time_ms: total_planning_ms / n,
+        node_type,
+    })
+}
+
+/// Assert that a JSON EXPLAIN plan does not use any sequential scan
+///
+/// Recursively walks the JSON plan tree checking all "Node Type" fields.
+/// A plan can have nested nodes (e.g., Aggregate -> Seq Scan), so all levels
+/// are checked. Both "Seq Scan" and "Parallel Seq Scan" are rejected.
+///
+/// This is the structured (JSON) counterpart to `assert_uses_seq_scan()` which
+/// operates on plain text output.
+///
+/// # Arguments
+/// * `plan` - JSON EXPLAIN output from `explain_json()` or `EXPLAIN (FORMAT JSON)`
+///
+/// # Panics
+/// Panics if any node in the plan tree has a "Seq Scan" or "Parallel Seq Scan" node type
+///
+/// # Example
+/// ```ignore
+/// let plan = explain_json(&pool, "SELECT * FROM foo WHERE x = 1").await?;
+/// assert_no_seq_scan(&plan);
+/// ```
+pub fn assert_no_seq_scan(plan: &serde_json::Value) {
+    let mut seq_scan_nodes = Vec::new();
+    collect_seq_scan_nodes(plan, &mut seq_scan_nodes);
+
+    assert!(
+        seq_scan_nodes.is_empty(),
+        "Expected no sequential scans but found {} node(s): {:?}\nFull plan: {}",
+        seq_scan_nodes.len(),
+        seq_scan_nodes,
+        serde_json::to_string_pretty(plan).unwrap_or_else(|_| plan.to_string())
+    );
+}
+
+/// Recursively collect all sequential scan node types from a JSON EXPLAIN plan
+fn collect_seq_scan_nodes(value: &serde_json::Value, found: &mut Vec<String>) {
+    match value {
+        serde_json::Value::Object(map) => {
+            if let Some(node_type) = map.get("Node Type").and_then(|v| v.as_str()) {
+                if node_type == "Seq Scan" || node_type == "Parallel Seq Scan" {
+                    let relation = map
+                        .get("Relation Name")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("unknown");
+                    found.push(format!("{} on {}", node_type, relation));
+                }
+            }
+            for v in map.values() {
+                collect_seq_scan_nodes(v, found);
+            }
+        }
+        serde_json::Value::Array(arr) => {
+            for item in arr {
+                collect_seq_scan_nodes(item, found);
+            }
+        }
+        _ => {}
+    }
+}
+
+// ============================================================================
+// pg_stat_statements Helpers (Tier 2)
+// ============================================================================
+
+/// Statistics from pg_stat_statements for a matched query
+///
+/// Contains key performance metrics from the pg_stat_statements view.
+/// See PostgreSQL documentation for pg_stat_statements column definitions.
+#[derive(Debug, Clone)]
+pub struct PgStatEntry {
+    /// Number of times the query was executed
+    pub calls: i64,
+    /// Mean execution time in milliseconds
+    pub mean_exec_time: f64,
+    /// Population standard deviation of execution time in milliseconds
+    pub stddev_exec_time: f64,
+    /// Total execution time in milliseconds across all calls
+    pub total_exec_time: f64,
+    /// The normalized query string from pg_stat_statements
+    pub query: String,
+}
+
+/// Ensure pg_stat_statements extension is available
+///
+/// Creates the extension if it doesn't exist. Should be called once
+/// at the start of benchmark tests that need pg_stat_statements.
+///
+/// Requires `shared_preload_libraries=pg_stat_statements` in the PostgreSQL
+/// server configuration (see docker-compose.yml).
+pub async fn ensure_pg_stat_statements(pool: &PgPool) -> Result<()> {
+    sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_stat_statements")
+        .execute(pool)
+        .await
+        .with_context(|| "creating pg_stat_statements extension")?;
+    Ok(())
+}
+
+/// Read query statistics from pg_stat_statements
+///
+/// Looks up a query in the `pg_stat_statements` view using a SQL LIKE pattern.
+/// Requires the `pg_stat_statements` extension to be loaded
+/// (see `ensure_pg_stat_statements`).
+///
+/// # Arguments
+/// * `pool` - Database connection pool
+/// * `query_pattern` - SQL LIKE pattern to match against normalized query text
+///   (e.g., `"%FROM ore WHERE%"`)
+///
+/// # Returns
+/// `PgStatEntry` for the matched query. Returns error if no match or multiple matches.
+///
+/// # Example
+/// ```ignore
+/// ensure_pg_stat_statements(&pool).await?;
+/// let stats = read_pg_stat_statements(&pool, "%FROM ore WHERE%").await?;
+/// assert!(stats.mean_exec_time < 5.0, "Query regression: {}ms", stats.mean_exec_time);
+/// ```
+pub async fn read_pg_stat_statements(
+    pool: &PgPool,
+    query_pattern: &str,
+) -> Result<PgStatEntry> {
+    let sql = "SELECT query, calls, mean_exec_time, stddev_exec_time, total_exec_time \
+               FROM pg_stat_statements \
+               WHERE query LIKE $1";
+
+    let rows: Vec<(String, i64, f64, f64, f64)> = sqlx::query_as(sql)
+        .bind(query_pattern)
+        .fetch_all(pool)
+        .await
+        .with_context(|| {
+            format!(
+                "reading pg_stat_statements for pattern: {}",
+                query_pattern
+            )
+        })?;
+
+    match rows.len() {
+        0 => Err(anyhow::anyhow!(
+            "No pg_stat_statements entry found matching pattern: {}",
+            query_pattern
+        )),
+        1 => {
+            let (query, calls, mean_exec_time, stddev_exec_time, total_exec_time) =
+                rows.into_iter().next().unwrap();
+            Ok(PgStatEntry {
+                calls,
+                mean_exec_time,
+                stddev_exec_time,
+                total_exec_time,
+                query,
+            })
+        }
+        n => Err(anyhow::anyhow!(
+            "Expected 1 pg_stat_statements entry but found {} matching pattern: {}",
+            n,
+            query_pattern
+        )),
+    }
+}
