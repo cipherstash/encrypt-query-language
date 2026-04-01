@@ -16,8 +16,8 @@ pub use helpers::{
     explain_analyze_avg, explain_json, explain_query, get_encrypted_term, get_ore_encrypted,
     get_ore_encrypted_as_jsonb, get_ore_text_encrypted, get_ore_text_encrypted_as_jsonb,
     get_ste_vec_encrypted, get_ste_vec_encrypted_pair, get_ste_vec_selector_term,
-    get_ste_vec_sv_element, get_ste_vec_term_by_id, read_pg_stat_statements, ExplainStats,
-    PgStatEntry,
+    get_ste_vec_sv_element, get_ste_vec_term_by_id, read_pg_stat_statements,
+    reset_pg_stat_statements, ExplainStats, PgStatEntry,
 };
 pub use index_types as IndexTypes;
 pub use selectors::Selectors;
