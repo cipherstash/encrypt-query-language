@@ -384,7 +384,9 @@ pub async fn analyze_table(pool: &PgPool, table: &str) -> Result<()> {
 ///
 /// # Arguments
 /// * `pool` - Database connection pool
-/// * `query` - SQL query to explain (without EXPLAIN prefix)
+/// * `query` - SQL query to explain (without EXPLAIN prefix).
+///   Must be a trusted/hardcoded string — not user-supplied input,
+///   as it is interpolated directly into the SQL statement.
 ///
 /// # Returns
 /// The EXPLAIN output as a newline-separated string
@@ -477,7 +479,9 @@ pub struct ExplainStats {
 ///
 /// # Arguments
 /// * `pool` - Database connection pool
-/// * `query` - SQL query to explain (without EXPLAIN prefix)
+/// * `query` - SQL query to explain (without EXPLAIN prefix).
+///   Must be a trusted/hardcoded string — not user-supplied input,
+///   as it is interpolated directly into the SQL statement.
 ///
 /// # Returns
 /// The full EXPLAIN JSON output as a `serde_json::Value`
@@ -512,9 +516,15 @@ pub async fn explain_json(pool: &PgPool, query: &str) -> Result<serde_json::Valu
 /// **Warning**: EXPLAIN ANALYZE actually executes the query. If the query has
 /// side effects (INSERT, UPDATE, DELETE), those effects will occur on every run.
 ///
+/// **Note**: The first run may include cold-start overhead (buffer cache misses,
+/// plan cache population). No runs are discarded — callers should account for this
+/// when setting thresholds or increase the run count to dilute the effect.
+///
 /// # Arguments
 /// * `pool` - Database connection pool
-/// * `query` - SQL query to explain and execute (without EXPLAIN prefix)
+/// * `query` - SQL query to explain and execute (without EXPLAIN prefix).
+///   Must be a trusted/hardcoded string — not user-supplied input,
+///   as it is interpolated directly into the SQL statement.
 /// * `runs` - Number of times to execute (must be >= 1)
 ///
 /// # Returns
@@ -532,7 +542,7 @@ pub async fn explain_analyze_avg(
     query: &str,
     runs: usize,
 ) -> Result<ExplainStats> {
-    assert!(runs >= 1, "runs must be >= 1, got {}", runs);
+    anyhow::ensure!(runs >= 1, "runs must be >= 1, got {}", runs);
 
     let sql = format!("EXPLAIN (ANALYZE, FORMAT JSON) {}", query);
 
@@ -626,6 +636,9 @@ pub fn assert_no_seq_scan(plan: &serde_json::Value) {
 }
 
 /// Recursively collect all sequential scan node types from a JSON EXPLAIN plan
+///
+/// Checks standard PostgreSQL node types only ("Seq Scan", "Parallel Seq Scan").
+/// Custom scan providers (e.g., from extensions) are not currently detected.
 fn collect_seq_scan_nodes(value: &serde_json::Value, found: &mut Vec<String>) {
     match value {
         serde_json::Value::Object(map) => {
@@ -688,6 +701,31 @@ pub async fn ensure_pg_stat_statements(pool: &PgPool) -> Result<()> {
     Ok(())
 }
 
+/// Reset all pg_stat_statements counters
+///
+/// Clears cumulative per-query statistics so the next sampling window starts
+/// from zero. Call this before the measurement phase of a benchmark case to
+/// ensure `read_pg_stat_statements` reflects only the queries executed after
+/// the reset — not leftovers from prior cases or setup work.
+///
+/// Requires the `pg_stat_statements` extension to be loaded
+/// (see `ensure_pg_stat_statements`).
+///
+/// # Example
+/// ```ignore
+/// ensure_pg_stat_statements(&pool).await?;
+/// reset_pg_stat_statements(&pool).await?;
+/// // ... run benchmark queries ...
+/// let stats = read_pg_stat_statements(&pool, "%FROM bench%").await?;
+/// ```
+pub async fn reset_pg_stat_statements(pool: &PgPool) -> Result<()> {
+    sqlx::query("SELECT pg_stat_statements_reset()")
+        .execute(pool)
+        .await
+        .with_context(|| "resetting pg_stat_statements counters")?;
+    Ok(())
+}
+
 /// Read query statistics from pg_stat_statements
 ///
 /// Looks up a query in the `pg_stat_statements` view using a SQL LIKE pattern.
@@ -697,7 +735,10 @@ pub async fn ensure_pg_stat_statements(pool: &PgPool) -> Result<()> {
 /// # Arguments
 /// * `pool` - Database connection pool
 /// * `query_pattern` - SQL LIKE pattern to match against normalized query text
-///   (e.g., `"%FROM ore WHERE%"`)
+///   (e.g., `"%FROM ore WHERE%"`).
+///   Note: `pg_stat_statements` normalizes queries by replacing literal values
+///   with `$N` placeholders. Patterns must match the normalized form
+///   (e.g., `"%FROM bench WHERE e = $1%"`, not `"%FROM bench WHERE e = 'abc'%"`).
 ///
 /// # Returns
 /// `PgStatEntry` for the matched query. Returns error if no match or multiple matches.
@@ -714,7 +755,8 @@ pub async fn read_pg_stat_statements(
 ) -> Result<PgStatEntry> {
     let sql = "SELECT query, calls, mean_exec_time, stddev_exec_time, total_exec_time \
                FROM pg_stat_statements \
-               WHERE query LIKE $1";
+               WHERE query LIKE $1 \
+               AND dbid = (SELECT oid FROM pg_database WHERE datname = current_database())";
 
     let rows: Vec<(String, i64, f64, f64, f64)> = sqlx::query_as(sql)
         .bind(query_pattern)
