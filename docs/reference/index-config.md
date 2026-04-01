@@ -35,17 +35,22 @@ SELECT eql_v2.add_search_config(
 
 #### Option (`cast_as`)
 
+The type field can be specified as either `cast_as` or `plaintext_type` (canonical alias).
+When both are present, `cast_as` takes precedence.
+
 Supported types:
 
 - `text`
 - `int`
 - `small_int`
 - `big_int`
-- `real`
+- `real` (also accepts `float`)
 - `double`
 - `boolean`
 - `date`
-- `jsonb`
+- `json` (also accepts `jsonb`)
+- `decimal`
+- `timestamp`
 
 #### Options for match indexes (`opts`)
 
