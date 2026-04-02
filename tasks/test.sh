@@ -20,7 +20,7 @@ echo ""
 
 # Build first
 echo "Building EQL..."
-mise run --output prefix build --force
+mise run --output prefix --force build
 
 # Run lints on sqlx tests
 echo ""
