@@ -43,7 +43,7 @@ jobs:
 
       - uses: jdx/mise-action@v3
         with:
-          version: latest
+          version: 2026.4.0
           install: true # [default: true] run `mise install`
           cache: true # [default: true] cache mise using GitHub's cache
 
