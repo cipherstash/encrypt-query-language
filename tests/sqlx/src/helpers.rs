@@ -493,17 +493,10 @@ pub struct ExplainStats {
 /// ```
 pub async fn explain_json(pool: &PgPool, query: &str) -> Result<serde_json::Value> {
     let sql = format!("EXPLAIN (FORMAT JSON) {}", query);
-    let row = sqlx::query(&sql)
+    let plan: serde_json::Value = sqlx::query_scalar(&sql)
         .fetch_one(pool)
         .await
         .with_context(|| format!("running EXPLAIN (FORMAT JSON) on query: {}", query))?;
-
-    let json_str: String = row
-        .try_get(0)
-        .with_context(|| "extracting JSON EXPLAIN output")?;
-
-    let plan: serde_json::Value = serde_json::from_str(&json_str)
-        .with_context(|| format!("parsing EXPLAIN JSON output: {}", json_str))?;
 
     Ok(plan)
 }
@@ -547,21 +540,17 @@ pub async fn explain_analyze_avg(pool: &PgPool, query: &str, runs: usize) -> Res
     let mut node_type = String::new();
 
     for i in 0..runs {
-        let row = sqlx::query(&sql).fetch_one(pool).await.with_context(|| {
-            format!(
-                "running EXPLAIN ANALYZE (run {}/{}) on query: {}",
-                i + 1,
-                runs,
-                query
-            )
-        })?;
-
-        let json_str: String = row
-            .try_get(0)
-            .with_context(|| format!("extracting JSON output on run {}/{}", i + 1, runs))?;
-
-        let plan: serde_json::Value = serde_json::from_str(&json_str)
-            .with_context(|| format!("parsing EXPLAIN ANALYZE JSON on run {}/{}", i + 1, runs))?;
+        let plan: serde_json::Value = sqlx::query_scalar(&sql)
+            .fetch_one(pool)
+            .await
+            .with_context(|| {
+                format!(
+                    "running EXPLAIN ANALYZE (run {}/{}) on query: {}",
+                    i + 1,
+                    runs,
+                    query
+                )
+            })?;
 
         // EXPLAIN (ANALYZE, FORMAT JSON) returns:
         // [{"Plan": {...}, "Planning Time": N, "Execution Time": N}]
@@ -712,10 +701,10 @@ pub async fn ensure_pg_stat_statements(pool: &PgPool) -> Result<()> {
 /// let stats = read_pg_stat_statements(&pool, "%FROM bench%").await?;
 /// ```
 pub async fn reset_pg_stat_statements(pool: &PgPool) -> Result<()> {
-    sqlx::query("SELECT pg_stat_statements_reset()")
+    sqlx::query("SELECT pg_stat_statements_reset(NULL::oid, NULL::oid, (SELECT oid FROM pg_database WHERE datname = current_database()))")
         .execute(pool)
         .await
-        .with_context(|| "resetting pg_stat_statements counters")?;
+        .with_context(|| "resetting pg_stat_statements counters for current database")?;
     Ok(())
 }
 
