@@ -537,11 +537,7 @@ pub async fn explain_json(pool: &PgPool, query: &str) -> Result<serde_json::Valu
 /// assert!(stats.execution_time_ms < 10.0, "Query too slow: {}ms", stats.execution_time_ms);
 /// assert_eq!(stats.node_type, "Index Scan");
 /// ```
-pub async fn explain_analyze_avg(
-    pool: &PgPool,
-    query: &str,
-    runs: usize,
-) -> Result<ExplainStats> {
+pub async fn explain_analyze_avg(pool: &PgPool, query: &str, runs: usize) -> Result<ExplainStats> {
     anyhow::ensure!(runs >= 1, "runs must be >= 1, got {}", runs);
 
     let sql = format!("EXPLAIN (ANALYZE, FORMAT JSON) {}", query);
@@ -551,17 +547,14 @@ pub async fn explain_analyze_avg(
     let mut node_type = String::new();
 
     for i in 0..runs {
-        let row = sqlx::query(&sql)
-            .fetch_one(pool)
-            .await
-            .with_context(|| {
-                format!(
-                    "running EXPLAIN ANALYZE (run {}/{}) on query: {}",
-                    i + 1,
-                    runs,
-                    query
-                )
-            })?;
+        let row = sqlx::query(&sql).fetch_one(pool).await.with_context(|| {
+            format!(
+                "running EXPLAIN ANALYZE (run {}/{}) on query: {}",
+                i + 1,
+                runs,
+                query
+            )
+        })?;
 
         let json_str: String = row
             .try_get(0)
@@ -749,10 +742,7 @@ pub async fn reset_pg_stat_statements(pool: &PgPool) -> Result<()> {
 /// let stats = read_pg_stat_statements(&pool, "%FROM ore WHERE%").await?;
 /// assert!(stats.mean_exec_time < 5.0, "Query regression: {}ms", stats.mean_exec_time);
 /// ```
-pub async fn read_pg_stat_statements(
-    pool: &PgPool,
-    query_pattern: &str,
-) -> Result<PgStatEntry> {
+pub async fn read_pg_stat_statements(pool: &PgPool, query_pattern: &str) -> Result<PgStatEntry> {
     let sql = "SELECT query, calls, mean_exec_time, stddev_exec_time, total_exec_time \
                FROM pg_stat_statements \
                WHERE query LIKE $1 \
@@ -762,12 +752,7 @@ pub async fn read_pg_stat_statements(
         .bind(query_pattern)
         .fetch_all(pool)
         .await
-        .with_context(|| {
-            format!(
-                "reading pg_stat_statements for pattern: {}",
-                query_pattern
-            )
-        })?;
+        .with_context(|| format!("reading pg_stat_statements for pattern: {}", query_pattern))?;
 
     match rows.len() {
         0 => Err(anyhow::anyhow!(
