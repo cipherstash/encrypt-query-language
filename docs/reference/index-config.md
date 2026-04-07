@@ -35,8 +35,8 @@ SELECT eql_v2.add_search_config(
 
 #### Option (`cast_as`)
 
-The type field can be specified as either `cast_as` or `plaintext_type` (canonical alias).
-When both are present, `cast_as` takes precedence.
+The type field can be specified as either `plaintext_type` (preferred) or `cast_as` (deprecated alias retained for backwards compatibility).
+When both are present, `plaintext_type` takes precedence.
 
 Supported types:
 

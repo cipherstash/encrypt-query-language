@@ -548,6 +548,48 @@ async fn configuration_accepts_plaintext_type_field(pool: PgPool) -> Result<()> 
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
+async fn plaintext_type_takes_precedence_over_cast_as(pool: PgPool) -> Result<()> {
+    sqlx::query("TRUNCATE TABLE eql_v2_configuration")
+        .execute(&pool)
+        .await?;
+
+    // When both fields are present, plaintext_type should win (cast_as is deprecated)
+    let config = serde_json::json!({
+        "v": 1,
+        "tables": {
+            "users": {
+                "age": {
+                    "plaintext_type": "int",
+                    "cast_as": "text",
+                    "indexes": {
+                        "ore": {}
+                    }
+                }
+            }
+        }
+    });
+
+    sqlx::query("INSERT INTO eql_v2_configuration (data) VALUES ($1::jsonb)")
+        .bind(&config)
+        .execute(&pool)
+        .await?;
+
+    let decrypts_as: Option<String> = sqlx::query_scalar(
+        "SELECT decrypts_as FROM eql_v2.config() WHERE relation = 'users' AND col_name = 'age'",
+    )
+    .fetch_one(&pool)
+    .await?;
+
+    assert_eq!(
+        decrypts_as.as_deref(),
+        Some("int"),
+        "plaintext_type should take precedence over cast_as"
+    );
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
 async fn configuration_validates_plaintext_type_values(pool: PgPool) -> Result<()> {
     sqlx::query("TRUNCATE TABLE eql_v2_configuration")
         .execute(&pool)
