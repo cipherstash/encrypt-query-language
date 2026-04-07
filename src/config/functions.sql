@@ -478,7 +478,7 @@ BEGIN
           tables.state,
           tables.table,
           column_config.key,
-          COALESCE(column_config.value->>'cast_as', column_config.value->>'plaintext_type'),
+          COALESCE(column_config.value->>'plaintext_type', column_config.value->>'cast_as'),
           column_config.value->'indexes'
       FROM tables, jsonb_each(tables.tbl_config) column_config;
 END;
