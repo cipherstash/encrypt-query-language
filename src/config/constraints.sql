@@ -74,6 +74,7 @@ $$ LANGUAGE plpgsql;
 --! @note 'plaintext_type' is accepted as a canonical alias for 'cast_as'
 CREATE FUNCTION eql_v2.config_check_cast(val jsonb)
   RETURNS BOOLEAN
+  IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   DECLARE
     _valid_types text[] := '{text, int, small_int, big_int, real, double, boolean, date, jsonb, json, float, decimal, timestamp}';
