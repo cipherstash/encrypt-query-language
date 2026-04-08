@@ -10,6 +10,8 @@ use anyhow::Result;
 use eql_tests::{analyze_table, assert_uses_index, assert_uses_seq_scan, explain_query};
 use sqlx::PgPool;
 
+const BENCH_ROW_COUNT: i64 = 10000;
+
 // ========== Data Integrity Tests ==========
 
 /// Verify migration seeded exactly 10K rows
@@ -18,7 +20,10 @@ async fn bench_table_has_expected_row_count(pool: PgPool) -> Result<()> {
     let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM bench")
         .fetch_one(&pool)
         .await?;
-    assert_eq!(count.0, 10000, "bench table should have 10000 rows");
+    assert_eq!(
+        count.0, BENCH_ROW_COUNT,
+        "bench table should have 10000 rows"
+    );
     Ok(())
 }
 
@@ -48,7 +53,10 @@ async fn bench_encrypted_text_has_hmac_terms(pool: PgPool) -> Result<()> {
     )
     .fetch_one(&pool)
     .await?;
-    assert_eq!(count.0, 10000, "all rows should have hmac_256 index terms");
+    assert_eq!(
+        count.0, BENCH_ROW_COUNT,
+        "all rows should have hmac_256 index terms"
+    );
     Ok(())
 }
 
@@ -75,7 +83,10 @@ async fn bench_encrypted_int_has_ore_terms(pool: PgPool) -> Result<()> {
     )
     .fetch_one(&pool)
     .await?;
-    assert_eq!(count.0, 10000, "all rows should have ORE block index terms");
+    assert_eq!(
+        count.0, BENCH_ROW_COUNT,
+        "all rows should have ORE block index terms"
+    );
     Ok(())
 }
 
