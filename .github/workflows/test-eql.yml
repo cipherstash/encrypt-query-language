@@ -21,6 +21,10 @@ on:
 
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  MISE_VERBOSE: "1"
+
 defaults:
   run:
     shell: bash -l {0}

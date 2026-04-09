@@ -428,6 +428,254 @@ async fn add_and_remove_column(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
+async fn configuration_accepts_canonical_type_names(pool: PgPool) -> Result<()> {
+    sqlx::query("TRUNCATE TABLE eql_v2_configuration")
+        .execute(&pool)
+        .await?;
+
+    // Test each new canonical type name
+    for type_name in &["json", "float", "decimal", "timestamp"] {
+        let config = serde_json::json!({
+            "v": 1,
+            "tables": {
+                "events": {
+                    "data": {
+                        "cast_as": type_name,
+                        "indexes": {}
+                    }
+                }
+            }
+        });
+
+        let result = sqlx::query("INSERT INTO eql_v2_configuration (data) VALUES ($1::jsonb)")
+            .bind(&config)
+            .execute(&pool)
+            .await;
+
+        assert!(
+            result.is_ok(),
+            "Should accept '{}' as a valid cast type: {:?}",
+            type_name,
+            result.err()
+        );
+
+        // Clean up for next iteration
+        sqlx::query("TRUNCATE TABLE eql_v2_configuration")
+            .execute(&pool)
+            .await?;
+    }
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
+async fn add_search_config_accepts_canonical_type_names(pool: PgPool) -> Result<()> {
+    sqlx::query("TRUNCATE TABLE eql_v2_configuration")
+        .execute(&pool)
+        .await?;
+
+    // Test each new canonical type via add_search_config
+    for type_name in &["json", "float", "decimal", "timestamp"] {
+        let result = sqlx::query(
+            "SELECT eql_v2.add_search_config('users', 'name', 'unique', $1, migrating => true)",
+        )
+        .bind(*type_name)
+        .execute(&pool)
+        .await;
+
+        assert!(
+            result.is_ok(),
+            "add_search_config should accept '{}': {:?}",
+            type_name,
+            result.err()
+        );
+
+        // Clean up for next iteration
+        sqlx::query("TRUNCATE TABLE eql_v2_configuration")
+            .execute(&pool)
+            .await?;
+    }
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
+async fn configuration_accepts_plaintext_type_field(pool: PgPool) -> Result<()> {
+    sqlx::query("TRUNCATE TABLE eql_v2_configuration")
+        .execute(&pool)
+        .await?;
+
+    // Insert config using 'plaintext_type' instead of 'cast_as'
+    let config = serde_json::json!({
+        "v": 1,
+        "tables": {
+            "users": {
+                "email": {
+                    "plaintext_type": "text",
+                    "indexes": {
+                        "unique": {}
+                    }
+                }
+            }
+        }
+    });
+
+    let result = sqlx::query("INSERT INTO eql_v2_configuration (data) VALUES ($1::jsonb)")
+        .bind(&config)
+        .execute(&pool)
+        .await;
+
+    assert!(
+        result.is_ok(),
+        "Should accept 'plaintext_type' field: {:?}",
+        result.err()
+    );
+
+    // Verify the config() view returns plaintext_type as decrypts_as
+    let decrypts_as: Option<String> = sqlx::query_scalar(
+        "SELECT decrypts_as FROM eql_v2.config() WHERE relation = 'users' AND col_name = 'email'",
+    )
+    .fetch_one(&pool)
+    .await?;
+
+    assert_eq!(
+        decrypts_as.as_deref(),
+        Some("text"),
+        "config() should return plaintext_type value as decrypts_as"
+    );
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
+async fn plaintext_type_takes_precedence_over_cast_as(pool: PgPool) -> Result<()> {
+    sqlx::query("TRUNCATE TABLE eql_v2_configuration")
+        .execute(&pool)
+        .await?;
+
+    // When both fields are present, plaintext_type should win (cast_as is deprecated)
+    let config = serde_json::json!({
+        "v": 1,
+        "tables": {
+            "users": {
+                "age": {
+                    "plaintext_type": "int",
+                    "cast_as": "text",
+                    "indexes": {
+                        "ore": {}
+                    }
+                }
+            }
+        }
+    });
+
+    sqlx::query("INSERT INTO eql_v2_configuration (data) VALUES ($1::jsonb)")
+        .bind(&config)
+        .execute(&pool)
+        .await?;
+
+    let decrypts_as: Option<String> = sqlx::query_scalar(
+        "SELECT decrypts_as FROM eql_v2.config() WHERE relation = 'users' AND col_name = 'age'",
+    )
+    .fetch_one(&pool)
+    .await?;
+
+    assert_eq!(
+        decrypts_as.as_deref(),
+        Some("int"),
+        "plaintext_type should take precedence over cast_as"
+    );
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
+async fn config_mixes_cast_as_and_plaintext_type_across_columns(pool: PgPool) -> Result<()> {
+    sqlx::query("TRUNCATE TABLE eql_v2_configuration")
+        .execute(&pool)
+        .await?;
+
+    let config = serde_json::json!({
+        "v": 1,
+        "tables": {
+            "users": {
+                "email": {
+                    "cast_as": "text",
+                    "indexes": {
+                        "unique": {}
+                    }
+                },
+                "name": {
+                    "plaintext_type": "text",
+                    "indexes": {
+                        "match": {}
+                    }
+                }
+            }
+        }
+    });
+
+    sqlx::query("INSERT INTO eql_v2_configuration (data) VALUES ($1::jsonb)")
+        .bind(&config)
+        .execute(&pool)
+        .await?;
+
+    let rows: Vec<(String, Option<String>)> = sqlx::query_as(
+        "SELECT col_name, decrypts_as FROM eql_v2.config() WHERE relation = 'users' ORDER BY col_name",
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    assert_eq!(rows.len(), 2);
+    assert_eq!(rows[0].0, "email");
+    assert_eq!(
+        rows[0].1.as_deref(),
+        Some("text"),
+        "cast_as column should resolve"
+    );
+    assert_eq!(rows[1].0, "name");
+    assert_eq!(
+        rows[1].1.as_deref(),
+        Some("text"),
+        "plaintext_type column should resolve"
+    );
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
+async fn configuration_validates_plaintext_type_values(pool: PgPool) -> Result<()> {
+    sqlx::query("TRUNCATE TABLE eql_v2_configuration")
+        .execute(&pool)
+        .await?;
+
+    // Invalid plaintext_type should be rejected
+    let config = serde_json::json!({
+        "v": 1,
+        "tables": {
+            "users": {
+                "email": {
+                    "plaintext_type": "invalid_type",
+                    "indexes": {}
+                }
+            }
+        }
+    });
+
+    let result = sqlx::query("INSERT INTO eql_v2_configuration (data) VALUES ($1::jsonb)")
+        .bind(&config)
+        .execute(&pool)
+        .await;
+
+    assert!(
+        result.is_err(),
+        "Should reject invalid plaintext_type value"
+    );
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
 async fn configuration_constraint_validation(pool: PgPool) -> Result<()> {
     // Test: Configuration constraint validation (11 assertions)
 
