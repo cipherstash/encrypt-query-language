@@ -10,10 +10,13 @@ These migrations install EQL and test helpers into the test database using a **h
 - In `.gitignore` - never commit this file
 - Ensures tests always use current EQL version
 
-**Migrations 002-004 are static fixtures**:
-- 002: Test helpers (`test_helpers.sql`)
-- 003: ORE test data (`ore.sql`)
-- 004: STE Vec test data (`ste_vec.sql`)
+**Migrations 002-007 are static fixtures**:
+- 002: ORE test data (`ore.sql`)
+- 003: STE Vec test data (`ste_vec.sql`)
+- 004: Test helpers (`test_helpers.sql`)
+- 005: STE Vec vast data
+- 006: ORE text data
+- 007: Benchmark table DDL (`bench` table with 3 encrypted columns — DDL only, no rows)
 
 ## How SQLx Uses These Migrations
 

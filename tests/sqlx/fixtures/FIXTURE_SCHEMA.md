@@ -9,7 +9,8 @@ EQL Extension (via migrations)
   ├── encrypted_json.sql
   ├── array_data.sql
   ├── order_by_null_data.sql (depends on ore migration)
-  └── ore_data.sql
+  ├── ore_data.sql
+  └── bench_data.sql + bench_setup.sql (depend on migration 007)
 ```
 
 All fixtures depend on the EQL extension being installed via SQLx migrations.
@@ -129,6 +130,56 @@ CREATE TABLE ore (
 - ❌ DO NOT create `ore_data.sql` fixture - table already exists from migrations
 - ❌ DO NOT use `scripts("ore_data")` in test attributes
 - ✅ Use `#[sqlx::test]` without fixtures for ORE tests
+
+---
+
+## bench_data.sql
+
+**Purpose:** Seeds 10K rows into the `bench` table for performance benchmarking. Opt-in fixture — only loaded when a test explicitly includes `scripts("bench_data")`, so other tests don't pay the cost.
+
+**Dependencies:**
+- Requires `bench` table from migration `007_install_bench_data.sql`
+- Uses `create_encrypted_json()` from migration `004_install_test_helpers.sql`
+
+**Schema:** Uses `bench` table (DDL in migration 007):
+```sql
+CREATE TABLE bench (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  encrypted_text    eql_v2_encrypted,
+  encrypted_int     eql_v2_encrypted,
+  encrypted_bigint  eql_v2_encrypted
+);
+```
+
+**Data:**
+- 10,000 rows cycling through 100 distinct encrypted values (ore ids 1-100)
+- Cycling offsets create varied column distributions:
+  - `encrypted_text`: ids 1, 2, ..., 100, 1, 2, ... (offset 0)
+  - `encrypted_int`: ids 35, 36, ..., 100, 1, ..., 34 (offset +33)
+  - `encrypted_bigint`: ids 68, 69, ..., 100, 1, ..., 67 (offset +66)
+- Each row has HMAC, bloom filter, and ORE index terms
+
+**Used By:**
+- bench_data_tests.rs (all tests)
+
+---
+
+## bench_setup.sql
+
+**Purpose:** Creates the 5 benchmark indexes and refreshes planner statistics. Always loaded after `bench_data.sql` in tests that verify index usage.
+
+**Dependencies:**
+- Requires `bench` table with data from `bench_data.sql`
+
+**Indexes created:**
+- `bench_text_hmac_idx` — hash on `eql_v2.hmac_256(encrypted_text)` for equality
+- `bench_text_ore_idx` — btree on `encrypted_text` via operator class for text ordering
+- `bench_int_ore_idx` — btree on `encrypted_int` via operator class for range/ORDER BY
+- `bench_bigint_ore_idx` — btree on `encrypted_bigint` via operator class
+- `bench_text_bloom_idx` — GIN on `eql_v2.bloom_filter(encrypted_text)` for containment
+
+**Used By:**
+- bench_data_tests.rs (index-usage tests: `scripts("bench_data", "bench_setup")`)
 
 ---
 
