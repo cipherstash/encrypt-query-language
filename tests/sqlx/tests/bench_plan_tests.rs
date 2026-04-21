@@ -2,40 +2,40 @@
 //!
 //! EXPLAIN-based tests asserting each P0/P1 query pattern uses the expected
 //! index access method. Tests for known-broken patterns are marked #[ignore].
+//!
+//! ANALYZE is run by the bench_setup fixture — planner statistics are populated at fixture load.
 
 use anyhow::Result;
-use eql_tests::assert_uses_index;
+use eql_tests::{assert_uses_index, get_bench_encrypted_int, get_bench_encrypted_text};
 use sqlx::PgPool;
+
+const BENCH_INT_ORE_IDX: &str = "bench_int_ore_idx";
 
 /// ORE range query (less-than) uses btree index
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
 async fn ore_int_range_lt_uses_btree_index(pool: PgPool) -> Result<()> {
-    let encrypted: String =
-        sqlx::query_scalar("SELECT (encrypted_int).data::text FROM bench WHERE id = 50")
-            .fetch_one(&pool)
-            .await?;
+    let encrypted = get_bench_encrypted_int(&pool, 50).await?;
 
     let sql = format!(
-        "SELECT * FROM bench WHERE encrypted_int < '{}'::jsonb::eql_v2_encrypted ORDER BY encrypted_int LIMIT 10",
+        "SELECT * FROM bench WHERE encrypted_int < '{}'::jsonb::eql_v2_encrypted \
+         ORDER BY encrypted_int LIMIT 10",
         encrypted
     );
-    assert_uses_index(&pool, &sql, "bench_int_ore_idx").await?;
+    assert_uses_index(&pool, &sql, BENCH_INT_ORE_IDX).await?;
     Ok(())
 }
 
 /// ORE range query (greater-than) uses btree index
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
 async fn ore_int_range_gt_uses_btree_index(pool: PgPool) -> Result<()> {
-    let encrypted: String =
-        sqlx::query_scalar("SELECT (encrypted_int).data::text FROM bench WHERE id = 50")
-            .fetch_one(&pool)
-            .await?;
+    let encrypted = get_bench_encrypted_int(&pool, 50).await?;
 
     let sql = format!(
-        "SELECT * FROM bench WHERE encrypted_int > '{}'::jsonb::eql_v2_encrypted ORDER BY encrypted_int LIMIT 10",
+        "SELECT * FROM bench WHERE encrypted_int > '{}'::jsonb::eql_v2_encrypted \
+         ORDER BY encrypted_int LIMIT 10",
         encrypted
     );
-    assert_uses_index(&pool, &sql, "bench_int_ore_idx").await?;
+    assert_uses_index(&pool, &sql, BENCH_INT_ORE_IDX).await?;
     Ok(())
 }
 
@@ -45,20 +45,17 @@ async fn ore_int_range_gt_uses_btree_index(pool: PgPool) -> Result<()> {
 /// against eql_v2_encrypted is untested and may not resolve to the btree family.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
 async fn ore_int_range_combined_uses_btree_index(pool: PgPool) -> Result<()> {
-    let low: String =
-        sqlx::query_scalar("SELECT (encrypted_int).data::text FROM bench WHERE id = 10")
-            .fetch_one(&pool)
-            .await?;
-    let high: String =
-        sqlx::query_scalar("SELECT (encrypted_int).data::text FROM bench WHERE id = 90")
-            .fetch_one(&pool)
-            .await?;
+    let low = get_bench_encrypted_int(&pool, 10).await?;
+    let high = get_bench_encrypted_int(&pool, 90).await?;
 
     let sql = format!(
-        "SELECT * FROM bench WHERE encrypted_int >= '{}'::jsonb::eql_v2_encrypted AND encrypted_int <= '{}'::jsonb::eql_v2_encrypted ORDER BY encrypted_int LIMIT 10",
+        "SELECT * FROM bench \
+         WHERE encrypted_int >= '{}'::jsonb::eql_v2_encrypted \
+           AND encrypted_int <= '{}'::jsonb::eql_v2_encrypted \
+         ORDER BY encrypted_int LIMIT 10",
         low, high
     );
-    assert_uses_index(&pool, &sql, "bench_int_ore_idx").await?;
+    assert_uses_index(&pool, &sql, BENCH_INT_ORE_IDX).await?;
     Ok(())
 }
 
@@ -73,13 +70,11 @@ async fn ore_int_range_combined_uses_btree_index(pool: PgPool) -> Result<()> {
 ///
 /// Remove #[ignore] when eql_cast index usage is fixed. At 1M rows this query
 /// takes 7.83s vs 0.4ms for hmac_256 — a 19,500x regression.
+/// Passing with the 10K-row fixture confirms index usage — timing data above was measured at 1M rows.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
 #[ignore = "CIP-2831: eql_cast equality performs full seq scan, no index used"]
 async fn eql_cast_equality_uses_hash_index(pool: PgPool) -> Result<()> {
-    let encrypted: String =
-        sqlx::query_scalar("SELECT (encrypted_text).data::text FROM bench WHERE id = 1")
-            .fetch_one(&pool)
-            .await?;
+    let encrypted = get_bench_encrypted_text(&pool, 1).await?;
 
     let sql = format!(
         "SELECT * FROM bench WHERE encrypted_text = '{}'::jsonb::eql_v2_encrypted",
@@ -96,20 +91,19 @@ async fn eql_cast_equality_uses_hash_index(pool: PgPool) -> Result<()> {
 /// columns with ORE index terms the planner should satisfy equality via the btree
 /// operator class, but the cast path prevents index recognition and causes a seq scan.
 ///
+/// CIP-2831 covers both this and `eql_cast_equality_uses_hash_index` as a single root cause fix.
 /// Remove #[ignore] when ORE equality index usage is fixed. At 1M rows this
 /// query takes 18.47s vs 0.4ms for hmac_256.
+/// Passing with the 10K-row fixture confirms index usage — timing data above was measured at 1M rows.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
 #[ignore = "CIP-2831: ORE equality via operator class performs full seq scan"]
 async fn ore_equality_uses_btree_index(pool: PgPool) -> Result<()> {
-    let encrypted: String =
-        sqlx::query_scalar("SELECT (encrypted_int).data::text FROM bench WHERE id = 1")
-            .fetch_one(&pool)
-            .await?;
+    let encrypted = get_bench_encrypted_int(&pool, 1).await?;
 
     let sql = format!(
         "SELECT * FROM bench WHERE encrypted_int = '{}'::jsonb::eql_v2_encrypted",
         encrypted
     );
-    assert_uses_index(&pool, &sql, "bench_int_ore_idx").await?;
+    assert_uses_index(&pool, &sql, BENCH_INT_ORE_IDX).await?;
     Ok(())
 }
