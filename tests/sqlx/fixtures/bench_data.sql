@@ -8,8 +8,8 @@
 --
 -- Cycling offsets create varied distributions:
 --   encrypted_text:   ids 1, 2, ..., 100, 1, 2, ... (offset 0)
---   encrypted_int:    ids 35, 36, ..., 100, 1, ..., 34 (offset +33)
---   encrypted_bigint: ids 68, 69, ..., 100, 1, ..., 67 (offset +66)
+--   encrypted_int:    ids 35, 36, ..., 100, 1, ..., 34 (offset +34)
+--   encrypted_bigint: ids 68, 69, ..., 100, 1, ..., 67 (offset +67)
 
 INSERT INTO bench (encrypted_text, encrypted_int, encrypted_bigint)
 SELECT

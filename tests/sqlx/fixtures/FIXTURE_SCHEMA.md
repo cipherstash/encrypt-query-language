@@ -9,7 +9,7 @@ EQL Extension (via migrations)
   ├── encrypted_json.sql
   ├── array_data.sql
   ├── order_by_null_data.sql (depends on ore migration)
-  ├── ore_data.sql
+  ├── ore table (migration 002 — not a fixture)
   └── bench_data.sql + bench_setup.sql (depend on migration 007)
 ```
 
@@ -155,8 +155,8 @@ CREATE TABLE bench (
 - 10,000 rows cycling through 100 distinct encrypted values (ore ids 1-100)
 - Cycling offsets create varied column distributions:
   - `encrypted_text`: ids 1, 2, ..., 100, 1, 2, ... (offset 0)
-  - `encrypted_int`: ids 35, 36, ..., 100, 1, ..., 34 (offset +33)
-  - `encrypted_bigint`: ids 68, 69, ..., 100, 1, ..., 67 (offset +66)
+  - `encrypted_int`: ids 35, 36, ..., 100, 1, ..., 34 (offset +34)
+  - `encrypted_bigint`: ids 68, 69, ..., 100, 1, ..., 67 (offset +67)
 - Each row has HMAC, bloom filter, and ORE index terms
 
 **Used By:**
@@ -199,15 +199,15 @@ async fn fixture_encrypted_json_has_three_records(pool: PgPool) {
 }
 ```
 
-### ore_data Validation
+### ore Migration Validation
 ```rust
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn fixture_ore_data_has_99_records(pool: PgPool) {
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM ore")
         .fetch_one(&pool)
         .await
         .unwrap();
-    assert_eq!(count, 99, "ore_data fixture should create 99 records");
+    assert_eq!(count, 99, "ore migration should provide 99 records");
 }
 ```
 
@@ -217,7 +217,7 @@ async fn fixture_ore_data_has_99_records(pool: PgPool) {
 
 - Use snake_case for fixture file names
 - Name should describe the data, not the test using it
-- Examples: `encrypted_json.sql`, `ore_data.sql`, `array_data.sql`
+- Examples: `encrypted_json.sql`, `array_data.sql`, `bench_data.sql`
 
 ## Adding New Fixtures
 
