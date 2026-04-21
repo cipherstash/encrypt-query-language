@@ -91,6 +91,9 @@ async fn bench_encrypted_int_has_ore_terms(pool: PgPool) -> Result<()> {
 }
 
 /// Verify ORE terms are extractable from encrypted_bigint
+///
+/// Both int and bigint columns use the same eql_v2_encrypted type and ob index structure.
+/// These tests verify that data seeding populated both columns, not that encoding differs.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data")))]
 async fn bench_encrypted_bigint_has_ore_terms(pool: PgPool) -> Result<()> {
     let count: (i64,) = sqlx::query_as(

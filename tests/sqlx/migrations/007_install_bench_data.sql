@@ -10,7 +10,7 @@
 --   encrypted_bigint - bigint ORE at scale
 
 CREATE TABLE bench (
-    id SERIAL PRIMARY KEY,
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     encrypted_text eql_v2_encrypted,
     encrypted_int eql_v2_encrypted,
     encrypted_bigint eql_v2_encrypted

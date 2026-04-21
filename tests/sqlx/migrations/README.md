@@ -22,7 +22,7 @@ These migrations install EQL and test helpers into the test database using a **h
 
 When using `#[sqlx::test]`:
 - Each test gets a fresh database
-- All migrations (001-004) run automatically before each test
+- All migrations (001-007) run automatically before each test
 - Migration 001 contains the latest built EQL
 - No need to manually reset database between tests
 
