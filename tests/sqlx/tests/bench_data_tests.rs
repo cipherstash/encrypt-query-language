@@ -90,6 +90,21 @@ async fn bench_encrypted_int_has_ore_terms(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
+/// Verify ORE terms are extractable from encrypted_bigint
+#[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data")))]
+async fn bench_encrypted_bigint_has_ore_terms(pool: PgPool) -> Result<()> {
+    let count: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM bench WHERE eql_v2.ore_block_u64_8_256(encrypted_bigint) IS NOT NULL",
+    )
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(
+        count.0, BENCH_ROW_COUNT,
+        "all rows should have ORE block index terms"
+    );
+    Ok(())
+}
+
 // ========== Index Usage Tests (with fixture) ==========
 
 /// Verify hash index is used for hmac_256 equality lookup
@@ -129,6 +144,22 @@ async fn bench_bloom_containment_uses_gin_index(pool: PgPool) -> Result<()> {
         encrypted
     );
     assert_uses_index(&pool, &sql, "bench_text_bloom_idx").await?;
+    Ok(())
+}
+
+/// Verify btree index is used for ORDER BY with LIMIT on encrypted_text
+#[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
+async fn bench_ore_text_order_uses_btree_index(pool: PgPool) -> Result<()> {
+    let sql = "SELECT * FROM bench ORDER BY encrypted_text LIMIT 10";
+    assert_uses_index(&pool, sql, "bench_text_ore_idx").await?;
+    Ok(())
+}
+
+/// Verify btree index is used for ORDER BY with LIMIT on encrypted_bigint
+#[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
+async fn bench_ore_bigint_order_uses_btree_index(pool: PgPool) -> Result<()> {
+    let sql = "SELECT * FROM bench ORDER BY encrypted_bigint LIMIT 10";
+    assert_uses_index(&pool, sql, "bench_bigint_ore_idx").await?;
     Ok(())
 }
 

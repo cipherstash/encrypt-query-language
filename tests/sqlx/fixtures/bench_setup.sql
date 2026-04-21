@@ -1,7 +1,7 @@
 -- Fixture: bench_setup.sql
 --
 -- Creates benchmark indexes and refreshes planner statistics.
--- Table and 10K rows created by migration 007_install_bench_data.sql.
+-- Table DDL from migration 007_install_bench_data.sql; 10K rows from bench_data.sql fixture.
 --
 -- Indexes:
 --   bench_text_hmac_idx   - hash on eql_v2.hmac_256(encrypted_text) for equality
