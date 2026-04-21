@@ -39,7 +39,7 @@ cp release/cipherstash-encrypt.sql tests/sqlx/migrations/001_install_eql.sql
 ## Adding New Test Fixtures
 
 To add new test data or helpers:
-1. Create a new migration: `tests/sqlx/migrations/005_my_fixture.sql`
+1. Create a new migration using the next unused number (e.g. `tests/sqlx/migrations/008_my_fixture.sql`)
 2. Add your SQL fixtures
 3. Commit it (static migrations are version-controlled)
 4. SQLx will apply it automatically in test runs
