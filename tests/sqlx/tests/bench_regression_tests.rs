@@ -11,7 +11,9 @@
 //! for their #[ignore] plan assertions.
 
 use anyhow::Result;
-use eql_tests::{explain_analyze_avg, get_bench_encrypted_int, get_bench_encrypted_text, ExplainStats};
+use eql_tests::{
+    explain_analyze_avg, get_bench_encrypted_int, get_bench_encrypted_text, ExplainStats,
+};
 use sqlx::PgPool;
 
 /// hmac_256 equality must stay under 50ms on 10K rows (expected ~0.5ms)
@@ -55,7 +57,8 @@ async fn bloom_filter_containment_under_threshold(pool: PgPool) -> Result<()> {
 /// ORE range query (< LIMIT 10) must stay under 200ms on 10K rows (expected ~2ms)
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
 async fn ore_range_lt_under_threshold(pool: PgPool) -> Result<()> {
-    // id=50 is the distribution midpoint → ~4,900 rows below threshold
+    // id=50 is the bench row midpoint; encrypted_int uses a +33 offset so this maps
+    // to ore id 83, but the 10K distribution still yields ~4,900 rows below the predicate
     let encrypted = get_bench_encrypted_int(&pool, 50).await?;
 
     let sql = format!(
@@ -79,9 +82,12 @@ async fn ore_range_lt_under_threshold(pool: PgPool) -> Result<()> {
 /// observed baseline — to absorb CI variance while catching catastrophic regressions.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
 async fn ore_order_by_under_threshold(pool: PgPool) -> Result<()> {
-    let stats: ExplainStats =
-        explain_analyze_avg(&pool, "SELECT * FROM bench ORDER BY encrypted_int LIMIT 10", 5)
-            .await?;
+    let stats: ExplainStats = explain_analyze_avg(
+        &pool,
+        "SELECT * FROM bench ORDER BY encrypted_int LIMIT 10",
+        5,
+    )
+    .await?;
     assert!(
         stats.execution_time_ms < 2000.0,
         "ORE ORDER BY LIMIT 10 took {:.1}ms, threshold 2000ms (observed ~543ms baseline at 10K rows, node_type={})",

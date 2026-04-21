@@ -10,6 +10,7 @@ use eql_tests::{assert_uses_index, get_bench_encrypted_int, get_bench_encrypted_
 use sqlx::PgPool;
 
 const BENCH_INT_ORE_IDX: &str = "bench_int_ore_idx";
+const BENCH_TEXT_HMAC_IDX: &str = "bench_text_hmac_idx";
 
 /// ORE range query (less-than) uses btree index
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
@@ -80,7 +81,7 @@ async fn eql_cast_equality_uses_hash_index(pool: PgPool) -> Result<()> {
         "SELECT * FROM bench WHERE encrypted_text = '{}'::jsonb::eql_v2_encrypted",
         encrypted
     );
-    assert_uses_index(&pool, &sql, "bench_text_hmac_idx").await?;
+    assert_uses_index(&pool, &sql, BENCH_TEXT_HMAC_IDX).await?;
     Ok(())
 }
 
