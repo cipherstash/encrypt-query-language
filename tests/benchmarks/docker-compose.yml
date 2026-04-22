@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: bench-postgres
+    command: >
+      postgres
+      -c track_functions=all
+      -c shared_preload_libraries=pg_stat_statements
+      -c pg_stat_statements.track=all
+      -c pg_stat_statements.max=10000
+    ports:
+      - "7433:5432"
+    environment:
+      POSTGRES_DB: cipherstash
+      POSTGRES_USER: cipherstash
+      POSTGRES_PASSWORD: password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cipherstash"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+    networks:
+      - bench
+
+  proxy:
+    image: cipherstash/proxy:latest
+    container_name: bench-proxy
+    ports:
+      - "6433:6432"
+    environment:
+      CS_DATABASE__NAME: cipherstash
+      CS_DATABASE__USERNAME: cipherstash
+      CS_DATABASE__PASSWORD: password
+      CS_DATABASE__HOST: postgres
+      CS_DATABASE__PORT: 5432
+      # EQL install is performed explicitly by generate.sh before schema.sql runs.
+      # Leaving Proxy's own install off avoids racing against generate.sh.
+      CS_DATABASE__INSTALL_EQL: "false"
+      CS_CLIENT_ACCESS_KEY: ${CS_CLIENT_ACCESS_KEY}
+      CS_DEFAULT_KEYSET_ID: ${CS_DEFAULT_KEYSET_ID}
+      CS_CLIENT_KEY: ${CS_CLIENT_KEY}
+      CS_CLIENT_ID: ${CS_CLIENT_ID}
+      CS_WORKSPACE_CRN: ${CS_WORKSPACE_CRN}
+    healthcheck:
+      # Probe the Proxy's pg-protocol listener (no auth handshake required).
+      # busybox `nc` is present in the cipherstash/proxy image.
+      test: ["CMD-SHELL", "nc -z localhost 6432"]
+      interval: 1s
+      timeout: 5s
+      retries: 30
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - bench
+
+networks:
+  bench:
+    driver: bridge
