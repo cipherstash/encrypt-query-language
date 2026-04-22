@@ -112,7 +112,7 @@ async fn bloom_filter_containment() -> Result<()> {
         stddev_ms: stats.stddev_exec_time,
         total_ms: stats.total_exec_time,
     });
-    assert_eq!(stats.calls, RUNS);
+    assert_eq!(stats.calls, RUNS, "expected {RUNS} recorded calls");
     Ok(())
 }
 
@@ -146,7 +146,7 @@ async fn eql_cast_equality() -> Result<()> {
         stddev_ms: stats.stddev_exec_time,
         total_ms: stats.total_exec_time,
     });
-    assert_eq!(stats.calls, RUNS);
+    assert_eq!(stats.calls, RUNS, "expected {RUNS} recorded calls");
     Ok(())
 }
 
@@ -179,7 +179,7 @@ async fn ore_equality_opclass() -> Result<()> {
         stddev_ms: stats.stddev_exec_time,
         total_ms: stats.total_exec_time,
     });
-    assert_eq!(stats.calls, RUNS);
+    assert_eq!(stats.calls, RUNS, "expected {RUNS} recorded calls");
     Ok(())
 }
 
@@ -214,7 +214,7 @@ async fn ore_range_lt_limit() -> Result<()> {
         stddev_ms: stats.stddev_exec_time,
         total_ms: stats.total_exec_time,
     });
-    assert_eq!(stats.calls, RUNS);
+    assert_eq!(stats.calls, RUNS, "expected {RUNS} recorded calls");
     Ok(())
 }
 
@@ -244,7 +244,7 @@ async fn ore_order_by_limit() -> Result<()> {
         stddev_ms: stats.stddev_exec_time,
         total_ms: stats.total_exec_time,
     });
-    assert_eq!(stats.calls, RUNS);
+    assert_eq!(stats.calls, RUNS, "expected {RUNS} recorded calls");
     Ok(())
 }
 
