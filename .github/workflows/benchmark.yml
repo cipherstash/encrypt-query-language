@@ -37,14 +37,20 @@ jobs:
           cache: true
 
       - name: Write Proxy credentials to .env
+        env:
+          CS_CLIENT_ACCESS_KEY: ${{ secrets.CS_CLIENT_ACCESS_KEY }}
+          CS_DEFAULT_KEYSET_ID: ${{ secrets.CS_DEFAULT_KEYSET_ID }}
+          CS_CLIENT_KEY: ${{ secrets.CS_CLIENT_KEY }}
+          CS_CLIENT_ID: ${{ secrets.CS_CLIENT_ID }}
+          CS_WORKSPACE_CRN: ${{ secrets.CS_WORKSPACE_CRN }}
         run: |
-          cat > tests/benchmarks/.env <<EOF
-          CS_CLIENT_ACCESS_KEY=${{ secrets.CS_CLIENT_ACCESS_KEY }}
-          CS_DEFAULT_KEYSET_ID=${{ secrets.CS_DEFAULT_KEYSET_ID }}
-          CS_CLIENT_KEY=${{ secrets.CS_CLIENT_KEY }}
-          CS_CLIENT_ID=${{ secrets.CS_CLIENT_ID }}
-          CS_WORKSPACE_CRN=${{ secrets.CS_WORKSPACE_CRN }}
-          EOF
+          {
+            printf 'CS_CLIENT_ACCESS_KEY=%s\n' "$CS_CLIENT_ACCESS_KEY"
+            printf 'CS_DEFAULT_KEYSET_ID=%s\n' "$CS_DEFAULT_KEYSET_ID"
+            printf 'CS_CLIENT_KEY=%s\n' "$CS_CLIENT_KEY"
+            printf 'CS_CLIENT_ID=%s\n' "$CS_CLIENT_ID"
+            printf 'CS_WORKSPACE_CRN=%s\n' "$CS_WORKSPACE_CRN"
+          } > tests/benchmarks/.env
 
       - name: Bring up Postgres + Proxy
         run: mise run bench:up
