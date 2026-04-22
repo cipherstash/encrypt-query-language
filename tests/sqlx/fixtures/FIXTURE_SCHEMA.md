@@ -152,11 +152,10 @@ CREATE TABLE bench (
 ```
 
 **Data:**
-- 10,000 rows cycling through 100 distinct encrypted values (ore ids 1-100)
-- Cycling offsets create varied column distributions:
-  - `encrypted_text`: ids 1, 2, ..., 100, 1, 2, ... (offset 0)
-  - `encrypted_int`: ids 35, 36, ..., 100, 1, ..., 34 (offset +34)
-  - `encrypted_bigint`: ids 68, 69, ..., 100, 1, ..., 67 (offset +67)
+- 10,000 rows drawn from 99 distinct encrypted values (ore ids 1-99)
+- Zipf-like skew via `setseed(0.42)` + `random()^2` — deterministic and byte-identical across runs
+- Top id gets ~5% of rows; tail ids ~0.5% each (top:bottom ratio ~10x)
+- Each column draws independently, so column values are decorrelated within a row
 - Each row has HMAC, bloom filter, and ORE index terms
 
 **Used By:**

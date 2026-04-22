@@ -1,19 +1,23 @@
 -- Fixture: bench_data.sql
 --
 -- Seeds 10K rows into the bench table for performance testing.
--- Each column cycles through 100 distinct encrypted values (from ore ids 1-100).
+-- Each column draws independently from 99 distinct encrypted values (ore ids 1-99)
+-- using a Zipf-like skew so the planner sees realistic histograms.
 --
 -- Index terms per row: hm (hmac), b3 (blake3), bf (bloom filter), ob (ORE blocks), sv (STE vec)
 -- Data generated via create_encrypted_json() from 004_install_test_helpers.sql.
 --
--- Cycling offsets create varied distributions:
---   encrypted_text:   ids 1, 2, ..., 100, 1, 2, ... (offset 0)
---   encrypted_int:    ids 35, 36, ..., 100, 1, ..., 34 (offset +34)
---   encrypted_bigint: ids 68, 69, ..., 100, 1, ..., 67 (offset +67)
+-- Distribution:
+--   Deterministic via setseed(0.42) — byte-identical across runs.
+--   random()^2 produces a power-law skew: P(id=k) is proportional to 1/sqrt(k).
+--   Top id gets ~5% of rows (~500); tail ids get ~0.5% each (~50). Ratio ~10x.
+--   Three independent draws per row decorrelate the columns.
+
+SELECT setseed(0.42);
 
 INSERT INTO bench (encrypted_text, encrypted_int, encrypted_bigint)
 SELECT
-    create_encrypted_json(((gs - 1) % 100) + 1),
-    create_encrypted_json(((gs + 33) % 100) + 1),
-    create_encrypted_json(((gs + 66) % 100) + 1)
-FROM generate_series(1, 10000) AS gs;
+    create_encrypted_json(1 + floor(99 * power(random(), 2))::int),
+    create_encrypted_json(1 + floor(99 * power(random(), 2))::int),
+    create_encrypted_json(1 + floor(99 * power(random(), 2))::int)
+FROM generate_series(1, 10000);
