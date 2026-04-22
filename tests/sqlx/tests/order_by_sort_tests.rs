@@ -522,6 +522,7 @@ async fn sort_compare_table_ref_matches_order_by_compare(pool: PgPool) -> Result
 // ============================================================================
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+#[ignore = "slow: O(n²) correlated subquery over 1000 rows (~7m); run with --ignored"]
 async fn filtered_inner_query_correct_order(pool: PgPool) -> Result<()> {
     // Optimized: inner query also filters, producing correct relative ordering
     // within the filtered set
@@ -602,6 +603,7 @@ async fn filtered_inner_query_with_range(pool: PgPool) -> Result<()> {
 // ============================================================================
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+#[ignore = "perf: relative timing assertion at 1000 rows; run with --ignored"]
 async fn sort_compare_faster_than_correlated_subquery(pool: PgPool) -> Result<()> {
     // Warm up: run each query once to populate caches
     let sort_sql = "SELECT * FROM eql_v2.sort_compare(
@@ -644,6 +646,7 @@ async fn sort_compare_faster_than_correlated_subquery(pool: PgPool) -> Result<()
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+#[ignore = "perf: relative timing assertion at 1000 rows; run with --ignored"]
 async fn filtered_inner_query_faster_than_unfiltered(pool: PgPool) -> Result<()> {
     let ore_term = get_ore_encrypted(&pool, 42).await?;
 
@@ -703,6 +706,7 @@ async fn filtered_inner_query_faster_than_unfiltered(pool: PgPool) -> Result<()>
 // ============================================================================
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+#[ignore = "perf: O(n log n) vs O(n²) demonstration at 1000 rows; run with --ignored"]
 async fn sort_compare_performance_at_scale(pool: PgPool) -> Result<()> {
     // 1000 rows is sufficient scale to demonstrate O(n log n) vs O(n²)
     let sort_sql = "SELECT * FROM eql_v2.sort_compare(
@@ -738,6 +742,7 @@ async fn sort_compare_performance_at_scale(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+#[ignore = "perf: timing assertion at 1000 rows; run with --ignored"]
 async fn filtered_inner_query_performance_at_scale(pool: PgPool) -> Result<()> {
     let ore_term = get_ore_encrypted(&pool, 42).await?;
 
