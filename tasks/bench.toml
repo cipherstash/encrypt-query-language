@@ -29,7 +29,7 @@ tests/benchmarks/generate.sh 100k
 ["bench:full"]
 description = "Run full Tier 2 benchmark suite against bench-postgres"
 dir = "{{config_root}}/tests/sqlx"
-env = { BENCH_DATABASE_URL = "postgresql://cipherstash:password@localhost:7433/cipherstash" }
+env = { DATABASE_URL = "postgresql://cipherstash:password@localhost:7433/cipherstash" }
 run = """
 cargo test --test bench_perf_tests -- --ignored --nocapture --test-threads=1
 """

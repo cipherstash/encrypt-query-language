@@ -5,7 +5,7 @@
 //! `cargo test --test bench_perf_tests -- --ignored`.
 //!
 //! Unlike Tier 1 tests, these use #[tokio::test] with a manual pool connected
-//! via BENCH_DATABASE_URL against a pre-loaded 100K-row dataset.
+//! via DATABASE_URL against a pre-loaded 100K-row dataset (set by `mise run bench:full`).
 //!
 //! Each test:
 //!   1. Resets pg_stat_statements
@@ -28,8 +28,8 @@ const RUNS: i64 = 1000;
 const DATASET_ROWS: i64 = 100_000;
 
 async fn connect() -> Result<PgPool> {
-    let url = std::env::var("BENCH_DATABASE_URL")
-        .expect("BENCH_DATABASE_URL must be set (run `mise run bench:full`)");
+    let url = std::env::var("DATABASE_URL")
+        .expect("DATABASE_URL must be set (run `mise run bench:full`)");
     let pool = PgPoolOptions::new()
         .max_connections(4)
         .connect(&url)
@@ -40,7 +40,7 @@ async fn connect() -> Result<PgPool> {
 
 /// P0 baseline: hmac_256 equality should stay ~0.5ms at 100K rows.
 #[tokio::test]
-#[ignore = "Tier 2: requires BENCH_DATABASE_URL and pre-loaded bench data"]
+#[ignore = "Tier 2: run via `mise run bench:full` (requires pre-loaded bench data)"]
 async fn hmac_256_equality() -> Result<()> {
     let pool = connect().await?;
 
@@ -83,7 +83,7 @@ async fn hmac_256_equality() -> Result<()> {
 
 /// P2: bloom_filter containment — expected ~3.35ms at 100K rows.
 #[tokio::test]
-#[ignore = "Tier 2: requires BENCH_DATABASE_URL and pre-loaded bench data"]
+#[ignore = "Tier 2: run via `mise run bench:full` (requires pre-loaded bench data)"]
 async fn bloom_filter_containment() -> Result<()> {
     let pool = connect().await?;
     let encrypted: String =
@@ -119,7 +119,7 @@ async fn bloom_filter_containment() -> Result<()> {
 /// P0: eql_cast equality — currently seq scans (CIP-2831). Report records the
 /// actual plan + timing so the number is visible week-over-week until the fix ships.
 #[tokio::test]
-#[ignore = "Tier 2: requires BENCH_DATABASE_URL and pre-loaded bench data"]
+#[ignore = "Tier 2: run via `mise run bench:full` (requires pre-loaded bench data)"]
 async fn eql_cast_equality() -> Result<()> {
     let pool = connect().await?;
     let encrypted: String =
@@ -152,7 +152,7 @@ async fn eql_cast_equality() -> Result<()> {
 
 /// P0: ORE equality via operator class — currently seq scans (CIP-2831).
 #[tokio::test]
-#[ignore = "Tier 2: requires BENCH_DATABASE_URL and pre-loaded bench data"]
+#[ignore = "Tier 2: run via `mise run bench:full` (requires pre-loaded bench data)"]
 async fn ore_equality_opclass() -> Result<()> {
     let pool = connect().await?;
     let encrypted: String =
@@ -185,7 +185,7 @@ async fn ore_equality_opclass() -> Result<()> {
 
 /// P1: ORE range < with LIMIT — expected ~1.93ms at 100K rows.
 #[tokio::test]
-#[ignore = "Tier 2: requires BENCH_DATABASE_URL and pre-loaded bench data"]
+#[ignore = "Tier 2: run via `mise run bench:full` (requires pre-loaded bench data)"]
 async fn ore_range_lt_limit() -> Result<()> {
     let pool = connect().await?;
     let encrypted: String =
@@ -221,7 +221,7 @@ async fn ore_range_lt_limit() -> Result<()> {
 /// P1: ORE ORDER BY encrypted_int LIMIT 10 — design doc observes ~543ms at 10K,
 /// so expect several seconds at 100K. Report captures actual number.
 #[tokio::test]
-#[ignore = "Tier 2: requires BENCH_DATABASE_URL and pre-loaded bench data"]
+#[ignore = "Tier 2: run via `mise run bench:full` (requires pre-loaded bench data)"]
 async fn ore_order_by_limit() -> Result<()> {
     let pool = connect().await?;
 
