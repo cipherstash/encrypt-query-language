@@ -78,16 +78,13 @@ pub fn write_reports(
         results,
     };
 
-    fs::create_dir_all(output_dir)
-        .with_context(|| format!("creating output dir {output_dir}"))?;
+    fs::create_dir_all(output_dir).with_context(|| format!("creating output dir {output_dir}"))?;
 
     let json_path = PathBuf::from(output_dir).join(format!("benchmark-{date}.json"));
-    let md_path   = PathBuf::from(output_dir).join(format!("benchmark-{date}.md"));
+    let md_path = PathBuf::from(output_dir).join(format!("benchmark-{date}.md"));
 
-    let json = serde_json::to_string_pretty(&report)
-        .context("serializing report to JSON")?;
-    fs::write(&json_path, json)
-        .with_context(|| format!("writing {}", json_path.display()))?;
+    let json = serde_json::to_string_pretty(&report).context("serializing report to JSON")?;
+    fs::write(&json_path, json).with_context(|| format!("writing {}", json_path.display()))?;
 
     fs::write(&md_path, render_markdown(&report))
         .with_context(|| format!("writing {}", md_path.display()))?;
