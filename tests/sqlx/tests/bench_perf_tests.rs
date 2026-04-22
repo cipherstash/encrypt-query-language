@@ -81,6 +81,173 @@ async fn hmac_256_equality() -> Result<()> {
     Ok(())
 }
 
+/// P2: bloom_filter containment — expected ~3.35ms at 100K rows.
+#[tokio::test]
+#[ignore = "Tier 2: requires BENCH_DATABASE_URL and pre-loaded bench data"]
+async fn bloom_filter_containment() -> Result<()> {
+    let pool = connect().await?;
+    let encrypted: String =
+        sqlx::query_scalar("SELECT (encrypted_text).data::text FROM bench WHERE id = 1")
+            .fetch_one(&pool).await?;
+
+    reset_pg_stat_statements(&pool).await?;
+    for _ in 0..RUNS {
+        sqlx::query(
+            "SELECT * FROM bench WHERE eql_v2.bloom_filter(encrypted_text) @> eql_v2.bloom_filter($1::jsonb::eql_v2_encrypted)",
+        )
+        .bind(&encrypted)
+        .fetch_all(&pool).await?;
+    }
+    let stats = read_pg_stat_statements(
+        &pool,
+        "%eql_v2.bloom_filter(encrypted_text) @> eql_v2.bloom_filter($%",
+    ).await?;
+
+    append_result(PerfResult {
+        name: "bloom_filter_containment".into(),
+        priority: "P2".into(),
+        runs: stats.calls,
+        plan_type: "Bitmap Index Scan".into(),
+        mean_ms: stats.mean_exec_time,
+        stddev_ms: stats.stddev_exec_time,
+        total_ms: stats.total_exec_time,
+    });
+    assert_eq!(stats.calls, RUNS);
+    Ok(())
+}
+
+/// P0: eql_cast equality — currently seq scans (CIP-2831). Report records the
+/// actual plan + timing so the number is visible week-over-week until the fix ships.
+#[tokio::test]
+#[ignore = "Tier 2: requires BENCH_DATABASE_URL and pre-loaded bench data"]
+async fn eql_cast_equality() -> Result<()> {
+    let pool = connect().await?;
+    let encrypted: String =
+        sqlx::query_scalar("SELECT (encrypted_text).data::text FROM bench WHERE id = 1")
+            .fetch_one(&pool).await?;
+
+    reset_pg_stat_statements(&pool).await?;
+    for _ in 0..RUNS {
+        sqlx::query("SELECT * FROM bench WHERE encrypted_text = $1::jsonb::eql_v2_encrypted")
+            .bind(&encrypted)
+            .fetch_all(&pool).await?;
+    }
+    let stats = read_pg_stat_statements(
+        &pool,
+        "%FROM bench WHERE encrypted_text = $%::jsonb::eql_v2_encrypted%",
+    ).await?;
+
+    append_result(PerfResult {
+        name: "eql_cast_equality".into(),
+        priority: "P0".into(),
+        runs: stats.calls,
+        plan_type: "Seq Scan".into(),
+        mean_ms: stats.mean_exec_time,
+        stddev_ms: stats.stddev_exec_time,
+        total_ms: stats.total_exec_time,
+    });
+    assert_eq!(stats.calls, RUNS);
+    Ok(())
+}
+
+/// P0: ORE equality via operator class — currently seq scans (CIP-2831).
+#[tokio::test]
+#[ignore = "Tier 2: requires BENCH_DATABASE_URL and pre-loaded bench data"]
+async fn ore_equality_opclass() -> Result<()> {
+    let pool = connect().await?;
+    let encrypted: String =
+        sqlx::query_scalar("SELECT (encrypted_int).data::text FROM bench WHERE id = 1")
+            .fetch_one(&pool).await?;
+
+    reset_pg_stat_statements(&pool).await?;
+    for _ in 0..RUNS {
+        sqlx::query("SELECT * FROM bench WHERE encrypted_int = $1::jsonb::eql_v2_encrypted")
+            .bind(&encrypted)
+            .fetch_all(&pool).await?;
+    }
+    let stats = read_pg_stat_statements(
+        &pool,
+        "%FROM bench WHERE encrypted_int = $%::jsonb::eql_v2_encrypted%",
+    ).await?;
+
+    append_result(PerfResult {
+        name: "ore_equality_opclass".into(),
+        priority: "P0".into(),
+        runs: stats.calls,
+        plan_type: "Seq Scan".into(),
+        mean_ms: stats.mean_exec_time,
+        stddev_ms: stats.stddev_exec_time,
+        total_ms: stats.total_exec_time,
+    });
+    assert_eq!(stats.calls, RUNS);
+    Ok(())
+}
+
+/// P1: ORE range < with LIMIT — expected ~1.93ms at 100K rows.
+#[tokio::test]
+#[ignore = "Tier 2: requires BENCH_DATABASE_URL and pre-loaded bench data"]
+async fn ore_range_lt_limit() -> Result<()> {
+    let pool = connect().await?;
+    let encrypted: String =
+        sqlx::query_scalar("SELECT (encrypted_int).data::text FROM bench WHERE id = 50000")
+            .fetch_one(&pool).await?;
+
+    reset_pg_stat_statements(&pool).await?;
+    for _ in 0..RUNS {
+        sqlx::query(
+            "SELECT * FROM bench WHERE encrypted_int < $1::jsonb::eql_v2_encrypted ORDER BY encrypted_int LIMIT 10",
+        )
+        .bind(&encrypted)
+        .fetch_all(&pool).await?;
+    }
+    let stats = read_pg_stat_statements(
+        &pool,
+        "%FROM bench WHERE encrypted_int < $%ORDER BY encrypted_int LIMIT %",
+    ).await?;
+
+    append_result(PerfResult {
+        name: "ore_range_lt_limit".into(),
+        priority: "P1".into(),
+        runs: stats.calls,
+        plan_type: "Index Scan".into(),
+        mean_ms: stats.mean_exec_time,
+        stddev_ms: stats.stddev_exec_time,
+        total_ms: stats.total_exec_time,
+    });
+    assert_eq!(stats.calls, RUNS);
+    Ok(())
+}
+
+/// P1: ORE ORDER BY encrypted_int LIMIT 10 — design doc observes ~543ms at 10K,
+/// so expect several seconds at 100K. Report captures actual number.
+#[tokio::test]
+#[ignore = "Tier 2: requires BENCH_DATABASE_URL and pre-loaded bench data"]
+async fn ore_order_by_limit() -> Result<()> {
+    let pool = connect().await?;
+
+    reset_pg_stat_statements(&pool).await?;
+    for _ in 0..RUNS {
+        sqlx::query("SELECT * FROM bench ORDER BY encrypted_int LIMIT 10")
+            .fetch_all(&pool).await?;
+    }
+    let stats = read_pg_stat_statements(
+        &pool,
+        "%FROM bench ORDER BY encrypted_int LIMIT %",
+    ).await?;
+
+    append_result(PerfResult {
+        name: "ore_order_by_limit".into(),
+        priority: "P1".into(),
+        runs: stats.calls,
+        plan_type: "Index Scan".into(),
+        mean_ms: stats.mean_exec_time,
+        stddev_ms: stats.stddev_exec_time,
+        total_ms: stats.total_exec_time,
+    });
+    assert_eq!(stats.calls, RUNS);
+    Ok(())
+}
+
 /// Alphabetical-last test — flushes accumulated results to disk.
 /// Requires `--test-threads=1` so it runs after all benchmark cases.
 #[tokio::test]
