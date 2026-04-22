@@ -9,7 +9,8 @@ EQL Extension (via migrations)
   ├── encrypted_json.sql
   ├── array_data.sql
   ├── order_by_null_data.sql (depends on ore migration)
-  └── ore_data.sql
+  ├── ore table (migration 002 — not a fixture)
+  └── bench_data.sql + bench_setup.sql (depend on migration 007)
 ```
 
 All fixtures depend on the EQL extension being installed via SQLx migrations.
@@ -132,6 +133,55 @@ CREATE TABLE ore (
 
 ---
 
+## bench_data.sql
+
+**Purpose:** Seeds 10K rows into the `bench` table for performance benchmarking. Opt-in fixture — only loaded when a test explicitly includes `scripts("bench_data")`, so other tests don't pay the cost.
+
+**Dependencies:**
+- Requires `bench` table from migration `007_install_bench_data.sql`
+- Uses `create_encrypted_json()` from migration `004_install_test_helpers.sql`
+
+**Schema:** Uses `bench` table (DDL in migration 007):
+```sql
+CREATE TABLE bench (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  encrypted_text    eql_v2_encrypted,
+  encrypted_int     eql_v2_encrypted,
+  encrypted_bigint  eql_v2_encrypted
+);
+```
+
+**Data:**
+- 10,000 rows drawn from 99 distinct encrypted values (ore ids 1-99)
+- Zipf-like skew via `setseed(0.42)` + `random()^2` — deterministic and byte-identical across runs
+- Top id gets ~5% of rows; tail ids ~0.5% each (top:bottom ratio ~10x)
+- Each column draws independently, so column values are decorrelated within a row
+- Each row has HMAC, bloom filter, and ORE index terms
+
+**Used By:**
+- bench_data_tests.rs (all tests)
+
+---
+
+## bench_setup.sql
+
+**Purpose:** Creates the 5 benchmark indexes and refreshes planner statistics. Always loaded after `bench_data.sql` in tests that verify index usage.
+
+**Dependencies:**
+- Requires `bench` table with data from `bench_data.sql`
+
+**Indexes created:**
+- `bench_text_hmac_idx` — hash on `eql_v2.hmac_256(encrypted_text)` for equality
+- `bench_text_ore_idx` — btree on `encrypted_text` via operator class for text ordering
+- `bench_int_ore_idx` — btree on `encrypted_int` via operator class for range/ORDER BY
+- `bench_bigint_ore_idx` — btree on `encrypted_bigint` via operator class
+- `bench_text_bloom_idx` — GIN on `eql_v2.bloom_filter(encrypted_text)` for containment
+
+**Used By:**
+- bench_data_tests.rs (index-usage tests: `scripts("bench_data", "bench_setup")`)
+
+---
+
 ## Validation Tests
 
 Each fixture should have a validation test to ensure correct structure:
@@ -148,15 +198,15 @@ async fn fixture_encrypted_json_has_three_records(pool: PgPool) {
 }
 ```
 
-### ore_data Validation
+### ore Migration Validation
 ```rust
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ore_data")))]
+#[sqlx::test]
 async fn fixture_ore_data_has_99_records(pool: PgPool) {
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM ore")
         .fetch_one(&pool)
         .await
         .unwrap();
-    assert_eq!(count, 99, "ore_data fixture should create 99 records");
+    assert_eq!(count, 99, "ore migration should provide 99 records");
 }
 ```
 
@@ -166,7 +216,7 @@ async fn fixture_ore_data_has_99_records(pool: PgPool) {
 
 - Use snake_case for fixture file names
 - Name should describe the data, not the test using it
-- Examples: `encrypted_json.sql`, `ore_data.sql`, `array_data.sql`
+- Examples: `encrypted_json.sql`, `array_data.sql`, `bench_data.sql`
 
 ## Adding New Fixtures
 

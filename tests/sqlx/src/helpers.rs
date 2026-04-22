@@ -701,7 +701,7 @@ pub async fn ensure_pg_stat_statements(pool: &PgPool) -> Result<()> {
 /// let stats = read_pg_stat_statements(&pool, "%FROM bench%").await?;
 /// ```
 pub async fn reset_pg_stat_statements(pool: &PgPool) -> Result<()> {
-    sqlx::query("SELECT pg_stat_statements_reset(NULL::oid, NULL::oid, (SELECT oid FROM pg_database WHERE datname = current_database()))")
+    sqlx::query("SELECT pg_stat_statements_reset(NULL::oid, (SELECT oid FROM pg_database WHERE datname = current_database()), 0::bigint)")
         .execute(pool)
         .await
         .with_context(|| "resetting pg_stat_statements counters for current database")?;
