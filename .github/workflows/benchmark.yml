@@ -1,0 +1,76 @@
+name: "Scheduled Benchmarks (Tier 2)"
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'   # Every Monday 03:00 UTC
+  workflow_dispatch:
+
+# Prevent a scheduled run from racing a manual dispatch for the same ports.
+concurrency:
+  group: scheduled-benchmarks
+  cancel-in-progress: false
+
+env:
+  # Matches test-eql.yml — forces JS-based composite actions onto Node 24.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  benchmark:
+    name: "100K dataset benchmark (Postgres 17)"
+    runs-on: ubuntu-latest-m
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install postgresql-client
+        # generate.sh uses psql directly against Postgres (port 7433) and Proxy
+        # (port 6433). jdx/mise-action only installs Rust + Python.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - uses: jdx/mise-action@v3
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+
+      - name: Write Proxy credentials to .env
+        env:
+          CS_CLIENT_ACCESS_KEY: ${{ secrets.CS_CLIENT_ACCESS_KEY }}
+          CS_DEFAULT_KEYSET_ID: ${{ secrets.CS_DEFAULT_KEYSET_ID }}
+          CS_CLIENT_KEY: ${{ secrets.CS_CLIENT_KEY }}
+          CS_CLIENT_ID: ${{ secrets.CS_CLIENT_ID }}
+          CS_WORKSPACE_CRN: ${{ secrets.CS_WORKSPACE_CRN }}
+        run: |
+          {
+            printf 'CS_CLIENT_ACCESS_KEY=%s\n' "$CS_CLIENT_ACCESS_KEY"
+            printf 'CS_DEFAULT_KEYSET_ID=%s\n' "$CS_DEFAULT_KEYSET_ID"
+            printf 'CS_CLIENT_KEY=%s\n' "$CS_CLIENT_KEY"
+            printf 'CS_CLIENT_ID=%s\n' "$CS_CLIENT_ID"
+            printf 'CS_WORKSPACE_CRN=%s\n' "$CS_WORKSPACE_CRN"
+          } > tests/benchmarks/.env
+
+      - name: Bring up Postgres + Proxy
+        run: mise run bench:up
+
+      - name: Generate 100K dataset
+        run: mise run bench:generate
+
+      - name: Run Tier 2 benchmark suite
+        run: |
+          export BENCH_REPORT_DATE="$(date -u +%Y-%m-%d)-${{ github.run_id }}"
+          mise run bench:full
+
+      - name: Tear down containers
+        if: always()
+        run: mise run bench:down
+
+      - name: Upload benchmark report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-report-${{ github.run_id }}
+          path: tests/benchmarks/reports/
+          retention-days: 90

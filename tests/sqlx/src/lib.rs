@@ -7,6 +7,7 @@ use sqlx::PgPool;
 pub mod assertions;
 pub mod helpers;
 pub mod index_types;
+pub mod reports;
 pub mod selectors;
 
 pub use assertions::QueryAssertion;
@@ -20,6 +21,7 @@ pub use helpers::{
     read_pg_stat_statements, reset_pg_stat_statements, ExplainStats, PgStatEntry,
 };
 pub use index_types as IndexTypes;
+pub use reports::{append_result, write_reports, PerfResult};
 pub use selectors::Selectors;
 
 /// Reset pg_stat_user_functions tracking before tests

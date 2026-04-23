@@ -1,0 +1,35 @@
+["bench:up"]
+description = "Start Postgres + Proxy for benchmark data generation"
+dir = "{{config_root}}"
+run = """
+if [ ! -f tests/benchmarks/.env ]; then
+  echo "ERROR: tests/benchmarks/.env missing. Copy .env.example and fill in credentials." >&2
+  exit 1
+fi
+docker compose --env-file tests/benchmarks/.env -f tests/benchmarks/docker-compose.yml up -d --wait
+"""
+
+["bench:down"]
+description = "Stop benchmark Postgres + Proxy"
+dir = "{{config_root}}"
+run = """
+docker compose -f tests/benchmarks/docker-compose.yml down -v
+"""
+
+["bench:generate"]
+description = "Generate 100K encrypted bench dataset (requires bench:up first)"
+# `build` produces release/cipherstash-encrypt.sql, which generate.sh
+# installs into the bench Postgres container before applying schema.sql.
+depends = ["build"]
+dir = "{{config_root}}"
+run = """
+tests/benchmarks/generate.sh 100k
+"""
+
+["bench:full"]
+description = "Run full Tier 2 benchmark suite against bench-postgres"
+dir = "{{config_root}}/tests/sqlx"
+env = { DATABASE_URL = "postgresql://cipherstash:password@localhost:7433/cipherstash" }
+run = """
+cargo test --test bench_perf_tests -- --ignored --nocapture --test-threads=1
+"""

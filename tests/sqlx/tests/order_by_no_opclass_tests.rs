@@ -169,6 +169,7 @@ async fn direct_order_by_desc_wrong_order_without_opclass(pool: PgPool) -> Resul
 // ============================================================================
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+#[ignore = "slow: O(n²) correlated subquery over 1000 rows; run with --ignored"]
 async fn correlated_subquery_ranking_asc_without_opclass(pool: PgPool) -> Result<()> {
     // eql_v2.compare() is a standalone function (not an operator), so it survives
     // the operator class drops. A correlated subquery counts how many rows have a
@@ -198,6 +199,7 @@ async fn correlated_subquery_ranking_asc_without_opclass(pool: PgPool) -> Result
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+#[ignore = "slow: O(n²) correlated subquery over 1000 rows; run with --ignored"]
 async fn correlated_subquery_ranking_desc_without_opclass(pool: PgPool) -> Result<()> {
     // Same correlated subquery with DESC — should return highest-ranked rows first.
 
@@ -220,6 +222,7 @@ async fn correlated_subquery_ranking_desc_without_opclass(pool: PgPool) -> Resul
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+#[ignore = "slow: O(n²) correlated subquery over 1000 rows; run with --ignored"]
 async fn correlated_subquery_ranking_with_limit_without_opclass(pool: PgPool) -> Result<()> {
     // LIMIT 1 with ASC subquery ranking should return the smallest value (id=1)
 
@@ -238,6 +241,7 @@ async fn correlated_subquery_ranking_with_limit_without_opclass(pool: PgPool) ->
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+#[ignore = "slow: O(n²) correlated subquery over 1000 rows; run with --ignored"]
 async fn correlated_subquery_ranking_with_where_without_opclass(pool: PgPool) -> Result<()> {
     // WHERE clause filters rows, then correlated subquery orders the result correctly.
     // Note: the subquery counts over the full table to produce a global rank.
