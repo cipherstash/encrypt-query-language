@@ -40,6 +40,32 @@ pub async fn get_ore_text_encrypted(pool: &PgPool, id: i32) -> Result<String> {
     result.with_context(|| format!("ore_text returned NULL for id={}", id))
 }
 
+/// Fetch encrypted_int value from the bench table by id
+///
+/// The bench table is created by the bench_data fixture (10K rows, ids 1-10000).
+pub async fn get_bench_encrypted_int(pool: &PgPool, id: i32) -> Result<String> {
+    let result: Option<String> =
+        sqlx::query_scalar("SELECT (encrypted_int).data::text FROM bench WHERE id = $1")
+            .bind(id)
+            .fetch_one(pool)
+            .await
+            .with_context(|| format!("fetching bench encrypted_int for id={id}"))?;
+    result.with_context(|| format!("bench.encrypted_int is NULL for id={id}"))
+}
+
+/// Fetch encrypted_text value from the bench table by id
+///
+/// The bench table is created by the bench_data fixture (10K rows, ids 1-10000).
+pub async fn get_bench_encrypted_text(pool: &PgPool, id: i32) -> Result<String> {
+    let result: Option<String> =
+        sqlx::query_scalar("SELECT (encrypted_text).data::text FROM bench WHERE id = $1")
+            .bind(id)
+            .fetch_one(pool)
+            .await
+            .with_context(|| format!("fetching bench encrypted_text for id={id}"))?;
+    result.with_context(|| format!("bench.encrypted_text is NULL for id={id}"))
+}
+
 /// Assert sorted rows match expected sequential id range
 pub fn assert_sequential_ids(rows: &[sqlx::postgres::PgRow], start: i64, end: i64) {
     let ids: Vec<i64> = rows.iter().map(|r| r.try_get(0).unwrap()).collect();

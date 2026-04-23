@@ -152,7 +152,7 @@ CREATE TABLE bench (
 ```
 
 **Data:**
-- 10,000 rows drawn from 99 distinct encrypted values (ore ids 1-99)
+- 10,000 rows drawn from 99 distinct encrypted values via `create_encrypted_json()` helper ids 1-99 (which map to ORE rows 10, 20, ..., 990)
 - Zipf-like skew via `setseed(0.42)` + `random()^2` — deterministic and byte-identical across runs
 - Top id gets ~5% of rows; tail ids ~0.5% each (top:bottom ratio ~10x)
 - Each column draws independently, so column values are decorrelated within a row
