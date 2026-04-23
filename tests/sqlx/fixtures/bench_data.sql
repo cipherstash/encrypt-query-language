@@ -1,8 +1,10 @@
 -- Fixture: bench_data.sql
 --
 -- Seeds 10K rows into the bench table for performance testing.
--- Each column draws independently from 99 distinct encrypted values (ore ids 1-99)
--- using a Zipf-like skew so the planner sees realistic histograms.
+-- Each column draws independently from 99 distinct create_encrypted_json() inputs
+-- (helper ids 1-99) using a Zipf-like skew so the planner sees realistic histograms.
+-- create_encrypted_json(id) maps helper ids to ORE rows at id * 10 (helper ids 1-99 →
+-- ORE rows 10, 20, ..., 990).
 --
 -- Index terms per row: hm (hmac), b3 (blake3), bf (bloom filter), ob (ORE blocks), sv (STE vec)
 -- Data generated via create_encrypted_json() from 004_install_test_helpers.sql.
