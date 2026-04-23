@@ -12,6 +12,14 @@ use sqlx::PgPool;
 
 const BENCH_ROW_COUNT: i64 = 10000;
 
+async fn fetch_sample_encrypted_text(pool: &PgPool) -> Result<String> {
+    Ok(
+        sqlx::query_scalar("SELECT (encrypted_text).data::text FROM bench WHERE id = 1")
+            .fetch_one(pool)
+            .await?,
+    )
+}
+
 // ========== Data Integrity Tests ==========
 
 /// Verify fixture seeded exactly 10K rows
@@ -113,10 +121,7 @@ async fn bench_encrypted_bigint_has_ore_terms(pool: PgPool) -> Result<()> {
 /// Verify hash index is used for hmac_256 equality lookup
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
 async fn bench_hmac_equality_uses_hash_index(pool: PgPool) -> Result<()> {
-    let encrypted: String =
-        sqlx::query_scalar("SELECT (encrypted_text).data::text FROM bench WHERE id = 1")
-            .fetch_one(&pool)
-            .await?;
+    let encrypted = fetch_sample_encrypted_text(&pool).await?;
 
     let sql = format!(
         "SELECT * FROM bench WHERE eql_v2.hmac_256(encrypted_text) = eql_v2.hmac_256('{}'::jsonb::eql_v2_encrypted)",
@@ -137,10 +142,7 @@ async fn bench_ore_order_uses_btree_index(pool: PgPool) -> Result<()> {
 /// Verify GIN index is used for bloom_filter containment
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
 async fn bench_bloom_containment_uses_gin_index(pool: PgPool) -> Result<()> {
-    let encrypted: String =
-        sqlx::query_scalar("SELECT (encrypted_text).data::text FROM bench WHERE id = 1")
-            .fetch_one(&pool)
-            .await?;
+    let encrypted = fetch_sample_encrypted_text(&pool).await?;
 
     let sql = format!(
         "SELECT * FROM bench WHERE eql_v2.bloom_filter(encrypted_text) @> eql_v2.bloom_filter('{}'::jsonb::eql_v2_encrypted)",
@@ -171,10 +173,7 @@ async fn bench_ore_bigint_order_uses_btree_index(pool: PgPool) -> Result<()> {
 async fn bench_hmac_without_index_uses_seq_scan(pool: PgPool) -> Result<()> {
     analyze_table(&pool, "bench").await?;
 
-    let encrypted: String =
-        sqlx::query_scalar("SELECT (encrypted_text).data::text FROM bench WHERE id = 1")
-            .fetch_one(&pool)
-            .await?;
+    let encrypted = fetch_sample_encrypted_text(&pool).await?;
 
     let sql = format!(
         "SELECT * FROM bench WHERE eql_v2.hmac_256(encrypted_text) = eql_v2.hmac_256('{}'::jsonb::eql_v2_encrypted)",
