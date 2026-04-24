@@ -70,16 +70,16 @@ This matrix covers higher-level SQL constructs rather than individual operators.
 | `WHERE col IN (…)`                 |               |    ✅    |  ✅   |   ❌    |    ❌     |
 | `WHERE col @> …` / `<@ …`          |                              |    ❌    |  ❌   |   ❌    |    ✅     |
 | `ORDER BY col`                     |                                  |    ❌    |  ✅   |   ❌    |    ❌     |
-| `GROUP BY col`                     | equality is insufficient - currently works with `unique` or `ste_vec`-indexed `jsonb` `Bool`, `Null`, `{ .. }` or `[ .. ]` terms                   |    ✅    |  ❌   |   ❌    |    ❌     |
+| `GROUP BY col`                     | requires `unique` on the whole column; `ore` not yet supported (see note below). Extracted JSON paths have separate caveats — see [ste_vec section](#index-terms-by-json-node-type). |    ✅    |  ❌   |   ❌    |    ❌     |
 | `DISTINCT` / `DISTINCT ON (col)`   | `unique` or `ore`                                  |    ✅    |  ✅   |   ❌    |    ❌     |
-| `HAVING`          |   see operator matrix   |  |
+| `HAVING`                           | same index requirements as the predicates used in `HAVING` (see operator matrix) | varies | varies | varies | varies |
 | `MIN(col)` / `MAX(col)`            |                                  |    ❌    |  ✅   |   ❌    |    ❌     |
 | `COUNT(col)` / `COUNT(DISTINCT col)` | `ore` or `unique` for `DISTINCT`; none for plain `COUNT(col)` |    ✅    |  ✅   |   ✅    |    ✅     |
 | `JOIN … ON lhs.col = rhs.col`      | same index and keyset on both sides      |    ✅    |  ✅   |   ❌    |    ❌     |
 | `JOIN … ON lhs.col < rhs.col` etc. | same index and keyset on both sides     |    ❌    |  ✅   |   ❌    |    ❌     |
-| `UNION` / `EXCEPT` / `INTERSECT` (set operations) |  |    ✅    |  ✅   |   ❌    |    ❌     |
-| `IS NULL` / `IS NOT NULL`          | works because `NULL` values are not encrypted              |        |     |       |         |
-| Window functions over encrypted columns | works identically as the same clause in "normal" SQL (e.g. `ORDER BY` needs `ore`) | see rows above |
+| `UNION` / `EXCEPT` / `INTERSECT` (set operations) |                          |    ✅    |  ✅   |   ❌    |    ❌     |
+| `IS NULL` / `IS NOT NULL`          | works because `NULL` values are not encrypted |   ✅    |  ✅   |   ✅    |    ✅     |
+| Window functions over encrypted columns | works like the equivalent clauses in normal SQL (e.g. window `ORDER BY` needs `ore`) | varies | varies | varies | varies |
 
 Notes:
 
