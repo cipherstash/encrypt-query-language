@@ -52,7 +52,7 @@ The following PostgreSQL JSONB operators are **not** implemented for `eql_v2_enc
 
 `?`, `?&`, `?|`, `@?`, `@@`
 
-Use the equivalent [`jsonb_path_query`](#supported-jsonb-functions) or containment patterns instead.
+Use the equivalent [`jsonb_path_query`](#jsonb-functions-and-selectors-enabled-by-ste_vec) or containment patterns instead.
 
 ---
 
@@ -89,22 +89,59 @@ Notes:
 - **Aggregates beyond `MIN`/`MAX`** (e.g. `SUM`, `AVG`) are not supported on encrypted values — decrypt and perform those aggregate operations on the client-side instead.
 - **Parameter binding**: CipherStash Proxy rewrites bound parameters in `WHERE`, `JOIN`, and `RETURNING` clauses with `::JSONB::eql_v2_encrypted` casts so that the encrypted operator and any B-tree / GIN indexes are selected. Writing those casts yourself is only required when bypassing the proxy.
 
-### Supported JSONB functions
+---
 
-When the `ste_vec` index is configured, CipherStash Proxy rewrites the following standard PostgreSQL functions to their `eql_v2` equivalents so they can operate on encrypted JSON:
+## ste_vec: structured encryption for JSON
 
-| Function                        | Index required | Notes                                                  |
-| ------------------------------- | -------------- | ------------------------------------------------------ |
-| `jsonb_path_query`              | `ste_vec`      | Returns `eql_v2_encrypted`.                            |
-| `jsonb_path_query_first`        | `ste_vec`      | Returns `eql_v2_encrypted`.                            |
-| `jsonb_path_exists`             | `ste_vec`      | Returns `boolean`.                                     |
-| `jsonb_array_length`            | `ste_vec`      | Returns `integer`.                                     |
-| `jsonb_array_elements`          | `ste_vec`      | Set-returning; yields `eql_v2_encrypted`.              |
-| `jsonb_array_elements_text`     | `ste_vec`      | Set-returning; yields `eql_v2_encrypted`.              |
-| `jsonb_array`                   | `ste_vec`      | EQL helper that exposes the `sv` array for GIN indexing. |
-| `jsonb_contains` / `jsonb_contained_by` | `ste_vec` | GIN-indexable containment. See [Database Indexes](./database-indexes.md#gin-indexes-for-jsonb-containment). |
+The `ste_vec` index turns a JSONB document into a searchable vector (the `sv` array) of encrypted terms. Each element of `sv` corresponds to one path inside the document and carries:
 
-`COUNT`, `MIN`, and `MAX` are also rewritten to their `eql_v2` aggregate equivalents where applicable. `MIN`/`MAX` require `ore`. `COUNT` has no encrypted index requirement, but `COUNT(DISTINCT <col>)` requires a `unique` or `ore` index term on the column.
+- `s` — a deterministic **selector** hash for the JSON path (always present).
+- One or more **value terms** that depend on the JSON type of the leaf at that path.
+
+Selectors let EQL locate a path; value terms let it compare the value at that path. The tables below cover (1) which value terms each JSON node type produces — i.e. which operators are possible on each node type via ste_vec alone — and (2) which standard PostgreSQL JSONB functions and selectors CipherStash Proxy rewrites to their ste_vec-backed EQL equivalents.
+
+### Index terms by JSON node type
+
+For each path in the document, ste_vec emits an element whose value terms depend on the type of the JSON leaf. The search capabilities available on a value extracted via `->` or `jsonb_path_query` are determined by those terms.
+
+| JSON node type          | Value terms emitted (alongside `s`) | Equality (`=`, `<>`, `IN`, `GROUP BY`) | Ordering (`<`, `<=`, `>`, `>=`, `BETWEEN`, `ORDER BY`, `MIN`/`MAX`) |
+| ----------------------- | ----------------------------------- | :------------------------------------: | :-----------------------------------------------------------------: |
+| Object `{ ... }`        | `b3` (blake3)                       | ✅                                     | ❌                                                                  |
+| Array `[ ... ]`         | `b3` on the container; each element also appears as its own `sv` entry, flagged `"a": 1`, carrying the terms for its own leaf type | ✅ (structural equality and containment) | ❌                                                      |
+| String `"..."`          | `ocv` (variable-width CLLW ORE)     | ✅                                     | ✅                                                                  |
+| Number (`integer`, `numeric`, …) | `ocf` (fixed-width CLLW ORE, `u64_8`) | ✅                               | ✅                                                                  |
+| Boolean `true` / `false` | `b3`                               | ✅                                     | ❌                                                                  |
+| Null (JSON `null`)      | `b3`                                | ✅                                     | ❌                                                                  |
+
+Notes:
+
+- **`b3`** (blake3) is a deterministic hash — it supports equality only. **`ocv`** and **`ocf`** are CLLW Order-Revealing Encryption terms; they preserve order *and* collapse to equality when two operands share the same key.
+- The "Equality" and "Ordering" columns describe what is possible on a value **extracted from the JSON document** (e.g. via `encrypted_json->'selector' = …` or `ORDER BY jsonb_path_query(...)`). The outer `eql_v2_encrypted` column still needs a sibling `unique` / `ore` index if you want `WHERE col = …` on the whole document — see [Operators section notes](#sql-operator-support).
+- **`GROUP BY` caveat**: the current btree operator class for `eql_v2_encrypted` only groups on `b3` / `hm` terms. `GROUP BY` on an extracted **string** or **number** path therefore does not work via ste_vec alone — add a `unique` index to that path if you need it. Object, array, boolean, and null paths group fine via ste_vec.
+- **JSON null vs SQL NULL**: the row above refers to JSON `null` literals *inside* the document. A SQL `NULL` column value is not encrypted at all, so `IS NULL` / `IS NOT NULL` always work regardless of the index configuration.
+
+### JSONB functions and selectors enabled by ste_vec
+
+When the `ste_vec` index is configured, CipherStash Proxy rewrites these standard PostgreSQL JSONB functions, selectors, and aggregates to their `eql_v2` equivalents so they operate on encrypted JSON. The "Also requires" column lists any *additional* capability that must be present on the extracted node (see the table above).
+
+| Function / selector                      | Rewritten to                                    | Also requires                                                                 | Notes                                                                  |
+| ---------------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `jsonb_path_query(col, path)`            | `eql_v2.jsonb_path_query(col, selector)`        | —                                                                             | Set-returning; yields `eql_v2_encrypted`. Paths become selector hashes. |
+| `jsonb_path_query_first(col, path)`      | `eql_v2.jsonb_path_query_first(...)`            | —                                                                             | Returns `eql_v2_encrypted`.                                             |
+| `jsonb_path_exists(col, path)`           | `eql_v2.jsonb_path_exists(...)`                 | —                                                                             | Returns `boolean`.                                                      |
+| `col -> 'field'` / `col -> N`            | ste_vec path / array-element access             | —                                                                             | Returns `eql_v2_encrypted`. `N` is a 0-based index into an array node.  |
+| `col ->> 'field'`                        | ste_vec path as ciphertext text                 | —                                                                             | Returns the **ciphertext** as `text` (not plaintext).                   |
+| `col @> value` / `value <@ col`          | ste_vec containment (via `@>` / `<@`)           | —                                                                             | GIN-indexable via `eql_v2.jsonb_array(col)` — see [Database Indexes](./database-indexes.md#gin-indexes-for-jsonb-containment). |
+| `jsonb_array_length(arr)`                | `eql_v2.jsonb_array_length(arr)`                | Path must resolve to a JSON array node                                        | Returns `integer`.                                                      |
+| `jsonb_array_elements(arr)`              | `eql_v2.jsonb_array_elements(arr)`              | Path must resolve to a JSON array node                                        | Set-returning; yields `eql_v2_encrypted`.                               |
+| `jsonb_array_elements_text(arr)`         | `eql_v2.jsonb_array_elements_text(arr)`         | Path must resolve to a JSON array node                                        | Set-returning; yields ciphertext as `text`.                             |
+| `COUNT(col)`                             | plain `count(*)`                                | —                                                                             | No encrypted term required.                                             |
+| `COUNT(DISTINCT col)`                    | deterministic dedup                             | `unique` **or** `ore` on the extracted node                                   | For a JSON leaf, that means Object / Array / Bool / Null (dedup via `b3`) or String / Number (dedup via `ocv`/`ocf`). |
+| `MIN(col)` / `MAX(col)`                  | `eql_v2` ORE aggregates                         | `ore` **or** ste_vec-extracted String / Number node                           | Requires a node that emits `ocv` / `ocf` (or a sibling `ore` index).    |
+
+Additionally, `eql_v2.jsonb_array`, `eql_v2.jsonb_contains`, and `eql_v2.jsonb_contained_by` are EQL helpers (not automatic rewrites) used when building **GIN-indexed** containment queries. See [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment) for the full setup.
+
+See [EQL with JSON and JSONB](./json-support.md) for worked examples of each function.
 
 ---
 
