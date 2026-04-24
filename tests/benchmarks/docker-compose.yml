@@ -9,7 +9,7 @@ services:
       -c pg_stat_statements.track=all
       -c pg_stat_statements.max=10000
     ports:
-      - "7433:5432"
+      - "127.0.0.1:7433:5432"
     environment:
       POSTGRES_DB: cipherstash
       POSTGRES_USER: cipherstash
@@ -26,7 +26,7 @@ services:
     image: cipherstash/proxy:latest
     container_name: bench-proxy
     ports:
-      - "6433:6432"
+      - "127.0.0.1:6433:6432"
     environment:
       CS_DATABASE__NAME: cipherstash
       CS_DATABASE__USERNAME: cipherstash

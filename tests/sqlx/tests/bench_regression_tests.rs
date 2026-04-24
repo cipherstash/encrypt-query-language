@@ -12,7 +12,8 @@
 
 use anyhow::Result;
 use eql_tests::{
-    explain_analyze_avg, get_bench_encrypted_int, get_bench_encrypted_text, ExplainStats,
+    explain_analyze_avg, explain_analyze_avg_bound, get_bench_encrypted_int,
+    get_bench_encrypted_text, ExplainStats,
 };
 use sqlx::PgPool;
 
@@ -22,11 +23,13 @@ async fn hmac_equality_under_threshold(pool: PgPool) -> Result<()> {
     // id=1 maps to 1 of 100 distinct values → ~100 matching rows at 10K
     let encrypted = get_bench_encrypted_text(&pool, 1).await?;
 
-    let sql = format!(
-        "SELECT * FROM bench WHERE eql_v2.hmac_256(encrypted_text) = eql_v2.hmac_256('{}'::jsonb::eql_v2_encrypted)",
-        encrypted
-    );
-    let stats: ExplainStats = explain_analyze_avg(&pool, &sql, 5).await?;
+    let stats: ExplainStats = explain_analyze_avg_bound(
+        &pool,
+        "SELECT * FROM bench WHERE eql_v2.hmac_256(encrypted_text) = eql_v2.hmac_256($1::jsonb::eql_v2_encrypted)",
+        &[&encrypted],
+        5,
+    )
+    .await?;
     assert!(
         stats.execution_time_ms < 50.0,
         "hmac_256 equality took {:.1}ms, threshold 50ms (expected ~0.5ms at 10K rows, node_type={})",
@@ -41,11 +44,13 @@ async fn bloom_filter_containment_under_threshold(pool: PgPool) -> Result<()> {
     // id=1 maps to 1 of 100 distinct values → ~100 matching rows at 10K
     let encrypted = get_bench_encrypted_text(&pool, 1).await?;
 
-    let sql = format!(
-        "SELECT * FROM bench WHERE eql_v2.bloom_filter(encrypted_text) @> eql_v2.bloom_filter('{}'::jsonb::eql_v2_encrypted)",
-        encrypted
-    );
-    let stats: ExplainStats = explain_analyze_avg(&pool, &sql, 5).await?;
+    let stats: ExplainStats = explain_analyze_avg_bound(
+        &pool,
+        "SELECT * FROM bench WHERE eql_v2.bloom_filter(encrypted_text) @> eql_v2.bloom_filter($1::jsonb::eql_v2_encrypted)",
+        &[&encrypted],
+        5,
+    )
+    .await?;
     assert!(
         stats.execution_time_ms < 100.0,
         "bloom_filter containment took {:.1}ms, threshold 100ms (expected ~1ms at 10K rows, node_type={})",
@@ -61,12 +66,14 @@ async fn ore_range_lt_under_threshold(pool: PgPool) -> Result<()> {
     // to ore id 83, but the 10K distribution still yields ~4,900 rows below the predicate
     let encrypted = get_bench_encrypted_int(&pool, 50).await?;
 
-    let sql = format!(
-        "SELECT * FROM bench WHERE encrypted_int < '{}'::jsonb::eql_v2_encrypted \
+    let stats: ExplainStats = explain_analyze_avg_bound(
+        &pool,
+        "SELECT * FROM bench WHERE encrypted_int < $1::jsonb::eql_v2_encrypted \
          ORDER BY encrypted_int LIMIT 10",
-        encrypted
-    );
-    let stats: ExplainStats = explain_analyze_avg(&pool, &sql, 5).await?;
+        &[&encrypted],
+        5,
+    )
+    .await?;
     assert!(
         stats.execution_time_ms < 200.0,
         "ORE range < LIMIT 10 took {:.1}ms, threshold 200ms (expected ~2ms at 10K rows, node_type={})",

@@ -527,6 +527,35 @@ pub async fn explain_json(pool: &PgPool, query: &str) -> Result<serde_json::Valu
     Ok(plan)
 }
 
+/// Run EXPLAIN (FORMAT JSON) with bound parameters and return the top-level plan node type.
+///
+/// Used by benchmarks to capture the actual Postgres plan at runtime instead of
+/// hard-coding a string. Binds each `params[i]` to the `$(i+1)` placeholder.
+///
+/// # Example
+/// ```ignore
+/// let plan_type = fetch_plan_node_type(
+///     &pool,
+///     "SELECT * FROM bench WHERE encrypted_int = $1::jsonb::eql_v2_encrypted",
+///     &[&encrypted],
+/// ).await?;
+/// ```
+pub async fn fetch_plan_node_type(pool: &PgPool, query: &str, params: &[&str]) -> Result<String> {
+    let sql = format!("EXPLAIN (FORMAT JSON) {}", query);
+    let mut q = sqlx::query_scalar::<_, serde_json::Value>(&sql);
+    for p in params {
+        q = q.bind(*p);
+    }
+    let plan = q
+        .fetch_one(pool)
+        .await
+        .with_context(|| format!("running EXPLAIN (FORMAT JSON) on query: {}", query))?;
+    Ok(plan[0]["Plan"]["Node Type"]
+        .as_str()
+        .with_context(|| format!("extracting Plan.Node Type from EXPLAIN on query: {}", query))?
+        .to_string())
+}
+
 /// Run EXPLAIN ANALYZE multiple times and return averaged statistics
 ///
 /// Executes `EXPLAIN (ANALYZE, FORMAT JSON) {query}` the specified number of times
@@ -557,6 +586,37 @@ pub async fn explain_json(pool: &PgPool, query: &str) -> Result<serde_json::Valu
 /// assert_eq!(stats.node_type, "Index Scan");
 /// ```
 pub async fn explain_analyze_avg(pool: &PgPool, query: &str, runs: usize) -> Result<ExplainStats> {
+    explain_analyze_avg_bound(pool, query, &[], runs).await
+}
+
+/// Run EXPLAIN ANALYZE multiple times with bound parameters and return averaged statistics
+///
+/// Like `explain_analyze_avg`, but supports `$1`, `$2`, ... placeholders in the
+/// query. String parameters are bound via sqlx, avoiding SQL injection and
+/// quoting issues when the value may contain `'` characters (for example,
+/// encrypted JSON payloads surfaced via `::jsonb::eql_v2_encrypted`).
+///
+/// # Arguments
+/// * `pool` - Database connection pool
+/// * `query` - SQL query with `$N` placeholders (no EXPLAIN prefix)
+/// * `params` - String parameters bound in order ($1 → params[0], etc.)
+/// * `runs` - Number of times to execute (must be >= 1)
+///
+/// # Example
+/// ```ignore
+/// let stats = explain_analyze_avg_bound(
+///     &pool,
+///     "SELECT * FROM bench WHERE eql_v2.hmac_256(col) = eql_v2.hmac_256($1::jsonb::eql_v2_encrypted)",
+///     &[&encrypted],
+///     5,
+/// ).await?;
+/// ```
+pub async fn explain_analyze_avg_bound(
+    pool: &PgPool,
+    query: &str,
+    params: &[&str],
+    runs: usize,
+) -> Result<ExplainStats> {
     anyhow::ensure!(runs >= 1, "runs must be >= 1, got {}", runs);
 
     let sql = format!("EXPLAIN (ANALYZE, FORMAT JSON) {}", query);
@@ -566,39 +626,27 @@ pub async fn explain_analyze_avg(pool: &PgPool, query: &str, runs: usize) -> Res
     let mut node_type = String::new();
 
     for i in 0..runs {
-        let plan: serde_json::Value = sqlx::query_scalar(&sql)
-            .fetch_one(pool)
-            .await
-            .with_context(|| {
-                format!(
-                    "running EXPLAIN ANALYZE (run {}/{}) on query: {}",
-                    i + 1,
-                    runs,
-                    query
-                )
-            })?;
+        let mut q = sqlx::query_scalar::<_, serde_json::Value>(&sql);
+        for p in params {
+            q = q.bind(*p);
+        }
+        let plan = q.fetch_one(pool).await.with_context(|| {
+            format!(
+                "running EXPLAIN ANALYZE (run {}/{}) on query: {}",
+                i + 1,
+                runs,
+                query
+            )
+        })?;
 
         // EXPLAIN (ANALYZE, FORMAT JSON) returns:
         // [{"Plan": {...}, "Planning Time": N, "Execution Time": N}]
         let entry = &plan[0];
-
-        let exec_time = entry["Execution Time"]
-            .as_f64()
-            .with_context(|| format!("extracting Execution Time on run {}/{}", i + 1, runs))?;
-
-        let plan_time = entry["Planning Time"]
-            .as_f64()
-            .with_context(|| format!("extracting Planning Time on run {}/{}", i + 1, runs))?;
-
+        let (exec_time, plan_time, nt) = parse_explain_entry(entry, i + 1, runs)?;
         total_execution_ms += exec_time;
         total_planning_ms += plan_time;
-
-        // Capture node type from first run only
         if i == 0 {
-            node_type = entry["Plan"]["Node Type"]
-                .as_str()
-                .with_context(|| "extracting Node Type from first run")?
-                .to_string();
+            node_type = nt;
         }
     }
 
@@ -608,6 +656,27 @@ pub async fn explain_analyze_avg(pool: &PgPool, query: &str, runs: usize) -> Res
         planning_time_ms: total_planning_ms / n,
         node_type,
     })
+}
+
+fn parse_explain_entry(
+    entry: &serde_json::Value,
+    run_num: usize,
+    total_runs: usize,
+) -> Result<(f64, f64, String)> {
+    let exec_time = entry["Execution Time"].as_f64().with_context(|| {
+        format!(
+            "extracting Execution Time on run {}/{}",
+            run_num, total_runs
+        )
+    })?;
+    let plan_time = entry["Planning Time"]
+        .as_f64()
+        .with_context(|| format!("extracting Planning Time on run {}/{}", run_num, total_runs))?;
+    let node_type = entry["Plan"]["Node Type"]
+        .as_str()
+        .with_context(|| format!("extracting Node Type on run {}/{}", run_num, total_runs))?
+        .to_string();
+    Ok((exec_time, plan_time, node_type))
 }
 
 /// Assert that a JSON EXPLAIN plan does not use any sequential scan

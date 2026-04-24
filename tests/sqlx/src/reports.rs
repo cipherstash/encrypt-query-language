@@ -1,8 +1,9 @@
 //! Benchmark report writer for Tier 2 scheduled benchmarks.
 //!
-//! Each `#[ignore]` test in `bench_perf_tests.rs` pushes a `PerfResult` into
-//! `append_result`. A teardown-style test (run last, alphabetical order) calls
-//! `write_reports` to flush all accumulated results to JSON + Markdown.
+//! Each `#[ignore]` benchmark in `bench_perf_tests.rs` pushes a `PerfResult`
+//! into `append_result`. The `run_all_benchmarks` orchestrator invokes each
+//! benchmark in sequence and then calls `write_reports` to flush all
+//! accumulated results to JSON + Markdown.
 //!
 //! Output shape matches the design doc (.work/eql-index-performance/
 //! 2026-03-30-benchmarking-design.md §Report Format) with one caveat: the
@@ -16,6 +17,8 @@ use serde::Serialize;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Mutex;
+use time::format_description::well_known::Rfc3339;
+use time::OffsetDateTime;
 
 /// One benchmark case result.
 #[derive(Debug, Clone, Serialize)]
@@ -62,8 +65,10 @@ pub fn append_result(r: PerfResult) {
 ///   `<output_dir>/benchmark-<date>.json`
 ///   `<output_dir>/benchmark-<date>.md`
 ///
-/// `date` is an ISO-8601 date string provided by the caller (usually today).
-/// `postgres_version` and `dataset_rows` are embedded in the report header.
+/// `date` is used only as a filename suffix (any caller-supplied string,
+/// typically `YYYY-MM-DD` with an optional run-id suffix for uniqueness).
+/// The report's `timestamp` field is captured at write time as RFC3339 UTC
+/// and is independent of `date`.
 pub fn write_reports(
     output_dir: &str,
     date: &str,
@@ -71,8 +76,11 @@ pub fn write_reports(
     dataset_rows: i64,
 ) -> Result<(PathBuf, PathBuf)> {
     let results = RESULTS.lock().expect("results mutex poisoned").clone();
+    let timestamp = OffsetDateTime::now_utc()
+        .format(&Rfc3339)
+        .context("formatting RFC3339 write-time timestamp")?;
     let report = BenchmarkReport {
-        timestamp: format!("{date}T00:00:00Z"),
+        timestamp,
         postgres_version: postgres_version.to_string(),
         dataset_rows,
         results,

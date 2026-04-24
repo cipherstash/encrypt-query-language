@@ -120,7 +120,7 @@ CREATE TABLE ore (
 
 **Helper Functions:**
 - `get_ore_encrypted(pool, id)` - Selects encrypted value from ore table
-- `create_encrypted_json(id)` - Looks up ore table at `id * 10` (valid ids: 1-9 → ore lookups: 10-90)
+- `create_encrypted_json(id)` - Looks up ore table at `id * 10` (valid ids: 1-99 → ore lookups: 10-990)
 
 **Key Property:**
 - Sequential numeric values enable deterministic comparison tests
@@ -152,7 +152,7 @@ CREATE TABLE bench (
 ```
 
 **Data:**
-- 10,000 rows drawn from 99 distinct encrypted values (ore ids 1-99)
+- 10,000 rows drawn from 99 distinct encrypted values. Caller ids `1..99` are Zipf-skewed and resolve via `create_encrypted_json(id)` to ORE ids `{10, 20, …, 990}` (see the ORE helper description above)
 - Zipf-like skew via `setseed(0.42)` + `random()^2` — deterministic and byte-identical across runs
 - Top id gets ~5% of rows; tail ids ~0.5% each (top:bottom ratio ~10x)
 - Each column draws independently, so column values are decorrelated within a row

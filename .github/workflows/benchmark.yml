@@ -17,7 +17,7 @@ env:
 jobs:
   benchmark:
     name: "100K dataset benchmark (Postgres 17)"
-    runs-on: ubuntu-latest-m
+    runs-on: ubuntu-latest
     timeout-minutes: 60
 
     steps:
@@ -60,7 +60,8 @@ jobs:
 
       - name: Run Tier 2 benchmark suite
         run: |
-          export BENCH_REPORT_DATE="$(date -u +%Y-%m-%d)-${{ github.run_id }}"
+          BENCH_REPORT_DATE="$(date -u +%Y-%m-%d)-${{ github.run_id }}"
+          export BENCH_REPORT_DATE
           mise run bench:full
 
       - name: Tear down containers
