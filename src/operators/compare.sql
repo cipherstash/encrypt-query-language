@@ -17,6 +17,14 @@
 -- REQUIRE: src/ore_cllw_var_8/types.sql
 -- REQUIRE: src/ore_cllw_var_8/functions.sql
 
+-- REQUIRE: src/ope_cllw_u64_65/types.sql
+-- REQUIRE: src/ope_cllw_u64_65/functions.sql
+-- REQUIRE: src/ope_cllw_u64_65/compare.sql
+
+-- REQUIRE: src/ope_cllw_var_8/types.sql
+-- REQUIRE: src/ope_cllw_var_8/functions.sql
+-- REQUIRE: src/ope_cllw_var_8/compare.sql
+
 --! @brief Core comparison function for encrypted values
 --!
 --! Compares two encrypted values using their index terms without decryption.
@@ -27,8 +35,10 @@
 --! 1. ore_block_u64_8_256 (Order-Revealing Encryption)
 --! 2. ore_cllw_u64_8 (Order-Revealing Encryption)
 --! 3. ore_cllw_var_8 (Order-Revealing Encryption)
---! 4. hmac_256 (Hash-based equality)
---! 5. blake3 (Hash-based equality)
+--! 4. ope_cllw_u64_65 (Order-Preserving Encryption)
+--! 5. ope_cllw_var_8 (Order-Preserving Encryption)
+--! 6. hmac_256 (Hash-based equality)
+--! 7. blake3 (Hash-based equality)
 --!
 --! The first index term type present in both values is used for comparison.
 --! If no matching index terms are found, falls back to JSONB literal comparison
@@ -74,6 +84,14 @@ AS $$
 
     IF eql_v2.has_ore_cllw_var_8(a) AND eql_v2.has_ore_cllw_var_8(b) THEN
       RETURN eql_v2.compare_ore_cllw_var_8(a, b);
+    END IF;
+
+    IF eql_v2.has_ope_cllw_u64_65(a) AND eql_v2.has_ope_cllw_u64_65(b) THEN
+      RETURN eql_v2.compare_ope_cllw_u64_65(a, b);
+    END IF;
+
+    IF eql_v2.has_ope_cllw_var_8(a) AND eql_v2.has_ope_cllw_var_8(b) THEN
+      RETURN eql_v2.compare_ope_cllw_var_8(a, b);
     END IF;
 
     IF eql_v2.has_hmac_256(a) AND eql_v2.has_hmac_256(b) THEN
