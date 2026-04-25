@@ -4,13 +4,13 @@
 
 --! @brief Add a search index configuration for an encrypted column
 --!
---! Configures a searchable encryption index (unique, match, ore, or ste_vec) on an
---! encrypted column. Creates or updates the pending configuration, then migrates
---! and activates it unless migrating flag is set.
+--! Configures a searchable encryption index (unique, match, ore, ope, or ste_vec)
+--! on an encrypted column. Creates or updates the pending configuration, then
+--! migrates and activates it unless migrating flag is set.
 --!
 --! @param table_name Text Name of the table containing the column
 --! @param column_name Text Name of the column to configure
---! @param index_name Text Type of index ('unique', 'match', 'ore', 'ste_vec')
+--! @param index_name Text Type of index ('unique', 'match', 'ore', 'ope', 'ste_vec')
 --! @param cast_as Text PostgreSQL type for decrypted values (default: 'text')
 --! @param opts JSONB Index-specific options (default: '{}')
 --! @param migrating Boolean Skip auto-migration if true (default: false)
