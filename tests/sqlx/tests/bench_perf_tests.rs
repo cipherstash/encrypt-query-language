@@ -10,7 +10,7 @@
 //! Each benchmark:
 //!   1. Resets pg_stat_statements
 //!   2. Captures the actual query plan via EXPLAIN (FORMAT JSON)
-//!   3. Runs its query pattern 1000 times
+//!   3. Runs its query pattern `RUNS` times (currently 10)
 //!   4. Reads pg_stat_statements for the match
 //!   5. Appends a PerfResult to the shared accumulator
 //!
@@ -28,7 +28,7 @@ use eql_tests::{
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 
-const RUNS: i64 = 1000;
+const RUNS: i64 = 10;
 const DATASET_ROWS: i64 = 100_000;
 
 async fn connect() -> Result<PgPool> {

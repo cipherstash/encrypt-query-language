@@ -7,7 +7,7 @@ encrypted datasets. Complements the Tier 1 tests in `tests/sqlx/tests/bench_*`.
 
 - Brings up Postgres + CipherStash Proxy via docker-compose
 - Inserts 100K plaintext rows through the Proxy (which encrypts them)
-- Runs each P0/P1/P2 query pattern 1000 times
+- Runs each P0/P1/P2 query pattern 10 times
 - Reads `pg_stat_statements` for statistical aggregates
 - Outputs JSON + Markdown reports
 
@@ -39,7 +39,7 @@ GitHub Actions UI (Run workflow button).
 ## Why a separate workflow
 
 - 100K generation takes ~100 seconds via the Proxy
-- 1000-run query loops add several minutes per pattern
+- The slowest pattern (`bench_ore_order_by_limit`) takes several seconds per run on 100K rows
 - Regular PR CI must stay under 10 minutes; this suite would blow that budget
 
 ## Output
