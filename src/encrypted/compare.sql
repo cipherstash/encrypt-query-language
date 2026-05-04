@@ -22,7 +22,6 @@ CREATE FUNCTION eql_v2.compare_literal(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS integer
   IMMUTABLE STRICT PARALLEL SAFE
   LANGUAGE SQL
-  SET search_path = pg_catalog, public, extensions
 AS $$
     SELECT CASE
         WHEN a.data < b.data THEN -1

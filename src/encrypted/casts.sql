@@ -16,7 +16,6 @@ CREATE FUNCTION eql_v2.to_encrypted(data jsonb)
     RETURNS public.eql_v2_encrypted
     IMMUTABLE STRICT PARALLEL SAFE
     LANGUAGE SQL
-  SET search_path = pg_catalog, public, extensions
 AS $$
     SELECT ROW(data)::public.eql_v2_encrypted;
 $$;
@@ -46,7 +45,6 @@ CREATE FUNCTION eql_v2.to_encrypted(data text)
     RETURNS public.eql_v2_encrypted
     IMMUTABLE STRICT PARALLEL SAFE
     LANGUAGE SQL
-  SET search_path = pg_catalog, public, extensions
 AS $$
     SELECT eql_v2.to_encrypted(data::jsonb);
 $$;
@@ -77,7 +75,6 @@ CREATE FUNCTION eql_v2.to_jsonb(e public.eql_v2_encrypted)
     RETURNS jsonb
     IMMUTABLE STRICT PARALLEL SAFE
     LANGUAGE SQL
-  SET search_path = pg_catalog, public, extensions
 AS $$
     SELECT e.data;
 $$;

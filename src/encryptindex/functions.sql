@@ -108,7 +108,6 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.select_target_columns()
 	RETURNS TABLE(table_name TEXT, column_name TEXT, target_column TEXT)
 	STABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT
     c.table_name,
@@ -136,7 +135,6 @@ $$ LANGUAGE sql;
 CREATE FUNCTION eql_v2.ready_for_encryption()
 	RETURNS BOOLEAN
 	STABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
 AS $$
 	SELECT EXISTS (
 	  SELECT *

@@ -264,7 +264,6 @@ CREATE FUNCTION eql_v2.jsonb_array_from_array_elements(val jsonb)
 RETURNS jsonb[]
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
-  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT CASE
     WHEN val ? 'sv' THEN
@@ -285,7 +284,6 @@ CREATE FUNCTION eql_v2.jsonb_array_from_array_elements(val eql_v2_encrypted)
 RETURNS jsonb[]
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
-  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT eql_v2.jsonb_array_from_array_elements(val.data);
 $$;
@@ -306,7 +304,6 @@ CREATE FUNCTION eql_v2.jsonb_array(val jsonb)
 RETURNS jsonb[]
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
-  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT ARRAY(
     SELECT jsonb_object_agg(kv.key, kv.value)
@@ -330,7 +327,6 @@ CREATE FUNCTION eql_v2.jsonb_array(val eql_v2_encrypted)
 RETURNS jsonb[]
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
-  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT eql_v2.jsonb_array(val.data);
 $$;
@@ -360,7 +356,6 @@ CREATE FUNCTION eql_v2.jsonb_contains(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS boolean
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
-  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT eql_v2.jsonb_array(a) @> eql_v2.jsonb_array(b);
 $$;
@@ -381,7 +376,6 @@ CREATE FUNCTION eql_v2.jsonb_contains(a eql_v2_encrypted, b jsonb)
 RETURNS boolean
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
-  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT eql_v2.jsonb_array(a) @> eql_v2.jsonb_array(b);
 $$;
@@ -402,7 +396,6 @@ CREATE FUNCTION eql_v2.jsonb_contains(a jsonb, b eql_v2_encrypted)
 RETURNS boolean
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
-  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT eql_v2.jsonb_array(a) @> eql_v2.jsonb_array(b);
 $$;
@@ -423,7 +416,6 @@ CREATE FUNCTION eql_v2.jsonb_contained_by(a eql_v2_encrypted, b eql_v2_encrypted
 RETURNS boolean
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
-  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT eql_v2.jsonb_array(a) <@ eql_v2.jsonb_array(b);
 $$;
@@ -444,7 +436,6 @@ CREATE FUNCTION eql_v2.jsonb_contained_by(a eql_v2_encrypted, b jsonb)
 RETURNS boolean
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
-  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT eql_v2.jsonb_array(a) <@ eql_v2.jsonb_array(b);
 $$;
@@ -465,7 +456,6 @@ CREATE FUNCTION eql_v2.jsonb_contained_by(a jsonb, b eql_v2_encrypted)
 RETURNS boolean
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
-  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT eql_v2.jsonb_array(a) <@ eql_v2.jsonb_array(b);
 $$;

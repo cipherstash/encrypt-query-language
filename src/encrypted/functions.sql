@@ -50,7 +50,6 @@ CREATE FUNCTION eql_v2.ciphertext(val eql_v2_encrypted)
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
   LANGUAGE SQL
-  SET search_path = pg_catalog, public, extensions
 AS $$
     SELECT eql_v2.ciphertext(val.data);
 $$;
@@ -68,7 +67,6 @@ $$;
 --! @see eql_v2.grouped_value
 CREATE FUNCTION eql_v2._first_grouped_value(jsonb, jsonb)
 RETURNS jsonb
-  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT COALESCE($1, $2);
 $$ LANGUAGE sql IMMUTABLE;
@@ -178,7 +176,6 @@ CREATE FUNCTION eql_v2.meta_data(val jsonb)
   RETURNS jsonb
   IMMUTABLE STRICT PARALLEL SAFE
   LANGUAGE SQL
-  SET search_path = pg_catalog, public, extensions
 AS $$
     SELECT jsonb_build_object('i', val->'i', 'v', val->'v');
 $$;
@@ -203,7 +200,6 @@ CREATE FUNCTION eql_v2.meta_data(val eql_v2_encrypted)
   RETURNS jsonb
   IMMUTABLE STRICT PARALLEL SAFE
   LANGUAGE SQL
-  SET search_path = pg_catalog, public, extensions
 AS $$
     SELECT eql_v2.meta_data(val.data);
 $$;
