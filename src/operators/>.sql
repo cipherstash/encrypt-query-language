@@ -60,6 +60,7 @@ CREATE OPERATOR >(
 );
 
 --! @brief > operator for encrypted value and JSONB
+--! @return Boolean True if a > b
 --! @see eql_v2.">"(eql_v2_encrypted, eql_v2_encrypted)
 CREATE FUNCTION eql_v2.">"(a eql_v2_encrypted, b jsonb)
 RETURNS boolean
@@ -81,6 +82,7 @@ CREATE OPERATOR >(
 );
 
 --! @brief > operator for JSONB and encrypted value
+--! @return Boolean True if a > b
 --! @see eql_v2.">"(eql_v2_encrypted, eql_v2_encrypted)
 CREATE FUNCTION eql_v2.">"(a jsonb, b eql_v2_encrypted)
 RETURNS boolean
