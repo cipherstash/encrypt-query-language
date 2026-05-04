@@ -32,6 +32,7 @@
 CREATE FUNCTION eql_v2."->"(e eql_v2_encrypted, selector text)
   RETURNS eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
   DECLARE
     meta jsonb;
@@ -75,6 +76,7 @@ CREATE OPERATOR ->(
 CREATE FUNCTION eql_v2."->"(e eql_v2_encrypted, selector eql_v2_encrypted)
   RETURNS eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
 	BEGIN
     RETURN eql_v2."->"(e, eql_v2.selector(selector));
@@ -103,6 +105,7 @@ CREATE OPERATOR ->(
 CREATE FUNCTION eql_v2."->"(e eql_v2_encrypted, selector integer)
   RETURNS eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
   DECLARE
     sv eql_v2_encrypted[];

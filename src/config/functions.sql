@@ -32,6 +32,7 @@
 CREATE FUNCTION eql_v2.add_search_config(table_name text, column_name text, index_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}', migrating boolean DEFAULT false)
   RETURNS jsonb
 
+  SET search_path = pg_catalog, public, extensions
 AS $$
   DECLARE
     o jsonb;
@@ -108,6 +109,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.modify_search_config
 CREATE FUNCTION eql_v2.remove_search_config(table_name text, column_name text, index_name text, migrating boolean DEFAULT false)
   RETURNS jsonb
+  SET search_path = pg_catalog, public, extensions
 AS $$
   DECLARE
     _config jsonb;
@@ -178,6 +180,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.remove_search_config
 CREATE FUNCTION eql_v2.modify_search_config(table_name text, column_name text, index_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}', migrating boolean DEFAULT false)
   RETURNS jsonb
+  SET search_path = pg_catalog, public, extensions
 AS $$
   BEGIN
     PERFORM eql_v2.remove_search_config(table_name, column_name, index_name, migrating);
@@ -204,6 +207,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.add_column
 CREATE FUNCTION eql_v2.migrate_config()
   RETURNS boolean
+  SET search_path = pg_catalog, public, extensions
 AS $$
 	BEGIN
 
@@ -241,6 +245,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.add_column
 CREATE FUNCTION eql_v2.activate_config()
   RETURNS boolean
+  SET search_path = pg_catalog, public, extensions
 AS $$
 	BEGIN
 
@@ -270,6 +275,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.add_search_config
 CREATE FUNCTION eql_v2.discard()
   RETURNS boolean
+  SET search_path = pg_catalog, public, extensions
 AS $$
   BEGIN
     IF EXISTS (SELECT FROM public.eql_v2_configuration c WHERE c.state = 'pending') THEN
@@ -305,6 +311,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.remove_column
 CREATE FUNCTION eql_v2.add_column(table_name text, column_name text, cast_as text DEFAULT 'text', migrating boolean DEFAULT false)
   RETURNS jsonb
+  SET search_path = pg_catalog, public, extensions
 AS $$
   DECLARE
     key text;
@@ -368,6 +375,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.remove_search_config
 CREATE FUNCTION eql_v2.remove_column(table_name text, column_name text, migrating boolean DEFAULT false)
   RETURNS jsonb
+  SET search_path = pg_catalog, public, extensions
 AS $$
   DECLARE
     key text;
@@ -438,6 +446,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.reload_config()
   RETURNS void
 LANGUAGE sql STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 BEGIN ATOMIC
   RETURN NULL;
 END;
@@ -466,6 +475,7 @@ CREATE FUNCTION eql_v2.config() RETURNS TABLE (
     decrypts_as text,
     indexes jsonb
 )
+  SET search_path = pg_catalog, public, extensions
 AS $$
 BEGIN
     RETURN QUERY

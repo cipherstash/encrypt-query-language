@@ -11,6 +11,7 @@
 CREATE FUNCTION eql_v2.config_default(config jsonb)
   RETURNS jsonb
   IMMUTABLE PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
   BEGIN
     IF config IS NULL THEN
@@ -32,6 +33,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.config_add_table(table_name text, config jsonb)
   RETURNS jsonb
   IMMUTABLE PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
   DECLARE
     tbl jsonb;
@@ -56,6 +58,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.config_add_column(table_name text, column_name text, config jsonb)
   RETURNS jsonb
   IMMUTABLE PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
   DECLARE
     col jsonb;
@@ -82,6 +85,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.config_add_cast(table_name text, column_name text, cast_as text, config jsonb)
   RETURNS jsonb
   IMMUTABLE PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
   BEGIN
     SELECT jsonb_set(config, array['tables', table_name, column_name, 'cast_as'], to_jsonb(cast_as)) INTO config;
@@ -104,6 +108,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.config_add_index(table_name text, column_name text, index_name text, opts jsonb, config jsonb)
   RETURNS jsonb
   IMMUTABLE PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
   BEGIN
     SELECT jsonb_insert(config, array['tables', table_name, column_name, 'indexes', index_name], opts) INTO config;
@@ -121,6 +126,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.config_match_default()
   RETURNS jsonb
 LANGUAGE sql STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 BEGIN ATOMIC
   SELECT jsonb_build_object(
             'k', 6,

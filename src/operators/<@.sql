@@ -25,7 +25,9 @@
 --! @see eql_v2.add_search_config
 
 CREATE FUNCTION eql_v2."<@"(a eql_v2_encrypted, b eql_v2_encrypted)
-RETURNS boolean AS $$
+RETURNS boolean
+  SET search_path = pg_catalog, public, extensions
+AS $$
   -- Contains with reversed arguments
   SELECT eql_v2.ste_vec_contains(b, a)
 $$ LANGUAGE SQL;

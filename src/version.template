@@ -26,6 +26,7 @@ DROP FUNCTION IF EXISTS eql_v2.version();
 CREATE FUNCTION eql_v2.version()
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT '$RELEASE_VERSION';
 $$ LANGUAGE SQL;

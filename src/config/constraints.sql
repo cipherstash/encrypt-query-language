@@ -24,6 +24,7 @@
 CREATE FUNCTION eql_v2.config_get_indexes(val jsonb)
     RETURNS SETOF text
     LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 BEGIN ATOMIC
 	SELECT jsonb_object_keys(jsonb_path_query(val,'$.tables.*.*.indexes'));
 END;
@@ -44,6 +45,7 @@ END;
 CREATE FUNCTION eql_v2.config_check_indexes(val jsonb)
   RETURNS BOOLEAN
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
 	BEGIN
 
@@ -75,6 +77,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.config_check_cast(val jsonb)
   RETURNS BOOLEAN
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
   DECLARE
     _valid_types text[] := '{text, int, small_int, big_int, real, double, boolean, date, jsonb, json, float, decimal, timestamp}';
@@ -113,6 +116,7 @@ $$ LANGUAGE plpgsql;
 --! @note Used in CHECK constraint on eql_v2_configuration table
 CREATE FUNCTION eql_v2.config_check_tables(val jsonb)
   RETURNS boolean
+  SET search_path = pg_catalog, public, extensions
 AS $$
 	BEGIN
     IF (val ? 'tables') THEN
@@ -136,6 +140,7 @@ $$ LANGUAGE plpgsql;
 --! @note Used in CHECK constraint on eql_v2_configuration table
 CREATE FUNCTION eql_v2.config_check_version(val jsonb)
   RETURNS boolean
+  SET search_path = pg_catalog, public, extensions
 AS $$
 	BEGIN
     IF (val ? 'v') THEN

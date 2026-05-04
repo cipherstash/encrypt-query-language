@@ -19,6 +19,7 @@
 CREATE FUNCTION eql_v2.ste_vec(val jsonb)
   RETURNS public.eql_v2_encrypted[]
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
   DECLARE
     sv jsonb;
@@ -52,6 +53,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.ste_vec(val eql_v2_encrypted)
   RETURNS public.eql_v2_encrypted[]
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
   BEGIN
     RETURN (SELECT eql_v2.ste_vec(val.data));
@@ -70,6 +72,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.is_ste_vec_value(val jsonb)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
 	BEGIN
     IF val ? 'sv' THEN
@@ -92,6 +95,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.is_ste_vec_value(val eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
 	BEGIN
     RETURN eql_v2.is_ste_vec_value(val.data);
@@ -111,6 +115,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.to_ste_vec_value(val jsonb)
   RETURNS eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
   DECLARE
     meta jsonb;
@@ -145,6 +150,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.to_ste_vec_value(val eql_v2_encrypted)
   RETURNS eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
 	BEGIN
     RETURN eql_v2.to_ste_vec_value(val.data);
@@ -164,6 +170,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.selector(val jsonb)
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
 	BEGIN
     IF val IS NULL THEN
@@ -190,6 +197,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.selector(val eql_v2_encrypted)
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
   BEGIN
     RETURN (SELECT eql_v2.selector(val.data));
@@ -210,6 +218,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.is_ste_vec_array(val jsonb)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
 	BEGIN
     IF val ? 'a' THEN
@@ -233,6 +242,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.is_ste_vec_array(val eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
   BEGIN
     RETURN (SELECT eql_v2.is_ste_vec_array(val.data));
@@ -254,6 +264,7 @@ CREATE FUNCTION eql_v2.jsonb_array_from_array_elements(val jsonb)
 RETURNS jsonb[]
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
+  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT CASE
     WHEN val ? 'sv' THEN
@@ -274,6 +285,7 @@ CREATE FUNCTION eql_v2.jsonb_array_from_array_elements(val eql_v2_encrypted)
 RETURNS jsonb[]
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
+  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT eql_v2.jsonb_array_from_array_elements(val.data);
 $$;
@@ -294,6 +306,7 @@ CREATE FUNCTION eql_v2.jsonb_array(val jsonb)
 RETURNS jsonb[]
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
+  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT ARRAY(
     SELECT jsonb_object_agg(kv.key, kv.value)
@@ -317,6 +330,7 @@ CREATE FUNCTION eql_v2.jsonb_array(val eql_v2_encrypted)
 RETURNS jsonb[]
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
+  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT eql_v2.jsonb_array(val.data);
 $$;
@@ -346,6 +360,7 @@ CREATE FUNCTION eql_v2.jsonb_contains(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS boolean
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
+  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT eql_v2.jsonb_array(a) @> eql_v2.jsonb_array(b);
 $$;
@@ -366,6 +381,7 @@ CREATE FUNCTION eql_v2.jsonb_contains(a eql_v2_encrypted, b jsonb)
 RETURNS boolean
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
+  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT eql_v2.jsonb_array(a) @> eql_v2.jsonb_array(b);
 $$;
@@ -386,6 +402,7 @@ CREATE FUNCTION eql_v2.jsonb_contains(a jsonb, b eql_v2_encrypted)
 RETURNS boolean
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
+  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT eql_v2.jsonb_array(a) @> eql_v2.jsonb_array(b);
 $$;
@@ -406,6 +423,7 @@ CREATE FUNCTION eql_v2.jsonb_contained_by(a eql_v2_encrypted, b eql_v2_encrypted
 RETURNS boolean
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
+  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT eql_v2.jsonb_array(a) <@ eql_v2.jsonb_array(b);
 $$;
@@ -426,6 +444,7 @@ CREATE FUNCTION eql_v2.jsonb_contained_by(a eql_v2_encrypted, b jsonb)
 RETURNS boolean
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
+  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT eql_v2.jsonb_array(a) <@ eql_v2.jsonb_array(b);
 $$;
@@ -446,6 +465,7 @@ CREATE FUNCTION eql_v2.jsonb_contained_by(a jsonb, b eql_v2_encrypted)
 RETURNS boolean
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
+  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT eql_v2.jsonb_array(a) <@ eql_v2.jsonb_array(b);
 $$;
@@ -468,6 +488,7 @@ $$;
 CREATE FUNCTION eql_v2.ste_vec_contains(a public.eql_v2_encrypted[], b eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
   DECLARE
     result boolean;
@@ -505,6 +526,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.ste_vec_contains(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
   DECLARE
     result boolean;
