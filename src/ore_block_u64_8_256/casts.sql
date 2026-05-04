@@ -14,7 +14,6 @@
 CREATE FUNCTION eql_v2.text_to_ore_block_u64_8_256_term(t text)
   RETURNS eql_v2.ore_block_u64_8_256_term
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
 BEGIN ATOMIC
 	RETURN t::bytea;
 END;

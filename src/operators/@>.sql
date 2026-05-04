@@ -24,7 +24,6 @@
 --! @see eql_v2.add_search_config
 CREATE FUNCTION eql_v2."@>"(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS boolean
-  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT eql_v2.ste_vec_contains(a, b)
 $$ LANGUAGE SQL;

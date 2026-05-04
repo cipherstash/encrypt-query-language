@@ -24,7 +24,6 @@
 CREATE FUNCTION eql_v2.config_get_indexes(val jsonb)
     RETURNS SETOF text
     LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
 BEGIN ATOMIC
 	SELECT jsonb_object_keys(jsonb_path_query(val,'$.tables.*.*.indexes'));
 END;

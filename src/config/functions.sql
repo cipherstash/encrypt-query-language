@@ -446,7 +446,6 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.reload_config()
   RETURNS void
 LANGUAGE sql STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
 BEGIN ATOMIC
   RETURN NULL;
 END;

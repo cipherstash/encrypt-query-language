@@ -133,7 +133,6 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.check_encrypted(val jsonb)
   RETURNS BOOLEAN
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
 BEGIN ATOMIC
     RETURN (
       eql_v2._encrypted_check_v(val) AND
@@ -157,7 +156,6 @@ END;
 CREATE FUNCTION eql_v2.check_encrypted(val eql_v2_encrypted)
   RETURNS BOOLEAN
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
 BEGIN ATOMIC
     RETURN eql_v2.check_encrypted(val.data);
 END;

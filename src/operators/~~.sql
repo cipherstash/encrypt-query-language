@@ -19,7 +19,6 @@
 --! @see eql_v2.add_search_config
 CREATE FUNCTION eql_v2.like(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS boolean
-  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT eql_v2.bloom_filter(a) @> eql_v2.bloom_filter(b);
 $$ LANGUAGE SQL;
@@ -40,7 +39,6 @@ $$ LANGUAGE SQL;
 --! @see eql_v2.add_search_config
 CREATE FUNCTION eql_v2.ilike(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS boolean
-  SET search_path = pg_catalog, public, extensions
 AS $$
   SELECT eql_v2.bloom_filter(a) @> eql_v2.bloom_filter(b);
 $$ LANGUAGE SQL;

@@ -126,7 +126,6 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.config_match_default()
   RETURNS jsonb
 LANGUAGE sql STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
 BEGIN ATOMIC
   SELECT jsonb_build_object(
             'k', 6,
