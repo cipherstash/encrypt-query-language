@@ -24,6 +24,7 @@
 CREATE FUNCTION eql_v2.compare_ore_cllw_var_8(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS integer
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, public, extensions
 AS $$
   DECLARE
     a_term eql_v2.ore_cllw_var_8;

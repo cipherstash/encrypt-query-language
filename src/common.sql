@@ -23,7 +23,9 @@
 --!
 --! @note Returns false immediately if lengths differ (length is not secret)
 --! @note Used for secure comparison of cryptographic values
-CREATE FUNCTION eql_v2.bytea_eq(a bytea, b bytea) RETURNS boolean AS $$
+CREATE FUNCTION eql_v2.bytea_eq(a bytea, b bytea) RETURNS boolean
+  SET search_path = pg_catalog, public, extensions
+AS $$
 DECLARE
     result boolean;
     differing bytea;
@@ -59,7 +61,9 @@ $$ LANGUAGE plpgsql;
 --! @note Returns NULL if input is JSON null
 --! @note Each array element is hex-decoded to bytea
 CREATE FUNCTION eql_v2.jsonb_array_to_bytea_array(val jsonb)
-RETURNS bytea[] AS $$
+RETURNS bytea[]
+  SET search_path = pg_catalog, public, extensions
+AS $$
 DECLARE
   terms_arr bytea[];
 BEGIN
@@ -87,6 +91,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.log(text, text) for contextual logging
 CREATE FUNCTION eql_v2.log(s text)
     RETURNS void
+  SET search_path = pg_catalog, public, extensions
 AS $$
   BEGIN
     RAISE NOTICE '[LOG] %', s;
@@ -106,6 +111,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.log(text)
 CREATE FUNCTION eql_v2.log(ctx text, s text)
     RETURNS void
+  SET search_path = pg_catalog, public, extensions
 AS $$
   BEGIN
     RAISE NOTICE '[LOG] % %', ctx, s;
