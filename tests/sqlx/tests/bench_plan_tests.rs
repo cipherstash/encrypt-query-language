@@ -60,49 +60,62 @@ async fn ore_int_range_combined_uses_btree_index(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-/// eql_cast equality should use hash index — currently seq scans (CIP-2831)
-///
-/// "eql_cast" refers to the implicit JSONB-to-eql_v2_encrypted assignment cast
-/// defined in `src/encrypted/casts.sql` (`CREATE CAST (jsonb AS eql_v2_encrypted)
-/// WITH FUNCTION eql_v2.to_encrypted(jsonb)`). The SQL under test uses
-/// `'...'::jsonb::eql_v2_encrypted`, which invokes that cast. PostgreSQL does not
-/// recognise this cast path as equivalent to the indexed `hmac_256` term, so the
-/// planner falls back to a sequential scan instead of using `bench_text_hmac_idx`.
-///
-/// Remove #[ignore] when eql_cast index usage is fixed. At 1M rows this query
-/// takes 7.83s vs 0.4ms for hmac_256 — a 19,500x regression.
-/// Passing with the 10K-row fixture confirms index usage — timing data above was measured at 1M rows.
+/// Equality on encrypted_text with `'...'::jsonb::eql_v2_encrypted` operand
+/// uses the btree index (same-type `=` is an opfamily member).
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
-#[ignore = "CIP-2831: eql_cast equality performs full seq scan, no index used"]
-async fn eql_cast_equality_uses_hash_index(pool: PgPool) -> Result<()> {
+async fn eql_cast_text_equality_uses_btree_index(pool: PgPool) -> Result<()> {
     let encrypted = get_bench_encrypted_text(&pool, 1).await?;
 
     let sql = format!(
         "SELECT * FROM bench WHERE encrypted_text = '{}'::jsonb::eql_v2_encrypted",
         encrypted
     );
-    assert_uses_index(&pool, &sql, BENCH_TEXT_HMAC_IDX).await?;
+    assert_uses_index(&pool, &sql, "bench_text_ore_idx").await?;
     Ok(())
 }
 
-/// ORE equality via operator class should use btree — currently seq scans (CIP-2831)
-///
-/// Like `eql_cast_equality_uses_hash_index`, the SQL uses `'...'::jsonb::eql_v2_encrypted`
-/// (the implicit JSONB assignment cast from `src/encrypted/casts.sql`). For integer
-/// columns with ORE index terms the planner should satisfy equality via the btree
-/// operator class, but the cast path prevents index recognition and causes a seq scan.
-///
-/// CIP-2831 covers both this and `eql_cast_equality_uses_hash_index` as a single root cause fix.
-/// Remove #[ignore] when ORE equality index usage is fixed. At 1M rows this
-/// query takes 18.47s vs 0.4ms for hmac_256.
-/// Passing with the 10K-row fixture confirms index usage — timing data above was measured at 1M rows.
+/// Equality on encrypted_int with `'...'::jsonb::eql_v2_encrypted` operand
+/// uses the btree index.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
-#[ignore = "CIP-2831: ORE equality via operator class performs full seq scan"]
 async fn ore_equality_uses_btree_index(pool: PgPool) -> Result<()> {
     let encrypted = get_bench_encrypted_int(&pool, 1).await?;
 
     let sql = format!(
         "SELECT * FROM bench WHERE encrypted_int = '{}'::jsonb::eql_v2_encrypted",
+        encrypted
+    );
+    assert_uses_index(&pool, &sql, BENCH_INT_ORE_IDX).await?;
+    Ok(())
+}
+
+/// Equality on encrypted_int with bare `'...'::jsonb` operand (no second cast)
+/// uses the btree index. Validates the cross-type opfamily registration in
+/// `src/operators/cross_type_operator_class.sql`. Without it, this query falls
+/// back to a parallel sequential scan because the `(eql_v2_encrypted, jsonb)`
+/// `=` operator isn't an opfamily member.
+#[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
+async fn ore_equality_with_bare_jsonb_uses_btree_index(pool: PgPool) -> Result<()> {
+    let encrypted = get_bench_encrypted_int(&pool, 1).await?;
+
+    let sql = format!(
+        "SELECT * FROM bench WHERE encrypted_int = '{}'::jsonb",
+        encrypted
+    );
+    assert_uses_index(&pool, &sql, BENCH_INT_ORE_IDX).await?;
+    Ok(())
+}
+
+/// Range query on encrypted_int with bare `'...'::jsonb` operand uses the
+/// btree index as an Index Cond (predicate pushdown), not just an Index Scan
+/// + Filter. Without the cross-type opfamily entry the predicate would only
+/// be applied as a row-level filter via ORDER BY traversal.
+#[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
+async fn ore_range_with_bare_jsonb_uses_btree_index(pool: PgPool) -> Result<()> {
+    let encrypted = get_bench_encrypted_int(&pool, 50).await?;
+
+    let sql = format!(
+        "SELECT * FROM bench WHERE encrypted_int > '{}'::jsonb \
+         ORDER BY encrypted_int LIMIT 10",
         encrypted
     );
     assert_uses_index(&pool, &sql, BENCH_INT_ORE_IDX).await?;
