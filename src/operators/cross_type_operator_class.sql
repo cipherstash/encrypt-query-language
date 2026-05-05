@@ -10,7 +10,7 @@
 -- REQUIRE: src/operators/>=.sql
 -- REQUIRE: src/operators/>.sql
 
---! @file cross_type_opfamily.sql
+--! @file cross_type_operator_class.sql
 --!
 --! @brief Register cross-type (eql_v2_encrypted ↔ jsonb) operators with the
 --!        btree and hash opfamilies so the planner uses encrypted-column
@@ -36,6 +36,18 @@
 --!       function) is the standard PostgreSQL approach — same shape used by
 --!       `integer_ops` to make `int4 = int8` index-eligible.
 
+-- Why LANGUAGE sql + schema-qualified bodies (no SET search_path):
+--
+-- These are opfamily support functions, called by the planner on every index
+-- comparison or hash probe. PostgreSQL refuses to inline a LANGUAGE SQL
+-- function that carries a SET clause, so the usual EQL pattern
+-- (LANGUAGE plpgsql + SET search_path = pg_catalog, extensions, public)
+-- would force a full function call per index op. Instead we drop SET and
+-- schema-qualify every reference inside the bodies — that gets us inlining
+-- AND keeps name resolution deterministic (immune to caller search_path
+-- manipulation), at the cost of pinning the references to current schema
+-- locations (eql_v2_encrypted lives in `public` today; revisit if it moves).
+
 --! @brief Cross-type btree compare: eql_v2_encrypted vs jsonb
 --! @internal
 --!
@@ -49,12 +61,10 @@
 CREATE FUNCTION eql_v2.compare(a eql_v2_encrypted, b jsonb)
   RETURNS integer
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
+LANGUAGE sql
 AS $$
-  BEGIN
-    RETURN eql_v2.compare(a, b::eql_v2_encrypted);
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.compare(a, b::public.eql_v2_encrypted);
+$$;
 
 --! @brief Cross-type btree compare: jsonb vs eql_v2_encrypted
 --! @internal
@@ -65,12 +75,10 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.compare(a jsonb, b eql_v2_encrypted)
   RETURNS integer
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
+LANGUAGE sql
 AS $$
-  BEGIN
-    RETURN eql_v2.compare(a::eql_v2_encrypted, b);
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.compare(a::public.eql_v2_encrypted, b);
+$$;
 
 --! @brief Cross-type hash for jsonb operands in the encrypted hash family
 --! @internal
@@ -87,12 +95,10 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.hash_encrypted(val jsonb)
   RETURNS integer
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
+LANGUAGE sql
 AS $$
-  BEGIN
-    RETURN eql_v2.hash_encrypted(val::eql_v2_encrypted);
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.hash_encrypted(val::public.eql_v2_encrypted);
+$$;
 
 --------------------
 -- Btree opfamily: register cross-type strategies + compare support functions
