@@ -28,7 +28,7 @@ CREATE FUNCTION eql_v2._compare_order_key(
 )
 RETURNS integer
 IMMUTABLE PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
     IF a IS NULL AND b IS NULL THEN
@@ -59,7 +59,7 @@ CREATE FUNCTION eql_v2._compare_sort_elements(
 )
 RETURNS integer
 IMMUTABLE PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
     IF use_ore THEN
@@ -91,7 +91,7 @@ CREATE FUNCTION eql_v2._compare_sort_pivot(
 )
 RETURNS integer
 IMMUTABLE PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
     IF use_ore THEN
@@ -123,7 +123,7 @@ CREATE FUNCTION eql_v2._insertion_sort(
     hi integer,
     use_ore boolean
 )
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 DECLARE
     i integer;
@@ -185,7 +185,7 @@ CREATE FUNCTION eql_v2._quicksort_sorter(
     hi integer,
     use_ore boolean
 )
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 DECLARE
     insertion_threshold CONSTANT integer := 16;
@@ -284,7 +284,7 @@ CREATE FUNCTION eql_v2._emit_sorted_rows(
 )
 RETURNS TABLE(id bigint, val eql_v2_encrypted)
 IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 DECLARE
     n integer;
@@ -324,7 +324,7 @@ CREATE FUNCTION eql_v2._sort_compare_precomputed(
 )
 RETURNS TABLE(id bigint, val eql_v2_encrypted)
 IMMUTABLE PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 DECLARE
     n integer;
@@ -413,7 +413,7 @@ CREATE FUNCTION eql_v2.sort_compare(
 )
 RETURNS TABLE(id bigint, val eql_v2_encrypted)
 IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 DECLARE
     n integer;
@@ -480,7 +480,7 @@ CREATE FUNCTION eql_v2.sort_compare(
     filter text DEFAULT NULL
 )
 RETURNS TABLE(id bigint, val eql_v2_encrypted)
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 DECLARE
     query text;
@@ -537,7 +537,7 @@ CREATE FUNCTION eql_v2.order_by_compare(
     direction text DEFAULT 'ASC'
 )
 RETURNS TABLE(id bigint, val eql_v2_encrypted)
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 DECLARE
     all_ids bigint[];

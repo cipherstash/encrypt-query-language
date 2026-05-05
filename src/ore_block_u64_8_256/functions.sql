@@ -17,7 +17,7 @@
 --! @see eql_v2.ore_block_u64_8_256(jsonb)
 CREATE FUNCTION eql_v2.jsonb_array_to_ore_block_u64_8_256(val jsonb)
 RETURNS eql_v2.ore_block_u64_8_256
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 DECLARE
   terms eql_v2.ore_block_u64_8_256_term[];
@@ -49,7 +49,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.ore_block_u64_8_256(val jsonb)
   RETURNS eql_v2.ore_block_u64_8_256
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     IF val IS NULL THEN
@@ -76,7 +76,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.ore_block_u64_8_256(val eql_v2_encrypted)
   RETURNS eql_v2.ore_block_u64_8_256
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     RETURN eql_v2.ore_block_u64_8_256(val.data);
@@ -96,7 +96,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.has_ore_block_u64_8_256(val jsonb)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     RETURN val ->> 'ob' IS NOT NULL;
@@ -116,7 +116,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.has_ore_block_u64_8_256(val eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     RETURN eql_v2.has_ore_block_u64_8_256(val.data);
@@ -141,7 +141,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.compare_ore_block_u64_8_256_terms
 CREATE FUNCTION eql_v2.compare_ore_block_u64_8_256_term(a eql_v2.ore_block_u64_8_256_term, b eql_v2.ore_block_u64_8_256_term)
   RETURNS integer
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   DECLARE
     eq boolean := true;
@@ -236,7 +236,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.compare_ore_block_u64_8_256_term
 CREATE FUNCTION eql_v2.compare_ore_block_u64_8_256_terms(a eql_v2.ore_block_u64_8_256_term[], b eql_v2.ore_block_u64_8_256_term[])
 RETURNS integer
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   DECLARE
     cmp_result integer;
@@ -287,7 +287,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.compare_ore_block_u64_8_256_terms(eql_v2.ore_block_u64_8_256_term[], eql_v2.ore_block_u64_8_256_term[])
 CREATE FUNCTION eql_v2.compare_ore_block_u64_8_256_terms(a eql_v2.ore_block_u64_8_256, b eql_v2.ore_block_u64_8_256)
 RETURNS integer
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN eql_v2.compare_ore_block_u64_8_256_terms(a.terms, b.terms);

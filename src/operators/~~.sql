@@ -76,7 +76,7 @@ $$ LANGUAGE SQL;
 --! @see eql_v2.add_search_config
 CREATE FUNCTION eql_v2."~~"(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS boolean
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN eql_v2.like(a, b);
@@ -128,7 +128,7 @@ CREATE OPERATOR ~~*(
 --! @see eql_v2."~~"(eql_v2_encrypted, eql_v2_encrypted)
 CREATE FUNCTION eql_v2."~~"(a eql_v2_encrypted, b jsonb)
   RETURNS boolean
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN eql_v2.like(a, b::eql_v2_encrypted);
@@ -169,7 +169,7 @@ CREATE OPERATOR ~~*(
 --! @see eql_v2."~~"(eql_v2_encrypted, eql_v2_encrypted)
 CREATE FUNCTION eql_v2."~~"(a jsonb, b eql_v2_encrypted)
   RETURNS boolean
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN eql_v2.like(a::eql_v2_encrypted, b);

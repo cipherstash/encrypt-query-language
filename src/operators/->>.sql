@@ -24,7 +24,7 @@
 CREATE FUNCTION eql_v2."->>"(e eql_v2_encrypted, selector text)
   RETURNS text
 IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   DECLARE
     found eql_v2_encrypted;
@@ -54,7 +54,7 @@ CREATE OPERATOR ->> (
 CREATE FUNCTION eql_v2."->>"(e eql_v2_encrypted, selector eql_v2_encrypted)
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     RETURN eql_v2."->>"(e, eql_v2.selector(selector));

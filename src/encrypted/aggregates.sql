@@ -18,7 +18,7 @@
 CREATE FUNCTION eql_v2.min(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS eql_v2_encrypted
 STRICT
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     IF a < b THEN
@@ -67,7 +67,7 @@ CREATE AGGREGATE eql_v2.min(eql_v2_encrypted)
 CREATE FUNCTION eql_v2.max(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS eql_v2_encrypted
 STRICT
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     IF a > b THEN

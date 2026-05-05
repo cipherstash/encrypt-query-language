@@ -26,7 +26,7 @@
 CREATE FUNCTION eql_v2.diff_config(a JSONB, b JSONB)
 	RETURNS TABLE(table_name TEXT, column_name TEXT)
 IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN QUERY
@@ -66,7 +66,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.select_target_columns
 CREATE FUNCTION eql_v2.select_pending_columns()
 	RETURNS TABLE(table_name TEXT, column_name TEXT)
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	DECLARE
 		active JSONB;
@@ -157,7 +157,7 @@ $$ LANGUAGE sql;
 --! @see eql_v2.rename_encrypted_columns
 CREATE FUNCTION eql_v2.create_encrypted_columns()
 	RETURNS TABLE(table_name TEXT, column_name TEXT)
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     FOR table_name, column_name IN
@@ -185,7 +185,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.create_encrypted_columns
 CREATE FUNCTION eql_v2.rename_encrypted_columns()
 	RETURNS TABLE(table_name TEXT, column_name TEXT, target_column TEXT)
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     FOR table_name, column_name, target_column IN
@@ -213,7 +213,7 @@ $$ LANGUAGE plpgsql;
 --! @note Configuration tracking mechanism is implementation-specific
 CREATE FUNCTION eql_v2.count_encrypted_with_active_config(table_name TEXT, column_name TEXT)
   RETURNS BIGINT
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 DECLARE
   result BIGINT;
