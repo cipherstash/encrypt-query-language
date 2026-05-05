@@ -34,6 +34,7 @@
 CREATE FUNCTION eql_v2.hash_encrypted(val eql_v2_encrypted)
   RETURNS integer
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
 AS $$
 DECLARE
   ste_val eql_v2_encrypted;

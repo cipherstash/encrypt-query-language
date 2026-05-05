@@ -17,6 +17,7 @@
 --! @see eql_v2.check_encrypted
 CREATE FUNCTION eql_v2._encrypted_check_i(val jsonb)
   RETURNS boolean
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     IF val ? 'i' THEN
@@ -41,6 +42,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.check_encrypted
 CREATE FUNCTION eql_v2._encrypted_check_i_ct(val jsonb)
   RETURNS boolean
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     IF (val->'i' ?& array['t', 'c']) THEN
@@ -64,6 +66,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.check_encrypted
 CREATE FUNCTION eql_v2._encrypted_check_v(val jsonb)
   RETURNS boolean
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     IF (val ? 'v') THEN
@@ -94,6 +97,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.check_encrypted
 CREATE FUNCTION eql_v2._encrypted_check_c(val jsonb)
   RETURNS boolean
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     IF (val ? 'c') THEN
