@@ -12,3 +12,11 @@ anyhow = "1"
 
 [dev-dependencies]
 # None needed - tests live in this crate
+
+[features]
+default = []
+# Opt-in to slow benchmark / regression / scale tests. Without this feature
+# they're #[ignore]'d so PR CI stays fast. The `bench-eql` workflow enables
+# it on push to main and on a nightly schedule. Run locally with:
+#   mise run test:bench
+bench = []

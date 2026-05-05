@@ -522,6 +522,7 @@ async fn sort_compare_table_ref_matches_order_by_compare(pool: PgPool) -> Result
 // ============================================================================
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+#[cfg_attr(not(feature = "bench"), ignore = "perf-bench: gated, run via mise test:bench")]
 async fn filtered_inner_query_correct_order(pool: PgPool) -> Result<()> {
     // Optimized: inner query also filters, producing correct relative ordering
     // within the filtered set
@@ -564,6 +565,7 @@ async fn filtered_inner_query_correct_order(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+#[cfg_attr(not(feature = "bench"), ignore = "perf-bench: gated, run via mise test:bench")]
 async fn filtered_inner_query_with_range(pool: PgPool) -> Result<()> {
     // Range filter: rows with ids 20-80
     let ore_term_19 = get_ore_encrypted(&pool, 19).await?;
@@ -602,6 +604,7 @@ async fn filtered_inner_query_with_range(pool: PgPool) -> Result<()> {
 // ============================================================================
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+#[cfg_attr(not(feature = "bench"), ignore = "perf-bench: gated, run via mise test:bench")]
 async fn sort_compare_faster_than_correlated_subquery(pool: PgPool) -> Result<()> {
     // Warm up: run each query once to populate caches
     let sort_sql = "SELECT * FROM eql_v2.sort_compare(
@@ -644,6 +647,7 @@ async fn sort_compare_faster_than_correlated_subquery(pool: PgPool) -> Result<()
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+#[cfg_attr(not(feature = "bench"), ignore = "perf-bench: gated, run via mise test:bench")]
 async fn filtered_inner_query_faster_than_unfiltered(pool: PgPool) -> Result<()> {
     let ore_term = get_ore_encrypted(&pool, 42).await?;
 
@@ -703,6 +707,7 @@ async fn filtered_inner_query_faster_than_unfiltered(pool: PgPool) -> Result<()>
 // ============================================================================
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+#[cfg_attr(not(feature = "bench"), ignore = "perf-bench: gated, run via mise test:bench")]
 async fn sort_compare_performance_at_scale(pool: PgPool) -> Result<()> {
     // 1000 rows is sufficient scale to demonstrate O(n log n) vs O(n²)
     let sort_sql = "SELECT * FROM eql_v2.sort_compare(
@@ -738,6 +743,7 @@ async fn sort_compare_performance_at_scale(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+#[cfg_attr(not(feature = "bench"), ignore = "perf-bench: gated, run via mise test:bench")]
 async fn filtered_inner_query_performance_at_scale(pool: PgPool) -> Result<()> {
     let ore_term = get_ore_encrypted(&pool, 42).await?;
 
@@ -787,6 +793,7 @@ async fn filtered_inner_query_performance_at_scale(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("drop_operator_classes")))]
+#[cfg_attr(not(feature = "bench"), ignore = "perf-bench: gated, run via mise test:bench")]
 async fn sort_compare_text_performance(pool: PgPool) -> Result<()> {
     let sort_sql = "SELECT * FROM eql_v2.sort_compare(
         (SELECT array_agg(id ORDER BY id) FROM ore_text),
