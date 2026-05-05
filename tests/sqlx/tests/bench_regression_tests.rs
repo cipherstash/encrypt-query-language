@@ -18,7 +18,10 @@ use sqlx::PgPool;
 
 /// hmac_256 equality must stay under 50ms on 10K rows (expected ~0.5ms)
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
-#[cfg_attr(not(feature = "bench"), ignore = "perf-bench: gated, run via mise test:bench")]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
 async fn hmac_equality_under_threshold(pool: PgPool) -> Result<()> {
     // id=1 maps to 1 of 100 distinct values → ~100 matching rows at 10K
     let encrypted = get_bench_encrypted_text(&pool, 1).await?;
@@ -38,7 +41,10 @@ async fn hmac_equality_under_threshold(pool: PgPool) -> Result<()> {
 
 /// bloom_filter containment must stay under 100ms on 10K rows (expected ~1ms)
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
-#[cfg_attr(not(feature = "bench"), ignore = "perf-bench: gated, run via mise test:bench")]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
 async fn bloom_filter_containment_under_threshold(pool: PgPool) -> Result<()> {
     // id=1 maps to 1 of 100 distinct values → ~100 matching rows at 10K
     let encrypted = get_bench_encrypted_text(&pool, 1).await?;
@@ -58,7 +64,10 @@ async fn bloom_filter_containment_under_threshold(pool: PgPool) -> Result<()> {
 
 /// ORE range query (< LIMIT 10) must stay under 200ms on 10K rows (expected ~2ms)
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
-#[cfg_attr(not(feature = "bench"), ignore = "perf-bench: gated, run via mise test:bench")]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
 async fn ore_range_lt_under_threshold(pool: PgPool) -> Result<()> {
     // id=50 is the bench row midpoint; encrypted_int uses a +33 offset so this maps
     // to ore id 83, but the 10K distribution still yields ~4,900 rows below the predicate
@@ -84,7 +93,10 @@ async fn ore_range_lt_under_threshold(pool: PgPool) -> Result<()> {
 /// ("Full-set comparison before sort"). Threshold is set at 2000ms — 4x the
 /// observed baseline — to absorb CI variance while catching catastrophic regressions.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
-#[cfg_attr(not(feature = "bench"), ignore = "perf-bench: gated, run via mise test:bench")]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
 async fn ore_order_by_under_threshold(pool: PgPool) -> Result<()> {
     let stats: ExplainStats = explain_analyze_avg(
         &pool,
