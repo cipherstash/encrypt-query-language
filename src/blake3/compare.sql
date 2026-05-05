@@ -22,7 +22,7 @@
 CREATE FUNCTION eql_v2.compare_blake3(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS integer
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   DECLARE
     a_term eql_v2.blake3;

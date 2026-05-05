@@ -18,7 +18,7 @@
 CREATE FUNCTION eql_v2.ore_cllw_var_8(val jsonb)
   RETURNS eql_v2.ore_cllw_var_8
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
 
@@ -47,7 +47,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.ore_cllw_var_8(val eql_v2_encrypted)
   RETURNS eql_v2.ore_cllw_var_8
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN (SELECT eql_v2.ore_cllw_var_8(val.data));
@@ -67,7 +67,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.has_ore_cllw_var_8(val jsonb)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     RETURN val ->> 'ocv' IS NOT NULL;
@@ -87,7 +87,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.has_ore_cllw_var_8(val eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     RETURN eql_v2.has_ore_cllw_var_8(val.data);
@@ -113,7 +113,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.compare_ore_cllw_var_8
 CREATE FUNCTION eql_v2.compare_ore_cllw_var_8_term(a eql_v2.ore_cllw_var_8, b eql_v2.ore_cllw_var_8)
 RETURNS int
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
 DECLARE
     len_a INT;

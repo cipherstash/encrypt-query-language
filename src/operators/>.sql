@@ -16,7 +16,7 @@
 --! @see eql_v2.">"
 CREATE FUNCTION eql_v2.gt(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS boolean
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN eql_v2.compare(a, b) = 1;
@@ -42,7 +42,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.add_search_config
 CREATE FUNCTION eql_v2.">"(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS boolean
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN eql_v2.gt(a, b);
@@ -60,11 +60,13 @@ CREATE OPERATOR >(
 );
 
 --! @brief > operator for encrypted value and JSONB
+--! @param a eql_v2_encrypted Left operand (encrypted value)
+--! @param b jsonb Right operand (JSONB cast to encrypted)
 --! @return Boolean True if a > b
 --! @see eql_v2.">"(eql_v2_encrypted, eql_v2_encrypted)
 CREATE FUNCTION eql_v2.">"(a eql_v2_encrypted, b jsonb)
 RETURNS boolean
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN eql_v2.gt(a, b::eql_v2_encrypted);
@@ -82,11 +84,13 @@ CREATE OPERATOR >(
 );
 
 --! @brief > operator for JSONB and encrypted value
+--! @param a jsonb Left operand (JSONB cast to encrypted)
+--! @param b eql_v2_encrypted Right operand (encrypted value)
 --! @return Boolean True if a > b
 --! @see eql_v2.">"(eql_v2_encrypted, eql_v2_encrypted)
 CREATE FUNCTION eql_v2.">"(a jsonb, b eql_v2_encrypted)
 RETURNS boolean
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN eql_v2.gt(a::eql_v2_encrypted, b);

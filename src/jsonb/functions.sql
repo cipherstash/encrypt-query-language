@@ -32,7 +32,7 @@
 CREATE FUNCTION eql_v2.jsonb_path_query(val jsonb, selector text)
   RETURNS SETOF eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   DECLARE
     sv eql_v2_encrypted[];
@@ -97,7 +97,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.jsonb_path_query(val eql_v2_encrypted, selector eql_v2_encrypted)
   RETURNS SETOF eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN QUERY
@@ -123,7 +123,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.jsonb_path_query(val eql_v2_encrypted, selector text)
   RETURNS SETOF eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN QUERY
@@ -148,7 +148,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.jsonb_path_exists(val jsonb, selector text)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN EXISTS (
@@ -171,7 +171,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.jsonb_path_exists(val eql_v2_encrypted, selector eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN EXISTS (
@@ -197,7 +197,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.jsonb_path_exists(val eql_v2_encrypted, selector text)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN EXISTS (
@@ -225,7 +225,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.jsonb_path_query_first(val jsonb, selector text)
   RETURNS eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN (
@@ -250,7 +250,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.jsonb_path_query_first(val eql_v2_encrypted, selector eql_v2_encrypted)
   RETURNS eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN (
@@ -278,7 +278,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.jsonb_path_query_first(val eql_v2_encrypted, selector text)
   RETURNS eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN (
@@ -309,7 +309,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.jsonb_array_length(val jsonb)
   RETURNS integer
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   DECLARE
     sv eql_v2_encrypted[];
@@ -347,7 +347,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.jsonb_array_length(val eql_v2_encrypted)
   RETURNS integer
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN (
@@ -375,7 +375,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.jsonb_array_elements(val jsonb)
   RETURNS SETOF eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   DECLARE
     sv eql_v2_encrypted[];
@@ -419,7 +419,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.jsonb_array_elements(val eql_v2_encrypted)
   RETURNS SETOF eql_v2_encrypted
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN QUERY
@@ -444,7 +444,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.jsonb_array_elements_text(val jsonb)
   RETURNS SETOF text
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   DECLARE
     sv eql_v2_encrypted[];
@@ -482,7 +482,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.jsonb_array_elements_text(val eql_v2_encrypted)
   RETURNS SETOF text
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, public, extensions
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN QUERY
