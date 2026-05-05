@@ -21,6 +21,7 @@
 CREATE FUNCTION eql_v2.ciphertext(val jsonb)
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     IF val ? 'c' THEN
@@ -65,7 +66,8 @@ $$;
 --!
 --! @see eql_v2.grouped_value
 CREATE FUNCTION eql_v2._first_grouped_value(jsonb, jsonb)
-RETURNS jsonb AS $$
+RETURNS jsonb
+AS $$
   SELECT COALESCE($1, $2);
 $$ LANGUAGE sql IMMUTABLE;
 
@@ -119,6 +121,7 @@ CREATE AGGREGATE eql_v2.grouped_value(jsonb) (
 --! @see eql_v2.remove_encrypted_constraint
 CREATE FUNCTION eql_v2.add_encrypted_constraint(table_name TEXT, column_name TEXT)
   RETURNS void
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     EXECUTE format('ALTER TABLE %I ADD CONSTRAINT eql_v2_encrypted_constraint_%I_%I CHECK (eql_v2.check_encrypted(%I))', table_name, table_name, column_name, column_name);
@@ -147,6 +150,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.add_encrypted_constraint
 CREATE FUNCTION eql_v2.remove_encrypted_constraint(table_name TEXT, column_name TEXT)
   RETURNS void
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
 		EXECUTE format('ALTER TABLE %I DROP CONSTRAINT IF EXISTS eql_v2_encrypted_constraint_%I_%I', table_name, table_name, column_name);

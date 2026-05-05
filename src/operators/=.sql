@@ -17,6 +17,7 @@
 CREATE FUNCTION eql_v2.eq(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN eql_v2.compare(a, b) = 0;
@@ -46,6 +47,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2."="(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN eql_v2.eq(a, b);
@@ -82,6 +84,7 @@ CREATE OPERATOR = (
 CREATE FUNCTION eql_v2."="(a eql_v2_encrypted, b jsonb)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN eql_v2.eq(a, b::eql_v2_encrypted);
@@ -117,6 +120,7 @@ CREATE OPERATOR = (
 CREATE FUNCTION eql_v2."="(a jsonb, b eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN eql_v2.eq(a::eql_v2_encrypted, b);

@@ -15,6 +15,7 @@
 CREATE FUNCTION eql_v2.bloom_filter(val jsonb)
   RETURNS eql_v2.bloom_filter
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     IF val IS NULL THEN
@@ -42,6 +43,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.bloom_filter(val eql_v2_encrypted)
   RETURNS eql_v2.bloom_filter
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN (SELECT eql_v2.bloom_filter(val.data));
@@ -61,6 +63,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.has_bloom_filter(val jsonb)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     RETURN val ->> 'bf' IS NOT NULL;
@@ -80,6 +83,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.has_bloom_filter(val eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     RETURN eql_v2.has_bloom_filter(val.data);
