@@ -45,8 +45,9 @@
 -- would force a full function call per index op. Instead we drop SET and
 -- schema-qualify every reference inside the bodies — that gets us inlining
 -- AND keeps name resolution deterministic (immune to caller search_path
--- manipulation), at the cost of pinning the references to current schema
--- locations (eql_v2_encrypted lives in `public` today; revisit if it moves).
+-- manipulation). `public.eql_v2_encrypted` stays in `public` by design
+-- (see #180): keeping the type out of the eql_v2 schema means a DROP of
+-- eql_v2 during install/upgrade doesn't cascade into user data.
 
 --! @brief Cross-type btree compare: eql_v2_encrypted vs jsonb
 --! @internal
