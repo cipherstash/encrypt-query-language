@@ -51,6 +51,11 @@ jobs:
           install: true # [default: true] run `mise install`
           cache: true # [default: true] cache mise using GitHub's cache
 
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tests/sqlx
+          shared-key: sqlx-tests
+
       - name: Setup database (Postgres ${{ matrix.postgres-version }})
         run: |
           mise run postgres:up postgres-${POSTGRES_VERSION} --extra-args "--detach --wait"
