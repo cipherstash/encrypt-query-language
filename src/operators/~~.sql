@@ -81,14 +81,18 @@ $$;
 --! @note Requires match index: eql_v2.add_search_config(table, column, 'match')
 --! @see eql_v2.like
 --! @see eql_v2.add_search_config
+-- Inlinable: delegates to `eql_v2.like` which is itself an inlinable
+-- single-statement SQL function. Two levels of inlining produce
+-- `eql_v2.bloom_filter(a) @> eql_v2.bloom_filter(b)`, which matches a
+-- functional GIN index built on `eql_v2.bloom_filter(col)`. PostgREST
+-- and ORM `~~`/`~~*` queries engage the bloom-filter index without
+-- the caller wrapping the column themselves.
 CREATE FUNCTION eql_v2."~~"(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS boolean
-  SET search_path = pg_catalog, extensions, public
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  BEGIN
-    RETURN eql_v2.like(a, b);
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.like(a, b)
+$$;
 
 CREATE OPERATOR ~~(
   FUNCTION=eql_v2."~~",
@@ -135,12 +139,10 @@ CREATE OPERATOR ~~*(
 --! @see eql_v2."~~"(eql_v2_encrypted, eql_v2_encrypted)
 CREATE FUNCTION eql_v2."~~"(a eql_v2_encrypted, b jsonb)
   RETURNS boolean
-  SET search_path = pg_catalog, extensions, public
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  BEGIN
-    RETURN eql_v2.like(a, b::eql_v2_encrypted);
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.like(a, b::eql_v2_encrypted)
+$$;
 
 
 CREATE OPERATOR ~~(
@@ -176,12 +178,10 @@ CREATE OPERATOR ~~*(
 --! @see eql_v2."~~"(eql_v2_encrypted, eql_v2_encrypted)
 CREATE FUNCTION eql_v2."~~"(a jsonb, b eql_v2_encrypted)
   RETURNS boolean
-  SET search_path = pg_catalog, extensions, public
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  BEGIN
-    RETURN eql_v2.like(a::eql_v2_encrypted, b);
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.like(a::eql_v2_encrypted, b)
+$$;
 
 
 CREATE OPERATOR ~~(
