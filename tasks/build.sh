@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Build SQL into single release file"
 #MISE alias="b"
-#MISE sources=["src/**/*.sql"]
+#MISE sources=["src/**/*.sql", "tasks/pin_search_path.sql", "tasks/uninstall.sql", "tasks/uninstall-protect.sql"]
 #MISE outputs=["release/cipherstash-encrypt.sql","release/cipherstash-encrypt-uninstall.sql","release/cipherstash-encrypt-protect.sql","release/cipherstash-encrypt-protect-uninstall.sql"]
 #USAGE flag "--version <version>" help="Specify release version of EQL" default="DEV"
 
@@ -55,6 +55,7 @@ done
 cat src/deps.txt | tsort | tac > src/deps-ordered.txt
 
 cat src/deps-ordered.txt | xargs cat | grep -v REQUIRE >> release/cipherstash-encrypt.sql
+cat tasks/pin_search_path.sql >> release/cipherstash-encrypt.sql
 
 cat tasks/uninstall.sql >> release/cipherstash-encrypt-uninstall.sql
 
@@ -84,8 +85,10 @@ done
 cat src/deps-supabase.txt | tsort | tac > src/deps-ordered-supabase.txt
 
 cat src/deps-ordered-supabase.txt | xargs cat | grep -v REQUIRE >> release/cipherstash-encrypt-supabase.sql
+cat tasks/pin_search_path.sql >> release/cipherstash-encrypt-supabase.sql
 
 cat src/deps-ordered-supabase.txt | xargs cat | grep -v REQUIRE >> dbdev/eql--0.0.0.sql
+cat tasks/pin_search_path.sql >> dbdev/eql--0.0.0.sql
 
 cat tasks/uninstall.sql >> release/cipherstash-encrypt-uninstall-supabase.sql
 
@@ -109,6 +112,7 @@ done
 cat src/deps-protect.txt | tsort | tac > src/deps-ordered-protect.txt
 
 cat src/deps-ordered-protect.txt | xargs cat | grep -v REQUIRE >> release/cipherstash-encrypt-protect.sql
+cat tasks/pin_search_path.sql >> release/cipherstash-encrypt-protect.sql
 
 cat tasks/uninstall-protect.sql >> release/cipherstash-encrypt-protect-uninstall.sql
 
