@@ -71,7 +71,7 @@ SELECT eql_v2.reload_config();
 
 Encrypted data is stored as `jsonb` values in the PostgreSQL database, regardless of the original data type.
 
-You can read more about the data format [here](docs/reference/payload.md).
+You can read more about the data format [here](../reference/PAYLOAD.md).
 
 ### Inserting data
 
@@ -153,7 +153,7 @@ SELECT eql_v2.add_search_config(
 );
 ```
 
-You can read more about the index configuration options [here](docs/reference/index-config.md).
+You can read more about the index configuration options [here](../reference/index-config.md).
 
 **Example (Unique index):**
 
@@ -189,7 +189,7 @@ In order to use the specialized functions, you must first configure the correspo
 
 ### Equality search
 
-Enable equality search on encrypted data using the `eql_v2.hmac_256` function.
+Enable exact equality search on encrypted data using the `unique` index (backed by hmac_256 or blake3).
 
 **Index configuration example:**
 
@@ -202,12 +202,20 @@ SELECT eql_v2.add_search_config(
 );
 ```
 
-**Example:**
+**Query using operators (recommended):**
+
+```sql
+-- Use the = operator directly on the encrypted column
+SELECT * FROM users
+WHERE encrypted_email = '{"v":2,"k":"pt","p":"test@example.com","i":{"t":"users","c":"encrypted_email"}}'::eql_v2_encrypted;
+```
+
+**Query using functions (for Supabase or operator-restricted environments):**
 
 ```sql
 SELECT * FROM users
-WHERE eql_v2.hmac_256(encrypted_email) = eql_v2.hmac_256(
-  '{"v":2,"k":"pt","p":"test@example.com","i":{"t":"users","c":"encrypted_email"},"q":"hmac_256"}'
+WHERE eql_v2.eq(encrypted_email,
+  '{"v":2,"k":"pt","p":"test@example.com","i":{"t":"users","c":"encrypted_email"}}'::eql_v2_encrypted
 );
 ```
 
@@ -219,38 +227,50 @@ SELECT * FROM users WHERE email = 'test@example.com';
 
 ### Full-text search
 
-Enables basic full-text search on encrypted data using the `eql_v2.bloom_filter` function.
+Enables full-text search on encrypted data using the `match` index (backed by bloom filters).
 
 **Index configuration example:**
 
 ```sql
 SELECT eql_v2.add_search_config(
   'users',
-  'encrypted_email',
+  'encrypted_name',
   'match',
   'text',
   '{"token_filters": [{"kind": "downcase"}], "tokenizer": { "kind": "ngram", "token_length": 3 }}'
 );
 ```
 
-**Example:**
+**Query using operators (recommended):**
+
+```sql
+-- Use the ~~ (LIKE) operator directly on the encrypted column
+SELECT * FROM users
+WHERE encrypted_name ~~ '{"v":2,"k":"pt","p":"alice","i":{"t":"users","c":"encrypted_name"}}'::eql_v2_encrypted;
+
+-- Case-insensitive search with ~~* (ILIKE)
+SELECT * FROM users
+WHERE encrypted_name ~~* '{"v":2,"k":"pt","p":"alice","i":{"t":"users","c":"encrypted_name"}}'::eql_v2_encrypted;
+```
+
+**Query using functions (for Supabase or operator-restricted environments):**
 
 ```sql
 SELECT * FROM users
-WHERE eql_v2.bloom_filter(encrypted_email) @> eql_v2.bloom_filter(
-  '{"v":2,"k":"pt","p":"test","i":{"t":"users","c":"encrypted_email"},"q":"match"}'
+WHERE eql_v2.like(encrypted_name,
+  '{"v":2,"k":"pt","p":"alice","i":{"t":"users","c":"encrypted_name"}}'::eql_v2_encrypted
 );
 ```
 
 Equivalent plaintext query:
 
 ```sql
-SELECT * FROM users WHERE email LIKE '%test%';
+SELECT * FROM users WHERE name LIKE '%alice%';
 ```
 
 ### Range queries
 
-Enable range queries on encrypted data using the `eql_v2.ore_block_u64_8_256` function. Supports:
+Enable range queries and ordering on encrypted data using the `ore` index (Order-Revealing Encryption). Supports:
 
 - `ORDER BY`
 - `WHERE` with comparison operators (`<`, `<=`, `>`, `>=`, `=`, `<>`)
@@ -259,39 +279,34 @@ Enable range queries on encrypted data using the `eql_v2.ore_block_u64_8_256` fu
 
 ```sql
 SELECT eql_v2.add_search_config(
-  'users',
+  'events',
   'encrypted_date',
   'ore',
   'date'
 );
 ```
 
-**Example (Filtering):**
+**Query using operators (recommended):**
 
 ```sql
-SELECT * FROM users
-WHERE eql_v2.ore_block_u64_8_256(encrypted_date) < eql_v2.ore_block_u64_8_256(
-  '{"v":2,"k":"pt","p":"2023-10-05","i":{"t":"users","c":"encrypted_date"},"q":"ore"}'
-);
+-- Range comparison - use comparison operators directly
+SELECT * FROM events
+WHERE encrypted_date < '{"v":2,"k":"pt","p":"2023-10-05","i":{"t":"events","c":"encrypted_date"}}'::eql_v2_encrypted;
+
+SELECT * FROM events
+WHERE encrypted_date >= '{"v":2,"k":"pt","p":"2023-01-01","i":{"t":"events","c":"encrypted_date"}}'::eql_v2_encrypted;
+
+-- Ordering - use ORDER BY directly
+SELECT * FROM events ORDER BY encrypted_date DESC;
+SELECT * FROM events ORDER BY encrypted_date ASC;
 ```
 
-Equivalent plaintext query:
+Equivalent plaintext queries:
 
 ```sql
-SELECT * FROM users WHERE date < '2023-10-05';
-```
-
-**Example (Ordering):**
-
-```sql
-SELECT id FROM users
-ORDER BY eql_v2.ore_block_u64_8_256(encrypted_field) DESC;
-```
-
-Equivalent plaintext query:
-
-```sql
-SELECT id FROM users ORDER BY field DESC;
+SELECT * FROM events WHERE date < '2023-10-05';
+SELECT * FROM events WHERE date >= '2023-01-01';
+SELECT * FROM events ORDER BY date DESC;
 ```
 
 ### Array Operations
@@ -353,7 +368,7 @@ WHERE encrypted_name ~~* '{"v":2,"k":"pt","p":"alice%","i":{"t":"users","c":"enc
 
 EQL supports encrypting entire JSON and JSONB data sets.
 This warrants a separate section in the documentation.
-You can read more about the JSONB support in the [JSONB reference guide](docs/reference/json-support.md).
+You can read more about the JSONB support in the [JSONB reference guide](../reference/json-support.md).
 
 ## Frequently Asked Questions
 

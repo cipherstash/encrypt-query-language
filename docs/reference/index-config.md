@@ -5,14 +5,14 @@
 > If you are using Protect.js, see the [Protect.js schema](https://github.com/cipherstash/protectjs/blob/main/docs/reference/schema.md).
 
 The following functions allow you to configure indexes for encrypted columns.
-All these functions modify the `eql_v2_configuration` table in your database, and are added during the EQL installation.
+All these functions modify the `public.eql_v2_configuration` table in your database, and are added during the EQL installation.
 
 > **IMPORTANT:** When you modify or add search configuration  index, you must re-encrypt data that's already been stored in the database.
 > The CipherStash encryption solution will encrypt the data based on the current state of the configuration.
 
 ### Configuring search (`eql_v2.add_search_config`)
 
-Add an index to an encrypted column.
+Add an index to an encrypted column. Returns the updated configuration as JSONB.
 
 ```sql
 SELECT eql_v2.add_search_config(
@@ -31,8 +31,12 @@ SELECT eql_v2.add_search_config(
 | `index_name`  | The index kind                                     | Required                                                                 |
 | `cast_as`     | The PostgreSQL type decrypted data will be cast to | Optional. Defaults to `text`                                             |
 | `opts`        | Index options                                      | Optional for `match` indexes, required for `ste_vec` indexes (see below) |
+| `migrating`   | Skip auto-migration if true                        | Optional. Defaults to `false`. Set to `true` for batch operations        |
 
 #### Option (`cast_as`)
+
+The type field can be specified as either `plaintext_type` (preferred) or `cast_as` (deprecated alias retained for backwards compatibility).
+When both are present, `plaintext_type` takes precedence.
 
 Supported types:
 
@@ -40,9 +44,13 @@ Supported types:
 - `int`
 - `small_int`
 - `big_int`
+- `real` (also accepts `float`)
+- `double`
 - `boolean`
 - `date`
-- `jsonb`
+- `json` (also accepts `jsonb`)
+- `decimal`
+- `timestamp`
 
 #### Options for match indexes (`opts`)
 
@@ -58,21 +66,21 @@ The default match index options are:
     "tokenizer": {
       "kind": "ngram",
       "token_length": 3
-    }
-    "token_filters": {
-      "kind": "downcase"
-    }
+    },
+    "token_filters": [
+      {"kind": "downcase"}
+    ]
   }
 ```
 
-- `tokenFilters`: a list of filters to apply to normalize tokens before indexing.
+- `token_filters`: a list of filters to apply to normalize tokens before indexing.
 - `tokenizer`: determines how input text is split into tokens.
-- `m`: The size of the backing [bloom filter](https://en.wikipedia.org/wiki/Bloom_filter) in bits. Defaults to `2048`.
-- `k`: The maximum number of bits set in the bloom filter per term. Defaults to `6`.
+- `bf`: The size of the backing [bloom filter](https://en.wikipedia.org/wiki/Bloom_filter) in bits. Defaults to `2048`.
+- `k`: The number of hash functions to use per term (each sets one bit in the bloom filter). Defaults to `6`.
 
 **Token filters**
 
-There are currently only two token filters available: `downcase` and `upcase`. These are used to normalise the text before indexing and are also applied to query terms. An empty array can also be passed to `tokenFilters` if no normalisation of terms is required.
+The `downcase` token filter is available to normalise text before indexing and is also applied to query terms. An empty array can also be passed to `token_filters` if no normalisation of terms is required.
 
 **Tokenizer**
 
@@ -80,15 +88,17 @@ There are two `tokenizer`s provided: `standard` and `ngram`.
 `standard` simply splits text into tokens using this regular expression: `/[ ,;:!]/`.
 `ngram` splits the text into n-grams and accepts a configuration object that allows you to specify the `tokenLength`.
 
-**m** and **k**
+**bf** and **k**
 
-`k` and `m` are optional fields for configuring [bloom filters](https://en.wikipedia.org/wiki/Bloom_filter) that back full text search.
+`k` and `bf` are optional fields for configuring [bloom filters](https://en.wikipedia.org/wiki/Bloom_filter) that back full text search.
 
-`m` is the size of the bloom filter in bits. `filterSize` must be a power of 2 between `32` and `65536` and defaults to `2048`.
+`bf` is the size of the bloom filter in bits. It must be a power of 2 between `32` and `65536` and defaults to `2048`.
 
 `k` is the number of hash functions to use per term.
 This determines the maximum number of bits that will be set in the bloom filter per term.
 `k` must be an integer from `3` to `16` and defaults to `6`.
+
+To calculate optimal values for your use case, see this [Bloom filter calculator](https://di-mgt.com.au/bloom-calculator.html).
 
 **Caveats around n-gram tokenization**
 
@@ -101,13 +111,20 @@ Try to ensure that the string you search for is at least as long as the `tokenLe
 
 #### Options for ste_vec indexes (`opts`)
 
-An ste_vec index on a encrypted JSONB column enables the use of PostgreSQL's `@>` and `<@` [containment operators](https://www.postgresql.org/docs/16/functions-json.html#FUNCTIONS-JSONB-OP-TABLE).
+An ste_vec index on an encrypted JSONB column enables the use of PostgreSQL's `@>` and `<@` [containment operators](https://www.postgresql.org/docs/16/functions-json.html#FUNCTIONS-JSONB-OP-TABLE).
 
-An ste_vec index requires one piece of configuration: the `context` (a string) which is passed as an info string to a MAC (Message Authenticated Code).
-This ensures that all of the encrypted values are unique to that context.
-We recommend that you use the table and column name as a the context (e.g. `users/name`).
+> **Note:** The `@>` and `<@` operators work directly on `eql_v2_encrypted` types, allowing simple query syntax like `encrypted_col @> search_term`.
 
-Within a dataset, encrypted columns indexed using an `ste_vec` that use different contexts can't be compared.
+An ste_vec index requires one piece of configuration: the `prefix` (a string) which is passed as an info string to a MAC (Message Authenticated Code).
+This ensures that all of the encrypted values are unique to that prefix.
+We recommend that you use the table and column name as the prefix (e.g. `users/name`).
+
+**Example:**
+```json
+{"prefix": "users/encrypted_json"}
+```
+
+Within a dataset, encrypted columns indexed using an `ste_vec` that use different prefixes can't be compared.
 Containment queries that manage to mix index terms from multiple columns will never return a positive result.
 This is by design.
 
@@ -197,7 +214,7 @@ A query prior to encrypting and indexing looks like a structurally similar subse
 }
 ```
 
-The expression `cs_ste_vec_v2(encrypted_account) @> cs_ste_vec_v2($query)` would match all records where the `encrypted_account` column contains a JSONB object with an "account" key containing an object with an "email" key where the value is the string "alice@example.com".
+The expression `encrypted_account @> $query` would match all records where the `encrypted_account` column contains a JSONB object with an "account" key containing an object with an "email" key where the value is the string "alice@example.com".
 
 When reduced to a prefix list, it would look like this:
 
@@ -217,30 +234,73 @@ When reduced to a prefix list, it would look like this:
 
 Which is then turned into an ste_vec of hashes which can be directly queries against the index.
 
-### Modifying an index (`cs_modify_index`)
+#### GIN indexing for ste_vec
 
-Modifies an existing index configuration.
-Accepts the same parameters as `cs_add_index`
+For efficient containment queries on large tables, you can create a GIN index using the `eql_v2.jsonb_array()` function:
 
 ```sql
-SELECT cs_modify_index_v2(
+-- Create GIN index for containment queries
+CREATE INDEX idx_encrypted_jsonb ON mytable USING GIN (eql_v2.jsonb_array(encrypted_col));
+
+-- Query using containment (will use the GIN index)
+SELECT * FROM mytable WHERE encrypted_col @> $1::eql_v2_encrypted;
+```
+
+The following helper functions are available for GIN-indexed containment queries:
+- `eql_v2.jsonb_array(val)` - Extracts encrypted JSONB as an array for GIN indexing
+- `eql_v2.jsonb_contains(a, b)` - GIN-indexable containment check (`a @> b`)
+- `eql_v2.jsonb_contained_by(a, b)` - GIN-indexable "is contained by" check (`a <@ b`)
+
+### Modifying an index (`eql_v2.modify_search_config`)
+
+Modifies an existing index configuration. Returns the updated configuration as JSONB.
+Accepts the same parameters as `eql_v2.add_search_config`
+
+```sql
+SELECT eql_v2.modify_search_config(
   table_name text,
   column_name text,
   index_name text,
-  cast_as text,
-  opts jsonb
+  cast_as text DEFAULT 'text',
+  opts jsonb DEFAULT '{}',
+  migrating boolean DEFAULT false
 );
 ```
 
-### Removing an index (`cs_remove_index`)
-
-Removes an index configuration from the column.
+**Example:**
 
 ```sql
-SELECT cs_remove_index_v2(
+-- Update match index options to increase bloom filter size
+SELECT eql_v2.modify_search_config(
+  'users',
+  'email',
+  'match',
+  'text',
+  '{"bf": 4096, "k": 8}'::jsonb
+);
+```
+
+### Removing an index (`eql_v2.remove_search_config`)
+
+Removes an index configuration from the column. Returns the updated configuration as JSONB.
+
+```sql
+SELECT eql_v2.remove_search_config(
   table_name text,
   column_name text,
-  index_name text
+  index_name text,
+  migrating boolean DEFAULT false
+);
+```
+
+**Example:**
+
+```sql
+-- Remove the match index from the email column
+SELECT eql_v2.remove_search_config(
+  'users',
+  'email',
+  'match'
 );
 ```
 
