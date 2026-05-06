@@ -36,7 +36,7 @@ Create indexes on encrypted columns when:
 - The table has a significant number of rows (typically > 1000)
 - You frequently query by equality on that column
 - Query performance is important
-- The column contains searchable index terms (hmac_256, blake3, or ore)
+- The column contains searchable index terms (hmac_256, blake3, ore, or ope)
 
 ---
 
@@ -49,7 +49,7 @@ For PostgreSQL to use an index on encrypted columns, **all** of these conditions
 The encrypted data must contain the index term types that support the operation:
 
 - **Equality queries** - Require `unique` index config (adds `hm` hmac_256 or `b3` blake3 terms)
-- **Range queries** - Require `ore` index config (adds `ob` ore_block_u64_8_256 terms)
+- **Range queries** - Require `ore` index config (adds `ob` ore_block_u64_8_256 terms) **or** `ope` index config (adds `opf` ope_cllw_u64_65 / `opv` ope_cllw_var_8 terms)
 - **Pattern matching** - Typically scans (bloom filters don't use B-tree indexes)
 
 **Example:**
@@ -149,13 +149,15 @@ Bitmap Heap Scan on users
 
 ### Range Queries
 
-When encrypted column has `ob` (ore_block_u64_8_256) index terms:
+When encrypted column has `ob` (ore_block_u64_8_256), `opf` (ope_cllw_u64_65), or `opv` (ope_cllw_var_8) index terms:
 
 ```sql
 SELECT * FROM events
 WHERE encrypted_date < $1::eql_v2_encrypted
 ORDER BY encrypted_date DESC;
 ```
+
+The encrypted operator class transparently dispatches to whichever ordered term is present on the column, so range queries against an `ore`-configured column and an `ope`-configured column have identical SQL.
 
 ### GROUP BY
 
@@ -215,6 +217,8 @@ B-tree indexes **only work** with:
 - `hm` (hmac_256) - for equality
 - `b3` (blake3) - for equality
 - `ob` (ore_block_u64_8_256) - for range queries
+- `opf` (ope_cllw_u64_65) - for range queries (fixed-width OPE)
+- `opv` (ope_cllw_var_8) - for range queries (variable-width OPE)
 
 They **do not work** with:
 - `bf` (bloom_filter) - pattern matching
@@ -404,7 +408,7 @@ If you see `Seq Scan`, ensure:
 | Feature | B-tree Index | GIN Index |
 |---------|-------------|-----------|
 | **Use case** | Equality, range queries | JSONB containment |
-| **Index terms** | `hm`, `b3`, `ob` | `sv` (via jsonb_array) |
+| **Index terms** | `hm`, `b3`, `ob`, `opf`, `opv` | `sv` (via jsonb_array) |
 | **Operators** | `=`, `<`, `>`, `<=`, `>=` | `@>`, `<@` |
 | **Function** | Direct column reference | `eql_v2.jsonb_array()` |
 
@@ -417,10 +421,13 @@ If you see `Seq Scan`, ensure:
 **Check 1: Verify data has index terms**
 
 ```sql
--- Check if data contains hm (hmac_256) or b3 (blake3) for equality
+-- Check if data contains hm (hmac_256) or b3 (blake3) for equality,
+-- ob (ore) for range, or opf/opv (ope) for range
 SELECT encrypted_email::jsonb ? 'hm' AS has_hmac,
        encrypted_email::jsonb ? 'b3' AS has_blake3,
-       encrypted_email::jsonb ? 'ob' AS has_ore
+       encrypted_email::jsonb ? 'ob' AS has_ore,
+       encrypted_email::jsonb ? 'opf' AS has_ope_fixed,
+       encrypted_email::jsonb ? 'opv' AS has_ope_var
 FROM users LIMIT 1;
 ```
 
@@ -457,7 +464,7 @@ WHERE tablename = 'users'
 1. **Ensure index exists and is being used** - Use `EXPLAIN ANALYZE`
 2. **Check table has been ANALYZEd** - Run `ANALYZE table_name`
 3. **Consider index selectivity** - Very small tables might not use indexes
-4. **Check for appropriate search config** - Equality needs `unique`, ranges need `ore`
+4. **Check for appropriate search config** - Equality needs `unique`, ranges need `ore` or `ope`
 
 ---
 

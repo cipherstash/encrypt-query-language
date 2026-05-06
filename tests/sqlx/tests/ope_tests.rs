@@ -12,7 +12,7 @@
 
 use anyhow::Result;
 use eql_tests::QueryAssertion;
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 
 /// Build a 65-byte OPE fixed ciphertext from a single "signal" byte at index 8
 /// (the first plaintext body byte). All other bytes are zero. Larger signal →
@@ -167,6 +167,120 @@ async fn generic_compare_dispatches_to_opv(pool: PgPool) -> Result<()> {
 async fn config_check_accepts_ope_index(pool: PgPool) -> Result<()> {
     let sql = r#"SELECT eql_v2.config_check_indexes('{"v":1,"tables":{"t":{"c":{"cast_as":"int","indexes":{"ope":{}}}}}}'::jsonb)"#;
     QueryAssertion::new(&pool, sql).returns_bool_value(true).await;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn order_by_ope_extracts_opf_bytes(pool: PgPool) -> Result<()> {
+    let payload = opf_payload(7);
+    let sql = format!(
+        "SELECT length(eql_v2.order_by_ope(eql_v2.to_encrypted('{}'::jsonb)))",
+        payload
+    );
+    QueryAssertion::new(&pool, &sql).returns_int_value(65).await;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn order_by_ope_extracts_opv_bytes(pool: PgPool) -> Result<()> {
+    let payload = opv_payload(&[0xaa, 0x11, 0x22, 0x33]);
+    let sql = format!(
+        "SELECT length(eql_v2.order_by_ope(eql_v2.to_encrypted('{}'::jsonb)))",
+        payload
+    );
+    QueryAssertion::new(&pool, &sql).returns_int_value(4).await;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn sort_compare_orders_opf_lexicographically(pool: PgPool) -> Result<()> {
+    let payloads = [opf_payload(3), opf_payload(1), opf_payload(2)];
+    let sql = format!(
+        "SELECT id FROM eql_v2.sort_compare(
+            ARRAY[1::bigint, 2::bigint, 3::bigint],
+            ARRAY[
+                eql_v2.to_encrypted('{}'::jsonb),
+                eql_v2.to_encrypted('{}'::jsonb),
+                eql_v2.to_encrypted('{}'::jsonb)
+            ]::eql_v2_encrypted[],
+            'ASC'
+        )",
+        payloads[0], payloads[1], payloads[2]
+    );
+
+    let rows = sqlx::query(&sql).fetch_all(&pool).await?;
+    let ids: Vec<i64> = rows.iter().map(|r| r.try_get(0).unwrap()).collect();
+    assert_eq!(ids, vec![2, 3, 1], "opf ASC should be id=2 (1) < 3 (2) < 1 (3)");
+    Ok(())
+}
+
+#[sqlx::test]
+async fn sort_compare_uses_ope_fast_path(pool: PgPool) -> Result<()> {
+    let mut tx = pool.begin().await?;
+
+    sqlx::query(
+        "CREATE TABLE encrypted_ope(
+            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+            e eql_v2_encrypted
+        )",
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    for signal in [3u8, 1, 2] {
+        let sql = format!(
+            "INSERT INTO encrypted_ope(e) VALUES (eql_v2.to_encrypted('{}'::jsonb))",
+            opf_payload(signal)
+        );
+        sqlx::query(&sql).execute(&mut *tx).await?;
+    }
+
+    sqlx::query(
+        "SELECT pg_stat_reset_single_function_counters(p.oid)
+         FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+         WHERE n.nspname = 'eql_v2'
+           AND p.proname IN ('order_by_ope', 'order_by')",
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    let rows = sqlx::query(
+        "SELECT id FROM eql_v2.sort_compare(
+            (SELECT array_agg(id ORDER BY id) FROM encrypted_ope),
+            (SELECT array_agg(e ORDER BY id) FROM encrypted_ope),
+            'ASC'
+        )",
+    )
+    .fetch_all(&mut *tx)
+    .await?;
+    let ids: Vec<i64> = rows.iter().map(|r| r.try_get(0).unwrap()).collect();
+    assert_eq!(ids, vec![2, 3, 1], "OPE ASC should be id=2 (1) < 3 (2) < 1 (3)");
+
+    let ope_calls: i64 = sqlx::query_scalar(
+        "SELECT coalesce(sum(calls), 0)::bigint
+         FROM pg_stat_xact_user_functions
+         WHERE schemaname = 'eql_v2' AND funcname = 'order_by_ope'",
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    assert_eq!(
+        ope_calls, 3,
+        "sort_compare should extract OPE key once per row"
+    );
+
+    let ore_calls: i64 = sqlx::query_scalar(
+        "SELECT coalesce(sum(calls), 0)::bigint
+         FROM pg_stat_xact_user_functions
+         WHERE schemaname = 'eql_v2' AND funcname = 'order_by'",
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    assert_eq!(
+        ore_calls, 0,
+        "sort_compare on OPE-only data must not call the ORE order_by extractor"
+    );
+
+    tx.rollback().await?;
     Ok(())
 }
 
