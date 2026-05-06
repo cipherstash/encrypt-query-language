@@ -178,7 +178,11 @@ async fn like_and_ilike_are_immutable(pool: PgPool) -> Result<()> {
         .await
         .context("querying pg_proc for like/ilike volatility")?;
 
-    assert_eq!(rows.len(), 2, "expected eql_v2.like and eql_v2.ilike to exist");
+    assert_eq!(
+        rows.len(),
+        2,
+        "expected eql_v2.like and eql_v2.ilike to exist"
+    );
 
     for row in rows {
         let name: String = row.try_get("proname")?;
