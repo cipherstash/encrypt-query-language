@@ -59,7 +59,7 @@ These are the important files in the repo:
 └── playground/            <-- Playground enviroment for experimenting with EQL and CipherStash Proxy
 ```
 
-Tests live alongside the individual SQL files, with a filename ending with `_test.sql`
+Tests are in the `tests/sqlx/` directory using Rust and the SQLx framework.
 
 We break SQL into small modules named after what they do.
 
@@ -144,85 +144,19 @@ There are tests for checking EQL against PostgreSQL versions 14–17, that verif
 - Validating schemas for EQL configuration, encrypted data, and encrypted indexes
 - Using PostgreSQL operators on encrypted data and indexes (`=`, `<>`, `@>`)
 
+Tests are written in Rust using the SQLx framework and live in `tests/sqlx/`.
+
 The easiest way to run the tests [is in GitHub Actions](./.github/workflows/test-eql.yml):
 
 - Automatically whenever there are changes in the `sql/`, `tests/`, or `tasks/` directories
 - By manually running [the workflow](https://github.com/cipherstash/encrypt-query-language/actions/workflows/test-eql.yml)
 
-This is how the `test-eql.yml` workflow functions:
-
-```mermaid
----
-title: Testing EQL
----
-stateDiagram-v2
-    direction LR
-    classDef code font-family:monospace;
-
-
-    state "🧍 Human makes changes to EQL sources" as changes
-    state sources_fork <<fork>>
-    state sources_join <<join>>
-    state "src/*.sql" as source_sql
-    state "tasks/**/*" as source_tasks
-    state "tests/**/*" as source_tests
-    state sources_changed <<choice>>
-
-    state "🛠️ Trigger GitHub Actions workflow test-eql.yml" as build_triggered
-    state "Matrix: Test EQL SQL components" as matrix
-    state "Test with Postgres 14" as pg14
-    state "Test with Postgres 15" as pg15
-    state "Test with Postgres 16" as pg16
-    state "Test with Postgres 17" as pg17
-    state "Check build results" as check
-    state if_state <<choice>>
-
-    changes --> sources_fork
-    sources_fork --> source_sql:::code
-    sources_fork --> source_tests:::code
-    sources_fork --> source_tasks:::code
-    source_sql --> sources_join
-    source_tests --> sources_join
-    source_tasks --> sources_join
-    sources_join --> source_changed_check
-    source_changed_check --> sources_changed
-    sources_changed --> build_triggered : Some changes
-    sources_changed --> [*]: No changes
-
-    state "Check source changes" as source_changed_check
-
-    [*] --> changes
-
-    build_triggered --> matrix
-
-    state fork_state <<fork>>
-        matrix --> fork_state
-        fork_state --> pg14
-        fork_state --> pg15
-        fork_state --> pg16
-        fork_state --> pg17
-
-    state join_state <<join>>
-        pg14 --> join_state
-        pg15 --> join_state
-        pg16 --> join_state
-        pg17 --> join_state
-
-    state "✅ Pass build" as build_pass
-    state "❌ Fail build" as build_fail
-    join_state --> check
-    check --> if_state
-    if_state --> build_pass: All success
-    if_state --> build_fail : Any failures
-    build_pass --> [*]
-    build_fail --> [*]
-```
-
 You can also [run the tests locally](#running-tests-locally) when doing local development.
 
 ### Running tests locally
 
-> [!IMPORTANT] > **Before you run the tests locally** you need to [set up a local dev environment](#set-up-a-local-development-environment).
+> [!IMPORTANT]
+> **Before you run the tests locally** you need to [set up a local dev environment](#set-up-a-local-development-environment).
 
 To run tests locally with PostgreSQL 17:
 
@@ -274,6 +208,23 @@ To cut a [release](https://github.com/cipherstash/encrypt-query-language/release
 
 This will trigger the [Release EQL](https://github.com/cipherstash/encrypt-query-language/actions/workflows/release-eql.yml) workflow, which will build and attach artifacts to [the release](https://github.com/cipherstash/encrypt-query-language/releases/).
 
+#### Public documentation updates
+
+When a tag with the `eql-` prefix is pushed (for example, `eql-1.2.3`), the workflow at `.github/workflows/rebuild-docs.yml` runs and sends a webhook to our Vercel-hosted public docs site to trigger a rebuild.
+
+What happens end-to-end:
+
+- Release EQL builds EQL artifacts and generates API docs (HTML, XML, Markdown). The Markdown frontmatter includes the release version.
+- Rebuild Docs posts to the `DOCS_WEBHOOK_URL` secret, which Vercel uses to kick off a fresh build of the public docs.
+- The public docs site pulls the latest generated reference (`docs/api/markdown/API.md`) and publishes it under the corresponding version.
+
+Manual triggers and troubleshooting:
+
+- You can re-run the “Rebuild Docs” workflow from the Actions tab if a build fails downstream.
+- Ensure the repository secret `DOCS_WEBHOOK_URL` is set and valid; the workflow simply POSTs to that URL.
+
+This mirrors the process used in the sibling `protect` repository so both products’ documentation stay in sync with releases.
+
 ### dbdev
 
 We publish a Trusted Language Extension for PostgreSQL for use on [dbdev](https://database.dev/).
@@ -317,6 +268,17 @@ This produces two SQL files in `releases/`:
 - An uninstaller (`cipherstash-encrypt-uninstall.sql`)
 
 ## Structure
+
+### Adding SQL
+
+When adding new SQL files to the project, follow these guidelines:
+
+- Never drop the configuration table as it may contain customer data and needs to live across EQL versions
+- Everything else should have a `DROP IF EXISTS`
+- Functions should be `DROP` and `CREATE`, instead of `CREATE OR REPLACE`
+  - Data types cannot be changed once created, so dropping first is more flexible
+- Keep `DROP` and `CREATE` together in the code
+- Types need to be dropped last, add to the `666-drop_types.sql`
 
 ### Schema
 

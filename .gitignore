@@ -2,6 +2,7 @@
 
 .DS_Store
 .mise.*
+.worktrees/
 
 deps.txt
 deps-ordered.txt
@@ -199,6 +200,9 @@ cipherstash-proxy.toml
 # build artifacts
 release/
 
+# Generated documentation
+docs/api/
+
 
 
 # jupyter notebook
@@ -207,3 +211,21 @@ __pycache__
 
 # dbdev
 eql--*.sql
+
+# Generated SQLx migration (built from src/, never commit)
+tests/sqlx/migrations/001_install_eql.sql
+
+# Large generated test data files
+tests/ste_vec_vast.sql
+tests/ste_vec_*M.sql*
+
+# Rust build artifacts (using sccache)
+tests/sqlx/target/
+
+# Work files (agent-generated, not for version control)
+.work/
+.serena/
+
+# Build variants - protect variant deps
+src/deps-protect.txt
+src/deps-ordered-protect.txt

@@ -1,15 +1,16 @@
 services:
   postgres: &postgres
     container_name: postgres
-    image: postgres
+    image: postgres:17
+    command: postgres -c track_functions=all -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=all
     ports:
       - 7432:7432
     environment:
-      - PGPORT=${POSTGRES_PORT}
-      - PGUSER=${POSTGRES_USER}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - PGPORT=${POSTGRES_PORT:-7432}
+      - PGUSER=${POSTGRES_USER:-cipherstash}
+      - POSTGRES_DB=${POSTGRES_DB:-cipherstash}
+      - POSTGRES_USER=${POSTGRES_USER:-cipherstash}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
     networks:
       - postgres
     deploy:
