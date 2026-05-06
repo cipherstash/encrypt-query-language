@@ -43,9 +43,9 @@ jobs:
       POSTGRES_VERSION: ${{ matrix.postgres-version }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: jdx/mise-action@v3
+      - uses: jdx/mise-action@v4
         with:
           version: 2026.4.0
           install: true # [default: true] run `mise install`
@@ -69,6 +69,42 @@ jobs:
           export active_rust_toolchain=$(rustup show active-toolchain | cut -d' ' -f1)
           rustup component add --toolchain ${active_rust_toolchain} rustfmt clippy
           mise run --output prefix test --postgres ${POSTGRES_VERSION}
+
+  splinter:
+    name: "Supabase splinter (advisory)"
+    runs-on: ubuntu-latest-m
+    # Advisory check — currently ~163 known findings (mostly function_search_path_mutable
+    # on LANGUAGE SQL helpers retained for inlinability). Flip continue-on-error to false
+    # once EQL is splinter-clean.
+    continue-on-error: true
+
+    env:
+      POSTGRES_VERSION: "17"
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: jdx/mise-action@v4
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+
+      - name: Setup database
+        run: |
+          mise run postgres:up postgres-${POSTGRES_VERSION} --extra-args "--detach --wait"
+
+      - name: Build and install EQL
+        run: |
+          mise run --output prefix build --force
+          cat release/cipherstash-encrypt.sql \
+            | docker exec -i postgres-${POSTGRES_VERSION} \
+                psql -v ON_ERROR_STOP=1 \
+                  postgresql://cipherstash:password@localhost:5432/cipherstash -f-
+
+      - name: Run splinter
+        run: |
+          mise run --output prefix test:splinter --postgres ${POSTGRES_VERSION}
 
 
 
