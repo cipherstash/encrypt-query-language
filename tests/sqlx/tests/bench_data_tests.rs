@@ -24,6 +24,10 @@ async fn fetch_sample_encrypted_text(pool: &PgPool) -> Result<String> {
 
 /// Verify fixture seeded exactly 10K rows
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data")))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
 async fn bench_table_has_expected_row_count(pool: PgPool) -> Result<()> {
     let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM bench")
         .fetch_one(&pool)
@@ -37,6 +41,10 @@ async fn bench_table_has_expected_row_count(pool: PgPool) -> Result<()> {
 
 /// Verify all three columns have non-null encrypted data
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data")))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
 async fn bench_columns_are_populated(pool: PgPool) -> Result<()> {
     let count: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM bench
@@ -55,6 +63,10 @@ async fn bench_columns_are_populated(pool: PgPool) -> Result<()> {
 
 /// Verify hmac_256 index terms are extractable from encrypted_text
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data")))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
 async fn bench_encrypted_text_has_hmac_terms(pool: PgPool) -> Result<()> {
     let count: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM bench WHERE eql_v2.hmac_256(encrypted_text) IS NOT NULL",
@@ -70,6 +82,10 @@ async fn bench_encrypted_text_has_hmac_terms(pool: PgPool) -> Result<()> {
 
 /// Verify bloom_filter index terms are extractable from encrypted_text
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data")))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
 async fn bench_encrypted_text_has_bloom_filter_terms(pool: PgPool) -> Result<()> {
     let count: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM bench WHERE eql_v2.bloom_filter(encrypted_text) IS NOT NULL",
@@ -85,6 +101,10 @@ async fn bench_encrypted_text_has_bloom_filter_terms(pool: PgPool) -> Result<()>
 
 /// Verify ORE terms are extractable from encrypted_int (3 of 5 indexes are ORE btree)
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data")))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
 async fn bench_encrypted_int_has_ore_terms(pool: PgPool) -> Result<()> {
     let count: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM bench WHERE eql_v2.ore_block_u64_8_256(encrypted_int) IS NOT NULL",
@@ -103,6 +123,10 @@ async fn bench_encrypted_int_has_ore_terms(pool: PgPool) -> Result<()> {
 /// Both int and bigint columns use the same eql_v2_encrypted type and ob index structure.
 /// These tests verify that data seeding populated both columns, not that encoding differs.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data")))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
 async fn bench_encrypted_bigint_has_ore_terms(pool: PgPool) -> Result<()> {
     let count: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM bench WHERE eql_v2.ore_block_u64_8_256(encrypted_bigint) IS NOT NULL",
@@ -120,6 +144,10 @@ async fn bench_encrypted_bigint_has_ore_terms(pool: PgPool) -> Result<()> {
 
 /// Verify hash index is used for hmac_256 equality lookup
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
 async fn bench_hmac_equality_uses_hash_index(pool: PgPool) -> Result<()> {
     let encrypted = fetch_sample_encrypted_text(&pool).await?;
 
@@ -133,6 +161,10 @@ async fn bench_hmac_equality_uses_hash_index(pool: PgPool) -> Result<()> {
 
 /// Verify btree index is used for ORDER BY with LIMIT on encrypted_int
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
 async fn bench_ore_order_uses_btree_index(pool: PgPool) -> Result<()> {
     let sql = "SELECT * FROM bench ORDER BY encrypted_int LIMIT 10";
     assert_uses_index(&pool, sql, "bench_int_ore_idx").await?;
@@ -141,6 +173,10 @@ async fn bench_ore_order_uses_btree_index(pool: PgPool) -> Result<()> {
 
 /// Verify GIN index is used for bloom_filter containment
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
 async fn bench_bloom_containment_uses_gin_index(pool: PgPool) -> Result<()> {
     let encrypted = fetch_sample_encrypted_text(&pool).await?;
 
@@ -154,6 +190,10 @@ async fn bench_bloom_containment_uses_gin_index(pool: PgPool) -> Result<()> {
 
 /// Verify btree index is used for ORDER BY with LIMIT on encrypted_text
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
 async fn bench_ore_text_order_uses_btree_index(pool: PgPool) -> Result<()> {
     let sql = "SELECT * FROM bench ORDER BY encrypted_text LIMIT 10";
     assert_uses_index(&pool, sql, "bench_text_ore_idx").await?;
@@ -162,6 +202,10 @@ async fn bench_ore_text_order_uses_btree_index(pool: PgPool) -> Result<()> {
 
 /// Verify btree index is used for ORDER BY with LIMIT on encrypted_bigint
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
 async fn bench_ore_bigint_order_uses_btree_index(pool: PgPool) -> Result<()> {
     let sql = "SELECT * FROM bench ORDER BY encrypted_bigint LIMIT 10";
     assert_uses_index(&pool, sql, "bench_bigint_ore_idx").await?;
@@ -170,6 +214,10 @@ async fn bench_ore_bigint_order_uses_btree_index(pool: PgPool) -> Result<()> {
 
 /// Verify sequential scan without indexes (before/after pattern sanity check)
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data")))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
 async fn bench_hmac_without_index_uses_seq_scan(pool: PgPool) -> Result<()> {
     analyze_table(&pool, "bench").await?;
 

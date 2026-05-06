@@ -14,6 +14,10 @@ const BENCH_TEXT_HMAC_IDX: &str = "bench_text_hmac_idx";
 
 /// ORE range query (less-than) uses btree index
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
 async fn ore_int_range_lt_uses_btree_index(pool: PgPool) -> Result<()> {
     let encrypted = get_bench_encrypted_int(&pool, 50).await?;
 
@@ -28,6 +32,10 @@ async fn ore_int_range_lt_uses_btree_index(pool: PgPool) -> Result<()> {
 
 /// ORE range query (greater-than) uses btree index
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
 async fn ore_int_range_gt_uses_btree_index(pool: PgPool) -> Result<()> {
     let encrypted = get_bench_encrypted_int(&pool, 50).await?;
 
@@ -45,6 +53,10 @@ async fn ore_int_range_gt_uses_btree_index(pool: PgPool) -> Result<()> {
 /// Uses explicit >= / <= rather than BETWEEN — BETWEEN's operator resolution
 /// against eql_v2_encrypted is untested and may not resolve to the btree family.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
 async fn ore_int_range_combined_uses_btree_index(pool: PgPool) -> Result<()> {
     let low = get_bench_encrypted_int(&pool, 10).await?;
     let high = get_bench_encrypted_int(&pool, 90).await?;
