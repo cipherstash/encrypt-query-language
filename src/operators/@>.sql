@@ -22,11 +22,17 @@
 --! @note Requires ste_vec index configuration
 --! @see eql_v2.ste_vec_contains
 --! @see eql_v2.add_search_config
+-- Marked IMMUTABLE STRICT PARALLEL SAFE so the planner inlines the body
+-- and a functional GIN index on `eql_v2.ste_vec(col)` can match
+-- `WHERE col @> val`. The previous default-VOLATILE declaration prevented
+-- inlining and forced seq scan even on Supabase installs that have the
+-- ste_vec functional index in place.
 CREATE FUNCTION eql_v2."@>"(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS boolean
+LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   SELECT eql_v2.ste_vec_contains(a, b)
-$$ LANGUAGE SQL;
+$$;
 
 CREATE OPERATOR @>(
   FUNCTION=eql_v2."@>",
