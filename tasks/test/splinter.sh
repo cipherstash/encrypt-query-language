@@ -25,7 +25,9 @@ work_dir="$(mktemp -d)"
 trap 'rm -rf "$work_dir"' EXIT
 
 splinter_sql="$work_dir/splinter.sql"
+all_findings_tsv="$work_dir/all_findings.tsv"
 findings_tsv="$work_dir/findings.tsv"
+allowlisted_tsv="$work_dir/allowlisted.tsv"
 summary_by_rule="$work_dir/by_rule.tsv"
 
 echo "Fetching splinter@${SPLINTER_SHA}..."
@@ -45,19 +47,75 @@ BEGIN
 END $$;
 SQL
 
+# Allowlist: each finding splinter emits is allowed only if rule + metadata
+# (schema, name, type) match an entry below. Each entry must be justified.
+#
+# Format: TSV "rule\tschema\tname\ttype\treason" — kept as a heredoc so the
+# justification lives next to the entry it covers. Keys are matched verbatim.
+cat > "$work_dir/allowlist.tsv" <<'ALLOW'
+function_search_path_mutable	eql_v2	@>	function	GIN-inlining: must inline so the planner can match the index on eql_v2.jsonb_array(e). SET search_path disables SQL function inlining (see PostgreSQL inline_function), reverting GIN scans to seq scans.
+function_search_path_mutable	eql_v2	<@	function	GIN-inlining: same as @>.
+function_search_path_mutable	eql_v2	jsonb_contains	function	GIN-inlining: wrapper unfolds to eql_v2.jsonb_array(a) @> eql_v2.jsonb_array(b). Pinning search_path here drops the bitmap index scan.
+function_search_path_mutable	eql_v2	jsonb_contained_by	function	GIN-inlining: same as jsonb_contains.
+function_search_path_mutable	eql_v2	min	function	Aggregate (splinter labels these type=function): ALTER AGGREGATE has no SET configuration_parameter syntax, and ALTER ROUTINE/FUNCTION reject aggregates. The aggregate's SFUNC has a pinned search_path.
+function_search_path_mutable	eql_v2	max	function	Aggregate: same as min.
+function_search_path_mutable	eql_v2	grouped_value	function	Aggregate: same as min.
+ALLOW
+
 # Wrap splinter (a single bare SELECT expression) into a subquery we can
 # aggregate from. Splinter starts with `set local search_path = ''` which only
 # works inside a transaction, so wrap the whole thing in BEGIN/COMMIT.
 splinter_body="$(tail -n +2 "$splinter_sql" | sed 's/;[[:space:]]*$//')"
 
-"${PSQL[@]}" -At -F $'\t' --quiet <<SQL > "$findings_tsv"
+# Pull all findings with their metadata, then split into allowlisted vs not.
+"${PSQL[@]}" -At -F $'\t' --quiet <<SQL > "$all_findings_tsv"
 BEGIN;
 SET LOCAL search_path = '';
-SELECT name, level, detail
+SELECT
+  name,
+  level,
+  detail,
+  coalesce(metadata->>'schema', ''),
+  coalesce(metadata->>'name', ''),
+  coalesce(metadata->>'type', '')
 FROM (${splinter_body}) splinter
-ORDER BY level, name;
+ORDER BY level, name, detail;
 COMMIT;
 SQL
+
+# Refuse to run with an empty allowlist. Without this guard, the awk
+# discriminator below would still classify everything as allowlisted on
+# an accidentally-empty file (e.g., a heredoc syntax error during edits)
+# and the gate would silently pass any real findings.
+if [[ ! -s "$work_dir/allowlist.tsv" ]]; then
+  echo "splinter: allowlist.tsv is empty — refusing to run to avoid silently passing findings" >&2
+  exit 2
+fi
+
+# Split: allowlisted entries match all of (rule, schema, name, type).
+# Use FILENAME as the discriminator rather than NR == FNR so behavior is
+# robust to either file being empty.
+awk -F'\t' \
+  -v allowlist_file="$work_dir/allowlist.tsv" \
+  -v allow_out="$allowlisted_tsv" \
+  -v deny_out="$findings_tsv" '
+  FILENAME == allowlist_file {
+    key = $1 SUBSEP $2 SUBSEP $3 SUBSEP $4
+    allow[key] = $5
+    next
+  }
+  {
+    key = $1 SUBSEP $4 SUBSEP $5 SUBSEP $6
+    if (key in allow) {
+      print $0 "\t" allow[key] > allow_out
+    } else {
+      print $0 > deny_out
+    }
+  }
+' "$work_dir/allowlist.tsv" "$all_findings_tsv"
+
+# Touch in case awk didn't write either file (no findings at all).
+touch "$findings_tsv" "$allowlisted_tsv"
 
 "${PSQL[@]}" -At -F $'\t' --quiet <<SQL > "$summary_by_rule"
 BEGIN;
@@ -71,16 +129,30 @@ ORDER BY
 COMMIT;
 SQL
 
+raw_total="$(wc -l < "$all_findings_tsv" | tr -d ' ')"
+allowlisted_total="$(wc -l < "$allowlisted_tsv" | tr -d ' ')"
 total="$(wc -l < "$findings_tsv" | tr -d ' ')"
 errors="$(awk -F'\t' '$2 == "ERROR"' "$findings_tsv" | wc -l | tr -d ' ')"
 warns="$(awk -F'\t' '$2 == "WARN"' "$findings_tsv" | wc -l | tr -d ' ')"
 infos="$(awk -F'\t' '$2 == "INFO"' "$findings_tsv" | wc -l | tr -d ' ')"
 
 echo
-echo "Splinter findings: total=${total} (ERROR=${errors} WARN=${warns} INFO=${infos})"
+echo "Splinter findings: raw=${raw_total} (allowlisted=${allowlisted_total}, unallowlisted=${total} — ERROR=${errors} WARN=${warns} INFO=${infos})"
 echo
-printf 'LEVEL\tRULE\tCOUNT\n'
+printf 'LEVEL\tRULE\tCOUNT (raw)\n'
 cat "$summary_by_rule"
+
+if [[ "$allowlisted_total" -gt 0 ]]; then
+  echo
+  echo "Allowlisted findings (accepted, see tasks/test/splinter.sh for justifications):"
+  awk -F'\t' '{ printf "  - [%s] %s.%s (%s) — %s\n", $1, $4, $5, $6, $7 }' "$allowlisted_tsv"
+fi
+
+if [[ "$total" -gt 0 ]]; then
+  echo
+  echo "Unallowlisted findings:"
+  awk -F'\t' '{ printf "  - [%s] %s — %s\n", $2, $1, $3 }' "$findings_tsv"
+fi
 
 # Write a GitHub Actions step summary if we're in CI.
 if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
@@ -89,18 +161,10 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
     echo
     echo "Pinned to [\`splinter@${SPLINTER_SHA:0:12}\`](https://github.com/supabase/splinter/tree/${SPLINTER_SHA})."
     echo
-    echo "**${total} findings** — ERROR: ${errors}, WARN: ${warns}, INFO: ${infos}"
-    echo
-    echo "_Advisory check. Findings here do not block merge until EQL is splinter-clean._"
+    echo "**${raw_total} raw findings** (allowlisted: ${allowlisted_total}, unallowlisted: ${total} — ERROR: ${errors}, WARN: ${warns}, INFO: ${infos})"
     echo
     if [[ "$total" -gt 0 ]]; then
-      echo "### By rule"
-      echo
-      echo "| Level | Rule | Count |"
-      echo "| --- | --- | --- |"
-      awk -F'\t' '{ printf "| %s | `%s` | %s |\n", $1, $2, $3 }' "$summary_by_rule"
-      echo
-      echo "<details><summary>All findings</summary>"
+      echo "### Unallowlisted findings (action required)"
       echo
       echo "| Level | Rule | Detail |"
       echo "| --- | --- | --- |"
@@ -109,15 +173,29 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
         printf "| %s | `%s` | %s |\n", $2, $1, $3
       }' "$findings_tsv"
       echo
-      echo "</details>"
-    else
+    elif [[ "$raw_total" -eq 0 ]]; then
       echo "EQL is splinter-clean against this pinned ruleset."
+      echo
+    else
+      echo "EQL is splinter-clean (all findings covered by the allowlist)."
+      echo
+    fi
+    if [[ "$allowlisted_total" -gt 0 ]]; then
+      echo "<details><summary>Allowlisted findings (${allowlisted_total})</summary>"
+      echo
+      echo "| Rule | Schema | Name | Type | Reason |"
+      echo "| --- | --- | --- | --- | --- |"
+      awk -F'\t' '{
+        gsub(/\|/, "\\|", $7);
+        printf "| `%s` | `%s` | `%s` | %s | %s |\n", $1, $4, $5, $6, $7
+      }' "$allowlisted_tsv"
+      echo
+      echo "</details>"
     fi
   } >> "$GITHUB_STEP_SUMMARY"
 fi
 
-# Exit non-zero so the check surfaces in the UI. The workflow uses
-# continue-on-error to keep it advisory until EQL is clean.
+# Fail only on findings that aren't allowlisted.
 if [[ "$total" -gt 0 ]]; then
   exit 1
 fi
