@@ -14,10 +14,15 @@
 
 
 
+-- IMMUTABLE so the planner inlines the body into the query and a functional
+-- index on `eql_v2.bloom_filter(col)` can match `WHERE eql_v2.like(col, val)`.
 CREATE FUNCTION eql_v2.like(a eql_v2_encrypted, b eql_v2_encrypted)
-RETURNS boolean AS $$
+RETURNS boolean
+LANGUAGE SQL
+IMMUTABLE STRICT PARALLEL SAFE
+AS $$
   SELECT eql_v2.bloom_filter(a) @> eql_v2.bloom_filter(b);
-$$ LANGUAGE SQL;
+$$;
 
 
 --
@@ -25,9 +30,12 @@ $$ LANGUAGE SQL;
 -- Function preserves the SQL semantics
 --
 CREATE FUNCTION eql_v2.ilike(a eql_v2_encrypted, b eql_v2_encrypted)
-RETURNS boolean AS $$
+RETURNS boolean
+LANGUAGE SQL
+IMMUTABLE STRICT PARALLEL SAFE
+AS $$
   SELECT eql_v2.bloom_filter(a) @> eql_v2.bloom_filter(b);
-$$ LANGUAGE SQL;
+$$;
 
 
 

@@ -105,4 +105,35 @@ $$ LANGUAGE plpgsql;
 
 
 
+--
+-- like/ilike must be IMMUTABLE so the planner inlines them into the query
+-- and a functional bloom_filter index can match. See issue #189.
+--
+DO $$
+DECLARE
+    vol "char";
+  BEGIN
+    SELECT provolatile INTO vol
+      FROM pg_proc
+     WHERE pronamespace = 'eql_v2'::regnamespace
+       AND proname = 'like'
+       AND pronargs = 2;
+
+    IF vol <> 'i' THEN
+      RAISE EXCEPTION 'eql_v2.like must be IMMUTABLE (provolatile=i), got %', vol;
+    END IF;
+
+    SELECT provolatile INTO vol
+      FROM pg_proc
+     WHERE pronamespace = 'eql_v2'::regnamespace
+       AND proname = 'ilike'
+       AND pronargs = 2;
+
+    IF vol <> 'i' THEN
+      RAISE EXCEPTION 'eql_v2.ilike must be IMMUTABLE (provolatile=i), got %', vol;
+    END IF;
+  END;
+$$ LANGUAGE plpgsql;
+
+
 SELECT drop_table_with_encrypted();
