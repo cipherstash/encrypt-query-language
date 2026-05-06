@@ -49,15 +49,20 @@ async fn has_opf_true_when_field_present(pool: PgPool) -> Result<()> {
         "SELECT eql_v2.has_ope_cllw_u64_65('{}'::jsonb)",
         opf_payload(1)
     );
-    QueryAssertion::new(&pool, &sql).returns_bool_value(true).await;
+    QueryAssertion::new(&pool, &sql)
+        .returns_bool_value(true)
+        .await;
     Ok(())
 }
 
 #[sqlx::test]
 async fn has_opf_false_when_field_absent(pool: PgPool) -> Result<()> {
     // Same shape but 'opf' replaced with 'ob' — should not trigger ope detection.
-    let sql = r#"SELECT eql_v2.has_ope_cllw_u64_65('{"v":2,"i":{"t":"t","c":"c"},"ob":["00"]}'::jsonb)"#;
-    QueryAssertion::new(&pool, sql).returns_bool_value(false).await;
+    let sql =
+        r#"SELECT eql_v2.has_ope_cllw_u64_65('{"v":2,"i":{"t":"t","c":"c"},"ob":["00"]}'::jsonb)"#;
+    QueryAssertion::new(&pool, sql)
+        .returns_bool_value(false)
+        .await;
     Ok(())
 }
 
@@ -73,9 +78,15 @@ async fn compare_opf_three_way(pool: PgPool) -> Result<()> {
         )
     };
 
-    QueryAssertion::new(&pool, &cmp(&a, &b)).returns_int_value(-1).await;
-    QueryAssertion::new(&pool, &cmp(&b, &a)).returns_int_value(1).await;
-    QueryAssertion::new(&pool, &cmp(&a, &a)).returns_int_value(0).await;
+    QueryAssertion::new(&pool, cmp(&a, &b))
+        .returns_int_value(-1)
+        .await;
+    QueryAssertion::new(&pool, cmp(&b, &a))
+        .returns_int_value(1)
+        .await;
+    QueryAssertion::new(&pool, cmp(&a, &a))
+        .returns_int_value(0)
+        .await;
     Ok(())
 }
 
@@ -101,7 +112,9 @@ async fn encrypted_lt_operator_uses_opf(pool: PgPool) -> Result<()> {
         "SELECT eql_v2.to_encrypted('{}'::jsonb) < eql_v2.to_encrypted('{}'::jsonb)",
         a, b
     );
-    QueryAssertion::new(&pool, &sql).returns_bool_value(true).await;
+    QueryAssertion::new(&pool, &sql)
+        .returns_bool_value(true)
+        .await;
     Ok(())
 }
 
@@ -114,7 +127,9 @@ async fn encrypted_gt_operator_uses_opf(pool: PgPool) -> Result<()> {
         "SELECT eql_v2.to_encrypted('{}'::jsonb) > eql_v2.to_encrypted('{}'::jsonb)",
         b, a
     );
-    QueryAssertion::new(&pool, &sql).returns_bool_value(true).await;
+    QueryAssertion::new(&pool, &sql)
+        .returns_bool_value(true)
+        .await;
     Ok(())
 }
 
@@ -144,9 +159,15 @@ async fn compare_opv_three_way_same_length(pool: PgPool) -> Result<()> {
         )
     };
 
-    QueryAssertion::new(&pool, &cmp(&a, &b)).returns_int_value(-1).await;
-    QueryAssertion::new(&pool, &cmp(&b, &a)).returns_int_value(1).await;
-    QueryAssertion::new(&pool, &cmp(&a, &a)).returns_int_value(0).await;
+    QueryAssertion::new(&pool, cmp(&a, &b))
+        .returns_int_value(-1)
+        .await;
+    QueryAssertion::new(&pool, cmp(&b, &a))
+        .returns_int_value(1)
+        .await;
+    QueryAssertion::new(&pool, cmp(&a, &a))
+        .returns_int_value(0)
+        .await;
     Ok(())
 }
 
@@ -166,7 +187,9 @@ async fn generic_compare_dispatches_to_opv(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn config_check_accepts_ope_index(pool: PgPool) -> Result<()> {
     let sql = r#"SELECT eql_v2.config_check_indexes('{"v":1,"tables":{"t":{"c":{"cast_as":"int","indexes":{"ope":{}}}}}}'::jsonb)"#;
-    QueryAssertion::new(&pool, sql).returns_bool_value(true).await;
+    QueryAssertion::new(&pool, sql)
+        .returns_bool_value(true)
+        .await;
     Ok(())
 }
 
@@ -210,7 +233,11 @@ async fn sort_compare_orders_opf_lexicographically(pool: PgPool) -> Result<()> {
 
     let rows = sqlx::query(&sql).fetch_all(&pool).await?;
     let ids: Vec<i64> = rows.iter().map(|r| r.try_get(0).unwrap()).collect();
-    assert_eq!(ids, vec![2, 3, 1], "opf ASC should be id=2 (1) < 3 (2) < 1 (3)");
+    assert_eq!(
+        ids,
+        vec![2, 3, 1],
+        "opf ASC should be id=2 (1) < 3 (2) < 1 (3)"
+    );
     Ok(())
 }
 
@@ -254,7 +281,11 @@ async fn sort_compare_uses_ope_fast_path(pool: PgPool) -> Result<()> {
     .fetch_all(&mut *tx)
     .await?;
     let ids: Vec<i64> = rows.iter().map(|r| r.try_get(0).unwrap()).collect();
-    assert_eq!(ids, vec![2, 3, 1], "OPE ASC should be id=2 (1) < 3 (2) < 1 (3)");
+    assert_eq!(
+        ids,
+        vec![2, 3, 1],
+        "OPE ASC should be id=2 (1) < 3 (2) < 1 (3)"
+    );
 
     let ope_calls: i64 = sqlx::query_scalar(
         "SELECT coalesce(sum(calls), 0)::bigint
