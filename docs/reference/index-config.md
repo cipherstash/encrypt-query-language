@@ -18,7 +18,7 @@ Add an index to an encrypted column. Returns the updated configuration as JSONB.
 SELECT eql_v2.add_search_config(
   'table_name',       -- Name of the table
   'column_name',      -- Name of the column
-  'index_name',       -- Index kind ('unique', 'match', 'ore', 'ste_vec')
+  'index_name',       -- Index kind ('unique', 'match', 'ore', 'ope', 'ste_vec')
   'cast_as',          -- PostgreSQL type to cast decrypted data ('text', 'int', etc.)
   'opts'              -- Index options as JSONB (optional)
 );
@@ -108,6 +108,15 @@ Specifically, searching for strings _shorter_ than the `tokenLength` parameter w
 If you're using n-gram as a token filter, then a token that is already shorter than the `tokenLength` parameter will be kept as-is when indexed, and so a search for that short token will match that record.
 However, if that same short string only appears as a part of a larger token, then it will not match that record.
 Try to ensure that the string you search for is at least as long as the `tokenLength` of the index, except in the specific case where you know that there are shorter tokens to match, _and_ you are explicitly OK with not returning records that have that short string as part of a larger token.
+
+#### `ore` vs `ope`
+
+Both `ore` and `ope` enable the same ordered-comparison surface (`<`, `<=`, `=`, `>`, `>=`, `BETWEEN`, `ORDER BY`, `MIN`/`MAX`).
+
+- **`ore`** uses Order-Revealing Encryption (`ore_block_u64_8_256`, payload field `ob`). Ciphertexts compare via a custom per-byte protocol implemented in `eql_v2.compare_ore_block_u64_8_256`. This is the default ordered-search index.
+- **`ope`** uses CLWW Order-Preserving Encryption — `ope_cllw_u64_65` (fixed-width, payload field `opf`) for numeric types and `ope_cllw_var_8` (variable-width, payload field `opv`) for text-shaped values. OPE ciphertexts compare with **standard lexicographic byte ordering**, which makes them usable in environments that can only sort `bytea` natively (e.g. some pluggable storage layers without custom comparators).
+
+`eql_v2.compare()` and the `<` / `<=` / `>` / `>=` operators dispatch automatically to whichever ordered terms are present on the encrypted value, so application queries do not change when switching between `ore` and `ope`.
 
 #### Options for ste_vec indexes (`opts`)
 

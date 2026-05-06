@@ -33,7 +33,7 @@ END;
 --! @internal
 --!
 --! Checks that all index types specified in the configuration are valid.
---! Valid index types are: match, ore, unique, ste_vec.
+--! Valid index types are: match, ore, ope, unique, ste_vec.
 --!
 --! @param jsonb Configuration data to validate
 --! @return boolean True if all index types are valid
@@ -49,10 +49,10 @@ AS $$
 	BEGIN
 
     IF (SELECT EXISTS (SELECT eql_v2.config_get_indexes(val))) THEN
-      IF (SELECT bool_and(index = ANY('{match, ore, unique, ste_vec}')) FROM eql_v2.config_get_indexes(val) AS index) THEN
+      IF (SELECT bool_and(index = ANY('{match, ore, ope, unique, ste_vec}')) FROM eql_v2.config_get_indexes(val) AS index) THEN
         RETURN true;
       END IF;
-      RAISE 'Configuration has an invalid index (%). Index should be one of {match, ore, unique, ste_vec}', val;
+      RAISE 'Configuration has an invalid index (%). Index should be one of {match, ore, ope, unique, ste_vec}', val;
     END IF;
     RETURN true;
   END;
