@@ -1,7 +1,7 @@
 //! ORE equality/inequality operator tests
 //!
 //! Tests equality with different ORE encryption schemes (ORE64, CLLW_U64_8, CLLW_VAR_8)
-//! Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
+//! Uses ore table from migrations/002_install_ore_data.sql (ids 1-1000)
 
 use anyhow::Result;
 use eql_tests::{get_ore_encrypted, QueryAssertion};
@@ -10,7 +10,7 @@ use sqlx::PgPool;
 #[sqlx::test]
 async fn ore64_equality_operator_finds_match(pool: PgPool) -> Result<()> {
     // Test: e = e with ORE encryption
-    // Uses ore table from migrations (ids 1-99)
+    // Uses ore table from migrations (ids 1-1000)
 
     let encrypted = get_ore_encrypted(&pool, 42).await?;
 
@@ -35,8 +35,8 @@ async fn ore64_inequality_operator_finds_non_matches(pool: PgPool) -> Result<()>
         encrypted
     );
 
-    // Should return 98 records (all except id=42)
-    QueryAssertion::new(&pool, &sql).count(98).await;
+    // Should return 999 records (all except id=42)
+    QueryAssertion::new(&pool, &sql).count(999).await;
 
     Ok(())
 }
@@ -69,7 +69,7 @@ async fn ore_cllw_u64_8_inequality_finds_non_matches(pool: PgPool) -> Result<()>
         encrypted
     );
 
-    QueryAssertion::new(&pool, &sql).count(98).await;
+    QueryAssertion::new(&pool, &sql).count(999).await;
 
     Ok(())
 }
@@ -102,7 +102,7 @@ async fn ore_cllw_var_8_inequality_finds_non_matches(pool: PgPool) -> Result<()>
         encrypted
     );
 
-    QueryAssertion::new(&pool, &sql).count(98).await;
+    QueryAssertion::new(&pool, &sql).count(999).await;
 
     Ok(())
 }
@@ -155,7 +155,7 @@ async fn ore_cllw_u64_8_greater_than(pool: PgPool) -> Result<()> {
         encrypted
     );
 
-    QueryAssertion::new(&pool, &sql).count(57).await;
+    QueryAssertion::new(&pool, &sql).count(958).await;
 
     Ok(())
 }
@@ -171,7 +171,7 @@ async fn ore_cllw_u64_8_greater_than_or_equal(pool: PgPool) -> Result<()> {
         encrypted
     );
 
-    QueryAssertion::new(&pool, &sql).count(58).await;
+    QueryAssertion::new(&pool, &sql).count(959).await;
 
     Ok(())
 }
@@ -220,7 +220,7 @@ async fn ore_cllw_var_8_greater_than(pool: PgPool) -> Result<()> {
         encrypted
     );
 
-    QueryAssertion::new(&pool, &sql).count(57).await;
+    QueryAssertion::new(&pool, &sql).count(958).await;
 
     Ok(())
 }
@@ -236,7 +236,7 @@ async fn ore_cllw_var_8_greater_than_or_equal(pool: PgPool) -> Result<()> {
         encrypted
     );
 
-    QueryAssertion::new(&pool, &sql).count(58).await;
+    QueryAssertion::new(&pool, &sql).count(959).await;
 
     Ok(())
 }

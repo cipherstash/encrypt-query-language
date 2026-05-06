@@ -60,7 +60,7 @@ async fn inequality_operator_returns_empty_for_non_existent_record_hmac(
     pool: PgPool,
 ) -> Result<()> {
     // Test: <> with different record (not in test data)
-    // Note: Using id=4 instead of 91347 to ensure ore data exists (start=40 is within ore range 1-99)
+    // Note: Using id=4 instead of 91347 to ensure ore data exists (start=40 is within ore range 1-1000)
 
     let encrypted = create_encrypted_json_with_index(&pool, 4, "hm").await?;
 
@@ -94,7 +94,7 @@ async fn neq_function_finds_non_matching_records_hmac(pool: PgPool) -> Result<()
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn neq_function_returns_empty_for_non_existent_record_hmac(pool: PgPool) -> Result<()> {
     // Test: eql_v2.neq() with different record (not in test data)
-    // Note: Using id=4 instead of 91347 to ensure ore data exists (start=40 is within ore range 1-99)
+    // Note: Using id=4 instead of 91347 to ensure ore data exists (start=40 is within ore range 1-1000)
 
     let encrypted = create_encrypted_json_with_index(&pool, 4, "hm").await?;
 
@@ -148,7 +148,7 @@ async fn inequality_operator_jsonb_not_equals_encrypted_hmac(pool: PgPool) -> Re
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn inequality_operator_encrypted_not_equals_jsonb_no_match_hmac(pool: PgPool) -> Result<()> {
     // Test: e <> jsonb with different record (not in test data)
-    // Note: Using id=4 instead of 91347 to ensure ore data exists (start=40 is within ore range 1-99)
+    // Note: Using id=4 instead of 91347 to ensure ore data exists (start=40 is within ore range 1-1000)
 
     let sql_create = "SELECT (create_encrypted_json(4)::jsonb - 'ob')::text";
     let row = sqlx::query(sql_create)

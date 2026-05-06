@@ -22,6 +22,7 @@
 CREATE FUNCTION eql_v2.order_by(a eql_v2_encrypted)
   RETURNS eql_v2.ore_block_u64_8_256
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN eql_v2.ore_block_u64_8_256(a);

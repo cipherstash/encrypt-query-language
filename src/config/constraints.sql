@@ -44,6 +44,7 @@ END;
 CREATE FUNCTION eql_v2.config_check_indexes(val jsonb)
   RETURNS BOOLEAN
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
 
@@ -61,29 +62,41 @@ $$ LANGUAGE plpgsql;
 --! @brief Validate cast types in configuration
 --! @internal
 --!
---! Checks that all 'cast_as' types specified in the configuration are valid.
---! Valid cast types are: text, int, small_int, big_int, real, double, boolean, date, jsonb.
+--! Checks that all 'cast_as' and 'plaintext_type' types specified in the configuration are valid.
+--! Valid cast types are: text, int, small_int, big_int, real, double, boolean, date, jsonb, json, float, decimal, timestamp.
 --!
 --! @param jsonb Configuration data to validate
 --! @return boolean True if all cast types are valid or no cast types specified
 --! @throws Exception if any invalid cast type found
 --!
 --! @note Used in CHECK constraint on eql_v2_configuration table
---! @note Empty configurations (no cast_as fields) are valid
+--! @note Empty configurations (no cast_as/plaintext_type fields) are valid
 --! @note Cast type names are EQL's internal representations, not PostgreSQL native types
+--! @note 'plaintext_type' is accepted as a canonical alias for 'cast_as'
 CREATE FUNCTION eql_v2.config_check_cast(val jsonb)
   RETURNS BOOLEAN
+  IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
 AS $$
+  DECLARE
+    _valid_types text[] := '{text, int, small_int, big_int, real, double, boolean, date, jsonb, json, float, decimal, timestamp}';
 	BEGIN
-    -- If there are cast_as fields, validate them
+    -- Validate cast_as fields
     IF EXISTS (SELECT jsonb_array_elements_text(jsonb_path_query_array(val, '$.tables.*.*.cast_as'))) THEN
-      IF (SELECT bool_and(cast_as = ANY('{text, int, small_int, big_int, real, double, boolean, date, jsonb}')) 
+      IF NOT (SELECT bool_and(cast_as = ANY(_valid_types))
           FROM (SELECT jsonb_array_elements_text(jsonb_path_query_array(val, '$.tables.*.*.cast_as')) AS cast_as) casts) THEN
-        RETURN true;
+        RAISE 'Configuration has an invalid cast_as (%). Cast should be one of %', val, _valid_types;
       END IF;
-      RAISE 'Configuration has an invalid cast_as (%). Cast should be one of {text, int, small_int, big_int, real, double, boolean, date, jsonb}', val;
     END IF;
-    -- If no cast_as fields exist (empty config), that's valid
+
+    -- Validate plaintext_type fields (canonical alias for cast_as)
+    IF EXISTS (SELECT jsonb_array_elements_text(jsonb_path_query_array(val, '$.tables.*.*.plaintext_type'))) THEN
+      IF NOT (SELECT bool_and(pt = ANY(_valid_types))
+          FROM (SELECT jsonb_array_elements_text(jsonb_path_query_array(val, '$.tables.*.*.plaintext_type')) AS pt) types) THEN
+        RAISE 'Configuration has an invalid plaintext_type (%). Type should be one of %', val, _valid_types;
+      END IF;
+    END IF;
+
     RETURN true;
   END;
 $$ LANGUAGE plpgsql;
@@ -102,6 +115,7 @@ $$ LANGUAGE plpgsql;
 --! @note Used in CHECK constraint on eql_v2_configuration table
 CREATE FUNCTION eql_v2.config_check_tables(val jsonb)
   RETURNS boolean
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     IF (val ? 'tables') THEN
@@ -125,6 +139,7 @@ $$ LANGUAGE plpgsql;
 --! @note Used in CHECK constraint on eql_v2_configuration table
 CREATE FUNCTION eql_v2.config_check_version(val jsonb)
   RETURNS boolean
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     IF (val ? 'v') THEN

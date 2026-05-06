@@ -9,6 +9,7 @@ This directory contains the documentation for the Encrypt Query Language (EQL).
 ## Reference
 
 - [EQL Functions Reference](reference/eql-functions.md) - Complete API reference for all EQL functions
+- [SQL support matrix](reference/sql-support.md) - Which SQL operators and features each encrypted index enables
 - [Database Indexes for Encrypted Columns](reference/database-indexes.md) - PostgreSQL B-tree index creation and usage
 - [EQL index configuration for CipherStash Proxy](reference/index-config.md)
 - [EQL with JSON and JSONB](reference/json-support.md)

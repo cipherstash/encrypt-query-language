@@ -15,6 +15,7 @@
 CREATE FUNCTION eql_v2.hmac_256(val jsonb)
   RETURNS eql_v2.hmac_256
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     IF val IS NULL THEN
@@ -41,6 +42,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.has_hmac_256(val jsonb)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     RETURN val ->> 'hm' IS NOT NULL;
@@ -60,6 +62,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.has_hmac_256(val eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
     RETURN eql_v2.has_hmac_256(val.data);
@@ -80,6 +83,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.hmac_256(val eql_v2_encrypted)
   RETURNS eql_v2.hmac_256
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     RETURN (SELECT eql_v2.hmac_256(val.data));
