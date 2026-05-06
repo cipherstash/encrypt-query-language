@@ -96,11 +96,11 @@ jobs:
 
       - name: Build and install EQL
         run: |
-          mise run --output prefix build --force
+          mise run --output prefix --force build
           cat release/cipherstash-encrypt.sql \
             | docker exec -i postgres-${POSTGRES_VERSION} \
                 psql -v ON_ERROR_STOP=1 \
-                  postgresql://cipherstash:password@localhost:5432/cipherstash -f-
+                  postgresql://cipherstash:password@localhost/cipherstash -f-
 
       - name: Run splinter
         run: |
