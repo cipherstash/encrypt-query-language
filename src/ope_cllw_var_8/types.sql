@@ -5,7 +5,7 @@
 --! Composite type for variable-width CLWW (Chenette, Lewi, Weis, Wu)
 --! Order-Preserving Encryption. Unlike ope_cllw_u64_65, supports
 --! variable-length ciphertexts (strings / byte slices). Ciphertext length is
---! `8 * plaintext_bytes + 1` (one carry byte + 8 bytes per plaintext bit).
+--! `8 * plaintext_bytes + 1` (one carry byte + 8 bytes per plaintext byte).
 --!
 --! Ciphertexts compare with **standard lexicographic byte ordering** — unlike
 --! the ORE variants there is no custom per-byte compare protocol. The ciphertext

@@ -266,7 +266,7 @@ async fn sort_compare_uses_ope_fast_path(pool: PgPool) -> Result<()> {
         "SELECT pg_stat_reset_single_function_counters(p.oid)
          FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
          WHERE n.nspname = 'eql_v2'
-           AND p.proname IN ('order_by_ope', 'order_by')",
+           AND p.proname IN ('ope_cllw_u64_65', 'ope_cllw_var_8', 'order_by')",
     )
     .execute(&mut *tx)
     .await?;
@@ -287,16 +287,33 @@ async fn sort_compare_uses_ope_fast_path(pool: PgPool) -> Result<()> {
         "OPE ASC should be id=2 (1) < 3 (2) < 1 (3)"
     );
 
-    let ope_calls: i64 = sqlx::query_scalar(
+    // sort_compare extracts the OPE key per subtype directly. Verify the opf
+    // extractor is invoked (the precise count varies because the encrypted
+    // overload delegates to the jsonb overload, but it must be called at all)
+    // and the var_8 extractor is never invoked because the homogeneity check
+    // gives up after the first row.
+    let opf_calls: i64 = sqlx::query_scalar(
         "SELECT coalesce(sum(calls), 0)::bigint
          FROM pg_stat_xact_user_functions
-         WHERE schemaname = 'eql_v2' AND funcname = 'order_by_ope'",
+         WHERE schemaname = 'eql_v2' AND funcname = 'ope_cllw_u64_65'",
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    assert!(
+        opf_calls >= 3,
+        "sort_compare should extract opf key for every row (got {opf_calls} calls)"
+    );
+
+    let opv_calls: i64 = sqlx::query_scalar(
+        "SELECT coalesce(sum(calls), 0)::bigint
+         FROM pg_stat_xact_user_functions
+         WHERE schemaname = 'eql_v2' AND funcname = 'ope_cllw_var_8'",
     )
     .fetch_one(&mut *tx)
     .await?;
     assert_eq!(
-        ope_calls, 3,
-        "sort_compare should extract OPE key once per row"
+        opv_calls, 0,
+        "sort_compare on opf-only data must not invoke the opv extractor"
     );
 
     let ore_calls: i64 = sqlx::query_scalar(
@@ -309,6 +326,128 @@ async fn sort_compare_uses_ope_fast_path(pool: PgPool) -> Result<()> {
     assert_eq!(
         ore_calls, 0,
         "sort_compare on OPE-only data must not call the ORE order_by extractor"
+    );
+
+    tx.rollback().await?;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn sort_compare_mixed_ope_subtypes_falls_back_to_compare(pool: PgPool) -> Result<()> {
+    // Mixing `opf` and `opv` payloads in the same batch must not take the OPE
+    // bytea fast path: those ciphertexts are not comparable across subtypes.
+    // sort_compare should fall back to eql_v2.compare() (which itself rejects
+    // mixed subtypes and uses literal JSONB ordering) and still return all
+    // rows without error.
+    let mut tx = pool.begin().await?;
+
+    sqlx::query(
+        "SELECT pg_stat_reset_single_function_counters(p.oid)
+         FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+         WHERE n.nspname = 'eql_v2'
+           AND p.proname = '_compare_ope_key'",
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    let opf = opf_payload(5);
+    let opv = opv_payload(&[0xaa, 0x11]);
+
+    let sql = format!(
+        "SELECT id FROM eql_v2.sort_compare(
+            ARRAY[1::bigint, 2::bigint, 3::bigint],
+            ARRAY[
+                eql_v2.to_encrypted('{}'::jsonb),
+                eql_v2.to_encrypted('{}'::jsonb),
+                eql_v2.to_encrypted('{}'::jsonb)
+            ]::eql_v2_encrypted[],
+            'ASC'
+        )",
+        opf, opv, opf
+    );
+    let rows = sqlx::query(&sql).fetch_all(&mut *tx).await?;
+    assert_eq!(
+        rows.len(),
+        3,
+        "mixed OPE batch should still sort and return all rows"
+    );
+
+    // _compare_ope_key is only invoked by the sort path when strategy='ope'.
+    // A mixed-subtype batch must select the compare-fallback strategy, so this
+    // helper must never run.
+    let ope_compare_calls: i64 = sqlx::query_scalar(
+        "SELECT coalesce(sum(calls), 0)::bigint
+         FROM pg_stat_xact_user_functions
+         WHERE schemaname = 'eql_v2' AND funcname = '_compare_ope_key'",
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    assert_eq!(
+        ope_compare_calls, 0,
+        "mixed-subtype batches must not take the OPE bytea fast path"
+    );
+
+    tx.rollback().await?;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn order_by_compare_mixed_ope_subtypes_falls_back(pool: PgPool) -> Result<()> {
+    // Same homogeneity contract for the dynamic-SQL entrypoint: a query that
+    // returns mixed `opf` and `opv` rows must not lex-compare the bytea
+    // ciphertexts (different subtypes are not order-comparable).
+    let mut tx = pool.begin().await?;
+
+    sqlx::query(
+        "CREATE TABLE encrypted_ope_mixed(
+            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+            e eql_v2_encrypted
+        )",
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    let payloads = [opf_payload(5), opv_payload(&[0xaa, 0x11]), opf_payload(2)];
+    for payload in &payloads {
+        let sql = format!(
+            "INSERT INTO encrypted_ope_mixed(e) VALUES (eql_v2.to_encrypted('{}'::jsonb))",
+            payload
+        );
+        sqlx::query(&sql).execute(&mut *tx).await?;
+    }
+
+    sqlx::query(
+        "SELECT pg_stat_reset_single_function_counters(p.oid)
+         FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+         WHERE n.nspname = 'eql_v2'
+           AND p.proname = '_compare_ope_key'",
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    let rows = sqlx::query(
+        "SELECT id FROM eql_v2.order_by_compare(
+            'SELECT id, e FROM encrypted_ope_mixed', 'ASC'
+        )",
+    )
+    .fetch_all(&mut *tx)
+    .await?;
+    assert_eq!(
+        rows.len(),
+        3,
+        "order_by_compare should return every row even on mixed-subtype input"
+    );
+
+    let ope_compare_calls: i64 = sqlx::query_scalar(
+        "SELECT coalesce(sum(calls), 0)::bigint
+         FROM pg_stat_xact_user_functions
+         WHERE schemaname = 'eql_v2' AND funcname = '_compare_ope_key'",
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    assert_eq!(
+        ope_compare_calls, 0,
+        "order_by_compare must not select the OPE bytea fast path on mixed-subtype input"
     );
 
     tx.rollback().await?;
