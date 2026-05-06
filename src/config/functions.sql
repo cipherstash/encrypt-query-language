@@ -32,6 +32,7 @@
 CREATE FUNCTION eql_v2.add_search_config(table_name text, column_name text, index_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}', migrating boolean DEFAULT false)
   RETURNS jsonb
 
+  SET search_path = pg_catalog, extensions, public
 AS $$
   DECLARE
     o jsonb;
@@ -46,7 +47,7 @@ AS $$
       RAISE EXCEPTION '% index exists for column: % %', index_name, table_name, column_name;
     END IF;
 
-    IF NOT cast_as = ANY('{text, int, small_int, big_int, real, double, boolean, date, jsonb}') THEN
+    IF NOT cast_as = ANY('{text, int, small_int, big_int, real, double, boolean, date, jsonb, json, float, decimal, timestamp}') THEN
       RAISE EXCEPTION '% is not a valid cast type', cast_as;
     END IF;
 
@@ -108,6 +109,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.modify_search_config
 CREATE FUNCTION eql_v2.remove_search_config(table_name text, column_name text, index_name text, migrating boolean DEFAULT false)
   RETURNS jsonb
+  SET search_path = pg_catalog, extensions, public
 AS $$
   DECLARE
     _config jsonb;
@@ -178,6 +180,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.remove_search_config
 CREATE FUNCTION eql_v2.modify_search_config(table_name text, column_name text, index_name text, cast_as text DEFAULT 'text', opts jsonb DEFAULT '{}', migrating boolean DEFAULT false)
   RETURNS jsonb
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     PERFORM eql_v2.remove_search_config(table_name, column_name, index_name, migrating);
@@ -204,6 +207,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.add_column
 CREATE FUNCTION eql_v2.migrate_config()
   RETURNS boolean
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
 
@@ -241,6 +245,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.add_column
 CREATE FUNCTION eql_v2.activate_config()
   RETURNS boolean
+  SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
 
@@ -270,6 +275,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.add_search_config
 CREATE FUNCTION eql_v2.discard()
   RETURNS boolean
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     IF EXISTS (SELECT FROM public.eql_v2_configuration c WHERE c.state = 'pending') THEN
@@ -305,6 +311,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.remove_column
 CREATE FUNCTION eql_v2.add_column(table_name text, column_name text, cast_as text DEFAULT 'text', migrating boolean DEFAULT false)
   RETURNS jsonb
+  SET search_path = pg_catalog, extensions, public
 AS $$
   DECLARE
     key text;
@@ -368,6 +375,7 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.remove_search_config
 CREATE FUNCTION eql_v2.remove_column(table_name text, column_name text, migrating boolean DEFAULT false)
   RETURNS jsonb
+  SET search_path = pg_catalog, extensions, public
 AS $$
   DECLARE
     key text;
@@ -466,20 +474,21 @@ CREATE FUNCTION eql_v2.config() RETURNS TABLE (
     decrypts_as text,
     indexes jsonb
 )
+  SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
     RETURN QUERY
       WITH tables AS (
-          SELECT config.state, tables.key AS table, tables.value AS config
-          FROM public.eql_v2_configuration config, jsonb_each(data->'tables') tables
-          WHERE config.data->>'v' = '1'
+          SELECT cfg.state, tables.key AS table, tables.value AS tbl_config
+          FROM public.eql_v2_configuration cfg, jsonb_each(data->'tables') tables
+          WHERE cfg.data->>'v' = '1'
       )
       SELECT
           tables.state,
           tables.table,
           column_config.key,
-          column_config.value->>'cast_as',
+          COALESCE(column_config.value->>'plaintext_type', column_config.value->>'cast_as'),
           column_config.value->'indexes'
-      FROM tables, jsonb_each(tables.config) column_config;
+      FROM tables, jsonb_each(tables.tbl_config) column_config;
 END;
 $$ LANGUAGE plpgsql;

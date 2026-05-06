@@ -10,7 +10,7 @@ use sqlx::PgPool;
 #[sqlx::test]
 async fn lte_operator_cllw_u64_8(pool: PgPool) -> Result<()> {
     // Test: <= operator with ORE CLLW U64 8
-    // Uses ore table from migrations/002_install_ore_data.sql (ids 1-99)
+    // Uses ore table from migrations/002_install_ore_data.sql (ids 1-1000)
 
     let ore_term = get_ore_encrypted(&pool, 42).await?;
 

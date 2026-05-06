@@ -18,7 +18,8 @@
 --! @note FILE IS DISABLED - Not included in build
 --! @see eql_v2.compare_ore_block_u64_8_256_terms
 CREATE FUNCTION eql_v2.ore_block_u64_8_256_eq(a eql_v2.ore_block_u64_8_256, b eql_v2.ore_block_u64_8_256)
-RETURNS boolean AS $$
+RETURNS boolean
+AS $$
   SELECT eql_v2.compare_ore_block_u64_8_256_terms(a, b) = 0
 $$ LANGUAGE SQL;
 
@@ -36,7 +37,8 @@ $$ LANGUAGE SQL;
 --! @note FILE IS DISABLED - Not included in build
 --! @see eql_v2.compare_ore_block_u64_8_256_terms
 CREATE FUNCTION eql_v2.ore_block_u64_8_256_neq(a eql_v2.ore_block_u64_8_256, b eql_v2.ore_block_u64_8_256)
-RETURNS boolean AS $$
+RETURNS boolean
+AS $$
   SELECT eql_v2.compare_ore_block_u64_8_256_terms(a, b) <> 0
 $$ LANGUAGE SQL;
 
@@ -54,7 +56,8 @@ $$ LANGUAGE SQL;
 --! @note FILE IS DISABLED - Not included in build
 --! @see eql_v2.compare_ore_block_u64_8_256_terms
 CREATE FUNCTION eql_v2.ore_block_u64_8_256_lt(a eql_v2.ore_block_u64_8_256, b eql_v2.ore_block_u64_8_256)
-RETURNS boolean AS $$
+RETURNS boolean
+AS $$
   SELECT eql_v2.compare_ore_block_u64_8_256_terms(a, b) = -1
 $$ LANGUAGE SQL;
 
@@ -72,7 +75,8 @@ $$ LANGUAGE SQL;
 --! @note FILE IS DISABLED - Not included in build
 --! @see eql_v2.compare_ore_block_u64_8_256_terms
 CREATE FUNCTION eql_v2.ore_block_u64_8_256_lte(a eql_v2.ore_block_u64_8_256, b eql_v2.ore_block_u64_8_256)
-RETURNS boolean AS $$
+RETURNS boolean
+AS $$
   SELECT eql_v2.compare_ore_block_u64_8_256_terms(a, b) != 1
 $$ LANGUAGE SQL;
 
@@ -90,7 +94,8 @@ $$ LANGUAGE SQL;
 --! @note FILE IS DISABLED - Not included in build
 --! @see eql_v2.compare_ore_block_u64_8_256_terms
 CREATE FUNCTION eql_v2.ore_block_u64_8_256_gt(a eql_v2.ore_block_u64_8_256, b eql_v2.ore_block_u64_8_256)
-RETURNS boolean AS $$
+RETURNS boolean
+AS $$
   SELECT eql_v2.compare_ore_block_u64_8_256_terms(a, b) = 1
 $$ LANGUAGE SQL;
 
@@ -108,7 +113,8 @@ $$ LANGUAGE SQL;
 --! @note FILE IS DISABLED - Not included in build
 --! @see eql_v2.compare_ore_block_u64_8_256_terms
 CREATE FUNCTION eql_v2.ore_block_u64_8_256_gte(a eql_v2.ore_block_u64_8_256, b eql_v2.ore_block_u64_8_256)
-RETURNS boolean AS $$
+RETURNS boolean
+AS $$
   SELECT eql_v2.compare_ore_block_u64_8_256_terms(a, b) != -1
 $$ LANGUAGE SQL;
 

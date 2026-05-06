@@ -67,7 +67,7 @@ async fn equality_operator_finds_matching_record_hmac(pool: PgPool) -> Result<()
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn equality_operator_returns_empty_for_no_match_hmac(pool: PgPool) -> Result<()> {
     // Test: equality returns no results for non-existent record
-    // Note: Using id=4 instead of 91347 to ensure ore data exists (start=40 is within ore range 1-99)
+    // Note: Using id=4 instead of 91347 to ensure ore data exists (start=40 is within ore range 1-1000)
     // The important part is that id=4 doesn't exist in the fixture data (only 1, 2, 3)
 
     let encrypted = create_encrypted_json_with_index(&pool, 4, "hm").await?;

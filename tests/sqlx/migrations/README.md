@@ -10,16 +10,19 @@ These migrations install EQL and test helpers into the test database using a **h
 - In `.gitignore` - never commit this file
 - Ensures tests always use current EQL version
 
-**Migrations 002-004 are static fixtures**:
-- 002: Test helpers (`test_helpers.sql`)
-- 003: ORE test data (`ore.sql`)
-- 004: STE Vec test data (`ste_vec.sql`)
+**Migrations 002-007 are static fixtures**:
+- 002: ORE test data (`ore.sql`)
+- 003: STE Vec test data (`ste_vec.sql`)
+- 004: Test helpers (`test_helpers.sql`)
+- 005: STE Vec vast data
+- 006: ORE text data
+- 007: Benchmark table DDL (`bench` table with 3 encrypted columns — DDL only, no rows)
 
 ## How SQLx Uses These Migrations
 
 When using `#[sqlx::test]`:
 - Each test gets a fresh database
-- All migrations (001-004) run automatically before each test
+- All migrations (001-007) run automatically before each test
 - Migration 001 contains the latest built EQL
 - No need to manually reset database between tests
 
@@ -36,7 +39,7 @@ cp release/cipherstash-encrypt.sql tests/sqlx/migrations/001_install_eql.sql
 ## Adding New Test Fixtures
 
 To add new test data or helpers:
-1. Create a new migration: `tests/sqlx/migrations/005_my_fixture.sql`
+1. Create a new migration using the next unused number (e.g. `tests/sqlx/migrations/008_my_fixture.sql`)
 2. Add your SQL fixtures
 3. Commit it (static migrations are version-controlled)
 4. SQLx will apply it automatically in test runs
