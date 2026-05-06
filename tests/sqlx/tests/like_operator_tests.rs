@@ -160,3 +160,39 @@ async fn ilike_operator_case_insensitive_matches(pool: PgPool) -> Result<()> {
 
     Ok(())
 }
+
+/// Regression test for issue #189: eql_v2.like / eql_v2.ilike must be IMMUTABLE
+/// so the planner inlines them and a functional bloom_filter index can match
+/// `WHERE eql_v2.like(col, val)`. Without this, queries silently seq-scan.
+#[sqlx::test]
+async fn like_and_ilike_are_immutable(pool: PgPool) -> Result<()> {
+    let sql = "SELECT proname, provolatile::text \
+               FROM pg_proc \
+               WHERE pronamespace = 'eql_v2'::regnamespace \
+                 AND proname IN ('like', 'ilike') \
+                 AND pronargs = 2 \
+               ORDER BY proname";
+
+    let rows = sqlx::query(sql)
+        .fetch_all(&pool)
+        .await
+        .context("querying pg_proc for like/ilike volatility")?;
+
+    assert_eq!(
+        rows.len(),
+        2,
+        "expected eql_v2.like and eql_v2.ilike to exist"
+    );
+
+    for row in rows {
+        let name: String = row.try_get("proname")?;
+        let volatility: String = row.try_get("provolatile")?;
+        assert_eq!(
+            volatility, "i",
+            "eql_v2.{} must be IMMUTABLE (provolatile='i') for index inlining; got '{}'",
+            name, volatility,
+        );
+    }
+
+    Ok(())
+}

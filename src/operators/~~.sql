@@ -10,6 +10,9 @@
 --! Uses bloom filter index terms to test substring containment without decryption.
 --! Requires 'match' index configuration on the column.
 --!
+--! Marked IMMUTABLE so the planner inlines the body and a functional index on
+--! `eql_v2.bloom_filter(col)` can match `WHERE eql_v2.like(col, val)`.
+--!
 --! @param a eql_v2_encrypted Haystack (value to search in)
 --! @param b eql_v2_encrypted Needle (pattern to search for)
 --! @return Boolean True if bloom filter of a contains bloom filter of b
@@ -19,9 +22,11 @@
 --! @see eql_v2.add_search_config
 CREATE FUNCTION eql_v2.like(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS boolean
+LANGUAGE SQL
+IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   SELECT eql_v2.bloom_filter(a) @> eql_v2.bloom_filter(b);
-$$ LANGUAGE SQL;
+$$;
 
 --! @brief Case-insensitive pattern matching helper
 --! @internal
@@ -39,9 +44,11 @@ $$ LANGUAGE SQL;
 --! @see eql_v2.add_search_config
 CREATE FUNCTION eql_v2.ilike(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS boolean
+LANGUAGE SQL
+IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   SELECT eql_v2.bloom_filter(a) @> eql_v2.bloom_filter(b);
-$$ LANGUAGE SQL;
+$$;
 
 --! @brief LIKE operator for encrypted values (pattern matching)
 --!
