@@ -12,7 +12,7 @@ EQL ships five search index kinds that encrypt data in ways that preserve specif
 | `match`                            | `bloom_filter` (`bf`)        | Substring / token matching via `LIKE` / `ILIKE`        |
 | `ste_vec`                          | Structured encryption (`sv`) | JSONB containment and JSONB path / field access        |
 
-> **`ore` vs `ope`** — both index kinds support the same ordered-comparison surface. `ore` (Order-Revealing Encryption) is the default. `ope` (CLLW Order-Preserving Encryption) is an alternative for environments that need plain lexicographic byte comparison (e.g. pluggable storage that cannot run a custom comparator). On a column configured for `ope`, `eql_v2.compare()` and the `<` / `<=` / `>` / `>=` operators dispatch to OPE terms automatically.
+> **`ore` vs `ope`** — both index kinds support the same ordered-comparison surface. `ore` (Order-Revealing Encryption) is the default. `ope` (CLWW Order-Preserving Encryption) is an alternative for environments that need plain lexicographic byte comparison (e.g. pluggable storage that cannot run a custom comparator). On a column configured for `ope`, `eql_v2.compare()` and the `<` / `<=` / `>` / `>=` operators dispatch to OPE terms automatically.
 
 
 Every column must also be registered with `eql_v2.add_column(...)` — that alone gives the column storage and decryption, but none of the operators below will produce results until at least one search index is added for the operation you need.

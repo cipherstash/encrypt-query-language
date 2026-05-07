@@ -3,10 +3,10 @@
 -- REQUIRE: src/ope_cllw_u64_65/functions.sql
 
 
---! @brief Compare two encrypted values using CLLW OPE index terms
+--! @brief Compare two encrypted values using CLWW OPE index terms
 --!
 --! Performs a three-way comparison (returns -1/0/1) of encrypted values using
---! their fixed-width CLLW OPE ciphertext index terms. Used internally by range
+--! their fixed-width CLWW OPE ciphertext index terms. Used internally by range
 --! operators (<, <=, >, >=) for order-preserving comparisons without decryption.
 --!
 --! @param a eql_v2_encrypted First encrypted value to compare (NOT NULL — function is STRICT)

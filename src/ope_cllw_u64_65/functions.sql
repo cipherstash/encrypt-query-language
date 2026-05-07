@@ -3,13 +3,13 @@
 -- REQUIRE: src/ope_cllw_u64_65/types.sql
 
 
---! @brief Extract CLLW OPE index term from JSONB payload
+--! @brief Extract CLWW OPE index term from JSONB payload
 --!
---! Extracts the fixed-width CLLW OPE ciphertext from the 'opf' field of an
+--! Extracts the fixed-width CLWW OPE ciphertext from the 'opf' field of an
 --! encrypted data payload. Used internally for range query comparisons.
 --!
 --! @param val jsonb encrypted EQL payload
---! @return eql_v2.ope_cllw_u64_65 CLLW OPE ciphertext
+--! @return eql_v2.ope_cllw_u64_65 CLWW OPE ciphertext
 --! @throws Exception if 'opf' field is missing when ope index is expected
 --!
 --! @see eql_v2.has_ope_cllw_u64_65
@@ -28,13 +28,13 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
---! @brief Extract CLLW OPE index term from encrypted column value
+--! @brief Extract CLWW OPE index term from encrypted column value
 --!
---! Extracts the fixed-width CLLW OPE ciphertext from an encrypted column value
+--! Extracts the fixed-width CLWW OPE ciphertext from an encrypted column value
 --! by accessing its underlying JSONB data field.
 --!
 --! @param val eql_v2_encrypted Encrypted column value
---! @return eql_v2.ope_cllw_u64_65 CLLW OPE ciphertext
+--! @return eql_v2.ope_cllw_u64_65 CLWW OPE ciphertext
 --!
 --! @see eql_v2.ope_cllw_u64_65(jsonb)
 CREATE FUNCTION eql_v2.ope_cllw_u64_65(val eql_v2_encrypted)
@@ -45,10 +45,10 @@ AS $$
 $$ LANGUAGE sql;
 
 
---! @brief Check if JSONB payload contains CLLW OPE index term
+--! @brief Check if JSONB payload contains CLWW OPE index term
 --!
 --! Tests whether the encrypted data payload includes an 'opf' field,
---! indicating a fixed-width CLLW OPE ciphertext is available for range queries.
+--! indicating a fixed-width CLWW OPE ciphertext is available for range queries.
 --!
 --! @param val jsonb encrypted EQL payload
 --! @return Boolean True if 'opf' field is present and non-null
@@ -62,13 +62,13 @@ AS $$
 $$ LANGUAGE sql;
 
 
---! @brief Check if encrypted column value contains CLLW OPE index term
+--! @brief Check if encrypted column value contains CLWW OPE index term
 --!
---! Tests whether an encrypted column value includes a fixed-width CLLW OPE
+--! Tests whether an encrypted column value includes a fixed-width CLWW OPE
 --! ciphertext by checking its underlying JSONB data field.
 --!
 --! @param val eql_v2_encrypted Encrypted column value
---! @return Boolean True if CLLW OPE ciphertext is present
+--! @return Boolean True if CLWW OPE ciphertext is present
 --!
 --! @see eql_v2.has_ope_cllw_u64_65(jsonb)
 CREATE FUNCTION eql_v2.has_ope_cllw_u64_65(val eql_v2_encrypted)

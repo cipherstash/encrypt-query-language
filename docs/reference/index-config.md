@@ -114,7 +114,7 @@ Try to ensure that the string you search for is at least as long as the `tokenLe
 Both `ore` and `ope` enable the same ordered-comparison surface (`<`, `<=`, `=`, `>`, `>=`, `BETWEEN`, `ORDER BY`, `MIN`/`MAX`).
 
 - **`ore`** uses Order-Revealing Encryption (`ore_block_u64_8_256`, payload field `ob`). Ciphertexts compare via a custom per-byte protocol implemented in `eql_v2.compare_ore_block_u64_8_256`. This is the default ordered-search index.
-- **`ope`** uses CLLW Order-Preserving Encryption — `ope_cllw_u64_65` (fixed-width, payload field `opf`) for numeric types and `ope_cllw_var_8` (variable-width, payload field `opv`) for text-shaped values. OPE ciphertexts compare with **standard lexicographic byte ordering**, which makes them usable in environments that can only sort `bytea` natively (e.g. some pluggable storage layers without custom comparators).
+- **`ope`** uses CLWW Order-Preserving Encryption — `ope_cllw_u64_65` (fixed-width, payload field `opf`) for numeric types and `ope_cllw_var_8` (variable-width, payload field `opv`) for text-shaped values. OPE ciphertexts compare with **standard lexicographic byte ordering**, which makes them usable in environments that can only sort `bytea` natively (e.g. some pluggable storage layers without custom comparators).
 
 `eql_v2.compare()` and the `<` / `<=` / `>` / `>=` operators dispatch automatically to whichever ordered terms are present on the encrypted value, so application queries do not change when switching between `ore` and `ope`.
 
