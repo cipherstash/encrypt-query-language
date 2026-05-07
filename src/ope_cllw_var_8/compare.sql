@@ -3,20 +3,20 @@
 -- REQUIRE: src/ope_cllw_var_8/functions.sql
 
 
---! @brief Compare two encrypted values using variable-width CLWW OPE index terms
+--! @brief Compare two encrypted values using variable-width CLLW OPE index terms
 --!
 --! Performs a three-way comparison (returns -1/0/1) of encrypted values using
---! their variable-width CLWW OPE ciphertext index terms. Used internally by
+--! their variable-width CLLW OPE ciphertext index terms. Used internally by
 --! range operators (<, <=, >, >=) for order-preserving comparisons without
 --! decryption.
 --!
---! @param a eql_v2_encrypted First encrypted value to compare
---! @param b eql_v2_encrypted Second encrypted value to compare
+--! @param a eql_v2_encrypted First encrypted value to compare (NOT NULL — function is STRICT)
+--! @param b eql_v2_encrypted Second encrypted value to compare (NOT NULL — function is STRICT)
 --! @return Integer -1 if a < b, 0 if a = b, 1 if a > b
 --!
---! @note NULL values are sorted before non-NULL values
+--! @note Declared STRICT, so NULL inputs short-circuit to NULL before the body runs.
 --! @note OPE ciphertexts compare via standard lexicographic bytea ordering —
---!       bytea compare handles variable-length inputs (shorter prefix is less)
+--!       bytea compare handles variable-length inputs (shorter prefix is less).
 --!
 --! @see eql_v2.ope_cllw_var_8
 --! @see eql_v2.has_ope_cllw_var_8
@@ -28,18 +28,6 @@ AS $$
     a_term eql_v2.ope_cllw_var_8;
     b_term eql_v2.ope_cllw_var_8;
   BEGIN
-    IF a IS NULL AND b IS NULL THEN
-      RETURN 0;
-    END IF;
-
-    IF a IS NULL THEN
-      RETURN -1;
-    END IF;
-
-    IF b IS NULL THEN
-      RETURN 1;
-    END IF;
-
     IF eql_v2.has_ope_cllw_var_8(a) THEN
       a_term := eql_v2.ope_cllw_var_8(a);
     END IF;

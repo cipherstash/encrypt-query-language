@@ -1,10 +1,10 @@
 -- REQUIRE: src/schema.sql
 
---! @brief CLWW OPE index term type for fixed-width numeric range queries
+--! @brief CLLW OPE index term type for fixed-width numeric range queries
 --!
---! Composite type for CLWW (Chenette, Lewi, Weis, Wu) Order-Preserving Encryption
---! over 64-bit integers. Ciphertexts are 65 bytes (8 bytes per plaintext bit plus
---! one reserved carry byte).
+--! Composite type for CLLW (Chenette, Lewi, Weis, Wu) Order-Preserving Encryption
+--! over 64-bit integers. Ciphertexts are 65 bytes (8 bytes per plaintext byte,
+--! plus one reserved carry byte).
 --!
 --! Ciphertexts compare with **standard lexicographic byte ordering** — unlike
 --! the ORE variants there is no custom per-byte compare protocol. The ciphertext
