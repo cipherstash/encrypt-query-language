@@ -91,10 +91,12 @@ async fn lint_reports_eql_v2_encrypted_operators(pool: PgPool) -> Result<()> {
     let rows = fetch_lints(&pool).await?;
     let names: Vec<&str> = rows.iter().map(|r| r.object_name.as_str()).collect();
     assert!(
-        names.iter().any(|n| n.starts_with("operator =(eql_v2_encrypted")
-            || n.starts_with("operator <>(eql_v2_encrypted")
-            || n.starts_with("operator ~~(eql_v2_encrypted")
-            || n.starts_with("operator @>(eql_v2_encrypted")),
+        names
+            .iter()
+            .any(|n| n.starts_with("operator =(eql_v2_encrypted")
+                || n.starts_with("operator <>(eql_v2_encrypted")
+                || n.starts_with("operator ~~(eql_v2_encrypted")
+                || n.starts_with("operator @>(eql_v2_encrypted")),
         "Expected at least one violation on a core eql_v2_encrypted \
          operator; got: {:?}",
         names
