@@ -798,12 +798,19 @@ async fn compare_ope_cllw_u64_65_strict_returns_null_for_null_operand(pool: PgPo
 #[sqlx::test]
 async fn compare_ope_cllw_var_8_strict_returns_null_for_null_operand(pool: PgPool) -> Result<()> {
     let payload = opv_payload(&[0xaa, 0x11]);
-    let sql = format!(
+    let lhs_null = format!(
         "SELECT eql_v2.compare_ope_cllw_var_8(NULL, eql_v2.to_encrypted('{}'::jsonb))",
         payload
     );
-    let result: Option<i32> = sqlx::query_scalar(&sql).fetch_one(&pool).await?;
+    let result: Option<i32> = sqlx::query_scalar(&lhs_null).fetch_one(&pool).await?;
     assert!(result.is_none(), "compare(NULL, x) should return NULL");
+
+    let rhs_null = format!(
+        "SELECT eql_v2.compare_ope_cllw_var_8(eql_v2.to_encrypted('{}'::jsonb), NULL)",
+        payload
+    );
+    let result: Option<i32> = sqlx::query_scalar(&rhs_null).fetch_one(&pool).await?;
+    assert!(result.is_none(), "compare(x, NULL) should return NULL");
     Ok(())
 }
 
