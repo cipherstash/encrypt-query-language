@@ -1004,6 +1004,46 @@ async fn install_opf_null_fixture(tx: &mut sqlx::Transaction<'_, sqlx::Postgres>
     Ok(())
 }
 
+async fn install_opf_between_fixture(tx: &mut sqlx::Transaction<'_, sqlx::Postgres>) -> Result<()> {
+    sqlx::query(
+        "CREATE TABLE encrypted_opf_between(
+            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+            e eql_v2_encrypted
+        )",
+    )
+    .execute(&mut **tx)
+    .await?;
+    for signal in [1u8, 3, 5, 7, 9] {
+        sqlx::query(&format!(
+            "INSERT INTO encrypted_opf_between(e) VALUES (eql_v2.to_encrypted('{}'::jsonb))",
+            opf_payload(signal)
+        ))
+        .execute(&mut **tx)
+        .await?;
+    }
+    Ok(())
+}
+
+async fn install_opv_between_fixture(tx: &mut sqlx::Transaction<'_, sqlx::Postgres>) -> Result<()> {
+    sqlx::query(
+        "CREATE TABLE encrypted_opv_between(
+            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+            e eql_v2_encrypted
+        )",
+    )
+    .execute(&mut **tx)
+    .await?;
+    for first_byte in [0x10u8, 0x30, 0x50, 0x70, 0x90] {
+        sqlx::query(&format!(
+            "INSERT INTO encrypted_opv_between(e) VALUES (eql_v2.to_encrypted('{}'::jsonb))",
+            opv_payload(&[first_byte, 0x00])
+        ))
+        .execute(&mut **tx)
+        .await?;
+    }
+    Ok(())
+}
+
 #[sqlx::test]
 async fn order_by_asc_nulls_first_with_opf(pool: PgPool) -> Result<()> {
     // Fixture: id=1 NULL, id=2 signal=42, id=3 signal=3, id=4 NULL.
@@ -1015,7 +1055,10 @@ async fn order_by_asc_nulls_first_with_opf(pool: PgPool) -> Result<()> {
     let rows = sqlx::query("SELECT id FROM encrypted_opf_nulls ORDER BY e ASC NULLS FIRST, id")
         .fetch_all(&mut *tx)
         .await?;
-    let ids: Vec<i64> = rows.iter().map(|r| r.try_get(0).unwrap()).collect();
+    let ids: Vec<i64> = rows
+        .iter()
+        .map(|r| r.try_get::<i64, _>(0))
+        .collect::<Result<_, _>>()?;
     assert_eq!(
         ids,
         vec![1i64, 4, 3, 2],
@@ -1036,7 +1079,10 @@ async fn order_by_asc_nulls_last_with_opf(pool: PgPool) -> Result<()> {
     let rows = sqlx::query("SELECT id FROM encrypted_opf_nulls ORDER BY e ASC NULLS LAST, id")
         .fetch_all(&mut *tx)
         .await?;
-    let ids: Vec<i64> = rows.iter().map(|r| r.try_get(0).unwrap()).collect();
+    let ids: Vec<i64> = rows
+        .iter()
+        .map(|r| r.try_get::<i64, _>(0))
+        .collect::<Result<_, _>>()?;
     assert_eq!(
         ids,
         vec![3i64, 2, 1, 4],
@@ -1057,7 +1103,10 @@ async fn order_by_desc_nulls_first_with_opf(pool: PgPool) -> Result<()> {
     let rows = sqlx::query("SELECT id FROM encrypted_opf_nulls ORDER BY e DESC NULLS FIRST, id")
         .fetch_all(&mut *tx)
         .await?;
-    let ids: Vec<i64> = rows.iter().map(|r| r.try_get(0).unwrap()).collect();
+    let ids: Vec<i64> = rows
+        .iter()
+        .map(|r| r.try_get::<i64, _>(0))
+        .collect::<Result<_, _>>()?;
     assert_eq!(
         ids,
         vec![1i64, 4, 2, 3],
@@ -1078,7 +1127,10 @@ async fn order_by_desc_nulls_last_with_opf(pool: PgPool) -> Result<()> {
     let rows = sqlx::query("SELECT id FROM encrypted_opf_nulls ORDER BY e DESC NULLS LAST, id")
         .fetch_all(&mut *tx)
         .await?;
-    let ids: Vec<i64> = rows.iter().map(|r| r.try_get(0).unwrap()).collect();
+    let ids: Vec<i64> = rows
+        .iter()
+        .map(|r| r.try_get::<i64, _>(0))
+        .collect::<Result<_, _>>()?;
     assert_eq!(
         ids,
         vec![2i64, 3, 1, 4],
@@ -1105,7 +1157,10 @@ async fn sort_compare_asc_puts_nulls_first_with_opf(pool: PgPool) -> Result<()> 
     )
     .fetch_all(&mut *tx)
     .await?;
-    let ids: Vec<i64> = rows.iter().map(|r| r.try_get(0).unwrap()).collect();
+    let ids: Vec<i64> = rows
+        .iter()
+        .map(|r| r.try_get::<i64, _>(0))
+        .collect::<Result<_, _>>()?;
     let mut null_ids = ids[..2].to_vec();
     null_ids.sort_unstable();
 
@@ -1134,7 +1189,10 @@ async fn sort_compare_desc_puts_nulls_last_with_opf(pool: PgPool) -> Result<()> 
     )
     .fetch_all(&mut *tx)
     .await?;
-    let ids: Vec<i64> = rows.iter().map(|r| r.try_get(0).unwrap()).collect();
+    let ids: Vec<i64> = rows
+        .iter()
+        .map(|r| r.try_get::<i64, _>(0))
+        .collect::<Result<_, _>>()?;
     let mut null_ids = ids[2..].to_vec();
     null_ids.sort_unstable();
 
@@ -1237,22 +1295,7 @@ async fn between_with_opf_inclusive_bounds(pool: PgPool) -> Result<()> {
     // signals [1, 3, 5, 7, 9] → ids [1, 2, 3, 4, 5];
     // BETWEEN signal=3 AND signal=7 should match ids [2, 3, 4].
     let mut tx = pool.begin().await?;
-    sqlx::query(
-        "CREATE TABLE encrypted_opf_between(
-            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-            e eql_v2_encrypted
-        )",
-    )
-    .execute(&mut *tx)
-    .await?;
-    for signal in [1u8, 3, 5, 7, 9] {
-        sqlx::query(&format!(
-            "INSERT INTO encrypted_opf_between(e) VALUES (eql_v2.to_encrypted('{}'::jsonb))",
-            opf_payload(signal)
-        ))
-        .execute(&mut *tx)
-        .await?;
-    }
+    install_opf_between_fixture(&mut tx).await?;
 
     let lo = opf_payload(3);
     let hi = opf_payload(7);
@@ -1276,22 +1319,7 @@ async fn between_with_opf_inclusive_bounds(pool: PgPool) -> Result<()> {
 async fn between_with_opf_equal_bounds(pool: PgPool) -> Result<()> {
     // BETWEEN x AND x should match exactly the row with signal=x (id=3).
     let mut tx = pool.begin().await?;
-    sqlx::query(
-        "CREATE TABLE encrypted_opf_between(
-            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-            e eql_v2_encrypted
-        )",
-    )
-    .execute(&mut *tx)
-    .await?;
-    for signal in [1u8, 3, 5, 7, 9] {
-        sqlx::query(&format!(
-            "INSERT INTO encrypted_opf_between(e) VALUES (eql_v2.to_encrypted('{}'::jsonb))",
-            opf_payload(signal)
-        ))
-        .execute(&mut *tx)
-        .await?;
-    }
+    install_opf_between_fixture(&mut tx).await?;
 
     let bound = opf_payload(5);
     let sql = format!(
@@ -1315,34 +1343,19 @@ async fn between_with_opf_empty_range(pool: PgPool) -> Result<()> {
     // BETWEEN hi AND lo where hi > lo expands to `lo' <= e AND e <= hi'`
     // with lo' > hi' → always false → 0 rows.
     let mut tx = pool.begin().await?;
-    sqlx::query(
-        "CREATE TABLE encrypted_opf_between(
-            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-            e eql_v2_encrypted
-        )",
-    )
-    .execute(&mut *tx)
-    .await?;
-    for signal in [1u8, 3, 5, 7, 9] {
-        sqlx::query(&format!(
-            "INSERT INTO encrypted_opf_between(e) VALUES (eql_v2.to_encrypted('{}'::jsonb))",
-            opf_payload(signal)
-        ))
-        .execute(&mut *tx)
-        .await?;
-    }
+    install_opf_between_fixture(&mut tx).await?;
 
     let lo = opf_payload(7);
     let hi = opf_payload(3);
     let sql = format!(
-        "SELECT count(*)::bigint FROM encrypted_opf_between
+        "SELECT array_agg(id ORDER BY id) FROM encrypted_opf_between
          WHERE e BETWEEN eql_v2.to_encrypted('{}'::jsonb) AND eql_v2.to_encrypted('{}'::jsonb)",
         lo, hi
     );
-    let count: i64 = sqlx::query_scalar(&sql).fetch_one(&mut *tx).await?;
-    assert_eq!(
-        count, 0,
-        "BETWEEN signal=7 AND signal=3 should match 0 rows"
+    let ids: Option<Vec<i64>> = sqlx::query_scalar(&sql).fetch_one(&mut *tx).await?;
+    assert!(
+        ids.is_none(),
+        "BETWEEN signal=7 AND signal=3 should match no rows, got {ids:?}"
     );
 
     tx.rollback().await?;
@@ -1355,31 +1368,19 @@ async fn between_with_opf_null_bound_excludes_all(pool: PgPool) -> Result<()> {
     // WHERE clause treats as not-true → 0 rows. Locks in that the encrypted
     // operators preserve this semantics rather than e.g. coalescing.
     let mut tx = pool.begin().await?;
-    sqlx::query(
-        "CREATE TABLE encrypted_opf_between(
-            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-            e eql_v2_encrypted
-        )",
-    )
-    .execute(&mut *tx)
-    .await?;
-    for signal in [1u8, 3, 5, 7, 9] {
-        sqlx::query(&format!(
-            "INSERT INTO encrypted_opf_between(e) VALUES (eql_v2.to_encrypted('{}'::jsonb))",
-            opf_payload(signal)
-        ))
-        .execute(&mut *tx)
-        .await?;
-    }
+    install_opf_between_fixture(&mut tx).await?;
 
     let hi = opf_payload(7);
     let sql = format!(
-        "SELECT count(*)::bigint FROM encrypted_opf_between
+        "SELECT array_agg(id ORDER BY id) FROM encrypted_opf_between
          WHERE e BETWEEN NULL::eql_v2_encrypted AND eql_v2.to_encrypted('{}'::jsonb)",
         hi
     );
-    let count: i64 = sqlx::query_scalar(&sql).fetch_one(&mut *tx).await?;
-    assert_eq!(count, 0, "BETWEEN NULL AND x should match 0 rows");
+    let ids: Option<Vec<i64>> = sqlx::query_scalar(&sql).fetch_one(&mut *tx).await?;
+    assert!(
+        ids.is_none(),
+        "BETWEEN NULL AND x should match no rows, got {ids:?}"
+    );
 
     tx.rollback().await?;
     Ok(())
@@ -1390,22 +1391,7 @@ async fn between_with_opv_inclusive_bounds(pool: PgPool) -> Result<()> {
     // First-byte sequence [0x10, 0x30, 0x50, 0x70, 0x90] → ids [1, 2, 3, 4, 5];
     // BETWEEN 0x30 AND 0x70 should match ids [2, 3, 4].
     let mut tx = pool.begin().await?;
-    sqlx::query(
-        "CREATE TABLE encrypted_opv_between(
-            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-            e eql_v2_encrypted
-        )",
-    )
-    .execute(&mut *tx)
-    .await?;
-    for first_byte in [0x10u8, 0x30, 0x50, 0x70, 0x90] {
-        sqlx::query(&format!(
-            "INSERT INTO encrypted_opv_between(e) VALUES (eql_v2.to_encrypted('{}'::jsonb))",
-            opv_payload(&[first_byte, 0x00])
-        ))
-        .execute(&mut *tx)
-        .await?;
-    }
+    install_opv_between_fixture(&mut tx).await?;
 
     let lo = opv_payload(&[0x30, 0x00]);
     let hi = opv_payload(&[0x70, 0x00]);
@@ -1428,22 +1414,7 @@ async fn between_with_opv_inclusive_bounds(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn between_with_opv_equal_bounds(pool: PgPool) -> Result<()> {
     let mut tx = pool.begin().await?;
-    sqlx::query(
-        "CREATE TABLE encrypted_opv_between(
-            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-            e eql_v2_encrypted
-        )",
-    )
-    .execute(&mut *tx)
-    .await?;
-    for first_byte in [0x10u8, 0x30, 0x50, 0x70, 0x90] {
-        sqlx::query(&format!(
-            "INSERT INTO encrypted_opv_between(e) VALUES (eql_v2.to_encrypted('{}'::jsonb))",
-            opv_payload(&[first_byte, 0x00])
-        ))
-        .execute(&mut *tx)
-        .await?;
-    }
+    install_opv_between_fixture(&mut tx).await?;
 
     let bound = opv_payload(&[0x50, 0x00]);
     let sql = format!(
@@ -1465,32 +1436,20 @@ async fn between_with_opv_equal_bounds(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn between_with_opv_empty_range(pool: PgPool) -> Result<()> {
     let mut tx = pool.begin().await?;
-    sqlx::query(
-        "CREATE TABLE encrypted_opv_between(
-            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-            e eql_v2_encrypted
-        )",
-    )
-    .execute(&mut *tx)
-    .await?;
-    for first_byte in [0x10u8, 0x30, 0x50, 0x70, 0x90] {
-        sqlx::query(&format!(
-            "INSERT INTO encrypted_opv_between(e) VALUES (eql_v2.to_encrypted('{}'::jsonb))",
-            opv_payload(&[first_byte, 0x00])
-        ))
-        .execute(&mut *tx)
-        .await?;
-    }
+    install_opv_between_fixture(&mut tx).await?;
 
     let lo = opv_payload(&[0x70, 0x00]);
     let hi = opv_payload(&[0x30, 0x00]);
     let sql = format!(
-        "SELECT count(*)::bigint FROM encrypted_opv_between
+        "SELECT array_agg(id ORDER BY id) FROM encrypted_opv_between
          WHERE e BETWEEN eql_v2.to_encrypted('{}'::jsonb) AND eql_v2.to_encrypted('{}'::jsonb)",
         lo, hi
     );
-    let count: i64 = sqlx::query_scalar(&sql).fetch_one(&mut *tx).await?;
-    assert_eq!(count, 0, "BETWEEN 0x70 AND 0x30 should match 0 rows");
+    let ids: Option<Vec<i64>> = sqlx::query_scalar(&sql).fetch_one(&mut *tx).await?;
+    assert!(
+        ids.is_none(),
+        "BETWEEN 0x70 AND 0x30 should match no rows, got {ids:?}"
+    );
 
     tx.rollback().await?;
     Ok(())
@@ -1499,31 +1458,19 @@ async fn between_with_opv_empty_range(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn between_with_opv_null_bound_excludes_all(pool: PgPool) -> Result<()> {
     let mut tx = pool.begin().await?;
-    sqlx::query(
-        "CREATE TABLE encrypted_opv_between(
-            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-            e eql_v2_encrypted
-        )",
-    )
-    .execute(&mut *tx)
-    .await?;
-    for first_byte in [0x10u8, 0x30, 0x50, 0x70, 0x90] {
-        sqlx::query(&format!(
-            "INSERT INTO encrypted_opv_between(e) VALUES (eql_v2.to_encrypted('{}'::jsonb))",
-            opv_payload(&[first_byte, 0x00])
-        ))
-        .execute(&mut *tx)
-        .await?;
-    }
+    install_opv_between_fixture(&mut tx).await?;
 
     let hi = opv_payload(&[0x70, 0x00]);
     let sql = format!(
-        "SELECT count(*)::bigint FROM encrypted_opv_between
+        "SELECT array_agg(id ORDER BY id) FROM encrypted_opv_between
          WHERE e BETWEEN NULL::eql_v2_encrypted AND eql_v2.to_encrypted('{}'::jsonb)",
         hi
     );
-    let count: i64 = sqlx::query_scalar(&sql).fetch_one(&mut *tx).await?;
-    assert_eq!(count, 0, "BETWEEN NULL AND x should match 0 rows");
+    let ids: Option<Vec<i64>> = sqlx::query_scalar(&sql).fetch_one(&mut *tx).await?;
+    assert!(
+        ids.is_none(),
+        "BETWEEN NULL AND x should match no rows, got {ids:?}"
+    );
 
     tx.rollback().await?;
     Ok(())
