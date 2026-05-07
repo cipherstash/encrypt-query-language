@@ -142,13 +142,17 @@ async fn encrypted_lte_operator_uses_opf(pool: PgPool) -> Result<()> {
         "SELECT eql_v2.to_encrypted('{}'::jsonb) <= eql_v2.to_encrypted('{}'::jsonb)",
         a, b
     );
-    QueryAssertion::new(&pool, &lt).returns_bool_value(true).await;
+    QueryAssertion::new(&pool, &lt)
+        .returns_bool_value(true)
+        .await;
 
     let eq = format!(
         "SELECT eql_v2.to_encrypted('{}'::jsonb) <= eql_v2.to_encrypted('{}'::jsonb)",
         a, a
     );
-    QueryAssertion::new(&pool, &eq).returns_bool_value(true).await;
+    QueryAssertion::new(&pool, &eq)
+        .returns_bool_value(true)
+        .await;
     Ok(())
 }
 
@@ -161,13 +165,17 @@ async fn encrypted_gte_operator_uses_opf(pool: PgPool) -> Result<()> {
         "SELECT eql_v2.to_encrypted('{}'::jsonb) >= eql_v2.to_encrypted('{}'::jsonb)",
         b, a
     );
-    QueryAssertion::new(&pool, &gt).returns_bool_value(true).await;
+    QueryAssertion::new(&pool, &gt)
+        .returns_bool_value(true)
+        .await;
 
     let eq = format!(
         "SELECT eql_v2.to_encrypted('{}'::jsonb) >= eql_v2.to_encrypted('{}'::jsonb)",
         b, b
     );
-    QueryAssertion::new(&pool, &eq).returns_bool_value(true).await;
+    QueryAssertion::new(&pool, &eq)
+        .returns_bool_value(true)
+        .await;
     Ok(())
 }
 
@@ -180,13 +188,17 @@ async fn encrypted_eq_operator_uses_opf(pool: PgPool) -> Result<()> {
         "SELECT eql_v2.to_encrypted('{}'::jsonb) = eql_v2.to_encrypted('{}'::jsonb)",
         a, a
     );
-    QueryAssertion::new(&pool, &eq).returns_bool_value(true).await;
+    QueryAssertion::new(&pool, &eq)
+        .returns_bool_value(true)
+        .await;
 
     let neq = format!(
         "SELECT eql_v2.to_encrypted('{}'::jsonb) = eql_v2.to_encrypted('{}'::jsonb)",
         a, b
     );
-    QueryAssertion::new(&pool, &neq).returns_bool_value(false).await;
+    QueryAssertion::new(&pool, &neq)
+        .returns_bool_value(false)
+        .await;
     Ok(())
 }
 
@@ -199,13 +211,17 @@ async fn encrypted_neq_operator_uses_opf(pool: PgPool) -> Result<()> {
         "SELECT eql_v2.to_encrypted('{}'::jsonb) <> eql_v2.to_encrypted('{}'::jsonb)",
         a, b
     );
-    QueryAssertion::new(&pool, &neq).returns_bool_value(true).await;
+    QueryAssertion::new(&pool, &neq)
+        .returns_bool_value(true)
+        .await;
 
     let eq = format!(
         "SELECT eql_v2.to_encrypted('{}'::jsonb) <> eql_v2.to_encrypted('{}'::jsonb)",
         a, a
     );
-    QueryAssertion::new(&pool, &eq).returns_bool_value(false).await;
+    QueryAssertion::new(&pool, &eq)
+        .returns_bool_value(false)
+        .await;
     Ok(())
 }
 
@@ -248,13 +264,17 @@ async fn encrypted_lte_operator_uses_opv(pool: PgPool) -> Result<()> {
         "SELECT eql_v2.to_encrypted('{}'::jsonb) <= eql_v2.to_encrypted('{}'::jsonb)",
         a, b
     );
-    QueryAssertion::new(&pool, &lt).returns_bool_value(true).await;
+    QueryAssertion::new(&pool, &lt)
+        .returns_bool_value(true)
+        .await;
 
     let eq = format!(
         "SELECT eql_v2.to_encrypted('{}'::jsonb) <= eql_v2.to_encrypted('{}'::jsonb)",
         a, a
     );
-    QueryAssertion::new(&pool, &eq).returns_bool_value(true).await;
+    QueryAssertion::new(&pool, &eq)
+        .returns_bool_value(true)
+        .await;
     Ok(())
 }
 
@@ -267,13 +287,17 @@ async fn encrypted_gte_operator_uses_opv(pool: PgPool) -> Result<()> {
         "SELECT eql_v2.to_encrypted('{}'::jsonb) >= eql_v2.to_encrypted('{}'::jsonb)",
         b, a
     );
-    QueryAssertion::new(&pool, &gt).returns_bool_value(true).await;
+    QueryAssertion::new(&pool, &gt)
+        .returns_bool_value(true)
+        .await;
 
     let eq = format!(
         "SELECT eql_v2.to_encrypted('{}'::jsonb) >= eql_v2.to_encrypted('{}'::jsonb)",
         b, b
     );
-    QueryAssertion::new(&pool, &eq).returns_bool_value(true).await;
+    QueryAssertion::new(&pool, &eq)
+        .returns_bool_value(true)
+        .await;
     Ok(())
 }
 
@@ -286,13 +310,17 @@ async fn encrypted_eq_operator_uses_opv(pool: PgPool) -> Result<()> {
         "SELECT eql_v2.to_encrypted('{}'::jsonb) = eql_v2.to_encrypted('{}'::jsonb)",
         a, a
     );
-    QueryAssertion::new(&pool, &eq).returns_bool_value(true).await;
+    QueryAssertion::new(&pool, &eq)
+        .returns_bool_value(true)
+        .await;
 
     let neq = format!(
         "SELECT eql_v2.to_encrypted('{}'::jsonb) = eql_v2.to_encrypted('{}'::jsonb)",
         a, b
     );
-    QueryAssertion::new(&pool, &neq).returns_bool_value(false).await;
+    QueryAssertion::new(&pool, &neq)
+        .returns_bool_value(false)
+        .await;
     Ok(())
 }
 
@@ -305,13 +333,17 @@ async fn encrypted_neq_operator_uses_opv(pool: PgPool) -> Result<()> {
         "SELECT eql_v2.to_encrypted('{}'::jsonb) <> eql_v2.to_encrypted('{}'::jsonb)",
         a, b
     );
-    QueryAssertion::new(&pool, &neq).returns_bool_value(true).await;
+    QueryAssertion::new(&pool, &neq)
+        .returns_bool_value(true)
+        .await;
 
     let eq = format!(
         "SELECT eql_v2.to_encrypted('{}'::jsonb) <> eql_v2.to_encrypted('{}'::jsonb)",
         a, a
     );
-    QueryAssertion::new(&pool, &eq).returns_bool_value(false).await;
+    QueryAssertion::new(&pool, &eq)
+        .returns_bool_value(false)
+        .await;
     Ok(())
 }
 
@@ -704,7 +736,8 @@ async fn config_check_rejects_unknown_index(pool: PgPool) -> Result<()> {
 async fn has_opf_false_when_field_is_json_null(pool: PgPool) -> Result<()> {
     // `{"opf": null}` must not trigger OPE detection — same contract as
     // `{"ob": null}` for ORE (see compare_hmac_with_null_ore_index).
-    let sql = r#"SELECT eql_v2.has_ope_cllw_u64_65('{"v":2,"i":{"t":"t","c":"c"},"opf":null}'::jsonb)"#;
+    let sql =
+        r#"SELECT eql_v2.has_ope_cllw_u64_65('{"v":2,"i":{"t":"t","c":"c"},"opf":null}'::jsonb)"#;
     QueryAssertion::new(&pool, sql)
         .returns_bool_value(false)
         .await;
@@ -713,7 +746,8 @@ async fn has_opf_false_when_field_is_json_null(pool: PgPool) -> Result<()> {
 
 #[sqlx::test]
 async fn has_opv_false_when_field_is_json_null(pool: PgPool) -> Result<()> {
-    let sql = r#"SELECT eql_v2.has_ope_cllw_var_8('{"v":2,"i":{"t":"t","c":"c"},"opv":null}'::jsonb)"#;
+    let sql =
+        r#"SELECT eql_v2.has_ope_cllw_var_8('{"v":2,"i":{"t":"t","c":"c"},"opv":null}'::jsonb)"#;
     QueryAssertion::new(&pool, sql)
         .returns_bool_value(false)
         .await;
@@ -727,12 +761,9 @@ async fn compare_dispatches_through_null_opf_to_hmac(pool: PgPool) -> Result<()>
     // Without this, two records with `{"opf": null}` would compare equal via
     // the OPE branch (both extract to NULL bytes → equal), masking the HMAC
     // ordering.
-    let a =
-        "('{\"opf\": null}'::jsonb || create_encrypted_json(1, 'hm')::jsonb)::eql_v2_encrypted";
-    let b =
-        "('{\"opf\": null}'::jsonb || create_encrypted_json(2, 'hm')::jsonb)::eql_v2_encrypted";
-    let c =
-        "('{\"opf\": null}'::jsonb || create_encrypted_json(3, 'hm')::jsonb)::eql_v2_encrypted";
+    let a = "('{\"opf\": null}'::jsonb || create_encrypted_json(1, 'hm')::jsonb)::eql_v2_encrypted";
+    let b = "('{\"opf\": null}'::jsonb || create_encrypted_json(2, 'hm')::jsonb)::eql_v2_encrypted";
+    let c = "('{\"opf\": null}'::jsonb || create_encrypted_json(3, 'hm')::jsonb)::eql_v2_encrypted";
 
     for (l, r, expected, label) in [
         (a, a, 0, "compare(a, a)"),
@@ -756,10 +787,8 @@ async fn compare_dispatches_through_null_opf_to_hmac(pool: PgPool) -> Result<()>
 async fn compare_dispatches_through_null_opv_to_hmac(pool: PgPool) -> Result<()> {
     // Same as the opf variant but for the variable-width term. Establishes
     // that {"opv": null} also short-circuits the OPE branch.
-    let a =
-        "('{\"opv\": null}'::jsonb || create_encrypted_json(1, 'hm')::jsonb)::eql_v2_encrypted";
-    let b =
-        "('{\"opv\": null}'::jsonb || create_encrypted_json(2, 'hm')::jsonb)::eql_v2_encrypted";
+    let a = "('{\"opv\": null}'::jsonb || create_encrypted_json(1, 'hm')::jsonb)::eql_v2_encrypted";
+    let b = "('{\"opv\": null}'::jsonb || create_encrypted_json(2, 'hm')::jsonb)::eql_v2_encrypted";
 
     let lt: i32 = sqlx::query_scalar(&format!("SELECT eql_v2.compare({}, {})", a, b))
         .fetch_one(&pool)
@@ -945,7 +974,10 @@ async fn sort_compare_asc_puts_nulls_first_with_opf(pool: PgPool) -> Result<()> 
 
     assert_eq!(rows.len(), 4, "should return all 4 rows");
     assert_eq!(null_ids, vec![1i64, 4], "NULL rows should sort first");
-    assert_eq!(ids[2], 3, "smallest non-NULL (signal=3) should follow NULLs");
+    assert_eq!(
+        ids[2], 3,
+        "smallest non-NULL (signal=3) should follow NULLs"
+    );
     assert_eq!(ids[3], 2, "largest non-NULL (signal=42) should sort last");
     tx.rollback().await?;
     Ok(())
@@ -989,10 +1021,9 @@ async fn eql_v2_min_with_opf_finds_minimum(pool: PgPool) -> Result<()> {
     install_opf_null_fixture(&mut tx).await?;
 
     // Smallest non-NULL signal=3 lives at id=3.
-    let actual: String =
-        sqlx::query_scalar("SELECT eql_v2.min(e)::text FROM encrypted_opf_nulls")
-            .fetch_one(&mut *tx)
-            .await?;
+    let actual: String = sqlx::query_scalar("SELECT eql_v2.min(e)::text FROM encrypted_opf_nulls")
+        .fetch_one(&mut *tx)
+        .await?;
     let expected: String =
         sqlx::query_scalar("SELECT e::text FROM encrypted_opf_nulls WHERE id = 3")
             .fetch_one(&mut *tx)
@@ -1012,10 +1043,9 @@ async fn eql_v2_max_with_opf_finds_maximum(pool: PgPool) -> Result<()> {
     install_opf_null_fixture(&mut tx).await?;
 
     // Largest non-NULL signal=42 lives at id=2.
-    let actual: String =
-        sqlx::query_scalar("SELECT eql_v2.max(e)::text FROM encrypted_opf_nulls")
-            .fetch_one(&mut *tx)
-            .await?;
+    let actual: String = sqlx::query_scalar("SELECT eql_v2.max(e)::text FROM encrypted_opf_nulls")
+        .fetch_one(&mut *tx)
+        .await?;
     let expected: String =
         sqlx::query_scalar("SELECT e::text FROM encrypted_opf_nulls WHERE id = 2")
             .fetch_one(&mut *tx)
@@ -1037,11 +1067,10 @@ async fn eql_v2_min_with_opf_null_only_returns_null(pool: PgPool) -> Result<()> 
     let mut tx = pool.begin().await?;
     install_opf_null_fixture(&mut tx).await?;
 
-    let result: Option<String> = sqlx::query_scalar(
-        "SELECT eql_v2.min(e)::text FROM encrypted_opf_nulls WHERE e IS NULL",
-    )
-    .fetch_one(&mut *tx)
-    .await?;
+    let result: Option<String> =
+        sqlx::query_scalar("SELECT eql_v2.min(e)::text FROM encrypted_opf_nulls WHERE e IS NULL")
+            .fetch_one(&mut *tx)
+            .await?;
     assert!(result.is_none(), "eql_v2.min over NULL-only should be NULL");
     tx.rollback().await?;
     Ok(())
@@ -1052,11 +1081,10 @@ async fn eql_v2_max_with_opf_null_only_returns_null(pool: PgPool) -> Result<()> 
     let mut tx = pool.begin().await?;
     install_opf_null_fixture(&mut tx).await?;
 
-    let result: Option<String> = sqlx::query_scalar(
-        "SELECT eql_v2.max(e)::text FROM encrypted_opf_nulls WHERE e IS NULL",
-    )
-    .fetch_one(&mut *tx)
-    .await?;
+    let result: Option<String> =
+        sqlx::query_scalar("SELECT eql_v2.max(e)::text FROM encrypted_opf_nulls WHERE e IS NULL")
+            .fetch_one(&mut *tx)
+            .await?;
     assert!(result.is_none(), "eql_v2.max over NULL-only should be NULL");
     tx.rollback().await?;
     Ok(())
@@ -1130,7 +1158,10 @@ async fn between_with_opv_inclusive_bounds(pool: PgPool) -> Result<()> {
         lo, hi
     );
     let count: i64 = sqlx::query_scalar(&sql).fetch_one(&mut *tx).await?;
-    assert_eq!(count, 3, "BETWEEN 0x30 AND 0x70 should match 0x30, 0x50, 0x70");
+    assert_eq!(
+        count, 3,
+        "BETWEEN 0x30 AND 0x70 should match 0x30, 0x50, 0x70"
+    );
     tx.rollback().await?;
     Ok(())
 }
