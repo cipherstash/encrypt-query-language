@@ -55,20 +55,12 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.order_by_ope(a eql_v2_encrypted)
   RETURNS bytea
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
 AS $$
-  BEGIN
-    IF eql_v2.has_ope_cllw_u64_65(a) THEN
-      RETURN (eql_v2.ope_cllw_u64_65(a)).bytes;
-    END IF;
-
-    IF eql_v2.has_ope_cllw_var_8(a) THEN
-      RETURN (eql_v2.ope_cllw_var_8(a)).bytes;
-    END IF;
-
-    RETURN NULL;
+  SELECT CASE
+    WHEN eql_v2.has_ope_cllw_u64_65(a) THEN (eql_v2.ope_cllw_u64_65(a)).bytes
+    WHEN eql_v2.has_ope_cllw_var_8(a)  THEN (eql_v2.ope_cllw_var_8(a)).bytes
   END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE sql;
 
 
 
