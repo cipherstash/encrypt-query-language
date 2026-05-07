@@ -14,7 +14,13 @@
 --! @param b eql_v2_encrypted Second encrypted value to compare (NOT NULL — function is STRICT)
 --! @return Integer -1 if a < b, 0 if a = b, 1 if a > b
 --!
---! @note Declared STRICT, so NULL inputs short-circuit to NULL before the body runs.
+--! @note Declared STRICT, so NULL function inputs short-circuit to NULL before
+--!       the body runs. The internal `a_term IS NULL` / `b_term IS NULL`
+--!       branches are NOT redundant with STRICT — they handle the case where
+--!       a non-NULL `eql_v2_encrypted` payload simply lacks the `opv` field
+--!       (i.e. `has_ope_cllw_var_8` returned false). A NULL term sorts before
+--!       a present term, mirroring the defensive pattern used in
+--!       compare_ore_block_u64_8_256.
 --! @note OPE ciphertexts compare via standard lexicographic bytea ordering —
 --!       bytea compare handles variable-length inputs (shorter prefix is less).
 --!
