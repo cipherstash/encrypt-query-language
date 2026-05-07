@@ -12,7 +12,7 @@ EQL ships five search index kinds that encrypt data in ways that preserve specif
 | `match`                            | `bloom_filter` (`bf`)        | Substring / token matching via `LIKE` / `ILIKE`        |
 | `ste_vec`                          | Structured encryption (`sv`) | JSONB containment and JSONB path / field access        |
 
-> **`ore` vs `ope`** — both index kinds support the same ordered-comparison surface. `ore` (Order-Revealing Encryption) is the default. `ope` (CLWW Order-Preserving Encryption) is an alternative for environments that need plain lexicographic byte comparison (e.g. pluggable storage that cannot run a custom comparator). On a column configured for `ope`, `eql_v2.compare()` and the `<` / `<=` / `>` / `>=` operators dispatch to OPE terms automatically.
+> **`ore` vs `ope`** — both index kinds support the same ordered-comparison surface. `ore` (Order-Revealing Encryption) is the default. `ope` (CLLW Order-Preserving Encryption) is an alternative for environments that need plain lexicographic byte comparison (e.g. pluggable storage that cannot run a custom comparator). On a column configured for `ope`, `eql_v2.compare()` and the `<` / `<=` / `>` / `>=` operators dispatch to OPE terms automatically.
 
 
 Every column must also be registered with `eql_v2.add_column(...)` — that alone gives the column storage and decryption, but none of the operators below will produce results until at least one search index is added for the operation you need.
@@ -139,8 +139,8 @@ When the `ste_vec` index is configured, CipherStash Proxy rewrites these standar
 | `jsonb_array_elements(arr)`              | `eql_v2.jsonb_array_elements(arr)`              | Path must resolve to a JSON array node                                        | Set-returning; yields `eql_v2_encrypted`.                               |
 | `jsonb_array_elements_text(arr)`         | `eql_v2.jsonb_array_elements_text(arr)`         | Path must resolve to a JSON array node                                        | Set-returning; yields ciphertext as `text`.                             |
 | `COUNT(col)`                             | plain `count(*)`                                | —                                                                             | No encrypted term required.                                             |
-| `COUNT(DISTINCT col)`                    | deterministic dedup                             | `unique`, `ore`, **or** `ope` on the extracted node                            | For a JSON leaf, that means Object / Array / Bool / Null (dedup via `b3`) or String / Number (dedup via `ocv`/`ocf`). |
-| `MIN(col)` / `MAX(col)`                  | `eql_v2` ORE/OPE aggregates                     | `ore`, `ope`, **or** ste_vec-extracted String / Number node                    | Requires a node that emits `ocv` / `ocf` (or a sibling `ore` / `ope` index). |
+| `COUNT(DISTINCT col)`                    | deterministic dedup                             | An extracted node that emits `b3`, `ocv`, or `ocf` (or a `unique` / `ore` index on the outer column) | A ste_vec-extracted leaf dedups via `b3` (Object / Array / Bool / Null) or `ocv` / `ocf` (String / Number). `ope` is never emitted by ste_vec extraction; it only applies to the outer column. |
+| `MIN(col)` / `MAX(col)`                  | `eql_v2` ORE/OPE aggregates                     | A ste_vec-extracted String / Number node (`ocv` / `ocf`), **or** a sibling `ore` / `ope` index on the outer column | ste_vec extraction can only produce `ocv` / `ocf` ordering terms. Whole-column ordering uses the outer-column `ore` or `ope` index. |
 
 Additionally, `eql_v2.jsonb_array`, `eql_v2.jsonb_contains`, and `eql_v2.jsonb_contained_by` are EQL helpers (not automatic rewrites) used when building **GIN-indexed** containment queries. See [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment) for the full setup.
 

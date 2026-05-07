@@ -36,7 +36,7 @@ $$ LANGUAGE plpgsql;
 
 --! @brief Extract OPE ciphertext bytes for ordering encrypted values
 --!
---! Returns the raw CLWW Order-Preserving Encryption ciphertext as `bytea` so
+--! Returns the raw CLLW Order-Preserving Encryption ciphertext as `bytea` so
 --! it can be used as an order key. OPE ciphertexts compare with standard
 --! lexicographic byte ordering, so the returned bytea can be ordered directly
 --! with `<`, `=`, `>` (no custom protocol required).
@@ -55,20 +55,12 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.order_by_ope(a eql_v2_encrypted)
   RETURNS bytea
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
 AS $$
-  BEGIN
-    IF eql_v2.has_ope_cllw_u64_65(a) THEN
-      RETURN (eql_v2.ope_cllw_u64_65(a)).bytes;
-    END IF;
-
-    IF eql_v2.has_ope_cllw_var_8(a) THEN
-      RETURN (eql_v2.ope_cllw_var_8(a)).bytes;
-    END IF;
-
-    RETURN NULL;
+  SELECT CASE
+    WHEN eql_v2.has_ope_cllw_u64_65(a) THEN (eql_v2.ope_cllw_u64_65(a)).bytes
+    WHEN eql_v2.has_ope_cllw_var_8(a)  THEN (eql_v2.ope_cllw_var_8(a)).bytes
   END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE sql;
 
 
 
