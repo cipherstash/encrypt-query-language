@@ -71,12 +71,8 @@ jobs:
           mise run --output prefix test --postgres ${POSTGRES_VERSION}
 
   splinter:
-    name: "Supabase splinter (advisory)"
+    name: "Supabase splinter"
     runs-on: ubuntu-latest-m
-    # Advisory check — currently ~163 known findings (mostly function_search_path_mutable
-    # on LANGUAGE SQL helpers retained for inlinability). Flip continue-on-error to false
-    # once EQL is splinter-clean.
-    continue-on-error: true
 
     env:
       POSTGRES_VERSION: "17"
