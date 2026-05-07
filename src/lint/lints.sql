@@ -12,6 +12,12 @@
 --!   * Not `SECURITY DEFINER`
 --!   * Single-statement SELECT body
 --!
+--! @note The single-statement SELECT body condition is **not yet checked** by
+--! this lint. A `LANGUAGE sql` function with a multi-statement body, a CTE,
+--! or any pre-SELECT statement will pass all four implemented checks while
+--! remaining non-inlinable. Implementing the check requires walking `prosrc`
+--! (or `pg_get_functiondef`); tracked as a follow-up to #194.
+--!
 --! Operators on encrypted types (`eql_v2_encrypted`, `eql_v2.bloom_filter`,
 --! `eql_v2.ore_*`, etc.) whose implementation functions fail any of these
 --! rules silently fall back to seq scan when the documented functional
