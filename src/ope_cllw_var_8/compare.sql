@@ -10,13 +10,19 @@
 --! range operators (<, <=, >, >=) for order-preserving comparisons without
 --! decryption.
 --!
---! @param a eql_v2_encrypted First encrypted value to compare
---! @param b eql_v2_encrypted Second encrypted value to compare
+--! @param a eql_v2_encrypted First encrypted value to compare (NOT NULL — function is STRICT)
+--! @param b eql_v2_encrypted Second encrypted value to compare (NOT NULL — function is STRICT)
 --! @return Integer -1 if a < b, 0 if a = b, 1 if a > b
 --!
---! @note NULL values are sorted before non-NULL values
+--! @note Declared STRICT, so NULL function inputs short-circuit to NULL before
+--!       the body runs. The internal `a_term IS NULL` / `b_term IS NULL`
+--!       branches are NOT redundant with STRICT — they handle the case where
+--!       a non-NULL `eql_v2_encrypted` payload simply lacks the `opv` field
+--!       (i.e. `has_ope_cllw_var_8` returned false). A NULL term sorts before
+--!       a present term, mirroring the defensive pattern used in
+--!       compare_ore_block_u64_8_256.
 --! @note OPE ciphertexts compare via standard lexicographic bytea ordering —
---!       bytea compare handles variable-length inputs (shorter prefix is less)
+--!       bytea compare handles variable-length inputs (shorter prefix is less).
 --!
 --! @see eql_v2.ope_cllw_var_8
 --! @see eql_v2.has_ope_cllw_var_8
@@ -28,18 +34,6 @@ AS $$
     a_term eql_v2.ope_cllw_var_8;
     b_term eql_v2.ope_cllw_var_8;
   BEGIN
-    IF a IS NULL AND b IS NULL THEN
-      RETURN 0;
-    END IF;
-
-    IF a IS NULL THEN
-      RETURN -1;
-    END IF;
-
-    IF b IS NULL THEN
-      RETURN 1;
-    END IF;
-
     IF eql_v2.has_ope_cllw_var_8(a) THEN
       a_term := eql_v2.ope_cllw_var_8(a);
     END IF;
