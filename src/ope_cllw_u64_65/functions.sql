@@ -3,13 +3,13 @@
 -- REQUIRE: src/ope_cllw_u64_65/types.sql
 
 
---! @brief Extract CLWW OPE index term from JSONB payload
+--! @brief Extract CLLW OPE index term from JSONB payload
 --!
---! Extracts the fixed-width CLWW OPE ciphertext from the 'opf' field of an
+--! Extracts the fixed-width CLLW OPE ciphertext from the 'opf' field of an
 --! encrypted data payload. Used internally for range query comparisons.
 --!
 --! @param jsonb containing encrypted EQL payload
---! @return eql_v2.ope_cllw_u64_65 CLWW OPE ciphertext
+--! @return eql_v2.ope_cllw_u64_65 CLLW OPE ciphertext
 --! @throws Exception if 'opf' field is missing when ope index is expected
 --!
 --! @see eql_v2.has_ope_cllw_u64_65
@@ -19,10 +19,6 @@ CREATE FUNCTION eql_v2.ope_cllw_u64_65(val jsonb)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   BEGIN
-    IF val IS NULL THEN
-      RETURN NULL;
-    END IF;
-
     IF NOT (eql_v2.has_ope_cllw_u64_65(val)) THEN
         RAISE 'Expected a ope_cllw_u64_65 index (opf) value in json: %', val;
     END IF;
@@ -32,29 +28,27 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
---! @brief Extract CLWW OPE index term from encrypted column value
+--! @brief Extract CLLW OPE index term from encrypted column value
 --!
---! Extracts the fixed-width CLWW OPE ciphertext from an encrypted column value
+--! Extracts the fixed-width CLLW OPE ciphertext from an encrypted column value
 --! by accessing its underlying JSONB data field.
 --!
 --! @param eql_v2_encrypted Encrypted column value
---! @return eql_v2.ope_cllw_u64_65 CLWW OPE ciphertext
+--! @return eql_v2.ope_cllw_u64_65 CLLW OPE ciphertext
 --!
 --! @see eql_v2.ope_cllw_u64_65(jsonb)
 CREATE FUNCTION eql_v2.ope_cllw_u64_65(val eql_v2_encrypted)
   RETURNS eql_v2.ope_cllw_u64_65
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  BEGIN
-    RETURN (SELECT eql_v2.ope_cllw_u64_65(val.data));
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.ope_cllw_u64_65(val.data);
+$$ LANGUAGE sql;
 
 
---! @brief Check if JSONB payload contains CLWW OPE index term
+--! @brief Check if JSONB payload contains CLLW OPE index term
 --!
 --! Tests whether the encrypted data payload includes an 'opf' field,
---! indicating a fixed-width CLWW OPE ciphertext is available for range queries.
+--! indicating a fixed-width CLLW OPE ciphertext is available for range queries.
 --!
 --! @param jsonb containing encrypted EQL payload
 --! @return Boolean True if 'opf' field is present and non-null
@@ -64,26 +58,22 @@ CREATE FUNCTION eql_v2.has_ope_cllw_u64_65(val jsonb)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  BEGIN
-    RETURN val ->> 'opf' IS NOT NULL;
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT val ->> 'opf' IS NOT NULL;
+$$ LANGUAGE sql;
 
 
---! @brief Check if encrypted column value contains CLWW OPE index term
+--! @brief Check if encrypted column value contains CLLW OPE index term
 --!
---! Tests whether an encrypted column value includes a fixed-width CLWW OPE
+--! Tests whether an encrypted column value includes a fixed-width CLLW OPE
 --! ciphertext by checking its underlying JSONB data field.
 --!
 --! @param eql_v2_encrypted Encrypted column value
---! @return Boolean True if CLWW OPE ciphertext is present
+--! @return Boolean True if CLLW OPE ciphertext is present
 --!
 --! @see eql_v2.has_ope_cllw_u64_65(jsonb)
 CREATE FUNCTION eql_v2.has_ope_cllw_u64_65(val eql_v2_encrypted)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  BEGIN
-    RETURN eql_v2.has_ope_cllw_u64_65(val.data);
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.has_ope_cllw_u64_65(val.data);
+$$ LANGUAGE sql;

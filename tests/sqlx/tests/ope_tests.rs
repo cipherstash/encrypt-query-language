@@ -1,4 +1,4 @@
-//! OPE (CLWW Order-Preserving Encryption) tests
+//! OPE (CLLW Order-Preserving Encryption) tests
 //!
 //! Exercises the `ope_cllw_u64_65` and `ope_cllw_var_8` support wired into
 //! `eql_v2_encrypted`. Unlike the ORE CLLW variants, OPE ciphertexts compare
@@ -130,6 +130,224 @@ async fn encrypted_gt_operator_uses_opf(pool: PgPool) -> Result<()> {
     QueryAssertion::new(&pool, &sql)
         .returns_bool_value(true)
         .await;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn encrypted_lte_operator_uses_opf(pool: PgPool) -> Result<()> {
+    let a = opf_payload(1);
+    let b = opf_payload(2);
+
+    let lt = format!(
+        "SELECT eql_v2.to_encrypted('{}'::jsonb) <= eql_v2.to_encrypted('{}'::jsonb)",
+        a, b
+    );
+    QueryAssertion::new(&pool, &lt).returns_bool_value(true).await;
+
+    let eq = format!(
+        "SELECT eql_v2.to_encrypted('{}'::jsonb) <= eql_v2.to_encrypted('{}'::jsonb)",
+        a, a
+    );
+    QueryAssertion::new(&pool, &eq).returns_bool_value(true).await;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn encrypted_gte_operator_uses_opf(pool: PgPool) -> Result<()> {
+    let a = opf_payload(1);
+    let b = opf_payload(2);
+
+    let gt = format!(
+        "SELECT eql_v2.to_encrypted('{}'::jsonb) >= eql_v2.to_encrypted('{}'::jsonb)",
+        b, a
+    );
+    QueryAssertion::new(&pool, &gt).returns_bool_value(true).await;
+
+    let eq = format!(
+        "SELECT eql_v2.to_encrypted('{}'::jsonb) >= eql_v2.to_encrypted('{}'::jsonb)",
+        b, b
+    );
+    QueryAssertion::new(&pool, &eq).returns_bool_value(true).await;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn encrypted_eq_operator_uses_opf(pool: PgPool) -> Result<()> {
+    let a = opf_payload(1);
+    let b = opf_payload(2);
+
+    let eq = format!(
+        "SELECT eql_v2.to_encrypted('{}'::jsonb) = eql_v2.to_encrypted('{}'::jsonb)",
+        a, a
+    );
+    QueryAssertion::new(&pool, &eq).returns_bool_value(true).await;
+
+    let neq = format!(
+        "SELECT eql_v2.to_encrypted('{}'::jsonb) = eql_v2.to_encrypted('{}'::jsonb)",
+        a, b
+    );
+    QueryAssertion::new(&pool, &neq).returns_bool_value(false).await;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn encrypted_neq_operator_uses_opf(pool: PgPool) -> Result<()> {
+    let a = opf_payload(1);
+    let b = opf_payload(2);
+
+    let neq = format!(
+        "SELECT eql_v2.to_encrypted('{}'::jsonb) <> eql_v2.to_encrypted('{}'::jsonb)",
+        a, b
+    );
+    QueryAssertion::new(&pool, &neq).returns_bool_value(true).await;
+
+    let eq = format!(
+        "SELECT eql_v2.to_encrypted('{}'::jsonb) <> eql_v2.to_encrypted('{}'::jsonb)",
+        a, a
+    );
+    QueryAssertion::new(&pool, &eq).returns_bool_value(false).await;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn encrypted_lt_operator_uses_opv(pool: PgPool) -> Result<()> {
+    let a = opv_payload(&[0xaa, 0x11]);
+    let b = opv_payload(&[0xbb, 0x11]);
+
+    let sql = format!(
+        "SELECT eql_v2.to_encrypted('{}'::jsonb) < eql_v2.to_encrypted('{}'::jsonb)",
+        a, b
+    );
+    QueryAssertion::new(&pool, &sql)
+        .returns_bool_value(true)
+        .await;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn encrypted_gt_operator_uses_opv(pool: PgPool) -> Result<()> {
+    let a = opv_payload(&[0xaa, 0x11]);
+    let b = opv_payload(&[0xbb, 0x11]);
+
+    let sql = format!(
+        "SELECT eql_v2.to_encrypted('{}'::jsonb) > eql_v2.to_encrypted('{}'::jsonb)",
+        b, a
+    );
+    QueryAssertion::new(&pool, &sql)
+        .returns_bool_value(true)
+        .await;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn encrypted_lte_operator_uses_opv(pool: PgPool) -> Result<()> {
+    let a = opv_payload(&[0xaa, 0x11]);
+    let b = opv_payload(&[0xbb, 0x11]);
+
+    let lt = format!(
+        "SELECT eql_v2.to_encrypted('{}'::jsonb) <= eql_v2.to_encrypted('{}'::jsonb)",
+        a, b
+    );
+    QueryAssertion::new(&pool, &lt).returns_bool_value(true).await;
+
+    let eq = format!(
+        "SELECT eql_v2.to_encrypted('{}'::jsonb) <= eql_v2.to_encrypted('{}'::jsonb)",
+        a, a
+    );
+    QueryAssertion::new(&pool, &eq).returns_bool_value(true).await;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn encrypted_gte_operator_uses_opv(pool: PgPool) -> Result<()> {
+    let a = opv_payload(&[0xaa, 0x11]);
+    let b = opv_payload(&[0xbb, 0x11]);
+
+    let gt = format!(
+        "SELECT eql_v2.to_encrypted('{}'::jsonb) >= eql_v2.to_encrypted('{}'::jsonb)",
+        b, a
+    );
+    QueryAssertion::new(&pool, &gt).returns_bool_value(true).await;
+
+    let eq = format!(
+        "SELECT eql_v2.to_encrypted('{}'::jsonb) >= eql_v2.to_encrypted('{}'::jsonb)",
+        b, b
+    );
+    QueryAssertion::new(&pool, &eq).returns_bool_value(true).await;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn encrypted_eq_operator_uses_opv(pool: PgPool) -> Result<()> {
+    let a = opv_payload(&[0xaa, 0x11]);
+    let b = opv_payload(&[0xbb, 0x11]);
+
+    let eq = format!(
+        "SELECT eql_v2.to_encrypted('{}'::jsonb) = eql_v2.to_encrypted('{}'::jsonb)",
+        a, a
+    );
+    QueryAssertion::new(&pool, &eq).returns_bool_value(true).await;
+
+    let neq = format!(
+        "SELECT eql_v2.to_encrypted('{}'::jsonb) = eql_v2.to_encrypted('{}'::jsonb)",
+        a, b
+    );
+    QueryAssertion::new(&pool, &neq).returns_bool_value(false).await;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn encrypted_neq_operator_uses_opv(pool: PgPool) -> Result<()> {
+    let a = opv_payload(&[0xaa, 0x11]);
+    let b = opv_payload(&[0xbb, 0x11]);
+
+    let neq = format!(
+        "SELECT eql_v2.to_encrypted('{}'::jsonb) <> eql_v2.to_encrypted('{}'::jsonb)",
+        a, b
+    );
+    QueryAssertion::new(&pool, &neq).returns_bool_value(true).await;
+
+    let eq = format!(
+        "SELECT eql_v2.to_encrypted('{}'::jsonb) <> eql_v2.to_encrypted('{}'::jsonb)",
+        a, a
+    );
+    QueryAssertion::new(&pool, &eq).returns_bool_value(false).await;
+    Ok(())
+}
+
+/// Build the raw 65-byte OPE fixed ciphertext as a hex string (no JSONB
+/// wrapper). Mirrors `opf_payload`'s body: a single signal byte at index 8,
+/// all other bytes zero. Larger signal → larger ciphertext under lex compare.
+fn opf_hex(signal: u8) -> String {
+    let mut bytes = vec![0u8; 65];
+    bytes[8] = signal;
+    hex::encode(&bytes)
+}
+
+#[sqlx::test]
+async fn ore_wins_over_opf_when_both_present(pool: PgPool) -> Result<()> {
+    // When a row carries both ORE (`ob`) and OPE (`opf`) terms with conflicting
+    // orderings, eql_v2.compare must dispatch to the ORE branch (it appears
+    // earlier in the priority chain) — locking in the precedence contract.
+    //
+    // Build a value with ORE rank 1 + opf=high(99) and another with ORE rank 2
+    // + opf=low(1). ORE-only ordering says (rank 1) < (rank 2). OPE-only
+    // ordering would say opf=99 > opf=1. compare() must follow ORE → -1.
+    let opf_high = opf_hex(99);
+    let opf_low = opf_hex(1);
+
+    // Fixture rows in `ore` have id=N and an `ob` term that orders by N.
+    let a_sql = format!(
+        "(create_encrypted_ore_json(1)::jsonb || jsonb_build_object('opf', '{}'))::eql_v2_encrypted",
+        opf_high
+    );
+    let b_sql = format!(
+        "(create_encrypted_ore_json(2)::jsonb || jsonb_build_object('opf', '{}'))::eql_v2_encrypted",
+        opf_low
+    );
+
+    let cmp = format!("SELECT eql_v2.compare({}, {})", a_sql, b_sql);
+    QueryAssertion::new(&pool, &cmp).returns_int_value(-1).await;
     Ok(())
 }
 
@@ -464,8 +682,8 @@ async fn config_check_rejects_unknown_index(pool: PgPool) -> Result<()> {
         .expect_err("expected check_indexes to reject unknown index");
     let msg = err.to_string();
     assert!(
-        msg.contains("match, ore, ope, unique, ste_vec"),
-        "expected error to list valid indexes including 'ope'; got: {msg}"
+        msg.contains("ope") && msg.contains("bogus"),
+        "expected error to mention the offending 'bogus' index and list 'ope' as valid; got: {msg}"
     );
     Ok(())
 }
