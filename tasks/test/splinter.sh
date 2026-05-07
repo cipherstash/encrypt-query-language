@@ -57,9 +57,41 @@ function_search_path_mutable	eql_v2	@>	function	GIN-inlining: must inline so the
 function_search_path_mutable	eql_v2	<@	function	GIN-inlining: same as @>.
 function_search_path_mutable	eql_v2	jsonb_contains	function	GIN-inlining: wrapper unfolds to eql_v2.jsonb_array(a) @> eql_v2.jsonb_array(b). Pinning search_path here drops the bitmap index scan.
 function_search_path_mutable	eql_v2	jsonb_contained_by	function	GIN-inlining: same as jsonb_contains.
+function_search_path_mutable	eql_v2	=	function	hmac_256-index inlining (#193): wrapper unfolds to eql_v2.hmac_256(a) = eql_v2.hmac_256(b) so the planner can match a btree-hash functional index on eql_v2.hmac_256(col). SET search_path would force a seq scan, including for bare `WHERE col = val` queries from PostgREST/ORMs.
+function_search_path_mutable	eql_v2	<>	function	hmac_256-index inlining: same as `=`.
+function_search_path_mutable	eql_v2	~~	function	bloom_filter-index inlining (#193): wrapper unfolds to eql_v2.bloom_filter(a) @> eql_v2.bloom_filter(b) so the planner can match a GIN functional index on eql_v2.bloom_filter(col) for LIKE / ILIKE.
+function_search_path_mutable	eql_v2	like	function	bloom_filter-index inlining: called by the `~~` operator wrapper; both must inline so the chain unfolds to bloom_filter @> bloom_filter.
+function_search_path_mutable	eql_v2	ilike	function	bloom_filter-index inlining: same as `like` (case sensitivity lives in match-index token filters, not here).
+function_search_path_mutable	eql_v2	ope_cllw_u64_65	function	OPE-index inlining (#176): extracts opf bytes; must inline so a btree on (eql_v2.ope_cllw_u64_65(col)).bytes can match.
+function_search_path_mutable	eql_v2	ope_cllw_var_8	function	OPE-index inlining: same as ope_cllw_u64_65 for variable-width OPE.
+function_search_path_mutable	eql_v2	has_ope_cllw_u64_65	function	OPE-index inlining: presence-check used by order_by_ope's CASE; LANGUAGE sql is a deliberate perf choice in #197.
+function_search_path_mutable	eql_v2	has_ope_cllw_var_8	function	OPE-index inlining: same as has_ope_cllw_u64_65.
+function_search_path_mutable	eql_v2	order_by_ope	function	OPE-index inlining (#176): wraps the CASE that picks ope_cllw_u64_65 vs ope_cllw_var_8; intended for `ORDER BY eql_v2.order_by_ope(col)`.
 function_search_path_mutable	eql_v2	min	function	Aggregate (splinter labels these type=function): ALTER AGGREGATE has no SET configuration_parameter syntax, and ALTER ROUTINE/FUNCTION reject aggregates. The aggregate's SFUNC has a pinned search_path.
 function_search_path_mutable	eql_v2	max	function	Aggregate: same as min.
 function_search_path_mutable	eql_v2	grouped_value	function	Aggregate: same as min.
+function_search_path_mutable	eql_v2	jsonb_array	function	GIN-index expression: indexes are built directly on `eql_v2.jsonb_array(col)`, so the function call must remain inlinable / matchable.
+function_search_path_mutable	eql_v2	jsonb_array_from_array_elements	function	Inlinable helper feeding the jsonb_array path; trivial single-SELECT body, no benefit to pinning.
+function_search_path_mutable	eql_v2	compare_literal	function	Operator-class comparator on encrypted values; must inline so the planner sees the underlying compare expressions for ORDER BY / merge join planning.
+function_search_path_mutable	eql_v2	ore_block_u64_8_256_eq	function	ORE-comparator: thin SQL wrapper that the planner inlines into the operator's comparison expression. Pinning would prevent indexable ordered-search.
+function_search_path_mutable	eql_v2	ore_block_u64_8_256_neq	function	ORE-comparator: same as ore_block_u64_8_256_eq.
+function_search_path_mutable	eql_v2	ore_block_u64_8_256_lt	function	ORE-comparator: same as ore_block_u64_8_256_eq.
+function_search_path_mutable	eql_v2	ore_block_u64_8_256_lte	function	ORE-comparator: same as ore_block_u64_8_256_eq.
+function_search_path_mutable	eql_v2	ore_block_u64_8_256_gt	function	ORE-comparator: same as ore_block_u64_8_256_eq.
+function_search_path_mutable	eql_v2	ore_block_u64_8_256_gte	function	ORE-comparator: same as ore_block_u64_8_256_eq.
+function_search_path_mutable	eql_v2	text_to_ore_block_u64_8_256_term	function	ORE-term constructor used in indexed-expression matching paths; trivial body, no benefit to pinning.
+function_search_path_mutable	eql_v2	check_encrypted	function	CHECK constraint expression — runs once per row write; inlining strips the function-call overhead from inserts/updates.
+function_search_path_mutable	eql_v2	ciphertext	function	JSON-field extractor used inside other inlinable wrappers; pinning would block transitive inlining.
+function_search_path_mutable	eql_v2	meta_data	function	JSON-field extractor; same rationale as ciphertext.
+function_search_path_mutable	eql_v2	to_jsonb	function	Cast helper from eql_v2_encrypted to jsonb; trivial single-SELECT body.
+function_search_path_mutable	eql_v2	to_encrypted	function	Cast helper from text/jsonb to eql_v2_encrypted; trivial single-SELECT body.
+function_search_path_mutable	eql_v2	_first_grouped_value	function	Aggregate SFUNC for grouped_value (allowlisted as the aggregate above).
+function_search_path_mutable	eql_v2	version	function	One-line constant SELECT — pinning would add a function-call boundary for no benefit.
+function_search_path_mutable	eql_v2	reload_config	function	Config helper invoked at install time; not on any hot path. No harm leaving inlinable.
+function_search_path_mutable	eql_v2	config_get_indexes	function	Config inspection helper; not on any hot path.
+function_search_path_mutable	eql_v2	config_match_default	function	Config helper used at config-DDL time; not on any hot path.
+function_search_path_mutable	eql_v2	select_target_columns	function	Config helper used at config-DDL time; not on any hot path.
+function_search_path_mutable	eql_v2	ready_for_encryption	function	Config inspection helper; not on any hot path.
 ALLOW
 
 # Wrap splinter (a single bare SELECT expression) into a subquery we can

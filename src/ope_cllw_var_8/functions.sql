@@ -17,6 +17,7 @@
 CREATE FUNCTION eql_v2.ope_cllw_var_8(val jsonb)
   RETURNS eql_v2.ope_cllw_var_8
   IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
     IF NOT (eql_v2.has_ope_cllw_var_8(val)) THEN
