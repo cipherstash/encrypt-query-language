@@ -1,8 +1,8 @@
 -- REQUIRE: src/schema.sql
 
---! @brief CLLW OPE index term type for variable-width range queries
+--! @brief CLWW OPE index term type for variable-width range queries
 --!
---! Composite type for variable-width CLLW (Chenette, Lewi, Weis, Wu)
+--! Composite type for variable-width CLWW (Chenette, Lewi, Weis, Wu)
 --! Order-Preserving Encryption. Unlike ope_cllw_u64_65, supports
 --! variable-length ciphertexts (strings / byte slices). Ciphertext length is
 --! `8 * plaintext_bytes + 1` (one carry byte + 8 bytes per plaintext byte).

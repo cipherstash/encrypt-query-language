@@ -36,7 +36,7 @@ $$ LANGUAGE plpgsql;
 
 --! @brief Extract OPE ciphertext bytes for ordering encrypted values
 --!
---! Returns the raw CLLW Order-Preserving Encryption ciphertext as `bytea` so
+--! Returns the raw CLWW Order-Preserving Encryption ciphertext as `bytea` so
 --! it can be used as an order key. OPE ciphertexts compare with standard
 --! lexicographic byte ordering, so the returned bytea can be ordered directly
 --! with `<`, `=`, `>` (no custom protocol required).

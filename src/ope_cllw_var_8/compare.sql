@@ -3,10 +3,10 @@
 -- REQUIRE: src/ope_cllw_var_8/functions.sql
 
 
---! @brief Compare two encrypted values using variable-width CLLW OPE index terms
+--! @brief Compare two encrypted values using variable-width CLWW OPE index terms
 --!
 --! Performs a three-way comparison (returns -1/0/1) of encrypted values using
---! their variable-width CLLW OPE ciphertext index terms. Used internally by
+--! their variable-width CLWW OPE ciphertext index terms. Used internally by
 --! range operators (<, <=, >, >=) for order-preserving comparisons without
 --! decryption.
 --!

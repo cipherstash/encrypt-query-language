@@ -1,4 +1,4 @@
-//! OPE (CLLW Order-Preserving Encryption) tests
+//! OPE (CLWW Order-Preserving Encryption) tests
 //!
 //! Exercises the `ope_cllw_u64_65` and `ope_cllw_var_8` support wired into
 //! `eql_v2_encrypted`. Unlike the ORE CLLW variants, OPE ciphertexts compare
