@@ -52,9 +52,19 @@ BEGIN
     RAISE EXCEPTION 'pin_search_path: type pg_catalog.jsonb not found';
   END IF;
 
-  -- Wrappers that must remain inlinable for the GIN-index path on
-  -- `eql_v2.jsonb_array(e) @> ...`. Verified empirically: with SET, EXPLAIN
-  -- drops to Seq Scan; without, it uses Bitmap Index Scan.
+  -- Wrappers that must remain inlinable for functional-index matching.
+  -- Verified empirically: with SET, EXPLAIN drops to Seq Scan; without,
+  -- it uses Bitmap Index Scan / Index Scan.
+  --
+  -- Phase 1 operator inlining (#193): `=`, `<>`, `~~`, `~~*`, `@>`, `<@`
+  -- on `eql_v2_encrypted` and the cross-type (encrypted, jsonb) /
+  -- (jsonb, encrypted) overloads emitted by ORMs that bind parameters
+  -- as jsonb (Drizzle, PostgREST, encryptedSupabase). The implementation
+  -- functions reduce to `extractor(a) op extractor(b)` and must inline
+  -- to match the documented functional indexes
+  -- (`eql_v2.hmac_256(col)`, `eql_v2.bloom_filter(col)`,
+  -- `eql_v2.ste_vec(col)`).
+  --
   -- Note: pg_proc.proargtypes is an oidvector with 0-based bounds, so we
   -- compare elements individually rather than using array equality (which
   -- requires matching bounds, not just contents).
@@ -64,11 +74,17 @@ BEGIN
   WHERE n.nspname = 'eql_v2'
     AND p.pronargs = 2
     AND (
-      (p.proname IN ('@>', '<@', 'jsonb_contains', 'jsonb_contained_by')
+      -- Same-type (encrypted, encrypted) operators that must inline.
+      (p.proname IN ('=', '<>', '~~', '~~*', '@>', '<@',
+                     'jsonb_contains', 'jsonb_contained_by')
         AND p.proargtypes[0] = enc_oid AND p.proargtypes[1] = enc_oid)
-      OR (p.proname IN ('jsonb_contains', 'jsonb_contained_by')
+      -- Cross-type (encrypted, jsonb).
+      OR (p.proname IN ('=', '<>', '~~', '~~*',
+                        'jsonb_contains', 'jsonb_contained_by')
         AND p.proargtypes[0] = enc_oid AND p.proargtypes[1] = jsonb_oid)
-      OR (p.proname IN ('jsonb_contains', 'jsonb_contained_by')
+      -- Cross-type (jsonb, encrypted).
+      OR (p.proname IN ('=', '<>', '~~', '~~*',
+                        'jsonb_contains', 'jsonb_contained_by')
         AND p.proargtypes[0] = jsonb_oid AND p.proargtypes[1] = enc_oid)
     );
 

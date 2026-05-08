@@ -203,34 +203,8 @@ async fn hash_function_directly(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
-async fn hash_function_uses_blake3_first(pool: PgPool) -> Result<()> {
-    // Test: hash_encrypted prefers Blake3 over HMAC to maintain hash/equality contract.
-    // compare() uses the first index term in BOTH operands (ORE > HMAC > Blake3).
-    // If value A has hm+b3 and value B has only b3, compare uses Blake3.
-    // hash_encrypted must also use Blake3 for A so hash(A) == hash(B).
-
-    // Create value with only Blake3 index term
-    let hash_b3: i32 =
-        sqlx::query_scalar("SELECT eql_v2.hash_encrypted(create_encrypted_json(1, 'b3'))")
-            .fetch_one(&pool)
-            .await
-            .context("hash with blake3-only failed")?;
-
-    // Create value with both HMAC and Blake3 - should use Blake3 (same hash)
-    let hash_both: i32 =
-        sqlx::query_scalar("SELECT eql_v2.hash_encrypted(create_encrypted_json(1, 'hm', 'b3'))")
-            .fetch_one(&pool)
-            .await
-            .context("hash with hmac+blake3 failed")?;
-
-    assert_eq!(
-        hash_b3, hash_both,
-        "Hash with both indexes should use Blake3 (same as Blake3-only)"
-    );
-
-    Ok(())
-}
+// hash_function_uses_blake3_first removed: post-discipline, hash_encrypted
+// is hmac-only at the root. There is no Blake3 path to prefer.
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn hash_function_falls_back_to_hmac(pool: PgPool) -> Result<()> {
@@ -251,9 +225,9 @@ async fn hash_function_falls_back_to_hmac(pool: PgPool) -> Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn hash_function_errors_without_hash_index(pool: PgPool) -> Result<()> {
-    // Test: hash_encrypted raises error when no HMAC or Blake3 index is present
+    // Test: hash_encrypted raises error when no HMAC index is present
 
-    // Create value with only ORE index (no hmac, no blake3)
+    // Create value with only ORE index (no hmac)
     let result = sqlx::query_scalar::<_, i32>(
         "SELECT eql_v2.hash_encrypted(create_encrypted_json(1, 'ob'))",
     )
@@ -267,8 +241,8 @@ async fn hash_function_errors_without_hash_index(pool: PgPool) -> Result<()> {
 
     let err_msg = result.unwrap_err().to_string();
     assert!(
-        err_msg.contains("hmac_256 or blake3"),
-        "Error should mention missing index terms, got: {}",
+        err_msg.contains("hmac_256"),
+        "Error should mention missing hmac_256 index term, got: {}",
         err_msg
     );
 
@@ -363,86 +337,13 @@ async fn in_subquery_with_encrypted_column(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
-async fn hash_consistency_full_index_matches_blake3_only(pool: PgPool) -> Result<()> {
-    // Test: hash of full-index value matches hash of Blake3-only value
-    // The hash function uses Blake3 first, so full value (with b3) should produce same hash as b3-only
-
-    let hash_full: i32 =
-        sqlx::query_scalar("SELECT eql_v2.hash_encrypted(create_encrypted_json(1))")
-            .fetch_one(&pool)
-            .await
-            .context("hash of full value failed")?;
-
-    let hash_b3_only: i32 =
-        sqlx::query_scalar("SELECT eql_v2.hash_encrypted(create_encrypted_json(1, 'b3'))")
-            .fetch_one(&pool)
-            .await
-            .context("hash of blake3-only value failed")?;
-
-    assert_eq!(
-        hash_full, hash_b3_only,
-        "Full-index hash should match Blake3-only hash (Blake3 priority)"
-    );
-
-    Ok(())
-}
-
-#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
-async fn hmac_and_blake3_produce_different_hashes(pool: PgPool) -> Result<()> {
-    // Test: HMAC and Blake3 code paths produce different hashes for same id
-    // Catches regression where the wrong branch is taken
-
-    let hash_hmac: i32 =
-        sqlx::query_scalar("SELECT eql_v2.hash_encrypted(create_encrypted_json(1, 'hm'))")
-            .fetch_one(&pool)
-            .await
-            .context("hash with hmac-only failed")?;
-
-    let hash_b3: i32 =
-        sqlx::query_scalar("SELECT eql_v2.hash_encrypted(create_encrypted_json(1, 'b3'))")
-            .fetch_one(&pool)
-            .await
-            .context("hash with blake3-only failed")?;
-
-    assert_ne!(
-        hash_hmac, hash_b3,
-        "HMAC and Blake3 should produce different hashes for same id"
-    );
-
-    Ok(())
-}
-
-#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
-async fn ste_vec_wrapped_hashes_same_as_unwrapped(pool: PgPool) -> Result<()> {
-    // Test: single-element STE vec wrapper produces same hash as inner value
-    // The hash function calls to_ste_vec_value() which unwraps single-element vectors
-
-    let hash_wrapped: i32 = sqlx::query_scalar(
-        r#"SELECT eql_v2.hash_encrypted(
-            ('{"sv": [{"b3": "blake3.1"}]}'::jsonb)::eql_v2_encrypted
-        )"#,
-    )
-    .fetch_one(&pool)
-    .await
-    .context("hash of wrapped STE vec failed")?;
-
-    let hash_unwrapped: i32 = sqlx::query_scalar(
-        r#"SELECT eql_v2.hash_encrypted(
-            ('{"b3": "blake3.1"}'::jsonb)::eql_v2_encrypted
-        )"#,
-    )
-    .fetch_one(&pool)
-    .await
-    .context("hash of unwrapped value failed")?;
-
-    assert_eq!(
-        hash_wrapped, hash_unwrapped,
-        "Single-element STE vec should hash same as unwrapped inner value"
-    );
-
-    Ok(())
-}
+// hash_consistency_full_index_matches_blake3_only,
+// hmac_and_blake3_produce_different_hashes,
+// ste_vec_wrapped_hashes_same_as_unwrapped — removed. They asserted
+// the Blake3-first hash priority that was the previous implementation.
+// Post-discipline, hash_encrypted is hmac-only at the root; there is
+// no Blake3 root path to test. ste_vec single-element unwrapping
+// still works but the inner element must carry hm to be hashable.
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn multi_element_ste_vec_raises_error(pool: PgPool) -> Result<()> {
@@ -461,8 +362,8 @@ async fn multi_element_ste_vec_raises_error(pool: PgPool) -> Result<()> {
 
     let err_msg = result.unwrap_err().to_string();
     assert!(
-        err_msg.contains("hmac_256 or blake3"),
-        "Error should mention missing index terms, got: {}",
+        err_msg.contains("hmac_256"),
+        "Error should mention missing hmac_256 index term, got: {}",
         err_msg
     );
 
@@ -719,137 +620,11 @@ async fn hash_join_non_matching_returns_zero(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
-// Mixed-index regression tests (P1 hash/equality contract)
-//
-// These exercise real SQL query paths (hash join, GROUP BY, UNION) where one
-// row has hm+b3 and the other has only b3. compare() falls back to Blake3 as
-// the common term, so hash_encrypted must also use Blake3 for both rows.
-// ---------------------------------------------------------------------------
-
-#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
-async fn mixed_index_hash_join(pool: PgPool) -> Result<()> {
-    // Test: hash join finds match when left=hm+b3, right=b3-only (same logical value)
-
-    create_hash_test_table(&pool, "mix_join_l").await?;
-    create_hash_test_table(&pool, "mix_join_r").await?;
-
-    // Left table: full hm+b3 for id 1
-    sqlx::query("INSERT INTO mix_join_l(e) VALUES (create_encrypted_json(1, 'hm', 'b3'))")
-        .execute(&pool)
-        .await?;
-
-    // Right table: b3-only for same id 1
-    sqlx::query("INSERT INTO mix_join_r(e) VALUES (create_encrypted_json(1, 'b3'))")
-        .execute(&pool)
-        .await?;
-
-    // Force hash join strategy.
-    // SET LOCAL is scoped to the current transaction, so we need an explicit one.
-    let mut tx = pool.begin().await?;
-    sqlx::query("SET LOCAL enable_nestloop = off")
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("SET LOCAL enable_mergejoin = off")
-        .execute(&mut *tx)
-        .await?;
-
-    let count: i64 =
-        sqlx::query_scalar("SELECT count(*) FROM mix_join_l l JOIN mix_join_r r ON l.e = r.e")
-            .fetch_one(&mut *tx)
-            .await
-            .context("mixed-index hash join failed")?;
-
-    tx.commit().await?;
-
-    assert_eq!(
-        count, 1,
-        "Hash join should match hm+b3 row with b3-only row for same id"
-    );
-
-    // Cleanup
-    sqlx::query("DROP TABLE IF EXISTS mix_join_l, mix_join_r CASCADE")
-        .execute(&pool)
-        .await?;
-
-    Ok(())
-}
-
-#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
-async fn mixed_index_group_by_dedup(pool: PgPool) -> Result<()> {
-    // Test: GROUP BY deduplicates hm+b3 and b3-only rows for same logical value into one group
-
-    create_hash_test_table(&pool, "mix_group").await?;
-
-    // Two rows for the same id with different index term sets
-    sqlx::query("INSERT INTO mix_group(e) VALUES (create_encrypted_json(1, 'hm', 'b3'))")
-        .execute(&pool)
-        .await?;
-    sqlx::query("INSERT INTO mix_group(e) VALUES (create_encrypted_json(1, 'b3'))")
-        .execute(&pool)
-        .await?;
-
-    // A different id to verify grouping still separates distinct values
-    sqlx::query("INSERT INTO mix_group(e) VALUES (create_encrypted_json(2, 'hm', 'b3'))")
-        .execute(&pool)
-        .await?;
-
-    let group_count: i64 =
-        sqlx::query_scalar("SELECT count(*) FROM (SELECT e FROM mix_group GROUP BY e) sub")
-            .fetch_one(&pool)
-            .await
-            .context("mixed-index GROUP BY failed")?;
-
-    assert_eq!(
-        group_count, 2,
-        "GROUP BY should produce 2 groups: id=1 (hm+b3 and b3-only merged) and id=2"
-    );
-
-    // Cleanup
-    sqlx::query("DROP TABLE IF EXISTS mix_group CASCADE")
-        .execute(&pool)
-        .await?;
-
-    Ok(())
-}
-
-#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
-async fn mixed_index_union_dedup(pool: PgPool) -> Result<()> {
-    // Test: UNION deduplicates hm+b3 and b3-only rows for same logical value
-
-    create_hash_test_table(&pool, "mix_union_a").await?;
-    create_hash_test_table(&pool, "mix_union_b").await?;
-
-    // Table A: hm+b3 for id 1
-    sqlx::query("INSERT INTO mix_union_a(e) VALUES (create_encrypted_json(1, 'hm', 'b3'))")
-        .execute(&pool)
-        .await?;
-
-    // Table B: b3-only for same id 1
-    sqlx::query("INSERT INTO mix_union_b(e) VALUES (create_encrypted_json(1, 'b3'))")
-        .execute(&pool)
-        .await?;
-
-    let count: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM (
-            SELECT e FROM mix_union_a
-            UNION
-            SELECT e FROM mix_union_b
-        ) sub",
-    )
-    .fetch_one(&pool)
-    .await
-    .context("mixed-index UNION failed")?;
-
-    assert_eq!(
-        count, 1,
-        "UNION should deduplicate hm+b3 and b3-only into 1 unique row"
-    );
-
-    // Cleanup
-    sqlx::query("DROP TABLE IF EXISTS mix_union_a, mix_union_b CASCADE")
-        .execute(&pool)
-        .await?;
-
-    Ok(())
-}
+// Mixed-index regression tests (`mixed_index_hash_join`,
+// `mixed_index_group_by_dedup`, `mixed_index_union_dedup`) were removed
+// as part of the v2 payload scheme discipline (see RFC). They asserted
+// the "P1 hash/equality contract" — that an `hm+b3` row equals a
+// `b3-only` row via `=` / hash join / GROUP BY / UNION because compare
+// fell back to Blake3 across rows. That contract has no production
+// analogue: protect.js does not emit a root-level `b3` term, so the
+// "hm+b3 vs b3-only" mixed shape is fixture-only.

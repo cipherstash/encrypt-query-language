@@ -489,7 +489,16 @@ AS $$
 
     FOR idx IN 1..array_length(a, 1) LOOP
       _a := a[idx];
-      result := result OR (eql_v2.selector(_a) = eql_v2.selector(b) AND _a = b);
+      -- Compare ste_vec elements via eql_v2.eq, which routes through
+      -- eql_v2.compare → literal fallback. Don't use the bare `=`
+      -- operator: post-#193 it requires hmac on both sides, which
+      -- ste_vec elements don't carry. Don't use compare_blake3
+      -- directly either — its NULL-safe behaviour returns 0 when
+      -- both sides lack b3, which would conflate distinct OPE-only
+      -- elements.
+      result := result OR (
+        eql_v2.selector(_a) = eql_v2.selector(b) AND eql_v2.eq(_a, b)
+      );
     END LOOP;
 
     RETURN result;
