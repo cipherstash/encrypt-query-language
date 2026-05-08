@@ -165,37 +165,10 @@ async fn inequality_operator_encrypted_not_equals_jsonb_no_match_hmac(pool: PgPo
     Ok(())
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
-async fn inequality_operator_finds_non_matching_records_blake3(pool: PgPool) -> Result<()> {
-    // Test: <> operator with Blake3 index
-
-    let encrypted = create_encrypted_json_with_index(&pool, 1, "b3").await?;
-
-    let sql = format!(
-        "SELECT e FROM encrypted WHERE e <> '{}'::eql_v2_encrypted",
-        encrypted
-    );
-
-    QueryAssertion::new(&pool, &sql).count(2).await;
-
-    Ok(())
-}
-
-#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
-async fn neq_function_finds_non_matching_records_blake3(pool: PgPool) -> Result<()> {
-    // Test: eql_v2.neq() with Blake3
-
-    let encrypted = create_encrypted_json_with_index(&pool, 1, "b3").await?;
-
-    let sql = format!(
-        "SELECT e FROM encrypted WHERE eql_v2.neq(e, '{}'::eql_v2_encrypted)",
-        encrypted
-    );
-
-    QueryAssertion::new(&pool, &sql).count(2).await;
-
-    Ok(())
-}
+// inequality_operator_finds_non_matching_records_blake3 and
+// neq_function_finds_non_matching_records_blake3 removed: post-discipline,
+// `<>` and eql_v2.neq are hmac-only at the root. Blake3 has no production
+// analogue at the root payload level.
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn inequality_operator_encrypted_not_equals_jsonb_blake3(pool: PgPool) -> Result<()> {

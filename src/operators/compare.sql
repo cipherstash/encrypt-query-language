@@ -38,11 +38,15 @@
 --! 4. ope_cllw_u64_65 (Order-Preserving Encryption)
 --! 5. ope_cllw_var_8 (Order-Preserving Encryption)
 --! 6. hmac_256 (Hash-based equality)
---! 7. blake3 (Hash-based equality)
 --!
 --! The first index term type present in both values is used for comparison.
 --! If no matching index terms are found, falls back to JSONB literal comparison
 --! to ensure consistent ordering (required for btree correctness).
+--!
+--! Blake3 is intentionally not part of the root-level priority list — it is
+--! used only inside ste_vec array elements, where eql_v2.compare_blake3 is
+--! called directly by eql_v2.ste_vec_contains. Root-level equality is hmac
+--! only; see the EQL payload scheme discipline RFC.
 --!
 --! @param a eql_v2_encrypted First encrypted value
 --! @param b eql_v2_encrypted Second encrypted value
@@ -50,7 +54,6 @@
 --!
 --! @note Literal fallback prevents "lock BufferContent is not held" errors
 --! @see eql_v2.compare_ore_block_u64_8_256
---! @see eql_v2.compare_blake3
 --! @see eql_v2.compare_hmac_256
 CREATE FUNCTION eql_v2.compare(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS integer
@@ -96,10 +99,6 @@ AS $$
 
     IF eql_v2.has_hmac_256(a) AND eql_v2.has_hmac_256(b) THEN
       RETURN eql_v2.compare_hmac_256(a, b);
-    END IF;
-
-    IF eql_v2.has_blake3(a) AND eql_v2.has_blake3(b) THEN
-      RETURN eql_v2.compare_blake3(a, b);
     END IF;
 
     -- Fallback to literal comparison of the encrypted data

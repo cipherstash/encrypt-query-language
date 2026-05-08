@@ -57,13 +57,14 @@ async fn group_by_encrypted_column(pool: PgPool) -> Result<()> {
 
 #[sqlx::test]
 async fn index_usage_with_explain_analyze(pool: PgPool) -> Result<()> {
-    // Test: Operator class index usage patterns (3 assertions)
+    // Test: Operator class index usage patterns. Post-#193, the `=`
+    // operator requires hmac on both sides; literals must carry `hm`.
 
     create_table_with_encrypted(&pool).await?;
 
     // Without index, should not use Bitmap Heap Scan
     let explain: String = sqlx::query_scalar(
-        "EXPLAIN SELECT e::jsonb FROM encrypted WHERE e = '(\"{\\\"ob\\\": \\\"abc\\\"}\")';",
+        "EXPLAIN SELECT e::jsonb FROM encrypted WHERE e = '(\"{\\\"hm\\\": \\\"abc\\\"}\")';",
     )
     .fetch_one(&pool)
     .await?;
@@ -78,17 +79,14 @@ async fn index_usage_with_explain_analyze(pool: PgPool) -> Result<()> {
         .execute(&pool)
         .await?;
 
-    // Get ORE term and verify index usage
-    let ore_term = get_ore_encrypted(&pool, 42).await?;
-    let explain: String = sqlx::query_scalar(&format!(
-        "EXPLAIN SELECT e::jsonb FROM encrypted WHERE e = '{}'::eql_v2_encrypted",
-        ore_term
-    ))
+    // Verify index usage shape with hmac literal (any matching shape works
+    // — the assertion is on plan structure, not row matches).
+    let explain: String = sqlx::query_scalar(
+        "EXPLAIN SELECT e::jsonb FROM encrypted WHERE e = '(\"{\\\"hm\\\": \\\"abc\\\"}\")';",
+    )
     .fetch_one(&pool)
     .await?;
 
-    // With ORE data and index, should potentially use index scan
-    // (actual plan may vary based on statistics)
     assert!(
         explain.contains("Scan"),
         "Should use some form of scan with index"
@@ -103,8 +101,9 @@ async fn index_behavior_with_different_data_types(pool: PgPool) -> Result<()> {
 
     create_table_with_encrypted(&pool).await?;
 
-    // Insert bloom filter data
-    sqlx::query("INSERT INTO encrypted (e) VALUES ('(\"{\\\"bf\\\": \\\"[1, 2, 3]\\\"}\")');")
+    // Insert hmac data (post-#193, `=` requires hmac on both sides; rows
+    // without hm are not eligible for the equality index path).
+    sqlx::query("INSERT INTO encrypted (e) VALUES ('(\"{\\\"hm\\\": \\\"setup\\\"}\")');")
         .execute(&pool)
         .await?;
 
@@ -115,17 +114,16 @@ async fn index_behavior_with_different_data_types(pool: PgPool) -> Result<()> {
 
     sqlx::query("ANALYZE encrypted").execute(&pool).await?;
 
-    // With only bloom filter data, index may not be used efficiently
+    // Plan generation works with hmac data
     let explain: String = sqlx::query_scalar(
-        "EXPLAIN SELECT e::jsonb FROM encrypted WHERE e = '(\"{\\\"bf\\\": \\\"[1,2,3]\\\"}\")';",
+        "EXPLAIN SELECT e::jsonb FROM encrypted WHERE e = '(\"{\\\"hm\\\": \\\"setup\\\"}\")';",
     )
     .fetch_one(&pool)
     .await?;
 
-    // Verify query plan was generated
     assert!(!explain.is_empty(), "EXPLAIN should return a plan");
 
-    // Truncate and add HMAC data
+    // Truncate and add five HMAC rows for index-selectivity assertions
     sqlx::query("TRUNCATE encrypted").execute(&pool).await?;
     sqlx::query("DROP INDEX encrypted_index")
         .execute(&pool)
@@ -215,19 +213,10 @@ async fn index_behavior_with_different_data_types(pool: PgPool) -> Result<()> {
         "to_encrypted with text should enable index usage"
     );
 
-    // Test with actual ORE term
-    let ore_term = get_ore_encrypted(&pool, 42).await?;
-    let explain: String = sqlx::query_scalar(&format!(
-        "EXPLAIN SELECT e::jsonb FROM encrypted WHERE e = '{}'::eql_v2_encrypted;",
-        ore_term
-    ))
-    .fetch_one(&pool)
-    .await?;
-
-    assert!(
-        explain.contains("Index") || explain.contains("Scan"),
-        "ORE term should enable index usage"
-    );
+    // ORE term against `=` removed: post-#193, equality requires hmac on
+    // both sides. ORE-only payloads are eligible for `<`/`<=`/`>`/`>=` but
+    // not `=`. The remaining hmac-shape assertions above cover the index
+    // path that operator_class indexes are designed to engage.
 
     Ok(())
 }

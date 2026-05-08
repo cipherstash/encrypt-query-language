@@ -179,51 +179,10 @@ async fn encrypted_gte_operator_uses_opf(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-#[sqlx::test]
-async fn encrypted_eq_operator_uses_opf(pool: PgPool) -> Result<()> {
-    let a = opf_payload(1);
-    let b = opf_payload(2);
-
-    let eq = format!(
-        "SELECT eql_v2.to_encrypted('{}'::jsonb) = eql_v2.to_encrypted('{}'::jsonb)",
-        a, a
-    );
-    QueryAssertion::new(&pool, &eq)
-        .returns_bool_value(true)
-        .await;
-
-    let neq = format!(
-        "SELECT eql_v2.to_encrypted('{}'::jsonb) = eql_v2.to_encrypted('{}'::jsonb)",
-        a, b
-    );
-    QueryAssertion::new(&pool, &neq)
-        .returns_bool_value(false)
-        .await;
-    Ok(())
-}
-
-#[sqlx::test]
-async fn encrypted_neq_operator_uses_opf(pool: PgPool) -> Result<()> {
-    let a = opf_payload(1);
-    let b = opf_payload(2);
-
-    let neq = format!(
-        "SELECT eql_v2.to_encrypted('{}'::jsonb) <> eql_v2.to_encrypted('{}'::jsonb)",
-        a, b
-    );
-    QueryAssertion::new(&pool, &neq)
-        .returns_bool_value(true)
-        .await;
-
-    let eq = format!(
-        "SELECT eql_v2.to_encrypted('{}'::jsonb) <> eql_v2.to_encrypted('{}'::jsonb)",
-        a, a
-    );
-    QueryAssertion::new(&pool, &eq)
-        .returns_bool_value(false)
-        .await;
-    Ok(())
-}
+// encrypted_eq_operator_uses_opf and encrypted_neq_operator_uses_opf
+// removed: post-discipline, `=` and `<>` on `eql_v2_encrypted` require
+// hmac at the root. OPE-only payloads do not carry hmac and intentionally
+// cannot be compared via `=` / `<>` — they support only range operators.
 
 #[sqlx::test]
 async fn encrypted_lt_operator_uses_opv(pool: PgPool) -> Result<()> {
@@ -301,51 +260,8 @@ async fn encrypted_gte_operator_uses_opv(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-#[sqlx::test]
-async fn encrypted_eq_operator_uses_opv(pool: PgPool) -> Result<()> {
-    let a = opv_payload(&[0xaa, 0x11]);
-    let b = opv_payload(&[0xbb, 0x11]);
-
-    let eq = format!(
-        "SELECT eql_v2.to_encrypted('{}'::jsonb) = eql_v2.to_encrypted('{}'::jsonb)",
-        a, a
-    );
-    QueryAssertion::new(&pool, &eq)
-        .returns_bool_value(true)
-        .await;
-
-    let neq = format!(
-        "SELECT eql_v2.to_encrypted('{}'::jsonb) = eql_v2.to_encrypted('{}'::jsonb)",
-        a, b
-    );
-    QueryAssertion::new(&pool, &neq)
-        .returns_bool_value(false)
-        .await;
-    Ok(())
-}
-
-#[sqlx::test]
-async fn encrypted_neq_operator_uses_opv(pool: PgPool) -> Result<()> {
-    let a = opv_payload(&[0xaa, 0x11]);
-    let b = opv_payload(&[0xbb, 0x11]);
-
-    let neq = format!(
-        "SELECT eql_v2.to_encrypted('{}'::jsonb) <> eql_v2.to_encrypted('{}'::jsonb)",
-        a, b
-    );
-    QueryAssertion::new(&pool, &neq)
-        .returns_bool_value(true)
-        .await;
-
-    let eq = format!(
-        "SELECT eql_v2.to_encrypted('{}'::jsonb) <> eql_v2.to_encrypted('{}'::jsonb)",
-        a, a
-    );
-    QueryAssertion::new(&pool, &eq)
-        .returns_bool_value(false)
-        .await;
-    Ok(())
-}
+// encrypted_eq_operator_uses_opv and encrypted_neq_operator_uses_opv
+// removed for the same reason as the *_opf counterparts above.
 
 /// Build the raw 65-byte OPE fixed ciphertext as a hex string (no JSONB
 /// wrapper). Mirrors `opf_payload`'s body: a single signal byte at index 8,
