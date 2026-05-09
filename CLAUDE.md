@@ -199,3 +199,58 @@ Prefer `LANGUAGE SQL` over `LANGUAGE plpgsql` unless you need procedural feature
 - Exception handling (`BEGIN...EXCEPTION...END`)
 - Complex control flow (loops, early returns)
 - Dynamic SQL (`EXECUTE`)
+
+## Release & changelog discipline
+
+EQL maintains a [Keep-a-Changelog](https://keepachangelog.com/en/1.1.0/)-style `CHANGELOG.md` and per-version upgrade guides under `docs/upgrading/`. The conventions are documented at the top of `CHANGELOG.md`; what follows is what to do when working in this repo.
+
+### When you make a user-facing change
+
+If your PR adds, changes, removes, deprecates, or fixes anything observable to a caller — new function, new operator, behaviour change, error message change, performance characteristic that callers might notice (e.g. an index now engages), changed default — **add an entry under `## [Unreleased]` in `CHANGELOG.md` as part of the same PR.**
+
+User-facing means: someone outside EQL would care. If in doubt, add the entry; it's cheap.
+
+What does *not* need an entry:
+
+- Internal refactors that don't change observable behaviour
+- Test-only changes
+- CI / tooling-only changes
+- Documentation typo fixes
+- Doxygen comments
+
+### How to write the entry
+
+Pick the right section (`Added` / `Changed` / `Deprecated` / `Removed` / `Fixed` / `Security`). Lead with the user-visible fact, then a short "Why." explanation, then a PR link in parentheses. Match the tone and density of existing entries — a single dense paragraph per entry, not a bullet list.
+
+Example shape (real entry from `2.3.0`):
+
+> **`=`, `<>`, `~~` (`LIKE`), `~~*` (`ILIKE`) on `eql_v2_encrypted` are now inlinable SQL functions.** The planner can structurally match these operators against the documented functional indexes (`eql_v2.hmac_256(col)` for equality, `eql_v2.bloom_filter(col)` for `LIKE`/`ILIKE`), so bare-form queries (`WHERE col = $1`) engage the index without per-query rewriting. Previously these operators wrapped multi-branch PL/pgSQL bodies that the planner could not inline, forcing seq scans on Supabase / managed Postgres installations that lack operator-class indexes. ([#193](...), [#196](...))
+
+### When a change warrants an upgrade note
+
+If the change has *behaviour callers should be aware of* — even when no API breaks — add a numbered upgrade note (`U-NNN`) to the active `docs/upgrading/v<version>.md` file. Examples of what warrants an upgrade note:
+
+- Recommended recipe shifts (e.g. opclass → functional indexes)
+- Tightened error semantics (e.g. "raises now where it used to silently NULL")
+- Required payload terms changing (e.g. equality requires `hm`)
+- Anything where a caller might need to audit their schema or queries
+
+The entry under `Changed` / `Deprecated` should cross-link to the `U-NNN`. See `docs/upgrading/v2.3.md` for the format — TL;DR, compatibility table, numbered notes, verification checklist, rollback.
+
+### Versioning
+
+The `eql_v2` PostgreSQL schema name is part of the public API and is **independent of the EQL release version**. Major-version bumps to EQL do not rename the schema. When deciding on a version bump:
+
+- **Patch (`2.3.x`)** — bug fixes, no behaviour changes
+- **Minor (`2.x.0`)** — additive changes, behaviour changes that don't break the public API (signatures, schema name, payload format, operator names)
+- **Major (`3.0.0`)** — only for changes that break the public API. Do not reach for a major bump just because a behaviour change has wide blast radius — that's what upgrade notes are for.
+
+### Cutting a release
+
+When a release is being prepared:
+
+1. Confirm `[Unreleased]` is non-empty and entries are coherent.
+2. Rename `## [Unreleased]` to `## [<version>] — YYYY-MM-DD` and add a fresh empty `[Unreleased]` above it.
+3. Update the link references at the bottom of `CHANGELOG.md` (new `[Unreleased]` compare URL, new `[<version>]` tag URL).
+4. Commit, then create the GitHub release. The release workflow (`.github/workflows/release-eql.yml`) takes the tag and builds artefacts.
+5. The `[<version>]` section is the GitHub release body — paste it verbatim.
