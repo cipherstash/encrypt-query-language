@@ -11,6 +11,7 @@ use sqlx::PgPool;
 
 const BENCH_INT_ORE_IDX: &str = "bench_int_ore_idx";
 const BENCH_TEXT_HMAC_IDX: &str = "bench_text_hmac_idx";
+const BENCH_TEXT_BLOOM_IDX: &str = "bench_text_bloom_idx";
 
 /// ORE range query (less-than) uses btree index
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
@@ -118,5 +119,41 @@ async fn ore_equality_uses_btree_index(pool: PgPool) -> Result<()> {
         encrypted
     );
     assert_uses_index(&pool, &sql, BENCH_INT_ORE_IDX).await?;
+    Ok(())
+}
+
+/// Bare LIKE against an encrypted column engages the bloom_filter functional
+/// index. Requires `~~` operator + `eql_v2.like` helper to both inline so the
+/// planner reaches `bloom_filter(a) @> bloom_filter(b)`.
+#[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
+async fn bare_like_uses_bloom_index(pool: PgPool) -> Result<()> {
+    let encrypted = get_bench_encrypted_text(&pool, 1).await?;
+
+    let sql = format!(
+        "SELECT * FROM bench WHERE encrypted_text ~~ '{}'::jsonb::eql_v2_encrypted",
+        encrypted
+    );
+    assert_uses_index(&pool, &sql, BENCH_TEXT_BLOOM_IDX).await?;
+    Ok(())
+}
+
+/// Bare ILIKE engages the bloom_filter functional index — same mechanism as `~~`.
+#[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
+async fn bare_ilike_uses_bloom_index(pool: PgPool) -> Result<()> {
+    let encrypted = get_bench_encrypted_text(&pool, 1).await?;
+
+    let sql = format!(
+        "SELECT * FROM bench WHERE encrypted_text ~~* '{}'::jsonb::eql_v2_encrypted",
+        encrypted
+    );
+    assert_uses_index(&pool, &sql, BENCH_TEXT_BLOOM_IDX).await?;
     Ok(())
 }
