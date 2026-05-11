@@ -53,6 +53,9 @@ SQL
 # Format: TSV "rule\tschema\tname\ttype\treason" — kept as a heredoc so the
 # justification lives next to the entry it covers. Keys are matched verbatim.
 cat > "$work_dir/allowlist.tsv" <<'ALLOW'
+function_search_path_mutable	eql_v2	=	function	Phase 1 inlining (#193): must inline so the planner can match the documented functional index eql_v2.hmac_256(col). SET search_path disables SQL function inlining (see PostgreSQL inline_function); pinning here would revert bare-equality queries to seq scan on Supabase / managed Postgres without superuser. Three overloads: (enc, enc), (enc, jsonb), (jsonb, enc).
+function_search_path_mutable	eql_v2	<>	function	Phase 1 inlining (#193): same rationale as eql_v2.=. Three overloads.
+function_search_path_mutable	eql_v2	~~	function	Phase 1 inlining (#193): must inline so the planner can match eql_v2.bloom_filter(col). Three overloads. (Note: the eql_v2.~~* operator points at this same function — case-insensitivity of LIKE on encrypted ciphertexts is meaningless because the bloom filter index term is independent of case.)
 function_search_path_mutable	eql_v2	@>	function	GIN-inlining: must inline so the planner can match the index on eql_v2.jsonb_array(e). SET search_path disables SQL function inlining (see PostgreSQL inline_function), reverting GIN scans to seq scans.
 function_search_path_mutable	eql_v2	<@	function	GIN-inlining: same as @>.
 function_search_path_mutable	eql_v2	jsonb_contains	function	GIN-inlining: wrapper unfolds to eql_v2.jsonb_array(a) @> eql_v2.jsonb_array(b). Pinning search_path here drops the bitmap index scan.

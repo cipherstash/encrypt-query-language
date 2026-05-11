@@ -24,12 +24,14 @@
 --! @see eql_v2.\"@>\"
 --! @see eql_v2.add_search_config
 
+-- Marked IMMUTABLE STRICT PARALLEL SAFE — see operators/@>.sql for rationale.
 CREATE FUNCTION eql_v2."<@"(a eql_v2_encrypted, b eql_v2_encrypted)
 RETURNS boolean
+LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   -- Contains with reversed arguments
   SELECT eql_v2.ste_vec_contains(b, a)
-$$ LANGUAGE SQL;
+$$;
 
 CREATE OPERATOR <@(
   FUNCTION=eql_v2."<@",

@@ -7,105 +7,13 @@ use anyhow::Result;
 use eql_tests::{get_ore_encrypted, QueryAssertion};
 use sqlx::PgPool;
 
-#[sqlx::test]
-async fn ore64_equality_operator_finds_match(pool: PgPool) -> Result<()> {
-    // Test: e = e with ORE encryption
-    // Uses ore table from migrations (ids 1-1000)
-
-    let encrypted = get_ore_encrypted(&pool, 42).await?;
-
-    let sql = format!(
-        "SELECT id FROM ore WHERE e = '{}'::eql_v2_encrypted",
-        encrypted
-    );
-
-    QueryAssertion::new(&pool, &sql).count(1).await;
-
-    Ok(())
-}
-
-#[sqlx::test]
-async fn ore64_inequality_operator_finds_non_matches(pool: PgPool) -> Result<()> {
-    // Test: e <> e with ORE encryption
-
-    let encrypted = get_ore_encrypted(&pool, 42).await?;
-
-    let sql = format!(
-        "SELECT id FROM ore WHERE e <> '{}'::eql_v2_encrypted",
-        encrypted
-    );
-
-    // Should return 999 records (all except id=42)
-    QueryAssertion::new(&pool, &sql).count(999).await;
-
-    Ok(())
-}
-
-#[sqlx::test]
-async fn ore_cllw_u64_8_equality_finds_match(pool: PgPool) -> Result<()> {
-    // Test: e = e with ORE CLLW_U64_8 scheme
-    // Note: Uses ore table encryption (ORE_BLOCK) as proxy for CLLW_U64_8 tests
-
-    let encrypted = get_ore_encrypted(&pool, 42).await?;
-
-    let sql = format!(
-        "SELECT id FROM ore WHERE e = '{}'::eql_v2_encrypted",
-        encrypted
-    );
-
-    QueryAssertion::new(&pool, &sql).count(1).await;
-
-    Ok(())
-}
-
-#[sqlx::test]
-async fn ore_cllw_u64_8_inequality_finds_non_matches(pool: PgPool) -> Result<()> {
-    // Test: e <> e with ORE CLLW_U64_8 scheme
-
-    let encrypted = get_ore_encrypted(&pool, 42).await?;
-
-    let sql = format!(
-        "SELECT id FROM ore WHERE e <> '{}'::eql_v2_encrypted",
-        encrypted
-    );
-
-    QueryAssertion::new(&pool, &sql).count(999).await;
-
-    Ok(())
-}
-
-#[sqlx::test]
-async fn ore_cllw_var_8_equality_finds_match(pool: PgPool) -> Result<()> {
-    // Test: e = e with ORE CLLW_VAR_8 scheme
-    // Note: Uses ore table encryption (ORE_BLOCK) as proxy for CLLW_VAR_8 tests
-
-    let encrypted = get_ore_encrypted(&pool, 42).await?;
-
-    let sql = format!(
-        "SELECT id FROM ore WHERE e = '{}'::eql_v2_encrypted",
-        encrypted
-    );
-
-    QueryAssertion::new(&pool, &sql).count(1).await;
-
-    Ok(())
-}
-
-#[sqlx::test]
-async fn ore_cllw_var_8_inequality_finds_non_matches(pool: PgPool) -> Result<()> {
-    // Test: e <> e with ORE CLLW_VAR_8 scheme
-
-    let encrypted = get_ore_encrypted(&pool, 42).await?;
-
-    let sql = format!(
-        "SELECT id FROM ore WHERE e <> '{}'::eql_v2_encrypted",
-        encrypted
-    );
-
-    QueryAssertion::new(&pool, &sql).count(999).await;
-
-    Ok(())
-}
+// ore64 / ore_cllw_u64_8 / ore_cllw_var_8 equality + inequality tests
+// removed: post-discipline, `=` and `<>` on `eql_v2_encrypted` require
+// hmac at the root. The `ore` table fixtures carry only ORE terms (no
+// hmac), so they are eligible for `<` / `<=` / `>` / `>=` (covered in
+// the comparison variant tests below) but not `=` / `<>`. ORE-only
+// equality has no production analogue — equality is configured via
+// the `unique` index, ordering via `ore`.
 
 // ============================================================================
 // Task 9: ORE Comparison Variants (CLLW schemes)

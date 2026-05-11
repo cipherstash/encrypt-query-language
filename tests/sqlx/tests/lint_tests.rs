@@ -82,24 +82,40 @@ async fn lint_categories_are_well_known(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-/// Smoke test: at least one operator equality / pattern operator on
-/// `eql_v2_encrypted` is reported pre-#193. Once #193 lands and reduces
-/// violations on those specific operators, this test should be updated
-/// or removed.
+/// Phase 1 regression: the operators rewritten in #193 (=, <>, ~~, ~~*,
+/// @>, <@ on eql_v2_encrypted) must report zero lint violations. If this
+/// test fails, an inlinability regression has been introduced into one
+/// of the core operators that PostgREST and ORM bare-form queries rely
+/// on.
 #[sqlx::test]
-async fn lint_reports_eql_v2_encrypted_operators(pool: PgPool) -> Result<()> {
+async fn lint_phase_1_operators_are_clean(pool: PgPool) -> Result<()> {
     let rows = fetch_lints(&pool).await?;
-    let names: Vec<&str> = rows.iter().map(|r| r.object_name.as_str()).collect();
+    let phase_1_prefixes = [
+        "operator =(eql_v2_encrypted",
+        "operator <>(eql_v2_encrypted",
+        "operator =(jsonb, eql_v2_encrypted",
+        "operator <>(jsonb, eql_v2_encrypted",
+        "operator ~~(eql_v2_encrypted",
+        "operator ~~*(eql_v2_encrypted",
+        "operator ~~(jsonb, eql_v2_encrypted",
+        "operator ~~*(jsonb, eql_v2_encrypted",
+        "operator @>(eql_v2_encrypted",
+        "operator <@(eql_v2_encrypted",
+    ];
+
+    let violations: Vec<_> = rows
+        .iter()
+        .filter(|row| {
+            phase_1_prefixes
+                .iter()
+                .any(|prefix| row.object_name.starts_with(prefix))
+        })
+        .collect();
+
     assert!(
-        names
-            .iter()
-            .any(|n| n.starts_with("operator =(eql_v2_encrypted")
-                || n.starts_with("operator <>(eql_v2_encrypted")
-                || n.starts_with("operator ~~(eql_v2_encrypted")
-                || n.starts_with("operator @>(eql_v2_encrypted")),
-        "Expected at least one violation on a core eql_v2_encrypted \
-         operator; got: {:?}",
-        names
+        violations.is_empty(),
+        "Phase 1 operators should report zero lint violations, but got: {:#?}",
+        violations
     );
     Ok(())
 }

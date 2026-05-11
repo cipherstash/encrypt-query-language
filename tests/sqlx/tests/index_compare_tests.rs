@@ -35,116 +35,12 @@ macro_rules! assert_compare {
 // Blake3 Index Comparison Tests
 //
 
-#[sqlx::test]
-async fn blake3_compare_equal(pool: PgPool) -> Result<()> {
-    // Test: compare_blake3() with equal values
-
-    let a = "create_encrypted_json(1, 'b3')";
-    let b = "create_encrypted_json(2, 'b3')";
-    let c = "create_encrypted_json(3, 'b3')";
-
-    // 3 assertions: a=a, b=b, c=c should all return 0
-    assert_compare!(
-        &pool,
-        "compare_blake3",
-        a,
-        a,
-        0,
-        "compare_blake3(a, a) should equal 0"
-    );
-    assert_compare!(
-        &pool,
-        "compare_blake3",
-        b,
-        b,
-        0,
-        "compare_blake3(b, b) should equal 0"
-    );
-    assert_compare!(
-        &pool,
-        "compare_blake3",
-        c,
-        c,
-        0,
-        "compare_blake3(c, c) should equal 0"
-    );
-
-    Ok(())
-}
-
-#[sqlx::test]
-async fn blake3_compare_less_than(pool: PgPool) -> Result<()> {
-    // Test: compare_blake3() with less than comparisons
-
-    let a = "create_encrypted_json(1, 'b3')";
-    let b = "create_encrypted_json(2, 'b3')";
-    let c = "create_encrypted_json(3, 'b3')";
-
-    // 4 assertions: a<b, a<c, b<c should all return -1
-    assert_compare!(
-        &pool,
-        "compare_blake3",
-        a,
-        b,
-        -1,
-        "compare_blake3(a, b) should equal -1"
-    );
-    assert_compare!(
-        &pool,
-        "compare_blake3",
-        a,
-        c,
-        -1,
-        "compare_blake3(a, c) should equal -1"
-    );
-    assert_compare!(
-        &pool,
-        "compare_blake3",
-        b,
-        c,
-        -1,
-        "compare_blake3(b, c) should equal -1"
-    );
-
-    Ok(())
-}
-
-#[sqlx::test]
-async fn blake3_compare_greater_than(pool: PgPool) -> Result<()> {
-    // Test: compare_blake3() with greater than comparisons
-
-    let a = "create_encrypted_json(1, 'b3')";
-    let b = "create_encrypted_json(2, 'b3')";
-    let c = "create_encrypted_json(3, 'b3')";
-
-    // 3 assertions: b>a, c>a, c>b should all return 1
-    assert_compare!(
-        &pool,
-        "compare_blake3",
-        b,
-        a,
-        1,
-        "compare_blake3(b, a) should equal 1"
-    );
-    assert_compare!(
-        &pool,
-        "compare_blake3",
-        c,
-        a,
-        1,
-        "compare_blake3(c, a) should equal 1"
-    );
-    assert_compare!(
-        &pool,
-        "compare_blake3",
-        c,
-        b,
-        1,
-        "compare_blake3(c, b) should equal 1"
-    );
-
-    Ok(())
-}
+// blake3_compare_{equal,less_than,greater_than} removed: they tested
+// compare_blake3 against root-level b3-only payloads created by
+// create_encrypted_json(id, 'b3'). With b3 removed from the synthetic
+// base payload, those payloads no longer carry b3 and the tests are
+// no longer meaningful at the root. compare_blake3 still exists and
+// is exercised through ste_vec internal element comparisons.
 
 //
 // HMAC-256 Index Comparison Tests

@@ -86,27 +86,11 @@ async fn compare_ore_block_u64_8_256(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-#[sqlx::test]
-async fn compare_blake3_index(pool: PgPool) -> Result<()> {
-    // Test: compare() with Blake3 index
-
-    let a = "create_encrypted_json(1, 'b3')";
-    let b = "create_encrypted_json(2, 'b3')";
-    let c = "create_encrypted_json(3, 'b3')";
-
-    // 9 assertions: reflexive, transitive, and antisymmetric comparison properties
-    assert_compare!(&pool, a, a, 0, "compare(a, a) should equal 0");
-    assert_compare!(&pool, a, b, -1, "compare(a, b) should equal -1");
-    assert_compare!(&pool, a, c, -1, "compare(a, c) should equal -1");
-    assert_compare!(&pool, b, b, 0, "compare(b, b) should equal 0");
-    assert_compare!(&pool, b, a, 1, "compare(b, a) should equal 1");
-    assert_compare!(&pool, b, c, -1, "compare(b, c) should equal -1");
-    assert_compare!(&pool, c, c, 0, "compare(c, c) should equal 0");
-    assert_compare!(&pool, c, b, 1, "compare(c, b) should equal 1");
-    assert_compare!(&pool, c, a, 1, "compare(c, a) should equal 1");
-
-    Ok(())
-}
+// compare_blake3_index removed: post-discipline, eql_v2.compare's
+// equality branch is hmac-only at the root. Blake3 is no longer in the
+// root compare priority list. compare_blake3 still exists and is
+// exercised inside ste_vec_contains for selector-level element
+// comparisons.
 
 #[sqlx::test]
 async fn compare_hmac_256_index(pool: PgPool) -> Result<()> {
