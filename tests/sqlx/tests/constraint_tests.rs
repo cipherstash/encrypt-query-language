@@ -244,8 +244,11 @@ async fn add_encrypted_constraint_prevents_invalid_data(pool: PgPool) -> Result<
         "Should have 4 records (3 from fixture + 1 invalid)"
     );
 
-    // Delete the invalid data and reset
-    sqlx::query("DELETE FROM encrypted WHERE e = '{}'::jsonb::eql_v2_encrypted")
+    // Delete the invalid data and reset. Compare via the underlying jsonb
+    // representation rather than the `=` operator on `eql_v2_encrypted` —
+    // post #193 the encrypted-side `=` requires a `hmac_256` index term, and
+    // `'{}'` is intentionally invalid (no `hm` field).
+    sqlx::query("DELETE FROM encrypted WHERE e::jsonb = '{}'::jsonb")
         .execute(&pool)
         .await?;
 

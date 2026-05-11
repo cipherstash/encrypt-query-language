@@ -306,6 +306,10 @@ AS $$
 
     -- PERFORM eql_v2.log('ore_term: ', ore_term::text);
 
+    -- Note: no `b3` at the root. Production protect.js does not emit a
+    -- root-level Blake3 term — Blake3 is only used inside ste_vec array
+    -- elements (which still carry b3 via get_numeric_ste_vec_*). See the
+    -- EQL payload scheme discipline RFC.
     s := format(
       '{
           "%s": "%s",
@@ -315,13 +319,12 @@ AS $$
               "c": "e"
           },
           "hm": "hmac.%s",
-          "b3": "blake3.%s",
           "bf": %s,
           "v": 2
         }',
         random_key,
         random_val,
-        id, id, m);
+        id, m);
 
     s := s::jsonb || sv || ore_term;
 

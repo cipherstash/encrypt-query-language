@@ -44,15 +44,28 @@ $$ LANGUAGE plpgsql;
 --!
 --! @see eql_v2.compare
 --! @see eql_v2.add_search_config
+-- Inlinable: `LANGUAGE sql IMMUTABLE` with a single SELECT body and no
+-- `SET` clause. The Postgres planner inlines the body into the calling
+-- query during planning, so `WHERE col = val` reduces to
+-- `WHERE eql_v2.hmac_256(col) = eql_v2.hmac_256(val)` and matches a
+-- functional hash index built on `eql_v2.hmac_256(col)`. Bare equality
+-- queries (including those issued by PostgREST and ORMs that don't
+-- wrap columns themselves) become fast on Supabase and any
+-- --exclude-operator-family install.
+--
+-- Behaviour change vs the previous dispatcher-based impl: the old
+-- `eql_v2.eq` walked `eql_v2.compare`, which fell back to ORE / Blake3 /
+-- literal comparison when HMAC wasn't present. Now `=` requires the
+-- column to have `equality` configured (i.e. carry an `hm` field).
+-- Calling `=` on an ORE-only column will return NULL where it
+-- previously returned a Boolean. This is intentional — it surfaces
+-- config errors loudly. See the predicate/extractor RFC for context.
 CREATE FUNCTION eql_v2."="(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS boolean
-  IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  BEGIN
-    RETURN eql_v2.eq(a, b);
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.hmac_256(a) = eql_v2.hmac_256(b)
+$$;
 
 CREATE OPERATOR = (
   FUNCTION=eql_v2."=",
@@ -83,13 +96,10 @@ CREATE OPERATOR = (
 --! @see eql_v2."="(eql_v2_encrypted, eql_v2_encrypted)
 CREATE FUNCTION eql_v2."="(a eql_v2_encrypted, b jsonb)
   RETURNS boolean
-  IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  BEGIN
-    RETURN eql_v2.eq(a, b::eql_v2_encrypted);
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.hmac_256(a) = eql_v2.hmac_256(b::eql_v2_encrypted)
+$$;
 
 CREATE OPERATOR = (
   FUNCTION=eql_v2."=",
@@ -119,13 +129,10 @@ CREATE OPERATOR = (
 --! @see eql_v2."="(eql_v2_encrypted, eql_v2_encrypted)
 CREATE FUNCTION eql_v2."="(a jsonb, b eql_v2_encrypted)
   RETURNS boolean
-  IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  BEGIN
-    RETURN eql_v2.eq(a::eql_v2_encrypted, b);
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.hmac_256(a::eql_v2_encrypted) = eql_v2.hmac_256(b)
+$$;
 
 CREATE OPERATOR = (
   FUNCTION=eql_v2."=",

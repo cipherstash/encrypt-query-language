@@ -40,15 +40,16 @@ $$ LANGUAGE plpgsql;
 --!
 --! @see eql_v2.compare
 --! @see eql_v2."="
+-- Inlinable; mirrors `=` (see operators/=.sql for rationale).
+-- Returns NULL on ORE-only encrypted columns (no `hm` field) instead
+-- of falling back to a slower comparison path; surface the config
+-- error rather than hide it.
 CREATE FUNCTION eql_v2."<>"(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS boolean
-  IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  BEGIN
-    RETURN eql_v2.neq(a, b );
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.hmac_256(a) <> eql_v2.hmac_256(b)
+$$;
 
 
 CREATE OPERATOR <> (
@@ -65,13 +66,10 @@ CREATE OPERATOR <> (
 --! @see eql_v2."<>"(eql_v2_encrypted, eql_v2_encrypted)
 CREATE FUNCTION eql_v2."<>"(a eql_v2_encrypted, b jsonb)
   RETURNS boolean
-  IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  BEGIN
-    RETURN eql_v2.neq(a, b::eql_v2_encrypted);
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.hmac_256(a) <> eql_v2.hmac_256(b::eql_v2_encrypted)
+$$;
 
 CREATE OPERATOR <> (
   FUNCTION=eql_v2."<>",
@@ -92,13 +90,10 @@ CREATE OPERATOR <> (
 --! @see eql_v2."<>"(eql_v2_encrypted, eql_v2_encrypted)
 CREATE FUNCTION eql_v2."<>"(a jsonb, b eql_v2_encrypted)
   RETURNS boolean
-  IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  BEGIN
-    RETURN eql_v2.neq(a::eql_v2_encrypted, b);
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.hmac_256(a::eql_v2_encrypted) <> eql_v2.hmac_256(b)
+$$;
 
 CREATE OPERATOR <> (
   FUNCTION=eql_v2."<>",

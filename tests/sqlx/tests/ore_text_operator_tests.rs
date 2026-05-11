@@ -14,39 +14,10 @@ use sqlx::PgPool;
 // Equality and inequality operators
 // ============================================================================
 
-#[sqlx::test]
-async fn ore_text_equality_operator_finds_match(pool: PgPool) -> Result<()> {
-    // Test: e = e with text ORE encryption
-    // id=56 ('horizon') should match exactly 1 record
-
-    let encrypted = get_ore_text_encrypted(&pool, 56).await?;
-
-    let sql = format!(
-        "SELECT id FROM ore_text WHERE e = '{}'::eql_v2_encrypted",
-        encrypted
-    );
-
-    QueryAssertion::new(&pool, &sql).count(1).await;
-
-    Ok(())
-}
-
-#[sqlx::test]
-async fn ore_text_inequality_operator_finds_non_matches(pool: PgPool) -> Result<()> {
-    // Test: e <> e with text ORE encryption
-    // Should return 99 records (all except id=56)
-
-    let encrypted = get_ore_text_encrypted(&pool, 56).await?;
-
-    let sql = format!(
-        "SELECT id FROM ore_text WHERE e <> '{}'::eql_v2_encrypted",
-        encrypted
-    );
-
-    QueryAssertion::new(&pool, &sql).count(99).await;
-
-    Ok(())
-}
+// ore_text_equality_operator_finds_match,
+// ore_text_inequality_operator_finds_non_matches removed:
+// post-discipline `=` and `<>` require hmac at the root. The ore_text
+// fixture carries only ORE terms.
 
 // ============================================================================
 // Comparison operators
@@ -268,65 +239,17 @@ async fn ore_text_gte_encrypted_gte_jsonb(pool: PgPool) -> Result<()> {
 // JSONB variants: e = jsonb, e <> jsonb
 // ============================================================================
 
-#[sqlx::test]
-async fn ore_text_equality_encrypted_eq_jsonb(pool: PgPool) -> Result<()> {
-    // Test: e = jsonb with text ORE
-    // id=56 ('horizon') should match exactly 1 record
-
-    let json_value = get_ore_text_encrypted_as_jsonb(&pool, 56).await?;
-
-    let sql = format!("SELECT id FROM ore_text WHERE e = '{}'::jsonb", json_value);
-
-    QueryAssertion::new(&pool, &sql).count(1).await;
-
-    Ok(())
-}
-
-#[sqlx::test]
-async fn ore_text_inequality_encrypted_neq_jsonb(pool: PgPool) -> Result<()> {
-    // Test: e <> jsonb with text ORE
-    // Should return 99 records (all except id=56)
-
-    let json_value = get_ore_text_encrypted_as_jsonb(&pool, 56).await?;
-
-    let sql = format!("SELECT id FROM ore_text WHERE e <> '{}'::jsonb", json_value);
-
-    QueryAssertion::new(&pool, &sql).count(99).await;
-
-    Ok(())
-}
+// ore_text_equality_encrypted_eq_jsonb,
+// ore_text_inequality_encrypted_neq_jsonb removed: post-discipline `=`
+// and `<>` (cross-type encrypted/jsonb) require hmac at the root.
 
 // ============================================================================
 // JSONB variants: jsonb = e, jsonb <> e (reverse direction)
 // ============================================================================
 
-#[sqlx::test]
-async fn ore_text_equality_jsonb_eq_encrypted(pool: PgPool) -> Result<()> {
-    // Test: jsonb = e (reverse direction)
-    // jsonb(56) = e should match exactly 1 record
-
-    let json_value = get_ore_text_encrypted_as_jsonb(&pool, 56).await?;
-
-    let sql = format!("SELECT id FROM ore_text WHERE '{}'::jsonb = e", json_value);
-
-    QueryAssertion::new(&pool, &sql).count(1).await;
-
-    Ok(())
-}
-
-#[sqlx::test]
-async fn ore_text_inequality_jsonb_neq_encrypted(pool: PgPool) -> Result<()> {
-    // Test: jsonb <> e (reverse direction)
-    // jsonb(56) <> e should return 99 records (all except id=56)
-
-    let json_value = get_ore_text_encrypted_as_jsonb(&pool, 56).await?;
-
-    let sql = format!("SELECT id FROM ore_text WHERE '{}'::jsonb <> e", json_value);
-
-    QueryAssertion::new(&pool, &sql).count(99).await;
-
-    Ok(())
-}
+// ore_text_equality_jsonb_eq_encrypted,
+// ore_text_inequality_jsonb_neq_encrypted removed: post-discipline `=`
+// and `<>` (reverse-direction jsonb/encrypted) require hmac at the root.
 
 // ============================================================================
 // JSONB variants: jsonb op e (reverse comparison direction)

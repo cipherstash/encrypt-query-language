@@ -489,7 +489,36 @@ AS $$
 
     FOR idx IN 1..array_length(a, 1) LOOP
       _a := a[idx];
-      result := result OR (eql_v2.selector(_a) = eql_v2.selector(b) AND _a = b);
+      -- Element-level match for ste_vec entries.
+      --
+      -- ste_vec elements carry `b3` (Blake3) for selector-scoped
+      -- equality, never `hm` (root-level hmac). When both sides have
+      -- `b3` we compare on it directly: this is the only path that
+      -- correctly matches two encryptions of the same plaintext when
+      -- the JSONB byte representations differ (e.g., a freshly-built
+      -- query payload vs. a stored row).
+      --
+      -- Without the `b3` guard:
+      --   - Don't use the bare `=` operator: post-#193 it requires
+      --     `hm` on both sides, which ste_vec elements lack.
+      --   - Don't use `compare_blake3` unconditionally: its NULL-safe
+      --     behaviour returns 0 when both sides lack `b3`, which would
+      --     conflate distinct OPE-only elements.
+      --   - `eql_v2.eq` (via `compare`) only reaches `compare_literal`
+      --     for b3-only elements, which compares raw JSONB bytes — so
+      --     same-plaintext-different-bytes pairs miss.
+      --
+      -- Falls through to `eql_v2.eq` for the OPE-only / future-index
+      -- case, which routes through `compare`'s ORE → OPE → hmac chain.
+      result := result OR (
+        eql_v2.selector(_a) = eql_v2.selector(b) AND
+        CASE
+          WHEN eql_v2.has_blake3(_a) AND eql_v2.has_blake3(b) THEN
+            eql_v2.compare_blake3(_a, b) = 0
+          ELSE
+            eql_v2.eq(_a, b)
+        END
+      );
     END LOOP;
 
     RETURN result;
