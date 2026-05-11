@@ -118,17 +118,22 @@ async fn ore_order_by_under_threshold(pool: PgPool) -> Result<()> {
 // per-row cost is dominated by plpgsql call overhead in the
 // `hash_encrypted` → `to_ste_vec_value` → `hmac_256` chain.
 //
-// All three are #[ignore]'d pending the chain inlining tracked in #202.
-// Thresholds are set to the post-inlining target (measured by patching the
-// chain to LANGUAGE sql IMMUTABLE in-place: ~70ms for GROUP BY, ~182ms for
-// the self-join, with consistent plan shapes). Remove the #[ignore] when #202
-// merges and confirm green.
+// All three are #[ignore]'d pending the hash_encrypted fast-path tracked in
+// #202. The dominant cost on these queries isn't plpgsql call overhead (a
+// naive plpgsql → LANGUAGE sql conversion of the existing body leaves them
+// effectively unchanged); it's `to_ste_vec_value`'s per-row JSONB inspection
+// and reconstruction. The #202 fix short-circuits via root-level `hm`
+// (`coalesce(val.data ->> 'hm', ...)`), falling through to `to_ste_vec_value`
+// only for single-element ste_vec-wrapped payloads. Thresholds below reflect
+// measured numbers with that fast-path applied in-place. Remove the
+// `#[ignore]` markers when #202 merges and confirm green.
 // ============================================================================
 
 /// `GROUP BY encrypted_text` should be under 150ms at 10K rows.
-/// Measured baseline today: ~309ms (HashAggregate + Seq Scan, plpgsql per-row
-/// cost in hash_encrypted chain). Measured with chain inlined: ~70ms.
-/// Threshold of 150ms is ~2× the inlined baseline to absorb CI variance.
+/// Measured baseline today: ~309ms (HashAggregate + Seq Scan, dominated by
+/// per-row `to_ste_vec_value` cost in the hash_encrypted chain). Measured
+/// with the #202 fast-path applied: ~73ms. Threshold of 150ms is ~2x the
+/// fast-path number to absorb CI variance.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
 #[ignore = "#202: hash_encrypted chain not yet inlined; remove ignore when #202 merges"]
 async fn group_by_encrypted_under_threshold(pool: PgPool) -> Result<()> {
@@ -140,7 +145,7 @@ async fn group_by_encrypted_under_threshold(pool: PgPool) -> Result<()> {
     .await?;
     assert!(
         stats.execution_time_ms < 150.0,
-        "GROUP BY encrypted_text took {:.1}ms, threshold 150ms (~70ms expected after #202, currently ~309ms, node_type={})",
+        "GROUP BY encrypted_text took {:.1}ms, threshold 150ms (~73ms expected after #202 fast-path, currently ~309ms, node_type={})",
         stats.execution_time_ms, stats.node_type
     );
     Ok(())
@@ -150,9 +155,9 @@ async fn group_by_encrypted_under_threshold(pool: PgPool) -> Result<()> {
 /// 10K rows (which produces ~1M result rows due to ~99 distinct values × ~100
 /// matches each — most of the time is intrinsic result cardinality, not the
 /// per-probe cost).
-/// Measured baseline today: ~308ms. Measured with chain inlined: ~182ms.
-/// Threshold of 350ms catches a regression to seq scan (>1s) without flapping
-/// on cardinality variance.
+/// Measured baseline today: ~308ms. Measured with the #202 fast-path applied:
+/// ~185ms. Threshold of 350ms catches a regression to seq scan (>1s) without
+/// flapping on cardinality variance.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
 #[ignore = "#202: hash_encrypted chain not yet inlined; remove ignore when #202 merges"]
 async fn self_join_encrypted_under_threshold(pool: PgPool) -> Result<()> {
@@ -164,15 +169,21 @@ async fn self_join_encrypted_under_threshold(pool: PgPool) -> Result<()> {
     .await?;
     assert!(
         stats.execution_time_ms < 350.0,
-        "Self-join on encrypted_text took {:.1}ms, threshold 350ms (~182ms expected after #202, currently ~308ms, node_type={})",
+        "Self-join on encrypted_text took {:.1}ms, threshold 350ms (~185ms expected after #202 fast-path, currently ~308ms, node_type={})",
         stats.execution_time_ms, stats.node_type
     );
     Ok(())
 }
 
-/// `SELECT DISTINCT encrypted_text` should be under 200ms at 10K rows once
-/// HashAggregate becomes the planner choice (currently picks Index Only Scan
-/// over the ORE btree opclass at ~132ms — usable but unavailable on Supabase).
+/// Unbounded `SELECT DISTINCT encrypted_text` should be under 200ms at 10K rows.
+/// Measured baseline today: ~515ms (HashAggregate over plpgsql hash_encrypted
+/// chain). Measured with the #202 fast-path applied (`coalesce(val.data ->>
+/// 'hm', ...)`): ~72ms. Threshold of 200ms is ~2.8x the fast-path number to
+/// absorb CI variance.
+///
+/// (The `... LIMIT N` variant biases the planner toward Index Only Scan over
+/// the ORE btree opclass — fine on full installs but unavailable on Supabase.
+/// This test exercises the unbounded path that engages HashAggregate.)
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
 #[ignore = "#202: hash_encrypted chain not yet inlined; remove ignore when #202 merges"]
 async fn distinct_encrypted_under_threshold(pool: PgPool) -> Result<()> {
@@ -180,7 +191,7 @@ async fn distinct_encrypted_under_threshold(pool: PgPool) -> Result<()> {
         explain_analyze_avg(&pool, "SELECT DISTINCT encrypted_text FROM bench", 5).await?;
     assert!(
         stats.execution_time_ms < 200.0,
-        "DISTINCT encrypted_text took {:.1}ms, threshold 200ms (currently ~132ms via ORE btree on full install; want HashAggregate-driven path post-#202, node_type={})",
+        "DISTINCT encrypted_text took {:.1}ms, threshold 200ms (~72ms expected after #202 fast-path, currently ~515ms, node_type={})",
         stats.execution_time_ms, stats.node_type
     );
     Ok(())
