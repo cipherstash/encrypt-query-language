@@ -196,3 +196,35 @@ async fn distinct_encrypted_under_threshold(pool: PgPool) -> Result<()> {
     );
     Ok(())
 }
+
+/// Field-level `GROUP BY eql_v2.jsonb_path_query_first(col, '<selector>')` —
+/// the canonical pattern for "count rows per JSON field value" against an
+/// encrypted column where the field has a `unique` index configured.
+///
+/// Closing #202 (hash_encrypted fast-path) helps but doesn't fully solve this:
+/// the dominant cost shifts to `jsonb_path_query_first`'s per-row plpgsql
+/// overhead. The threshold below reflects what becomes achievable once #204
+/// inlines the JSONB field extractors.
+///
+/// Measured at 10K rows on a synthesized fixture with `hm` overlaid at
+/// $.hello: current main ~496ms, with #202 fast-path applied ~234ms, with
+/// raw JSONB extraction bypass (proxy-emitted, no eql_v2 plpgsql in the
+/// hot path) ~7ms. Threshold of 50ms is set near the bypass number — when
+/// #204 inlines the extractors, the EQL form should converge on the same
+/// ballpark.
+#[sqlx::test(fixtures(
+    path = "../fixtures",
+    scripts("bench_data", "bench_setup", "bench_json_data")
+))]
+#[ignore = "#204: JSONB field extractors not yet inlined; remove ignore when #204 merges"]
+async fn group_by_jsonb_field_under_threshold(pool: PgPool) -> Result<()> {
+    let sql = "SELECT count(*) FROM bench_json \
+               GROUP BY eql_v2.jsonb_path_query_first(e, 'a7cea93975ed8c01f861ccb6bd082784')";
+    let stats: ExplainStats = explain_analyze_avg(&pool, sql, 5).await?;
+    assert!(
+        stats.execution_time_ms < 50.0,
+        "GROUP BY field-level jsonb_path_query_first took {:.1}ms, threshold 50ms (~7ms achievable with full extractor inlining + #202, currently ~496ms on main, ~234ms with #202 fast-path only, node_type={})",
+        stats.execution_time_ms, stats.node_type
+    );
+    Ok(())
+}

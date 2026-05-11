@@ -223,3 +223,43 @@ async fn distinct_encrypted_uses_hash_aggregate(pool: PgPool) -> Result<()> {
     );
     Ok(())
 }
+
+// ============================================================================
+// Field-level hash-strategy: GROUP BY on a JSON path extracted from an
+// encrypted column. This is the "how many users per region" pattern against
+// ste_vec encryption.
+//
+// Uses the bench_json fixture, which overlays `hm` onto the `$.hello` sv
+// element of each bench row — simulating what `@cipherstash/protect` produces
+// for a JSONB column where the `$.hello` path is configured with a `unique`
+// index. Without that overlay, field-level GROUP BY raises today
+// ("Cannot hash eql_v2_encrypted value: no hmac_256 index term found").
+// ============================================================================
+
+/// Documented EQL form for field-level GROUP BY:
+/// `GROUP BY eql_v2.jsonb_path_query_first(col, '<selector>')`.
+/// The planner engages a parallel Partial HashAggregate + Sort + GroupAggregate
+/// merge — i.e., `HashAggregate` appears in the plan even if it's not the top
+/// node. The bare-`->` form (`col -> '<sel>'::text`) currently picks
+/// Sort + GroupAggregate instead; once #204 inlines the extractors, the
+/// planner has the option of flattening to a single HashAggregate.
+#[sqlx::test(fixtures(
+    path = "../fixtures",
+    scripts("bench_data", "bench_setup", "bench_json_data")
+))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
+async fn group_by_jsonb_field_uses_hash_aggregate(pool: PgPool) -> Result<()> {
+    // Selectors::HELLO = $.hello — see tests/sqlx/src/selectors.rs.
+    let sql = "SELECT count(*) FROM bench_json \
+               GROUP BY eql_v2.jsonb_path_query_first(e, 'a7cea93975ed8c01f861ccb6bd082784')";
+    let plan = explain_query(&pool, sql).await?;
+    assert!(
+        plan.contains("HashAggregate"),
+        "Expected field-level GROUP BY plan to include a HashAggregate node. EXPLAIN output:\n{}",
+        plan
+    );
+    Ok(())
+}
