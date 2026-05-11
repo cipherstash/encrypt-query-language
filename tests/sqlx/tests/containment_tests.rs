@@ -147,9 +147,7 @@ const B3_HELLO: &str = "7b4ffe5d60e4e4300dc3e28d9c300c87";
 /// "same plaintext at same selector"; varying `ciphertext` means "different
 /// JSONB byte representation" — together they exercise the b3-match path.
 fn build_ste_vec_payload(selector: &str, b3: &str, ciphertext: &str) -> String {
-    format!(
-        r#"{{"v":2,"k":"sv","sv":[{{"b3":"{b3}","c":"{ciphertext}","s":"{selector}"}}]}}"#
-    )
+    format!(r#"{{"v":2,"k":"sv","sv":[{{"b3":"{b3}","c":"{ciphertext}","s":"{selector}"}}]}}"#)
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
