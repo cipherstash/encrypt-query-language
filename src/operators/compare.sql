@@ -44,15 +44,24 @@
 --! to ensure consistent ordering (required for btree correctness).
 --!
 --! Blake3 is intentionally not part of the root-level priority list — it is
---! used only inside ste_vec array elements, where eql_v2.compare_blake3 is
---! called directly by eql_v2.ste_vec_contains. Root-level equality is hmac
---! only; see the EQL payload scheme discipline RFC.
+--! only relevant inside ste_vec array elements. eql_v2.ste_vec_contains
+--! handles b3-bearing elements with its own guard around eql_v2.compare_blake3
+--! and falls through to eql_v2.eq (which calls back into this function) for
+--! the OPE-only case. Root-level equality is hmac only; see the EQL payload
+--! scheme discipline RFC.
 --!
 --! @param a eql_v2_encrypted First encrypted value
 --! @param b eql_v2_encrypted Second encrypted value
 --! @return integer -1 if a < b, 0 if a = b, 1 if a > b
 --!
 --! @note Literal fallback prevents "lock BufferContent is not held" errors
+--! @note `LANGUAGE plpgsql` and therefore not inlinable into the calling query.
+--!       This is intentional: it remains the canonical multi-branch ordering
+--!       function for backwards-compatible callers (e.g. the ORE btree
+--!       operator-class methods, eql_v2.eq's compare-then-equal-zero form).
+--!       Hot-path inlinable equality is provided by `eql_v2."="` directly
+--!       (post-#193, hmac-only); callers that need the historic multi-index
+--!       fallback continue to go through this function via eql_v2.eq.
 --! @see eql_v2.compare_ore_block_u64_8_256
 --! @see eql_v2.compare_hmac_256
 CREATE FUNCTION eql_v2.compare(a eql_v2_encrypted, b eql_v2_encrypted)
