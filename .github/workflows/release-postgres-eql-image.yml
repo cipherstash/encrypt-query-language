@@ -1,0 +1,173 @@
+name: "Release Postgres + EQL image"
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      eql_version:
+        description: "EQL version to embed (e.g. 2.1.8). Used as the image tag and SQL build version."
+        required: true
+        type: string
+      update_floating_tags:
+        description: "Also update :latest, :<pg>, and :<eql_version> floating tags. Off by default for test runs."
+        required: false
+        type: boolean
+        default: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  MISE_VERBOSE: "1"
+  IMAGE: ghcr.io/cipherstash/postgres-eql
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-sql:
+    runs-on: ubuntu-latest
+    name: Build EQL SQL
+    if: ${{ github.event_name != 'release' || contains(github.event.release.tag_name, 'eql') }}
+    timeout-minutes: 5
+    outputs:
+      # Used for image tags, e.g. "2.1.8" -> ghcr.io/.../postgres-eql:17-2.1.8
+      eql_version: ${{ steps.ver.outputs.eql_version }}
+      # Passed to `mise run build --version`. Matches the existing release-eql.yml
+      # convention so eql_v2.version() in the image is byte-identical to the SQL release.
+      build_version: ${{ steps.ver.outputs.build_version }}
+      update_floating_tags: ${{ steps.ver.outputs.update_floating_tags }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v3
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+
+      - name: Compute EQL version and tag policy
+        id: ver
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          INPUT_VERSION: ${{ inputs.eql_version }}
+          INPUT_FLOATING: ${{ inputs.update_floating_tags }}
+        run: |
+          if [[ "$EVENT_NAME" == "release" ]]; then
+            build_version="$RELEASE_TAG"          # e.g. "eql-2.1.8"
+            eql_version="${RELEASE_TAG#eql-}"     # e.g. "2.1.8"
+            floating="true"
+          else
+            eql_version="$INPUT_VERSION"
+            build_version="$INPUT_VERSION"
+            floating="$INPUT_FLOATING"
+          fi
+          echo "eql_version=${eql_version}" >> "$GITHUB_OUTPUT"
+          echo "build_version=${build_version}" >> "$GITHUB_OUTPUT"
+          echo "update_floating_tags=${floating}" >> "$GITHUB_OUTPUT"
+
+      - name: Build EQL release SQL
+        run: mise run build --version ${{ steps.ver.outputs.build_version }}
+
+      - name: Upload EQL SQL artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: eql-sql
+          path: release/cipherstash-encrypt.sql
+
+  build-images:
+    runs-on: ubuntu-latest
+    needs: build-sql
+    name: Build postgres-eql image (PG ${{ matrix.pg_version }})
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        pg_version: ["14", "15", "16", "17"]
+    env:
+      EQL_VERSION: ${{ needs.build-sql.outputs.eql_version }}
+      UPDATE_FLOATING: ${{ needs.build-sql.outputs.update_floating_tags }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download EQL SQL artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: eql-sql
+          path: docker/
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tags
+        id: tags
+        # Always push the immutable :<pg>-<version> tag.
+        # Only push the floating :<pg> tag on release, or on dispatch with opt-in.
+        run: |
+          tags="${IMAGE}:${{ matrix.pg_version }}-${EQL_VERSION}"
+          if [[ "${UPDATE_FLOATING}" == "true" ]]; then
+            tags+=$'\n'"${IMAGE}:${{ matrix.pg_version }}"
+          fi
+          {
+            echo 'tags<<EOF'
+            echo "${tags}"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: docker
+          file: docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            PG_VERSION=${{ matrix.pg_version }}
+            EQL_VERSION=${{ env.EQL_VERSION }}
+          tags: ${{ steps.tags.outputs.tags }}
+
+  promote-latest:
+    runs-on: ubuntu-latest
+    needs: [build-sql, build-images]
+    name: Promote PG17 image to :latest and :<eql_version>
+    if: ${{ needs.build-sql.outputs.update_floating_tags == 'true' }}
+    timeout-minutes: 5
+    env:
+      EQL_VERSION: ${{ needs.build-sql.outputs.eql_version }}
+
+    steps:
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Re-tag PG17 image as :latest and :<eql_version>
+        # buildx imagetools preserves multi-arch manifests; `docker tag` would not.
+        run: |
+          docker buildx imagetools create \
+            -t "${IMAGE}:latest" \
+            -t "${IMAGE}:${EQL_VERSION}" \
+            "${IMAGE}:17-${EQL_VERSION}"
