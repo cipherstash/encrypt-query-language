@@ -18,6 +18,8 @@ Store encrypted data alongside your existing data:
 ## Table of Contents
 
 - [Installation](#installation)
+  - [Local development (fastest)](#local-development-fastest)
+  - [Install into an existing database](#install-into-an-existing-database)
   - [dbdev](#dbdev)
 - [Getting started](#getting-started)
   - [Enable encrypted columns](#enable-encrypted-columns)
@@ -33,7 +35,20 @@ Store encrypted data alongside your existing data:
 
 ## Installation
 
-The simplest way to get up and running with EQL is to execute the install SQL file directly in your PostgreSQL database.
+### Local development (fastest)
+
+Run a Postgres image with EQL pre-installed:
+
+```sh
+docker run --rm -p 5432:5432 -e POSTGRES_PASSWORD=postgres \
+  ghcr.io/cipherstash/postgres-eql:17
+```
+
+EQL is installed automatically on first boot. Pin a specific version with `:17-2.1.8`. Other PostgreSQL majors are available as `:14`, `:15`, `:16`. See [`docker/README.md`](./docker/README.md) for the full tag scheme and details.
+
+### Install into an existing database
+
+Execute the install SQL file directly:
 
 1. Download the latest EQL install script:
 
