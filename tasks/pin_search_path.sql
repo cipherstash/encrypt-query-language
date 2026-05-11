@@ -65,6 +65,13 @@ BEGIN
   -- (`eql_v2.hmac_256(col)`, `eql_v2.bloom_filter(col)`,
   -- `eql_v2.ste_vec(col)`).
   --
+  -- For `~~` / `~~*` the planner must inline two layers — the operator
+  -- function `eql_v2."~~"` and the helper `eql_v2.like` / `eql_v2.ilike`
+  -- — to reach the canonical `eql_v2.bloom_filter(a) @> eql_v2.bloom_filter(b)`
+  -- form that the documented functional index matches. The helpers are
+  -- allowlisted alongside the operator wrappers below; pinning either
+  -- layer breaks the chain and reverts to Seq Scan.
+  --
   -- Note: pg_proc.proargtypes is an oidvector with 0-based bounds, so we
   -- compare elements individually rather than using array equality (which
   -- requires matching bounds, not just contents).
@@ -75,8 +82,11 @@ BEGIN
     AND p.pronargs = 2
     AND (
       -- Same-type (encrypted, encrypted) operators that must inline.
+      -- `like`/`ilike` are the SQL helpers that `~~`/`~~*` delegate to;
+      -- both layers must inline to reach `bloom_filter(a) @> bloom_filter(b)`.
       (p.proname IN ('=', '<>', '~~', '~~*', '@>', '<@',
-                     'jsonb_contains', 'jsonb_contained_by')
+                     'jsonb_contains', 'jsonb_contained_by',
+                     'like', 'ilike')
         AND p.proargtypes[0] = enc_oid AND p.proargtypes[1] = enc_oid)
       -- Cross-type (encrypted, jsonb).
       OR (p.proname IN ('=', '<>', '~~', '~~*',
