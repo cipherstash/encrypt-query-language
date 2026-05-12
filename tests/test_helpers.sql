@@ -283,6 +283,7 @@ AS $$
     random_val text;
     sv jsonb;
     ore_term jsonb;
+    result jsonb;
   BEGIN
 
     start := (10 * id);
@@ -317,19 +318,38 @@ AS $$
               "c": "e"
           },
           "hm": "hmac.%s",
-          "b3": "blake3.%s",
           "bf": %s,
           "v": 2
         }',
         random_key,
         random_val,
-        id, id, m);
+        id, m);
 
-    s := s::jsonb || sv || ore_term;
+    result := s::jsonb || sv || ore_term;
 
-    -- PERFORM eql_v2.log('json: %', s);
+    -- Post-2.3 ste_vec shape: each sv element carries `hm` (HMAC-256) as its
+    -- selector-scoped equality term. Synthesise `hm` deterministically from
+    -- the existing fixture terms so same-plaintext sv elements share the
+    -- same hm (preserving equality semantics under the new scheme).
+    IF result -> 'sv' IS NOT NULL THEN
+      result := jsonb_set(result, '{sv}', (
+        SELECT jsonb_agg(
+          elem || jsonb_build_object(
+            'hm',
+            coalesce(
+              elem ->> 'hm',
+              elem ->> 'ocv',
+              elem ->> 'ocf',
+              elem ->> 'b3',
+              md5(coalesce(elem ->> 's', '') || coalesce(elem ->> 'c', ''))
+            )
+          )
+        )
+        FROM jsonb_array_elements(result -> 'sv') elem
+      ));
+    END IF;
 
-    RETURN s::eql_v2_encrypted;
+    RETURN result::eql_v2_encrypted;
   END;
 $$ LANGUAGE plpgsql;
 
