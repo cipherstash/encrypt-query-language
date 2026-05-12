@@ -55,3 +55,10 @@ dir = "{{config_root}}/tests/sqlx"
 run = """
 cargo watch -x test
 """
+
+[tasks."test:schema"]
+description = "Validate sample payloads against the v2.2 / v2.3 JSON Schemas (no database required)"
+dir = "{{config_root}}/tests/sqlx"
+run = """
+cargo test --test payload_schema_tests
+"""
