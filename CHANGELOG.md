@@ -22,6 +22,10 @@ Each entry that ships in a published release links to the PR that introduced it.
 
 Targeting `2.3.0`. See [`docs/upgrading/v2.3.md`](docs/upgrading/v2.3.md) for the consolidated upgrade notes.
 
+### Added
+
+- **Formal JSON Schema for the EQL payload format.** Two files under `docs/reference/schema/`: `eql-payload-v2.2.schema.json` captures the on-the-wire shape as of release 2.2 (baseline), and `eql-payload-v2.3.schema.json` captures the target shape for 2.3. The 2.3 schema makes three breaking changes to the payload format: the root-level `b3` term is gone (already reflected in the equality / hashing entries below) and is also dropped from `sv` elements, which now carry `hm` instead; `opf` (fixed-width OPE) and `opv` (variable-width OPE) collapse into a single `op` field with the width carried in the value; OPE (`op`) and ORE (`ob`, `ocf`, `ocv`) are now mutually exclusive within a single payload or `sv` element. Both files use JSON Schema 2020-12 and share a single `IndexTerms` catalogue between root and `sv`-element shapes so that field semantics are described in exactly one place. ([#208](https://github.com/cipherstash/encrypt-query-language/pull/208))
+
 ### Changed
 
 - **`=`, `<>`, `~~` (`LIKE`), `~~*` (`ILIKE`) on `eql_v2_encrypted` are now inlinable SQL functions.** The planner can structurally match these operators against the documented functional indexes (`eql_v2.hmac_256(col)` for equality, `eql_v2.bloom_filter(col)` for `LIKE`/`ILIKE`), so bare-form queries (`WHERE col = $1`) engage the index without per-query rewriting. Previously these operators wrapped multi-branch PL/pgSQL bodies that the planner could not inline, forcing seq scans on Supabase / managed Postgres installations that lack operator-class indexes. ([#193](https://github.com/cipherstash/encrypt-query-language/pull/193), [#196](https://github.com/cipherstash/encrypt-query-language/pull/196))
