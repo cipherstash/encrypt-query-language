@@ -30,9 +30,32 @@ defaults:
     shell: bash -l {0}
 
 jobs:
+  schema:
+    name: "JSON Schema validation"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: jdx/mise-action@v4
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tests/sqlx
+          shared-key: sqlx-tests
+
+      - name: Validate v2.2 / v2.3 payload schemas
+        run: |
+          mise run test:schema
+
   test:
     name: "Test & Validate EQL (Postgres ${{ matrix.postgres-version }})"
     runs-on: ubuntu-latest-m
+    needs: schema
 
     strategy:
       fail-fast: false
