@@ -11,7 +11,7 @@
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
-use jsonschema::JSONSchema;
+use jsonschema::Validator;
 use serde_json::{json, Value};
 
 // ---------- helpers ----------
@@ -25,29 +25,29 @@ fn load_schema(filename: &str) -> Value {
     serde_json::from_str(&text).unwrap_or_else(|e| panic!("schema is not valid JSON: {e}"))
 }
 
-fn compile(schema: &Value) -> JSONSchema {
-    // Schema files declare `$schema: draft 2020-12`. The 0.17 jsonschema crate
-    // doesn't have an explicit Draft 2020-12 variant; let it fall back to its
-    // default (Draft 7). The constructs we use ($defs, $ref, oneOf, allOf,
-    // not, const, additionalProperties, pattern, etc.) are all supported.
-    JSONSchema::compile(schema).expect("schema fails to compile")
+fn compile(schema: &Value) -> Validator {
+    // `validator_for` auto-detects the draft from the schema's `$schema`
+    // keyword. Both files declare draft 2020-12, which is supported natively
+    // by jsonschema >= 0.18.
+    jsonschema::validator_for(schema).expect("schema fails to compile")
 }
 
-fn schema_v2_2() -> &'static JSONSchema {
-    static S: OnceLock<JSONSchema> = OnceLock::new();
+fn schema_v2_2() -> &'static Validator {
+    static S: OnceLock<Validator> = OnceLock::new();
     S.get_or_init(|| compile(&load_schema("eql-payload-v2.2.schema.json")))
 }
 
-fn schema_v2_3() -> &'static JSONSchema {
-    static S: OnceLock<JSONSchema> = OnceLock::new();
+fn schema_v2_3() -> &'static Validator {
+    static S: OnceLock<Validator> = OnceLock::new();
     S.get_or_init(|| compile(&load_schema("eql-payload-v2.3.schema.json")))
 }
 
 #[track_caller]
-fn assert_valid(schema: &JSONSchema, instance: &Value, label: &str) {
-    if let Err(errors) = schema.validate(instance) {
-        let msgs: Vec<String> = errors
-            .map(|e| format!("  - {} (at {})", e, e.instance_path))
+fn assert_valid(schema: &Validator, instance: &Value, label: &str) {
+    if !schema.is_valid(instance) {
+        let msgs: Vec<String> = schema
+            .iter_errors(instance)
+            .map(|e| format!("  - {} (at {})", e, e.instance_path()))
             .collect();
         panic!(
             "expected `{label}` to validate, but got:\n{}\ninstance:\n{}",
@@ -58,7 +58,7 @@ fn assert_valid(schema: &JSONSchema, instance: &Value, label: &str) {
 }
 
 #[track_caller]
-fn assert_invalid(schema: &JSONSchema, instance: &Value, label: &str) {
+fn assert_invalid(schema: &Validator, instance: &Value, label: &str) {
     if schema.is_valid(instance) {
         panic!(
             "expected `{label}` to fail validation, but it passed:\n{}",
@@ -259,7 +259,11 @@ fn v2_3_ste_vec_payload_with_hm_in_elements_is_valid() {
             { "s": SELECTOR, "a": true,  "c": CIPHERTEXT, "hm": HEX, "op": HEX }
         ]
     });
-    assert_valid(schema_v2_3(), &p, "ste_vec payload with hm-bearing elements");
+    assert_valid(
+        schema_v2_3(),
+        &p,
+        "ste_vec payload with hm-bearing elements",
+    );
 }
 
 #[test]
@@ -282,18 +286,30 @@ fn v2_3_legacy_opf_and_opv_are_rejected() {
     let with_opf = json!({
         "v": 2, "c": CIPHERTEXT, "i": ident(), "opf": HEX
     });
-    assert_invalid(schema_v2_3(), &with_opf, "encrypted payload with legacy opf");
+    assert_invalid(
+        schema_v2_3(),
+        &with_opf,
+        "encrypted payload with legacy opf",
+    );
 
     let with_opv = json!({
         "v": 2, "c": CIPHERTEXT, "i": ident(), "opv": HEX_LONG
     });
-    assert_invalid(schema_v2_3(), &with_opv, "encrypted payload with legacy opv");
+    assert_invalid(
+        schema_v2_3(),
+        &with_opv,
+        "encrypted payload with legacy opv",
+    );
 
     let element_with_opf = json!({
         "v": 2, "k": "sv", "i": ident(),
         "sv": [{ "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX, "opf": HEX }]
     });
-    assert_invalid(schema_v2_3(), &element_with_opf, "sv element with legacy opf");
+    assert_invalid(
+        schema_v2_3(),
+        &element_with_opf,
+        "sv element with legacy opf",
+    );
 }
 
 #[test]
