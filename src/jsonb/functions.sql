@@ -1,5 +1,8 @@
 -- REQUIRE: src/schema.sql
 -- REQUIRE: src/encrypted/types.sql
+-- REQUIRE: src/encrypted/functions.sql
+-- REQUIRE: src/hmac_256/types.sql
+-- REQUIRE: src/ste_vec/functions.sql
 
 --! @file jsonb/functions.sql
 --! @brief JSONB path query and array manipulation functions for encrypted data
@@ -9,9 +12,16 @@
 --! - Path-based queries to extract nested encrypted values
 --! - Existence checks for encrypted fields
 --! - Array operations (length, elements extraction)
+--! - Field-level HMAC term extraction for equality / GROUP BY / DISTINCT
 --!
 --! @note STE stores encrypted JSONB as a vector of encrypted elements ('sv') with selectors
 --! @note Functions suppress errors for missing fields, type mismatches (similar to PostgreSQL jsonpath)
+--! @note `selector` parameters in this module are *encrypted-side* selector
+--!       hashes — the deterministic hash that the crypto layer (e.g.
+--!       `@cipherstash/protect`) emits in the `s` field of each `sv` element
+--!       (e.g. `'a7cea93975ed8c01f861ccb6bd082784'`). Plaintext JSONPaths
+--!       like `'$.address.city'` are never accepted at runtime; the proxy /
+--!       client rewrites them to selector hashes before the query reaches EQL.
 
 
 --! @brief Query encrypted JSONB for elements matching selector
@@ -31,57 +41,20 @@
 --! @see eql_v2.jsonb_path_exists
 CREATE FUNCTION eql_v2.jsonb_path_query(val jsonb, selector text)
   RETURNS SETOF eql_v2_encrypted
+  LANGUAGE sql
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
 AS $$
-  DECLARE
-    sv eql_v2_encrypted[];
-    found jsonb[];
-    e jsonb;
-    meta jsonb;
-    ary boolean;
-  BEGIN
-
-    IF val IS NULL THEN
-      RETURN NEXT NULL;
-    END IF;
-
-    -- Column identifier and version
-    meta := eql_v2.meta_data(val);
-
-    sv := eql_v2.ste_vec(val);
-
-    FOR idx IN 1..array_length(sv, 1) LOOP
-      e := sv[idx];
-
-      IF eql_v2.selector(e) = selector THEN
-        found := array_append(found, e);
-        IF eql_v2.is_ste_vec_array(e) THEN
-          ary := true;
-        END IF;
-
-      END IF;
-    END LOOP;
-
-    IF found IS NOT NULL THEN
-
-      IF ary THEN
-        -- Wrap found array elements as eql_v2_encrypted
-
-        RETURN NEXT (meta || jsonb_build_object(
-          'sv', found,
-          'a', 1
-        ))::eql_v2_encrypted;
-
+  SELECT
+    CASE
+      WHEN bool_or(eql_v2.is_ste_vec_array(elem)) THEN
+        (eql_v2.meta_data(val) || jsonb_build_object('sv', jsonb_agg(elem), 'a', 1))::eql_v2_encrypted
       ELSE
-        RETURN NEXT (meta || found[1])::eql_v2_encrypted;
-      END IF;
-
-    END IF;
-
-    RETURN;
-  END;
-$$ LANGUAGE plpgsql;
+        (eql_v2.meta_data(val) || (array_agg(elem))[1])::eql_v2_encrypted
+    END
+  FROM jsonb_array_elements(val -> 'sv') elem
+  WHERE elem ->> 's' = selector
+  HAVING count(*) > 0
+$$;
 
 
 --! @brief Query encrypted JSONB with encrypted selector
@@ -96,14 +69,11 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.jsonb_path_query(jsonb, text)
 CREATE FUNCTION eql_v2.jsonb_path_query(val eql_v2_encrypted, selector eql_v2_encrypted)
   RETURNS SETOF eql_v2_encrypted
+  LANGUAGE sql
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
 AS $$
-  BEGIN
-    RETURN QUERY
-    SELECT * FROM eql_v2.jsonb_path_query(val.data, eql_v2.selector(selector));
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT * FROM eql_v2.jsonb_path_query((val).data, eql_v2.selector(selector));
+$$;
 
 
 --! @brief Query encrypted JSONB with text selector
@@ -116,20 +86,17 @@ $$ LANGUAGE plpgsql;
 --! @return SETOF eql_v2_encrypted Matching encrypted elements
 --!
 --! @example
---! -- Query encrypted JSONB for specific field
---! SELECT * FROM eql_v2.jsonb_path_query(encrypted_document, '$.address.city');
+--! -- Query encrypted JSONB for the sv element at a given selector hash
+--! SELECT * FROM eql_v2.jsonb_path_query(encrypted_document, 'a7cea93975ed8c01f861ccb6bd082784');
 --!
 --! @see eql_v2.jsonb_path_query(jsonb, text)
 CREATE FUNCTION eql_v2.jsonb_path_query(val eql_v2_encrypted, selector text)
   RETURNS SETOF eql_v2_encrypted
+  LANGUAGE sql
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
 AS $$
-  BEGIN
-    RETURN QUERY
-    SELECT * FROM eql_v2.jsonb_path_query(val.data, selector);
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT * FROM eql_v2.jsonb_path_query((val).data, selector);
+$$;
 
 
 ------------------------------------------------------------------------------------
@@ -147,15 +114,14 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.jsonb_path_query(jsonb, text)
 CREATE FUNCTION eql_v2.jsonb_path_exists(val jsonb, selector text)
   RETURNS boolean
+  LANGUAGE sql
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
 AS $$
-  BEGIN
-    RETURN EXISTS (
-      SELECT eql_v2.jsonb_path_query(val, selector)
-    );
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT EXISTS (
+    SELECT 1 FROM jsonb_array_elements(val -> 'sv') elem
+    WHERE elem ->> 's' = selector
+  );
+$$;
 
 
 --! @brief Check existence with encrypted selector
@@ -170,15 +136,11 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.jsonb_path_exists(jsonb, text)
 CREATE FUNCTION eql_v2.jsonb_path_exists(val eql_v2_encrypted, selector eql_v2_encrypted)
   RETURNS boolean
+  LANGUAGE sql
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
 AS $$
-  BEGIN
-    RETURN EXISTS (
-      SELECT eql_v2.jsonb_path_query(val, eql_v2.selector(selector))
-    );
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.jsonb_path_exists((val).data, eql_v2.selector(selector));
+$$;
 
 
 --! @brief Check existence with text selector
@@ -190,21 +152,17 @@ $$ LANGUAGE plpgsql;
 --! @return boolean True if path exists
 --!
 --! @example
---! -- Check if encrypted document has address field
---! SELECT eql_v2.jsonb_path_exists(encrypted_document, '$.address');
+--! -- Check if the encrypted document has an sv element at a given selector hash
+--! SELECT eql_v2.jsonb_path_exists(encrypted_document, 'a7cea93975ed8c01f861ccb6bd082784');
 --!
 --! @see eql_v2.jsonb_path_exists(jsonb, text)
 CREATE FUNCTION eql_v2.jsonb_path_exists(val eql_v2_encrypted, selector text)
   RETURNS boolean
+  LANGUAGE sql
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
 AS $$
-  BEGIN
-    RETURN EXISTS (
-      SELECT eql_v2.jsonb_path_query(val, selector)
-    );
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.jsonb_path_exists((val).data, selector);
+$$;
 
 
 ------------------------------------------------------------------------------------
@@ -224,17 +182,14 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.jsonb_path_query(jsonb, text)
 CREATE FUNCTION eql_v2.jsonb_path_query_first(val jsonb, selector text)
   RETURNS eql_v2_encrypted
+  LANGUAGE sql
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
 AS $$
-  BEGIN
-    RETURN (
-      SELECT e
-      FROM eql_v2.jsonb_path_query(val, selector) AS e
-      LIMIT 1
-    );
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT (eql_v2.meta_data(val) || elem)::eql_v2_encrypted
+  FROM jsonb_array_elements(val -> 'sv') elem
+  WHERE elem ->> 's' = selector
+  LIMIT 1
+$$;
 
 
 --! @brief Get first element with encrypted selector
@@ -249,17 +204,11 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v2.jsonb_path_query_first(jsonb, text)
 CREATE FUNCTION eql_v2.jsonb_path_query_first(val eql_v2_encrypted, selector eql_v2_encrypted)
   RETURNS eql_v2_encrypted
+  LANGUAGE sql
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
 AS $$
-  BEGIN
-    RETURN (
-      SELECT e
-      FROM eql_v2.jsonb_path_query(val.data, eql_v2.selector(selector)) AS e
-      LIMIT 1
-    );
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.jsonb_path_query_first((val).data, eql_v2.selector(selector));
+$$;
 
 
 --! @brief Get first element with text selector
@@ -271,23 +220,17 @@ $$ LANGUAGE plpgsql;
 --! @return eql_v2_encrypted First matching element or NULL
 --!
 --! @example
---! -- Get first matching address from encrypted document
---! SELECT eql_v2.jsonb_path_query_first(encrypted_document, '$.addresses[*]');
+--! -- Get the first matching sv element from an encrypted document
+--! SELECT eql_v2.jsonb_path_query_first(encrypted_document, 'a7cea93975ed8c01f861ccb6bd082784');
 --!
 --! @see eql_v2.jsonb_path_query_first(jsonb, text)
 CREATE FUNCTION eql_v2.jsonb_path_query_first(val eql_v2_encrypted, selector text)
   RETURNS eql_v2_encrypted
+  LANGUAGE sql
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
 AS $$
-  BEGIN
-    RETURN (
-      SELECT e
-      FROM eql_v2.jsonb_path_query(val.data, selector) AS e
-      LIMIT 1
-    );
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.jsonb_path_query_first((val).data, selector);
+$$;
 
 
 
@@ -489,3 +432,84 @@ AS $$
       SELECT * FROM eql_v2.jsonb_array_elements_text(val.data);
   END;
 $$ LANGUAGE plpgsql;
+
+
+------------------------------------------------------------------------------------
+
+
+--! @brief Extract HMAC-SHA256 index term for a specific ste_vec selector
+--!
+--! Field-level equality extractor: walks the encrypted value's sv array,
+--! finds the element whose selector matches @p selector, and returns its
+--! `hm` term. Mirrors the root-level `eql_v2.hmac_256(val)` at the field
+--! level so the same hash/index/equality recipes compose.
+--!
+--! Single-statement SQL — inlinable into the calling query, so a btree
+--! hash index built on `eql_v2.hmac_256(col, '<selector-hash>')` engages
+--! structurally for WHERE / GROUP BY / DISTINCT / hash-join.
+--!
+--! @param val      eql_v2_encrypted Encrypted column value
+--! @param selector text             Encrypted-side selector hash (see file-level note)
+--! @return eql_v2.hmac_256 HMAC-SHA256 hash for that selector's element, or NULL
+--!
+--! @note Returns NULL if @p selector matches no sv element, or if the
+--!       matched element carries no `hm`.
+--!
+--! @see eql_v2.hmac_256(eql_v2_encrypted)
+--! @see eql_v2.hmac_256_terms
+--! @see eql_v2.ste_vec_contains
+--!
+--! @example
+--! CREATE INDEX users_data_email_idx ON users
+--!   USING hash (eql_v2.hmac_256(data_encrypted, 'a7cea93975ed8c01f861ccb6bd082784'));
+--! SELECT count(*) FROM users
+--!   GROUP BY eql_v2.hmac_256(data_encrypted, 'a7cea93975ed8c01f861ccb6bd082784');
+CREATE FUNCTION eql_v2.hmac_256(val eql_v2_encrypted, selector text)
+  RETURNS eql_v2.hmac_256
+  LANGUAGE sql
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  SELECT (elem ->> 'hm')::eql_v2.hmac_256
+  FROM jsonb_array_elements((val).data -> 'sv') elem
+  WHERE elem ->> 's' = selector
+  LIMIT 1
+$$;
+
+
+--! @brief Aggregate all (selector, hmac) pairs from ste_vec elements
+--!
+--! Returns a jsonb array of `{"s": <selector>, "hm": <hmac>}` objects, one
+--! per sv element that carries an `hm` term. Designed for use with a GIN
+--! index — one index covers field-level equality / containment across
+--! every selector in the encrypted document, instead of one per selector.
+--!
+--! @param val eql_v2_encrypted Encrypted column value
+--! @return jsonb Array of `{s, hm}` objects (empty array when no sv elements)
+--!
+--! @note Selector values in `s` are the deterministic selector hashes
+--!       emitted by the crypto layer, not plaintext JSONPaths. See the
+--!       file-level @note for the convention.
+--!
+--! @see eql_v2.hmac_256(eql_v2_encrypted, text)
+--!
+--! @example
+--! CREATE INDEX users_data_hmac_terms_idx
+--!   ON users USING gin (eql_v2.hmac_256_terms(data_encrypted));
+--!
+--! SELECT * FROM users
+--!   WHERE eql_v2.hmac_256_terms(data_encrypted)
+--!       @> '[{"s":"a7cea93975ed8c01f861ccb6bd082784","hm":"<hash>"}]'::jsonb;
+CREATE FUNCTION eql_v2.hmac_256_terms(val eql_v2_encrypted)
+  RETURNS jsonb
+  LANGUAGE sql
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  SELECT coalesce(
+    jsonb_agg(
+      jsonb_build_object('s', elem ->> 's', 'hm', elem ->> 'hm')
+    ),
+    '[]'::jsonb
+  )
+  FROM jsonb_array_elements((val).data -> 'sv') elem
+  WHERE elem ->> 'hm' IS NOT NULL
+$$;

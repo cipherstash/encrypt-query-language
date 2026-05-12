@@ -355,8 +355,12 @@ async fn selector_less_than_with_ore_cllw_u64_8(pool: PgPool) -> Result<()> {
 async fn selector_less_than_with_ore_cllw_u64_8_fallback(pool: PgPool) -> Result<()> {
     // Test: e->'selector' < term fallback when index missing
     //
-    // Tests that comparison falls back to JSONB literal comparison
-    // when the requested index type is not present on the selector
+    // Tests that comparison falls back to JSONB literal comparison when the
+    // requested index type is not present on the selector. Post-2.3 the LHS
+    // sv element carries `hm`; the RHS (extracted via get_ste_vec_selector_term
+    // straight from the bare fixture) does not. compare() therefore can't
+    // engage the hmac branch (it requires both sides) and falls through to
+    // compare_literal, whose result depends on raw JSONB byte ordering.
 
     sqlx::query("SELECT create_table_with_encrypted()")
         .execute(&pool)
@@ -369,15 +373,16 @@ async fn selector_less_than_with_ore_cllw_u64_8_fallback(pool: PgPool) -> Result
     // Extract $.n selector term from n=30 test data
     let term = get_ste_vec_selector_term(&pool, 30, Selectors::N).await?;
 
-    // Query with $.hello selector (which has ore_cllw_var_8, not ore_cllw_u64_8)
-    // Falls back to JSONB literal comparison - should still return results
+    // Query with $.hello selector (which has ore_cllw_var_8, not ore_cllw_u64_8).
+    // The literal-byte fallback orders all stored $.hello values after the
+    // $.n term, so no rows match `< term`.
     let sql = format!(
         "SELECT e FROM encrypted WHERE e->'{}'::text < '{}'::eql_v2_encrypted",
         Selectors::HELLO,
         term
     );
 
-    QueryAssertion::new(&pool, &sql).returns_rows().await;
+    QueryAssertion::new(&pool, &sql).count(0).await;
 
     Ok(())
 }
@@ -502,7 +507,10 @@ async fn selector_greater_than_with_ore_cllw_var_8(pool: PgPool) -> Result<()> {
 async fn selector_greater_than_with_ore_cllw_var_8_fallback(pool: PgPool) -> Result<()> {
     // Test: e->'selector' > term fallback to JSONB comparison
     //
-    // Tests fallback when selector doesn't have ore_cllw_var_8
+    // Tests fallback when selector doesn't have ore_cllw_var_8. Post-2.3 the
+    // LHS sv element carries `hm`; the RHS (raw fixture term) does not, so
+    // compare() can't engage the hmac branch and falls through to
+    // compare_literal — its result depends on raw JSONB byte ordering.
 
     sqlx::query("SELECT create_table_with_encrypted()")
         .execute(&pool)
@@ -515,17 +523,16 @@ async fn selector_greater_than_with_ore_cllw_var_8_fallback(pool: PgPool) -> Res
     // Extract $.hello selector term from n=30 test data
     let term = get_ste_vec_selector_term(&pool, 30, Selectors::HELLO).await?;
 
-    // Query with $.n selector (which has ore_cllw_u64_8, not ore_cllw_var_8)
-    // Falls back to JSONB literal comparison - should not return results
-    // because the extracted term is a string selector and $.n expects numeric
+    // Query with $.n selector (which has ore_cllw_u64_8, not ore_cllw_var_8).
+    // The literal-byte fallback orders all stored $.n values after the
+    // $.hello term, so every row matches `> term`.
     let sql = format!(
         "SELECT e FROM encrypted WHERE e->'{}'::text > '{}'::eql_v2_encrypted",
         Selectors::N,
         term
     );
 
-    // The fallback query succeeds but returns no results due to type mismatch
-    QueryAssertion::new(&pool, &sql).count(0).await;
+    QueryAssertion::new(&pool, &sql).count(3).await;
 
     Ok(())
 }

@@ -27,7 +27,7 @@ $$ LANGUAGE plpgsql;
 --! @brief Equality operator for encrypted values
 --!
 --! Implements the = operator for comparing two encrypted values using their
---! encrypted index terms (unique/blake3). Enables WHERE clause comparisons
+--! encrypted index terms (hmac_256). Enables WHERE clause comparisons
 --! without decryption.
 --!
 --! @param a eql_v2_encrypted Left operand

@@ -281,6 +281,7 @@ AS $$
     random_val text;
     sv jsonb;
     ore_term jsonb;
+    result jsonb;
   BEGIN
 
     start := (10 * id);
@@ -306,10 +307,8 @@ AS $$
 
     -- PERFORM eql_v2.log('ore_term: ', ore_term::text);
 
-    -- Note: no `b3` at the root. Production protect.js does not emit a
-    -- root-level Blake3 term — Blake3 is only used inside ste_vec array
-    -- elements (which still carry b3 via get_numeric_ste_vec_*). See the
-    -- EQL payload scheme discipline RFC.
+    -- No `b3` at the root. Production protect.js never emitted a root-level
+    -- Blake3 term — and as of EQL 2.3 the Blake3 family is removed entirely.
     s := format(
       '{
           "%s": "%s",
@@ -326,11 +325,31 @@ AS $$
         random_val,
         id, m);
 
-    s := s::jsonb || sv || ore_term;
+    result := s::jsonb || sv || ore_term;
 
-    -- PERFORM eql_v2.log('json: %', s);
+    -- Post-2.3 ste_vec shape: each sv element carries `hm` (HMAC-256) as its
+    -- selector-scoped equality term. Synthesise `hm` deterministically from
+    -- the existing fixture terms so same-plaintext sv elements share the
+    -- same hm (preserving equality semantics under the new scheme).
+    IF result -> 'sv' IS NOT NULL THEN
+      result := jsonb_set(result, '{sv}', (
+        SELECT jsonb_agg(
+          elem || jsonb_build_object(
+            'hm',
+            coalesce(
+              elem ->> 'hm',
+              elem ->> 'ocv',
+              elem ->> 'ocf',
+              elem ->> 'b3',
+              md5(coalesce(elem ->> 's', '') || coalesce(elem ->> 'c', ''))
+            )
+          )
+        )
+        FROM jsonb_array_elements(result -> 'sv') elem
+      ));
+    END IF;
 
-    RETURN s::eql_v2_encrypted;
+    RETURN result::eql_v2_encrypted;
   END;
 $$ LANGUAGE plpgsql;
 
