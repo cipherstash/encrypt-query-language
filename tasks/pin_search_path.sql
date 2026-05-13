@@ -79,23 +79,59 @@ BEGIN
   FROM pg_catalog.pg_proc p
   JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
   WHERE n.nspname = 'eql_v2'
-    AND p.pronargs = 2
     AND (
-      -- Same-type (encrypted, encrypted) operators that must inline.
-      -- `like`/`ilike` are the SQL helpers that `~~`/`~~*` delegate to;
-      -- both layers must inline to reach `bloom_filter(a) @> bloom_filter(b)`.
-      (p.proname IN ('=', '<>', '~~', '~~*', '@>', '<@',
-                     'jsonb_contains', 'jsonb_contained_by',
-                     'like', 'ilike')
-        AND p.proargtypes[0] = enc_oid AND p.proargtypes[1] = enc_oid)
-      -- Cross-type (encrypted, jsonb).
-      OR (p.proname IN ('=', '<>', '~~', '~~*',
-                        'jsonb_contains', 'jsonb_contained_by')
-        AND p.proargtypes[0] = enc_oid AND p.proargtypes[1] = jsonb_oid)
-      -- Cross-type (jsonb, encrypted).
-      OR (p.proname IN ('=', '<>', '~~', '~~*',
-                        'jsonb_contains', 'jsonb_contained_by')
-        AND p.proargtypes[0] = jsonb_oid AND p.proargtypes[1] = enc_oid)
+      -- Two-arg operator overloads on eql_v2_encrypted / jsonb. The
+      -- `pronargs = 2` filter is scoped to these arms because the helpers
+      -- below include single-argument extractors (encrypted_int4_ope_key,
+      -- encrypted_jsonb_array) that must also remain inlineable.
+      ( p.pronargs = 2 AND (
+        -- Same-type (encrypted, encrypted) operators that must inline.
+        -- `like`/`ilike` are the SQL helpers that `~~`/`~~*` delegate to;
+        -- both layers must inline to reach `bloom_filter(a) @> bloom_filter(b)`.
+        (p.proname IN ('=', '<>', '~~', '~~*', '@>', '<@',
+                       'jsonb_contains', 'jsonb_contained_by',
+                       'like', 'ilike')
+          AND p.proargtypes[0] = enc_oid AND p.proargtypes[1] = enc_oid)
+        -- Cross-type (encrypted, jsonb).
+        OR (p.proname IN ('=', '<>', '~~', '~~*',
+                          'jsonb_contains', 'jsonb_contained_by')
+          AND p.proargtypes[0] = enc_oid AND p.proargtypes[1] = jsonb_oid)
+        -- Cross-type (jsonb, encrypted).
+        OR (p.proname IN ('=', '<>', '~~', '~~*',
+                          'jsonb_contains', 'jsonb_contained_by')
+          AND p.proargtypes[0] = jsonb_oid AND p.proargtypes[1] = enc_oid)
+      ) )
+      -- Domain-type prototype helpers and operator functions
+      -- (encrypted_text, encrypted_int4, encrypted_jsonb). These are
+      -- LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE and must inline so
+      -- that bare operator predicates engage functional indexes on
+      -- eql_v2.hmac_256(col::jsonb), eql_v2.bloom_filter(col::jsonb),
+      -- eql_v2.encrypted_int4_ope_key(col), and
+      -- eql_v2.encrypted_jsonb_array(col). Name-only match (any arity)
+      -- because the same proname covers same-domain and cross-type
+      -- (domain, jsonb) / (jsonb, domain) overloads, plus the single-arg
+      -- extractors used in the functional indexes themselves.
+      OR p.proname IN (
+        'encrypted_text_eq',
+        'encrypted_text_neq',
+        'encrypted_text_like',
+        'encrypted_int4_eq',
+        'encrypted_int4_neq',
+        'encrypted_int4_lt',
+        'encrypted_int4_lte',
+        'encrypted_int4_gt',
+        'encrypted_int4_gte',
+        'encrypted_int4_ope_key',
+        'encrypted_jsonb_eq',
+        'encrypted_jsonb_neq',
+        'encrypted_jsonb_contains',
+        'encrypted_jsonb_contained_by',
+        'encrypted_jsonb_arrow',
+        'encrypted_jsonb_arrow_text',
+        'encrypted_jsonb_arrow_int',
+        'encrypted_jsonb_arrow_text_int',
+        'encrypted_jsonb_array'
+      )
     );
 
   FOR fn_oid IN
