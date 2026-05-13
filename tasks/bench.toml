@@ -1,0 +1,64 @@
+["bench:up"]
+description = "Start Postgres + Proxy for benchmark data generation"
+dir = "{{config_root}}"
+run = """
+if [ ! -f tests/benchmarks/.env ]; then
+  echo "ERROR: tests/benchmarks/.env missing. Copy .env.example and fill in credentials." >&2
+  exit 1
+fi
+docker compose --env-file tests/benchmarks/.env -f tests/benchmarks/docker-compose.yml up -d
+export PGPASSWORD="password"
+echo "Waiting for bench-postgres on localhost:7433..."
+for i in $(seq 1 60); do
+  if psql -U cipherstash -d cipherstash -h localhost -p 7433 -c 'SELECT 1' >/dev/null 2>&1; then
+    echo "bench-postgres ready."
+    break
+  fi
+  sleep 1
+  if [ "$i" -eq 60 ]; then
+    echo "bench-postgres did not become ready in 60s."
+    echo
+    echo '=== bench-postgres logs ==='
+    docker logs bench-postgres 2>&1 | tail -40
+    exit 1
+  fi
+done
+
+echo "Waiting for bench-proxy on localhost:6433..."
+for i in $(seq 1 60); do
+  if psql -U cipherstash -d cipherstash -h localhost -p 6433 -c 'SELECT 1' >/dev/null 2>&1; then
+    echo "bench-proxy ready."
+    exit 0
+  fi
+  sleep 1
+done
+echo "bench-proxy did not become ready in 60s."
+echo
+echo '=== bench-proxy logs ==='
+docker logs bench-proxy 2>&1 | tail -40
+exit 1
+"""
+
+["bench:down"]
+description = "Stop benchmark Postgres + Proxy"
+dir = "{{config_root}}"
+run = """
+docker compose -f tests/benchmarks/docker-compose.yml down -v
+"""
+
+["bench:generate"]
+description = "Generate 100K encrypted bench dataset (requires bench:up first)"
+# `build` produces release/cipherstash-encrypt.sql, which generate.sh
+# installs into the bench Postgres container before applying schema.sql.
+depends = ["build"]
+dir = "{{config_root}}"
+run = """
+tests/benchmarks/generate.sh 100k
+"""
+
+["bench:full"]
+description = "Run committed SQLx bench/regression suite"
+dir = "{{config_root}}"
+run = """
+mise run --output prefix test:bench
+"""
