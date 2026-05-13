@@ -524,7 +524,13 @@ async fn encrypted_jsonb_equality_and_inequality_use_hmac_index(pool: PgPool) ->
     }
 
     sqlx::query(
-        "CREATE INDEX typed_jsonb_hmac_idx ON typed_jsonb_eq_index ((eql_v2.hmac_256(value::jsonb)))",
+        // The encrypted_jsonb = / <> wrappers normalise both operands through
+        // eql_v2.encrypted_jsonb_path_value before hashing. The function
+        // returns encrypted_jsonb; the wrapper casts it back to jsonb for
+        // hmac_256. The functional index must mirror that exact expression
+        // shape so the planner can match the inlined predicate.
+        "CREATE INDEX typed_jsonb_hmac_idx ON typed_jsonb_eq_index \
+         ((eql_v2.hmac_256((eql_v2.encrypted_jsonb_path_value(value::jsonb))::jsonb)))",
     )
     .execute(&mut *tx)
     .await?;
@@ -804,6 +810,109 @@ async fn encrypted_jsonb_path_results_support_equality_and_inequality(pool: PgPo
         int_neq,
         "integer path result should compare unequal to non-matching leaf"
     );
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn encrypted_jsonb_eq_normalises_both_operands(pool: PgPool) -> Result<()> {
+    // Regression: both operands of `=` / `<>` on encrypted_jsonb must thread
+    // through encrypted_jsonb_path_value. If only one side is normalised, a
+    // leaf-shaped payload (no top-level `hm`) on the un-normalised side
+    // makes hmac_256 raise, and the predicate becomes order-dependent.
+    let leaf_a = r#"{"s":"selector-email","b3":"b3-alice","c":"a-ciphertext"}"#;
+    let leaf_a_again = r#"{"s":"selector-email","b3":"b3-alice","c":"a-ciphertext-other"}"#;
+    let leaf_b = r#"{"s":"selector-email","b3":"b3-bob","c":"b-ciphertext"}"#;
+
+    // (domain, domain) — both leaves carry no top-level `hm`; previous bug
+    // raised because the LHS skipped path_value.
+    let eq: bool =
+        sqlx::query_scalar("SELECT $1::jsonb::encrypted_jsonb = $2::jsonb::encrypted_jsonb")
+            .bind(leaf_a)
+            .bind(leaf_a_again)
+            .fetch_one(&pool)
+            .await?;
+    assert!(
+        eq,
+        "(domain, domain) leaf=leaf same plaintext must be equal"
+    );
+
+    let neq: bool =
+        sqlx::query_scalar("SELECT $1::jsonb::encrypted_jsonb <> $2::jsonb::encrypted_jsonb")
+            .bind(leaf_a)
+            .bind(leaf_b)
+            .fetch_one(&pool)
+            .await?;
+    assert!(neq, "(domain, domain) leaf<>leaf different plaintext");
+
+    // (domain, jsonb) — RHS bound as plain jsonb.
+    let eq: bool = sqlx::query_scalar("SELECT $1::jsonb::encrypted_jsonb = $2::jsonb")
+        .bind(leaf_a)
+        .bind(leaf_a_again)
+        .fetch_one(&pool)
+        .await?;
+    assert!(eq, "(domain, jsonb) leaf=leaf");
+
+    // (jsonb, domain) — LHS bound as plain jsonb. Was the order-sensitive case.
+    let eq: bool = sqlx::query_scalar("SELECT $1::jsonb = $2::jsonb::encrypted_jsonb")
+        .bind(leaf_a)
+        .bind(leaf_a_again)
+        .fetch_one(&pool)
+        .await?;
+    assert!(eq, "(jsonb, domain) leaf=leaf");
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn encrypted_jsonb_eq_handles_numeric_leaves_via_ocv(pool: PgPool) -> Result<()> {
+    // Regression: numeric / float leaves carry deterministic ORE/OPE bytes
+    // in `ocv` (or `ocf`) — they don't have a `b3` (which is the text-leaf
+    // plaintext blake3). The previous COALESCE chain skipped ocv/ocf and
+    // fell straight to `c` (random ciphertext), making equal numeric values
+    // hash differently. Build two leaves with the same `ocv` but different
+    // `c` and assert they compare equal.
+    let leaf_score_10_v1 = r#"{"s":"selector-score","ocv":"deadbeef0000","c":"score-ct-v1"}"#;
+    let leaf_score_10_v2 = r#"{"s":"selector-score","ocv":"deadbeef0000","c":"score-ct-v2"}"#;
+    let leaf_score_20 = r#"{"s":"selector-score","ocv":"feedface0000","c":"score-ct-v3"}"#;
+
+    let eq: bool =
+        sqlx::query_scalar("SELECT $1::jsonb::encrypted_jsonb = $2::jsonb::encrypted_jsonb")
+            .bind(leaf_score_10_v1)
+            .bind(leaf_score_10_v2)
+            .fetch_one(&pool)
+            .await?;
+    assert!(eq, "two leaves with the same ocv must compare equal");
+
+    let neq: bool =
+        sqlx::query_scalar("SELECT $1::jsonb::encrypted_jsonb <> $2::jsonb::encrypted_jsonb")
+            .bind(leaf_score_10_v1)
+            .bind(leaf_score_20)
+            .fetch_one(&pool)
+            .await?;
+    assert!(neq, "leaves with different ocv must compare unequal");
+
+    // Same shape but with `ocf` instead of `ocv` — the other deterministic
+    // scalar term. Path_value's COALESCE chain should pick it up.
+    let leaf_ocf_a = r#"{"s":"selector-score","ocf":"cafef00d","c":"score-ocf-a"}"#;
+    let leaf_ocf_a_again = r#"{"s":"selector-score","ocf":"cafef00d","c":"score-ocf-b"}"#;
+    let leaf_ocf_b = r#"{"s":"selector-score","ocf":"baadcafe","c":"score-ocf-c"}"#;
+
+    let eq: bool =
+        sqlx::query_scalar("SELECT $1::jsonb::encrypted_jsonb = $2::jsonb::encrypted_jsonb")
+            .bind(leaf_ocf_a)
+            .bind(leaf_ocf_a_again)
+            .fetch_one(&pool)
+            .await?;
+    assert!(eq, "two leaves with the same ocf must compare equal");
+
+    let neq: bool =
+        sqlx::query_scalar("SELECT $1::jsonb::encrypted_jsonb = $2::jsonb::encrypted_jsonb")
+            .bind(leaf_ocf_a)
+            .bind(leaf_ocf_b)
+            .fetch_one(&pool)
+            .await?;
+    assert!(!neq, "leaves with different ocf must not compare equal");
 
     Ok(())
 }

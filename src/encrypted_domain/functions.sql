@@ -695,12 +695,25 @@ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.encrypted_jsonb_path_value(a jsonb)
 RETURNS encrypted_jsonb LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
+-- Synthesise a deterministic hm for payloads / leaves that lack one. The
+-- COALESCE chain prefers fields that are stable across re-encryptions:
+--   b3   text-leaf blake3 of plaintext (sv text elements)
+--   ocv  OPE-CLLW value bytes (sv numeric / float leaves — ordered scalar)
+--   ocf  ORE-CLLW value bytes (alternate ORE form for scalar leaves)
+-- and only falls back to the per-encryption random ciphertext `c` (and
+-- finally the jsonb-as-text serialisation) when none of the deterministic
+-- terms are present. Without the ocv/ocf branches, numeric/float leaves
+-- (which carry no b3) would hash through `c` and two equal numeric
+-- plaintexts would compare unequal.
 SELECT (
   CASE
     WHEN a ? 'hm' THEN a
     ELSE a || jsonb_build_object(
       'hm',
-      jsonb_build_array(a->'s', COALESCE(a->'b3', a->'c', to_jsonb(a::text)))::text
+      jsonb_build_array(
+        a->'s',
+        COALESCE(a->'b3', a->'ocv', a->'ocf', a->'c', to_jsonb(a::text))
+      )::text
     )
   END
 )::encrypted_jsonb
@@ -716,7 +729,7 @@ $$;
 --! @return boolean
 CREATE FUNCTION eql_v2.encrypted_jsonb_eq(a encrypted_jsonb, b encrypted_jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.hmac_256(a::jsonb) = eql_v2.hmac_256((eql_v2.encrypted_jsonb_path_value(b::jsonb))::jsonb) $$;
+AS $$ SELECT eql_v2.hmac_256((eql_v2.encrypted_jsonb_path_value(a::jsonb))::jsonb) = eql_v2.hmac_256((eql_v2.encrypted_jsonb_path_value(b::jsonb))::jsonb) $$;
 
 --! @brief Equality wrapper for encrypted_jsonb. Threads through path_value so = comparisons compose with -> / ->> path access.
 --! @param a encrypted_jsonb
@@ -724,7 +737,7 @@ AS $$ SELECT eql_v2.hmac_256(a::jsonb) = eql_v2.hmac_256((eql_v2.encrypted_jsonb
 --! @return boolean
 CREATE FUNCTION eql_v2.encrypted_jsonb_eq(a encrypted_jsonb, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.hmac_256(a::jsonb) = eql_v2.hmac_256((eql_v2.encrypted_jsonb_path_value(b))::jsonb) $$;
+AS $$ SELECT eql_v2.hmac_256((eql_v2.encrypted_jsonb_path_value(a::jsonb))::jsonb) = eql_v2.hmac_256((eql_v2.encrypted_jsonb_path_value(b))::jsonb) $$;
 
 --! @brief Equality wrapper for encrypted_jsonb. Threads through path_value so = comparisons compose with -> / ->> path access.
 --! @param a jsonb
@@ -732,7 +745,7 @@ AS $$ SELECT eql_v2.hmac_256(a::jsonb) = eql_v2.hmac_256((eql_v2.encrypted_jsonb
 --! @return boolean
 CREATE FUNCTION eql_v2.encrypted_jsonb_eq(a jsonb, b encrypted_jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.hmac_256((eql_v2.encrypted_jsonb_path_value(a))::jsonb) = eql_v2.hmac_256(b::jsonb) $$;
+AS $$ SELECT eql_v2.hmac_256((eql_v2.encrypted_jsonb_path_value(a))::jsonb) = eql_v2.hmac_256((eql_v2.encrypted_jsonb_path_value(b::jsonb))::jsonb) $$;
 
 --! @brief Inequality wrapper for encrypted_jsonb. Threads through path_value.
 --! @param a encrypted_jsonb
@@ -740,7 +753,7 @@ AS $$ SELECT eql_v2.hmac_256((eql_v2.encrypted_jsonb_path_value(a))::jsonb) = eq
 --! @return boolean
 CREATE FUNCTION eql_v2.encrypted_jsonb_neq(a encrypted_jsonb, b encrypted_jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.hmac_256(a::jsonb) <> eql_v2.hmac_256((eql_v2.encrypted_jsonb_path_value(b::jsonb))::jsonb) $$;
+AS $$ SELECT eql_v2.hmac_256((eql_v2.encrypted_jsonb_path_value(a::jsonb))::jsonb) <> eql_v2.hmac_256((eql_v2.encrypted_jsonb_path_value(b::jsonb))::jsonb) $$;
 
 --! @brief Inequality wrapper for encrypted_jsonb. Threads through path_value.
 --! @param a encrypted_jsonb
@@ -748,7 +761,7 @@ AS $$ SELECT eql_v2.hmac_256(a::jsonb) <> eql_v2.hmac_256((eql_v2.encrypted_json
 --! @return boolean
 CREATE FUNCTION eql_v2.encrypted_jsonb_neq(a encrypted_jsonb, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.hmac_256(a::jsonb) <> eql_v2.hmac_256((eql_v2.encrypted_jsonb_path_value(b))::jsonb) $$;
+AS $$ SELECT eql_v2.hmac_256((eql_v2.encrypted_jsonb_path_value(a::jsonb))::jsonb) <> eql_v2.hmac_256((eql_v2.encrypted_jsonb_path_value(b))::jsonb) $$;
 
 --! @brief Inequality wrapper for encrypted_jsonb. Threads through path_value.
 --! @param a jsonb
@@ -756,7 +769,7 @@ AS $$ SELECT eql_v2.hmac_256(a::jsonb) <> eql_v2.hmac_256((eql_v2.encrypted_json
 --! @return boolean
 CREATE FUNCTION eql_v2.encrypted_jsonb_neq(a jsonb, b encrypted_jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.hmac_256((eql_v2.encrypted_jsonb_path_value(a))::jsonb) <> eql_v2.hmac_256(b::jsonb) $$;
+AS $$ SELECT eql_v2.hmac_256((eql_v2.encrypted_jsonb_path_value(a))::jsonb) <> eql_v2.hmac_256((eql_v2.encrypted_jsonb_path_value(b::jsonb))::jsonb) $$;
 
 -- @>, <@ (STE-vec array containment)
 
