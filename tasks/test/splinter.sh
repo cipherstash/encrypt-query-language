@@ -65,6 +65,25 @@ function_search_path_mutable	eql_v2	jsonb_contained_by	function	GIN-inlining: sa
 function_search_path_mutable	eql_v2	min	function	Aggregate (splinter labels these type=function): ALTER AGGREGATE has no SET configuration_parameter syntax, and ALTER ROUTINE/FUNCTION reject aggregates. The aggregate's SFUNC has a pinned search_path.
 function_search_path_mutable	eql_v2	max	function	Aggregate: same as min.
 function_search_path_mutable	eql_v2	grouped_value	function	Aggregate: same as min.
+function_search_path_mutable	eql_v2	encrypted_text_eq	function	Domain prototype: inlineable wrapper that reduces to eql_v2.hmac_256(a::jsonb) = eql_v2.hmac_256(b::jsonb). SET search_path would disable SQL function inlining and break functional-index matching on hmac_256(value::jsonb). Three overloads: (domain, domain), (domain, jsonb), (jsonb, domain).
+function_search_path_mutable	eql_v2	encrypted_text_neq	function	Domain prototype: same rationale as encrypted_text_eq.
+function_search_path_mutable	eql_v2	encrypted_text_like	function	Domain prototype: inlines to eql_v2.bloom_filter(a::jsonb) @> eql_v2.bloom_filter(b::jsonb) for ~~/~~* engagement of the GIN index on bloom_filter(value::jsonb).
+function_search_path_mutable	eql_v2	encrypted_int4_ope_key	function	Domain prototype: OPE-key extractor used by both the comparison function bodies and the functional index. Inlines (encrypted_int4 overload, jsonb overload).
+function_search_path_mutable	eql_v2	encrypted_int4_eq	function	Domain prototype: same hmac_256 rationale as encrypted_text_eq.
+function_search_path_mutable	eql_v2	encrypted_int4_neq	function	Domain prototype: same as encrypted_int4_eq.
+function_search_path_mutable	eql_v2	encrypted_int4_lt	function	Domain prototype: inlines to eql_v2.encrypted_int4_ope_key(a) < eql_v2.encrypted_int4_ope_key(b) for index engagement.
+function_search_path_mutable	eql_v2	encrypted_int4_lte	function	Domain prototype: same as encrypted_int4_lt.
+function_search_path_mutable	eql_v2	encrypted_int4_gt	function	Domain prototype: same as encrypted_int4_lt.
+function_search_path_mutable	eql_v2	encrypted_int4_gte	function	Domain prototype: same as encrypted_int4_lt.
+function_search_path_mutable	eql_v2	encrypted_jsonb_array	function	Domain prototype: ste-vec array extractor used by the functional GIN index and by encrypted_jsonb_contains / encrypted_jsonb_contained_by. Two overloads.
+function_search_path_mutable	eql_v2	encrypted_jsonb_eq	function	Domain prototype: hmac_256 rationale.
+function_search_path_mutable	eql_v2	encrypted_jsonb_neq	function	Domain prototype: hmac_256 rationale.
+function_search_path_mutable	eql_v2	encrypted_jsonb_contains	function	Domain prototype: inlines to encrypted_jsonb_array(a) @> encrypted_jsonb_array(b) so the GIN index on encrypted_jsonb_array(value) engages.
+function_search_path_mutable	eql_v2	encrypted_jsonb_contained_by	function	Domain prototype: same as encrypted_jsonb_contains.
+function_search_path_mutable	eql_v2	encrypted_jsonb_arrow	function	Domain prototype: text-selector path operator wrapper. Inlineable so a future ste_vec functional index on the rewrapped value could engage.
+function_search_path_mutable	eql_v2	encrypted_jsonb_arrow_int	function	Domain prototype: integer-selector path operator wrapper (array element access on encrypted JSON arrays).
+function_search_path_mutable	eql_v2	encrypted_jsonb_arrow_text	function	Domain prototype: ->> text-selector wrapper.
+function_search_path_mutable	eql_v2	encrypted_jsonb_arrow_text_int	function	Domain prototype: ->> integer-selector wrapper.
 ALLOW
 
 # Wrap splinter (a single bare SELECT expression) into a subquery we can

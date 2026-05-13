@@ -20,6 +20,30 @@ async fn fetch_sample_encrypted_text(pool: &PgPool) -> Result<String> {
     )
 }
 
+#[sqlx::test]
+async fn benchmark_schema_can_be_reapplied(pool: PgPool) -> Result<()> {
+    sqlx::query("TRUNCATE TABLE eql_v2_configuration")
+        .execute(&pool)
+        .await?;
+
+    let schema = include_str!("../../benchmarks/schema.sql");
+    sqlx::raw_sql(schema).execute(&pool).await?;
+    sqlx::raw_sql(schema).execute(&pool).await?;
+
+    let active_bench_columns: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM eql_v2.config() WHERE state = 'active' AND relation = 'bench'",
+    )
+    .fetch_one(&pool)
+    .await?;
+
+    assert_eq!(
+        active_bench_columns, 3,
+        "reapplying benchmark schema should leave one active config for each bench column"
+    );
+
+    Ok(())
+}
+
 // ========== Data Integrity Tests ==========
 
 /// Verify fixture seeded exactly 10K rows
