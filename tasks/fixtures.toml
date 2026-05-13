@@ -1,0 +1,62 @@
+["proxy:up"]
+description = "Start CipherStash Proxy connected to existing Postgres"
+# Reuses the tests/docker-compose.yml Postgres on POSTGRES_PORT.
+# CS_* credentials are read from the shell environment (mise/direnv/profile).
+# Readiness is verified from the host (the proxy image lacks busybox nc, so
+# the container-internal healthcheck cannot be used). Dumps container logs
+# on failure so the user does not need a separate `docker logs` invocation.
+dir = "{{config_root}}/tests"
+run = """
+docker compose -f docker-compose.proxy.yml up -d
+echo "Waiting for proxy on localhost:6432..."
+export PGPASSWORD="${POSTGRES_PASSWORD:-password}"
+for i in $(seq 1 60); do
+  if psql -U "${POSTGRES_USER:-cipherstash}" -d "${POSTGRES_DB:-cipherstash}" \
+       -h localhost -p 6432 -c 'SELECT 1' >/dev/null 2>&1; then
+    echo "Proxy ready."
+    exit 0
+  fi
+  sleep 1
+done
+echo "Proxy did not become ready in 60s."
+echo
+echo '=== cipherstash-proxy logs ==='
+docker logs cipherstash-proxy 2>&1 | tail -40
+exit 1
+"""
+
+["proxy:logs"]
+description = "Tail CipherStash Proxy container logs"
+dir = "{{config_root}}/tests"
+run = "docker logs --tail 100 -f cipherstash-proxy"
+
+["proxy:down"]
+description = "Stop CipherStash Proxy"
+dir = "{{config_root}}/tests"
+run = "docker compose -f docker-compose.proxy.yml down"
+
+["fixture:text:generate"]
+description = "Generate encrypted_text fixture (008) via Proxy"
+# Prerequisites for every fixture:* task:
+#   - mise run postgres:up   (existing Postgres on POSTGRES_PORT)
+#   - mise run reset         (ensures EQL is installed in that Postgres)
+#   - mise run proxy:up      (Proxy on localhost:6432)
+depends = ["build"]
+dir = "{{config_root}}"
+run = "tasks/fixtures/generate_encrypted_text.sh"
+
+["fixture:int:generate"]
+description = "Generate encrypted_int4 fixture (009) via Proxy"
+depends = ["build"]
+dir = "{{config_root}}"
+run = "tasks/fixtures/generate_encrypted_int4.sh"
+
+["fixture:jsonb:generate"]
+description = "Generate encrypted_jsonb fixture (010) via Proxy"
+depends = ["build"]
+dir = "{{config_root}}"
+run = "tasks/fixtures/generate_encrypted_jsonb.sh"
+
+["fixture:all:generate"]
+description = "Generate all three fixtures (text/int/jsonb) via Proxy"
+depends = ["fixture:text:generate", "fixture:int:generate", "fixture:jsonb:generate"]

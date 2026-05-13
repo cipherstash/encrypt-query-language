@@ -1,0 +1,10 @@
+[
+  {"name": "alice", "email": "alice@example.com", "score": 10},
+  {"name": "alice", "email": "alice@example.com", "score": 20},
+  {"name": "bob",   "email": "bob@example.com",   "score": 10},
+  {"name": "bob",   "email": "bob@elsewhere.org", "score": 50},
+  {"name": "carol", "email": "carol@example.com"},
+  {"name": "alice"},
+  {"name": "alice", "email": "alice@example.com"},
+  {"name": "dave",  "email": "dave@example.com",  "score": 10}
+]
