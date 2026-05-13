@@ -149,15 +149,37 @@ Bitmap Heap Scan on users
 
 ### Range Queries
 
-When encrypted column has `ob` (ore_block_u64_8_256), `opf` (ope_cllw_u64_65), or `opv` (ope_cllw_var_8) index terms:
+The canonical 2.3 recipe is a functional B-tree index over the `ob` (Block ORE) term:
+
+```sql
+CREATE INDEX events_encrypted_date_ore_idx
+  ON events (eql_v2.ore_block_u64_8_256(encrypted_date));
+ANALYZE events;
+```
+
+The `eql_v2.ore_block_u64_8_256_operator_class` is `DEFAULT FOR TYPE`, so it's selected automatically — no explicit opclass annotation needed. The `<`, `<=`, `>`, `>=` operators on `eql_v2_encrypted` inline to `eql_v2.ore_block_u64_8_256(a) <op> eql_v2.ore_block_u64_8_256(b)`, which means natural-form range queries match the index without any rewriting:
 
 ```sql
 SELECT * FROM events
-WHERE encrypted_date < $1::eql_v2_encrypted
-ORDER BY encrypted_date DESC;
+  WHERE encrypted_date < $1::eql_v2_encrypted
+  ORDER BY encrypted_date DESC
+  LIMIT 10;
 ```
 
-The encrypted operator class transparently dispatches to whichever ordered term is present on the column, so range queries against an `ore`-configured column and an `ope`-configured column have identical SQL.
+**Index Scan vs. Top-N sort.** PostgreSQL uses the functional ORE index for the `WHERE` clause via structural match on the inlined predicate. The `ORDER BY` step, however, still needs a Sort node when the sort key is `encrypted_date` (the natural form) — Postgres only uses an index for `ORDER BY` when the sort key syntactically matches the index expression. With the operator inlining, each comparison in that Sort step now reduces to an inlined ORE-term comparison, so a `LIMIT n` Top-N sort is fast even without an index-ordered scan.
+
+To skip the Sort step entirely, write the `ORDER BY` in extractor form:
+
+```sql
+SELECT * FROM events
+  WHERE encrypted_date < $1::eql_v2_encrypted
+  ORDER BY eql_v2.ore_block_u64_8_256(encrypted_date) DESC
+  LIMIT 10;
+```
+
+The sort key now matches the functional index expression, so the planner streams rows out of the index in order — a plain Index Scan, no separate Sort node.
+
+**Non-Block-ORE term types.** For columns carrying only `ore_cllw_u64_8`, `ore_cllw_var_8`, `opf` (OPE fixed-width), or `opv` (OPE variable-width) terms, the bare-form `<` / `>` operators no longer dispatch through `eql_v2.compare()` — they go straight to the Block ORE extractor, which raises on a missing `ob`. Either migrate the column configuration to `ore` (Block ORE), or rewrite range queries to the matching extractor form, e.g. `WHERE eql_v2.ore_cllw_u64_8(col) < eql_v2.ore_cllw_u64_8($1::jsonb)`. See [U-005](../upgrading/v2.3.md#u-005-range-operators-are-block-ore-only) for the migration notes.
 
 ### GROUP BY
 
