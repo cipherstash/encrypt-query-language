@@ -93,19 +93,26 @@ BEGIN
       -- Same-type (encrypted, encrypted) operators that must inline.
       -- `like`/`ilike` are the SQL helpers that `~~`/`~~*` delegate to;
       -- both layers must inline to reach `bloom_filter(a) @> bloom_filter(b)`.
+      -- `<`, `<=`, `>`, `>=` inline to `ore_block_u64_8_256(a) op
+      -- ore_block_u64_8_256(b)`; they must reach the functional ORE index
+      -- expression `eql_v2.ore_block_u64_8_256(col)` for bare range
+      -- queries to engage Index Scan.
       (p.pronargs = 2
-        AND p.proname IN ('=', '<>', '~~', '~~*', '@>', '<@',
+        AND p.proname IN ('=', '<>', '<', '<=', '>', '>=',
+                          '~~', '~~*', '@>', '<@',
                           'jsonb_contains', 'jsonb_contained_by',
                           'like', 'ilike')
         AND p.proargtypes[0] = enc_oid AND p.proargtypes[1] = enc_oid)
       -- Cross-type (encrypted, jsonb).
       OR (p.pronargs = 2
-        AND p.proname IN ('=', '<>', '~~', '~~*',
+        AND p.proname IN ('=', '<>', '<', '<=', '>', '>=',
+                          '~~', '~~*',
                           'jsonb_contains', 'jsonb_contained_by')
         AND p.proargtypes[0] = enc_oid AND p.proargtypes[1] = jsonb_oid)
       -- Cross-type (jsonb, encrypted).
       OR (p.pronargs = 2
-        AND p.proname IN ('=', '<>', '~~', '~~*',
+        AND p.proname IN ('=', '<>', '<', '<=', '>', '>=',
+                          '~~', '~~*',
                           'jsonb_contains', 'jsonb_contained_by')
         AND p.proargtypes[0] = jsonb_oid AND p.proargtypes[1] = enc_oid)
       -- Root-level HMAC extractor (#205): all 1-arg overloads are now
@@ -139,6 +146,19 @@ BEGIN
         AND p.proname IN ('jsonb_path_query',
                           'jsonb_path_query_first',
                           'jsonb_path_exists'))
+      -- Inner ORE-block comparison helpers backing the `<`, `<=`, `>`, `>=`
+      -- operators on `eql_v2.ore_block_u64_8_256`. The outer operators on
+      -- `eql_v2_encrypted` inline to `ore_block(a) <op> ore_block(b)`, and
+      -- PG only carries the inlined form through to index matching if the
+      -- inner operator function is also inlinable (no SET, IMMUTABLE).
+      -- Pinning these would prevent the planner from structurally matching
+      -- predicates against a functional `eql_v2.ore_block_u64_8_256(col)`
+      -- index. The inner functions are deterministic comparisons of
+      -- composite type bytes, declared IMMUTABLE STRICT PARALLEL SAFE.
+      OR (p.pronargs = 2
+        AND p.proname IN ('ore_block_u64_8_256_eq', 'ore_block_u64_8_256_neq',
+                          'ore_block_u64_8_256_lt', 'ore_block_u64_8_256_lte',
+                          'ore_block_u64_8_256_gt', 'ore_block_u64_8_256_gte'))
     );
 
   FOR fn_oid IN

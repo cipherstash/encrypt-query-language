@@ -1,12 +1,16 @@
 -- REQUIRE: src/schema.sql
 -- REQUIRE: src/encrypted/types.sql
 -- REQUIRE: src/operators/compare.sql
+-- REQUIRE: src/ore_block_u64_8_256/functions.sql
+-- REQUIRE: src/ore_block_u64_8_256/operators.sql
 
 --! @brief Less-than comparison helper for encrypted values
 --! @internal
 --!
 --! Internal helper that delegates to eql_v2.compare for less-than testing.
---! Returns true if first value is less than second using ORE comparison.
+--! Kept for callers that invoke it directly (and used by `eql_v2.compare`
+--! itself). The `<` operator wrappers no longer go through this helper —
+--! see the inlinable bodies below.
 --!
 --! @param a eql_v2_encrypted First encrypted value
 --! @param b eql_v2_encrypted Second encrypted value
@@ -25,9 +29,10 @@ $$ LANGUAGE plpgsql;
 
 --! @brief Less-than operator for encrypted values
 --!
---! Implements the < operator for comparing two encrypted values using Order-Revealing
---! Encryption (ORE) index terms. Enables range queries and sorting without decryption.
---! Requires 'ore' index configuration on the column.
+--! Implements the < operator for comparing two encrypted values via their
+--! `ob` (ore_block_u64_8_256) ORE term. Enables range queries and sorting
+--! without decryption. Requires the column to carry an `ob` term (configured
+--! via the `ore` index in the EQL schema).
 --!
 --! @param a eql_v2_encrypted Left operand
 --! @param b eql_v2_encrypted Right operand
@@ -41,16 +46,31 @@ $$ LANGUAGE plpgsql;
 --! -- Compare encrypted numeric columns
 --! SELECT * FROM products WHERE encrypted_price < encrypted_discount_price;
 --!
---! @see eql_v2.compare
+--! @see eql_v2.ore_block_u64_8_256
 --! @see eql_v2.add_search_config
+-- Inlinable: `LANGUAGE sql IMMUTABLE` with a single SELECT body and no
+-- `SET` clause. The Postgres planner inlines the body into the calling
+-- query during planning, so `WHERE col < val` reduces to
+-- `WHERE eql_v2.ore_block_u64_8_256(col) < eql_v2.ore_block_u64_8_256(val)`
+-- and matches a functional btree index built on
+-- `eql_v2.ore_block_u64_8_256(col)` (using the DEFAULT
+-- `eql_v2.ore_block_u64_8_256_operator_class`). Bare range queries
+-- (`WHERE col < $1`) engage the functional ORE index on Supabase and any
+-- install that doesn't ship `eql_v2.encrypted_operator_class`.
+--
+-- Behaviour change vs the previous dispatcher-based impl: the old
+-- `eql_v2."<"` walked `eql_v2.compare`, which dispatched through
+-- ore_block / ore_cllw_u64 / ore_cllw_var / ope. Now `<` requires the
+-- column to have `ore_block_u64_8_256` configured (i.e. carry an `ob`
+-- field). Calling `<` on a column with only `ore_cllw_*` or OPE terms
+-- will return NULL where it previously returned a Boolean — same
+-- shape as the 2.3 `=` change for hmac.
 CREATE FUNCTION eql_v2."<"(a eql_v2_encrypted, b eql_v2_encrypted)
-RETURNS boolean
-  SET search_path = pg_catalog, extensions, public
+  RETURNS boolean
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  BEGIN
-    RETURN eql_v2.lt(a, b);
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.ore_block_u64_8_256(a) < eql_v2.ore_block_u64_8_256(b)
+$$;
 
 CREATE OPERATOR <(
   FUNCTION=eql_v2."<",
@@ -64,25 +84,24 @@ CREATE OPERATOR <(
 
 --! @brief Less-than operator for encrypted value and JSONB
 --!
---! Overload of < operator accepting JSONB on the right side. Automatically
---! casts JSONB to eql_v2_encrypted for ORE comparison.
+--! Overload of < operator accepting JSONB on the right side. Reduces to a
+--! direct comparison of the `ob` ORE term on both sides; the jsonb
+--! extractor `eql_v2.ore_block_u64_8_256(jsonb)` reads `b->'ob'` directly.
 --!
 --! @param eql_v2_encrypted Left operand (encrypted value)
---! @param b JSONB Right operand (will be cast to eql_v2_encrypted)
+--! @param b JSONB Right operand
 --! @return Boolean True if a < b
 --!
 --! @example
---! SELECT * FROM events WHERE encrypted_age < '18'::int::text::jsonb;
+--! SELECT * FROM events WHERE encrypted_age < '{"ob":[...]}'::jsonb;
 --!
 --! @see eql_v2."<"(eql_v2_encrypted, eql_v2_encrypted)
 CREATE FUNCTION eql_v2."<"(a eql_v2_encrypted, b jsonb)
-RETURNS boolean
-  SET search_path = pg_catalog, extensions, public
+  RETURNS boolean
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  BEGIN
-    RETURN eql_v2.lt(a, b::eql_v2_encrypted);
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.ore_block_u64_8_256(a) < eql_v2.ore_block_u64_8_256(b)
+$$;
 
 CREATE OPERATOR <(
   FUNCTION=eql_v2."<",
@@ -96,25 +115,23 @@ CREATE OPERATOR <(
 
 --! @brief Less-than operator for JSONB and encrypted value
 --!
---! Overload of < operator accepting JSONB on the left side. Automatically
---! casts JSONB to eql_v2_encrypted for ORE comparison.
+--! Overload of < operator accepting JSONB on the left side. Reduces to a
+--! direct comparison of the `ob` ORE term on both sides.
 --!
---! @param a JSONB Left operand (will be cast to eql_v2_encrypted)
+--! @param a JSONB Left operand
 --! @param eql_v2_encrypted Right operand (encrypted value)
 --! @return Boolean True if a < b
 --!
 --! @example
---! SELECT * FROM events WHERE '2023-01-01'::date::text::jsonb < encrypted_date;
+--! SELECT * FROM events WHERE '{"ob":[...]}'::jsonb < encrypted_date;
 --!
 --! @see eql_v2."<"(eql_v2_encrypted, eql_v2_encrypted)
 CREATE FUNCTION eql_v2."<"(a jsonb, b eql_v2_encrypted)
-RETURNS boolean
-  SET search_path = pg_catalog, extensions, public
+  RETURNS boolean
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  BEGIN
-    RETURN eql_v2.lt(a::eql_v2_encrypted, b);
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.ore_block_u64_8_256(a) < eql_v2.ore_block_u64_8_256(b)
+$$;
 
 
 CREATE OPERATOR <(
@@ -126,5 +143,3 @@ CREATE OPERATOR <(
   RESTRICT = scalarltsel,
   JOIN = scalarltjoinsel
 );
-
-
