@@ -792,10 +792,7 @@ async fn natural_form_jsonb_lt_engages_functional_ore_index(pool: PgPool) -> Res
     setup_ore_functional_index(&pool).await?;
     let jsonb = get_ore_encrypted_as_jsonb(&pool, 42).await?;
 
-    let sql = format!(
-        "SELECT count(*) FROM ore WHERE e < '{}'::jsonb",
-        jsonb
-    );
+    let sql = format!("SELECT count(*) FROM ore WHERE e < '{}'::jsonb", jsonb);
 
     assert_uses_index(&pool, &sql, ORE_FUNCTIONAL_INDEX).await?;
     Ok(())
