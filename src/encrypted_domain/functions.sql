@@ -243,73 +243,69 @@ CREATE FUNCTION eql_v2.encrypted_int4_neq(a jsonb, b encrypted_int4)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v2.hmac_256(a) <> eql_v2.hmac_256(b::jsonb) $$;
 
--- <, <=, >, >= delegate via the eql_v2_encrypted comparison cascade.
+-- <, <=, >, >= reduce to lexicographic bytea comparison of the OPE-key
+-- extractor output. Both encrypted_int4_ope_key overloads (defined above)
+-- are LANGUAGE sql IMMUTABLE so the wrapper bodies inline fully into the
+-- form  bytea < bytea  — bytea's built-in comparison operators are
+-- IMMUTABLE built-ins, so PG can match a functional btree on
+--   ((eql_v2.encrypted_int4_ope_key(value::jsonb)))
+-- and use it for these predicates.
 --
--- The wrappers are inlineable SQL but the underlying `<`/`<=`/`>`/`>=`
--- operators on eql_v2_encrypted call eql_v2.compare which dispatches
--- across every shipped ORE/OPE shape (ore_block_u64_8_256 `ob`,
--- ore_cllw_u64_8 `ocf`, ope_cllw_u64_65 `opf`, ...) plus a literal
--- fallback. This lets the same wrapper handle Proxy's real ORE-block
--- output today AND the in-flight OPE single-byte path once that lands,
--- without per-shape branching here.
---
--- Index engagement story (real ORE-block payloads): build a functional
--- btree over the expression
---   (eql_v2.to_encrypted(value::jsonb) eql_v2.encrypted_operator_class)
--- The wrapper inlines to `to_encrypted(value::jsonb) < to_encrypted(<lit>::jsonb)`
--- and the planner matches the LHS against the indexed expression. The
--- pre-existing encrypted_int4_ope_key extractor (defined above) is
--- retained for the in-flight OPE-direct-extractor path; once Proxy
--- emits `opf` for int columns it becomes the inlineable functional-index
--- target.
+-- This is the OPE-direct architecture: the prototype assumes the in-flight
+-- Proxy emission of `opf` (OPE single-byte signal at the encrypted column).
+-- Real Proxy currently emits ORE blocks (`ob`) for int columns; the
+-- ORE-shape coverage is preserved (quarantined) in
+-- tests/sqlx/tests/encrypted_int4_fixture_tests.rs and re-enables when
+-- Proxy migrates. The OPE-direct demonstration runs in
+-- tests/sqlx/tests/encrypted_int4_ope_tests.rs with synthetic opf payloads.
 
 CREATE FUNCTION eql_v2.encrypted_int4_lt(a encrypted_int4, b encrypted_int4)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.to_encrypted(a::jsonb) < eql_v2.to_encrypted(b::jsonb) $$;
+AS $$ SELECT eql_v2.encrypted_int4_ope_key(a) < eql_v2.encrypted_int4_ope_key(b) $$;
 
 CREATE FUNCTION eql_v2.encrypted_int4_lt(a encrypted_int4, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.to_encrypted(a::jsonb) < eql_v2.to_encrypted(b) $$;
+AS $$ SELECT eql_v2.encrypted_int4_ope_key(a) < eql_v2.encrypted_int4_ope_key(b) $$;
 
 CREATE FUNCTION eql_v2.encrypted_int4_lt(a jsonb, b encrypted_int4)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.to_encrypted(a) < eql_v2.to_encrypted(b::jsonb) $$;
+AS $$ SELECT eql_v2.encrypted_int4_ope_key(a) < eql_v2.encrypted_int4_ope_key(b) $$;
 
 CREATE FUNCTION eql_v2.encrypted_int4_lte(a encrypted_int4, b encrypted_int4)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.to_encrypted(a::jsonb) <= eql_v2.to_encrypted(b::jsonb) $$;
+AS $$ SELECT eql_v2.encrypted_int4_ope_key(a) <= eql_v2.encrypted_int4_ope_key(b) $$;
 
 CREATE FUNCTION eql_v2.encrypted_int4_lte(a encrypted_int4, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.to_encrypted(a::jsonb) <= eql_v2.to_encrypted(b) $$;
+AS $$ SELECT eql_v2.encrypted_int4_ope_key(a) <= eql_v2.encrypted_int4_ope_key(b) $$;
 
 CREATE FUNCTION eql_v2.encrypted_int4_lte(a jsonb, b encrypted_int4)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.to_encrypted(a) <= eql_v2.to_encrypted(b::jsonb) $$;
+AS $$ SELECT eql_v2.encrypted_int4_ope_key(a) <= eql_v2.encrypted_int4_ope_key(b) $$;
 
 CREATE FUNCTION eql_v2.encrypted_int4_gt(a encrypted_int4, b encrypted_int4)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.to_encrypted(a::jsonb) > eql_v2.to_encrypted(b::jsonb) $$;
+AS $$ SELECT eql_v2.encrypted_int4_ope_key(a) > eql_v2.encrypted_int4_ope_key(b) $$;
 
 CREATE FUNCTION eql_v2.encrypted_int4_gt(a encrypted_int4, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.to_encrypted(a::jsonb) > eql_v2.to_encrypted(b) $$;
+AS $$ SELECT eql_v2.encrypted_int4_ope_key(a) > eql_v2.encrypted_int4_ope_key(b) $$;
 
 CREATE FUNCTION eql_v2.encrypted_int4_gt(a jsonb, b encrypted_int4)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.to_encrypted(a) > eql_v2.to_encrypted(b::jsonb) $$;
+AS $$ SELECT eql_v2.encrypted_int4_ope_key(a) > eql_v2.encrypted_int4_ope_key(b) $$;
 
 CREATE FUNCTION eql_v2.encrypted_int4_gte(a encrypted_int4, b encrypted_int4)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.to_encrypted(a::jsonb) >= eql_v2.to_encrypted(b::jsonb) $$;
+AS $$ SELECT eql_v2.encrypted_int4_ope_key(a) >= eql_v2.encrypted_int4_ope_key(b) $$;
 
 CREATE FUNCTION eql_v2.encrypted_int4_gte(a encrypted_int4, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.to_encrypted(a::jsonb) >= eql_v2.to_encrypted(b) $$;
+AS $$ SELECT eql_v2.encrypted_int4_ope_key(a) >= eql_v2.encrypted_int4_ope_key(b) $$;
 
 CREATE FUNCTION eql_v2.encrypted_int4_gte(a jsonb, b encrypted_int4)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.to_encrypted(a) >= eql_v2.to_encrypted(b::jsonb) $$;
+AS $$ SELECT eql_v2.encrypted_int4_ope_key(a) >= eql_v2.encrypted_int4_ope_key(b) $$;
 
 -- Blockers (~~, ~~*, @>, <@)
 

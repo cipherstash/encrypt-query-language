@@ -380,15 +380,17 @@ async fn encrypted_int4_range_and_equality_use_indexes(pool: PgPool) -> Result<(
             .await?;
         assert_eq!(ids, reverse_expected, "reverse {op} with jsonb LHS");
 
-        // NOTE: no EXPLAIN assertion on typed_int4_ope_idx — the wrapper
-        // `encrypted_int4_lt` (and siblings) now delegates via
-        // `to_encrypted(...) < to_encrypted(...)` so that range ops work
-        // against real-Proxy `ob`-shape payloads. The shipping `<` operator
-        // on eql_v2_encrypted is plpgsql+volatile and blocks SQL function
-        // inlining, so the wrapper stays opaque to the planner and the
-        // OPE functional index can't be matched. Correctness against the
-        // synthetic `opf` payloads is still proved by the row-set assertions
-        // above (compare cascade dispatches `opf` → compare_ope_cllw_u64_65).
+        let plan_rows: Vec<String> = sqlx::query_scalar(&format!(
+            "EXPLAIN SELECT * FROM typed_int4_index WHERE value {op} '{}'::jsonb",
+            mid_query
+        ))
+        .fetch_all(&mut *tx)
+        .await?;
+        let plan = plan_rows.join("\n");
+        assert!(
+            plan.contains("typed_int4_ope_idx"),
+            "expected OPE functional index for {op}; plan:\n{plan}"
+        );
     }
 
     for rhs in ["$1::jsonb::encrypted_int4", "$1::jsonb"] {
