@@ -30,9 +30,10 @@ DECLARE
   inline_critical_oids oid[];
   enc_oid oid;
   jsonb_oid oid;
+  text_oid oid;
 BEGIN
   -- Resolve type oids without depending on caller search_path. The encrypted
-  -- composite type is created in `public`; jsonb is in `pg_catalog`.
+  -- composite type is created in `public`; jsonb / text are in `pg_catalog`.
   SELECT t.oid INTO enc_oid
   FROM pg_catalog.pg_type t
   JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
@@ -50,6 +51,15 @@ BEGIN
 
   IF jsonb_oid IS NULL THEN
     RAISE EXCEPTION 'pin_search_path: type pg_catalog.jsonb not found';
+  END IF;
+
+  SELECT t.oid INTO text_oid
+  FROM pg_catalog.pg_type t
+  JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+  WHERE n.nspname = 'pg_catalog' AND t.typname = 'text';
+
+  IF text_oid IS NULL THEN
+    RAISE EXCEPTION 'pin_search_path: type pg_catalog.text not found';
   END IF;
 
   -- Wrappers that must remain inlinable for functional-index matching.
@@ -79,23 +89,56 @@ BEGIN
   FROM pg_catalog.pg_proc p
   JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
   WHERE n.nspname = 'eql_v2'
-    AND p.pronargs = 2
     AND (
       -- Same-type (encrypted, encrypted) operators that must inline.
       -- `like`/`ilike` are the SQL helpers that `~~`/`~~*` delegate to;
       -- both layers must inline to reach `bloom_filter(a) @> bloom_filter(b)`.
-      (p.proname IN ('=', '<>', '~~', '~~*', '@>', '<@',
-                     'jsonb_contains', 'jsonb_contained_by',
-                     'like', 'ilike')
+      (p.pronargs = 2
+        AND p.proname IN ('=', '<>', '~~', '~~*', '@>', '<@',
+                          'jsonb_contains', 'jsonb_contained_by',
+                          'like', 'ilike')
         AND p.proargtypes[0] = enc_oid AND p.proargtypes[1] = enc_oid)
       -- Cross-type (encrypted, jsonb).
-      OR (p.proname IN ('=', '<>', '~~', '~~*',
-                        'jsonb_contains', 'jsonb_contained_by')
+      OR (p.pronargs = 2
+        AND p.proname IN ('=', '<>', '~~', '~~*',
+                          'jsonb_contains', 'jsonb_contained_by')
         AND p.proargtypes[0] = enc_oid AND p.proargtypes[1] = jsonb_oid)
       -- Cross-type (jsonb, encrypted).
-      OR (p.proname IN ('=', '<>', '~~', '~~*',
-                        'jsonb_contains', 'jsonb_contained_by')
+      OR (p.pronargs = 2
+        AND p.proname IN ('=', '<>', '~~', '~~*',
+                          'jsonb_contains', 'jsonb_contained_by')
         AND p.proargtypes[0] = jsonb_oid AND p.proargtypes[1] = enc_oid)
+      -- Root-level HMAC extractor (#205): all 1-arg overloads are now
+      -- inlinable SQL. Must stay unpinned so the planner can fold extractor
+      -- calls inside the inlined equality operator bodies into the calling
+      -- query, preserving the functional-index match.
+      OR (p.pronargs = 1
+        AND p.proname = 'hmac_256'
+        AND (p.proargtypes[0] = enc_oid OR p.proargtypes[0] = jsonb_oid))
+      -- Field-level equality extractor (#205): the inlinable counterpart to
+      -- the root-level `eql_v2.hmac_256(col)`. Must inline so the planner
+      -- can fold `eql_v2.hmac_256(col, '<selector>')` into the calling
+      -- query for WHERE / GROUP BY / DISTINCT / hash-join, matching a
+      -- functional hash index on the same expression.
+      OR (p.pronargs = 2
+        AND p.proname = 'hmac_256'
+        AND p.proargtypes[0] = enc_oid AND p.proargtypes[1] = text_oid)
+      -- Field-level HMAC terms aggregate (#205): GIN-indexable jsonb array
+      -- of `{s, hm}` pairs. Must inline so
+      -- `eql_v2.hmac_256_terms(col) @> $1::jsonb` engages the GIN index on
+      -- the same expression.
+      OR (p.pronargs = 1
+        AND p.proname = 'hmac_256_terms'
+        AND p.proargtypes[0] = enc_oid)
+      -- Field-level JSONB extractors (#205): inlinable SQL replacements for
+      -- the previous plpgsql bodies. Inlining lets the planner fold the
+      -- `jsonb_array_elements(...) WHERE elem->>'s' = selector` body into
+      -- the calling query, eliminating per-row function call overhead on
+      -- large ste_vec scans.
+      OR (p.pronargs = 2
+        AND p.proname IN ('jsonb_path_query',
+                          'jsonb_path_query_first',
+                          'jsonb_path_exists'))
     );
 
   FOR fn_oid IN

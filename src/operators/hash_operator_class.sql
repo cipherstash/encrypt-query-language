@@ -16,7 +16,7 @@
 --! registered. Cross-type operators (encrypted/jsonb) are excluded because hash
 --! joins require independent hashing of each side before comparison.
 --!
---! @note Requires hmac_256 or blake3 index terms for correct hashing
+--! @note Requires hmac_256 index terms for correct hashing
 --! @see eql_v2.hash_encrypted
 --! @see eql_v2.encrypted_operator_class (btree)
 

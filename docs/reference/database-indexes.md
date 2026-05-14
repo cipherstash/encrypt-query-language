@@ -169,6 +169,45 @@ FROM orders
 GROUP BY encrypted_status;
 ```
 
+### Field-level equality index (ste_vec elements)
+
+For `GROUP BY` / `DISTINCT` / equality on a value extracted from an encrypted JSON document — e.g. `data->'email'` — there are two complementary recipes. Pick by use case:
+
+**Per-selector hash index.** Use when a single JSONB path is queried hot and you want a small, narrow index:
+
+```sql
+CREATE INDEX users_data_email_hmac_idx
+  ON users USING hash (eql_v2.hmac_256(data_encrypted, '<selector-for-email>'));
+```
+
+The same expression can then be used directly in query predicates and aggregation keys:
+
+```sql
+SELECT count(*) FROM users
+  GROUP BY eql_v2.hmac_256(data_encrypted, '<selector-for-email>');
+
+SELECT * FROM users
+  WHERE eql_v2.hmac_256(data_encrypted, '<selector-for-email>')
+      = eql_v2.hmac_256($1::jsonb::eql_v2_encrypted, '<selector-for-email>');
+```
+
+**GIN index over all (selector, hmac) pairs.** Use when many selectors are queried on the same column and you want one index covering them all — typical for proxy-rewritten `col -> 'foo' = $1` predicates where `'foo'` can be any field:
+
+```sql
+CREATE INDEX users_data_hmac_terms_idx
+  ON users USING gin (eql_v2.hmac_256_terms(data_encrypted));
+```
+
+Query shape:
+
+```sql
+SELECT * FROM users
+  WHERE eql_v2.hmac_256_terms(data_encrypted)
+     @> '[{"s":"<selector-hash>","hm":"<hmac-hash>"}]'::jsonb;
+```
+
+The two recipes can coexist on the same column. The `<selector>` value is the deterministic selector hash that the crypto layer emits in the `s` field of each `sv` element — not a plaintext JSONPath.
+
 ---
 
 ## Query Patterns That Don't Use Indexes

@@ -55,7 +55,7 @@ eql_v2.add_search_config(
 ```
 
 **Supported index types:**
-- `unique` - Exact equality (uses hmac_256 or blake3)
+- `unique` - Exact equality (uses hmac_256)
 - `match` - Full-text search (uses bloom_filter)
 - `ore` - Range queries and ordering (uses ore_block_u64_8_256)
 - `ste_vec` - JSONB containment queries (uses structured encryption)
@@ -220,7 +220,7 @@ EQL overloads standard PostgreSQL operators to work directly on `eql_v2_encrypte
 #### Equality
 
 ```sql
--- Exact match (uses 'unique' index: hmac_256 or blake3)
+-- Exact match (uses 'unique' index: hmac_256)
 SELECT * FROM users WHERE encrypted_email = $1::eql_v2_encrypted;
 SELECT * FROM users WHERE encrypted_email = $1::jsonb;
 
@@ -393,15 +393,6 @@ Extract HMAC-256 unique index term.
 ```sql
 eql_v2.hmac_256(val eql_v2_encrypted) RETURNS eql_v2.hmac_256
 eql_v2.hmac_256(val jsonb) RETURNS eql_v2.hmac_256
-```
-
-### `eql_v2.blake3()`
-
-Extract Blake3 unique index term.
-
-```sql
-eql_v2.blake3(val eql_v2_encrypted) RETURNS eql_v2.blake3
-eql_v2.blake3(val jsonb) RETURNS eql_v2.blake3
 ```
 
 ### `eql_v2.bloom_filter()`
@@ -593,14 +584,6 @@ Check if value contains hmac_256 index term.
 
 ```sql
 eql_v2.has_hmac_256(val eql_v2_encrypted) RETURNS boolean
-```
-
-### `eql_v2.has_blake3()`
-
-Check if value contains blake3 index term.
-
-```sql
-eql_v2.has_blake3(val eql_v2_encrypted) RETURNS boolean
 ```
 
 ### `eql_v2.has_bloom_filter()`
