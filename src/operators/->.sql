@@ -9,7 +9,7 @@
 --!
 --! Encrypted JSON is represented as an array of eql_v2_encrypted values in the ste_vec format.
 --! Each element has a selector, ciphertext, and index terms:
---!     {"sv": [{"c": "", "s": "", "b3": ""}]}
+--!     {"sv": [{"c": "", "s": "", "hm": ""}]}
 --!
 --! Provides three overloads:
 --! - (eql_v2_encrypted, text) - Field name selector

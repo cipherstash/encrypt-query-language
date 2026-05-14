@@ -314,12 +314,20 @@ async fn hmac_extracts_hmac_term(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
-async fn hmac_throws_exception_for_missing_term(pool: PgPool) -> Result<()> {
-    // Test: hmac_256() throws exception when hmac term is missing
+async fn hmac_returns_null_for_missing_term(pool: PgPool) -> Result<()> {
+    // Post-2.3, eql_v2.hmac_256 is inlinable SQL — it returns NULL when the
+    // 'hm' field is missing rather than raising. The loud failure surface
+    // for missing-hm columns is now eql_v2.hash_encrypted (used by GROUP BY,
+    // DISTINCT, hash joins) — see U-002.
+    let result: Option<String> = sqlx::query_scalar("SELECT eql_v2.hmac_256('{}'::jsonb)::text")
+        .fetch_one(&pool)
+        .await?;
 
-    QueryAssertion::new(&pool, "SELECT eql_v2.hmac_256('{}'::jsonb)")
-        .throws_exception()
-        .await;
+    assert!(
+        result.is_none(),
+        "hmac_256 on a payload without 'hm' should return NULL, got: {:?}",
+        result
+    );
 
     Ok(())
 }

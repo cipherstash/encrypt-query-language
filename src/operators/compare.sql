@@ -2,9 +2,6 @@
 -- REQUIRE: src/encrypted/types.sql
 -- REQUIRE: src/encrypted/functions.sql
 
--- REQUIRE: src/blake3/types.sql
--- REQUIRE: src/blake3/functions.sql
-
 -- REQUIRE: src/hmac_256/types.sql
 -- REQUIRE: src/hmac_256/functions.sql
 
@@ -43,12 +40,6 @@
 --! If no matching index terms are found, falls back to JSONB literal comparison
 --! to ensure consistent ordering (required for btree correctness).
 --!
---! Blake3 is intentionally not part of the root-level priority list — it is
---! only relevant inside ste_vec array elements. eql_v2.ste_vec_contains
---! handles b3-bearing elements with its own guard around eql_v2.compare_blake3
---! and falls through to eql_v2.eq (which calls back into this function) for
---! the OPE-only case. Root-level equality is hmac only; see the EQL payload
---! scheme discipline RFC.
 --!
 --! @param a eql_v2_encrypted First encrypted value
 --! @param b eql_v2_encrypted Second encrypted value

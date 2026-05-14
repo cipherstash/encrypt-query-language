@@ -119,15 +119,6 @@ fn protect_variant_includes_operators() {
 }
 
 #[test]
-fn protect_variant_includes_blake3() {
-    let sql = read_release_sql("cipherstash-encrypt-protect.sql");
-    assert!(
-        sql.contains("eql_v2.blake3"),
-        "protect variant should contain blake3 index type"
-    );
-}
-
-#[test]
 fn protect_variant_includes_hmac_256() {
     let sql = read_release_sql("cipherstash-encrypt-protect.sql");
     assert!(

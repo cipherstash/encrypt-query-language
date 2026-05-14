@@ -9,7 +9,7 @@
 --! for btree correctness and prevents "lock BufferContent is not held" errors.
 --!
 --! Used as a last resort fallback in eql_v2.compare() when encrypted values
---! lack matching index terms (blake3, hmac_256, ore).
+--! lack matching index terms (hmac_256, ore).
 --!
 --! @param a eql_v2_encrypted First encrypted value
 --! @param b eql_v2_encrypted Second encrypted value

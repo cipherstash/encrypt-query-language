@@ -6,7 +6,7 @@ EQL ships five search index kinds that encrypt data in ways that preserve specif
 
 | Search index (config `index_name`) | Underlying encrypted term(s) | Enables                                                |
 | ---------------------------------- | ---------------------------- | ------------------------------------------------------ |
-| `unique`                           | `hmac_256` (`hm`) or `blake3` (`b3`) | Exact equality                                         |
+| `unique`                           | `hmac_256` (`hm`)            | Exact equality                                         |
 | `ore`                              | `ore_block_u64_8_256` (`ob`) | Ordered comparison (`<`, `<=`, `=`, `>`, `>=`), range (`BETWEEN`), `ORDER BY`, aggregates (`MIN`/`MAX`)     |
 | `ope`                              | `ope_cllw_u64_65` (`opf`) or `ope_cllw_var_8` (`opv`) | Ordered comparison (`<`, `<=`, `=`, `>`, `>=`), range (`BETWEEN`), `ORDER BY`, aggregates (`MIN`/`MAX`) — see note below |
 | `match`                            | `bloom_filter` (`bf`)        | Substring / token matching via `LIKE` / `ILIKE`        |
@@ -46,7 +46,7 @@ Each row lists an operator that EQL either implements natively on `eql_v2_encryp
 Notes:
 
 - Binary operators have overloads that accept `jsonb` literals on either side; CipherStash Proxy typically rewrites those to `::eql_v2_encrypted` casts so the encrypted operator is selected.
-- `=` and `<>` on a column that has **only** a `ste_vec` index will not match anything useful — the underlying comparison requires `hm`, `b3`, `ob`, `opf`, or `opv` terms. Configure `unique` (or `ore` / `ope`) alongside `ste_vec` if you need equality on the outer value.
+- `=` and `<>` on a column that has **only** a `ste_vec` index will not match anything useful — the underlying comparison requires `hm`, `ob`, `opf`, or `opv` terms. Configure `unique` (or `ore` / `ope`) alongside `ste_vec` if you need equality on the outer value.
 - JSONB path operators (`->`, `->>`) return an `eql_v2_encrypted` value (or ciphertext for `->>`). The value they return is itself searchable only if the parent `ste_vec` index covers that path.
 
 ### Unsupported JSONB operators
@@ -109,18 +109,18 @@ For each path in the document, ste_vec emits an element whose value terms depend
 
 | JSON node type          | Value terms emitted (alongside `s`) | Equality (`=`, `<>`, `IN`, `GROUP BY`) | Ordering (`<`, `<=`, `>`, `>=`, `BETWEEN`, `ORDER BY`, `MIN`/`MAX`) |
 | ----------------------- | ----------------------------------- | :------------------------------------: | :-----------------------------------------------------------------: |
-| Object `{ ... }`        | `b3` (blake3)                       | ✅                                     | ❌                                                                  |
-| Array `[ ... ]`         | `b3` on the container; each element also appears as its own `sv` entry, flagged `"a": 1`, carrying the terms for its own leaf type | ✅ (structural equality and containment) | ❌                                                      |
-| String `"..."`          | `ocv` (variable-width CLLW ORE)     | ✅                                     | ✅                                                                  |
-| Number (`integer`, `numeric`, …) | `ocf` (fixed-width CLLW ORE, `u64_8`) | ✅                               | ✅                                                                  |
-| Boolean `true` / `false` | `b3`                               | ✅                                     | ❌                                                                  |
-| Null (JSON `null`)      | `b3`                                | ✅                                     | ❌                                                                  |
+| Object `{ ... }`        | `hm` (hmac_256)                     | ✅                                     | ❌                                                                  |
+| Array `[ ... ]`         | `hm` on the container; each element also appears as its own `sv` entry, flagged `"a": 1`, carrying the terms for its own leaf type | ✅ (structural equality and containment) | ❌                                                      |
+| String `"..."`          | `hm` (hmac_256), `ocv` (variable-width CLLW ORE) | ✅                       | ✅                                                                  |
+| Number (`integer`, `numeric`, …) | `hm` (hmac_256), `ocf` (fixed-width CLLW ORE, `u64_8`) | ✅              | ✅                                                                  |
+| Boolean `true` / `false` | `hm` (hmac_256)                    | ✅                                     | ❌                                                                  |
+| Null (JSON `null`)      | `hm` (hmac_256)                     | ✅                                     | ❌                                                                  |
 
 Notes:
 
-- **`b3`** (blake3) is a deterministic hash — it supports equality only. **`ocv`** and **`ocf`** are CLLW Order-Revealing Encryption terms; they preserve order *and* collapse to equality when two operands share the same key.
+- **`hm`** (hmac_256) is a deterministic hash — it supports equality only. **`ocv`** and **`ocf`** are CLLW Order-Revealing Encryption terms; they preserve order *and* collapse to equality when two operands share the same key.
 - The "Equality" and "Ordering" columns describe what is possible on a value **extracted from the JSON document** (e.g. via `encrypted_json->'selector' = …` or `ORDER BY jsonb_path_query(...)`). The outer `eql_v2_encrypted` column still needs a sibling `unique` / `ore` index if you want `WHERE col = …` on the whole document — see [Operators section notes](#sql-operator-support).
-- **`GROUP BY` caveat**: the current btree operator class for `eql_v2_encrypted` only groups on `b3` / `hm` terms. `GROUP BY` on an extracted **string** or **number** path therefore does not work via ste_vec alone — add a `unique` index to that path if you need it. Object, array, boolean, and null paths group fine via ste_vec.
+- **Field-level `GROUP BY` / equality recipe**: use the `eql_v2.hmac_256(col, '<selector>')` extractor. Add a functional hash index on the same expression to engage Index Scan on bare-form queries — see [Field-level equality index](./database-indexes.md#field-level-equality-index-ste_vec-elements). The previous Blake3-based caveat is gone: every node type now emits `hm`, so field-level GROUP BY works for any path without an extra `unique` index.
 - **JSON null vs SQL NULL**: the row above refers to JSON `null` literals *inside* the document. A SQL `NULL` column value is not encrypted at all, so `IS NULL` / `IS NOT NULL` always work regardless of the index configuration.
 
 ### JSONB functions and selectors enabled by ste_vec
@@ -139,7 +139,7 @@ When the `ste_vec` index is configured, CipherStash Proxy rewrites these standar
 | `jsonb_array_elements(arr)`              | `eql_v2.jsonb_array_elements(arr)`              | Path must resolve to a JSON array node                                        | Set-returning; yields `eql_v2_encrypted`.                               |
 | `jsonb_array_elements_text(arr)`         | `eql_v2.jsonb_array_elements_text(arr)`         | Path must resolve to a JSON array node                                        | Set-returning; yields ciphertext as `text`.                             |
 | `COUNT(col)`                             | plain `count(*)`                                | —                                                                             | No encrypted term required.                                             |
-| `COUNT(DISTINCT col)`                    | deterministic dedup                             | An extracted node that emits `b3`, `ocv`, or `ocf` (or a `unique` / `ore` / `ope` index on the outer column) | A ste_vec-extracted leaf dedups via `b3` (Object / Array / Bool / Null) or `ocv` / `ocf` (String / Number). `ope` is never emitted by ste_vec extraction; it only applies to the outer column. |
+| `COUNT(DISTINCT col)`                    | deterministic dedup                             | An extracted node that emits `hm`, `ocv`, or `ocf` (or a `unique` / `ore` / `ope` index on the outer column) | A ste_vec-extracted leaf dedups via `hm` (any node type) or `ocv` / `ocf` (String / Number). `ope` is never emitted by ste_vec extraction; it only applies to the outer column. |
 | `MIN(col)` / `MAX(col)`                  | `eql_v2` ORE/OPE aggregates                     | A ste_vec-extracted String / Number node (`ocv` / `ocf`), **or** a sibling `ore` / `ope` index on the outer column | ste_vec extraction can only produce `ocv` / `ocf` ordering terms. Whole-column ordering uses the outer-column `ore` or `ope` index. |
 
 Additionally, `eql_v2.jsonb_array`, `eql_v2.jsonb_contains`, and `eql_v2.jsonb_contained_by` are EQL helpers (not automatic rewrites) used when building **GIN-indexed** containment queries. See [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment) for the full setup.
