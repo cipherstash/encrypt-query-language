@@ -173,19 +173,9 @@ SELECT * FROM users WHERE email_encrypted = $1;
 --   Index Cond: ((eql_v2.hmac_256(email_encrypted))::text = (eql_v2.hmac_256(...))::text)
 ```
 
-**`GROUP BY` is a different beast.** PostgreSQL evaluates `GROUP BY col` by hashing each row's `col` value using the type's hash discriminator. For `eql_v2_encrypted`, that discriminator is `eql_v2.hash_encrypted`, which is plpgsql and called once per row. Even with a functional hash index in place, the index doesn't help `GROUP BY` directly (hash aggregation is in-memory, not index-driven).
+**`GROUP BY` is a different beast — and the extractor form is the only recipe that scales.** Use it. Even at moderate row counts the natural form's plan choice degrades pathologically; the extractor form sidesteps the trap entirely and works the same way on every Postgres deployment, including Supabase and managed services where you can't tune `work_mem`.
 
-The natural form is:
-
-```sql
-SELECT email_encrypted, count(*)
-  FROM users
-  GROUP BY email_encrypted;
-```
-
-This works, but the per-row hash is a plpgsql function call — ~hundreds of microseconds per row, not hundreds of nanoseconds.
-
-The extractor form is dramatically faster on large tables:
+The canonical recipe for `GROUP BY` (and `DISTINCT`, and `IN (subquery)`, and hash joins) on an encrypted column:
 
 ```sql
 SELECT eql_v2.hmac_256(email_encrypted), count(*)
@@ -193,9 +183,42 @@ SELECT eql_v2.hmac_256(email_encrypted), count(*)
   GROUP BY eql_v2.hmac_256(email_encrypted);
 ```
 
-The body of `eql_v2.hmac_256` is inlinable SQL — `(col).data ->> 'hm'` — so the planner folds it into the aggregation and each row pays a single jsonb lookup instead of a plpgsql function call. On 10k rows the difference is around 425×; the gap grows with the table.
+Why this is the right shape:
 
-If the column also has a `bloom_filter` for `LIKE` (which is `smallint[]`), `DISTINCT` over the extractor form benefits the same way.
+- **The group key is small.** `eql_v2.hmac_256(col)` returns a 32-byte HMAC. At 1M rows the in-memory hash table is well under 100 MB, which fits inside the default `work_mem = 4MB` per partition many times over — so the planner picks `HashAggregate` reliably, without any deployment-wide tuning.
+- **The extractor inlines.** `eql_v2.hmac_256(val)` is a single-statement SQL function whose body is essentially `(val).data ->> 'hm'`. The planner folds it into the aggregation, so each row pays a single jsonb lookup. No plpgsql function-call overhead per row, no opaque dispatch.
+- **It matches a functional index.** If you have a `unique` search config on the column and a `CREATE INDEX … USING hash (eql_v2.hmac_256(col))` — the same index you'd build for fast equality — `IN (subquery)` and hash joins against `eql_v2.hmac_256(col)` can use it directly. `GROUP BY` itself doesn't use the index (hash aggregation is in-memory, not index-driven), but everything else that hashes against the same key does.
+
+### Why the natural form doesn't scale
+
+The natural form looks fine on paper:
+
+```sql
+-- Avoid. Falls into the work_mem / planner trap below.
+SELECT email_encrypted, count(*)
+  FROM users
+  GROUP BY email_encrypted;
+```
+
+The trap is in the planner's cost model. PostgreSQL has two aggregation strategies — `HashAggregate` (in-memory hash table keyed by the GROUP BY expression) and `GroupAggregate` (sort the input, then collapse adjacent equal rows). The planner picks between them on cost, and the cost model is *very* sensitive to the size of the group key — because the hash table for HashAggregate has to fit in `work_mem`.
+
+On an encrypted column, the natural-form key is the entire `eql_v2_encrypted` payload — typically 1-2 KB per row. At 100k rows the planner estimates a 100-200 MB hash table, which exceeds the default `work_mem = 4MB` by two orders of magnitude. The planner refuses HashAggregate and falls back to GroupAggregate. GroupAggregate sorts the input, which means an O(N log N) pass over kilobyte-sized rows — the per-comparison cost is small (the `=` operator is inlinable SQL post-2.3, so each comparison reduces to a 32-byte HMAC comparison), but the sort still dominates wall-clock time and spills to disk past `work_mem`.
+
+Measured at 100k rows on the bench tables:
+
+| Query form | Plan | Time |
+| --- | --- | --- |
+| `GROUP BY col` (natural, default 4 MB work_mem) | GroupAggregate + Sort (disk spill) | ~29 s |
+| `GROUP BY col` (natural, work_mem bumped to 256 MB) | HashAggregate | ~780 ms |
+| `GROUP BY eql_v2.hmac_256(col)` (extractor) | HashAggregate | ~80 ms |
+
+Bumping `work_mem` recovers the natural form from "minutes" to "sub-second" by changing the planner's choice — a 37× improvement just from one setting. The extractor form is another ~10× on top of that and doesn't depend on a deployment-wide knob. At 1M rows the natural form's GroupAggregate sort takes around 4 minutes even with `work_mem = 512MB`; the extractor form stays sub-second.
+
+The takeaway: write the extractor form. If you have a query you can't rewrite (an ORM that's GROUP BY-ing the raw column, a third-party report tool), bumping `work_mem` to a size that fits the estimated hash table is the rescue knob — but don't make that the design.
+
+### `DISTINCT` and ste_vec field-level
+
+`DISTINCT col` follows the same rules — `SELECT DISTINCT eql_v2.hmac_256(col) FROM tbl` is the recipe. If you only need set membership and not the original encrypted value back, the extractor form is what you want regardless of table size.
 
 For ste_vec documents, field-level `GROUP BY` works analogously:
 
@@ -260,7 +283,8 @@ For field-level lookups (`data_encrypted->'email' = $1`), use the per-selector h
 - **Stale opclass index alongside a functional index.** If you migrate an old schema from `eql_v2.encrypted_operator_class` to functional indexes, drop the old opclass index. Two btree indexes on the same column compete for cache and double the maintenance cost on writes.
 - **Pinning `search_path` on an EQL function.** Adding `SET search_path = …` to an `eql_v2.*` function disables inlining and reverts queries through that function to sequential scans. The EQL build allowlists operator wrappers that must stay inlinable; if you're customising the install, preserve that allowlist.
 - **`ORDER BY` on the natural form expecting an `Index Scan`.** The Sort node is required (§4). If you need it gone, switch the `ORDER BY` to extractor form.
-- **`=` / `<>` returning zero rows silently.** Equality requires `hm`. On a column without a `unique` search config, `WHERE col = $1` either raises (on lookup) or returns zero rows. `eql_v2.hash_encrypted` raises loudly when used in `GROUP BY` / `DISTINCT` — that's the canonical smoke test for "is `hm` configured?".
+- **`=` / `<>` returning zero rows silently on a column without `hm`.** Equality requires the column to carry an `hm` HMAC term. Without it, `eql_v2.hmac_256(col)` returns NULL and the operator comparison evaluates to NULL — false in a WHERE context. `eql_v2.hash_encrypted` (the discriminator behind `GROUP BY` / `DISTINCT` / hash joins) doesn't raise on missing `hm` either — it falls back to hashing the encrypted payload bytes, which keeps the aggregate's hash table from degrading to O(N²) on a single NULL bucket but no longer gives you a runtime smoke signal. Audit at config time instead: `SELECT eql_v2.has_hmac_256(col) FROM tbl LIMIT 1`.
+- **`GROUP BY` on the raw encrypted column at scale.** §5 details the trap, but it's worth repeating in pitfalls form: `GROUP BY col` on an `eql_v2_encrypted` column past ~10k rows falls into GroupAggregate-with-disk-spill territory because the natural-form key is 1-2 KB per row and the hash table can't fit in `work_mem`. Write `GROUP BY eql_v2.hmac_256(col)` instead. The extractor form is the only `GROUP BY` recipe that holds up at production scale on default Postgres settings.
 - **Range queries (`<`, `<=`, `>`, `>=`) on columns with only `ore_cllw_*` or OPE terms.** The range operators are Block ORE only post-2.3 (see [U-005 in v2.3.md](../upgrading/v2.3.md#u-005-range-operators-are-block-ore-only)). Migrate the column to `ore` or switch the query to the extractor form for the relevant CLLW / OPE encoding.
 
 ---
