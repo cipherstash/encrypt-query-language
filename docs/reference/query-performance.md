@@ -150,11 +150,20 @@ SELECT * FROM events
 
 With a functional Block ORE index in place (`CREATE INDEX … ON events (eql_v2.ore_block_u64_8_256(encrypted_at))`), the plans differ:
 
-- **(a) Natural** — `Bitmap Index Scan` via the inlined `<`, plus a `Sort` (Top-N because of the `LIMIT`) by `encrypted_at`. The sort key doesn't match the index expression, so the Sort can't be eliminated. Each comparison inside the Sort step uses the inlined ORE-term path, so the Top-N step is fast — but you still pay for it.
+- **(a) Natural** — `Bitmap Index Scan` via the inlined `<`, plus a `Sort` (Top-N because of the `LIMIT`) by `encrypted_at`. The sort key doesn't match the index expression, so the Sort can't be eliminated. Each comparison inside the Sort step uses the inlined ORE-term path — but you still do one per post-WHERE row.
 - **(b) Hybrid** — `Index Scan` over the functional ORE index, walking it in order. No `Sort` node. The `WHERE` is satisfied by `Index Cond` and rows stream out of the index already in the desired order.
 - **(c) Fully extractor** — same plan as (b). The natural-form `<` inlines into the same predicate shape, so the planner can't tell (b) and (c) apart after planning.
 
-Empirically at 100k rows on the bench: (a) lands around 880 ms, (b) and (c) under 2 ms. The Top-N cost in (a) is real but bounded — a `Sort` with `LIMIT 10` over a few tens of thousands of post-`WHERE` rows is milliseconds, not seconds. If you can live with that, the natural form keeps the query readable. If you need sub-ms, switch the `ORDER BY` to extractor form.
+Empirically on the bench tables, with `WHERE value < $1 … LIMIT 10` (selectivity around 0.5):
+
+| Rows | (a) natural | (b) hybrid | (c) fully extractor |
+| --- | --- | --- | --- |
+| 100k | ~880 ms | <2 ms | <2 ms |
+| 1M   | ~8.8 s  | ~1 ms  | ~1 ms  |
+
+The natural-form Top-N scales linearly with the number of rows passing `WHERE` — at 1M with our selectivity that's ~500k inlined ORE-term comparisons in the Sort step, which is several seconds even when each comparison is cheap. **For ordered range queries on encrypted columns, write the `ORDER BY` in extractor form.** It's the same plan as (c) post-inlining; only the source-level syntax differs.
+
+The bench suite (`cipherstash/benches`) keeps only the hybrid scenario for this reason: (a) is the trap this section warns about, and (c) plans identically to (b) — measuring all three only inflates the run cost without surfacing a new behaviour.
 
 ---
 
