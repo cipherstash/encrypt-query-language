@@ -774,3 +774,104 @@ async fn configuration_constraint_validation(pool: PgPool) -> Result<()> {
 
     Ok(())
 }
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("config_tables")))]
+async fn ste_vec_mode_validation(pool: PgPool) -> Result<()> {
+    sqlx::query("TRUNCATE TABLE eql_v2_configuration")
+        .execute(&pool)
+        .await?;
+
+    // ste_vec without `mode` is accepted (mode is optional)
+    let no_mode = serde_json::json!({
+        "v": 1,
+        "tables": {
+            "users": {
+                "doc": {
+                    "cast_as": "jsonb",
+                    "indexes": { "ste_vec": {} }
+                }
+            }
+        }
+    });
+
+    sqlx::query("INSERT INTO eql_v2_configuration (data) VALUES ($1::jsonb)")
+        .bind(&no_mode)
+        .execute(&pool)
+        .await
+        .context("ste_vec without mode should be accepted")?;
+
+    // `mode = standard` is accepted
+    sqlx::query("TRUNCATE TABLE eql_v2_configuration")
+        .execute(&pool)
+        .await?;
+
+    let standard = serde_json::json!({
+        "v": 1,
+        "tables": {
+            "users": {
+                "doc": {
+                    "cast_as": "jsonb",
+                    "indexes": { "ste_vec": { "mode": "standard" } }
+                }
+            }
+        }
+    });
+
+    sqlx::query("INSERT INTO eql_v2_configuration (data) VALUES ($1::jsonb)")
+        .bind(&standard)
+        .execute(&pool)
+        .await
+        .context("ste_vec mode=standard should be accepted")?;
+
+    // `mode = compat` is accepted
+    sqlx::query("TRUNCATE TABLE eql_v2_configuration")
+        .execute(&pool)
+        .await?;
+
+    let compat = serde_json::json!({
+        "v": 1,
+        "tables": {
+            "users": {
+                "doc": {
+                    "cast_as": "jsonb",
+                    "indexes": { "ste_vec": { "mode": "compat" } }
+                }
+            }
+        }
+    });
+
+    sqlx::query("INSERT INTO eql_v2_configuration (data) VALUES ($1::jsonb)")
+        .bind(&compat)
+        .execute(&pool)
+        .await
+        .context("ste_vec mode=compat should be accepted")?;
+
+    // Any other value is rejected by the CHECK constraint
+    sqlx::query("TRUNCATE TABLE eql_v2_configuration")
+        .execute(&pool)
+        .await?;
+
+    let invalid = serde_json::json!({
+        "v": 1,
+        "tables": {
+            "users": {
+                "doc": {
+                    "cast_as": "jsonb",
+                    "indexes": { "ste_vec": { "mode": "legacy" } }
+                }
+            }
+        }
+    });
+
+    let result = sqlx::query("INSERT INTO eql_v2_configuration (data) VALUES ($1::jsonb)")
+        .bind(&invalid)
+        .execute(&pool)
+        .await;
+
+    assert!(
+        result.is_err(),
+        "ste_vec mode=legacy should be rejected by the CHECK constraint"
+    );
+
+    Ok(())
+}
