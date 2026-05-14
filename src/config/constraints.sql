@@ -150,6 +150,38 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
+--! @brief Validate ste_vec index mode option
+--! @internal
+--!
+--! Checks that the optional `mode` field on `ste_vec` index configurations is
+--! one of the recognised values. Valid modes are: standard, compat.
+--! Configurations without a `mode` field (the default) pass unconditionally.
+--!
+--! @param jsonb Configuration data to validate
+--! @return boolean True if every ste_vec mode is valid, or none are set
+--! @throws Exception if any ste_vec.mode value is not in the allowed set
+--!
+--! @note Used in CHECK constraint on eql_v2_configuration table
+--! @note Mode is optional — only configurations that set it are validated
+CREATE FUNCTION eql_v2.config_check_ste_vec_mode(val jsonb)
+  RETURNS BOOLEAN
+  IMMUTABLE STRICT PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
+AS $$
+  DECLARE
+    _valid_modes text[] := '{standard, compat}';
+  BEGIN
+    IF EXISTS (SELECT jsonb_array_elements_text(jsonb_path_query_array(val, '$.tables.*.*.indexes.ste_vec.mode'))) THEN
+      IF NOT (SELECT bool_and(mode = ANY(_valid_modes))
+          FROM (SELECT jsonb_array_elements_text(jsonb_path_query_array(val, '$.tables.*.*.indexes.ste_vec.mode')) AS mode) modes) THEN
+        RAISE 'Configuration has an invalid ste_vec mode (%). Mode should be one of %', val, _valid_modes;
+      END IF;
+    END IF;
+    RETURN true;
+  END;
+$$ LANGUAGE plpgsql;
+
+
 --! @brief Drop existing data validation constraint if present
 --! @note Allows constraint to be recreated during upgrades
 ALTER TABLE public.eql_v2_configuration DROP CONSTRAINT IF EXISTS eql_v2_configuration_data_check;
@@ -162,18 +194,21 @@ ALTER TABLE public.eql_v2_configuration DROP CONSTRAINT IF EXISTS eql_v2_configu
 --! - Tables field presence
 --! - Valid cast_as types
 --! - Valid index types
+--! - Valid ste_vec mode (when set)
 --!
 --! @note Combines all config_check_* validation functions
 --! @see eql_v2.config_check_version
 --! @see eql_v2.config_check_tables
 --! @see eql_v2.config_check_cast
 --! @see eql_v2.config_check_indexes
+--! @see eql_v2.config_check_ste_vec_mode
 ALTER TABLE public.eql_v2_configuration
   ADD CONSTRAINT eql_v2_configuration_data_check CHECK (
     eql_v2.config_check_version(data) AND
     eql_v2.config_check_tables(data) AND
     eql_v2.config_check_cast(data) AND
-    eql_v2.config_check_indexes(data)
+    eql_v2.config_check_indexes(data) AND
+    eql_v2.config_check_ste_vec_mode(data)
 );
 
 
