@@ -14,12 +14,11 @@
 --! inlinable bodies below).
 --!
 --! @warning Behaviour now diverges from the `<` operator: this helper
---!   still walks `eql_v2.compare`'s priority list (ore_block →
---!   ore_cllw_u64 → ore_cllw_var → ope), whereas `<` goes straight to
---!   `ore_block_u64_8_256` and raises on missing `ob`. Callers relying
---!   on the dispatcher fallback should migrate to the relevant
---!   extractor form (e.g. `eql_v2.ore_cllw_u64_8(col) < eql_v2.ore_cllw_u64_8($1::jsonb)`).
---!   See U-005.
+--!   still walks `eql_v2.compare`'s priority list (ore_block → ore_cllw
+--!   → hm), whereas `<` goes straight to `ore_block_u64_8_256` and raises
+--!   on missing `ob`. Callers relying on the dispatcher fallback should
+--!   migrate to the extractor form: `eql_v2.ore_cllw(col) <
+--!   eql_v2.ore_cllw($1::jsonb)`. See U-005.
 --!
 --! @param a eql_v2_encrypted First encrypted value
 --! @param b eql_v2_encrypted Second encrypted value

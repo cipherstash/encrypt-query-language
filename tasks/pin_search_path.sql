@@ -159,6 +159,23 @@ BEGIN
         AND p.proname IN ('ore_block_u64_8_256_eq', 'ore_block_u64_8_256_neq',
                           'ore_block_u64_8_256_lt', 'ore_block_u64_8_256_lte',
                           'ore_block_u64_8_256_gt', 'ore_block_u64_8_256_gte'))
+      -- Hash operator class FUNCTION 1: called once per row by HashAggregate,
+      -- hash joins, DISTINCT. Inlinable SQL avoids the per-row plpgsql
+      -- interpreter overhead — without this, `GROUP BY value` on
+      -- `eql_v2_encrypted` at 1M rows degrades super-linearly because the
+      -- plpgsql cost compounds with HashAggregate work_mem spillage.
+      OR (p.pronargs = 1
+        AND p.proname = 'hash_encrypted'
+        AND p.proargtypes[0] = enc_oid)
+      -- Consolidated ORE-CLLW extractor (U-006). Inlinable SQL — pinning
+      -- would silently undo it and prevent the planner from folding
+      -- `eql_v2.ore_cllw(col)` calls into the calling query. The
+      -- `compare_ore_cllw` comparator stays plpgsql by design (per-byte
+      -- protocol can't be expressed as a single inlinable SELECT), so
+      -- it is NOT on this list.
+      OR (p.pronargs = 1
+        AND p.proname IN ('ore_cllw', 'has_ore_cllw')
+        AND (p.proargtypes[0] = enc_oid OR p.proargtypes[0] = jsonb_oid))
     );
 
   FOR fn_oid IN

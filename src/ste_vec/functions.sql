@@ -293,9 +293,14 @@ $$;
 
 --! @brief Extract deterministic fields as array for GIN indexing
 --!
---! Extracts only deterministic search term fields (s, b3, hm, ocv, ocf, opf, opv)
---! from each STE vector element. Excludes non-deterministic ciphertext for correct
---! containment comparison using PostgreSQL's native @> operator.
+--! Extracts only deterministic search term fields (`s`, `hm`, `oc`, `op`)
+--! from each STE vector element. Excludes non-deterministic ciphertext for
+--! correct containment comparison using PostgreSQL's native `@>` operator.
+--!
+--! Field set: selector (`s`), HMAC equality (`hm`), ORE CLLW (`oc`,
+--! Standard-mode), OPE CLLW (`op`, Compat-mode). The pre-2.3 fields
+--! (`b3` / `ocf` / `ocv` / `opf` / `opv`) are no longer emitted — see U-004
+--! and U-006 in `docs/upgrading/v2.3.md`.
 --!
 --! @param val jsonb containing encrypted EQL payload
 --! @return jsonb[] Array of JSONB elements with only deterministic fields
@@ -313,7 +318,7 @@ AS $$
       CASE WHEN val ? 'sv' THEN val->'sv' ELSE jsonb_build_array(val) END
     ) AS elem,
     LATERAL jsonb_each(elem) AS kv(key, value)
-    WHERE kv.key IN ('s', 'b3', 'hm', 'ocv', 'ocf', 'opf', 'opv')
+    WHERE kv.key IN ('s', 'hm', 'oc', 'op')
     GROUP BY elem
   );
 $$;
