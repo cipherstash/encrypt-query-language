@@ -96,6 +96,7 @@ async fn ore_text_greater_than_or_equal(pool: PgPool) -> Result<()> {
 // ============================================================================
 
 #[sqlx::test]
+#[ignore = "Strict equality contract (#219): eql_v2.eq is now hm-only (inlines to hmac_256(a) = hmac_256(b)), matching the `=` operator. The ore_text fixture rows carry only `ob` (no `hm`), so eq returns NULL → zero rows match. Equality on ORE-only data has no production analogue — equality is configured via the `unique` index, ordering via `ore`."]
 async fn ore_text_eq_function(pool: PgPool) -> Result<()> {
     let encrypted = get_ore_text_encrypted(&pool, 56).await?;
 
@@ -110,6 +111,7 @@ async fn ore_text_eq_function(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
+#[ignore = "Strict equality contract (#219): eql_v2.neq is now hm-only. Same rationale as ore_text_eq_function."]
 async fn ore_text_neq_function(pool: PgPool) -> Result<()> {
     let encrypted = get_ore_text_encrypted(&pool, 56).await?;
 

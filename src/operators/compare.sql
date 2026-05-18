@@ -2,78 +2,54 @@
 -- REQUIRE: src/encrypted/types.sql
 -- REQUIRE: src/encrypted/functions.sql
 
--- REQUIRE: src/hmac_256/types.sql
--- REQUIRE: src/hmac_256/functions.sql
-
 -- REQUIRE: src/ore_block_u64_8_256/types.sql
 -- REQUIRE: src/ore_block_u64_8_256/functions.sql
 
--- REQUIRE: src/ore_cllw_u64_8/types.sql
--- REQUIRE: src/ore_cllw_u64_8/functions.sql
+-- REQUIRE: src/ore_cllw/types.sql
+-- REQUIRE: src/ore_cllw/functions.sql
+-- REQUIRE: src/ore_cllw/compare.sql
 
--- REQUIRE: src/ore_cllw_var_8/types.sql
--- REQUIRE: src/ore_cllw_var_8/functions.sql
-
--- REQUIRE: src/ope_cllw_u64_65/types.sql
--- REQUIRE: src/ope_cllw_u64_65/functions.sql
--- REQUIRE: src/ope_cllw_u64_65/compare.sql
-
--- REQUIRE: src/ope_cllw_var_8/types.sql
--- REQUIRE: src/ope_cllw_var_8/functions.sql
--- REQUIRE: src/ope_cllw_var_8/compare.sql
-
---! @brief Core comparison function for encrypted values
+--! @brief Three-way ordering function for encrypted values
 --!
---! Compares two encrypted values using their index terms without decryption.
---! This function implements all comparison operators required for btree indexing
---! (<, <=, =, >=, >).
+--! Returns the ORE-based order between two encrypted values: `-1` if `a < b`,
+--! `0` if `a = b` (same encrypted plaintext under deterministic ORE), `1` if
+--! `a > b`. Used by the btree operator class on `eql_v2_encrypted`
+--! (FUNCTION 1), by the legacy `eql_v2.lt` / `eql_v2.lte` / `eql_v2.gt` /
+--! `eql_v2.gte` helpers, and by `sort_compare`'s `strategy = 'compare'`
+--! fallback path.
 --!
---! Index terms are checked in the following priority order:
---! 1. ore_block_u64_8_256 (Order-Revealing Encryption)
---! 2. ore_cllw_u64_8 (Order-Revealing Encryption)
---! 3. ore_cllw_var_8 (Order-Revealing Encryption)
---! 4. ope_cllw_u64_65 (Order-Preserving Encryption)
---! 5. ope_cllw_var_8 (Order-Preserving Encryption)
---! 6. hmac_256 (Hash-based equality)
+--! **Strict ORE contract.** This function is for ordering only. It requires
+--! both operands to carry an ORE term on the same scope:
+--!   - `ob` (Block ORE) at the root, for scalar `eql_v2_encrypted` values
+--!   - `oc` (CLLW ORE) at the sv-element scope (the input is normalised
+--!     through `eql_v2.to_ste_vec_value` first, so an sv-shaped payload is
+--!     unwrapped to its sv[0] for inspection)
 --!
---! The first index term type present in both values is used for comparison.
---! If no matching index terms are found, falls back to JSONB literal comparison
---! to ensure consistent ordering (required for btree correctness).
+--! Missing both raises with a clear error directing callers to the correct
+--! recipe. **`hm` and literal-bytes fallbacks have been removed:** equality
+--! on `eql_v2_encrypted` is hm-only and runs through the inlined `=` /
+--! `<>` operators (post-#193) — it does *not* go through this function.
+--! `eql_v2.eq` and `eql_v2.neq` are also hm-only now (inlinable SQL
+--! mirroring the operators). The previous literal-bytes fallback covered
+--! btree-correctness on misconfigured columns; with the strict contract,
+--! misconfigured columns raise loudly at query time instead of silently
+--! producing meaningless ordering.
 --!
+--! @param a eql_v2_encrypted First encrypted value (STRICT — NULL inputs short-circuit to NULL)
+--! @param b eql_v2_encrypted Second encrypted value (STRICT — NULL inputs short-circuit to NULL)
+--! @return integer -1, 0, or 1
 --!
---! @param a eql_v2_encrypted First encrypted value
---! @param b eql_v2_encrypted Second encrypted value
---! @return integer -1 if a < b, 0 if a = b, 1 if a > b
+--! @throws Exception when neither value carries `ob` (root) nor `oc` (sv element)
 --!
---! @note Literal fallback prevents "lock BufferContent is not held" errors
---! @note `LANGUAGE plpgsql` and therefore not inlinable into the calling query.
---!       This is intentional: it remains the canonical multi-branch ordering
---!       function for backwards-compatible callers (e.g. the ORE btree
---!       operator-class methods, eql_v2.eq's compare-then-equal-zero form).
---!       Hot-path inlinable equality is provided by `eql_v2."="` directly
---!       (post-#193, hmac-only); callers that need the historic multi-index
---!       fallback continue to go through this function via eql_v2.eq.
 --! @see eql_v2.compare_ore_block_u64_8_256
---! @see eql_v2.compare_hmac_256
+--! @see eql_v2.compare_ore_cllw
+--! @see eql_v2."=" -- hm-only equality, post-#193 inlining
 CREATE FUNCTION eql_v2.compare(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS integer
   IMMUTABLE STRICT PARALLEL SAFE
   SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
-
-    IF a IS NULL AND b IS NULL THEN
-      RETURN 0;
-    END IF;
-
-    IF a IS NULL THEN
-      RETURN -1;
-    END IF;
-
-    IF b IS NULL THEN
-      RETURN 1;
-    END IF;
-
     a := eql_v2.to_ste_vec_value(a);
     b := eql_v2.to_ste_vec_value(b);
 
@@ -81,30 +57,12 @@ AS $$
       RETURN eql_v2.compare_ore_block_u64_8_256(a, b);
     END IF;
 
-    IF eql_v2.has_ore_cllw_u64_8(a) AND eql_v2.has_ore_cllw_u64_8(b) THEN
-      RETURN eql_v2.compare_ore_cllw_u64_8(a, b);
+    IF eql_v2.has_ore_cllw(a) AND eql_v2.has_ore_cllw(b) THEN
+      RETURN eql_v2.compare_ore_cllw(a, b);
     END IF;
 
-    IF eql_v2.has_ore_cllw_var_8(a) AND eql_v2.has_ore_cllw_var_8(b) THEN
-      RETURN eql_v2.compare_ore_cllw_var_8(a, b);
-    END IF;
-
-    IF eql_v2.has_ope_cllw_u64_65(a) AND eql_v2.has_ope_cllw_u64_65(b) THEN
-      RETURN eql_v2.compare_ope_cllw_u64_65(a, b);
-    END IF;
-
-    IF eql_v2.has_ope_cllw_var_8(a) AND eql_v2.has_ope_cllw_var_8(b) THEN
-      RETURN eql_v2.compare_ope_cllw_var_8(a, b);
-    END IF;
-
-    IF eql_v2.has_hmac_256(a) AND eql_v2.has_hmac_256(b) THEN
-      RETURN eql_v2.compare_hmac_256(a, b);
-    END IF;
-
-    -- Fallback to literal comparison of the encrypted data
-    -- Compare must have consistent ordering for a given state
-    -- Without this text fallback, database errors with "lock BufferContent is not held"
-    RETURN eql_v2.compare_literal(a, b);
-
+    RAISE EXCEPTION
+      'eql_v2.compare requires an ORE term on both operands: `ob` (Block ORE, root scalars) or `oc` (CLLW ORE, sv elements). Equality is hmac-only via the `=` operator — this function is for ordering only.'
+      USING ERRCODE = 'feature_not_supported';
   END;
 $$ LANGUAGE plpgsql;
