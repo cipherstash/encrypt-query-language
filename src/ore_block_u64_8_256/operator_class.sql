@@ -1,15 +1,12 @@
--- NOTE FILE IS DISABLED
--- REPLACE `!REQUIRE` with `REQUIRE` to enable in the build
-
--- !REQUIRE: src/schema.sql
--- !REQUIRE: src/ore_block_u64_8_256/types.sql
+-- REQUIRE: src/schema.sql
+-- REQUIRE: src/ore_block_u64_8_256/types.sql
+-- REQUIRE: src/ore_block_u64_8_256/functions.sql
 
 
 --! @brief B-tree operator family for ORE block types
 --!
 --! Defines the operator family for creating B-tree indexes on ORE block types.
 --!
---! @note FILE IS DISABLED - Not included in build
 --! @see eql_v2.ore_block_u64_8_256_operator_class
 CREATE OPERATOR FAMILY eql_v2.ore_block_u64_8_256_operator_family USING btree;
 
@@ -22,7 +19,6 @@ CREATE OPERATOR FAMILY eql_v2.ore_block_u64_8_256_operator_family USING btree;
 --! Supports operators: <, <=, =, >=, >
 --! Uses comparison function: compare_ore_block_u64_8_256_terms
 --!
---! @note FILE IS DISABLED - Not included in build
 --!
 --! @example
 --! -- Would be used like (if enabled):
