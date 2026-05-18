@@ -6,10 +6,16 @@
 
 --! @brief Greater-than comparison helper for encrypted values
 --! @internal
+--! @deprecated Slated for removal in EQL 3.0. Use the `>` operator instead.
 --!
---! Internal helper that delegates to eql_v2.compare for greater-than testing.
---! Kept for callers that invoke it directly. The `>` operator wrappers no
---! longer go through this helper — see the inlinable bodies below.
+--! Internal helper that delegates to `eql_v2.compare` for greater-than
+--! testing. The `>` operator wrappers no longer go through this helper —
+--! see the inlinable bodies below.
+--!
+--! @warning Behaviour now diverges from the `>` operator: this helper
+--!   still walks `eql_v2.compare`'s priority list, whereas `>` goes
+--!   straight to `ore_block_u64_8_256` and raises on missing `ob`. See
+--!   the matching note on `eql_v2.lt` and U-005 for migration guidance.
 --!
 --! @param a eql_v2_encrypted First encrypted value
 --! @param b eql_v2_encrypted Second encrypted value
@@ -46,8 +52,10 @@ $$ LANGUAGE plpgsql;
 -- `WHERE col > val` reduces to
 -- `WHERE eql_v2.ore_block_u64_8_256(col) > eql_v2.ore_block_u64_8_256(val)`
 -- and matches a functional ORE index built on the same expression.
--- Breaking impact: columns with only `ore_cllw_*` or OPE terms return
--- NULL for `>` where they previously fell through `eql_v2.compare`.
+-- Breaking impact: columns with only `ore_cllw_*` or OPE terms now
+-- raise from the `ore_block_u64_8_256(jsonb)` extractor
+-- (`Expected an ore index (ob) value in json: ...`) where they
+-- previously fell through `eql_v2.compare`. See U-005.
 CREATE FUNCTION eql_v2.">"(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
