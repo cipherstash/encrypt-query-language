@@ -195,6 +195,6 @@ CREATE OPERATOR >= (
   RIGHTARG=eql_v2.ore_block_u64_8_256,
   COMMUTATOR = <=,
   NEGATOR = <,
-  RESTRICT = scalarlesel,
-  JOIN = scalarlejoinsel
+  RESTRICT = scalargesel,
+  JOIN = scalargejoinsel
 );
