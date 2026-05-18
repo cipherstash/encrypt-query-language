@@ -271,6 +271,7 @@ $$ LANGUAGE plpgsql;
 DROP FUNCTION IF EXISTS create_encrypted_json(integer);
 CREATE FUNCTION create_encrypted_json(id integer)
   RETURNS eql_v2_encrypted
+  IMMUTABLE
 AS $$
   DECLARE
     s text;
@@ -357,6 +358,7 @@ $$ LANGUAGE plpgsql;
 DROP FUNCTION IF EXISTS create_encrypted_json(integer, VARIADIC indexes text[]);
 CREATE FUNCTION create_encrypted_json(id integer, VARIADIC indexes text[])
   RETURNS eql_v2_encrypted
+  IMMUTABLE
 AS $$
   DECLARE
     j jsonb;
@@ -378,6 +380,7 @@ $$ LANGUAGE plpgsql;
 DROP FUNCTION IF EXISTS create_encrypted_json(VARIADIC indexes text[]);
 CREATE FUNCTION create_encrypted_json(VARIADIC indexes text[])
   RETURNS eql_v2_encrypted
+  IMMUTABLE
 AS $$
  DECLARE
     default_indexes text[];
@@ -430,6 +433,11 @@ $$ LANGUAGE plpgsql;
 
 
 DROP FUNCTION IF EXISTS create_encrypted_json();
+-- Intentionally NOT IMMUTABLE: this overload uses random() to pick an id,
+-- so each call must produce a fresh value. Marking it IMMUTABLE would let
+-- the planner fold it to a single value and reuse, defeating the point.
+-- The other create_encrypted_json overloads (with explicit id / indexes)
+-- are deterministic and IMMUTABLE.
 CREATE FUNCTION create_encrypted_json()
   RETURNS eql_v2_encrypted
 AS $$

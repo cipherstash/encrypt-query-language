@@ -159,6 +159,22 @@ async fn bench_hmac_equality_uses_hash_index(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
+/// Verify hash index is used when the operand is a function-call expression
+/// (rather than a literal jsonb that PG can constant-fold trivially).
+///
+/// Regression test for the volatility blind spot: if `create_encrypted_json`
+/// is VOLATILE, PostgreSQL won't fold the function call at plan time, the
+/// indexed-expression match against `bench_text_hmac_idx` fails, and the
+/// query falls back to a sequential scan. Marking the helper IMMUTABLE
+/// (in 004_install_test_helpers.sql) is what keeps this assertion green.
+#[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
+async fn bench_hmac_equality_via_function_call_uses_hash_index(pool: PgPool) -> Result<()> {
+    let sql = "SELECT * FROM bench WHERE eql_v2.hmac_256(encrypted_text) \
+               = eql_v2.hmac_256(create_encrypted_json(1))";
+    assert_uses_index(&pool, sql, "bench_text_hmac_idx").await?;
+    Ok(())
+}
+
 /// Verify btree index is used for ORDER BY with LIMIT on encrypted_int
 #[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
 #[cfg_attr(
