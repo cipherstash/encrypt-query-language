@@ -6,7 +6,9 @@
 //! ANALYZE is run by the bench_setup fixture — planner statistics are populated at fixture load.
 
 use anyhow::Result;
-use eql_tests::{assert_uses_index, get_bench_encrypted_int, get_bench_encrypted_text};
+use eql_tests::{
+    assert_uses_index, explain_query, get_bench_encrypted_int, get_bench_encrypted_text,
+};
 use sqlx::PgPool;
 
 const BENCH_INT_ORE_IDX: &str = "bench_int_ore_idx";
@@ -155,5 +157,109 @@ async fn bare_ilike_uses_bloom_index(pool: PgPool) -> Result<()> {
         encrypted
     );
     assert_uses_index(&pool, &sql, BENCH_TEXT_BLOOM_IDX).await?;
+    Ok(())
+}
+
+// ============================================================================
+// Hash-strategy plans: GROUP BY / JOIN / DISTINCT on encrypted columns engage
+// the hash operator class (#196). The plan-shape assertions below cover the
+// surface PR #196 enabled; the corresponding timing thresholds in
+// bench_regression_tests.rs are #[ignore]'d pending the hash-chain inlining
+// work tracked in #202.
+// ============================================================================
+
+/// `GROUP BY encrypted_col` engages HashAggregate via the hash operator class.
+/// Without the hash op class registered in #196 this would fall back to
+/// GroupAggregate-after-Sort or — worse — degenerate to a Nested-Loop self-comparison.
+#[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
+async fn group_by_encrypted_uses_hash_aggregate(pool: PgPool) -> Result<()> {
+    let sql = "SELECT count(*) FROM bench GROUP BY encrypted_text";
+    let plan = explain_query(&pool, sql).await?;
+    assert!(
+        plan.contains("HashAggregate"),
+        "Expected GROUP BY to use HashAggregate. EXPLAIN output:\n{}",
+        plan
+    );
+    Ok(())
+}
+
+/// JOIN on `a.encrypted_col = b.encrypted_col` engages the hmac functional index.
+/// Acceptable plan shapes: Hash Join (preferred), or Nested Loop + Memoize +
+/// Index Scan via `bench_text_hmac_idx` (current planner choice — fine since
+/// the index lookup remains the per-probe cost).
+#[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
+async fn join_on_encrypted_uses_hmac_index(pool: PgPool) -> Result<()> {
+    let sql = "SELECT count(*) FROM bench a JOIN bench b \
+               ON a.encrypted_text = b.encrypted_text";
+    assert_uses_index(&pool, sql, BENCH_TEXT_HMAC_IDX).await?;
+    Ok(())
+}
+
+/// `SELECT DISTINCT encrypted_col FROM t` (unbounded) engages HashAggregate
+/// via the hash operator class. The bounded variant (`... LIMIT N`) biases
+/// the planner toward Index Only Scan over the ORE btree opclass — that's
+/// fine on full installs but unavailable on Supabase, where this hash path
+/// becomes the only viable one.
+#[sqlx::test(fixtures(path = "../fixtures", scripts("bench_data", "bench_setup")))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
+async fn distinct_encrypted_uses_hash_aggregate(pool: PgPool) -> Result<()> {
+    let sql = "SELECT DISTINCT encrypted_text FROM bench";
+    let plan = explain_query(&pool, sql).await?;
+    assert!(
+        plan.contains("HashAggregate"),
+        "Expected DISTINCT to use HashAggregate. EXPLAIN output:\n{}",
+        plan
+    );
+    Ok(())
+}
+
+// ============================================================================
+// Field-level hash-strategy: GROUP BY on a JSON path extracted from an
+// encrypted column. This is the "how many users per region" pattern against
+// ste_vec encryption.
+//
+// Uses the bench_json fixture, which overlays `hm` onto the `$.hello` sv
+// element of each bench row — simulating what `@cipherstash/protect` produces
+// for a JSONB column where the `$.hello` path is configured with a `unique`
+// index. Without that overlay, field-level GROUP BY raises today
+// ("Cannot hash eql_v2_encrypted value: no hmac_256 index term found").
+// ============================================================================
+
+/// Documented EQL form for field-level GROUP BY:
+/// `GROUP BY eql_v2.jsonb_path_query_first(col, '<selector>')`.
+/// The planner engages a parallel Partial HashAggregate + Sort + GroupAggregate
+/// merge — i.e., `HashAggregate` appears in the plan even if it's not the top
+/// node. The bare-`->` form (`col -> '<sel>'::text`) currently picks
+/// Sort + GroupAggregate instead; once #204 inlines the extractors, the
+/// planner has the option of flattening to a single HashAggregate.
+#[sqlx::test(fixtures(
+    path = "../fixtures",
+    scripts("bench_data", "bench_setup", "bench_json_data")
+))]
+#[cfg_attr(
+    not(feature = "bench"),
+    ignore = "perf-bench: gated, run via mise test:bench"
+)]
+async fn group_by_jsonb_field_uses_hash_aggregate(pool: PgPool) -> Result<()> {
+    // Selectors::HELLO = $.hello — see tests/sqlx/src/selectors.rs.
+    let sql = "SELECT count(*) FROM bench_json \
+               GROUP BY eql_v2.jsonb_path_query_first(e, 'a7cea93975ed8c01f861ccb6bd082784')";
+    let plan = explain_query(&pool, sql).await?;
+    assert!(
+        plan.contains("HashAggregate"),
+        "Expected field-level GROUP BY plan to include a HashAggregate node. EXPLAIN output:\n{}",
+        plan
+    );
     Ok(())
 }
