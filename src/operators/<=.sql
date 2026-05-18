@@ -61,8 +61,8 @@ CREATE OPERATOR <=(
   RIGHTARG = eql_v2_encrypted,
   COMMUTATOR = >=,
   NEGATOR = >,
-  RESTRICT = scalarltsel,
-  JOIN = scalarltjoinsel
+  RESTRICT = scalarlesel,
+  JOIN = scalarlejoinsel
 );
 
 --! @brief <= operator for encrypted value and JSONB
@@ -80,8 +80,8 @@ CREATE OPERATOR <=(
   RIGHTARG = jsonb,
   COMMUTATOR = >=,
   NEGATOR = >,
-  RESTRICT = scalarltsel,
-  JOIN = scalarltjoinsel
+  RESTRICT = scalarlesel,
+  JOIN = scalarlejoinsel
 );
 
 --! @brief <= operator for JSONB and encrypted value
@@ -100,6 +100,6 @@ CREATE OPERATOR <=(
   RIGHTARG = eql_v2_encrypted,
   COMMUTATOR = >=,
   NEGATOR = >,
-  RESTRICT = scalarltsel,
-  JOIN = scalarltjoinsel
+  RESTRICT = scalarlesel,
+  JOIN = scalarlejoinsel
 );
