@@ -159,6 +159,14 @@ BEGIN
         AND p.proname IN ('ore_block_u64_8_256_eq', 'ore_block_u64_8_256_neq',
                           'ore_block_u64_8_256_lt', 'ore_block_u64_8_256_lte',
                           'ore_block_u64_8_256_gt', 'ore_block_u64_8_256_gte'))
+      -- Hash operator class FUNCTION 1: called once per row by HashAggregate,
+      -- hash joins, DISTINCT. Inlinable SQL avoids the per-row plpgsql
+      -- interpreter overhead — without this, `GROUP BY value` on
+      -- `eql_v2_encrypted` at 1M rows degrades super-linearly because the
+      -- plpgsql cost compounds with HashAggregate work_mem spillage.
+      OR (p.pronargs = 1
+        AND p.proname = 'hash_encrypted'
+        AND p.proargtypes[0] = enc_oid)
     );
 
   FOR fn_oid IN
