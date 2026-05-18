@@ -6,10 +6,16 @@
 
 --! @brief Less-than-or-equal comparison helper for encrypted values
 --! @internal
+--! @deprecated Slated for removal in EQL 3.0. Use the `<=` operator instead.
 --!
---! Internal helper that delegates to eql_v2.compare for <= testing. Kept
---! for callers that invoke it directly. The `<=` operator wrappers no
---! longer go through this helper — see the inlinable bodies below.
+--! Internal helper that delegates to `eql_v2.compare` for `<=` testing.
+--! The `<=` operator wrappers no longer go through this helper — see the
+--! inlinable bodies below.
+--!
+--! @warning Behaviour now diverges from the `<=` operator: this helper
+--!   still walks `eql_v2.compare`'s priority list, whereas `<=` goes
+--!   straight to `ore_block_u64_8_256` and raises on missing `ob`. See
+--!   the matching note on `eql_v2.lt` and U-005 for migration guidance.
 --!
 --! @param a eql_v2_encrypted First encrypted value
 --! @param b eql_v2_encrypted Second encrypted value

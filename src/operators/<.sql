@@ -6,11 +6,20 @@
 
 --! @brief Less-than comparison helper for encrypted values
 --! @internal
+--! @deprecated Slated for removal in EQL 3.0. Use the `<` operator instead.
 --!
---! Internal helper that delegates to eql_v2.compare for less-than testing.
---! Kept for callers that invoke it directly (and used by `eql_v2.compare`
---! itself). The `<` operator wrappers no longer go through this helper —
---! see the inlinable bodies below.
+--! Internal helper that delegates to `eql_v2.compare` for less-than
+--! testing. The `<` operator wrappers no longer call this helper — they
+--! inline a direct `ore_block_u64_8_256` comparison instead (see the
+--! inlinable bodies below).
+--!
+--! @warning Behaviour now diverges from the `<` operator: this helper
+--!   still walks `eql_v2.compare`'s priority list (ore_block →
+--!   ore_cllw_u64 → ore_cllw_var → ope), whereas `<` goes straight to
+--!   `ore_block_u64_8_256` and raises on missing `ob`. Callers relying
+--!   on the dispatcher fallback should migrate to the relevant
+--!   extractor form (e.g. `eql_v2.ore_cllw_u64_8(col) < eql_v2.ore_cllw_u64_8($1::jsonb)`).
+--!   See U-005.
 --!
 --! @param a eql_v2_encrypted First encrypted value
 --! @param b eql_v2_encrypted Second encrypted value
@@ -63,8 +72,10 @@ $$ LANGUAGE plpgsql;
 -- ore_block / ore_cllw_u64 / ore_cllw_var / ope. Now `<` requires the
 -- column to have `ore_block_u64_8_256` configured (i.e. carry an `ob`
 -- field). Calling `<` on a column with only `ore_cllw_*` or OPE terms
--- will return NULL where it previously returned a Boolean — same
--- shape as the 2.3 `=` change for hmac.
+-- now raises from the `ore_block_u64_8_256(jsonb)` extractor
+-- (`Expected an ore index (ob) value in json: ...`) where it
+-- previously returned a Boolean. Loud failure surfaces config errors
+-- rather than silently producing zero rows — see U-005.
 CREATE FUNCTION eql_v2."<"(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
