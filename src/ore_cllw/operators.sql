@@ -2,33 +2,33 @@
 -- REQUIRE: src/ore_cllw/types.sql
 -- REQUIRE: src/ore_cllw/functions.sql
 
-
--- ============================================================================
--- Operators on `eql_v2.ore_cllw`
--- ============================================================================
---
--- Same-type comparison operators backing the btree operator class on the
--- composite `eql_v2.ore_cllw` type. Each operator reduces to a single SELECT
--- over `eql_v2.compare_ore_cllw_term(a, b)`, which is the canonical CLLW
--- per-byte comparator (`y + 1 == x` mod 256). The operator wrappers are
--- inlinable `LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE` so the planner can
--- fold them into the calling query — that's what lets a functional btree
--- index on `eql_v2.ore_cllw(col)` engage for both `WHERE eql_v2.ore_cllw(col)
--- < eql_v2.ore_cllw($1)` and `ORDER BY eql_v2.ore_cllw(col)` shapes.
---
--- The inner `eql_v2.compare_ore_cllw_term` is `LANGUAGE plpgsql` (it has a
--- per-byte loop) and is NOT inlined. That's fine for index *match* (the
--- planner only needs the outer operator function call to fold so the
--- predicate's expression tree matches the index's expression tree); only the
--- per-comparison cost is the plpgsql call overhead. That's the cost the
--- functional index avoids by walking the btree in order rather than calling
--- compare on every row.
---
--- Deliberately no `HASHES` / `MERGES` flags on the operator declarations.
--- HASHES requires a registered hash function on the type, which we don't
--- have (and don't want — the CLLW protocol gives ordering, not a sensible
--- hashing). MERGES requires an equivalent merge-joinable operator class on
--- both sides; we'd need a corresponding family registered first.
+--! @file src/ore_cllw/operators.sql
+--! @brief Comparison operators on the `eql_v2.ore_cllw` composite type
+--!
+--! Same-type comparison operators backing the btree operator class on the
+--! composite `eql_v2.ore_cllw` type. Each operator reduces to a single SELECT
+--! over `eql_v2.compare_ore_cllw_term(a, b)`, which is the canonical CLLW
+--! per-byte comparator (`y + 1 == x` mod 256). The operator wrappers are
+--! inlinable `LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE` so the planner can
+--! fold them into the calling query — that's what lets a functional btree
+--! index on `eql_v2.ore_cllw(col)` engage for both `WHERE eql_v2.ore_cllw(col)
+--! < eql_v2.ore_cllw($1)` and `ORDER BY eql_v2.ore_cllw(col)` shapes.
+--!
+--! The inner `eql_v2.compare_ore_cllw_term` is `LANGUAGE plpgsql` (it has a
+--! per-byte loop) and is NOT inlined. That's fine for index *match* (the
+--! planner only needs the outer operator function call to fold so the
+--! predicate's expression tree matches the index's expression tree); only the
+--! per-comparison cost is the plpgsql call overhead. That's the cost the
+--! functional index avoids by walking the btree in order rather than calling
+--! compare on every row.
+--!
+--! @note Deliberately no `HASHES` / `MERGES` flags on the operator
+--!       declarations. HASHES requires a registered hash function on the type
+--!       (the CLLW protocol gives ordering, not a sensible hashing); MERGES
+--!       requires an equivalent merge-joinable operator class on both sides.
+--!
+--! @see src/ore_cllw/operator_class.sql
+--! @see src/ore_cllw/functions.sql
 
 CREATE FUNCTION eql_v2.ore_cllw_eq(a eql_v2.ore_cllw, b eql_v2.ore_cllw)
   RETURNS boolean
