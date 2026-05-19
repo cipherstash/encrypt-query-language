@@ -456,3 +456,125 @@ async fn contained_by_encrypted_param_encrypted(pool: PgPool) -> Result<()> {
 
     Ok(())
 }
+
+// ===========================================================================
+// Typed needle: stevec_query DOMAIN
+// ===========================================================================
+
+#[sqlx::test]
+async fn stevec_query_domain_rejects_payloads_with_c(_pool: PgPool) -> Result<()> {
+    // The DOMAIN CHECK on `eql_v2.stevec_query` forbids any `c` field on sv
+    // elements — `c` is ciphertext, which a containment needle never matches.
+    let result = sqlx::query_scalar::<_, bool>(
+        "SELECT '{\"sv\":[{\"s\":\"x\",\"c\":\"y\",\"hm\":\"z\"}]}'::eql_v2.stevec_query \
+         IS NOT NULL",
+    )
+    .fetch_one(&_pool)
+    .await;
+
+    assert!(
+        result.is_err(),
+        "stevec_query cast should raise on a payload carrying `c`"
+    );
+
+    let msg = format!("{}", result.unwrap_err());
+    assert!(
+        msg.contains("violates check constraint"),
+        "expected CHECK violation, got: {msg}"
+    );
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn stevec_query_domain_rejects_non_sv_objects(_pool: PgPool) -> Result<()> {
+    let result = sqlx::query_scalar::<_, bool>(
+        "SELECT '{\"x\":1}'::eql_v2.stevec_query IS NOT NULL",
+    )
+    .fetch_one(&_pool)
+    .await;
+
+    assert!(result.is_err());
+    let msg = format!("{}", result.unwrap_err());
+    assert!(msg.contains("violates check constraint"));
+    Ok(())
+}
+
+#[sqlx::test]
+async fn stevec_query_domain_accepts_valid_payload(_pool: PgPool) -> Result<()> {
+    let result: serde_json::Value = sqlx::query_scalar(
+        "SELECT '{\"sv\":[{\"s\":\"x\",\"hm\":\"y\"}]}'::eql_v2.stevec_query::jsonb",
+    )
+    .fetch_one(&_pool)
+    .await?;
+
+    assert_eq!(result["sv"][0]["s"], "x");
+    assert_eq!(result["sv"][0]["hm"], "y");
+    Ok(())
+}
+
+#[sqlx::test]
+async fn contains_with_stevec_query_overload(pool: PgPool) -> Result<()> {
+    // The recommended recipe: `e @> '{"sv":[...]}'::eql_v2.stevec_query`.
+    // Verifies the new operator overload dispatches correctly through
+    // `ste_vec_contains` without the prior `eql_v2_encrypted` cast workaround.
+    setup_ste_vec_vast_gin_index(&pool).await?;
+
+    let id = 1;
+    let entry: serde_json::Value = sqlx::query_scalar(&format!(
+        "SELECT ((e -> ((e).data -> 'sv' -> 0 ->> 's')::text) - 'c')::jsonb \
+         FROM {} WHERE id = $1",
+        STE_VEC_VAST_TABLE
+    ))
+    .bind(id)
+    .fetch_one(&pool)
+    .await?;
+
+    // Wrap the entry into a `stevec_query`-shaped payload.
+    let needle = serde_json::json!({ "sv": [entry] });
+
+    let sql = format!(
+        "SELECT id FROM {} WHERE e @> $1::jsonb::eql_v2.stevec_query AND id = $2",
+        STE_VEC_VAST_TABLE
+    );
+
+    let result: Option<(i64,)> = sqlx::query_as(&sql)
+        .bind(&needle)
+        .bind(id)
+        .fetch_optional(&pool)
+        .await?;
+
+    assert!(
+        result.is_some(),
+        "e @> stevec_query should match the row the entry was extracted from"
+    );
+    assert_eq!(result.unwrap().0, id as i64);
+    Ok(())
+}
+
+#[sqlx::test]
+async fn cast_eql_v2_encrypted_to_stevec_query_strips_c(_pool: PgPool) -> Result<()> {
+    // `to_stevec_query` is the cast function from `eql_v2_encrypted` to
+    // `eql_v2.stevec_query` — strips `c` fields from each sv element.
+    let result: serde_json::Value = sqlx::query_scalar(
+        "SELECT (eql_v2.to_stevec_query(
+                  '{\"v\":2,\"i\":{\"t\":\"t\",\"c\":\"c\"},
+                    \"sv\":[
+                      {\"s\":\"sel1\",\"c\":\"ct1\",\"hm\":\"hm1\"},
+                      {\"s\":\"sel2\",\"c\":\"ct2\",\"oc\":\"oc2\"}
+                    ]}'::jsonb::eql_v2_encrypted
+                ))::jsonb",
+    )
+    .fetch_one(&_pool)
+    .await?;
+
+    let sv = result["sv"].as_array().expect("sv should be array");
+    assert_eq!(sv.len(), 2);
+    for elem in sv {
+        assert!(
+            elem.get("c").is_none(),
+            "to_stevec_query should strip `c` fields; got: {elem}"
+        );
+    }
+    Ok(())
+}
