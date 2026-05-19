@@ -20,7 +20,7 @@ async fn encrypted_domain_types_exist_and_accept_jsonb(pool: PgPool) -> Result<(
         r#"
         CREATE TEMP TABLE typed_smoke (
             text_col encrypted_text,
-            int_col encrypted_int4,
+            int_col eql_v2_int4,
             json_col encrypted_jsonb
         )
         "#,
@@ -30,7 +30,7 @@ async fn encrypted_domain_types_exist_and_accept_jsonb(pool: PgPool) -> Result<(
 
     sqlx::query(
         "INSERT INTO typed_smoke(text_col, int_col, json_col)
-         VALUES ($1::jsonb::encrypted_text, $2::jsonb::encrypted_int4, $3::jsonb::encrypted_jsonb)",
+         VALUES ($1::jsonb::encrypted_text, $2::jsonb::eql_v2_int4, $3::jsonb::encrypted_jsonb)",
     )
     .bind(&text_payload)
     .bind(&int_payload)
@@ -294,207 +294,6 @@ async fn encrypted_text_unsupported_operators_are_blocked(pool: PgPool) -> Resul
     }
 
     Ok(())
-}
-
-fn opf_hex(signal: u8) -> String {
-    let mut bytes = vec![0u8; 65];
-    bytes[8] = signal;
-    hex::encode(bytes)
-}
-
-fn int4_payload(ciphertext: &str, hm: &str, signal: u8) -> String {
-    format!(
-        r#"{{"v":2,"i":{{"t":"typed","c":"int_col"}},"c":"{}","hm":"{}","opf":"{}"}}"#,
-        ciphertext,
-        hm,
-        opf_hex(signal)
-    )
-}
-
-#[sqlx::test]
-async fn encrypted_int4_range_and_equality_use_indexes(pool: PgPool) -> Result<()> {
-    let low = int4_payload("low-ciphertext", "hm-low", 10);
-    let mid = int4_payload("mid-ciphertext", "hm-mid", 15);
-    let high = int4_payload("high-ciphertext", "hm-high", 20);
-    let mid_query = int4_payload("mid-query-ciphertext", "hm-mid", 15);
-    let non_match = int4_payload("none-ciphertext", "hm-none", 99);
-
-    let mut tx = pool.begin().await?;
-
-    sqlx::query(
-        r#"
-        CREATE TEMP TABLE typed_int4_index (
-            id integer GENERATED ALWAYS AS IDENTITY,
-            value encrypted_int4
-        ) ON COMMIT DROP;
-        "#,
-    )
-    .execute(&mut *tx)
-    .await?;
-
-    for payload in [&low, &mid, &high] {
-        sqlx::query("INSERT INTO typed_int4_index(value) VALUES ($1::jsonb::encrypted_int4)")
-            .bind(payload)
-            .execute(&mut *tx)
-            .await?;
-    }
-
-    sqlx::query(
-        "CREATE INDEX typed_int4_ope_idx ON typed_int4_index ((eql_v2.encrypted_int4_ope_key(value)))",
-    )
-    .execute(&mut *tx)
-    .await?;
-    sqlx::query(
-        "CREATE INDEX typed_int4_hmac_idx ON typed_int4_index ((eql_v2.hmac_256(value::jsonb)))",
-    )
-    .execute(&mut *tx)
-    .await?;
-    sqlx::query("ANALYZE typed_int4_index")
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("SET LOCAL enable_seqscan = off")
-        .execute(&mut *tx)
-        .await?;
-
-    let range_cases = [
-        ("<", vec![1], vec![3]),
-        ("<=", vec![1, 2], vec![2, 3]),
-        (">", vec![3], vec![1]),
-        (">=", vec![2, 3], vec![1, 2]),
-    ];
-
-    for (op, forward_expected, reverse_expected) in range_cases {
-        for rhs in ["$1::jsonb::encrypted_int4", "$1::jsonb"] {
-            let sql = format!("SELECT id FROM typed_int4_index WHERE value {op} {rhs} ORDER BY id");
-            let ids: Vec<i32> = sqlx::query_scalar(&sql)
-                .bind(&mid_query)
-                .fetch_all(&mut *tx)
-                .await?;
-            assert_eq!(ids, forward_expected, "forward {op} with rhs {rhs}");
-        }
-
-        let sql = format!("SELECT id FROM typed_int4_index WHERE $1::jsonb {op} value ORDER BY id");
-        let ids: Vec<i32> = sqlx::query_scalar(&sql)
-            .bind(&mid_query)
-            .fetch_all(&mut *tx)
-            .await?;
-        assert_eq!(ids, reverse_expected, "reverse {op} with jsonb LHS");
-
-        let plan_rows: Vec<String> = sqlx::query_scalar(&format!(
-            "EXPLAIN SELECT * FROM typed_int4_index WHERE value {op} '{}'::jsonb",
-            mid_query
-        ))
-        .fetch_all(&mut *tx)
-        .await?;
-        let plan = plan_rows.join("\n");
-        assert!(
-            plan.contains("typed_int4_ope_idx"),
-            "expected OPE functional index for {op}; plan:\n{plan}"
-        );
-    }
-
-    for rhs in ["$1::jsonb::encrypted_int4", "$1::jsonb"] {
-        let eq_ids: Vec<i32> = sqlx::query_scalar(&format!(
-            "SELECT id FROM typed_int4_index WHERE value = {rhs} ORDER BY id"
-        ))
-        .bind(&mid_query)
-        .fetch_all(&mut *tx)
-        .await?;
-        assert_eq!(eq_ids, vec![2], "forward = with rhs {rhs}");
-
-        let neq_ids: Vec<i32> = sqlx::query_scalar(&format!(
-            "SELECT id FROM typed_int4_index WHERE value <> {rhs} ORDER BY id"
-        ))
-        .bind(&non_match)
-        .fetch_all(&mut *tx)
-        .await?;
-        assert_eq!(neq_ids, vec![1, 2, 3], "forward <> with rhs {rhs}");
-    }
-
-    let eq_ids: Vec<i32> =
-        sqlx::query_scalar("SELECT id FROM typed_int4_index WHERE $1::jsonb = value ORDER BY id")
-            .bind(&mid_query)
-            .fetch_all(&mut *tx)
-            .await?;
-    assert_eq!(eq_ids, vec![2], "reverse = with jsonb LHS");
-
-    let neq_ids: Vec<i32> =
-        sqlx::query_scalar("SELECT id FROM typed_int4_index WHERE $1::jsonb <> value ORDER BY id")
-            .bind(&non_match)
-            .fetch_all(&mut *tx)
-            .await?;
-    assert_eq!(neq_ids, vec![1, 2, 3], "reverse <> with jsonb LHS");
-
-    let plan_rows: Vec<String> = sqlx::query_scalar(&format!(
-        "EXPLAIN SELECT * FROM typed_int4_index WHERE value = '{}'::jsonb",
-        mid_query
-    ))
-    .fetch_all(&mut *tx)
-    .await?;
-    let plan = plan_rows.join("\n");
-    assert!(
-        plan.contains("typed_int4_hmac_idx"),
-        "expected HMAC functional index for cross-type =; plan:\n{plan}"
-    );
-
-    tx.commit().await?;
-    Ok(())
-}
-
-#[sqlx::test]
-async fn encrypted_int4_unsupported_operators_are_blocked(pool: PgPool) -> Result<()> {
-    let a = int4_payload("a-ciphertext", "hm-a", 1);
-    let b = int4_payload("b-ciphertext", "hm-b", 2);
-
-    let bool_ops = ["~~", "~~*", "@>", "<@"];
-    let shapes = [
-        ("$1::jsonb::encrypted_int4", "$2::jsonb::encrypted_int4"),
-        ("$1::jsonb::encrypted_int4", "$2::jsonb"),
-        ("$1::jsonb", "$2::jsonb::encrypted_int4"),
-    ];
-
-    for op in bool_ops {
-        for (lhs, rhs) in shapes {
-            let sql = format!("SELECT {lhs} {op} {rhs}");
-            let err = sqlx::query_scalar::<_, bool>(&sql)
-                .bind(&a)
-                .bind(&b)
-                .fetch_one(&pool)
-                .await
-                .expect_err(&format!("encrypted_int4 {op} should be blocked: {sql}"))
-                .to_string();
-            let expected = format!("operator {op} is not supported for encrypted_int4");
-            assert!(err.contains(&expected), "unexpected error for {sql}: {err}");
-        }
-    }
-
-    for op in ["->", "->>"] {
-        let cases = [
-            format!("SELECT $1::jsonb::encrypted_int4 {op} 'field'::text"),
-            format!("SELECT $1::jsonb::encrypted_int4 {op} 0::integer"),
-            format!("SELECT $1::jsonb {op} $2::jsonb::encrypted_int4"),
-        ];
-        for sql in &cases {
-            let err = sqlx::query(sql)
-                .bind(&a)
-                .bind(&b)
-                .fetch_one(&pool)
-                .await
-                .expect_err(&format!("encrypted_int4 {op} should be blocked: {sql}"))
-                .to_string();
-            let expected = format!("operator {op} is not supported for encrypted_int4");
-            assert!(err.contains(&expected), "unexpected error for {sql}: {err}");
-        }
-    }
-
-    Ok(())
-}
-
-fn jsonb_payload(ciphertext: &str, hm: &str, selector: &str, b3: &str) -> String {
-    format!(
-        r#"{{"v":2,"i":{{"t":"typed","c":"json_col"}},"c":"{}","hm":"{}","sv":[{{"s":"{}","b3":"{}","c":"{}-leaf"}}]}}"#,
-        ciphertext, hm, selector, b3, ciphertext
-    )
 }
 
 #[sqlx::test]
