@@ -59,7 +59,7 @@ cat > "$OUTPUT" <<HEADER
 -- DO NOT EDIT BY HAND. Re-run the generator to refresh.
 --
 -- Source: 14-value integer set defined inline in the generator.
--- Produced via CipherStash Proxy (HMAC + OPE terms).
+-- Produced via CipherStash Proxy (HMAC + ORE block terms).
 -- Used by encrypted_int4 domain SQLx fixture tests.
 
 DROP TABLE IF EXISTS encrypted_int4_plaintext;
