@@ -237,6 +237,74 @@ async fn functional_index_engages_for_order_by(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
+#[sqlx::test]
+async fn functional_index_engages_via_arrow_chain(pool: PgPool) -> Result<()> {
+    // The recommended recipe for ordered queries on an sv element:
+    // `ORDER BY eql_v2.ore_cllw(col -> '<selector>')`. With the typed
+    // `->` returning `eql_v2.ste_vec_entry`, `eql_v2.ore_cllw` dispatches
+    // to the `(ste_vec_entry)` overload — which is inlinable, so the
+    // planner sees the unfolded extractor expression and matches a
+    // functional btree index built on the same expression.
+    let mut tx = pool.begin().await?;
+
+    sqlx::query(
+        "CREATE TABLE ore_cllw_sv_test
+           (id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+            value eql_v2_encrypted NOT NULL)",
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    // Seed 20 rows where each value's sv array has one element under
+    // selector 'age' carrying a unique `oc` byte sequence.
+    for i in 0..20u8 {
+        let hex = format!("00{:02x}", i);
+        let sql = format!(
+            "INSERT INTO ore_cllw_sv_test(value) \
+             VALUES (jsonb_build_object(
+                       'v', 2,
+                       'i', jsonb_build_object('t', 'ore_cllw_sv_test', 'c', 'value'),
+                       'sv', jsonb_build_array(
+                         jsonb_build_object('s', 'age', 'c', 'ct', 'oc', '{hex}')
+                       )
+                     )::eql_v2_encrypted)"
+        );
+        sqlx::query(&sql).execute(&mut *tx).await?;
+    }
+
+    // Functional btree on the chained extractor. No opclass annotation
+    // needed because `eql_v2.ore_cllw_ops` is DEFAULT FOR TYPE.
+    sqlx::query(
+        "CREATE INDEX ore_cllw_sv_test_idx
+         ON ore_cllw_sv_test (eql_v2.ore_cllw(value -> 'age'::text))",
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    sqlx::query("SET LOCAL enable_seqscan = off")
+        .execute(&mut *tx)
+        .await?;
+    let explain_rows = sqlx::query_scalar::<_, String>(
+        "EXPLAIN SELECT id FROM ore_cllw_sv_test \
+         ORDER BY eql_v2.ore_cllw(value -> 'age'::text) LIMIT 5",
+    )
+    .fetch_all(&mut *tx)
+    .await?;
+    let explain = explain_rows.join("\n");
+
+    assert!(
+        explain.contains("Index Scan") || explain.contains("Index Only Scan"),
+        "Expected Index Scan via ore_cllw_sv_test_idx, got:\n{explain}"
+    );
+    assert!(
+        !explain.contains("Sort"),
+        "Expected no Sort node (index walks in order), got:\n{explain}"
+    );
+
+    tx.rollback().await?;
+    Ok(())
+}
+
 // ===========================================================================
 // Inlinability check: operator backing functions must stay unpinned + SQL
 // ===========================================================================

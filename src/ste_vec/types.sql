@@ -76,3 +76,39 @@ CREATE DOMAIN eql_v2.stevec_query AS jsonb
     AND jsonb_typeof(VALUE -> 'sv') = 'array'
     AND NOT jsonb_path_exists(VALUE, '$.sv[*] ? (exists(@.c))'::jsonpath)
   );
+
+
+--! @brief Convert an `eql_v2_encrypted` to a `stevec_query` needle
+--!
+--! Strips the `c` (ciphertext) field from each sv element and rewraps
+--! the result as a `stevec_query`. Useful for "does this payload
+--! contain a row's sv shape?" style queries where the right-hand side
+--! is sourced from another encrypted column.
+--!
+--! @param e eql_v2_encrypted Source encrypted payload
+--! @return eql_v2.stevec_query Query-shaped needle with all `c` fields removed
+--!
+--! @example
+--! SELECT a.*
+--!   FROM docs a, docs b
+--!  WHERE a.encrypted_doc @> b.encrypted_doc::eql_v2.stevec_query
+--!    AND b.id = 42;
+--!
+--! @see eql_v2.stevec_query
+CREATE FUNCTION eql_v2.to_stevec_query(e eql_v2_encrypted)
+  RETURNS eql_v2.stevec_query
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  SELECT jsonb_build_object(
+    'sv',
+    coalesce(
+      (SELECT jsonb_agg(elem - 'c')
+       FROM jsonb_array_elements((e).data -> 'sv') AS elem),
+      '[]'::jsonb
+    )
+  )::eql_v2.stevec_query
+$$;
+
+CREATE CAST (eql_v2_encrypted AS eql_v2.stevec_query)
+  WITH FUNCTION eql_v2.to_stevec_query
+  AS ASSIGNMENT;
