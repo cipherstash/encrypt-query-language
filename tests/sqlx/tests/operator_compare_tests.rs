@@ -22,9 +22,9 @@ async fn compare_ore_cllw_hello_path(pool: PgPool) -> Result<()> {
     // {"hello": "world{N}"}
     // $.hello: d90b97b5207d30fe867ca816ed0fe4a7
 
-    let a = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(1), 'd90b97b5207d30fe867ca816ed0fe4a7')";
-    let b = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(2), 'd90b97b5207d30fe867ca816ed0fe4a7')";
-    let c = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(3), 'd90b97b5207d30fe867ca816ed0fe4a7')";
+    let a = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(1), 'd90b97b5207d30fe867ca816ed0fe4a7')).data)::eql_v2.ste_vec_entry";
+    let b = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(2), 'd90b97b5207d30fe867ca816ed0fe4a7')).data)::eql_v2.ste_vec_entry";
+    let c = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(3), 'd90b97b5207d30fe867ca816ed0fe4a7')).data)::eql_v2.ste_vec_entry";
 
     // 9 assertions: reflexive, transitive, and antisymmetric comparison properties
     assert_compare!(&pool, a, a, 0, "compare(a, a) should equal 0");
@@ -46,9 +46,9 @@ async fn compare_ore_cllw_number_path(pool: PgPool) -> Result<()> {
     // {"number": {N}}
     // $.number: 3dba004f4d7823446e7cb71f6681b344
 
-    let a = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(1), '3dba004f4d7823446e7cb71f6681b344')";
-    let b = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(5), '3dba004f4d7823446e7cb71f6681b344')";
-    let c = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(10), '3dba004f4d7823446e7cb71f6681b344')";
+    let a = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(1), '3dba004f4d7823446e7cb71f6681b344')).data)::eql_v2.ste_vec_entry";
+    let b = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(5), '3dba004f4d7823446e7cb71f6681b344')).data)::eql_v2.ste_vec_entry";
+    let c = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(10), '3dba004f4d7823446e7cb71f6681b344')).data)::eql_v2.ste_vec_entry";
 
     // 9 assertions: reflexive, transitive, and antisymmetric comparison properties
     assert_compare!(&pool, a, a, 0, "compare(a, a) should equal 0");
@@ -109,8 +109,8 @@ async fn compare_raises_on_hmac_only_payloads(pool: PgPool) -> Result<()> {
     );
     let msg = err.to_string();
     assert!(
-        msg.contains("requires an ORE term"),
-        "expected error to mention the strict ORE requirement; got: {msg}"
+        msg.contains("requires Block ORE"),
+        "expected error to mention the strict Block ORE requirement; got: {msg}"
     );
     Ok(())
 }
@@ -126,8 +126,8 @@ async fn compare_raises_when_no_index_terms_present(pool: PgPool) -> Result<()> 
         .expect_err("expected compare() to raise on payloads carrying no ORE term");
     let msg = err.to_string();
     assert!(
-        msg.contains("requires an ORE term"),
-        "expected error to mention the strict ORE requirement; got: {msg}"
+        msg.contains("requires Block ORE"),
+        "expected error to mention the strict Block ORE requirement; got: {msg}"
     );
     Ok(())
 }
@@ -146,8 +146,8 @@ async fn compare_raises_when_ore_term_is_json_null(pool: PgPool) -> Result<()> {
         .expect_err("expected compare() to raise when ob is JSON null and only hm is present");
     let msg = err.to_string();
     assert!(
-        msg.contains("requires an ORE term"),
-        "expected error to mention the strict ORE requirement; got: {msg}"
+        msg.contains("requires Block ORE"),
+        "expected error to mention the strict Block ORE requirement; got: {msg}"
     );
     Ok(())
 }
