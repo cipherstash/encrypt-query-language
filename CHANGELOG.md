@@ -20,10 +20,11 @@ Each entry that ships in a published release links to the PR that introduced it.
 
 ## [Unreleased]
 
-Targeting `2.3.0`. See [`docs/upgrading/v2.3.md`](docs/upgrading/v2.3.md) for the consolidated upgrade notes.
+Targeting `2.4.0`. See [`docs/upgrading/v2.4.md`](docs/upgrading/v2.4.md) for the consolidated upgrade notes for the breaking `encrypted_int4` rename; entries below the new one are carry-overs targeting `2.3.0` (see [`docs/upgrading/v2.3.md`](docs/upgrading/v2.3.md)).
 
 ### Changed
 
+- **Breaking: `public.encrypted_int4` has been replaced by a family of variant domains.** Pick the variant whose operator surface matches the index terms your column carries: `eql_v2_int4_ct` (storage only, no operators), `eql_v2_int4_eq` (HMAC equality only — `=`, `<>`), `eql_v2_int4_ord_ore` (HMAC equality + ORE ordering — adds `<`, `<=`, `>`, `>=` with range queries on ORE backed by sequential scan), `eql_v2_int4_ord_ope` (HMAC equality + OPE-direct ordering — same operator surface as `_ord_ore` with functional-index-engaged range), or `eql_v2_int4` (default, behaves as `_ord_ore`). No compatibility alias for `encrypted_int4`. Migration recipe and per-variant payload requirements: [U-001](docs/upgrading/v2.4.md#u-001-encrypted_int4-rename).
 - **`=`, `<>`, `~~` (`LIKE`), `~~*` (`ILIKE`) on `eql_v2_encrypted` are now inlinable SQL functions.** The planner can structurally match these operators against the documented functional indexes (`eql_v2.hmac_256(col)` for equality, `eql_v2.bloom_filter(col)` for `LIKE`/`ILIKE`), so bare-form queries (`WHERE col = $1`) engage the index without per-query rewriting. Previously these operators wrapped multi-branch PL/pgSQL bodies that the planner could not inline, forcing seq scans on Supabase / managed Postgres installations that lack operator-class indexes. ([#193](https://github.com/cipherstash/encrypt-query-language/pull/193), [#196](https://github.com/cipherstash/encrypt-query-language/pull/196))
 - **`eql_v2_encrypted = eql_v2_encrypted` is now strictly hmac-based at the root.** Equality requires both sides to carry `hm` (hmac); otherwise the operator raises with a clear message. Previously, equality could silently fall through to a `NULL` comparison or to Blake3 on synthetic fixtures. Blake3 continues to be used internally inside ste_vec element comparisons, where it has always lived. **Behaviour to be aware of:** queries against columns that lack `hm` will now raise rather than silently returning zero rows — see [U-002](docs/upgrading/v2.3.md#u-002-equality-and-hashing-require-hmac). ([#196](https://github.com/cipherstash/encrypt-query-language/pull/196))
 - **`eql_v2.hash_encrypted(eql_v2_encrypted)` is now hmac-only.** Hash operations (`GROUP BY`, `DISTINCT`, hash joins) require the column to carry an `hm` index term; the previous Blake3 fallback has been removed. The function raises a clear error directing the caller to configure a `unique` index. ([#196](https://github.com/cipherstash/encrypt-query-language/pull/196))
@@ -43,7 +44,9 @@ Targeting `2.3.0`. See [`docs/upgrading/v2.3.md`](docs/upgrading/v2.3.md) for th
 
 ### Upgrade notes
 
-See [`docs/upgrading/v2.3.md`](docs/upgrading/v2.3.md). Three numbered notes cover the indexing recipe shift (U-001), the hmac requirement for equality and hashing (U-002), and the formalisation of Blake3 as ste_vec-internal (U-003).
+- [U-001 — `encrypted_int4` rename](docs/upgrading/v2.4.md#u-001-encrypted_int4-rename) (v2.4)
+
+Carry-over from `2.3.0`: see [`docs/upgrading/v2.3.md`](docs/upgrading/v2.3.md). Three numbered notes cover the indexing recipe shift, the hmac requirement for equality and hashing, and the formalisation of Blake3 as ste_vec-internal.
 
 ## [2.2.1] — 2026-04
 
