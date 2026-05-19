@@ -162,7 +162,7 @@ async fn opclass_is_default_for_type(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn functional_index_engages_for_order_by(pool: PgPool) -> Result<()> {
     // Build a small fixture table with synthetic ore_cllw values, create a
-    // functional btree on `eql_v2.ore_cllw(value)`, and confirm EXPLAIN
+    // functional btree on `eql_v2.ore_cllw((value).data)`, and confirm EXPLAIN
     // engages the index for `ORDER BY ... LIMIT n`.
     let mut tx = pool.begin().await?;
 
@@ -193,14 +193,18 @@ async fn functional_index_engages_for_order_by(pool: PgPool) -> Result<()> {
     // because `eql_v2.ore_cllw_ops` is DEFAULT FOR TYPE.
     sqlx::query(
         "CREATE INDEX ore_cllw_test_idx
-         ON ore_cllw_test (eql_v2.ore_cllw(value))",
+         ON ore_cllw_test (eql_v2.ore_cllw((value).data))",
     )
     .execute(&mut *tx)
     .await?;
 
-    sqlx::query("ANALYZE ore_cllw_test")
-        .execute(&mut *tx)
-        .await?;
+    // ANALYZE is skipped intentionally: the `value` column is
+    // `eql_v2_encrypted` with payloads that carry only `oc` (no root `ob`),
+    // and ANALYZE samples via the default btree opclass on
+    // `eql_v2_encrypted` — whose FUNCTION 1 is the strict-Block-ORE
+    // `eql_v2.compare` (post-#219), which raises on missing `ob`. The
+    // functional index match below works without stats once we force
+    // `enable_seqscan = off`.
 
     // EXPLAIN the ORDER BY query. With the opclass engaging, the plan
     // should walk the btree in order (Index Scan / Index Only Scan) and
@@ -211,7 +215,7 @@ async fn functional_index_engages_for_order_by(pool: PgPool) -> Result<()> {
         .await?;
     let explain_rows = sqlx::query_scalar::<_, String>(
         "EXPLAIN SELECT id FROM ore_cllw_test \
-         ORDER BY eql_v2.ore_cllw(value) LIMIT 5",
+         ORDER BY eql_v2.ore_cllw((value).data) LIMIT 5",
     )
     .fetch_all(&mut *tx)
     .await?;
