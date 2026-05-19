@@ -244,11 +244,12 @@ fn v2_3_encrypted_payload_with_ob_only_is_valid() {
 
 #[test]
 fn v2_3_sv_element_with_oc_is_valid() {
-    // Standard-mode sv element: single `oc` term replaces the v2.2 ocf/ocv split.
+    // `oc` covers string and number leaves. `hm` is NOT present on the
+    // same element — the two are mutually exclusive per v2.3.
     let p = json!({
         "v": 2, "k": "sv", "i": ident(),
         "sv": [
-            { "s": SELECTOR, "a": false, "c": CIPHERTEXT, "hm": HEX, "oc": HEX_LONG }
+            { "s": SELECTOR, "a": false, "c": CIPHERTEXT, "oc": HEX_LONG }
         ]
     });
     assert_valid(schema_v2_3(), &p, "sv element with single oc term");
@@ -256,19 +257,49 @@ fn v2_3_sv_element_with_oc_is_valid() {
 
 #[test]
 fn v2_3_ste_vec_payload_with_hm_in_elements_is_valid() {
-    // v2.3 promotes element equality from b3 -> hm.
+    // v2.3 promotes element equality from b3 -> hm for boolean leaves and
+    // for the placeholder entries that represent array / object roots.
+    // String / number leaves carry `oc` instead. Every sv element has
+    // exactly one — the two are mutually exclusive.
     let p = json!({
         "v": 2, "k": "sv", "i": ident(),
         "sv": [
             { "s": SELECTOR, "a": false, "c": CIPHERTEXT, "hm": HEX },
-            { "s": SELECTOR, "a": true,  "c": CIPHERTEXT, "hm": HEX, "oc": HEX_LONG }
+            { "s": SELECTOR, "a": true,  "c": CIPHERTEXT, "oc": HEX_LONG }
         ]
     });
     assert_valid(
         schema_v2_3(),
         &p,
-        "ste_vec payload with hm-bearing elements",
+        "ste_vec payload with hm-bearing + oc-bearing elements",
     );
+}
+
+#[test]
+fn v2_3_sv_element_with_both_hm_and_oc_is_rejected() {
+    // hm and oc are mutually exclusive: hm covers boolean leaves and the
+    // placeholders for array / object roots; oc covers string / number
+    // leaves. cipherstash-suite never emits both on the same entry.
+    let p = json!({
+        "v": 2, "k": "sv", "i": ident(),
+        "sv": [
+            { "s": SELECTOR, "a": false, "c": CIPHERTEXT, "hm": HEX, "oc": HEX_LONG }
+        ]
+    });
+    assert_invalid(schema_v2_3(), &p, "sv element carrying both hm and oc");
+}
+
+#[test]
+fn v2_3_sv_element_with_neither_hm_nor_oc_is_rejected() {
+    // Every sv element carries exactly one of hm or oc — neither is also
+    // malformed.
+    let p = json!({
+        "v": 2, "k": "sv", "i": ident(),
+        "sv": [
+            { "s": SELECTOR, "a": false, "c": CIPHERTEXT }
+        ]
+    });
+    assert_invalid(schema_v2_3(), &p, "sv element with neither hm nor oc");
 }
 
 #[test]
