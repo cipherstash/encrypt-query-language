@@ -521,16 +521,28 @@ AS $$
       _a := a[idx];
       -- Element-level match for ste_vec entries.
       --
-      -- Per the v2.3 sv-element contract, each entry carries exactly one
-      -- of `hm` (HMAC-256, for hash-equality-configured selectors) or
-      -- `oc` (CLLW ORE, for ordering-configured selectors) — never both.
+      -- Per the v2.3 sv-element contract (encoded in
+      -- `docs/reference/schema/eql-payload-v2.3.schema.json` and the
+      -- `eql_v2.ste_vec_entry` DOMAIN), each entry carries **exactly
+      -- one** of:
+      --   - `hm` — HMAC-256 for boolean leaves and for the placeholder
+      --     entries that represent array / object roots.
+      --   - `oc` — CLLW ORE for string and number leaves.
       -- Both terms are deterministic for the same plaintext at the same
-      -- selector, so either one can serve as an equality discriminator
-      -- between sv elements emitted by the same workspace.
+      -- selector under the same workspace, so either one serves as the
+      -- equality discriminator. A selector configures the leaf's role
+      -- (eq / ordered), and the role determines which term is emitted —
+      -- two sv entries with the same selector therefore always carry
+      -- the same term type.
       --
-      -- Match by `hm` when present on both sides; otherwise by `oc` when
-      -- present on both sides. The selector check above is a fast-path
-      -- gate so we don't compare terms across mismatched fields.
+      -- The selector check is a fast-path gate so we don't compare
+      -- terms across mismatched fields. Once selectors match, exactly
+      -- one of the two CASE branches fires (XOR contract above).
+      --
+      -- The `ELSE false` arm covers the malformed case (entry carries
+      -- neither term, or only one side has the term for a given role).
+      -- That's a data error rather than a normal containment result,
+      -- but returning false is safer than raising mid-array-scan.
       result := result OR (
         eql_v2.selector(_a) = eql_v2.selector(b) AND
         CASE
@@ -544,6 +556,11 @@ AS $$
           ELSE false
         END
       );
+
+      -- Short-circuit once a match is found. Without this we still walk
+      -- the rest of the sv array, which on a 100-element document means
+      -- 99 wasted selector + extractor calls per row.
+      EXIT WHEN result;
     END LOOP;
 
     RETURN result;
