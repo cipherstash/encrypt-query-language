@@ -339,7 +339,6 @@ AS $$
             coalesce(
               elem ->> 'hm',
               elem ->> 'oc',
-              elem ->> 'oc',
               elem ->> 'b3',
               md5(coalesce(elem ->> 's', '') || coalesce(elem ->> 'c', ''))
             )
