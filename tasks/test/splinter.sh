@@ -78,6 +78,8 @@ function_search_path_mutable	eql_v2	@>	function	GIN-inlining: must inline so the
 function_search_path_mutable	eql_v2	<@	function	GIN-inlining: same as @>.
 function_search_path_mutable	eql_v2	jsonb_contains	function	GIN-inlining: wrapper unfolds to eql_v2.jsonb_array(a) @> eql_v2.jsonb_array(b). Pinning search_path here drops the bitmap index scan.
 function_search_path_mutable	eql_v2	jsonb_contained_by	function	GIN-inlining: same as jsonb_contains.
+function_search_path_mutable	eql_v2	ore_cllw	function	Consolidated ORE-CLLW extractor (U-006): inlinable SQL so the planner can fold `eql_v2.ore_cllw(col)` calls into the calling query. SET search_path would silently undo the inlining and prevent functional-index match through the extractor form. Two overloads: (jsonb), (eql_v2_encrypted).
+function_search_path_mutable	eql_v2	has_ore_cllw	function	Consolidated ORE-CLLW presence check (U-006): inlinable SQL counterpart to `eql_v2.ore_cllw`. Same rationale as `ore_cllw` — must stay unpinned to inline into the calling query. Two overloads: (jsonb), (eql_v2_encrypted).
 function_search_path_mutable	eql_v2	min	function	Aggregate (splinter labels these type=function): ALTER AGGREGATE has no SET configuration_parameter syntax, and ALTER ROUTINE/FUNCTION reject aggregates. The aggregate's SFUNC has a pinned search_path.
 function_search_path_mutable	eql_v2	max	function	Aggregate: same as min.
 function_search_path_mutable	eql_v2	grouped_value	function	Aggregate: same as min.
