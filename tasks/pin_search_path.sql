@@ -82,7 +82,7 @@ BEGIN
     AND (
       -- Two-arg operator overloads on eql_v2_encrypted / jsonb. The
       -- `pronargs = 2` filter is scoped to these arms because the helpers
-      -- below include single-argument extractors (encrypted_int4_ope_key,
+      -- below include single-argument extractors (eql_v2_int4_ord_ope_ope_key,
       -- encrypted_jsonb_array) that must also remain inlineable.
       ( p.pronargs = 2 AND (
         -- Same-type (encrypted, encrypted) operators that must inline.
@@ -102,11 +102,11 @@ BEGIN
           AND p.proargtypes[0] = jsonb_oid AND p.proargtypes[1] = enc_oid)
       ) )
       -- Domain-type prototype helpers and operator functions
-      -- (encrypted_text, encrypted_int4, encrypted_jsonb). These are
+      -- (encrypted_text, eql_v2_int4 variant family, encrypted_jsonb). These are
       -- LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE and must inline so
       -- that bare operator predicates engage functional indexes on
       -- eql_v2.hmac_256(col::jsonb), eql_v2.bloom_filter(col::jsonb),
-      -- eql_v2.encrypted_int4_ope_key(col), and
+      -- eql_v2.eql_v2_int4_ord_ope_ope_key(col), and
       -- eql_v2.encrypted_jsonb_array(col). Name-only match (any arity)
       -- because the same proname covers same-domain and cross-type
       -- (domain, jsonb) / (jsonb, domain) overloads, plus the single-arg
@@ -115,13 +115,29 @@ BEGIN
         'encrypted_text_eq',
         'encrypted_text_neq',
         'encrypted_text_like',
-        'encrypted_int4_eq',
-        'encrypted_int4_neq',
-        'encrypted_int4_lt',
-        'encrypted_int4_lte',
-        'encrypted_int4_gt',
-        'encrypted_int4_gte',
-        'encrypted_int4_ope_key',
+        -- eql_v2_int4 variant family — inline-critical equality and range wrappers.
+        -- Blockers are intentionally absent: they are PL/pgSQL and must NOT inline.
+        'eql_v2_int4_eq',                   -- default variant equality
+        'eql_v2_int4_neq',
+        'eql_v2_int4_lt',
+        'eql_v2_int4_lte',
+        'eql_v2_int4_gt',
+        'eql_v2_int4_gte',
+        'eql_v2_int4_eq_eq',                -- _eq variant equality
+        'eql_v2_int4_eq_neq',
+        'eql_v2_int4_ord_ore_eq',           -- _ord_ore variant equality + range
+        'eql_v2_int4_ord_ore_neq',
+        'eql_v2_int4_ord_ore_lt',
+        'eql_v2_int4_ord_ore_lte',
+        'eql_v2_int4_ord_ore_gt',
+        'eql_v2_int4_ord_ore_gte',
+        'eql_v2_int4_ord_ope_eq',           -- _ord_ope variant equality + range
+        'eql_v2_int4_ord_ope_neq',
+        'eql_v2_int4_ord_ope_lt',
+        'eql_v2_int4_ord_ope_lte',
+        'eql_v2_int4_ord_ope_gt',
+        'eql_v2_int4_ord_ope_gte',
+        'eql_v2_int4_ord_ope_ope_key',      -- _ord_ope extractor (functional-index expr)
         'encrypted_jsonb_eq',
         'encrypted_jsonb_neq',
         'encrypted_jsonb_contains',
