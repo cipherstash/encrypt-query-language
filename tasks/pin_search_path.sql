@@ -111,6 +111,16 @@ BEGIN
       -- because the same proname covers same-domain and cross-type
       -- (domain, jsonb) / (jsonb, domain) overloads, plus the single-arg
       -- extractors used in the functional indexes themselves.
+      --
+      -- Exception: the eql_v2_int4_ord_ore_* and default eql_v2_int4_*
+      -- range wrappers (_lt/_lte/_gt/_gte) are allowlisted for parity
+      -- with the _ord_ope range wrappers but do NOT engage any functional
+      -- btree at present — their inner call is to compare_ore_block_u64_8_256,
+      -- which is PL/pgSQL and does not inline. Range queries on those
+      -- variants are seq-scan by design; see docs/upgrading/v2.4.md U-001
+      -- (Range-index limitation). They are still allowlisted so that any
+      -- future migration of compare_ore_block_u64_8_256 to an inlineable
+      -- form lights up the indexed path without an allowlist edit.
       OR p.proname IN (
         'encrypted_text_eq',
         'encrypted_text_neq',

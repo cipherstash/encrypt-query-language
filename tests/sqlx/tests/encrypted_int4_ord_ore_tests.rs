@@ -239,21 +239,11 @@ async fn encrypted_int4_hmac_distinctness_sweep(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-// NOTE: range-op functional-index engagement is intentionally NOT asserted
-// against the operator-class btree in this fixture pass.
-//
-// Why: the wrapper `eql_v2.encrypted_int4_lt(a, b)` is SQL+IMMUTABLE, but its
-// body calls the `<` operator on `eql_v2_encrypted`, which ships as
-// PL/pgSQL+VOLATILE with `SET search_path`. PG refuses to inline a SQL
-// function whose body invokes a non-immutable operator, so the planner sees
-// an opaque `encrypted_int4_lt(...)` call and cannot match it to the indexed
-// expression `(eql_v2.to_encrypted(payload::jsonb) eql_v2.encrypted_operator_class)`.
-//
-// Range-op correctness on real ORE payloads is covered by
-// `encrypted_int4_range_operators_match_numeric_semantics` and
-// `encrypted_int4_ore_ordering_matches_numeric_ordering`. Index engagement
-// will land alongside the in-flight OPE-direct path (which yields a 1-arg
-// orderable extractor that can power an inlineable wrapper).
+// Range-op index engagement is not asserted here. `_ord_ore` is seq-scan
+// by design (see docs/upgrading/v2.4.md U-001 — compare_ore_block_u64_8_256
+// is PL/pgSQL and does not inline). Functional-btree engagement on the
+// OPE-key extractor is asserted in
+// encrypted_int4_ord_ope_tests.rs::encrypted_int4_ope_idx_engages_for_range.
 
 #[sqlx::test]
 async fn encrypted_int4_hmac_btree_engages_for_eq(pool: PgPool) -> Result<()> {

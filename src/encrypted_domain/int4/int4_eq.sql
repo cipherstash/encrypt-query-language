@@ -369,29 +369,41 @@ CREATE OPERATOR <> (
   NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 
-CREATE OPERATOR < (FUNCTION = eql_v2.eql_v2_int4_eq_lt,
-  LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq);
+CREATE OPERATOR < (
+  FUNCTION = eql_v2.eql_v2_int4_eq_lt,
+  LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq,
+  RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
 CREATE OPERATOR < (FUNCTION = eql_v2.eql_v2_int4_eq_lt,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = jsonb);
 CREATE OPERATOR < (FUNCTION = eql_v2.eql_v2_int4_eq_lt,
   LEFTARG = jsonb, RIGHTARG = eql_v2_int4_eq);
 
-CREATE OPERATOR <= (FUNCTION = eql_v2.eql_v2_int4_eq_lte,
-  LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq);
+CREATE OPERATOR <= (
+  FUNCTION = eql_v2.eql_v2_int4_eq_lte,
+  LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq,
+  RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
 CREATE OPERATOR <= (FUNCTION = eql_v2.eql_v2_int4_eq_lte,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = jsonb);
 CREATE OPERATOR <= (FUNCTION = eql_v2.eql_v2_int4_eq_lte,
   LEFTARG = jsonb, RIGHTARG = eql_v2_int4_eq);
 
-CREATE OPERATOR > (FUNCTION = eql_v2.eql_v2_int4_eq_gt,
-  LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq);
+CREATE OPERATOR > (
+  FUNCTION = eql_v2.eql_v2_int4_eq_gt,
+  LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq,
+  RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
 CREATE OPERATOR > (FUNCTION = eql_v2.eql_v2_int4_eq_gt,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = jsonb);
 CREATE OPERATOR > (FUNCTION = eql_v2.eql_v2_int4_eq_gt,
   LEFTARG = jsonb, RIGHTARG = eql_v2_int4_eq);
 
-CREATE OPERATOR >= (FUNCTION = eql_v2.eql_v2_int4_eq_gte,
-  LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq);
+CREATE OPERATOR >= (
+  FUNCTION = eql_v2.eql_v2_int4_eq_gte,
+  LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq,
+  RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
 CREATE OPERATOR >= (FUNCTION = eql_v2.eql_v2_int4_eq_gte,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = jsonb);
 CREATE OPERATOR >= (FUNCTION = eql_v2.eql_v2_int4_eq_gte,
