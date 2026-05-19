@@ -38,7 +38,7 @@ impl<'a> QueryAssertion<'a> {
         let rows = sqlx::query(&self.sql)
             .fetch_all(self.pool)
             .await
-            .unwrap_or_else(|_| panic!("Query failed: {}", self.sql));
+            .unwrap_or_else(|e| panic!("Query failed: {}\n  -- error: {}", self.sql, e));
 
         assert!(
             !rows.is_empty(),
@@ -57,7 +57,7 @@ impl<'a> QueryAssertion<'a> {
         let rows = sqlx::query(&self.sql)
             .fetch_all(self.pool)
             .await
-            .unwrap_or_else(|_| panic!("Query failed: {}", self.sql));
+            .unwrap_or_else(|e| panic!("Query failed: {}\n  -- error: {}", self.sql, e));
 
         assert_eq!(
             rows.len(),

@@ -201,20 +201,21 @@ async fn ste_vec_contains_self(pool: PgPool) -> Result<()> {
 
 #[sqlx::test]
 async fn ste_vec_contains_term(pool: PgPool) -> Result<()> {
-    // Test: ste_vec_contains() returns true when value contains extracted term
-
+    // Test: `e @> (e -> 'sel')` is true. The typed `->` returns
+    // `ste_vec_entry`; the `@>(eql_v2_encrypted, eql_v2.ste_vec_entry)`
+    // overload wraps the entry and delegates to `ste_vec_contains`.
     let result: bool = sqlx::query_scalar(
-        "SELECT eql_v2.ste_vec_contains(
-            get_numeric_ste_vec_10()::eql_v2_encrypted,
-            (get_numeric_ste_vec_10()::eql_v2_encrypted) -> '2517068c0d1f9d4d41d2c666211f785e'::text
-        )",
+        "SELECT
+           (get_numeric_ste_vec_10()::eql_v2_encrypted)
+           @>
+           ((get_numeric_ste_vec_10()::eql_v2_encrypted) -> '2517068c0d1f9d4d41d2c666211f785e'::text)",
     )
     .fetch_one(&pool)
     .await?;
 
     assert!(
         result,
-        "ste_vec_contains should return true when array contains term"
+        "encrypted value should contain the entry extracted from it"
     );
 
     Ok(())
@@ -222,20 +223,34 @@ async fn ste_vec_contains_term(pool: PgPool) -> Result<()> {
 
 #[sqlx::test]
 async fn ste_vec_term_does_not_contain_array(pool: PgPool) -> Result<()> {
-    // Test: ste_vec_contains() returns false when term doesn't contain array
-
+    // Test: a single-entry payload does NOT contain the full multi-entry payload.
+    // Post-flip the type system makes the original shape
+    // (`ste_vec_entry @> eql_v2_encrypted`) compile-time-prevented; the
+    // semantic of asymmetric containment is preserved here by wrapping the
+    // extracted entry into its own minimal payload and verifying it doesn't
+    // contain the full source.
     let result: bool = sqlx::query_scalar(
-        "SELECT eql_v2.ste_vec_contains(
-            (get_numeric_ste_vec_10()::eql_v2_encrypted) -> '2517068c0d1f9d4d41d2c666211f785e'::text,
-            get_numeric_ste_vec_10()::eql_v2_encrypted
-        )"
+        "WITH one_entry_payload AS (
+           SELECT eql_v2.to_encrypted(
+                    jsonb_build_object(
+                      'sv',
+                      jsonb_build_array(
+                        ((get_numeric_ste_vec_10()::eql_v2_encrypted) -> '2517068c0d1f9d4d41d2c666211f785e'::text) - 'c'
+                      )
+                    )
+                  ) AS v
+         )
+         SELECT one_entry_payload.v
+                @>
+                (get_numeric_ste_vec_10()::eql_v2_encrypted)
+         FROM one_entry_payload",
     )
     .fetch_one(&pool)
     .await?;
 
     assert!(
         !result,
-        "ste_vec_contains should return false when term doesn't contain array"
+        "single-entry payload should NOT contain the full multi-entry payload"
     );
 
     Ok(())

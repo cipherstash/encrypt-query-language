@@ -1,6 +1,8 @@
 -- REQUIRE: src/schema.sql
 -- REQUIRE: src/encrypted/types.sql
+-- REQUIRE: src/ste_vec/types.sql
 -- REQUIRE: src/ste_vec/functions.sql
+-- REQUIRE: src/operators/@>.sql
 
 --! @brief Contained-by operator for encrypted values (<@)
 --!
@@ -36,5 +38,52 @@ $$;
 CREATE OPERATOR <@(
   FUNCTION=eql_v2."<@",
   LEFTARG=eql_v2_encrypted,
+  RIGHTARG=eql_v2_encrypted
+);
+
+
+--! @brief Contained-by operator (<@) with an `eql_v2.stevec_query` LHS
+--!
+--! Reverse of `@>(eql_v2_encrypted, eql_v2.stevec_query)`. Mirrors the
+--! typed needle convention: "is this query payload contained in that
+--! encrypted document?".
+--!
+--! @param a eql_v2.stevec_query Left operand (query payload)
+--! @param b eql_v2_encrypted Right operand (container)
+--! @return Boolean True if `b` contains `a`
+--! @see eql_v2."@>"(eql_v2_encrypted, eql_v2.stevec_query)
+CREATE FUNCTION eql_v2."<@"(a eql_v2.stevec_query, b eql_v2_encrypted)
+RETURNS boolean
+LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  SELECT eql_v2."@>"(b, a)
+$$;
+
+CREATE OPERATOR <@(
+  FUNCTION=eql_v2."<@",
+  LEFTARG=eql_v2.stevec_query,
+  RIGHTARG=eql_v2_encrypted
+);
+
+
+--! @brief Contained-by operator (<@) with an `eql_v2.ste_vec_entry` LHS
+--!
+--! Reverse of `@>(eql_v2_encrypted, eql_v2.ste_vec_entry)`. Convenience
+--! shape for "is this entry contained in that encrypted document?".
+--!
+--! @param a eql_v2.ste_vec_entry Left operand (single entry)
+--! @param b eql_v2_encrypted Right operand (container)
+--! @return Boolean True if `b` contains `a`
+--! @see eql_v2."@>"(eql_v2_encrypted, eql_v2.ste_vec_entry)
+CREATE FUNCTION eql_v2."<@"(a eql_v2.ste_vec_entry, b eql_v2_encrypted)
+RETURNS boolean
+LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  SELECT eql_v2."@>"(b, a)
+$$;
+
+CREATE OPERATOR <@(
+  FUNCTION=eql_v2."<@",
+  LEFTARG=eql_v2.ste_vec_entry,
   RIGHTARG=eql_v2_encrypted
 );
