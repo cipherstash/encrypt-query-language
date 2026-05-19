@@ -349,8 +349,9 @@ async fn encrypted_int4_hmac_distinctness_sweep(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn encrypted_int4_blocker_operators_still_raise(pool: PgPool) -> Result<()> {
     // Sanity: replacing the range ops must not accidentally re-route the
-    // blocker operators. ~~, ~~*, @>, <@, ->, ->> must still raise the
-    // shared "operator … is not supported" exception.
+    // blocker operators. ~~, ~~*, @>, <@ must still raise the shared
+    // "operator … is not supported" exception. Path operators (->, ->>)
+    // are covered in encrypted_int4_path_operators_blocked below.
     let a = opf_payload(0x01);
     let b = opf_payload(0x02);
 
@@ -371,5 +372,97 @@ async fn encrypted_int4_blocker_operators_still_raise(pool: PgPool) -> Result<()
         );
     }
 
+    Ok(())
+}
+
+#[sqlx::test]
+async fn encrypted_int4_path_operators_blocked(pool: PgPool) -> Result<()> {
+    // Path operators -> and ->> must raise the variant-specific error for
+    // each of the three asymmetric declared shapes:
+    //   (domain, text), (domain, integer), (jsonb, domain).
+    let sample = opf_payload(0x01);
+
+    for op in ["->", "->>"] {
+        for sql in [
+            format!(
+                "SELECT '{}'::jsonb::eql_v2_int4_ord_ope {op} 'field'::text",
+                sample
+            ),
+            format!(
+                "SELECT '{}'::jsonb::eql_v2_int4_ord_ope {op} 0::integer",
+                sample
+            ),
+            format!(
+                "SELECT '{}'::jsonb {op} '{}'::jsonb::eql_v2_int4_ord_ope",
+                sample, sample
+            ),
+        ] {
+            let err = sqlx::query(&sql)
+                .fetch_one(&pool)
+                .await
+                .expect_err(&format!("eql_v2_int4_ord_ope {op} must raise: {sql}"))
+                .to_string();
+            let expected = format!("operator {op} is not supported for eql_v2_int4_ord_ope");
+            assert!(
+                err.contains(&expected),
+                "path-op blocker error mismatch: {sql} -> {err}"
+            );
+        }
+    }
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn encrypted_int4_missing_opf_raises_at_execution(pool: PgPool) -> Result<()> {
+    // U-001 promise: the variant family does NOT enforce payload-term
+    // presence at the type level. A column declared eql_v2_int4_ord_ope
+    // can accept a jsonb payload that lacks `opf`; the mismatch surfaces
+    // at query execution when eql_v2.ope_cllw_u64_65 is called inside
+    // the range wrapper and raises per-row.
+    //
+    // Reference: src/ope_cllw_u64_65/functions.sql:23
+    //   RAISE 'Expected a ope_cllw_u64_65 index (opf) value in json: %', val;
+    let mut tx = pool.begin().await?;
+
+    sqlx::query(
+        r#"
+        CREATE TEMP TABLE typed_int4_missing_opf (
+            id integer GENERATED ALWAYS AS IDENTITY,
+            value eql_v2_int4_ord_ope
+        ) ON COMMIT DROP;
+        "#,
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    // Insert succeeds: the domain has no CHECK constraint.
+    let payload_without_opf =
+        r#"{"v":2,"i":{"t":"typed","c":"int_col"},"c":"ct-sample","hm":"hm-sample"}"#;
+    sqlx::query(
+        "INSERT INTO typed_int4_missing_opf(value) VALUES ($1::jsonb::eql_v2_int4_ord_ope)",
+    )
+    .bind(payload_without_opf)
+    .execute(&mut *tx)
+    .await?;
+
+    // A range query forces the OPE-key extractor to run against the bad
+    // payload; the per-row raise surfaces from inside ope_cllw_u64_65.
+    let pivot = opf_payload(0x0a);
+    let sql = format!(
+        "SELECT count(*) FROM typed_int4_missing_opf WHERE value < '{}'::jsonb::eql_v2_int4_ord_ope",
+        pivot
+    );
+    let err = sqlx::query_scalar::<_, i64>(&sql)
+        .fetch_one(&mut *tx)
+        .await
+        .expect_err("range query against payload missing opf must raise per-row")
+        .to_string();
+    assert!(
+        err.contains("Expected a ope_cllw_u64_65 index (opf) value in json"),
+        "expected ope_cllw_u64_65 extractor raise, got: {err}"
+    );
+
+    tx.commit().await?;
     Ok(())
 }

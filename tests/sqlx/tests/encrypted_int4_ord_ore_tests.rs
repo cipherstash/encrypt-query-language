@@ -293,3 +293,78 @@ async fn encrypted_int4_hmac_btree_engages_for_eq(pool: PgPool) -> Result<()> {
     tx.commit().await?;
     Ok(())
 }
+
+#[sqlx::test]
+async fn encrypted_int4_ord_ore_unsupported_operators_raise(pool: PgPool) -> Result<()> {
+    // The _ord_ore variant supports HMAC equality + ORE range. Every other
+    // operator must raise the variant-specific blocker error rather than
+    // fall through to native jsonb semantics.
+    //
+    // We use the fixture payload of 42 (any row would work) cast to the
+    // domain to exercise the (domain, domain) shape, then sweep the other
+    // two declared shapes.
+    let payload: String = sqlx::query_scalar(
+        "SELECT payload::text FROM encrypted_int4_plaintext WHERE plaintext = 42",
+    )
+    .fetch_one(&pool)
+    .await?;
+    let lit = payload.replace('\'', "''");
+
+    let shapes: &[(&str, &str)] = &[
+        (
+            "$1::jsonb::eql_v2_int4_ord_ore",
+            "$2::jsonb::eql_v2_int4_ord_ore",
+        ),
+        ("$1::jsonb::eql_v2_int4_ord_ore", "$2::jsonb"),
+        ("$1::jsonb", "$2::jsonb::eql_v2_int4_ord_ore"),
+    ];
+
+    for op in ["~~", "~~*", "@>", "<@"] {
+        for (lhs, rhs) in shapes {
+            let sql = format!("SELECT {lhs} {op} {rhs}");
+            let err = sqlx::query(&sql)
+                .bind(&payload)
+                .bind(&payload)
+                .fetch_one(&pool)
+                .await
+                .expect_err(&format!("eql_v2_int4_ord_ore {op} must raise: {sql}"))
+                .to_string();
+            let expected = format!("operator {op} is not supported for eql_v2_int4_ord_ore");
+            assert!(
+                err.contains(&expected),
+                "blocker error mismatch: {sql} -> {err}"
+            );
+        }
+    }
+
+    // Path operators across all three asymmetric shapes.
+    for op in ["->", "->>"] {
+        for sql in [
+            format!(
+                "SELECT '{}'::jsonb::eql_v2_int4_ord_ore {op} 'field'::text",
+                lit
+            ),
+            format!(
+                "SELECT '{}'::jsonb::eql_v2_int4_ord_ore {op} 0::integer",
+                lit
+            ),
+            format!(
+                "SELECT '{}'::jsonb {op} '{}'::jsonb::eql_v2_int4_ord_ore",
+                lit, lit
+            ),
+        ] {
+            let err = sqlx::query(&sql)
+                .fetch_one(&pool)
+                .await
+                .expect_err(&format!("eql_v2_int4_ord_ore {op} must raise: {sql}"))
+                .to_string();
+            let expected = format!("operator {op} is not supported for eql_v2_int4_ord_ore");
+            assert!(
+                err.contains(&expected),
+                "path-op blocker error mismatch: {sql} -> {err}"
+            );
+        }
+    }
+
+    Ok(())
+}
