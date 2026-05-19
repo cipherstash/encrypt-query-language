@@ -283,14 +283,14 @@ async fn ore_cllw_u64_compare_equal(pool: PgPool) -> Result<()> {
     // {"number": {N}}
     // $.number: 3dba004f4d7823446e7cb71f6681b344
 
-    let a = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(1), '3dba004f4d7823446e7cb71f6681b344')";
-    let b = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(5), '3dba004f4d7823446e7cb71f6681b344')";
-    let c = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(10), '3dba004f4d7823446e7cb71f6681b344')";
+    let a = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(1), '3dba004f4d7823446e7cb71f6681b344')).data)::eql_v2.ste_vec_entry";
+    let b = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(5), '3dba004f4d7823446e7cb71f6681b344')).data)::eql_v2.ste_vec_entry";
+    let c = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(10), '3dba004f4d7823446e7cb71f6681b344')).data)::eql_v2.ste_vec_entry";
 
     // 3 assertions: a=a, b=b, c=c should all return 0
     assert_compare!(
         &pool,
-        "compare_ore_cllw",
+        "compare",
         a,
         a,
         0,
@@ -298,7 +298,7 @@ async fn ore_cllw_u64_compare_equal(pool: PgPool) -> Result<()> {
     );
     assert_compare!(
         &pool,
-        "compare_ore_cllw",
+        "compare",
         b,
         b,
         0,
@@ -306,7 +306,7 @@ async fn ore_cllw_u64_compare_equal(pool: PgPool) -> Result<()> {
     );
     assert_compare!(
         &pool,
-        "compare_ore_cllw",
+        "compare",
         c,
         c,
         0,
@@ -323,14 +323,14 @@ async fn ore_cllw_u64_compare_less_than(pool: PgPool) -> Result<()> {
     // {"number": {N}}
     // $.number: 3dba004f4d7823446e7cb71f6681b344
 
-    let a = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(1), '3dba004f4d7823446e7cb71f6681b344')";
-    let b = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(5), '3dba004f4d7823446e7cb71f6681b344')";
-    let c = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(10), '3dba004f4d7823446e7cb71f6681b344')";
+    let a = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(1), '3dba004f4d7823446e7cb71f6681b344')).data)::eql_v2.ste_vec_entry";
+    let b = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(5), '3dba004f4d7823446e7cb71f6681b344')).data)::eql_v2.ste_vec_entry";
+    let c = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(10), '3dba004f4d7823446e7cb71f6681b344')).data)::eql_v2.ste_vec_entry";
 
     // 3 assertions: a<b, a<c, b<c should all return -1
     assert_compare!(
         &pool,
-        "compare_ore_cllw",
+        "compare",
         a,
         b,
         -1,
@@ -338,7 +338,7 @@ async fn ore_cllw_u64_compare_less_than(pool: PgPool) -> Result<()> {
     );
     assert_compare!(
         &pool,
-        "compare_ore_cllw",
+        "compare",
         a,
         c,
         -1,
@@ -346,7 +346,7 @@ async fn ore_cllw_u64_compare_less_than(pool: PgPool) -> Result<()> {
     );
     assert_compare!(
         &pool,
-        "compare_ore_cllw",
+        "compare",
         b,
         c,
         -1,
@@ -363,14 +363,14 @@ async fn ore_cllw_u64_compare_greater_than(pool: PgPool) -> Result<()> {
     // {"number": {N}}
     // $.number: 3dba004f4d7823446e7cb71f6681b344
 
-    let a = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(1), '3dba004f4d7823446e7cb71f6681b344')";
-    let b = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(5), '3dba004f4d7823446e7cb71f6681b344')";
-    let c = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(10), '3dba004f4d7823446e7cb71f6681b344')";
+    let a = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(1), '3dba004f4d7823446e7cb71f6681b344')).data)::eql_v2.ste_vec_entry";
+    let b = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(5), '3dba004f4d7823446e7cb71f6681b344')).data)::eql_v2.ste_vec_entry";
+    let c = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(10), '3dba004f4d7823446e7cb71f6681b344')).data)::eql_v2.ste_vec_entry";
 
     // 3 assertions: b>a, c>a, c>b should all return 1
     assert_compare!(
         &pool,
-        "compare_ore_cllw",
+        "compare",
         b,
         a,
         1,
@@ -378,7 +378,7 @@ async fn ore_cllw_u64_compare_greater_than(pool: PgPool) -> Result<()> {
     );
     assert_compare!(
         &pool,
-        "compare_ore_cllw",
+        "compare",
         c,
         a,
         1,
@@ -386,7 +386,7 @@ async fn ore_cllw_u64_compare_greater_than(pool: PgPool) -> Result<()> {
     );
     assert_compare!(
         &pool,
-        "compare_ore_cllw",
+        "compare",
         c,
         b,
         1,
@@ -407,14 +407,14 @@ async fn ore_cllw_var_compare_equal(pool: PgPool) -> Result<()> {
     // {"hello": "world{N}"}
     // $.hello: d90b97b5207d30fe867ca816ed0fe4a7
 
-    let a = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(1), 'd90b97b5207d30fe867ca816ed0fe4a7')";
-    let b = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(2), 'd90b97b5207d30fe867ca816ed0fe4a7')";
-    let c = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(3), 'd90b97b5207d30fe867ca816ed0fe4a7')";
+    let a = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(1), 'd90b97b5207d30fe867ca816ed0fe4a7')).data)::eql_v2.ste_vec_entry";
+    let b = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(2), 'd90b97b5207d30fe867ca816ed0fe4a7')).data)::eql_v2.ste_vec_entry";
+    let c = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(3), 'd90b97b5207d30fe867ca816ed0fe4a7')).data)::eql_v2.ste_vec_entry";
 
     // 3 assertions: a=a, b=b, c=c should all return 0
     assert_compare!(
         &pool,
-        "compare_ore_cllw",
+        "compare",
         a,
         a,
         0,
@@ -422,7 +422,7 @@ async fn ore_cllw_var_compare_equal(pool: PgPool) -> Result<()> {
     );
     assert_compare!(
         &pool,
-        "compare_ore_cllw",
+        "compare",
         b,
         b,
         0,
@@ -430,7 +430,7 @@ async fn ore_cllw_var_compare_equal(pool: PgPool) -> Result<()> {
     );
     assert_compare!(
         &pool,
-        "compare_ore_cllw",
+        "compare",
         c,
         c,
         0,
@@ -447,14 +447,14 @@ async fn ore_cllw_var_compare_less_than(pool: PgPool) -> Result<()> {
     // {"hello": "world{N}"}
     // $.hello: d90b97b5207d30fe867ca816ed0fe4a7
 
-    let a = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(1), 'd90b97b5207d30fe867ca816ed0fe4a7')";
-    let b = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(2), 'd90b97b5207d30fe867ca816ed0fe4a7')";
-    let c = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(3), 'd90b97b5207d30fe867ca816ed0fe4a7')";
+    let a = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(1), 'd90b97b5207d30fe867ca816ed0fe4a7')).data)::eql_v2.ste_vec_entry";
+    let b = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(2), 'd90b97b5207d30fe867ca816ed0fe4a7')).data)::eql_v2.ste_vec_entry";
+    let c = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(3), 'd90b97b5207d30fe867ca816ed0fe4a7')).data)::eql_v2.ste_vec_entry";
 
     // 3 assertions: a<b, a<c, b<c should all return -1
     assert_compare!(
         &pool,
-        "compare_ore_cllw",
+        "compare",
         a,
         b,
         -1,
@@ -462,7 +462,7 @@ async fn ore_cllw_var_compare_less_than(pool: PgPool) -> Result<()> {
     );
     assert_compare!(
         &pool,
-        "compare_ore_cllw",
+        "compare",
         a,
         c,
         -1,
@@ -470,7 +470,7 @@ async fn ore_cllw_var_compare_less_than(pool: PgPool) -> Result<()> {
     );
     assert_compare!(
         &pool,
-        "compare_ore_cllw",
+        "compare",
         b,
         c,
         -1,
@@ -487,14 +487,14 @@ async fn ore_cllw_var_compare_greater_than(pool: PgPool) -> Result<()> {
     // {"hello": "world{N}"}
     // $.hello: d90b97b5207d30fe867ca816ed0fe4a7
 
-    let a = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(1), 'd90b97b5207d30fe867ca816ed0fe4a7')";
-    let b = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(2), 'd90b97b5207d30fe867ca816ed0fe4a7')";
-    let c = "eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(3), 'd90b97b5207d30fe867ca816ed0fe4a7')";
+    let a = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(1), 'd90b97b5207d30fe867ca816ed0fe4a7')).data)::eql_v2.ste_vec_entry";
+    let b = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(2), 'd90b97b5207d30fe867ca816ed0fe4a7')).data)::eql_v2.ste_vec_entry";
+    let c = "((eql_v2.jsonb_path_query(create_encrypted_ste_vec_json(3), 'd90b97b5207d30fe867ca816ed0fe4a7')).data)::eql_v2.ste_vec_entry";
 
     // 3 assertions: b>a, c>a, c>b should all return 1
     assert_compare!(
         &pool,
-        "compare_ore_cllw",
+        "compare",
         b,
         a,
         1,
@@ -502,7 +502,7 @@ async fn ore_cllw_var_compare_greater_than(pool: PgPool) -> Result<()> {
     );
     assert_compare!(
         &pool,
-        "compare_ore_cllw",
+        "compare",
         c,
         a,
         1,
@@ -510,7 +510,7 @@ async fn ore_cllw_var_compare_greater_than(pool: PgPool) -> Result<()> {
     );
     assert_compare!(
         &pool,
-        "compare_ore_cllw",
+        "compare",
         c,
         b,
         1,
