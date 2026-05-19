@@ -1,16 +1,16 @@
-//! OPE-direct demonstration suite for the `encrypted_int4` domain.
+//! OPE-direct test suite for `eql_v2_int4_ord_ope` — the
+//! HMAC + OPE-direct ordering variant.
 //!
-//! This file exists alongside `encrypted_int4_fixture_tests.rs` (which is
-//! currently quarantined because real CipherStash Proxy emits ORE blocks
-//! `ob` for int columns, not OPE bytes `opf`). The prototype's range-op
-//! wrappers target the in-flight OPE-direct emission. This suite proves
-//! the inlineable-wrapper + functional-index architecture works today
-//! using hand-crafted `opf` payloads — the same pattern as
-//! `tests/sqlx/tests/ope_tests.rs:20-27`.
+//! Uses hand-crafted `opf` payloads (no Proxy round-trip). The
+//! variant's range wrappers reduce to bytea lex-compare of
+//! `eql_v2.eql_v2_int4_ord_ope_ope_key(...)`; both wrappers inline,
+//! so a functional btree on the extractor expression engages for
+//! range queries.
 //!
 //! Pattern:
-//!   - `opf_payload(signal: u8)` builds a 65-byte buffer with the signal
-//!     at index 8; lexicographic bytea comparison preserves signal order.
+//!   - `opf_payload(signal: u8)` builds a 65-byte buffer with the
+//!     signal at index 8; lexicographic bytea comparison preserves
+//!     signal order.
 //!   - Each test sets up its own temp table, inserts synthetic rows,
 //!     creates the functional indexes, and asserts BOTH correctness
 //!     (row sets) and index engagement (EXPLAIN plan).
@@ -41,7 +41,7 @@ async fn setup_ope_table(
         CREATE TEMP TABLE typed_int4_ope (
             id integer GENERATED ALWAYS AS IDENTITY,
             signal smallint NOT NULL,
-            value encrypted_int4
+            value eql_v2_int4_ord_ope
         ) ON COMMIT DROP;
         "#,
     )
@@ -51,7 +51,7 @@ async fn setup_ope_table(
     for signal in signals {
         sqlx::query(
             "INSERT INTO typed_int4_ope (signal, value) \
-             VALUES ($1::smallint, $2::jsonb::encrypted_int4)",
+             VALUES ($1::smallint, $2::jsonb::eql_v2_int4_ord_ope)",
         )
         .bind(*signal as i16)
         .bind(opf_payload(*signal))
@@ -85,7 +85,7 @@ async fn encrypted_int4_eq_engages_hmac_idx(pool: PgPool) -> Result<()> {
     // Domain-on-both-sides correctness.
     let signal: i16 = sqlx::query_scalar(
         "SELECT signal FROM typed_int4_ope \
-         WHERE value = $1::jsonb::encrypted_int4",
+         WHERE value = $1::jsonb::eql_v2_int4_ord_ope",
     )
     .bind(&needle)
     .fetch_one(&mut *tx)
@@ -116,7 +116,7 @@ async fn encrypted_int4_ope_idx_engages_for_range(pool: PgPool) -> Result<()> {
 
     sqlx::query(
         "CREATE INDEX typed_int4_ope_key_idx \
-         ON typed_int4_ope ((eql_v2.encrypted_int4_ope_key(value::jsonb)))",
+         ON typed_int4_ope ((eql_v2.eql_v2_int4_ord_ope_ope_key(value::jsonb)))",
     )
     .execute(&mut *tx)
     .await?;
@@ -143,7 +143,7 @@ async fn encrypted_int4_ope_idx_engages_for_range(pool: PgPool) -> Result<()> {
         );
 
         // (jsonb, domain) — ORM bind shape. The wrapper inlines through
-        // the (jsonb, encrypted_int4) overload of encrypted_int4_ope_key.
+        // the (jsonb, eql_v2_int4_ord_ope) overload of eql_v2_int4_ord_ope_ope_key.
         let plan_rows: Vec<String> = sqlx::query_scalar(&format!(
             "EXPLAIN SELECT * FROM typed_int4_ope WHERE '{}'::jsonb {op} value",
             pivot
@@ -185,7 +185,7 @@ async fn encrypted_int4_range_semantics(pool: PgPool) -> Result<()> {
         // (domain, domain)
         let mut ids: Vec<i16> = sqlx::query_scalar(&format!(
             "SELECT signal FROM typed_int4_ope \
-             WHERE value {op} '{}'::jsonb::encrypted_int4 \
+             WHERE value {op} '{}'::jsonb::eql_v2_int4_ord_ope \
              ORDER BY signal",
             pivot
         ))
@@ -247,7 +247,7 @@ async fn encrypted_int4_ordering_matches_signal_byte(pool: PgPool) -> Result<()>
     let ordered: Vec<i16> = sqlx::query_scalar(
         "SELECT signal \
          FROM typed_int4_ope \
-         ORDER BY eql_v2.encrypted_int4_ope_key(value)",
+         ORDER BY eql_v2.eql_v2_int4_ord_ope_ope_key(value)",
     )
     .fetch_all(&mut *tx)
     .await?;
@@ -273,7 +273,7 @@ async fn encrypted_int4_equality_cross_type_shapes(pool: PgPool) -> Result<()> {
     for sql in [
         format!(
             "SELECT signal FROM typed_int4_ope \
-             WHERE value = '{}'::jsonb::encrypted_int4",
+             WHERE value = '{}'::jsonb::eql_v2_int4_ord_ope",
             needle
         ),
         format!(
@@ -296,7 +296,7 @@ async fn encrypted_int4_equality_cross_type_shapes(pool: PgPool) -> Result<()> {
     for sql in [
         format!(
             "SELECT count(*) FROM typed_int4_ope \
-             WHERE value <> '{}'::jsonb::encrypted_int4",
+             WHERE value <> '{}'::jsonb::eql_v2_int4_ord_ope",
             other
         ),
         format!(
@@ -356,7 +356,7 @@ async fn encrypted_int4_blocker_operators_still_raise(pool: PgPool) -> Result<()
 
     for op in ["~~", "~~*", "@>", "<@"] {
         let sql = format!(
-            "SELECT '{}'::jsonb::encrypted_int4 {op} '{}'::jsonb::encrypted_int4",
+            "SELECT '{}'::jsonb::eql_v2_int4_ord_ope {op} '{}'::jsonb::eql_v2_int4_ord_ope",
             a, b
         );
         let err = sqlx::query_scalar::<_, bool>(&sql)
@@ -364,7 +364,7 @@ async fn encrypted_int4_blocker_operators_still_raise(pool: PgPool) -> Result<()
             .await
             .expect_err(&format!("encrypted_int4 {op} should be blocked"))
             .to_string();
-        let expected = format!("operator {op} is not supported for encrypted_int4");
+        let expected = format!("operator {op} is not supported for eql_v2_int4_ord_ope");
         assert!(
             err.contains(&expected),
             "blocker error mismatch for {op}: {err}"
