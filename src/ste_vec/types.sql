@@ -43,3 +43,36 @@ CREATE DOMAIN eql_v2.ste_vec_entry AS jsonb
     AND VALUE ? 'c'
     AND (VALUE ? 'hm') <> (VALUE ? 'oc')
   );
+
+
+--! @brief Domain type for an STE-vec containment needle
+--!
+--! `eql_v2.stevec_query` is a query-shaped sv payload: a top-level
+--! `{"sv": [...]}` object whose elements carry selector + index
+--! terms but **never** a ciphertext (`c`) field. Containment (`@>`)
+--! against an `eql_v2_encrypted` column is structurally typed
+--! through this domain so the call site reads as "match against an
+--! sv query", not "compare two encrypted values".
+--!
+--! Compared to `eql_v2.ste_vec_entry` (single sv element with `s`,
+--! `c`, and `hm` XOR `oc`), `stevec_query` is the wrapping
+--! `{"sv": [...]}` payload and explicitly forbids `c` on any
+--! element. The implementation of `ste_vec_contains` ignores `c`
+--! either way, but typing the needle as `stevec_query` documents
+--! the contract at the API surface.
+--!
+--! @note Constructing a `stevec_query` literal from inline JSON works
+--!       via the standard DOMAIN cast:
+--!         `'{"sv":[{"s":"<sel>","hm":"<hm>"}]}'::eql_v2.stevec_query`
+--!       Casting an `eql_v2_encrypted` value strips `c` fields from
+--!       each sv element — see `eql_v2.to_stevec_query`.
+--!
+--! @see eql_v2.to_stevec_query
+--! @see src/operators/@>.sql
+CREATE DOMAIN eql_v2.stevec_query AS jsonb
+  CHECK (
+    jsonb_typeof(VALUE) = 'object'
+    AND VALUE ? 'sv'
+    AND jsonb_typeof(VALUE -> 'sv') = 'array'
+    AND NOT jsonb_path_exists(VALUE, '$.sv[*] ? (exists(@.c))'::jsonpath)
+  );
