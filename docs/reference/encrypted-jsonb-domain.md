@@ -6,7 +6,7 @@
 CREATE DOMAIN public.encrypted_jsonb AS jsonb;
 ```
 
-Same lifecycle pattern as `encrypted_text` / `encrypted_int4`. No CHECK constraint.
+Same lifecycle pattern as `encrypted_text` / the `eql_v2_int4` variant family (see `docs/reference/encrypted-int4-domain.md`). No CHECK constraint.
 
 ## Payload shape
 
