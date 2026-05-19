@@ -30,6 +30,14 @@
 --! @see src/ore_cllw/operator_class.sql
 --! @see src/ore_cllw/functions.sql
 
+--! @brief Equality operator backing function for `eql_v2.ore_cllw`
+--! @internal
+--!
+--! @param a eql_v2.ore_cllw Left operand
+--! @param b eql_v2.ore_cllw Right operand
+--! @return boolean True if the CLLW terms compare equal
+--!
+--! @see eql_v2.compare_ore_cllw_term
 CREATE FUNCTION eql_v2.ore_cllw_eq(a eql_v2.ore_cllw, b eql_v2.ore_cllw)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -37,6 +45,14 @@ AS $$
   SELECT eql_v2.compare_ore_cllw_term(a, b) = 0
 $$;
 
+--! @brief Inequality operator backing function for `eql_v2.ore_cllw`
+--! @internal
+--!
+--! @param a eql_v2.ore_cllw Left operand
+--! @param b eql_v2.ore_cllw Right operand
+--! @return boolean True if the CLLW terms compare unequal
+--!
+--! @see eql_v2.compare_ore_cllw_term
 CREATE FUNCTION eql_v2.ore_cllw_neq(a eql_v2.ore_cllw, b eql_v2.ore_cllw)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -44,6 +60,14 @@ AS $$
   SELECT eql_v2.compare_ore_cllw_term(a, b) <> 0
 $$;
 
+--! @brief Less-than operator backing function for `eql_v2.ore_cllw`
+--! @internal
+--!
+--! @param a eql_v2.ore_cllw Left operand
+--! @param b eql_v2.ore_cllw Right operand
+--! @return boolean True if `a` orders before `b`
+--!
+--! @see eql_v2.compare_ore_cllw_term
 CREATE FUNCTION eql_v2.ore_cllw_lt(a eql_v2.ore_cllw, b eql_v2.ore_cllw)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -51,6 +75,14 @@ AS $$
   SELECT eql_v2.compare_ore_cllw_term(a, b) = -1
 $$;
 
+--! @brief Less-than-or-equal operator backing function for `eql_v2.ore_cllw`
+--! @internal
+--!
+--! @param a eql_v2.ore_cllw Left operand
+--! @param b eql_v2.ore_cllw Right operand
+--! @return boolean True if `a` orders before or equal to `b`
+--!
+--! @see eql_v2.compare_ore_cllw_term
 CREATE FUNCTION eql_v2.ore_cllw_lte(a eql_v2.ore_cllw, b eql_v2.ore_cllw)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -58,6 +90,14 @@ AS $$
   SELECT eql_v2.compare_ore_cllw_term(a, b) <> 1
 $$;
 
+--! @brief Greater-than operator backing function for `eql_v2.ore_cllw`
+--! @internal
+--!
+--! @param a eql_v2.ore_cllw Left operand
+--! @param b eql_v2.ore_cllw Right operand
+--! @return boolean True if `a` orders after `b`
+--!
+--! @see eql_v2.compare_ore_cllw_term
 CREATE FUNCTION eql_v2.ore_cllw_gt(a eql_v2.ore_cllw, b eql_v2.ore_cllw)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -65,6 +105,14 @@ AS $$
   SELECT eql_v2.compare_ore_cllw_term(a, b) = 1
 $$;
 
+--! @brief Greater-than-or-equal operator backing function for `eql_v2.ore_cllw`
+--! @internal
+--!
+--! @param a eql_v2.ore_cllw Left operand
+--! @param b eql_v2.ore_cllw Right operand
+--! @return boolean True if `a` orders after or equal to `b`
+--!
+--! @see eql_v2.compare_ore_cllw_term
 CREATE FUNCTION eql_v2.ore_cllw_gte(a eql_v2.ore_cllw, b eql_v2.ore_cllw)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
