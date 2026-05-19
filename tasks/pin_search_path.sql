@@ -31,9 +31,11 @@ DECLARE
   enc_oid oid;
   jsonb_oid oid;
   text_oid oid;
+  entry_oid oid;
 BEGIN
   -- Resolve type oids without depending on caller search_path. The encrypted
-  -- composite type is created in `public`; jsonb / text are in `pg_catalog`.
+  -- composite type is created in `public`; jsonb / text are in `pg_catalog`;
+  -- the ste_vec_entry DOMAIN lives in `eql_v2`.
   SELECT t.oid INTO enc_oid
   FROM pg_catalog.pg_type t
   JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
@@ -60,6 +62,15 @@ BEGIN
 
   IF text_oid IS NULL THEN
     RAISE EXCEPTION 'pin_search_path: type pg_catalog.text not found';
+  END IF;
+
+  SELECT t.oid INTO entry_oid
+  FROM pg_catalog.pg_type t
+  JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+  WHERE n.nspname = 'eql_v2' AND t.typname = 'ste_vec_entry';
+
+  IF entry_oid IS NULL THEN
+    RAISE EXCEPTION 'pin_search_path: type eql_v2.ste_vec_entry not found';
   END IF;
 
   -- Wrappers that must remain inlinable for functional-index matching.
@@ -170,12 +181,29 @@ BEGIN
       -- Consolidated ORE-CLLW extractor (U-006). Inlinable SQL — pinning
       -- would silently undo it and prevent the planner from folding
       -- `eql_v2.ore_cllw(col)` calls into the calling query. The
-      -- `compare_ore_cllw` comparator stays plpgsql by design (per-byte
-      -- protocol can't be expressed as a single inlinable SELECT), so
-      -- it is NOT on this list.
+      -- `compare_ore_cllw_term` comparator stays plpgsql by design (per-byte
+      -- protocol can't be expressed as a single inlinable SELECT), so it is
+      -- NOT on this list. The (jsonb) form is a RHS-parameter helper for
+      -- comparisons against literal jsonb; the (eql_v2.ste_vec_entry) form
+      -- is the typed extractor for the result of `col -> '<selector>'`.
       OR (p.pronargs = 1
         AND p.proname IN ('ore_cllw', 'has_ore_cllw')
-        AND (p.proargtypes[0] = enc_oid OR p.proargtypes[0] = jsonb_oid))
+        AND (p.proargtypes[0] = jsonb_oid OR p.proargtypes[0] = entry_oid))
+      -- Typed HMAC extractor on a ste_vec entry (#219 strict separation).
+      -- Same rationale as `ore_cllw(ste_vec_entry)` — must inline so
+      -- `eql_v2.hmac_256(col -> 'sel')` folds into the calling query and
+      -- matches a functional hash index built on the same expression.
+      OR (p.pronargs = 1
+        AND p.proname IN ('hmac_256', 'has_hmac_256', 'selector')
+        AND p.proargtypes[0] = entry_oid)
+      -- `eql_v2.ste_vec_entry × eql_v2.ste_vec_entry` operators (#219).
+      -- Inline to `hmac_256(a) = hmac_256(b)` (equality) or
+      -- `ore_cllw(a) <op> ore_cllw(b)` (ordering); both chains must remain
+      -- unpinned for functional-index match through extractor form.
+      OR (p.pronargs = 2
+        AND p.proname IN ('=', '<>', '<', '<=', '>', '>=',
+                          'eq', 'neq', 'lt', 'lte', 'gt', 'gte')
+        AND p.proargtypes[0] = entry_oid AND p.proargtypes[1] = entry_oid)
     );
 
   FOR fn_oid IN

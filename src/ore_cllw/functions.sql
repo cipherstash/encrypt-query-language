@@ -1,30 +1,54 @@
 -- REQUIRE: src/schema.sql
 -- REQUIRE: src/common.sql
 -- REQUIRE: src/ore_cllw/types.sql
+-- REQUIRE: src/ste_vec/types.sql
 
 
---! @brief Extract CLLW ORE index term from JSONB payload
+--! @brief Extract CLLW ORE index term from a ste_vec entry
 --!
---! Returns the CLLW ORE ciphertext from the `oc` field of an encrypted
---! data payload. Inlinable single-statement SQL — the planner folds the
---! body into the calling query so the extractor disappears at planning
---! time. Whether index match engages depends on whether a custom operator
---! class is installed on the `eql_v2.ore_cllw` composite type
---! (`compare_ore_cllw_term` is the entry point); without one, Postgres
---! has no way to use a functional btree on this extractor because lex
---! `bytea` order does not match the CLLW order-revealing protocol.
+--! Returns the CLLW ORE ciphertext from the `oc` field of an `sv` element.
+--! `oc` is **only ever present on a `SteVecElement`** in the v2.3 payload
+--! shape — never at the root of an `eql_v2_encrypted` column value — so the
+--! type signature accepts `eql_v2.ste_vec_entry` directly. Callers must
+--! extract first: `eql_v2.ore_cllw(col -> '<selector>')`.
+--!
+--! Inlinable single-statement SQL — the planner folds the body into the
+--! calling query so the extractor disappears at planning time. Functional
+--! btree index match on this extractor requires the `eql_v2.ore_cllw_ops`
+--! opclass (installed automatically by the main / protect variants; absent
+--! in the supabase variant).
 --!
 --! When the `oc` field is absent, returns a composite with `bytes IS NULL`
 --! rather than raising. This is necessary for inlinability (a SQL function
 --! body that may raise can't be inlined). Callers needing the loud RAISE
---! contract should check `eql_v2.has_ore_cllw(val)` first.
+--! contract should check `eql_v2.has_ore_cllw(entry)` first.
 --!
---! @param val jsonb Encrypted EQL payload
+--! @param entry eql_v2.ste_vec_entry STE-vec entry (extracted via `->`)
 --! @return eql_v2.ore_cllw Composite carrying the CLLW ciphertext, or
 --!         `(bytes => NULL)` when the `oc` field is absent.
 --!
 --! @see eql_v2.has_ore_cllw
---! @see eql_v2.compare_ore_cllw
+--! @see eql_v2.compare_ore_cllw_term
+--! @see src/operators/->.sql
+CREATE FUNCTION eql_v2.ore_cllw(entry eql_v2.ste_vec_entry)
+  RETURNS eql_v2.ore_cllw
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  SELECT ROW(decode(entry ->> 'oc', 'hex'))::eql_v2.ore_cllw
+$$;
+
+
+--! @brief Extract CLLW ORE index term from raw jsonb (RHS parameter helper)
+--!
+--! Companion overload for `eql_v2.ore_cllw(eql_v2.ste_vec_entry)` that
+--! accepts a raw `jsonb` value. Intended for the right-hand side of
+--! comparisons where the caller binds a literal/parameter jsonb representing
+--! a single ste_vec entry: `... < eql_v2.ore_cllw($1::jsonb)`. The (jsonb)
+--! form skips the domain CHECK constraint so it works for ad-hoc test inputs
+--! and for the GenericComparison case in `eql_v2.compare_ore_cllw_term`.
+--!
+--! @param val jsonb An object carrying an `oc` field
+--! @return eql_v2.ore_cllw Composite carrying the CLLW ciphertext
 CREATE FUNCTION eql_v2.ore_cllw(val jsonb)
   RETURNS eql_v2.ore_cllw
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -33,50 +57,33 @@ AS $$
 $$;
 
 
---! @brief Extract CLLW ORE index term from encrypted column value
+--! @brief Check if a ste_vec entry contains a CLLW ORE index term
 --!
---! Convenience overload that unwraps the encrypted column value's JSONB
---! payload and delegates to `eql_v2.ore_cllw(jsonb)`. Inlinable.
+--! Tests whether the entry includes an `oc` field. Inlinable.
 --!
---! @param val eql_v2_encrypted Encrypted column value
---! @return eql_v2.ore_cllw CLLW ORE ciphertext composite
---!
---! @see eql_v2.ore_cllw(jsonb)
-CREATE FUNCTION eql_v2.ore_cllw(val eql_v2_encrypted)
-  RETURNS eql_v2.ore_cllw
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$
-  SELECT eql_v2.ore_cllw(val.data)
-$$;
-
-
---! @brief Check if JSONB payload contains CLLW ORE index term
---!
---! Tests whether the encrypted data payload includes an `oc` field,
---! indicating a CLLW ORE ciphertext is available for range queries
---! (Standard-mode `ste_vec` emissions). Inlinable.
---!
---! @param val jsonb Encrypted EQL payload
+--! @param entry eql_v2.ste_vec_entry STE-vec entry
 --! @return Boolean True if `oc` field is present and non-null
 --!
 --! @see eql_v2.ore_cllw
+CREATE FUNCTION eql_v2.has_ore_cllw(entry eql_v2.ste_vec_entry)
+  RETURNS boolean
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  SELECT entry ->> 'oc' IS NOT NULL
+$$;
+
+
+--! @brief Check if a raw jsonb value contains a CLLW ORE index term
+--!
+--! Companion to `eql_v2.has_ore_cllw(ste_vec_entry)` for raw jsonb inputs.
+--!
+--! @param val jsonb An object that may carry an `oc` field
+--! @return Boolean True if `oc` field is present and non-null
 CREATE FUNCTION eql_v2.has_ore_cllw(val jsonb)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   SELECT val ->> 'oc' IS NOT NULL
-$$;
-
-
---! @brief Check if encrypted column value contains CLLW ORE index term
---!
---! @param val eql_v2_encrypted Encrypted column value
---! @return Boolean True if CLLW ORE ciphertext is present
-CREATE FUNCTION eql_v2.has_ore_cllw(val eql_v2_encrypted)
-  RETURNS boolean
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$
-  SELECT eql_v2.has_ore_cllw(val.data)
 $$;
 
 

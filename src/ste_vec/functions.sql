@@ -4,6 +4,7 @@
 -- REQUIRE: src/encrypted/functions.sql
 -- REQUIRE: src/hmac_256/functions.sql
 -- REQUIRE: src/hmac_256/compare.sql
+-- REQUIRE: src/ste_vec/types.sql
 
 
 --! @brief Extract STE vector index from JSONB payload
@@ -190,12 +191,16 @@ $$ LANGUAGE plpgsql;
 --! @brief Extract selector value from encrypted column value
 --!
 --! Extracts the selector from an encrypted column value by accessing its
---! underlying JSONB data field.
+--! underlying JSONB data field. Used internally by `eql_v2."->"` when the
+--! selector argument is itself an `eql_v2_encrypted` (so the caller's
+--! single-element ste_vec scalar carries the selector); not intended for
+--! direct use against the root payload of a multi-element ste_vec column.
 --!
---! @param eql_v2_encrypted Encrypted column value
+--! @param eql_v2_encrypted Encrypted column value (single-element form)
 --! @return Text The selector value
 --!
 --! @see eql_v2.selector(jsonb)
+--! @see eql_v2.selector(eql_v2.ste_vec_entry)
 CREATE FUNCTION eql_v2.selector(val eql_v2_encrypted)
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
@@ -205,6 +210,24 @@ AS $$
     RETURN (SELECT eql_v2.selector(val.data));
   END;
 $$ LANGUAGE plpgsql;
+
+
+--! @brief Extract selector value from a ste_vec entry
+--!
+--! Direct overload on the domain type. The DOMAIN's CHECK constraint
+--! already guarantees `s` is present, so this is a simple field access.
+--!
+--! @param entry eql_v2.ste_vec_entry STE-vec entry
+--! @return Text The selector value
+--!
+--! @see eql_v2.selector(jsonb)
+CREATE FUNCTION eql_v2.selector(entry eql_v2.ste_vec_entry)
+  RETURNS text
+  LANGUAGE sql
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  SELECT entry ->> 's'
+$$;
 
 
 
