@@ -521,23 +521,27 @@ AS $$
       _a := a[idx];
       -- Element-level match for ste_vec entries.
       --
-      -- Post-2.3 ste_vec elements carry `hm` (HMAC-256) as the
-      -- selector-scoped equality term. When both sides have `hm` we
-      -- compare on it directly — this correctly matches two
-      -- encryptions of the same plaintext when the JSONB byte
-      -- representations differ (e.g., a freshly-built query payload
-      -- vs. a stored row).
+      -- Per the v2.3 sv-element contract, each entry carries exactly one
+      -- of `hm` (HMAC-256, for hash-equality-configured selectors) or
+      -- `oc` (CLLW ORE, for ordering-configured selectors) — never both.
+      -- Both terms are deterministic for the same plaintext at the same
+      -- selector, so either one can serve as an equality discriminator
+      -- between sv elements emitted by the same workspace.
       --
-      -- Falls through to `eql_v2.eq` for non-hash-indexed elements
-      -- (e.g. OPE-only future shapes), which routes through
-      -- `compare`'s ORE → OPE → hmac chain.
+      -- Match by `hm` when present on both sides; otherwise by `oc` when
+      -- present on both sides. The selector check above is a fast-path
+      -- gate so we don't compare terms across mismatched fields.
       result := result OR (
         eql_v2.selector(_a) = eql_v2.selector(b) AND
         CASE
           WHEN eql_v2.has_hmac_256(_a) AND eql_v2.has_hmac_256(b) THEN
             eql_v2.compare_hmac_256(_a, b) = 0
-          ELSE
-            eql_v2.eq(_a, b)
+          WHEN eql_v2.has_ore_cllw((_a).data) AND eql_v2.has_ore_cllw((b).data) THEN
+            eql_v2.compare_ore_cllw_term(
+              eql_v2.ore_cllw((_a).data),
+              eql_v2.ore_cllw((b).data)
+            ) = 0
+          ELSE false
         END
       );
     END LOOP;
