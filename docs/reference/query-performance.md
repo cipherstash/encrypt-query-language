@@ -165,6 +165,39 @@ The natural-form Top-N scales linearly with the number of rows passing `WHERE` �
 
 The bench suite (`cipherstash/benches`) keeps only the hybrid scenario for this reason: (a) is the trap this section warns about, and (c) plans identically to (b) — measuring all three only inflates the run cost without surfacing a new behaviour.
 
+### 4.1 Field-level `ORDER BY` (ste_vec elements)
+
+Same trap, same fix at the sv-element level. With a Standard-mode `ste_vec` index the orderable term on each sv element is `oc` (ORE CLLW), and the canonical recipe is a functional btree on the *extractor* applied to a selector:
+
+```sql
+-- Build a functional ORE-CLLW index on the orderable sv element
+CREATE INDEX users_age_oc_idx
+  ON users (eql_v2.ore_cllw(data_encrypted -> '<age-selector>'::text));
+ANALYZE users;
+```
+
+(The `eql_v2.ore_cllw_ops` opclass is `DEFAULT FOR TYPE eql_v2.ore_cllw`, so no explicit opclass annotation is needed.)
+
+Three query shapes at the field level:
+
+```sql
+-- (a) Bare form — Seq Scan + Top-N sort, linear in table size
+SELECT id FROM users
+  ORDER BY (data_encrypted -> '<age-selector>'::text)
+  LIMIT 10;
+
+-- (b) Extractor form — Index Scan, walks the btree in order
+SELECT id FROM users
+  ORDER BY eql_v2.ore_cllw(data_encrypted -> '<age-selector>'::text)
+  LIMIT 10;
+```
+
+The bare form (a) doesn't engage the index even when it's present. `eql_v2."->"` is `plpgsql` (it walks the `sv` array picking the matching selector), and the planner can't see through a plpgsql function call to match the sort key against the indexed expression. The plan is always Seq Scan + Top-N — at 1M rows that's ~20 s versus ~1 ms with the extractor form, which is the entire point of the index.
+
+For the same reason the JSON bench suite (`cipherstash/benches`, `benches/json.rs`) does not include a `field_order/bare` scenario. The functional form is the documented recipe; measuring the bare form just demonstrates the cost of *not* following it, which is fixture noise rather than a meaningful EQL performance signal.
+
+**For ordered field-level queries on encrypted JSON, write `ORDER BY` against the extractor.** This is the only field-level shape that scales.
+
 ---
 
 ## 5. Equality and `GROUP BY` / `DISTINCT`
