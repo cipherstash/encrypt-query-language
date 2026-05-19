@@ -185,61 +185,109 @@ AS $$ SELECT eql_v2.eql_v2_int4_ord_ope_ope_key(a) >= eql_v2.eql_v2_int4_ord_ope
 
 -- ~~, ~~*, @>, <@ (blockers, 3 shapes each)
 
+--! @brief Blocker for ~~ on eql_v2_int4_ord_ope.
+--! @param a eql_v2_int4_ord_ope
+--! @param b eql_v2_int4_ord_ope
+--! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ope_like(a eql_v2_int4_ord_ope, b eql_v2_int4_ord_ope)
 RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ope', '~~'); END; $$
 LANGUAGE plpgsql;
 
+--! @brief Blocker for ~~ on eql_v2_int4_ord_ope (domain, jsonb).
+--! @param a eql_v2_int4_ord_ope
+--! @param b jsonb
+--! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ope_like(a eql_v2_int4_ord_ope, b jsonb)
 RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ope', '~~'); END; $$
 LANGUAGE plpgsql;
 
+--! @brief Blocker for ~~ on eql_v2_int4_ord_ope (jsonb, domain).
+--! @param a jsonb
+--! @param b eql_v2_int4_ord_ope
+--! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ope_like(a jsonb, b eql_v2_int4_ord_ope)
 RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ope', '~~'); END; $$
 LANGUAGE plpgsql;
 
+--! @brief Blocker for ~~* on eql_v2_int4_ord_ope.
+--! @param a eql_v2_int4_ord_ope
+--! @param b eql_v2_int4_ord_ope
+--! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ope_ilike(a eql_v2_int4_ord_ope, b eql_v2_int4_ord_ope)
 RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ope', '~~*'); END; $$
 LANGUAGE plpgsql;
 
+--! @brief Blocker for ~~* on eql_v2_int4_ord_ope (domain, jsonb).
+--! @param a eql_v2_int4_ord_ope
+--! @param b jsonb
+--! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ope_ilike(a eql_v2_int4_ord_ope, b jsonb)
 RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ope', '~~*'); END; $$
 LANGUAGE plpgsql;
 
+--! @brief Blocker for ~~* on eql_v2_int4_ord_ope (jsonb, domain).
+--! @param a jsonb
+--! @param b eql_v2_int4_ord_ope
+--! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ope_ilike(a jsonb, b eql_v2_int4_ord_ope)
 RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ope', '~~*'); END; $$
 LANGUAGE plpgsql;
 
+--! @brief Blocker for @> on eql_v2_int4_ord_ope.
+--! @param a eql_v2_int4_ord_ope
+--! @param b eql_v2_int4_ord_ope
+--! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ope_contains(a eql_v2_int4_ord_ope, b eql_v2_int4_ord_ope)
 RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ope', '@>'); END; $$
 LANGUAGE plpgsql;
 
+--! @brief Blocker for @> on eql_v2_int4_ord_ope (domain, jsonb).
+--! @param a eql_v2_int4_ord_ope
+--! @param b jsonb
+--! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ope_contains(a eql_v2_int4_ord_ope, b jsonb)
 RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ope', '@>'); END; $$
 LANGUAGE plpgsql;
 
+--! @brief Blocker for @> on eql_v2_int4_ord_ope (jsonb, domain).
+--! @param a jsonb
+--! @param b eql_v2_int4_ord_ope
+--! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ope_contains(a jsonb, b eql_v2_int4_ord_ope)
 RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ope', '@>'); END; $$
 LANGUAGE plpgsql;
 
+--! @brief Blocker for <@ on eql_v2_int4_ord_ope.
+--! @param a eql_v2_int4_ord_ope
+--! @param b eql_v2_int4_ord_ope
+--! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ope_contained_by(a eql_v2_int4_ord_ope, b eql_v2_int4_ord_ope)
 RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ope', '<@'); END; $$
 LANGUAGE plpgsql;
 
+--! @brief Blocker for <@ on eql_v2_int4_ord_ope (domain, jsonb).
+--! @param a eql_v2_int4_ord_ope
+--! @param b jsonb
+--! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ope_contained_by(a eql_v2_int4_ord_ope, b jsonb)
 RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ope', '<@'); END; $$
 LANGUAGE plpgsql;
 
+--! @brief Blocker for <@ on eql_v2_int4_ord_ope (jsonb, domain).
+--! @param a jsonb
+--! @param b eql_v2_int4_ord_ope
+--! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ope_contained_by(a jsonb, b eql_v2_int4_ord_ope)
 RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ope', '<@'); END; $$
@@ -247,31 +295,55 @@ LANGUAGE plpgsql;
 
 -- -> and ->> (blockers, 3 asymmetric shapes each)
 
+--! @brief Blocker for -> on eql_v2_int4_ord_ope (domain, text).
+--! @param a eql_v2_int4_ord_ope
+--! @param selector text
+--! @return eql_v2_int4_ord_ope (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ope_arrow(a eql_v2_int4_ord_ope, selector text)
 RETURNS eql_v2_int4_ord_ope IMMUTABLE STRICT PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v2_int4_ord_ope'; END; $$
 LANGUAGE plpgsql;
 
+--! @brief Blocker for -> on eql_v2_int4_ord_ope (domain, integer).
+--! @param a eql_v2_int4_ord_ope
+--! @param selector integer
+--! @return eql_v2_int4_ord_ope (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ope_arrow(a eql_v2_int4_ord_ope, selector integer)
 RETURNS eql_v2_int4_ord_ope IMMUTABLE STRICT PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v2_int4_ord_ope'; END; $$
 LANGUAGE plpgsql;
 
+--! @brief Blocker for -> on eql_v2_int4_ord_ope (jsonb, domain).
+--! @param a jsonb
+--! @param selector eql_v2_int4_ord_ope
+--! @return eql_v2_int4_ord_ope (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ope_arrow(a jsonb, selector eql_v2_int4_ord_ope)
 RETURNS eql_v2_int4_ord_ope IMMUTABLE STRICT PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v2_int4_ord_ope'; END; $$
 LANGUAGE plpgsql;
 
+--! @brief Blocker for ->> on eql_v2_int4_ord_ope (domain, text).
+--! @param a eql_v2_int4_ord_ope
+--! @param selector text
+--! @return text (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ope_arrow_text(a eql_v2_int4_ord_ope, selector text)
 RETURNS text IMMUTABLE STRICT PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v2_int4_ord_ope'; END; $$
 LANGUAGE plpgsql;
 
+--! @brief Blocker for ->> on eql_v2_int4_ord_ope (domain, integer).
+--! @param a eql_v2_int4_ord_ope
+--! @param selector integer
+--! @return text (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ope_arrow_text(a eql_v2_int4_ord_ope, selector integer)
 RETURNS text IMMUTABLE STRICT PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v2_int4_ord_ope'; END; $$
 LANGUAGE plpgsql;
 
+--! @brief Blocker for ->> on eql_v2_int4_ord_ope (jsonb, domain).
+--! @param a jsonb
+--! @param selector eql_v2_int4_ord_ope
+--! @return text (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ope_arrow_text(a jsonb, selector eql_v2_int4_ord_ope)
 RETURNS text IMMUTABLE STRICT PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v2_int4_ord_ope'; END; $$
