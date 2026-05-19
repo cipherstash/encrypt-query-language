@@ -1,88 +1,73 @@
 -- REQUIRE: src/schema.sql
 -- REQUIRE: src/encrypted/types.sql
 -- REQUIRE: src/encrypted/functions.sql
+-- REQUIRE: src/ste_vec/types.sql
+-- REQUIRE: src/ste_vec/functions.sql
 
 --! @brief JSONB field accessor operator for encrypted values (->)
 --!
 --! Implements the -> operator to access fields/elements from encrypted JSONB data.
---! Returns encrypted value matching the provided selector without decryption.
+--! Returns the matching sv entry as `eql_v2.ste_vec_entry` (or NULL on miss).
 --!
---! Encrypted JSON is represented as an array of eql_v2_encrypted values in the ste_vec format.
---! Each element has a selector, ciphertext, and index terms:
---!     {"sv": [{"c": "", "s": "", "hm": ""}]}
+--! Encrypted JSON is represented as an array of sv elements in the
+--! StEVec format. Each element has a selector, ciphertext, and index
+--! terms: `{"sv": [{"c": "...", "s": "...", "hm": "..."}, ...]}`.
 --!
 --! Provides three overloads:
 --! - (eql_v2_encrypted, text) - Field name selector
 --! - (eql_v2_encrypted, eql_v2_encrypted) - Encrypted selector
 --! - (eql_v2_encrypted, integer) - Array index selector (0-based)
 --!
+--! All three return `eql_v2.ste_vec_entry` and preserve the source
+--! payload's root `i` / `v` envelope metadata in the returned entry
+--! (the DOMAIN CHECK on `ste_vec_entry` doesn't forbid extra fields).
+--!
 --! @note Operator resolution: Assignment casts are considered (PostgreSQL standard behavior).
 --! To use text selector, parameter may need explicit cast to text.
 --!
---! @see eql_v2.ste_vec
+--! @see eql_v2.ste_vec_entry
 --! @see eql_v2.selector
 --! @see eql_v2."->>"
 
 --! @brief -> operator with text selector
 --!
---! Walks the encrypted document's `sv` array, picks the entry whose
---! selector matches, and returns it merged with the source payload's
---! `i` / `v` metadata as a new `eql_v2_encrypted`. Selectors are
---! deterministic per (path, key), so at most one entry matches; the
---! loop exits early on the first hit.
+--! Returns the sv entry whose `s` selector equals @p selector, with
+--! the source payload's `i` / `v` metadata merged in. Selectors are
+--! deterministic per (path, key) within a document, so at most one
+--! entry matches; `jsonb_path_query_first` returns the first match
+--! and stops scanning.
 --!
---! Caveat. The merged return — `meta || sv_entry` — is a synthetic
---! shape: it has root-level `i` / `v` plus sv-element-level `s` / `c`
---! / `hm`-or-`oc`. It's not a strictly-valid `EncryptedPayload`
---! (root has no `s`) and not a strictly-valid `SteVecElement` (entry
---! has no `i` / `v`). Callers chain off `.data` to feed typed
---! extractors like `eql_v2.ore_cllw(.data::eql_v2.ste_vec_entry)`. A
---! future refactor may flip this function's return type to
---! `eql_v2.ste_vec_entry` so the typed chain is direct; until then
---! the wrap-then-cast pattern is the canonical recipe.
+--! Inlinable single-statement SQL: the planner folds this body into
+--! the calling query, so `WHERE col -> 'sel' = $1` reduces structurally
+--! to `eql_v2.eq_term(col -> 'sel') = eql_v2.eq_term($1)` and matches
+--! a functional index built on `eql_v2.eq_term(col -> 'sel')`.
 --!
---! @param eql_v2_encrypted Encrypted JSONB data
---! @param text Field name to extract
---! @return eql_v2_encrypted Encrypted value at selector, NULL if no match
+--! @param e eql_v2_encrypted Encrypted JSONB payload (root)
+--! @param selector text Selector hash (the `s` field value)
+--! @return eql_v2.ste_vec_entry Matching entry merged with root meta,
+--!         NULL if no element matches.
+--!
+--! @note The returned entry carries `i` / `v` from the root in addition
+--!       to the sv-element fields. This is intentional: per-entry
+--!       extractors (`eql_v2.eq_term`, `eql_v2.ore_cllw`, ...) read
+--!       only their own fields and ignore `i` / `v`; callers that need
+--!       the root envelope (e.g. for decryption) still see it.
+--!
 --! @example
 --! SELECT encrypted_json -> 'field_name' FROM table;
 CREATE FUNCTION eql_v2."->"(e eql_v2_encrypted, selector text)
-  RETURNS eql_v2_encrypted
-  IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
+  RETURNS eql_v2.ste_vec_entry
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  DECLARE
-    meta jsonb;
-    sv eql_v2_encrypted[];
-    found jsonb;
-	BEGIN
-
-    IF e IS NULL THEN
-      RETURN NULL;
-    END IF;
-
-    -- Column identifier and version
-    meta := eql_v2.meta_data(e);
-
-    sv := eql_v2.ste_vec(e);
-
-    -- Linear scan with early EXIT on first match. Selectors are
-    -- unique per (path, key) within a document, so at most one entry
-    -- matches and continuing past the first hit is wasted work.
-    FOR idx IN 1..array_length(sv, 1) LOOP
-      if eql_v2._selector(sv[idx]) = selector THEN
-        found := sv[idx];
-        EXIT;
-      END IF;
-    END LOOP;
-
-    IF found IS NULL THEN
-      RETURN NULL;
-    END IF;
-
-    RETURN (meta || found)::eql_v2_encrypted;
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT (
+    eql_v2.meta_data(e) ||
+    jsonb_path_query_first(
+      (e).data,
+      '$.sv[*] ? (@.s == $sel)'::jsonpath,
+      jsonb_build_object('sel', selector)
+    )
+  )::eql_v2.ste_vec_entry
+$$;
 
 
 CREATE OPERATOR ->(
@@ -94,19 +79,20 @@ CREATE OPERATOR ->(
 ---------------------------------------------------
 
 --! @brief -> operator with encrypted selector
+--!
+--! Convenience overload: extracts the selector text from an encrypted
+--! selector payload and delegates to the (text) form. Inlinable.
+--!
 --! @param e eql_v2_encrypted Encrypted JSONB data
---! @param selector eql_v2_encrypted Encrypted field selector
---! @return eql_v2_encrypted Encrypted value at selector
+--! @param selector eql_v2_encrypted Encrypted selector payload
+--! @return eql_v2.ste_vec_entry Matching entry, NULL on miss
 --! @see eql_v2."->"(eql_v2_encrypted, text)
 CREATE FUNCTION eql_v2."->"(e eql_v2_encrypted, selector eql_v2_encrypted)
-  RETURNS eql_v2_encrypted
-  IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
+  RETURNS eql_v2.ste_vec_entry
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-	BEGIN
-    RETURN eql_v2."->"(e, eql_v2._selector(selector));
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2."->"(e, eql_v2._selector(selector))
+$$;
 
 
 
@@ -120,39 +106,29 @@ CREATE OPERATOR ->(
 ---------------------------------------------------
 
 --! @brief -> operator with integer array index
---! @param eql_v2_encrypted Encrypted array data
---! @param integer Array index (0-based, JSONB convention)
---! @return eql_v2_encrypted Encrypted value at array index
+--!
+--! Returns the sv entry at the given (0-based, JSONB-style) array
+--! index, merged with the root payload's `i` / `v` metadata. Returns
+--! NULL when the underlying value isn't an sv-array payload or when
+--! the index is out of bounds.
+--!
+--! @param e eql_v2_encrypted Encrypted sv-array payload
+--! @param selector integer Array index (0-based, JSONB convention)
+--! @return eql_v2.ste_vec_entry Matching entry, NULL on miss
 --! @note Array index is 0-based (JSONB standard) despite PostgreSQL arrays being 1-based
 --! @example
 --! SELECT encrypted_array -> 0 FROM table;
 --! @see eql_v2.is_ste_vec_array
 CREATE FUNCTION eql_v2."->"(e eql_v2_encrypted, selector integer)
-  RETURNS eql_v2_encrypted
-  IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
+  RETURNS eql_v2.ste_vec_entry
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  DECLARE
-    sv eql_v2_encrypted[];
-    found eql_v2_encrypted;
-	BEGIN
-    IF NOT eql_v2.is_ste_vec_array(e) THEN
-      RETURN NULL;
-    END IF;
-
-    sv := eql_v2.ste_vec(e);
-
-    -- PostgreSQL arrays are 1-based
-    -- JSONB arrays are 0-based and so the selector is 0-based
-    FOR idx IN 1..array_length(sv, 1) LOOP
-      if (idx-1) = selector THEN
-        found := sv[idx];
-      END IF;
-    END LOOP;
-
-    RETURN found;
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT CASE
+    WHEN eql_v2.is_ste_vec_array(e) THEN
+      (eql_v2.meta_data(e) || ((e).data -> 'sv' -> selector))::eql_v2.ste_vec_entry
+    ELSE NULL
+  END
+$$;
 
 
 

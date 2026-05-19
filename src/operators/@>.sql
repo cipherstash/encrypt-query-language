@@ -1,5 +1,6 @@
 -- REQUIRE: src/schema.sql
 -- REQUIRE: src/encrypted/types.sql
+-- REQUIRE: src/ste_vec/types.sql
 -- REQUIRE: src/ste_vec/functions.sql
 
 --! @brief Contains operator for encrypted values (@>)
@@ -38,4 +39,73 @@ CREATE OPERATOR @>(
   FUNCTION=eql_v2."@>",
   LEFTARG=eql_v2_encrypted,
   RIGHTARG=eql_v2_encrypted
+);
+
+
+--! @brief Contains operator (@>) with an `eql_v2.stevec_query` needle
+--!
+--! Type-safe containment for the recommended recipe: the right-hand
+--! side is an `stevec_query` (sv-shaped payload, no `c` fields), making
+--! it explicit at the API surface that containment matches indexes
+--! (selector + `hm`/`oc`) rather than ciphertexts. The
+--! `ste_vec_contains` body ignores `c` either way; the typed needle
+--! documents and enforces the contract.
+--!
+--! @param a eql_v2_encrypted Left operand (container)
+--! @param b eql_v2.stevec_query Right operand (query payload)
+--! @return Boolean True if a contains b
+--!
+--! @example
+--! SELECT * FROM users
+--! WHERE encrypted_doc @> '{"sv":[{"s":"<sel>","hm":"<hm>"}]}'::eql_v2.stevec_query;
+--!
+--! @see eql_v2.stevec_query
+--! @see eql_v2.ste_vec_contains
+CREATE FUNCTION eql_v2."@>"(a eql_v2_encrypted, b eql_v2.stevec_query)
+RETURNS boolean
+LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  SELECT eql_v2.ste_vec_contains(a, eql_v2.to_encrypted(b::jsonb))
+$$;
+
+CREATE OPERATOR @>(
+  FUNCTION=eql_v2."@>",
+  LEFTARG=eql_v2_encrypted,
+  RIGHTARG=eql_v2.stevec_query
+);
+
+
+--! @brief Contains operator (@>) with an `eql_v2.ste_vec_entry` needle
+--!
+--! Convenience overload for the common pattern "does this encrypted
+--! payload include this specific sv entry?". Wraps the entry into a
+--! single-element sv array (stripping its `c` field, which the
+--! containment logic ignores anyway) so it can dispatch through the
+--! standard `ste_vec_contains` machinery. Inlinable.
+--!
+--! @param a eql_v2_encrypted Left operand (container)
+--! @param b eql_v2.ste_vec_entry Right operand (single entry)
+--! @return Boolean True if a contains an sv entry matching `b`
+--!
+--! @example
+--! -- Does this row's encrypted doc contain the same name as this other doc?
+--! SELECT a.* FROM docs a, docs b
+--!  WHERE a.doc @> (b.doc -> '<name-sel>');
+--!
+--! @see eql_v2.ste_vec_entry
+--! @see eql_v2."@>"(eql_v2_encrypted, eql_v2.stevec_query)
+CREATE FUNCTION eql_v2."@>"(a eql_v2_encrypted, b eql_v2.ste_vec_entry)
+RETURNS boolean
+LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  SELECT eql_v2.ste_vec_contains(
+    a,
+    eql_v2.to_encrypted(jsonb_build_object('sv', jsonb_build_array(b - 'c')))
+  )
+$$;
+
+CREATE OPERATOR @>(
+  FUNCTION=eql_v2."@>",
+  LEFTARG=eql_v2_encrypted,
+  RIGHTARG=eql_v2.ste_vec_entry
 );
