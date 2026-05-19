@@ -319,15 +319,20 @@ async fn greater_than_or_equal_jsonb_gte_encrypted(pool: PgPool) -> Result<()> {
 // Covers ore_cllw and ore_cllw index types with fallback behavior
 
 #[sqlx::test]
-#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw / ore_cllw columns must use the extractor form, e.g. eql_v2.ore_cllw(col) < eql_v2.ore_cllw($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
 async fn selector_less_than_with_ore_cllw(pool: PgPool) -> Result<()> {
-    // Test: e->'selector' < term with ore_cllw index
+    // Test: ordered comparison on an sv-element extracted via `->`.
     //
     // Uses test data created by seed_encrypted_json() helper which creates:
     // - Three records with n=10, n=20, n=30
     // - ore_cllw index on $.n selector
+    //
+    // Post-#219 (strict separation): the bare-form `<` on
+    // `eql_v2_encrypted` reduces to Block-ORE comparison (`ob`), which
+    // raises here because sv-element CLLW terms carry `oc`, not `ob`.
+    // The canonical recipe is to cast both sides to
+    // `eql_v2.ste_vec_entry`, then `<` resolves to the entry-typed
+    // operator which inlines to `ore_cllw(a) < ore_cllw(b)`.
 
-    // Create table and seed with test data
     sqlx::query("SELECT create_table_with_encrypted()")
         .execute(&pool)
         .await?;
@@ -336,13 +341,17 @@ async fn selector_less_than_with_ore_cllw(pool: PgPool) -> Result<()> {
         .execute(&pool)
         .await?;
 
-    // Extract $.n selector term from n=30 test data
+    // Extract $.n selector term from n=30 test data. The returned text is
+    // the composite-row representation of an eql_v2_encrypted, parseable
+    // back via `'...'::eql_v2_encrypted`.
     let term = get_ste_vec_selector_term(&pool, 30, Selectors::N).await?;
 
-    // Query: e->'$.n' < term(30)
-    // Should return 2 records (n=10 and n=20)
+    // Should return 2 records (n=10 and n=20).
     let sql = format!(
-        "SELECT e FROM encrypted WHERE e->'{}'::text < '{}'::eql_v2_encrypted",
+        "SELECT e FROM encrypted WHERE \
+           ((e -> '{}'::text).data)::eql_v2.ste_vec_entry \
+         < \
+           (('{}'::eql_v2_encrypted).data)::eql_v2.ste_vec_entry",
         Selectors::N,
         term
     );
