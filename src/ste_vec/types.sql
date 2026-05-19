@@ -21,14 +21,17 @@
 --! explicit: `eql_v2_encrypted` is the root shape; `eql_v2.ste_vec_entry`
 --! is the per-entry shape; extractors are typed accordingly.
 --!
---! @note The CHECK constraint requires `s`, `c`, and `hm` — the three
---!       fields that cipherstash-suite always emits on a SteVecElement:
---!         - `s` (selector) — column-name HMAC, the entry's identifier.
---!         - `c` (ciphertext) — the encrypted scalar.
---!         - `hm` (HMAC-256) — the equality term used by `=` / `<>`.
---!       `oc` (CLLW ORE) is optional and only present on orderable terms.
---!       Other fields (`a` for array marker, etc.) are also allowed but
---!       not required.
+--! @note The CHECK constraint reflects the cipherstash-suite emission
+--!       contract:
+--!         - `s` (selector — column-name HMAC) and `c` (ciphertext) are
+--!           emitted on every sv element.
+--!         - Each sv element carries **exactly one** of `hm` (HMAC-256, for
+--!           hash-equality queries) or `oc` (CLLW ORE, for ordered queries)
+--!           — they are mutually exclusive. A given selector / field is
+--!           configured for one mode or the other; the crypto layer emits
+--!           the corresponding term and only that term.
+--!       Other fields (`a` for array marker, etc.) are allowed but not
+--!       required.
 --!
 --! @see src/operators/->.sql
 --! @see src/ore_cllw/functions.sql
@@ -38,5 +41,5 @@ CREATE DOMAIN eql_v2.ste_vec_entry AS jsonb
     jsonb_typeof(VALUE) = 'object'
     AND VALUE ? 's'
     AND VALUE ? 'c'
-    AND VALUE ? 'hm'
+    AND (VALUE ? 'hm') <> (VALUE ? 'oc')
   );
