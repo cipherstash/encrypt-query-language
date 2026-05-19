@@ -195,22 +195,21 @@ GROUP BY encrypted_status;
 
 For `GROUP BY` / `DISTINCT` / equality on a value extracted from an encrypted JSON document — e.g. `data->'email'` — there are two complementary recipes. Pick by use case:
 
-**Per-selector hash index.** Use when a single JSONB path is queried hot and you want a small, narrow index:
+**Per-selector hash index.** Use when a single JSONB path is queried hot and you want a small, narrow index. The canonical extractor is `eql_v2.eq_term(col -> '<selector>')` — XOR-aware (covers both hm-bearing and oc-bearing selectors with one expression):
 
 ```sql
-CREATE INDEX users_data_email_hmac_idx
-  ON users USING hash (eql_v2.hmac_256(data_encrypted, '<selector-for-email>'));
+CREATE INDEX users_data_email_eq_term_idx
+  ON users USING hash (eql_v2.eq_term(data_encrypted -> '<selector-for-email>'));
 ```
 
-The same expression can then be used directly in query predicates and aggregation keys:
+The bare-form predicate uses `=` on `eql_v2.ste_vec_entry`, which inlines to `eql_v2.eq_term(a) = eql_v2.eq_term(b)` — matching the functional hash index above:
 
 ```sql
 SELECT count(*) FROM users
-  GROUP BY eql_v2.hmac_256(data_encrypted, '<selector-for-email>');
+  GROUP BY eql_v2.eq_term(data_encrypted -> '<selector-for-email>');
 
 SELECT * FROM users
-  WHERE eql_v2.hmac_256(data_encrypted, '<selector-for-email>')
-      = eql_v2.hmac_256($1::jsonb::eql_v2_encrypted, '<selector-for-email>');
+  WHERE data_encrypted -> '<selector-for-email>' = $1::eql_v2.ste_vec_entry;
 ```
 
 **GIN index over all (selector, hmac) pairs.** Use when many selectors are queried on the same column and you want one index covering them all — typical for proxy-rewritten `col -> 'foo' = $1` predicates where `'foo'` can be any field:

@@ -133,14 +133,6 @@ BEGIN
       OR (p.pronargs = 1
         AND p.proname = 'hmac_256'
         AND (p.proargtypes[0] = enc_oid OR p.proargtypes[0] = jsonb_oid))
-      -- Field-level equality extractor (#205): the inlinable counterpart to
-      -- the root-level `eql_v2.hmac_256(col)`. Must inline so the planner
-      -- can fold `eql_v2.hmac_256(col, '<selector>')` into the calling
-      -- query for WHERE / GROUP BY / DISTINCT / hash-join, matching a
-      -- functional hash index on the same expression.
-      OR (p.pronargs = 2
-        AND p.proname = 'hmac_256'
-        AND p.proargtypes[0] = enc_oid AND p.proargtypes[1] = text_oid)
       -- Field-level HMAC terms aggregate (#205): GIN-indexable jsonb array
       -- of `{s, hm}` pairs. Must inline so
       -- `eql_v2.hmac_256_terms(col) @> $1::jsonb` engages the GIN index on

@@ -111,12 +111,13 @@ async fn gin_containment_uses_index(pool: PgPool) -> Result<()> {
     sqlx::query("ANALYZE encrypted").execute(&pool).await?;
 
     // Discover an actual (s, hm) pair to query against — for the first row's
-    // $.hello sv element. This avoids relying on knowing the exact hash value.
+    // $.hello sv element. Read the `hm` hex directly via JSONB field access
+    // on the entry returned by `->` (now an `eql_v2.ste_vec_entry`).
     let probe: serde_json::Value = sqlx::query_scalar(&format!(
         "SELECT jsonb_build_array(
              jsonb_build_object(
                  's', '{}',
-                 'hm', eql_v2.hmac_256(e, '{}')::text
+                 'hm', (e -> '{}'::text) ->> 'hm'
              )
          )
          FROM encrypted ORDER BY id LIMIT 1",

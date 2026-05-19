@@ -25,9 +25,10 @@
 --! @return integer 32-bit hash value derived from `hm`
 --!
 --! @note For grouping a value extracted from an encrypted JSON document, use
---!       the field-level recipe directly: `GROUP BY eql_v2.hmac_256(col, '<selector>')`
---!       (or, post-#219, `GROUP BY eql_v2.hmac_256((col -> '<selector>').data::eql_v2.ste_vec_entry)`).
---!       Those bypass `hash_encrypted` entirely.
+--!       the field-level recipe directly: `GROUP BY eql_v2.eq_term(col -> '<selector>')`
+--!       (covers both hm-bearing and oc-bearing selectors via the XOR-aware
+--!       extractor — see `src/ste_vec/eq_term.sql`). That bypasses
+--!       `hash_encrypted` entirely.
 --!
 --! @see eql_v2.hmac_256
 --! @see eql_v2.has_hmac_256
