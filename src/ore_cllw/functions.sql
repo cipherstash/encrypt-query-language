@@ -92,12 +92,21 @@ $$;
 --!
 --! Byte-by-byte comparison implementing the CLLW order-revealing protocol.
 --! Used by `eql_v2.compare_ore_cllw_term` for the within-prefix step. The
---! protocol: walk both inputs byte-for-byte until a difference is found;
---! if `get_byte(y, 0) + 1 == get_byte(x, 0)` modulo 256 then x > y, else
---! x < y.
+--! protocol: identify the index of the first differing byte across both
+--! inputs; if `(y_byte + 1) == x_byte` modulo 256 at that index, then x > y;
+--! otherwise x < y. Equal inputs return 0.
 --!
 --! Inputs MUST be the same length. The caller (`compare_ore_cllw_term`)
 --! guarantees this by passing equal-length prefixes.
+--!
+--! @par Soft constant-time intent
+--! Plpgsql is not a constant-time environment — the interpreter, `SUBSTRING`,
+--! `get_byte`, and the SQL bytea representation all leak timing in ways we
+--! can't control from here. Still, the loop deliberately walks every byte
+--! (no `EXIT` on first difference) and the rotation check uses a bitmask
+--! (`& 255`) instead of `% 256` so that what little timing structure plpgsql
+--! does expose is independent of the position and value of the differing
+--! byte. This is hardening intent, not a guarantee.
 --!
 --! Stays `LANGUAGE plpgsql` — the per-byte loop can't be expressed as a
 --! single inlinable SQL expression. This is the architectural reason ORE
@@ -116,10 +125,8 @@ AS $$
 DECLARE
     len_a INT;
     len_b INT;
-    x BYTEA;
-    y BYTEA;
     i INT;
-    differing boolean;
+    first_diff INT := 0;
 BEGIN
 
     len_a := LENGTH(a);
@@ -129,24 +136,26 @@ BEGIN
       RAISE EXCEPTION 'ore_cllw index terms are not the same length';
     END IF;
 
+    -- Walk every byte, even after a difference is found. Record only the
+    -- index of the first difference (1-based; 0 means "no difference").
+    -- Avoids an early `EXIT` whose presence is itself a timing signal.
     FOR i IN 1..len_a LOOP
-        x := SUBSTRING(a FROM i FOR 1);
-        y := SUBSTRING(b FROM i FOR 1);
-
-        IF x != y THEN
-            differing := true;
-            EXIT;
+        IF first_diff = 0 AND get_byte(a, i - 1) != get_byte(b, i - 1) THEN
+            first_diff := i;
         END IF;
     END LOOP;
 
-    IF differing THEN
-        IF (get_byte(y, 0) + 1) % 256 = get_byte(x, 0) THEN
-            RETURN 1;
-        ELSE
-            RETURN -1;
-        END IF;
-    ELSE
+    IF first_diff = 0 THEN
         RETURN 0;
+    END IF;
+
+    -- Bitmask instead of `% 256` — the modulo's operand is a power of two
+    -- so the two are arithmetically equivalent, but `& 255` is a single
+    -- machine instruction with no division-related timing variance.
+    IF ((get_byte(b, first_diff - 1) + 1) & 255) = get_byte(a, first_diff - 1) THEN
+        RETURN 1;
+    ELSE
+        RETURN -1;
     END IF;
 END;
 $$ LANGUAGE plpgsql;
