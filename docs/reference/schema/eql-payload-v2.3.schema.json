@@ -83,6 +83,53 @@
       "additionalProperties": false
     },
 
+    "SteVecQueryPayload": {
+      "title": "STE vector query payload",
+      "description": "Shape used as the right-hand needle of `@>` containment against an `eql_v2_encrypted` column. Same outer shape as `SteVecPayload` (a top-level `sv` array) but elements explicitly omit `c` — a containment query matches indexes (`s` + `hm`/`oc`), never ciphertexts. Modelled in EQL by the `eql_v2.stevec_query` DOMAIN, which enforces the no-`c` invariant via a CHECK constraint. Use the standard DOMAIN cast to construct: `'{\"sv\":[...]}'::eql_v2.stevec_query`.",
+      "type": "object",
+      "properties": {
+        "sv": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SteVecQueryElement" }
+        }
+      },
+      "required": ["sv"],
+      "additionalProperties": false
+    },
+
+    "SteVecQueryElement": {
+      "title": "STE vector query element",
+      "description": "One entry inside an `sv` query array. Differs from `SteVecElement` in that `c` (ciphertext) is forbidden — a query payload matches indexes, not ciphertexts. Otherwise identical: carries the per-element selector `s` and exactly one of `hm` / `oc`.",
+      "type": "object",
+      "properties": {
+        "s": {
+          "type": "string",
+          "description": "Selector — deterministic per (path, key) within the document. Required."
+        },
+        "a": {
+          "type": "boolean",
+          "description": "Array marker. Optional. True when the selector points at a JSON array context."
+        },
+        "hm": { "$ref": "#/$defs/IndexTerms/properties/hm" },
+        "oc": { "$ref": "#/$defs/IndexTerms/properties/oc" }
+      },
+      "required": ["s"],
+      "allOf": [
+        {
+          "description": "A query element must NOT carry `c`. Containment matches selectors + index terms, not ciphertexts.",
+          "not": { "required": ["c"] }
+        },
+        {
+          "description": "Exactly one of `hm` or `oc` must be present, mirroring `SteVecElement`.",
+          "oneOf": [
+            { "required": ["hm"] },
+            { "required": ["oc"] }
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
+
     "SteVecElement": {
       "title": "STE vector element",
       "description": "One entry inside `sv`. Distinct from the root payload: carries a per-element selector `s` and an array flag `a`, but never an `i`, `v`, or nested `sv`. Every element carries exactly one of two equality / ordering terms — `hm` (HMAC-256) for boolean leaves and for the placeholder entries that represent array / object roots, or `oc` (CLLW ORE) for string and number leaves. They are mutually exclusive: cipherstash-suite emits one and only one per entry; an element with both terms or with neither is malformed.",
