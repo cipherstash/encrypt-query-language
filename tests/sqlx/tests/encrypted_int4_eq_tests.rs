@@ -9,9 +9,7 @@ use anyhow::Result;
 use sqlx::PgPool;
 
 fn payload(hm: &str) -> String {
-    format!(
-        r#"{{"v":2,"i":{{"t":"typed","c":"int_col"}},"c":"ct-{hm}","hm":"{hm}"}}"#
-    )
+    format!(r#"{{"v":2,"i":{{"t":"typed","c":"int_col"}},"c":"ct-{hm}","hm":"{hm}"}}"#)
 }
 
 async fn setup_eq_table(
@@ -30,12 +28,10 @@ async fn setup_eq_table(
     .await?;
 
     for hm in hmacs {
-        sqlx::query(
-            "INSERT INTO typed_int4_eq(value) VALUES ($1::jsonb::eql_v2_int4_eq)",
-        )
-        .bind(payload(hm))
-        .execute(&mut **tx)
-        .await?;
+        sqlx::query("INSERT INTO typed_int4_eq(value) VALUES ($1::jsonb::eql_v2_int4_eq)")
+            .bind(payload(hm))
+            .execute(&mut **tx)
+            .await?;
     }
     Ok(())
 }
@@ -51,8 +47,12 @@ async fn eq_engages_hmac_btree_for_equality(pool: PgPool) -> Result<()> {
     )
     .execute(&mut *tx)
     .await?;
-    sqlx::query("ANALYZE typed_int4_eq").execute(&mut *tx).await?;
-    sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
+    sqlx::query("ANALYZE typed_int4_eq")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("SET LOCAL enable_seqscan = off")
+        .execute(&mut *tx)
+        .await?;
 
     let needle = payload("bbb");
     let plan: Vec<String> = sqlx::query_scalar(&format!(
@@ -103,9 +103,18 @@ async fn eq_cross_type_shapes_for_equality(pool: PgPool) -> Result<()> {
     let needle = payload("bbb");
 
     for sql in [
-        format!("SELECT count(*) FROM typed_int4_eq WHERE value = '{}'::jsonb::eql_v2_int4_eq", needle),
-        format!("SELECT count(*) FROM typed_int4_eq WHERE value = '{}'::jsonb", needle),
-        format!("SELECT count(*) FROM typed_int4_eq WHERE '{}'::jsonb = value", needle),
+        format!(
+            "SELECT count(*) FROM typed_int4_eq WHERE value = '{}'::jsonb::eql_v2_int4_eq",
+            needle
+        ),
+        format!(
+            "SELECT count(*) FROM typed_int4_eq WHERE value = '{}'::jsonb",
+            needle
+        ),
+        format!(
+            "SELECT count(*) FROM typed_int4_eq WHERE '{}'::jsonb = value",
+            needle
+        ),
     ] {
         let count: i64 = sqlx::query_scalar(&sql).fetch_one(&mut *tx).await?;
         assert_eq!(count, 1, "= shape must match one row; sql: {sql}");

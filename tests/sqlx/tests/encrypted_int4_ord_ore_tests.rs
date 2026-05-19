@@ -80,13 +80,19 @@ async fn encrypted_int4_equality_cross_type_shapes(pool: PgPool) -> Result<()> {
     assert_eq!(ids, vec![42], "(domain, domain) =");
 
     // (domain, jsonb)
-    let ids: Vec<i32> =
-        plaintexts_matching(&pool, &format!("payload::eql_v2_int4_ord_ore = '{lit}'::jsonb")).await?;
+    let ids: Vec<i32> = plaintexts_matching(
+        &pool,
+        &format!("payload::eql_v2_int4_ord_ore = '{lit}'::jsonb"),
+    )
+    .await?;
     assert_eq!(ids, vec![42], "(domain, jsonb) =");
 
     // (jsonb, domain) — ORM bind shape
-    let ids: Vec<i32> =
-        plaintexts_matching(&pool, &format!("'{lit}'::jsonb = payload::eql_v2_int4_ord_ore")).await?;
+    let ids: Vec<i32> = plaintexts_matching(
+        &pool,
+        &format!("'{lit}'::jsonb = payload::eql_v2_int4_ord_ore"),
+    )
+    .await?;
     assert_eq!(ids, vec![42], "(jsonb, domain) =");
 
     Ok(())
@@ -112,8 +118,11 @@ async fn encrypted_int4_inequality_against_42(pool: PgPool) -> Result<()> {
     assert_eq!(ids, expected, "<> against 42 should exclude only 42");
 
     // Reverse shape sweep
-    let ids: Vec<i32> =
-        plaintexts_matching(&pool, &format!("'{lit}'::jsonb <> payload::eql_v2_int4_ord_ore")).await?;
+    let ids: Vec<i32> = plaintexts_matching(
+        &pool,
+        &format!("'{lit}'::jsonb <> payload::eql_v2_int4_ord_ore"),
+    )
+    .await?;
     assert_eq!(ids, expected, "reverse-shape <> against 42");
 
     Ok(())

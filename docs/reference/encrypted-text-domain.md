@@ -87,4 +87,4 @@ src/encrypted_domain/
 
 ## What `encrypted_text` proves about the architecture
 
-Functional indexes engage on real Proxy output across all three signature shapes for both `=` and `~~`. HMAC and bloom dispatch independently. ORM-bound `jsonb` parameters route to the right operator without per-query rewriting. This is the cleanest of the three domains — `encrypted_int4` (range ops) and `encrypted_jsonb` (no top-level `hm`) hit limitations that text doesn't.
+Functional indexes engage on real Proxy output across all three signature shapes for both `=` and `~~`. HMAC and bloom dispatch independently. ORM-bound `jsonb` parameters route to the right operator without per-query rewriting. This is the cleanest of the domains — the `eql_v2_int4` variant family (range ops; see `docs/reference/encrypted-int4-domain.md`) and `encrypted_jsonb` (no top-level `hm`) hit limitations that text doesn't.
