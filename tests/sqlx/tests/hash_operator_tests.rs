@@ -224,35 +224,24 @@ async fn hash_function_falls_back_to_hmac(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
-async fn hash_function_falls_back_when_hmac_absent(pool: PgPool) -> Result<()> {
-    // Post-flip, hash_encrypted is inlinable SQL and falls back to hashing the
-    // encrypted payload bytes when `hm` is absent. The fallback is what keeps
-    // HashAggregate from degrading to O(N^2) on a single NULL-hash bucket when
-    // a column without `hm` is grouped.
+async fn hash_function_returns_null_when_hmac_absent(pool: PgPool) -> Result<()> {
+    // U-002 contract: equality on `eql_v2_encrypted` is hm-only at the root,
+    // and `hash_encrypted` mirrors that. On a column without `hm` (e.g. an
+    // ore-only payload), the inlined body reduces to
+    // `hashtext(hmac_256(val)::text)` — `hmac_256(val)` returns NULL, and
+    // `hashtext(NULL)` propagates NULL. Misconfiguration surfaces as the
+    // hash opclass machinery erroring on the NULL return, not as a silent
+    // wrong-grouping. This test pins the NULL return at the function level.
 
-    let h1: Option<i32> =
+    let h: Option<i32> =
         sqlx::query_scalar("SELECT eql_v2.hash_encrypted(create_encrypted_json(1, 'ob'))")
             .fetch_one(&pool)
             .await
-            .context("hash_encrypted on ore-only value should not error")?;
-
-    let h2: Option<i32> =
-        sqlx::query_scalar("SELECT eql_v2.hash_encrypted(create_encrypted_json(2, 'ob'))")
-            .fetch_one(&pool)
-            .await
-            .context("hash_encrypted on a second ore-only value should not error")?;
+            .context("hash_encrypted on ore-only value")?;
 
     assert!(
-        h1.is_some(),
-        "hash_encrypted on ore-only should yield a hash"
-    );
-    assert!(
-        h2.is_some(),
-        "hash_encrypted on ore-only should yield a hash"
-    );
-    assert_ne!(
-        h1, h2,
-        "distinct ciphertexts must hash differently — otherwise GROUP BY on a misconfigured column degrades to O(N^2)"
+        h.is_none(),
+        "hash_encrypted on a column without `hm` must return NULL (caller responsibility to configure a `unique` index)"
     );
 
     Ok(())
@@ -355,20 +344,24 @@ async fn in_subquery_with_encrypted_column(pool: PgPool) -> Result<()> {
 // still works but the inner element must carry hm to be hashable.
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
-async fn multi_element_ste_vec_falls_back(pool: PgPool) -> Result<()> {
-    // Multi-element STE vec has no top-level `hm` (only sv-element terms).
-    // Post-flip the function falls back to data-hashing rather than raising,
-    // mirroring the misconfig contract documented in U-002.
+async fn multi_element_ste_vec_returns_null(pool: PgPool) -> Result<()> {
+    // A multi-element STE vec (`{i, v, sv: [...]}`) has no root `hm` — `hm`
+    // lives on sv elements, not at the root. `hash_encrypted` is documented
+    // as operating on the root payload only; for grouping by an extracted
+    // field, callers use `GROUP BY eql_v2.hmac_256(col, '<selector>')`
+    // directly (or the ste_vec_entry recipe). At the root, this returns NULL
+    // — surfacing as a clear hash-machinery error if someone tries to
+    // `GROUP BY` the column itself without configuring `hm`.
 
     let h: Option<i32> =
         sqlx::query_scalar("SELECT eql_v2.hash_encrypted((get_array_ste_vec())::eql_v2_encrypted)")
             .fetch_one(&pool)
             .await
-            .context("hash_encrypted on multi-element ste_vec should not error")?;
+            .context("hash_encrypted on multi-element ste_vec")?;
 
     assert!(
-        h.is_some(),
-        "fallback hash should be non-null for a non-null input"
+        h.is_none(),
+        "hash_encrypted on a multi-element ste_vec (no root `hm`) must return NULL"
     );
 
     Ok(())
