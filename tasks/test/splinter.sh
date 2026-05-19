@@ -68,13 +68,27 @@ function_search_path_mutable	eql_v2	grouped_value	function	Aggregate: same as mi
 function_search_path_mutable	eql_v2	encrypted_text_eq	function	Domain prototype: inlineable wrapper that reduces to eql_v2.hmac_256(a::jsonb) = eql_v2.hmac_256(b::jsonb). SET search_path would disable SQL function inlining and break functional-index matching on hmac_256(value::jsonb). Three overloads: (domain, domain), (domain, jsonb), (jsonb, domain).
 function_search_path_mutable	eql_v2	encrypted_text_neq	function	Domain prototype: same rationale as encrypted_text_eq.
 function_search_path_mutable	eql_v2	encrypted_text_like	function	Domain prototype: inlines to eql_v2.bloom_filter(a::jsonb) @> eql_v2.bloom_filter(b::jsonb) for ~~/~~* engagement of the GIN index on bloom_filter(value::jsonb).
-function_search_path_mutable	eql_v2	encrypted_int4_ope_key	function	Domain prototype: OPE-key extractor used by both the comparison function bodies and the functional index. Inlines (encrypted_int4 overload, jsonb overload).
-function_search_path_mutable	eql_v2	encrypted_int4_eq	function	Domain prototype: same hmac_256 rationale as encrypted_text_eq.
-function_search_path_mutable	eql_v2	encrypted_int4_neq	function	Domain prototype: same as encrypted_int4_eq.
-function_search_path_mutable	eql_v2	encrypted_int4_lt	function	Domain prototype: inlines to eql_v2.encrypted_int4_ope_key(a) < eql_v2.encrypted_int4_ope_key(b) for index engagement.
-function_search_path_mutable	eql_v2	encrypted_int4_lte	function	Domain prototype: same as encrypted_int4_lt.
-function_search_path_mutable	eql_v2	encrypted_int4_gt	function	Domain prototype: same as encrypted_int4_lt.
-function_search_path_mutable	eql_v2	encrypted_int4_gte	function	Domain prototype: same as encrypted_int4_lt.
+function_search_path_mutable	eql_v2	eql_v2_int4_eq	function	eql_v2_int4 default-variant equality: HMAC wrapper, same rationale as encrypted_text_eq. SET search_path would disable SQL function inlining (see PostgreSQL inline_function) and break functional-index matching on hmac_256(value::jsonb). Three overloads: (domain, domain), (domain, jsonb), (jsonb, domain).
+function_search_path_mutable	eql_v2	eql_v2_int4_neq	function	eql_v2_int4 default-variant inequality: same hmac_256 inlining rationale as eql_v2_int4_eq. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_lt	function	eql_v2_int4 default-variant range: inlines to eql_v2.ore_block_u64_8_256(a::jsonb) < eql_v2.ore_block_u64_8_256(b::jsonb) for functional-btree engagement on the ORE-block extractor. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_lte	function	eql_v2_int4 default-variant range: same ORE-block rationale as eql_v2_int4_lt. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_gt	function	eql_v2_int4 default-variant range: same ORE-block rationale as eql_v2_int4_lt. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_gte	function	eql_v2_int4 default-variant range: same ORE-block rationale as eql_v2_int4_lt. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_eq_eq	function	eql_v2_int4_eq variant equality: HMAC wrapper, same hmac_256 inlining rationale as encrypted_text_eq. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_eq_neq	function	eql_v2_int4_eq variant inequality: same hmac_256 inlining rationale as eql_v2_int4_eq_eq. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_ore_eq	function	eql_v2_int4_ord_ore variant equality: HMAC wrapper, same hmac_256 inlining rationale as encrypted_text_eq. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_ore_neq	function	eql_v2_int4_ord_ore variant inequality: same hmac_256 inlining rationale as eql_v2_int4_ord_ore_eq. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_ore_lt	function	eql_v2_int4_ord_ore variant range: inlines to eql_v2.ore_block_u64_8_256(a::jsonb) < eql_v2.ore_block_u64_8_256(b::jsonb) for functional-btree engagement on the ORE-block extractor. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_ore_lte	function	eql_v2_int4_ord_ore variant range: same ORE-block rationale as eql_v2_int4_ord_ore_lt. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_ore_gt	function	eql_v2_int4_ord_ore variant range: same ORE-block rationale as eql_v2_int4_ord_ore_lt. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_ore_gte	function	eql_v2_int4_ord_ore variant range: same ORE-block rationale as eql_v2_int4_ord_ore_lt. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_ope_eq	function	eql_v2_int4_ord_ope variant equality: HMAC wrapper, same hmac_256 inlining rationale as encrypted_text_eq. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_ope_neq	function	eql_v2_int4_ord_ope variant inequality: same hmac_256 inlining rationale as eql_v2_int4_ord_ope_eq. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_ope_lt	function	eql_v2_int4_ord_ope variant range: inlines to eql_v2.eql_v2_int4_ord_ope_ope_key(a) < eql_v2.eql_v2_int4_ord_ope_ope_key(b) (bytea lex-compare on OPE bytes) for functional-btree engagement on the OPE-key extractor. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_ope_lte	function	eql_v2_int4_ord_ope variant range: same OPE-key bytea lex-compare rationale as eql_v2_int4_ord_ope_lt. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_ope_gt	function	eql_v2_int4_ord_ope variant range: same OPE-key bytea lex-compare rationale as eql_v2_int4_ord_ope_lt. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_ope_gte	function	eql_v2_int4_ord_ope variant range: same OPE-key bytea lex-compare rationale as eql_v2_int4_ord_ope_lt. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_ope_ope_key	function	eql_v2_int4_ord_ope OPE-key extractor: used both by the range wrapper bodies and by the functional btree index expression ((eql_v2.eql_v2_int4_ord_ope_ope_key(col::jsonb))). Must inline. Two overloads (domain input, jsonb input).
 function_search_path_mutable	eql_v2	encrypted_jsonb_array	function	Domain prototype: ste-vec array extractor used by the functional GIN index and by encrypted_jsonb_contains / encrypted_jsonb_contained_by. Two overloads.
 function_search_path_mutable	eql_v2	encrypted_jsonb_eq	function	Domain prototype: hmac_256 rationale.
 function_search_path_mutable	eql_v2	encrypted_jsonb_neq	function	Domain prototype: hmac_256 rationale.
