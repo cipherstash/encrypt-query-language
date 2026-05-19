@@ -201,7 +201,6 @@ async fn ste_vec_contains_self(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
-#[ignore = "Strict equality contract (#219): same as ste_vec_contains_self. Fixture sv elements lack `hm`, so the element-compare fallback (now hm-only) returns NULL."]
 async fn ste_vec_contains_term(pool: PgPool) -> Result<()> {
     // Test: ste_vec_contains() returns true when value contains extracted term
 
