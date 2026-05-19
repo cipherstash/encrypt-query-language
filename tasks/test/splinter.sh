@@ -94,6 +94,8 @@ function_search_path_mutable	eql_v2	ore_cllw_lt	function	Inner comparator for th
 function_search_path_mutable	eql_v2	ore_cllw_lte	function	Inner comparator for the `eql_v2.ore_cllw` type's `<=` operator (#221). Same rationale as `ore_cllw_eq`.
 function_search_path_mutable	eql_v2	ore_cllw_gt	function	Inner comparator for the `eql_v2.ore_cllw` type's `>` operator (#221). Same rationale as `ore_cllw_eq`.
 function_search_path_mutable	eql_v2	ore_cllw_gte	function	Inner comparator for the `eql_v2.ore_cllw` type's `>=` operator (#221). Same rationale as `ore_cllw_eq`.
+function_search_path_mutable	eql_v2	->	function	Typed sv-element selector lookup (U-007): inlinable SQL so the planner can fold `col -> '<sel>'` into the calling query, preserving functional-index match for the chained recipes `WHERE col -> 'sel' = $1::ste_vec_entry` (via eq_term) and `ORDER BY eql_v2.ore_cllw(col -> 'sel')`. Three overloads: (enc, text), (enc, enc), (enc, int).
+function_search_path_mutable	eql_v2	eq_term	function	XOR-aware equality term extractor on a ste_vec entry (U-007): coalesces hm and oc as bytea. Must inline so `eql_v2.eq_term(col -> 'sel')` folds into the calling query and matches a functional hash index built on the same expression — same precedent as ore_cllw / hmac_256 extractors on ste_vec_entry.
 function_search_path_mutable	eql_v2	min	function	Aggregate (splinter labels these type=function): ALTER AGGREGATE has no SET configuration_parameter syntax, and ALTER ROUTINE/FUNCTION reject aggregates. The aggregate's SFUNC has a pinned search_path.
 function_search_path_mutable	eql_v2	max	function	Aggregate: same as min.
 function_search_path_mutable	eql_v2	grouped_value	function	Aggregate: same as min.

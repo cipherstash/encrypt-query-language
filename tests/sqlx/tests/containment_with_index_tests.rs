@@ -488,11 +488,10 @@ async fn stevec_query_domain_rejects_payloads_with_c(_pool: PgPool) -> Result<()
 
 #[sqlx::test]
 async fn stevec_query_domain_rejects_non_sv_objects(_pool: PgPool) -> Result<()> {
-    let result = sqlx::query_scalar::<_, bool>(
-        "SELECT '{\"x\":1}'::eql_v2.stevec_query IS NOT NULL",
-    )
-    .fetch_one(&_pool)
-    .await;
+    let result =
+        sqlx::query_scalar::<_, bool>("SELECT '{\"x\":1}'::eql_v2.stevec_query IS NOT NULL")
+            .fetch_one(&_pool)
+            .await;
 
     assert!(result.is_err());
     let msg = format!("{}", result.unwrap_err());
