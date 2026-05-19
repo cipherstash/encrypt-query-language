@@ -296,6 +296,13 @@ async fn encrypted_text_unsupported_operators_are_blocked(pool: PgPool) -> Resul
     Ok(())
 }
 
+fn jsonb_payload(ciphertext: &str, hm: &str, selector: &str, b3: &str) -> String {
+    format!(
+        r#"{{"v":2,"i":{{"t":"typed","c":"json_col"}},"c":"{}","hm":"{}","sv":[{{"s":"{}","b3":"{}","c":"{}-leaf"}}]}}"#,
+        ciphertext, hm, selector, b3, ciphertext
+    )
+}
+
 #[sqlx::test]
 async fn encrypted_jsonb_equality_and_inequality_use_hmac_index(pool: PgPool) -> Result<()> {
     let document = jsonb_payload("doc-ciphertext", "hm-doc", "selector-email", "b3-alice");
