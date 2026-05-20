@@ -79,23 +79,64 @@ BEGIN
   FROM pg_catalog.pg_proc p
   JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
   WHERE n.nspname = 'eql_v2'
-    AND p.pronargs = 2
     AND (
-      -- Same-type (encrypted, encrypted) operators that must inline.
-      -- `like`/`ilike` are the SQL helpers that `~~`/`~~*` delegate to;
-      -- both layers must inline to reach `bloom_filter(a) @> bloom_filter(b)`.
-      (p.proname IN ('=', '<>', '~~', '~~*', '@>', '<@',
-                     'jsonb_contains', 'jsonb_contained_by',
-                     'like', 'ilike')
-        AND p.proargtypes[0] = enc_oid AND p.proargtypes[1] = enc_oid)
-      -- Cross-type (encrypted, jsonb).
-      OR (p.proname IN ('=', '<>', '~~', '~~*',
-                        'jsonb_contains', 'jsonb_contained_by')
-        AND p.proargtypes[0] = enc_oid AND p.proargtypes[1] = jsonb_oid)
-      -- Cross-type (jsonb, encrypted).
-      OR (p.proname IN ('=', '<>', '~~', '~~*',
-                        'jsonb_contains', 'jsonb_contained_by')
-        AND p.proargtypes[0] = jsonb_oid AND p.proargtypes[1] = enc_oid)
+      -- Two-arg operator overloads on eql_v2_encrypted / jsonb. The
+      -- `pronargs = 2` filter is scoped to these arms because the helpers
+      -- below include single-argument extractors
+      -- (eql_v2_int4_ord_ope_ope_key) that must also remain inlineable.
+      ( p.pronargs = 2 AND (
+        -- Same-type (encrypted, encrypted) operators that must inline.
+        -- `like`/`ilike` are the SQL helpers that `~~`/`~~*` delegate to;
+        -- both layers must inline to reach `bloom_filter(a) @> bloom_filter(b)`.
+        (p.proname IN ('=', '<>', '~~', '~~*', '@>', '<@',
+                       'jsonb_contains', 'jsonb_contained_by',
+                       'like', 'ilike')
+          AND p.proargtypes[0] = enc_oid AND p.proargtypes[1] = enc_oid)
+        -- Cross-type (encrypted, jsonb).
+        OR (p.proname IN ('=', '<>', '~~', '~~*',
+                          'jsonb_contains', 'jsonb_contained_by')
+          AND p.proargtypes[0] = enc_oid AND p.proargtypes[1] = jsonb_oid)
+        -- Cross-type (jsonb, encrypted).
+        OR (p.proname IN ('=', '<>', '~~', '~~*',
+                          'jsonb_contains', 'jsonb_contained_by')
+          AND p.proargtypes[0] = jsonb_oid AND p.proargtypes[1] = enc_oid)
+      ) )
+      -- eql_v2_int4 variant family inline-critical wrappers. Name-only
+      -- match (any arity) so the single-arg OPE-key extractor is covered
+      -- alongside the two-arg operator wrappers. Blockers are intentionally
+      -- excluded — they are PL/pgSQL and must NOT inline.
+      --
+      -- Exception: the _ord_ore and default eql_v2_int4 range wrappers
+      -- (_lt/_lte/_gt/_gte) are allowlisted for parity with _ord_ope but
+      -- do not currently engage any functional btree (the inner
+      -- compare_ore_block_u64_8_256 is PL/pgSQL). Range queries on those
+      -- variants are seq-scan by design; see docs/upgrading/v2.4.md U-001.
+      -- They are still allowlisted so that any future migration of
+      -- compare_ore_block_u64_8_256 to an inlineable form lights up the
+      -- indexed path without an allowlist edit.
+      OR p.proname IN (
+        'eql_v2_int4_eq',                   -- default variant equality
+        'eql_v2_int4_neq',
+        'eql_v2_int4_lt',
+        'eql_v2_int4_lte',
+        'eql_v2_int4_gt',
+        'eql_v2_int4_gte',
+        'eql_v2_int4_eq_eq',                -- _eq variant equality
+        'eql_v2_int4_eq_neq',
+        'eql_v2_int4_ord_ore_eq',           -- _ord_ore variant equality + range
+        'eql_v2_int4_ord_ore_neq',
+        'eql_v2_int4_ord_ore_lt',
+        'eql_v2_int4_ord_ore_lte',
+        'eql_v2_int4_ord_ore_gt',
+        'eql_v2_int4_ord_ore_gte',
+        'eql_v2_int4_ord_ope_eq',           -- _ord_ope variant equality + range
+        'eql_v2_int4_ord_ope_neq',
+        'eql_v2_int4_ord_ope_lt',
+        'eql_v2_int4_ord_ope_lte',
+        'eql_v2_int4_ord_ope_gt',
+        'eql_v2_int4_ord_ope_gte',
+        'eql_v2_int4_ord_ope_ope_key'       -- _ord_ope extractor (functional-index expr)
+      )
     );
 
   FOR fn_oid IN
