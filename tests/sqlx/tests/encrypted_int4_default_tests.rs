@@ -190,3 +190,69 @@ async fn default_unsupported_operators_raise(pool: PgPool) -> Result<()> {
 
     Ok(())
 }
+
+#[sqlx::test]
+async fn default_opclass_indexes_range(pool: PgPool) -> Result<()> {
+    // The default eql_v2_int4 variant mirrors _ord_ore: range queries
+    // are served by its btree operator class
+    // (eql_v2.eql_v2_int4_operator_class), which must be named
+    // explicitly in CREATE INDEX (a bare USING btree (col) resolves to
+    // jsonb_ops via the domain's base type).
+    let mut tx = pool.begin().await?;
+    sqlx::query(
+        "CREATE TEMP TABLE int4_oc (\
+             plaintext integer, \
+             value eql_v2_int4\
+         ) ON COMMIT DROP",
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(
+        "INSERT INTO int4_oc(plaintext, value) \
+         SELECT plaintext, payload::eql_v2_int4 FROM encrypted_int4_plaintext",
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(
+        "CREATE INDEX int4_oc_idx ON int4_oc \
+         USING btree (value eql_v2.eql_v2_int4_operator_class)",
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query("ANALYZE int4_oc").execute(&mut *tx).await?;
+    sqlx::query("SET LOCAL enable_seqscan = off")
+        .execute(&mut *tx)
+        .await?;
+
+    let pivot: String = sqlx::query_scalar(
+        "SELECT payload::text FROM encrypted_int4_plaintext WHERE plaintext = 10",
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    let lit = pivot.replace('\'', "''");
+
+    for op in ["<", "<=", ">", ">="] {
+        let plan: Vec<String> = sqlx::query_scalar(&format!(
+            "EXPLAIN SELECT * FROM int4_oc WHERE value {op} '{lit}'::jsonb::eql_v2_int4"
+        ))
+        .fetch_all(&mut *tx)
+        .await?;
+        let plan_text = plan.join("\n");
+        assert!(
+            plan_text.contains("int4_oc_idx"),
+            "{op} must engage the eql_v2_int4 opclass btree index; plan:\n{plan_text}"
+        );
+    }
+
+    // Correctness: < 10 returns the five fixture values below 10.
+    let mut ids: Vec<i32> = sqlx::query_scalar(&format!(
+        "SELECT plaintext FROM int4_oc WHERE value < '{lit}'::jsonb::eql_v2_int4"
+    ))
+    .fetch_all(&mut *tx)
+    .await?;
+    ids.sort();
+    assert_eq!(ids, vec![-100, -1, 1, 2, 5], "< 10 via opclass index");
+
+    tx.commit().await?;
+    Ok(())
+}

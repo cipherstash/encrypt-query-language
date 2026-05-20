@@ -11,7 +11,7 @@ payloads must carry.
 |------------------------------|--------------------------------|------------------------|------------------|
 | `public.eql_v2_int4_ct`      | none (all blockers)            | `c` only               | n/a              |
 | `public.eql_v2_int4_eq`      | `=`, `<>`                      | `hm`                   | functional btree on `((eql_v2.hmac_256(col::jsonb)))` for `=`; `<>` seq-scan |
-| `public.eql_v2_int4_ord_ore` | `=`, `<>`, `<`, `<=`, `>`, `>=` | `hm`, `ob`             | btree (equality); range seq-scan |
+| `public.eql_v2_int4_ord_ore` | `=`, `<>`, `<`, `<=`, `>`, `>=` | `hm`, `ob`             | hmac functional btree (equality); btree operator class for range — name it explicitly, excluded from Supabase build |
 | `public.eql_v2_int4_ord_ope` | `=`, `<>`, `<`, `<=`, `>`, `>=` | `hm`, `opf`            | functional btree on `((eql_v2.eql_v2_int4_ord_ope_ope_key(col::jsonb)))` |
 | `public.eql_v2_int4`         | same as `_ord_ore`             | `hm`, `ob`             | same as `_ord_ore` |
 
@@ -41,20 +41,36 @@ USING btree ((eql_v2.hmac_256(age::jsonb)));
 
 Payload terms: `hm`, `ob`. Operators: `=`, `<>`, `<`, `<=`, `>`, `>=`.
 
-Recommended index for equality:
+Recommended indexes:
 
 ```sql
+-- Equality: functional btree on the hmac extractor.
 CREATE INDEX orders_amount_hmac_idx ON orders
 USING btree ((eql_v2.hmac_256(amount::jsonb)));
+
+-- Range: btree operator class — name it explicitly. A bare
+-- USING btree (amount) resolves to jsonb_ops (the domain base type's
+-- default) and will not serve ORE range.
+CREATE INDEX orders_amount_ore_idx ON orders
+USING btree (amount eql_v2.eql_v2_int4_ord_ore_operator_class);
+-- default eql_v2_int4: name eql_v2.eql_v2_int4_operator_class.
 ```
 
-Range queries are seq-scan: `compare_ore_block_u64_8_256` is PL/pgSQL
-and does not inline. If range performance matters, use
-`eql_v2_int4_ord_ope` instead.
+Range queries are served by the btree operator class, not a functional
+index: `compare_ore_block_u64_8_256` is PL/pgSQL, so the range wrappers
+are deliberately non-inlinable (`plpgsql IMMUTABLE`) and the planner
+matches the surviving `<` / `<=` / `>` / `>=` operator nodes to the
+operator class. This mirrors how the core `eql_v2_encrypted` type
+indexes ORE.
+
+Supabase caveat: operator classes are stripped from the EQL Supabase
+build, so `_ord_ore` range falls back to seq-scan there — use
+`eql_v2_int4_ord_ope` for indexed range on Supabase.
 
 ORDER BY caveat: `ORDER BY col` on a jsonb-backed domain follows
-native jsonb comparison, not ORE order. Sort by the extractor
-expression:
+native jsonb comparison, not ORE order — `ORDER BY` requests the
+column type's default sort order, which for a domain resolves to the
+base type, not the operator class. Sort by the extractor expression:
 
 ```sql
 ORDER BY eql_v2.ore_block_u64_8_256(col::jsonb)
@@ -97,9 +113,14 @@ col < $1::eql_v2_int4_ord_ope
                    ((eql_v2.eql_v2_int4_ord_ope_ope_key(col::jsonb)))
 ```
 
-For `_ord_ore`, the equivalent chain terminates in a PL/pgSQL
-function (`compare_ore_block_u64_8_256`) that the planner cannot
-inline; range predicates fall back to seq-scan.
+`_ord_ore` range does not use inlining at all. `compare_ore_block_u64_8_256`
+is PL/pgSQL, so its range wrappers are deliberately `plpgsql IMMUTABLE`
+— non-inlinable, which keeps the `<` / `<=` / `>` / `>=` operator nodes
+intact for the planner to match against the btree operator class
+`eql_v2.eql_v2_int4_ord_ore_operator_class`. The index access method
+calls the operator class's support comparator directly, per comparison;
+inlining is irrelevant to that path. This is the same mechanism the
+core `eql_v2_encrypted` type uses for ORE.
 
 ## File layout
 

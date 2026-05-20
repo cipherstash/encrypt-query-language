@@ -11,15 +11,17 @@
 //! 14 rows. Range pivots produce distinct cardinalities so swapped
 //! operators would fail the assertions, not silently pass.
 //!
-//! Tests cast `payload::eql_v2_int4_ord_ore` per-query so the fixture
-//! table itself stays JSONB-shaped. Range ordering is asserted via
-//! `ORDER BY eql_v2.ore_block_u64_8_256(payload::jsonb)` — sorting on
-//! the domain column directly would follow native jsonb comparison.
+//! Most tests cast `payload::eql_v2_int4_ord_ore` per-query so the
+//! fixture table itself stays JSONB-shaped.
 //!
-//! Range queries are seq-scan: compare_ore_block_u64_8_256 is
-//! PL/pgSQL and does not inline. No EXPLAIN engagement assertion
-//! for range; equality engagement is asserted on the hmac functional
-//! btree.
+//! Range indexing: `_ord_ore` range queries are served by the btree
+//! OPERATOR CLASS (`eql_v2.eql_v2_int4_ord_ore_operator_class`), not a
+//! functional index. The range wrappers are LANGUAGE plpgsql so the
+//! operator nodes survive for the planner to match the opclass index.
+//! `encrypted_int4_ord_ore_opclass_indexes_range` materialises the
+//! fixture into a typed column and asserts that a btree index naming
+//! the operator class explicitly engages for range queries. Equality
+//! engagement is asserted separately on the hmac functional btree.
 
 use anyhow::Result;
 use sqlx::PgPool;
@@ -239,11 +241,136 @@ async fn encrypted_int4_hmac_distinctness_sweep(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-// Range-op index engagement is not asserted here. `_ord_ore` is seq-scan
-// by design (see docs/upgrading/v2.4.md U-001 — compare_ore_block_u64_8_256
-// is PL/pgSQL and does not inline). Functional-btree engagement on the
-// OPE-key extractor is asserted in
-// encrypted_int4_ord_ope_tests.rs::encrypted_int4_ope_idx_engages_for_range.
+#[sqlx::test]
+async fn encrypted_int4_ord_ore_opclass_indexes_range(pool: PgPool) -> Result<()> {
+    // _ord_ore range queries are served by the btree OPERATOR CLASS
+    // (eql_v2.eql_v2_int4_ord_ore_operator_class), not a functional
+    // index. The range wrappers are LANGUAGE plpgsql, so the </<=/>/>=
+    // operator nodes survive (no inlining) for the planner to match
+    // against the opclass index — exactly how the core eql_v2_encrypted
+    // type indexes ORE.
+    //
+    // The opclass MUST be named explicitly in CREATE INDEX. A bare
+    // `USING btree (value)` resolves to jsonb_ops (the base type's
+    // default opclass — PostgreSQL resolves a domain column's default
+    // opclass via its base type), which cannot serve ORE range.
+    let mut tx = pool.begin().await?;
+
+    sqlx::query(
+        "CREATE TEMP TABLE ord_ore_oc (\
+             plaintext integer, \
+             value eql_v2_int4_ord_ore\
+         ) ON COMMIT DROP",
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(
+        "INSERT INTO ord_ore_oc(plaintext, value) \
+         SELECT plaintext, payload::eql_v2_int4_ord_ore FROM encrypted_int4_plaintext",
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(
+        "CREATE INDEX ord_ore_oc_idx ON ord_ore_oc \
+         USING btree (value eql_v2.eql_v2_int4_ord_ore_operator_class)",
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query("ANALYZE ord_ore_oc").execute(&mut *tx).await?;
+    sqlx::query("SET LOCAL enable_seqscan = off")
+        .execute(&mut *tx)
+        .await?;
+
+    let pivot: String = sqlx::query_scalar(
+        "SELECT payload::text FROM encrypted_int4_plaintext WHERE plaintext = 10",
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    let lit = pivot.replace('\'', "''");
+
+    // Every range operator must engage the opclass btree index.
+    for op in ["<", "<=", ">", ">="] {
+        let plan: Vec<String> = sqlx::query_scalar(&format!(
+            "EXPLAIN SELECT * FROM ord_ore_oc \
+             WHERE value {op} '{lit}'::jsonb::eql_v2_int4_ord_ore"
+        ))
+        .fetch_all(&mut *tx)
+        .await?;
+        let plan_text = plan.join("\n");
+        assert!(
+            plan_text.contains("ord_ore_oc_idx"),
+            "{op} must engage the opclass btree index; plan:\n{plan_text}"
+        );
+    }
+
+    tx.commit().await?;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn encrypted_int4_ord_ore_range_returns_correct_rows_via_index(pool: PgPool) -> Result<()> {
+    // Correctness companion to the engagement test above: with the
+    // opclass index in place and seqscan disabled, range predicates
+    // must still return the numerically-correct row set.
+    let mut tx = pool.begin().await?;
+    sqlx::query(
+        "CREATE TEMP TABLE ord_ore_oc2 (\
+             plaintext integer, \
+             value eql_v2_int4_ord_ore\
+         ) ON COMMIT DROP",
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(
+        "INSERT INTO ord_ore_oc2(plaintext, value) \
+         SELECT plaintext, payload::eql_v2_int4_ord_ore FROM encrypted_int4_plaintext",
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(
+        "CREATE INDEX ord_ore_oc2_idx ON ord_ore_oc2 \
+         USING btree (value eql_v2.eql_v2_int4_ord_ore_operator_class)",
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query("ANALYZE ord_ore_oc2").execute(&mut *tx).await?;
+    sqlx::query("SET LOCAL enable_seqscan = off")
+        .execute(&mut *tx)
+        .await?;
+
+    let pivot: String = sqlx::query_scalar(
+        "SELECT payload::text FROM encrypted_int4_plaintext WHERE plaintext = 10",
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    let lit = pivot.replace('\'', "''");
+
+    // Numeric ground truth against pivot 10 (fixture value set).
+    let cases: &[(&str, Vec<i32>)] = &[
+        ("<", vec![-100, -1, 1, 2, 5]),
+        ("<=", vec![-100, -1, 1, 2, 5, 10]),
+        (">", vec![17, 25, 42, 50, 100, 250, 1000, 9999]),
+        (">=", vec![10, 17, 25, 42, 50, 100, 250, 1000, 9999]),
+    ];
+    for (op, expected) in cases {
+        let mut ids: Vec<i32> = sqlx::query_scalar(&format!(
+            "SELECT plaintext FROM ord_ore_oc2 \
+             WHERE value {op} '{lit}'::jsonb::eql_v2_int4_ord_ore"
+        ))
+        .fetch_all(&mut *tx)
+        .await?;
+        ids.sort();
+        let mut want = expected.clone();
+        want.sort();
+        assert_eq!(
+            ids, want,
+            "{op} via opclass index must match numeric ground truth"
+        );
+    }
+
+    tx.commit().await?;
+    Ok(())
+}
 
 #[sqlx::test]
 async fn encrypted_int4_hmac_btree_engages_for_eq(pool: PgPool) -> Result<()> {

@@ -106,29 +106,22 @@ BEGIN
       -- alongside the two-arg operator wrappers. Blockers are intentionally
       -- excluded — they are PL/pgSQL and must NOT inline.
       --
-      -- Exception: the _ord_ore and default eql_v2_int4 range wrappers
-      -- (_lt/_lte/_gt/_gte) are allowlisted for parity with _ord_ope but
-      -- do not currently engage any functional btree (the inner
-      -- compare_ore_block_u64_8_256 is PL/pgSQL). Range queries on those
-      -- variants are seq-scan by design; see docs/upgrading/v2.4.md U-001.
-      -- They are still allowlisted so that any future migration of
-      -- compare_ore_block_u64_8_256 to an inlineable form lights up the
-      -- indexed path without an allowlist edit.
+      -- Equality wrappers (_eq / _neq on every variant) must inline so
+      -- the planner matches the functional hmac btree. The _ord_ope
+      -- range wrappers must inline so the planner matches the functional
+      -- OPE-key btree. The _ord_ore and default eql_v2_int4 RANGE
+      -- wrappers (_lt/_lte/_gt/_gte) are deliberately ABSENT — they are
+      -- LANGUAGE plpgsql by design (non-inlinable, so the operator node
+      -- survives for the btree operator class to match), and so must be
+      -- pinned like any other plpgsql function. See U-001 and
+      -- src/encrypted_domain/int4/int4_ord_ore_operator_class.sql.
       OR p.proname IN (
         'eql_v2_int4_eq',                   -- default variant equality
         'eql_v2_int4_neq',
-        'eql_v2_int4_lt',
-        'eql_v2_int4_lte',
-        'eql_v2_int4_gt',
-        'eql_v2_int4_gte',
         'eql_v2_int4_eq_eq',                -- _eq variant equality
         'eql_v2_int4_eq_neq',
-        'eql_v2_int4_ord_ore_eq',           -- _ord_ore variant equality + range
+        'eql_v2_int4_ord_ore_eq',           -- _ord_ore variant equality (range is plpgsql/opclass)
         'eql_v2_int4_ord_ore_neq',
-        'eql_v2_int4_ord_ore_lt',
-        'eql_v2_int4_ord_ore_lte',
-        'eql_v2_int4_ord_ore_gt',
-        'eql_v2_int4_ord_ore_gte',
         'eql_v2_int4_ord_ope_eq',           -- _ord_ope variant equality + range
         'eql_v2_int4_ord_ope_neq',
         'eql_v2_int4_ord_ope_lt',

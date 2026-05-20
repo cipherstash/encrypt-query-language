@@ -7,10 +7,18 @@
 
 --! @file encrypted_domain/int4/int4_default.sql
 --! @brief Default int4 variant. Operator surface identical to
---!        eql_v2_int4_ord_ore (HMAC equality + ORE-block ordering;
---!        range is seq-scan). Provided as the unqualified
---!        eql_v2_int4 name for callers that don't need to call out
---!        the variant explicitly. Payload-term assumption: `hm`, `ob`.
+--!        eql_v2_int4_ord_ore (HMAC equality + ORE-block ordering).
+--!        Provided as the unqualified eql_v2_int4 name for callers
+--!        that don't need to call out the variant explicitly.
+--!        Payload-term assumption: `hm`, `ob`.
+--!
+--! Equality wrappers are LANGUAGE sql IMMUTABLE (inline → functional
+--! hmac btree). Range wrappers are LANGUAGE plpgsql IMMUTABLE
+--! (non-inlinable → the < / <= / > / >= operator nodes survive for
+--! the btree operator class in int4_default_operator_class.sql to
+--! match). The class must be named explicitly in CREATE INDEX —
+--! see int4_ord_ore.sql for the full rationale and
+--! docs/upgrading/v2.4.md U-001.
 --!
 --! Wrapper bodies are duplicated from int4_ord_ore.sql; the
 --! INLINEABLE_DOMAIN_FUNCTIONS test and
@@ -68,104 +76,141 @@ RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v2.hmac_256(a) <> eql_v2.hmac_256(b::jsonb) $$;
 
 -- <, <=, >, >= (ORE-block range wrappers, 3 shapes each)
--- Range is seq-scan: compare_ore_block_u64_8_256 is PL/pgSQL and does not
--- inline. Wrappers stay LANGUAGE sql for parity with _ord_ore. See U-001.
+-- LANGUAGE plpgsql on purpose: a non-inlinable operator function keeps
+-- the < / <= / > / >= operator node intact for the btree operator class
+-- (int4_default_operator_class.sql) to match. Mirrors int4_ord_ore.sql.
 
 --! @brief Less-than wrapper for eql_v2_int4. Reduces to compare_ore_block_u64_8_256 < 0.
 --! @param a eql_v2_int4
 --! @param b eql_v2_int4
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_lt(a eql_v2_int4, b eql_v2_int4)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) < 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) < 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Less-than wrapper for eql_v2_int4 (domain, jsonb).
 --! @param a eql_v2_int4
 --! @param b jsonb
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_lt(a eql_v2_int4, b jsonb)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::eql_v2_encrypted) < 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::eql_v2_encrypted) < 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Less-than wrapper for eql_v2_int4 (jsonb, domain).
 --! @param a jsonb
 --! @param b eql_v2_int4
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_lt(a jsonb, b eql_v2_int4)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) < 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) < 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Less-than-or-equal wrapper for eql_v2_int4.
 --! @param a eql_v2_int4
 --! @param b eql_v2_int4
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_lte(a eql_v2_int4, b eql_v2_int4)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) <= 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) <= 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Less-than-or-equal wrapper for eql_v2_int4 (domain, jsonb).
 --! @param a eql_v2_int4
 --! @param b jsonb
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_lte(a eql_v2_int4, b jsonb)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::eql_v2_encrypted) <= 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::eql_v2_encrypted) <= 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Less-than-or-equal wrapper for eql_v2_int4 (jsonb, domain).
 --! @param a jsonb
 --! @param b eql_v2_int4
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_lte(a jsonb, b eql_v2_int4)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) <= 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) <= 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Greater-than wrapper for eql_v2_int4.
 --! @param a eql_v2_int4
 --! @param b eql_v2_int4
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_gt(a eql_v2_int4, b eql_v2_int4)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) > 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) > 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Greater-than wrapper for eql_v2_int4 (domain, jsonb).
 --! @param a eql_v2_int4
 --! @param b jsonb
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_gt(a eql_v2_int4, b jsonb)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::eql_v2_encrypted) > 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::eql_v2_encrypted) > 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Greater-than wrapper for eql_v2_int4 (jsonb, domain).
 --! @param a jsonb
 --! @param b eql_v2_int4
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_gt(a jsonb, b eql_v2_int4)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) > 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) > 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Greater-than-or-equal wrapper for eql_v2_int4.
 --! @param a eql_v2_int4
 --! @param b eql_v2_int4
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_gte(a eql_v2_int4, b eql_v2_int4)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) >= 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) >= 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Greater-than-or-equal wrapper for eql_v2_int4 (domain, jsonb).
 --! @param a eql_v2_int4
 --! @param b jsonb
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_gte(a eql_v2_int4, b jsonb)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::eql_v2_encrypted) >= 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::eql_v2_encrypted) >= 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Greater-than-or-equal wrapper for eql_v2_int4 (jsonb, domain).
 --! @param a jsonb
 --! @param b eql_v2_int4
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_gte(a jsonb, b eql_v2_int4)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) >= 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) >= 0; END; $$
+LANGUAGE plpgsql;
 
 -- ~~, ~~*, @>, <@ (blockers, 3 shapes each)
 

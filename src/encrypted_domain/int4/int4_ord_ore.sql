@@ -8,13 +8,28 @@
 --! @file encrypted_domain/int4/int4_ord_ore.sql
 --! @brief Equality + ORE-block ordering int4 variant.
 --!
---! eql_v2_int4_ord_ore carries `hm` and `ob`. Equality uses HMAC
---! (functional btree engages). Range operators reduce to
---! eql_v2.compare_ore_block_u64_8_256(eql_v2_encrypted, eql_v2_encrypted)
---! and **are seq-scan**: compare_ore_block_u64_8_256 is PL/pgSQL and
---! does not inline, so no functional btree on the extractor engages.
---! See docs/upgrading/v2.4.md U-001 (Range-index limitation) — choose
---! eql_v2_int4_ord_ope if range performance matters.
+--! eql_v2_int4_ord_ore carries `hm` and `ob`.
+--!
+--! Equality (`=`, `<>`) uses HMAC: the wrappers stay LANGUAGE sql
+--! IMMUTABLE so they inline and a functional btree on
+--! ((eql_v2.hmac_256(col::jsonb))) engages.
+--!
+--! Range (`<`, `<=`, `>`, `>=`) reduces to
+--! eql_v2.compare_ore_block_u64_8_256, which is PL/pgSQL. The range
+--! wrappers are therefore LANGUAGE plpgsql IMMUTABLE — deliberately
+--! NOT inlinable — so the `<` / `<=` / `>` / `>=` operator nodes
+--! survive for the planner to match against the btree operator class
+--! in int4_ord_ore_operator_class.sql. Index queries must name the
+--! class explicitly:
+--!   CREATE INDEX t_idx ON t
+--!     USING btree (col eql_v2.eql_v2_int4_ord_ore_operator_class);
+--! A bare `USING btree (col)` resolves to jsonb_ops (the base type's
+--! default) and will NOT serve ORE range. See docs/upgrading/v2.4.md
+--! U-001.
+--!
+--! @note The operator class is excluded from the Supabase build
+--!       variant; on Supabase, range falls back to seq-scan — use
+--!       eql_v2_int4_ord_ope for Supabase-compatible indexed range.
 --! Payload-term assumption: `hm`, `ob`.
 
 -- = / <> (HMAC equality wrappers, 3 shapes each)
@@ -70,103 +85,142 @@ AS $$ SELECT eql_v2.hmac_256(a) <> eql_v2.hmac_256(b::jsonb) $$;
 -- <, <=, >, >= (ORE-block range wrappers, 3 shapes each)
 -- compare_ore_block_u64_8_256 only accepts (eql_v2_encrypted, eql_v2_encrypted),
 -- so every jsonb arg requires an explicit ::eql_v2_encrypted cast (via
--- src/encrypted/casts.sql). Range is seq-scan: see file-level @brief and U-001.
+-- src/encrypted/casts.sql). These are LANGUAGE plpgsql on purpose: a
+-- non-inlinable operator function keeps the < / <= / > / >= operator
+-- node intact for the btree operator class to match. See file-level
+-- @brief, int4_ord_ore_operator_class.sql, and U-001.
 
 --! @brief Less-than wrapper for eql_v2_int4_ord_ore. Reduces to compare_ore_block_u64_8_256 < 0.
 --! @param a eql_v2_int4_ord_ore
 --! @param b eql_v2_int4_ord_ore
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_lt(a eql_v2_int4_ord_ore, b eql_v2_int4_ord_ore)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) < 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) < 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Less-than wrapper for eql_v2_int4_ord_ore (domain, jsonb).
 --! @param a eql_v2_int4_ord_ore
 --! @param b jsonb
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_lt(a eql_v2_int4_ord_ore, b jsonb)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::eql_v2_encrypted) < 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::eql_v2_encrypted) < 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Less-than wrapper for eql_v2_int4_ord_ore (jsonb, domain).
 --! @param a jsonb
 --! @param b eql_v2_int4_ord_ore
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_lt(a jsonb, b eql_v2_int4_ord_ore)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) < 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) < 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Less-than-or-equal wrapper for eql_v2_int4_ord_ore.
 --! @param a eql_v2_int4_ord_ore
 --! @param b eql_v2_int4_ord_ore
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_lte(a eql_v2_int4_ord_ore, b eql_v2_int4_ord_ore)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) <= 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) <= 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Less-than-or-equal wrapper for eql_v2_int4_ord_ore (domain, jsonb).
 --! @param a eql_v2_int4_ord_ore
 --! @param b jsonb
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_lte(a eql_v2_int4_ord_ore, b jsonb)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::eql_v2_encrypted) <= 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::eql_v2_encrypted) <= 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Less-than-or-equal wrapper for eql_v2_int4_ord_ore (jsonb, domain).
 --! @param a jsonb
 --! @param b eql_v2_int4_ord_ore
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_lte(a jsonb, b eql_v2_int4_ord_ore)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) <= 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) <= 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Greater-than wrapper for eql_v2_int4_ord_ore.
 --! @param a eql_v2_int4_ord_ore
 --! @param b eql_v2_int4_ord_ore
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_gt(a eql_v2_int4_ord_ore, b eql_v2_int4_ord_ore)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) > 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) > 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Greater-than wrapper for eql_v2_int4_ord_ore (domain, jsonb).
 --! @param a eql_v2_int4_ord_ore
 --! @param b jsonb
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_gt(a eql_v2_int4_ord_ore, b jsonb)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::eql_v2_encrypted) > 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::eql_v2_encrypted) > 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Greater-than wrapper for eql_v2_int4_ord_ore (jsonb, domain).
 --! @param a jsonb
 --! @param b eql_v2_int4_ord_ore
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_gt(a jsonb, b eql_v2_int4_ord_ore)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) > 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) > 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Greater-than-or-equal wrapper for eql_v2_int4_ord_ore.
 --! @param a eql_v2_int4_ord_ore
 --! @param b eql_v2_int4_ord_ore
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_gte(a eql_v2_int4_ord_ore, b eql_v2_int4_ord_ore)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) >= 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) >= 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Greater-than-or-equal wrapper for eql_v2_int4_ord_ore (domain, jsonb).
 --! @param a eql_v2_int4_ord_ore
 --! @param b jsonb
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_gte(a eql_v2_int4_ord_ore, b jsonb)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::eql_v2_encrypted) >= 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::jsonb::eql_v2_encrypted, b::eql_v2_encrypted) >= 0; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Greater-than-or-equal wrapper for eql_v2_int4_ord_ore (jsonb, domain).
 --! @param a jsonb
 --! @param b eql_v2_int4_ord_ore
 --! @return boolean
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_gte(a jsonb, b eql_v2_int4_ord_ore)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.compare_ore_block_u64_8_256(a::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) >= 0 $$;
+RETURNS boolean
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$ BEGIN RETURN eql_v2.compare_ore_block_u64_8_256(a::eql_v2_encrypted, b::jsonb::eql_v2_encrypted) >= 0; END; $$
+LANGUAGE plpgsql;
 
 -- ~~, ~~*, @>, <@ (blockers, 3 shapes each)
 

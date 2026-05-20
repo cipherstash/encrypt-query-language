@@ -8,7 +8,7 @@ Quick-start companion to [`encrypted-int4-domain.md`](encrypted-int4-domain.md).
 |------------------------------|------------------------|------------------------------------|--------------------------------------------------------|--------------------------------------------------------------------------------|
 | `public.eql_v2_int4_ct`      | `c`                    | none (all raise)                   | n/a                                                    | n/a                                                                            |
 | `public.eql_v2_int4_eq`      | `c`, `hm`              | `=`, `<>`                          | btree `((eql_v2.hmac_256(col::jsonb)))`                | n/a (`<>` is seq-scan, btree only serves `=`)                                  |
-| `public.eql_v2_int4_ord_ore` | `c`, `hm`, `ob`        | `=`, `<>`, `<`, `<=`, `>`, `>=`    | btree `((eql_v2.hmac_256(col::jsonb)))`                | none — range is seq-scan (PL/pgSQL `compare_ore_block_u64_8_256` doesn't inline) |
+| `public.eql_v2_int4_ord_ore` | `c`, `hm`, `ob`        | `=`, `<>`, `<`, `<=`, `>`, `>=`    | btree `((eql_v2.hmac_256(col::jsonb)))`                | btree operator class `eql_v2.eql_v2_int4_ord_ore_operator_class` (name it explicitly; excluded from Supabase build) |
 | `public.eql_v2_int4_ord_ope` | `c`, `hm`, `opf`       | `=`, `<>`, `<`, `<=`, `>`, `>=`    | btree `((eql_v2.hmac_256(col::jsonb)))`                | btree `((eql_v2.eql_v2_int4_ord_ope_ope_key(col::jsonb)))`                     |
 | `public.eql_v2_int4`         | `c`, `hm`, `ob`        | identical to `_ord_ore`            | identical to `_ord_ore`                                | identical to `_ord_ore`                                                        |
 
@@ -60,18 +60,21 @@ flowchart TD
   ops -- no, storage only --> ct[<b>eql_v2_int4_ct</b><br/>payload: c]
   ops -- yes --> rng{Range<br/>operators<br/>required?}
   rng -- no, equality only --> eq[<b>eql_v2_int4_eq</b><br/>payload: hm]
-  rng -- yes --> idx{Need range<br/>queries to<br/>use an index?}
-  idx -- no, seq-scan acceptable --> ore[<b>eql_v2_int4_ord_ore</b><br/>or default <b>eql_v2_int4</b><br/>payload: hm, ob]
-  idx -- yes --> ope[<b>eql_v2_int4_ord_ope</b><br/>payload: hm, opf]
+  rng -- yes --> sb{Deploying<br/>on Supabase /<br/>managed PG?}
+  sb -- yes, no operator classes --> ope[<b>eql_v2_int4_ord_ope</b><br/>payload: hm, opf<br/>range: functional btree]
+  sb -- no, self-hosted --> shape{Proxy emits<br/>ob or opf?}
+  shape -- ob --> ore[<b>eql_v2_int4_ord_ore</b><br/>or default <b>eql_v2_int4</b><br/>payload: hm, ob<br/>range: btree operator class]
+  shape -- opf --> ope
 
   classDef pick fill:#e6f4ea,stroke:#34a853,color:#000;
   class ct,eq,ore,ope pick;
 ```
 
 Tie-breakers:
-- Pick `_ord_ope` when range predicates dominate large-table reads.
-- Pick `_ord_ore` (or the default `eql_v2_int4`) when range is occasional and you want the smaller `ob` payload, or when your Proxy doesn't emit `opf`.
-- The default `eql_v2_int4` exists for callers who want range support without picking a flavour explicitly; it is a literal mirror of `_ord_ore` and carries the same seq-scan limitation.
+- Both `_ord_ore` and `_ord_ope` give indexed range. `_ord_ore` indexes range via a btree **operator class** (named explicitly in `CREATE INDEX`); `_ord_ope` via a **functional** btree.
+- Pick `_ord_ope` for Supabase / managed Postgres: operator classes are stripped from the EQL Supabase build, so `_ord_ore` range falls back to seq-scan there. `_ord_ope`'s functional index survives.
+- Pick `_ord_ore` (or the default `eql_v2_int4`) on self-hosted Postgres, especially when your Proxy emits `ob` and not `opf`.
+- The default `eql_v2_int4` is a literal mirror of `_ord_ore` — same operator surface, same `eql_v2.eql_v2_int4_operator_class` range index recipe.
 
 ## Operator dispatch and inlining
 
@@ -124,33 +127,32 @@ Two layers of SQL+IMMUTABLE inline into the call site, terminating at a bytea bu
 
 ### `<` (and `<=`, `>`, `>=`) on `eql_v2_int4_ord_ore`
 
+`_ord_ore` range does **not** use the inlining mechanism — it uses a btree **operator class**. The range wrappers are `LANGUAGE plpgsql IMMUTABLE` precisely so they do *not* inline: a non-inlinable operator function keeps the `<` operator node intact in the parse tree, and the planner matches that node against the operator class on the index. The index access method then calls the opclass support comparator directly, per comparison — inlining is irrelevant to it.
+
 ```mermaid
 flowchart LR
   Q["col < $1"] --> OP["operator &lt;<br/>(LEFTARG=_ord_ore)"]
-  OP --> W["eql_v2.eql_v2_int4_ord_ore_lt(a, b)<br/>LANGUAGE sql IMMUTABLE STRICT"]
-  W -- inlines --> CMP["eql_v2.compare_ore_block_u64_8_256(<br/>a::jsonb::eql_v2_encrypted,<br/>b::jsonb::eql_v2_encrypted) &lt; 0"]
-  CMP --> PLPGSQL["eql_v2.compare_ore_block_u64_8_256(...)<br/><b>LANGUAGE plpgsql</b> — stops here"]
-  PLPGSQL -. no match .-> NOIDX[(functional btree on<br/>ORE extractor —<br/>cannot engage)]
-  NOIDX --> PLAN[Seq Scan]
+  OP --> W["eql_v2.eql_v2_int4_ord_ore_lt(a, b)<br/>LANGUAGE plpgsql IMMUTABLE<br/>— does NOT inline; node survives"]
+  W -. planner matches operator node .-> OC["btree operator class<br/>eql_v2.eql_v2_int4_ord_ore_operator_class<br/>(named in CREATE INDEX)"]
+  OC --> CMP["FUNCTION 1: eql_v2_int4_ord_ore_compare<br/>→ compare_ore_block_u64_8_256 (PL/pgSQL)<br/>called per comparison by the index AM"]
+  CMP --> PLAN[Index Scan / Bitmap Index Scan]
 
-  classDef inline fill:#e6f4ea,stroke:#34a853;
-  classDef plpgsql fill:#fce8e6,stroke:#ea4335;
-  class W,CMP inline;
-  class PLPGSQL plpgsql;
+  classDef opclass fill:#e6f4ea,stroke:#34a853;
+  class W,OC,CMP opclass;
 ```
 
-The wrapper inlines fine, but the body it inlines to is a single PL/pgSQL call. The planner cannot decompose that further, so any functional btree on `eql_v2.ore_block_u64_8_256(col::jsonb)` is invisible to range predicates. If range performance matters, choose `_ord_ope`.
+Mirrors how the core `eql_v2_encrypted` type indexes ORE (`src/operators/operator_class.sql`). The operator class **must be named explicitly** in `CREATE INDEX` — see Index recipes below. A *functional* index on `eql_v2.ore_block_u64_8_256(col::jsonb)` would never engage (the wrapper can't inline to a planner-visible extractor); the operator class is the supported path. On Supabase the operator class is unavailable (build-stripped) and range falls back to seq-scan — use `_ord_ope` there.
 
 ### Summary: where each chain terminates
 
-| Variant     | Operator                        | Terminal expression (after inlining)                            | Indexable?              |
-|-------------|---------------------------------|-----------------------------------------------------------------|-------------------------|
-| `_eq`       | `=`, `<>`                       | `hmac_256(col::jsonb) = hmac_256($1::jsonb)` (bytea built-in)   | yes — hmac btree        |
-| `_ord_ore`  | `=`, `<>`                       | `hmac_256(col::jsonb) = hmac_256($1::jsonb)` (bytea built-in)   | yes — hmac btree        |
-| `_ord_ore`  | `<`, `<=`, `>`, `>=`            | `compare_ore_block_u64_8_256(...)` (PL/pgSQL)                   | **no** — seq-scan       |
-| `_ord_ope`  | `=`, `<>`                       | `hmac_256(col::jsonb) = hmac_256($1::jsonb)` (bytea built-in)   | yes — hmac btree        |
-| `_ord_ope`  | `<`, `<=`, `>`, `>=`            | `(ope_cllw_u64_65(col::jsonb)).bytes < (...).bytes` (bytea built-in) | yes — OPE-key btree |
-| `_ct`       | any                             | `RAISE EXCEPTION` (PL/pgSQL)                                    | n/a — raises before scan |
+| Variant     | Operator                        | Index path                                                      | Indexable?                       |
+|-------------|---------------------------------|-----------------------------------------------------------------|----------------------------------|
+| `_eq`       | `=`, `<>`                       | inlines to `hmac_256(col::jsonb) = hmac_256($1)`                | yes — hmac functional btree      |
+| `_ord_ore`  | `=`, `<>`                       | inlines to `hmac_256(col::jsonb) = hmac_256($1)`                | yes — hmac functional btree      |
+| `_ord_ore`  | `<`, `<=`, `>`, `>=`            | `<` operator node matched to the btree operator class           | yes — btree opclass (not Supabase) |
+| `_ord_ope`  | `=`, `<>`                       | inlines to `hmac_256(col::jsonb) = hmac_256($1)`                | yes — hmac functional btree      |
+| `_ord_ope`  | `<`, `<=`, `>`, `>=`            | inlines to `ope_cllw_u64_65(col::jsonb).bytes < (...).bytes`    | yes — OPE-key functional btree   |
+| `_ct`       | any                             | `RAISE EXCEPTION` (PL/pgSQL)                                    | n/a — raises before scan         |
 
 ## Index recipes
 
@@ -169,19 +171,26 @@ CREATE INDEX users_age_hmac_idx
 ### `_ord_ore` / default `eql_v2_int4`
 
 ```sql
--- Equality is btree-indexed.
+-- Equality: functional btree on the hmac extractor.
 CREATE INDEX orders_amount_hmac_idx
   ON orders USING btree ((eql_v2.hmac_256(amount::jsonb)));
 
--- A btree on the ORE extractor is *valid* but will never be used for
--- <, <=, >, >= (see inlining chain). Skip it unless you have an
--- ORDER BY use case (see ORDER BY caveat below).
+-- Range: btree operator class — the class MUST be named explicitly.
+-- A bare USING btree (amount) resolves to jsonb_ops (the domain's
+-- base type default) and will not serve ORE range.
+CREATE INDEX orders_amount_ore_idx
+  ON orders USING btree (amount eql_v2.eql_v2_int4_ord_ore_operator_class);
+-- default eql_v2_int4: name eql_v2.eql_v2_int4_operator_class instead.
 ```
 
 ```
- Seq Scan on orders  (cost=0.00..1.26 rows=… width=…)
-   Filter: (eql_v2.compare_ore_block_u64_8_256(amount, '…'::eql_v2_encrypted) < 0)
+ Bitmap Heap Scan on orders
+   Recheck Cond: (amount < '…'::eql_v2_int4_ord_ore)
+   ->  Bitmap Index Scan on orders_amount_ore_idx
+         Index Cond: (amount < '…'::eql_v2_int4_ord_ore)
 ```
+
+The operator class is excluded from the EQL Supabase build; on Supabase, `_ord_ore` range falls back to seq-scan — use `_ord_ope` for indexed range there.
 
 ### `_ord_ope`
 
@@ -243,34 +252,36 @@ The `(jsonb, …)` and `(…, jsonb)` shapes exist so the binding survives a lit
   ```
   Source: `eql_v2.encrypted_domain_unsupported_bool` in [`src/encrypted_domain/functions.sql`](../../src/encrypted_domain/functions.sql#L36). For `WHERE` predicates with planner-time-foldable constants this raises once at plan time; for general-case predicates it raises on the first scanned row. Either way, the error never falls through to native jsonb comparison — that's the policy.
 
-- **`ORDER BY col` sorts by native jsonb.** The domain is jsonb-backed, has no operator class for sort, so `ORDER BY col` falls back to jsonb's lexical byte comparison — *not* the operator class semantics. Always `ORDER BY <extractor>(col::jsonb)`. See U-001 (Domain ordering footgun).
+- **`ORDER BY col` sorts by native jsonb.** Even though `_ord_ore` and the default ship a btree operator class, `ORDER BY col` requests the column type's *default* sort order — and for a domain that resolves to the base type (`jsonb_ops`), never a domain-specific class. So `ORDER BY col` follows jsonb's lexical byte comparison, *not* ORE order. Always `ORDER BY <extractor>(col::jsonb)`. See U-001 (Domain ordering footgun).
 
-## Verifying inlineability from `pg_proc`
+## Wrapper language: who inlines and who doesn't
 
-A senior engineer wanting to convince themselves the wrappers really meet the inline preconditions can run:
+Two wrapper categories, two `LANGUAGE` choices — each deliberate:
+
+| Wrappers | `LANGUAGE` | Why |
+|----------|-----------|-----|
+| Equality (`_eq`/`_neq`, all variants) and `_ord_ope` range (`_lt`/`_lte`/`_gt`/`_gte`) | `sql IMMUTABLE` | Must **inline** so the planner sees `hmac_256(col::jsonb) = …` / `ope_key(col::jsonb) < …` and matches a **functional** btree. |
+| `_ord_ore` / default range (`_lt`/`_lte`/`_gt`/`_gte`) | `plpgsql IMMUTABLE` | Must **not** inline — the `<` operator node has to survive so the planner can match it against the btree **operator class**. `IMMUTABLE` (not the plpgsql default `VOLATILE`) is required or the planner won't use the index. |
+| Blockers (`~~`, `@>`, `->`, … on every variant) | `plpgsql` | Must not inline; raise a variant-specific error. |
+
+Confirm with `pg_proc` — the equality + `_ord_ope`-range wrappers:
 
 ```sql
-SELECT
-  p.proname,
-  l.lanname            AS language,
-  p.provolatile        AS vol,   -- expect 'i'
-  p.proisstrict        AS strict, -- expect t
-  p.prosecdef          AS secdef, -- expect f
-  p.proconfig          AS config  -- expect NULL
-FROM pg_proc p
-JOIN pg_language l ON l.oid = p.prolang
+SELECT p.proname, l.lanname AS language, p.provolatile AS vol
+FROM pg_proc p JOIN pg_language l ON l.oid = p.prolang
 WHERE p.pronamespace = 'eql_v2'::regnamespace
-  AND p.proname LIKE 'eql_v2_int4_%'
-  AND p.proname NOT LIKE '%\_ct\_%' ESCAPE '\\'  -- _ct wrappers are blockers
-  AND p.proname NOT LIKE '%\_like'   ESCAPE '\\'
-  AND p.proname NOT LIKE '%\_ilike'  ESCAPE '\\'
-  AND p.proname NOT LIKE '%\_contains' ESCAPE '\\'
-  AND p.proname NOT LIKE '%\_contained\_by' ESCAPE '\\'
-  AND p.proname NOT LIKE '%\_arrow%' ESCAPE '\\'
+  AND p.proname IN (
+    'eql_v2_int4_eq', 'eql_v2_int4_neq',
+    'eql_v2_int4_eq_eq', 'eql_v2_int4_eq_neq',
+    'eql_v2_int4_ord_ore_eq', 'eql_v2_int4_ord_ore_neq',
+    'eql_v2_int4_ord_ope_eq', 'eql_v2_int4_ord_ope_neq',
+    'eql_v2_int4_ord_ope_lt', 'eql_v2_int4_ord_ope_lte',
+    'eql_v2_int4_ord_ope_gt', 'eql_v2_int4_ord_ope_gte',
+    'eql_v2_int4_ord_ope_ope_key')
 ORDER BY p.proname;
 ```
 
-Every row should be `language=sql`, `vol=i`, `strict=t`, `secdef=f`, `config=NULL`. The inverse query (blockers must be PL/pgSQL) returns `language=plpgsql` for the excluded names. The `INLINEABLE_DOMAIN_FUNCTIONS` catalog test in `tests/sqlx/` asserts both invariants on every install.
+Every row: `language=sql`, `vol=i`. The `_ord_ore` / default range wrappers, by contrast, are `language=plpgsql`, `vol=i` — non-inlinable but immutable, as the operator-class path requires.
 
 ## Pointers
 
