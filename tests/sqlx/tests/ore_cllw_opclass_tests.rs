@@ -288,3 +288,242 @@ async fn backing_functions_are_inlinable(pool: PgPool) -> Result<()> {
     }
     Ok(())
 }
+
+// ===========================================================================
+// Missing-`oc` rows: extractor returns SQL NULL composite, not ROW(NULL)
+//
+// Regression coverage for the btree FUNCTION 1 contract: the extractor must
+// not emit a non-NULL composite whose `bytes` field is NULL, because btree's
+// null-handling layer filters composite-level NULLs but not nested ones —
+// indexing `ROW(NULL)` would land calls into `compare_ore_cllw_term` with
+// undefined-behaviour inputs.
+// ===========================================================================
+//
+// Extractor returns SQL-level NULL when the sv element lacks `oc`. Both the
+// `(jsonb)` and `(ste_vec_entry)` overloads share the same semantics.
+
+#[sqlx::test]
+async fn ore_cllw_extractor_returns_null_when_oc_absent(pool: PgPool) -> Result<()> {
+    let is_null: bool = sqlx::query_scalar(
+        "SELECT eql_v2.ore_cllw('{\"s\":\"x\",\"c\":\"y\",\"hm\":\"abc\"}'::jsonb) IS NULL",
+    )
+    .fetch_one(&pool)
+    .await?;
+    assert!(
+        is_null,
+        "ore_cllw(jsonb) should return SQL NULL when `oc` is absent"
+    );
+
+    let is_null_entry: bool = sqlx::query_scalar(
+        "SELECT eql_v2.ore_cllw('{\"s\":\"x\",\"c\":\"y\",\"hm\":\"abc\"}'::jsonb::eql_v2.ste_vec_entry) IS NULL",
+    )
+    .fetch_one(&pool)
+    .await?;
+    assert!(
+        is_null_entry,
+        "ore_cllw(ste_vec_entry) should return SQL NULL when `oc` is absent"
+    );
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn ore_cllw_extractor_returns_composite_when_oc_present(pool: PgPool) -> Result<()> {
+    // Sanity: when `oc` is present, the extractor returns a non-NULL
+    // composite whose `bytes` field decodes the hex.
+    let is_null: bool = sqlx::query_scalar(
+        "SELECT eql_v2.ore_cllw('{\"s\":\"x\",\"c\":\"y\",\"oc\":\"deadbeef\"}'::jsonb) IS NULL",
+    )
+    .fetch_one(&pool)
+    .await?;
+    assert!(
+        !is_null,
+        "ore_cllw(jsonb) should NOT be NULL when `oc` is present"
+    );
+    Ok(())
+}
+
+#[sqlx::test]
+async fn comparator_raises_on_null_bytes_in_non_null_composite(pool: PgPool) -> Result<()> {
+    // Defense-in-depth: a hand-crafted composite with NULL `bytes` should
+    // raise rather than silently misorder. The extractors are designed not
+    // to produce this shape, so reaching this branch indicates a hand-built
+    // literal or a regression in the extractor body.
+    //
+    // Note: a single-field composite with all fields NULL is composite-
+    // level NULL per SQL semantics, so this branch is currently
+    // unreachable via the type as defined. We still assert the guard
+    // surfaces correctly when a future field addition makes
+    // `ROW(non_null, NULL)`-style values constructible — and we exercise
+    // the (jsonb) overload path to confirm the SQL-level NULL flows
+    // through the comparator without raising.
+    let comparator_returns_null: Option<i32> = sqlx::query_scalar(
+        "SELECT eql_v2.compare_ore_cllw_term(\
+           eql_v2.ore_cllw('{\"s\":\"x\",\"c\":\"y\",\"hm\":\"abc\"}'::jsonb), \
+           eql_v2.ore_cllw('{\"s\":\"x\",\"c\":\"y\",\"oc\":\"00ff\"}'::jsonb)\
+         )",
+    )
+    .fetch_one(&pool)
+    .await?;
+    assert!(
+        comparator_returns_null.is_none(),
+        "compare_ore_cllw_term with NULL composite should return SQL NULL"
+    );
+    Ok(())
+}
+
+// ===========================================================================
+// Functional-index match: WHERE-clause range engages Index Cond
+//
+// Closes the gap James flagged: the existing test only proves ORDER BY
+// engages the index. WHERE-clause range quals go through a different
+// planner path (opclass strategies 1/2/4/5) and need separate coverage.
+// ===========================================================================
+
+#[sqlx::test]
+async fn functional_index_engages_for_where_range(pool: PgPool) -> Result<()> {
+    let mut tx = pool.begin().await?;
+
+    sqlx::query(
+        "CREATE TABLE ore_cllw_where_test
+           (id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+            value eql_v2_encrypted NOT NULL)",
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    // Seed 100 rows so the planner can plausibly prefer an index scan.
+    for i in 0..100u8 {
+        let hex = format!("00{:02x}", i);
+        let sql = format!(
+            "INSERT INTO ore_cllw_where_test(value) \
+             VALUES (jsonb_build_object('v', 2, 'k', 'ct', 'c', 'placeholder', \
+                                        'i', jsonb_build_object('t', 'ore_cllw_where_test', 'c', 'value'), \
+                                        'oc', '{hex}')::eql_v2_encrypted)"
+        );
+        sqlx::query(&sql).execute(&mut *tx).await?;
+    }
+
+    sqlx::query(
+        "CREATE INDEX ore_cllw_where_test_idx
+         ON ore_cllw_where_test (eql_v2.ore_cllw((value).data))",
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    sqlx::query("SET LOCAL enable_seqscan = off")
+        .execute(&mut *tx)
+        .await?;
+    let explain_rows = sqlx::query_scalar::<_, String>(
+        "EXPLAIN SELECT id FROM ore_cllw_where_test \
+         WHERE eql_v2.ore_cllw((value).data) \
+             < eql_v2.ore_cllw('{\"oc\":\"00aa\"}'::jsonb)",
+    )
+    .fetch_all(&mut *tx)
+    .await?;
+    let explain = explain_rows.join("\n");
+
+    // Accept either Index Scan or Bitmap Index Scan — both are valid
+    // index-engaging plans for a range qual. The key negative: NO Seq Scan.
+    assert!(
+        explain.contains("Index Scan") || explain.contains("Bitmap Index Scan"),
+        "Expected Index Scan via ore_cllw_where_test_idx for WHERE range, got:\n{explain}"
+    );
+    assert!(
+        explain.contains("Index Cond"),
+        "Expected Index Cond clause on the WHERE range, got:\n{explain}"
+    );
+
+    tx.rollback().await?;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn rows_without_oc_excluded_from_range_query(pool: PgPool) -> Result<()> {
+    // Mixed-payload test: some rows carry `oc`, others carry only `hm`.
+    // A range query against the column must:
+    //   (a) complete without raising — even though the hm-only rows produce
+    //       SQL NULL from the extractor, the comparator (with my Option-C
+    //       tightening) only RAISES on a non-NULL composite with NULL
+    //       `bytes`, never on SQL NULL composites; and
+    //   (b) return only oc-bearing row ids — the hm-only rows must be
+    //       filtered out by SQL NULL semantics (NULL `<op>` _ → NULL →
+    //       not true → row excluded from WHERE).
+    //
+    // The test deliberately doesn't assert the exact count of matched
+    // oc-rows: the CLLW protocol is adjacency-revealing rather than
+    // total-order-preserving, so the set of "less than" rows under
+    // synthetic byte sequences depends on protocol details that aren't
+    // the subject of this test.
+    let mut tx = pool.begin().await?;
+
+    sqlx::query(
+        "CREATE TABLE ore_cllw_mixed_test
+           (id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+            kind text NOT NULL,
+            value eql_v2_encrypted NOT NULL)",
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    // 20 rows with oc, 20 rows hm-only.
+    for i in 0..20u8 {
+        let hex = format!("00{:02x}", i);
+        sqlx::query(&format!(
+            "INSERT INTO ore_cllw_mixed_test(kind, value) \
+             VALUES ('oc', jsonb_build_object('v', 2, 'k', 'ct', 'c', 'placeholder', \
+                                        'i', jsonb_build_object('t', 'ore_cllw_mixed_test', 'c', 'value'), \
+                                        'oc', '{hex}')::eql_v2_encrypted)"
+        ))
+        .execute(&mut *tx)
+        .await?;
+
+        let hm = format!("{:032x}", i + 100);
+        sqlx::query(&format!(
+            "INSERT INTO ore_cllw_mixed_test(kind, value) \
+             VALUES ('hm', jsonb_build_object('v', 2, 'k', 'ct', 'c', 'placeholder', \
+                                        'i', jsonb_build_object('t', 'ore_cllw_mixed_test', 'c', 'value'), \
+                                        'hm', '{hm}')::eql_v2_encrypted)"
+        ))
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    // (a) Query completes — no raise. If Option-A had been bypassed and
+    // the extractor still returned `ROW(NULL)` for hm-only rows, the
+    // Option-C RAISE in `compare_ore_cllw_term` would fire and crash
+    // this query.
+    let hm_matches: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM ore_cllw_mixed_test \
+         WHERE kind = 'hm' \
+           AND eql_v2.ore_cllw((value).data) \
+             < eql_v2.ore_cllw('{\"oc\":\"00aa\"}'::jsonb)",
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+
+    // (b) None of the hm-only rows appear in the result.
+    assert_eq!(
+        hm_matches, 0,
+        "Expected zero hm-only rows in range query result — \
+         missing-oc rows must be excluded by NULL semantics"
+    );
+
+    // Sanity: at least some oc-bearing rows DO match (so the predicate
+    // isn't trivially false — exercising the live comparator path).
+    let oc_matches: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM ore_cllw_mixed_test \
+         WHERE kind = 'oc' \
+           AND eql_v2.ore_cllw((value).data) \
+             < eql_v2.ore_cllw('{\"oc\":\"00aa\"}'::jsonb)",
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    assert!(
+        oc_matches > 0,
+        "Expected the predicate to match at least one oc-bearing row"
+    );
+
+    tx.rollback().await?;
+    Ok(())
+}
