@@ -163,7 +163,7 @@ CREATE INDEX users_age_hmac_idx
   ON users USING btree ((eql_v2.hmac_256(age::jsonb)));
 ```
 
-```
+```text
  Index Scan using users_age_hmac_idx on users  (cost=0.28..8.30 rows=1 width=…)
    Index Cond: (eql_v2.hmac_256((age)::jsonb) = eql_v2.hmac_256('{"hm":"…"}'::jsonb))
 ```
@@ -183,7 +183,7 @@ CREATE INDEX orders_amount_ore_idx
 -- default eql_v2_int4: name eql_v2.eql_v2_int4_operator_class instead.
 ```
 
-```
+```text
  Bitmap Heap Scan on orders
    Recheck Cond: (amount < '…'::eql_v2_int4_ord_ore)
    ->  Bitmap Index Scan on orders_amount_ore_idx
@@ -202,7 +202,7 @@ CREATE INDEX prices_ope_idx
   ON prices USING btree ((eql_v2.eql_v2_int4_ord_ope_ope_key(price::jsonb)));
 ```
 
-```
+```text
  Index Scan using prices_ope_idx on prices  (cost=0.28..8.30 rows=… width=…)
    Index Cond: (eql_v2.eql_v2_int4_ord_ope_ope_key((price)::jsonb)
                 < eql_v2.eql_v2_int4_ord_ope_ope_key('{"opf":"…"}'::jsonb))
@@ -241,16 +241,16 @@ The `(jsonb, …)` and `(…, jsonb)` shapes exist so the binding survives a lit
 ## Failure modes
 
 - **Wrong variant for payload.** `_ord_ope` over a row whose payload omits `opf` raises per-row from the extractor:
-  ```
+  ```text
   ERROR: Expected a ope_cllw_u64_65 index (opf) value in json: {"v":2,"k":"ct","i":{…},"c":"…","hm":"…"}
   ```
   Source: [`src/ope_cllw_u64_65/functions.sql:23`](../../src/ope_cllw_u64_65/functions.sql#L23). Same pattern for `hmac_256` (`hm` missing) and `ore_block_u64_8_256` (`ob` missing). Type system does not catch this — the domain is `CREATE DOMAIN ... AS jsonb` with no CHECK.
 
 - **Unsupported operator.** Every blocker resolves to `encrypted_domain_unsupported_bool` and raises before predicate evaluation. Example for `<` on `_eq`:
-  ```
+  ```text
   ERROR: operator < is not supported for eql_v2_int4_eq
   ```
-  Source: `eql_v2.encrypted_domain_unsupported_bool` in [`src/encrypted_domain/functions.sql`](../../src/encrypted_domain/functions.sql#L36). For `WHERE` predicates with planner-time-foldable constants this raises once at plan time; for general-case predicates it raises on the first scanned row. Either way, the error never falls through to native jsonb comparison — that's the policy.
+  Source: `eql_v2.encrypted_domain_unsupported_bool` in [`src/encrypted_domain/functions.sql`](../../src/encrypted_domain/functions.sql). For `WHERE` predicates with planner-time-foldable constants this raises once at plan time; for general-case predicates it raises on the first scanned row. Either way, the error never falls through to native jsonb comparison — that's the policy.
 
 - **`ORDER BY col` sorts by native jsonb.** Even though `_ord_ore` and the default ship a btree operator class, `ORDER BY col` requests the column type's *default* sort order — and for a domain that resolves to the base type (`jsonb_ops`), never a domain-specific class. So `ORDER BY col` follows jsonb's lexical byte comparison, *not* ORE order. Always `ORDER BY <extractor>(col::jsonb)`. See U-001 (Domain ordering footgun).
 

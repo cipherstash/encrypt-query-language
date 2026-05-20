@@ -10,10 +10,10 @@ payloads must carry.
 | Domain                       | Operators supported            | Payload terms required | Index-engagement |
 |------------------------------|--------------------------------|------------------------|------------------|
 | `public.eql_v2_int4_ct`      | none (all blockers)            | `c` only               | n/a              |
-| `public.eql_v2_int4_eq`      | `=`, `<>`                      | `hm`                   | functional btree on `((eql_v2.hmac_256(col::jsonb)))` for `=`; `<>` seq-scan |
-| `public.eql_v2_int4_ord_ore` | `=`, `<>`, `<`, `<=`, `>`, `>=` | `hm`, `ob`             | hmac functional btree (equality); btree operator class for range — name it explicitly, excluded from Supabase build |
-| `public.eql_v2_int4_ord_ope` | `=`, `<>`, `<`, `<=`, `>`, `>=` | `hm`, `opf`            | functional btree on `((eql_v2.eql_v2_int4_ord_ope_ope_key(col::jsonb)))` |
-| `public.eql_v2_int4`         | same as `_ord_ore`             | `hm`, `ob`             | same as `_ord_ore` |
+| `public.eql_v2_int4_eq`      | `=`, `<>`                      | `c`, `hm`              | functional btree on `((eql_v2.hmac_256(col::jsonb)))` for `=`; `<>` seq-scan |
+| `public.eql_v2_int4_ord_ore` | `=`, `<>`, `<`, `<=`, `>`, `>=` | `c`, `hm`, `ob`        | hmac functional btree (equality); btree operator class for range — name it explicitly, excluded from Supabase build |
+| `public.eql_v2_int4_ord_ope` | `=`, `<>`, `<`, `<=`, `>`, `>=` | `c`, `hm`, `opf`       | functional btree on `((eql_v2.eql_v2_int4_ord_ope_ope_key(col::jsonb)))` |
+| `public.eql_v2_int4`         | same as `_ord_ore`             | `c`, `hm`, `ob`        | same as `_ord_ore` |
 
 ## Per-variant detail
 
@@ -26,7 +26,7 @@ operator surface. Every operator (`=`, `<>`, `<`, `<=`, `>`, `>=`,
 
 ### `eql_v2_int4_eq` — HMAC equality
 
-Payload terms: `hm`. Operators: `=`, `<>`.
+Payload terms: `c`, `hm`. Operators: `=`, `<>`.
 
 Recommended index:
 
@@ -39,7 +39,7 @@ USING btree ((eql_v2.hmac_256(age::jsonb)));
 
 ### `eql_v2_int4_ord_ore` and the default `eql_v2_int4` — HMAC + ORE-block
 
-Payload terms: `hm`, `ob`. Operators: `=`, `<>`, `<`, `<=`, `>`, `>=`.
+Payload terms: `c`, `hm`, `ob`. Operators: `=`, `<>`, `<`, `<=`, `>`, `>=`.
 
 Recommended indexes:
 
@@ -78,7 +78,7 @@ ORDER BY eql_v2.ore_block_u64_8_256(col::jsonb)
 
 ### `eql_v2_int4_ord_ope` — HMAC + OPE-direct
 
-Payload terms: `hm`, `opf`. Operators: `=`, `<>`, `<`, `<=`, `>`, `>=`.
+Payload terms: `c`, `hm`, `opf`. Operators: `=`, `<>`, `<`, `<=`, `>`, `>=`.
 
 Recommended indexes:
 
@@ -104,7 +104,7 @@ ORDER BY eql_v2.eql_v2_int4_ord_ope_ope_key(col::jsonb)
 For `_ord_ope` range queries, the planner sees a clean three-layer
 inline chain through to a built-in `bytea` compare:
 
-```
+```text
 col < $1::eql_v2_int4_ord_ope
   └─ eql_v2.eql_v2_int4_ord_ope_lt(eql_v2_int4_ord_ope, eql_v2_int4_ord_ope) [SQL IMMUTABLE]
        └─ eql_v2.eql_v2_int4_ord_ope_ope_key(col) < eql_v2.eql_v2_int4_ord_ope_ope_key($1)
@@ -124,17 +124,18 @@ core `eql_v2_encrypted` type uses for ORE.
 
 ## File layout
 
-```
+```text
 src/encrypted_domain/
   types.sql                    # five domain declarations (CT/EQ/ORD_ORE/ORD_OPE/default)
-  functions.sql                # shared blocker helper; text + jsonb wrappers
-  operators.sql                # CREATE OPERATOR for text + jsonb
+  functions.sql                # shared blocker helper (encrypted_domain_unsupported_bool)
   int4/
     int4_ct.sql                # all-blocker variant
     int4_eq.sql                # HMAC equality + blockers
     int4_ord_ore.sql           # HMAC = + ORE-block range + blockers
     int4_ord_ope.sql           # HMAC = + OPE-direct range + extractor + blockers
     int4_default.sql           # mirror of _ord_ore under the eql_v2_int4 name
+    int4_ord_ore_operator_class.sql  # btree operator class for _ord_ore range
+    int4_default_operator_class.sql  # btree operator class for default range
 tasks/
   pin_search_path.sql          # inline-critical allowlist (21 wrapper names)
   test/splinter.sh             # function_search_path_mutable mirror

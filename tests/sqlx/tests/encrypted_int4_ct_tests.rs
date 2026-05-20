@@ -43,10 +43,9 @@ async fn ct_path_operators_raise(pool: PgPool) -> Result<()> {
         for sql in [
             format!("SELECT $1::jsonb::eql_v2_int4_ct {op} 'field'::text"),
             format!("SELECT $1::jsonb::eql_v2_int4_ct {op} 0::integer"),
-            format!("SELECT $1::jsonb {op} $2::jsonb::eql_v2_int4_ct"),
+            format!("SELECT $1::jsonb {op} $1::jsonb::eql_v2_int4_ct"),
         ] {
             let err = sqlx::query(&sql)
-                .bind(SAMPLE_PAYLOAD)
                 .bind(SAMPLE_PAYLOAD)
                 .fetch_one(&pool)
                 .await
@@ -56,5 +55,39 @@ async fn ct_path_operators_raise(pool: PgPool) -> Result<()> {
             assert!(err.contains(&expected), "unexpected error for {sql}: {err}");
         }
     }
+    Ok(())
+}
+
+#[sqlx::test]
+async fn ct_blocked_operators_raise_on_null_input(pool: PgPool) -> Result<()> {
+    // A blocker declared STRICT lets PostgreSQL skip the body and return
+    // NULL on a NULL argument, silently bypassing the
+    // "operator … is not supported" exception. The blocker contract is
+    // "always raises" — guard against STRICT regressing back in.
+    let null: Option<&str> = None;
+
+    let err = sqlx::query("SELECT $1::jsonb::eql_v2_int4_ct = $2::jsonb::eql_v2_int4_ct")
+        .bind(null)
+        .bind(null)
+        .fetch_one(&pool)
+        .await
+        .expect_err("eql_v2_int4_ct = must raise on NULL input")
+        .to_string();
+    assert!(
+        err.contains("operator = is not supported for eql_v2_int4_ct"),
+        "unexpected error for = on NULL: {err}"
+    );
+
+    let err = sqlx::query("SELECT $1::jsonb -> $2::jsonb::eql_v2_int4_ct")
+        .bind(null)
+        .bind(null)
+        .fetch_one(&pool)
+        .await
+        .expect_err("eql_v2_int4_ct -> must raise on NULL input")
+        .to_string();
+    assert!(
+        err.contains("operator -> is not supported for eql_v2_int4_ct"),
+        "unexpected error for -> on NULL: {err}"
+    );
     Ok(())
 }

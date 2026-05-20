@@ -229,7 +229,7 @@ LANGUAGE plpgsql;
 --! @param b eql_v2_int4_ord_ore
 --! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_like(a eql_v2_int4_ord_ore, b eql_v2_int4_ord_ore)
-RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
+RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ore', '~~'); END; $$
 LANGUAGE plpgsql;
 
@@ -238,7 +238,7 @@ LANGUAGE plpgsql;
 --! @param b jsonb
 --! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_like(a eql_v2_int4_ord_ore, b jsonb)
-RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
+RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ore', '~~'); END; $$
 LANGUAGE plpgsql;
 
@@ -247,7 +247,7 @@ LANGUAGE plpgsql;
 --! @param b eql_v2_int4_ord_ore
 --! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_like(a jsonb, b eql_v2_int4_ord_ore)
-RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
+RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ore', '~~'); END; $$
 LANGUAGE plpgsql;
 
@@ -256,7 +256,7 @@ LANGUAGE plpgsql;
 --! @param b eql_v2_int4_ord_ore
 --! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_ilike(a eql_v2_int4_ord_ore, b eql_v2_int4_ord_ore)
-RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
+RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ore', '~~*'); END; $$
 LANGUAGE plpgsql;
 
@@ -265,7 +265,7 @@ LANGUAGE plpgsql;
 --! @param b jsonb
 --! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_ilike(a eql_v2_int4_ord_ore, b jsonb)
-RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
+RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ore', '~~*'); END; $$
 LANGUAGE plpgsql;
 
@@ -274,7 +274,7 @@ LANGUAGE plpgsql;
 --! @param b eql_v2_int4_ord_ore
 --! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_ilike(a jsonb, b eql_v2_int4_ord_ore)
-RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
+RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ore', '~~*'); END; $$
 LANGUAGE plpgsql;
 
@@ -283,7 +283,7 @@ LANGUAGE plpgsql;
 --! @param b eql_v2_int4_ord_ore
 --! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_contains(a eql_v2_int4_ord_ore, b eql_v2_int4_ord_ore)
-RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
+RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ore', '@>'); END; $$
 LANGUAGE plpgsql;
 
@@ -292,7 +292,7 @@ LANGUAGE plpgsql;
 --! @param b jsonb
 --! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_contains(a eql_v2_int4_ord_ore, b jsonb)
-RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
+RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ore', '@>'); END; $$
 LANGUAGE plpgsql;
 
@@ -301,7 +301,7 @@ LANGUAGE plpgsql;
 --! @param b eql_v2_int4_ord_ore
 --! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_contains(a jsonb, b eql_v2_int4_ord_ore)
-RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
+RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ore', '@>'); END; $$
 LANGUAGE plpgsql;
 
@@ -310,7 +310,7 @@ LANGUAGE plpgsql;
 --! @param b eql_v2_int4_ord_ore
 --! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_contained_by(a eql_v2_int4_ord_ore, b eql_v2_int4_ord_ore)
-RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
+RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ore', '<@'); END; $$
 LANGUAGE plpgsql;
 
@@ -319,7 +319,7 @@ LANGUAGE plpgsql;
 --! @param b jsonb
 --! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_contained_by(a eql_v2_int4_ord_ore, b jsonb)
-RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
+RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ore', '<@'); END; $$
 LANGUAGE plpgsql;
 
@@ -328,7 +328,7 @@ LANGUAGE plpgsql;
 --! @param b eql_v2_int4_ord_ore
 --! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_contained_by(a jsonb, b eql_v2_int4_ord_ore)
-RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE
+RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord_ore', '<@'); END; $$
 LANGUAGE plpgsql;
 
@@ -339,7 +339,7 @@ LANGUAGE plpgsql;
 --! @param selector text
 --! @return eql_v2_int4_ord_ore (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_arrow(a eql_v2_int4_ord_ore, selector text)
-RETURNS eql_v2_int4_ord_ore IMMUTABLE STRICT PARALLEL SAFE
+RETURNS eql_v2_int4_ord_ore IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v2_int4_ord_ore'; END; $$
 LANGUAGE plpgsql;
 
@@ -348,7 +348,7 @@ LANGUAGE plpgsql;
 --! @param selector integer
 --! @return eql_v2_int4_ord_ore (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_arrow(a eql_v2_int4_ord_ore, selector integer)
-RETURNS eql_v2_int4_ord_ore IMMUTABLE STRICT PARALLEL SAFE
+RETURNS eql_v2_int4_ord_ore IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v2_int4_ord_ore'; END; $$
 LANGUAGE plpgsql;
 
@@ -357,7 +357,7 @@ LANGUAGE plpgsql;
 --! @param selector eql_v2_int4_ord_ore
 --! @return eql_v2_int4_ord_ore (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_arrow(a jsonb, selector eql_v2_int4_ord_ore)
-RETURNS eql_v2_int4_ord_ore IMMUTABLE STRICT PARALLEL SAFE
+RETURNS eql_v2_int4_ord_ore IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v2_int4_ord_ore'; END; $$
 LANGUAGE plpgsql;
 
@@ -366,7 +366,7 @@ LANGUAGE plpgsql;
 --! @param selector text
 --! @return text (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_arrow_text(a eql_v2_int4_ord_ore, selector text)
-RETURNS text IMMUTABLE STRICT PARALLEL SAFE
+RETURNS text IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v2_int4_ord_ore'; END; $$
 LANGUAGE plpgsql;
 
@@ -375,7 +375,7 @@ LANGUAGE plpgsql;
 --! @param selector integer
 --! @return text (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_arrow_text(a eql_v2_int4_ord_ore, selector integer)
-RETURNS text IMMUTABLE STRICT PARALLEL SAFE
+RETURNS text IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v2_int4_ord_ore'; END; $$
 LANGUAGE plpgsql;
 
@@ -384,7 +384,7 @@ LANGUAGE plpgsql;
 --! @param selector eql_v2_int4_ord_ore
 --! @return text (never returns; always raises)
 CREATE FUNCTION eql_v2.eql_v2_int4_ord_ore_arrow_text(a jsonb, selector eql_v2_int4_ord_ore)
-RETURNS text IMMUTABLE STRICT PARALLEL SAFE
+RETURNS text IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v2_int4_ord_ore'; END; $$
 LANGUAGE plpgsql;
 

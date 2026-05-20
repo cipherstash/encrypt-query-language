@@ -18,7 +18,7 @@
 --! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.encrypted_domain_unsupported_bool(type_name text, operator_name text)
 RETURNS boolean
-IMMUTABLE STRICT PARALLEL SAFE
+IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN

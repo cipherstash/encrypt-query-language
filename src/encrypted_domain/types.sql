@@ -19,6 +19,9 @@
 
 DO $$
 BEGIN
+  --! @brief Default encrypted int4 domain (jsonb-backed). Operator
+  --!        surface identical to eql_v2_int4_ord_ore (HMAC equality +
+  --!        ORE-block ordering).
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
     WHERE typname = 'eql_v2_int4' AND typnamespace = 'public'::regnamespace
@@ -26,6 +29,8 @@ BEGIN
     CREATE DOMAIN public.eql_v2_int4 AS jsonb;
   END IF;
 
+  --! @brief Storage-only encrypted int4 domain (jsonb-backed). Every
+  --!        operator is a blocker; carries ciphertext (`c`) only.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
     WHERE typname = 'eql_v2_int4_ct' AND typnamespace = 'public'::regnamespace
@@ -33,6 +38,8 @@ BEGIN
     CREATE DOMAIN public.eql_v2_int4_ct AS jsonb;
   END IF;
 
+  --! @brief Equality-only encrypted int4 domain (jsonb-backed).
+  --!        Supports = and <> via HMAC-256.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
     WHERE typname = 'eql_v2_int4_eq' AND typnamespace = 'public'::regnamespace
@@ -40,6 +47,8 @@ BEGIN
     CREATE DOMAIN public.eql_v2_int4_eq AS jsonb;
   END IF;
 
+  --! @brief Equality + ORE-block ordering encrypted int4 domain
+  --!        (jsonb-backed). Range engages a btree operator class.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
     WHERE typname = 'eql_v2_int4_ord_ore' AND typnamespace = 'public'::regnamespace
@@ -47,6 +56,8 @@ BEGIN
     CREATE DOMAIN public.eql_v2_int4_ord_ore AS jsonb;
   END IF;
 
+  --! @brief Equality + OPE-direct ordering encrypted int4 domain
+  --!        (jsonb-backed). Range engages a functional btree.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
     WHERE typname = 'eql_v2_int4_ord_ope' AND typnamespace = 'public'::regnamespace

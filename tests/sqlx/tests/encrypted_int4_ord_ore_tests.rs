@@ -495,3 +495,38 @@ async fn encrypted_int4_ord_ore_unsupported_operators_raise(pool: PgPool) -> Res
 
     Ok(())
 }
+
+#[sqlx::test]
+async fn encrypted_int4_ord_ore_blocked_operators_raise_on_null_input(pool: PgPool) -> Result<()> {
+    // A blocker declared STRICT lets PostgreSQL skip the body and return
+    // NULL on a NULL argument, silently bypassing the
+    // "operator … is not supported" exception. The blocker contract is
+    // "always raises" — guard against STRICT regressing back in.
+    let null: Option<&str> = None;
+
+    let err =
+        sqlx::query("SELECT $1::jsonb::eql_v2_int4_ord_ore ~~ $2::jsonb::eql_v2_int4_ord_ore")
+            .bind(null)
+            .bind(null)
+            .fetch_one(&pool)
+            .await
+            .expect_err("eql_v2_int4_ord_ore ~~ must raise on NULL input")
+            .to_string();
+    assert!(
+        err.contains("operator ~~ is not supported for eql_v2_int4_ord_ore"),
+        "unexpected error for ~~ on NULL: {err}"
+    );
+
+    let err = sqlx::query("SELECT $1::jsonb -> $2::jsonb::eql_v2_int4_ord_ore")
+        .bind(null)
+        .bind(null)
+        .fetch_one(&pool)
+        .await
+        .expect_err("eql_v2_int4_ord_ore -> must raise on NULL input")
+        .to_string();
+    assert!(
+        err.contains("operator -> is not supported for eql_v2_int4_ord_ore"),
+        "unexpected error for -> on NULL: {err}"
+    );
+    Ok(())
+}
