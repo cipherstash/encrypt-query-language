@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://cipherstash.com/schemas/eql/v2.3/payload.schema.json",
   "title": "EQL v2.3 payload",
-  "description": "JSON Schema describing the on-the-wire EQL payload format as of release v2.3. Two top-level shapes are accepted, mutually exclusive: an `EncryptedPayload` (a single encrypted scalar value, with any combination of index terms) and an `SteVecPayload` (an STE vector for jsonb / containment queries). The encrypted root form is what `eql_v2.check_encrypted` validates and what `eql_v2_encrypted` columns hold.\n\nChanges since v2.2:\n- The `b3` (Blake3) index term is removed everywhere. STE vector element equality now uses `hm` directly.\n- `SteVecElement` may now carry an `hm` field (matches the root `EncryptedPayload`); the previous prohibition is lifted.\n- `opf` and `opv` are collapsed into a single `op` field. Width information that was previously implied by the field name is now carried on the value itself.\n- OPE (`op`) and ORE (`ob`, `ocf`, `ocv`) are now mutually exclusive within a single payload or `sv` element: a column is configured for one ordered scheme or the other, never both.",
+  "description": "JSON Schema describing the on-the-wire EQL payload format as of release v2.3. Two top-level shapes are accepted, mutually exclusive: an `EncryptedPayload` (a single encrypted scalar value, with any combination of index terms) and an `SteVecPayload` (an STE vector for jsonb / containment queries). The encrypted root form is what `eql_v2.check_encrypted` validates and what `eql_v2_encrypted` columns hold.\n\nChanges since v2.2:\n- The `b3` (Blake3) index term is removed everywhere. STE vector element equality now uses `hm` directly.\n- `SteVecElement` may now carry an `hm` field (matches the root `EncryptedPayload`); the previous prohibition is lifted.\n- `ste_vec` elements now carry a single ORE term `oc` (CLLW ORE). The pre-2.3 `ocf` / `ocv` split collapses into this one field: width information that was previously implied by the field name is now carried on the ciphertext via a leading domain-tag byte (`0x00` numeric, `0x01` string).\n- The two ordered schemes are scope-disjoint: `ob` (Block ORE) appears only on the root payload (scalar `eql_v2_encrypted` values), `oc` (CLLW ORE) appears only on `sv` elements.\n- Each `SteVecElement` carries exactly one of `hm` (boolean leaves / array / object roots) or `oc` (string / number leaves). They are mutually exclusive — cipherstash-suite never emits both on the same element. This is enforced by a `oneOf` constraint on `SteVecElement` and by the `eql_v2.ste_vec_entry` DOMAIN check in the EQL install.",
 
   "oneOf": [
     { "$ref": "#/$defs/EncryptedPayload" },
@@ -46,7 +46,7 @@
 
     "EncryptedPayload": {
       "title": "Encrypted payload (scalar, database side)",
-      "description": "Shape stored in `eql_v2_encrypted` columns for a single encrypted scalar value. `v`, `c`, and `i.{t,c}` are required by `eql_v2.check_encrypted`. Any subset of the index-term fields may be present, depending on the configured indexes for the column. Mutually exclusive with `SteVecPayload`: must not carry `sv`. The OPE term (`op`) and the ORE terms (`ob`, `ocf`, `ocv`) are also mutually exclusive — see `OreOpeExclusion`.",
+      "description": "Shape stored in `eql_v2_encrypted` columns for a single encrypted scalar value. `v`, `c`, and `i.{t,c}` are required by `eql_v2.check_encrypted`. Any subset of the index-term fields may be present, depending on the configured indexes for the column. The orderable term at this scope is `ob` (Block ORE); `oc` lives only on `sv` elements. Mutually exclusive with `SteVecPayload`: must not carry `sv`.",
       "type": "object",
       "properties": {
         "v":  { "$ref": "#/$defs/Version" },
@@ -54,17 +54,13 @@
         "c":  { "$ref": "#/$defs/Ciphertext" },
         "i":  { "$ref": "#/$defs/Ident" },
 
-        "hm":  { "$ref": "#/$defs/IndexTerms/properties/hm" },
-        "bf":  { "$ref": "#/$defs/IndexTerms/properties/bf" },
-        "ob":  { "$ref": "#/$defs/IndexTerms/properties/ob" },
-        "ocf": { "$ref": "#/$defs/IndexTerms/properties/ocf" },
-        "ocv": { "$ref": "#/$defs/IndexTerms/properties/ocv" },
-        "op":  { "$ref": "#/$defs/IndexTerms/properties/op" }
+        "hm": { "$ref": "#/$defs/IndexTerms/properties/hm" },
+        "bf": { "$ref": "#/$defs/IndexTerms/properties/bf" },
+        "ob": { "$ref": "#/$defs/IndexTerms/properties/ob" }
       },
       "required": ["v", "c", "i"],
       "allOf": [
-        { "not": { "required": ["sv"] } },
-        { "$ref": "#/$defs/OreOpeExclusion" }
+        { "not": { "required": ["sv"] } }
       ],
       "additionalProperties": false
     },
@@ -89,7 +85,7 @@
 
     "SteVecElement": {
       "title": "STE vector element",
-      "description": "One entry inside `sv`. Distinct from the root payload: carries a per-element selector `s` and an array flag `a`, but never an `i`, `v`, or nested `sv`. As of v2.3 element equality is matched by `s` plus `hm` (Blake3 / `b3` is removed); `hm` is now permitted at this level. The OPE term (`op`) and the ORE terms (`ob`, `ocf`, `ocv`) are mutually exclusive within an element — see `OreOpeExclusion`.",
+      "description": "One entry inside `sv`. Distinct from the root payload: carries a per-element selector `s` and an array flag `a`, but never an `i`, `v`, or nested `sv`. Every element carries exactly one of two equality / ordering terms — `hm` (HMAC-256) for boolean leaves and for the placeholder entries that represent array / object roots, or `oc` (CLLW ORE) for string and number leaves. They are mutually exclusive: cipherstash-suite emits one and only one per entry; an element with both terms or with neither is malformed.",
       "type": "object",
       "properties": {
         "s": {
@@ -100,12 +96,9 @@
           "type": "boolean",
           "description": "Array marker. True when the selector points at a JSON array context."
         },
-        "c":   { "$ref": "#/$defs/Ciphertext" },
-        "hm":  { "$ref": "#/$defs/IndexTerms/properties/hm" },
-        "ocf": { "$ref": "#/$defs/IndexTerms/properties/ocf" },
-        "ocv": { "$ref": "#/$defs/IndexTerms/properties/ocv" },
-        "op":  { "$ref": "#/$defs/IndexTerms/properties/op" },
-        "ob":  { "$ref": "#/$defs/IndexTerms/properties/ob" }
+        "c":  { "$ref": "#/$defs/Ciphertext" },
+        "hm": { "$ref": "#/$defs/IndexTerms/properties/hm" },
+        "oc": { "$ref": "#/$defs/IndexTerms/properties/oc" }
       },
       "required": ["s", "c"],
       "allOf": [
@@ -118,26 +111,15 @@
             ]
           }
         },
-        { "$ref": "#/$defs/OreOpeExclusion" }
+        {
+          "description": "Exactly one of `hm` or `oc` must be present. `hm` covers boolean leaves and array / object root placeholders; `oc` covers string and number leaves. cipherstash-suite never emits both or neither on the same element.",
+          "oneOf": [
+            { "required": ["hm"] },
+            { "required": ["oc"] }
+          ]
+        }
       ],
       "additionalProperties": false
-    },
-
-    "OreOpeExclusion": {
-      "title": "OPE / ORE mutual exclusion",
-      "description": "A payload (or `sv` element) configured for ordered comparison must use OPE (`op`) or ORE (`ob` / `ocf` / `ocv`), never both. Encoded as `not (op AND any-ORE)`.",
-      "not": {
-        "allOf": [
-          { "required": ["op"] },
-          {
-            "anyOf": [
-              { "required": ["ob"] },
-              { "required": ["ocf"] },
-              { "required": ["ocv"] }
-            ]
-          }
-        ]
-      }
     },
 
     "IndexTerms": {
@@ -162,28 +144,14 @@
 
         "ob": {
           "title": "ORE block u64_8_256 (ob)",
-          "description": "Order-Revealing Encryption term used for ordered comparisons (`<`, `<=`, `>`, `>=`) via the custom `eql_v2.ore_block_u64_8_256` comparator. Stored as an array of hex-encoded ORE blocks. Mutually exclusive with `op` (OPE).",
+          "description": "Order-Revealing Encryption term used for ordered comparisons (`<`, `<=`, `>`, `>=`) on root scalars via the custom `eql_v2.ore_block_u64_8_256` comparator. Stored as an array of hex-encoded ORE blocks. Mutually exclusive with `oc`.",
           "type": "array",
           "items": { "type": "string", "pattern": "^[0-9a-f]+$" }
         },
 
-        "ocf": {
-          "title": "ORE CLLW u64_8 fixed (ocf)",
-          "description": "CLLW Order-Revealing Encryption, fixed-width (numeric). Hex-encoded. Mutually exclusive with `op` (OPE).",
-          "type": "string",
-          "pattern": "^[0-9a-f]+$"
-        },
-
-        "ocv": {
-          "title": "ORE CLLW var_8 (ocv)",
-          "description": "CLLW Order-Revealing Encryption, variable-width (text). Hex-encoded. Mutually exclusive with `op` (OPE).",
-          "type": "string",
-          "pattern": "^[0-9a-f]+$"
-        },
-
-        "op": {
-          "title": "OPE CLLW (op)",
-          "description": "CLLW Order-Preserving Encryption term, hex-encoded. Sortable with native bytea ordering — used in environments without custom comparators. As of v2.3 a single field replaces the previous `opf` (fixed-width / numeric) and `opv` (variable-width / text) split; the value itself encodes any width information the comparator needs. Mutually exclusive with the ORE terms (`ob`, `ocf`, `ocv`).",
+        "oc": {
+          "title": "ORE CLLW (oc)",
+          "description": "CLLW Order-Revealing Encryption term for `ste_vec` elements. Hex-encoded; the decoded byte string starts with a domain-tag byte (`0x00` numeric, `0x01` string) followed by the CLLW ciphertext, which lets a single column hold mixed numeric and string values with a consistent total order. Mutually exclusive with `ob`. Comparison uses the CLLW per-byte protocol (`y + 1 == x`), so a custom comparator / opclass is required for index-driven ordered queries.",
           "type": "string",
           "pattern": "^[0-9a-f]+$"
         }

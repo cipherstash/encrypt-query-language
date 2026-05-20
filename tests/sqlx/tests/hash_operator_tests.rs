@@ -224,26 +224,24 @@ async fn hash_function_falls_back_to_hmac(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
-async fn hash_function_errors_without_hash_index(pool: PgPool) -> Result<()> {
-    // Test: hash_encrypted raises error when no HMAC index is present
+async fn hash_function_returns_null_when_hmac_absent(pool: PgPool) -> Result<()> {
+    // U-002 contract: equality on `eql_v2_encrypted` is hm-only at the root,
+    // and `hash_encrypted` mirrors that. On a column without `hm` (e.g. an
+    // ore-only payload), the inlined body reduces to
+    // `hashtext(hmac_256(val)::text)` — `hmac_256(val)` returns NULL, and
+    // `hashtext(NULL)` propagates NULL. Misconfiguration surfaces as the
+    // hash opclass machinery erroring on the NULL return, not as a silent
+    // wrong-grouping. This test pins the NULL return at the function level.
 
-    // Create value with only ORE index (no hmac)
-    let result = sqlx::query_scalar::<_, i32>(
-        "SELECT eql_v2.hash_encrypted(create_encrypted_json(1, 'ob'))",
-    )
-    .fetch_one(&pool)
-    .await;
+    let h: Option<i32> =
+        sqlx::query_scalar("SELECT eql_v2.hash_encrypted(create_encrypted_json(1, 'ob'))")
+            .fetch_one(&pool)
+            .await
+            .context("hash_encrypted on ore-only value")?;
 
     assert!(
-        result.is_err(),
-        "hash_encrypted should error with ORE-only value"
-    );
-
-    let err_msg = result.unwrap_err().to_string();
-    assert!(
-        err_msg.contains("hmac_256"),
-        "Error should mention missing hmac_256 index term, got: {}",
-        err_msg
+        h.is_none(),
+        "hash_encrypted on a column without `hm` must return NULL (caller responsibility to configure a `unique` index)"
     );
 
     Ok(())
@@ -346,25 +344,24 @@ async fn in_subquery_with_encrypted_column(pool: PgPool) -> Result<()> {
 // still works but the inner element must carry hm to be hashable.
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
-async fn multi_element_ste_vec_raises_error(pool: PgPool) -> Result<()> {
-    // Test: multi-element STE vec cannot be hashed (no top-level hm/b3 keys)
+async fn multi_element_ste_vec_returns_null(pool: PgPool) -> Result<()> {
+    // A multi-element STE vec (`{i, v, sv: [...]}`) has no root `hm` — `hm`
+    // lives on sv elements, not at the root. `hash_encrypted` is documented
+    // as operating on the root payload only; for grouping by an extracted
+    // field, callers use `GROUP BY eql_v2.hmac_256(col, '<selector>')`
+    // directly (or the ste_vec_entry recipe). At the root, this returns NULL
+    // — surfacing as a clear hash-machinery error if someone tries to
+    // `GROUP BY` the column itself without configuring `hm`.
 
-    let result = sqlx::query_scalar::<_, i32>(
-        "SELECT eql_v2.hash_encrypted((get_array_ste_vec())::eql_v2_encrypted)",
-    )
-    .fetch_one(&pool)
-    .await;
+    let h: Option<i32> =
+        sqlx::query_scalar("SELECT eql_v2.hash_encrypted((get_array_ste_vec())::eql_v2_encrypted)")
+            .fetch_one(&pool)
+            .await
+            .context("hash_encrypted on multi-element ste_vec")?;
 
     assert!(
-        result.is_err(),
-        "hash_encrypted should error with multi-element STE vec"
-    );
-
-    let err_msg = result.unwrap_err().to_string();
-    assert!(
-        err_msg.contains("hmac_256"),
-        "Error should mention missing hmac_256 index term, got: {}",
-        err_msg
+        h.is_none(),
+        "hash_encrypted on a multi-element ste_vec (no root `hm`) must return NULL"
     );
 
     Ok(())
@@ -628,3 +625,47 @@ async fn hash_join_non_matching_returns_zero(pool: PgPool) -> Result<()> {
 // fell back to Blake3 across rows. That contract has no production
 // analogue: protect.js does not emit a root-level `b3` term, so the
 // "hm+b3 vs b3-only" mixed shape is fixture-only.
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn hash_encrypted_is_inlinable(pool: PgPool) -> Result<()> {
+    // The hash operator class FUNCTION 1 is called once per row by
+    // HashAggregate / hash joins / DISTINCT. For the per-row cost to drop
+    // out of the plpgsql interpreter, `eql_v2.hash_encrypted(eql_v2_encrypted)`
+    // must be (a) LANGUAGE sql and (b) without a pinned search_path.
+    // Either condition alone is enough to disable PG's SQL function inlining
+    // (see PostgreSQL's inline_function in clauses.c), so the splinter
+    // allowlist and tasks/pin_search_path.sql carve-out are load-bearing.
+    let (lang, proconfig): (String, Option<Vec<String>>) = sqlx::query_as(
+        r#"
+        SELECT l.lanname::text, p.proconfig
+        FROM pg_proc p
+        JOIN pg_namespace n ON n.oid = p.pronamespace
+        JOIN pg_language l ON l.oid = p.prolang
+        WHERE n.nspname = 'eql_v2'
+          AND p.proname = 'hash_encrypted'
+          AND p.pronargs = 1
+        "#,
+    )
+    .fetch_one(&pool)
+    .await
+    .context("could not look up hash_encrypted in pg_proc")?;
+
+    assert_eq!(
+        lang, "sql",
+        "hash_encrypted must be LANGUAGE sql for the planner to inline it (got {})",
+        lang
+    );
+
+    let has_search_path = proconfig
+        .as_ref()
+        .map(|cfg| cfg.iter().any(|c| c.starts_with("search_path=")))
+        .unwrap_or(false);
+    assert!(
+        !has_search_path,
+        "hash_encrypted must NOT have a pinned search_path — pin_search_path.sql allowlists it; \
+         pinning disables SQL inlining (got proconfig={:?})",
+        proconfig
+    );
+
+    Ok(())
+}

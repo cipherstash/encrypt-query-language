@@ -48,7 +48,7 @@ async fn excludes_elements_without_hm(pool: PgPool) -> Result<()> {
             '{"v":2,"i":{"t":"t","c":"c"},
               "sv":[
                 {"s":"sel_with_hm",    "c":"c1", "hm":"hash_a"},
-                {"s":"sel_without_hm", "c":"c2", "ocv":"ocv_only"}
+                {"s":"sel_without_hm", "c":"c2", "oc":"ocv_only"}
               ]}'::jsonb::eql_v2_encrypted
         )
     "#;

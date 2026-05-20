@@ -24,9 +24,26 @@
 --! @see eql_v2."->>"
 
 --! @brief -> operator with text selector
+--!
+--! Walks the encrypted document's `sv` array, picks the entry whose
+--! selector matches, and returns it merged with the source payload's
+--! `i` / `v` metadata as a new `eql_v2_encrypted`. Selectors are
+--! deterministic per (path, key), so at most one entry matches; the
+--! loop exits early on the first hit.
+--!
+--! Caveat. The merged return — `meta || sv_entry` — is a synthetic
+--! shape: it has root-level `i` / `v` plus sv-element-level `s` / `c`
+--! / `hm`-or-`oc`. It's not a strictly-valid `EncryptedPayload`
+--! (root has no `s`) and not a strictly-valid `SteVecElement` (entry
+--! has no `i` / `v`). Callers chain off `.data` to feed typed
+--! extractors like `eql_v2.ore_cllw(.data::eql_v2.ste_vec_entry)`. A
+--! future refactor may flip this function's return type to
+--! `eql_v2.ste_vec_entry` so the typed chain is direct; until then
+--! the wrap-then-cast pattern is the canonical recipe.
+--!
 --! @param eql_v2_encrypted Encrypted JSONB data
 --! @param text Field name to extract
---! @return eql_v2_encrypted Encrypted value at selector
+--! @return eql_v2_encrypted Encrypted value at selector, NULL if no match
 --! @example
 --! SELECT encrypted_json -> 'field_name' FROM table;
 CREATE FUNCTION eql_v2."->"(e eql_v2_encrypted, selector text)
@@ -49,11 +66,19 @@ AS $$
 
     sv := eql_v2.ste_vec(e);
 
+    -- Linear scan with early EXIT on first match. Selectors are
+    -- unique per (path, key) within a document, so at most one entry
+    -- matches and continuing past the first hit is wasted work.
     FOR idx IN 1..array_length(sv, 1) LOOP
-      if eql_v2.selector(sv[idx]) = selector THEN
+      if eql_v2._selector(sv[idx]) = selector THEN
         found := sv[idx];
+        EXIT;
       END IF;
     END LOOP;
+
+    IF found IS NULL THEN
+      RETURN NULL;
+    END IF;
 
     RETURN (meta || found)::eql_v2_encrypted;
   END;
@@ -79,7 +104,7 @@ CREATE FUNCTION eql_v2."->"(e eql_v2_encrypted, selector eql_v2_encrypted)
   SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
-    RETURN eql_v2."->"(e, eql_v2.selector(selector));
+    RETURN eql_v2."->"(e, eql_v2._selector(selector));
   END;
 $$ LANGUAGE plpgsql;
 

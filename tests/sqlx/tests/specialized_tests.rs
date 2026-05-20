@@ -99,7 +99,7 @@ async fn to_ste_vec_value_extracts_ste_vec_fields(pool: PgPool) -> Result<()> {
 
     // to_ste_vec_value() returns eql_v2_encrypted - cast to jsonb for parsing
     let result: serde_json::Value = sqlx::query_scalar(
-        "SELECT eql_v2.to_ste_vec_value('{\"i\": \"i\", \"v\": 2, \"sv\": [{\"ocf\": \"ocf\"}]}'::jsonb)::jsonb"
+        "SELECT eql_v2.to_ste_vec_value('{\"i\": \"i\", \"v\": 2, \"sv\": [{\"oc\": \"oc\"}]}'::jsonb)::jsonb"
     )
     .fetch_one(&pool)
     .await?;
@@ -108,7 +108,7 @@ async fn to_ste_vec_value_extracts_ste_vec_fields(pool: PgPool) -> Result<()> {
     let obj = result.as_object().unwrap();
     assert!(obj.contains_key("i"), "should contain 'i' key");
     assert!(obj.contains_key("v"), "should contain 'v' key");
-    assert!(obj.contains_key("ocf"), "should contain 'ocf' key");
+    assert!(obj.contains_key("oc"), "should contain 'oc' key");
 
     Ok(())
 }

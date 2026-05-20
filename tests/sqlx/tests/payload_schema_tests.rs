@@ -5,8 +5,8 @@
 //! - Lock the on-the-wire payload contracts as code so format drift is caught
 //!   in CI rather than discovered at integration time.
 //! - Document the v2.2 -> v2.3 delta as executable assertions: payloads that
-//!   are valid in 2.2 (e.g. `b3` everywhere, `opf`/`opv` split) must fail
-//!   under 2.3, and vice versa.
+//!   are valid in 2.2 (e.g. `b3` everywhere, `opf`/`opv` and `ocf`/`ocv`
+//!   splits) must fail under 2.3, and vice versa.
 
 use std::path::PathBuf;
 use std::sync::OnceLock;
@@ -232,38 +232,75 @@ fn v2_3_minimal_encrypted_payload_is_valid() {
 }
 
 #[test]
-fn v2_3_encrypted_payload_with_op_only_is_valid() {
+fn v2_3_encrypted_payload_with_ob_only_is_valid() {
+    // Root-only Block ORE. `oc` is sv-element only by convention, but the
+    // schema doesn't restrict it to that level today — covered separately.
     let p = json!({
         "v": 2, "k": "ct", "c": CIPHERTEXT, "i": ident(),
-        "hm": HEX, "bf": [1, 2, 3], "op": HEX
+        "hm": HEX, "ob": [HEX, HEX_LONG]
     });
-    assert_valid(schema_v2_3(), &p, "encrypted with OPE only");
+    assert_valid(schema_v2_3(), &p, "encrypted with Block ORE only");
 }
 
 #[test]
-fn v2_3_encrypted_payload_with_ore_only_is_valid() {
+fn v2_3_sv_element_with_oc_is_valid() {
+    // `oc` covers string and number leaves. `hm` is NOT present on the
+    // same element — the two are mutually exclusive per v2.3.
     let p = json!({
-        "v": 2, "k": "ct", "c": CIPHERTEXT, "i": ident(),
-        "hm": HEX, "ob": [HEX, HEX_LONG], "ocf": HEX, "ocv": HEX_LONG
+        "v": 2, "k": "sv", "i": ident(),
+        "sv": [
+            { "s": SELECTOR, "a": false, "c": CIPHERTEXT, "oc": HEX_LONG }
+        ]
     });
-    assert_valid(schema_v2_3(), &p, "encrypted with ORE only");
+    assert_valid(schema_v2_3(), &p, "sv element with single oc term");
 }
 
 #[test]
-fn v2_3_ste_vec_payload_with_hm_in_elements_is_valid() {
-    // v2.3 promotes element equality from b3 -> hm.
+fn v2_3_ste_vec_payload_with_mixed_hm_and_oc_elements_is_valid() {
+    // v2.3 promotes element equality from b3 -> hm for boolean leaves and
+    // for the placeholder entries that represent array / object roots.
+    // String / number leaves carry `oc` instead. Every sv element has
+    // exactly one — the two are mutually exclusive — and a single payload
+    // can mix the two kinds of elements freely.
     let p = json!({
         "v": 2, "k": "sv", "i": ident(),
         "sv": [
             { "s": SELECTOR, "a": false, "c": CIPHERTEXT, "hm": HEX },
-            { "s": SELECTOR, "a": true,  "c": CIPHERTEXT, "hm": HEX, "op": HEX }
+            { "s": SELECTOR, "a": true,  "c": CIPHERTEXT, "oc": HEX_LONG }
         ]
     });
     assert_valid(
         schema_v2_3(),
         &p,
-        "ste_vec payload with hm-bearing elements",
+        "ste_vec payload with hm-bearing + oc-bearing elements",
     );
+}
+
+#[test]
+fn v2_3_sv_element_with_both_hm_and_oc_is_rejected() {
+    // hm and oc are mutually exclusive: hm covers boolean leaves and the
+    // placeholders for array / object roots; oc covers string / number
+    // leaves. cipherstash-suite never emits both on the same entry.
+    let p = json!({
+        "v": 2, "k": "sv", "i": ident(),
+        "sv": [
+            { "s": SELECTOR, "a": false, "c": CIPHERTEXT, "hm": HEX, "oc": HEX_LONG }
+        ]
+    });
+    assert_invalid(schema_v2_3(), &p, "sv element carrying both hm and oc");
+}
+
+#[test]
+fn v2_3_sv_element_with_neither_hm_nor_oc_is_rejected() {
+    // Every sv element carries exactly one of hm or oc — neither is also
+    // malformed.
+    let p = json!({
+        "v": 2, "k": "sv", "i": ident(),
+        "sv": [
+            { "s": SELECTOR, "a": false, "c": CIPHERTEXT }
+        ]
+    });
+    assert_invalid(schema_v2_3(), &p, "sv element with neither hm nor oc");
 }
 
 #[test]
@@ -282,58 +319,44 @@ fn v2_3_b3_field_is_rejected_everywhere() {
 }
 
 #[test]
-fn v2_3_legacy_opf_and_opv_are_rejected() {
-    let with_opf = json!({
-        "v": 2, "c": CIPHERTEXT, "i": ident(), "opf": HEX
-    });
-    assert_invalid(
-        schema_v2_3(),
-        &with_opf,
-        "encrypted payload with legacy opf",
-    );
-
-    let with_opv = json!({
-        "v": 2, "c": CIPHERTEXT, "i": ident(), "opv": HEX_LONG
-    });
-    assert_invalid(
-        schema_v2_3(),
-        &with_opv,
-        "encrypted payload with legacy opv",
-    );
-
-    let element_with_opf = json!({
-        "v": 2, "k": "sv", "i": ident(),
-        "sv": [{ "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX, "opf": HEX }]
-    });
-    assert_invalid(
-        schema_v2_3(),
-        &element_with_opf,
-        "sv element with legacy opf",
-    );
-}
-
-#[test]
-fn v2_3_ope_and_ore_are_mutually_exclusive_at_root() {
+fn v2_3_legacy_split_ore_fields_are_rejected() {
+    // v2.2 had `ocf` (ORE CLLW fixed) and `ocv` (ORE CLLW var) as separate
+    // ordered fields. v2.3 collapses them into a single `oc` field. Width
+    // information that was implied by the field name is now carried in a
+    // leading domain-tag byte on the ciphertext.
+    //
+    // The OPE-side legacy fields (`opf` / `opv`) are also rejected — v2.3
+    // doesn't support OPE on `eql_v2_encrypted` (deferred to a future
+    // separate type).
     let cases = [
         (
-            "op + ob",
+            "encrypted payload with legacy ocf",
+            json!({ "v": 2, "c": CIPHERTEXT, "i": ident(), "ocf": HEX }),
+        ),
+        (
+            "encrypted payload with legacy ocv",
+            json!({ "v": 2, "c": CIPHERTEXT, "i": ident(), "ocv": HEX_LONG }),
+        ),
+        (
+            "encrypted payload with legacy opf",
+            json!({ "v": 2, "c": CIPHERTEXT, "i": ident(), "opf": HEX }),
+        ),
+        (
+            "encrypted payload with legacy opv",
+            json!({ "v": 2, "c": CIPHERTEXT, "i": ident(), "opv": HEX_LONG }),
+        ),
+        (
+            "sv element with legacy ocv",
             json!({
-                "v": 2, "c": CIPHERTEXT, "i": ident(),
-                "op": HEX, "ob": [HEX, HEX_LONG]
+                "v": 2, "k": "sv", "i": ident(),
+                "sv": [{ "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX, "ocv": HEX_LONG }]
             }),
         ),
         (
-            "op + ocf",
+            "sv element with `op` (OPE not supported in v2.3)",
             json!({
-                "v": 2, "c": CIPHERTEXT, "i": ident(),
-                "op": HEX, "ocf": HEX
-            }),
-        ),
-        (
-            "op + ocv",
-            json!({
-                "v": 2, "c": CIPHERTEXT, "i": ident(),
-                "op": HEX, "ocv": HEX_LONG
+                "v": 2, "k": "sv", "i": ident(),
+                "sv": [{ "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX, "op": HEX }]
             }),
         ),
     ];
@@ -343,15 +366,37 @@ fn v2_3_ope_and_ore_are_mutually_exclusive_at_root() {
 }
 
 #[test]
-fn v2_3_ope_and_ore_are_mutually_exclusive_in_sv_element() {
+fn v2_3_ob_and_oc_are_mutually_exclusive_at_root() {
+    let p = json!({
+        "v": 2, "c": CIPHERTEXT, "i": ident(),
+        "oc": HEX_LONG, "ob": [HEX, HEX_LONG]
+    });
+    assert_invalid(schema_v2_3(), &p, "ob + oc");
+}
+
+#[test]
+fn v2_3_oc_at_root_is_rejected() {
+    // `oc` is sv-element-scope only. It must never appear at the root
+    // of an EncryptedPayload, regardless of whether `ob` is also present
+    // — the scope-disjoint rule (U-006) is independent of the mutual-
+    // exclusion check between the two ordered terms.
+    let p = json!({
+        "v": 2, "c": CIPHERTEXT, "i": ident(),
+        "oc": HEX_LONG
+    });
+    assert_invalid(schema_v2_3(), &p, "root payload with oc");
+}
+
+#[test]
+fn v2_3_ob_and_oc_are_mutually_exclusive_in_sv_element() {
     let p = json!({
         "v": 2, "k": "sv", "i": ident(),
         "sv": [{
             "s": SELECTOR, "c": CIPHERTEXT,
-            "hm": HEX, "op": HEX, "ocv": HEX_LONG
+            "hm": HEX, "ob": [HEX, HEX_LONG], "oc": HEX_LONG
         }]
     });
-    assert_invalid(schema_v2_3(), &p, "sv element with both op and ocv");
+    assert_invalid(schema_v2_3(), &p, "sv element with both ob and oc");
 }
 
 #[test]

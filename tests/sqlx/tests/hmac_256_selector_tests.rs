@@ -81,7 +81,7 @@ async fn returns_null_when_matched_element_has_no_hm(pool: PgPool) -> Result<()>
     let sql = r#"
         SELECT eql_v2.hmac_256(
             '{"v": 2, "i": {"t": "t", "c": "c"},
-              "sv": [{"s": "sel_x", "c": "ct", "ocv": "ocv_value"}]}'::jsonb::eql_v2_encrypted,
+              "sv": [{"s": "sel_x", "c": "ct", "oc": "ocv_value"}]}'::jsonb::eql_v2_encrypted,
             'sel_x'
         )::text
     "#;

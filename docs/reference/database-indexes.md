@@ -48,8 +48,8 @@ For PostgreSQL to use an index on encrypted columns, **all** of these conditions
 
 The encrypted data must contain the index term types that support the operation:
 
-- **Equality queries** - Require `unique` index config (adds `hm` hmac_256 or `b3` blake3 terms)
-- **Range queries** - Require `ore` index config (adds `ob` ore_block_u64_8_256 terms) **or** `ope` index config (adds `opf` ope_cllw_u64_65 / `opv` ope_cllw_var_8 terms)
+- **Equality queries** - Require `unique` index config (adds `hm` hmac_256 terms)
+- **Range queries** - Require `ore` index config on root scalars (adds `ob` ore_block_u64_8_256 terms), or `ste_vec` on encrypted JSON columns (adds `oc` ORE CLLW on sv elements — see [U-006](../upgrading/v2.3.md#u-006-ste_vec-ore-field-consolidation))
 - **Pattern matching** - Typically scans (bloom filters don't use B-tree indexes)
 
 **Example:**
@@ -179,7 +179,7 @@ SELECT * FROM events
 
 The sort key now matches the functional index expression, so the planner streams rows out of the index in order — a plain Index Scan, no separate Sort node.
 
-**Non-Block-ORE term types.** For columns carrying only `ore_cllw_u64_8`, `ore_cllw_var_8`, `opf` (OPE fixed-width), or `opv` (OPE variable-width) terms, the bare-form `<` / `>` operators no longer dispatch through `eql_v2.compare()` — they go straight to the Block ORE extractor, which raises on a missing `ob`. Either migrate the column configuration to `ore` (Block ORE), or rewrite range queries to the matching extractor form, e.g. `WHERE eql_v2.ore_cllw_u64_8(col) < eql_v2.ore_cllw_u64_8($1::jsonb)`. See [U-005](../upgrading/v2.3.md#u-005-range-operators-are-block-ore-only) for the migration notes.
+**Non-Block-ORE term types.** For columns carrying only `oc` (sv-element ORE CLLW), the bare-form `<` / `>` operators no longer dispatch through `eql_v2.compare()` — they go straight to the Block ORE extractor, which raises on a missing `ob`. Either migrate the column configuration to `ore` (Block ORE), or rewrite range queries to the extractor form: `WHERE eql_v2.ore_cllw(e->'<selector>'::text) < eql_v2.ore_cllw($1::jsonb)`. See [U-005](../upgrading/v2.3.md#u-005-range-operators-are-block-ore-only) and [U-006](../upgrading/v2.3.md#u-006-ste_vec-ore-field-consolidation) for the migration notes.
 
 ### GROUP BY
 
@@ -276,10 +276,8 @@ CREATE INDEX ON users (encrypted_email eql_v2.encrypted_operator_class);
 
 B-tree indexes **only work** with:
 - `hm` (hmac_256) - for equality
-- `b3` (blake3) - for equality
-- `ob` (ore_block_u64_8_256) - for range queries
-- `opf` (ope_cllw_u64_65) - for range queries (fixed-width OPE)
-- `opv` (ope_cllw_var_8) - for range queries (variable-width OPE)
+- `ob` (ore_block_u64_8_256) - for range queries on root scalars
+- `oc` (ore_cllw) - for range queries on `ste_vec` elements (needs a custom comparator; tracked as #220)
 
 They **do not work** with:
 - `bf` (bloom_filter) - pattern matching
@@ -482,13 +480,12 @@ If you see `Seq Scan`, ensure:
 **Check 1: Verify data has index terms**
 
 ```sql
--- Check if data contains hm (hmac_256) or b3 (blake3) for equality,
--- ob (ore) for range, or opf/opv (ope) for range
+-- Check if data contains hm (hmac) for equality, ob (Block ORE)
+-- for range queries on root scalars, or oc for range queries on
+-- ste_vec elements.
 SELECT encrypted_email::jsonb ? 'hm' AS has_hmac,
-       encrypted_email::jsonb ? 'b3' AS has_blake3,
-       encrypted_email::jsonb ? 'ob' AS has_ore,
-       encrypted_email::jsonb ? 'opf' AS has_ope_fixed,
-       encrypted_email::jsonb ? 'opv' AS has_ope_var
+       encrypted_email::jsonb ? 'ob' AS has_ore_block,
+       encrypted_email::jsonb ? 'oc' AS has_ore_cllw
 FROM users LIMIT 1;
 ```
 

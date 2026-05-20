@@ -191,11 +191,13 @@ async fn contains_does_not_match_different_hm(pool: PgPool) -> Result<()> {
 
     // The seed fixture inserted three rows whose $.hello sv element hm is
     // derived from a different source (the existing fixture ocv) — none of
-    // them should match `other_hm`.
+    // them should match `other_hm`. Inspect the extracted entry's `s` via
+    // JSONB field access (selector(eql_v2_encrypted) is now an internal
+    // helper).
     let sql = format!(
         "SELECT e FROM encrypted \
          WHERE e @> '{}'::jsonb::eql_v2_encrypted \
-           AND eql_v2.selector(e -> '{}'::text) = '{}'",
+           AND ((e -> '{}'::text).data) ->> 's' = '{}'",
         query_payload,
         Selectors::HELLO,
         Selectors::HELLO,

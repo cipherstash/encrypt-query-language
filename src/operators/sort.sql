@@ -2,10 +2,6 @@
 -- REQUIRE: src/encrypted/types.sql
 -- REQUIRE: src/ore_block_u64_8_256/types.sql
 -- REQUIRE: src/ore_block_u64_8_256/functions.sql
--- REQUIRE: src/ope_cllw_u64_65/types.sql
--- REQUIRE: src/ope_cllw_u64_65/functions.sql
--- REQUIRE: src/ope_cllw_var_8/types.sql
--- REQUIRE: src/ope_cllw_var_8/functions.sql
 -- REQUIRE: src/operators/compare.sql
 -- REQUIRE: src/operators/order_by.sql
 
@@ -17,12 +13,8 @@
 --! faster than the O(n^2) correlated subquery workaround.
 --!
 --! When all input rows share an ORE term (`ob`) the sort path pre-extracts the
---! ORE order key once per row and compares those keys directly. When all rows
---! share the *same* OPE subtype (every non-NULL row carries `opf`, or every
---! non-NULL row carries `opv`) the matching OPE ciphertext is pre-extracted as
---! `bytea` and compared lexicographically (OPE ciphertexts are designed to be
---! ordered that way within a subtype). Mixed-subtype OPE batches and rows
---! lacking ORE/OPE entirely fall back to `eql_v2.compare()` per pair.
+--! ORE order key once per row and compares those keys directly. Rows lacking
+--! an ORE term entirely fall back to `eql_v2.compare()` per pair.
 
 
 --! @internal
@@ -61,63 +53,17 @@ $$ LANGUAGE plpgsql;
 
 
 --! @internal
---! @brief Compare pre-extracted OPE ciphertext bytes with encrypted NULL semantics
---!
---! OPE ciphertexts within a single subtype are ordered lexicographically by
---! construction, so once the bytea has been extracted (per-subtype, by the
---! caller) we can dispatch directly to the native bytea comparison operators.
---! Callers must ensure every non-NULL key originates from the same OPE subtype
---! (`opf` or `opv`); mixed-subtype batches must use `strategy = 'compare'`.
---!
---! @param a bytea First OPE ciphertext (or NULL)
---! @param b bytea Second OPE ciphertext (or NULL)
---! @return integer -1 if a < b, 0 if a = b, 1 if a > b
-CREATE FUNCTION eql_v2._compare_ope_key(
-    a bytea,
-    b bytea
-)
-RETURNS integer
-IMMUTABLE PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
-AS $$
-BEGIN
-    IF a IS NULL AND b IS NULL THEN
-        RETURN 0;
-    END IF;
-
-    IF a IS NULL THEN
-        RETURN -1;
-    END IF;
-
-    IF b IS NULL THEN
-        RETURN 1;
-    END IF;
-
-    IF a < b THEN
-        RETURN -1;
-    ELSIF a > b THEN
-        RETURN 1;
-    ELSE
-        RETURN 0;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
-
-
---! @internal
 --! @brief Compare two elements from aligned arrays using the selected sort strategy
 --!
 --! @param vals eql_v2_encrypted[] Encrypted values (used when strategy = 'compare')
 --! @param ore_keys eql_v2.ore_block_u64_8_256[] Pre-extracted ORE keys (strategy = 'ore')
---! @param ope_keys bytea[] Pre-extracted OPE ciphertext bytes (strategy = 'ope')
 --! @param left_idx integer Index of the left element
 --! @param right_idx integer Index of the right element
---! @param strategy text One of 'ore', 'ope', or 'compare'
+--! @param strategy text One of 'ore' or 'compare'
 --! @return integer -1 if left < right, 0 if equal, 1 if left > right
 CREATE FUNCTION eql_v2._compare_sort_elements(
     vals eql_v2_encrypted[],
     ore_keys eql_v2.ore_block_u64_8_256[],
-    ope_keys bytea[],
     left_idx integer,
     right_idx integer,
     strategy text
@@ -131,10 +77,6 @@ BEGIN
         RETURN eql_v2._compare_order_key(ore_keys[left_idx], ore_keys[right_idx]);
     END IF;
 
-    IF strategy = 'ope' THEN
-        RETURN eql_v2._compare_ope_key(ope_keys[left_idx], ope_keys[right_idx]);
-    END IF;
-
     RETURN eql_v2.compare(vals[left_idx], vals[right_idx]);
 END;
 $$ LANGUAGE plpgsql;
@@ -145,21 +87,17 @@ $$ LANGUAGE plpgsql;
 --!
 --! @param vals eql_v2_encrypted[] Array of encrypted values
 --! @param ore_keys eql_v2.ore_block_u64_8_256[] Array of pre-extracted ORE keys
---! @param ope_keys bytea[] Array of pre-extracted OPE ciphertext bytes
 --! @param idx integer Index of the element to compare
 --! @param pivot_val eql_v2_encrypted Pivot encrypted value (strategy = 'compare')
 --! @param pivot_ore_key eql_v2.ore_block_u64_8_256 Pivot ORE key (strategy = 'ore')
---! @param pivot_ope_key bytea Pivot OPE ciphertext bytes (strategy = 'ope')
---! @param strategy text One of 'ore', 'ope', or 'compare'
+--! @param strategy text One of 'ore' or 'compare'
 --! @return integer -1 if element < pivot, 0 if equal, 1 if element > pivot
 CREATE FUNCTION eql_v2._compare_sort_pivot(
     vals eql_v2_encrypted[],
     ore_keys eql_v2.ore_block_u64_8_256[],
-    ope_keys bytea[],
     idx integer,
     pivot_val eql_v2_encrypted,
     pivot_ore_key eql_v2.ore_block_u64_8_256,
-    pivot_ope_key bytea,
     strategy text
 )
 RETURNS integer
@@ -169,10 +107,6 @@ AS $$
 BEGIN
     IF strategy = 'ore' THEN
         RETURN eql_v2._compare_order_key(ore_keys[idx], pivot_ore_key);
-    END IF;
-
-    IF strategy = 'ope' THEN
-        RETURN eql_v2._compare_ope_key(ope_keys[idx], pivot_ope_key);
     END IF;
 
     RETURN eql_v2.compare(vals[idx], pivot_val);
@@ -186,19 +120,16 @@ $$ LANGUAGE plpgsql;
 --! @param ids bigint[] Array of row identifiers (reordered in place)
 --! @param vals eql_v2_encrypted[] Array of encrypted values (reordered in place)
 --! @param ore_keys eql_v2.ore_block_u64_8_256[] Array of pre-extracted ORE keys (reordered in place)
---! @param ope_keys bytea[] Array of pre-extracted OPE bytes (reordered in place)
 --! @param lo integer Lower bound index (1-based, inclusive)
 --! @param hi integer Upper bound index (1-based, inclusive)
---! @param strategy text One of 'ore', 'ope', or 'compare'
+--! @param strategy text One of 'ore' or 'compare'
 --! @return ids bigint[] Sorted array of row identifiers
 --! @return vals eql_v2_encrypted[] Sorted array of encrypted values
 --! @return ore_keys eql_v2.ore_block_u64_8_256[] Sorted array of pre-extracted ORE keys
---! @return ope_keys bytea[] Sorted array of pre-extracted OPE bytes
 CREATE FUNCTION eql_v2._insertion_sort(
     INOUT ids bigint[],
     INOUT vals eql_v2_encrypted[],
     INOUT ore_keys eql_v2.ore_block_u64_8_256[],
-    INOUT ope_keys bytea[],
     lo integer,
     hi integer,
     strategy text
@@ -211,7 +142,6 @@ DECLARE
     key_id bigint;
     key_val eql_v2_encrypted;
     sort_ore_key eql_v2.ore_block_u64_8_256;
-    sort_ope_key bytea;
 BEGIN
     IF lo >= hi THEN
         RETURN;
@@ -221,7 +151,6 @@ BEGIN
         key_id := ids[i];
         key_val := vals[i];
         sort_ore_key := ore_keys[i];
-        sort_ope_key := ope_keys[i];
         j := i - 1;
 
         WHILE j >= lo LOOP
@@ -229,20 +158,16 @@ BEGIN
                 AND eql_v2.compare(vals[j], key_val) <= 0;
             EXIT WHEN strategy = 'ore'
                 AND eql_v2._compare_order_key(ore_keys[j], sort_ore_key) <= 0;
-            EXIT WHEN strategy = 'ope'
-                AND eql_v2._compare_ope_key(ope_keys[j], sort_ope_key) <= 0;
 
             ids[j + 1] := ids[j];
             vals[j + 1] := vals[j];
             ore_keys[j + 1] := ore_keys[j];
-            ope_keys[j + 1] := ope_keys[j];
             j := j - 1;
         END LOOP;
 
         ids[j + 1] := key_id;
         vals[j + 1] := key_val;
         ore_keys[j + 1] := sort_ore_key;
-        ope_keys[j + 1] := sort_ope_key;
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
@@ -258,20 +183,17 @@ $$ LANGUAGE plpgsql;
 --! @param ids bigint[] Array of row identifiers (reordered in place)
 --! @param vals eql_v2_encrypted[] Array of encrypted values to compare (reordered in place)
 --! @param ore_keys eql_v2.ore_block_u64_8_256[] Pre-extracted ORE keys (reordered in place)
---! @param ope_keys bytea[] Pre-extracted OPE ciphertext bytes (reordered in place)
 --! @param lo integer Lower bound index (1-based, inclusive)
 --! @param hi integer Upper bound index (1-based, inclusive)
---! @param strategy text One of 'ore', 'ope', or 'compare'
+--! @param strategy text One of 'ore' or 'compare'
 --!
 --! @return ids bigint[] Sorted array of row identifiers
 --! @return vals eql_v2_encrypted[] Sorted array of encrypted values
 --! @return ore_keys eql_v2.ore_block_u64_8_256[] Sorted array of pre-extracted ORE keys
---! @return ope_keys bytea[] Sorted array of pre-extracted OPE bytes
 CREATE FUNCTION eql_v2._quicksort_sorter(
     INOUT ids bigint[],
     INOUT vals eql_v2_encrypted[],
     INOUT ore_keys eql_v2.ore_block_u64_8_256[],
-    INOUT ope_keys bytea[],
     lo integer,
     hi integer,
     strategy text
@@ -282,7 +204,6 @@ DECLARE
     insertion_threshold CONSTANT integer := 16;
     pivot_val eql_v2_encrypted;
     pivot_ore_key eql_v2.ore_block_u64_8_256;
-    pivot_ope_key bytea;
     mid integer;
     i integer;
     j integer;
@@ -291,54 +212,49 @@ DECLARE
     tmp_id bigint;
     tmp_val eql_v2_encrypted;
     tmp_ore_key eql_v2.ore_block_u64_8_256;
-    tmp_ope_key bytea;
 BEGIN
     WHILE lo < hi LOOP
         IF hi - lo <= insertion_threshold THEN
-            SELECT q.ids, q.vals, q.ore_keys, q.ope_keys
-                INTO ids, vals, ore_keys, ope_keys
-                FROM eql_v2._insertion_sort(ids, vals, ore_keys, ope_keys, lo, hi, strategy) q;
+            SELECT q.ids, q.vals, q.ore_keys
+                INTO ids, vals, ore_keys
+                FROM eql_v2._insertion_sort(ids, vals, ore_keys, lo, hi, strategy) q;
             RETURN;
         END IF;
 
         -- Median-of-three pivot selection: sort lo, mid, hi then use mid as pivot
         mid := lo + (hi - lo) / 2;
 
-        IF eql_v2._compare_sort_elements(vals, ore_keys, ope_keys, lo, mid, strategy) > 0 THEN
+        IF eql_v2._compare_sort_elements(vals, ore_keys, lo, mid, strategy) > 0 THEN
             tmp_id := ids[lo]; ids[lo] := ids[mid]; ids[mid] := tmp_id;
             tmp_val := vals[lo]; vals[lo] := vals[mid]; vals[mid] := tmp_val;
             tmp_ore_key := ore_keys[lo]; ore_keys[lo] := ore_keys[mid]; ore_keys[mid] := tmp_ore_key;
-            tmp_ope_key := ope_keys[lo]; ope_keys[lo] := ope_keys[mid]; ope_keys[mid] := tmp_ope_key;
         END IF;
-        IF eql_v2._compare_sort_elements(vals, ore_keys, ope_keys, lo, hi, strategy) > 0 THEN
+        IF eql_v2._compare_sort_elements(vals, ore_keys, lo, hi, strategy) > 0 THEN
             tmp_id := ids[lo]; ids[lo] := ids[hi]; ids[hi] := tmp_id;
             tmp_val := vals[lo]; vals[lo] := vals[hi]; vals[hi] := tmp_val;
             tmp_ore_key := ore_keys[lo]; ore_keys[lo] := ore_keys[hi]; ore_keys[hi] := tmp_ore_key;
-            tmp_ope_key := ope_keys[lo]; ope_keys[lo] := ope_keys[hi]; ope_keys[hi] := tmp_ope_key;
         END IF;
-        IF eql_v2._compare_sort_elements(vals, ore_keys, ope_keys, mid, hi, strategy) > 0 THEN
+        IF eql_v2._compare_sort_elements(vals, ore_keys, mid, hi, strategy) > 0 THEN
             tmp_id := ids[mid]; ids[mid] := ids[hi]; ids[hi] := tmp_id;
             tmp_val := vals[mid]; vals[mid] := vals[hi]; vals[hi] := tmp_val;
             tmp_ore_key := ore_keys[mid]; ore_keys[mid] := ore_keys[hi]; ore_keys[hi] := tmp_ore_key;
-            tmp_ope_key := ope_keys[mid]; ope_keys[mid] := ope_keys[hi]; ope_keys[hi] := tmp_ope_key;
         END IF;
 
         pivot_val := vals[mid];
         pivot_ore_key := ore_keys[mid];
-        pivot_ope_key := ope_keys[mid];
         i := lo;
         j := hi;
 
         LOOP
             WHILE eql_v2._compare_sort_pivot(
-                vals, ore_keys, ope_keys, i,
-                pivot_val, pivot_ore_key, pivot_ope_key, strategy
+                vals, ore_keys, i,
+                pivot_val, pivot_ore_key, strategy
             ) < 0 LOOP
                 i := i + 1;
             END LOOP;
             WHILE eql_v2._compare_sort_pivot(
-                vals, ore_keys, ope_keys, j,
-                pivot_val, pivot_ore_key, pivot_ope_key, strategy
+                vals, ore_keys, j,
+                pivot_val, pivot_ore_key, strategy
             ) > 0 LOOP
                 j := j - 1;
             END LOOP;
@@ -348,7 +264,6 @@ BEGIN
             tmp_id := ids[i]; ids[i] := ids[j]; ids[j] := tmp_id;
             tmp_val := vals[i]; vals[i] := vals[j]; vals[j] := tmp_val;
             tmp_ore_key := ore_keys[i]; ore_keys[i] := ore_keys[j]; ore_keys[j] := tmp_ore_key;
-            tmp_ope_key := ope_keys[i]; ope_keys[i] := ope_keys[j]; ope_keys[j] := tmp_ope_key;
 
             i := i + 1;
             j := j - 1;
@@ -359,16 +274,16 @@ BEGIN
 
         IF left_hi - lo < hi - right_lo THEN
             IF lo < left_hi THEN
-                SELECT q.ids, q.vals, q.ore_keys, q.ope_keys
-                    INTO ids, vals, ore_keys, ope_keys
-                    FROM eql_v2._quicksort_sorter(ids, vals, ore_keys, ope_keys, lo, left_hi, strategy) q;
+                SELECT q.ids, q.vals, q.ore_keys
+                    INTO ids, vals, ore_keys
+                    FROM eql_v2._quicksort_sorter(ids, vals, ore_keys, lo, left_hi, strategy) q;
             END IF;
             lo := right_lo;
         ELSE
             IF right_lo < hi THEN
-                SELECT q.ids, q.vals, q.ore_keys, q.ope_keys
-                    INTO ids, vals, ore_keys, ope_keys
-                    FROM eql_v2._quicksort_sorter(ids, vals, ore_keys, ope_keys, right_lo, hi, strategy) q;
+                SELECT q.ids, q.vals, q.ore_keys
+                    INTO ids, vals, ore_keys
+                    FROM eql_v2._quicksort_sorter(ids, vals, ore_keys, right_lo, hi, strategy) q;
             END IF;
             hi := left_hi;
         END IF;
@@ -417,25 +332,23 @@ $$ LANGUAGE plpgsql;
 
 
 --! @internal
---! @brief Sort encrypted values using precomputed ORE or OPE keys when available
+--! @brief Sort encrypted values using precomputed ORE keys when available
 --!
 --! Shared implementation for public sorting entrypoints. The `strategy`
 --! parameter selects the comparison path: `'ore'` uses the aligned `ore_keys`
---! array; `'ope'` uses the aligned `ope_keys` array (lex bytea comparison);
---! `'compare'` falls back to `eql_v2.compare()` on the encrypted values directly.
+--! array; `'compare'` falls back to `eql_v2.compare()` on the encrypted values
+--! directly.
 --!
 --! @param ids bigint[] Row identifiers aligned with `vals`
 --! @param vals eql_v2_encrypted[] Encrypted values to sort
 --! @param ore_keys eql_v2.ore_block_u64_8_256[] Pre-extracted ORE keys (used when strategy = 'ore')
---! @param ope_keys bytea[] Pre-extracted OPE ciphertext bytes (used when strategy = 'ope'); must all originate from the same OPE subtype
 --! @param direction text Sort direction: 'ASC' (default) or 'DESC'
---! @param strategy text One of 'ore', 'ope', or 'compare'
+--! @param strategy text One of 'ore' or 'compare'
 --! @return TABLE(id bigint, val eql_v2_encrypted) Sorted rows
 CREATE FUNCTION eql_v2._sort_compare_precomputed(
     ids bigint[],
     vals eql_v2_encrypted[],
     ore_keys eql_v2.ore_block_u64_8_256[],
-    ope_keys bytea[],
     direction text DEFAULT 'ASC',
     strategy text DEFAULT 'ore'
 )
@@ -450,7 +363,6 @@ DECLARE
     sorted_ids bigint[];
     sorted_vals eql_v2_encrypted[];
     sorted_ore_keys eql_v2.ore_block_u64_8_256[];
-    sorted_ope_keys bytea[];
 BEGIN
     n := coalesce(array_length(ids, 1), 0);
     m := coalesce(array_length(vals, 1), 0);
@@ -463,11 +375,6 @@ BEGIN
         k := coalesce(array_length(ore_keys, 1), 0);
         IF n <> k THEN
             RAISE EXCEPTION 'ids and ore_keys must have the same length when strategy = ''ore''';
-        END IF;
-    ELSIF strategy = 'ope' THEN
-        k := coalesce(array_length(ope_keys, 1), 0);
-        IF n <> k THEN
-            RAISE EXCEPTION 'ids and ope_keys must have the same length when strategy = ''ope''';
         END IF;
     END IF;
 
@@ -482,9 +389,9 @@ BEGIN
         RETURN;
     END IF;
 
-    SELECT q.ids, q.vals, q.ore_keys, q.ope_keys
-        INTO sorted_ids, sorted_vals, sorted_ore_keys, sorted_ope_keys
-        FROM eql_v2._quicksort_sorter(ids, vals, ore_keys, ope_keys, 1, n, strategy) q;
+    SELECT q.ids, q.vals, q.ore_keys
+        INTO sorted_ids, sorted_vals, sorted_ore_keys
+        FROM eql_v2._quicksort_sorter(ids, vals, ore_keys, 1, n, strategy) q;
 
     RETURN QUERY
         SELECT emitted.id, emitted.val
@@ -500,10 +407,7 @@ $$ LANGUAGE plpgsql;
 --! the need for unnest() or other array manipulation by callers.
 --!
 --! When all input rows share an `ore` term the sort uses pre-extracted ORE
---! keys; when every non-NULL row shares the *same* OPE subtype (all `opf` or
---! all `opv`) the matching OPE ciphertext is pre-extracted as `bytea` and
---! compared lexicographically. Mixed-subtype OPE batches and other mixed
---! inputs fall back to `eql_v2.compare()` per pair.
+--! keys; otherwise it falls back to `eql_v2.compare()` per pair.
 --!
 --! This function is designed for environments without operator classes (e.g., Supabase)
 --! where direct ORDER BY on encrypted columns is not available.
@@ -548,26 +452,17 @@ AS $$
 DECLARE
     n integer;
     sorted_ore_keys eql_v2.ore_block_u64_8_256[];
-    sorted_ope_u64_keys bytea[];
-    sorted_ope_var_keys bytea[];
-    selected_ope_keys bytea[];
     i integer;
     use_ore boolean := true;
-    use_ope_u64 boolean := true;
-    use_ope_var boolean := true;
     strategy text;
 BEGIN
     n := coalesce(array_length(ids, 1), 0);
 
-    -- Pre-extract per-subtype keys. Mixed OPE subtypes (some opf, some opv)
-    -- cannot share the bytea fast path because the ciphertexts are not
-    -- comparable across subtypes — fall back to eql_v2.compare() in that case
-    -- (which itself requires both sides to share a subtype).
+    -- Pre-extract sort keys. ORE wins if every non-NULL row carries `ob`,
+    -- otherwise fall back to eql_v2.compare() per pair.
     FOR i IN 1..n LOOP
         IF vals[i] IS NULL THEN
             sorted_ore_keys[i] := NULL;
-            sorted_ope_u64_keys[i] := NULL;
-            sorted_ope_var_keys[i] := NULL;
         ELSE
             IF use_ore THEN
                 IF eql_v2.has_ore_block_u64_8_256(vals[i]) THEN
@@ -577,44 +472,20 @@ BEGIN
                 END IF;
             END IF;
 
-            IF use_ope_u64 THEN
-                IF eql_v2.has_ope_cllw_u64_65(vals[i]) THEN
-                    sorted_ope_u64_keys[i] := (eql_v2.ope_cllw_u64_65(vals[i])).bytes;
-                ELSE
-                    use_ope_u64 := false;
-                END IF;
-            END IF;
-
-            IF use_ope_var THEN
-                IF eql_v2.has_ope_cllw_var_8(vals[i]) THEN
-                    sorted_ope_var_keys[i] := (eql_v2.ope_cllw_var_8(vals[i])).bytes;
-                ELSE
-                    use_ope_var := false;
-                END IF;
-            END IF;
-
-            EXIT WHEN NOT use_ore AND NOT use_ope_u64 AND NOT use_ope_var;
+            EXIT WHEN NOT use_ore;
         END IF;
     END LOOP;
 
     IF use_ore THEN
         strategy := 'ore';
-        selected_ope_keys := NULL;
-    ELSIF use_ope_u64 THEN
-        strategy := 'ope';
-        selected_ope_keys := sorted_ope_u64_keys;
-    ELSIF use_ope_var THEN
-        strategy := 'ope';
-        selected_ope_keys := sorted_ope_var_keys;
     ELSE
         strategy := 'compare';
-        selected_ope_keys := NULL;
     END IF;
 
     RETURN QUERY
         SELECT sc.id, sc.val
         FROM eql_v2._sort_compare_precomputed(
-            ids, vals, sorted_ore_keys, selected_ope_keys, direction, strategy
+            ids, vals, sorted_ore_keys, direction, strategy
         ) sc;
 END;
 $$ LANGUAGE plpgsql;
@@ -688,12 +559,9 @@ $$ LANGUAGE plpgsql;
 --!
 --! Convenience wrapper that accepts a SQL query string, executes it, collects the
 --! results, and returns them sorted. For ORE-backed values this pre-extracts the
---! order key once per row and sorts on that key; for OPE-backed values where
---! every non-NULL row shares the *same* OPE subtype (all `opf` or all `opv`)
---! the matching OPE ciphertext is pre-extracted as `bytea` and compared
---! lexicographically. Mixed-subtype OPE batches and other mixed inputs fall
---! back to eql_v2.compare(). The query must return exactly two columns: a
---! bigint identifier and an eql_v2_encrypted value.
+--! order key once per row and sorts on that key; other inputs fall back to
+--! eql_v2.compare(). The query must return exactly two columns: a bigint
+--! identifier and an eql_v2_encrypted value.
 --!
 --! @param query text SQL query returning (bigint, eql_v2_encrypted) columns
 --! @param direction text Sort direction: 'ASC' (default) or 'DESC'
@@ -725,18 +593,11 @@ DECLARE
     all_ids bigint[];
     all_vals eql_v2_encrypted[];
     all_ore_keys eql_v2.ore_block_u64_8_256[];
-    all_ope_u64_keys bytea[];
-    all_ope_var_keys bytea[];
-    selected_ope_keys bytea[];
     all_have_ore_keys boolean;
-    all_have_ope_u64_keys boolean;
-    all_have_ope_var_keys boolean;
     strategy text;
 BEGIN
-    -- Pre-extract per-subtype keys. The OPE bytea fast path is only valid when
-    -- every non-NULL row carries the same OPE subtype; mixed opf/opv batches
-    -- must fall back to eql_v2.compare() per pair (which itself requires
-    -- matching subtypes on both sides).
+    -- Pre-extract sort keys. ORE wins if every non-NULL row carries `ob`,
+    -- otherwise fall back to eql_v2.compare() per pair.
     EXECUTE format(
         'WITH input_rows AS (
             SELECT row_number() OVER () AS ord,
@@ -748,43 +609,18 @@ BEGIN
                        ELSE NULL
                    END AS ore_key,
                    CASE
-                       WHEN sub.val IS NULL THEN NULL
-                       WHEN eql_v2.has_ope_cllw_u64_65(sub.val)
-                           THEN (eql_v2.ope_cllw_u64_65(sub.val)).bytes
-                       ELSE NULL
-                   END AS ope_u64_key,
-                   CASE
-                       WHEN sub.val IS NULL THEN NULL
-                       WHEN eql_v2.has_ope_cllw_var_8(sub.val)
-                           THEN (eql_v2.ope_cllw_var_8(sub.val)).bytes
-                       ELSE NULL
-                   END AS ope_var_key,
-                   CASE
                        WHEN sub.val IS NULL THEN TRUE
                        ELSE eql_v2.has_ore_block_u64_8_256(sub.val)
-                   END AS has_ore_key,
-                   CASE
-                       WHEN sub.val IS NULL THEN TRUE
-                       ELSE eql_v2.has_ope_cllw_u64_65(sub.val)
-                   END AS has_ope_u64_key,
-                   CASE
-                       WHEN sub.val IS NULL THEN TRUE
-                       ELSE eql_v2.has_ope_cllw_var_8(sub.val)
-                   END AS has_ope_var_key
+                   END AS has_ore_key
             FROM (%s) sub(id, val)
          )
          SELECT array_agg(id ORDER BY ord),
                 array_agg(val ORDER BY ord),
                 array_agg(ore_key ORDER BY ord),
-                array_agg(ope_u64_key ORDER BY ord),
-                array_agg(ope_var_key ORDER BY ord),
-                coalesce(bool_and(has_ore_key), TRUE),
-                coalesce(bool_and(has_ope_u64_key), TRUE),
-                coalesce(bool_and(has_ope_var_key), TRUE)
+                coalesce(bool_and(has_ore_key), TRUE)
          FROM input_rows',
         query
-    ) INTO all_ids, all_vals, all_ore_keys, all_ope_u64_keys, all_ope_var_keys,
-           all_have_ore_keys, all_have_ope_u64_keys, all_have_ope_var_keys;
+    ) INTO all_ids, all_vals, all_ore_keys, all_have_ore_keys;
 
     IF all_ids IS NULL THEN
         RETURN;
@@ -792,16 +628,8 @@ BEGIN
 
     IF all_have_ore_keys THEN
         strategy := 'ore';
-        selected_ope_keys := NULL;
-    ELSIF all_have_ope_u64_keys THEN
-        strategy := 'ope';
-        selected_ope_keys := all_ope_u64_keys;
-    ELSIF all_have_ope_var_keys THEN
-        strategy := 'ope';
-        selected_ope_keys := all_ope_var_keys;
     ELSE
         strategy := 'compare';
-        selected_ope_keys := NULL;
     END IF;
 
     RETURN QUERY
@@ -810,7 +638,6 @@ BEGIN
             all_ids,
             all_vals,
             all_ore_keys,
-            selected_ope_keys,
             direction,
             strategy
         ) sc;
