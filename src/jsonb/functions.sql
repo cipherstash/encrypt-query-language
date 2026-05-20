@@ -72,7 +72,7 @@ CREATE FUNCTION eql_v2.jsonb_path_query(val eql_v2_encrypted, selector eql_v2_en
   LANGUAGE sql
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT * FROM eql_v2.jsonb_path_query((val).data, eql_v2.selector(selector));
+  SELECT * FROM eql_v2.jsonb_path_query((val).data, eql_v2._selector(selector));
 $$;
 
 
@@ -139,7 +139,7 @@ CREATE FUNCTION eql_v2.jsonb_path_exists(val eql_v2_encrypted, selector eql_v2_e
   LANGUAGE sql
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v2.jsonb_path_exists((val).data, eql_v2.selector(selector));
+  SELECT eql_v2.jsonb_path_exists((val).data, eql_v2._selector(selector));
 $$;
 
 
@@ -207,7 +207,7 @@ CREATE FUNCTION eql_v2.jsonb_path_query_first(val eql_v2_encrypted, selector eql
   LANGUAGE sql
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v2.jsonb_path_query_first((val).data, eql_v2.selector(selector));
+  SELECT eql_v2.jsonb_path_query_first((val).data, eql_v2._selector(selector));
 $$;
 
 

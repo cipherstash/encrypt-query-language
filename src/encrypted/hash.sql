@@ -11,18 +11,15 @@
 --! function machinery is much cheaper per row than plpgsql, which matters
 --! because HashAggregate / hash-join call this once per input row.
 --!
---! Returns `hashtext(hm::text)` of the root payload's `hm` term. This is the
---! canonical bucket for equality groups, since `=` on `eql_v2_encrypted`
---! reduces to `hmac_256(a) = hmac_256(b)` post-#193.
+--! Returns `hashtext` of the root payload's `hm` term. This is the canonical
+--! bucket for equality groups, since `=` on `eql_v2_encrypted` reduces to
+--! `hmac_256(a) = hmac_256(b)` post-#193.
 --!
 --! @par Contract
---! Equality on `eql_v2_encrypted` is hm-only at the root ([U-002]). Callers
---! using `GROUP BY` / `DISTINCT` / hash joins on this type MUST configure
---! the column with a `unique` index (so the crypto layer emits `hm`); a
---! missing `hm` is a misconfiguration. With `hm` absent, `eql_v2.hmac_256(val)`
---! returns NULL, `hashtext(NULL)` returns NULL, and the hash opclass support
---! function returns NULL — Postgres surfaces this as a clear function-result
---! error at the hash machinery boundary.
+--! Callers using `GROUP BY` / `DISTINCT` / hash joins on `eql_v2_encrypted`
+--! MUST configure the column with a `unique` index so the crypto layer
+--! emits `hm` — `hm` is assumed present. A missing `hm` is a misconfiguration
+--! that surfaces upstream via [U-002](docs/upgrading/v2.3.md#u-002-equality-and-hashing-require-hmac).
 --!
 --! @param val eql_v2_encrypted Encrypted value to hash
 --! @return integer 32-bit hash value derived from `hm`

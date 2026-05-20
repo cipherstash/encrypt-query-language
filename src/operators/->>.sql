@@ -57,7 +57,7 @@ CREATE FUNCTION eql_v2."->>"(e eql_v2_encrypted, selector eql_v2_encrypted)
   SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
-    RETURN eql_v2."->>"(e, eql_v2.selector(selector));
+    RETURN eql_v2."->>"(e, eql_v2._selector(selector));
   END;
 $$ LANGUAGE plpgsql;
 

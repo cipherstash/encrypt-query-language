@@ -5,6 +5,8 @@
 -- REQUIRE: src/hmac_256/functions.sql
 -- REQUIRE: src/hmac_256/compare.sql
 -- REQUIRE: src/ste_vec/types.sql
+-- REQUIRE: src/ore_cllw/types.sql
+-- REQUIRE: src/ore_cllw/functions.sql
 
 
 --! @brief Extract STE vector index from JSONB payload
@@ -189,19 +191,21 @@ $$ LANGUAGE plpgsql;
 
 
 --! @brief Extract selector value from encrypted column value
+--! @internal
 --!
---! Extracts the selector from an encrypted column value by accessing its
---! underlying JSONB data field. Used internally by `eql_v2."->"` when the
---! selector argument is itself an `eql_v2_encrypted` (so the caller's
---! single-element ste_vec scalar carries the selector); not intended for
---! direct use against the root payload of a multi-element ste_vec column.
+--! Internal convenience: unwraps the encrypted composite and delegates
+--! to `eql_v2.selector(jsonb)`. Exists so the encrypted-selector
+--! overloads of `eql_v2."->"` / `eql_v2."->>"` / `eql_v2.jsonb_path_*`
+--! can dispatch without each having to spell out `(val).data` first.
+--! Not part of the public API — callers should use
+--! `eql_v2.selector(jsonb)` or `eql_v2.selector(eql_v2.ste_vec_entry)`.
 --!
 --! @param eql_v2_encrypted Encrypted column value (single-element form)
 --! @return Text The selector value
 --!
 --! @see eql_v2.selector(jsonb)
 --! @see eql_v2.selector(eql_v2.ste_vec_entry)
-CREATE FUNCTION eql_v2.selector(val eql_v2_encrypted)
+CREATE FUNCTION eql_v2._selector(val eql_v2_encrypted)
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
   SET search_path = pg_catalog, extensions, public
@@ -544,7 +548,7 @@ AS $$
       -- That's a data error rather than a normal containment result,
       -- but returning false is safer than raising mid-array-scan.
       result := result OR (
-        eql_v2.selector(_a) = eql_v2.selector(b) AND
+        eql_v2._selector(_a) = eql_v2._selector(b) AND
         CASE
           WHEN eql_v2.has_hmac_256(_a) AND eql_v2.has_hmac_256(b) THEN
             eql_v2.compare_hmac_256(_a, b) = 0

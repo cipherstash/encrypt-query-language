@@ -193,7 +193,13 @@ DECLARE
     common_len INT;
     cmp_result INT;
 BEGIN
-    IF a IS NULL OR b IS NULL THEN
+    -- Guard against both the composite being NULL and against its
+    -- `bytes` field being NULL. The (jsonb) and (ste_vec_entry)
+    -- overloads of `eql_v2.ore_cllw` return `(bytes => NULL)` when the
+    -- payload lacks `oc` — that composite passes `IS NOT NULL` but
+    -- would otherwise raise from `compare_ore_cllw_term_bytes` on the
+    -- NULL bytea length check. Treat as "incomparable, return NULL".
+    IF a IS NULL OR b IS NULL OR a.bytes IS NULL OR b.bytes IS NULL THEN
       RETURN NULL;
     END IF;
 

@@ -70,7 +70,7 @@ AS $$
     -- unique per (path, key) within a document, so at most one entry
     -- matches and continuing past the first hit is wasted work.
     FOR idx IN 1..array_length(sv, 1) LOOP
-      if eql_v2.selector(sv[idx]) = selector THEN
+      if eql_v2._selector(sv[idx]) = selector THEN
         found := sv[idx];
         EXIT;
       END IF;
@@ -104,7 +104,7 @@ CREATE FUNCTION eql_v2."->"(e eql_v2_encrypted, selector eql_v2_encrypted)
   SET search_path = pg_catalog, extensions, public
 AS $$
 	BEGIN
-    RETURN eql_v2."->"(e, eql_v2.selector(selector));
+    RETURN eql_v2."->"(e, eql_v2._selector(selector));
   END;
 $$ LANGUAGE plpgsql;
 
