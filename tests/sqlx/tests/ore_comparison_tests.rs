@@ -1,6 +1,6 @@
 //! ORE comparison variant tests
 //!
-//! and src/operators/<=_ore_cllw_var_8_test.sql
+//! and src/operators/<=_ore_cllw_test.sql
 //! Tests ORE CLLW comparison operators
 
 use anyhow::Result;

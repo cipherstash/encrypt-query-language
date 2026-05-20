@@ -1,5 +1,6 @@
 -- REQUIRE: src/schema.sql
 -- REQUIRE: src/hmac_256/types.sql
+-- REQUIRE: src/ste_vec/types.sql
 
 --! @brief Extract HMAC-SHA256 index term from JSONB payload
 --!
@@ -84,6 +85,45 @@ CREATE FUNCTION eql_v2.hmac_256(val eql_v2_encrypted)
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   SELECT ((val).data ->> 'hm')::eql_v2.hmac_256
+$$;
+
+
+--! @brief Extract HMAC-SHA256 index term from a ste_vec entry
+--!
+--! Extracts the HMAC from the `hm` field of an `sv` element extracted via
+--! the `->` operator. Inlinable. The recipe for field-level equality on
+--! encrypted JSON is:
+--!
+--! @example
+--! -- Functional hash index
+--! CREATE INDEX ON users USING hash (eql_v2.hmac_256(data -> '<selector>'));
+--! -- Bare-form predicate matches via the inlined `=` on ste_vec_entry
+--! SELECT * FROM users WHERE data -> '<selector>' = $1::eql_v2.ste_vec_entry;
+--!
+--! @param entry eql_v2.ste_vec_entry STE-vec entry (extracted via `->`)
+--! @return eql_v2.hmac_256 HMAC value, or NULL when `hm` is absent
+--!
+--! @see eql_v2.has_hmac_256
+--! @see src/operators/->.sql
+CREATE FUNCTION eql_v2.hmac_256(entry eql_v2.ste_vec_entry)
+  RETURNS eql_v2.hmac_256
+  LANGUAGE sql
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  SELECT (entry ->> 'hm')::eql_v2.hmac_256
+$$;
+
+
+--! @brief Check if a ste_vec entry contains an HMAC-SHA256 index term
+--!
+--! @param entry eql_v2.ste_vec_entry STE-vec entry
+--! @return Boolean True if `hm` field is present and non-null
+CREATE FUNCTION eql_v2.has_hmac_256(entry eql_v2.ste_vec_entry)
+  RETURNS boolean
+  LANGUAGE sql
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  SELECT entry ->> 'hm' IS NOT NULL
 $$;
 
 

@@ -316,18 +316,23 @@ async fn greater_than_or_equal_jsonb_gte_encrypted(pool: PgPool) -> Result<()> {
 // Selector-based Comparison Tests
 // ============================================================================
 // Tests for extracting subterms with e->'selector' and comparing them
-// Covers ore_cllw_u64_8 and ore_cllw_var_8 index types with fallback behavior
+// Covers ore_cllw and ore_cllw index types with fallback behavior
 
 #[sqlx::test]
-#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw_u64_8 / ore_cllw_var_8 columns must use the extractor form, e.g. eql_v2.ore_cllw_u64_8(col) < eql_v2.ore_cllw_u64_8($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
-async fn selector_less_than_with_ore_cllw_u64_8(pool: PgPool) -> Result<()> {
-    // Test: e->'selector' < term with ore_cllw_u64_8 index
+async fn selector_less_than_with_ore_cllw(pool: PgPool) -> Result<()> {
+    // Test: ordered comparison on an sv-element extracted via `->`.
     //
     // Uses test data created by seed_encrypted_json() helper which creates:
     // - Three records with n=10, n=20, n=30
-    // - ore_cllw_u64_8 index on $.n selector
+    // - ore_cllw index on $.n selector
+    //
+    // Post-#219 (strict separation): the bare-form `<` on
+    // `eql_v2_encrypted` reduces to Block-ORE comparison (`ob`), which
+    // raises here because sv-element CLLW terms carry `oc`, not `ob`.
+    // The canonical recipe is to cast both sides to
+    // `eql_v2.ste_vec_entry`, then `<` resolves to the entry-typed
+    // operator which inlines to `ore_cllw(a) < ore_cllw(b)`.
 
-    // Create table and seed with test data
     sqlx::query("SELECT create_table_with_encrypted()")
         .execute(&pool)
         .await?;
@@ -336,13 +341,17 @@ async fn selector_less_than_with_ore_cllw_u64_8(pool: PgPool) -> Result<()> {
         .execute(&pool)
         .await?;
 
-    // Extract $.n selector term from n=30 test data
+    // Extract $.n selector term from n=30 test data. The returned text is
+    // the composite-row representation of an eql_v2_encrypted, parseable
+    // back via `'...'::eql_v2_encrypted`.
     let term = get_ste_vec_selector_term(&pool, 30, Selectors::N).await?;
 
-    // Query: e->'$.n' < term(30)
-    // Should return 2 records (n=10 and n=20)
+    // Should return 2 records (n=10 and n=20).
     let sql = format!(
-        "SELECT e FROM encrypted WHERE e->'{}'::text < '{}'::eql_v2_encrypted",
+        "SELECT e FROM encrypted WHERE \
+           ((e -> '{}'::text).data)::eql_v2.ste_vec_entry \
+         < \
+           (('{}'::eql_v2_encrypted).data)::eql_v2.ste_vec_entry",
         Selectors::N,
         term
     );
@@ -353,8 +362,8 @@ async fn selector_less_than_with_ore_cllw_u64_8(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
-#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw_u64_8 / ore_cllw_var_8 columns must use the extractor form, e.g. eql_v2.ore_cllw_u64_8(col) < eql_v2.ore_cllw_u64_8($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
-async fn selector_less_than_with_ore_cllw_u64_8_fallback(pool: PgPool) -> Result<()> {
+#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw / ore_cllw columns must use the extractor form, e.g. eql_v2.ore_cllw(col) < eql_v2.ore_cllw($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
+async fn selector_less_than_with_ore_cllw_fallback(pool: PgPool) -> Result<()> {
     // Test: e->'selector' < term fallback when index missing
     //
     // Tests that comparison falls back to JSONB literal comparison when the
@@ -375,7 +384,7 @@ async fn selector_less_than_with_ore_cllw_u64_8_fallback(pool: PgPool) -> Result
     // Extract $.n selector term from n=30 test data
     let term = get_ste_vec_selector_term(&pool, 30, Selectors::N).await?;
 
-    // Query with $.hello selector (which has ore_cllw_var_8, not ore_cllw_u64_8).
+    // Query with $.hello selector (which has ore_cllw, not ore_cllw).
     // The literal-byte fallback orders all stored $.hello values after the
     // $.n term, so no rows match `< term`.
     let sql = format!(
@@ -390,11 +399,11 @@ async fn selector_less_than_with_ore_cllw_u64_8_fallback(pool: PgPool) -> Result
 }
 
 #[sqlx::test]
-#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw_u64_8 / ore_cllw_var_8 columns must use the extractor form, e.g. eql_v2.ore_cllw_u64_8(col) < eql_v2.ore_cllw_u64_8($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
-async fn selector_less_than_with_ore_cllw_var_8(pool: PgPool) -> Result<()> {
-    // Test: e->'selector' < term with ore_cllw_var_8 index
+#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw / ore_cllw columns must use the extractor form, e.g. eql_v2.ore_cllw(col) < eql_v2.ore_cllw($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
+async fn selector_less_than_with_ore_cllw_str(pool: PgPool) -> Result<()> {
+    // Test: e->'selector' < term with ore_cllw index
     //
-    // STE vec test data has ore_cllw_var_8 on $.hello selector (a7cea93975ed8c01f861ccb6bd082784)
+    // STE vec test data has ore_cllw on $.hello selector (a7cea93975ed8c01f861ccb6bd082784)
     // Extract $.hello from ste_vec id=3 and compare
 
     sqlx::query("SELECT create_table_with_encrypted()")
@@ -422,9 +431,9 @@ async fn selector_less_than_with_ore_cllw_var_8(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
-#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw_u64_8 / ore_cllw_var_8 columns must use the extractor form, e.g. eql_v2.ore_cllw_u64_8(col) < eql_v2.ore_cllw_u64_8($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
-async fn selector_greater_than_with_ore_cllw_u64_8(pool: PgPool) -> Result<()> {
-    // Test: e->'selector' > term with ore_cllw_u64_8 index
+#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw / ore_cllw columns must use the extractor form, e.g. eql_v2.ore_cllw(col) < eql_v2.ore_cllw($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
+async fn selector_greater_than_with_ore_cllw(pool: PgPool) -> Result<()> {
+    // Test: e->'selector' > term with ore_cllw index
     //
     // Extract $.n from ste_vec id=2 (n=20 value) and find records > 20
 
@@ -453,8 +462,8 @@ async fn selector_greater_than_with_ore_cllw_u64_8(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
-#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw_u64_8 / ore_cllw_var_8 columns must use the extractor form, e.g. eql_v2.ore_cllw_u64_8(col) < eql_v2.ore_cllw_u64_8($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
-async fn selector_greater_than_with_ore_cllw_u64_8_fallback(pool: PgPool) -> Result<()> {
+#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw / ore_cllw columns must use the extractor form, e.g. eql_v2.ore_cllw(col) < eql_v2.ore_cllw($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
+async fn selector_greater_than_with_ore_cllw_fallback(pool: PgPool) -> Result<()> {
     // Test: e->'selector' > term fallback when index missing
 
     sqlx::query("SELECT create_table_with_encrypted()")
@@ -481,9 +490,9 @@ async fn selector_greater_than_with_ore_cllw_u64_8_fallback(pool: PgPool) -> Res
 }
 
 #[sqlx::test]
-#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw_u64_8 / ore_cllw_var_8 columns must use the extractor form, e.g. eql_v2.ore_cllw_u64_8(col) < eql_v2.ore_cllw_u64_8($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
-async fn selector_greater_than_with_ore_cllw_var_8(pool: PgPool) -> Result<()> {
-    // Test: e->'selector' > term with ore_cllw_var_8 index
+#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw / ore_cllw columns must use the extractor form, e.g. eql_v2.ore_cllw(col) < eql_v2.ore_cllw($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
+async fn selector_greater_than_with_ore_cllw_str(pool: PgPool) -> Result<()> {
+    // Test: e->'selector' > term with ore_cllw index
 
     sqlx::query("SELECT create_table_with_encrypted()")
         .execute(&pool)
@@ -510,11 +519,11 @@ async fn selector_greater_than_with_ore_cllw_var_8(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
-#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw_u64_8 / ore_cllw_var_8 columns must use the extractor form, e.g. eql_v2.ore_cllw_u64_8(col) < eql_v2.ore_cllw_u64_8($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
-async fn selector_greater_than_with_ore_cllw_var_8_fallback(pool: PgPool) -> Result<()> {
+#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw / ore_cllw columns must use the extractor form, e.g. eql_v2.ore_cllw(col) < eql_v2.ore_cllw($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
+async fn selector_greater_than_with_ore_cllw_fallback_str(pool: PgPool) -> Result<()> {
     // Test: e->'selector' > term fallback to JSONB comparison
     //
-    // Tests fallback when selector doesn't have ore_cllw_var_8. Post-2.3 the
+    // Tests fallback when selector doesn't have ore_cllw. Post-2.3 the
     // LHS sv element carries `hm`; the RHS (raw fixture term) does not, so
     // compare() can't engage the hmac branch and falls through to
     // compare_literal — its result depends on raw JSONB byte ordering.
@@ -530,7 +539,7 @@ async fn selector_greater_than_with_ore_cllw_var_8_fallback(pool: PgPool) -> Res
     // Extract $.hello selector term from n=30 test data
     let term = get_ste_vec_selector_term(&pool, 30, Selectors::HELLO).await?;
 
-    // Query with $.n selector (which has ore_cllw_u64_8, not ore_cllw_var_8).
+    // Query with $.n selector (which has ore_cllw, not ore_cllw).
     // The literal-byte fallback orders all stored $.n values after the
     // $.hello term, so every row matches `> term`.
     let sql = format!(
@@ -545,9 +554,9 @@ async fn selector_greater_than_with_ore_cllw_var_8_fallback(pool: PgPool) -> Res
 }
 
 #[sqlx::test]
-#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw_u64_8 / ore_cllw_var_8 columns must use the extractor form, e.g. eql_v2.ore_cllw_u64_8(col) < eql_v2.ore_cllw_u64_8($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
-async fn selector_less_than_or_equal_with_ore_cllw_u64_8(pool: PgPool) -> Result<()> {
-    // Test: e->'selector' <= term with ore_cllw_u64_8 index
+#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw / ore_cllw columns must use the extractor form, e.g. eql_v2.ore_cllw(col) < eql_v2.ore_cllw($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
+async fn selector_less_than_or_equal_with_ore_cllw(pool: PgPool) -> Result<()> {
+    // Test: e->'selector' <= term with ore_cllw index
     //
     // Extract $.n from ste_vec id=2 (n=20) and find records <= 20
 
@@ -576,8 +585,8 @@ async fn selector_less_than_or_equal_with_ore_cllw_u64_8(pool: PgPool) -> Result
 }
 
 #[sqlx::test]
-#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw_u64_8 / ore_cllw_var_8 columns must use the extractor form, e.g. eql_v2.ore_cllw_u64_8(col) < eql_v2.ore_cllw_u64_8($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
-async fn selector_less_than_or_equal_with_ore_cllw_u64_8_fallback(pool: PgPool) -> Result<()> {
+#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw / ore_cllw columns must use the extractor form, e.g. eql_v2.ore_cllw(col) < eql_v2.ore_cllw($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
+async fn selector_less_than_or_equal_with_ore_cllw_fallback(pool: PgPool) -> Result<()> {
     // Test: e->'selector' <= term fallback when index missing
 
     sqlx::query("SELECT create_table_with_encrypted()")
@@ -606,9 +615,9 @@ async fn selector_less_than_or_equal_with_ore_cllw_u64_8_fallback(pool: PgPool) 
 }
 
 #[sqlx::test]
-#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw_u64_8 / ore_cllw_var_8 columns must use the extractor form, e.g. eql_v2.ore_cllw_u64_8(col) < eql_v2.ore_cllw_u64_8($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
-async fn selector_greater_than_or_equal_with_ore_cllw_u64_8(pool: PgPool) -> Result<()> {
-    // Test: e->'selector' >= term with ore_cllw_u64_8 index
+#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw / ore_cllw columns must use the extractor form, e.g. eql_v2.ore_cllw(col) < eql_v2.ore_cllw($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
+async fn selector_greater_than_or_equal_with_ore_cllw(pool: PgPool) -> Result<()> {
+    // Test: e->'selector' >= term with ore_cllw index
     //
     // Extract $.n from ste_vec id=1 (n=10) and find records >= 10
 
@@ -637,8 +646,8 @@ async fn selector_greater_than_or_equal_with_ore_cllw_u64_8(pool: PgPool) -> Res
 }
 
 #[sqlx::test]
-#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw_u64_8 / ore_cllw_var_8 columns must use the extractor form, e.g. eql_v2.ore_cllw_u64_8(col) < eql_v2.ore_cllw_u64_8($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
-async fn selector_greater_than_or_equal_with_ore_cllw_u64_8_fallback(pool: PgPool) -> Result<()> {
+#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw / ore_cllw columns must use the extractor form, e.g. eql_v2.ore_cllw(col) < eql_v2.ore_cllw($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
+async fn selector_greater_than_or_equal_with_ore_cllw_fallback(pool: PgPool) -> Result<()> {
     // Test: e->'selector' >= term fallback when index missing
 
     sqlx::query("SELECT create_table_with_encrypted()")
@@ -665,9 +674,9 @@ async fn selector_greater_than_or_equal_with_ore_cllw_u64_8_fallback(pool: PgPoo
 }
 
 #[sqlx::test]
-#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw_u64_8 / ore_cllw_var_8 columns must use the extractor form, e.g. eql_v2.ore_cllw_u64_8(col) < eql_v2.ore_cllw_u64_8($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
-async fn selector_greater_than_or_equal_with_ore_cllw_var_8(pool: PgPool) -> Result<()> {
-    // Test: e->'selector' >= term with ore_cllw_var_8 index
+#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw / ore_cllw columns must use the extractor form, e.g. eql_v2.ore_cllw(col) < eql_v2.ore_cllw($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
+async fn selector_greater_than_or_equal_with_ore_cllw_str(pool: PgPool) -> Result<()> {
+    // Test: e->'selector' >= term with ore_cllw index
 
     sqlx::query("SELECT create_table_with_encrypted()")
         .execute(&pool)
@@ -694,8 +703,8 @@ async fn selector_greater_than_or_equal_with_ore_cllw_var_8(pool: PgPool) -> Res
 }
 
 #[sqlx::test]
-#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw_u64_8 / ore_cllw_var_8 columns must use the extractor form, e.g. eql_v2.ore_cllw_u64_8(col) < eql_v2.ore_cllw_u64_8($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
-async fn selector_greater_than_or_equal_with_ore_cllw_var_8_fallback(pool: PgPool) -> Result<()> {
+#[ignore = "Breaking with range-operator inlining: < / <= / > / >= on eql_v2_encrypted now reduce to ore_block term comparison (raises on missing ob). Callers on ore_cllw / ore_cllw columns must use the extractor form, e.g. eql_v2.ore_cllw(col) < eql_v2.ore_cllw($1::jsonb). Re-enable once the inlined operators support a CASE-style dispatch across ORE encodings."]
+async fn selector_greater_than_or_equal_with_ore_cllw_fallback_str(pool: PgPool) -> Result<()> {
     // Test: e->'selector' >= term fallback to JSONB comparison
 
     sqlx::query("SELECT create_table_with_encrypted()")

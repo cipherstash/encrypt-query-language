@@ -4,6 +4,9 @@
 -- REQUIRE: src/encrypted/functions.sql
 -- REQUIRE: src/hmac_256/functions.sql
 -- REQUIRE: src/hmac_256/compare.sql
+-- REQUIRE: src/ste_vec/types.sql
+-- REQUIRE: src/ore_cllw/types.sql
+-- REQUIRE: src/ore_cllw/functions.sql
 
 
 --! @brief Extract STE vector index from JSONB payload
@@ -188,15 +191,21 @@ $$ LANGUAGE plpgsql;
 
 
 --! @brief Extract selector value from encrypted column value
+--! @internal
 --!
---! Extracts the selector from an encrypted column value by accessing its
---! underlying JSONB data field.
+--! Internal convenience: unwraps the encrypted composite and delegates
+--! to `eql_v2.selector(jsonb)`. Exists so the encrypted-selector
+--! overloads of `eql_v2."->"` / `eql_v2."->>"` / `eql_v2.jsonb_path_*`
+--! can dispatch without each having to spell out `(val).data` first.
+--! Not part of the public API — callers should use
+--! `eql_v2.selector(jsonb)` or `eql_v2.selector(eql_v2.ste_vec_entry)`.
 --!
---! @param eql_v2_encrypted Encrypted column value
+--! @param eql_v2_encrypted Encrypted column value (single-element form)
 --! @return Text The selector value
 --!
 --! @see eql_v2.selector(jsonb)
-CREATE FUNCTION eql_v2.selector(val eql_v2_encrypted)
+--! @see eql_v2.selector(eql_v2.ste_vec_entry)
+CREATE FUNCTION eql_v2._selector(val eql_v2_encrypted)
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
   SET search_path = pg_catalog, extensions, public
@@ -205,6 +214,24 @@ AS $$
     RETURN (SELECT eql_v2.selector(val.data));
   END;
 $$ LANGUAGE plpgsql;
+
+
+--! @brief Extract selector value from a ste_vec entry
+--!
+--! Direct overload on the domain type. The DOMAIN's CHECK constraint
+--! already guarantees `s` is present, so this is a simple field access.
+--!
+--! @param entry eql_v2.ste_vec_entry STE-vec entry
+--! @return Text The selector value
+--!
+--! @see eql_v2.selector(jsonb)
+CREATE FUNCTION eql_v2.selector(entry eql_v2.ste_vec_entry)
+  RETURNS text
+  LANGUAGE sql
+  IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  SELECT entry ->> 's'
+$$;
 
 
 
@@ -293,9 +320,14 @@ $$;
 
 --! @brief Extract deterministic fields as array for GIN indexing
 --!
---! Extracts only deterministic search term fields (s, b3, hm, ocv, ocf, opf, opv)
---! from each STE vector element. Excludes non-deterministic ciphertext for correct
---! containment comparison using PostgreSQL's native @> operator.
+--! Extracts only deterministic search term fields (`s`, `hm`, `oc`, `op`)
+--! from each STE vector element. Excludes non-deterministic ciphertext for
+--! correct containment comparison using PostgreSQL's native `@>` operator.
+--!
+--! Field set: selector (`s`), HMAC equality (`hm`), ORE CLLW (`oc`,
+--! Standard-mode), OPE CLLW (`op`, Compat-mode). The pre-2.3 fields
+--! (`b3` / `ocf` / `ocv` / `opf` / `opv`) are no longer emitted — see U-004
+--! and U-006 in `docs/upgrading/v2.3.md`.
 --!
 --! @param val jsonb containing encrypted EQL payload
 --! @return jsonb[] Array of JSONB elements with only deterministic fields
@@ -313,7 +345,7 @@ AS $$
       CASE WHEN val ? 'sv' THEN val->'sv' ELSE jsonb_build_array(val) END
     ) AS elem,
     LATERAL jsonb_each(elem) AS kv(key, value)
-    WHERE kv.key IN ('s', 'b3', 'hm', 'ocv', 'ocf', 'opf', 'opv')
+    WHERE kv.key IN ('s', 'hm', 'oc', 'op')
     GROUP BY elem
   );
 $$;
@@ -493,25 +525,46 @@ AS $$
       _a := a[idx];
       -- Element-level match for ste_vec entries.
       --
-      -- Post-2.3 ste_vec elements carry `hm` (HMAC-256) as the
-      -- selector-scoped equality term. When both sides have `hm` we
-      -- compare on it directly — this correctly matches two
-      -- encryptions of the same plaintext when the JSONB byte
-      -- representations differ (e.g., a freshly-built query payload
-      -- vs. a stored row).
+      -- Per the v2.3 sv-element contract (encoded in
+      -- `docs/reference/schema/eql-payload-v2.3.schema.json` and the
+      -- `eql_v2.ste_vec_entry` DOMAIN), each entry carries **exactly
+      -- one** of:
+      --   - `hm` — HMAC-256 for boolean leaves and for the placeholder
+      --     entries that represent array / object roots.
+      --   - `oc` — CLLW ORE for string and number leaves.
+      -- Both terms are deterministic for the same plaintext at the same
+      -- selector under the same workspace, so either one serves as the
+      -- equality discriminator. A selector configures the leaf's role
+      -- (eq / ordered), and the role determines which term is emitted —
+      -- two sv entries with the same selector therefore always carry
+      -- the same term type.
       --
-      -- Falls through to `eql_v2.eq` for non-hash-indexed elements
-      -- (e.g. OPE-only future shapes), which routes through
-      -- `compare`'s ORE → OPE → hmac chain.
+      -- The selector check is a fast-path gate so we don't compare
+      -- terms across mismatched fields. Once selectors match, exactly
+      -- one of the two CASE branches fires (XOR contract above).
+      --
+      -- The `ELSE false` arm covers the malformed case (entry carries
+      -- neither term, or only one side has the term for a given role).
+      -- That's a data error rather than a normal containment result,
+      -- but returning false is safer than raising mid-array-scan.
       result := result OR (
-        eql_v2.selector(_a) = eql_v2.selector(b) AND
+        eql_v2._selector(_a) = eql_v2._selector(b) AND
         CASE
           WHEN eql_v2.has_hmac_256(_a) AND eql_v2.has_hmac_256(b) THEN
             eql_v2.compare_hmac_256(_a, b) = 0
-          ELSE
-            eql_v2.eq(_a, b)
+          WHEN eql_v2.has_ore_cllw((_a).data) AND eql_v2.has_ore_cllw((b).data) THEN
+            eql_v2.compare_ore_cllw_term(
+              eql_v2.ore_cllw((_a).data),
+              eql_v2.ore_cllw((b).data)
+            ) = 0
+          ELSE false
         END
       );
+
+      -- Short-circuit once a match is found. Without this we still walk
+      -- the rest of the sv array, which on a 100-element document means
+      -- 99 wasted selector + extractor calls per row.
+      EXIT WHEN result;
     END LOOP;
 
     RETURN result;

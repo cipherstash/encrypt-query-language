@@ -2,27 +2,30 @@
 -- REQUIRE: src/encrypted/types.sql
 -- REQUIRE: src/operators/compare.sql
 
---! @brief Not-equal comparison helper for encrypted values
+--! @brief Inequality helper for encrypted values
 --! @internal
 --!
---! Internal helper that delegates to eql_v2.compare for inequality testing.
---! Returns true if encrypted values are not equal via encrypted index comparison.
+--! Inlinable SQL helper mirroring the `<>` operator's body: reduces to
+--! `hmac_256(a) <> hmac_256(b)`. Kept for callers that invoked the
+--! pre-#193 form (`eql_v2.neq`); equivalent to using the `<>` operator
+--! directly.
+--!
+--! Inequality on `eql_v2_encrypted` is strictly hmac-based (see U-002).
+--! Returns NULL when either side lacks an `hm` term — matching the
+--! `<>` operator's behaviour.
 --!
 --! @param a eql_v2_encrypted First encrypted value
 --! @param b eql_v2_encrypted Second encrypted value
---! @return Boolean True if values are not equal (compare result <> 0)
+--! @return Boolean True if hmac terms differ
 --!
---! @see eql_v2.compare
 --! @see eql_v2."<>"
+--! @see eql_v2.hmac_256
 CREATE FUNCTION eql_v2.neq(a eql_v2_encrypted, b eql_v2_encrypted)
   RETURNS boolean
-  IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  BEGIN
-    RETURN eql_v2.compare(a, b) <> 0;
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v2.hmac_256(a) <> eql_v2.hmac_256(b)
+$$;
 
 --! @brief Not-equal operator for encrypted values
 --!
