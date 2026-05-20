@@ -256,11 +256,12 @@ fn v2_3_sv_element_with_oc_is_valid() {
 }
 
 #[test]
-fn v2_3_ste_vec_payload_with_hm_in_elements_is_valid() {
+fn v2_3_ste_vec_payload_with_mixed_hm_and_oc_elements_is_valid() {
     // v2.3 promotes element equality from b3 -> hm for boolean leaves and
     // for the placeholder entries that represent array / object roots.
     // String / number leaves carry `oc` instead. Every sv element has
-    // exactly one — the two are mutually exclusive.
+    // exactly one — the two are mutually exclusive — and a single payload
+    // can mix the two kinds of elements freely.
     let p = json!({
         "v": 2, "k": "sv", "i": ident(),
         "sv": [
@@ -371,6 +372,19 @@ fn v2_3_ob_and_oc_are_mutually_exclusive_at_root() {
         "oc": HEX_LONG, "ob": [HEX, HEX_LONG]
     });
     assert_invalid(schema_v2_3(), &p, "ob + oc");
+}
+
+#[test]
+fn v2_3_oc_at_root_is_rejected() {
+    // `oc` is sv-element-scope only. It must never appear at the root
+    // of an EncryptedPayload, regardless of whether `ob` is also present
+    // — the scope-disjoint rule (U-006) is independent of the mutual-
+    // exclusion check between the two ordered terms.
+    let p = json!({
+        "v": 2, "c": CIPHERTEXT, "i": ident(),
+        "oc": HEX_LONG
+    });
+    assert_invalid(schema_v2_3(), &p, "root payload with oc");
 }
 
 #[test]

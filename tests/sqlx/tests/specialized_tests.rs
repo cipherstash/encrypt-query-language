@@ -179,7 +179,6 @@ async fn is_ste_vec_value_returns_false_for_invalid_values(pool: PgPool) -> Resu
 }
 
 #[sqlx::test]
-#[ignore = "Strict equality contract (#219): ste_vec_contains element-compare fallback was `eql_v2.eq`, which is now hm-only. The `get_numeric_ste_vec_10` fixture's sv elements carry `b3` / `oc` but not `hm` — element compare returns NULL and the OR-accumulator stays false. Fixture needs refreshing to align with U-004 (sv elements should carry `hm`). Tracked as a follow-up; ste_vec_contains itself behaves correctly under the strict contract once the data carries `hm`."]
 async fn ste_vec_contains_self(pool: PgPool) -> Result<()> {
     // Test: ste_vec_contains() returns true when value contains itself
 
