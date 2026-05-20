@@ -20,7 +20,9 @@ Each entry that ships in a published release links to the PR that introduced it.
 
 ## [Unreleased]
 
-Targeting `2.3.0` as a breaking release. Customers re-encrypt their data as part of the upgrade — the crypto-side counterpart (`@cipherstash/protect` / `protect-ffi` / proxy) emits a new ste_vec element shape. See [`docs/upgrading/v2.3.md`](docs/upgrading/v2.3.md) for the consolidated upgrade notes.
+## [2.3.0] — 2026-05-20
+
+`2.3.0` is a breaking release. Customers re-encrypt their data as part of the upgrade — the crypto-side counterpart (`@cipherstash/protect` / `protect-ffi` / proxy) emits a new ste_vec element shape. See [`docs/upgrading/v2.3.md`](docs/upgrading/v2.3.md) for the consolidated upgrade notes.
 
 ### Added
 
@@ -75,5 +77,6 @@ See [`docs/upgrading/v2.3.md`](docs/upgrading/v2.3.md). Six numbered notes cover
 
 (Backfill pending — entries for tagged 2.x releases will be added retroactively from `git log` in a follow-up.)
 
-[Unreleased]: https://github.com/cipherstash/encrypt-query-language/compare/eql-2.2.1...HEAD
+[Unreleased]: https://github.com/cipherstash/encrypt-query-language/compare/eql-2.3.0...HEAD
+[2.3.0]: https://github.com/cipherstash/encrypt-query-language/releases/tag/eql-2.3.0
 [2.2.1]: https://github.com/cipherstash/encrypt-query-language/releases/tag/eql-2.2.1
