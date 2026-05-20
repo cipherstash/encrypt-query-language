@@ -33,6 +33,25 @@ psql "$PG_URL" -v ON_ERROR_STOP=1 -f "$EQL_SQL" >/dev/null
 echo "==> Applying bench schema and Proxy search configuration"
 psql "$PG_URL" -v ON_ERROR_STOP=1 -f "$SCRIPT_DIR/schema.sql"
 
+# Proxy caches the encrypt config at connection-handler init. add_search_config
+# in schema.sql writes the new config but the Proxy will keep running in
+# PASSTHROUGH MODE (inserts pass through unencrypted) until it reconnects.
+# Restart and wait for it to come back before driving the INSERT.
+echo "==> Restarting bench-proxy so it reloads the new encrypt config"
+docker restart bench-proxy >/dev/null
+for i in $(seq 1 60); do
+    if psql "$PROXY_URL" -c 'SELECT 1' >/dev/null 2>&1; then
+        echo "    Proxy ready."
+        break
+    fi
+    sleep 1
+    if [ "$i" -eq 60 ]; then
+        echo "ERROR: bench-proxy did not come back up after restart" >&2
+        docker logs bench-proxy 2>&1 | tail -20
+        exit 1
+    fi
+done
+
 echo "==> Inserting $ROWS plaintext rows through Proxy (this encrypts them)"
 # generate_series emits plaintext rows; Proxy intercepts and encrypts each
 # column per the search config applied in schema.sql.
