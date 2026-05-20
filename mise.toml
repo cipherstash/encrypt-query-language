@@ -14,7 +14,7 @@
 "python" = "3.13"
 
 [task_config]
-includes = ["tasks", "tasks/postgres.toml", "tasks/bench.toml"]
+includes = ["tasks", "tasks/postgres.toml", "tasks/bench.toml", "tasks/fixtures.toml"]
 
 [env]
 POSTGRES_DB = "cipherstash"
