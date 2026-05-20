@@ -189,7 +189,8 @@ AS $$
     --
     -- Per the v2.3 sv-element contract (and the `eql_v2.ste_vec_entry`
     -- DOMAIN check), `hm` and `oc` are mutually exclusive — never both —
-    -- so skip elements that already have `oc`.
+    -- so skip elements that already have `oc`. The pre-2.3 `b3` field
+    -- is gone; the synthesised `hm` is just `md5(s || c)`.
     IF result -> 'sv' IS NOT NULL THEN
       result := jsonb_set(result, '{sv}', (
         SELECT jsonb_agg(
@@ -197,10 +198,7 @@ AS $$
             WHEN NOT (elem ? 'hm') AND NOT (elem ? 'oc') THEN
               elem || jsonb_build_object(
                 'hm',
-                coalesce(
-                  elem ->> 'b3',
-                  md5(coalesce(elem ->> 's', '') || coalesce(elem ->> 'c', ''))
-                )
+                md5(coalesce(elem ->> 's', '') || coalesce(elem ->> 'c', ''))
               )
             ELSE elem
           END
