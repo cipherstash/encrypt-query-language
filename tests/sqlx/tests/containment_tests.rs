@@ -39,25 +39,28 @@ async fn contains_operator_with_extracted_term(pool: PgPool) -> Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn contains_operator_term_does_not_contain_full_value(pool: PgPool) -> Result<()> {
-    // Test: a full payload is NOT contained in a single sv entry
-    // (asymmetric containment). The previous shape (`(e -> 'sel') @> e`)
-    // is no longer expressible because `->` returns ste_vec_entry, not
-    // eql_v2_encrypted — the typed needle has no `@>` overload that
-    // accepts a full payload on the right. The semantic the original
-    // test asserted (asymmetric containment) is now type-prevented at
-    // compile time. Re-express the asymmetry through the reverse
-    // direction: a single-entry stevec_query is not contained in the
-    // entry it was extracted from (because the entry isn't a container).
-    let sql = format!(
-        "SELECT e FROM encrypted WHERE \
-           e @> jsonb_build_object('sv', jsonb_build_array((e -> '{}'::text) - 'c'))::eql_v2.stevec_query \
-           AND NOT (e @> e) LIMIT 1",
-        Selectors::N
-    );
+    // Containment is directional. The old shape `(e -> 'sel') @> e` no
+    // longer type-checks — `->` now returns `ste_vec_entry`, which is not
+    // a container type for `@>`. Express the same asymmetry between two
+    // `eql_v2_encrypted` values: `single` is `e` reduced to its first sv
+    // entry.
+    //
+    //   e      @> single  -> true   (superset contains subset)
+    //   single @> e       -> false  (subset does not contain superset)
+    //
+    // The fixture rows each carry three sv entries ($, $.hello, $.n), so
+    // the one-entry `single` is always a strict subset.
+    let single_entry = "jsonb_set((e).data, '{sv}', \
+                         jsonb_build_array((e).data -> 'sv' -> 0))::eql_v2_encrypted";
 
-    // The first clause is true (e contains its own entry); the second is
-    // false (e contains itself), so the AND is false. Zero rows.
-    QueryAssertion::new(&pool, &sql).count(0).await;
+    // Positive direction: the full payload contains its one-entry subset.
+    let contains = format!("SELECT e FROM encrypted WHERE e @> {single_entry} LIMIT 1");
+    QueryAssertion::new(&pool, &contains).returns_rows().await;
+
+    // Negative direction: same rows, operands swapped. A one-entry subset
+    // never contains the full three-entry payload — so this returns nothing.
+    let not_contains = format!("SELECT e FROM encrypted WHERE {single_entry} @> e LIMIT 1");
+    QueryAssertion::new(&pool, &not_contains).count(0).await;
 
     Ok(())
 }

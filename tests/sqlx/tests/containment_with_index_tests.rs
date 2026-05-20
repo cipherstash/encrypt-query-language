@@ -500,6 +500,53 @@ async fn stevec_query_domain_rejects_non_sv_objects(_pool: PgPool) -> Result<()>
 }
 
 #[sqlx::test]
+async fn stevec_query_domain_rejects_selector_only_element(_pool: PgPool) -> Result<()> {
+    // Every sv element must carry exactly one deterministic term (`hm` XOR
+    // `oc`). A selector-only needle (`{"sv":[{"s":"x"}]}`) would otherwise
+    // cast and then match every row through the bare `jsonb @>` body — the
+    // empty element is a subset of any element. The CHECK rejects it.
+    let result = sqlx::query_scalar::<_, bool>(
+        "SELECT '{\"sv\":[{\"s\":\"x\"}]}'::eql_v2.stevec_query IS NOT NULL",
+    )
+    .fetch_one(&_pool)
+    .await;
+
+    assert!(
+        result.is_err(),
+        "stevec_query cast should raise on an element missing both `hm` and `oc`"
+    );
+    let msg = format!("{}", result.unwrap_err());
+    assert!(
+        msg.contains("violates check constraint"),
+        "expected CHECK violation, got: {msg}"
+    );
+    Ok(())
+}
+
+#[sqlx::test]
+async fn stevec_query_domain_rejects_element_with_both_terms(_pool: PgPool) -> Result<()> {
+    // `hm` and `oc` are mutually exclusive — an element carrying both
+    // violates the XOR contract and is rejected by the DOMAIN CHECK.
+    let result = sqlx::query_scalar::<_, bool>(
+        "SELECT '{\"sv\":[{\"s\":\"x\",\"hm\":\"y\",\"oc\":\"z\"}]}'::eql_v2.stevec_query \
+         IS NOT NULL",
+    )
+    .fetch_one(&_pool)
+    .await;
+
+    assert!(
+        result.is_err(),
+        "stevec_query cast should raise on an element carrying both `hm` and `oc`"
+    );
+    let msg = format!("{}", result.unwrap_err());
+    assert!(
+        msg.contains("violates check constraint"),
+        "expected CHECK violation, got: {msg}"
+    );
+    Ok(())
+}
+
+#[sqlx::test]
 async fn stevec_query_domain_accepts_valid_payload(_pool: PgPool) -> Result<()> {
     let result: serde_json::Value = sqlx::query_scalar(
         "SELECT '{\"sv\":[{\"s\":\"x\",\"hm\":\"y\"}]}'::eql_v2.stevec_query::jsonb",
