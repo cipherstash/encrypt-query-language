@@ -20,7 +20,11 @@ Each entry that ships in a published release links to the PR that introduced it.
 
 ## [Unreleased]
 
-Targeting `2.3.0`. See [`docs/upgrading/v2.3.md`](docs/upgrading/v2.3.md) for the consolidated upgrade notes.
+Targeting `2.4.0`. See [`docs/upgrading/v2.4.md`](docs/upgrading/v2.4.md) for the consolidated upgrade notes for the new `eql_v2_int4` variant family; entries below the new one are carry-overs targeting `2.3.0` (see [`docs/upgrading/v2.3.md`](docs/upgrading/v2.3.md)).
+
+### Added
+
+- **`eql_v2_int4` variant family — five capability-encoded domain types for encrypted `int4` columns.** Pick the variant whose operator surface matches the index terms your column carries: `eql_v2_int4_ct` (storage only, no operators), `eql_v2_int4_eq` (HMAC equality only — `=`, `<>`), `eql_v2_int4_ord_ore` (HMAC equality + ORE ordering — adds `<`, `<=`, `>`, `>=` with range queries on ORE backed by sequential scan), `eql_v2_int4_ord_ope` (HMAC equality + OPE-direct ordering — same operator surface as `_ord_ore` with functional-index-engaged range), or `eql_v2_int4` (default, behaves as `_ord_ore`). All variants live in `public` and survive `eql_v2` uninstall. Per-variant payload requirements and index recipes: [U-001](docs/upgrading/v2.4.md#u-001-eql_v2_int4-variant-family).
 
 ### Changed
 
@@ -43,7 +47,9 @@ Targeting `2.3.0`. See [`docs/upgrading/v2.3.md`](docs/upgrading/v2.3.md) for th
 
 ### Upgrade notes
 
-See [`docs/upgrading/v2.3.md`](docs/upgrading/v2.3.md). Three numbered notes cover the indexing recipe shift (U-001), the hmac requirement for equality and hashing (U-002), and the formalisation of Blake3 as ste_vec-internal (U-003).
+- [U-001 — `eql_v2_int4` variant family](docs/upgrading/v2.4.md#u-001-eql_v2_int4-variant-family) (v2.4)
+
+Carry-over from `2.3.0`: see [`docs/upgrading/v2.3.md`](docs/upgrading/v2.3.md). Three numbered notes cover the indexing recipe shift, the hmac requirement for equality and hashing, and the formalisation of Blake3 as ste_vec-internal.
 
 ## [2.2.1] — 2026-04
 
