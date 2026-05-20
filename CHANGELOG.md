@@ -71,7 +71,7 @@ Each entry that ships in a published release links to the PR that introduced it.
 
 ### Upgrade notes
 
-See [`docs/upgrading/v2.3.md`](docs/upgrading/v2.3.md). Six numbered notes cover the indexing recipe shift (U-001), the hmac requirement for equality and hashing (U-002), the formalisation of Blake3 as ste_vec-internal (U-003 — now historical, see U-004), the breaking ste_vec element shape migration plus the new `eql_v2.hmac_256(col, '<selector>')` recipe (U-004), the Block-ORE-only contract for range operators (U-005), and the ste_vec ORE-CLLW field consolidation to a single `oc` field (U-006).
+See [`docs/upgrading/v2.3.md`](docs/upgrading/v2.3.md). Eight numbered notes cover the indexing recipe shift (U-001), the hmac requirement for equality and hashing (U-002), the formalisation of Blake3 as ste_vec-internal (U-003 — now historical, see U-004), the breaking ste_vec element shape migration (U-004), the Block-ORE-only contract for range operators (U-005), the ste_vec ORE-CLLW field consolidation to a single `oc` field (U-006), the typed `->` selector lookup returning `eql_v2.ste_vec_entry` (U-007), and the typed `stevec_query` containment needle (U-008).
 
 ## [2.2.1] — 2026-04
 
