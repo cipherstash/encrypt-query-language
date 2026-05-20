@@ -204,6 +204,18 @@ BEGIN
         AND p.proname IN ('=', '<>', '<', '<=', '>', '>=',
                           'eq', 'neq', 'lt', 'lte', 'gt', 'gte')
         AND p.proargtypes[0] = entry_oid AND p.proargtypes[1] = entry_oid)
+      -- Inner ORE-CLLW comparison helpers backing the `<`, `<=`, `=`,
+      -- `>=`, `>`, `<>` operators on `eql_v2.ore_cllw` (the composite
+      -- type, registered via `eql_v2.ore_cllw_ops` opclass — #221). Same
+      -- precedent as the `ore_block_u64_8_256_*` helpers above: PG only
+      -- carries the inlined operator wrapper through to functional-index
+      -- match if the inner backing function is also inlinable. Pinning
+      -- these would break the index match for `ORDER BY eql_v2.ore_cllw
+      -- (value -> '<selector>'::text)` and the matching `WHERE` form.
+      OR (p.pronargs = 2
+        AND p.proname IN ('ore_cllw_eq', 'ore_cllw_neq',
+                          'ore_cllw_lt', 'ore_cllw_lte',
+                          'ore_cllw_gt', 'ore_cllw_gte'))
     );
 
   FOR fn_oid IN

@@ -18,14 +18,21 @@
 --! opclass (installed automatically by the main / protect variants; absent
 --! in the supabase variant).
 --!
---! When the `oc` field is absent, returns a composite with `bytes IS NULL`
---! rather than raising. This is necessary for inlinability (a SQL function
---! body that may raise can't be inlined). Callers needing the loud RAISE
---! contract should check `eql_v2.has_ore_cllw(entry)` first.
+--! **Missing-`oc` semantics**: when the `oc` field is absent, returns a
+--! SQL-level NULL (not a composite with NULL bytes). Btree's standard
+--! NULL handling then filters those rows from range queries: they don't
+--! match `WHERE ore_cllw(col) <op> $1`, they sort at the NULLS LAST end
+--! of `ORDER BY ore_cllw(col)`, and they never reach the comparator.
+--! This avoids the btree FUNCTION 1 contract violation that
+--! `(bytes => NULL)` would otherwise cause (`compare_ore_cllw_term`
+--! must return non-NULL int for non-NULL composite inputs).
+--!
+--! Callers needing a loud RAISE on missing `oc` should check
+--! `eql_v2.has_ore_cllw(entry)` first.
 --!
 --! @param entry eql_v2.ste_vec_entry STE-vec entry (extracted via `->`)
 --! @return eql_v2.ore_cllw Composite carrying the CLLW ciphertext, or
---!         `(bytes => NULL)` when the `oc` field is absent.
+--!         NULL when the `oc` field is absent.
 --!
 --! @see eql_v2.has_ore_cllw
 --! @see eql_v2.compare_ore_cllw_term
@@ -34,7 +41,9 @@ CREATE FUNCTION eql_v2.ore_cllw(entry eql_v2.ste_vec_entry)
   RETURNS eql_v2.ore_cllw
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT ROW(decode(entry ->> 'oc', 'hex'))::eql_v2.ore_cllw
+  SELECT CASE WHEN entry ->> 'oc' IS NULL THEN NULL
+              ELSE ROW(decode(entry ->> 'oc', 'hex'))::eql_v2.ore_cllw
+         END
 $$;
 
 
@@ -47,13 +56,21 @@ $$;
 --! form skips the domain CHECK constraint so it works for ad-hoc test inputs
 --! and for the GenericComparison case in `eql_v2.compare_ore_cllw_term`.
 --!
+--! Returns SQL-level NULL when the input lacks `oc`, matching the
+--! `(ste_vec_entry)` overload's missing-`oc` semantics so a `WHERE
+--! ore_cllw(col) < ore_cllw($1::jsonb)` with a malformed query needle
+--! evaluates to no rows rather than indexing a NULL-bytes composite.
+--!
 --! @param val jsonb An object carrying an `oc` field
---! @return eql_v2.ore_cllw Composite carrying the CLLW ciphertext
+--! @return eql_v2.ore_cllw Composite carrying the CLLW ciphertext, or
+--!         NULL when the `oc` field is absent.
 CREATE FUNCTION eql_v2.ore_cllw(val jsonb)
   RETURNS eql_v2.ore_cllw
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT ROW(decode(val ->> 'oc', 'hex'))::eql_v2.ore_cllw
+  SELECT CASE WHEN val ->> 'oc' IS NULL THEN NULL
+              ELSE ROW(decode(val ->> 'oc', 'hex'))::eql_v2.ore_cllw
+         END
 $$;
 
 
@@ -177,9 +194,26 @@ $$ LANGUAGE plpgsql;
 --! Stays `LANGUAGE plpgsql` because it dispatches to
 --! `compare_ore_cllw_term_bytes`, which can't be inlined.
 --!
+--! @par Null handling — btree FUNCTION 1 contract
+--! PostgreSQL's btree filters NULL composites at the row level, so this
+--! function should never be called with `a IS NULL` or `b IS NULL` under
+--! normal operation. The leading IS-NULL guard returns NULL defensively
+--! to cover edge cases (e.g., a non-index `ORDER BY` or `WHERE` path
+--! that bypasses the opclass).
+--!
+--! A composite that is non-NULL but whose `bytes` field is NULL is a
+--! contract violation: btree expects FUNCTION 1 to return a non-NULL
+--! integer for non-NULL composite inputs. The extractor overloads of
+--! `eql_v2.ore_cllw` are designed to return SQL NULL (not `ROW(NULL)`)
+--! when the source payload lacks `oc`, so a NULL-bytes composite should
+--! only arise from a hand-crafted literal or a future field addition to
+--! the composite type. Raise loudly to surface the bug instead of
+--! producing silent misordering downstream.
+--!
 --! @param a eql_v2.ore_cllw First term
 --! @param b eql_v2.ore_cllw Second term
---! @return Integer -1, 0, or 1; NULL if either input is NULL
+--! @return Integer -1, 0, or 1; NULL if either composite is NULL
+--! @throws Exception if either composite has a NULL `bytes` field
 --!
 --! @see eql_v2.compare_ore_cllw_term_bytes
 --! @see eql_v2.compare_ore_cllw
@@ -193,14 +227,20 @@ DECLARE
     common_len INT;
     cmp_result INT;
 BEGIN
-    -- Guard against both the composite being NULL and against its
-    -- `bytes` field being NULL. The (jsonb) and (ste_vec_entry)
-    -- overloads of `eql_v2.ore_cllw` return `(bytes => NULL)` when the
-    -- payload lacks `oc` — that composite passes `IS NOT NULL` but
-    -- would otherwise raise from `compare_ore_cllw_term_bytes` on the
-    -- NULL bytea length check. Treat as "incomparable, return NULL".
-    IF a IS NULL OR b IS NULL OR a.bytes IS NULL OR b.bytes IS NULL THEN
+    -- Composite-level NULL: btree's null-handling layer filters these at
+    -- the row level under normal operation. Returning NULL covers
+    -- non-index code paths that might still reach here.
+    IF a IS NULL OR b IS NULL THEN
       RETURN NULL;
+    END IF;
+
+    -- Non-NULL composite with NULL bytes is a contract violation: btree's
+    -- FUNCTION 1 must return non-NULL int for non-NULL composite inputs.
+    -- The extractors return SQL NULL (not ROW(NULL)) on missing `oc`, so
+    -- reaching here means a hand-crafted literal or a regression in the
+    -- extractor body. Raise loudly rather than silently misorder.
+    IF a.bytes IS NULL OR b.bytes IS NULL THEN
+      RAISE EXCEPTION 'eql_v2.compare_ore_cllw_term: composite has NULL bytes field — extractor invariant violated. Check that the index expression uses eql_v2.ore_cllw(...) and not a hand-crafted ROW(NULL).';
     END IF;
 
     len_a := LENGTH(a.bytes);
