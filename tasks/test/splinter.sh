@@ -88,6 +88,12 @@ function_search_path_mutable	eql_v2	lt	function	Less-than backing function for `
 function_search_path_mutable	eql_v2	lte	function	Less-than-or-equal backing function for `eql_v2.ste_vec_entry`. Same rationale as `lt`.
 function_search_path_mutable	eql_v2	gt	function	Greater-than backing function for `eql_v2.ste_vec_entry`. Same rationale as `lt`.
 function_search_path_mutable	eql_v2	gte	function	Greater-than-or-equal backing function for `eql_v2.ste_vec_entry`. Same rationale as `lt`.
+function_search_path_mutable	eql_v2	ore_cllw_eq	function	Inner comparator for the `eql_v2.ore_cllw` type's `=` operator (#221). The outer same-type operators back the btree opclass on `eql_v2.ore_cllw`; the planner only carries the inlined form through to functional-index match if this inner function is also inlinable (no SET, IMMUTABLE). Mirrors ore_block_u64_8_256_eq.
+function_search_path_mutable	eql_v2	ore_cllw_neq	function	Inner comparator for the `eql_v2.ore_cllw` type's `<>` operator (#221). Same rationale as `ore_cllw_eq`.
+function_search_path_mutable	eql_v2	ore_cllw_lt	function	Inner comparator for the `eql_v2.ore_cllw` type's `<` operator (#221). Same rationale as `ore_cllw_eq`.
+function_search_path_mutable	eql_v2	ore_cllw_lte	function	Inner comparator for the `eql_v2.ore_cllw` type's `<=` operator (#221). Same rationale as `ore_cllw_eq`.
+function_search_path_mutable	eql_v2	ore_cllw_gt	function	Inner comparator for the `eql_v2.ore_cllw` type's `>` operator (#221). Same rationale as `ore_cllw_eq`.
+function_search_path_mutable	eql_v2	ore_cllw_gte	function	Inner comparator for the `eql_v2.ore_cllw` type's `>=` operator (#221). Same rationale as `ore_cllw_eq`.
 function_search_path_mutable	eql_v2	min	function	Aggregate (splinter labels these type=function): ALTER AGGREGATE has no SET configuration_parameter syntax, and ALTER ROUTINE/FUNCTION reject aggregates. The aggregate's SFUNC has a pinned search_path.
 function_search_path_mutable	eql_v2	max	function	Aggregate: same as min.
 function_search_path_mutable	eql_v2	grouped_value	function	Aggregate: same as min.

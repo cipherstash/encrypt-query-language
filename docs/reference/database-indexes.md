@@ -277,7 +277,7 @@ CREATE INDEX ON users (encrypted_email eql_v2.encrypted_operator_class);
 B-tree indexes **only work** with:
 - `hm` (hmac_256) - for equality
 - `ob` (ore_block_u64_8_256) - for range queries on root scalars
-- `oc` (ore_cllw) - for range queries on `ste_vec` elements (needs a custom comparator; tracked as #220)
+- `oc` (ore_cllw) - for range queries on `ste_vec` elements (functional btree on `eql_v2.ore_cllw(col)` engages via the `eql_v2.ore_cllw_ops` opclass; excluded from the Supabase variant because operator classes require superuser)
 
 They **do not work** with:
 - `bf` (bloom_filter) - pattern matching
