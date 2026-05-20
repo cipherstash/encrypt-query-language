@@ -96,9 +96,10 @@ async fn index_usage_with_explain_analyze(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
-#[ignore = "Strict eql_v2.compare contract: raises on missing ORE term. This test builds a btree using eql_v2.encrypted_operator_class over hm-only payloads; the opclass calls compare() per row, which now raises. Equality on hm-only columns should use the inlined `=` operator (post-#193), not opclass-driven btree. Re-enable once the test is rewritten to use ORE-bearing payloads (or to assert raise-on-build-with-hm-only)."]
 async fn index_behavior_with_different_data_types(pool: PgPool) -> Result<()> {
-    // Test: Index behavior with various encrypted data types (37 assertions)
+    // Test: Index behavior with various encrypted data types. The opclass
+    // btree FUNCTION 1 is eql_v2.encrypted_btree_compare (total, non-raising),
+    // so building the index and ANALYZE over hm-only payloads both succeed.
 
     create_table_with_encrypted(&pool).await?;
 
@@ -218,6 +219,30 @@ async fn index_behavior_with_different_data_types(pool: PgPool) -> Result<()> {
     // both sides. ORE-only payloads are eligible for `<`/`<=`/`>`/`>=` but
     // not `=`. The remaining hmac-shape assertions above cover the index
     // path that operator_class indexes are designed to engage.
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
+async fn analyze_on_hmac_only_column_does_not_raise(pool: PgPool) -> Result<()> {
+    // Regression: eql_v2_encrypted has a DEFAULT btree operator class, so
+    // ANALYZE invokes its FUNCTION 1 comparator to gather column statistics.
+    // That comparator must never raise — ANALYZE (autovacuum included) runs
+    // on every encrypted column. It previously pointed at the strict
+    // eql_v2.compare, which raises without a Block-ORE `ob` term, so ANALYZE
+    // failed on every equality-only (`hm`-only) encrypted column. FUNCTION 1
+    // is now eql_v2.encrypted_btree_compare (total, non-raising).
+
+    create_table_with_encrypted(&pool).await?;
+
+    for _ in 0..5 {
+        sqlx::query("INSERT INTO encrypted(e) VALUES (create_encrypted_json(1, 'hm'))")
+            .execute(&pool)
+            .await?;
+    }
+
+    // Must complete without raising.
+    sqlx::query("ANALYZE encrypted").execute(&pool).await?;
 
     Ok(())
 }
