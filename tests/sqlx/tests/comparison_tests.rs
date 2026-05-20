@@ -346,12 +346,14 @@ async fn selector_less_than_with_ore_cllw(pool: PgPool) -> Result<()> {
     // back via `'...'::eql_v2_encrypted`.
     let term = get_ste_vec_selector_term(&pool, 30, Selectors::N).await?;
 
-    // Should return 2 records (n=10 and n=20).
+    // Should return 2 records (n=10 and n=20). Both sides type as
+    // `eql_v2.ste_vec_entry` (LHS via `->`'s post-flip return type;
+    // RHS via direct cast of the JSON literal `term`).
     let sql = format!(
         "SELECT e FROM encrypted WHERE \
-           ((e -> '{}'::text).data)::eql_v2.ste_vec_entry \
+           e -> '{}'::text \
          < \
-           (('{}'::eql_v2_encrypted).data)::eql_v2.ste_vec_entry",
+           '{}'::eql_v2.ste_vec_entry",
         Selectors::N,
         term
     );

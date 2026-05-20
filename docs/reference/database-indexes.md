@@ -195,37 +195,38 @@ GROUP BY encrypted_status;
 
 For `GROUP BY` / `DISTINCT` / equality on a value extracted from an encrypted JSON document — e.g. `data->'email'` — there are two complementary recipes. Pick by use case:
 
-**Per-selector hash index.** Use when a single JSONB path is queried hot and you want a small, narrow index:
+**Per-selector hash index.** Use when a single JSONB path is queried hot and you want a small, narrow index. The canonical extractor is `eql_v2.eq_term(col -> '<selector>')` — XOR-aware (covers both hm-bearing and oc-bearing selectors with one expression):
 
 ```sql
-CREATE INDEX users_data_email_hmac_idx
-  ON users USING hash (eql_v2.hmac_256(data_encrypted, '<selector-for-email>'));
+CREATE INDEX users_data_email_eq_term_idx
+  ON users USING hash (eql_v2.eq_term(data_encrypted -> '<selector-for-email>'));
 ```
 
-The same expression can then be used directly in query predicates and aggregation keys:
+The bare-form predicate uses `=` on `eql_v2.ste_vec_entry`, which inlines to `eql_v2.eq_term(a) = eql_v2.eq_term(b)` — matching the functional hash index above:
 
 ```sql
 SELECT count(*) FROM users
-  GROUP BY eql_v2.hmac_256(data_encrypted, '<selector-for-email>');
+  GROUP BY eql_v2.eq_term(data_encrypted -> '<selector-for-email>');
 
 SELECT * FROM users
-  WHERE eql_v2.hmac_256(data_encrypted, '<selector-for-email>')
-      = eql_v2.hmac_256($1::jsonb::eql_v2_encrypted, '<selector-for-email>');
+  WHERE data_encrypted -> '<selector-for-email>' = $1::eql_v2.ste_vec_entry;
 ```
 
-**GIN index over all (selector, hmac) pairs.** Use when many selectors are queried on the same column and you want one index covering them all — typical for proxy-rewritten `col -> 'foo' = $1` predicates where `'foo'` can be any field:
+**GIN index over the entire sv shape (recommended).** Use when many selectors are queried on the same column and you want one index covering them all — typical for proxy-rewritten `col @> needle` containment where the needle can target any field. The recipe is XOR-aware: both `hm`-bearing (bool leaves / array / object roots) and `oc`-bearing (string / number leaves) sv elements are indexed.
 
 ```sql
-CREATE INDEX users_data_hmac_terms_idx
-  ON users USING gin (eql_v2.hmac_256_terms(data_encrypted));
+CREATE INDEX users_data_stevec_query_idx
+  ON users USING gin (eql_v2.to_stevec_query(data_encrypted)::jsonb jsonb_path_ops);
 ```
 
-Query shape:
+Query shape — uses the typed `@>` overload, which inlines to a native `jsonb @>` over the same expression so the planner engages Bitmap Index Scan:
 
 ```sql
 SELECT * FROM users
-  WHERE eql_v2.hmac_256_terms(data_encrypted)
-     @> '[{"s":"<selector-hash>","hm":"<hmac-hash>"}]'::jsonb;
+  WHERE data_encrypted @> '{"sv":[{"s":"<selector-hash>","hm":"<term>"}]}'::eql_v2.stevec_query;
+-- or, for an oc-bearing selector:
+SELECT * FROM users
+  WHERE data_encrypted @> '{"sv":[{"s":"<selector-hash>","oc":"<term>"}]}'::eql_v2.stevec_query;
 ```
 
 The two recipes can coexist on the same column. The `<selector>` value is the deterministic selector hash that the crypto layer emits in the `s` field of each `sv` element — not a plaintext JSONPath.

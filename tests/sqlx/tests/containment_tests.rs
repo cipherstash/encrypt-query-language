@@ -39,29 +39,41 @@ async fn contains_operator_with_extracted_term(pool: PgPool) -> Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn contains_operator_term_does_not_contain_full_value(pool: PgPool) -> Result<()> {
-    // Test: term does NOT contain full encrypted value (asymmetric containment)
-    // Verifies that while e @> term is true, term @> e is false
+    // Containment is directional. The old shape `(e -> 'sel') @> e` no
+    // longer type-checks — `->` now returns `ste_vec_entry`, which is not
+    // a container type for `@>`. Express the same asymmetry between two
+    // `eql_v2_encrypted` values: `single` is `e` reduced to its first sv
+    // entry.
+    //
+    //   e      @> single  -> true   (superset contains subset)
+    //   single @> e       -> false  (subset does not contain superset)
+    //
+    // The fixture rows each carry three sv entries ($, $.hello, $.n), so
+    // the one-entry `single` is always a strict subset.
+    let single_entry = "jsonb_set((e).data, '{sv}', \
+                         jsonb_build_array((e).data -> 'sv' -> 0))::eql_v2_encrypted";
 
-    let sql = format!(
-        "SELECT e FROM encrypted WHERE (e -> '{}'::text) @> e LIMIT 1",
-        Selectors::N
-    );
+    // Positive direction: the full payload contains its one-entry subset.
+    let contains = format!("SELECT e FROM encrypted WHERE e @> {single_entry} LIMIT 1");
+    QueryAssertion::new(&pool, &contains).returns_rows().await;
 
-    // Should return 0 records - extracted term cannot contain the full encrypted value
-    QueryAssertion::new(&pool, &sql).count(0).await;
+    // Negative direction: same rows, operands swapped. A one-entry subset
+    // never contains the full three-entry payload — so this returns nothing.
+    let not_contains = format!("SELECT e FROM encrypted WHERE {single_entry} @> e LIMIT 1");
+    QueryAssertion::new(&pool, &not_contains).count(0).await;
 
     Ok(())
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn contains_operator_with_encrypted_term(pool: PgPool) -> Result<()> {
-    // Test: e @> encrypted_term with encrypted selector
+    // Test: e @> entry with encrypted selector
     // Uses encrypted test data with $.hello selector
 
     let term = get_encrypted_term(&pool, Selectors::HELLO).await?;
 
     let sql = format!(
-        "SELECT e FROM encrypted WHERE e @> '{}'::eql_v2_encrypted",
+        "SELECT e FROM encrypted WHERE e @> '{}'::eql_v2.ste_vec_entry",
         term
     );
 
@@ -73,13 +85,13 @@ async fn contains_operator_with_encrypted_term(pool: PgPool) -> Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn contains_operator_count_matches(pool: PgPool) -> Result<()> {
-    // Test: e @> term returns correct count
+    // Test: e @> entry returns correct count
     // Verifies count of records containing the term
 
     let term = get_encrypted_term(&pool, Selectors::HELLO).await?;
 
     let sql = format!(
-        "SELECT e FROM encrypted WHERE e @> '{}'::eql_v2_encrypted",
+        "SELECT e FROM encrypted WHERE e @> '{}'::eql_v2.ste_vec_entry",
         term
     );
 
@@ -92,13 +104,13 @@ async fn contains_operator_count_matches(pool: PgPool) -> Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn contained_by_operator_with_encrypted_term(pool: PgPool) -> Result<()> {
-    // Test: term <@ e (contained by)
+    // Test: entry <@ e (contained by)
     // Tests that extracted term is contained by the original encrypted value
 
     let term = get_encrypted_term(&pool, Selectors::HELLO).await?;
 
     let sql = format!(
-        "SELECT e FROM encrypted WHERE '{}'::eql_v2_encrypted <@ e",
+        "SELECT e FROM encrypted WHERE '{}'::eql_v2.ste_vec_entry <@ e",
         term
     );
 
@@ -110,13 +122,13 @@ async fn contained_by_operator_with_encrypted_term(pool: PgPool) -> Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn contained_by_operator_count_matches(pool: PgPool) -> Result<()> {
-    // Test: term <@ e returns correct count
+    // Test: entry <@ e returns correct count
     // Verifies count of records containing the term
 
     let term = get_encrypted_term(&pool, Selectors::HELLO).await?;
 
     let sql = format!(
-        "SELECT e FROM encrypted WHERE '{}'::eql_v2_encrypted <@ e",
+        "SELECT e FROM encrypted WHERE '{}'::eql_v2.ste_vec_entry <@ e",
         term
     );
 
@@ -192,12 +204,11 @@ async fn contains_does_not_match_different_hm(pool: PgPool) -> Result<()> {
     // The seed fixture inserted three rows whose $.hello sv element hm is
     // derived from a different source (the existing fixture ocv) — none of
     // them should match `other_hm`. Inspect the extracted entry's `s` via
-    // JSONB field access (selector(eql_v2_encrypted) is now an internal
-    // helper).
+    // JSONB field access on the `ste_vec_entry` returned by `->`.
     let sql = format!(
         "SELECT e FROM encrypted \
          WHERE e @> '{}'::jsonb::eql_v2_encrypted \
-           AND ((e -> '{}'::text).data) ->> 's' = '{}'",
+           AND (e -> '{}'::text) ->> 's' = '{}'",
         query_payload,
         Selectors::HELLO,
         Selectors::HELLO,

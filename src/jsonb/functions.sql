@@ -436,80 +436,14 @@ $$ LANGUAGE plpgsql;
 
 ------------------------------------------------------------------------------------
 
-
---! @brief Extract HMAC-SHA256 index term for a specific ste_vec selector
---!
---! Field-level equality extractor: walks the encrypted value's sv array,
---! finds the element whose selector matches @p selector, and returns its
---! `hm` term. Mirrors the root-level `eql_v2.hmac_256(val)` at the field
---! level so the same hash/index/equality recipes compose.
---!
---! Single-statement SQL — inlinable into the calling query, so a btree
---! hash index built on `eql_v2.hmac_256(col, '<selector-hash>')` engages
---! structurally for WHERE / GROUP BY / DISTINCT / hash-join.
---!
---! @param val      eql_v2_encrypted Encrypted column value
---! @param selector text             Encrypted-side selector hash (see file-level note)
---! @return eql_v2.hmac_256 HMAC-SHA256 hash for that selector's element, or NULL
---!
---! @note Returns NULL if @p selector matches no sv element, or if the
---!       matched element carries no `hm`.
---!
---! @see eql_v2.hmac_256(eql_v2_encrypted)
---! @see eql_v2.hmac_256_terms
---! @see eql_v2.ste_vec_contains
---!
---! @example
---! CREATE INDEX users_data_email_idx ON users
---!   USING hash (eql_v2.hmac_256(data_encrypted, 'a7cea93975ed8c01f861ccb6bd082784'));
---! SELECT count(*) FROM users
---!   GROUP BY eql_v2.hmac_256(data_encrypted, 'a7cea93975ed8c01f861ccb6bd082784');
-CREATE FUNCTION eql_v2.hmac_256(val eql_v2_encrypted, selector text)
-  RETURNS eql_v2.hmac_256
-  LANGUAGE sql
-  IMMUTABLE STRICT PARALLEL SAFE
-AS $$
-  SELECT (elem ->> 'hm')::eql_v2.hmac_256
-  FROM jsonb_array_elements((val).data -> 'sv') elem
-  WHERE elem ->> 's' = selector
-  LIMIT 1
-$$;
-
-
---! @brief Aggregate all (selector, hmac) pairs from ste_vec elements
---!
---! Returns a jsonb array of `{"s": <selector>, "hm": <hmac>}` objects, one
---! per sv element that carries an `hm` term. Designed for use with a GIN
---! index — one index covers field-level equality / containment across
---! every selector in the encrypted document, instead of one per selector.
---!
---! @param val eql_v2_encrypted Encrypted column value
---! @return jsonb Array of `{s, hm}` objects (empty array when no sv elements)
---!
---! @note Selector values in `s` are the deterministic selector hashes
---!       emitted by the crypto layer, not plaintext JSONPaths. See the
---!       file-level @note for the convention.
---!
---! @see eql_v2.hmac_256(eql_v2_encrypted, text)
---!
---! @example
---! CREATE INDEX users_data_hmac_terms_idx
---!   ON users USING gin (eql_v2.hmac_256_terms(data_encrypted));
---!
---! SELECT * FROM users
---!   WHERE eql_v2.hmac_256_terms(data_encrypted)
---!       @> '[{"s":"a7cea93975ed8c01f861ccb6bd082784","hm":"<hash>"}]'::jsonb;
-CREATE FUNCTION eql_v2.hmac_256_terms(val eql_v2_encrypted)
-  RETURNS jsonb
-  LANGUAGE sql
-  IMMUTABLE STRICT PARALLEL SAFE
-AS $$
-  SELECT coalesce(
-    jsonb_agg(
-      jsonb_build_object('s', elem ->> 's', 'hm', elem ->> 'hm')
-    ),
-    '[]'::jsonb
-  )
-  FROM jsonb_array_elements((val).data -> 'sv') elem
-  WHERE elem ->> 'hm' IS NOT NULL
-$$;
+-- `eql_v2.hmac_256_terms(eql_v2_encrypted)` was added under #205 as a
+-- GIN-indexable {s, hm} aggregate. It's been removed: under the XOR
+-- contract each sv element carries exactly one of `hm` (bool leaves,
+-- array / object roots) or `oc` (string / number leaves), and
+-- `hmac_256_terms` filters out everything without `hm` — so containment
+-- queries via this index could never match on string / number selectors.
+-- The canonical XOR-aware replacement is the typed
+-- `@>(eql_v2_encrypted, eql_v2.stevec_query)` overload, which inlines
+-- to `eql_v2.to_stevec_query(col)::jsonb @> needle::jsonb` and engages
+-- a functional GIN on `(eql_v2.to_stevec_query(col)::jsonb) jsonb_path_ops`.
+-- See U-007 / U-008 in `docs/upgrading/v2.3.md`.

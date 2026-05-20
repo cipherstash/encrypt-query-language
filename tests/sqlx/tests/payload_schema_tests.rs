@@ -408,6 +408,66 @@ fn v2_3_encrypted_payload_with_sv_is_rejected() {
     assert_invalid(schema_v2_3(), &p, "encrypted payload with sv");
 }
 
+// ---- SteVecQueryPayload (containment needle) ----
+
+fn compile_query_schema() -> jsonschema::Validator {
+    let mut schema = load_schema("eql-payload-v2.3.schema.json");
+    // The top-level schema gates SteVecQueryPayload behind a separate
+    // path; validate via the embedded definition.
+    let defs = schema["$defs"]["SteVecQueryPayload"].clone();
+    // Carry the surrounding $defs so $ref resolution still works.
+    schema = json!({
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": schema["$defs"].clone(),
+        "$ref": "#/$defs/SteVecQueryPayload"
+    });
+    let _ = defs;
+    compile(&schema)
+}
+
+#[test]
+fn v2_3_stevec_query_payload_with_hm_only_is_valid() {
+    let schema = compile_query_schema();
+    let payload = json!({
+        "sv": [{ "s": SELECTOR, "hm": HEX }]
+    });
+    assert_valid(&schema, &payload, "stevec_query with hm-only element");
+}
+
+#[test]
+fn v2_3_stevec_query_payload_with_oc_only_is_valid() {
+    let schema = compile_query_schema();
+    let payload = json!({
+        "sv": [{ "s": SELECTOR, "oc": HEX_LONG }]
+    });
+    assert_valid(&schema, &payload, "stevec_query with oc-only element");
+}
+
+#[test]
+fn v2_3_stevec_query_payload_with_c_field_is_rejected() {
+    let schema = compile_query_schema();
+    let payload = json!({
+        "sv": [{ "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX }]
+    });
+    assert_invalid(&schema, &payload, "stevec_query with c on element");
+}
+
+#[test]
+fn v2_3_stevec_query_payload_without_sv_is_rejected() {
+    let schema = compile_query_schema();
+    let payload = json!({ "x": 1 });
+    assert_invalid(&schema, &payload, "stevec_query without sv");
+}
+
+#[test]
+fn v2_3_stevec_query_element_without_hm_or_oc_is_rejected() {
+    let schema = compile_query_schema();
+    let payload = json!({
+        "sv": [{ "s": SELECTOR }]
+    });
+    assert_invalid(&schema, &payload, "stevec_query element with neither term");
+}
+
 #[test]
 fn v2_3_minimum_required_fields_enforced() {
     let cases = [
