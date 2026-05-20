@@ -133,13 +133,6 @@ BEGIN
       OR (p.pronargs = 1
         AND p.proname = 'hmac_256'
         AND (p.proargtypes[0] = enc_oid OR p.proargtypes[0] = jsonb_oid))
-      -- Field-level HMAC terms aggregate (#205): GIN-indexable jsonb array
-      -- of `{s, hm}` pairs. Must inline so
-      -- `eql_v2.hmac_256_terms(col) @> $1::jsonb` engages the GIN index on
-      -- the same expression.
-      OR (p.pronargs = 1
-        AND p.proname = 'hmac_256_terms'
-        AND p.proargtypes[0] = enc_oid)
       -- Field-level JSONB extractors (#205): inlinable SQL replacements for
       -- the previous plpgsql bodies. Inlining lets the planner fold the
       -- `jsonb_array_elements(...) WHERE elem->>'s' = selector` body into
