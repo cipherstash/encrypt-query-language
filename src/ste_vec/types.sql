@@ -80,21 +80,39 @@ CREATE DOMAIN eql_v2.stevec_query AS jsonb
 
 --! @brief Convert an `eql_v2_encrypted` to a `stevec_query` needle
 --!
---! Strips the `c` (ciphertext) field from each sv element and rewraps
---! the result as a `stevec_query`. Useful for "does this payload
---! contain a row's sv shape?" style queries where the right-hand side
---! is sourced from another encrypted column.
+--! Normalises each sv element down to the matching-relevant fields:
+--! `s` (selector) plus exactly one of `hm` / `oc`. Other fields
+--! (`c` ciphertext, `a` array marker, `i`/`v` envelope metadata, anything
+--! else cipherstash-client might emit) are stripped. This is the
+--! canonical needle shape for `@>` containment — matching the contract
+--! that containment compares by selector + deterministic term and
+--! ignores everything else.
+--!
+--! Designed for use as a functional GIN index expression: a single
+--! `GIN (eql_v2.to_stevec_query(col)::jsonb jsonb_path_ops)` index
+--! covers containment queries against any selector (both hm-bearing
+--! and oc-bearing — XOR-aware), and the typed `@>` overloads inline
+--! to a native `jsonb @>` on the same expression so the planner
+--! engages Bitmap Index Scan structurally.
 --!
 --! @param e eql_v2_encrypted Source encrypted payload
---! @return eql_v2.stevec_query Query-shaped needle with all `c` fields removed
+--! @return eql_v2.stevec_query Query-shaped needle, sv elements
+--!         normalised to `{s, hm}` or `{s, oc}`.
 --!
 --! @example
+--! -- Functional GIN index — canonical containment recipe
+--! CREATE INDEX ON users USING gin (
+--!   eql_v2.to_stevec_query(encrypted_doc)::jsonb jsonb_path_ops
+--! );
+--!
+--! -- Cross-row containment
 --! SELECT a.*
 --!   FROM docs a, docs b
 --!  WHERE a.encrypted_doc @> b.encrypted_doc::eql_v2.stevec_query
 --!    AND b.id = 42;
 --!
 --! @see eql_v2.stevec_query
+--! @see eql_v2."@>"(eql_v2_encrypted, eql_v2.stevec_query)
 CREATE FUNCTION eql_v2.to_stevec_query(e eql_v2_encrypted)
   RETURNS eql_v2.stevec_query
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -102,7 +120,15 @@ AS $$
   SELECT jsonb_build_object(
     'sv',
     coalesce(
-      (SELECT jsonb_agg(elem - 'c')
+      (SELECT jsonb_agg(
+                jsonb_strip_nulls(
+                  jsonb_build_object(
+                    's',  elem -> 's',
+                    'hm', elem -> 'hm',
+                    'oc', elem -> 'oc'
+                  )
+                )
+              )
        FROM jsonb_array_elements((e).data -> 'sv') AS elem),
       '[]'::jsonb
     )
