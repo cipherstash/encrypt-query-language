@@ -56,10 +56,15 @@ CREATE DOMAIN eql_v2.ste_vec_entry AS jsonb
 --!
 --! Compared to `eql_v2.ste_vec_entry` (single sv element with `s`,
 --! `c`, and `hm` XOR `oc`), `stevec_query` is the wrapping
---! `{"sv": [...]}` payload and explicitly forbids `c` on any
---! element. The implementation of `ste_vec_contains` ignores `c`
---! either way, but typing the needle as `stevec_query` documents
---! the contract at the API surface.
+--! `{"sv": [...]}` payload: it forbids `c` on every element but
+--! otherwise keeps the same per-element contract — each element must
+--! carry a selector `s` and exactly one deterministic term (`hm` XOR
+--! `oc`). This mirrors the `SteVecQueryElement` JSON schema and stops
+--! selector-only needles (e.g. `{"sv":[{"s":"x"}]}`) from casting and
+--! then matching every row through the bare `jsonb @>` implementation.
+--! The implementation of `ste_vec_contains` ignores `c` either way,
+--! but typing the needle as `stevec_query` documents the contract at
+--! the API surface.
 --!
 --! @note Constructing a `stevec_query` literal from inline JSON works
 --!       via the standard DOMAIN cast:
@@ -74,7 +79,16 @@ CREATE DOMAIN eql_v2.stevec_query AS jsonb
     jsonb_typeof(VALUE) = 'object'
     AND VALUE ? 'sv'
     AND jsonb_typeof(VALUE -> 'sv') = 'array'
+    -- No element may carry a ciphertext (`c`) — this is a query, not a value.
     AND NOT jsonb_path_exists(VALUE, '$.sv[*] ? (exists(@.c))'::jsonpath)
+    -- Every element must carry a selector (`s`) ...
+    AND NOT jsonb_path_exists(VALUE, '$.sv[*] ? (!exists(@.s))'::jsonpath)
+    -- ... and exactly one deterministic term — `hm` XOR `oc` — matching
+    -- the `ste_vec_entry` emission contract and the `SteVecQueryElement`
+    -- JSON schema. Rejects selector-only needles that would otherwise
+    -- cast and then match every row via the bare `jsonb @>` body.
+    AND NOT jsonb_path_exists(VALUE, '$.sv[*] ? (exists(@.hm) && exists(@.oc))'::jsonpath)
+    AND NOT jsonb_path_exists(VALUE, '$.sv[*] ? (!exists(@.hm) && !exists(@.oc))'::jsonpath)
   );
 
 
