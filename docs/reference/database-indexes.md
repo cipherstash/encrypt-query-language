@@ -49,7 +49,7 @@ For PostgreSQL to use an index on encrypted columns, **all** of these conditions
 The encrypted data must contain the index term types that support the operation:
 
 - **Equality queries** - Require `unique` index config (adds `hm` hmac_256 terms)
-- **Range queries** - Require `ore` index config on root scalars (adds `ob` ore_block_u64_8_256 terms), or `ste_vec` on encrypted JSON columns (adds `oc` ORE CLLW on sv elements — see [U-006](../upgrading/v2.3.md#u-006-stevec-ore-field-consolidation))
+- **Range queries** - Require `ore` index config on root scalars (adds `ob` ore_block_u64_8_256 terms), or `ste_vec` on encrypted JSON columns (adds `oc` ORE CLLW on sv elements — see [U-006](../upgrading/v2.3.md#u-006-ste_vec-ore-field-consolidation))
 - **Pattern matching** - Typically scans (bloom filters don't use B-tree indexes)
 
 **Example:**
@@ -179,7 +179,7 @@ SELECT * FROM events
 
 The sort key now matches the functional index expression, so the planner streams rows out of the index in order — a plain Index Scan, no separate Sort node.
 
-**Non-Block-ORE term types.** For columns carrying only `oc` (sv-element ORE CLLW), the bare-form `<` / `>` operators no longer dispatch through `eql_v2.compare()` — they go straight to the Block ORE extractor, which raises on a missing `ob`. Either migrate the column configuration to `ore` (Block ORE), or rewrite range queries to the extractor form: `WHERE eql_v2.ore_cllw(e->'<selector>'::text) < eql_v2.ore_cllw($1::jsonb)`. See [U-005](../upgrading/v2.3.md#u-005-range-operators-are-block-ore-only) and [U-006](../upgrading/v2.3.md#u-006-stevec-ore-field-consolidation) for the migration notes.
+**Non-Block-ORE term types.** For columns carrying only `oc` (sv-element ORE CLLW), the bare-form `<` / `>` operators no longer dispatch through `eql_v2.compare()` — they go straight to the Block ORE extractor, which raises on a missing `ob`. Either migrate the column configuration to `ore` (Block ORE), or rewrite range queries to the extractor form: `WHERE eql_v2.ore_cllw(e->'<selector>'::text) < eql_v2.ore_cllw($1::jsonb)`. See [U-005](../upgrading/v2.3.md#u-005-range-operators-are-block-ore-only) and [U-006](../upgrading/v2.3.md#u-006-ste_vec-ore-field-consolidation) for the migration notes.
 
 ### GROUP BY
 
