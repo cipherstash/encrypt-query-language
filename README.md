@@ -24,6 +24,7 @@ Store encrypted data alongside your existing data:
 - [Getting started](#getting-started)
   - [Enable encrypted columns](#enable-encrypted-columns)
 - [Encrypt configuration](#encrypt-configuration)
+- [Performance](#performance)
 - [Documentation](#documentation)
 - [CipherStash integrations using EQL](#cipherstash-integrations-using-eql)
 - [Versioning](#versioning)
@@ -219,6 +220,25 @@ In order to enable searchable encryption, you will need to configure your Cipher
 
 - If you are using [CipherStash Proxy](https://github.com/cipherstash/proxy), see [this guide](docs/tutorials/proxy-configuration.md).
 - If you are using [Protect.js](https://github.com/cipherstash/protectjs), use the [Protect.js schema](https://github.com/cipherstash/protectjs/blob/main/docs/reference/schema.md).
+
+## Performance
+
+Query latency for searchable-encryption operations stays low across data set sizes. The numbers below are query-only medians (no decryption) from a full benchmark run against EQL 2.3 on PostgreSQL 17, across four row-count tiers.
+
+| Family | Scenario | 10k | 100k | 1M | 10M |
+|---|---|--:|--:|--:|--:|
+| **JSON** | contains/functional | 0.66 ms | 0.65 ms | 0.68 ms | 6.8 ms |
+| JSON | field_eq/functional | 0.98 ms | 0.98 ms | 0.90 ms | 0.92 ms |
+| JSON | field_order/functional | 0.74 ms | 0.77 ms | 0.77 ms | 0.84 ms |
+| **ORE** | range_gt_100 | 4.1 ms | 6.7 ms | 6.9 ms | 8.1 ms |
+| ORE | range_lt_hybrid_ordered_10 | — | 1.1 ms | 1.2 ms | 1.2 ms |
+| **EXACT** | eql_hash | 0.43 ms | 0.44 ms | 0.43 ms | 0.46 ms |
+| **MATCH** | eql_bloom | 1.0 ms | 2.5 ms | 18 ms | 216 ms |
+| **GROUP_BY** | low_cardinality — encrypted | 2.7 ms | 28 ms | 179 ms | 1.47 s |
+| GROUP_BY | low_cardinality — plaintext baseline | 1.5 ms | 9.9 ms | 36 ms | 430 ms |
+| **COMBO** | top_n_filtered_group_by | 0.84 ms | 1.1 ms | 5.5 ms | 43 ms |
+
+Full methodology, per-scenario SQL, planner index choices, and EXPLAIN plans are in the [`cipherstash/benches`](https://github.com/cipherstash/benches) repository.
 
 ## Documentation
 
