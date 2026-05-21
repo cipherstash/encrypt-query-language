@@ -1,0 +1,182 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EqlEncrypted",
+  "description": "`eql_v2_encrypted` — the EQL v2.3 storage payload. Discriminated on `k`.",
+  "oneOf": [
+    {
+      "description": "Scalar ciphertext payload.",
+      "type": "object",
+      "required": [
+        "c",
+        "i",
+        "k",
+        "v"
+      ],
+      "properties": {
+        "bf": {
+          "description": "Bloom filter term — present iff a `match` index is configured.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "integer",
+            "format": "uint16",
+            "minimum": 0.0
+          }
+        },
+        "c": {
+          "description": "mp_base85 ciphertext. Required.",
+          "type": "string"
+        },
+        "hm": {
+          "description": "HMAC-SHA256 equality term — present iff a `unique` index is configured.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "i": {
+          "description": "Table/column identifier.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Identifier"
+            }
+          ]
+        },
+        "k": {
+          "type": "string",
+          "enum": [
+            "ct"
+          ]
+        },
+        "ob": {
+          "description": "Block ORE term — present iff an `ore` index is configured.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "v": {
+          "description": "Schema version — always [`crate::EQL_SCHEMA_VERSION`].",
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0.0
+        }
+      }
+    },
+    {
+      "description": "STE-vector payload (jsonb / structured values).",
+      "type": "object",
+      "required": [
+        "i",
+        "k",
+        "sv",
+        "v"
+      ],
+      "properties": {
+        "i": {
+          "description": "Table/column identifier.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Identifier"
+            }
+          ]
+        },
+        "k": {
+          "type": "string",
+          "enum": [
+            "sv"
+          ]
+        },
+        "sv": {
+          "description": "Per-selector encrypted entries; root document ciphertext at `sv[0].c`.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SteVecElement"
+          }
+        },
+        "v": {
+          "description": "Schema version.",
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0.0
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "Identifier": {
+      "description": "Table + column identifier — wire shape `{\"t\": \"...\", \"c\": \"...\"}`.\n\nShared by every payload in both tiers.",
+      "type": "object",
+      "required": [
+        "c",
+        "t"
+      ],
+      "properties": {
+        "c": {
+          "description": "Column name.",
+          "type": "string"
+        },
+        "t": {
+          "description": "Table name.",
+          "type": "string"
+        }
+      }
+    },
+    "SteVecElement": {
+      "description": "One STE-vector element.",
+      "type": "object",
+      "anyOf": [
+        {
+          "description": "HMAC term — boolean leaves, and array / object root placeholders.",
+          "type": "object",
+          "required": [
+            "hm"
+          ],
+          "properties": {
+            "hm": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "description": "CLLW ORE term — string / number leaves.",
+          "type": "object",
+          "required": [
+            "oc"
+          ],
+          "properties": {
+            "oc": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "required": [
+        "c",
+        "s"
+      ],
+      "properties": {
+        "a": {
+          "description": "Array marker — true when the selector points at a JSON array context.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "c": {
+          "description": "Per-entry mp_base85 ciphertext. Required.",
+          "type": "string"
+        },
+        "s": {
+          "description": "Tokenized selector — deterministic per (path, key).",
+          "type": "string"
+        }
+      }
+    }
+  }
+}
