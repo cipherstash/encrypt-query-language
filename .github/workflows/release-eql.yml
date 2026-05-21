@@ -24,6 +24,29 @@ permissions:
   contents: write
 
 jobs:
+  verify-changelog:
+    runs-on: ubuntu-latest
+    name: Verify CHANGELOG entry
+    # Only real (non-prerelease) eql-* releases. Pre-releases keep their
+    # entries under [Unreleased] until the final release is cut.
+    if: ${{ github.event_name == 'release' && contains(github.event.release.tag_name, 'eql') && github.event.release.prerelease == false }}
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: CHANGELOG.md has a section for this release
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version="${TAG#eql-}"
+          escaped="${version//./\\.}"
+          if ! grep -qE "^## \[${escaped}\]" CHANGELOG.md; then
+            echo "::error file=CHANGELOG.md::No '## [${version}]' section in CHANGELOG.md at tag ${TAG}. The release was cut without promoting [Unreleased] -> [${version}] first. See the 'Cutting a release' section of CLAUDE.md."
+            exit 1
+          fi
+          echo "Found '## [${version}]' section in CHANGELOG.md."
+
   build-and-publish:
     runs-on: ubuntu-latest
     name: Build EQL
