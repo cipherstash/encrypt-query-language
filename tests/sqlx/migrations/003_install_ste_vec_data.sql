@@ -6,6 +6,17 @@ CREATE TABLE ste_vec
     PRIMARY KEY(id)
 );
 
+-- Apply the production `add_encrypted_constraint` CHECK to the fixture
+-- table. Every row in this file is a real v2.3 SteVec payload (root `sv`,
+-- no root `c`), so the constraint also acts as a regression guard against
+-- #232: under the pre-fix `_encrypted_check_c` (which required `val ? 'c'`
+-- unconditionally) every INSERT below would fail. If this fixture loads
+-- cleanly with the constraint applied, the check function correctly
+-- admits both `EncryptedPayload` and `SteVecPayload` shapes; if it loads
+-- cleanly with `add_encrypted_constraint` somehow not wiring the CHECK,
+-- something more fundamental is broken (h/t @coderdan).
+SELECT eql_v2.add_encrypted_constraint('ste_vec', 'e');
+
 -- Inlined v2.3-shape ste_vec records (10 records, ids 1-10).
 --
 -- Plaintext shape (for reference):
