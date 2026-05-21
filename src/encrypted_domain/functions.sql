@@ -14,7 +14,7 @@
 --!        for TYPE' so unsupported domain operators surface a clear
 --!        error rather than fall through to native jsonb behaviour.
 --! @param type_name Domain type name (eql_v2_int4*)
---! @param operator_name Operator symbol (=, <, ~~, @>, ->, etc.)
+--! @param operator_name Operator symbol (=, <, @>, ->, etc.)
 --! @return boolean (never returns; always raises)
 CREATE FUNCTION eql_v2.encrypted_domain_unsupported_bool(type_name text, operator_name text)
 RETURNS boolean
