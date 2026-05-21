@@ -440,11 +440,10 @@ async fn check_encrypted_accepts_stevec_payload(pool: PgPool) -> Result<()> {
         .execute(&pool)
         .await?;
 
-    sqlx::query(&format!(
-        "INSERT INTO encrypted (e) VALUES ('{stevec_payload}'::jsonb::eql_v2_encrypted)"
-    ))
-    .execute(&pool)
-    .await?;
+    sqlx::query("INSERT INTO encrypted (e) VALUES ($1::jsonb::eql_v2_encrypted)")
+        .bind(stevec_payload)
+        .execute(&pool)
+        .await?;
 
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM encrypted")
         .fetch_one(&pool)
