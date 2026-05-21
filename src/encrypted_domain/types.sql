@@ -30,7 +30,7 @@
 --! therefore carries its own operator surface (int4_ord.sql).
 --!
 --! Ordered range and equality both engage a functional btree
---! USING btree (eql_v2.ord(col)) — eql_v2.ord returns
+--! USING btree (eql_v2.ord_term(col)) — eql_v2.ord_term returns
 --! eql_v2.ore_block_u64_8_256, which carries main's DEFAULT btree
 --! operator class. No operator class is defined on these domains.
 
@@ -56,7 +56,7 @@ BEGIN
 
   --! @brief Scheme-explicit ordered encrypted int4 domain (jsonb-backed).
   --!        Supports = <> < <= > >= via the ORE-block term; carries
-  --!        `c`, `ob`. Carries the eql_v2.ord extractor, the comparison
+  --!        `c`, `ob`. Carries the eql_v2.ord_term extractor, the comparison
   --!        wrappers, the operator declarations, and the blockers.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type

@@ -1,9 +1,8 @@
 //! Synthetic test suite for `eql_v2_int4_eq` — HMAC equality only.
 //!
-//! `=` engages the functional btree on
-//! `((eql_v2.hmac_256(col::jsonb)))` (EXPLAIN assertion).
-//! `<>` is supported semantically but is seq-scan (btree only
-//! supports equality, by design). All other operators raise.
+//! `=` engages a functional index on `eql_v2.eq_term(col)` — hash or
+//! btree (EXPLAIN assertion). `<>` is supported semantically but is
+//! seq-scan (no index serves inequality). All other operators raise.
 
 use anyhow::Result;
 use sqlx::PgPool;
@@ -37,13 +36,13 @@ async fn setup_eq_table(
 }
 
 #[sqlx::test]
-async fn eq_engages_hmac_btree_for_equality(pool: PgPool) -> Result<()> {
+async fn eq_engages_btree_for_equality(pool: PgPool) -> Result<()> {
     let mut tx = pool.begin().await?;
     setup_eq_table(&mut tx, &["aaa", "bbb", "ccc"]).await?;
 
     sqlx::query(
-        "CREATE INDEX typed_int4_eq_hmac_idx \
-         ON typed_int4_eq ((eql_v2.hmac_256(value::jsonb)))",
+        "CREATE INDEX typed_int4_eq_btree_idx \
+         ON typed_int4_eq USING btree (eql_v2.eq_term(value))",
     )
     .execute(&mut *tx)
     .await?;
@@ -63,8 +62,8 @@ async fn eq_engages_hmac_btree_for_equality(pool: PgPool) -> Result<()> {
     .await?;
     let plan_text = plan.join("\n");
     assert!(
-        plan_text.contains("typed_int4_eq_hmac_idx"),
-        "= must engage the hmac btree; got plan:\n{plan_text}"
+        plan_text.contains("typed_int4_eq_btree_idx"),
+        "= must engage the eql_v2.eq_term btree index; got plan:\n{plan_text}"
     );
 
     tx.commit().await?;
@@ -201,16 +200,12 @@ async fn eq_blocked_operators_raise_on_null_input(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
-async fn eq_hmac_index_recipe_requires_jsonb_cast(pool: PgPool) -> Result<()> {
-    // The documented _eq index recipe is
-    //   USING btree ((eql_v2.hmac_256(col::jsonb)))
-    // The ::jsonb cast is REQUIRED, not redundant. `eql_v2.hmac_256` is
-    // both a function and an index-term type, and an eql_v2_int4_eq
-    // column has no exact hmac_256 overload — so the bare form
-    // `eql_v2.hmac_256(col)` parses as a cast to the hmac_256 type
-    // (col::eql_v2.hmac_256), building an index the `=` predicate never
-    // matches. This test pins both halves of that contract so the
-    // docs/reference + v2.4.md U-001 recipe stays honest.
+async fn eq_engages_hash_for_equality(pool: PgPool) -> Result<()> {
+    // `eql_v2.eq_term(col)` extracts the HMAC equality term — a domain
+    // over `text`, which carries a default hash operator class. A hash
+    // functional index on it engages `=` (btree does too — see
+    // eq_engages_btree_for_equality). No `::jsonb` cast: `eql_v2.eq_term`
+    // is a plain function name with no colliding type.
     let mut tx = pool.begin().await?;
     sqlx::query(
         "CREATE TEMP TABLE eq_idx (plaintext integer, value eql_v2_int4_eq) ON COMMIT DROP",
@@ -223,6 +218,9 @@ async fn eq_hmac_index_recipe_requires_jsonb_cast(pool: PgPool) -> Result<()> {
     )
     .execute(&mut *tx)
     .await?;
+    sqlx::query("CREATE INDEX eq_idx_hash ON eq_idx USING hash (eql_v2.eq_term(value))")
+        .execute(&mut *tx)
+        .await?;
     sqlx::query("ANALYZE eq_idx").execute(&mut *tx).await?;
     sqlx::query("SET LOCAL enable_seqscan = off")
         .execute(&mut *tx)
@@ -236,32 +234,12 @@ async fn eq_hmac_index_recipe_requires_jsonb_cast(pool: PgPool) -> Result<()> {
     let lit = pivot.replace('\'', "''");
     let eq_query = format!("SELECT * FROM eq_idx WHERE value = '{lit}'::jsonb::eql_v2_int4_eq");
 
-    // Footgun half: the bare eql_v2.hmac_256(value) form is a cast to the
-    // hmac_256 type, not a function call — the index it builds cannot
-    // serve the = predicate.
-    sqlx::query("CREATE INDEX eq_idx_bare ON eq_idx USING btree (eql_v2.hmac_256(value))")
-        .execute(&mut *tx)
-        .await?;
-    let bare_plan: Vec<String> = sqlx::query_scalar(&format!("EXPLAIN {eq_query}"))
-        .fetch_all(&mut *tx)
-        .await?;
-    assert!(
-        !bare_plan.join("\n").contains("eq_idx_bare"),
-        "bare eql_v2.hmac_256(col) is a cast, not a call — must NOT serve = ; plan:\n{}",
-        bare_plan.join("\n")
-    );
-
-    // Recipe half: the explicit ::jsonb cast resolves the
-    // hmac_256(jsonb) function, and = engages the index.
-    sqlx::query("CREATE INDEX eq_idx_hmac ON eq_idx USING btree ((eql_v2.hmac_256(value::jsonb)))")
-        .execute(&mut *tx)
-        .await?;
     let plan: Vec<String> = sqlx::query_scalar(&format!("EXPLAIN {eq_query}"))
         .fetch_all(&mut *tx)
         .await?;
     assert!(
-        plan.join("\n").contains("eq_idx_hmac"),
-        "the documented eql_v2.hmac_256(col::jsonb) recipe must engage for = ; plan:\n{}",
+        plan.join("\n").contains("eq_idx_hash"),
+        "the eql_v2.eq_term hash recipe must engage for = ; plan:\n{}",
         plan.join("\n")
     );
 
@@ -273,7 +251,7 @@ async fn eq_hmac_index_recipe_requires_jsonb_cast(pool: PgPool) -> Result<()> {
     assert_eq!(
         ids,
         vec![42],
-        "= via the hmac index must return the matching row"
+        "= via the eq_term hash index must return the matching row"
     );
 
     tx.commit().await?;

@@ -248,14 +248,16 @@ BEGIN
       --
       -- The eql_v2_int4_ord_ore comparison wrappers (_eq/_neq and the
       -- four range wrappers) are LANGUAGE sql and must inline so the
-      -- planner rewrites `col <op> $1` to `eql_v2.ord(col) <op>
-      -- eql_v2.ord($1)` and matches the functional btree on
-      -- eql_v2.ord(col). eql_v2.ord is the index extractor and must also
-      -- stay unpinned. The eql_v2_int4_eq wrappers must inline to match
-      -- the functional hmac btree. eql_v2_int4_ord is a concrete domain
-      -- (D-E fallback) carrying the same wrapper set as
+      -- planner rewrites `col <op> $1` to `eql_v2.ord_term(col) <op>
+      -- eql_v2.ord_term($1)` and matches the functional btree on
+      -- eql_v2.ord_term(col). eql_v2.ord_term is the index extractor and
+      -- must also stay unpinned (the 1-arg clause below). The
+      -- eql_v2_int4_eq wrappers must inline to match the functional
+      -- eql_v2.eq_term(col) index; eql_v2.eq_term itself stays unpinned
+      -- via the 1-arg `eq_term` clause above. eql_v2_int4_ord is a
+      -- concrete domain (D-E fallback) carrying the same wrapper set as
       -- eql_v2_int4_ord_ore. See docs/upgrading/v2.4.md U-001.
-      OR (p.pronargs = 1 AND p.proname = 'ord')
+      OR (p.pronargs = 1 AND p.proname = 'ord_term')
       OR p.proname IN (
         'eql_v2_int4_eq_eq',                -- _eq variant equality
         'eql_v2_int4_eq_neq',

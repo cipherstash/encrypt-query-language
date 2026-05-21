@@ -129,7 +129,7 @@ async fn ord_blocked_operators_raise(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn ord_functional_index_serves_range_and_equality(pool: PgPool) -> Result<()> {
     // Range + equality on eql_v2_int4_ord are served by one functional
-    // btree USING btree (eql_v2.ord(col)).
+    // btree USING btree (eql_v2.ord_term(col)).
     let mut tx = pool.begin().await?;
     sqlx::query(
         "CREATE TEMP TABLE ord_fi (plaintext integer, value eql_v2_int4_ord) ON COMMIT DROP",
@@ -142,7 +142,7 @@ async fn ord_functional_index_serves_range_and_equality(pool: PgPool) -> Result<
     )
     .execute(&mut *tx)
     .await?;
-    sqlx::query("CREATE INDEX ord_fi_idx ON ord_fi USING btree (eql_v2.ord(value))")
+    sqlx::query("CREATE INDEX ord_fi_idx ON ord_fi USING btree (eql_v2.ord_term(value))")
         .execute(&mut *tx)
         .await?;
     sqlx::query("ANALYZE ord_fi").execute(&mut *tx).await?;
@@ -166,7 +166,7 @@ async fn ord_functional_index_serves_range_and_equality(pool: PgPool) -> Result<
         let plan_text = plan.join("\n");
         assert!(
             plan_text.contains("ord_fi_idx"),
-            "{op} must engage the eql_v2.ord functional btree; plan:\n{plan_text}"
+            "{op} must engage the eql_v2.ord_term functional btree; plan:\n{plan_text}"
         );
     }
 
@@ -198,7 +198,7 @@ async fn ord_functional_index_serves_range_and_equality(pool: PgPool) -> Result<
 
 #[sqlx::test]
 async fn ord_order_by_preserves_numeric_order(pool: PgPool) -> Result<()> {
-    // ORDER BY eql_v2.ord(col) sorts an eql_v2_int4_ord column in
+    // ORDER BY eql_v2.ord_term(col) sorts an eql_v2_int4_ord column in
     // plaintext numeric order.
     let mut tx = pool.begin().await?;
     sqlx::query(
@@ -213,13 +213,13 @@ async fn ord_order_by_preserves_numeric_order(pool: PgPool) -> Result<()> {
     .execute(&mut *tx)
     .await?;
     let ordered: Vec<i32> =
-        sqlx::query_scalar("SELECT plaintext FROM ord_sort ORDER BY eql_v2.ord(value)")
+        sqlx::query_scalar("SELECT plaintext FROM ord_sort ORDER BY eql_v2.ord_term(value)")
             .fetch_all(&mut *tx)
             .await?;
     assert_eq!(
         ordered,
         vec![-100, -1, 1, 2, 5, 10, 17, 25, 42, 50, 100, 250, 1000, 9999],
-        "ORDER BY eql_v2.ord(value) must yield plaintext numeric order"
+        "ORDER BY eql_v2.ord_term(value) must yield plaintext numeric order"
     );
     tx.commit().await?;
     Ok(())
@@ -255,7 +255,7 @@ async fn ord_null_operand_yields_null(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn ord_equality_independent_of_hm(pool: PgPool) -> Result<()> {
     // D#1: ordered variants carry c + ob and drop hm. Equality on
-    // eql_v2_int4_ord routes through eql_v2.ord (the `ob` term), never
+    // eql_v2_int4_ord routes through eql_v2.ord_term (the `ob` term), never
     // HMAC. Strip `hm` so an accidental regression to HMAC equality
     // fails instead of passing on the hm-carrying fixture.
     let mut tx = pool.begin().await?;
@@ -278,7 +278,7 @@ async fn ord_equality_independent_of_hm(pool: PgPool) -> Result<()> {
             .await?;
     assert_eq!(with_hm, 0, "test rows must not carry hm");
 
-    sqlx::query("CREATE INDEX ord_no_hm_idx ON ord_no_hm USING btree (eql_v2.ord(value))")
+    sqlx::query("CREATE INDEX ord_no_hm_idx ON ord_no_hm USING btree (eql_v2.ord_term(value))")
         .execute(&mut *tx)
         .await?;
     sqlx::query("ANALYZE ord_no_hm").execute(&mut *tx).await?;
@@ -314,7 +314,7 @@ async fn ord_equality_independent_of_hm(pool: PgPool) -> Result<()> {
     .await?;
     assert!(
         plan.join("\n").contains("ord_no_hm_idx"),
-        "= must engage the eql_v2.ord functional btree with no hm present"
+        "= must engage the eql_v2.ord_term functional btree with no hm present"
     );
 
     tx.commit().await?;
@@ -326,8 +326,8 @@ async fn ord_ore_wrappers_are_inlinable(pool: PgPool) -> Result<()> {
     // The comparison wrappers on eql_v2_int4_ord_ore and eql_v2_int4_ord
     // must be LANGUAGE sql, IMMUTABLE, and carry no pinned search_path,
     // so the planner inlines `col < $1` to
-    // `eql_v2.ord(col) < eql_v2.ord($1)` and the functional btree on
-    // eql_v2.ord(col) engages. A pinned proconfig or a plpgsql body
+    // `eql_v2.ord_term(col) < eql_v2.ord_term($1)` and the functional btree on
+    // eql_v2.ord_term(col) engages. A pinned proconfig or a plpgsql body
     // would break the inline chain.
     let rows: Vec<(String, String, String, Option<Vec<String>>)> = sqlx::query_as(
         r#"
@@ -368,9 +368,9 @@ async fn ord_ore_wrappers_are_inlinable(pool: PgPool) -> Result<()> {
         );
     }
 
-    // eql_v2.ord must be IMMUTABLE (functional-index requirement) in
+    // eql_v2.ord_term must be IMMUTABLE (functional-index requirement) in
     // every spike outcome. The spike (Task 2) fixed its LANGUAGE as sql,
-    // so a LANGUAGE sql eql_v2.ord must additionally have no proconfig
+    // so a LANGUAGE sql eql_v2.ord_term must additionally have no proconfig
     // (it must inline); a LANGUAGE plpgsql ord is exempt from that check.
     let ord: Vec<(String, String, Option<Vec<String>>)> = sqlx::query_as(
         r#"
@@ -378,18 +378,18 @@ async fn ord_ore_wrappers_are_inlinable(pool: PgPool) -> Result<()> {
         FROM pg_catalog.pg_proc p
         JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
         JOIN pg_catalog.pg_language  l ON l.oid = p.prolang
-        WHERE n.nspname = 'eql_v2' AND p.proname = 'ord'
+        WHERE n.nspname = 'eql_v2' AND p.proname = 'ord_term'
         "#,
     )
     .fetch_all(&pool)
     .await?;
-    assert!(!ord.is_empty(), "eql_v2.ord must exist");
+    assert!(!ord.is_empty(), "eql_v2.ord_term must exist");
     for (lang, volatile, config) in &ord {
-        assert_eq!(volatile, "i", "eql_v2.ord must be IMMUTABLE");
+        assert_eq!(volatile, "i", "eql_v2.ord_term must be IMMUTABLE");
         if lang == "sql" {
             assert!(
                 config.is_none(),
-                "a LANGUAGE sql eql_v2.ord must have no pinned search_path so it inlines"
+                "a LANGUAGE sql eql_v2.ord_term must have no pinned search_path so it inlines"
             );
         }
     }
@@ -400,7 +400,7 @@ async fn ord_ore_wrappers_are_inlinable(pool: PgPool) -> Result<()> {
 ///
 /// The `_ord_ore` variant (scheme-explicit) and the `_ord` variant (the
 /// D-E fallback concrete domain) are deliberate twins: the same
-/// `eql_v2.ord` extractor, the 18 comparison wrappers, the blockers, and
+/// `eql_v2.ord_term` extractor, the 18 comparison wrappers, the blockers, and
 /// the operator declarations, differing only by the
 /// `eql_v2_int4_ord_ore` <-> `eql_v2_int4_ord` type-name swap. A full
 /// de-duplication refactor is out of scope for this branch, so this test
@@ -437,7 +437,7 @@ fn ordered_int4_domain_files_stay_in_sync() {
             .replace("eql_v2_int4_ord", "ORDTYPE")
     }
 
-    // Functions: executable body starts at the eql_v2.ord extractor.
+    // Functions: executable body starts at the eql_v2.ord_term extractor.
     assert_eq!(
         body(
             "int4_ord_ore_functions.sql",

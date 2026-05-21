@@ -10,11 +10,11 @@
 //! 14 rows. Range pivots produce distinct cardinalities so swapped
 //! operators would fail the assertions, not silently pass.
 //!
-//! Equality and range both route through `eql_v2.ord`: `col <op> $1`
-//! inlines to `eql_v2.ord(col) <op> eql_v2.ord($1)`, the operator on
+//! Equality and range both route through `eql_v2.ord_term`: `col <op> $1`
+//! inlines to `eql_v2.ord_term(col) <op> eql_v2.ord_term($1)`, the operator on
 //! `eql_v2.ore_block_u64_8_256`. A single functional btree
-//! `USING btree (eql_v2.ord(col))` serves all six operators — there is
-//! no operator class on the domain. `ORDER BY eql_v2.ord(col)` sorts in
+//! `USING btree (eql_v2.ord_term(col))` serves all six operators — there is
+//! no operator class on the domain. `ORDER BY eql_v2.ord_term(col)` sorts in
 //! plaintext numeric order. Equality routes through the `ob` term
 //! (lossless ORE on full-domain int4 = exact equality); there is no
 //! `hm` term on the ordered variants (D#1).
@@ -191,19 +191,19 @@ async fn encrypted_int4_range_operators_match_numeric_semantics(pool: PgPool) ->
 #[sqlx::test]
 async fn encrypted_int4_ore_ordering_matches_numeric_ordering(pool: PgPool) -> Result<()> {
     // Critical invariant: ORE bytes from Proxy must preserve numeric order.
-    // Pulling all 14 rows ordered by eql_v2.ord — the uniform ordered-int4
+    // Pulling all 14 rows ordered by eql_v2.ord_term — the uniform ordered-int4
     // index/ORDER BY extractor — must yield the plaintext sequence in
     // ascending numeric order. A bug in Proxy's ORE-block encoding (sign
     // handling, byte-order, padding) would fail this without throwing.
     //
-    // ORDER BY eql_v2.ord(payload::eql_v2_int4_ord_ore) pins the sort to
+    // ORDER BY eql_v2.ord_term(payload::eql_v2_int4_ord_ore) pins the sort to
     // the ORE-block term; sorting the domain column directly would follow
     // native jsonb comparison, not ORE order.
     let ordered: Vec<i32> = sqlx::query_scalar(
         r#"
         SELECT plaintext
         FROM encrypted_int4_plaintext
-        ORDER BY eql_v2.ord(payload::eql_v2_int4_ord_ore)
+        ORDER BY eql_v2.ord_term(payload::eql_v2_int4_ord_ore)
         "#,
     )
     .fetch_all(&pool)
@@ -212,7 +212,7 @@ async fn encrypted_int4_ore_ordering_matches_numeric_ordering(pool: PgPool) -> R
     let expected = vec![-100, -1, 1, 2, 5, 10, 17, 25, 42, 50, 100, 250, 1000, 9999];
     assert_eq!(
         ordered, expected,
-        "eql_v2.ord ordering must match numeric ordering of plaintext"
+        "eql_v2.ord_term ordering must match numeric ordering of plaintext"
     );
 
     Ok(())
@@ -221,7 +221,7 @@ async fn encrypted_int4_ore_ordering_matches_numeric_ordering(pool: PgPool) -> R
 #[sqlx::test]
 async fn encrypted_int4_ord_distinctness_sweep(pool: PgPool) -> Result<()> {
     // Pairwise: no two distinct integer plaintexts share an ORE term.
-    // Equality routes through eql_v2.ord (the `ob` term), not HMAC —
+    // Equality routes through eql_v2.ord_term (the `ob` term), not HMAC —
     // 14 distinct ints → 14 distinct ORE terms → no `=` collisions.
     let collisions: i64 = sqlx::query_scalar(
         r#"
@@ -246,7 +246,7 @@ async fn encrypted_int4_ord_ore_functional_index_serves_range_and_equality(
     pool: PgPool,
 ) -> Result<()> {
     // Range + equality on eql_v2_int4_ord_ore are served by one
-    // functional btree USING btree (eql_v2.ord(col)). eql_v2.ord
+    // functional btree USING btree (eql_v2.ord_term(col)). eql_v2.ord_term
     // returns eql_v2.ore_block_u64_8_256, which carries main's DEFAULT
     // btree operator class — no opclass annotation needed.
     let mut tx = pool.begin().await?;
@@ -264,7 +264,7 @@ async fn encrypted_int4_ord_ore_functional_index_serves_range_and_equality(
     )
     .execute(&mut *tx)
     .await?;
-    sqlx::query("CREATE INDEX ord_ore_fi_idx ON ord_ore_fi USING btree (eql_v2.ord(value))")
+    sqlx::query("CREATE INDEX ord_ore_fi_idx ON ord_ore_fi USING btree (eql_v2.ord_term(value))")
         .execute(&mut *tx)
         .await?;
     sqlx::query("ANALYZE ord_ore_fi").execute(&mut *tx).await?;
@@ -290,7 +290,7 @@ async fn encrypted_int4_ord_ore_functional_index_serves_range_and_equality(
         let plan_text = plan.join("\n");
         assert!(
             plan_text.contains("ord_ore_fi_idx"),
-            "{op} must engage the eql_v2.ord functional btree; plan:\n{plan_text}"
+            "{op} must engage the eql_v2.ord_term functional btree; plan:\n{plan_text}"
         );
     }
 
@@ -462,7 +462,7 @@ async fn encrypted_int4_ord_ore_null_operand_yields_null(pool: PgPool) -> Result
 #[sqlx::test]
 async fn encrypted_int4_ord_ore_equality_uses_ob_not_hm(pool: PgPool) -> Result<()> {
     // D#1: ordered variants carry c + ob and drop hm. Equality routes
-    // through eql_v2.ord (the `ob` term), never HMAC. Strip `hm` from
+    // through eql_v2.ord_term (the `ob` term), never HMAC. Strip `hm` from
     // every payload: with no hm present, an accidental regression to
     // HMAC equality fails instead of silently passing on the fixture.
     let mut tx = pool.begin().await?;
@@ -489,9 +489,11 @@ async fn encrypted_int4_ord_ore_equality_uses_ob_not_hm(pool: PgPool) -> Result<
     .await?;
     assert_eq!(with_hm, 0, "test rows must not carry hm");
 
-    sqlx::query("CREATE INDEX ord_ore_no_hm_idx ON ord_ore_no_hm USING btree (eql_v2.ord(value))")
-        .execute(&mut *tx)
-        .await?;
+    sqlx::query(
+        "CREATE INDEX ord_ore_no_hm_idx ON ord_ore_no_hm USING btree (eql_v2.ord_term(value))",
+    )
+    .execute(&mut *tx)
+    .await?;
     sqlx::query("ANALYZE ord_ore_no_hm")
         .execute(&mut *tx)
         .await?;
@@ -532,7 +534,7 @@ async fn encrypted_int4_ord_ore_equality_uses_ob_not_hm(pool: PgPool) -> Result<
     .await?;
     assert!(
         plan.join("\n").contains("ord_ore_no_hm_idx"),
-        "= must engage the eql_v2.ord functional btree with no hm present"
+        "= must engage the eql_v2.ord_term functional btree with no hm present"
     );
 
     tx.commit().await?;

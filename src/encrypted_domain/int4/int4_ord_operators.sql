@@ -12,7 +12,7 @@
 --! inherit the operator surface — PostgreSQL resolves operators against
 --! the ultimate base type (jsonb), so ordered operators fall through to
 --! native jsonb comparison and the blockers do not engage.
---! eql_v2_int4_ord therefore carries its own eql_v2.ord() overload,
+--! eql_v2_int4_ord therefore carries its own eql_v2.ord_term() overload,
 --! comparison wrappers, operator declarations, and blockers.
 --! eql_v2_int4_ord_ore is the scheme-explicit ordered domain with the
 --! identical operator surface.

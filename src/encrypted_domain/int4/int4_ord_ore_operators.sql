@@ -7,7 +7,7 @@
 --!        (equality + ORE-block ordering).
 --!
 --! eql_v2_int4_ord_ore carries `c`, `ob`. It is the scheme-explicit
---! ordered domain: it carries the eql_v2.ord() extractor, the six
+--! ordered domain: it carries the eql_v2.ord_term() extractor, the six
 --! comparison wrappers, the operator declarations, and the blockers.
 --! eql_v2_int4_ord — the recommended ordered name — is a separate
 --! concrete domain (int4_ord.sql) carrying its own copy of this
