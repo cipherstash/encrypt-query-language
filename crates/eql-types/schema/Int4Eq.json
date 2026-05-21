@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Int4Eq",
+  "description": "`eql_v2_int4_eq` — HMAC equality (`=`, `<>`).\n\n`hm` is a required field. There is no `Option`: the type *is* the equality capability. A payload without `hm` cannot be deserialized into this type — the Rust analogue of the SQL domain's CHECK constraint.",
+  "type": "object",
+  "required": [
+    "c",
+    "hm",
+    "i",
+    "v"
+  ],
+  "properties": {
+    "c": {
+      "description": "mp_base85 ciphertext. Required.",
+      "type": "string"
+    },
+    "hm": {
+      "description": "HMAC-SHA256 equality term. Required.",
+      "type": "string"
+    },
+    "i": {
+      "description": "Table/column identifier.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Identifier"
+        }
+      ]
+    },
+    "v": {
+      "description": "Schema version.",
+      "type": "integer",
+      "format": "uint16",
+      "minimum": 0.0
+    }
+  },
+  "definitions": {
+    "Identifier": {
+      "description": "Table + column identifier — wire shape `{\"t\": \"...\", \"c\": \"...\"}`.\n\nShared by every payload in both tiers.",
+      "type": "object",
+      "required": [
+        "c",
+        "t"
+      ],
+      "properties": {
+        "c": {
+          "description": "Column name.",
+          "type": "string"
+        },
+        "t": {
+          "description": "Table name.",
+          "type": "string"
+        }
+      }
+    }
+  }
+}
