@@ -123,6 +123,10 @@ web_modules/
 .env.local
 .envrc
 
+# Local mise overrides (CipherStash credentials, etc.)
+mise.local.toml
+.mise.local.toml
+
 # parcel-bundler cache (https://parceljs.org/)
 
 .parcel-cache
