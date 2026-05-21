@@ -2,8 +2,11 @@
 -- DO NOT EDIT BY HAND. Re-run the generator to refresh.
 --
 -- Source: 14-value integer set defined inline in the generator.
--- Produced via CipherStash Proxy (HMAC + OPE terms).
--- Used by encrypted_int4 domain SQLx fixture tests.
+-- Produced via CipherStash Proxy (HMAC + ORE-block terms).
+-- Each row carries `c`, `hm`, `ob`. The ordered variants
+-- (eql_v2_int4_ord_ore, eql_v2_int4_ord) read `ob` only; the `hm`
+-- term is retained because the same payload feeds eql_v2_int4_eq.
+-- Used by the encrypted_int4 variant-family SQLx test suites.
 
 DROP TABLE IF EXISTS encrypted_int4_plaintext;
 

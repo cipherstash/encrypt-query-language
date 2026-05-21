@@ -119,3 +119,48 @@ async fn lint_phase_1_operators_are_clean(pool: PgPool) -> Result<()> {
     );
     Ok(())
 }
+
+/// The real comparison operators on the `eql_v2_int4` variant family
+/// (`=`, `<>` on `_eq`; `=`, `<>`, `<`, `<=`, `>`, `>=` on `_ord` and
+/// `_ord_ore`) must report zero lint violations: they are inlinable
+/// `LANGUAGE sql` wrappers, and a regression to plpgsql, VOLATILE, a
+/// `SET` clause, or a non-inlinable callee would silently drop their
+/// functional indexes to seq scan. The plpgsql blocker operators on the
+/// same variants are intentionally non-inlinable and are excluded by
+/// the variant-qualified prefixes.
+#[sqlx::test]
+async fn lint_int4_operators_are_clean(pool: PgPool) -> Result<()> {
+    let rows = fetch_lints(&pool).await?;
+
+    // object_name is `operator <op>(<lhs>, <rhs>) -> ...`. A variant-
+    // qualified prefix excludes the storage-only eql_v2_int4 blockers:
+    // `operator =(eql_v2_int4,` does not match `..._eq` / `..._ord`.
+    let mut prefixes = vec![
+        "operator =(eql_v2_int4_eq".to_string(),
+        "operator <>(eql_v2_int4_eq".to_string(),
+        "operator =(jsonb, eql_v2_int4_eq".to_string(),
+        "operator <>(jsonb, eql_v2_int4_eq".to_string(),
+    ];
+    // `eql_v2_int4_ord` is a prefix of `eql_v2_int4_ord_ore`, so each
+    // entry covers both ordered variants.
+    for op in ["=", "<>", "<", "<=", ">", ">="] {
+        prefixes.push(format!("operator {op}(eql_v2_int4_ord"));
+        prefixes.push(format!("operator {op}(jsonb, eql_v2_int4_ord"));
+    }
+
+    let violations: Vec<_> = rows
+        .iter()
+        .filter(|row| {
+            prefixes
+                .iter()
+                .any(|prefix| row.object_name.starts_with(prefix.as_str()))
+        })
+        .collect();
+
+    assert!(
+        violations.is_empty(),
+        "eql_v2_int4 real operators should report zero lint violations, but got: {:#?}",
+        violations
+    );
+    Ok(())
+}

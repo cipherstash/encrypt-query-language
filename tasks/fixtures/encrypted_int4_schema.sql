@@ -25,6 +25,6 @@ SELECT eql_v2.remove_search_config('bench_int4', 'encrypted_int4', 'ore')
     WHERE c.data #> '{tables,bench_int4,encrypted_int4,indexes,ore}' IS NOT NULL
   );
 
--- unique → HMAC (drives =, <>); ore → OPE bytes (drives <, <=, >, >=).
+-- unique → HMAC (drives =, <>); ore → ORE-block terms (drives <, <=, >, >=).
 SELECT eql_v2.add_search_config('bench_int4', 'encrypted_int4', 'unique', 'int');
 SELECT eql_v2.add_search_config('bench_int4', 'encrypted_int4', 'ore',    'int');
