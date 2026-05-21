@@ -18,75 +18,75 @@
 -- plan-quality completeness, not index engagement.
 
 CREATE OPERATOR = (
-  FUNCTION = eql_v2.eql_v2_int4_eq_eq,
+  FUNCTION = eql_v2.eq,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq,
   COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 CREATE OPERATOR = (
-  FUNCTION = eql_v2.eql_v2_int4_eq_eq,
+  FUNCTION = eql_v2.eq,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = jsonb,
   COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 CREATE OPERATOR = (
-  FUNCTION = eql_v2.eql_v2_int4_eq_eq,
+  FUNCTION = eql_v2.eq,
   LEFTARG = jsonb, RIGHTARG = eql_v2_int4_eq,
   COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 
 CREATE OPERATOR <> (
-  FUNCTION = eql_v2.eql_v2_int4_eq_neq,
+  FUNCTION = eql_v2.neq,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq,
   COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 CREATE OPERATOR <> (
-  FUNCTION = eql_v2.eql_v2_int4_eq_neq,
+  FUNCTION = eql_v2.neq,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = jsonb,
   COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 CREATE OPERATOR <> (
-  FUNCTION = eql_v2.eql_v2_int4_eq_neq,
+  FUNCTION = eql_v2.neq,
   LEFTARG = jsonb, RIGHTARG = eql_v2_int4_eq,
   COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 
 CREATE OPERATOR < (
-  FUNCTION = eql_v2.eql_v2_int4_eq_lt,
+  FUNCTION = eql_v2.lt,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq,
   RESTRICT = scalarltsel, JOIN = scalarltjoinsel
 );
-CREATE OPERATOR < (FUNCTION = eql_v2.eql_v2_int4_eq_lt,
+CREATE OPERATOR < (FUNCTION = eql_v2.lt,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = jsonb);
-CREATE OPERATOR < (FUNCTION = eql_v2.eql_v2_int4_eq_lt,
+CREATE OPERATOR < (FUNCTION = eql_v2.lt,
   LEFTARG = jsonb, RIGHTARG = eql_v2_int4_eq);
 
 CREATE OPERATOR <= (
-  FUNCTION = eql_v2.eql_v2_int4_eq_lte,
+  FUNCTION = eql_v2.lte,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq,
   RESTRICT = scalarlesel, JOIN = scalarlejoinsel
 );
-CREATE OPERATOR <= (FUNCTION = eql_v2.eql_v2_int4_eq_lte,
+CREATE OPERATOR <= (FUNCTION = eql_v2.lte,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = jsonb);
-CREATE OPERATOR <= (FUNCTION = eql_v2.eql_v2_int4_eq_lte,
+CREATE OPERATOR <= (FUNCTION = eql_v2.lte,
   LEFTARG = jsonb, RIGHTARG = eql_v2_int4_eq);
 
 CREATE OPERATOR > (
-  FUNCTION = eql_v2.eql_v2_int4_eq_gt,
+  FUNCTION = eql_v2.gt,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq,
   RESTRICT = scalargtsel, JOIN = scalargtjoinsel
 );
-CREATE OPERATOR > (FUNCTION = eql_v2.eql_v2_int4_eq_gt,
+CREATE OPERATOR > (FUNCTION = eql_v2.gt,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = jsonb);
-CREATE OPERATOR > (FUNCTION = eql_v2.eql_v2_int4_eq_gt,
+CREATE OPERATOR > (FUNCTION = eql_v2.gt,
   LEFTARG = jsonb, RIGHTARG = eql_v2_int4_eq);
 
 CREATE OPERATOR >= (
-  FUNCTION = eql_v2.eql_v2_int4_eq_gte,
+  FUNCTION = eql_v2.gte,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq,
   RESTRICT = scalargesel, JOIN = scalargejoinsel
 );
-CREATE OPERATOR >= (FUNCTION = eql_v2.eql_v2_int4_eq_gte,
+CREATE OPERATOR >= (FUNCTION = eql_v2.gte,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = jsonb);
-CREATE OPERATOR >= (FUNCTION = eql_v2.eql_v2_int4_eq_gte,
+CREATE OPERATOR >= (FUNCTION = eql_v2.gte,
   LEFTARG = jsonb, RIGHTARG = eql_v2_int4_eq);
 
 CREATE OPERATOR ~~ (FUNCTION = eql_v2.eql_v2_int4_eq_like,
@@ -103,30 +103,30 @@ CREATE OPERATOR ~~* (FUNCTION = eql_v2.eql_v2_int4_eq_ilike,
 CREATE OPERATOR ~~* (FUNCTION = eql_v2.eql_v2_int4_eq_ilike,
   LEFTARG = jsonb, RIGHTARG = eql_v2_int4_eq);
 
-CREATE OPERATOR @> (FUNCTION = eql_v2.eql_v2_int4_eq_contains,
+CREATE OPERATOR @> (FUNCTION = eql_v2.contains,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq);
-CREATE OPERATOR @> (FUNCTION = eql_v2.eql_v2_int4_eq_contains,
+CREATE OPERATOR @> (FUNCTION = eql_v2.contains,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = jsonb);
-CREATE OPERATOR @> (FUNCTION = eql_v2.eql_v2_int4_eq_contains,
+CREATE OPERATOR @> (FUNCTION = eql_v2.contains,
   LEFTARG = jsonb, RIGHTARG = eql_v2_int4_eq);
 
-CREATE OPERATOR <@ (FUNCTION = eql_v2.eql_v2_int4_eq_contained_by,
+CREATE OPERATOR <@ (FUNCTION = eql_v2.contained_by,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq);
-CREATE OPERATOR <@ (FUNCTION = eql_v2.eql_v2_int4_eq_contained_by,
+CREATE OPERATOR <@ (FUNCTION = eql_v2.contained_by,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = jsonb);
-CREATE OPERATOR <@ (FUNCTION = eql_v2.eql_v2_int4_eq_contained_by,
+CREATE OPERATOR <@ (FUNCTION = eql_v2.contained_by,
   LEFTARG = jsonb, RIGHTARG = eql_v2_int4_eq);
 
-CREATE OPERATOR -> (FUNCTION = eql_v2.eql_v2_int4_eq_arrow,
+CREATE OPERATOR -> (FUNCTION = eql_v2."->",
   LEFTARG = eql_v2_int4_eq, RIGHTARG = text);
-CREATE OPERATOR -> (FUNCTION = eql_v2.eql_v2_int4_eq_arrow,
+CREATE OPERATOR -> (FUNCTION = eql_v2."->",
   LEFTARG = eql_v2_int4_eq, RIGHTARG = integer);
-CREATE OPERATOR -> (FUNCTION = eql_v2.eql_v2_int4_eq_arrow,
+CREATE OPERATOR -> (FUNCTION = eql_v2."->",
   LEFTARG = jsonb, RIGHTARG = eql_v2_int4_eq);
 
-CREATE OPERATOR ->> (FUNCTION = eql_v2.eql_v2_int4_eq_arrow_text,
+CREATE OPERATOR ->> (FUNCTION = eql_v2."->>",
   LEFTARG = eql_v2_int4_eq, RIGHTARG = text);
-CREATE OPERATOR ->> (FUNCTION = eql_v2.eql_v2_int4_eq_arrow_text,
+CREATE OPERATOR ->> (FUNCTION = eql_v2."->>",
   LEFTARG = eql_v2_int4_eq, RIGHTARG = integer);
-CREATE OPERATOR ->> (FUNCTION = eql_v2.eql_v2_int4_eq_arrow_text,
+CREATE OPERATOR ->> (FUNCTION = eql_v2."->>",
   LEFTARG = jsonb, RIGHTARG = eql_v2_int4_eq);

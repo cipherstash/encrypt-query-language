@@ -338,22 +338,19 @@ async fn ord_ore_wrappers_are_inlinable(pool: PgPool) -> Result<()> {
         FROM pg_catalog.pg_proc p
         JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
         JOIN pg_catalog.pg_language  l ON l.oid = p.prolang
+        JOIN pg_catalog.pg_type lt ON lt.oid = p.proargtypes[0]
+        JOIN pg_catalog.pg_type rt ON rt.oid = p.proargtypes[1]
         WHERE n.nspname = 'eql_v2'
-          AND p.proname IN (
-            'eql_v2_int4_ord_ore_eq',  'eql_v2_int4_ord_ore_neq',
-            'eql_v2_int4_ord_ore_lt',  'eql_v2_int4_ord_ore_lte',
-            'eql_v2_int4_ord_ore_gt',  'eql_v2_int4_ord_ore_gte',
-            'eql_v2_int4_ord_eq',      'eql_v2_int4_ord_neq',
-            'eql_v2_int4_ord_lt',      'eql_v2_int4_ord_lte',
-            'eql_v2_int4_ord_gt',      'eql_v2_int4_ord_gte'
-          )
+          AND p.proname IN ('eq', 'neq', 'lt', 'lte', 'gt', 'gte')
+          AND (lt.typname IN ('eql_v2_int4_ord', 'eql_v2_int4_ord_ore')
+            OR rt.typname IN ('eql_v2_int4_ord', 'eql_v2_int4_ord_ore'))
         "#,
     )
     .fetch_all(&pool)
     .await?;
 
-    // 12 wrapper names (6 on _ord_ore, 6 on the concrete _ord domain)
-    // × 3 arg-shapes = 36 rows.
+    // 6 converged comparison wrappers (eq/neq/lt/lte/gt/gte) × 2 ordered
+    // domains (_ord_ore and the concrete _ord) × 3 arg-shapes = 36 rows.
     assert_eq!(
         rows.len(),
         36,

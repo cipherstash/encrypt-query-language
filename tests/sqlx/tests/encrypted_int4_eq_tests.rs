@@ -373,8 +373,11 @@ async fn eq_wrappers_are_inlinable(pool: PgPool) -> Result<()> {
         FROM pg_catalog.pg_proc p
         JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
         JOIN pg_catalog.pg_language  l ON l.oid = p.prolang
+        JOIN pg_catalog.pg_type lt ON lt.oid = p.proargtypes[0]
+        JOIN pg_catalog.pg_type rt ON rt.oid = p.proargtypes[1]
         WHERE n.nspname = 'eql_v2'
-          AND p.proname IN ('eql_v2_int4_eq_eq', 'eql_v2_int4_eq_neq')
+          AND p.proname IN ('eq', 'neq')
+          AND (lt.typname = 'eql_v2_int4_eq' OR rt.typname = 'eql_v2_int4_eq')
         "#,
     )
     .fetch_all(&pool)

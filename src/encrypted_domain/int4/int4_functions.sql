@@ -16,7 +16,7 @@
 --! @param a eql_v2_int4
 --! @param b eql_v2_int4
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_eq(a eql_v2_int4, b eql_v2_int4)
+CREATE FUNCTION eql_v2.eq(a eql_v2_int4, b eql_v2_int4)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '='); END; $$
 LANGUAGE plpgsql;
@@ -25,7 +25,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v2_int4
 --! @param b jsonb
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_eq(a eql_v2_int4, b jsonb)
+CREATE FUNCTION eql_v2.eq(a eql_v2_int4, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '='); END; $$
 LANGUAGE plpgsql;
@@ -34,7 +34,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v2_int4
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_eq(a jsonb, b eql_v2_int4)
+CREATE FUNCTION eql_v2.eq(a jsonb, b eql_v2_int4)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '='); END; $$
 LANGUAGE plpgsql;
@@ -43,7 +43,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v2_int4
 --! @param b eql_v2_int4
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_neq(a eql_v2_int4, b eql_v2_int4)
+CREATE FUNCTION eql_v2.neq(a eql_v2_int4, b eql_v2_int4)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '<>'); END; $$
 LANGUAGE plpgsql;
@@ -52,7 +52,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v2_int4
 --! @param b jsonb
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_neq(a eql_v2_int4, b jsonb)
+CREATE FUNCTION eql_v2.neq(a eql_v2_int4, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '<>'); END; $$
 LANGUAGE plpgsql;
@@ -61,7 +61,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v2_int4
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_neq(a jsonb, b eql_v2_int4)
+CREATE FUNCTION eql_v2.neq(a jsonb, b eql_v2_int4)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '<>'); END; $$
 LANGUAGE plpgsql;
@@ -72,7 +72,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v2_int4
 --! @param b eql_v2_int4
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_lt(a eql_v2_int4, b eql_v2_int4)
+CREATE FUNCTION eql_v2.lt(a eql_v2_int4, b eql_v2_int4)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '<'); END; $$
 LANGUAGE plpgsql;
@@ -81,7 +81,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v2_int4
 --! @param b jsonb
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_lt(a eql_v2_int4, b jsonb)
+CREATE FUNCTION eql_v2.lt(a eql_v2_int4, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '<'); END; $$
 LANGUAGE plpgsql;
@@ -90,7 +90,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v2_int4
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_lt(a jsonb, b eql_v2_int4)
+CREATE FUNCTION eql_v2.lt(a jsonb, b eql_v2_int4)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '<'); END; $$
 LANGUAGE plpgsql;
@@ -99,7 +99,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v2_int4
 --! @param b eql_v2_int4
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_lte(a eql_v2_int4, b eql_v2_int4)
+CREATE FUNCTION eql_v2.lte(a eql_v2_int4, b eql_v2_int4)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '<='); END; $$
 LANGUAGE plpgsql;
@@ -108,7 +108,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v2_int4
 --! @param b jsonb
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_lte(a eql_v2_int4, b jsonb)
+CREATE FUNCTION eql_v2.lte(a eql_v2_int4, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '<='); END; $$
 LANGUAGE plpgsql;
@@ -117,7 +117,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v2_int4
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_lte(a jsonb, b eql_v2_int4)
+CREATE FUNCTION eql_v2.lte(a jsonb, b eql_v2_int4)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '<='); END; $$
 LANGUAGE plpgsql;
@@ -126,7 +126,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v2_int4
 --! @param b eql_v2_int4
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_gt(a eql_v2_int4, b eql_v2_int4)
+CREATE FUNCTION eql_v2.gt(a eql_v2_int4, b eql_v2_int4)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '>'); END; $$
 LANGUAGE plpgsql;
@@ -135,7 +135,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v2_int4
 --! @param b jsonb
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_gt(a eql_v2_int4, b jsonb)
+CREATE FUNCTION eql_v2.gt(a eql_v2_int4, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '>'); END; $$
 LANGUAGE plpgsql;
@@ -144,7 +144,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v2_int4
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_gt(a jsonb, b eql_v2_int4)
+CREATE FUNCTION eql_v2.gt(a jsonb, b eql_v2_int4)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '>'); END; $$
 LANGUAGE plpgsql;
@@ -153,7 +153,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v2_int4
 --! @param b eql_v2_int4
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_gte(a eql_v2_int4, b eql_v2_int4)
+CREATE FUNCTION eql_v2.gte(a eql_v2_int4, b eql_v2_int4)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '>='); END; $$
 LANGUAGE plpgsql;
@@ -162,7 +162,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v2_int4
 --! @param b jsonb
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_gte(a eql_v2_int4, b jsonb)
+CREATE FUNCTION eql_v2.gte(a eql_v2_int4, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '>='); END; $$
 LANGUAGE plpgsql;
@@ -171,7 +171,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v2_int4
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_gte(a jsonb, b eql_v2_int4)
+CREATE FUNCTION eql_v2.gte(a jsonb, b eql_v2_int4)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '>='); END; $$
 LANGUAGE plpgsql;
@@ -236,7 +236,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v2_int4
 --! @param b eql_v2_int4
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_contains(a eql_v2_int4, b eql_v2_int4)
+CREATE FUNCTION eql_v2.contains(a eql_v2_int4, b eql_v2_int4)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '@>'); END; $$
 LANGUAGE plpgsql;
@@ -245,7 +245,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v2_int4
 --! @param b jsonb
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_contains(a eql_v2_int4, b jsonb)
+CREATE FUNCTION eql_v2.contains(a eql_v2_int4, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '@>'); END; $$
 LANGUAGE plpgsql;
@@ -254,7 +254,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v2_int4
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_contains(a jsonb, b eql_v2_int4)
+CREATE FUNCTION eql_v2.contains(a jsonb, b eql_v2_int4)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '@>'); END; $$
 LANGUAGE plpgsql;
@@ -263,7 +263,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v2_int4
 --! @param b eql_v2_int4
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_contained_by(a eql_v2_int4, b eql_v2_int4)
+CREATE FUNCTION eql_v2.contained_by(a eql_v2_int4, b eql_v2_int4)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '<@'); END; $$
 LANGUAGE plpgsql;
@@ -272,7 +272,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v2_int4
 --! @param b jsonb
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_contained_by(a eql_v2_int4, b jsonb)
+CREATE FUNCTION eql_v2.contained_by(a eql_v2_int4, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '<@'); END; $$
 LANGUAGE plpgsql;
@@ -281,7 +281,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v2_int4
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_contained_by(a jsonb, b eql_v2_int4)
+CREATE FUNCTION eql_v2.contained_by(a jsonb, b eql_v2_int4)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '<@'); END; $$
 LANGUAGE plpgsql;
@@ -292,7 +292,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v2_int4
 --! @param selector text
 --! @return eql_v2_int4 (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_arrow(a eql_v2_int4, selector text)
+CREATE FUNCTION eql_v2."->"(a eql_v2_int4, selector text)
 RETURNS eql_v2_int4 IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v2_int4'; END; $$
 LANGUAGE plpgsql;
@@ -301,7 +301,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v2_int4
 --! @param selector integer
 --! @return eql_v2_int4 (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_arrow(a eql_v2_int4, selector integer)
+CREATE FUNCTION eql_v2."->"(a eql_v2_int4, selector integer)
 RETURNS eql_v2_int4 IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v2_int4'; END; $$
 LANGUAGE plpgsql;
@@ -310,7 +310,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param selector eql_v2_int4
 --! @return eql_v2_int4 (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_arrow(a jsonb, selector eql_v2_int4)
+CREATE FUNCTION eql_v2."->"(a jsonb, selector eql_v2_int4)
 RETURNS eql_v2_int4 IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v2_int4'; END; $$
 LANGUAGE plpgsql;
@@ -319,7 +319,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v2_int4
 --! @param selector text
 --! @return text (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_arrow_text(a eql_v2_int4, selector text)
+CREATE FUNCTION eql_v2."->>"(a eql_v2_int4, selector text)
 RETURNS text IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v2_int4'; END; $$
 LANGUAGE plpgsql;
@@ -328,7 +328,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v2_int4
 --! @param selector integer
 --! @return text (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_arrow_text(a eql_v2_int4, selector integer)
+CREATE FUNCTION eql_v2."->>"(a eql_v2_int4, selector integer)
 RETURNS text IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v2_int4'; END; $$
 LANGUAGE plpgsql;
@@ -337,7 +337,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param selector eql_v2_int4
 --! @return text (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_arrow_text(a jsonb, selector eql_v2_int4)
+CREATE FUNCTION eql_v2."->>"(a jsonb, selector eql_v2_int4)
 RETURNS text IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v2_int4'; END; $$
 LANGUAGE plpgsql;

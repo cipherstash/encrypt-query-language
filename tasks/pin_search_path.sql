@@ -32,6 +32,9 @@ DECLARE
   jsonb_oid oid;
   text_oid oid;
   entry_oid oid;
+  int4_eq_oid oid;
+  int4_ord_oid oid;
+  int4_ord_ore_oid oid;
 BEGIN
   -- Resolve type oids without depending on caller search_path. The encrypted
   -- composite type is created in `public`; jsonb / text are in `pg_catalog`;
@@ -71,6 +74,38 @@ BEGIN
 
   IF entry_oid IS NULL THEN
     RAISE EXCEPTION 'pin_search_path: type eql_v2.ste_vec_entry not found';
+  END IF;
+
+  -- The eql_v2_int4 variant-family domains are created in `public`
+  -- (alongside eql_v2_encrypted). Resolved so the inline-critical clauses
+  -- for the converged eq/neq/lt/lte/gt/gte wrappers can be restricted by
+  -- argument type — those bare names now collide with the ste_vec_entry
+  -- and eql_v2_encrypted overloads of the same name.
+  SELECT t.oid INTO int4_eq_oid
+  FROM pg_catalog.pg_type t
+  JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+  WHERE n.nspname = 'public' AND t.typname = 'eql_v2_int4_eq';
+
+  IF int4_eq_oid IS NULL THEN
+    RAISE EXCEPTION 'pin_search_path: type public.eql_v2_int4_eq not found';
+  END IF;
+
+  SELECT t.oid INTO int4_ord_oid
+  FROM pg_catalog.pg_type t
+  JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+  WHERE n.nspname = 'public' AND t.typname = 'eql_v2_int4_ord';
+
+  IF int4_ord_oid IS NULL THEN
+    RAISE EXCEPTION 'pin_search_path: type public.eql_v2_int4_ord not found';
+  END IF;
+
+  SELECT t.oid INTO int4_ord_ore_oid
+  FROM pg_catalog.pg_type t
+  JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+  WHERE n.nspname = 'public' AND t.typname = 'eql_v2_int4_ord_ore';
+
+  IF int4_ord_ore_oid IS NULL THEN
+    RAISE EXCEPTION 'pin_search_path: type public.eql_v2_int4_ord_ore not found';
   END IF;
 
   -- Wrappers that must remain inlinable for functional-index matching.
@@ -240,39 +275,35 @@ BEGIN
              OR p.proargtypes[0] = (SELECT t.oid FROM pg_catalog.pg_type t
                                      JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
                                      WHERE n.nspname = 'eql_v2' AND t.typname = 'stevec_query')))
-      -- eql_v2_int4 variant family inline-critical wrappers. Name-only
-      -- match (any arity) covers all three arg-shapes per operator.
-      -- Blockers are intentionally excluded — they are PL/pgSQL and must
-      -- NOT inline.
+      -- eql_v2_int4 variant family inline-critical wrappers.
       --
-      -- The eql_v2_int4_ord_ore comparison wrappers (_eq/_neq and the
-      -- four range wrappers) are LANGUAGE sql and must inline so the
-      -- planner rewrites `col <op> $1` to `eql_v2.ord_term(col) <op>
-      -- eql_v2.ord_term($1)` and matches the functional btree on
-      -- eql_v2.ord_term(col). eql_v2.ord_term is the index extractor and
-      -- must also stay unpinned (the 1-arg clause below). The
-      -- eql_v2_int4_eq wrappers must inline to match the functional
-      -- eql_v2.eq_term(col) index; eql_v2.eq_term itself stays unpinned
-      -- via the 1-arg `eq_term` clause above. eql_v2_int4_ord is a
-      -- concrete domain (D-E fallback) carrying the same wrapper set as
-      -- eql_v2_int4_ord_ore. See docs/upgrading/v2.4.md U-001.
+      -- After the PR #225 naming convergence the backing functions are
+      -- overloaded eql_v2.eq / neq / lt / lte / gt / gte discriminated by
+      -- argument type, sharing those bare names with the ste_vec_entry and
+      -- eql_v2_encrypted overloads — so these clauses MUST restrict by the
+      -- int4 domain arg types. The `proargtypes[0] OR proargtypes[1]` form
+      -- covers all three arg-shapes (domain,domain), (domain,jsonb),
+      -- (jsonb,domain).
+      --
+      -- Only the real (LANGUAGE sql) wrappers appear here: eq/neq on
+      -- eql_v2_int4_eq, and all six comparisons on eql_v2_int4_ord /
+      -- eql_v2_int4_ord_ore. They must inline so the planner rewrites
+      -- `col <op> $1` to `eql_v2.eq_term(col) <op> ...` /
+      -- `eql_v2.ord_term(col) <op> ...` and matches the functional index.
+      -- The extractors eql_v2.eq_term / eql_v2.ord_term stay unpinned via
+      -- the 1-arg clauses above. The storage-variant eql_v2_int4 blockers
+      -- and every contains / contained_by / "->" / "->>" blocker are
+      -- PL/pgSQL and must NOT inline — they are excluded by omission.
       OR (p.pronargs = 1 AND p.proname = 'ord_term')
-      OR p.proname IN (
-        'eql_v2_int4_eq_eq',                -- _eq variant equality
-        'eql_v2_int4_eq_neq',
-        'eql_v2_int4_ord_ore_eq',           -- _ord_ore equality (routes through ord)
-        'eql_v2_int4_ord_ore_neq',
-        'eql_v2_int4_ord_ore_lt',           -- _ord_ore range (routes through ord)
-        'eql_v2_int4_ord_ore_lte',
-        'eql_v2_int4_ord_ore_gt',
-        'eql_v2_int4_ord_ore_gte',
-        'eql_v2_int4_ord_eq',               -- _ord equality (routes through ord)
-        'eql_v2_int4_ord_neq',
-        'eql_v2_int4_ord_lt',               -- _ord range (routes through ord)
-        'eql_v2_int4_ord_lte',
-        'eql_v2_int4_ord_gt',
-        'eql_v2_int4_ord_gte'
-      )
+      OR (p.pronargs = 2
+        AND p.proname IN ('eq', 'neq')
+        AND (p.proargtypes[0] = int4_eq_oid OR p.proargtypes[1] = int4_eq_oid))
+      OR (p.pronargs = 2
+        AND p.proname IN ('eq', 'neq', 'lt', 'lte', 'gt', 'gte')
+        AND (p.proargtypes[0] = int4_ord_oid OR p.proargtypes[1] = int4_ord_oid))
+      OR (p.pronargs = 2
+        AND p.proname IN ('eq', 'neq', 'lt', 'lte', 'gt', 'gte')
+        AND (p.proargtypes[0] = int4_ord_ore_oid OR p.proargtypes[1] = int4_ord_ore_oid))
     );
 
   FOR fn_oid IN
