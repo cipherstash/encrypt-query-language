@@ -241,6 +241,37 @@ BEGIN
              OR p.proargtypes[0] = (SELECT t.oid FROM pg_catalog.pg_type t
                                      JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
                                      WHERE n.nspname = 'eql_v2' AND t.typname = 'stevec_query')))
+      -- eql_v2_int4 variant family inline-critical wrappers. Name-only
+      -- match (any arity) covers all three arg-shapes per operator.
+      -- Blockers are intentionally excluded — they are PL/pgSQL and must
+      -- NOT inline.
+      --
+      -- The eql_v2_int4_ord_ore comparison wrappers (_eq/_neq and the
+      -- four range wrappers) are LANGUAGE sql and must inline so the
+      -- planner rewrites `col <op> $1` to `eql_v2.ord(col) <op>
+      -- eql_v2.ord($1)` and matches the functional btree on
+      -- eql_v2.ord(col). eql_v2.ord is the index extractor and must also
+      -- stay unpinned. The eql_v2_int4_eq wrappers must inline to match
+      -- the functional hmac btree. eql_v2_int4_ord is a concrete domain
+      -- (D-E fallback) carrying the same wrapper set as
+      -- eql_v2_int4_ord_ore. See docs/upgrading/v2.4.md U-001.
+      OR (p.pronargs = 1 AND p.proname = 'ord')
+      OR p.proname IN (
+        'eql_v2_int4_eq_eq',                -- _eq variant equality
+        'eql_v2_int4_eq_neq',
+        'eql_v2_int4_ord_ore_eq',           -- _ord_ore equality (routes through ord)
+        'eql_v2_int4_ord_ore_neq',
+        'eql_v2_int4_ord_ore_lt',           -- _ord_ore range (routes through ord)
+        'eql_v2_int4_ord_ore_lte',
+        'eql_v2_int4_ord_ore_gt',
+        'eql_v2_int4_ord_ore_gte',
+        'eql_v2_int4_ord_eq',               -- _ord equality (routes through ord)
+        'eql_v2_int4_ord_neq',
+        'eql_v2_int4_ord_lt',               -- _ord range (routes through ord)
+        'eql_v2_int4_ord_lte',
+        'eql_v2_int4_ord_gt',
+        'eql_v2_int4_ord_gte'
+      )
     );
 
   FOR fn_oid IN

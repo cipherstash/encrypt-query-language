@@ -98,6 +98,21 @@ function_search_path_mutable	eql_v2	eq_term	function	XOR-aware equality term ext
 function_search_path_mutable	eql_v2	min	function	Aggregate (splinter labels these type=function): ALTER AGGREGATE has no SET configuration_parameter syntax, and ALTER ROUTINE/FUNCTION reject aggregates. The aggregate's SFUNC has a pinned search_path.
 function_search_path_mutable	eql_v2	max	function	Aggregate: same as min.
 function_search_path_mutable	eql_v2	grouped_value	function	Aggregate: same as min.
+function_search_path_mutable	eql_v2	ord	function	eql_v2_int4 ordered-variant index extractor: returns eql_v2.ore_block_u64_8_256 (carrying main DEFAULT btree opclass). Used inside the inlinable comparison wrappers and as the functional-index expression USING btree (eql_v2.ord(col)); must inline. SET search_path would disable SQL function inlining (see PostgreSQL inline_function). Covers both ord overloads (eql_v2_int4_ord_ore, eql_v2_int4_ord).
+function_search_path_mutable	eql_v2	eql_v2_int4_eq_eq	function	eql_v2_int4_eq variant equality: HMAC wrapper, inlines to hmac_256(a::jsonb) = hmac_256(b::jsonb) for functional-btree engagement. Three overloads: (domain,domain), (domain,jsonb), (jsonb,domain).
+function_search_path_mutable	eql_v2	eql_v2_int4_eq_neq	function	eql_v2_int4_eq variant inequality: same hmac_256 inlining rationale as eql_v2_int4_eq_eq. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_ore_eq	function	eql_v2_int4_ord_ore equality: inlines to eql_v2.ord(a) = eql_v2.ord(b) for functional-btree engagement on eql_v2.ord(col). Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_ore_neq	function	eql_v2_int4_ord_ore inequality: same eql_v2.ord inlining rationale as eql_v2_int4_ord_ore_eq. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_ore_lt	function	eql_v2_int4_ord_ore range: inlines to eql_v2.ord(a) < eql_v2.ord(b) for functional-btree engagement on eql_v2.ord(col). Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_ore_lte	function	eql_v2_int4_ord_ore range: same eql_v2.ord inlining rationale as eql_v2_int4_ord_ore_lt. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_ore_gt	function	eql_v2_int4_ord_ore range: same eql_v2.ord inlining rationale as eql_v2_int4_ord_ore_lt. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_ore_gte	function	eql_v2_int4_ord_ore range: same eql_v2.ord inlining rationale as eql_v2_int4_ord_ore_lt. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_eq	function	eql_v2_int4_ord equality (D-E fallback concrete domain): inlines to eql_v2.ord(a) = eql_v2.ord(b), same rationale as eql_v2_int4_ord_ore_eq. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_neq	function	eql_v2_int4_ord inequality (D-E fallback): same eql_v2.ord inlining rationale as eql_v2_int4_ord_eq. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_lt	function	eql_v2_int4_ord range (D-E fallback): inlines to eql_v2.ord(a) < eql_v2.ord(b), same rationale as eql_v2_int4_ord_ore_lt. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_lte	function	eql_v2_int4_ord range (D-E fallback): same eql_v2.ord inlining rationale as eql_v2_int4_ord_lt. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_gt	function	eql_v2_int4_ord range (D-E fallback): same eql_v2.ord inlining rationale as eql_v2_int4_ord_lt. Three overloads.
+function_search_path_mutable	eql_v2	eql_v2_int4_ord_gte	function	eql_v2_int4_ord range (D-E fallback): same eql_v2.ord inlining rationale as eql_v2_int4_ord_lt. Three overloads.
 ALLOW
 
 # Wrap splinter (a single bare SELECT expression) into a subquery we can

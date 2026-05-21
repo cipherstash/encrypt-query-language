@@ -38,6 +38,8 @@ rm -f release/cipherstash-encrypt-supabase.sql
 rm -f release/cipherstash-encrypt-protect.sql
 rm -f release/cipherstash-encrypt-protect-uninstall.sql
 
+# dbdev/eql--0.0.0.sql is appended with >> below; truncate it here so
+# repeated builds do not concatenate onto stale content.
 rm -f dbdev/eql--0.0.0.sql
 
 rm -f src/version.sql

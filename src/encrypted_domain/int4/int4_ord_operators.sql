@@ -1,0 +1,134 @@
+-- REQUIRE: src/schema.sql
+-- REQUIRE: src/encrypted_domain/types.sql
+-- REQUIRE: src/encrypted_domain/int4/int4_ord_functions.sql
+
+--! @file encrypted_domain/int4/int4_ord_operators.sql
+--! @brief Concrete ordered int4 variant (D-E fallback) — operator
+--!        declarations. The recommended ordered name.
+--!
+--! eql_v2_int4_ord carries `c`, `ob`. It is a full concrete mirror of
+--! int4_ord_ore.sql: the §8 verification spike showed the pure-alias
+--! form (a domain over eql_v2_int4_ord_ore) does not transparently
+--! inherit the operator surface — PostgreSQL resolves operators against
+--! the ultimate base type (jsonb), so ordered operators fall through to
+--! native jsonb comparison and the blockers do not engage.
+--! eql_v2_int4_ord therefore carries its own eql_v2.ord() overload,
+--! comparison wrappers, operator declarations, and blockers.
+--! eql_v2_int4_ord_ore is the scheme-explicit ordered domain with the
+--! identical operator surface.
+
+-- Operator declarations
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v2.eql_v2_int4_ord_eq,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = eql_v2_int4_ord,
+  NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
+);
+CREATE OPERATOR = (
+  FUNCTION = eql_v2.eql_v2_int4_ord_eq,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb,
+  NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
+);
+CREATE OPERATOR = (
+  FUNCTION = eql_v2.eql_v2_int4_ord_eq,
+  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord,
+  NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v2.eql_v2_int4_ord_neq,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = eql_v2_int4_ord,
+  NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
+);
+CREATE OPERATOR <> (
+  FUNCTION = eql_v2.eql_v2_int4_ord_neq,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb,
+  NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
+);
+CREATE OPERATOR <> (
+  FUNCTION = eql_v2.eql_v2_int4_ord_neq,
+  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord,
+  NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v2.eql_v2_int4_ord_lt,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = eql_v2_int4_ord,
+  RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+CREATE OPERATOR < (FUNCTION = eql_v2.eql_v2_int4_ord_lt,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb);
+CREATE OPERATOR < (FUNCTION = eql_v2.eql_v2_int4_ord_lt,
+  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v2.eql_v2_int4_ord_lte,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = eql_v2_int4_ord,
+  RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+CREATE OPERATOR <= (FUNCTION = eql_v2.eql_v2_int4_ord_lte,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb);
+CREATE OPERATOR <= (FUNCTION = eql_v2.eql_v2_int4_ord_lte,
+  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v2.eql_v2_int4_ord_gt,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = eql_v2_int4_ord,
+  RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+CREATE OPERATOR > (FUNCTION = eql_v2.eql_v2_int4_ord_gt,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb);
+CREATE OPERATOR > (FUNCTION = eql_v2.eql_v2_int4_ord_gt,
+  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v2.eql_v2_int4_ord_gte,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = eql_v2_int4_ord,
+  RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+CREATE OPERATOR >= (FUNCTION = eql_v2.eql_v2_int4_ord_gte,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb);
+CREATE OPERATOR >= (FUNCTION = eql_v2.eql_v2_int4_ord_gte,
+  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord);
+
+CREATE OPERATOR ~~ (FUNCTION = eql_v2.eql_v2_int4_ord_like,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = eql_v2_int4_ord);
+CREATE OPERATOR ~~ (FUNCTION = eql_v2.eql_v2_int4_ord_like,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb);
+CREATE OPERATOR ~~ (FUNCTION = eql_v2.eql_v2_int4_ord_like,
+  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord);
+
+CREATE OPERATOR ~~* (FUNCTION = eql_v2.eql_v2_int4_ord_ilike,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = eql_v2_int4_ord);
+CREATE OPERATOR ~~* (FUNCTION = eql_v2.eql_v2_int4_ord_ilike,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb);
+CREATE OPERATOR ~~* (FUNCTION = eql_v2.eql_v2_int4_ord_ilike,
+  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord);
+
+CREATE OPERATOR @> (FUNCTION = eql_v2.eql_v2_int4_ord_contains,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = eql_v2_int4_ord);
+CREATE OPERATOR @> (FUNCTION = eql_v2.eql_v2_int4_ord_contains,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb);
+CREATE OPERATOR @> (FUNCTION = eql_v2.eql_v2_int4_ord_contains,
+  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord);
+
+CREATE OPERATOR <@ (FUNCTION = eql_v2.eql_v2_int4_ord_contained_by,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = eql_v2_int4_ord);
+CREATE OPERATOR <@ (FUNCTION = eql_v2.eql_v2_int4_ord_contained_by,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb);
+CREATE OPERATOR <@ (FUNCTION = eql_v2.eql_v2_int4_ord_contained_by,
+  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord);
+
+CREATE OPERATOR -> (FUNCTION = eql_v2.eql_v2_int4_ord_arrow,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = text);
+CREATE OPERATOR -> (FUNCTION = eql_v2.eql_v2_int4_ord_arrow,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = integer);
+CREATE OPERATOR -> (FUNCTION = eql_v2.eql_v2_int4_ord_arrow,
+  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord);
+
+CREATE OPERATOR ->> (FUNCTION = eql_v2.eql_v2_int4_ord_arrow_text,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = text);
+CREATE OPERATOR ->> (FUNCTION = eql_v2.eql_v2_int4_ord_arrow_text,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = integer);
+CREATE OPERATOR ->> (FUNCTION = eql_v2.eql_v2_int4_ord_arrow_text,
+  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord);
