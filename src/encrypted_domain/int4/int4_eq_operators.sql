@@ -62,7 +62,7 @@ CREATE OPERATOR < (FUNCTION = eql_v2.eql_v2_int4_eq_lt,
 CREATE OPERATOR <= (
   FUNCTION = eql_v2.eql_v2_int4_eq_lte,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq,
-  RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+  RESTRICT = scalarlesel, JOIN = scalarlejoinsel
 );
 CREATE OPERATOR <= (FUNCTION = eql_v2.eql_v2_int4_eq_lte,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = jsonb);
@@ -82,7 +82,7 @@ CREATE OPERATOR > (FUNCTION = eql_v2.eql_v2_int4_eq_gt,
 CREATE OPERATOR >= (
   FUNCTION = eql_v2.eql_v2_int4_eq_gte,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq,
-  RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+  RESTRICT = scalargesel, JOIN = scalargejoinsel
 );
 CREATE OPERATOR >= (FUNCTION = eql_v2.eql_v2_int4_eq_gte,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = jsonb);
