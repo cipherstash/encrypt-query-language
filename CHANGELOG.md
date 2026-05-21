@@ -20,6 +20,16 @@ Each entry that ships in a published release links to the PR that introduced it.
 
 ## [Unreleased]
 
+The additive `eql_v2_int4` variant family targets `2.4.0`; see [`docs/upgrading/v2.4.md`](docs/upgrading/v2.4.md) for its upgrade notes.
+
+### Added
+
+- **`eql_v2_int4` variant family — four capability-encoded domain types for encrypted `int4` columns.** Pick the variant whose operator surface matches the index terms your column carries: `eql_v2_int4` (storage only, every operator blocked — carries `c`), `eql_v2_int4_eq` (HMAC equality only — `=`, `<>` — carries `c`, `hm`), `eql_v2_int4_ord_ore` (equality + ORE-block ordering — `=`, `<>`, `<`, `<=`, `>`, `>=` — carries `c`, `ob`), or `eql_v2_int4_ord` (the recommended ordered name; the identical operator surface to `eql_v2_int4_ord_ore`). Ordered columns expose a single uniform index extractor, `eql_v2.ord(col)` — equality and range share one functional btree, `CREATE INDEX ... USING btree (eql_v2.ord(col))`, and `ORDER BY eql_v2.ord(col)` sorts in plaintext order. `eql_v2.ord` returns the internal `eql_v2.ore_block_u64_8_256` composite, which carries EQL's existing `DEFAULT` btree operator class, so no operator class is defined on the public domain types. The ordered variants do not carry an `hm` term: ORE on a full-domain `int4` is lossless, so the order term doubles as an exact equality term. All variants live in `public` and survive `eql_v2` uninstall. Per-variant payload requirements and index recipes: [U-001](docs/upgrading/v2.4.md#u-001-eql_v2_int4-variant-family). Note: the ORE operator class is excluded from the Supabase build, so ordered `int4` columns fall back to seq-scan for range on Supabase. ([#225](https://github.com/cipherstash/encrypt-query-language/pull/225))
+
+### Upgrade notes
+
+For the `2.4.0`-targeted `eql_v2_int4` variant family, see [`docs/upgrading/v2.4.md`](docs/upgrading/v2.4.md): [U-001 — `eql_v2_int4` variant family](docs/upgrading/v2.4.md#u-001-eql_v2_int4-variant-family).
+
 ## [2.3.0] — 2026-05-20
 
 `2.3.0` is a breaking release. Customers re-encrypt their data as part of the upgrade — the crypto-side counterpart (`@cipherstash/protect` / `protect-ffi` / proxy) emits a new ste_vec element shape. See [`docs/upgrading/v2.3.md`](docs/upgrading/v2.3.md) for the consolidated upgrade notes.
