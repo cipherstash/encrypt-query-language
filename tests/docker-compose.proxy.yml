@@ -1,0 +1,35 @@
+services:
+  proxy:
+    image: cipherstash/proxy:latest
+    container_name: cipherstash-proxy
+    ports:
+      - "6432:6432"
+    environment:
+      # Proxy connects to the existing tests/docker-compose.yml Postgres,
+      # reaching the host via host.docker.internal. POSTGRES_* values come
+      # from mise.toml [env] block (overridable per shell).
+      CS_DATABASE__NAME: ${POSTGRES_DB:-cipherstash}
+      CS_DATABASE__USERNAME: ${POSTGRES_USER:-cipherstash}
+      CS_DATABASE__PASSWORD: ${POSTGRES_PASSWORD:-password}
+      CS_DATABASE__HOST: host.docker.internal
+      CS_DATABASE__PORT: ${POSTGRES_PORT:-7432}
+      # EQL installation is handled by the existing reset / install flow; the
+      # Proxy must not race against it.
+      CS_DATABASE__INSTALL_EQL: "false"
+      # CipherStash workspace credentials are read from the host shell
+      # environment (mise / direnv / profile). No .env file is required.
+      CS_CLIENT_ACCESS_KEY: ${CS_CLIENT_ACCESS_KEY}
+      CS_DEFAULT_KEYSET_ID: ${CS_DEFAULT_KEYSET_ID}
+      CS_CLIENT_KEY: ${CS_CLIENT_KEY}
+      CS_CLIENT_ID: ${CS_CLIENT_ID}
+      CS_WORKSPACE_CRN: ${CS_WORKSPACE_CRN}
+      # Optional: pin the CTS region host for workspaces in non-default regions.
+      CS_CTS_HOST: ${CS_CTS_HOST:-}
+      CS_ZEROKMS_HOST: ${CS_ZEROKMS_HOST:-}
+    extra_hosts:
+      # Linux compatibility; macOS / Windows resolve host.docker.internal natively.
+      - "host.docker.internal:host-gateway"
+    # No in-container healthcheck: the current cipherstash/proxy:latest image
+    # lacks busybox nc, so any TCP probe inside the container fails even when
+    # the proxy is listening. Readiness is verified from the host by the
+    # proxy:up task using psql.
