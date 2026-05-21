@@ -131,7 +131,7 @@ async fn eq_unsupported_operators_raise(pool: PgPool) -> Result<()> {
         ("$1::jsonb::eql_v2_int4_eq", "$2::jsonb"),
         ("$1::jsonb", "$2::jsonb::eql_v2_int4_eq"),
     ];
-    for op in ["<", "<=", ">", ">=", "~~", "~~*", "@>", "<@"] {
+    for op in ["<", "<=", ">", ">=", "@>", "<@"] {
         for (lhs, rhs) in shapes {
             let sql = format!("SELECT {lhs} {op} {rhs}");
             let err = sqlx::query(&sql)

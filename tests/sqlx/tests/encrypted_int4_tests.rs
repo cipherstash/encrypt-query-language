@@ -17,7 +17,7 @@ async fn all_symmetric_operators_raise(pool: PgPool) -> Result<()> {
         ("$1::jsonb", "$2::jsonb::eql_v2_int4"),
     ];
 
-    for op in ["=", "<>", "<", "<=", ">", ">=", "~~", "~~*", "@>", "<@"] {
+    for op in ["=", "<>", "<", "<=", ">", ">=", "@>", "<@"] {
         for (lhs, rhs) in shapes {
             let sql = format!("SELECT {lhs} {op} {rhs}");
             let err = sqlx::query(&sql)
@@ -59,6 +59,29 @@ async fn path_operators_raise(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
+async fn like_operators_are_not_declared(pool: PgPool) -> Result<()> {
+    // EQL no longer declares ~~ / ~~* (LIKE / ILIKE) on the int4 domains —
+    // int4 has no pattern-match capability. With the operators removed,
+    // `col ~~ x` raises PostgreSQL's native "operator does not exist"
+    // rather than an EQL blocker message. Pin that they stay gone.
+    for op in ["~~", "~~*"] {
+        let sql = format!("SELECT $1::jsonb::eql_v2_int4 {op} $2::jsonb::eql_v2_int4");
+        let err = sqlx::query(&sql)
+            .bind(SAMPLE_PAYLOAD)
+            .bind(SAMPLE_PAYLOAD)
+            .fetch_one(&pool)
+            .await
+            .expect_err(&format!("eql_v2_int4 {op} must not resolve: {sql}"))
+            .to_string();
+        assert!(
+            err.contains("operator does not exist"),
+            "expected native 'operator does not exist' for {op}: {err}"
+        );
+    }
+    Ok(())
+}
+
+#[sqlx::test]
 async fn blockers_raise_on_typed_column(pool: PgPool) -> Result<()> {
     // The other tests exercise blockers on cast literals
     // ($1::jsonb::eql_v2_int4). This pins that the blockers also engage
@@ -80,7 +103,7 @@ async fn blockers_raise_on_typed_column(pool: PgPool) -> Result<()> {
         .execute(&mut *tx)
         .await?;
 
-    for op in ["=", "<>", "<", "<=", ">", ">=", "~~", "~~*", "@>", "<@"] {
+    for op in ["=", "<>", "<", "<=", ">", ">=", "@>", "<@"] {
         // A raised blocker aborts the transaction; wrap each probe in a
         // savepoint so the next operator can be checked after rollback.
         sqlx::query("SAVEPOINT op_probe").execute(&mut *tx).await?;

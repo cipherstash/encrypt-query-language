@@ -84,7 +84,7 @@ CREATE FUNCTION eql_v2.neq(a jsonb, b eql_v2_int4_eq)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v2.eq_term(a::eql_v2_int4_eq) <> eql_v2.eq_term(b) $$;
 
--- <, <=, >, >=, ~~, ~~*, @>, <@ (blockers, 3 shapes each — 8 ops × 3 = 24 functions)
+-- <, <=, >, >=, @>, <@ (blockers, 3 shapes each — 6 ops × 3 = 18 functions)
 
 --! @brief Blocker for < on eql_v2_int4_eq.
 --! @param a eql_v2_int4_eq
@@ -192,60 +192,6 @@ LANGUAGE plpgsql;
 CREATE FUNCTION eql_v2.gte(a jsonb, b eql_v2_int4_eq)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_eq', '>='); END; $$
-LANGUAGE plpgsql;
-
---! @brief Blocker for ~~ on eql_v2_int4_eq.
---! @param a eql_v2_int4_eq
---! @param b eql_v2_int4_eq
---! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_eq_like(a eql_v2_int4_eq, b eql_v2_int4_eq)
-RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_eq', '~~'); END; $$
-LANGUAGE plpgsql;
-
---! @brief Blocker for ~~ on eql_v2_int4_eq (domain, jsonb).
---! @param a eql_v2_int4_eq
---! @param b jsonb
---! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_eq_like(a eql_v2_int4_eq, b jsonb)
-RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_eq', '~~'); END; $$
-LANGUAGE plpgsql;
-
---! @brief Blocker for ~~ on eql_v2_int4_eq (jsonb, domain).
---! @param a jsonb
---! @param b eql_v2_int4_eq
---! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_eq_like(a jsonb, b eql_v2_int4_eq)
-RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_eq', '~~'); END; $$
-LANGUAGE plpgsql;
-
---! @brief Blocker for ~~* on eql_v2_int4_eq.
---! @param a eql_v2_int4_eq
---! @param b eql_v2_int4_eq
---! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_eq_ilike(a eql_v2_int4_eq, b eql_v2_int4_eq)
-RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_eq', '~~*'); END; $$
-LANGUAGE plpgsql;
-
---! @brief Blocker for ~~* on eql_v2_int4_eq (domain, jsonb).
---! @param a eql_v2_int4_eq
---! @param b jsonb
---! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_eq_ilike(a eql_v2_int4_eq, b jsonb)
-RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_eq', '~~*'); END; $$
-LANGUAGE plpgsql;
-
---! @brief Blocker for ~~* on eql_v2_int4_eq (jsonb, domain).
---! @param a jsonb
---! @param b eql_v2_int4_eq
---! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.eql_v2_int4_eq_ilike(a jsonb, b eql_v2_int4_eq)
-RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_eq', '~~*'); END; $$
 LANGUAGE plpgsql;
 
 --! @brief Blocker for @> on eql_v2_int4_eq.

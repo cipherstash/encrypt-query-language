@@ -132,20 +132,6 @@ CREATE OPERATOR >= (
   RESTRICT = scalargesel, JOIN = scalargejoinsel
 );
 
-CREATE OPERATOR ~~ (FUNCTION = eql_v2.eql_v2_int4_ord_like,
-  LEFTARG = eql_v2_int4_ord, RIGHTARG = eql_v2_int4_ord);
-CREATE OPERATOR ~~ (FUNCTION = eql_v2.eql_v2_int4_ord_like,
-  LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb);
-CREATE OPERATOR ~~ (FUNCTION = eql_v2.eql_v2_int4_ord_like,
-  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord);
-
-CREATE OPERATOR ~~* (FUNCTION = eql_v2.eql_v2_int4_ord_ilike,
-  LEFTARG = eql_v2_int4_ord, RIGHTARG = eql_v2_int4_ord);
-CREATE OPERATOR ~~* (FUNCTION = eql_v2.eql_v2_int4_ord_ilike,
-  LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb);
-CREATE OPERATOR ~~* (FUNCTION = eql_v2.eql_v2_int4_ord_ilike,
-  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord);
-
 CREATE OPERATOR @> (FUNCTION = eql_v2.contains,
   LEFTARG = eql_v2_int4_ord, RIGHTARG = eql_v2_int4_ord);
 CREATE OPERATOR @> (FUNCTION = eql_v2.contains,

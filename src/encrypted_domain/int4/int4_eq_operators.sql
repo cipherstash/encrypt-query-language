@@ -89,20 +89,6 @@ CREATE OPERATOR >= (FUNCTION = eql_v2.gte,
 CREATE OPERATOR >= (FUNCTION = eql_v2.gte,
   LEFTARG = jsonb, RIGHTARG = eql_v2_int4_eq);
 
-CREATE OPERATOR ~~ (FUNCTION = eql_v2.eql_v2_int4_eq_like,
-  LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq);
-CREATE OPERATOR ~~ (FUNCTION = eql_v2.eql_v2_int4_eq_like,
-  LEFTARG = eql_v2_int4_eq, RIGHTARG = jsonb);
-CREATE OPERATOR ~~ (FUNCTION = eql_v2.eql_v2_int4_eq_like,
-  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_eq);
-
-CREATE OPERATOR ~~* (FUNCTION = eql_v2.eql_v2_int4_eq_ilike,
-  LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq);
-CREATE OPERATOR ~~* (FUNCTION = eql_v2.eql_v2_int4_eq_ilike,
-  LEFTARG = eql_v2_int4_eq, RIGHTARG = jsonb);
-CREATE OPERATOR ~~* (FUNCTION = eql_v2.eql_v2_int4_eq_ilike,
-  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_eq);
-
 CREATE OPERATOR @> (FUNCTION = eql_v2.contains,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq);
 CREATE OPERATOR @> (FUNCTION = eql_v2.contains,

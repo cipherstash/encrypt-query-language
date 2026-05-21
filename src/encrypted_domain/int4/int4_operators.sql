@@ -6,11 +6,11 @@
 --! @brief Storage-only int4 variant — operator declarations. All bool operators raise.
 --!
 --! eql_v2_int4 accepts the storage of an encrypted int4 column with
---! ciphertext (`c`) only. Every comparison, containment, LIKE, and path
+--! ciphertext (`c`) only. Every comparison, containment, and path
 --! operator is a blocker so callers cannot accidentally fall through to
 --! native jsonb semantics. Payload-term assumption: `c` only.
 
--- Operator declarations (10 symmetric ops × 3 shapes + 2 path ops × 3 asymmetric shapes)
+-- Operator declarations (8 symmetric ops × 3 shapes + 2 path ops × 3 asymmetric shapes)
 
 CREATE OPERATOR = (
   FUNCTION = eql_v2.eq,
@@ -82,20 +82,6 @@ CREATE OPERATOR >= (
 CREATE OPERATOR >= (FUNCTION = eql_v2.gte,
   LEFTARG = eql_v2_int4, RIGHTARG = jsonb);
 CREATE OPERATOR >= (FUNCTION = eql_v2.gte,
-  LEFTARG = jsonb, RIGHTARG = eql_v2_int4);
-
-CREATE OPERATOR ~~ (FUNCTION = eql_v2.eql_v2_int4_like,
-  LEFTARG = eql_v2_int4, RIGHTARG = eql_v2_int4);
-CREATE OPERATOR ~~ (FUNCTION = eql_v2.eql_v2_int4_like,
-  LEFTARG = eql_v2_int4, RIGHTARG = jsonb);
-CREATE OPERATOR ~~ (FUNCTION = eql_v2.eql_v2_int4_like,
-  LEFTARG = jsonb, RIGHTARG = eql_v2_int4);
-
-CREATE OPERATOR ~~* (FUNCTION = eql_v2.eql_v2_int4_ilike,
-  LEFTARG = eql_v2_int4, RIGHTARG = eql_v2_int4);
-CREATE OPERATOR ~~* (FUNCTION = eql_v2.eql_v2_int4_ilike,
-  LEFTARG = eql_v2_int4, RIGHTARG = jsonb);
-CREATE OPERATOR ~~* (FUNCTION = eql_v2.eql_v2_int4_ilike,
   LEFTARG = jsonb, RIGHTARG = eql_v2_int4);
 
 CREATE OPERATOR @> (FUNCTION = eql_v2.contains,
