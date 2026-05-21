@@ -20,10 +20,10 @@ capability is encoded in the domain name:
 
 | Domain name            | Capability                          | Capability terms |
 |------------------------|-------------------------------------|------------------|
-| `eql_v2_<T>`           | storage only — every operator raises | `c`             |
-| `eql_v2_<T>_eq`        | equality (`=`, `<>`)                 | `c`, `hm`       |
-| `eql_v2_<T>_ord`       | equality + ordering (`=` `<>` `<` `<=` `>` `>=`) | `c`, `ob` |
-| `eql_v2_<T>_ord_<scheme>` | as `_ord`, scheme-explicit name   | `c`, `ob`       |
+| `eql_v2_<T>`           | storage only — every operator raises | design-note ciphertext term; int4 uses `c` |
+| `eql_v2_<T>_eq`        | equality (`=`, `<>`)                 | ciphertext + equality term; int4 uses `c`, `hm` |
+| `eql_v2_<T>_ord`       | equality + ordering (`=` `<>` `<` `<=` `>` `>=`) | ciphertext + order term, and possibly equality term; int4 uses `c`, `ob` |
+| `eql_v2_<T>_ord_<scheme>` | as `_ord`, scheme-explicit name   | same as that ordered variant's design note |
 
 A caller picks the domain whose capability matches the searches they
 need; an unmatched operator **raises** rather than silently falling
@@ -31,9 +31,12 @@ through to native `jsonb` behaviour.
 
 Every domain also carries the EQL envelope keys (`v`, `i`) in addition
 to the capability terms above, and **each domain enforces a `CHECK`
-constraint** requiring the envelope plus its capability terms — a
-malformed payload is rejected at the point it is cast into the domain
-(§3).
+constraint** requiring the envelope plus its capability terms (§3).
+The baseline `CHECK` pattern is presence/type-shape validation only:
+it rejects non-object and under-populated payloads at the point they are
+cast into the domain, but it does not prove that a present term has the
+full internal structure an extractor expects unless the type chooses a
+stronger structural `CHECK`.
 
 ### What is fixed vs. what each type decides
 
@@ -57,6 +60,11 @@ transfer automatically:
 - int4 ships two ordered domains (`_ord` and `_ord_ore`) as mechanical
   twins. A type with a single ordering scheme needs only `_ord`.
 - `jsonb` does not fit the scalar storage/eq/ord shape; see §11.
+- Native edge semantics are type-specific. The design note must
+  explicitly include or exclude edge values such as float/double `NaN`,
+  infinities and `-0.0`/`0.0`; `numeric` precision/scale boundaries;
+  date min/max and calendar boundaries; timestamp timezone and DST
+  behavior; and bool's two-value domain.
 
 Resolve these before writing code, and record them in a short
 type-specific design note. Everything else follows the checklist.
@@ -73,6 +81,10 @@ Work top to bottom. Each item links to its reference section.
       ordered variants carry `hm` and where `=`/`<>` route (§1, §4).
 - [ ] Pick the index-term type(s) the extractors will return — they
       must already carry a default operator class (§4).
+- [ ] Document native edge semantics for the type: include or exclude
+      float/double `NaN`, infinities, and signed zero; `numeric`
+      precision/scale boundaries; date boundaries; timestamp timezone
+      and DST behavior; and bool's tiny value domain (§8).
 
 ### Types
 - [ ] Declare every domain in `src/encrypted_domain/types.sql` as an
@@ -142,12 +154,17 @@ Work top to bottom. Each item links to its reference section.
 
 - **Every domain carries a `CHECK` constraint.** The payload must be a
   `jsonb` object carrying the EQL envelope (`v`, `i`), the ciphertext
-  (`c`), **and every capability term the variant relies on** — `hm` for
-  an `_eq` variant, `ob` for an `_ord` variant. The constraint is
-  enforced when a value is cast into the domain, so a malformed or
-  under-populated payload is rejected at write time rather than failing
-  obscurely inside an extractor later. The storage variant requires only
-  `v`, `i`, `c`; each capability variant adds its term:
+  term, **and every capability term the variant relies on** — for
+  example `hm` for an int4 `_eq` variant and `ob` for an int4 lossless
+  `_ord` variant. The baseline constraint is enforced when a value is
+  cast into the domain and is intentionally limited to presence and
+  coarse type-shape unless the type chooses stronger structural checks.
+  It rejects non-object and under-populated payloads at write time; a
+  present but malformed term can still fail later inside an extractor or
+  query wrapper if the domain `CHECK` does not validate that term's
+  internal shape. The storage variant requires only the envelope and
+  ciphertext; each capability variant adds the terms from its design
+  note:
 
   ```sql
   CREATE DOMAIN public.eql_v2_<T>_eq AS jsonb
@@ -168,6 +185,9 @@ Work top to bottom. Each item links to its reference section.
   surface; keep them in sync with a twin-sync test (§7).
 - **Payload terms** are a per-variant assumption, documented in each
   file's `--! @file` header (e.g. *"Payload-term assumption: `c`, `hm`."*).
+  If a variant chooses structural `CHECK` validation beyond
+  presence/type-shape, document that choice in the same design note and
+  add matching negative tests (§7, §10).
 
 ---
 
@@ -199,8 +219,13 @@ Instead, index through a **functional index on an extractor function**:
   opclass you need.
 
 **Build caveat:** the internal ORE composite operator class is excluded
-from the **Supabase** build variant, so ordered columns have **no
-indexed range on Supabase** (seq-scan). Note this in the upgrade doc.
+from the **Supabase** build variant, so ORE-backed range/order
+predicates have **no indexed range on Supabase** (seq-scan). If an
+ordered variant keeps a non-ORE equality term and routes `=`/`<>`
+through `eq_term`, that equality path can still use its equality
+functional index; only the ORE range/order path loses its opclass. If
+equality is routed through a lossless ORE `ord_term`, it is subject to
+the same Supabase limitation. Note this in the upgrade doc.
 
 ---
 
@@ -317,20 +342,28 @@ Declaring the full surface is what prevents fall-through to native
 | `=` `<>` `<` `<=` `>` `>=` `~~` `~~*` `@>` `<@` | symmetric boolean (10) | `(domain,domain)`, `(domain,jsonb)`, `(jsonb,domain)` |
 | `->` `->>` | path (2) | `(domain,text)`, `(domain,integer)`, `(jsonb,domain)` |
 
-The `(*,jsonb)` / `(jsonb,*)` shapes cover ORM bind patterns where one
-operand arrives as raw `jsonb`. That is **12 operators × 3 shapes = 36
-`CREATE OPERATOR` statements per variant.**
+The `(*,jsonb)` / `(jsonb,*)` boolean shapes cover ORM bind patterns
+where one operand arrives as raw `jsonb`. The `(jsonb,domain)` path
+shape for `->` / `->>` is defensive blocker coverage so native `jsonb`
+path behavior cannot leak through; it is not a supported ORM bind
+pattern. That is **12 operators × 3 shapes = 36 `CREATE OPERATOR`
+statements per variant.**
 
-### Function counts per variant (reference: int4)
+### Function counts per variant
 
-| Variant | Extractor | Wrappers | Blockers | Functions | Operators |
-|---------|-----------|----------|----------|-----------|-----------|
+| Variant | Extractors | Wrappers | Blockers | Functions | Operators |
+|---------|------------|----------|----------|-----------|-----------|
 | storage `eql_v2_<T>`      | 0 | 0  | 36 | 36 | 36 |
-| `eql_v2_<T>_eq`           | 1 | 6  | 30 | 37 | 36 |
-| `eql_v2_<T>_ord[_ore]`    | 1 | 18 | 18 | 37 | 36 |
+| equality-only `eql_v2_<T>_eq` | 1 (`eq_term`) | 6  | 30 | 37 | 36 |
+| lossless ordered `eql_v2_<T>_ord[_scheme]` | 1 (`ord_term`) | 18 | 18 | 37 | 36 |
+| lossy ordered `eql_v2_<T>_ord[_scheme]` | 2 (`eq_term`, `ord_term`) | 18 | 18 | 38 | 36 |
 
 (Wrappers/blockers = supported/unsupported operators × 3 shapes; the
-storage variant supports nothing.)
+storage variant supports nothing.) Lossless ordered variants may route
+equality wrappers through `ord_term`; lossy ordered variants route
+equality wrappers through `eq_term` and range/order wrappers through
+`ord_term`. Lossy ordered variants therefore usually need separate
+equality and order index recipes.
 
 ### `CREATE OPERATOR` metadata
 
@@ -394,7 +427,8 @@ declarations in `_operators.sql`. One pair per variant:
 | Inlinability catalogue assertion (see §10) | eq, ord |
 | Operator planner-metadata assertion (`COMMUTATOR`/`NEGATOR` present) | eq, ord |
 | Blockers engage on a real typed column, not just cast literals | storage (+ others) |
-| Domain `CHECK` rejects malformed / under-populated payloads at the cast | all |
+| Domain `CHECK` rejects non-object / under-populated payloads at the cast | all |
+| Malformed required term shapes fail at the domain `CHECK` if structurally enforced, otherwise at extractor/query time | eq, ord |
 | Twin-sync source check | twinned variants |
 
 ---
@@ -430,16 +464,33 @@ declarations in `_operators.sql`. One pair per variant:
   ```
 
 - **One payload, all terms.** Each `payload` carries every term the
-  family uses (`c`, `hm`, `ob`) so a single fixture feeds every
-  variant's suite — the ordered suites read `ob`, the equality suite
-  reads `hm`, from the same rows.
+  family design note says any variant uses, so a single fixture feeds
+  every variant's suite. For int4 this means `c`, `hm`, and `ob`: the
+  ordered suites read `ob`, the equality suite reads `hm`, from the same
+  rows. Do not hard-code those term names for a different type; derive
+  them from that type's variants and search configuration.
 - **Value-set design rules:**
   - Choose pivots so each range operator yields a **distinct
     cardinality** — a swapped operator then fails an assertion instead
     of silently passing.
   - Include negative values and boundary values where the type allows.
-  - All values distinct, so a distinctness sweep proves no two
-    plaintexts share an index term.
+  - All values distinct where the native type and semantics allow, so a
+    distinctness sweep proves no two plaintexts share an equality term
+    and, for lossless ordered variants, no two plaintexts share an order
+    term.
+  - For lossy ordered variants, do not assert distinct order terms.
+    Instead, prove `=`/`<>` use the equality term and range/order
+    predicates use order semantics, with separate equality and order
+    index recipes when both can be indexed.
+  - Add negative-space fixture/tests for omitted non-required terms
+    (for example, ordered variants that intentionally do not carry an
+    equality term) and malformed required terms per variant.
+  - Add a native edge-semantics checklist to the type design note:
+    float/double `NaN`, infinities, and `-0.0`/`0.0`; `numeric`
+    precision and scale limits; date boundaries; timestamp timezone and
+    DST behavior; and bool's tiny value domain. Each item must be
+    explicitly included or excluded, and the encrypted semantics must be
+    documented.
   - int4 uses 14 values; size similarly.
 
 ---
@@ -469,7 +520,9 @@ A new type is user-facing, so per `CLAUDE.md` release discipline:
 - A `## [Unreleased]` entry in `CHANGELOG.md` (`Added`).
 - A numbered upgrade note (`U-NNN`) in the active
   `docs/upgrading/v<x>.md` — variant set, the extractor interface,
-  index recipes, and the Supabase seq-scan caveat for ordered columns.
+  index recipes, and the Supabase seq-scan caveat for ORE range/order
+  predicates. If ordered equality is routed through a non-ORE equality
+  term, document that equality indexing remains available separately.
 - All SQL functions/types need Doxygen `--!` comments (`@brief`,
   `@param`, `@return`, …) per `CLAUDE.md`.
 
@@ -500,10 +553,16 @@ The bar a new type's test suites must clear:
   variants without `hm`), strip that term from the payload and prove
   the variant still routes correctly — so an accidental regression to
   the wrong term fails instead of passing on a fully-populated fixture.
-- **Payload validation.** Assert the domain `CHECK` rejects malformed
-  payloads — a non-object, and an object missing the envelope (`v`,
-  `i`), the ciphertext (`c`), or the variant's capability term — with a
-  `violates check constraint` error at the cast.
+  For lossy ordered variants, also prove equality predicates use the
+  equality term and range/order predicates use the order term.
+- **Payload validation.** Assert the domain `CHECK` rejects payloads
+  outside its declared validation scope — at minimum a non-object and an
+  object missing the envelope (`v`, `i`), the ciphertext term, or the
+  variant's required capability term — with a `violates check
+  constraint` error at the cast. If a type chooses stronger structural
+  `CHECK` validation, malformed required term shapes must fail there
+  too. If it keeps the baseline presence/type-shape `CHECK`, malformed
+  required term shapes must fail in extractor/query-time tests instead.
 - **Real columns, not just literals.** At least one test per variant
   runs operators against a genuine `eql_v2_<T>_<variant>`-typed table
   column, the shape a real caller writes.
