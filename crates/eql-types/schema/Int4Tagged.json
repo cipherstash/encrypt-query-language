@@ -1,0 +1,125 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Int4Tagged",
+  "description": "**Proposed.** Self-describing int4 payload — `x` is the capability tag.\n\nGenerates a clean TypeScript discriminated union (`switch (p.x)` with exhaustiveness) and a JSON Schema `oneOf` with a per-branch `const`.",
+  "oneOf": [
+    {
+      "description": "`x: \"int4\"` — storage only.",
+      "type": "object",
+      "required": [
+        "c",
+        "i",
+        "v",
+        "x"
+      ],
+      "properties": {
+        "c": {
+          "type": "string"
+        },
+        "i": {
+          "$ref": "#/definitions/Identifier"
+        },
+        "v": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0.0
+        },
+        "x": {
+          "type": "string",
+          "enum": [
+            "int4"
+          ]
+        }
+      }
+    },
+    {
+      "description": "`x: \"int4_eq\"` — HMAC equality.",
+      "type": "object",
+      "required": [
+        "c",
+        "hm",
+        "i",
+        "v",
+        "x"
+      ],
+      "properties": {
+        "c": {
+          "type": "string"
+        },
+        "hm": {
+          "type": "string"
+        },
+        "i": {
+          "$ref": "#/definitions/Identifier"
+        },
+        "v": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0.0
+        },
+        "x": {
+          "type": "string",
+          "enum": [
+            "int4_eq"
+          ]
+        }
+      }
+    },
+    {
+      "description": "`x: \"int4_ord\"` — equality + ORE-block range.",
+      "type": "object",
+      "required": [
+        "c",
+        "i",
+        "ob",
+        "v",
+        "x"
+      ],
+      "properties": {
+        "c": {
+          "type": "string"
+        },
+        "i": {
+          "$ref": "#/definitions/Identifier"
+        },
+        "ob": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "v": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0.0
+        },
+        "x": {
+          "type": "string",
+          "enum": [
+            "int4_ord"
+          ]
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "Identifier": {
+      "description": "Table + column identifier — wire shape `{\"t\": \"...\", \"c\": \"...\"}`.\n\nShared by every payload in both tiers.",
+      "type": "object",
+      "required": [
+        "c",
+        "t"
+      ],
+      "properties": {
+        "c": {
+          "description": "Column name.",
+          "type": "string"
+        },
+        "t": {
+          "description": "Table name.",
+          "type": "string"
+        }
+      }
+    }
+  }
+}
