@@ -17,79 +17,120 @@
 --! eql_v2_int4_ord_ore is the scheme-explicit ordered domain with the
 --! identical operator surface.
 
--- Operator declarations
+-- Operator declarations.
+--
+-- COMMUTATOR lets the planner normalise `$1 < col` to `col > $1`;
+-- NEGATOR drives `NOT (...)` simplification. These wrappers inline to
+-- the ORE-block composite operators before index matching, so the
+-- metadata is for plan-quality completeness, not index engagement.
 
 CREATE OPERATOR = (
   FUNCTION = eql_v2.eql_v2_int4_ord_eq,
   LEFTARG = eql_v2_int4_ord, RIGHTARG = eql_v2_int4_ord,
-  NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
+  COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 CREATE OPERATOR = (
   FUNCTION = eql_v2.eql_v2_int4_ord_eq,
   LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb,
-  NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
+  COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 CREATE OPERATOR = (
   FUNCTION = eql_v2.eql_v2_int4_ord_eq,
   LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord,
-  NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
+  COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v2.eql_v2_int4_ord_neq,
   LEFTARG = eql_v2_int4_ord, RIGHTARG = eql_v2_int4_ord,
-  NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
+  COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 CREATE OPERATOR <> (
   FUNCTION = eql_v2.eql_v2_int4_ord_neq,
   LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb,
-  NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
+  COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 CREATE OPERATOR <> (
   FUNCTION = eql_v2.eql_v2_int4_ord_neq,
   LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord,
-  NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
+  COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 
 CREATE OPERATOR < (
   FUNCTION = eql_v2.eql_v2_int4_ord_lt,
   LEFTARG = eql_v2_int4_ord, RIGHTARG = eql_v2_int4_ord,
+  COMMUTATOR = >, NEGATOR = >=,
   RESTRICT = scalarltsel, JOIN = scalarltjoinsel
 );
-CREATE OPERATOR < (FUNCTION = eql_v2.eql_v2_int4_ord_lt,
-  LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb);
-CREATE OPERATOR < (FUNCTION = eql_v2.eql_v2_int4_ord_lt,
-  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord);
+CREATE OPERATOR < (
+  FUNCTION = eql_v2.eql_v2_int4_ord_lt,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb,
+  COMMUTATOR = >, NEGATOR = >=,
+  RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+CREATE OPERATOR < (
+  FUNCTION = eql_v2.eql_v2_int4_ord_lt,
+  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord,
+  COMMUTATOR = >, NEGATOR = >=,
+  RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
 
 CREATE OPERATOR <= (
   FUNCTION = eql_v2.eql_v2_int4_ord_lte,
   LEFTARG = eql_v2_int4_ord, RIGHTARG = eql_v2_int4_ord,
-  RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+  COMMUTATOR = >=, NEGATOR = >,
+  RESTRICT = scalarlesel, JOIN = scalarlejoinsel
 );
-CREATE OPERATOR <= (FUNCTION = eql_v2.eql_v2_int4_ord_lte,
-  LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb);
-CREATE OPERATOR <= (FUNCTION = eql_v2.eql_v2_int4_ord_lte,
-  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord);
+CREATE OPERATOR <= (
+  FUNCTION = eql_v2.eql_v2_int4_ord_lte,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb,
+  COMMUTATOR = >=, NEGATOR = >,
+  RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+CREATE OPERATOR <= (
+  FUNCTION = eql_v2.eql_v2_int4_ord_lte,
+  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord,
+  COMMUTATOR = >=, NEGATOR = >,
+  RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
 
 CREATE OPERATOR > (
   FUNCTION = eql_v2.eql_v2_int4_ord_gt,
   LEFTARG = eql_v2_int4_ord, RIGHTARG = eql_v2_int4_ord,
+  COMMUTATOR = <, NEGATOR = <=,
   RESTRICT = scalargtsel, JOIN = scalargtjoinsel
 );
-CREATE OPERATOR > (FUNCTION = eql_v2.eql_v2_int4_ord_gt,
-  LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb);
-CREATE OPERATOR > (FUNCTION = eql_v2.eql_v2_int4_ord_gt,
-  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord);
+CREATE OPERATOR > (
+  FUNCTION = eql_v2.eql_v2_int4_ord_gt,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb,
+  COMMUTATOR = <, NEGATOR = <=,
+  RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+CREATE OPERATOR > (
+  FUNCTION = eql_v2.eql_v2_int4_ord_gt,
+  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord,
+  COMMUTATOR = <, NEGATOR = <=,
+  RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
 
 CREATE OPERATOR >= (
   FUNCTION = eql_v2.eql_v2_int4_ord_gte,
   LEFTARG = eql_v2_int4_ord, RIGHTARG = eql_v2_int4_ord,
-  RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+  COMMUTATOR = <=, NEGATOR = <,
+  RESTRICT = scalargesel, JOIN = scalargejoinsel
 );
-CREATE OPERATOR >= (FUNCTION = eql_v2.eql_v2_int4_ord_gte,
-  LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb);
-CREATE OPERATOR >= (FUNCTION = eql_v2.eql_v2_int4_ord_gte,
-  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord);
+CREATE OPERATOR >= (
+  FUNCTION = eql_v2.eql_v2_int4_ord_gte,
+  LEFTARG = eql_v2_int4_ord, RIGHTARG = jsonb,
+  COMMUTATOR = <=, NEGATOR = <,
+  RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+CREATE OPERATOR >= (
+  FUNCTION = eql_v2.eql_v2_int4_ord_gte,
+  LEFTARG = jsonb, RIGHTARG = eql_v2_int4_ord,
+  COMMUTATOR = <=, NEGATOR = <,
+  RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
 
 CREATE OPERATOR ~~ (FUNCTION = eql_v2.eql_v2_int4_ord_like,
   LEFTARG = eql_v2_int4_ord, RIGHTARG = eql_v2_int4_ord);

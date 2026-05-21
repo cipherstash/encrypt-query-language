@@ -38,31 +38,46 @@ DO $$
 BEGIN
   --! @brief Storage-only encrypted int4 domain (jsonb-backed). Every
   --!        operator is a blocker; carries ciphertext (`c`) only.
+  --!        A CHECK constraint requires the `v`, `i`, `c` payload keys.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
     WHERE typname = 'eql_v2_int4' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN public.eql_v2_int4 AS jsonb;
+    CREATE DOMAIN public.eql_v2_int4 AS jsonb
+      CHECK (
+        jsonb_typeof(VALUE) = 'object'
+        AND VALUE ? 'v' AND VALUE ? 'i' AND VALUE ? 'c'
+      );
   END IF;
 
   --! @brief Equality-only encrypted int4 domain (jsonb-backed).
   --!        Supports = and <> via HMAC-256; carries `c`, `hm`.
+  --!        A CHECK constraint requires the `v`, `i`, `c`, `hm` payload keys.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
     WHERE typname = 'eql_v2_int4_eq' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN public.eql_v2_int4_eq AS jsonb;
+    CREATE DOMAIN public.eql_v2_int4_eq AS jsonb
+      CHECK (
+        jsonb_typeof(VALUE) = 'object'
+        AND VALUE ? 'v' AND VALUE ? 'i' AND VALUE ? 'c' AND VALUE ? 'hm'
+      );
   END IF;
 
   --! @brief Scheme-explicit ordered encrypted int4 domain (jsonb-backed).
   --!        Supports = <> < <= > >= via the ORE-block term; carries
   --!        `c`, `ob`. Carries the eql_v2.ord_term extractor, the comparison
   --!        wrappers, the operator declarations, and the blockers.
+  --!        A CHECK constraint requires the `v`, `i`, `c`, `ob` payload keys.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
     WHERE typname = 'eql_v2_int4_ord_ore' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN public.eql_v2_int4_ord_ore AS jsonb;
+    CREATE DOMAIN public.eql_v2_int4_ord_ore AS jsonb
+      CHECK (
+        jsonb_typeof(VALUE) = 'object'
+        AND VALUE ? 'v' AND VALUE ? 'i' AND VALUE ? 'c' AND VALUE ? 'ob'
+      );
   END IF;
 
   --! @brief Ordered encrypted int4 domain — the recommended ordered
@@ -71,11 +86,16 @@ BEGIN
   --!        not transparently inherit the operator surface (spike §8).
   --!        Supports = <> < <= > >= via the ORE-block term; carries
   --!        `c`, `ob`.
+  --!        A CHECK constraint requires the `v`, `i`, `c`, `ob` payload keys.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
     WHERE typname = 'eql_v2_int4_ord' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN public.eql_v2_int4_ord AS jsonb;
+    CREATE DOMAIN public.eql_v2_int4_ord AS jsonb
+      CHECK (
+        jsonb_typeof(VALUE) = 'object'
+        AND VALUE ? 'v' AND VALUE ? 'i' AND VALUE ? 'c' AND VALUE ? 'ob'
+      );
   END IF;
 END
 $$;

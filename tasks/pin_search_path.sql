@@ -215,13 +215,12 @@ BEGIN
              OR p.proargtypes[1] = (SELECT t.oid FROM pg_catalog.pg_type t
                                      JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
                                      WHERE n.nspname = 'pg_catalog' AND t.typname = 'int4')))
-      -- XOR-aware equality term extractor on a ste_vec entry. Must
-      -- inline so `eql_v2.eq_term(col -> 'sel')` folds into the
-      -- calling query and matches a functional hash index built on
-      -- the same expression.
-      OR (p.pronargs = 1
-        AND p.proname = 'eq_term'
-        AND p.proargtypes[0] = entry_oid)
+      -- Equality-term extractors — `eq_term` on a ste_vec entry
+      -- (XOR-aware) and on eql_v2_int4_eq. Must inline so
+      -- `eql_v2.eq_term(col)` folds into the calling query and matches
+      -- a functional index built on the same expression. Name-only
+      -- match (any arity-1 overload), mirroring the `ord_term` clause.
+      OR (p.pronargs = 1 AND p.proname = 'eq_term')
       -- Type-safe `@>` / `<@` overloads with typed needles
       -- (`stevec_query`, `ste_vec_entry`). Inline to the existing
       -- `ste_vec_contains` machinery — must stay unpinned to engage

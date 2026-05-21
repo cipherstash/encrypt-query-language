@@ -137,3 +137,27 @@ async fn blocked_operators_raise_on_null_input(pool: PgPool) -> Result<()> {
     );
     Ok(())
 }
+
+#[sqlx::test]
+async fn int4_rejects_invalid_payloads(pool: PgPool) -> Result<()> {
+    // The eql_v2_int4 domain CHECK requires a jsonb object carrying the
+    // EQL envelope (v, i) and the ciphertext (c). A payload missing a
+    // required key, or a non-object, is rejected at the cast.
+    for (label, json) in [
+        ("missing c", r#"{"v":2,"i":{"t":"t","c":"c"}}"#),
+        ("missing v", r#"{"i":{"t":"t","c":"c"},"c":"x"}"#),
+        ("missing i", r#"{"v":2,"c":"x"}"#),
+        ("not an object", r#"["v","i","c"]"#),
+    ] {
+        let err = sqlx::query(&format!("SELECT '{json}'::jsonb::eql_v2_int4"))
+            .fetch_one(&pool)
+            .await
+            .expect_err(&format!("eql_v2_int4 must reject payload: {label}"))
+            .to_string();
+        assert!(
+            err.contains("violates check constraint"),
+            "{label}: expected a check-constraint violation, got: {err}"
+        );
+    }
+    Ok(())
+}

@@ -461,3 +461,199 @@ fn ordered_int4_domain_files_stay_in_sync() {
          only) below the file header; mirror every change into both files."
     );
 }
+
+#[sqlx::test]
+async fn ord_functional_index_serves_constant_on_left(pool: PgPool) -> Result<()> {
+    // The functional btree on eql_v2.ord_term(col) must engage when the
+    // literal is on the LEFT (`$1 < col`) — the commuted shape — for
+    // both the (domain, domain) and (jsonb, domain) operator forms.
+    // `$1 < col` resolves through COMMUTATOR to `col > $1` for index
+    // matching.
+    let mut tx = pool.begin().await?;
+    sqlx::query(
+        "CREATE TEMP TABLE ord_cl (plaintext integer, value eql_v2_int4_ord) ON COMMIT DROP",
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(
+        "INSERT INTO ord_cl(plaintext, value) \
+         SELECT plaintext, payload::eql_v2_int4_ord FROM encrypted_int4_plaintext",
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query("CREATE INDEX ord_cl_idx ON ord_cl USING btree (eql_v2.ord_term(value))")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("ANALYZE ord_cl").execute(&mut *tx).await?;
+    sqlx::query("SET LOCAL enable_seqscan = off")
+        .execute(&mut *tx)
+        .await?;
+
+    let pivot: String = sqlx::query_scalar(
+        "SELECT payload::text FROM encrypted_int4_plaintext WHERE plaintext = 10",
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    let lit = pivot.replace('\'', "''");
+
+    // Pivot 10 on the LEFT — the expected set is the commuted operator's
+    // ground truth (`10 < value` selects rows where value > 10).
+    let cases: &[(&str, Vec<i32>)] = &[
+        ("=", vec![10]),
+        ("<", vec![17, 25, 42, 50, 100, 250, 1000, 9999]),
+        ("<=", vec![10, 17, 25, 42, 50, 100, 250, 1000, 9999]),
+        (">", vec![-100, -1, 1, 2, 5]),
+        (">=", vec![-100, -1, 1, 2, 5, 10]),
+    ];
+    for (op, expected) in cases {
+        for rhs_cast in ["::eql_v2_int4_ord", ""] {
+            let predicate = format!("'{lit}'::jsonb{rhs_cast} {op} value");
+            let plan: Vec<String> =
+                sqlx::query_scalar(&format!("EXPLAIN SELECT * FROM ord_cl WHERE {predicate}"))
+                    .fetch_all(&mut *tx)
+                    .await?;
+            let plan_text = plan.join("\n");
+            assert!(
+                plan_text.contains("ord_cl_idx"),
+                "constant-on-left {op} must engage the functional btree; \
+                 predicate={predicate}\nplan:\n{plan_text}"
+            );
+
+            let mut ids: Vec<i32> =
+                sqlx::query_scalar(&format!("SELECT plaintext FROM ord_cl WHERE {predicate}"))
+                    .fetch_all(&mut *tx)
+                    .await?;
+            ids.sort();
+            let mut want = expected.clone();
+            want.sort();
+            assert_eq!(
+                ids, want,
+                "constant-on-left {op} must match commuted ground truth; \
+                 predicate={predicate}"
+            );
+        }
+    }
+
+    tx.commit().await?;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn ord_operators_declare_planner_metadata(pool: PgPool) -> Result<()> {
+    // The real comparison operators on the ordered int4 domains
+    // (eql_v2_int4_ord and eql_v2_int4_ord_ore) must declare COMMUTATOR,
+    // NEGATOR, and selectivity estimators (RESTRICT / JOIN) on all three
+    // arg-shapes, so the planner can normalise and cost commuted and
+    // negated predicates.
+    let rows: Vec<(String, String, String, bool, bool, bool, bool)> = sqlx::query_as(
+        r#"
+        SELECT o.oprname,
+               lt.typname AS lhs,
+               rt.typname AS rhs,
+               o.oprcom <> 0       AS has_commutator,
+               o.oprnegate <> 0    AS has_negator,
+               o.oprrest::oid <> 0 AS has_restrict,
+               o.oprjoin::oid <> 0 AS has_join
+        FROM pg_catalog.pg_operator o
+        JOIN pg_catalog.pg_type lt ON lt.oid = o.oprleft
+        JOIN pg_catalog.pg_type rt ON rt.oid = o.oprright
+        WHERE o.oprname IN ('=', '<>', '<', '<=', '>', '>=')
+          AND (lt.typname IN ('eql_v2_int4_ord', 'eql_v2_int4_ord_ore')
+            OR rt.typname IN ('eql_v2_int4_ord', 'eql_v2_int4_ord_ore'))
+        "#,
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    // 6 operators x 3 arg-shapes x 2 ordered domains = 36 rows.
+    assert_eq!(
+        rows.len(),
+        36,
+        "expected 6 operators x 3 arg-shapes x 2 ordered domains"
+    );
+    for (op, lhs, rhs, has_com, has_neg, has_rest, has_join) in &rows {
+        assert!(
+            has_com,
+            "operator {op}({lhs},{rhs}) must declare COMMUTATOR"
+        );
+        assert!(has_neg, "operator {op}({lhs},{rhs}) must declare NEGATOR");
+        assert!(has_rest, "operator {op}({lhs},{rhs}) must declare RESTRICT");
+        assert!(has_join, "operator {op}({lhs},{rhs}) must declare JOIN");
+    }
+    Ok(())
+}
+
+#[sqlx::test]
+async fn ord_functional_index_preferred_at_scale(pool: PgPool) -> Result<()> {
+    // The other EXPLAIN tests force `enable_seqscan = off`, proving the
+    // index is *usable*. This test proves the planner *prefers* it: at
+    // ~5000 rows with a highly selective `=` predicate, the functional
+    // btree must be chosen with seqscan left enabled.
+    let mut tx = pool.begin().await?;
+    sqlx::query("CREATE TEMP TABLE ord_scale (value eql_v2_int4_ord) ON COMMIT DROP")
+        .execute(&mut *tx)
+        .await?;
+
+    let filler: String = sqlx::query_scalar(
+        "SELECT payload::text FROM encrypted_int4_plaintext WHERE plaintext = 5",
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    let pivot: String = sqlx::query_scalar(
+        "SELECT payload::text FROM encrypted_int4_plaintext WHERE plaintext = 42",
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    sqlx::query(
+        "INSERT INTO ord_scale(value) \
+         SELECT $1::jsonb::eql_v2_int4_ord FROM generate_series(1, 5000)",
+    )
+    .bind(&filler)
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query("INSERT INTO ord_scale(value) VALUES ($1::jsonb::eql_v2_int4_ord)")
+        .bind(&pivot)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("CREATE INDEX ord_scale_idx ON ord_scale USING btree (eql_v2.ord_term(value))")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("ANALYZE ord_scale").execute(&mut *tx).await?;
+
+    let lit = pivot.replace('\'', "''");
+    let plan: Vec<String> = sqlx::query_scalar(&format!(
+        "EXPLAIN SELECT * FROM ord_scale WHERE value = '{lit}'::jsonb::eql_v2_int4_ord"
+    ))
+    .fetch_all(&mut *tx)
+    .await?;
+    let plan_text = plan.join("\n");
+    assert!(
+        plan_text.contains("ord_scale_idx"),
+        "with seqscan enabled the planner must prefer the eql_v2.ord_term \
+         btree for a selective = ; plan:\n{plan_text}"
+    );
+
+    tx.commit().await?;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn ord_rejects_payload_missing_required_keys(pool: PgPool) -> Result<()> {
+    // The eql_v2_int4_ord domain CHECK requires v, i, c, ob. A payload
+    // missing any required key is rejected at the cast.
+    for (label, json) in [
+        ("missing ob", r#"{"v":2,"i":{"t":"t","c":"c"},"c":"x"}"#),
+        ("missing c", r#"{"v":2,"i":{"t":"t","c":"c"},"ob":["aa"]}"#),
+    ] {
+        let err = sqlx::query(&format!("SELECT '{json}'::jsonb::eql_v2_int4_ord"))
+            .fetch_one(&pool)
+            .await
+            .expect_err(&format!("eql_v2_int4_ord must reject payload: {label}"))
+            .to_string();
+        assert!(
+            err.contains("violates check constraint"),
+            "{label}: expected a check-constraint violation, got: {err}"
+        );
+    }
+    Ok(())
+}

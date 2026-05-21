@@ -275,3 +275,210 @@ async fn eq_null_operand_yields_null(pool: PgPool) -> Result<()> {
     }
     Ok(())
 }
+
+#[sqlx::test]
+async fn eq_engages_btree_constant_on_left(pool: PgPool) -> Result<()> {
+    // The functional btree must engage when the literal is on the LEFT
+    // (`$1 = col`) as well as the right — the commuted shape ORMs and
+    // PostgREST emit. `=` is its own commutator.
+    let mut tx = pool.begin().await?;
+    setup_eq_table(&mut tx, &["aaa", "bbb", "ccc"]).await?;
+
+    sqlx::query(
+        "CREATE INDEX typed_int4_eq_cl_idx \
+         ON typed_int4_eq USING btree (eql_v2.eq_term(value))",
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query("ANALYZE typed_int4_eq")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("SET LOCAL enable_seqscan = off")
+        .execute(&mut *tx)
+        .await?;
+
+    let needle = payload("bbb");
+    for sql in [
+        format!(
+            "EXPLAIN SELECT * FROM typed_int4_eq \
+             WHERE '{needle}'::jsonb::eql_v2_int4_eq = value"
+        ),
+        format!("EXPLAIN SELECT * FROM typed_int4_eq WHERE '{needle}'::jsonb = value"),
+    ] {
+        let plan: Vec<String> = sqlx::query_scalar(&sql).fetch_all(&mut *tx).await?;
+        let plan_text = plan.join("\n");
+        assert!(
+            plan_text.contains("typed_int4_eq_cl_idx"),
+            "constant-on-left = must engage the eql_v2.eq_term btree; \
+             sql: {sql}\nplan:\n{plan_text}"
+        );
+    }
+
+    tx.commit().await?;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn eq_operators_declare_planner_metadata(pool: PgPool) -> Result<()> {
+    // The real = / <> operators on eql_v2_int4_eq must declare
+    // COMMUTATOR, NEGATOR, and selectivity estimators (RESTRICT / JOIN)
+    // on all three arg-shapes, so the planner can normalise and cost
+    // commuted and negated predicates.
+    let rows: Vec<(String, String, String, bool, bool, bool, bool)> = sqlx::query_as(
+        r#"
+        SELECT o.oprname,
+               lt.typname AS lhs,
+               rt.typname AS rhs,
+               o.oprcom <> 0       AS has_commutator,
+               o.oprnegate <> 0    AS has_negator,
+               o.oprrest::oid <> 0 AS has_restrict,
+               o.oprjoin::oid <> 0 AS has_join
+        FROM pg_catalog.pg_operator o
+        JOIN pg_catalog.pg_type lt ON lt.oid = o.oprleft
+        JOIN pg_catalog.pg_type rt ON rt.oid = o.oprright
+        WHERE o.oprname IN ('=', '<>')
+          AND (lt.typname = 'eql_v2_int4_eq' OR rt.typname = 'eql_v2_int4_eq')
+        "#,
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    assert_eq!(
+        rows.len(),
+        6,
+        "expected = and <> x 3 arg-shapes on eql_v2_int4_eq"
+    );
+    for (op, lhs, rhs, has_com, has_neg, has_rest, has_join) in &rows {
+        assert!(
+            has_com,
+            "operator {op}({lhs},{rhs}) must declare COMMUTATOR"
+        );
+        assert!(has_neg, "operator {op}({lhs},{rhs}) must declare NEGATOR");
+        assert!(has_rest, "operator {op}({lhs},{rhs}) must declare RESTRICT");
+        assert!(has_join, "operator {op}({lhs},{rhs}) must declare JOIN");
+    }
+    Ok(())
+}
+
+#[sqlx::test]
+async fn eq_wrappers_are_inlinable(pool: PgPool) -> Result<()> {
+    // The = / <> wrappers on eql_v2_int4_eq must be LANGUAGE sql,
+    // IMMUTABLE, and carry no pinned search_path, so the planner inlines
+    // `col = $1` to `eql_v2.eq_term(col) = eql_v2.eq_term($1)` and the
+    // functional index on eql_v2.eq_term(col) engages. A pinned
+    // proconfig or a plpgsql body would break the inline chain.
+    let rows: Vec<(String, String, String, Option<Vec<String>>)> = sqlx::query_as(
+        r#"
+        SELECT p.proname, l.lanname, p.provolatile::text, p.proconfig
+        FROM pg_catalog.pg_proc p
+        JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+        JOIN pg_catalog.pg_language  l ON l.oid = p.prolang
+        WHERE n.nspname = 'eql_v2'
+          AND p.proname IN ('eql_v2_int4_eq_eq', 'eql_v2_int4_eq_neq')
+        "#,
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    // 2 wrapper names x 3 arg-shapes = 6 rows.
+    assert_eq!(rows.len(), 6, "expected 6 equality wrapper overloads");
+    for (name, lang, volatile, config) in &rows {
+        assert_eq!(lang, "sql", "{name} must be LANGUAGE sql to inline");
+        assert_eq!(volatile, "i", "{name} must be IMMUTABLE");
+        assert!(
+            config.is_none(),
+            "{name} must have no pinned search_path (proconfig)"
+        );
+    }
+
+    // The eql_v2.eq_term index extractor must be IMMUTABLE — a
+    // functional index expression requires it.
+    let eq_term: Vec<(String, String, Option<Vec<String>>)> = sqlx::query_as(
+        r#"
+        SELECT l.lanname, p.provolatile::text, p.proconfig
+        FROM pg_catalog.pg_proc p
+        JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+        JOIN pg_catalog.pg_language  l ON l.oid = p.prolang
+        WHERE n.nspname = 'eql_v2' AND p.proname = 'eq_term'
+        "#,
+    )
+    .fetch_all(&pool)
+    .await?;
+    assert!(!eq_term.is_empty(), "eql_v2.eq_term must exist");
+    for (lang, volatile, config) in &eq_term {
+        assert_eq!(volatile, "i", "eql_v2.eq_term must be IMMUTABLE");
+        if lang == "sql" {
+            assert!(
+                config.is_none(),
+                "a LANGUAGE sql eql_v2.eq_term must have no pinned search_path"
+            );
+        }
+    }
+    Ok(())
+}
+
+#[sqlx::test]
+async fn eq_btree_index_preferred_at_scale(pool: PgPool) -> Result<()> {
+    // The other EXPLAIN tests force `enable_seqscan = off`, proving the
+    // index is *usable*. This test proves the planner *prefers* it: at
+    // ~5000 rows with a highly selective `=` predicate, the functional
+    // btree must be chosen with seqscan left enabled.
+    let mut tx = pool.begin().await?;
+    sqlx::query("CREATE TEMP TABLE eq_scale (value eql_v2_int4_eq) ON COMMIT DROP")
+        .execute(&mut *tx)
+        .await?;
+
+    let filler = payload("filler");
+    let pivot = payload("pivot");
+    sqlx::query(
+        "INSERT INTO eq_scale(value) \
+         SELECT $1::jsonb::eql_v2_int4_eq FROM generate_series(1, 5000)",
+    )
+    .bind(&filler)
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query("INSERT INTO eq_scale(value) VALUES ($1::jsonb::eql_v2_int4_eq)")
+        .bind(&pivot)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("CREATE INDEX eq_scale_idx ON eq_scale USING btree (eql_v2.eq_term(value))")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("ANALYZE eq_scale").execute(&mut *tx).await?;
+
+    let plan: Vec<String> = sqlx::query_scalar(&format!(
+        "EXPLAIN SELECT * FROM eq_scale WHERE value = '{pivot}'::jsonb::eql_v2_int4_eq"
+    ))
+    .fetch_all(&mut *tx)
+    .await?;
+    let plan_text = plan.join("\n");
+    assert!(
+        plan_text.contains("eq_scale_idx"),
+        "with seqscan enabled the planner must prefer the eql_v2.eq_term \
+         btree for a selective = ; plan:\n{plan_text}"
+    );
+
+    tx.commit().await?;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn eq_rejects_payload_missing_required_keys(pool: PgPool) -> Result<()> {
+    // The eql_v2_int4_eq domain CHECK requires v, i, c, hm. A payload
+    // missing any required key is rejected at the cast.
+    for (label, json) in [
+        ("missing hm", r#"{"v":2,"i":{"t":"t","c":"c"},"c":"x"}"#),
+        ("missing c", r#"{"v":2,"i":{"t":"t","c":"c"},"hm":"aa"}"#),
+    ] {
+        let err = sqlx::query(&format!("SELECT '{json}'::jsonb::eql_v2_int4_eq"))
+            .fetch_one(&pool)
+            .await
+            .expect_err(&format!("eql_v2_int4_eq must reject payload: {label}"))
+            .to_string();
+        assert!(
+            err.contains("violates check constraint"),
+            "{label}: expected a check-constraint violation, got: {err}"
+        );
+    }
+    Ok(())
+}

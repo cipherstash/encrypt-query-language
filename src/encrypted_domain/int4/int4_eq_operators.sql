@@ -10,38 +10,43 @@
 --! `<>` is supported but is a seq-scan (btree supports only equality).
 --! All other operators raise. Payload-term assumption: `c`, `hm`.
 
--- Operator declarations
+-- Operator declarations.
+--
+-- COMMUTATOR lets the planner normalise `$1 = col` to `col = $1`;
+-- NEGATOR drives `NOT (...)` simplification. These wrappers inline to
+-- the hmac-256 equality before index matching, so the metadata is for
+-- plan-quality completeness, not index engagement.
 
 CREATE OPERATOR = (
   FUNCTION = eql_v2.eql_v2_int4_eq_eq,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq,
-  NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
+  COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 CREATE OPERATOR = (
   FUNCTION = eql_v2.eql_v2_int4_eq_eq,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = jsonb,
-  NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
+  COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 CREATE OPERATOR = (
   FUNCTION = eql_v2.eql_v2_int4_eq_eq,
   LEFTARG = jsonb, RIGHTARG = eql_v2_int4_eq,
-  NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
+  COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v2.eql_v2_int4_eq_neq,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq,
-  NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
+  COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 CREATE OPERATOR <> (
   FUNCTION = eql_v2.eql_v2_int4_eq_neq,
   LEFTARG = eql_v2_int4_eq, RIGHTARG = jsonb,
-  NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
+  COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 CREATE OPERATOR <> (
   FUNCTION = eql_v2.eql_v2_int4_eq_neq,
   LEFTARG = jsonb, RIGHTARG = eql_v2_int4_eq,
-  NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
+  COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 
 CREATE OPERATOR < (
