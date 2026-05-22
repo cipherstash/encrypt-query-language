@@ -346,6 +346,66 @@ Once a plan looks right, repeat with `EXPLAIN ANALYZE` to measure actual timings
 
 ---
 
+## 10. Building indexes on large tables
+
+Everything above is about query time. Index *build* time is a separate axis, and on large encrypted tables it is the one that bites: a functional index that queries in a millisecond can still take hours — or fail to finish — to `CREATE`. Three things govern it.
+
+### `maintenance_work_mem`, not `work_mem`
+
+`CREATE INDEX` builds draw on `maintenance_work_mem`. The default is 64 MB — far too small for a multi-million-row build; the sort (btree) or bucket fill (hash) spills to disk early and the build goes I/O-bound. Raise it for the session before a large build:
+
+```sql
+SET maintenance_work_mem = '2GB';   -- per-build; only one build runs at a time
+CREATE INDEX … ;
+```
+
+It is the single highest-leverage knob for build time. On a managed deployment where you can't set it per-session, raise it cluster-wide for the maintenance window.
+
+### Index type decides whether the build scales
+
+The §1 recipes name a specific access method — `hash` for equality, `btree` for Block ORE, `GIN` for bloom filter and ste_vec. For *query* performance the choice is settled. For *build* performance at scale the methods are not equivalent:
+
+| Access method | Build algorithm | Scales past cache? | Parallel build? |
+| --- | --- | --- | --- |
+| **btree** | sort, then bulk-load the tree bottom-up — sequential writes | yes | yes (`max_parallel_maintenance_workers`) |
+| **GIN** | batched buffer build | yes | no |
+| **hash** | fill buckets keyed by hash value | **no** | no |
+
+A hash build places each entry in a bucket chosen by its hash, scattering consecutive heap rows to random buckets across the index. Once the index outgrows `shared_buffers` + OS cache the build becomes random-I/O-bound and the insert rate degrades monotonically — and it cannot be parallelised. A btree build sidesteps this entirely: it sorts every entry first, then writes the tree out sequentially, and spreads the work across parallel workers.
+
+**For equality functional indexes on large tables, prefer `btree` over `hash`.** `eql_v2.hmac_256(col)` — and the field-level `eql_v2.eq_term(col -> '<selector>')` — return small deterministic terms; a btree on them serves `=` exactly as well as a hash index, with no query-side cost, and the build goes from pathological to routine:
+
+```sql
+CREATE INDEX … USING btree (eql_v2.hmac_256(col));   -- large tables
+CREATE INDEX … USING hash  (eql_v2.hmac_256(col));   -- small / medium tables
+```
+
+Measured: a `hash` functional index on a 10M-row encrypted-JSONB column ran for 17 hours to 73% and then stalled, the insert rate decaying toward zero — it never completed. The `btree` equivalent, with `maintenance_work_mem` raised, builds without drama. Hash is not wrong — it is a fine choice up to mid-six-figure row counts — but its *build* does not scale, so reserve it for tables that won't grow into the millions.
+
+### The de-TOAST floor
+
+A functional index over a large encrypted column de-TOASTs the whole stored value once per row to evaluate the extractor — and an ste_vec JSONB document is large. This cost is unavoidable and identical across access methods: a GIN, btree, or hash build on the same column all pay it. It sets the build's *floor* rate; the memory and index-type choices above decide whether you stay near that floor or fall far below it. (There is no partial de-TOAST for JSONB — `col -> 'selector'` materialises the entire document.)
+
+### Storage matters more than it does for queries
+
+Index builds are I/O-heavy in a way steady-state queries are not. Containerised PostgreSQL on a virtualised filesystem — notably Docker Desktop on macOS — pays a steep penalty here: the random TOAST reads a functional-index build performs are the worst case for a VM I/O layer. For large builds, run PostgreSQL on native storage / fast NVMe. The same build can differ by more than an order of magnitude between a Docker-for-Mac volume and a native cluster on the same hardware.
+
+### Diagnosing a slow build
+
+`pg_stat_progress_create_index` is the build-time analogue of `EXPLAIN`. Query it from a second session while a `CREATE INDEX` runs:
+
+```sql
+SELECT phase, tuples_done, tuples_total,
+       round(100.0 * tuples_done / nullif(tuples_total, 0), 1) AS pct
+FROM pg_stat_progress_create_index;
+```
+
+Sample `tuples_done` a few times. A steady rate means the build is healthy and finishes in `(tuples_total − tuples_done) / rate`. A rate that **decays over time** is the cache/memory wall — raise `maintenance_work_mem`, and if it's a hash index, rebuild it as a btree.
+
+And, as always (§1): `ANALYZE` after every build. `CREATE INDEX` on an *expression* gathers no statistics on that expression — without an `ANALYZE` the planner has no histogram for `eql_v2.hmac_256(col)` and can misjudge the very index you just built.
+
+---
+
 ## See also
 
 - [Database Indexes for Encrypted Columns](./database-indexes.md) — index recipes and creation order.
