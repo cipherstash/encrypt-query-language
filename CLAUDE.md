@@ -61,6 +61,7 @@ This is the **Encrypt Query Language (EQL)** - a PostgreSQL extension for search
 - `src/operators/` - SQL operators for encrypted data comparisons
 - `src/config/` - Configuration management functions
 - `src/blake3/`, `src/hmac_256/`, `src/bloom_filter/`, `src/ore_*` - Index implementations
+- `src/encrypted_domain/` - Encrypted-domain type families (jsonb-backed PostgreSQL domains, one per operator/index capability)
 - `tasks/` - mise task scripts
 - `tests/sqlx/` - Rust/SQLx test framework (PostgreSQL 14-17 support)
 - `release/` - Generated SQL installation files
@@ -71,6 +72,20 @@ This is the **Encrypt Query Language (EQL)** - a PostgreSQL extension for search
 - **Index Terms**: Transient types for search operations (blake3, hmac_256, etc.)
 - **Operators**: Support comparisons between encrypted and plain JSONB data
 - **CipherStash Proxy**: Required for encryption/decryption operations
+
+### Encrypted-Domain Types
+
+`src/encrypted_domain/` holds **encrypted-domain type families** — jsonb-backed PostgreSQL domains, one domain per operator/index capability (`eql_v2_<T>` storage-only, `eql_v2_<T>_eq`, `eql_v2_<T>_ord`). `eql_v2_int4` (PR #225) is the reference implementation; `int8`, `bool`, `date`, `float`, `numeric`, `timestamp`, and `jsonb` follow the same pattern.
+
+**Adding a new encrypted-domain type: follow `docs/reference/encrypted-domain-implementation-spec.md`.** It is the consolidated spec, checklist, and per-section reference. The mechanics are fixed; per-type judgment calls (variant set, payload terms, ORE lossless vs lossy, native edge semantics) go in a short type-specific design note resolved *first*.
+
+Footguns the spec exists to prevent:
+
+- **Blockers must never be `STRICT`.** A `STRICT` blocker lets PostgreSQL skip the body and return `NULL` on a `NULL` argument, silently bypassing the "operator not supported" exception.
+- **No domain-over-domain** (`CREATE DOMAIN a AS b`). Operators resolve against the ultimate base type (`jsonb`), so a derived domain does not inherit the base domain's operator surface — blockers stop engaging.
+- **No operator class on a domain.** Index through a functional index on the extractor (`eq_term` / `ord_term`), whose return type already carries a default opclass.
+- **Inlinable functions** (extractors, comparison wrappers) need `LANGUAGE sql`, a single-statement `SELECT`, `IMMUTABLE`, and **no `SET` clause** — a pinned `search_path` disables inlining. Allowlist each one in `tasks/pin_search_path.sql` and `tasks/test/splinter.sh`.
+- **Build with `mise run clean && mise run build`** — a bare build can leave stale `release/*.sql`.
 
 ### Testing Infrastructure
 - Tests are written in Rust using SQLx, located in `tests/sqlx/`
