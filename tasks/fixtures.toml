@@ -35,16 +35,6 @@ description = "Stop CipherStash Proxy"
 dir = "{{config_root}}/tests"
 run = "docker compose -f docker-compose.proxy.yml down"
 
-["fixture:int:generate"]
-description = "Generate encrypted_int4 fixture (009) via Proxy"
-# Prerequisites:
-#   - mise run postgres:up   (existing Postgres on POSTGRES_PORT)
-#   - mise run reset         (ensures EQL is installed in that Postgres)
-#   - mise run proxy:up      (Proxy on localhost:6432)
-depends = ["build"]
-dir = "{{config_root}}"
-run = "tasks/fixtures/generate_encrypted_int4.sh"
-
 ["fixture:generate"]
 description = "Generate a SQLx fixture script via CipherStash Proxy"
 # Runs the gated generator for the named fixture. Writes
