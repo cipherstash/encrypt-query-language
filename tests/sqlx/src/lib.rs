@@ -8,6 +8,7 @@ pub mod assertions;
 pub mod helpers;
 pub mod index_types;
 pub mod selectors;
+pub mod fixtures;
 
 pub use assertions::QueryAssertion;
 pub use helpers::{
