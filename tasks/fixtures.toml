@@ -44,3 +44,21 @@ description = "Generate encrypted_int4 fixture (009) via Proxy"
 depends = ["build"]
 dir = "{{config_root}}"
 run = "tasks/fixtures/generate_encrypted_int4.sh"
+
+["fixture:generate"]
+description = "Generate a SQLx fixture script via CipherStash Proxy"
+# Runs the gated generator for the named fixture. Writes
+# tests/sqlx/fixtures/<fixture>.sql. Must run inside the crate — there is no
+# root Cargo.toml — matching test:schema / test:sqlx:watch.
+#
+# Prerequisites:
+#   - mise run postgres:up   (Postgres with EQL installed)
+#   - mise run proxy:up      (Proxy on localhost:6432)
+#
+# Usage: mise run fixture:generate eql_v2_int4
+dir = "{{config_root}}/tests/sqlx"
+run = """
+cargo test --features fixture-gen --lib \
+  fixtures::{{arg(name="fixture")}}::generate \
+  -- --ignored --exact --nocapture
+"""

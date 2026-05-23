@@ -15,3 +15,5 @@ pub mod spec;
 pub use spec::FixtureSpec;
 
 pub mod driver;
+
+pub mod eql_v2_int4;
