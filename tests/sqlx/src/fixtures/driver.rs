@@ -234,3 +234,126 @@ where
             .collect()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::PgPool;
+
+    /// A small int4 spec for driver tests. Three values keeps the test fast;
+    /// the driver's orchestration is independent of value count.
+    fn small_spec(name: &'static str) -> FixtureSpec<'static, i32> {
+        const VALUES: &[i32] = &[-1, 1, 42];
+        FixtureSpec::new(name)
+            .index("unique")
+            .index("ore")
+            .column_type("jsonb")
+            .values(VALUES)
+    }
+
+    #[sqlx::test]
+    async fn run_with_renders_committed_rows_and_drops_working_table(
+        pool: PgPool,
+    ) -> Result<()> {
+        let spec = small_spec("driver_test_a");
+        let working = spec.working_table();
+        let working_for_closure = working.clone();
+        let pool_for_closure = pool.clone();
+
+        let mut conn = pool.acquire().await?;
+
+        let lines = spec
+            .run_with(&mut *conn, move || async move {
+                // Working table should exist while the closure runs.
+                let mut c = pool_for_closure.acquire().await?;
+                let exists: Option<String> = sqlx::query_scalar(&format!(
+                    "SELECT to_regclass('public.{working_for_closure}')::text"
+                ))
+                .fetch_one(&mut *c)
+                .await?;
+                assert!(
+                    exists.is_some(),
+                    "working table should exist inside the closure"
+                );
+
+                for (i, value) in [-1i32, 1, 42].iter().enumerate() {
+                    let id = (i as i64) + 1;
+                    let insert = format!(
+                        "INSERT INTO public.{working_for_closure} \
+                         (id, plaintext, payload) \
+                         VALUES ($1, $2, ROW($3::jsonb)::public.eql_v2_encrypted)"
+                    );
+                    sqlx::query(&insert)
+                        .bind(id)
+                        .bind(*value)
+                        .bind(
+                            r#"{"v":2,"c":"x","i":{"t":"_fixture_driver_test_a","c":"payload"},"hm":"x","ob":["1"]}"#,
+                        )
+                        .execute(&mut *c)
+                        .await?;
+                }
+                Ok(())
+            })
+            .await?;
+
+        assert_eq!(lines.len(), 3, "one rendered INSERT per inserted row");
+        for line in &lines {
+            assert!(
+                line.starts_with(
+                    "INSERT INTO fixtures.driver_test_a (id, plaintext, payload) VALUES ("
+                ),
+                "rendered line should target the committed table: {line}"
+            );
+        }
+
+        let after: Option<String> = sqlx::query_scalar(&format!(
+            "SELECT to_regclass('public.{working}')::text"
+        ))
+        .fetch_one(&pool)
+        .await?;
+        assert!(
+            after.is_none(),
+            "working table should be dropped after run_with returns"
+        );
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn run_with_drops_working_table_on_inserter_error(
+        pool: PgPool,
+    ) -> Result<()> {
+        let spec = small_spec("driver_test_b");
+        let working = spec.working_table();
+
+        let mut conn = pool.acquire().await?;
+
+        let result = spec
+            .run_with(&mut *conn, || async {
+                anyhow::bail!("forced failure for test")
+            })
+            .await;
+
+        assert!(
+            result.is_err(),
+            "run_with should propagate the inserter error"
+        );
+        let err_msg = format!("{:#}", result.unwrap_err());
+        assert!(
+            err_msg.contains("forced failure for test"),
+            "error chain should contain the forced failure: {err_msg}"
+        );
+
+        let after: Option<String> = sqlx::query_scalar(&format!(
+            "SELECT to_regclass('public.{working}')::text"
+        ))
+        .fetch_one(&pool)
+        .await?;
+        assert!(
+            after.is_none(),
+            "working table should be dropped even on inserter error"
+        );
+
+        Ok(())
+    }
+}
