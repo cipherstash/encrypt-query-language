@@ -163,7 +163,7 @@ Empirically on the bench tables, with `WHERE value < $1 … LIMIT 10` (selectivi
 
 The natural-form Top-N scales linearly with the number of rows passing `WHERE` — at 1M with our selectivity that's ~500k inlined ORE-term comparisons in the Sort step, which is several seconds even when each comparison is cheap. **For ordered range queries on encrypted columns, write the `ORDER BY` in extractor form.** It's the same plan as (c) post-inlining; only the source-level syntax differs.
 
-The bench suite (`cipherstash/benches`) keeps only the hybrid scenario for this reason: (a) is the trap this section warns about, and (c) plans identically to (b) — measuring all three only inflates the run cost without surfacing a new behaviour.
+The bench suite (`cipherstash/benches`) keeps only the extractor-form scenario (`range_lt_ordered_10`) for this reason: (a) is the trap this section warns about, and (c) plans identically to (b) — measuring all three only inflates the run cost without surfacing a new behaviour.
 
 ### 4.1 Field-level `ORDER BY` (ste_vec elements)
 
@@ -197,6 +197,45 @@ The bare form (a) doesn't engage the index even when it's present. `eql_v2."->"`
 For the same reason the JSON bench suite (`cipherstash/benches`, `benches/json.rs`) does not include a `field_order/bare` scenario. The functional form is the documented recipe; measuring the bare form just demonstrates the cost of *not* following it, which is fixture noise rather than a meaningful EQL performance signal.
 
 **For ordered field-level queries on encrypted JSON, write `ORDER BY` against the extractor.** This is the only field-level shape that scales.
+
+### 4.2 Projection-pushdown: the `value::jsonb` cast trap
+
+There's a second, subtler way to lose the index-driven sort, even when you've already written `ORDER BY` correctly. When the `SELECT` projects the same column you `ORDER BY` and applies a cast to that projection — typically `value::jsonb` to coerce an `eql_v2_encrypted` column into something a generic driver can decode — PostgreSQL pushes the cast into the inner scan output and **uses the projected (post-cast) expression as the sort key**. `EXPLAIN` will show `Sort Key: ((value)::jsonb)` rather than `Sort Key: value`. That expression is syntactically distinct from anything you could index — neither a btree on `value` with the default `eql_v2.encrypted_operator_class` nor a functional btree on `eql_v2.ore_block_u64_8_256(value)` matches `(value)::jsonb`.
+
+```sql
+-- TRAP: cast in SELECT + bare column in ORDER BY
+-- Plan: Sort Key: ((value)::jsonb), no index-for-sort, falls back to
+--       SeqScan/Bitmap + Sort even though a perfectly good index exists.
+SELECT id, value::jsonb FROM events
+  WHERE encrypted_at < $1
+  ORDER BY encrypted_at LIMIT 10;
+```
+
+The fix is to keep the sort scope clear of the cast. Two options:
+
+```sql
+-- (i) Project the column raw — no cast for the planner to fold into the
+--     sort key. Requires a driver that can decode eql_v2_encrypted
+--     directly (e.g. via a custom sqlx Type).
+SELECT id, value FROM events
+  WHERE encrypted_at < $1
+  ORDER BY encrypted_at LIMIT 10;
+
+-- (ii) Wrap the sort in a subquery so the cast applies outside the LIMIT.
+--     The inner plan sees only `value`; the cast runs on the 10 emitted
+--     rows in the outer projection.
+SELECT id, value::jsonb FROM (
+  SELECT id, value FROM events
+  WHERE encrypted_at < $1
+  ORDER BY encrypted_at LIMIT 10
+) sub;
+```
+
+Important: this trap only fires when the sort key column is the same as the projected-cast column. The recommended **extractor form** of §4 (`ORDER BY eql_v2.ore_block_u64_8_256(value)`) is structurally distinct from `(value)::jsonb`, so projecting `value::jsonb` alongside is safe — the sort key matches the functional index either way and the cast just runs on the LIMIT'd rows.
+
+The bench suite at `cipherstash/benches` ships a custom `EqlV2Encrypted` sqlx type and projects `value` raw across every scenario for exactly this reason: a future scenario that adds `ORDER BY value` (or `ORDER BY (value -> 'sel')` at the field level) can't accidentally walk into the trap.
+
+(Why does PostgreSQL push the cast into the scan? It's a projection-pushdown optimisation: computing `value::jsonb` early narrows the rows fed into Sort/Hash/Materialize nodes — `1100 → 36` bytes per row in the bench's ORE-encoded `i32` case. That's normally a big win; the cost model just doesn't account for "preserving sort-key matchability against an indexed expression." The optimisation is right in expectation and wrong in this specific case.)
 
 ---
 
