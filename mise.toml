@@ -34,6 +34,11 @@ run = """
 
 [tasks."test:sqlx"]
 description = "Run SQLx tests with hybrid migration approach"
+# `build` produces release/cipherstash-encrypt.sql, which is then cp'd into
+# tests/sqlx/migrations/001_install_eql.sql below. Without this dep, a stale
+# release artifact silently ships an old EQL extension into the test DB and
+# regression-guard migrations (e.g. 003_install_ste_vec_data.sql) fail.
+depends = ["build"]
 dir = "{{config_root}}"
 run = """
 # Copy built SQL to SQLx migrations (EQL install is generated, not static)
