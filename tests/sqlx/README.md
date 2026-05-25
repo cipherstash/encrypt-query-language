@@ -70,7 +70,7 @@ cargo test -- --nocapture
 **encryptindex_tables.sql**: Tables for encryption workflow tests
 - Table: `users` with plaintext columns for encryption testing
 
-**like_data.sql**: Test data for LIKE operator tests
+**match_data.sql**: Test data for LIKE operator tests
 - 3 encrypted records with bloom filter indexes
 
 
