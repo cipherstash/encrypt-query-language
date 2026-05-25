@@ -14,6 +14,8 @@ pub mod spec;
 
 pub use spec::FixtureSpec;
 
+pub mod cipherstash;
+
 pub mod driver;
 
 pub mod eql_v2_int4;

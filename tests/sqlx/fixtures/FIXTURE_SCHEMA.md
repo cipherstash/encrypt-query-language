@@ -201,10 +201,11 @@ applies standalone.
 
 **Regenerated every test run.** `mise run test:sqlx` invokes the generator
 before `cargo test`, so a stale committed fixture cannot mask a payload-shape
-regression. The generator needs a live Postgres with EQL and a running
-CipherStash Proxy — `test:sqlx` brings the Proxy up automatically via
-`mise run proxy:up`. Do not hand-edit the generated file; it is overwritten in
-place on every run.
+regression. The generator encrypts in-process via `cipherstash-client`; it
+needs a live Postgres plus CipherStash workspace credentials
+(`CS_CLIENT_ACCESS_KEY` + `CS_WORKSPACE_CRN`, or the legacy
+`CS_CLIENT_ID`/`CS_CLIENT_KEY` pair) in the shell environment. Do not
+hand-edit the generated file; it is overwritten in place on every run.
 
 **Schema:** Table lives in the dedicated `fixtures` SQL schema (kept out of the
 `public` type/domain namespace so a downstream `public.eql_v2_int4` domain can
@@ -224,9 +225,10 @@ CREATE TABLE fixtures.eql_v2_int4 (
   — a negative boundary plus small/medium/large/extreme magnitudes.
 - `plaintext` is the **in-table oracle**: consuming tests filter
   `WHERE plaintext = N` directly, so no Rust value constant is shared.
-- Each `payload` is a Proxy-encrypted JSONB object carrying `c` (ciphertext),
-  `hm` (HMAC equality term), `ob` (ORE block ordering term), and an inert `i`
-  metadata object.
+- Each `payload` is a cipherstash-client-encrypted JSONB object carrying
+  `c` (ciphertext), `hm` (HMAC equality term), `ob` (ORE block ordering
+  term), an inert `i` metadata object, and the EQL v2 root discriminator
+  (`k = "ct"`, `v = 2`).
 
 **Used By:**
 - eql_v2_int4_fixture_tests.rs (structural verification)
