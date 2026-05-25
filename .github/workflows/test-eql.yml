@@ -64,6 +64,8 @@ jobs:
 
     env:
       POSTGRES_VERSION: ${{ matrix.postgres-version }}
+      CS_CLIENT_ACCESS_KEY: ${{ secrets.CS_CLIENT_ACCESS_KEY }}
+      CS_WORKSPACE_CRN: ${{ secrets.CS_WORKSPACE_CRN }}
 
     steps:
       - uses: actions/checkout@v6
@@ -124,6 +126,5 @@ jobs:
       - name: Run splinter
         run: |
           mise run --output prefix test:splinter --postgres ${POSTGRES_VERSION}
-
 
 
