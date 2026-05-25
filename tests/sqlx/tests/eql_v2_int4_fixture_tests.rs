@@ -93,7 +93,11 @@ async fn plaintext_oracle_supports_value_filtering(pool: PgPool) -> Result<()> {
         sqlx::query_scalar("SELECT id FROM fixtures.eql_v2_int4 WHERE plaintext = 42 ORDER BY id")
             .fetch_all(&pool)
             .await?;
-    assert_eq!(ids, vec![9], "expected exactly one row with plaintext = 42 at id 9");
+    assert_eq!(
+        ids,
+        vec![9],
+        "expected exactly one row with plaintext = 42 at id 9"
+    );
     Ok(())
 }
 
