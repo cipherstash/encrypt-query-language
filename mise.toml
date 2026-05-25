@@ -46,10 +46,11 @@ cd tests/sqlx
 sqlx migrate run
 
 # Regenerate fixtures every run — they are not committed (see .gitignore).
-# Requires Proxy on PROXY_PORT; brings it up if not already running.
+# Generator encrypts via cipherstash-client directly; CS_* credentials must
+# be present in the shell environment (CS_CLIENT_ACCESS_KEY +
+# CS_WORKSPACE_CRN, or the legacy CS_CLIENT_ID/CS_CLIENT_KEY pair).
 echo "Regenerating SQLx fixtures..."
 cd "{{config_root}}"
-mise run proxy:up
 mise run fixture:generate eql_v2_int4
 
 echo "Running Rust tests..."

@@ -6,8 +6,14 @@
 //! makes the EQL allowlist structural — a `T::CAST` is, by construction, a
 //! value EQL accepts. The trait is sealed so external crates cannot add
 //! impls that bypass this guarantee.
+//!
+//! `to_plaintext` lifts the value into the cipherstash-client
+//! `encryption::Plaintext` enum so the fixture generator can encrypt directly
+//! via `eql::encrypt_eql` (no Proxy round trip).
 
 use std::fmt;
+
+use cipherstash_client::encryption::Plaintext;
 
 /// The `cast_as` argument for `eql_v2.add_search_config`. The field is
 /// private so the allowlist is the set of `pub const`s below.
@@ -70,11 +76,21 @@ mod sealed {
 pub trait EqlPlaintext: sealed::Sealed {
     const CAST: Cast;
     const PLAINTEXT_SQL_TYPE: PlaintextSqlType;
+
+    /// Lift the Rust value into the cipherstash-client `Plaintext` enum the
+    /// EQL encryption pipeline consumes. The mapping is total — every
+    /// `EqlPlaintext` impl maps cleanly onto a `Plaintext::*(Some(_))`
+    /// variant.
+    fn to_plaintext(self) -> Plaintext;
 }
 
 impl EqlPlaintext for i32 {
     const CAST: Cast = Cast::INT;
     const PLAINTEXT_SQL_TYPE: PlaintextSqlType = PlaintextSqlType::INTEGER;
+
+    fn to_plaintext(self) -> Plaintext {
+        Plaintext::Int(Some(self))
+    }
 }
 
 #[cfg(test)]
@@ -92,5 +108,15 @@ mod tests {
             <i32 as EqlPlaintext>::PLAINTEXT_SQL_TYPE.as_str(),
             "integer"
         );
+    }
+
+    #[test]
+    fn i32_to_plaintext_wraps_in_int_variant() {
+        // The trait must lift the raw i32 into the EQL pipeline's Plaintext
+        // enum so the fixture driver can hand it to `eql::encrypt_eql`.
+        match (42_i32).to_plaintext() {
+            Plaintext::Int(Some(value)) => assert_eq!(value, 42),
+            other => panic!("expected Plaintext::Int(Some(42)), got {other:?}"),
+        }
     }
 }
