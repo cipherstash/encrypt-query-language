@@ -1,10 +1,11 @@
 //! `FixtureSpec::run()` — the generation driver.
 //!
-//! mise owns the containers; this owns the data. The driver assumes
-//! `mise run proxy:up` has started `cipherstash-proxy` and that the
-//! generation Postgres has EQL installed. Errors are `anyhow` with
-//! `.context(...)` — a generator is a developer tool; a clear crash beats a
-//! partial fixture.
+//! mise owns the containers; this owns the data. The driver opens a direct
+//! Postgres connection and encrypts each plaintext value via
+//! `cipherstash-client` (see the sibling `cipherstash` module) before
+//! inserting the result into a transient working table. Errors are `anyhow`
+//! with `.context(...)` — a generator is a developer tool; a clear crash
+//! beats a partial fixture.
 //!
 //! The `public._fixture_<name>` working table is transient plumbing: `.run()`
 //! creates it, encrypts into it, renders the committed rows from it, then
@@ -16,19 +17,14 @@
 //! `DROP TABLE IF EXISTS` reclaims that case.
 
 use std::path::PathBuf;
-use std::process::Command;
-use std::time::Duration;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use sqlx::postgres::PgConnectOptions;
 use sqlx::{ConnectOptions, Connection, PgConnection, Row};
 
+use super::cipherstash;
 use super::eql_plaintext::EqlPlaintext;
 use super::spec::FixtureSpec;
-
-/// `cipherstash-proxy` — the fixed container_name from
-/// `tests/docker-compose.proxy.yml`.
-const PROXY_CONTAINER: &str = "cipherstash-proxy";
 
 /// Bag of Rust-type bounds required of a fixture's plaintext value `T`.
 /// Collapses the long `where` clause on `impl FixtureSpec<'a, T>` to a single
@@ -55,25 +51,24 @@ impl<T> FixtureValue for T where
 }
 
 /// Driver connection options, parsed once from the environment at the start
-/// of `run`. `direct` is the unmediated Postgres connection (DDL +
-/// rendering); `proxy` is the Proxy-mediated connection (encrypted inserts).
+/// of `run`. Only the unmediated Postgres connection is needed: DDL,
+/// inserts, and the render step all run against it. Encryption happens in
+/// Rust (cipherstash-client), so there is no second connection.
 struct DriverConfig {
     direct: PgConnectOptions,
-    proxy: PgConnectOptions,
 }
 
 impl DriverConfig {
     /// Build connection options from env vars, defaulting to the
     /// `mise.toml` `[env]` values. Port parses are strict — a malformed
-    /// `POSTGRES_PORT` or `PROXY_PORT` surfaces as an `anyhow::Error` with
-    /// the offending value, matching the rest of the driver's error story.
+    /// `POSTGRES_PORT` surfaces as an `anyhow::Error` with the offending
+    /// value, matching the rest of the driver's error story.
     fn from_env() -> Result<Self> {
         let host = env_or("POSTGRES_HOST", "localhost");
         let user = env_or("POSTGRES_USER", "cipherstash");
         let password = env_or("POSTGRES_PASSWORD", "password");
         let database = env_or("POSTGRES_DB", "cipherstash");
         let port = parse_port_env("POSTGRES_PORT", 7432)?;
-        let proxy_port = parse_port_env("PROXY_PORT", 6432)?;
 
         let direct = PgConnectOptions::new()
             .host(&host)
@@ -82,10 +77,7 @@ impl DriverConfig {
             .password(&password)
             .database(&database);
 
-        // Proxy runs on the host at PROXY_PORT (default 6432); same credentials.
-        let proxy = direct.clone().port(proxy_port);
-
-        Ok(Self { direct, proxy })
+        Ok(Self { direct })
     }
 }
 
@@ -100,47 +92,6 @@ fn parse_port_env(key: &str, default: u16) -> Result<u16> {
             .with_context(|| format!("{key}={value:?} must be a valid u16")),
         Err(_) => Ok(default),
     }
-}
-
-/// Restart Proxy (so it reloads the new encrypt config) and poll until it
-/// accepts a connection. On timeout, dump `docker logs` and fail.
-async fn restart_proxy_and_wait(proxy_options: &PgConnectOptions) -> Result<()> {
-    let status = Command::new("docker")
-        .args(["restart", PROXY_CONTAINER])
-        .status()
-        .context("failed to spawn `docker restart`")?;
-    if !status.success() {
-        anyhow::bail!("`docker restart {PROXY_CONTAINER}` exited non-zero");
-    }
-
-    for _ in 0..60 {
-        if let Ok(mut conn) = proxy_options.clone().connect().await {
-            if sqlx::query("SELECT 1").execute(&mut conn).await.is_ok() {
-                let _ = conn.close().await;
-                return Ok(());
-            }
-        }
-        tokio::time::sleep(Duration::from_secs(1)).await;
-    }
-
-    // `docker logs` sends the container's stdout to our stdout and its stderr
-    // to our stderr; capture both so the diagnostic is non-empty regardless of
-    // which stream the Proxy logs to.
-    let logs = Command::new("docker")
-        .args(["logs", "--tail", "40", PROXY_CONTAINER])
-        .output()
-        .map(|o| {
-            format!(
-                "{}{}",
-                String::from_utf8_lossy(&o.stdout),
-                String::from_utf8_lossy(&o.stderr),
-            )
-        })
-        .unwrap_or_default();
-    Err(anyhow!(
-        "Proxy did not become ready within 60s after restart\n\
-         === {PROXY_CONTAINER} logs ===\n{logs}"
-    ))
 }
 
 /// Absolute path to `tests/sqlx/fixtures/<name>.sql`. Resolved from
@@ -161,7 +112,7 @@ where
     /// The production entry point. Parses the env-driven `DriverConfig`
     /// once, opens a direct Postgres connection, then delegates the
     /// schema + teardown orchestration to `run_with`, supplying
-    /// `insert_through_proxy` as the closure. After `run_with` returns the
+    /// `insert_direct` as the closure. After `run_with` returns the
     /// rendered INSERT lines, this method composes them with
     /// `fixture_script_preamble` and writes the committed script to disk.
     pub async fn run(&self) -> Result<()> {
@@ -174,10 +125,21 @@ where
             .await
             .context("connecting to Postgres (direct)")?;
 
+        // Second direct connection for the inserter closure. `run_with`
+        // borrows the first connection mutably for the duration of the
+        // pipeline, so the inserter must hold its own.
+        let mut inserter_conn = config
+            .direct
+            .clone()
+            .connect()
+            .await
+            .context("connecting to Postgres (direct inserter)")?;
+
         let lines = self
-            .run_with(&mut direct, || self.insert_through_proxy(&config.proxy))
+            .run_with(&mut direct, || self.insert_direct(&mut inserter_conn))
             .await?;
 
+        let _ = inserter_conn.close().await;
         let _ = direct.close().await;
 
         let mut script = self.fixture_script_preamble();
@@ -193,33 +155,34 @@ where
         Ok(())
     }
 
-    /// Restart Proxy so it picks up the new `add_search_config`, then open a
-    /// Proxy connection and insert each plaintext value into the working
-    /// table. Proxy intercepts each insert and writes the encrypted JSONB
-    /// composite into `payload`. The production insert step extracted from
-    /// `run`'s closure for skim-ability.
-    async fn insert_through_proxy(&self, proxy_options: &PgConnectOptions) -> Result<()> {
-        restart_proxy_and_wait(proxy_options).await?;
+    /// Encrypt each plaintext value via cipherstash-client and INSERT it
+    /// into the working table as plain JSONB. The committed
+    /// `ColumnConfig` is built once from the spec's indexes + cast — the
+    /// fixture name is fed as the table identifier so the resulting
+    /// payload's `i.t` field matches the working table, preserving the
+    /// shape Proxy used to emit.
+    async fn insert_direct(&self, direct: &mut PgConnection) -> Result<()> {
+        let config = cipherstash::column_config_for(self.indexes(), T::CAST)
+            .context("building ColumnConfig from FixtureSpec indexes")?;
 
-        let mut proxy = proxy_options
-            .clone()
-            .connect()
-            .await
-            .context("connecting to Proxy")?;
         let working = self.working_table();
         for (i, value) in self.values().iter().enumerate() {
             let id = (i as i64) + 1;
+            let payload =
+                cipherstash::encrypt_store(&working, "payload", *value, &config)
+                    .await
+                    .with_context(|| format!("encrypting value #{id}"))?;
+
             let insert =
-                format!("INSERT INTO {working} (id, plaintext, payload) VALUES ($1, $2, $3)");
+                format!("INSERT INTO public.{working} (id, plaintext, payload) VALUES ($1, $2, $3)");
             sqlx::query(&insert)
                 .bind(id)
                 .bind(*value)
-                .bind(*value)
-                .execute(&mut proxy)
+                .bind(sqlx::types::Json(payload))
+                .execute(&mut *direct)
                 .await
-                .with_context(|| format!("inserting value #{id} through Proxy"))?;
+                .with_context(|| format!("inserting value #{id}"))?;
         }
-        let _ = proxy.close().await;
         Ok(())
     }
 
@@ -239,10 +202,10 @@ where
     /// 6. Propagate failures in causal order: inserter error first
     ///    (root cause), then render, then drop.
     ///
-    /// `run()` calls this with `insert_through_proxy`. Tests call it with
-    /// closures that insert hand-crafted `eql_v2_encrypted` composite
-    /// literals directly (no Proxy required), or with closures that return
-    /// `Err` to exercise the teardown contract.
+    /// `run()` calls this with `insert_direct`. Tests call it with
+    /// closures that insert hand-crafted JSONB payloads directly (no
+    /// cipherstash-client required), or with closures that return `Err`
+    /// to exercise the teardown contract.
     ///
     /// Private by design: this is a test seam, not a public API. Other
     /// fixtures must go through `run`.
@@ -332,7 +295,7 @@ mod tests {
                     let insert = format!(
                         "INSERT INTO public.{working_for_closure} \
                          (id, plaintext, payload) \
-                         VALUES ($1, $2, ROW($3::jsonb)::public.eql_v2_encrypted)"
+                         VALUES ($1, $2, $3::jsonb)"
                     );
                     sqlx::query(&insert)
                         .bind(id)

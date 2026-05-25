@@ -1,49 +1,15 @@
-["proxy:up"]
-description = "Start CipherStash Proxy connected to existing Postgres"
-# Reuses the tests/docker-compose.yml Postgres on POSTGRES_PORT.
-# CS_* credentials are read from the shell environment (mise/direnv/profile).
-# Readiness is verified from the host (the proxy image lacks busybox nc, so
-# the container-internal healthcheck cannot be used). Dumps container logs
-# on failure so the user does not need a separate `docker logs` invocation.
-dir = "{{config_root}}/tests"
-run = """
-docker compose -f docker-compose.proxy.yml up -d
-echo "Waiting for proxy on localhost:6432..."
-export PGPASSWORD="${POSTGRES_PASSWORD:-password}"
-for i in $(seq 1 60); do
-  if psql -U "${POSTGRES_USER:-cipherstash}" -d "${POSTGRES_DB:-cipherstash}" \
-       -h localhost -p 6432 -c 'SELECT 1' >/dev/null 2>&1; then
-    echo "Proxy ready."
-    exit 0
-  fi
-  sleep 1
-done
-echo "Proxy did not become ready in 60s."
-echo
-echo '=== cipherstash-proxy logs ==='
-docker logs cipherstash-proxy 2>&1 | tail -40
-exit 1
-"""
-
-["proxy:logs"]
-description = "Tail CipherStash Proxy container logs"
-dir = "{{config_root}}/tests"
-run = "docker logs --tail 100 -f cipherstash-proxy"
-
-["proxy:down"]
-description = "Stop CipherStash Proxy"
-dir = "{{config_root}}/tests"
-run = "docker compose -f docker-compose.proxy.yml down"
-
 ["fixture:generate"]
-description = "Generate a SQLx fixture script via CipherStash Proxy"
+description = "Generate a SQLx fixture script via cipherstash-client"
 # Runs the gated generator for the named fixture. Writes
 # tests/sqlx/fixtures/<fixture>.sql. Must run inside the crate — there is no
 # root Cargo.toml — matching test:schema / test:sqlx:watch.
 #
 # Prerequisites:
 #   - mise run postgres:up   (Postgres with EQL installed)
-#   - mise run proxy:up      (Proxy on localhost:6432)
+#   - CS_* credentials in the shell environment (auto-loaded by
+#     cipherstash-client's AutoStrategy / EnvKeyProvider):
+#       CS_CLIENT_ACCESS_KEY + CS_WORKSPACE_CRN  (preferred), OR
+#       CS_CLIENT_ID + CS_CLIENT_KEY             (legacy pair)
 #
 # Usage: mise run fixture:generate eql_v2_int4
 dir = "{{config_root}}/tests/sqlx"
