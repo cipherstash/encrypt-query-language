@@ -22,3 +22,9 @@ default = []
 # it on push to main and on a nightly schedule. Run locally with:
 #   mise run test:bench
 bench = []
+# Opt-in to compiling the fixture generators. Without this feature the
+# `#[cfg(feature = "fixture-gen")]` generator tests do not exist, so
+# `cargo test` and CI never see them. Generators need a live Postgres and
+# CipherStash Proxy; run one with:
+#   mise run fixture:generate <name>
+fixture-gen = []

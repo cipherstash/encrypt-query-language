@@ -1,6 +1,0 @@
-# Generated reports (too large for git, regenerated on demand)
-reports/*
-!reports/.gitkeep
-
-# Local Proxy credentials
-.env

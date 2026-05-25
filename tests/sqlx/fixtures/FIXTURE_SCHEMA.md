@@ -7,13 +7,21 @@ This document defines the structure and dependencies of test fixtures used in th
 ```
 EQL Extension (via migrations)
   ├── encrypted_json.sql
-  ├── array_data.sql
+  │   └── array_data.sql (extends `encrypted` table from encrypted_json)
+  ├── match_data.sql
+  ├── aggregate_minmax_data.sql
+  ├── config_tables.sql
+  ├── constraint_tables.sql
+  ├── encryptindex_tables.sql
+  ├── drop_operator_classes.sql (Supabase-simulation; drops opclasses + ORE operators)
   ├── order_by_null_data.sql (depends on ore migration)
   ├── ore table (migration 002 — not a fixture)
   └── bench_data.sql + bench_setup.sql (depend on migration 007)
+
+eql_v2_int4.sql (no EQL dependency — generated, plain jsonb, not committed)
 ```
 
-All fixtures depend on the EQL extension being installed via SQLx migrations.
+All fixtures except the generated `eql_v2_int4.sql` depend on the EQL extension being installed via SQLx migrations.
 
 ---
 
@@ -179,6 +187,56 @@ CREATE TABLE bench (
 
 **Used By:**
 - bench_data_tests.rs (index-usage tests: `scripts("bench_data", "bench_setup")`)
+
+---
+
+## eql_v2_int4.sql
+
+**Purpose:** 14 encrypted integers for verifying encrypted-integer fixture
+structure. Unlike its neighbours, this is a **generated** fixture — produced by
+`mise run fixture:generate eql_v2_int4` (the Rust fixture framework in
+`tests/sqlx/src/fixtures/`) and **not committed** (see `.gitignore`). It is
+plain SQL with **no EQL dependency**: `payload` is `jsonb`, so the script
+applies standalone.
+
+**Regenerated every test run.** `mise run test:sqlx` invokes the generator
+before `cargo test`, so a stale committed fixture cannot mask a payload-shape
+regression. The generator needs a live Postgres with EQL and a running
+CipherStash Proxy — `test:sqlx` brings the Proxy up automatically via
+`mise run proxy:up`. Do not hand-edit the generated file; it is overwritten in
+place on every run.
+
+**Schema:** Table lives in the dedicated `fixtures` SQL schema (kept out of the
+`public` type/domain namespace so a downstream `public.eql_v2_int4` domain can
+coexist):
+```sql
+CREATE SCHEMA IF NOT EXISTS fixtures;
+CREATE TABLE fixtures.eql_v2_int4 (
+  id BIGINT PRIMARY KEY,
+  plaintext integer NOT NULL,
+  payload jsonb NOT NULL
+);
+```
+
+**Data:**
+- 14 rows, ids 1-14; `id = N` is the Nth generated value.
+- `plaintext` values: `-100, -1, 1, 2, 5, 10, 17, 25, 42, 50, 100, 250, 1000, 9999`
+  — a negative boundary plus small/medium/large/extreme magnitudes.
+- `plaintext` is the **in-table oracle**: consuming tests filter
+  `WHERE plaintext = N` directly, so no Rust value constant is shared.
+- Each `payload` is a Proxy-encrypted JSONB object carrying `c` (ciphertext),
+  `hm` (HMAC equality term), `ob` (ORE block ordering term), and an inert `i`
+  metadata object.
+
+**Used By:**
+- eql_v2_int4_fixture_tests.rs (structural verification)
+- (#225) the `eql_v2_int4` domain operator tests, via per-query `payload` casts
+
+**Opt-in:** Not a migration — a SQLx fixture script. Each consuming test opts
+in explicitly:
+```rust
+#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v2_int4")))]
+```
 
 ---
 

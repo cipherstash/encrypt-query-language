@@ -14,7 +14,7 @@
 "python" = "3.13"
 
 [task_config]
-includes = ["tasks", "tasks/postgres.toml", "tasks/bench.toml", "tasks/fixtures.toml"]
+includes = ["tasks", "tasks/postgres.toml", "tasks/fixtures.toml"]
 
 [env]
 POSTGRES_DB = "cipherstash"
@@ -45,7 +45,15 @@ echo "Running SQLx migrations..."
 cd tests/sqlx
 sqlx migrate run
 
+# Regenerate fixtures every run — they are not committed (see .gitignore).
+# Requires Proxy on PROXY_PORT; brings it up if not already running.
+echo "Regenerating SQLx fixtures..."
+cd "{{config_root}}"
+mise run proxy:up
+mise run fixture:generate eql_v2_int4
+
 echo "Running Rust tests..."
+cd tests/sqlx
 cargo test
 """
 

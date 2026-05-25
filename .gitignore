@@ -219,6 +219,10 @@ eql--*.sql
 # Generated SQLx migration (built from src/, never commit)
 tests/sqlx/migrations/001_install_eql.sql
 
+# Generated SQLx fixtures (regenerated via `mise run fixture:generate`,
+# never commit — stale fixtures hide bugs)
+tests/sqlx/fixtures/eql_v2_int4.sql
+
 # Large generated test data files
 tests/ste_vec_vast.sql
 tests/ste_vec_*M.sql*
@@ -229,6 +233,7 @@ tests/sqlx/target/
 # Work files (agent-generated, not for version control)
 .work/
 .serena/
+docs/superpowers/
 
 # Build variants - protect variant deps
 src/deps-protect.txt
