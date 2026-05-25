@@ -5,6 +5,7 @@
 use sqlx::PgPool;
 
 pub mod assertions;
+pub mod fixtures;
 pub mod helpers;
 pub mod index_types;
 pub mod selectors;

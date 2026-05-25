@@ -53,7 +53,7 @@ async fn create_encrypted_json_with_index(
     })
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("like_data")))]
+#[sqlx::test(fixtures(path = "../fixtures", scripts("match_data")))]
 async fn like_operator_matches_pattern(pool: PgPool) -> Result<()> {
     // Test: ~~ operator (LIKE) matches encrypted values
     // Tests both ~~ operator and LIKE operator (they're equivalent)
@@ -89,7 +89,7 @@ async fn like_operator_matches_pattern(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("like_data")))]
+#[sqlx::test(fixtures(path = "../fixtures", scripts("match_data")))]
 async fn like_operator_no_match(pool: PgPool) -> Result<()> {
     // Test: ~~ operator returns empty for non-matching pattern
     // This test verifies that LIKE operations correctly return no results
@@ -109,7 +109,7 @@ async fn like_operator_no_match(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("like_data")))]
+#[sqlx::test(fixtures(path = "../fixtures", scripts("match_data")))]
 async fn like_function_matches_pattern(pool: PgPool) -> Result<()> {
     // Test: eql_v2.like() function
     // Tests the eql_v2.like() function which wraps bloom filter matching
@@ -129,7 +129,7 @@ async fn like_function_matches_pattern(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("like_data")))]
+#[sqlx::test(fixtures(path = "../fixtures", scripts("match_data")))]
 async fn ilike_operator_case_insensitive_matches(pool: PgPool) -> Result<()> {
     // Test: ~~* operator (ILIKE) matches encrypted values (case-insensitive)
     // Tests both ~~* operator and ILIKE operator (they're equivalent)
