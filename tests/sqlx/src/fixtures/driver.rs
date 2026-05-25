@@ -155,26 +155,30 @@ where
         Ok(())
     }
 
-    /// Encrypt each plaintext value via cipherstash-client and INSERT it
-    /// into the working table as plain JSONB. The committed
-    /// `ColumnConfig` is built once from the spec's indexes + cast — the
-    /// fixture name is fed as the table identifier so the resulting
-    /// payload's `i.t` field matches the working table, preserving the
-    /// shape Proxy used to emit.
+    /// Encrypt every plaintext value via cipherstash-client in **one
+    /// batched call**, then INSERT each ciphertext into the working
+    /// table as plain JSONB. The committed `ColumnConfig` is built once
+    /// from the spec's indexes + cast — the fixture name is fed as the
+    /// table identifier so the resulting payload's `i.t` field matches
+    /// the working table, preserving the shape Proxy used to emit.
+    ///
+    /// Batching means one ZeroKMS round trip per fixture run regardless
+    /// of value count; the INSERT loop is per-row because the working
+    /// table is local Postgres and the per-row execute cost is in
+    /// microseconds.
     async fn insert_direct(&self, direct: &mut PgConnection) -> Result<()> {
         let config = cipherstash::column_config_for(self.indexes(), T::CAST)
             .context("building ColumnConfig from FixtureSpec indexes")?;
 
         let working = self.working_table();
-        for (i, value) in self.values().iter().enumerate() {
-            let id = (i as i64) + 1;
-            let payload =
-                cipherstash::encrypt_store(&working, "payload", *value, &config)
-                    .await
-                    .with_context(|| format!("encrypting value #{id}"))?;
+        let payloads = cipherstash::encrypt_store(&working, "payload", self.values(), &config)
+            .await
+            .context("encrypting fixture values")?;
 
-            let insert =
-                format!("INSERT INTO public.{working} (id, plaintext, payload) VALUES ($1, $2, $3)");
+        let insert =
+            format!("INSERT INTO public.{working} (id, plaintext, payload) VALUES ($1, $2, $3)");
+        for (i, (value, payload)) in self.values().iter().zip(payloads).enumerate() {
+            let id = (i as i64) + 1;
             sqlx::query(&insert)
                 .bind(id)
                 .bind(*value)

@@ -39,7 +39,8 @@ impl<'a, T> FixtureSpec<'a, T> {
     /// # Panics
     /// Panics if `name` is not a valid identifier.
     pub fn new(name: &str) -> Self {
-        let name = FixtureIdentifier::try_from(name).unwrap_or_else(|e| panic!("fixture name: {e}"));
+        let name =
+            FixtureIdentifier::try_from(name).unwrap_or_else(|e| panic!("fixture name: {e}"));
         let column_type = ColumnType::try_from("jsonb")
             .expect("default column type \"jsonb\" must be in the allowlist");
         Self {
@@ -55,7 +56,8 @@ impl<'a, T> FixtureSpec<'a, T> {
     /// # Panics
     /// Panics if `index_name` is not a valid identifier.
     pub fn with_index(mut self, index_name: &str) -> Self {
-        let id = FixtureIdentifier::try_from(index_name).unwrap_or_else(|e| panic!("index name: {e}"));
+        let id =
+            FixtureIdentifier::try_from(index_name).unwrap_or_else(|e| panic!("index name: {e}"));
         self.indexes.push(id);
         self
     }
