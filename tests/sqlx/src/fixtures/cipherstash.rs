@@ -362,9 +362,7 @@ mod live_tests {
     /// with non-null `v`, `c`, `hm`, `ob`, and `i` fields. Mirrors the
     /// per-key assertions in `eql_v2_int4_fixture_tests.rs`.
     fn assert_store_shape(payload: &Value) {
-        let obj = payload
-            .as_object()
-            .expect("payload must be a JSON object");
+        let obj = payload.as_object().expect("payload must be a JSON object");
         for key in ["v", "c", "hm", "ob", "i"] {
             assert!(
                 obj.get(key).is_some_and(|v| !v.is_null()),
