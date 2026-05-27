@@ -1,0 +1,9 @@
+# Encrypted-domain scalar manifest for int4.
+# The filename supplies the type token. Each domain lists the index terms
+# it carries; term capabilities are fixed in tasks/codegen/terms.py.
+
+[domain]
+int4 = []
+int4_eq = ["hm"]
+int4_ord_ore = ["ore"]
+int4_ord = ["ore"]

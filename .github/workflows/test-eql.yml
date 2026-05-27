@@ -52,10 +52,27 @@ jobs:
         run: |
           mise run test:schema
 
+  codegen:
+    name: "Encrypted-domain codegen"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: jdx/mise-action@v4
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+
+      - name: Run codegen generator + drift tests
+        run: |
+          mise run test:codegen
+
   test:
     name: "Test & Validate EQL (Postgres ${{ matrix.postgres-version }})"
     runs-on: ubuntu-latest-m
-    needs: schema
+    needs: [schema, codegen]
 
     strategy:
       fail-fast: false
@@ -64,8 +81,15 @@ jobs:
 
     env:
       POSTGRES_VERSION: ${{ matrix.postgres-version }}
+      # CS_* are required for `mise run test:sqlx` to regenerate the
+      # cipherstash-client-encrypted fixtures before the suite runs.
+      # This repository does not accept fork PRs, so the secrets-on-
+      # `pull_request` constraint that breaks the fork CI flow does not
+      # apply here — leave the env block unconditional.
       CS_CLIENT_ACCESS_KEY: ${{ secrets.CS_CLIENT_ACCESS_KEY }}
       CS_WORKSPACE_CRN: ${{ secrets.CS_WORKSPACE_CRN }}
+      CS_CLIENT_ID: ${{ secrets.CS_CLIENT_ID }}
+      CS_CLIENT_KEY: ${{ secrets.CS_CLIENT_KEY }}
 
     steps:
       - uses: actions/checkout@v6

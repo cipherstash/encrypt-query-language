@@ -1,0 +1,247 @@
+"""Top-level scalar encrypted-domain materializer."""
+
+import sys
+from collections.abc import Iterator
+from pathlib import Path
+
+from .operator_surface import (
+    BLOCKER_ONLY_OPERATORS,
+    PATH_OPERATORS,
+    SYMMETRIC_OPERATORS,
+    backing_function,
+)
+from .spec import DomainSpec, TypeSpec, load_spec
+from .templates import (
+    domain_name,
+    extractor_for_operator,
+    render_blocker_bool,
+    render_blocker_native,
+    render_blocker_path,
+    render_domain_block,
+    render_extractor,
+    render_operator,
+    render_wrapper,
+    supported_operators,
+)
+from .terms import TERM_CATALOG, Term, role_for_terms, term_requires
+from .writer import (
+    clean_generated_files,
+    ensure_generated_paths_writable,
+    write_generated_file,
+)
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _symmetric_shapes(dom: str) -> list[tuple[str, str]]:
+    return [(dom, dom), (dom, "jsonb"), ("jsonb", dom)]
+
+
+def _path_shapes(dom: str) -> list[tuple[str, str]]:
+    return [(dom, "text"), (dom, "integer"), ("jsonb", dom)]
+
+
+def _blocker_only_shapes(dom: str, op: str) -> list[tuple[str, str, str]]:
+    if op in {"?", "?|", "?&"}:
+        rhs = "text[]" if op in {"?|", "?&"} else "text"
+        return [(dom, rhs, "boolean")]
+    if op in {"@?", "@@"}:
+        return [(dom, "jsonpath", "boolean")]
+    if op == "#>":
+        return [(dom, "text[]", "jsonb")]
+    if op == "#>>":
+        return [(dom, "text[]", "text")]
+    if op == "-":
+        return [(dom, "text", "jsonb"), (dom, "integer", "jsonb"), (dom, "text[]", "jsonb")]
+    if op == "#-":
+        return [(dom, "text[]", "jsonb")]
+    if op == "||":
+        return [(dom, dom, "jsonb"), (dom, "jsonb", "jsonb"), ("jsonb", dom, "jsonb")]
+    raise ValueError(f"unhandled blocker-only operator: {op}")
+
+
+def _types_path(token: str) -> str:
+    return f"src/encrypted_domain/{token}/{token}_types.sql"
+
+
+def render_types_file(spec: TypeSpec) -> str:
+    """Body for <T>_types.sql: every domain in one idempotent DO block.
+
+    Iteration order follows the manifest's declared order — the TOML file is
+    the source of truth for emit order.
+    """
+    blocks = [render_domain_block(domain, spec.token) for domain in spec.domains]
+    return (
+        "-- REQUIRE: src/schema.sql\n\n"
+        f"--! @file encrypted_domain/{spec.token}/{spec.token}_types.sql\n"
+        f"--! @brief Encrypted-domain type family for {spec.token}.\n\n"
+        "DO $$\nBEGIN\n"
+        + "\n".join(blocks)
+        + "END\n$$;\n"
+    )
+
+
+def _functions_requires(spec: TypeSpec, domain: DomainSpec) -> list[str]:
+    reqs = [
+        "src/schema.sql",
+        _types_path(spec.token),
+        "src/encrypted_domain/functions.sql",
+    ]
+    for extra in term_requires(domain.terms):
+        if extra not in reqs:
+            reqs.append(extra)
+    return reqs
+
+
+def _extractor_terms(domain: DomainSpec) -> Iterator[Term]:
+    seen: set[str] = set()
+    for term_name in domain.terms:
+        term = TERM_CATALOG[term_name]
+        if term.extractor not in seen:
+            seen.add(term.extractor)
+            yield term
+
+
+def render_functions_file(spec: TypeSpec, domain: DomainSpec) -> str:
+    """Body for a domain's _functions.sql."""
+    dom = domain_name(domain.name)
+    supported = set(supported_operators(domain))
+    parts: list[str] = []
+
+    for term in _extractor_terms(domain):
+        parts.append(render_extractor(domain, term))
+
+    for op in SYMMETRIC_OPERATORS:
+        extractor = extractor_for_operator(domain, op)
+        for arg_a, arg_b in _symmetric_shapes(dom):
+            if op in supported and extractor is not None:
+                parts.append(render_wrapper(domain, op, arg_a, arg_b, extractor))
+            else:
+                parts.append(render_blocker_bool(domain, op, arg_a, arg_b))
+
+    for op in PATH_OPERATORS:
+        for arg_a, arg_b in _path_shapes(dom):
+            parts.append(render_blocker_path(domain, op, arg_a, arg_b))
+
+    for op in BLOCKER_ONLY_OPERATORS:
+        for arg_a, arg_b, returns in _blocker_only_shapes(dom, op):
+            parts.append(render_blocker_native(domain, op, arg_a, arg_b, returns))
+
+    requires = "\n".join(f"-- REQUIRE: {r}" for r in _functions_requires(spec, domain))
+    header = (
+        requires + "\n\n"
+        f"--! @file encrypted_domain/{spec.token}/{domain.name}_functions.sql\n"
+        f"--! @brief {role_for_terms(domain.terms)} domain of the {spec.token} "
+        f"encrypted-domain family — comparison/path functions.\n\n"
+    )
+    return header + "\n".join(parts)
+
+
+def render_operators_file(spec: TypeSpec, domain: DomainSpec) -> str:
+    """Body for a domain's _operators.sql: 44 CREATE OPERATOR statements."""
+    dom = domain_name(domain.name)
+    supported = set(supported_operators(domain))
+    parts: list[str] = []
+
+    for op in SYMMETRIC_OPERATORS:
+        backing = backing_function(op)
+        for leftarg, rightarg in _symmetric_shapes(dom):
+            parts.append(
+                render_operator(
+                    op, backing, leftarg, rightarg,
+                    supported=op in supported,
+                )
+            )
+    for op in PATH_OPERATORS:
+        backing = backing_function(op)
+        for leftarg, rightarg in _path_shapes(dom):
+            parts.append(
+                render_operator(op, backing, leftarg, rightarg, supported=False)
+            )
+    for op in BLOCKER_ONLY_OPERATORS:
+        backing = backing_function(op)
+        for leftarg, rightarg, _returns in _blocker_only_shapes(dom, op):
+            parts.append(
+                render_operator(op, backing, leftarg, rightarg, supported=False)
+            )
+
+    requires = (
+        "-- REQUIRE: src/schema.sql\n"
+        f"-- REQUIRE: {_types_path(spec.token)}\n"
+        f"-- REQUIRE: src/encrypted_domain/{spec.token}/"
+        f"{domain.name}_functions.sql\n"
+    )
+    header = (
+        requires + "\n"
+        f"--! @file encrypted_domain/{spec.token}/{domain.name}_operators.sql\n"
+        f"--! @brief {role_for_terms(domain.terms)} domain of the {spec.token} "
+        f"encrypted-domain family — operator declarations.\n\n"
+    )
+    return header + "\n".join(parts)
+
+
+def generate_type(spec: TypeSpec, out_dir: Path) -> list[Path]:
+    """Regenerate every generated file for a type."""
+    out_dir = Path(out_dir)
+    target_paths = [out_dir / f"{spec.token}_types.sql"]
+    for domain in spec.domains:
+        target_paths.append(out_dir / f"{domain.name}_functions.sql")
+        target_paths.append(out_dir / f"{domain.name}_operators.sql")
+    ensure_generated_paths_writable(target_paths)
+    clean_generated_files(out_dir)
+
+    written: list[Path] = []
+
+    types_path = out_dir / f"{spec.token}_types.sql"
+    write_generated_file(types_path, render_types_file(spec))
+    written.append(types_path)
+
+    for domain in spec.domains:
+        fn_path = out_dir / f"{domain.name}_functions.sql"
+        write_generated_file(fn_path, render_functions_file(spec, domain))
+        written.append(fn_path)
+
+        op_path = out_dir / f"{domain.name}_operators.sql"
+        write_generated_file(op_path, render_operators_file(spec, domain))
+        written.append(op_path)
+
+    return written
+
+
+DEFAULT_TYPES_DIR = Path(__file__).parent / "types"
+
+
+def main(
+    argv: list[str],
+    *,
+    types_dir: Path | None = None,
+    out_root: Path | None = None,
+) -> int:
+    """CLI entrypoint: generate <type> from tasks/codegen/types/<type>.toml."""
+    if len(argv) != 2:
+        print("Usage: generate.py <type>", file=sys.stderr)
+        return 2
+    token = argv[1]
+    types_dir = types_dir or DEFAULT_TYPES_DIR
+    out_root = out_root or REPO_ROOT
+    toml_path = types_dir / f"{token}.toml"
+    if not toml_path.is_file():
+        print(f"error: no manifest at {toml_path}", file=sys.stderr)
+        return 1
+    spec = load_spec(toml_path)
+    if spec.token != token:
+        print(
+            f"error: manifest token '{spec.token}' does not match '{token}'",
+            file=sys.stderr,
+        )
+        return 1
+    out_dir = out_root / "src" / "encrypted_domain" / token
+    written = generate_type(spec, out_dir)
+    for path in written:
+        print(f"generated {path.relative_to(out_root)}")
+    print(f"generated {len(written)} files for {token}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

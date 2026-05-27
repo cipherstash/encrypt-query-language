@@ -76,3 +76,12 @@ dir = "{{config_root}}/tests/sqlx"
 run = """
 cargo test --test payload_schema_tests
 """
+
+[tasks."test:codegen"]
+description = "Run the encrypted-domain codegen generator tests (no database required)"
+dir = "{{config_root}}"
+run = """
+# pytest is the only non-stdlib dependency; the install is a fast no-op once satisfied.
+mise exec python -- python -m pip install --quiet --disable-pip-version-check pytest
+mise exec python -- python -m pytest tasks/codegen -q
+"""

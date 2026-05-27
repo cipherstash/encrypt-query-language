@@ -9,6 +9,17 @@
 
 set -euo pipefail
 
+# Scope: this lint gates the EQL codebase, not the test scaffolding around it.
+# We only consider splinter findings whose metadata->>'schema' is in
+# EQL_OWNED_SCHEMAS. Findings in public.* (e.g. tests/test_helpers.sql
+# fixtures like assert_count, build_synthetic_ste_vec) and _sqlx_test.*
+# (the SQLx test-database isolation framework) are dropped before the
+# allowlist gate runs. EQL's generated `public.eql_v2_<T>` DOMAIN types
+# are not in scope under the current splinter rules (function_search_path_mutable
+# only fires on functions); add a separate scope rule here if splinter ever
+# grows a DOMAIN-level check that's relevant.
+EQL_OWNED_SCHEMAS="('eql_v2')"
+
 # Pinned to splinter main as of 2026-04-27. Bump intentionally.
 SPLINTER_SHA="55db5b1f28e58d816f7d9136eed87eabcd95868d"
 SPLINTER_URL="https://raw.githubusercontent.com/supabase/splinter/${SPLINTER_SHA}/splinter.sql"
@@ -81,12 +92,12 @@ function_search_path_mutable	eql_v2	jsonb_contained_by	function	GIN-inlining: sa
 function_search_path_mutable	eql_v2	ore_cllw	function	Consolidated ORE-CLLW extractor (U-006): inlinable SQL so the planner can fold `eql_v2.ore_cllw(col -> 'sel')` calls into the calling query. SET search_path would silently undo the inlining and prevent functional-index match through the extractor form. Two overloads: (jsonb), (eql_v2.ste_vec_entry).
 function_search_path_mutable	eql_v2	has_ore_cllw	function	Consolidated ORE-CLLW presence check (U-006): inlinable SQL counterpart to `eql_v2.ore_cllw`. Same rationale as `ore_cllw` — must stay unpinned to inline into the calling query. Two overloads: (jsonb), (eql_v2.ste_vec_entry).
 function_search_path_mutable	eql_v2	selector	function	STE-vec entry selector extractor (#219): typed (eql_v2.ste_vec_entry) overload, inlinable so the planner can fold `eql_v2.selector(col -> 'sel')` into the calling query.
-function_search_path_mutable	eql_v2	eq	function	Equality backing function for `eql_v2.ste_vec_entry × eql_v2.ste_vec_entry` (#219). Inlines to `hmac_256(a) = hmac_256(b)`; the `=` operator must reach the functional hash index on `eql_v2.hmac_256(col -> 'sel')` for bare-form field equality to engage Index Scan.
-function_search_path_mutable	eql_v2	neq	function	Inequality backing function for `eql_v2.ste_vec_entry`. Same rationale as `eq`.
-function_search_path_mutable	eql_v2	lt	function	Less-than backing function for `eql_v2.ste_vec_entry`. Inlines to `ore_cllw(a) < ore_cllw(b)`; must reach the functional btree opclass on `eql_v2.ore_cllw` for ordered field queries to engage Index Scan.
-function_search_path_mutable	eql_v2	lte	function	Less-than-or-equal backing function for `eql_v2.ste_vec_entry`. Same rationale as `lt`.
-function_search_path_mutable	eql_v2	gt	function	Greater-than backing function for `eql_v2.ste_vec_entry`. Same rationale as `lt`.
-function_search_path_mutable	eql_v2	gte	function	Greater-than-or-equal backing function for `eql_v2.ste_vec_entry`. Same rationale as `lt`.
+function_search_path_mutable	eql_v2	eq	function	Equality backing function for `eql_v2.ste_vec_entry × eql_v2.ste_vec_entry` (#219). Inlines to `hmac_256(a) = hmac_256(b)`; the `=` operator must reach the functional hash index on `eql_v2.hmac_256(col -> 'sel')` for bare-form field equality to engage Index Scan. Splinter matches by name only, so this row also covers the converged eql_v2.eq wrappers on eql_v2_int4_eq / _ord / _ord_ore (PR #225).
+function_search_path_mutable	eql_v2	neq	function	Inequality backing function for `eql_v2.ste_vec_entry`. Same rationale as `eq`. Also covers the converged eql_v2.neq wrappers on eql_v2_int4_eq / _ord / _ord_ore (PR #225).
+function_search_path_mutable	eql_v2	lt	function	Less-than backing function for `eql_v2.ste_vec_entry`. Inlines to `ore_cllw(a) < ore_cllw(b)`; must reach the functional btree opclass on `eql_v2.ore_cllw` for ordered field queries to engage Index Scan. Splinter matches by name only, so this row also covers the converged eql_v2.lt wrappers on eql_v2_int4_ord / _ord_ore (PR #225).
+function_search_path_mutable	eql_v2	lte	function	Less-than-or-equal backing function for `eql_v2.ste_vec_entry`. Same rationale as `lt`. Also covers the converged eql_v2.lte wrappers on eql_v2_int4_ord / _ord_ore (PR #225).
+function_search_path_mutable	eql_v2	gt	function	Greater-than backing function for `eql_v2.ste_vec_entry`. Same rationale as `lt`. Also covers the converged eql_v2.gt wrappers on eql_v2_int4_ord / _ord_ore (PR #225).
+function_search_path_mutable	eql_v2	gte	function	Greater-than-or-equal backing function for `eql_v2.ste_vec_entry`. Same rationale as `lt`. Also covers the converged eql_v2.gte wrappers on eql_v2_int4_ord / _ord_ore (PR #225).
 function_search_path_mutable	eql_v2	ore_cllw_eq	function	Inner comparator for the `eql_v2.ore_cllw` type's `=` operator (#221). The outer same-type operators back the btree opclass on `eql_v2.ore_cllw`; the planner only carries the inlined form through to functional-index match if this inner function is also inlinable (no SET, IMMUTABLE). Mirrors ore_block_u64_8_256_eq.
 function_search_path_mutable	eql_v2	ore_cllw_neq	function	Inner comparator for the `eql_v2.ore_cllw` type's `<>` operator (#221). Same rationale as `ore_cllw_eq`.
 function_search_path_mutable	eql_v2	ore_cllw_lt	function	Inner comparator for the `eql_v2.ore_cllw` type's `<` operator (#221). Same rationale as `ore_cllw_eq`.
@@ -94,10 +105,11 @@ function_search_path_mutable	eql_v2	ore_cllw_lte	function	Inner comparator for t
 function_search_path_mutable	eql_v2	ore_cllw_gt	function	Inner comparator for the `eql_v2.ore_cllw` type's `>` operator (#221). Same rationale as `ore_cllw_eq`.
 function_search_path_mutable	eql_v2	ore_cllw_gte	function	Inner comparator for the `eql_v2.ore_cllw` type's `>=` operator (#221). Same rationale as `ore_cllw_eq`.
 function_search_path_mutable	eql_v2	->	function	Typed sv-element selector lookup (U-007): inlinable SQL so the planner can fold `col -> '<sel>'` into the calling query, preserving functional-index match for the chained recipes `WHERE col -> 'sel' = $1::ste_vec_entry` (via eq_term) and `ORDER BY eql_v2.ore_cllw(col -> 'sel')`. Three overloads: (enc, text), (enc, enc), (enc, int).
-function_search_path_mutable	eql_v2	eq_term	function	XOR-aware equality term extractor on a ste_vec entry (U-007): coalesces hm and oc as bytea. Must inline so `eql_v2.eq_term(col -> 'sel')` folds into the calling query and matches a functional hash index built on the same expression — same precedent as ore_cllw / hmac_256 extractors on ste_vec_entry.
+function_search_path_mutable	eql_v2	eq_term	function	XOR-aware equality term extractor on a ste_vec entry (U-007): coalesces hm and oc as bytea. Must inline so `eql_v2.eq_term(col -> 'sel')` folds into the calling query and matches a functional hash index built on the same expression — same precedent as ore_cllw / hmac_256 extractors on ste_vec_entry. Also covers the eql_v2_int4_eq eq_term overload (PR #225).
 function_search_path_mutable	eql_v2	min	function	Aggregate (splinter labels these type=function): ALTER AGGREGATE has no SET configuration_parameter syntax, and ALTER ROUTINE/FUNCTION reject aggregates. The aggregate's SFUNC has a pinned search_path.
 function_search_path_mutable	eql_v2	max	function	Aggregate: same as min.
 function_search_path_mutable	eql_v2	grouped_value	function	Aggregate: same as min.
+function_search_path_mutable	eql_v2	ord_term	function	eql_v2_int4 ordered-variant index extractor: returns eql_v2.ore_block_u64_8_256 (carrying main DEFAULT btree opclass). Used inside the inlinable comparison wrappers and as the functional-index expression USING btree (eql_v2.ord_term(col)); must inline. SET search_path would disable SQL function inlining (see PostgreSQL inline_function). Covers both ord_term overloads (eql_v2_int4_ord_ore, eql_v2_int4_ord).
 ALLOW
 
 # Wrap splinter (a single bare SELECT expression) into a subquery we can
@@ -106,6 +118,7 @@ ALLOW
 splinter_body="$(tail -n +2 "$splinter_sql" | sed 's/;[[:space:]]*$//')"
 
 # Pull all findings with their metadata, then split into allowlisted vs not.
+# Scoped to EQL-owned schemas — see EQL_OWNED_SCHEMAS at the top of this file.
 "${PSQL[@]}" -At -F $'\t' --quiet <<SQL > "$all_findings_tsv"
 BEGIN;
 SET LOCAL search_path = '';
@@ -117,6 +130,7 @@ SELECT
   coalesce(metadata->>'name', ''),
   coalesce(metadata->>'type', '')
 FROM (${splinter_body}) splinter
+WHERE coalesce(metadata->>'schema', '') IN ${EQL_OWNED_SCHEMAS}
 ORDER BY level, name, detail;
 COMMIT;
 SQL
@@ -155,11 +169,14 @@ awk -F'\t' \
 # Touch in case awk didn't write either file (no findings at all).
 touch "$findings_tsv" "$allowlisted_tsv"
 
+# Summary scoped to the same schemas the gate considers, so the count line
+# matches what was actually checked.
 "${PSQL[@]}" -At -F $'\t' --quiet <<SQL > "$summary_by_rule"
 BEGIN;
 SET LOCAL search_path = '';
 SELECT level, name, count(*)
 FROM (${splinter_body}) splinter
+WHERE coalesce(metadata->>'schema', '') IN ${EQL_OWNED_SCHEMAS}
 GROUP BY level, name
 ORDER BY
   CASE level WHEN 'ERROR' THEN 0 WHEN 'WARN' THEN 1 WHEN 'INFO' THEN 2 ELSE 3 END,
@@ -175,7 +192,7 @@ warns="$(awk -F'\t' '$2 == "WARN"' "$findings_tsv" | wc -l | tr -d ' ')"
 infos="$(awk -F'\t' '$2 == "INFO"' "$findings_tsv" | wc -l | tr -d ' ')"
 
 echo
-echo "Splinter findings: raw=${raw_total} (allowlisted=${allowlisted_total}, unallowlisted=${total} — ERROR=${errors} WARN=${warns} INFO=${infos})"
+echo "Splinter findings: raw=${raw_total} (allowlisted=${allowlisted_total}, unmatched=${total} — ERROR=${errors} WARN=${warns} INFO=${infos})"
 echo
 printf 'LEVEL\tRULE\tCOUNT (raw)\n'
 cat "$summary_by_rule"
@@ -188,7 +205,7 @@ fi
 
 if [[ "$total" -gt 0 ]]; then
   echo
-  echo "Unallowlisted findings:"
+  echo "Findings not covered by the allowlist:"
   awk -F'\t' '{ printf "  - [%s] %s — %s\n", $2, $1, $3 }' "$findings_tsv"
 fi
 
@@ -198,11 +215,12 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
     echo "## Supabase splinter (database linter)"
     echo
     echo "Pinned to [\`splinter@${SPLINTER_SHA:0:12}\`](https://github.com/supabase/splinter/tree/${SPLINTER_SHA})."
+    echo "Scope: schemas owned by EQL (${EQL_OWNED_SCHEMAS//[\'()]/}). Findings outside these schemas are not reported."
     echo
-    echo "**${raw_total} raw findings** (allowlisted: ${allowlisted_total}, unallowlisted: ${total} — ERROR: ${errors}, WARN: ${warns}, INFO: ${infos})"
+    echo "**${raw_total} raw findings** (allowlisted: ${allowlisted_total}, unmatched: ${total} — ERROR: ${errors}, WARN: ${warns}, INFO: ${infos})"
     echo
     if [[ "$total" -gt 0 ]]; then
-      echo "### Unallowlisted findings (action required)"
+      echo "### Unmatched findings (action required)"
       echo
       echo "| Level | Rule | Detail |"
       echo "| --- | --- | --- |"
