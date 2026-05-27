@@ -352,12 +352,11 @@ async fn version_metadata_validation_on_insert(pool: PgPool) -> Result<()> {
     // Attempt to insert without version field - should fail. Bind the payload
     // rather than format!-interpolate it — JSONB strings can carry quotes
     // and would otherwise need hand-rolled escaping.
-    let err =
-        sqlx::query("INSERT INTO encrypted (e) VALUES ($1::jsonb::eql_v2_encrypted)")
-            .bind(&encrypted_without_version)
-            .execute(&pool)
-            .await
-            .expect_err("Insert should fail when version field is missing");
+    let err = sqlx::query("INSERT INTO encrypted (e) VALUES ($1::jsonb::eql_v2_encrypted)")
+        .bind(&encrypted_without_version)
+        .execute(&pool)
+        .await
+        .expect_err("Insert should fail when version field is missing");
 
     // `check_encrypted` RAISEs on invalid payloads, so the CHECK constraint
     // propagates the underlying SQLSTATE (P0001 raise_exception) rather than
@@ -373,12 +372,11 @@ async fn version_metadata_validation_on_insert(pool: PgPool) -> Result<()> {
             .await?;
 
     // Attempt to insert with invalid version - should fail
-    let err =
-        sqlx::query("INSERT INTO encrypted (e) VALUES ($1::jsonb::eql_v2_encrypted)")
-            .bind(&encrypted_invalid_version)
-            .execute(&pool)
-            .await
-            .expect_err("Insert should fail when version field is invalid (v=1)");
+    let err = sqlx::query("INSERT INTO encrypted (e) VALUES ($1::jsonb::eql_v2_encrypted)")
+        .bind(&encrypted_invalid_version)
+        .execute(&pool)
+        .await
+        .expect_err("Insert should fail when version field is invalid (v=1)");
 
     // `check_encrypted` RAISEs on invalid payloads, so the CHECK constraint
     // propagates the underlying SQLSTATE (P0001 raise_exception) rather than

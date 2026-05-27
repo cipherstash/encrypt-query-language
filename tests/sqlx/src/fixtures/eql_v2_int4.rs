@@ -14,7 +14,23 @@ use super::spec::FixtureSpec;
 /// exercise; the extra rows give range pivots and ordering tests
 /// meaningful boundary coverage.
 const VALUES: &[i32] = &[
-    i32::MIN, -100, -1, 0, 1, 2, 5, 10, 17, 25, 42, 50, 100, 250, 1000, 9999, i32::MAX,
+    i32::MIN,
+    -100,
+    -1,
+    0,
+    1,
+    2,
+    5,
+    10,
+    17,
+    25,
+    42,
+    50,
+    100,
+    250,
+    1000,
+    9999,
+    i32::MAX,
 ];
 
 /// The complete fixture definition. `IndexKind::Unique` drives `=` / `<>`

@@ -72,7 +72,23 @@ impl ScalarType for i32 {
     /// ORE block encoding has sign-bit edge cases that the previous list
     /// did not exercise.
     const FIXTURE_VALUES: &'static [i32] = &[
-        i32::MIN, -100, -1, 0, 1, 2, 5, 10, 17, 25, 42, 50, 100, 250, 1000, 9999, i32::MAX,
+        i32::MIN,
+        -100,
+        -1,
+        0,
+        1,
+        2,
+        5,
+        10,
+        17,
+        25,
+        42,
+        50,
+        100,
+        250,
+        1000,
+        9999,
+        i32::MAX,
     ];
 }
 
@@ -92,12 +108,8 @@ impl Variant {
     /// Every variant the family currently materialises, in declaration
     /// order. Tests iterate over this rather than hand-listing variants
     /// so adding a future variant requires no test edit.
-    pub const ALL: &'static [Variant] = &[
-        Variant::Storage,
-        Variant::Eq,
-        Variant::Ord,
-        Variant::OrdOre,
-    ];
+    pub const ALL: &'static [Variant] =
+        &[Variant::Storage, Variant::Eq, Variant::Ord, Variant::OrdOre];
 
     pub const fn suffix(self) -> &'static str {
         match self {
@@ -305,11 +317,7 @@ pub async fn assert_null(pool: &PgPool, sql: &str, binds: &[Option<&str>]) -> Re
 }
 
 /// EXPLAIN-based index-engagement assertion.
-pub async fn assert_plan_uses_index(
-    pool: &PgPool,
-    sql: &str,
-    index_name: &str,
-) -> Result<()> {
+pub async fn assert_plan_uses_index(pool: &PgPool, sql: &str, index_name: &str) -> Result<()> {
     let plan: Vec<String> = sqlx::query_scalar(&format!("EXPLAIN {sql}"))
         .fetch_all(pool)
         .await

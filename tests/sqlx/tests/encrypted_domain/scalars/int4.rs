@@ -58,9 +58,9 @@ mod twin_sync {
                 .join(rel);
             let text = std::fs::read_to_string(&path)
                 .unwrap_or_else(|e| panic!("failed to read {}: {}", path.display(), e));
-            let start = text.find(marker).unwrap_or_else(|| {
-                panic!("{} is missing the marker {:?}", path.display(), marker)
-            });
+            let start = text
+                .find(marker)
+                .unwrap_or_else(|| panic!("{} is missing the marker {:?}", path.display(), marker));
             text[start..]
                 .replace("eql_v2_int4_ord_ore", "ORDTYPE")
                 .replace("eql_v2_int4_ord", "ORDTYPE")

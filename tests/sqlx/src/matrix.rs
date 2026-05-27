@@ -1072,7 +1072,7 @@ macro_rules! __scalar_matrix_scale_case {
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!(
                     "INSERT INTO {table}(value) \
-                     SELECT $1::jsonb::{d} FROM generate_series(1, 5000)",
+SELECT $1::jsonb::{d} FROM generate_series(1, 5000)",
                     table = table, d = d,
                 )).bind(&filler_payload).execute(&mut *tx).await?;
                 sqlx::query(&format!(
@@ -1094,7 +1094,7 @@ macro_rules! __scalar_matrix_scale_case {
                 let plan_text = plan.join("\n");
                 anyhow::ensure!(plan_text.contains(index),
                     "with seqscan enabled the planner must prefer the {extractor} \
-                     {using} index for a selective = ; plan:\n{plan_text}",
+{using} index for a selective = ; plan:\n{plan_text}",
                     extractor = $extractor, using = $using,
                 );
 
@@ -1354,9 +1354,9 @@ macro_rules! __scalar_matrix_ore_injectivity_case {
                     <$scalar as $crate::scalar_domains::ScalarType>::fixture_table_name();
                 let collisions: i64 = sqlx::query_scalar(&format!(
                     "SELECT count(*) \
-                     FROM {fixture} a \
-                     JOIN {fixture} b ON a.id < b.id \
-                     WHERE a.payload::{d} = b.payload::{d}",
+FROM {fixture} a \
+JOIN {fixture} b ON a.id < b.id \
+WHERE a.payload::{d} = b.payload::{d}",
                     fixture = fixture_table, d = d,
                 )).fetch_one(&pool).await?;
                 anyhow::ensure!(collisions == 0,
@@ -1537,7 +1537,7 @@ macro_rules! __scalar_matrix_order_by_case {
                     <$scalar as $crate::scalar_domains::ScalarType>::fixture_table_name();
                 let sql = format!(
                     "SELECT plaintext FROM {fixture}{where_clause} \
-                     ORDER BY eql_v2.ord_term(payload::{d}) {dir}",
+ORDER BY eql_v2.ord_term(payload::{d}) {dir}",
                     fixture = fixture_table, where_clause = $where_clause,
                     d = &spec.sql_domain, dir = $direction,
                 );
@@ -1627,7 +1627,7 @@ macro_rules! __scalar_matrix_order_by_using_case {
                     .await
                     .expect_err(&format!(
                         "domain={} op={} SQL={} must reject ORDER BY USING (no opclass on \
-                         domain by design) but succeeded",
+domain by design) but succeeded",
                         &spec.sql_domain, $op, sql,
                     ));
                 // SQLSTATE 42809 (wrong_object_type) — "operator X is not a
@@ -1962,7 +1962,7 @@ macro_rules! __scalar_matrix_aggregate_group_by_case {
                 let mut tx = pool.begin().await?;
                 sqlx::query(&format!(
                     "CREATE TEMP TABLE group_test (group_key int, value {d}) \
-                     ON COMMIT DROP",
+ON COMMIT DROP",
                     d = d,
                 )).execute(&mut *tx).await?;
 
@@ -1971,7 +1971,7 @@ macro_rules! __scalar_matrix_aggregate_group_by_case {
                     let lit = <$scalar as ScalarType>::to_sql_literal(*v);
                     sqlx::query(&format!(
                         "INSERT INTO group_test(group_key, value) \
-                         SELECT 1, payload::{d} FROM {fixture} WHERE plaintext = {lit}",
+SELECT 1, payload::{d} FROM {fixture} WHERE plaintext = {lit}",
                         d = d, fixture = fixture, lit = lit,
                     )).execute(&mut *tx).await?;
                 }
@@ -1980,7 +1980,7 @@ macro_rules! __scalar_matrix_aggregate_group_by_case {
                     let lit = <$scalar as ScalarType>::to_sql_literal(*v);
                     sqlx::query(&format!(
                         "INSERT INTO group_test(group_key, value) \
-                         SELECT 2, payload::{d} FROM {fixture} WHERE plaintext = {lit}",
+SELECT 2, payload::{d} FROM {fixture} WHERE plaintext = {lit}",
                         d = d, fixture = fixture, lit = lit,
                     )).execute(&mut *tx).await?;
                 }
@@ -1997,7 +1997,7 @@ macro_rules! __scalar_matrix_aggregate_group_by_case {
 
                 let rows: Vec<(i32, String)> = sqlx::query_as(&format!(
                     "SELECT group_key, eql_v2.{agg}(value)::text \
-                     FROM group_test GROUP BY group_key ORDER BY group_key",
+FROM group_test GROUP BY group_key ORDER BY group_key",
                     agg = $agg_fn,
                 )).fetch_all(&mut *tx).await?;
 
@@ -2009,13 +2009,13 @@ macro_rules! __scalar_matrix_aggregate_group_by_case {
                 anyhow::ensure!(
                     rows[0].0 == 1 && rows[0].1 == g1_expected,
                     "group 1 eql_v2.{}({}) must yield payload for plaintext={:?}; \
-                     want ({}, {:?}), got {:?}",
+want ({}, {:?}), got {:?}",
                     $agg_fn, d, group1_extremum, 1, g1_expected, rows[0],
                 );
                 anyhow::ensure!(
                     rows[1].0 == 2 && rows[1].1 == g2_expected,
                     "group 2 eql_v2.{}({}) must yield payload for plaintext={:?}; \
-                     want ({}, {:?}), got {:?}",
+want ({}, {:?}), got {:?}",
                     $agg_fn, d, group2_extremum, 2, g2_expected, rows[1],
                 );
 
@@ -2139,7 +2139,7 @@ macro_rules! __scalar_matrix_aggregate_typecheck_case {
                 anyhow::ensure!(
                     code.as_deref() == Some("42883") || code.as_deref() == Some("42725"),
                     "expected SQLSTATE 42883 (undefined_function) or 42725 \
-                     (ambiguous_function) for eql_v2.{}({}), got {:?} (message: {})",
+(ambiguous_function) for eql_v2.{}({}), got {:?} (message: {})",
                     $agg_fn, d, code, db_err.message(),
                 );
                 sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;

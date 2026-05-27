@@ -64,7 +64,22 @@ fn expected_forward_default_is_numeric_ground_truth() {
     assert_eq!(
         <i32 as ScalarType>::expected_forward("<>", 42),
         vec![
-            i32::MIN, -100, -1, 0, 1, 2, 5, 10, 17, 25, 50, 100, 250, 1000, 9999, i32::MAX
+            i32::MIN,
+            -100,
+            -1,
+            0,
+            1,
+            2,
+            5,
+            10,
+            17,
+            25,
+            50,
+            100,
+            250,
+            1000,
+            9999,
+            i32::MAX
         ]
     );
 }
@@ -111,10 +126,7 @@ async fn placeholder_payload_satisfies_every_variant_check(pool: PgPool) -> Resu
             .fetch_one(&pool)
             .await
             .map_err(|e| {
-                anyhow::anyhow!(
-                    "PLACEHOLDER_PAYLOAD must cast to {}: {e}",
-                    spec.sql_domain
-                )
+                anyhow::anyhow!("PLACEHOLDER_PAYLOAD must cast to {}: {e}", spec.sql_domain)
             })?;
     }
     Ok(())
