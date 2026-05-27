@@ -3,6 +3,7 @@
 //! Tests UNIQUE, NOT NULL, CHECK constraints on encrypted columns
 
 use anyhow::Result;
+use eql_tests::assert_db_error;
 use sqlx::PgPool;
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("constraint_tables")))]
@@ -25,17 +26,15 @@ async fn unique_constraint_on_encrypted_column(pool: PgPool) -> Result<()> {
     assert_eq!(count, 1, "Should have 1 record after insert");
 
     // Attempt duplicate insert
-    let result = sqlx::query(
+    let err = sqlx::query(
         "INSERT INTO constrained (unique_field, not_null_field, check_field)
          VALUES (create_encrypted_json(1, 'hm'), create_encrypted_json(2, 'hm'), create_encrypted_json(2, 'hm'))"
     )
     .execute(&pool)
-    .await;
+    .await
+    .expect_err("UNIQUE constraint should prevent duplicate");
 
-    assert!(
-        result.is_err(),
-        "UNIQUE constraint should prevent duplicate"
-    );
+    assert_db_error(&err, "23505", Some("constrained_unique_field_key"));
 
     // Verify count unchanged after failed insert
     let count_after: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM constrained")
@@ -51,14 +50,17 @@ async fn unique_constraint_on_encrypted_column(pool: PgPool) -> Result<()> {
 async fn not_null_constraint_on_encrypted_column(pool: PgPool) -> Result<()> {
     // Test: NOT NULL constraint enforced (2 assertions)
 
-    let result = sqlx::query(
+    let err = sqlx::query(
         "INSERT INTO constrained (unique_field)
          VALUES (create_encrypted_json(2, 'hm'))",
     )
     .execute(&pool)
-    .await;
+    .await
+    .expect_err("NOT NULL constraint should prevent NULL");
 
-    assert!(result.is_err(), "NOT NULL constraint should prevent NULL");
+    // NOT NULL is a column attribute, not a named constraint — `constraint()`
+    // returns None, so only pin the SQLSTATE.
+    assert_db_error(&err, "23502", None);
 
     // Verify no records were inserted
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM constrained")
@@ -74,7 +76,7 @@ async fn not_null_constraint_on_encrypted_column(pool: PgPool) -> Result<()> {
 async fn check_constraint_on_encrypted_column(pool: PgPool) -> Result<()> {
     // Test: CHECK constraint enforced (2 assertions)
 
-    let result = sqlx::query(
+    let err = sqlx::query(
         "INSERT INTO constrained (unique_field, not_null_field, check_field)
          VALUES (
              create_encrypted_json(3, 'hm'),
@@ -83,9 +85,10 @@ async fn check_constraint_on_encrypted_column(pool: PgPool) -> Result<()> {
          )",
     )
     .execute(&pool)
-    .await;
+    .await
+    .expect_err("CHECK constraint should prevent NULL");
 
-    assert!(result.is_err(), "CHECK constraint should prevent NULL");
+    assert_db_error(&err, "23514", Some("constrained_check_field_check"));
 
     // Verify no records were inserted
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM constrained")
@@ -199,15 +202,13 @@ async fn foreign_key_constraint_with_encrypted(pool: PgPool) -> Result<()> {
     );
 
     // Attempt to insert child with different encrypted value (should fail FK check)
-    let different_insert_result =
+    let err =
         sqlx::query("INSERT INTO child (id, parent_id) VALUES (2, create_encrypted_json(2, 'hm'))")
             .execute(&pool)
-            .await;
+            .await
+            .expect_err("FK constraint should reject non-existent parent reference");
 
-    assert!(
-        different_insert_result.is_err(),
-        "FK constraint should reject non-existent parent reference"
-    );
+    assert_db_error(&err, "23503", Some("child_parent_id_fkey"));
 
     // Verify child count unchanged
     let final_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM child")
@@ -258,14 +259,17 @@ async fn add_encrypted_constraint_prevents_invalid_data(pool: PgPool) -> Result<
         .await?;
 
     // Now attempt to insert invalid data - should fail
-    let result = sqlx::query("INSERT INTO encrypted (e) VALUES ('{}'::jsonb::eql_v2_encrypted)")
+    let err = sqlx::query("INSERT INTO encrypted (e) VALUES ('{}'::jsonb::eql_v2_encrypted)")
         .execute(&pool)
-        .await;
+        .await
+        .expect_err("Constraint should prevent insert of invalid eql_v2_encrypted (empty JSONB)");
 
-    assert!(
-        result.is_err(),
-        "Constraint should prevent insert of invalid eql_v2_encrypted (empty JSONB)"
-    );
+    // `check_encrypted` RAISEs on invalid payloads, so the CHECK constraint
+    // propagates the underlying SQLSTATE (P0001 raise_exception) rather than
+    // 23514. The raise message identifies which check failed (missing v,
+    // invalid v, missing root c/sv, etc.) — that's the value over a bare
+    // `is_err()` check.
+    assert_db_error(&err, "P0001", None);
 
     // Verify count unchanged after failed insert
     let final_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM encrypted")
@@ -290,14 +294,17 @@ async fn remove_encrypted_constraint_allows_invalid_data(pool: PgPool) -> Result
         .await?;
 
     // Verify constraint is working - invalid data should be rejected
-    let result = sqlx::query("INSERT INTO encrypted (e) VALUES ('{}'::jsonb::eql_v2_encrypted)")
+    let err = sqlx::query("INSERT INTO encrypted (e) VALUES ('{}'::jsonb::eql_v2_encrypted)")
         .execute(&pool)
-        .await;
+        .await
+        .expect_err("Constraint should prevent insert of invalid eql_v2_encrypted");
 
-    assert!(
-        result.is_err(),
-        "Constraint should prevent insert of invalid eql_v2_encrypted"
-    );
+    // `check_encrypted` RAISEs on invalid payloads, so the CHECK constraint
+    // propagates the underlying SQLSTATE (P0001 raise_exception) rather than
+    // 23514. The raise message identifies which check failed (missing v,
+    // invalid v, missing root c/sv, etc.) — that's the value over a bare
+    // `is_err()` check.
+    assert_db_error(&err, "P0001", None);
 
     // Remove the constraint
     sqlx::query("SELECT eql_v2.remove_encrypted_constraint('encrypted', 'e')")
@@ -342,18 +349,22 @@ async fn version_metadata_validation_on_insert(pool: PgPool) -> Result<()> {
             .fetch_one(&pool)
             .await?;
 
-    // Attempt to insert without version field - should fail
-    let result = sqlx::query(&format!(
-        "INSERT INTO encrypted (e) VALUES ('{}'::jsonb::eql_v2_encrypted)",
-        encrypted_without_version
-    ))
-    .execute(&pool)
-    .await;
+    // Attempt to insert without version field - should fail. Bind the payload
+    // rather than format!-interpolate it — JSONB strings can carry quotes
+    // and would otherwise need hand-rolled escaping.
+    let err =
+        sqlx::query("INSERT INTO encrypted (e) VALUES ($1::jsonb::eql_v2_encrypted)")
+            .bind(&encrypted_without_version)
+            .execute(&pool)
+            .await
+            .expect_err("Insert should fail when version field is missing");
 
-    assert!(
-        result.is_err(),
-        "Insert should fail when version field is missing"
-    );
+    // `check_encrypted` RAISEs on invalid payloads, so the CHECK constraint
+    // propagates the underlying SQLSTATE (P0001 raise_exception) rather than
+    // 23514. The raise message identifies which check failed (missing v,
+    // invalid v, missing root c/sv, etc.) — that's the value over a bare
+    // `is_err()` check.
+    assert_db_error(&err, "P0001", None);
 
     // Create encrypted value with invalid version (v=1 instead of v=2)
     let encrypted_invalid_version: String =
@@ -362,17 +373,19 @@ async fn version_metadata_validation_on_insert(pool: PgPool) -> Result<()> {
             .await?;
 
     // Attempt to insert with invalid version - should fail
-    let result = sqlx::query(&format!(
-        "INSERT INTO encrypted (e) VALUES ('{}'::jsonb::eql_v2_encrypted)",
-        encrypted_invalid_version
-    ))
-    .execute(&pool)
-    .await;
+    let err =
+        sqlx::query("INSERT INTO encrypted (e) VALUES ($1::jsonb::eql_v2_encrypted)")
+            .bind(&encrypted_invalid_version)
+            .execute(&pool)
+            .await
+            .expect_err("Insert should fail when version field is invalid (v=1)");
 
-    assert!(
-        result.is_err(),
-        "Insert should fail when version field is invalid (v=1)"
-    );
+    // `check_encrypted` RAISEs on invalid payloads, so the CHECK constraint
+    // propagates the underlying SQLSTATE (P0001 raise_exception) rather than
+    // 23514. The raise message identifies which check failed (missing v,
+    // invalid v, missing root c/sv, etc.) — that's the value over a bare
+    // `is_err()` check.
+    assert_db_error(&err, "P0001", None);
 
     // Insert with valid version (v=2) should succeed
     sqlx::query("INSERT INTO encrypted (e) VALUES (create_encrypted_json(1))")
@@ -455,17 +468,17 @@ async fn check_encrypted_accepts_stevec_payload(pool: PgPool) -> Result<()> {
     );
 
     // Sanity-check the negative path: a root that carries neither `c` nor
-    // `sv` is still rejected with the updated error message.
-    let neither: Result<bool, _> = sqlx::query_scalar(
+    // `sv` is still rejected with the updated error message. Calling
+    // `check_encrypted` directly RAISEs (not a CHECK constraint), so
+    // SQLSTATE P0001 (raise_exception) rather than 23514.
+    let err = sqlx::query_scalar::<_, bool>(
         "SELECT eql_v2.check_encrypted('{\"v\": 2, \"i\": {\"t\": \"users\", \"c\": \"x\"}}'::jsonb)",
     )
     .fetch_one(&pool)
-    .await;
+    .await
+    .expect_err("payload with neither c nor sv at root must be rejected");
 
-    assert!(
-        neither.is_err(),
-        "payload with neither c nor sv at root must be rejected"
-    );
+    assert_db_error(&err, "P0001", None);
 
     Ok(())
 }
