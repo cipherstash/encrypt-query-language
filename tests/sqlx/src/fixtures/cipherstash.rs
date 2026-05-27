@@ -8,11 +8,12 @@
 //! existed only because the Proxy was the encryption oracle.
 //!
 //! `cipherstash-client` 0.35 exposes the same surface natively. This module
-//! owns the bootstrap — `cipher()` lazily builds a process-wide
-//! `ScopedCipher<AutoStrategy>` — and the per-value helper
-//! `encrypt_store()` that wraps `eql::encrypt_eql` and returns the resulting
-//! EQL ciphertext as a `serde_json::Value` ready to bind into a `jsonb`
-//! column.
+//! owns the bootstrap — `build_cipher()` builds a `ScopedCipher<AutoStrategy>` —
+//! and the batched helper `encrypt_store()` that wraps `eql::encrypt_eql` and
+//! returns the resulting EQL ciphertexts as `serde_json::Value`s ready to bind
+//! into a `jsonb` column. A fixture-generator process makes exactly one
+//! `encrypt_store` call, so the cipher is built once per process by
+//! construction — no static cache, no cross-runtime hazard.
 //!
 //! `column_config_for` is the bridge between the fixture spec's string-typed
 //! index names (`"unique"`, `"ore"`, …) and the typed `IndexType` enum
@@ -32,70 +33,38 @@ use cipherstash_client::schema::column::{Index, IndexType};
 use cipherstash_client::schema::{ColumnConfig, ColumnType};
 use cipherstash_client::zerokms::{EnvKeyProvider, ZeroKMSBuilder};
 use cipherstash_client::AutoStrategy;
-use tokio::sync::OnceCell;
 
 use super::eql_plaintext::{Cast, EqlPlaintext};
-use super::validation::FixtureIdentifier;
+use super::index_kind::IndexKind;
 
-/// Process-wide `ScopedCipher`. Built on first use and held for the lifetime
-/// of the test binary — `ScopedCipher` is documented as
-/// "initialise once per process, hold an `Arc` for the process lifetime"
-/// (see the upstream doc comment in `scoped_cipher.rs`). Re-initialising it
-/// per call discards the warm reqwest pool and the cached auth token, and
-/// makes the generator slower for no benefit.
-static CIPHER: OnceCell<Arc<ScopedCipher<AutoStrategy>>> = OnceCell::const_new();
+/// Build a fresh `ScopedCipher`. Performs `AutoStrategy::detect()`, the
+/// ZeroKMS handshake, and the keyset load on every call — fine because
+/// every fixture-generator process calls this exactly once via the
+/// single batched `encrypt_store`.
+async fn build_cipher() -> Result<Arc<ScopedCipher<AutoStrategy>>> {
+    let zerokms = ZeroKMSBuilder::auto()?
+        .with_key_provider(EnvKeyProvider)
+        .build()
+        .await?;
 
-/// Lazily initialise the process-wide cipher. On the first call this performs
-/// the AutoStrategy detection, the ZeroKMS handshake, and the keyset load —
-/// each subsequent call is an `Arc` clone.
-///
-/// Errors surface as `anyhow::Error` with `.context(...)` naming the step
-/// that failed (credential detection vs ZeroKMS connect vs keyset load).
-pub async fn cipher() -> Result<Arc<ScopedCipher<AutoStrategy>>> {
-    CIPHER
-        .get_or_try_init(|| async {
-            let zerokms = ZeroKMSBuilder::auto()
-                .context(
-                    "building ZeroKMSBuilder via AutoStrategy::detect() — check \
-                     CS_CLIENT_ACCESS_KEY or CS_WORKSPACE_CRN env vars",
-                )?
-                .with_key_provider(EnvKeyProvider)
-                .build()
-                .await
-                .context(
-                    "building ZeroKMS client — check CS_CLIENT_ID + CS_CLIENT_KEY \
-                     env vars (loaded by EnvKeyProvider)",
-                )?;
+    let cipher = ScopedCipher::init_default(Arc::new(zerokms)).await?;
 
-            let cipher = ScopedCipher::init_default(Arc::new(zerokms))
-                .await
-                .context("initialising ScopedCipher for the default keyset")?;
-
-            Ok::<_, anyhow::Error>(Arc::new(cipher))
-        })
-        .await
-        .cloned()
+    Ok(Arc::new(cipher))
 }
 
 /// Build a `ColumnConfig` from the fixture spec's index list + cast.
 ///
-/// The fixture spec uses EQL's string-typed index identifiers (`"unique"`,
-/// `"ore"`, `"match"`, `"ste_vec"`); cipherstash-config uses the typed
-/// `IndexType` enum. The mapping here is the single point of contact
-/// between the two — extending fixture coverage to a new index means one
-/// new arm here plus the corresponding `EqlPlaintext::CAST` constant.
-///
-/// Unknown identifiers raise immediately with the offending name in the
-/// error so a typo at spec-construction surfaces at run time (the
-/// `FixtureIdentifier` newtype only proves the string is a valid SQL
-/// identifier, not that it names a real index type).
-pub fn column_config_for(spec_indexes: &[FixtureIdentifier], cast: Cast) -> Result<ColumnConfig> {
+/// `IndexKind` is a typed enum — every value is a real EQL index by
+/// construction, so the mapping is total and `column_config_for` cannot
+/// fail on an unknown index name. Extending fixture coverage to a new
+/// index is one variant on `IndexKind` plus one arm here, both compile-
+/// time checked.
+pub fn column_config_for(spec_indexes: &[IndexKind], cast: Cast) -> Result<ColumnConfig> {
     let column_type = cast_to_column_type(cast)?;
     let mut config = ColumnConfig::build("payload").casts_as(column_type);
 
     for ix in spec_indexes {
-        let index_type = index_type_for(ix.as_str())?;
-        config = config.add_index(Index::new(index_type));
+        config = config.add_index(Index::new(index_type_for(*ix)));
     }
 
     Ok(config)
@@ -126,19 +95,17 @@ fn cast_to_column_type(cast: Cast) -> Result<ColumnType> {
     }
 }
 
-/// Map the fixture spec's string-typed index identifier onto a typed
-/// `IndexType`. Reuses the canonical constructors on `Index`
-/// (`Index::new_unique`, etc.) so the defaults stay in sync with whatever
-/// cipherstash-config considers the canonical shape for each index.
-fn index_type_for(name: &str) -> Result<IndexType> {
-    match name {
-        "unique" => Ok(Index::new_unique().index_type),
-        "ore" => Ok(IndexType::Ore),
-        "match" => Ok(Index::new_match().index_type),
-        other => Err(anyhow!(
-            "unknown EQL index identifier {other:?} — supported: \
-             unique, ore, match"
-        )),
+/// Map an `IndexKind` variant onto cipherstash-config's `IndexType`.
+/// Reuses the canonical constructors on `Index` (`Index::new_unique`,
+/// etc.) so the defaults stay in sync with whatever cipherstash-config
+/// considers the canonical shape for each index. Total — every variant
+/// has an arm; adding a new variant is a compile error here, which is
+/// the point.
+fn index_type_for(kind: IndexKind) -> IndexType {
+    match kind {
+        IndexKind::Unique => Index::new_unique().index_type,
+        IndexKind::Ore => IndexType::Ore,
+        IndexKind::Match => Index::new_match().index_type,
     }
 }
 
@@ -158,9 +125,10 @@ fn index_type_for(name: &str) -> Result<IndexType> {
 /// index filter — the same defaults Proxy uses for column-config-driven
 /// inserts.
 ///
-/// An empty `values` slice short-circuits before `cipher()` so a caller
-/// with nothing to encrypt does not pay the ZeroKMS bootstrap cost.
-pub async fn encrypt_store<T: EqlPlaintext + Copy>(
+/// An empty `values` slice short-circuits before `build_cipher()` so a
+/// caller with nothing to encrypt does not pay the ZeroKMS bootstrap
+/// cost.
+pub async fn encrypt_store<T: EqlPlaintext>(
     table: &str,
     column: &str,
     values: &[T],
@@ -170,7 +138,7 @@ pub async fn encrypt_store<T: EqlPlaintext + Copy>(
         return Ok(Vec::new());
     }
 
-    let cipher = cipher().await?;
+    let cipher = build_cipher().await?;
 
     // `Identifier::new` does two `String` allocations per call — cheap
     // enough that constructing per-iteration is preferred over assuming
@@ -228,13 +196,9 @@ pub async fn encrypt_store<T: EqlPlaintext + Copy>(
 mod tests {
     use super::*;
 
-    fn ident(s: &str) -> FixtureIdentifier {
-        FixtureIdentifier::try_from(s).unwrap()
-    }
-
     #[test]
     fn column_config_for_int_with_unique_and_ore_builds_a_two_index_config() {
-        let indexes = [ident("unique"), ident("ore")];
+        let indexes = [IndexKind::Unique, IndexKind::Ore];
         let config = column_config_for(&indexes, Cast::INT).unwrap();
 
         assert_eq!(config.name, "payload");
@@ -244,51 +208,34 @@ mod tests {
         assert!(config.indexes.iter().any(|i| i.is_ore()));
     }
 
-    #[test]
-    fn column_config_for_rejects_an_unknown_index_name() {
-        let indexes = [ident("bogus")];
-        let err = column_config_for(&indexes, Cast::INT).unwrap_err();
-        assert!(
-            format!("{err:#}").contains("unknown EQL index identifier"),
-            "error should name the unknown identifier: {err:#}"
-        );
-    }
+    // Note: the "unknown index name rejected at runtime" test is gone —
+    // `IndexKind` is a closed enum, so a typo is a compile error.
 
     #[test]
-    fn index_type_for_maps_known_names_to_their_canonical_index_type() {
-        // The named EQL index identifiers each round-trip into the
-        // `IndexType` cipherstash-config considers canonical for that
-        // name. Compared via the public `Index` surface (`is_unique`,
-        // `is_ore`, `is_match`) so the assertion does not depend on the
-        // shape of the non-exhaustive `IndexType` enum.
-        let unique = Index::new(index_type_for("unique").unwrap());
-        assert!(unique.is_unique(), "'unique' must map to the unique index");
+    fn index_type_for_maps_every_variant_to_its_canonical_index_type() {
+        // Each `IndexKind` variant round-trips into the `IndexType`
+        // cipherstash-config considers canonical for that name. Compared
+        // via the public `Index` surface (`is_unique`, `is_ore`,
+        // `is_match`) so the assertion does not depend on the shape of
+        // the non-exhaustive `IndexType` enum.
+        let unique = Index::new(index_type_for(IndexKind::Unique));
+        assert!(unique.is_unique(), "Unique must map to the unique index");
 
-        let ore = Index::new(index_type_for("ore").unwrap());
-        assert!(ore.is_ore(), "'ore' must map to the ORE index");
+        let ore = Index::new(index_type_for(IndexKind::Ore));
+        assert!(ore.is_ore(), "Ore must map to the ORE index");
 
-        let m = Index::new(index_type_for("match").unwrap());
-        assert!(m.is_match(), "'match' must map to the match (bloom) index");
-    }
-
-    #[test]
-    fn index_type_for_rejects_an_unknown_index_name() {
-        let err = index_type_for("bogus").unwrap_err();
-        let msg = format!("{err:#}");
-        assert!(
-            msg.contains("unknown EQL index identifier") && msg.contains("bogus"),
-            "error should name the offending identifier: {msg}"
-        );
+        let m = Index::new(index_type_for(IndexKind::Match));
+        assert!(m.is_match(), "Match must map to the match (bloom) index");
     }
 
     #[tokio::test]
-    async fn encrypt_store_with_empty_values_returns_an_empty_vec_without_calling_cipher() {
-        // Empty input short-circuits before `cipher()` so a caller with
-        // nothing to encrypt does not pay the ZeroKMS bootstrap cost.
+    async fn encrypt_store_with_empty_values_returns_an_empty_vec_without_building_cipher() {
+        // Empty input short-circuits before `build_cipher()` so a caller
+        // with nothing to encrypt does not pay the ZeroKMS bootstrap cost.
         // Running this test under `cargo test` (no `fixture-gen` feature,
-        // no CS_* env vars) proves the short-circuit: if `cipher()` were
-        // reached, the missing credentials would surface as an error.
-        let config = column_config_for(&[ident("unique")], Cast::INT).unwrap();
+        // no CS_* env vars) proves the short-circuit: if `build_cipher()`
+        // were reached, the missing credentials would surface as an error.
+        let config = column_config_for(&[IndexKind::Unique], Cast::INT).unwrap();
         let out = encrypt_store::<i32>("t", "c", &[], &config).await.unwrap();
         assert!(out.is_empty(), "empty input must yield empty output");
     }
@@ -326,20 +273,11 @@ mod tests {
 /// by `fixture-gen` so default `cargo test` runs do not require
 /// `CS_CLIENT_ACCESS_KEY` / `CS_WORKSPACE_CRN`. Each test is
 /// `#[ignore]` so it only runs under
-/// `cargo test --features fixture-gen -- --ignored --test-threads=1`,
-/// mirroring the `generate` test in `eql_v2_int4.rs`.
-///
-/// **Must run serially (`--test-threads=1`).** The process-wide
-/// `CIPHER` `OnceCell` caches a `ScopedCipher` whose reqwest connection
-/// pool is bound to the tokio runtime that initialised it. Each
-/// `#[tokio::test]` builds its own runtime, so under parallel
-/// execution the second test's calls go through a pool whose
-/// dispatcher has been dropped — failing with
-/// "SendRequest: dispatch task is gone". Production fixture runs (one
-/// `#[tokio::main]` runtime) are unaffected.
+/// `cargo test --features fixture-gen -- --ignored`, mirroring the
+/// `generate` test in `eql_v2_int4.rs`.
 ///
 /// These complement the structural fixture-tests in
-/// `tests/sqlx/tests/eql_v2_int4_fixture_tests.rs`: those assert over the
+/// the `__scalar_matrix_fixture_shape!` arm in `tests/sqlx/src/matrix.rs`: those assert over the
 /// regenerated SQL file end-to-end; these isolate the
 /// `encrypt_store` call so an SDK API drift surfaces here before the
 /// whole fixture pipeline fails.
@@ -348,19 +286,15 @@ mod live_tests {
     use super::*;
     use serde_json::Value;
 
-    fn ident(s: &str) -> FixtureIdentifier {
-        FixtureIdentifier::try_from(s).unwrap()
-    }
-
-    /// Config used by every live test — `unique` drives the `hm` term,
-    /// `ore` drives the `ob` term, so the returned payloads carry both.
+    /// Config used by every live test — `Unique` drives the `hm` term,
+    /// `Ore` drives the `ob` term, so the returned payloads carry both.
     fn int_config_with_hm_and_ob() -> ColumnConfig {
-        column_config_for(&[ident("unique"), ident("ore")], Cast::INT).unwrap()
+        column_config_for(&[IndexKind::Unique, IndexKind::Ore], Cast::INT).unwrap()
     }
 
     /// Assert the well-formed Store shape: the payload is a JSON object
     /// with non-null `v`, `c`, `hm`, `ob`, and `i` fields. Mirrors the
-    /// per-key assertions in `eql_v2_int4_fixture_tests.rs`.
+    /// per-key assertions in `tests/encrypted_domain/scalars/int4/fixture.rs`.
     fn assert_store_shape(payload: &Value) {
         let obj = payload.as_object().expect("payload must be a JSON object");
         for key in ["v", "c", "hm", "ob", "i"] {

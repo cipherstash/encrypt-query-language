@@ -8,9 +8,17 @@ pub mod assertions;
 pub mod fixtures;
 pub mod helpers;
 pub mod index_types;
+pub mod matrix;
+pub mod scalar_domains;
 pub mod selectors;
 
-pub use assertions::QueryAssertion;
+// Re-export `paste` under a stable path so the `scalar_domain_matrix!` macro
+// can refer to `$crate::paste::paste!` without requiring callers to depend on
+// the `paste` crate directly.
+#[doc(hidden)]
+pub use paste;
+
+pub use assertions::{assert_db_error, QueryAssertion};
 pub use helpers::{
     analyze_table, assert_no_seq_scan, assert_sequential_ids, assert_uses_index,
     assert_uses_seq_scan, create_jsonb_gin_index, ensure_pg_stat_statements, explain_analyze_avg,
@@ -19,8 +27,14 @@ pub use helpers::{
     get_ore_text_encrypted_as_jsonb, get_ste_vec_encrypted, get_ste_vec_encrypted_pair,
     get_ste_vec_selector_term, get_ste_vec_sv_element, get_ste_vec_term_by_id,
     read_pg_stat_statements, reset_pg_stat_statements, ExplainStats, PgStatEntry,
+    PLACEHOLDER_PAYLOAD,
 };
 pub use index_types as IndexTypes;
+pub use scalar_domains::{
+    assert_null, assert_plan_uses_index, assert_raises, assert_scalar_plaintexts, blocker_msg,
+    commute_op, fetch_fixture_payload, scalar_plaintexts_matching, sql_string_literal,
+    ScalarDomainSpec, ScalarType, Variant,
+};
 pub use selectors::Selectors;
 
 /// Reset pg_stat_user_functions tracking before tests

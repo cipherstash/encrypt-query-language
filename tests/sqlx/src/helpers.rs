@@ -6,6 +6,19 @@ use anyhow::{Context, Result};
 use serde_json;
 use sqlx::{PgPool, Row};
 
+/// Sentinel payload that satisfies every encrypted-domain CHECK in the
+/// `eql_v2_<T>{,_eq,_ord,_ord_ore}` family. Carries the EQL envelope
+/// (`v`, `i`, `c`) plus *both* term keys (`hm`, `ob`) so one bind value
+/// works for any variant's cast.
+///
+/// Used by blocker / null-result tests where the payload is bound but
+/// never decrypted — the blocker raises (or the STRICT wrapper
+/// short-circuits) before the term values matter. **Not a representative
+/// payload.** Real encrypted payloads come from the fixture
+/// (Proxy-encrypted).
+pub const PLACEHOLDER_PAYLOAD: &str =
+    r#"{"v":2,"i":{"t":"t","c":"c"},"c":"sample","hm":"sample","ob":["00"]}"#;
+
 /// Fetch ORE encrypted value from pre-seeded ore table
 ///
 /// The ore table is created by migration `002_install_ore_data.sql`
