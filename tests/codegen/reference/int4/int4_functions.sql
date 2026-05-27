@@ -3,7 +3,7 @@
 -- REQUIRE: src/encrypted_domain/functions.sql
 
 --! @file encrypted_domain/int4/int4_functions.sql
---! @brief storage domain of the int4 encrypted-domain family — comparison/path functions.
+--! @brief Storage-only domain of the int4 encrypted-domain family — comparison/path functions.
 
 --! @brief Blocker for = on eql_v2_int4.
 --! @param a eql_v2_int4

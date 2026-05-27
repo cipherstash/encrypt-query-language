@@ -4,7 +4,7 @@
 -- REQUIRE: src/hmac_256/functions.sql
 
 --! @file encrypted_domain/int4/int4_eq_functions.sql
---! @brief eq domain of the int4 encrypted-domain family — comparison/path functions.
+--! @brief Equality-only domain of the int4 encrypted-domain family — comparison/path functions.
 
 --! @brief Index extractor for the eql_v2_int4_eq variant.
 --! @param a eql_v2_int4_eq

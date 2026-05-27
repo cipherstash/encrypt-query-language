@@ -21,9 +21,10 @@ from .templates import (
     render_extractor,
     render_operator,
     render_wrapper,
+    role_phrase,
     supported_operators,
 )
-from .terms import TERM_CATALOG, Term, role_for_terms, term_requires
+from .terms import TERM_CATALOG, Term, term_requires
 from .writer import (
     clean_generated_files,
     ensure_generated_paths_writable,
@@ -131,7 +132,7 @@ def render_functions_file(spec: TypeSpec, domain: DomainSpec) -> str:
     header = (
         requires + "\n\n"
         f"--! @file encrypted_domain/{spec.token}/{domain.name}_functions.sql\n"
-        f"--! @brief {role_for_terms(domain.terms)} domain of the {spec.token} "
+        f"--! @brief {role_phrase(domain.terms)} domain of the {spec.token} "
         f"encrypted-domain family — comparison/path functions.\n\n"
     )
     return header + "\n".join(parts)
@@ -174,7 +175,7 @@ def render_operators_file(spec: TypeSpec, domain: DomainSpec) -> str:
     header = (
         requires + "\n"
         f"--! @file encrypted_domain/{spec.token}/{domain.name}_operators.sql\n"
-        f"--! @brief {role_for_terms(domain.terms)} domain of the {spec.token} "
+        f"--! @brief {role_phrase(domain.terms)} domain of the {spec.token} "
         f"encrypted-domain family — operator declarations.\n\n"
     )
     return header + "\n".join(parts)

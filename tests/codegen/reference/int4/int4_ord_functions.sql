@@ -5,7 +5,7 @@
 -- REQUIRE: src/ore_block_u64_8_256/operators.sql
 
 --! @file encrypted_domain/int4/int4_ord_functions.sql
---! @brief ord domain of the int4 encrypted-domain family — comparison/path functions.
+--! @brief Ordered domain of the int4 encrypted-domain family — comparison/path functions.
 
 --! @brief Index extractor for the eql_v2_int4_ord variant.
 --! @param a eql_v2_int4_ord

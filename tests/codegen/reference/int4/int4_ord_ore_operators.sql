@@ -3,7 +3,7 @@
 -- REQUIRE: src/encrypted_domain/int4/int4_ord_ore_functions.sql
 
 --! @file encrypted_domain/int4/int4_ord_ore_operators.sql
---! @brief ord domain of the int4 encrypted-domain family — operator declarations.
+--! @brief Ordered domain of the int4 encrypted-domain family — operator declarations.
 
 CREATE OPERATOR = (
   FUNCTION = eql_v2.eq,

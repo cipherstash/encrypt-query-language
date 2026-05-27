@@ -39,6 +39,14 @@ DOMAIN_ROLE_PHRASES: dict[str, str] = {
 }
 
 
+def role_phrase(terms: list[str]) -> str:
+    """Proper-cased prose label for a domain with these terms — the single
+    source of truth for role → human prose. Every renderer that wants to
+    describe a domain's role in @brief lines reaches for this, so a rename
+    in DOMAIN_ROLE_PHRASES propagates to every generated file."""
+    return DOMAIN_ROLE_PHRASES[role_for_terms(terms)]
+
+
 def domain_name(domain: str) -> str:
     """The public SQL domain type name."""
     return f"eql_v2_{domain}"
@@ -63,7 +71,7 @@ def render_domain_block(domain: DomainSpec, token: str) -> str:
     dom = domain_name(domain.name)
     keys = ENVELOPE_KEYS + [CIPHERTEXT_KEY] + term_json_keys(domain.terms)
     checks = "\n        AND ".join(f"VALUE ? '{key}'" for key in keys)
-    phrase = DOMAIN_ROLE_PHRASES[role_for_terms(domain.terms)]
+    phrase = role_phrase(domain.terms)
     return (
         f"  --! @brief {phrase} encrypted {token} domain.\n"
         f"  IF NOT EXISTS (\n"
