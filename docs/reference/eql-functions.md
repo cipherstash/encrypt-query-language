@@ -624,33 +624,33 @@ FROM products
 GROUP BY eql_v2.jsonb_path_query_first(encrypted_json, 'color_selector');
 ```
 
-### `eql_v2.min()`
+### `eql_v2.min()` / `eql_v2.max()` (per-domain)
 
-Returns the minimum encrypted value in a set (requires `ore` index for ordering).
+Returns the minimum or maximum encrypted value in a set on an ordered encrypted-domain column. Defined per ord-capable variant of every scalar type (`eql_v2_<T>_ord`, `eql_v2_<T>_ord_ore`); the input type selects the aggregate via PostgreSQL's overload resolution.
 
 ```sql
-eql_v2.min(eql_v2_encrypted) RETURNS eql_v2_encrypted
+-- int4 — generated for every ordered variant of every scalar type.
+eql_v2.min(eql_v2_int4_ord)      RETURNS eql_v2_int4_ord
+eql_v2.max(eql_v2_int4_ord)      RETURNS eql_v2_int4_ord
+eql_v2.min(eql_v2_int4_ord_ore)  RETURNS eql_v2_int4_ord_ore
+eql_v2.max(eql_v2_int4_ord_ore)  RETURNS eql_v2_int4_ord_ore
 ```
+
+Comparison routes through the variant's `<` / `>` operator, which uses the ORE block term — no decryption. The state function is `STRICT`, so `NULL` inputs are skipped and an all-`NULL` input set returns `NULL`.
 
 **Example:**
 ```sql
-SELECT eql_v2.min(encrypted_date) FROM events;
-SELECT eql_v2.min(encrypted_price) FROM products WHERE category = 'electronics';
+-- ord-capable column (e.g. price_encrypted typed as eql_v2_int4_ord)
+SELECT eql_v2.min(price_encrypted) FROM products;
+SELECT eql_v2.max(price_encrypted) FROM products WHERE category = 'electronics';
+
+-- Equivalent on a generic jsonb column (cast to the right domain)
+SELECT eql_v2.min(price_jsonb::eql_v2_int4_ord) FROM products;
 ```
 
-### `eql_v2.max()`
+`SUM` / `AVG` and other numeric aggregates are not supported on encrypted columns — decrypt at the application boundary. `MIN` / `MAX` only require comparator-revealing terms; arithmetic aggregates would require homomorphic encryption.
 
-Returns the maximum encrypted value in a set (requires `ore` index for ordering).
-
-```sql
-eql_v2.max(eql_v2_encrypted) RETURNS eql_v2_encrypted
-```
-
-**Example:**
-```sql
-SELECT eql_v2.max(encrypted_date) FROM events;
-SELECT eql_v2.max(encrypted_price) FROM products WHERE category = 'electronics';
-```
+**See also:** [`docs/reference/sql-support.md`](./sql-support.md) for the per-variant capability table.
 
 ---
 

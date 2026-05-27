@@ -7,6 +7,7 @@ import pytest
 from tasks.codegen.generate import (
     generate_type,
     main,
+    render_aggregates_file,
     render_functions_file,
     render_operators_file,
     render_types_file,
@@ -94,7 +95,13 @@ def test_generate_type_writes_expected_files(tmp_path):
     for domain in ("int4", "int4_eq", "int4_ord", "int4_ord_ore"):
         assert f"{domain}_functions.sql" in names
         assert f"{domain}_operators.sql" in names
-    assert len(written) == 9
+    # Aggregates only emitted for ord-capable variants — storage and eq skip.
+    assert "int4_aggregates.sql" not in names
+    assert "int4_eq_aggregates.sql" not in names
+    assert "int4_ord_aggregates.sql" in names
+    assert "int4_ord_ore_aggregates.sql" in names
+    # 1 types + 4 functions + 4 operators + 2 aggregates = 11
+    assert len(written) == 11
     for p in written:
         assert p.read_text().startswith(AUTO_GENERATED_HEADER)
 
@@ -202,8 +209,12 @@ def test_main_happy_path_writes_files(tmp_path, capsys):
     assert (out_dir / "int4_types.sql").is_file()
     assert (out_dir / "int4_eq_functions.sql").is_file()
     assert (out_dir / "int4_ord_operators.sql").is_file()
+    assert (out_dir / "int4_ord_aggregates.sql").is_file()
+    assert (out_dir / "int4_ord_ore_aggregates.sql").is_file()
+    assert not (out_dir / "int4_aggregates.sql").exists()
+    assert not (out_dir / "int4_eq_aggregates.sql").exists()
     stdout = capsys.readouterr().out
-    assert "generated 9 files for int4" in stdout
+    assert "generated 11 files for int4" in stdout
 
 
 def test_ordered_files_are_byte_identical_modulo_typename(tmp_path):
@@ -211,7 +222,7 @@ def test_ordered_files_are_byte_identical_modulo_typename(tmp_path):
     ord_domain = next(d for d in spec.domains if d.name == "int4_ord")
     ore_domain = next(d for d in spec.domains if d.name == "int4_ord_ore")
 
-    for renderer in (render_functions_file, render_operators_file):
+    for renderer in (render_functions_file, render_operators_file, render_aggregates_file):
         ord_sql = renderer(spec, ord_domain)
         ore_sql = renderer(spec, ore_domain)
         normalised_ord = ord_sql.replace("int4_ord_ore", "T").replace(
@@ -224,3 +235,31 @@ def test_ordered_files_are_byte_identical_modulo_typename(tmp_path):
             f"{renderer.__name__}: int4_ord and int4_ord_ore must produce "
             f"byte-identical SQL modulo their typenames"
         )
+
+
+def test_render_aggregates_file_only_for_ord_variants(tmp_path):
+    spec = load(tmp_path)
+    storage = next(d for d in spec.domains if d.name == "int4")
+    eq = next(d for d in spec.domains if d.name == "int4_eq")
+    ordered = next(d for d in spec.domains if d.name == "int4_ord")
+    ore = next(d for d in spec.domains if d.name == "int4_ord_ore")
+
+    assert render_aggregates_file(spec, storage) is None
+    assert render_aggregates_file(spec, eq) is None
+    assert render_aggregates_file(spec, ordered) is not None
+    assert render_aggregates_file(spec, ore) is not None
+
+
+def test_render_aggregates_file_carries_both_min_and_max(tmp_path):
+    spec = load(tmp_path)
+    ordered = next(d for d in spec.domains if d.name == "int4_ord")
+    sql = render_aggregates_file(spec, ordered)
+    assert sql is not None
+    assert sql.count("CREATE FUNCTION") == 2
+    assert sql.count("CREATE AGGREGATE") == 2
+    assert "eql_v2.min_sfunc" in sql
+    assert "eql_v2.max_sfunc" in sql
+    # REQUIRE edges: types + functions + operators must all be declared.
+    assert "-- REQUIRE: src/encrypted_domain/int4/int4_ord_operators.sql" in sql
+    assert "-- REQUIRE: src/encrypted_domain/int4/int4_ord_functions.sql" in sql
+    assert "-- REQUIRE: src/encrypted_domain/int4/int4_types.sql" in sql

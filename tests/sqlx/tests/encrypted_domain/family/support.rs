@@ -16,26 +16,26 @@ fn variant_derives_consistent_sql_domain_and_capabilities() {
     assert_eq!(storage.sql_domain, "eql_v2_int4");
     assert!(!storage.supports_eq());
     assert!(!storage.supports_ord());
-    assert_eq!(storage.eq_index_expr(), None);
-    assert_eq!(storage.ord_index_expr(), None);
+    assert_eq!(storage.extractor_fn(), None);
     assert_eq!(Variant::Storage.required_term(), None);
 
     let eq = ScalarDomainSpec::new::<i32>(Variant::Eq);
     assert_eq!(eq.sql_domain, "eql_v2_int4_eq");
     assert!(eq.supports_eq());
     assert!(!eq.supports_ord());
-    assert_eq!(eq.eq_index_expr(), Some("eql_v2.eq_term(value)"));
+    assert_eq!(eq.extractor_fn(), Some("eql_v2.eq_term"));
     assert_eq!(Variant::Eq.required_term(), Some("hm"));
 
     let ord = ScalarDomainSpec::new::<i32>(Variant::Ord);
     assert_eq!(ord.sql_domain, "eql_v2_int4_ord");
     assert!(ord.supports_ord());
-    assert_eq!(ord.ord_index_expr(), Some("eql_v2.ord_term(value)"));
+    assert_eq!(ord.extractor_fn(), Some("eql_v2.ord_term"));
     assert_eq!(Variant::Ord.required_term(), Some("ob"));
 
     let ord_ore = ScalarDomainSpec::new::<i32>(Variant::OrdOre);
     assert_eq!(ord_ore.sql_domain, "eql_v2_int4_ord_ore");
     assert!(ord_ore.supports_ord());
+    assert_eq!(ord_ore.extractor_fn(), Some("eql_v2.ord_term"));
 }
 
 #[test]

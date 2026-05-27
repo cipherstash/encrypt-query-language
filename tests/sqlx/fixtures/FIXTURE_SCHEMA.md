@@ -9,7 +9,6 @@ EQL Extension (via migrations)
   ├── encrypted_json.sql
   │   └── array_data.sql (extends `encrypted` table from encrypted_json)
   ├── match_data.sql
-  ├── aggregate_minmax_data.sql
   ├── config_tables.sql
   ├── constraint_tables.sql
   ├── encryptindex_tables.sql

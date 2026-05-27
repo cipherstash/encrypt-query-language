@@ -142,17 +142,17 @@ impl Variant {
         matches!(self, Variant::Ord | Variant::OrdOre)
     }
 
-    pub const fn eq_index_expr(self) -> Option<&'static str> {
+    /// Function name of the discriminating extractor for this variant,
+    /// or `None` if the variant carries no extractor (`Storage`). Returns
+    /// just the function name — call sites append `(column)` themselves so
+    /// the accessor is decoupled from any specific column-naming
+    /// convention. `Eq` resolves to `eql_v2.eq_term`; `Ord` and `OrdOre`
+    /// both resolve to `eql_v2.ord_term`.
+    pub const fn extractor_fn(self) -> Option<&'static str> {
         match self {
-            Variant::Eq => Some("eql_v2.eq_term(value)"),
-            _ => None,
-        }
-    }
-
-    pub const fn ord_index_expr(self) -> Option<&'static str> {
-        match self {
-            Variant::Ord | Variant::OrdOre => Some("eql_v2.ord_term(value)"),
-            _ => None,
+            Variant::Storage => None,
+            Variant::Eq => Some("eql_v2.eq_term"),
+            Variant::Ord | Variant::OrdOre => Some("eql_v2.ord_term"),
         }
     }
 }
@@ -182,12 +182,8 @@ impl ScalarDomainSpec {
         self.variant.supports_ord()
     }
 
-    pub fn eq_index_expr(&self) -> Option<&'static str> {
-        self.variant.eq_index_expr()
-    }
-
-    pub fn ord_index_expr(&self) -> Option<&'static str> {
-        self.variant.ord_index_expr()
+    pub fn extractor_fn(&self) -> Option<&'static str> {
+        self.variant.extractor_fn()
     }
 }
 

@@ -231,6 +231,22 @@ macro_rules! scalar_domain_matrix {
             suite = $suite, scalar = $scalar, script = $fixture_script, script_path = $fixture_path,
             domains = [$($ord_ore_dom),*],
         }
+        $crate::__scalar_matrix_aggregate_outer! {
+            suite = $suite, scalar = $scalar, script = $fixture_script, script_path = $fixture_path,
+            domains = [$($ord_dom),*],
+        }
+        $crate::__scalar_matrix_aggregate_group_by_outer! {
+            suite = $suite, scalar = $scalar, script = $fixture_script, script_path = $fixture_path,
+            domains = [$($ord_dom),*],
+        }
+        $crate::__scalar_matrix_aggregate_typecheck_outer! {
+            suite = $suite, scalar = $scalar,
+            domains = [$(($all_name, $all_variant)),+],
+        }
+        $crate::__scalar_matrix_count_outer! {
+            suite = $suite, scalar = $scalar, script = $fixture_script, script_path = $fixture_path,
+            domains = [$(($all_name, $all_variant)),+],
+        }
         $crate::__scalar_matrix_order_by_outer! {
             suite = $suite, scalar = $scalar, script = $fixture_script, script_path = $fixture_path,
             domains = [$($ord_dom),*],
@@ -1621,6 +1637,680 @@ macro_rules! __scalar_matrix_order_by_using_case {
                 // a stray opclass would make ORDER BY USING start succeeding
                 // for the wrong reason — `is_err()` alone could not.
                 $crate::assert_db_error(&err, "42809", None);
+                Ok(())
+            }
+        }
+    };
+}
+
+// ============================================================================
+// Aggregate category — per (ord domain, op ∈ {min, max}), three tests:
+// extremum identity (payload of the min/max FIXTURE_VALUES row), all-NULL
+// returns NULL, and mixed NULL/non-NULL returns the correct extremum from
+// the non-NULL subset. Pins that `eql_v2.min` / `eql_v2.max` aggregates
+// route through the domain's `<` / `>` and that the STRICT state function
+// correctly seeds + skips NULLs. Emits zero tests when ord_domains is
+// empty — eq-only umbrellas pick that up naturally.
+// ============================================================================
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_aggregate_outer {
+    (
+        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
+        domains = [$($domain:tt),* $(,)?] $(,)?
+    ) => {
+        $(
+            $crate::__scalar_matrix_aggregate_mid! {
+                suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
+                domain = $domain,
+            }
+        )*
+    };
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_aggregate_mid {
+    (
+        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
+        domain = ($dom_name:ident, $variant:ident) $(,)?
+    ) => {
+        $crate::__scalar_matrix_aggregate_case! {
+            suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
+            dom_name = $dom_name, variant = $variant,
+            op_name = min, agg_fn = "min", picker = min,
+        }
+        $crate::__scalar_matrix_aggregate_case! {
+            suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
+            dom_name = $dom_name, variant = $variant,
+            op_name = max, agg_fn = "max", picker = max,
+        }
+    };
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_aggregate_case {
+    (
+        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
+        dom_name = $dom_name:ident, variant = $variant:ident,
+        op_name = $op_name:ident, agg_fn = $agg_fn:literal, picker = $picker:ident $(,)?
+    ) => {
+        $crate::paste::paste! {
+            // Extremum identity: aggregate returns the exact payload of the
+            // smallest (or largest) fixture row. Domain-cast on both sides
+            // so the comparator routes through the variant's `<` / `>`.
+            #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
+            async fn [<matrix_ $suite _ $dom_name _aggregate_ $op_name>](
+                pool: sqlx::PgPool,
+            ) -> anyhow::Result<()> {
+                use $crate::scalar_domains::ScalarType;
+                let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
+                let d = &spec.sql_domain;
+                let fixture = <$scalar as ScalarType>::fixture_table_name();
+                let extremum: $scalar = <$scalar as ScalarType>::FIXTURE_VALUES
+                    .iter()
+                    .copied()
+                    .$picker()
+                    .expect("FIXTURE_VALUES must be non-empty");
+                let extremum_lit = <$scalar as ScalarType>::to_sql_literal(extremum);
+
+                let expected: String = sqlx::query_scalar(&format!(
+                    "SELECT payload::text FROM {fixture} WHERE plaintext = {lit}",
+                    fixture = fixture, lit = extremum_lit,
+                )).fetch_one(&pool).await?;
+
+                let actual: String = sqlx::query_scalar(&format!(
+                    "SELECT eql_v2.{agg}(payload::{d})::text FROM {fixture}",
+                    agg = $agg_fn, d = d, fixture = fixture,
+                )).fetch_one(&pool).await?;
+
+                assert_eq!(
+                    actual, expected,
+                    "eql_v2.{}({}) must return the payload of plaintext={:?} (the fixture {})",
+                    $agg_fn, d, extremum, $agg_fn,
+                );
+
+                // Secondary diagnostic: when the primary identity holds,
+                // the ORE comparator must agree. The check is reached only
+                // on success of `assert_eq!`, so it's a self-consistency
+                // assertion on the comparator — catches the regression
+                // where payload text matches but `ord_term` resolves to a
+                // different value (e.g. due to payload-key reordering).
+                let ord_terms_match: bool = sqlx::query_scalar(&format!(
+                    "SELECT eql_v2.ord_term(eql_v2.{agg}(payload::{d})) \
+                          = eql_v2.ord_term($1::jsonb::{d}) \
+                     FROM {fixture}",
+                    agg = $agg_fn, d = d, fixture = fixture,
+                ))
+                .bind(&expected)
+                .fetch_one(&pool)
+                .await?;
+                anyhow::ensure!(
+                    ord_terms_match,
+                    "eql_v2.ord_term(eql_v2.{}({})) must equal eql_v2.ord_term(<expected payload>) \
+                     for plaintext={:?}",
+                    $agg_fn, d, extremum,
+                );
+                Ok(())
+            }
+
+            // Empty rowset: aggregate over zero rows returns NULL,
+            // structurally distinct from the all-NULL case (no rows fed
+            // at all vs. rows fed but every value NULL). Both must
+            // return NULL but they exercise different sfunc paths.
+            #[sqlx::test]
+            async fn [<matrix_ $suite _ $dom_name _aggregate_ $op_name _empty>](
+                pool: sqlx::PgPool,
+            ) -> anyhow::Result<()> {
+                let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
+                let d = &spec.sql_domain;
+                let mut tx = pool.begin().await?;
+                sqlx::query(&format!(
+                    "CREATE TEMP TABLE empty_agg (value {d}) ON COMMIT DROP",
+                    d = d,
+                )).execute(&mut *tx).await?;
+                let result: Option<String> = sqlx::query_scalar(&format!(
+                    "SELECT eql_v2.{agg}(value)::text FROM empty_agg",
+                    agg = $agg_fn,
+                )).fetch_one(&mut *tx).await?;
+                anyhow::ensure!(
+                    result.is_none(),
+                    "empty rowset to eql_v2.{} on {} must return NULL, got {:?}",
+                    $agg_fn, d, result,
+                );
+                tx.commit().await?;
+                Ok(())
+            }
+
+            // All-NULL input: STRICT sfunc never seeds the state, final
+            // result is NULL. No fixture needed.
+            #[sqlx::test]
+            async fn [<matrix_ $suite _ $dom_name _aggregate_ $op_name _all_null>](
+                pool: sqlx::PgPool,
+            ) -> anyhow::Result<()> {
+                let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
+                let d = &spec.sql_domain;
+                let sql = format!(
+                    "SELECT eql_v2.{agg}(NULL::{d})::text FROM generate_series(1, 3)",
+                    agg = $agg_fn, d = d,
+                );
+                let result: Option<String> = sqlx::query_scalar(&sql)
+                    .fetch_one(&pool)
+                    .await?;
+                anyhow::ensure!(
+                    result.is_none(),
+                    "all-NULL input to eql_v2.{} on {} must return NULL, got {:?}; SQL={}",
+                    $agg_fn, d, result, sql,
+                );
+                Ok(())
+            }
+
+            // Mixed NULL / non-NULL: feeds [NULL, mid, NULL, high, NULL] and
+            // asserts the aggregate returns the correct extremum of {mid,
+            // high}. A non-STRICT sfunc would crash on (state=NULL, value=mid)
+            // because `value < state` would be NULL; the STRICT contract
+            // skips NULL inputs and seeds with the first non-NULL value.
+            #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
+            async fn [<matrix_ $suite _ $dom_name _aggregate_ $op_name _mixed_null>](
+                pool: sqlx::PgPool,
+            ) -> anyhow::Result<()> {
+                use $crate::scalar_domains::ScalarType;
+                let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
+                let d = &spec.sql_domain;
+                let fixture = <$scalar as ScalarType>::fixture_table_name();
+                let values: &[$scalar] = <$scalar as ScalarType>::FIXTURE_VALUES;
+                anyhow::ensure!(
+                    values.len() >= 2,
+                    "mixed-NULL test needs >= 2 fixture values; got {}",
+                    values.len(),
+                );
+                let mut sorted: Vec<$scalar> = values.to_vec();
+                sorted.sort();
+                // Span the fixture's extremes — for signed numeric scalars this
+                // exercises the ORE sign-bit edges in addition to pinning STRICT
+                // sfunc behaviour.
+                let low: $scalar = *sorted.first().expect("non-empty after len check");
+                let high: $scalar = *sorted.last().expect("non-empty after len check");
+                // .min() / .max() on two values resolves to the correct picker.
+                let expected_plaintext: $scalar = low.$picker(high);
+                let low_lit = <$scalar as ScalarType>::to_sql_literal(low);
+                let high_lit = <$scalar as ScalarType>::to_sql_literal(high);
+                let expected_lit = <$scalar as ScalarType>::to_sql_literal(expected_plaintext);
+
+                let mut tx = pool.begin().await?;
+                sqlx::query(&format!(
+                    "CREATE TEMP TABLE mixed_null (value {d}) ON COMMIT DROP",
+                    d = d,
+                )).execute(&mut *tx).await?;
+                sqlx::query(&format!(
+                    "INSERT INTO mixed_null(value) \
+                     SELECT NULL::{d} \
+                     UNION ALL SELECT payload::{d} FROM {fixture} WHERE plaintext = {low} \
+                     UNION ALL SELECT NULL::{d} \
+                     UNION ALL SELECT payload::{d} FROM {fixture} WHERE plaintext = {high} \
+                     UNION ALL SELECT NULL::{d}",
+                    d = d, fixture = fixture, low = low_lit, high = high_lit,
+                )).execute(&mut *tx).await?;
+
+                let expected: String = sqlx::query_scalar(&format!(
+                    "SELECT payload::text FROM {fixture} WHERE plaintext = {lit}",
+                    fixture = fixture, lit = expected_lit,
+                )).fetch_one(&mut *tx).await?;
+
+                let actual: Option<String> = sqlx::query_scalar(&format!(
+                    "SELECT eql_v2.{agg}(value)::text FROM mixed_null",
+                    agg = $agg_fn,
+                )).fetch_one(&mut *tx).await?;
+
+                anyhow::ensure!(
+                    actual.as_deref() == Some(expected.as_str()),
+                    "eql_v2.{} on mixed NULL/non-NULL must return the {} non-NULL value (plaintext={:?}); want {expected:?}, got {actual:?}",
+                    $agg_fn, $agg_fn, expected_plaintext,
+                );
+
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+    };
+}
+
+// ============================================================================
+// Aggregate GROUP BY category — per (ord domain, op ∈ {min, max}), build a
+// temp table partitioned into two groups, populate each with a known
+// subset of fixture rows, GROUP BY the group key, and assert that
+// `eql_v2.<op>(value)` returns the correct extremum payload per group.
+// Pins that the aggregate composes correctly under GROUP BY (state is
+// reset between groups, the sfunc routes through the variant's
+// comparator inside each partition).
+// ============================================================================
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_aggregate_group_by_outer {
+    (
+        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
+        domains = [$($domain:tt),* $(,)?] $(,)?
+    ) => {
+        $(
+            $crate::__scalar_matrix_aggregate_group_by_mid! {
+                suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
+                domain = $domain,
+            }
+        )*
+    };
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_aggregate_group_by_mid {
+    (
+        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
+        domain = ($dom_name:ident, $variant:ident) $(,)?
+    ) => {
+        $crate::__scalar_matrix_aggregate_group_by_case! {
+            suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
+            dom_name = $dom_name, variant = $variant,
+            op_name = min, agg_fn = "min", picker = min,
+        }
+        $crate::__scalar_matrix_aggregate_group_by_case! {
+            suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
+            dom_name = $dom_name, variant = $variant,
+            op_name = max, agg_fn = "max", picker = max,
+        }
+    };
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_aggregate_group_by_case {
+    (
+        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
+        dom_name = $dom_name:ident, variant = $variant:ident,
+        op_name = $op_name:ident, agg_fn = $agg_fn:literal, picker = $picker:ident $(,)?
+    ) => {
+        $crate::paste::paste! {
+            #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
+            async fn [<matrix_ $suite _ $dom_name _aggregate_group_by_ $op_name>](
+                pool: sqlx::PgPool,
+            ) -> anyhow::Result<()> {
+                use $crate::scalar_domains::ScalarType;
+                let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
+                let d = &spec.sql_domain;
+                let fixture = <$scalar as ScalarType>::fixture_table_name();
+                let values: &[$scalar] = <$scalar as ScalarType>::FIXTURE_VALUES;
+                anyhow::ensure!(
+                    values.len() >= 5,
+                    "GROUP BY test needs >= 5 fixture values; got {}",
+                    values.len(),
+                );
+
+                // Partition FIXTURE_VALUES[..3] into group 1 and [3..5]
+                // into group 2. Per-group extremum is computed in Rust as
+                // the ground truth.
+                let group1: &[$scalar] = &values[..3];
+                let group2: &[$scalar] = &values[3..5];
+                let group1_extremum: $scalar = group1.iter().copied().$picker()
+                    .expect("group 1 is non-empty");
+                let group2_extremum: $scalar = group2.iter().copied().$picker()
+                    .expect("group 2 is non-empty");
+                let g1_lit = <$scalar as ScalarType>::to_sql_literal(group1_extremum);
+                let g2_lit = <$scalar as ScalarType>::to_sql_literal(group2_extremum);
+
+                let mut tx = pool.begin().await?;
+                sqlx::query(&format!(
+                    "CREATE TEMP TABLE group_test (group_key int, value {d}) \
+                     ON COMMIT DROP",
+                    d = d,
+                )).execute(&mut *tx).await?;
+
+                // Insert group 1 rows.
+                for v in group1 {
+                    let lit = <$scalar as ScalarType>::to_sql_literal(*v);
+                    sqlx::query(&format!(
+                        "INSERT INTO group_test(group_key, value) \
+                         SELECT 1, payload::{d} FROM {fixture} WHERE plaintext = {lit}",
+                        d = d, fixture = fixture, lit = lit,
+                    )).execute(&mut *tx).await?;
+                }
+                // Insert group 2 rows.
+                for v in group2 {
+                    let lit = <$scalar as ScalarType>::to_sql_literal(*v);
+                    sqlx::query(&format!(
+                        "INSERT INTO group_test(group_key, value) \
+                         SELECT 2, payload::{d} FROM {fixture} WHERE plaintext = {lit}",
+                        d = d, fixture = fixture, lit = lit,
+                    )).execute(&mut *tx).await?;
+                }
+
+                // Lookup the expected payload texts for each group's extremum.
+                let g1_expected: String = sqlx::query_scalar(&format!(
+                    "SELECT payload::text FROM {fixture} WHERE plaintext = {lit}",
+                    fixture = fixture, lit = g1_lit,
+                )).fetch_one(&mut *tx).await?;
+                let g2_expected: String = sqlx::query_scalar(&format!(
+                    "SELECT payload::text FROM {fixture} WHERE plaintext = {lit}",
+                    fixture = fixture, lit = g2_lit,
+                )).fetch_one(&mut *tx).await?;
+
+                let rows: Vec<(i32, String)> = sqlx::query_as(&format!(
+                    "SELECT group_key, eql_v2.{agg}(value)::text \
+                     FROM group_test GROUP BY group_key ORDER BY group_key",
+                    agg = $agg_fn,
+                )).fetch_all(&mut *tx).await?;
+
+                anyhow::ensure!(
+                    rows.len() == 2,
+                    "GROUP BY must return 2 rows, got {}",
+                    rows.len(),
+                );
+                anyhow::ensure!(
+                    rows[0].0 == 1 && rows[0].1 == g1_expected,
+                    "group 1 eql_v2.{}({}) must yield payload for plaintext={:?}; \
+                     want ({}, {:?}), got {:?}",
+                    $agg_fn, d, group1_extremum, 1, g1_expected, rows[0],
+                );
+                anyhow::ensure!(
+                    rows[1].0 == 2 && rows[1].1 == g2_expected,
+                    "group 2 eql_v2.{}({}) must yield payload for plaintext={:?}; \
+                     want ({}, {:?}), got {:?}",
+                    $agg_fn, d, group2_extremum, 2, g2_expected, rows[1],
+                );
+
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+    };
+}
+
+// ============================================================================
+// Aggregate type-safety category — for variants that do NOT support ord
+// (Storage, Eq), `eql_v2.min(<variant-column>)` / `eql_v2.max(...)` must
+// resolve to "function does not exist" (SQLSTATE 42883). Pins that
+// codegen correctly omits MIN/MAX wrappers for these variants — a
+// SQL-level regression test complementing the codegen unit test.
+// ============================================================================
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_aggregate_typecheck_outer {
+    (
+        suite = $suite:ident, scalar = $scalar:ty,
+        domains = [$(($dom_name:ident, $variant:ident)),+ $(,)?] $(,)?
+    ) => {
+        $(
+            $crate::__scalar_matrix_aggregate_typecheck_dispatch! {
+                suite = $suite, scalar = $scalar,
+                dom_name = $dom_name, variant = $variant,
+            }
+        )+
+    };
+}
+
+// Dispatch on variant ident: ord-capable variants (Ord, OrdOre) emit no
+// typecheck test — they DO declare min/max. Non-ord variants (Storage,
+// Eq) emit one test per aggregate op asserting the call fails with
+// SQLSTATE 42883.
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_aggregate_typecheck_dispatch {
+    // Ord, OrdOre: no typecheck test — these variants declare min/max.
+    (
+        suite = $suite:ident, scalar = $scalar:ty,
+        dom_name = $dom_name:ident, variant = Ord $(,)?
+    ) => {};
+    (
+        suite = $suite:ident, scalar = $scalar:ty,
+        dom_name = $dom_name:ident, variant = OrdOre $(,)?
+    ) => {};
+    // Storage, Eq: emit min + max typecheck tests.
+    (
+        suite = $suite:ident, scalar = $scalar:ty,
+        dom_name = $dom_name:ident, variant = $variant:ident $(,)?
+    ) => {
+        $crate::__scalar_matrix_aggregate_typecheck_case! {
+            suite = $suite, scalar = $scalar,
+            dom_name = $dom_name, variant = $variant,
+            op_name = min, agg_fn = "min",
+        }
+        $crate::__scalar_matrix_aggregate_typecheck_case! {
+            suite = $suite, scalar = $scalar,
+            dom_name = $dom_name, variant = $variant,
+            op_name = max, agg_fn = "max",
+        }
+    };
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_aggregate_typecheck_case {
+    (
+        suite = $suite:ident, scalar = $scalar:ty,
+        dom_name = $dom_name:ident, variant = $variant:ident,
+        op_name = $op_name:ident, agg_fn = $agg_fn:literal $(,)?
+    ) => {
+        $crate::paste::paste! {
+            #[sqlx::test]
+            async fn [<matrix_ $suite _ $dom_name _aggregate_typecheck_ $op_name>](
+                pool: sqlx::PgPool,
+            ) -> anyhow::Result<()> {
+                let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
+                let d = &spec.sql_domain;
+                let payload = $crate::helpers::PLACEHOLDER_PAYLOAD;
+
+                let mut tx = pool.begin().await?;
+                sqlx::query(&format!(
+                    "CREATE TEMP TABLE typecheck_table (value {d}) ON COMMIT DROP",
+                    d = d,
+                )).execute(&mut *tx).await?;
+                sqlx::query(&format!(
+                    "INSERT INTO typecheck_table(value) VALUES ($1::jsonb::{d})",
+                    d = d,
+                )).bind(payload).execute(&mut *tx).await?;
+
+                // Savepoint-isolate the probe so the failed lookup
+                // doesn't abort the outer transaction and tx.commit()
+                // can succeed cleanly.
+                sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
+                let sql = format!(
+                    "SELECT eql_v2.{agg}(value) FROM typecheck_table",
+                    agg = $agg_fn,
+                );
+                let err = sqlx::query_scalar::<_, String>(&sql)
+                    .fetch_one(&mut *tx)
+                    .await
+                    .expect_err(&format!(
+                        "eql_v2.{} on non-ord variant {} must raise but succeeded",
+                        $agg_fn, d,
+                    ));
+                // 42883 = undefined_function (no overload defined at all);
+                // 42725 = ambiguous_function (multiple overloads resolve,
+                // none specific to this variant). Either confirms the
+                // variant carries no MIN/MAX of its own — the generic
+                // eql_v2_encrypted overload is reachable via cast but
+                // can't be resolved unambiguously from a domain-typed
+                // column. Both outcomes are acceptable "not supported".
+                let db_err = err.as_database_error()
+                    .expect("expected database error from typecheck probe");
+                let code = db_err.code();
+                anyhow::ensure!(
+                    code.as_deref() == Some("42883") || code.as_deref() == Some("42725"),
+                    "expected SQLSTATE 42883 (undefined_function) or 42725 \
+                     (ambiguous_function) for eql_v2.{}({}), got {:?} (message: {})",
+                    $agg_fn, d, code, db_err.message(),
+                );
+                sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
+
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+    };
+}
+
+// ============================================================================
+// COUNT category — pins three forms per variant: plain COUNT(value) on a
+// typed column, COUNT(payload::variant) on the fixture, and
+// COUNT(DISTINCT extractor(value)) using the variant's own extractor. The
+// DISTINCT case dispatches per-variant: Storage has no extractor and so
+// emits no DISTINCT test; Eq uses eq_term, Ord/OrdOre use ord_term.
+//
+// This is net new coverage relative to the legacy aggregate_tests.rs file,
+// which only covered plain COUNT and only against the eql_v2_encrypted
+// type. Pinning per-variant DISTINCT catches the breakage class where
+// picking the wrong extractor would fail at runtime ("function
+// eql_v2.eq_term(eql_v2_int4_ord) does not exist") — exactly the kind of
+// thing the variant-aware matrix is meant to surface mechanically.
+// ============================================================================
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_count_outer {
+    (
+        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
+        domains = [$(($dom_name:ident, $variant:ident)),+ $(,)?] $(,)?
+    ) => {
+        $(
+            $crate::__scalar_matrix_count_case! {
+                suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
+                dom_name = $dom_name, variant = $variant,
+            }
+            $crate::__scalar_matrix_count_distinct_dispatch! {
+                suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
+                dom_name = $dom_name, variant = $variant,
+            }
+        )+
+    };
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_count_case {
+    (
+        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
+        dom_name = $dom_name:ident, variant = $variant:ident $(,)?
+    ) => {
+        $crate::paste::paste! {
+            // COUNT(value) on a typed column — pins that PG's native COUNT
+            // works on a domain-typed column without an aggregate declaration.
+            #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
+            async fn [<matrix_ $suite _ $dom_name _count_typed_column>](
+                pool: sqlx::PgPool,
+            ) -> anyhow::Result<()> {
+                use $crate::scalar_domains::ScalarType;
+                let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
+                let d = &spec.sql_domain;
+                let fixture = <$scalar as ScalarType>::fixture_table_name();
+                let expected = <$scalar as ScalarType>::FIXTURE_VALUES.len() as i64;
+
+                let mut tx = pool.begin().await?;
+                sqlx::query(&format!(
+                    "CREATE TEMP TABLE typed_count (value {d}) ON COMMIT DROP",
+                    d = d,
+                )).execute(&mut *tx).await?;
+                sqlx::query(&format!(
+                    "INSERT INTO typed_count(value) SELECT payload::{d} FROM {fixture}",
+                    d = d, fixture = fixture,
+                )).execute(&mut *tx).await?;
+
+                let actual: i64 = sqlx::query_scalar(
+                    "SELECT COUNT(value) FROM typed_count",
+                ).fetch_one(&mut *tx).await?;
+                anyhow::ensure!(
+                    actual == expected,
+                    "COUNT(value) on typed {} column: want {}, got {}",
+                    d, expected, actual,
+                );
+
+                tx.commit().await?;
+                Ok(())
+            }
+
+            // COUNT(payload::variant) on the fixture — pins COUNT on a
+            // path-cast expression. No temp table; the cast happens inline.
+            #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
+            async fn [<matrix_ $suite _ $dom_name _count_path_cast>](
+                pool: sqlx::PgPool,
+            ) -> anyhow::Result<()> {
+                use $crate::scalar_domains::ScalarType;
+                let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
+                let d = &spec.sql_domain;
+                let fixture = <$scalar as ScalarType>::fixture_table_name();
+                let expected = <$scalar as ScalarType>::FIXTURE_VALUES.len() as i64;
+
+                let sql = format!(
+                    "SELECT COUNT(payload::{d}) FROM {fixture}",
+                    d = d, fixture = fixture,
+                );
+                let actual: i64 = sqlx::query_scalar(&sql).fetch_one(&pool).await?;
+                anyhow::ensure!(
+                    actual == expected,
+                    "COUNT(payload::{}) on {}: want {}, got {}; SQL={}",
+                    d, fixture, expected, actual, sql,
+                );
+                Ok(())
+            }
+        }
+    };
+}
+
+// Dispatch on variant ident: Storage has no discriminating extractor, so
+// emits no DISTINCT test. The other three (Eq, Ord, OrdOre) each emit one
+// test that reads the extractor function name from the runtime
+// `ScalarDomainSpec::extractor_fn()` accessor (Eq -> `eql_v2.eq_term`,
+// Ord/OrdOre -> `eql_v2.ord_term`) and appends `(value)` at the call site.
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_count_distinct_dispatch {
+    // Storage: no DISTINCT case — no extractor to deduplicate by.
+    (
+        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
+        dom_name = $dom_name:ident, variant = Storage $(,)?
+    ) => {};
+    // Eq, Ord, OrdOre — emit the DISTINCT test.
+    (
+        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
+        dom_name = $dom_name:ident, variant = $variant:ident $(,)?
+    ) => {
+        $crate::paste::paste! {
+            #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
+            async fn [<matrix_ $suite _ $dom_name _count_distinct_extractor>](
+                pool: sqlx::PgPool,
+            ) -> anyhow::Result<()> {
+                use $crate::scalar_domains::ScalarType;
+                let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
+                let d = &spec.sql_domain;
+                let extractor_fn = spec.extractor_fn()
+                    .expect("non-Storage variant must expose an extractor");
+                let extractor = format!("{extractor_fn}(value)");
+                let fixture = <$scalar as ScalarType>::fixture_table_name();
+                let expected = <$scalar as ScalarType>::FIXTURE_VALUES.len() as i64;
+
+                let mut tx = pool.begin().await?;
+                sqlx::query(&format!(
+                    "CREATE TEMP TABLE distinct_count (value {d}) ON COMMIT DROP",
+                    d = d,
+                )).execute(&mut *tx).await?;
+                sqlx::query(&format!(
+                    "INSERT INTO distinct_count(value) SELECT payload::{d} FROM {fixture}",
+                    d = d, fixture = fixture,
+                )).execute(&mut *tx).await?;
+
+                let sql = format!(
+                    "SELECT COUNT(DISTINCT {extr}) FROM distinct_count",
+                    extr = extractor,
+                );
+                let actual: i64 = sqlx::query_scalar(&sql).fetch_one(&mut *tx).await?;
+                anyhow::ensure!(
+                    actual == expected,
+                    "COUNT(DISTINCT {}) on {}: want {} (one per FIXTURE_VALUES row), got {}; SQL={}",
+                    extractor, d, expected, actual, sql,
+                );
+
+                tx.commit().await?;
                 Ok(())
             }
         }

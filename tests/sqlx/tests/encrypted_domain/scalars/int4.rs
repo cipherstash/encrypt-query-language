@@ -84,5 +84,19 @@ mod twin_sync {
              drifted apart. They must stay mechanical twins (type-name swap \
              only) below the file header; mirror every change into both files."
         );
+
+        assert_eq!(
+            body(
+                "int4_ord_ore_aggregates.sql",
+                "CREATE FUNCTION eql_v2.min_sfunc"
+            ),
+            body(
+                "int4_ord_aggregates.sql",
+                "CREATE FUNCTION eql_v2.min_sfunc"
+            ),
+            "int4_ord_ore_aggregates.sql and int4_ord_aggregates.sql have \
+             drifted apart. They must stay mechanical twins (type-name swap \
+             only) below the file header; mirror every change into both files."
+        );
     }
 }

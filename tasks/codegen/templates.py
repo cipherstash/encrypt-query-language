@@ -1,5 +1,7 @@
 """Per-construct SQL template functions for scalar encrypted-domain codegen."""
 
+from dataclasses import dataclass
+
 from .operator_surface import OPERATORS
 from .spec import DomainSpec
 from .terms import (
@@ -224,6 +226,81 @@ def extractor_for_operator(domain: DomainSpec, op: str) -> str | None:
 def supported_operators(domain: DomainSpec) -> list[str]:
     """Supported operators for this domain."""
     return operators_for_terms(domain.terms)
+
+
+@dataclass(frozen=True)
+class AggregateOp:
+    """One aggregate operator definition (min or max)."""
+
+    name: str        # public function name, e.g. "min"
+    sfunc_name: str  # state function name, e.g. "min_sfunc"
+    comparator: str  # SQL comparator used to choose the new state: "<" or ">"
+    phrase: str      # short prose label used in --! @brief lines
+
+
+AGGREGATE_OPS: dict[str, AggregateOp] = {
+    "min": AggregateOp("min", "min_sfunc", "<", "minimum"),
+    "max": AggregateOp("max", "max_sfunc", ">", "maximum"),
+}
+
+
+def is_ord_capable(domain: DomainSpec) -> bool:
+    """True if the domain carries a comparator term (i.e. supports `<`)."""
+    return role_for_terms(domain.terms) == "ord"
+
+
+def render_aggregate(domain: DomainSpec, op: AggregateOp) -> str:
+    """Render state function + CREATE AGGREGATE for one aggregate op on one
+    domain. The ord-capability gate lives at the file-level renderer
+    (`render_aggregates_file`); callers may legitimately render a single
+    aggregate without re-asserting that precondition. MIN/MAX on a non-ord
+    domain is structurally well-formed text but semantically meaningless —
+    the file-level gate is what stops it ever reaching disk."""
+    dom = domain_name(domain.name)
+    sfunc_doxy = (
+        f"--! @brief State function for {op.name} aggregate on {dom}.\n"
+        f"--! @internal\n"
+        f"--!\n"
+        f"--! @param state {dom} running extremum\n"
+        f"--! @param value {dom} next non-NULL value\n"
+        f"--! @return {dom} the {op.phrase} of state and value\n"
+    )
+    # plpgsql + STRICT: PG seeds the state with the first non-NULL value and
+    # skips NULL inputs. plpgsql (not sql) because aggregate state functions
+    # aren't index expressions — opacity to the planner is fine — and a
+    # multi-statement BEGIN/IF/END body is the natural shape.
+    sfunc = (
+        f"CREATE FUNCTION eql_v2.{op.sfunc_name}(state {dom}, value {dom})\n"
+        f"RETURNS {dom}\n"
+        f"LANGUAGE plpgsql IMMUTABLE STRICT\n"
+        f"SET search_path = pg_catalog, extensions, public\n"
+        f"AS $$\n"
+        f"BEGIN\n"
+        f"  IF value {op.comparator} state THEN\n"
+        f"    RETURN value;\n"
+        f"  END IF;\n"
+        f"  RETURN state;\n"
+        f"END;\n"
+        f"$$;\n"
+    )
+    agg_doxy = (
+        f"--! @brief Find the {op.phrase} encrypted value in a group of "
+        f"{dom} values.\n"
+        f"--!\n"
+        f"--! Comparison routes through the domain's `{op.comparator}` "
+        f"operator, which uses the ORE block term — no decryption.\n"
+        f"--!\n"
+        f"--! @param input {dom} encrypted values to aggregate\n"
+        f"--! @return {dom} {op.phrase} of the group, or NULL if all "
+        f"inputs are NULL\n"
+    )
+    aggregate = (
+        f"CREATE AGGREGATE eql_v2.{op.name}({dom}) (\n"
+        f"  sfunc = eql_v2.{op.sfunc_name},\n"
+        f"  stype = {dom}\n"
+        f");\n"
+    )
+    return sfunc_doxy + sfunc + "\n" + agg_doxy + aggregate
 
 
 def render_operator(

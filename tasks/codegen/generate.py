@@ -12,8 +12,11 @@ from .operator_surface import (
 )
 from .spec import DomainSpec, TypeSpec, load_spec
 from .templates import (
+    AGGREGATE_OPS,
     domain_name,
     extractor_for_operator,
+    is_ord_capable,
+    render_aggregate,
     render_blocker_bool,
     render_blocker_native,
     render_blocker_path,
@@ -181,6 +184,29 @@ def render_operators_file(spec: TypeSpec, domain: DomainSpec) -> str:
     return header + "\n".join(parts)
 
 
+def render_aggregates_file(spec: TypeSpec, domain: DomainSpec) -> str | None:
+    """Body for a domain's _aggregates.sql, or None if the domain has no
+    ordering comparator (storage/eq variants have no MIN/MAX semantics)."""
+    if not is_ord_capable(domain):
+        return None
+    parts = [render_aggregate(domain, AGGREGATE_OPS[name]) for name in ("min", "max")]
+    requires = (
+        "-- REQUIRE: src/schema.sql\n"
+        f"-- REQUIRE: {_types_path(spec.token)}\n"
+        f"-- REQUIRE: src/encrypted_domain/{spec.token}/"
+        f"{domain.name}_functions.sql\n"
+        f"-- REQUIRE: src/encrypted_domain/{spec.token}/"
+        f"{domain.name}_operators.sql\n"
+    )
+    header = (
+        requires + "\n"
+        f"--! @file encrypted_domain/{spec.token}/{domain.name}_aggregates.sql\n"
+        f"--! @brief {role_phrase(domain.terms)} domain of the {spec.token} "
+        f"encrypted-domain family — MIN/MAX aggregates.\n\n"
+    )
+    return header + "\n".join(parts)
+
+
 def generate_type(spec: TypeSpec, out_dir: Path) -> list[Path]:
     """Regenerate every generated file for a type."""
     out_dir = Path(out_dir)
@@ -188,6 +214,8 @@ def generate_type(spec: TypeSpec, out_dir: Path) -> list[Path]:
     for domain in spec.domains:
         target_paths.append(out_dir / f"{domain.name}_functions.sql")
         target_paths.append(out_dir / f"{domain.name}_operators.sql")
+        if is_ord_capable(domain):
+            target_paths.append(out_dir / f"{domain.name}_aggregates.sql")
     ensure_generated_paths_writable(target_paths)
     clean_generated_files(out_dir)
 
@@ -205,6 +233,12 @@ def generate_type(spec: TypeSpec, out_dir: Path) -> list[Path]:
         op_path = out_dir / f"{domain.name}_operators.sql"
         write_generated_file(op_path, render_operators_file(spec, domain))
         written.append(op_path)
+
+        agg_body = render_aggregates_file(spec, domain)
+        if agg_body is not None:
+            agg_path = out_dir / f"{domain.name}_aggregates.sql"
+            write_generated_file(agg_path, agg_body)
+            written.append(agg_path)
 
     return written
 

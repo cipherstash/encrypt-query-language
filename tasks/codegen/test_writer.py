@@ -12,7 +12,13 @@ from tasks.codegen.writer import (
 )
 
 
-_EXPECTED_SUFFIXES = ("_types.sql", "_functions.sql", "_operators.sql", "_extensions.sql")
+_EXPECTED_SUFFIXES = (
+    "_types.sql",
+    "_functions.sql",
+    "_operators.sql",
+    "_aggregates.sql",
+    "_extensions.sql",
+)
 
 
 def test_is_generated_true_for_header(tmp_path):

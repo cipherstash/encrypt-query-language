@@ -20,7 +20,8 @@ set -euo pipefail
 # *_extensions.sql is preserved by the name patterns; -mindepth 2 keeps
 # the type-agnostic src/encrypted_domain/functions.sql safe.
 find src/encrypted_domain -mindepth 2 -type f \
-  \( -name '*_types.sql' -o -name '*_functions.sql' -o -name '*_operators.sql' \) \
+  \( -name '*_types.sql' -o -name '*_functions.sql' -o -name '*_operators.sql' \
+     -o -name '*_aggregates.sql' \) \
   -delete 2>/dev/null || true
 
 for spec in tasks/codegen/types/*.toml; do

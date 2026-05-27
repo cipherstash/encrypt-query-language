@@ -229,6 +229,7 @@ tests/sqlx/fixtures/eql_v2_int4.sql
 src/encrypted_domain/*/*_types.sql
 src/encrypted_domain/*/*_functions.sql
 src/encrypted_domain/*/*_operators.sql
+src/encrypted_domain/*/*_aggregates.sql
 
 # Large generated test data files
 tests/ste_vec_vast.sql

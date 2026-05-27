@@ -17,6 +17,7 @@ import pytest
 
 from tasks.codegen.generate import (
     REPO_ROOT,
+    render_aggregates_file,
     render_functions_file,
     render_operators_file,
     render_types_file,
@@ -48,6 +49,15 @@ def _render(reference_path: Path) -> str:
             return render_functions_file(spec, domain)
         if name == f"{domain.name}_operators.sql":
             return render_operators_file(spec, domain)
+        if name == f"{domain.name}_aggregates.sql":
+            body = render_aggregates_file(spec, domain)
+            if body is None:
+                pytest.fail(
+                    f"reference {reference_path.relative_to(REPO_ROOT)} exists "
+                    f"but the generator skipped this variant (not ord-capable). "
+                    f"Remove the reference file or update the manifest."
+                )
+            return body
 
     pytest.fail(f"unrecognised reference filename: {name}")
 

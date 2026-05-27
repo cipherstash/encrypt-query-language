@@ -2,9 +2,12 @@
 
 from tasks.codegen.spec import DomainSpec
 from tasks.codegen.templates import (
+    AGGREGATE_OPS,
     AUTO_GENERATED_HEADER,
     domain_name,
     extractor_for_operator,
+    is_ord_capable,
+    render_aggregate,
     render_blocker_bool,
     render_blocker_native,
     render_blocker_path,
@@ -211,6 +214,48 @@ def test_render_operator_unsupported_emits_only_function_and_args():
     assert "RESTRICT" not in sql
     assert "JOIN" not in sql
     assert "COMMUTATOR" not in sql
+
+
+def test_render_aggregate_min_int4_ord_emits_state_function_and_aggregate():
+    """Pin the rendered shape for the canonical (int4_ord, min) case."""
+    domain = DomainSpec(name="int4_ord", terms=["ore"])
+    sql = render_aggregate(domain, AGGREGATE_OPS["min"])
+    assert "CREATE FUNCTION eql_v2.min_sfunc(state eql_v2_int4_ord, value eql_v2_int4_ord)" in sql
+    assert "RETURNS eql_v2_int4_ord" in sql
+    assert "LANGUAGE plpgsql IMMUTABLE STRICT" in sql
+    assert "SET search_path = pg_catalog, extensions, public" in sql
+    assert "IF value < state THEN" in sql
+    assert "CREATE AGGREGATE eql_v2.min(eql_v2_int4_ord) (" in sql
+    assert "sfunc = eql_v2.min_sfunc" in sql
+    assert "stype = eql_v2_int4_ord" in sql
+
+
+def test_render_aggregate_max_uses_greater_than_comparator():
+    """Symmetric pin: max uses `>` not `<`."""
+    domain = DomainSpec(name="int4_ord_ore", terms=["ore"])
+    sql = render_aggregate(domain, AGGREGATE_OPS["max"])
+    assert "CREATE FUNCTION eql_v2.max_sfunc(state eql_v2_int4_ord_ore, value eql_v2_int4_ord_ore)" in sql
+    assert "IF value > state THEN" in sql
+    assert "CREATE AGGREGATE eql_v2.max(eql_v2_int4_ord_ore) (" in sql
+
+
+def test_render_aggregate_state_function_is_not_inlinable():
+    """Footgun mirror: blockers must be LANGUAGE plpgsql; the state function
+    deliberately is too, so the planner can't elide an IMMUTABLE STRICT
+    aggregate state call away. STRICT + plpgsql + SET search_path together."""
+    domain = DomainSpec(name="int4_ord", terms=["ore"])
+    sql = render_aggregate(domain, AGGREGATE_OPS["min"])
+    assert "LANGUAGE plpgsql" in sql
+    assert "STRICT" in sql
+    # Inlinable-SQL shape — explicitly absent.
+    assert "LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE" not in sql
+
+
+def test_is_ord_capable_matches_role():
+    assert is_ord_capable(DomainSpec(name="int4_ord", terms=["ore"])) is True
+    assert is_ord_capable(DomainSpec(name="int4_ord_ore", terms=["ore"])) is True
+    assert is_ord_capable(DomainSpec(name="int4_eq", terms=["hm"])) is False
+    assert is_ord_capable(DomainSpec(name="int4", terms=[])) is False
 
 
 def test_render_operator_for_containment_omits_commutator():
