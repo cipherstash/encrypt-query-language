@@ -38,6 +38,24 @@
 --!                                but its body invokes a non-inlinable function
 --!                                (depth 1; the planner can't peek through
 --!                                that boundary).
+--!   `blocker_language`        — encrypted-domain blocker is not LANGUAGE
+--!                                plpgsql. The planner can inline / elide a
+--!                                LANGUAGE sql body when the result is
+--!                                provably unused, silently bypassing the
+--!                                RAISE that the blocker exists to perform.
+--!   `blocker_strict`          — encrypted-domain blocker is STRICT.
+--!                                PostgreSQL skips the body and returns NULL
+--!                                on NULL arguments, silently bypassing the
+--!                                RAISE.
+--!   `domain_over_domain`      — an `eql_v2_*` domain is derived from another
+--!                                `eql_v2_*` domain rather than jsonb.
+--!                                Operators resolve against the ultimate base
+--!                                type, so the derived domain does not
+--!                                inherit the base domain's blocker surface.
+--!   `domain_opclass`          — an operator class is declared FOR TYPE on an
+--!                                `eql_v2_*` domain. Opclasses on domains
+--!                                bypass operator resolution; use a
+--!                                functional index on the extractor instead.
 --!
 --! @example
 --! ```
@@ -85,6 +103,7 @@ AS $$
       eo.opname,
       eo.lhs,
       eo.rhs,
+      eo.implfunc                                  AS impl_oid,
       eo.impl_signature::text                       AS impl_signature,
       lang_l.lanname                                AS lang,
       p.provolatile                                 AS volatility,
@@ -94,6 +113,39 @@ AS $$
     FROM eql_operators eo
     JOIN pg_proc p ON p.oid = eo.implfunc
     JOIN pg_language lang_l ON lang_l.oid = p.prolang
+  ),
+
+  -- Encrypted-domain blockers: functions in `eql_v2` whose body contains
+  -- one of the two blocker markers emitted by the codegen
+  -- (`encrypted_domain_unsupported_bool` for boolean blockers; the literal
+  -- `is not supported for` for path-operator blockers) AND that take at
+  -- least one `public.eql_v2_*` domain over jsonb argument. The argument
+  -- filter excludes the shared `encrypted_domain_unsupported_bool(text,
+  -- text)` helper itself, which contains the marker in its body but is
+  -- not a blocker.
+  encrypted_domain_blockers AS (
+    SELECT
+      p.oid                                        AS oid,
+      p.oid::regprocedure::text                    AS signature,
+      lang_l.lanname                               AS lang,
+      p.proisstrict                                AS isstrict
+    FROM pg_catalog.pg_proc p
+    JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+    JOIN pg_catalog.pg_language lang_l ON lang_l.oid = p.prolang
+    WHERE n.nspname = 'eql_v2'
+      AND (p.prosrc LIKE '%encrypted_domain_unsupported_bool%'
+        OR p.prosrc LIKE '%is not supported for%')
+      AND EXISTS (
+        SELECT 1
+        FROM pg_catalog.unnest(p.proargtypes::oid[]) AS arg(typ)
+        JOIN pg_catalog.pg_type dt ON dt.oid = arg.typ
+        JOIN pg_catalog.pg_namespace dn ON dn.oid = dt.typnamespace
+        JOIN pg_catalog.pg_type bt ON bt.oid = dt.typbasetype
+        WHERE dt.typtype = 'd'
+          AND dn.nspname = 'public'
+          AND dt.typname LIKE 'eql_v2\_%'
+          AND bt.typname = 'jsonb'
+      )
   )
 
   -- ┌─────────────────────────────────────────────────────────────────┐
@@ -113,6 +165,10 @@ AS $$
       lang, opname)                                                     AS message
   FROM op_impl
   WHERE lang <> 'sql'
+    AND NOT EXISTS (
+      SELECT 1 FROM encrypted_domain_blockers b
+      WHERE b.oid = op_impl.impl_oid
+    )
 
   UNION ALL
 
@@ -125,6 +181,10 @@ AS $$
       opname)
   FROM op_impl
   WHERE volatility = 'v'
+    AND NOT EXISTS (
+      SELECT 1 FROM encrypted_domain_blockers b
+      WHERE b.oid = op_impl.impl_oid
+    )
 
   UNION ALL
 
@@ -136,6 +196,10 @@ AS $$
       'Operator implementation function has a `SET` clause (e.g. `SET search_path = ...`). Per Postgres function-inlining rules, any `SET` clause blocks inlining. Use schema-qualified identifiers in the body and remove the `SET` clause to allow the planner to inline.')
   FROM op_impl
   WHERE config IS NOT NULL
+    AND NOT EXISTS (
+      SELECT 1 FROM encrypted_domain_blockers b
+      WHERE b.oid = op_impl.impl_oid
+    )
 
   UNION ALL
 
@@ -146,6 +210,10 @@ AS $$
     'Operator implementation function is `SECURITY DEFINER`. Such functions cannot be inlined; remove `SECURITY DEFINER` or use a non-inlinable wrapper layer.'
   FROM op_impl
   WHERE secdef
+    AND NOT EXISTS (
+      SELECT 1 FROM encrypted_domain_blockers b
+      WHERE b.oid = op_impl.impl_oid
+    )
 
   -- ┌─────────────────────────────────────────────────────────────────┐
   -- │ Transitive inlinability: an operator implementation function    │
@@ -200,6 +268,85 @@ AS $$
       OR called.proconfig IS NOT NULL
       OR called.prosecdef
     )
+
+  -- ┌─────────────────────────────────────────────────────────────────┐
+  -- │ Encrypted-domain footguns: blockers exist to RAISE, so they     │
+  -- │ have inverted inlinability requirements vs operator impls.      │
+  -- │ A LANGUAGE sql blocker can be elided by the planner; a STRICT   │
+  -- │ blocker returns NULL on NULL args. Both silently re-enable      │
+  -- │ operators the storage variant is supposed to block.             │
+  -- └─────────────────────────────────────────────────────────────────┘
+
+  UNION ALL
+
+  SELECT
+    'error',
+    'blocker_language',
+    format('function %s', signature),
+    format(
+      'Encrypted-domain blocker is `LANGUAGE %s`; must be `LANGUAGE plpgsql` so the RAISE is opaque to the planner. A `LANGUAGE sql` body is inlinable and may be elided when the result is provably unused, silently re-enabling the operator.',
+      lang)
+  FROM encrypted_domain_blockers
+  WHERE lang <> 'plpgsql'
+
+  UNION ALL
+
+  SELECT
+    'error',
+    'blocker_strict',
+    format('function %s', signature),
+    'Encrypted-domain blocker is `STRICT`. PostgreSQL skips the body and returns NULL on a NULL argument, silently bypassing the RAISE. Remove `STRICT`.'
+  FROM encrypted_domain_blockers
+  WHERE isstrict
+
+  -- ┌─────────────────────────────────────────────────────────────────┐
+  -- │ Domain identity: an eql_v2_* domain must be defined directly    │
+  -- │ over jsonb. Operators resolve against the ultimate base type,   │
+  -- │ so domain-over-domain inherits jsonb's operator surface and not │
+  -- │ the base domain's blockers.                                     │
+  -- └─────────────────────────────────────────────────────────────────┘
+
+  UNION ALL
+
+  SELECT
+    'error',
+    'domain_over_domain',
+    format('domain %I.%I', dn.nspname, dt.typname),
+    format(
+      'Domain `%s.%s` is derived from another eql_v2_* domain `%s.%s` rather than jsonb. Operators resolve against the ultimate base type, so the derived domain does not inherit the base domain''s operator surface and storage blockers do not engage. Define this domain directly over jsonb.',
+      dn.nspname, dt.typname, bn.nspname, bt.typname)
+  FROM pg_catalog.pg_type dt
+  JOIN pg_catalog.pg_namespace dn ON dn.oid = dt.typnamespace
+  JOIN pg_catalog.pg_type bt ON bt.oid = dt.typbasetype
+  JOIN pg_catalog.pg_namespace bn ON bn.oid = bt.typnamespace
+  WHERE dt.typtype = 'd'
+    AND dn.nspname = 'public'
+    AND dt.typname LIKE 'eql_v2\_%'
+    AND bt.typtype = 'd'
+    AND bt.typname LIKE 'eql_v2\_%'
+
+  -- ┌─────────────────────────────────────────────────────────────────┐
+  -- │ Domain opclass: an operator class declared FOR TYPE on an       │
+  -- │ eql_v2_* domain bypasses operator resolution at index time.     │
+  -- │ Use a functional index on the extractor instead.                │
+  -- └─────────────────────────────────────────────────────────────────┘
+
+  UNION ALL
+
+  SELECT
+    'error',
+    'domain_opclass',
+    format('opclass %I.%I FOR TYPE %s.%s', cn.nspname, oc.opcname, tn.nspname, t.typname),
+    format(
+      'Operator class `%s.%s` is declared FOR TYPE `%s.%s`, which is an eql_v2_* domain. Opclasses on domains bypass operator resolution. Use a functional index on the extractor (e.g. `eql_v2.eq_term(col)`, `eql_v2.ord_term(col)`) instead.',
+      cn.nspname, oc.opcname, tn.nspname, t.typname)
+  FROM pg_catalog.pg_opclass oc
+  JOIN pg_catalog.pg_type t ON t.oid = oc.opcintype
+  JOIN pg_catalog.pg_namespace tn ON tn.oid = t.typnamespace
+  JOIN pg_catalog.pg_namespace cn ON cn.oid = oc.opcnamespace
+  WHERE t.typtype = 'd'
+    AND tn.nspname = 'public'
+    AND t.typname LIKE 'eql_v2\_%'
 
   ORDER BY 1, 2, 3;
 $$;
