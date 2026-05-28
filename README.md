@@ -110,11 +110,6 @@ Dropping the `public.eql_v2_encrypted` type will remove any associated columns f
 Uninstalling EQL will not drop the `public.eql_v2_encrypted` type to avoid risk of data loss.
 
 
-### Encrypted-Domain Type Families
-
-Some encrypted types — `eql_v2_int4` and its capability-encoded variants (`_eq`, `_ord`, `_ord_ore`) — are generated from TOML manifests under `tasks/codegen/types/` rather than hand-written. The generated SQL under `src/encrypted_domain/<T>/*_types.sql` / `*_functions.sql` / `*_operators.sql` is gitignored and rebuilt by `mise run build`; the manifest plus `tasks/codegen/terms.py` are the source of truth. Contributors adding a new scalar type follow `docs/reference/encrypted-domain-implementation-spec.md` (contract) and `docs/reference/encrypted-domain-generator.md` (mechanics); see `CLAUDE.md` for the workflow summary.
-
-
 ## Database Permissions
 
 EQL requires specific database privileges to install and operate correctly. The permissions needed depend on your deployment pattern.

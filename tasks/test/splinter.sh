@@ -9,15 +9,7 @@
 
 set -euo pipefail
 
-# Scope: this lint gates the EQL codebase, not the test scaffolding around it.
-# We only consider splinter findings whose metadata->>'schema' is in
-# EQL_OWNED_SCHEMAS. Findings in public.* (e.g. tests/test_helpers.sql
-# fixtures like assert_count, build_synthetic_ste_vec) and _sqlx_test.*
-# (the SQLx test-database isolation framework) are dropped before the
-# allowlist gate runs. EQL's generated `public.eql_v2_<T>` DOMAIN types
-# are not in scope under the current splinter rules (function_search_path_mutable
-# only fires on functions); add a separate scope rule here if splinter ever
-# grows a DOMAIN-level check that's relevant.
+# Scope: only findings in EQL-owned schemas are gated.
 EQL_OWNED_SCHEMAS="('eql_v2')"
 
 # Pinned to splinter main as of 2026-04-27. Bump intentionally.

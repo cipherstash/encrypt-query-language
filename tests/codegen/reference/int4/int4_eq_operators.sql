@@ -1,3 +1,4 @@
+-- REFERENCE: hand-written parity baseline for tasks/codegen/ — see ../README.md
 -- REQUIRE: src/schema.sql
 -- REQUIRE: src/encrypted_domain/int4/int4_types.sql
 -- REQUIRE: src/encrypted_domain/int4/int4_eq_functions.sql
