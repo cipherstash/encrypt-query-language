@@ -20,6 +20,10 @@ Each entry that ships in a published release links to the PR that introduced it.
 
 ## [Unreleased]
 
+### Added
+
+- **Per-domain `MIN` / `MAX` aggregates for the encrypted-domain family.** `eql_v2.min(eql_v2_<T>_ord)` / `eql_v2.max(eql_v2_<T>_ord)` (and the `_ord_ore` twin) are generated for every ord-capable scalar variant, giving type-safe extrema on domain-typed columns — comparison routes through the variant's `<` / `>` operator (ORE block term, no decryption). Why: the new domain types previously had no equivalent of the composite-type aggregates. The existing `eql_v2.min(eql_v2_encrypted)` / `eql_v2.max(eql_v2_encrypted)` aggregates are **retained** and continue to work on `eql_v2_encrypted` columns; the per-domain aggregates are additive and coexist with them.
+
 ## [2.3.1] — 2026-05-21
 
 ### Fixed

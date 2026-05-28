@@ -624,9 +624,26 @@ FROM products
 GROUP BY eql_v2.jsonb_path_query_first(encrypted_json, 'color_selector');
 ```
 
+### `eql_v2.min()` / `eql_v2.max()` (composite type)
+
+Returns the minimum or maximum encrypted value in a set on an `eql_v2_encrypted` column (requires `ore` index terms for ordering).
+
+```sql
+eql_v2.min(eql_v2_encrypted) RETURNS eql_v2_encrypted
+eql_v2.max(eql_v2_encrypted) RETURNS eql_v2_encrypted
+```
+
+Comparison routes through the `<` / `>` operator on `eql_v2_encrypted`, which uses the ORE block term — no decryption.
+
+**Example:**
+```sql
+SELECT eql_v2.min(encrypted_date) FROM events;
+SELECT eql_v2.max(encrypted_price) FROM products WHERE category = 'electronics';
+```
+
 ### `eql_v2.min()` / `eql_v2.max()` (per-domain)
 
-Returns the minimum or maximum encrypted value in a set on an ordered encrypted-domain column. Defined per ord-capable variant of every scalar type (`eql_v2_<T>_ord`, `eql_v2_<T>_ord_ore`); the input type selects the aggregate via PostgreSQL's overload resolution.
+Returns the minimum or maximum encrypted value in a set on an ordered encrypted-domain column. Defined per ord-capable variant of every scalar type (`eql_v2_<T>_ord`, `eql_v2_<T>_ord_ore`); the input type selects the aggregate via PostgreSQL's overload resolution. These are type-safe alternatives to the composite-type aggregates above and coexist with them.
 
 ```sql
 -- int4 — generated for every ordered variant of every scalar type.
