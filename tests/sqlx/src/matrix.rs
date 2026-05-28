@@ -168,31 +168,37 @@ macro_rules! scalar_domain_matrix {
             suite = $suite, scalar = $scalar,
             domains = [$(($all_name, $all_variant)),+],
         }
-        $crate::__scalar_matrix_correctness_outer! {
+        $crate::__scalar_matrix_dxop_outer! {
+            case = __scalar_matrix_correctness_case,
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($eq_dom),+], ops_list = [$($eq_op),+],
             pivots_list = [$($pivot),+],
         }
-        $crate::__scalar_matrix_correctness_outer! {
+        $crate::__scalar_matrix_dxop_outer! {
+            case = __scalar_matrix_correctness_case,
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($ord_dom),*], ops_list = [$($ord_op),+],
             pivots_list = [$($pivot),+],
         }
-        $crate::__scalar_matrix_cross_shape_outer! {
+        $crate::__scalar_matrix_dxop_outer! {
+            case = __scalar_matrix_cross_shape_case,
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($eq_dom),+], ops_list = [$($eq_op),+],
             pivots_list = [$($pivot),+],
         }
-        $crate::__scalar_matrix_cross_shape_outer! {
+        $crate::__scalar_matrix_dxop_outer! {
+            case = __scalar_matrix_cross_shape_case,
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($ord_dom),*], ops_list = [$($ord_op),+],
             pivots_list = [$($pivot),+],
         }
-        $crate::__scalar_matrix_supported_null_outer! {
+        $crate::__scalar_matrix_dxo_outer! {
+            case = __scalar_matrix_supported_null_case,
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($eq_dom),+], ops_list = [$($eq_op),+],
         }
-        $crate::__scalar_matrix_supported_null_outer! {
+        $crate::__scalar_matrix_dxo_outer! {
+            case = __scalar_matrix_supported_null_case,
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($ord_dom),*], ops_list = [$($ord_op),+],
         }
@@ -320,20 +326,27 @@ macro_rules! __scalar_matrix_sanity {
 }
 
 // ============================================================================
-// Correctness category — per (domain, op, pivot), assert the row set
-// returned by `WHERE col op pivot` matches `T::expected_forward(op, pivot)`.
+// Shared cartesian-product drivers. `macro_rules!` cannot cross-product
+// independent lists in one repetition (`$($($(…)*)*)*` over flat depth-1
+// lists does not compile — every metavariable is bound at depth 1), so one
+// recursion level fixes one dimension. These generic drivers do that fan-out
+// once and dispatch to a per-category leaf macro named by `case`. The
+// dimension lists are independent: this is a product, not a zip.
 // ============================================================================
 
+// domain × op × pivot.
 #[macro_export]
 #[doc(hidden)]
-macro_rules! __scalar_matrix_correctness_outer {
+macro_rules! __scalar_matrix_dxop_outer {
     (
+        case = $case:ident,
         suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
         domains = [$($domain:tt),* $(,)?],
         ops_list = $ops_list:tt, pivots_list = $pivots_list:tt $(,)?
     ) => {
         $(
-            $crate::__scalar_matrix_correctness_mid! {
+            $crate::__scalar_matrix_dxop_mid! {
+                case = $case,
                 suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
                 domain = $domain, ops_list = $ops_list, pivots_list = $pivots_list,
             }
@@ -343,14 +356,16 @@ macro_rules! __scalar_matrix_correctness_outer {
 
 #[macro_export]
 #[doc(hidden)]
-macro_rules! __scalar_matrix_correctness_mid {
+macro_rules! __scalar_matrix_dxop_mid {
     (
+        case = $case:ident,
         suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
         domain = ($dom_name:ident, $variant:ident),
         ops_list = [$($op:tt),+ $(,)?], pivots_list = $pivots_list:tt $(,)?
     ) => {
         $(
-            $crate::__scalar_matrix_correctness_inner! {
+            $crate::__scalar_matrix_dxop_inner! {
+                case = $case,
                 suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
                 dom_name = $dom_name, variant = $variant,
                 op = $op, pivots_list = $pivots_list,
@@ -361,15 +376,16 @@ macro_rules! __scalar_matrix_correctness_mid {
 
 #[macro_export]
 #[doc(hidden)]
-macro_rules! __scalar_matrix_correctness_inner {
+macro_rules! __scalar_matrix_dxop_inner {
     (
+        case = $case:ident,
         suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
         dom_name = $dom_name:ident, variant = $variant:ident,
         op = ($op_name:ident, $op:literal),
         pivots_list = [$($pivot:tt),+ $(,)?] $(,)?
     ) => {
         $(
-            $crate::__scalar_matrix_correctness_case! {
+            $crate::$case! {
                 suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
                 dom_name = $dom_name, variant = $variant,
                 op_name = $op_name, op = $op, pivot = $pivot,
@@ -377,6 +393,48 @@ macro_rules! __scalar_matrix_correctness_inner {
         )+
     };
 }
+
+// domain × op.
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_dxo_outer {
+    (
+        case = $case:ident,
+        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
+        domains = [$($domain:tt),* $(,)?], ops_list = $ops_list:tt $(,)?
+    ) => {
+        $(
+            $crate::__scalar_matrix_dxo_inner! {
+                case = $case,
+                suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
+                domain = $domain, ops_list = $ops_list,
+            }
+        )*
+    };
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_dxo_inner {
+    (
+        case = $case:ident,
+        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
+        domain = ($dom_name:ident, $variant:ident),
+        ops_list = [$($op:tt),+ $(,)?] $(,)?
+    ) => {
+        $(
+            $crate::$case! {
+                suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
+                dom_name = $dom_name, variant = $variant, op = $op,
+            }
+        )+
+    };
+}
+
+// ============================================================================
+// Correctness category — leaf for the domain × op × pivot driver: assert the
+// row set from `WHERE col op pivot` matches `T::expected_forward(op, pivot)`.
+// ============================================================================
 
 #[macro_export]
 #[doc(hidden)]
@@ -413,64 +471,11 @@ macro_rules! __scalar_matrix_correctness_case {
 }
 
 // ============================================================================
-// Cross-shape category — per (domain, op, pivot), sweep the three operator
-// argument shapes (d,d), (d,j), (j,d) and assert each returns the right
-// row count. The `j_d` shape uses the commuted operator's expected set.
+// Cross-shape category — leaf for the domain × op × pivot driver: per
+// (domain, op, pivot) sweep the three operator argument shapes (d,d), (d,j),
+// (j,d) and assert each returns the right row count. The `j_d` shape uses the
+// commuted operator's expected set.
 // ============================================================================
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! __scalar_matrix_cross_shape_outer {
-    (
-        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
-        domains = [$($domain:tt),* $(,)?],
-        ops_list = $ops_list:tt, pivots_list = $pivots_list:tt $(,)?
-    ) => {
-        $(
-            $crate::__scalar_matrix_cross_shape_mid! {
-                suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
-                domain = $domain, ops_list = $ops_list, pivots_list = $pivots_list,
-            }
-        )*
-    };
-}
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! __scalar_matrix_cross_shape_mid {
-    (
-        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
-        domain = ($dom_name:ident, $variant:ident),
-        ops_list = [$($op:tt),+ $(,)?], pivots_list = $pivots_list:tt $(,)?
-    ) => {
-        $(
-            $crate::__scalar_matrix_cross_shape_inner! {
-                suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
-                dom_name = $dom_name, variant = $variant,
-                op = $op, pivots_list = $pivots_list,
-            }
-        )+
-    };
-}
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! __scalar_matrix_cross_shape_inner {
-    (
-        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
-        dom_name = $dom_name:ident, variant = $variant:ident,
-        op = ($op_name:ident, $op:literal),
-        pivots_list = [$($pivot:tt),+ $(,)?] $(,)?
-    ) => {
-        $(
-            $crate::__scalar_matrix_cross_shape_case! {
-                suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
-                dom_name = $dom_name, variant = $variant,
-                op_name = $op_name, op = $op, pivot = $pivot,
-            }
-        )+
-    };
-}
 
 #[macro_export]
 #[doc(hidden)]
@@ -521,42 +526,9 @@ macro_rules! __scalar_matrix_cross_shape_case {
 }
 
 // ============================================================================
-// Supported-NULL category — STRICT wrappers must propagate NULL on all
-// three NULL positions (left, right, both).
+// Supported-NULL category — leaf for the domain × op driver: STRICT wrappers
+// must propagate NULL on all three NULL positions (left, right, both).
 // ============================================================================
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! __scalar_matrix_supported_null_outer {
-    (
-        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
-        domains = [$($domain:tt),* $(,)?], ops_list = $ops_list:tt $(,)?
-    ) => {
-        $(
-            $crate::__scalar_matrix_supported_null_inner! {
-                suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
-                domain = $domain, ops_list = $ops_list,
-            }
-        )*
-    };
-}
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! __scalar_matrix_supported_null_inner {
-    (
-        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
-        domain = ($dom_name:ident, $variant:ident),
-        ops_list = [$($op:tt),+ $(,)?] $(,)?
-    ) => {
-        $(
-            $crate::__scalar_matrix_supported_null_case! {
-                suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
-                dom_name = $dom_name, variant = $variant, op = $op,
-            }
-        )+
-    };
-}
 
 #[macro_export]
 #[doc(hidden)]
