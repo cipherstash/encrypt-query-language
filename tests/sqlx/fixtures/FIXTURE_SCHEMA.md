@@ -202,10 +202,11 @@ applies standalone.
 **Regenerated every test run.** `mise run test:sqlx` invokes the generator
 before `cargo test`, so a stale committed fixture cannot mask a payload-shape
 regression. The generator encrypts in-process via `cipherstash-client`; it
-needs a live Postgres plus CipherStash workspace credentials
-(`CS_CLIENT_ACCESS_KEY` + `CS_WORKSPACE_CRN`, or the legacy
-`CS_CLIENT_ID`/`CS_CLIENT_KEY` pair) in the shell environment. Do not
-hand-edit the generated file; it is overwritten in place on every run.
+needs a live Postgres plus **both** CipherStash credential pairs in the shell
+environment (they are not alternatives): `CS_CLIENT_ACCESS_KEY` +
+`CS_WORKSPACE_CRN` for ZeroKMS auth (AutoStrategy) **and** `CS_CLIENT_ID` +
+`CS_CLIENT_KEY` for the client key (EnvKeyProvider). Do not hand-edit the
+generated file; it is overwritten in place on every run.
 
 **Schema:** Table lives in the dedicated `fixtures` SQL schema (kept out of the
 `public` type/domain namespace so a downstream `public.eql_v2_int4` domain can
