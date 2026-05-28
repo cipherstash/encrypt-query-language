@@ -6462,9 +6462,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "=",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -6475,7 +6475,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "=", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "=", d, lit),
                             )
                         }),
                         forward_count,
@@ -6484,7 +6484,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "=", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "=", lit, d),
                             )
                         }),
                         commuted_count,
@@ -6670,9 +6670,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "=",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -6683,7 +6683,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "=", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "=", d, lit),
                             )
                         }),
                         forward_count,
@@ -6692,7 +6692,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "=", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "=", lit, d),
                             )
                         }),
                         commuted_count,
@@ -6878,9 +6878,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "=",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -6891,7 +6891,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "=", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "=", d, lit),
                             )
                         }),
                         forward_count,
@@ -6900,7 +6900,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "=", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "=", lit, d),
                             )
                         }),
                         commuted_count,
@@ -7086,9 +7086,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "<>",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -7099,7 +7099,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "<>", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "<>", d, lit),
                             )
                         }),
                         forward_count,
@@ -7108,7 +7108,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "<>", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "<>", lit, d),
                             )
                         }),
                         commuted_count,
@@ -7294,9 +7294,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "<>",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -7307,7 +7307,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "<>", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "<>", d, lit),
                             )
                         }),
                         forward_count,
@@ -7316,7 +7316,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "<>", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "<>", lit, d),
                             )
                         }),
                         commuted_count,
@@ -7502,9 +7502,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "<>",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -7515,7 +7515,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "<>", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "<>", d, lit),
                             )
                         }),
                         forward_count,
@@ -7524,7 +7524,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "<>", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "<>", lit, d),
                             )
                         }),
                         commuted_count,
@@ -7710,9 +7710,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "=",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -7723,7 +7723,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "=", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "=", d, lit),
                             )
                         }),
                         forward_count,
@@ -7732,7 +7732,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "=", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "=", lit, d),
                             )
                         }),
                         commuted_count,
@@ -7918,9 +7918,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "=",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -7931,7 +7931,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "=", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "=", d, lit),
                             )
                         }),
                         forward_count,
@@ -7940,7 +7940,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "=", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "=", lit, d),
                             )
                         }),
                         commuted_count,
@@ -8126,9 +8126,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "=",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -8139,7 +8139,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "=", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "=", d, lit),
                             )
                         }),
                         forward_count,
@@ -8148,7 +8148,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "=", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "=", lit, d),
                             )
                         }),
                         commuted_count,
@@ -8334,9 +8334,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "<>",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -8347,7 +8347,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "<>", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "<>", d, lit),
                             )
                         }),
                         forward_count,
@@ -8356,7 +8356,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "<>", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "<>", lit, d),
                             )
                         }),
                         commuted_count,
@@ -8542,9 +8542,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "<>",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -8555,7 +8555,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "<>", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "<>", d, lit),
                             )
                         }),
                         forward_count,
@@ -8564,7 +8564,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "<>", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "<>", lit, d),
                             )
                         }),
                         commuted_count,
@@ -8750,9 +8750,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "<>",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -8763,7 +8763,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "<>", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "<>", d, lit),
                             )
                         }),
                         forward_count,
@@ -8772,7 +8772,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "<>", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "<>", lit, d),
                             )
                         }),
                         commuted_count,
@@ -8958,9 +8958,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "=",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -8971,7 +8971,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "=", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "=", d, lit),
                             )
                         }),
                         forward_count,
@@ -8980,7 +8980,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "=", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "=", lit, d),
                             )
                         }),
                         commuted_count,
@@ -9166,9 +9166,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "=",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -9179,7 +9179,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "=", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "=", d, lit),
                             )
                         }),
                         forward_count,
@@ -9188,7 +9188,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "=", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "=", lit, d),
                             )
                         }),
                         commuted_count,
@@ -9374,9 +9374,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "=",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -9387,7 +9387,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "=", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "=", d, lit),
                             )
                         }),
                         forward_count,
@@ -9396,7 +9396,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "=", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "=", lit, d),
                             )
                         }),
                         commuted_count,
@@ -9582,9 +9582,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "<>",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -9595,7 +9595,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "<>", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "<>", d, lit),
                             )
                         }),
                         forward_count,
@@ -9604,7 +9604,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "<>", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "<>", lit, d),
                             )
                         }),
                         commuted_count,
@@ -9790,9 +9790,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "<>",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -9803,7 +9803,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "<>", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "<>", d, lit),
                             )
                         }),
                         forward_count,
@@ -9812,7 +9812,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "<>", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "<>", lit, d),
                             )
                         }),
                         commuted_count,
@@ -9998,9 +9998,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "<>",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -10011,7 +10011,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "<>", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "<>", d, lit),
                             )
                         }),
                         forward_count,
@@ -10020,7 +10020,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "<>", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "<>", lit, d),
                             )
                         }),
                         commuted_count,
@@ -10206,9 +10206,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "<",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -10219,7 +10219,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "<", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "<", d, lit),
                             )
                         }),
                         forward_count,
@@ -10228,7 +10228,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "<", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "<", lit, d),
                             )
                         }),
                         commuted_count,
@@ -10414,9 +10414,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "<",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -10427,7 +10427,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "<", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "<", d, lit),
                             )
                         }),
                         forward_count,
@@ -10436,7 +10436,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "<", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "<", lit, d),
                             )
                         }),
                         commuted_count,
@@ -10622,9 +10622,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "<",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -10635,7 +10635,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "<", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "<", d, lit),
                             )
                         }),
                         forward_count,
@@ -10644,7 +10644,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "<", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "<", lit, d),
                             )
                         }),
                         commuted_count,
@@ -10830,9 +10830,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "<=",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -10843,7 +10843,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "<=", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "<=", d, lit),
                             )
                         }),
                         forward_count,
@@ -10852,7 +10852,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "<=", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "<=", lit, d),
                             )
                         }),
                         commuted_count,
@@ -11038,9 +11038,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "<=",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -11051,7 +11051,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "<=", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "<=", d, lit),
                             )
                         }),
                         forward_count,
@@ -11060,7 +11060,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "<=", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "<=", lit, d),
                             )
                         }),
                         commuted_count,
@@ -11246,9 +11246,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "<=",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -11259,7 +11259,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "<=", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "<=", d, lit),
                             )
                         }),
                         forward_count,
@@ -11268,7 +11268,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "<=", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "<=", lit, d),
                             )
                         }),
                         commuted_count,
@@ -11454,9 +11454,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     ">",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -11467,7 +11467,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, ">", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", ">", d, lit),
                             )
                         }),
                         forward_count,
@@ -11476,7 +11476,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, ">", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", ">", lit, d),
                             )
                         }),
                         commuted_count,
@@ -11662,9 +11662,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     ">",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -11675,7 +11675,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, ">", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", ">", d, lit),
                             )
                         }),
                         forward_count,
@@ -11684,7 +11684,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, ">", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", ">", lit, d),
                             )
                         }),
                         commuted_count,
@@ -11870,9 +11870,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     ">",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -11883,7 +11883,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, ">", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", ">", d, lit),
                             )
                         }),
                         forward_count,
@@ -11892,7 +11892,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, ">", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", ">", lit, d),
                             )
                         }),
                         commuted_count,
@@ -12078,9 +12078,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     ">=",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -12091,7 +12091,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, ">=", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", ">=", d, lit),
                             )
                         }),
                         forward_count,
@@ -12100,7 +12100,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, ">=", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", ">=", lit, d),
                             )
                         }),
                         commuted_count,
@@ -12286,9 +12286,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     ">=",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -12299,7 +12299,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, ">=", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", ">=", d, lit),
                             )
                         }),
                         forward_count,
@@ -12308,7 +12308,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, ">=", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", ">=", lit, d),
                             )
                         }),
                         commuted_count,
@@ -12494,9 +12494,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     ">=",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -12507,7 +12507,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, ">=", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", ">=", d, lit),
                             )
                         }),
                         forward_count,
@@ -12516,7 +12516,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, ">=", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", ">=", lit, d),
                             )
                         }),
                         commuted_count,
@@ -12702,9 +12702,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "<",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -12715,7 +12715,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "<", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "<", d, lit),
                             )
                         }),
                         forward_count,
@@ -12724,7 +12724,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "<", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "<", lit, d),
                             )
                         }),
                         commuted_count,
@@ -12910,9 +12910,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "<",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -12923,7 +12923,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "<", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "<", d, lit),
                             )
                         }),
                         forward_count,
@@ -12932,7 +12932,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "<", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "<", lit, d),
                             )
                         }),
                         commuted_count,
@@ -13118,9 +13118,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "<",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -13131,7 +13131,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "<", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "<", d, lit),
                             )
                         }),
                         forward_count,
@@ -13140,7 +13140,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "<", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "<", lit, d),
                             )
                         }),
                         commuted_count,
@@ -13326,9 +13326,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "<=",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -13339,7 +13339,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "<=", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "<=", d, lit),
                             )
                         }),
                         forward_count,
@@ -13348,7 +13348,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "<=", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "<=", lit, d),
                             )
                         }),
                         commuted_count,
@@ -13534,9 +13534,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "<=",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -13547,7 +13547,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "<=", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "<=", d, lit),
                             )
                         }),
                         forward_count,
@@ -13556,7 +13556,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "<=", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "<=", lit, d),
                             )
                         }),
                         commuted_count,
@@ -13742,9 +13742,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     "<=",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -13755,7 +13755,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, "<=", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", "<=", d, lit),
                             )
                         }),
                         forward_count,
@@ -13764,7 +13764,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, "<=", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", "<=", lit, d),
                             )
                         }),
                         commuted_count,
@@ -13950,9 +13950,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     ">",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -13963,7 +13963,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, ">", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", ">", d, lit),
                             )
                         }),
                         forward_count,
@@ -13972,7 +13972,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, ">", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", ">", lit, d),
                             )
                         }),
                         commuted_count,
@@ -14158,9 +14158,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     ">",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -14171,7 +14171,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, ">", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", ">", d, lit),
                             )
                         }),
                         forward_count,
@@ -14180,7 +14180,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, ">", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", ">", lit, d),
                             )
                         }),
                         commuted_count,
@@ -14366,9 +14366,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     ">",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -14379,7 +14379,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, ">", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", ">", d, lit),
                             )
                         }),
                         forward_count,
@@ -14388,7 +14388,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, ">", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", ">", lit, d),
                             )
                         }),
                         commuted_count,
@@ -14574,9 +14574,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     ">=",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -14587,7 +14587,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, ">=", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", ">=", d, lit),
                             )
                         }),
                         forward_count,
@@ -14596,7 +14596,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, ">=", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", ">=", lit, d),
                             )
                         }),
                         commuted_count,
@@ -14782,9 +14782,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     ">=",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -14795,7 +14795,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, ">=", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", ">=", d, lit),
                             )
                         }),
                         forward_count,
@@ -14804,7 +14804,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, ">=", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", ">=", lit, d),
                             )
                         }),
                         commuted_count,
@@ -14990,9 +14990,9 @@ pub mod int4 {
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{0} {1} {2}::jsonb::{0}",
-                                    d,
+                                    "payload::{1} {0} {2}::jsonb::{1}",
                                     ">=",
+                                    d,
                                     lit,
                                 ),
                             )
@@ -15003,7 +15003,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{0} {1} {2}::jsonb", d, ">=", lit),
+                                format_args!("payload::{1} {0} {2}::jsonb", ">=", d, lit),
                             )
                         }),
                         forward_count,
@@ -15012,7 +15012,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{2}::jsonb {1} payload::{0}", d, ">=", lit),
+                                format_args!("{1}::jsonb {0} payload::{2}", ">=", lit, d),
                             )
                         }),
                         commuted_count,
@@ -17107,7 +17107,7 @@ pub mod int4 {
                 }
                 let null_sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT $1::jsonb::{0} {1} $2::jsonb::{0}", d, "="),
+                        format_args!("SELECT $1::jsonb::{1} {0} $2::jsonb::{1}", "=", d),
                     )
                 });
                 ::eql_tests::scalar_domains::assert_raises(
@@ -17284,7 +17284,7 @@ pub mod int4 {
                 }
                 let null_sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT $1::jsonb::{0} {1} $2::jsonb::{0}", d, "<>"),
+                        format_args!("SELECT $1::jsonb::{1} {0} $2::jsonb::{1}", "<>", d),
                     )
                 });
                 ::eql_tests::scalar_domains::assert_raises(
@@ -17461,7 +17461,7 @@ pub mod int4 {
                 }
                 let null_sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT $1::jsonb::{0} {1} $2::jsonb::{0}", d, "<"),
+                        format_args!("SELECT $1::jsonb::{1} {0} $2::jsonb::{1}", "<", d),
                     )
                 });
                 ::eql_tests::scalar_domains::assert_raises(
@@ -17638,7 +17638,7 @@ pub mod int4 {
                 }
                 let null_sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT $1::jsonb::{0} {1} $2::jsonb::{0}", d, "<="),
+                        format_args!("SELECT $1::jsonb::{1} {0} $2::jsonb::{1}", "<=", d),
                     )
                 });
                 ::eql_tests::scalar_domains::assert_raises(
@@ -17815,7 +17815,7 @@ pub mod int4 {
                 }
                 let null_sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT $1::jsonb::{0} {1} $2::jsonb::{0}", d, ">"),
+                        format_args!("SELECT $1::jsonb::{1} {0} $2::jsonb::{1}", ">", d),
                     )
                 });
                 ::eql_tests::scalar_domains::assert_raises(
@@ -17992,7 +17992,7 @@ pub mod int4 {
                 }
                 let null_sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT $1::jsonb::{0} {1} $2::jsonb::{0}", d, ">="),
+                        format_args!("SELECT $1::jsonb::{1} {0} $2::jsonb::{1}", ">=", d),
                     )
                 });
                 ::eql_tests::scalar_domains::assert_raises(
@@ -18171,7 +18171,7 @@ pub mod int4 {
                 }
                 let null_sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT $1::jsonb::{0} {1} $2::jsonb::{0}", d, "@>"),
+                        format_args!("SELECT $1::jsonb::{1} {0} $2::jsonb::{1}", "@>", d),
                     )
                 });
                 ::eql_tests::scalar_domains::assert_raises(
@@ -18350,7 +18350,7 @@ pub mod int4 {
                 }
                 let null_sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT $1::jsonb::{0} {1} $2::jsonb::{0}", d, "<@"),
+                        format_args!("SELECT $1::jsonb::{1} {0} $2::jsonb::{1}", "<@", d),
                     )
                 });
                 ::eql_tests::scalar_domains::assert_raises(
@@ -18525,7 +18525,7 @@ pub mod int4 {
                 }
                 let null_sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT $1::jsonb::{0} {1} $2::jsonb::{0}", d, "<"),
+                        format_args!("SELECT $1::jsonb::{1} {0} $2::jsonb::{1}", "<", d),
                     )
                 });
                 ::eql_tests::scalar_domains::assert_raises(
@@ -18700,7 +18700,7 @@ pub mod int4 {
                 }
                 let null_sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT $1::jsonb::{0} {1} $2::jsonb::{0}", d, "<="),
+                        format_args!("SELECT $1::jsonb::{1} {0} $2::jsonb::{1}", "<=", d),
                     )
                 });
                 ::eql_tests::scalar_domains::assert_raises(
@@ -18875,7 +18875,7 @@ pub mod int4 {
                 }
                 let null_sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT $1::jsonb::{0} {1} $2::jsonb::{0}", d, ">"),
+                        format_args!("SELECT $1::jsonb::{1} {0} $2::jsonb::{1}", ">", d),
                     )
                 });
                 ::eql_tests::scalar_domains::assert_raises(
@@ -19050,7 +19050,7 @@ pub mod int4 {
                 }
                 let null_sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT $1::jsonb::{0} {1} $2::jsonb::{0}", d, ">="),
+                        format_args!("SELECT $1::jsonb::{1} {0} $2::jsonb::{1}", ">=", d),
                     )
                 });
                 ::eql_tests::scalar_domains::assert_raises(
@@ -19227,7 +19227,7 @@ pub mod int4 {
                 }
                 let null_sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT $1::jsonb::{0} {1} $2::jsonb::{0}", d, "@>"),
+                        format_args!("SELECT $1::jsonb::{1} {0} $2::jsonb::{1}", "@>", d),
                     )
                 });
                 ::eql_tests::scalar_domains::assert_raises(
@@ -19406,7 +19406,7 @@ pub mod int4 {
                 }
                 let null_sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT $1::jsonb::{0} {1} $2::jsonb::{0}", d, "<@"),
+                        format_args!("SELECT $1::jsonb::{1} {0} $2::jsonb::{1}", "<@", d),
                     )
                 });
                 ::eql_tests::scalar_domains::assert_raises(
@@ -19585,7 +19585,7 @@ pub mod int4 {
                 }
                 let null_sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT $1::jsonb::{0} {1} $2::jsonb::{0}", d, "@>"),
+                        format_args!("SELECT $1::jsonb::{1} {0} $2::jsonb::{1}", "@>", d),
                     )
                 });
                 ::eql_tests::scalar_domains::assert_raises(
@@ -19764,7 +19764,7 @@ pub mod int4 {
                 }
                 let null_sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT $1::jsonb::{0} {1} $2::jsonb::{0}", d, "<@"),
+                        format_args!("SELECT $1::jsonb::{1} {0} $2::jsonb::{1}", "<@", d),
                     )
                 });
                 ::eql_tests::scalar_domains::assert_raises(
@@ -19943,7 +19943,7 @@ pub mod int4 {
                 }
                 let null_sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT $1::jsonb::{0} {1} $2::jsonb::{0}", d, "@>"),
+                        format_args!("SELECT $1::jsonb::{1} {0} $2::jsonb::{1}", "@>", d),
                     )
                 });
                 ::eql_tests::scalar_domains::assert_raises(
@@ -20122,7 +20122,7 @@ pub mod int4 {
                 }
                 let null_sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT $1::jsonb::{0} {1} $2::jsonb::{0}", d, "<@"),
+                        format_args!("SELECT $1::jsonb::{1} {0} $2::jsonb::{1}", "<@", d),
                     )
                 });
                 ::eql_tests::scalar_domains::assert_raises(
@@ -20235,9 +20235,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 675usize,
+            start_line: 674usize,
             start_col: 22usize,
-            end_line: 675usize,
+            end_line: 674usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -20417,9 +20417,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 675usize,
+            start_line: 674usize,
             start_col: 22usize,
-            end_line: 675usize,
+            end_line: 674usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -20597,9 +20597,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 675usize,
+            start_line: 674usize,
             start_col: 22usize,
-            end_line: 675usize,
+            end_line: 674usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -20781,9 +20781,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 675usize,
+            start_line: 674usize,
             start_col: 22usize,
-            end_line: 675usize,
+            end_line: 674usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -20965,9 +20965,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 748usize,
+            start_line: 747usize,
             start_col: 22usize,
-            end_line: 748usize,
+            end_line: 747usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -21108,9 +21108,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 748usize,
+            start_line: 747usize,
             start_col: 22usize,
-            end_line: 748usize,
+            end_line: 747usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -21253,9 +21253,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 748usize,
+            start_line: 747usize,
             start_col: 22usize,
-            end_line: 748usize,
+            end_line: 747usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -21398,9 +21398,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 748usize,
+            start_line: 747usize,
             start_col: 22usize,
-            end_line: 748usize,
+            end_line: 747usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -21543,9 +21543,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 805usize,
+            start_line: 804usize,
             start_col: 22usize,
-            end_line: 805usize,
+            end_line: 804usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -21674,9 +21674,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 805usize,
+            start_line: 804usize,
             start_col: 22usize,
-            end_line: 805usize,
+            end_line: 804usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -21805,9 +21805,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 805usize,
+            start_line: 804usize,
             start_col: 22usize,
-            end_line: 805usize,
+            end_line: 804usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -21936,9 +21936,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 805usize,
+            start_line: 804usize,
             start_col: 22usize,
-            end_line: 805usize,
+            end_line: 804usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -22067,9 +22067,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 858usize,
+            start_line: 857usize,
             start_col: 22usize,
-            end_line: 858usize,
+            end_line: 857usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -22480,9 +22480,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 858usize,
+            start_line: 857usize,
             start_col: 22usize,
-            end_line: 858usize,
+            end_line: 857usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -22823,9 +22823,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 858usize,
+            start_line: 857usize,
             start_col: 22usize,
-            end_line: 858usize,
+            end_line: 857usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -23026,9 +23026,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 858usize,
+            start_line: 857usize,
             start_col: 22usize,
-            end_line: 858usize,
+            end_line: 857usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -23229,9 +23229,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 939usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 939usize,
+            end_line: 938usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -23435,9 +23435,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 939usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 939usize,
+            end_line: 938usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -23641,9 +23641,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 939usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 939usize,
+            end_line: 938usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -23847,9 +23847,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 939usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 939usize,
+            end_line: 938usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -24053,9 +24053,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 939usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 939usize,
+            end_line: 938usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -24259,9 +24259,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1390usize,
+            start_line: 1373usize,
             start_col: 22usize,
-            end_line: 1390usize,
+            end_line: 1373usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -24289,10 +24289,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
-                                    table,
+                                    "CREATE TEMP TABLE {2} (plaintext {0}, value {1}) ON COMMIT DROP",
                                     <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE,
                                     &spec.sql_domain,
+                                    table,
                                 ),
                             )
                         }),
@@ -24303,10 +24303,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO {0}(plaintext, value) SELECT plaintext, payload::{1} FROM {2}",
-                                    table,
+                                    "INSERT INTO {2}(plaintext, value) SELECT plaintext, payload::{0} FROM {1}",
                                     &spec.sql_domain,
                                     fixture_table,
+                                    table,
                                 ),
                             )
                         }),
@@ -24317,11 +24317,11 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "CREATE INDEX {0} ON {1} USING {2} ({3}(value))",
-                                    index,
-                                    table,
+                                    "CREATE INDEX {2} ON {3} USING {0} ({1}(value))",
                                     "btree",
                                     "eql_v2.eq_term",
+                                    index,
+                                    table,
                                 ),
                             )
                         }),
@@ -24352,11 +24352,11 @@ pub mod int4 {
                     let sql = ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
-                                "EXPLAIN SELECT * FROM {0} WHERE value {1} {2}::jsonb{3}",
-                                table,
+                                "EXPLAIN SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
                                 "=",
-                                lit,
                                 rhs_cast,
+                                table,
+                                lit,
                             ),
                         )
                     });
@@ -24477,9 +24477,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1390usize,
+            start_line: 1373usize,
             start_col: 22usize,
-            end_line: 1390usize,
+            end_line: 1373usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -24507,10 +24507,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
-                                    table,
+                                    "CREATE TEMP TABLE {2} (plaintext {0}, value {1}) ON COMMIT DROP",
                                     <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE,
                                     &spec.sql_domain,
+                                    table,
                                 ),
                             )
                         }),
@@ -24521,10 +24521,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO {0}(plaintext, value) SELECT plaintext, payload::{1} FROM {2}",
-                                    table,
+                                    "INSERT INTO {2}(plaintext, value) SELECT plaintext, payload::{0} FROM {1}",
                                     &spec.sql_domain,
                                     fixture_table,
+                                    table,
                                 ),
                             )
                         }),
@@ -24535,11 +24535,11 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "CREATE INDEX {0} ON {1} USING {2} ({3}(value))",
-                                    index,
-                                    table,
+                                    "CREATE INDEX {2} ON {3} USING {0} ({1}(value))",
                                     "hash",
                                     "eql_v2.eq_term",
+                                    index,
+                                    table,
                                 ),
                             )
                         }),
@@ -24570,11 +24570,11 @@ pub mod int4 {
                     let sql = ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
-                                "EXPLAIN SELECT * FROM {0} WHERE value {1} {2}::jsonb{3}",
-                                table,
+                                "EXPLAIN SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
                                 "=",
-                                lit,
                                 rhs_cast,
+                                table,
+                                lit,
                             ),
                         )
                     });
@@ -24695,9 +24695,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1390usize,
+            start_line: 1373usize,
             start_col: 22usize,
-            end_line: 1390usize,
+            end_line: 1373usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -24725,10 +24725,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
-                                    table,
+                                    "CREATE TEMP TABLE {2} (plaintext {0}, value {1}) ON COMMIT DROP",
                                     <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE,
                                     &spec.sql_domain,
+                                    table,
                                 ),
                             )
                         }),
@@ -24739,10 +24739,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO {0}(plaintext, value) SELECT plaintext, payload::{1} FROM {2}",
-                                    table,
+                                    "INSERT INTO {2}(plaintext, value) SELECT plaintext, payload::{0} FROM {1}",
                                     &spec.sql_domain,
                                     fixture_table,
+                                    table,
                                 ),
                             )
                         }),
@@ -24753,11 +24753,11 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "CREATE INDEX {0} ON {1} USING {2} ({3}(value))",
-                                    index,
-                                    table,
+                                    "CREATE INDEX {2} ON {3} USING {0} ({1}(value))",
                                     "btree",
                                     "eql_v2.ord_term",
+                                    index,
+                                    table,
                                 ),
                             )
                         }),
@@ -24788,11 +24788,11 @@ pub mod int4 {
                     let sql = ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
-                                "EXPLAIN SELECT * FROM {0} WHERE value {1} {2}::jsonb{3}",
-                                table,
+                                "EXPLAIN SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
                                 "=",
-                                lit,
                                 rhs_cast,
+                                table,
+                                lit,
                             ),
                         )
                     });
@@ -24820,11 +24820,11 @@ pub mod int4 {
                     let sql = ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
-                                "EXPLAIN SELECT * FROM {0} WHERE value {1} {2}::jsonb{3}",
-                                table,
+                                "EXPLAIN SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
                                 "<",
-                                lit,
                                 rhs_cast,
+                                table,
+                                lit,
                             ),
                         )
                     });
@@ -24852,11 +24852,11 @@ pub mod int4 {
                     let sql = ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
-                                "EXPLAIN SELECT * FROM {0} WHERE value {1} {2}::jsonb{3}",
-                                table,
+                                "EXPLAIN SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
                                 "<=",
-                                lit,
                                 rhs_cast,
+                                table,
+                                lit,
                             ),
                         )
                     });
@@ -24884,11 +24884,11 @@ pub mod int4 {
                     let sql = ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
-                                "EXPLAIN SELECT * FROM {0} WHERE value {1} {2}::jsonb{3}",
-                                table,
+                                "EXPLAIN SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
                                 ">",
-                                lit,
                                 rhs_cast,
+                                table,
+                                lit,
                             ),
                         )
                     });
@@ -24916,11 +24916,11 @@ pub mod int4 {
                     let sql = ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
-                                "EXPLAIN SELECT * FROM {0} WHERE value {1} {2}::jsonb{3}",
-                                table,
+                                "EXPLAIN SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
                                 ">=",
-                                lit,
                                 rhs_cast,
+                                table,
+                                lit,
                             ),
                         )
                     });
@@ -25041,9 +25041,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1390usize,
+            start_line: 1373usize,
             start_col: 22usize,
-            end_line: 1390usize,
+            end_line: 1373usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -25071,10 +25071,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
-                                    table,
+                                    "CREATE TEMP TABLE {2} (plaintext {0}, value {1}) ON COMMIT DROP",
                                     <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE,
                                     &spec.sql_domain,
+                                    table,
                                 ),
                             )
                         }),
@@ -25085,10 +25085,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO {0}(plaintext, value) SELECT plaintext, payload::{1} FROM {2}",
-                                    table,
+                                    "INSERT INTO {2}(plaintext, value) SELECT plaintext, payload::{0} FROM {1}",
                                     &spec.sql_domain,
                                     fixture_table,
+                                    table,
                                 ),
                             )
                         }),
@@ -25099,11 +25099,11 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "CREATE INDEX {0} ON {1} USING {2} ({3}(value))",
-                                    index,
-                                    table,
+                                    "CREATE INDEX {2} ON {3} USING {0} ({1}(value))",
                                     "btree",
                                     "eql_v2.ord_term",
+                                    index,
+                                    table,
                                 ),
                             )
                         }),
@@ -25134,11 +25134,11 @@ pub mod int4 {
                     let sql = ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
-                                "EXPLAIN SELECT * FROM {0} WHERE value {1} {2}::jsonb{3}",
-                                table,
+                                "EXPLAIN SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
                                 "=",
-                                lit,
                                 rhs_cast,
+                                table,
+                                lit,
                             ),
                         )
                     });
@@ -25166,11 +25166,11 @@ pub mod int4 {
                     let sql = ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
-                                "EXPLAIN SELECT * FROM {0} WHERE value {1} {2}::jsonb{3}",
-                                table,
+                                "EXPLAIN SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
                                 "<",
-                                lit,
                                 rhs_cast,
+                                table,
+                                lit,
                             ),
                         )
                     });
@@ -25198,11 +25198,11 @@ pub mod int4 {
                     let sql = ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
-                                "EXPLAIN SELECT * FROM {0} WHERE value {1} {2}::jsonb{3}",
-                                table,
+                                "EXPLAIN SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
                                 "<=",
-                                lit,
                                 rhs_cast,
+                                table,
+                                lit,
                             ),
                         )
                     });
@@ -25230,11 +25230,11 @@ pub mod int4 {
                     let sql = ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
-                                "EXPLAIN SELECT * FROM {0} WHERE value {1} {2}::jsonb{3}",
-                                table,
+                                "EXPLAIN SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
                                 ">",
-                                lit,
                                 rhs_cast,
+                                table,
+                                lit,
                             ),
                         )
                     });
@@ -25262,11 +25262,11 @@ pub mod int4 {
                     let sql = ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
-                                "EXPLAIN SELECT * FROM {0} WHERE value {1} {2}::jsonb{3}",
-                                table,
+                                "EXPLAIN SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
                                 ">=",
-                                lit,
                                 rhs_cast,
+                                table,
+                                lit,
                             ),
                         )
                     });
@@ -25385,9 +25385,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1112usize,
+            start_line: 1106usize,
             start_col: 22usize,
-            end_line: 1112usize,
+            end_line: 1106usize,
             end_col: 55usize,
             compile_fail: false,
             no_run: false,
@@ -25555,9 +25555,9 @@ pub mod int4 {
                             &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "SELECT id FROM {0} WHERE plaintext = {1} ORDER BY id",
-                                        table,
+                                        "SELECT id FROM {1} WHERE plaintext = {0} ORDER BY id",
                                         probe_lit,
+                                        table,
                                     ),
                                 )
                             }),
@@ -25682,9 +25682,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1218usize,
+            start_line: 1209usize,
             start_col: 22usize,
-            end_line: 1218usize,
+            end_line: 1209usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -25717,9 +25717,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
-                                    table,
+                                    "CREATE TEMP TABLE {1} (plaintext {0}, value {2}) ON COMMIT DROP",
                                     <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE,
+                                    table,
                                     d,
                                 ),
                             )
@@ -25731,10 +25731,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO {0}(plaintext, value) SELECT plaintext, (payload - \'hm\')::{1} FROM {2}",
+                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, (payload - \'hm\')::{2} FROM {0}",
+                                    fixture_table,
                                     table,
                                     d,
-                                    fixture_table,
                                 ),
                             )
                         }),
@@ -25971,9 +25971,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1218usize,
+            start_line: 1209usize,
             start_col: 22usize,
-            end_line: 1218usize,
+            end_line: 1209usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -26006,9 +26006,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
-                                    table,
+                                    "CREATE TEMP TABLE {1} (plaintext {0}, value {2}) ON COMMIT DROP",
                                     <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE,
+                                    table,
                                     d,
                                 ),
                             )
@@ -26020,10 +26020,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO {0}(plaintext, value) SELECT plaintext, (payload - \'hm\')::{1} FROM {2}",
+                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, (payload - \'hm\')::{2} FROM {0}",
+                                    fixture_table,
                                     table,
                                     d,
-                                    fixture_table,
                                 ),
                             )
                         }),
@@ -26260,9 +26260,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1334usize,
+            start_line: 1317usize,
             start_col: 22usize,
-            end_line: 1334usize,
+            end_line: 1317usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -26402,9 +26402,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1691usize,
+            start_line: 1669usize,
             start_col: 22usize,
-            end_line: 1691usize,
+            end_line: 1669usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -26437,9 +26437,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {0} WHERE plaintext = {1}",
-                                    fixture,
+                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
                                     extremum_lit,
+                                    fixture,
                                 ),
                             )
                         }),
@@ -26608,9 +26608,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1750usize,
+            start_line: 1727usize,
             start_col: 22usize,
-            end_line: 1750usize,
+            end_line: 1727usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -26762,9 +26762,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1776usize,
+            start_line: 1752usize,
             start_col: 22usize,
-            end_line: 1776usize,
+            end_line: 1752usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -26903,9 +26903,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1802usize,
+            start_line: 1778usize,
             start_col: 22usize,
-            end_line: 1802usize,
+            end_line: 1778usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -26970,11 +26970,11 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO mixed_null(value) SELECT NULL::{0} UNION ALL SELECT payload::{0} FROM {1} WHERE plaintext = {2} UNION ALL SELECT NULL::{0} UNION ALL SELECT payload::{0} FROM {1} WHERE plaintext = {3} UNION ALL SELECT NULL::{0}",
-                                    d,
-                                    fixture,
+                                    "INSERT INTO mixed_null(value) SELECT NULL::{2} UNION ALL SELECT payload::{2} FROM {3} WHERE plaintext = {0} UNION ALL SELECT NULL::{2} UNION ALL SELECT payload::{2} FROM {3} WHERE plaintext = {1} UNION ALL SELECT NULL::{2}",
                                     low_lit,
                                     high_lit,
+                                    d,
+                                    fixture,
                                 ),
                             )
                         }),
@@ -26985,9 +26985,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {0} WHERE plaintext = {1}",
-                                    fixture,
+                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
                                     expected_lit,
+                                    fixture,
                                 ),
                             )
                         }),
@@ -27121,9 +27121,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1691usize,
+            start_line: 1669usize,
             start_col: 22usize,
-            end_line: 1691usize,
+            end_line: 1669usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -27156,9 +27156,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {0} WHERE plaintext = {1}",
-                                    fixture,
+                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
                                     extremum_lit,
+                                    fixture,
                                 ),
                             )
                         }),
@@ -27327,9 +27327,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1750usize,
+            start_line: 1727usize,
             start_col: 22usize,
-            end_line: 1750usize,
+            end_line: 1727usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -27481,9 +27481,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1776usize,
+            start_line: 1752usize,
             start_col: 22usize,
-            end_line: 1776usize,
+            end_line: 1752usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -27622,9 +27622,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1802usize,
+            start_line: 1778usize,
             start_col: 22usize,
-            end_line: 1802usize,
+            end_line: 1778usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -27689,11 +27689,11 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO mixed_null(value) SELECT NULL::{0} UNION ALL SELECT payload::{0} FROM {1} WHERE plaintext = {2} UNION ALL SELECT NULL::{0} UNION ALL SELECT payload::{0} FROM {1} WHERE plaintext = {3} UNION ALL SELECT NULL::{0}",
-                                    d,
-                                    fixture,
+                                    "INSERT INTO mixed_null(value) SELECT NULL::{2} UNION ALL SELECT payload::{2} FROM {3} WHERE plaintext = {0} UNION ALL SELECT NULL::{2} UNION ALL SELECT payload::{2} FROM {3} WHERE plaintext = {1} UNION ALL SELECT NULL::{2}",
                                     low_lit,
                                     high_lit,
+                                    d,
+                                    fixture,
                                 ),
                             )
                         }),
@@ -27704,9 +27704,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {0} WHERE plaintext = {1}",
-                                    fixture,
+                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
                                     expected_lit,
+                                    fixture,
                                 ),
                             )
                         }),
@@ -27842,9 +27842,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1691usize,
+            start_line: 1669usize,
             start_col: 22usize,
-            end_line: 1691usize,
+            end_line: 1669usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -27877,9 +27877,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {0} WHERE plaintext = {1}",
-                                    fixture,
+                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
                                     extremum_lit,
+                                    fixture,
                                 ),
                             )
                         }),
@@ -28048,9 +28048,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1750usize,
+            start_line: 1727usize,
             start_col: 22usize,
-            end_line: 1750usize,
+            end_line: 1727usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -28202,9 +28202,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1776usize,
+            start_line: 1752usize,
             start_col: 22usize,
-            end_line: 1776usize,
+            end_line: 1752usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -28343,9 +28343,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1802usize,
+            start_line: 1778usize,
             start_col: 22usize,
-            end_line: 1802usize,
+            end_line: 1778usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -28410,11 +28410,11 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO mixed_null(value) SELECT NULL::{0} UNION ALL SELECT payload::{0} FROM {1} WHERE plaintext = {2} UNION ALL SELECT NULL::{0} UNION ALL SELECT payload::{0} FROM {1} WHERE plaintext = {3} UNION ALL SELECT NULL::{0}",
-                                    d,
-                                    fixture,
+                                    "INSERT INTO mixed_null(value) SELECT NULL::{2} UNION ALL SELECT payload::{2} FROM {3} WHERE plaintext = {0} UNION ALL SELECT NULL::{2} UNION ALL SELECT payload::{2} FROM {3} WHERE plaintext = {1} UNION ALL SELECT NULL::{2}",
                                     low_lit,
                                     high_lit,
+                                    d,
+                                    fixture,
                                 ),
                             )
                         }),
@@ -28425,9 +28425,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {0} WHERE plaintext = {1}",
-                                    fixture,
+                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
                                     expected_lit,
+                                    fixture,
                                 ),
                             )
                         }),
@@ -28563,9 +28563,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1691usize,
+            start_line: 1669usize,
             start_col: 22usize,
-            end_line: 1691usize,
+            end_line: 1669usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -28598,9 +28598,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {0} WHERE plaintext = {1}",
-                                    fixture,
+                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
                                     extremum_lit,
+                                    fixture,
                                 ),
                             )
                         }),
@@ -28769,9 +28769,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1750usize,
+            start_line: 1727usize,
             start_col: 22usize,
-            end_line: 1750usize,
+            end_line: 1727usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -28923,9 +28923,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1776usize,
+            start_line: 1752usize,
             start_col: 22usize,
-            end_line: 1776usize,
+            end_line: 1752usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -29064,9 +29064,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1802usize,
+            start_line: 1778usize,
             start_col: 22usize,
-            end_line: 1802usize,
+            end_line: 1778usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -29131,11 +29131,11 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO mixed_null(value) SELECT NULL::{0} UNION ALL SELECT payload::{0} FROM {1} WHERE plaintext = {2} UNION ALL SELECT NULL::{0} UNION ALL SELECT payload::{0} FROM {1} WHERE plaintext = {3} UNION ALL SELECT NULL::{0}",
-                                    d,
-                                    fixture,
+                                    "INSERT INTO mixed_null(value) SELECT NULL::{2} UNION ALL SELECT payload::{2} FROM {3} WHERE plaintext = {0} UNION ALL SELECT NULL::{2} UNION ALL SELECT payload::{2} FROM {3} WHERE plaintext = {1} UNION ALL SELECT NULL::{2}",
                                     low_lit,
                                     high_lit,
+                                    d,
+                                    fixture,
                                 ),
                             )
                         }),
@@ -29146,9 +29146,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {0} WHERE plaintext = {1}",
-                                    fixture,
+                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
                                     expected_lit,
+                                    fixture,
                                 ),
                             )
                         }),
@@ -29284,9 +29284,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1922usize,
+            start_line: 1895usize,
             start_col: 22usize,
-            end_line: 1922usize,
+            end_line: 1895usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -29389,9 +29389,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {0} WHERE plaintext = {1}",
-                                    fixture,
+                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
                                     g1_lit,
+                                    fixture,
                                 ),
                             )
                         }),
@@ -29402,9 +29402,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {0} WHERE plaintext = {1}",
-                                    fixture,
+                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
                                     g2_lit,
+                                    fixture,
                                 ),
                             )
                         }),
@@ -29572,9 +29572,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1922usize,
+            start_line: 1895usize,
             start_col: 22usize,
-            end_line: 1922usize,
+            end_line: 1895usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -29677,9 +29677,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {0} WHERE plaintext = {1}",
-                                    fixture,
+                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
                                     g1_lit,
+                                    fixture,
                                 ),
                             )
                         }),
@@ -29690,9 +29690,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {0} WHERE plaintext = {1}",
-                                    fixture,
+                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
                                     g2_lit,
+                                    fixture,
                                 ),
                             )
                         }),
@@ -29860,9 +29860,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1922usize,
+            start_line: 1895usize,
             start_col: 22usize,
-            end_line: 1922usize,
+            end_line: 1895usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -29965,9 +29965,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {0} WHERE plaintext = {1}",
-                                    fixture,
+                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
                                     g1_lit,
+                                    fixture,
                                 ),
                             )
                         }),
@@ -29978,9 +29978,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {0} WHERE plaintext = {1}",
-                                    fixture,
+                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
                                     g2_lit,
+                                    fixture,
                                 ),
                             )
                         }),
@@ -30148,9 +30148,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1922usize,
+            start_line: 1895usize,
             start_col: 22usize,
-            end_line: 1922usize,
+            end_line: 1895usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -30253,9 +30253,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {0} WHERE plaintext = {1}",
-                                    fixture,
+                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
                                     g1_lit,
+                                    fixture,
                                 ),
                             )
                         }),
@@ -30266,9 +30266,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {0} WHERE plaintext = {1}",
-                                    fixture,
+                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
                                     g2_lit,
+                                    fixture,
                                 ),
                             )
                         }),
@@ -30436,9 +30436,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2083usize,
+            start_line: 2051usize,
             start_col: 22usize,
-            end_line: 2083usize,
+            end_line: 2051usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -30623,9 +30623,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2083usize,
+            start_line: 2051usize,
             start_col: 22usize,
-            end_line: 2083usize,
+            end_line: 2051usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -30810,9 +30810,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2083usize,
+            start_line: 2051usize,
             start_col: 22usize,
-            end_line: 2083usize,
+            end_line: 2051usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -30997,9 +30997,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2083usize,
+            start_line: 2051usize,
             start_col: 22usize,
-            end_line: 2083usize,
+            end_line: 2051usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -31184,9 +31184,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2186usize,
+            start_line: 2152usize,
             start_col: 22usize,
-            end_line: 2186usize,
+            end_line: 2152usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -31354,9 +31354,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2221usize,
+            start_line: 2185usize,
             start_col: 22usize,
-            end_line: 2221usize,
+            end_line: 2185usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -31500,9 +31500,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2186usize,
+            start_line: 2152usize,
             start_col: 22usize,
-            end_line: 2186usize,
+            end_line: 2152usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -31668,9 +31668,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2221usize,
+            start_line: 2185usize,
             start_col: 22usize,
-            end_line: 2221usize,
+            end_line: 2185usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -31814,9 +31814,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2266usize,
+            start_line: 2229usize,
             start_col: 22usize,
-            end_line: 2266usize,
+            end_line: 2229usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -31996,9 +31996,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2186usize,
+            start_line: 2152usize,
             start_col: 22usize,
-            end_line: 2186usize,
+            end_line: 2152usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -32164,9 +32164,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2221usize,
+            start_line: 2185usize,
             start_col: 22usize,
-            end_line: 2221usize,
+            end_line: 2185usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -32310,9 +32310,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2266usize,
+            start_line: 2229usize,
             start_col: 22usize,
-            end_line: 2266usize,
+            end_line: 2229usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -32492,9 +32492,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2186usize,
+            start_line: 2152usize,
             start_col: 22usize,
-            end_line: 2186usize,
+            end_line: 2152usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -32662,9 +32662,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2221usize,
+            start_line: 2185usize,
             start_col: 22usize,
-            end_line: 2221usize,
+            end_line: 2185usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -32808,9 +32808,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2266usize,
+            start_line: 2229usize,
             start_col: 22usize,
-            end_line: 2266usize,
+            end_line: 2229usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -32990,9 +32990,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1518usize,
+            start_line: 1497usize,
             start_col: 22usize,
-            end_line: 1518usize,
+            end_line: 1497usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -33027,9 +33027,7 @@ pub mod int4 {
                 let actual: Vec<i32> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
                 let zero: i32 = Default::default();
                 let mut expected: Vec<i32> = <i32 as ::eql_tests::scalar_domains::ScalarType>::FIXTURE_VALUES
-                    .iter()
-                    .copied()
-                    .collect();
+                    .to_vec();
                 expected.sort();
                 if "".contains("plaintext > 0") {
                     expected.retain(|v| *v > zero);
@@ -33155,9 +33153,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1518usize,
+            start_line: 1497usize,
             start_col: 22usize,
-            end_line: 1518usize,
+            end_line: 1497usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -33192,9 +33190,7 @@ pub mod int4 {
                 let actual: Vec<i32> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
                 let zero: i32 = Default::default();
                 let mut expected: Vec<i32> = <i32 as ::eql_tests::scalar_domains::ScalarType>::FIXTURE_VALUES
-                    .iter()
-                    .copied()
-                    .collect();
+                    .to_vec();
                 expected.sort();
                 if "".contains("plaintext > 0") {
                     expected.retain(|v| *v > zero);
@@ -33320,9 +33316,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1518usize,
+            start_line: 1497usize,
             start_col: 22usize,
-            end_line: 1518usize,
+            end_line: 1497usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -33357,9 +33353,7 @@ pub mod int4 {
                 let actual: Vec<i32> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
                 let zero: i32 = Default::default();
                 let mut expected: Vec<i32> = <i32 as ::eql_tests::scalar_domains::ScalarType>::FIXTURE_VALUES
-                    .iter()
-                    .copied()
-                    .collect();
+                    .to_vec();
                 expected.sort();
                 if " WHERE plaintext > 0".contains("plaintext > 0") {
                     expected.retain(|v| *v > zero);
@@ -33485,9 +33479,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1518usize,
+            start_line: 1497usize,
             start_col: 22usize,
-            end_line: 1518usize,
+            end_line: 1497usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -33522,9 +33516,7 @@ pub mod int4 {
                 let actual: Vec<i32> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
                 let zero: i32 = Default::default();
                 let mut expected: Vec<i32> = <i32 as ::eql_tests::scalar_domains::ScalarType>::FIXTURE_VALUES
-                    .iter()
-                    .copied()
-                    .collect();
+                    .to_vec();
                 expected.sort();
                 if " WHERE plaintext > 0".contains("plaintext > 0") {
                     expected.retain(|v| *v > zero);
@@ -33650,9 +33642,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1518usize,
+            start_line: 1497usize,
             start_col: 22usize,
-            end_line: 1518usize,
+            end_line: 1497usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -33687,9 +33679,7 @@ pub mod int4 {
                 let actual: Vec<i32> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
                 let zero: i32 = Default::default();
                 let mut expected: Vec<i32> = <i32 as ::eql_tests::scalar_domains::ScalarType>::FIXTURE_VALUES
-                    .iter()
-                    .copied()
-                    .collect();
+                    .to_vec();
                 expected.sort();
                 if "".contains("plaintext > 0") {
                     expected.retain(|v| *v > zero);
@@ -33815,9 +33805,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1518usize,
+            start_line: 1497usize,
             start_col: 22usize,
-            end_line: 1518usize,
+            end_line: 1497usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -33852,9 +33842,7 @@ pub mod int4 {
                 let actual: Vec<i32> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
                 let zero: i32 = Default::default();
                 let mut expected: Vec<i32> = <i32 as ::eql_tests::scalar_domains::ScalarType>::FIXTURE_VALUES
-                    .iter()
-                    .copied()
-                    .collect();
+                    .to_vec();
                 expected.sort();
                 if "".contains("plaintext > 0") {
                     expected.retain(|v| *v > zero);
@@ -33980,9 +33968,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1518usize,
+            start_line: 1497usize,
             start_col: 22usize,
-            end_line: 1518usize,
+            end_line: 1497usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -34017,9 +34005,7 @@ pub mod int4 {
                 let actual: Vec<i32> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
                 let zero: i32 = Default::default();
                 let mut expected: Vec<i32> = <i32 as ::eql_tests::scalar_domains::ScalarType>::FIXTURE_VALUES
-                    .iter()
-                    .copied()
-                    .collect();
+                    .to_vec();
                 expected.sort();
                 if " WHERE plaintext > 0".contains("plaintext > 0") {
                     expected.retain(|v| *v > zero);
@@ -34145,9 +34131,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1518usize,
+            start_line: 1497usize,
             start_col: 22usize,
-            end_line: 1518usize,
+            end_line: 1497usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -34182,9 +34168,7 @@ pub mod int4 {
                 let actual: Vec<i32> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
                 let zero: i32 = Default::default();
                 let mut expected: Vec<i32> = <i32 as ::eql_tests::scalar_domains::ScalarType>::FIXTURE_VALUES
-                    .iter()
-                    .copied()
-                    .collect();
+                    .to_vec();
                 expected.sort();
                 if " WHERE plaintext > 0".contains("plaintext > 0") {
                     expected.retain(|v| *v > zero);
@@ -34310,9 +34294,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1601usize,
+            start_line: 1579usize,
             start_col: 22usize,
-            end_line: 1601usize,
+            end_line: 1579usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -34455,9 +34439,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1601usize,
+            start_line: 1579usize,
             start_col: 22usize,
-            end_line: 1601usize,
+            end_line: 1579usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -34600,9 +34584,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1601usize,
+            start_line: 1579usize,
             start_col: 22usize,
-            end_line: 1601usize,
+            end_line: 1579usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -34745,9 +34729,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1601usize,
+            start_line: 1579usize,
             start_col: 22usize,
-            end_line: 1601usize,
+            end_line: 1579usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -34890,9 +34874,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1601usize,
+            start_line: 1579usize,
             start_col: 22usize,
-            end_line: 1601usize,
+            end_line: 1579usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -35035,9 +35019,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1601usize,
+            start_line: 1579usize,
             start_col: 22usize,
-            end_line: 1601usize,
+            end_line: 1579usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -35180,9 +35164,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1601usize,
+            start_line: 1579usize,
             start_col: 22usize,
-            end_line: 1601usize,
+            end_line: 1579usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -35325,9 +35309,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1601usize,
+            start_line: 1579usize,
             start_col: 22usize,
-            end_line: 1601usize,
+            end_line: 1579usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
