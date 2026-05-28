@@ -12,9 +12,11 @@ outside scope.
 
 ## 1. Why a generator
 
-A single scalar encrypted-domain type emits ~90 SQL declarations across
-nine files: four domains, three extractors, dozens of wrappers and
-blockers, 120 `CREATE OPERATOR` statements. The shape is mechanical and
+A single scalar encrypted-domain type emits several hundred SQL
+declarations across eleven files: four domains, three extractors, dozens
+of comparison wrappers and blockers, 176 `CREATE OPERATOR` statements (44
+per domain), and MIN/MAX aggregates for every ordered domain. The shape
+is mechanical and
 the invariants are unforgiving — a `STRICT` blocker silently bypasses
 its exception, a pinned `search_path` disables inlining and reverts
 queries to seq scans. The generator exists so each new scalar type adds
@@ -44,10 +46,12 @@ Stages, in order:
    operators, and the SQL `-- REQUIRE:` edges those terms imply
    (`tasks/codegen/terms.py:57-88`).
 3. **Render** — `generate.render_types_file`,
-   `generate.render_functions_file`, and `generate.render_operators_file`
-   build SQL strings via the per-construct functions in `templates.py`.
-   No template engine — plain f-strings, with the structural shape of
-   each declaration encoded in code (`tasks/codegen/generate.py:42-145`).
+   `generate.render_functions_file`, `generate.render_operators_file`,
+   and `generate.render_aggregates_file` (the last only for ordered
+   domains) build SQL strings via the per-construct functions in
+   `templates.py`. No template engine — plain f-strings, with the
+   structural shape of each declaration encoded in code
+   (`tasks/codegen/generate.py:71-207`).
 4. **Write** — `writer.write_generated_file` prefixes every output with
    the `AUTO-GENERATED — DO NOT EDIT` header (`templates.py:13-17`) and
    refuses to overwrite any pre-existing file that lacks that marker
@@ -154,9 +158,10 @@ parameters select the generated blocker.
 
 ## 6. Generated outputs
 
-For a manifest with `D` domains, the generator writes `1 + 2D` files
-into `src/encrypted_domain/<token>/`. For `int4` (`D = 4`): nine files.
-These outputs are gitignored — `tasks/build.sh` regenerates them at the
+For a manifest with `D` domains of which `A` are ordered (ord-capable),
+the generator writes `1 + 2D + A` files into
+`src/encrypted_domain/<token>/`. For `int4` (`D = 4`, `A = 2`): eleven
+files. These outputs are gitignored — `tasks/build.sh` regenerates them at the
 start of every build from each `tasks/codegen/types/<token>.toml`, and
 `mise run codegen:domain <token>` refreshes a single type manually. The
 manifest plus `tasks/codegen/terms.py` are the source of truth.
@@ -166,6 +171,7 @@ manifest plus `tasks/codegen/terms.py` are the source of truth.
 | `<token>_types.sql`               | Single idempotent `DO` block creating every domain; one `--! @brief` per domain          |
 | `<domain>_functions.sql`          | One extractor per unique term, then 44 wrappers-or-blockers covering the surface         |
 | `<domain>_operators.sql`          | 44 `CREATE OPERATOR` statements with planner metadata on supported ops                   |
+| `<domain>_aggregates.sql`         | MIN/MAX state functions + `CREATE AGGREGATE`; emitted only for ordered (ord-capable) domains |
 
 Every file:
 
@@ -175,7 +181,8 @@ Every file:
   require `src/schema.sql`; function files require schema, types, and
   `src/encrypted_domain/functions.sql` plus each term's `requires` set;
   operator files require schema, types, and their domain's function
-  file.
+  file; aggregate files require schema, types, and their domain's
+  function and operator files.
 - Carries Doxygen `--! @file` / `--! @brief` headers describing its
   role.
 
@@ -192,6 +199,11 @@ Six wrappers for `hm` = `=` and `<>` × three shapes. Eighteen for `ore`
 wrapper/blocker split is what shifts, and native `jsonb` fallback
 operators are always blockers.
 
+The table above covers `<domain>_functions.sql` only. Ordered domains
+additionally emit `<domain>_aggregates.sql` — two state functions
+(`min_sfunc`, `max_sfunc`) and two `CREATE AGGREGATE` declarations
+(`eql_v2.min`, `eql_v2.max`).
+
 ## 7. Invariants the generator enforces
 
 The generator's job is partly to write SQL and partly to make
@@ -200,15 +212,21 @@ incorrect SQL unreachable. Invariants encoded in code:
 - **Blockers are never `STRICT`.** `render_blocker_bool`,
   `render_blocker_path`, and `render_blocker_native` emit
   `IMMUTABLE PARALLEL SAFE` without the
-  `STRICT` qualifier (`templates.py:139-145`, `162-168`), so a `NULL`
+  `STRICT` qualifier (`templates.py:138-218`), so a `NULL`
   argument still reaches the `RAISE` and the unsupported-operator
   exception fires. There is no code path that produces a strict
   blocker.
 - **Wrappers are inlinable SQL.** `render_wrapper` and
   `render_extractor` emit `LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE`
   with a single-statement `SELECT` and no `SET search_path`
-  (`templates.py:90-94`, `120-123`). `pin_search_path.sql:265-290`
+  (`templates.py:93-135`). `pin_search_path.sql:265-290`
   catches them structurally and leaves them unpinned.
+- **Aggregate state functions are the deliberate exception.**
+  `render_aggregate` emits `min_sfunc` / `max_sfunc` as
+  `LANGUAGE plpgsql IMMUTABLE STRICT` *with* a pinned `SET search_path`
+  (`templates.py:272-285`). They are aggregate transition functions, not
+  index expressions, so pinning is correct; the generated `min` / `max`
+  aggregates are allowlisted by name in `splinter.sh`.
 - **No domain-over-domain.** Every domain is `CREATE DOMAIN ... AS
   jsonb`, never `AS <some_other_domain>` (`templates.py:72`). PostgreSQL
   resolves operators against the underlying base type; a derived domain
@@ -257,7 +275,7 @@ output without per-type edits:
 - **`tasks/test/splinter.sh`** — name-based allowlist. The converged
   wrapper names (`eq`, `neq`, `lt`, `lte`, `gt`, `gte`, `eq_term`,
   `ord_term`) are already covered by entries originally added for
-  `ste_vec_entry` and friends (`splinter.sh:95-112`). Splinter matches
+  `ste_vec_entry` and friends (`splinter.sh:87-104`). Splinter matches
   by name only, so a new scalar type that uses the catalog extractors
   inherits coverage. Adding a new term whose extractor has a new name
   requires a splinter entry.

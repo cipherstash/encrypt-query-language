@@ -422,6 +422,33 @@ eql_v2.ste_vec(val eql_v2_encrypted) RETURNS eql_v2_encrypted[]
 eql_v2.ste_vec(val jsonb) RETURNS eql_v2_encrypted[]
 ```
 
+### `eql_v2.eq_term()` / `eql_v2.ord_term()` (encrypted-domain)
+
+Extract the equality (`hm`) or ordering (`ob`) index term from a scalar
+encrypted-domain value. Generated per eq/ord-capable variant of every
+scalar type — see [Encrypted-Domain Code Generator](./encrypted-domain-generator.md).
+The argument type selects the overload, and both are inlinable so a
+functional index built on the extractor engages.
+
+```sql
+-- int4 — generated for every scalar type's eq / ord variants.
+eql_v2.eq_term(a eql_v2_int4_eq)       RETURNS eql_v2.hmac_256
+eql_v2.ord_term(a eql_v2_int4_ord)     RETURNS eql_v2.ore_block_u64_8_256
+eql_v2.ord_term(a eql_v2_int4_ord_ore) RETURNS eql_v2.ore_block_u64_8_256
+```
+
+**Example:**
+```sql
+-- Functional indexes on the extracted terms (see Database Indexes)
+CREATE INDEX ON users USING hash  (eql_v2.eq_term(salary_encrypted));
+CREATE INDEX ON users USING btree (eql_v2.ord_term(salary_encrypted));
+```
+
+> The full per-domain operator/wrapper/blocker surface (and the
+> `eql_v2_<T>` / `_eq` / `_ord` / `_ord_ore` domain types themselves) is
+> documented in [SQL support](./sql-support.md#encrypted-domain-scalar-types-eql_v2_t)
+> and the [generator reference](./encrypted-domain-generator.md).
+
 ---
 
 ## JSONB Path Functions
@@ -540,10 +567,11 @@ eql_v2.meta_data(val jsonb) RETURNS jsonb
 
 ### `eql_v2.selector()`
 
-Extract selector hash from encrypted value.
+Extract selector hash from an encrypted payload (`jsonb`) or a ste_vec entry.
 
 ```sql
-eql_v2.selector(val eql_v2_encrypted) RETURNS text
+eql_v2.selector(val jsonb) RETURNS text
+eql_v2.selector(entry eql_v2.ste_vec_entry) RETURNS text
 ```
 
 ### `eql_v2.is_ste_vec_array()`

@@ -35,6 +35,12 @@ For current `int4`, domains carrying `ore` use JSON key `ob`, extractor
 that needs a non-ORE equality term on an ordered domain needs a new
 catalog term design, not a manifest flag.
 
+The manifest above declares two ordered domains, `int4_ord` and
+`int4_ord_ore`, carrying the same term. They are intentional twins: the
+generator emits byte-identical SQL (modulo type name) so callers can pick
+a name that documents intent without committing to a term family in a
+future migration.
+
 ## 2. Checklist
 
 - [ ] Author `tasks/codegen/types/<T>.toml`. The filename supplies `<T>`.
@@ -54,10 +60,11 @@ catalog term design, not a manifest flag.
 - [ ] Run `mise run codegen:domain <T>` to materialise generated SQL
       while iterating, or just `mise run build` — every build
       regenerates from the manifest first.
-- [ ] Generated `*_types.sql` / `*_functions.sql` / `*_operators.sql`
-      are gitignored and never committed. The TOML manifest plus
-      `tasks/codegen/terms.py` are the source of truth. Change the
-      manifest or catalog and rebuild; do not hand-edit generated SQL.
+- [ ] Generated `*_types.sql` / `*_functions.sql` / `*_operators.sql` /
+      `*_aggregates.sql` are gitignored and never committed. The TOML
+      manifest plus `tasks/codegen/terms.py` are the source of truth.
+      Change the manifest or catalog and rebuild; do not hand-edit
+      generated SQL.
 - [ ] Put optional hand-written SQL in
       `src/encrypted_domain/<T>/<T>_extensions.sql` with explicit
       `-- REQUIRE:` edges. This file IS committed.
@@ -96,9 +103,12 @@ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT ... $$;
 ```
 
-They must not carry a pinned `search_path`. The build tooling recognises
-generated encrypted-domain extractors and wrappers structurally, so the
-generator does not emit `eql-inline-critical` markers.
+Extractors and comparison wrappers must not carry a pinned `search_path`
+— a `SET` clause disables inlining and reverts index-backed queries to
+seq scans. The build tooling recognises these generated functions
+structurally, so the generator does not emit `eql-inline-critical`
+markers. Aggregate state functions are the one deliberate exception — see
+§5 — because they are never index expressions.
 
 Unsupported operators route to blockers. Blockers are `plpgsql`,
 `IMMUTABLE`, `PARALLEL SAFE`, and intentionally not `STRICT`. Both
@@ -151,6 +161,23 @@ Use typed parameters or explicit casts (`'c'::text`) to route those forms
 to the generated blocker. The generated surface blocks the typed native
 operator shapes exposed by the catalog.
 
+### Aggregates
+
+Each ordered (ord-capable) domain additionally gets a generated
+`<domain>_aggregates.sql` file declaring `MIN` / `MAX`:
+
+- two state functions, `eql_v2.min_sfunc` and `eql_v2.max_sfunc`, and
+- two aggregates, `eql_v2.min(<domain>)` and `eql_v2.max(<domain>)`.
+
+Comparison routes through the domain's `<` / `>` operator (the ORE block
+term — no decryption). The state functions are `LANGUAGE plpgsql
+IMMUTABLE STRICT` **with** a pinned `SET search_path`. This is the one
+place the "no pinned `search_path`" rule of §4 does not apply: aggregate
+transition functions are never index expressions, so pinning is correct.
+`STRICT` makes PostgreSQL seed the running state with the first non-NULL
+value and skip NULLs, so an all-NULL group returns NULL. Storage-only and
+equality-only domains have no comparator and emit no aggregate file.
+
 ## 6. Extension Files
 
 Optional hand-written SQL beyond the fixed scalar surface belongs in:
@@ -193,7 +220,9 @@ Cover each generated domain with SQLx tests appropriate to its terms:
 - constant-on-left comparisons engage the index where applicable;
 - domain `CHECK` rejects non-object and under-populated payloads;
 - real typed columns are tested, not only cast literals;
-- generated ordered-domain twins remain byte-identical modulo type name.
+- generated ordered-domain twins remain byte-identical modulo type name
+  (verified by `tasks/codegen/test_against_reference.py` against the
+  hand-reviewed baseline in `tests/codegen/reference/<T>/`).
 
 For ordered `int4`, keep the assertion that distinct plaintext values
 produce distinct ORE blocks. Do not add assertions for term behavior that

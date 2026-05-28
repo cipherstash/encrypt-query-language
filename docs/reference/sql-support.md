@@ -59,6 +59,25 @@ Use the equivalent [`jsonb_path_query`](#jsonb-functions-and-selectors-enabled-b
 
 ---
 
+## Encrypted-domain scalar types (`eql_v2_<T>`)
+
+Scalar encrypted-domain types (e.g. `eql_v2_int4`; see the [generator reference](./encrypted-domain-generator.md)) are a different access model from the matrix above. Instead of configuring a search index on an `eql_v2_encrypted` column, you type the column as a specific domain *variant* whose operator surface is fixed at generation time. The index terms travel in the payload; there is no `add_search_config` step.
+
+Each scalar type `<T>` generates one storage-only variant plus eq/ord query variants:
+
+| Domain variant                 | Term carried        | `=` `<>` | `<` `<=` `>` `>=` | `MIN` / `MAX` | `LIKE`/`ILIKE`, JSONB / ste_vec ops |
+| ------------------------------- | ------------------- | :------: | :---------------: | :-----------: | :---------------------------------: |
+| `eql_v2_<T>`                    | none (storage only) |    ❌    |        ❌         |      ❌       |                 ❌                  |
+| `eql_v2_<T>_eq`                 | `hm` (hmac_256)     |    ✅    |        ❌         |      ❌       |                 ❌                  |
+| `eql_v2_<T>_ord` / `_ord_ore`   | `ob` (ore_block)    |    ✅    |        ✅         |      ✅       |                 ❌                  |
+
+- The bare `eql_v2_<T>` variant carries no index term and **blocks every comparison operator** — it is storage / decryption only. Type the column as `_eq` or `_ord` (or cast at the call site) when you need to query.
+- Unsupported operators are not silent no-ops: they route to blocker functions that `RAISE` an "operator not supported" exception (a `NULL` operand still raises — the blockers are deliberately not `STRICT`).
+- `LIKE` / `ILIKE` and the native JSONB operators (`@>`, `<@`, `->`, `->>`, `?`, `?|`, `?&`, `@?`, `@@`, `#>`, `#>>`) are blocked on **every** scalar domain variant — they are meaningless on a scalar payload.
+- `MIN` / `MAX` are exposed only on the ordered variants as `eql_v2.min(eql_v2_<T>_ord)` / `eql_v2.max(...)` — see [EQL Functions Reference](./eql-functions.md#eql_v2min--eql_v2max-per-domain).
+
+---
+
 ## SQL syntax / feature support
 
 This matrix covers higher-level SQL constructs rather than individual operators. As above, ✅ requires the listed index to be configured on the column; ❌ means the construct cannot be used against that column (without first decrypting via CipherStash Proxy or Protect.js).
