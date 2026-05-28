@@ -138,12 +138,8 @@ impl Variant {
     /// variants additionally require their term key (`hm` / `ob`). The
     /// matrix `payload_check` arm iterates this to assert each key's
     /// absence is rejected at the cast.
-    pub fn payload_required_keys(self) -> Vec<&'static str> {
-        let mut keys = vec!["v", "i", "c"];
-        if let Some(term) = self.required_term() {
-            keys.push(term);
-        }
-        keys
+    pub fn payload_required_keys(self) -> impl Iterator<Item = &'static str> {
+        ["v", "i", "c"].into_iter().chain(self.required_term())
     }
 
     pub const fn supports_eq(self) -> bool {
@@ -288,11 +284,11 @@ pub async fn assert_raises(
     for b in binds {
         q = q.bind(*b);
     }
-    let err = q
-        .fetch_one(pool)
-        .await
-        .expect_err(&format!("SQL must raise: {sql}"))
-        .to_string();
+    let result = q.fetch_one(pool).await;
+    let err = match result {
+        Ok(_) => bail!("SQL must raise: {sql}"),
+        Err(e) => e.to_string(),
+    };
     if !err.contains(expected_msg) {
         bail!("SQL={sql} expected error containing {expected_msg:?}, got {err}");
     }

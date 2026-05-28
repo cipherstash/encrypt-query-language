@@ -627,10 +627,10 @@ macro_rules! __scalar_matrix_blocker_case {
                 let d = &spec.sql_domain;
 
                 // Sweep 3 arg shapes — every overload must engage.
-                let shapes = [
+                let shapes: [(String, String); 3] = [
                     (format!("$1::jsonb::{d}", d = d), format!("$2::jsonb::{d}", d = d)),
-                    (format!("$1::jsonb::{d}", d = d), "$2::jsonb".to_string()),
-                    ("$1::jsonb".to_string(), format!("$2::jsonb::{d}", d = d)),
+                    (format!("$1::jsonb::{d}", d = d), "$2::jsonb".into()),
+                    ("$1::jsonb".into(), format!("$2::jsonb::{d}", d = d)),
                 ];
                 for (lhs, rhs) in shapes {
                     let sql = format!("SELECT {lhs} {op} {rhs}", op = $op);
