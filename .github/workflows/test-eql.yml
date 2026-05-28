@@ -76,6 +76,38 @@ jobs:
         run: |
           mise run test:codegen
 
+  matrix-coverage:
+    name: "Matrix coverage inventory"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: jdx/mise-action@v4
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tests/sqlx
+          shared-key: sqlx-tests
+
+      # Regenerate the matrix test-name inventory with the SAME pinned feature
+      # set the local task uses (`--no-default-features`, scale excluded), then
+      # fail if it differs from the committed snapshot. A coverage change shows
+      # up as added/removed names in the PR diff — e.g. emptying `ord_domains`
+      # drops ~140 names, impossible to miss in review. No Postgres needed:
+      # `--list` only enumerates, the suite uses runtime queries.
+      - name: Regenerate and verify the matrix test-name inventory
+        run: |
+          mise run test:matrix:inventory
+          git diff --exit-code -- tests/sqlx/snapshots/int4_matrix_tests.txt \
+            || { echo "Coverage inventory stale — run 'mise run test:matrix:inventory' and commit."; exit 1; }
+
   test:
     name: "Test & Validate EQL (Postgres ${{ matrix.postgres-version }})"
     runs-on: ubuntu-latest-m

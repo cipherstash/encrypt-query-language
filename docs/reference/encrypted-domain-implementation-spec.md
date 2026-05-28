@@ -133,14 +133,14 @@ everything else routes to blockers.
 
 | Operators | Forms |
 |---|---|
-| `=` `<>` `<` `<=` `>` `>=` `@>` `<@` | `(domain, domain)`, `(domain, jsonb)`, `(jsonb, domain)` |
-| `->` `->>` | `(domain, text)`, `(domain, integer)`, `(jsonb, domain)` |
+| `=` `<>` `<` `<=` `>` `>=` `@>` `<@` | `(domain, domain)` · `(domain, jsonb)` · `(jsonb, domain)` |
+| `->` `->>` | `(domain, text)` · `(domain, integer)` · `(jsonb, domain)` |
 | `?` | `(domain, text)` |
-| `?|` `?&` | `(domain, text[])` |
+| `?\|` `?&` | `(domain, text[])` |
 | `@?` `@@` | `(domain, jsonpath)` |
 | `#>` `#>>` `#-` | `(domain, text[])` |
-| `-` | `(domain, text)`, `(domain, integer)`, `(domain, text[])` |
-| `||` | `(domain, domain)`, `(domain, jsonb)`, `(jsonb, domain)` |
+| `-` | `(domain, text)` · `(domain, integer)` · `(domain, text[])` |
+| `\|\|` | `(domain, domain)` · `(domain, jsonb)` · `(jsonb, domain)` |
 
 Function counts:
 

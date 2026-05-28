@@ -85,3 +85,68 @@ run = """
 mise exec python -- python -m pip install --quiet --disable-pip-version-check pytest
 mise exec python -- python -m pytest tasks/codegen -q
 """
+
+[tasks."test:matrix:inventory"]
+description = "Regenerate the int4 matrix test-name inventory snapshot (no database required)"
+dir = "{{config_root}}/tests/sqlx"
+run = """
+# Pin an explicit feature set so the inventory is deterministic regardless of
+# the caller's local flags. `--no-default-features` keeps the `scale` arm
+# (`#[cfg(feature = "scale")]`) excluded — its add/delete is a known blind spot
+# of this default-feature inventory, covered instead by the scale gate + the
+# family::mutations negative controls. `--list` enumerates the whole
+# encrypted_domain binary (family::support, family::inlinability,
+# family::mutations, scalars::int4); `grep '^scalars::int4'` scopes the
+# snapshot to the matrix only, so landing other family tests never dirties it.
+# `LC_ALL=C sort` makes ordering byte-stable across locales (a bare `sort` is
+# locale-dependent and yields spurious CI diffs).
+set -euo pipefail
+mkdir -p snapshots
+cargo test --no-default-features --test encrypted_domain -- --list |
+  sed -n 's/: test$//p' |
+  grep '^scalars::int4' |
+  LC_ALL=C sort > snapshots/int4_matrix_tests.txt
+"""
+
+[tasks."test:matrix:expand"]
+description = "Regenerate the int4 matrix cargo-expand snapshot (requires the pinned nightly + cargo-expand)"
+dir = "{{config_root}}/tests/sqlx"
+run = """
+# Body-level fidelity backstop for the macro: the expanded source of the int4
+# matrix arms. NIGHTLY is pinned to a known-good date so the snapshot only moves
+# when *the macro* moves, not when nightly reformats — bump the date deliberately
+# and in lockstep with .github/workflows/macro-expand-eql.yml.
+#
+# `#[sqlx::test]` embeds one `sqlx::migrate::Migration` per file in migrations/
+# plus the fixture (via include_str) into EVERY generated test — ~477 MB of
+# repeated data dwarfing the macro bodies, and non-deterministic across
+# environments (the generated 001_install_eql.sql is absent in a bare checkout).
+# Normalise both to fixed empties so the snapshot depends only on matrix.rs +
+# the sqlx/test harness: swap migrations/ for a single empty placeholder and
+# empty the int4 fixture, expand, then restore (trap fires on any exit). This is
+# expand-only surgery on gitignored/generated inputs; nothing here is committed.
+#
+# Non-blocking lane (no Postgres, never compiled): the `.rs` name lives under
+# snapshots/, not tests/, so Cargo never treats it as a test target.
+set -euo pipefail
+mkdir -p snapshots fixtures
+BK=$(mktemp -d)
+cp -a migrations "$BK/migrations"
+# The int4 fixture is gitignored (regenerated) and absent in a bare checkout —
+# back it up only if present, and on restore drop the empty stand-in if so.
+HAD_FIXTURE=0
+if [ -f fixtures/eql_v2_int4.sql ]; then cp -a fixtures/eql_v2_int4.sql "$BK/eql_v2_int4.sql"; HAD_FIXTURE=1; fi
+restore() {
+  rm -rf migrations && cp -a "$BK/migrations" migrations
+  if [ "$HAD_FIXTURE" = 1 ]; then cp -af "$BK/eql_v2_int4.sql" fixtures/eql_v2_int4.sql; else rm -f fixtures/eql_v2_int4.sql; fi
+  rm -rf "$BK"
+}
+trap restore EXIT
+# Wipe + recreate so the expand input is ALWAYS exactly one empty migration +
+# one empty fixture, regardless of what the checkout had — this is what makes
+# the snapshot deterministic across local and CI.
+rm -rf migrations && mkdir migrations
+: > migrations/0001_placeholder.sql
+: > fixtures/eql_v2_int4.sql
+cargo +nightly-2026-05-01 expand --test encrypted_domain scalars::int4 > snapshots/int4_expanded.rs
+"""

@@ -329,7 +329,7 @@ fixture under `tests/codegen/reference/`.
 
 ## 12. Out of scope
 
-`text` and `jsonb` are not materialized through this generator. There
+`text` and `jsonb` are not materialised through this generator. There
 is no guard preventing a `text.toml` from being authored; the catalog
 simply lacks the term shape those types would need. Text and JSONB
 encrypted behaviour lives on the composite `eql_v2_encrypted` type and
