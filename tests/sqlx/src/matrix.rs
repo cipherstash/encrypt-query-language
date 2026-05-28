@@ -1620,18 +1620,18 @@ macro_rules! __scalar_matrix_order_by_nulls_case {
                 // Non-NULL rows: every fixture row, carrying its plaintext.
                 sqlx::query(&format!(
                     "INSERT INTO {table}(plaintext, value) \
-                     SELECT plaintext, payload::{d} FROM {fixture}", fixture = fixture_table,
+SELECT plaintext, payload::{d} FROM {fixture}", fixture = fixture_table,
                 )).execute(&mut *tx).await?;
                 // NULL-valued rows: NULL plaintext too, so they surface as None
                 // and their position is what the assertion pins.
                 sqlx::query(&format!(
                     "INSERT INTO {table}(plaintext, value) \
-                     SELECT NULL::{pg}, NULL::{d} FROM generate_series(1, {n})", n = NULL_ROWS,
+SELECT NULL::{pg}, NULL::{d} FROM generate_series(1, {n})", n = NULL_ROWS,
                 )).execute(&mut *tx).await?;
 
                 let sql = format!(
                     "SELECT plaintext FROM {table} \
-                     ORDER BY eql_v2.ord_term(value) {dir} NULLS {nulls}",
+ORDER BY eql_v2.ord_term(value) {dir} NULLS {nulls}",
                     dir = $direction, nulls = $nulls,
                 );
                 let actual: Vec<Option<$scalar>> =
