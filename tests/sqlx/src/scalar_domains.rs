@@ -15,6 +15,7 @@ use std::fmt::{Debug, Display};
 pub trait ScalarType:
     Copy
     + Ord
+    + Default
     + Debug
     + Display
     + Send
@@ -30,6 +31,12 @@ pub trait ScalarType:
 
     /// Distinct plaintext values present in the fixture. Order doesn't
     /// matter — `expected_forward` sorts before returning.
+    ///
+    /// For types driven by `ordered_numeric_matrix!`, the fixture MUST
+    /// include `MIN`, `MAX`, and zero (`Default::default()`): the matrix
+    /// uses those three as comparison pivots and fetches each one's
+    /// ciphertext via `fetch_fixture_payload`, which fails loudly if the
+    /// row is absent.
     const FIXTURE_VALUES: &'static [Self];
 
     /// `fixtures.eql_v2_<pg_type>`.

@@ -12,26 +12,7 @@ use eql_tests::ordered_numeric_matrix;
 ordered_numeric_matrix! {
     suite = int4,
     scalar = i32,
-    fixture_script = "eql_v2_int4",
-    // 3 climbs out of tests/encrypted_domain/scalars/ to reach
-    // tests/sqlx/fixtures/. include_str! inside #[sqlx::test] resolves
-    // relative to the source file containing the attribute.
-    fixture_path = "../../../fixtures",
-    // Pivots cover the four interesting numeric regions:
-    //   `min` / `max` — i32 signed extremes, where ORE block encoding
-    //                   has sign-bit edge cases.
-    //   `zero`        — additive identity and the predicate boundary
-    //                   for `WHERE plaintext > 0` cases.
-    //   `neg` / `mid` / `high` — small / medium / large magnitudes
-    //                            producing distinct range cardinalities.
-    pivots = [
-        (min, i32::MIN),
-        (neg, -1),
-        (zero, 0),
-        (mid, 10),
-        (high, 42),
-        (max, i32::MAX),
-    ],
+    eql_type = "eql_v2_int4",
 }
 
 mod twin_sync {

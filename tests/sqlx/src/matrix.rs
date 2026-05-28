@@ -6,8 +6,9 @@
 //!   ordered numeric scalar (i32, i64, f64, date, numeric, timestamp,
 //!   ...) all four variants are present, the operator surface is
 //!   identical, and the only inputs that change per type are the scalar
-//!   itself, the type token (used to derive fixture script + domain
-//!   names), and the pivot values. Invocation is ~5 lines.
+//!   itself, the suite token (used to derive domain + test names), the
+//!   EQL type name (the fixture `scripts(...)` ref), and the pivot
+//!   values. Invocation is ~5 lines.
 //!
 //! - **`scalar_domain_matrix!`** — the lower-level macro the wrapper
 //!   expands to. Use directly only for types with a non-standard surface
@@ -28,28 +29,41 @@
 /// supported comparison operators, 2 path operators, and the standard
 /// blocker / index partitions.
 ///
-/// `fixture_script` must be a string literal (sqlx's `#[test(fixtures(...))]`
-/// attribute requires a token-level literal). It's typically
-/// `"eql_v2_<suite>"`.
+/// `eql_type` is the EQL domain type name (e.g. `"eql_v2_int4"`). It is
+/// used as the SQLx fixture `scripts(...)` ref, which sqlx parses as a
+/// token-level string literal — so it must be a literal, not derived.
+///
+/// Pivots — the comparison anchors swept by the correctness / cross-shape
+/// arms — are derived from the scalar type: `MIN`, `MAX`, and zero
+/// (`Default::default()`). The fixture must contain those three plaintext
+/// rows, since each pivot's ciphertext is fetched at test time via
+/// `fetch_fixture_payload`.
 #[macro_export]
 macro_rules! ordered_numeric_matrix {
     (
         suite = $suite:ident,
         scalar = $scalar:ty,
-        fixture_script = $fixture_script:literal,
-        fixture_path = $fixture_path:literal,
-        pivots = [$($pivot:tt),+ $(,)?] $(,)?
+        eql_type = $eql_type:literal $(,)?
     ) => {
         $crate::scalar_domain_matrix! {
             suite = $suite,
             scalar = $scalar,
-            fixture_script = $fixture_script,
-            fixture_path = $fixture_path,
+            eql_type = $eql_type,
+            // Relative to the suite source file at
+            // tests/sqlx/tests/encrypted_domain/scalars/<T>.rs; sqlx's
+            // include_str! resolves it against that file. Every scalar
+            // suite lives at this depth, so the path is fixed here rather
+            // than repeated per invocation.
+            fixture_path = "../../../fixtures",
             all_domains = [(storage, Storage), (eq, Eq), (ord, Ord), (ord_ore, OrdOre)],
             eq_domains = [(eq, Eq), (ord, Ord), (ord_ore, OrdOre)],
             ord_domains = [(ord, Ord), (ord_ore, OrdOre)],
             ord_ore_domains = [(ord_ore, OrdOre)],
-            pivots = [$($pivot),+],
+            pivots = [
+                (min,  <$scalar>::MIN),
+                (max,  <$scalar>::MAX),
+                (zero, <$scalar as ::core::default::Default>::default()),
+            ],
             eq_ops = [(eq, "="), (neq, "<>")],
             ord_ops = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
             index_combos = [
@@ -96,15 +110,15 @@ macro_rules! eq_only_scalar_matrix {
     (
         suite = $suite:ident,
         scalar = $scalar:ty,
-        fixture_script = $fixture_script:literal,
-        fixture_path = $fixture_path:literal,
+        eql_type = $eql_type:literal,
         pivots = [$($pivot:tt),+ $(,)?] $(,)?
     ) => {
         $crate::scalar_domain_matrix! {
             suite = $suite,
             scalar = $scalar,
-            fixture_script = $fixture_script,
-            fixture_path = $fixture_path,
+            eql_type = $eql_type,
+            // Fixed path; see `ordered_numeric_matrix!` for the rationale.
+            fixture_path = "../../../fixtures",
             all_domains = [(storage, Storage), (eq, Eq)],
             eq_domains = [(eq, Eq)],
             ord_domains = [],
@@ -138,7 +152,7 @@ macro_rules! scalar_domain_matrix {
     (
         suite = $suite:ident,
         scalar = $scalar:ty,
-        fixture_script = $fixture_script:literal,
+        eql_type = $eql_type:literal,
         fixture_path = $fixture_path:literal,
         all_domains = [$(($all_name:ident, $all_variant:ident)),+ $(,)?],
         eq_domains = [$($eq_dom:tt),+ $(,)?],
@@ -155,31 +169,31 @@ macro_rules! scalar_domain_matrix {
             domains = [$(($all_name, $all_variant)),+],
         }
         $crate::__scalar_matrix_correctness_outer! {
-            suite = $suite, scalar = $scalar, script = $fixture_script, script_path = $fixture_path,
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($eq_dom),+], ops_list = [$($eq_op),+],
             pivots_list = [$($pivot),+],
         }
         $crate::__scalar_matrix_correctness_outer! {
-            suite = $suite, scalar = $scalar, script = $fixture_script, script_path = $fixture_path,
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($ord_dom),*], ops_list = [$($ord_op),+],
             pivots_list = [$($pivot),+],
         }
         $crate::__scalar_matrix_cross_shape_outer! {
-            suite = $suite, scalar = $scalar, script = $fixture_script, script_path = $fixture_path,
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($eq_dom),+], ops_list = [$($eq_op),+],
             pivots_list = [$($pivot),+],
         }
         $crate::__scalar_matrix_cross_shape_outer! {
-            suite = $suite, scalar = $scalar, script = $fixture_script, script_path = $fixture_path,
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($ord_dom),*], ops_list = [$($ord_op),+],
             pivots_list = [$($pivot),+],
         }
         $crate::__scalar_matrix_supported_null_outer! {
-            suite = $suite, scalar = $scalar, script = $fixture_script, script_path = $fixture_path,
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($eq_dom),+], ops_list = [$($eq_op),+],
         }
         $crate::__scalar_matrix_supported_null_outer! {
-            suite = $suite, scalar = $scalar, script = $fixture_script, script_path = $fixture_path,
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($ord_dom),*], ops_list = [$($ord_op),+],
         }
         $crate::__scalar_matrix_blocker_outer! {
@@ -213,30 +227,30 @@ macro_rules! scalar_domain_matrix {
             ops_list = [$($ord_op),+],
         }
         $crate::__scalar_matrix_index_outer! {
-            suite = $suite, scalar = $scalar, script = $fixture_script, script_path = $fixture_path,
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             combos = [$($index_combo),+],
         }
         $crate::__scalar_matrix_scale_outer! {
-            suite = $suite, scalar = $scalar, script = $fixture_script, script_path = $fixture_path,
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             combos = [$($index_combo),+],
         }
         $crate::__scalar_matrix_fixture_shape! {
-            suite = $suite, scalar = $scalar, script = $fixture_script, script_path = $fixture_path,
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
         }
         $crate::__scalar_matrix_ord_routes_outer! {
-            suite = $suite, scalar = $scalar, script = $fixture_script, script_path = $fixture_path,
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($ord_dom),*],
         }
         $crate::__scalar_matrix_ore_injectivity_outer! {
-            suite = $suite, scalar = $scalar, script = $fixture_script, script_path = $fixture_path,
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($ord_ore_dom),*],
         }
         $crate::__scalar_matrix_aggregate_outer! {
-            suite = $suite, scalar = $scalar, script = $fixture_script, script_path = $fixture_path,
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($ord_dom),*],
         }
         $crate::__scalar_matrix_aggregate_group_by_outer! {
-            suite = $suite, scalar = $scalar, script = $fixture_script, script_path = $fixture_path,
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($ord_dom),*],
         }
         $crate::__scalar_matrix_aggregate_typecheck_outer! {
@@ -244,15 +258,15 @@ macro_rules! scalar_domain_matrix {
             domains = [$(($all_name, $all_variant)),+],
         }
         $crate::__scalar_matrix_count_outer! {
-            suite = $suite, scalar = $scalar, script = $fixture_script, script_path = $fixture_path,
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$(($all_name, $all_variant)),+],
         }
         $crate::__scalar_matrix_order_by_outer! {
-            suite = $suite, scalar = $scalar, script = $fixture_script, script_path = $fixture_path,
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($ord_dom),*],
         }
         $crate::__scalar_matrix_order_by_using_outer! {
-            suite = $suite, scalar = $scalar, script = $fixture_script, script_path = $fixture_path,
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($ord_dom),*], ops_list = [$($ord_op),+],
         }
     };
