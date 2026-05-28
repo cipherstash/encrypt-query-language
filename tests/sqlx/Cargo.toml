@@ -25,9 +25,10 @@ default = []
 bench = []
 # Opt-in to compiling the fixture generators. Without this feature the
 # `#[cfg(feature = "fixture-gen")]` generator tests do not exist, so
-# `cargo test` and CI never see them. Generators need a live Postgres and
-# CipherStash workspace credentials in the process env
-# (`CS_CLIENT_ACCESS_KEY` + `CS_WORKSPACE_CRN`, or the legacy
-# `CS_CLIENT_ID`/`CS_CLIENT_KEY` pair). Run one with:
+# `cargo test` and CI never see them. Generators need a live Postgres and,
+# in the process env, BOTH a ZeroKMS auth credential (`CS_CLIENT_ACCESS_KEY`
+# + `CS_WORKSPACE_CRN`, via AutoStrategy) AND a client key (`CS_CLIENT_ID` +
+# `CS_CLIENT_KEY`, via EnvKeyProvider) — the two pairs are not alternatives.
+# Run one with:
 #   mise run fixture:generate <name>
 fixture-gen = []

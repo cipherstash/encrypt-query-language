@@ -6,10 +6,10 @@ description = "Generate a SQLx fixture script via cipherstash-client"
 #
 # Prerequisites:
 #   - mise run postgres:up   (Postgres with EQL installed)
-#   - CS_* credentials in the shell environment (auto-loaded by
-#     cipherstash-client's AutoStrategy / EnvKeyProvider):
-#       CS_CLIENT_ACCESS_KEY + CS_WORKSPACE_CRN  (preferred), OR
-#       CS_CLIENT_ID + CS_CLIENT_KEY             (legacy pair)
+#   - CS_* credentials in the shell environment. The generator needs BOTH
+#     pairs — they are not alternatives:
+#       CS_CLIENT_ACCESS_KEY + CS_WORKSPACE_CRN  ZeroKMS auth (AutoStrategy)
+#       CS_CLIENT_ID + CS_CLIENT_KEY             client key (EnvKeyProvider)
 #
 # Usage: mise run fixture:generate eql_v2_int4
 dir = "{{config_root}}/tests/sqlx"

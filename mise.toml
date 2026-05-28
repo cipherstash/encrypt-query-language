@@ -51,9 +51,11 @@ cd tests/sqlx
 sqlx migrate run
 
 # Regenerate fixtures every run — they are not committed (see .gitignore).
-# Generator encrypts via cipherstash-client directly; CS_* credentials must
-# be present in the shell environment (CS_CLIENT_ACCESS_KEY +
-# CS_WORKSPACE_CRN, or the legacy CS_CLIENT_ID/CS_CLIENT_KEY pair).
+# Generator encrypts via cipherstash-client directly, which needs BOTH a
+# ZeroKMS auth credential (CS_CLIENT_ACCESS_KEY + CS_WORKSPACE_CRN, via
+# AutoStrategy) AND a client key (CS_CLIENT_ID + CS_CLIENT_KEY, via
+# EnvKeyProvider) in the shell environment. Auth and key material are
+# separate roles — the two pairs are not alternatives.
 echo "Regenerating SQLx fixtures..."
 cd "{{config_root}}"
 mise run fixture:generate eql_v2_int4
