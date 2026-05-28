@@ -242,7 +242,7 @@ pub async fn fetch_fixture_payload<T: ScalarType>(pool: &PgPool, plaintext: T) -
 }
 
 /// Sorted plaintexts matching `predicate` against `T`'s fixture table.
-pub async fn scalar_plaintexts_matching<T: ScalarType>(
+async fn scalar_plaintexts_matching<T: ScalarType>(
     pool: &PgPool,
     predicate: &str,
 ) -> Result<Vec<T>> {
@@ -315,19 +315,6 @@ pub async fn assert_null(pool: &PgPool, sql: &str, binds: &[Option<&str>]) -> Re
         .with_context(|| format!("running null-result assertion: {sql}"))?;
     if result.is_some() {
         bail!("SQL={sql} with NULL operand must yield NULL, got {result:?}");
-    }
-    Ok(())
-}
-
-/// EXPLAIN-based index-engagement assertion.
-pub async fn assert_plan_uses_index(pool: &PgPool, sql: &str, index_name: &str) -> Result<()> {
-    let plan: Vec<String> = sqlx::query_scalar(&format!("EXPLAIN {sql}"))
-        .fetch_all(pool)
-        .await
-        .with_context(|| format!("running EXPLAIN for SQL={sql}"))?;
-    let plan_text = plan.join("\n");
-    if !plan_text.contains(index_name) {
-        bail!("SQL={sql} must use index={index_name}; plan:\n{plan_text}");
     }
     Ok(())
 }

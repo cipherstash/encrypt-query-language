@@ -31,9 +31,8 @@ pub use helpers::{
 };
 pub use index_types as IndexTypes;
 pub use scalar_domains::{
-    assert_null, assert_plan_uses_index, assert_raises, assert_scalar_plaintexts, blocker_msg,
-    commute_op, fetch_fixture_payload, scalar_plaintexts_matching, sql_string_literal,
-    ScalarDomainSpec, ScalarType, Variant,
+    assert_null, assert_raises, assert_scalar_plaintexts, blocker_msg, commute_op,
+    fetch_fixture_payload, sql_string_literal, ScalarDomainSpec, ScalarType, Variant,
 };
 pub use selectors::Selectors;
 
