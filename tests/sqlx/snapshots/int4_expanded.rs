@@ -17,9 +17,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 314usize,
+            start_line: 318usize,
             start_col: 26usize,
-            end_line: 314usize,
+            end_line: 318usize,
             end_col: 60usize,
             compile_fail: false,
             no_run: false,
@@ -136,9 +136,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 314usize,
+            start_line: 318usize,
             start_col: 26usize,
-            end_line: 314usize,
+            end_line: 318usize,
             end_col: 60usize,
             compile_fail: false,
             no_run: false,
@@ -255,9 +255,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 314usize,
+            start_line: 318usize,
             start_col: 26usize,
-            end_line: 314usize,
+            end_line: 318usize,
             end_col: 60usize,
             compile_fail: false,
             no_run: false,
@@ -374,9 +374,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 314usize,
+            start_line: 318usize,
             start_col: 26usize,
-            end_line: 314usize,
+            end_line: 318usize,
             end_col: 60usize,
             compile_fail: false,
             no_run: false,
@@ -495,9 +495,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -636,9 +636,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -777,9 +777,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -918,9 +918,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1059,9 +1059,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1200,9 +1200,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1341,9 +1341,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1482,9 +1482,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1623,9 +1623,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1764,9 +1764,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1905,9 +1905,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2046,9 +2046,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2187,9 +2187,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2328,9 +2328,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2469,9 +2469,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2610,9 +2610,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2751,9 +2751,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2892,9 +2892,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3033,9 +3033,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3174,9 +3174,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3315,9 +3315,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3456,9 +3456,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3597,9 +3597,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3738,9 +3738,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3879,9 +3879,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4020,9 +4020,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4161,9 +4161,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4302,9 +4302,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4443,9 +4443,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4584,9 +4584,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4725,9 +4725,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4866,9 +4866,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5007,9 +5007,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5148,9 +5148,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5289,9 +5289,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5430,9 +5430,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5571,9 +5571,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5712,9 +5712,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5853,9 +5853,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5994,9 +5994,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6135,9 +6135,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6276,9 +6276,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 450usize,
+            start_line: 454usize,
             start_col: 22usize,
-            end_line: 450usize,
+            end_line: 454usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6417,9 +6417,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6625,9 +6625,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6833,9 +6833,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7041,9 +7041,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7249,9 +7249,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7457,9 +7457,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7665,9 +7665,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7873,9 +7873,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8081,9 +8081,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8289,9 +8289,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8497,9 +8497,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8705,9 +8705,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8913,9 +8913,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9121,9 +9121,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9329,9 +9329,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9537,9 +9537,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9745,9 +9745,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9953,9 +9953,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10161,9 +10161,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10369,9 +10369,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10577,9 +10577,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10785,9 +10785,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10993,9 +10993,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -11201,9 +11201,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -11409,9 +11409,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -11617,9 +11617,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -11825,9 +11825,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -12033,9 +12033,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -12241,9 +12241,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -12449,9 +12449,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -12657,9 +12657,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -12865,9 +12865,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -13073,9 +13073,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -13281,9 +13281,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -13489,9 +13489,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -13697,9 +13697,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -13905,9 +13905,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -14113,9 +14113,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -14321,9 +14321,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -14529,9 +14529,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -14737,9 +14737,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -14945,9 +14945,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 491usize,
+            start_line: 495usize,
             start_col: 22usize,
-            end_line: 491usize,
+            end_line: 495usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -15153,9 +15153,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 543usize,
+            start_line: 547usize,
             start_col: 22usize,
-            end_line: 543usize,
+            end_line: 547usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -15288,9 +15288,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 543usize,
+            start_line: 547usize,
             start_col: 22usize,
-            end_line: 543usize,
+            end_line: 547usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -15423,9 +15423,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 543usize,
+            start_line: 547usize,
             start_col: 22usize,
-            end_line: 543usize,
+            end_line: 547usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -15558,9 +15558,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 543usize,
+            start_line: 547usize,
             start_col: 22usize,
-            end_line: 543usize,
+            end_line: 547usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -15693,9 +15693,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 543usize,
+            start_line: 547usize,
             start_col: 22usize,
-            end_line: 543usize,
+            end_line: 547usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -15828,9 +15828,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 543usize,
+            start_line: 547usize,
             start_col: 22usize,
-            end_line: 543usize,
+            end_line: 547usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -15963,9 +15963,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 543usize,
+            start_line: 547usize,
             start_col: 22usize,
-            end_line: 543usize,
+            end_line: 547usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -16098,9 +16098,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 543usize,
+            start_line: 547usize,
             start_col: 22usize,
-            end_line: 543usize,
+            end_line: 547usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -16233,9 +16233,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 543usize,
+            start_line: 547usize,
             start_col: 22usize,
-            end_line: 543usize,
+            end_line: 547usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -16368,9 +16368,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 543usize,
+            start_line: 547usize,
             start_col: 22usize,
-            end_line: 543usize,
+            end_line: 547usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -16503,9 +16503,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 543usize,
+            start_line: 547usize,
             start_col: 22usize,
-            end_line: 543usize,
+            end_line: 547usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -16638,9 +16638,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 543usize,
+            start_line: 547usize,
             start_col: 22usize,
-            end_line: 543usize,
+            end_line: 547usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -16773,9 +16773,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 543usize,
+            start_line: 547usize,
             start_col: 22usize,
-            end_line: 543usize,
+            end_line: 547usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -16908,9 +16908,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 543usize,
+            start_line: 547usize,
             start_col: 22usize,
-            end_line: 543usize,
+            end_line: 547usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -17041,9 +17041,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 607usize,
+            start_line: 611usize,
             start_col: 22usize,
-            end_line: 607usize,
+            end_line: 611usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -17218,9 +17218,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 607usize,
+            start_line: 611usize,
             start_col: 22usize,
-            end_line: 607usize,
+            end_line: 611usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -17395,9 +17395,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 607usize,
+            start_line: 611usize,
             start_col: 22usize,
-            end_line: 607usize,
+            end_line: 611usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -17572,9 +17572,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 607usize,
+            start_line: 611usize,
             start_col: 22usize,
-            end_line: 607usize,
+            end_line: 611usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -17749,9 +17749,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 607usize,
+            start_line: 611usize,
             start_col: 22usize,
-            end_line: 607usize,
+            end_line: 611usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -17926,9 +17926,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 607usize,
+            start_line: 611usize,
             start_col: 22usize,
-            end_line: 607usize,
+            end_line: 611usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -18105,9 +18105,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 607usize,
+            start_line: 611usize,
             start_col: 22usize,
-            end_line: 607usize,
+            end_line: 611usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -18284,9 +18284,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 607usize,
+            start_line: 611usize,
             start_col: 22usize,
-            end_line: 607usize,
+            end_line: 611usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -18461,9 +18461,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 607usize,
+            start_line: 611usize,
             start_col: 22usize,
-            end_line: 607usize,
+            end_line: 611usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -18636,9 +18636,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 607usize,
+            start_line: 611usize,
             start_col: 22usize,
-            end_line: 607usize,
+            end_line: 611usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -18811,9 +18811,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 607usize,
+            start_line: 611usize,
             start_col: 22usize,
-            end_line: 607usize,
+            end_line: 611usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -18986,9 +18986,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 607usize,
+            start_line: 611usize,
             start_col: 22usize,
-            end_line: 607usize,
+            end_line: 611usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -19161,9 +19161,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 607usize,
+            start_line: 611usize,
             start_col: 22usize,
-            end_line: 607usize,
+            end_line: 611usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -19340,9 +19340,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 607usize,
+            start_line: 611usize,
             start_col: 22usize,
-            end_line: 607usize,
+            end_line: 611usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -19519,9 +19519,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 607usize,
+            start_line: 611usize,
             start_col: 22usize,
-            end_line: 607usize,
+            end_line: 611usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -19698,9 +19698,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 607usize,
+            start_line: 611usize,
             start_col: 22usize,
-            end_line: 607usize,
+            end_line: 611usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -19877,9 +19877,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 607usize,
+            start_line: 611usize,
             start_col: 22usize,
-            end_line: 607usize,
+            end_line: 611usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -20056,9 +20056,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 607usize,
+            start_line: 611usize,
             start_col: 22usize,
-            end_line: 607usize,
+            end_line: 611usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -20235,9 +20235,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 674usize,
+            start_line: 678usize,
             start_col: 22usize,
-            end_line: 674usize,
+            end_line: 678usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -20417,9 +20417,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 674usize,
+            start_line: 678usize,
             start_col: 22usize,
-            end_line: 674usize,
+            end_line: 678usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -20597,9 +20597,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 674usize,
+            start_line: 678usize,
             start_col: 22usize,
-            end_line: 674usize,
+            end_line: 678usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -20781,9 +20781,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 674usize,
+            start_line: 678usize,
             start_col: 22usize,
-            end_line: 674usize,
+            end_line: 678usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -20965,9 +20965,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 747usize,
+            start_line: 751usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 751usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -21108,9 +21108,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 747usize,
+            start_line: 751usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 751usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -21253,9 +21253,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 747usize,
+            start_line: 751usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 751usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -21398,9 +21398,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 747usize,
+            start_line: 751usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 751usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -21543,9 +21543,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 804usize,
+            start_line: 808usize,
             start_col: 22usize,
-            end_line: 804usize,
+            end_line: 808usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -21674,9 +21674,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 804usize,
+            start_line: 808usize,
             start_col: 22usize,
-            end_line: 804usize,
+            end_line: 808usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -21805,9 +21805,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 804usize,
+            start_line: 808usize,
             start_col: 22usize,
-            end_line: 804usize,
+            end_line: 808usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -21936,9 +21936,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 804usize,
+            start_line: 808usize,
             start_col: 22usize,
-            end_line: 804usize,
+            end_line: 808usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -22067,9 +22067,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 857usize,
+            start_line: 861usize,
             start_col: 22usize,
-            end_line: 857usize,
+            end_line: 861usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -22480,9 +22480,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 857usize,
+            start_line: 861usize,
             start_col: 22usize,
-            end_line: 857usize,
+            end_line: 861usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -22823,9 +22823,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 857usize,
+            start_line: 861usize,
             start_col: 22usize,
-            end_line: 857usize,
+            end_line: 861usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -23026,9 +23026,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 857usize,
+            start_line: 861usize,
             start_col: 22usize,
-            end_line: 857usize,
+            end_line: 861usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -23229,9 +23229,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 938usize,
+            start_line: 942usize,
             start_col: 22usize,
-            end_line: 938usize,
+            end_line: 942usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -23435,9 +23435,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 938usize,
+            start_line: 942usize,
             start_col: 22usize,
-            end_line: 938usize,
+            end_line: 942usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -23641,9 +23641,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 938usize,
+            start_line: 942usize,
             start_col: 22usize,
-            end_line: 938usize,
+            end_line: 942usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -23847,9 +23847,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 938usize,
+            start_line: 942usize,
             start_col: 22usize,
-            end_line: 938usize,
+            end_line: 942usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -24053,9 +24053,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 938usize,
+            start_line: 942usize,
             start_col: 22usize,
-            end_line: 938usize,
+            end_line: 942usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -24259,9 +24259,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1373usize,
+            start_line: 1377usize,
             start_col: 22usize,
-            end_line: 1373usize,
+            end_line: 1377usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -24477,9 +24477,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1373usize,
+            start_line: 1377usize,
             start_col: 22usize,
-            end_line: 1373usize,
+            end_line: 1377usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -24695,9 +24695,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1373usize,
+            start_line: 1377usize,
             start_col: 22usize,
-            end_line: 1373usize,
+            end_line: 1377usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -25041,9 +25041,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1373usize,
+            start_line: 1377usize,
             start_col: 22usize,
-            end_line: 1373usize,
+            end_line: 1377usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -25385,9 +25385,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1106usize,
+            start_line: 1110usize,
             start_col: 22usize,
-            end_line: 1106usize,
+            end_line: 1110usize,
             end_col: 55usize,
             compile_fail: false,
             no_run: false,
@@ -25682,9 +25682,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1209usize,
+            start_line: 1213usize,
             start_col: 22usize,
-            end_line: 1209usize,
+            end_line: 1213usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -25971,9 +25971,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1209usize,
+            start_line: 1213usize,
             start_col: 22usize,
-            end_line: 1209usize,
+            end_line: 1213usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -26260,9 +26260,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1317usize,
+            start_line: 1321usize,
             start_col: 22usize,
-            end_line: 1317usize,
+            end_line: 1321usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -26402,9 +26402,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1669usize,
+            start_line: 1807usize,
             start_col: 22usize,
-            end_line: 1669usize,
+            end_line: 1807usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -26608,9 +26608,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1727usize,
+            start_line: 1865usize,
             start_col: 22usize,
-            end_line: 1727usize,
+            end_line: 1865usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -26762,9 +26762,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1752usize,
+            start_line: 1890usize,
             start_col: 22usize,
-            end_line: 1752usize,
+            end_line: 1890usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -26903,9 +26903,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1778usize,
+            start_line: 1916usize,
             start_col: 22usize,
-            end_line: 1778usize,
+            end_line: 1916usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -27121,9 +27121,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1669usize,
+            start_line: 1807usize,
             start_col: 22usize,
-            end_line: 1669usize,
+            end_line: 1807usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -27327,9 +27327,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1727usize,
+            start_line: 1865usize,
             start_col: 22usize,
-            end_line: 1727usize,
+            end_line: 1865usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -27481,9 +27481,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1752usize,
+            start_line: 1890usize,
             start_col: 22usize,
-            end_line: 1752usize,
+            end_line: 1890usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -27622,9 +27622,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1778usize,
+            start_line: 1916usize,
             start_col: 22usize,
-            end_line: 1778usize,
+            end_line: 1916usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -27842,9 +27842,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1669usize,
+            start_line: 1807usize,
             start_col: 22usize,
-            end_line: 1669usize,
+            end_line: 1807usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -28048,9 +28048,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1727usize,
+            start_line: 1865usize,
             start_col: 22usize,
-            end_line: 1727usize,
+            end_line: 1865usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -28202,9 +28202,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1752usize,
+            start_line: 1890usize,
             start_col: 22usize,
-            end_line: 1752usize,
+            end_line: 1890usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -28343,9 +28343,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1778usize,
+            start_line: 1916usize,
             start_col: 22usize,
-            end_line: 1778usize,
+            end_line: 1916usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -28563,9 +28563,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1669usize,
+            start_line: 1807usize,
             start_col: 22usize,
-            end_line: 1669usize,
+            end_line: 1807usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -28769,9 +28769,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1727usize,
+            start_line: 1865usize,
             start_col: 22usize,
-            end_line: 1727usize,
+            end_line: 1865usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -28923,9 +28923,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1752usize,
+            start_line: 1890usize,
             start_col: 22usize,
-            end_line: 1752usize,
+            end_line: 1890usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -29064,9 +29064,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1778usize,
+            start_line: 1916usize,
             start_col: 22usize,
-            end_line: 1778usize,
+            end_line: 1916usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -29284,9 +29284,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1895usize,
+            start_line: 2033usize,
             start_col: 22usize,
-            end_line: 1895usize,
+            end_line: 2033usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -29572,9 +29572,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1895usize,
+            start_line: 2033usize,
             start_col: 22usize,
-            end_line: 1895usize,
+            end_line: 2033usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -29860,9 +29860,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1895usize,
+            start_line: 2033usize,
             start_col: 22usize,
-            end_line: 1895usize,
+            end_line: 2033usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -30148,9 +30148,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1895usize,
+            start_line: 2033usize,
             start_col: 22usize,
-            end_line: 1895usize,
+            end_line: 2033usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -30436,9 +30436,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2051usize,
+            start_line: 2189usize,
             start_col: 22usize,
-            end_line: 2051usize,
+            end_line: 2189usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -30623,9 +30623,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2051usize,
+            start_line: 2189usize,
             start_col: 22usize,
-            end_line: 2051usize,
+            end_line: 2189usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -30810,9 +30810,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2051usize,
+            start_line: 2189usize,
             start_col: 22usize,
-            end_line: 2051usize,
+            end_line: 2189usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -30997,9 +30997,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2051usize,
+            start_line: 2189usize,
             start_col: 22usize,
-            end_line: 2051usize,
+            end_line: 2189usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -31184,9 +31184,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2152usize,
+            start_line: 2290usize,
             start_col: 22usize,
-            end_line: 2152usize,
+            end_line: 2290usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -31354,9 +31354,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2185usize,
+            start_line: 2323usize,
             start_col: 22usize,
-            end_line: 2185usize,
+            end_line: 2323usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -31500,9 +31500,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2152usize,
+            start_line: 2290usize,
             start_col: 22usize,
-            end_line: 2152usize,
+            end_line: 2290usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -31668,9 +31668,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2185usize,
+            start_line: 2323usize,
             start_col: 22usize,
-            end_line: 2185usize,
+            end_line: 2323usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -31814,9 +31814,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2229usize,
+            start_line: 2367usize,
             start_col: 22usize,
-            end_line: 2229usize,
+            end_line: 2367usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -31996,9 +31996,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2152usize,
+            start_line: 2290usize,
             start_col: 22usize,
-            end_line: 2152usize,
+            end_line: 2290usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -32164,9 +32164,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2185usize,
+            start_line: 2323usize,
             start_col: 22usize,
-            end_line: 2185usize,
+            end_line: 2323usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -32310,9 +32310,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2229usize,
+            start_line: 2367usize,
             start_col: 22usize,
-            end_line: 2229usize,
+            end_line: 2367usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -32492,9 +32492,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2152usize,
+            start_line: 2290usize,
             start_col: 22usize,
-            end_line: 2152usize,
+            end_line: 2290usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -32662,9 +32662,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2185usize,
+            start_line: 2323usize,
             start_col: 22usize,
-            end_line: 2185usize,
+            end_line: 2323usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -32808,9 +32808,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 2229usize,
+            start_line: 2367usize,
             start_col: 22usize,
-            end_line: 2229usize,
+            end_line: 2367usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -32990,9 +32990,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1497usize,
+            start_line: 1501usize,
             start_col: 22usize,
-            end_line: 1497usize,
+            end_line: 1501usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -33153,9 +33153,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1497usize,
+            start_line: 1501usize,
             start_col: 22usize,
-            end_line: 1497usize,
+            end_line: 1501usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -33316,9 +33316,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1497usize,
+            start_line: 1501usize,
             start_col: 22usize,
-            end_line: 1497usize,
+            end_line: 1501usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -33479,9 +33479,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1497usize,
+            start_line: 1501usize,
             start_col: 22usize,
-            end_line: 1497usize,
+            end_line: 1501usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -33642,9 +33642,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1497usize,
+            start_line: 1501usize,
             start_col: 22usize,
-            end_line: 1497usize,
+            end_line: 1501usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -33805,9 +33805,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1497usize,
+            start_line: 1501usize,
             start_col: 22usize,
-            end_line: 1497usize,
+            end_line: 1501usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -33968,9 +33968,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1497usize,
+            start_line: 1501usize,
             start_col: 22usize,
-            end_line: 1497usize,
+            end_line: 1501usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -34131,9 +34131,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1497usize,
+            start_line: 1501usize,
             start_col: 22usize,
-            end_line: 1497usize,
+            end_line: 1501usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -34284,6 +34284,1750 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_order_by_asc_nulls_first"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_order_by_asc_nulls_first: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_order_by_asc_nulls_first",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "src/matrix.rs",
+            start_line: 1600usize,
+            start_col: 22usize,
+            end_line: 1600usize,
+            end_col: 74usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_order_by_asc_nulls_first()),
+        ),
+    };
+    fn matrix_int4_ord_order_by_asc_nulls_first() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_order_by_asc_nulls_first(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                const NULL_ROWS: usize = 3;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::Ord);
+                let d = &spec.sql_domain;
+                let table = "matrix_int4_ord_order_by_asc_nulls_first";
+                let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let pg = <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, payload::{2} FROM {0}",
+                                    fixture_table,
+                                    table,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
+                                    NULL_ROWS,
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT plaintext FROM {2} ORDER BY eql_v2.ord_term(value) {0} NULLS {1}",
+                            "ASC",
+                            "FIRST",
+                            table,
+                        ),
+                    )
+                });
+                let actual: Vec<Option<i32>> = sqlx::query_scalar(&sql)
+                    .fetch_all(&mut *tx)
+                    .await?;
+                let mut non_null: Vec<i32> = <i32 as ::eql_tests::scalar_domains::ScalarType>::FIXTURE_VALUES
+                    .to_vec();
+                non_null.sort();
+                if "ASC" == "DESC" {
+                    non_null.reverse();
+                }
+                let sorted = non_null.into_iter().map(Some);
+                let mut expected: Vec<Option<i32>> = Vec::new();
+                if "FIRST" == "FIRST" {
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                    expected.extend(sorted);
+                } else {
+                    expected.extend(sorted);
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                }
+                match (&actual, &expected) {
+                    (left_val, right_val) => {
+                        if !(*left_val == *right_val) {
+                            let kind = ::core::panicking::AssertKind::Eq;
+                            ::core::panicking::assert_failed(
+                                kind,
+                                &*left_val,
+                                &*right_val,
+                                ::core::option::Option::Some(
+                                    format_args!(
+                                        "domain={0} mode={1} SQL={2} expected {3:?}, got {4:?}",
+                                        d,
+                                        "asc_nulls_first",
+                                        sql,
+                                        expected,
+                                        actual,
+                                    ),
+                                ),
+                            );
+                        }
+                    }
+                };
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_order_by_asc_nulls_first",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8,
+                                    176u8,
+                                    96u8,
+                                    167u8,
+                                    81u8,
+                                    172u8,
+                                    150u8,
+                                    56u8,
+                                    76u8,
+                                    217u8,
+                                    50u8,
+                                    126u8,
+                                    177u8,
+                                    177u8,
+                                    227u8,
+                                    106u8,
+                                    33u8,
+                                    253u8,
+                                    183u8,
+                                    17u8,
+                                    20u8,
+                                    190u8,
+                                    7u8,
+                                    67u8,
+                                    76u8,
+                                    12u8,
+                                    199u8,
+                                    191u8,
+                                    99u8,
+                                    246u8,
+                                    225u8,
+                                    218u8,
+                                    39u8,
+                                    78u8,
+                                    222u8,
+                                    191u8,
+                                    231u8,
+                                    111u8,
+                                    101u8,
+                                    251u8,
+                                    213u8,
+                                    26u8,
+                                    210u8,
+                                    241u8,
+                                    72u8,
+                                    152u8,
+                                    185u8,
+                                    91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v2_int4.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_int4_ord_order_by_asc_nulls_first;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_order_by_asc_nulls_last"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_order_by_asc_nulls_last: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_order_by_asc_nulls_last",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "src/matrix.rs",
+            start_line: 1600usize,
+            start_col: 22usize,
+            end_line: 1600usize,
+            end_col: 74usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_order_by_asc_nulls_last()),
+        ),
+    };
+    fn matrix_int4_ord_order_by_asc_nulls_last() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_order_by_asc_nulls_last(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                const NULL_ROWS: usize = 3;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::Ord);
+                let d = &spec.sql_domain;
+                let table = "matrix_int4_ord_order_by_asc_nulls_last";
+                let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let pg = <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, payload::{2} FROM {0}",
+                                    fixture_table,
+                                    table,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
+                                    NULL_ROWS,
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT plaintext FROM {2} ORDER BY eql_v2.ord_term(value) {0} NULLS {1}",
+                            "ASC",
+                            "LAST",
+                            table,
+                        ),
+                    )
+                });
+                let actual: Vec<Option<i32>> = sqlx::query_scalar(&sql)
+                    .fetch_all(&mut *tx)
+                    .await?;
+                let mut non_null: Vec<i32> = <i32 as ::eql_tests::scalar_domains::ScalarType>::FIXTURE_VALUES
+                    .to_vec();
+                non_null.sort();
+                if "ASC" == "DESC" {
+                    non_null.reverse();
+                }
+                let sorted = non_null.into_iter().map(Some);
+                let mut expected: Vec<Option<i32>> = Vec::new();
+                if "LAST" == "FIRST" {
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                    expected.extend(sorted);
+                } else {
+                    expected.extend(sorted);
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                }
+                match (&actual, &expected) {
+                    (left_val, right_val) => {
+                        if !(*left_val == *right_val) {
+                            let kind = ::core::panicking::AssertKind::Eq;
+                            ::core::panicking::assert_failed(
+                                kind,
+                                &*left_val,
+                                &*right_val,
+                                ::core::option::Option::Some(
+                                    format_args!(
+                                        "domain={0} mode={1} SQL={2} expected {3:?}, got {4:?}",
+                                        d,
+                                        "asc_nulls_last",
+                                        sql,
+                                        expected,
+                                        actual,
+                                    ),
+                                ),
+                            );
+                        }
+                    }
+                };
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_order_by_asc_nulls_last",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8,
+                                    176u8,
+                                    96u8,
+                                    167u8,
+                                    81u8,
+                                    172u8,
+                                    150u8,
+                                    56u8,
+                                    76u8,
+                                    217u8,
+                                    50u8,
+                                    126u8,
+                                    177u8,
+                                    177u8,
+                                    227u8,
+                                    106u8,
+                                    33u8,
+                                    253u8,
+                                    183u8,
+                                    17u8,
+                                    20u8,
+                                    190u8,
+                                    7u8,
+                                    67u8,
+                                    76u8,
+                                    12u8,
+                                    199u8,
+                                    191u8,
+                                    99u8,
+                                    246u8,
+                                    225u8,
+                                    218u8,
+                                    39u8,
+                                    78u8,
+                                    222u8,
+                                    191u8,
+                                    231u8,
+                                    111u8,
+                                    101u8,
+                                    251u8,
+                                    213u8,
+                                    26u8,
+                                    210u8,
+                                    241u8,
+                                    72u8,
+                                    152u8,
+                                    185u8,
+                                    91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v2_int4.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_int4_ord_order_by_asc_nulls_last;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_order_by_desc_nulls_first"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_order_by_desc_nulls_first: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_order_by_desc_nulls_first",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "src/matrix.rs",
+            start_line: 1600usize,
+            start_col: 22usize,
+            end_line: 1600usize,
+            end_col: 74usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_order_by_desc_nulls_first()),
+        ),
+    };
+    fn matrix_int4_ord_order_by_desc_nulls_first() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_order_by_desc_nulls_first(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                const NULL_ROWS: usize = 3;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::Ord);
+                let d = &spec.sql_domain;
+                let table = "matrix_int4_ord_order_by_desc_nulls_first";
+                let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let pg = <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, payload::{2} FROM {0}",
+                                    fixture_table,
+                                    table,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
+                                    NULL_ROWS,
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT plaintext FROM {2} ORDER BY eql_v2.ord_term(value) {0} NULLS {1}",
+                            "DESC",
+                            "FIRST",
+                            table,
+                        ),
+                    )
+                });
+                let actual: Vec<Option<i32>> = sqlx::query_scalar(&sql)
+                    .fetch_all(&mut *tx)
+                    .await?;
+                let mut non_null: Vec<i32> = <i32 as ::eql_tests::scalar_domains::ScalarType>::FIXTURE_VALUES
+                    .to_vec();
+                non_null.sort();
+                if "DESC" == "DESC" {
+                    non_null.reverse();
+                }
+                let sorted = non_null.into_iter().map(Some);
+                let mut expected: Vec<Option<i32>> = Vec::new();
+                if "FIRST" == "FIRST" {
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                    expected.extend(sorted);
+                } else {
+                    expected.extend(sorted);
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                }
+                match (&actual, &expected) {
+                    (left_val, right_val) => {
+                        if !(*left_val == *right_val) {
+                            let kind = ::core::panicking::AssertKind::Eq;
+                            ::core::panicking::assert_failed(
+                                kind,
+                                &*left_val,
+                                &*right_val,
+                                ::core::option::Option::Some(
+                                    format_args!(
+                                        "domain={0} mode={1} SQL={2} expected {3:?}, got {4:?}",
+                                        d,
+                                        "desc_nulls_first",
+                                        sql,
+                                        expected,
+                                        actual,
+                                    ),
+                                ),
+                            );
+                        }
+                    }
+                };
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_order_by_desc_nulls_first",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8,
+                                    176u8,
+                                    96u8,
+                                    167u8,
+                                    81u8,
+                                    172u8,
+                                    150u8,
+                                    56u8,
+                                    76u8,
+                                    217u8,
+                                    50u8,
+                                    126u8,
+                                    177u8,
+                                    177u8,
+                                    227u8,
+                                    106u8,
+                                    33u8,
+                                    253u8,
+                                    183u8,
+                                    17u8,
+                                    20u8,
+                                    190u8,
+                                    7u8,
+                                    67u8,
+                                    76u8,
+                                    12u8,
+                                    199u8,
+                                    191u8,
+                                    99u8,
+                                    246u8,
+                                    225u8,
+                                    218u8,
+                                    39u8,
+                                    78u8,
+                                    222u8,
+                                    191u8,
+                                    231u8,
+                                    111u8,
+                                    101u8,
+                                    251u8,
+                                    213u8,
+                                    26u8,
+                                    210u8,
+                                    241u8,
+                                    72u8,
+                                    152u8,
+                                    185u8,
+                                    91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v2_int4.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_int4_ord_order_by_desc_nulls_first;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_order_by_desc_nulls_last"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_order_by_desc_nulls_last: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_order_by_desc_nulls_last",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "src/matrix.rs",
+            start_line: 1600usize,
+            start_col: 22usize,
+            end_line: 1600usize,
+            end_col: 74usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_order_by_desc_nulls_last()),
+        ),
+    };
+    fn matrix_int4_ord_order_by_desc_nulls_last() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_order_by_desc_nulls_last(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                const NULL_ROWS: usize = 3;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::Ord);
+                let d = &spec.sql_domain;
+                let table = "matrix_int4_ord_order_by_desc_nulls_last";
+                let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let pg = <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, payload::{2} FROM {0}",
+                                    fixture_table,
+                                    table,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
+                                    NULL_ROWS,
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT plaintext FROM {2} ORDER BY eql_v2.ord_term(value) {0} NULLS {1}",
+                            "DESC",
+                            "LAST",
+                            table,
+                        ),
+                    )
+                });
+                let actual: Vec<Option<i32>> = sqlx::query_scalar(&sql)
+                    .fetch_all(&mut *tx)
+                    .await?;
+                let mut non_null: Vec<i32> = <i32 as ::eql_tests::scalar_domains::ScalarType>::FIXTURE_VALUES
+                    .to_vec();
+                non_null.sort();
+                if "DESC" == "DESC" {
+                    non_null.reverse();
+                }
+                let sorted = non_null.into_iter().map(Some);
+                let mut expected: Vec<Option<i32>> = Vec::new();
+                if "LAST" == "FIRST" {
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                    expected.extend(sorted);
+                } else {
+                    expected.extend(sorted);
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                }
+                match (&actual, &expected) {
+                    (left_val, right_val) => {
+                        if !(*left_val == *right_val) {
+                            let kind = ::core::panicking::AssertKind::Eq;
+                            ::core::panicking::assert_failed(
+                                kind,
+                                &*left_val,
+                                &*right_val,
+                                ::core::option::Option::Some(
+                                    format_args!(
+                                        "domain={0} mode={1} SQL={2} expected {3:?}, got {4:?}",
+                                        d,
+                                        "desc_nulls_last",
+                                        sql,
+                                        expected,
+                                        actual,
+                                    ),
+                                ),
+                            );
+                        }
+                    }
+                };
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_order_by_desc_nulls_last",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8,
+                                    176u8,
+                                    96u8,
+                                    167u8,
+                                    81u8,
+                                    172u8,
+                                    150u8,
+                                    56u8,
+                                    76u8,
+                                    217u8,
+                                    50u8,
+                                    126u8,
+                                    177u8,
+                                    177u8,
+                                    227u8,
+                                    106u8,
+                                    33u8,
+                                    253u8,
+                                    183u8,
+                                    17u8,
+                                    20u8,
+                                    190u8,
+                                    7u8,
+                                    67u8,
+                                    76u8,
+                                    12u8,
+                                    199u8,
+                                    191u8,
+                                    99u8,
+                                    246u8,
+                                    225u8,
+                                    218u8,
+                                    39u8,
+                                    78u8,
+                                    222u8,
+                                    191u8,
+                                    231u8,
+                                    111u8,
+                                    101u8,
+                                    251u8,
+                                    213u8,
+                                    26u8,
+                                    210u8,
+                                    241u8,
+                                    72u8,
+                                    152u8,
+                                    185u8,
+                                    91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v2_int4.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_int4_ord_order_by_desc_nulls_last;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_order_by_asc_nulls_first"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_ore_order_by_asc_nulls_first: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_ore_order_by_asc_nulls_first",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "src/matrix.rs",
+            start_line: 1600usize,
+            start_col: 22usize,
+            end_line: 1600usize,
+            end_col: 74usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_ore_order_by_asc_nulls_first()),
+        ),
+    };
+    fn matrix_int4_ord_ore_order_by_asc_nulls_first() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_order_by_asc_nulls_first(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                const NULL_ROWS: usize = 3;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::OrdOre);
+                let d = &spec.sql_domain;
+                let table = "matrix_int4_ord_ore_order_by_asc_nulls_first";
+                let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let pg = <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, payload::{2} FROM {0}",
+                                    fixture_table,
+                                    table,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
+                                    NULL_ROWS,
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT plaintext FROM {2} ORDER BY eql_v2.ord_term(value) {0} NULLS {1}",
+                            "ASC",
+                            "FIRST",
+                            table,
+                        ),
+                    )
+                });
+                let actual: Vec<Option<i32>> = sqlx::query_scalar(&sql)
+                    .fetch_all(&mut *tx)
+                    .await?;
+                let mut non_null: Vec<i32> = <i32 as ::eql_tests::scalar_domains::ScalarType>::FIXTURE_VALUES
+                    .to_vec();
+                non_null.sort();
+                if "ASC" == "DESC" {
+                    non_null.reverse();
+                }
+                let sorted = non_null.into_iter().map(Some);
+                let mut expected: Vec<Option<i32>> = Vec::new();
+                if "FIRST" == "FIRST" {
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                    expected.extend(sorted);
+                } else {
+                    expected.extend(sorted);
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                }
+                match (&actual, &expected) {
+                    (left_val, right_val) => {
+                        if !(*left_val == *right_val) {
+                            let kind = ::core::panicking::AssertKind::Eq;
+                            ::core::panicking::assert_failed(
+                                kind,
+                                &*left_val,
+                                &*right_val,
+                                ::core::option::Option::Some(
+                                    format_args!(
+                                        "domain={0} mode={1} SQL={2} expected {3:?}, got {4:?}",
+                                        d,
+                                        "asc_nulls_first",
+                                        sql,
+                                        expected,
+                                        actual,
+                                    ),
+                                ),
+                            );
+                        }
+                    }
+                };
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_order_by_asc_nulls_first",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8,
+                                    176u8,
+                                    96u8,
+                                    167u8,
+                                    81u8,
+                                    172u8,
+                                    150u8,
+                                    56u8,
+                                    76u8,
+                                    217u8,
+                                    50u8,
+                                    126u8,
+                                    177u8,
+                                    177u8,
+                                    227u8,
+                                    106u8,
+                                    33u8,
+                                    253u8,
+                                    183u8,
+                                    17u8,
+                                    20u8,
+                                    190u8,
+                                    7u8,
+                                    67u8,
+                                    76u8,
+                                    12u8,
+                                    199u8,
+                                    191u8,
+                                    99u8,
+                                    246u8,
+                                    225u8,
+                                    218u8,
+                                    39u8,
+                                    78u8,
+                                    222u8,
+                                    191u8,
+                                    231u8,
+                                    111u8,
+                                    101u8,
+                                    251u8,
+                                    213u8,
+                                    26u8,
+                                    210u8,
+                                    241u8,
+                                    72u8,
+                                    152u8,
+                                    185u8,
+                                    91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v2_int4.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_int4_ord_ore_order_by_asc_nulls_first;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_order_by_asc_nulls_last"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_ore_order_by_asc_nulls_last: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_ore_order_by_asc_nulls_last",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "src/matrix.rs",
+            start_line: 1600usize,
+            start_col: 22usize,
+            end_line: 1600usize,
+            end_col: 74usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_ore_order_by_asc_nulls_last()),
+        ),
+    };
+    fn matrix_int4_ord_ore_order_by_asc_nulls_last() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_order_by_asc_nulls_last(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                const NULL_ROWS: usize = 3;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::OrdOre);
+                let d = &spec.sql_domain;
+                let table = "matrix_int4_ord_ore_order_by_asc_nulls_last";
+                let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let pg = <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, payload::{2} FROM {0}",
+                                    fixture_table,
+                                    table,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
+                                    NULL_ROWS,
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT plaintext FROM {2} ORDER BY eql_v2.ord_term(value) {0} NULLS {1}",
+                            "ASC",
+                            "LAST",
+                            table,
+                        ),
+                    )
+                });
+                let actual: Vec<Option<i32>> = sqlx::query_scalar(&sql)
+                    .fetch_all(&mut *tx)
+                    .await?;
+                let mut non_null: Vec<i32> = <i32 as ::eql_tests::scalar_domains::ScalarType>::FIXTURE_VALUES
+                    .to_vec();
+                non_null.sort();
+                if "ASC" == "DESC" {
+                    non_null.reverse();
+                }
+                let sorted = non_null.into_iter().map(Some);
+                let mut expected: Vec<Option<i32>> = Vec::new();
+                if "LAST" == "FIRST" {
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                    expected.extend(sorted);
+                } else {
+                    expected.extend(sorted);
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                }
+                match (&actual, &expected) {
+                    (left_val, right_val) => {
+                        if !(*left_val == *right_val) {
+                            let kind = ::core::panicking::AssertKind::Eq;
+                            ::core::panicking::assert_failed(
+                                kind,
+                                &*left_val,
+                                &*right_val,
+                                ::core::option::Option::Some(
+                                    format_args!(
+                                        "domain={0} mode={1} SQL={2} expected {3:?}, got {4:?}",
+                                        d,
+                                        "asc_nulls_last",
+                                        sql,
+                                        expected,
+                                        actual,
+                                    ),
+                                ),
+                            );
+                        }
+                    }
+                };
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_order_by_asc_nulls_last",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8,
+                                    176u8,
+                                    96u8,
+                                    167u8,
+                                    81u8,
+                                    172u8,
+                                    150u8,
+                                    56u8,
+                                    76u8,
+                                    217u8,
+                                    50u8,
+                                    126u8,
+                                    177u8,
+                                    177u8,
+                                    227u8,
+                                    106u8,
+                                    33u8,
+                                    253u8,
+                                    183u8,
+                                    17u8,
+                                    20u8,
+                                    190u8,
+                                    7u8,
+                                    67u8,
+                                    76u8,
+                                    12u8,
+                                    199u8,
+                                    191u8,
+                                    99u8,
+                                    246u8,
+                                    225u8,
+                                    218u8,
+                                    39u8,
+                                    78u8,
+                                    222u8,
+                                    191u8,
+                                    231u8,
+                                    111u8,
+                                    101u8,
+                                    251u8,
+                                    213u8,
+                                    26u8,
+                                    210u8,
+                                    241u8,
+                                    72u8,
+                                    152u8,
+                                    185u8,
+                                    91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v2_int4.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_int4_ord_ore_order_by_asc_nulls_last;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_order_by_desc_nulls_first"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_ore_order_by_desc_nulls_first: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_ore_order_by_desc_nulls_first",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "src/matrix.rs",
+            start_line: 1600usize,
+            start_col: 22usize,
+            end_line: 1600usize,
+            end_col: 74usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_ore_order_by_desc_nulls_first()),
+        ),
+    };
+    fn matrix_int4_ord_ore_order_by_desc_nulls_first() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_order_by_desc_nulls_first(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                const NULL_ROWS: usize = 3;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::OrdOre);
+                let d = &spec.sql_domain;
+                let table = "matrix_int4_ord_ore_order_by_desc_nulls_first";
+                let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let pg = <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, payload::{2} FROM {0}",
+                                    fixture_table,
+                                    table,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
+                                    NULL_ROWS,
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT plaintext FROM {2} ORDER BY eql_v2.ord_term(value) {0} NULLS {1}",
+                            "DESC",
+                            "FIRST",
+                            table,
+                        ),
+                    )
+                });
+                let actual: Vec<Option<i32>> = sqlx::query_scalar(&sql)
+                    .fetch_all(&mut *tx)
+                    .await?;
+                let mut non_null: Vec<i32> = <i32 as ::eql_tests::scalar_domains::ScalarType>::FIXTURE_VALUES
+                    .to_vec();
+                non_null.sort();
+                if "DESC" == "DESC" {
+                    non_null.reverse();
+                }
+                let sorted = non_null.into_iter().map(Some);
+                let mut expected: Vec<Option<i32>> = Vec::new();
+                if "FIRST" == "FIRST" {
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                    expected.extend(sorted);
+                } else {
+                    expected.extend(sorted);
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                }
+                match (&actual, &expected) {
+                    (left_val, right_val) => {
+                        if !(*left_val == *right_val) {
+                            let kind = ::core::panicking::AssertKind::Eq;
+                            ::core::panicking::assert_failed(
+                                kind,
+                                &*left_val,
+                                &*right_val,
+                                ::core::option::Option::Some(
+                                    format_args!(
+                                        "domain={0} mode={1} SQL={2} expected {3:?}, got {4:?}",
+                                        d,
+                                        "desc_nulls_first",
+                                        sql,
+                                        expected,
+                                        actual,
+                                    ),
+                                ),
+                            );
+                        }
+                    }
+                };
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_order_by_desc_nulls_first",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8,
+                                    176u8,
+                                    96u8,
+                                    167u8,
+                                    81u8,
+                                    172u8,
+                                    150u8,
+                                    56u8,
+                                    76u8,
+                                    217u8,
+                                    50u8,
+                                    126u8,
+                                    177u8,
+                                    177u8,
+                                    227u8,
+                                    106u8,
+                                    33u8,
+                                    253u8,
+                                    183u8,
+                                    17u8,
+                                    20u8,
+                                    190u8,
+                                    7u8,
+                                    67u8,
+                                    76u8,
+                                    12u8,
+                                    199u8,
+                                    191u8,
+                                    99u8,
+                                    246u8,
+                                    225u8,
+                                    218u8,
+                                    39u8,
+                                    78u8,
+                                    222u8,
+                                    191u8,
+                                    231u8,
+                                    111u8,
+                                    101u8,
+                                    251u8,
+                                    213u8,
+                                    26u8,
+                                    210u8,
+                                    241u8,
+                                    72u8,
+                                    152u8,
+                                    185u8,
+                                    91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v2_int4.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_int4_ord_ore_order_by_desc_nulls_first;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_order_by_desc_nulls_last"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_ore_order_by_desc_nulls_last: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_ore_order_by_desc_nulls_last",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "src/matrix.rs",
+            start_line: 1600usize,
+            start_col: 22usize,
+            end_line: 1600usize,
+            end_col: 74usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_ore_order_by_desc_nulls_last()),
+        ),
+    };
+    fn matrix_int4_ord_ore_order_by_desc_nulls_last() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_order_by_desc_nulls_last(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                const NULL_ROWS: usize = 3;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::OrdOre);
+                let d = &spec.sql_domain;
+                let table = "matrix_int4_ord_ore_order_by_desc_nulls_last";
+                let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let pg = <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, payload::{2} FROM {0}",
+                                    fixture_table,
+                                    table,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
+                                    NULL_ROWS,
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT plaintext FROM {2} ORDER BY eql_v2.ord_term(value) {0} NULLS {1}",
+                            "DESC",
+                            "LAST",
+                            table,
+                        ),
+                    )
+                });
+                let actual: Vec<Option<i32>> = sqlx::query_scalar(&sql)
+                    .fetch_all(&mut *tx)
+                    .await?;
+                let mut non_null: Vec<i32> = <i32 as ::eql_tests::scalar_domains::ScalarType>::FIXTURE_VALUES
+                    .to_vec();
+                non_null.sort();
+                if "DESC" == "DESC" {
+                    non_null.reverse();
+                }
+                let sorted = non_null.into_iter().map(Some);
+                let mut expected: Vec<Option<i32>> = Vec::new();
+                if "LAST" == "FIRST" {
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                    expected.extend(sorted);
+                } else {
+                    expected.extend(sorted);
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                }
+                match (&actual, &expected) {
+                    (left_val, right_val) => {
+                        if !(*left_val == *right_val) {
+                            let kind = ::core::panicking::AssertKind::Eq;
+                            ::core::panicking::assert_failed(
+                                kind,
+                                &*left_val,
+                                &*right_val,
+                                ::core::option::Option::Some(
+                                    format_args!(
+                                        "domain={0} mode={1} SQL={2} expected {3:?}, got {4:?}",
+                                        d,
+                                        "desc_nulls_last",
+                                        sql,
+                                        expected,
+                                        actual,
+                                    ),
+                                ),
+                            );
+                        }
+                    }
+                };
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_order_by_desc_nulls_last",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8,
+                                    176u8,
+                                    96u8,
+                                    167u8,
+                                    81u8,
+                                    172u8,
+                                    150u8,
+                                    56u8,
+                                    76u8,
+                                    217u8,
+                                    50u8,
+                                    126u8,
+                                    177u8,
+                                    177u8,
+                                    227u8,
+                                    106u8,
+                                    33u8,
+                                    253u8,
+                                    183u8,
+                                    17u8,
+                                    20u8,
+                                    190u8,
+                                    7u8,
+                                    67u8,
+                                    76u8,
+                                    12u8,
+                                    199u8,
+                                    191u8,
+                                    99u8,
+                                    246u8,
+                                    225u8,
+                                    218u8,
+                                    39u8,
+                                    78u8,
+                                    222u8,
+                                    191u8,
+                                    231u8,
+                                    111u8,
+                                    101u8,
+                                    251u8,
+                                    213u8,
+                                    26u8,
+                                    210u8,
+                                    241u8,
+                                    72u8,
+                                    152u8,
+                                    185u8,
+                                    91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v2_int4.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_int4_ord_ore_order_by_desc_nulls_last;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::int4::matrix_int4_ord_order_by_using_lt_rejects"]
     #[doc(hidden)]
     pub const matrix_int4_ord_order_by_using_lt_rejects: test::TestDescAndFn = test::TestDescAndFn {
@@ -34294,9 +36038,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1579usize,
+            start_line: 1717usize,
             start_col: 22usize,
-            end_line: 1579usize,
+            end_line: 1717usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -34439,9 +36183,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1579usize,
+            start_line: 1717usize,
             start_col: 22usize,
-            end_line: 1579usize,
+            end_line: 1717usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -34584,9 +36328,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1579usize,
+            start_line: 1717usize,
             start_col: 22usize,
-            end_line: 1579usize,
+            end_line: 1717usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -34729,9 +36473,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1579usize,
+            start_line: 1717usize,
             start_col: 22usize,
-            end_line: 1579usize,
+            end_line: 1717usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -34874,9 +36618,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1579usize,
+            start_line: 1717usize,
             start_col: 22usize,
-            end_line: 1579usize,
+            end_line: 1717usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -35019,9 +36763,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1579usize,
+            start_line: 1717usize,
             start_col: 22usize,
-            end_line: 1579usize,
+            end_line: 1717usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -35164,9 +36908,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1579usize,
+            start_line: 1717usize,
             start_col: 22usize,
-            end_line: 1579usize,
+            end_line: 1717usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -35309,9 +37053,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "src/matrix.rs",
-            start_line: 1579usize,
+            start_line: 1717usize,
             start_col: 22usize,
-            end_line: 1579usize,
+            end_line: 1717usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,

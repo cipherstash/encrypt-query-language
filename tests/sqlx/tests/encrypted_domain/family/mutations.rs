@@ -370,3 +370,59 @@ async fn collapsing_ord_term_flips_order_by_arm(pool: PgPool) -> Result<()> {
     );
     Ok(())
 }
+
+// 8. ORDER BY NULLS placement depends on `ord_term` being STRICT: a NULL domain
+//    value yields a NULL sort key, so `NULLS LAST` parks those rows at the tail.
+//    Dropping STRICT (coalescing a NULL input to a real payload) gives NULL-valued
+//    rows a concrete sort key, so they stop clustering at the end. Proves the
+//    ORDER BY NULLS arm has teeth on the NULL-placement dimension — one #5 (block
+//    `lt`) and #7 (collapse `ord_term`) do not exercise, since both run on the
+//    NULL-free fixture. A UNION ALL subquery supplies the NULL rows inline, so no
+//    session-local temp table is needed and the global `mutate()` stays valid.
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_int4")))]
+async fn making_ord_term_non_strict_flips_order_by_nulls_arm(pool: PgPool) -> Result<()> {
+    const NULL_ROWS: usize = 3;
+    let order_by = format!(
+        "SELECT plaintext FROM ( \
+           SELECT plaintext, payload::eql_v2_int4_ord AS value FROM fixtures.eql_v2_int4 \
+           UNION ALL \
+           SELECT NULL::int4, NULL::eql_v2_int4_ord FROM generate_series(1, {NULL_ROWS}) \
+         ) s \
+         ORDER BY eql_v2.ord_term(value) ASC NULLS LAST"
+    );
+
+    let tail_all_none =
+        |rows: &[Option<i32>]| rows.iter().rev().take(NULL_ROWS).all(|x| x.is_none());
+
+    // Baseline: STRICT ord_term -> NULL value -> NULL sort key -> NULLS LAST
+    // parks the NULL-valued rows at the tail.
+    let baseline: Vec<Option<i32>> = sqlx::query_scalar(&order_by).fetch_all(&pool).await?;
+    ensure!(
+        tail_all_none(&baseline),
+        "baseline: the {NULL_ROWS} NULL-valued rows must cluster at the tail under \
+         NULLS LAST (got {baseline:?})"
+    );
+
+    // Mutation: drop STRICT and coalesce a NULL input to a REAL fixture payload,
+    // so NULL-valued rows gain a concrete (non-NULL) sort key; non-NULL rows are
+    // unchanged. Unique dollar-quote tag guards the embedded jsonb literal.
+    let const_payload = fetch_fixture_payload::<i32>(&pool, 0).await?;
+    let ddl = format!(
+        "CREATE OR REPLACE FUNCTION eql_v2.ord_term(a eql_v2_int4_ord) \
+         RETURNS eql_v2.ore_block_u64_8_256 LANGUAGE sql IMMUTABLE PARALLEL SAFE \
+         AS $mutbody$ SELECT eql_v2.ore_block_u64_8_256(\
+         coalesce(a, '{esc}'::jsonb::eql_v2_int4_ord)::jsonb) $mutbody$",
+        esc = const_payload.replace('\'', "''"),
+    );
+    mutate(&pool, &ddl).await?;
+
+    // Post: NULL-valued rows now carry a concrete key, so they no longer park at
+    // the tail — the NULLS arm catches the lost STRICT contract.
+    let mutated: Vec<Option<i32>> = sqlx::query_scalar(&order_by).fetch_all(&pool).await?;
+    ensure!(
+        !tail_all_none(&mutated),
+        "after dropping STRICT on ord_term, the NULL-valued rows must no longer \
+         cluster at the tail (got {mutated:?})"
+    );
+    Ok(())
+}

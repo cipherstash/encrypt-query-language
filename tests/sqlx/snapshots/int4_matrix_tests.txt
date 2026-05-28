@@ -93,8 +93,12 @@ scalars::int4::matrix_int4_ord_neq_pivot_zero_cross_shape
 scalars::int4::matrix_int4_ord_neq_supported_null
 scalars::int4::matrix_int4_ord_ord_routes_through_ob
 scalars::int4::matrix_int4_ord_order_by_asc_no_where
+scalars::int4::matrix_int4_ord_order_by_asc_nulls_first
+scalars::int4::matrix_int4_ord_order_by_asc_nulls_last
 scalars::int4::matrix_int4_ord_order_by_asc_with_where
 scalars::int4::matrix_int4_ord_order_by_desc_no_where
+scalars::int4::matrix_int4_ord_order_by_desc_nulls_first
+scalars::int4::matrix_int4_ord_order_by_desc_nulls_last
 scalars::int4::matrix_int4_ord_order_by_desc_with_where
 scalars::int4::matrix_int4_ord_order_by_using_gt_rejects
 scalars::int4::matrix_int4_ord_order_by_using_gte_rejects
@@ -161,8 +165,12 @@ scalars::int4::matrix_int4_ord_ore_neq_pivot_zero_cross_shape
 scalars::int4::matrix_int4_ord_ore_neq_supported_null
 scalars::int4::matrix_int4_ord_ore_ord_routes_through_ob
 scalars::int4::matrix_int4_ord_ore_order_by_asc_no_where
+scalars::int4::matrix_int4_ord_ore_order_by_asc_nulls_first
+scalars::int4::matrix_int4_ord_ore_order_by_asc_nulls_last
 scalars::int4::matrix_int4_ord_ore_order_by_asc_with_where
 scalars::int4::matrix_int4_ord_ore_order_by_desc_no_where
+scalars::int4::matrix_int4_ord_ore_order_by_desc_nulls_first
+scalars::int4::matrix_int4_ord_ore_order_by_desc_nulls_last
 scalars::int4::matrix_int4_ord_ore_order_by_desc_with_where
 scalars::int4::matrix_int4_ord_ore_order_by_using_gt_rejects
 scalars::int4::matrix_int4_ord_ore_order_by_using_gte_rejects

@@ -271,6 +271,10 @@ macro_rules! scalar_domain_matrix {
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($ord_dom),*],
         }
+        $crate::__scalar_matrix_order_by_nulls_outer! {
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
+            domains = [$($ord_dom),*],
+        }
         $crate::__scalar_matrix_order_by_using_outer! {
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($ord_dom),*], ops_list = [$($ord_op),+],
@@ -1520,6 +1524,140 @@ ORDER BY eql_v2.ord_term(payload::{d}) {dir}",
                 assert_eq!(actual, expected,
                     "domain={} mode={} SQL={} expected {:?}, got {:?}",
                     &spec.sql_domain, stringify!($mode_name), sql, expected, actual);
+                Ok(())
+            }
+        }
+    };
+}
+
+// ============================================================================
+// ORDER BY NULLS FIRST/LAST category — per ord domain × {ASC,DESC} ×
+// {NULLS FIRST, NULLS LAST}. The plain ORDER BY arm above sorts the fixture,
+// which has no NULL rows, so NULLS placement goes untested there. This arm
+// builds an isolated temp table mixing NULL-valued rows with the fixture rows
+// and pins that the NULL sort keys land at the requested end while the
+// non-NULL rows stay in plaintext order. `eql_v2.ord_term` is STRICT, so a
+// NULL domain value yields a NULL sort key; a regression making it non-STRICT
+// would let NULL rows interleave — see the `family::mutations` negative
+// control for that dimension.
+// ============================================================================
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_order_by_nulls_outer {
+    (
+        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
+        domains = [$($domain:tt),* $(,)?] $(,)?
+    ) => {
+        $(
+            $crate::__scalar_matrix_order_by_nulls_domain! {
+                suite = $suite, scalar = $scalar, script = $script, script_path = $script_path, domain = $domain,
+            }
+        )*
+    };
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_order_by_nulls_domain {
+    (
+        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
+        domain = ($dom_name:ident, $variant:ident) $(,)?
+    ) => {
+        $crate::__scalar_matrix_order_by_nulls_case! {
+            suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
+            dom_name = $dom_name, variant = $variant,
+            mode_name = asc_nulls_first, direction = "ASC", nulls = "FIRST",
+        }
+        $crate::__scalar_matrix_order_by_nulls_case! {
+            suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
+            dom_name = $dom_name, variant = $variant,
+            mode_name = asc_nulls_last, direction = "ASC", nulls = "LAST",
+        }
+        $crate::__scalar_matrix_order_by_nulls_case! {
+            suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
+            dom_name = $dom_name, variant = $variant,
+            mode_name = desc_nulls_first, direction = "DESC", nulls = "FIRST",
+        }
+        $crate::__scalar_matrix_order_by_nulls_case! {
+            suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
+            dom_name = $dom_name, variant = $variant,
+            mode_name = desc_nulls_last, direction = "DESC", nulls = "LAST",
+        }
+    };
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_order_by_nulls_case {
+    (
+        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
+        dom_name = $dom_name:ident, variant = $variant:ident,
+        mode_name = $mode_name:ident, direction = $direction:literal, nulls = $nulls:literal $(,)?
+    ) => {
+        $crate::paste::paste! {
+            #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
+            async fn [<matrix_ $suite _ $dom_name _order_by_ $mode_name>](
+                pool: sqlx::PgPool,
+            ) -> anyhow::Result<()> {
+                // Number of NULL-valued rows mixed in; >1 proves they cluster.
+                const NULL_ROWS: usize = 3;
+
+                let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
+                let d = &spec.sql_domain;
+                let table = concat!(
+                    "matrix_", stringify!($suite), "_", stringify!($dom_name),
+                    "_order_by_", stringify!($mode_name),
+                );
+                let fixture_table =
+                    <$scalar as $crate::scalar_domains::ScalarType>::fixture_table_name();
+                let pg = <$scalar as $crate::scalar_domains::ScalarType>::PG_TYPE;
+
+                let mut tx = pool.begin().await?;
+                sqlx::query(&format!(
+                    "CREATE TEMP TABLE {table} (plaintext {pg}, value {d}) ON COMMIT DROP",
+                )).execute(&mut *tx).await?;
+                // Non-NULL rows: every fixture row, carrying its plaintext.
+                sqlx::query(&format!(
+                    "INSERT INTO {table}(plaintext, value) \
+                     SELECT plaintext, payload::{d} FROM {fixture}", fixture = fixture_table,
+                )).execute(&mut *tx).await?;
+                // NULL-valued rows: NULL plaintext too, so they surface as None
+                // and their position is what the assertion pins.
+                sqlx::query(&format!(
+                    "INSERT INTO {table}(plaintext, value) \
+                     SELECT NULL::{pg}, NULL::{d} FROM generate_series(1, {n})", n = NULL_ROWS,
+                )).execute(&mut *tx).await?;
+
+                let sql = format!(
+                    "SELECT plaintext FROM {table} \
+                     ORDER BY eql_v2.ord_term(value) {dir} NULLS {nulls}",
+                    dir = $direction, nulls = $nulls,
+                );
+                let actual: Vec<Option<$scalar>> =
+                    sqlx::query_scalar(&sql).fetch_all(&mut *tx).await?;
+
+                // Ground truth: non-NULL plaintexts sorted (reversed for DESC),
+                // with NULL_ROWS Nones at the requested end.
+                let mut non_null: Vec<$scalar> =
+                    <$scalar as $crate::scalar_domains::ScalarType>::FIXTURE_VALUES.to_vec();
+                non_null.sort();
+                if $direction == "DESC" { non_null.reverse(); }
+                let sorted = non_null.into_iter().map(Some);
+                let mut expected: Vec<Option<$scalar>> = Vec::new();
+                if $nulls == "FIRST" {
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                    expected.extend(sorted);
+                } else {
+                    expected.extend(sorted);
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                }
+
+                assert_eq!(actual, expected,
+                    "domain={} mode={} SQL={} expected {:?}, got {:?}",
+                    d, stringify!($mode_name), sql, expected, actual);
+
+                tx.commit().await?;
                 Ok(())
             }
         }
