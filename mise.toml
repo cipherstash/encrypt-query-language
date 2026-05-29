@@ -11,6 +11,13 @@
 "rust" = { version = "latest", components = "rustc,rust-std,cargo,rustfmt,rust-docs,clippy" }
 "cargo:cargo-binstall" = "latest"
 "cargo:sqlx-cli" = "latest"
+# Single source of truth for the cargo-expand version used by `test:matrix:expand`.
+# Pinned in lockstep with the nightly date in that task: cargo-expand drives the
+# rustfmt pass, so an unpinned version can drift the matrix snapshot even with a
+# frozen macro + nightly. mise installs this for both local runs and CI (the
+# macro-expand-eql.yml workflow's mise-action step), so there is no separate
+# hardcoded version to keep in lockstep.
+"cargo:cargo-expand" = "1.0.122"
 "python" = "3.13"
 
 [task_config]
@@ -120,9 +127,11 @@ description = "Regenerate the int4 matrix cargo-expand snapshot (requires the pi
 dir = "{{config_root}}/tests/sqlx"
 run = """
 # Body-level fidelity backstop for the macro: the expanded source of the int4
-# matrix arms. NIGHTLY is pinned to a known-good date so the snapshot only moves
-# when *the macro* moves, not when nightly reformats — bump the date deliberately
-# and in lockstep with .github/workflows/macro-expand-eql.yml.
+# matrix arms. The `cargo +nightly-...` invocation below is the SINGLE source of
+# the pinned nightly date — .github/workflows/macro-expand-eql.yml greps it from
+# here rather than hardcoding, so there is nothing to keep in lockstep. The date
+# is pinned to a known-good value so the snapshot only moves when *the macro*
+# moves, not when nightly reformats — bump it deliberately, here, in one place.
 #
 # `#[sqlx::test]` embeds one `sqlx::migrate::Migration` per file in migrations/
 # plus the fixture (via include_str) into EVERY generated test — ~477 MB of
@@ -136,6 +145,12 @@ run = """
 # Non-blocking lane (no Postgres, never compiled): the `.rs` name lives under
 # snapshots/, not tests/, so Cargo never treats it as a test target.
 set -euo pipefail
+# Force the mise-pinned cargo-expand (mise.toml [tools]) to win over any stray
+# global `cargo install cargo-expand` in ~/.cargo/bin, which otherwise sits
+# ahead of mise's install dir on PATH and silently drifts the snapshot. The
+# version is single-sourced in [tools]; this only fixes PATH precedence.
+PATH="$(mise where cargo:cargo-expand)/bin:$PATH"
+export PATH
 mkdir -p snapshots fixtures
 BK=$(mktemp -d)
 cp -a migrations "$BK/migrations"
@@ -155,5 +170,12 @@ trap restore EXIT
 rm -rf migrations && mkdir migrations
 : > migrations/0001_placeholder.sql
 : > fixtures/eql_v2_int4.sql
-cargo +nightly-2026-05-01 expand --test encrypted_domain scalars::int4 > snapshots/int4_expanded.rs
+# Expand into a temp file and mv into place only on success — a redirect straight
+# onto the snapshot would zero it before cargo runs, so a transient expand
+# failure would leave a 0-byte snapshot locally. (Under `set -euo pipefail` a
+# cargo failure aborts the script and the trap restores migrations/fixtures; the
+# temp file is then orphaned in $TMPDIR, which is acceptable.)
+OUT=$(mktemp)
+cargo +nightly-2026-05-01 expand --test encrypted_domain scalars::int4 > "$OUT"
+mv "$OUT" snapshots/int4_expanded.rs
 """
