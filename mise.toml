@@ -57,6 +57,7 @@ sqlx migrate run
 echo "Regenerating SQLx fixtures..."
 cd "{{config_root}}"
 mise run fixture:generate eql_v2_int4
+mise run fixture:generate eql_v2_numeric
 
 echo "Running Rust tests..."
 cd tests/sqlx

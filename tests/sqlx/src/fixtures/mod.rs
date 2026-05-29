@@ -24,3 +24,5 @@ pub mod cipherstash;
 pub mod driver;
 
 pub mod eql_v2_int4;
+
+pub mod eql_v2_numeric;

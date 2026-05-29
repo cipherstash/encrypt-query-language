@@ -8,6 +8,7 @@
 //! `T::PG_TYPE`, `T::FIXTURE_VALUES`, and the `Variant` enum.
 
 use anyhow::{bail, Context, Result};
+use rust_decimal::Decimal;
 use sqlx::PgPool;
 use std::fmt::{Debug, Display};
 
@@ -96,6 +97,39 @@ impl ScalarType for i32 {
         1000,
         9999,
         i32::MAX,
+    ];
+}
+
+impl ScalarType for Decimal {
+    const PG_TYPE: &'static str = "numeric";
+    /// Mirrors `eql_v2_numeric.rs` `VALUES` exactly — the two lists must stay
+    /// in agreement: the matrix asserts against `FIXTURE_VALUES` while the DB
+    /// rows come from the fixture, and `MIN`/`MAX`/`ZERO` are fetched by
+    /// ciphertext from the fixture as the comparison pivots.
+    ///
+    /// Spans the signed extremes (`Decimal::MIN`/`MAX`), zero
+    /// (`Default::default()`), negatives, fractional/high-scale values, and
+    /// ordinary magnitudes. Every value is distinct under `Decimal::cmp`, so
+    /// each produces a distinct order-preserving ORE block (equal bytes occur
+    /// only for `Decimal`-equal values such as `1` vs `1.0`, none of which
+    /// appear here). `Decimal::from_parts(lo, mid, hi, negative, scale)` is a
+    /// `const fn`, so fractional values are buildable in this `const` array
+    /// without `rust_decimal_macros`.
+    const FIXTURE_VALUES: &'static [Decimal] = &[
+        Decimal::MIN,                                // signed extreme (negative)
+        Decimal::from_parts(100, 0, 0, true, 0),     // -100
+        Decimal::NEGATIVE_ONE,                       // -1
+        Decimal::from_parts(5, 0, 0, true, 1),       // -0.5  (negative fractional)
+        Decimal::ZERO,                               // 0     (= Default; pivot)
+        Decimal::from_parts(1, 0, 0, false, 3),      // 0.001 (small, high scale)
+        Decimal::ONE,                                // 1
+        Decimal::from_parts(15, 0, 0, false, 1),     // 1.5  (fractional)
+        Decimal::TWO,                                // 2
+        Decimal::from_parts(314159, 0, 0, false, 5), // 3.14159 (high scale)
+        Decimal::TEN,                                // 10
+        Decimal::ONE_HUNDRED,                        // 100
+        Decimal::ONE_THOUSAND,                       // 1000
+        Decimal::MAX,                                // signed extreme (positive)
     ];
 }
 

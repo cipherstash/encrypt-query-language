@@ -14,6 +14,7 @@
 use std::fmt;
 
 use cipherstash_client::encryption::Plaintext;
+use rust_decimal::Decimal;
 
 /// The `cast_as` argument for `eql_v2.add_search_config`. The field is
 /// private so the allowlist is the set of `pub const`s below.
@@ -53,6 +54,7 @@ pub struct PlaintextSqlType(&'static str);
 
 impl PlaintextSqlType {
     pub const INTEGER: PlaintextSqlType = PlaintextSqlType("integer");
+    pub const NUMERIC: PlaintextSqlType = PlaintextSqlType("numeric");
 
     pub fn as_str(&self) -> &'static str {
         self.0
@@ -66,8 +68,11 @@ impl fmt::Display for PlaintextSqlType {
 }
 
 mod sealed {
+    use rust_decimal::Decimal;
+
     pub trait Sealed {}
     impl Sealed for i32 {}
+    impl Sealed for Decimal {}
 }
 
 /// A Rust type usable as a fixture `plaintext` value, carrying its EQL cast
@@ -96,6 +101,15 @@ impl EqlPlaintext for i32 {
     }
 }
 
+impl EqlPlaintext for Decimal {
+    const CAST: Cast = Cast::DECIMAL;
+    const PLAINTEXT_SQL_TYPE: PlaintextSqlType = PlaintextSqlType::NUMERIC;
+
+    fn to_plaintext(&self) -> Plaintext {
+        Plaintext::Decimal(Some(*self))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -120,6 +134,31 @@ mod tests {
         match 42_i32.to_plaintext() {
             Plaintext::Int(Some(value)) => assert_eq!(value, 42),
             other => panic!("expected Plaintext::Int(Some(42)), got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn decimal_casts_to_decimal() {
+        assert_eq!(<Decimal as EqlPlaintext>::CAST.as_str(), "decimal");
+    }
+
+    #[test]
+    fn decimal_plaintext_sql_type_is_numeric() {
+        assert_eq!(
+            <Decimal as EqlPlaintext>::PLAINTEXT_SQL_TYPE.as_str(),
+            "numeric"
+        );
+    }
+
+    #[test]
+    fn decimal_to_plaintext_wraps_in_decimal_variant() {
+        // The trait must lift the raw Decimal into the EQL pipeline's
+        // Plaintext enum so the fixture driver can hand it to
+        // `eql::encrypt_eql`.
+        let value = Decimal::from_parts(15, 0, 0, false, 1); // 1.5
+        match value.to_plaintext() {
+            Plaintext::Decimal(Some(d)) => assert_eq!(d, value),
+            other => panic!("expected Plaintext::Decimal(Some(1.5)), got {other:?}"),
         }
     }
 }

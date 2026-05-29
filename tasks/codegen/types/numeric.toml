@@ -1,0 +1,9 @@
+# Encrypted-domain scalar manifest for numeric.
+# The filename supplies the type token. Each domain lists the index terms
+# it carries; term capabilities are fixed in tasks/codegen/terms.py.
+
+[domain]
+numeric = []
+numeric_eq = ["hm"]
+numeric_ord_ore = ["ore"]
+numeric_ord = ["ore"]

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "macros"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "macros", "rust_decimal"] }
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -12,6 +12,11 @@ anyhow = "1"
 hex = "0.4"
 jsonschema = { version = "0.46.4", default-features = false }
 cipherstash-client = { version = "0.35", features = ["tokio"] }
+# Pinned to the version cipherstash-client resolves (1.42) so the `Decimal`
+# the fixture generator hands to `Plaintext::Decimal` is the *same* type sqlx
+# decodes from NUMERIC — a second rust_decimal in the tree would make the two
+# `Decimal`s distinct, incompatible types.
+rust_decimal = "1.42"
 paste = "1"
 
 [dev-dependencies]
