@@ -11,6 +11,7 @@ serde_json = "1"
 anyhow = "1"
 hex = "0.4"
 jsonschema = { version = "0.46.4", default-features = false }
+cipherstash-client = { version = "0.35", features = ["tokio"] }
 
 [dev-dependencies]
 # None needed - tests live in this crate
@@ -22,3 +23,12 @@ default = []
 # it on push to main and on a nightly schedule. Run locally with:
 #   mise run test:bench
 bench = []
+# Opt-in to compiling the fixture generators. Without this feature the
+# `#[cfg(feature = "fixture-gen")]` generator tests do not exist, so
+# `cargo test` and CI never see them. Generators need a live Postgres and,
+# in the process env, BOTH a ZeroKMS auth credential (`CS_CLIENT_ACCESS_KEY`
+# + `CS_WORKSPACE_CRN`, via AutoStrategy) AND a client key (`CS_CLIENT_ID` +
+# `CS_CLIENT_KEY`, via EnvKeyProvider) — the two pairs are not alternatives.
+# Run one with:
+#   mise run fixture:generate <name>
+fixture-gen = []

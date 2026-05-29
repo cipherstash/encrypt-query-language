@@ -1,4 +1,4 @@
--- Fixture: like_data.sql
+-- Fixture: match_data.sql
 --
 -- Creates test data for LIKE operator tests (~~ and ~~* operators)
 -- Tests encrypted-to-encrypted matching using bloom filter indexes

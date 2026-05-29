@@ -1,0 +1,25 @@
+["fixture:generate"]
+description = "Generate a SQLx fixture script via cipherstash-client"
+# Runs the gated generator for the named fixture. Writes
+# tests/sqlx/fixtures/<fixture>.sql. Must run inside the crate — there is no
+# root Cargo.toml — matching test:schema / test:sqlx:watch.
+#
+# Prerequisites:
+#   - mise run postgres:up   (Postgres with EQL installed)
+#   - CS_* credentials in the shell environment. The generator needs BOTH
+#     pairs — they are not alternatives:
+#       CS_CLIENT_ACCESS_KEY + CS_WORKSPACE_CRN  ZeroKMS auth (AutoStrategy)
+#       CS_CLIENT_ID + CS_CLIENT_KEY             client key (EnvKeyProvider)
+#
+# Usage: mise run fixture:generate eql_v2_int4
+dir = "{{config_root}}/tests/sqlx"
+run = """
+fixture="{{arg(name="fixture")}}"
+case "$fixture" in
+  (*[!a-z0-9_]*|'') echo "Invalid fixture name: $fixture (expected [a-z0-9_]+)" >&2; exit 1 ;;
+esac
+
+cargo test --features fixture-gen --lib \
+  "fixtures::${fixture}::generate" \
+  -- --ignored --exact --nocapture
+"""
