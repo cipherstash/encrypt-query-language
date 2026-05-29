@@ -2,6 +2,8 @@
 
 This guide is about getting query performance out of EQL-encrypted columns that's competitive with plain-PostgreSQL workloads. It explains the two practical ingredients — **functional indexes** and **operator inlining** — and shows how to combine them across the common query shapes (`=`, `<` / `>`, `ORDER BY`, `GROUP BY`, `LIKE`, JSONB containment, ste_vec field-level access).
 
+It applies to EQL 2.3 and later, where the `eql_v2_encrypted` operators became inlinable SQL functions.
+
 If you remember nothing else: **use functional indexes**, and **let bare-form predicates do the work** wherever possible. Reach for the extractor form when (a) you need an index for a query shape that the natural form can't drive (`ORDER BY` on the encrypted column), or (b) your column's term configuration falls outside the canonical Block ORE / HMAC pair.
 
 ---
@@ -54,7 +56,7 @@ PostgreSQL inlines a SQL function when **all** of these conditions hold:
 
 - `LANGUAGE sql` (not `plpgsql`).
 - The body is a single `SELECT` returning the same type the function declares.
-- No `SET` clause on the function definition (in particular, no `SET search_path = …`).
+- No `SET` clause on the function definition. `SET search_path = …` is the usual culprit, but *any* `SET` clause blocks inlining.
 - Declared volatility (`IMMUTABLE` / `STABLE` / `VOLATILE`) is at least as restrictive as anything the body calls into.
 
 When the planner inlines an operator, it replaces the operator's function call with the body. So `WHERE col = $1` — where `=` is `eql_v2."="(eql_v2_encrypted, eql_v2_encrypted)` — becomes `WHERE eql_v2.hmac_256(col) = eql_v2.hmac_256($1)` during planning. The planner then matches that rewritten expression against indexes.
@@ -178,7 +180,7 @@ ANALYZE users;
 
 (The `eql_v2.ore_cllw_ops` opclass is `DEFAULT FOR TYPE eql_v2.ore_cllw`, so no explicit opclass annotation is needed.)
 
-Three query shapes at the field level:
+Two query shapes at the field level:
 
 ```sql
 -- (a) Bare form — Seq Scan + Top-N sort, linear in table size
@@ -207,8 +209,8 @@ There's a second, subtler way to lose the index-driven sort, even when you've al
 -- Plan: Sort Key: ((value)::jsonb), no index-for-sort, falls back to
 --       SeqScan/Bitmap + Sort even though a perfectly good index exists.
 SELECT id, value::jsonb FROM events
-  WHERE encrypted_at < $1
-  ORDER BY encrypted_at LIMIT 10;
+  WHERE value < $1
+  ORDER BY value LIMIT 10;
 ```
 
 The fix is to keep the sort scope clear of the cast. Two options:
@@ -359,7 +361,7 @@ For field-level lookups (`data_encrypted->'email' = $1`), use the per-selector h
 
 ## 8. A short list of common pitfalls
 
-- **Index created before data was populated through the proxy.** EQL search-config + functional index is a two-phase process: configure the index, repopulate the column through the proxy so the encrypted terms land in the payload, *then* `CREATE INDEX … ANALYZE`. The other order silently leaves the index without the values it needs.
+- **Index created before data was populated through your EQL client.** EQL search-config + functional index is a two-phase process: configure the index, repopulate the column through your EQL client so the encrypted terms land in the payload, *then* `CREATE INDEX … ANALYZE`. The other order silently leaves the index without the values it needs.
 - **`ANALYZE` not run.** PostgreSQL's planner uses table statistics. Small tables get sequential scans even when an index would be cheaper, but on larger tables a missing `ANALYZE` can also mask an index that *should* be picked.
 - **Stale opclass index alongside a functional index.** If you migrate an old schema from `eql_v2.encrypted_operator_class` to functional indexes, drop the old opclass index. Two btree indexes on the same column compete for cache and double the maintenance cost on writes.
 - **Pinning `search_path` on an EQL function.** Adding `SET search_path = …` to an `eql_v2.*` function disables inlining and reverts queries through that function to sequential scans. The EQL build allowlists operator wrappers that must stay inlinable; if you're customising the install, preserve that allowlist.
