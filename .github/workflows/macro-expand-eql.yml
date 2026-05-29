@@ -1,0 +1,69 @@
+name: "Macro expand EQL"
+
+# Regenerates the int4 matrix `cargo expand` snapshot and fails if it has
+# drifted from the committed copy. This is a body-level fidelity backstop for
+# the `ordered_numeric_matrix!` / `scalar_domain_matrix!` macros — the
+# name-inventory snapshot (test-eql.yml `matrix-coverage` job) catches
+# add/remove of whole arms; this catches changes *inside* the generated bodies.
+#
+# Non-blocking by design: it is NOT a required PR check. `cargo expand` needs a
+# nightly toolchain, so it is isolated off the PR path.
+#   - nightly schedule (the backstop that flags a forgotten local regen)
+#   - manual workflow_dispatch
+#
+# The toolchain is pinned (nightly-2026-05-01) in lockstep with the
+# `test:matrix:expand` mise task so the snapshot only moves when the macro
+# moves, not when nightly reformats its expansion. Bump both together.
+on:
+  schedule:
+    # 03:00 UTC daily
+    - cron: "0 3 * * *"
+
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  MISE_VERBOSE: "1"
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+permissions:
+  contents: read
+
+jobs:
+  macro-expand:
+    name: "Macro expand drift (nightly)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: jdx/mise-action@v4
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tests/sqlx
+          shared-key: sqlx-tests
+
+      # Pinned nightly — keep the date in lockstep with the `cargo +nightly-...`
+      # invocation in the `test:matrix:expand` mise task. rustfmt formats the
+      # expansion deterministically.
+      - name: Install pinned nightly + cargo-expand
+        run: |
+          rustup toolchain install nightly-2026-05-01 --profile minimal --component rustfmt
+          cargo binstall -y cargo-expand
+
+      - name: Regenerate and verify the matrix expansion snapshot
+        run: |
+          mise run test:matrix:expand
+          git diff --exit-code -- tests/sqlx/snapshots/int4_expanded.rs \
+            || { echo "Expansion snapshot stale — run 'mise run test:matrix:expand' (needs the pinned nightly) and commit."; exit 1; }
