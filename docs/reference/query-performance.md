@@ -17,9 +17,9 @@ The two recipes for putting a PostgreSQL index on an `eql_v2_encrypted` column a
 | **Functional** *(canonical)* | Index over a deterministic extractor that yields a small per-row term | `CREATE INDEX … ON users (eql_v2.hmac_256(email_encrypted));` |
 | **Operator class** *(legacy)* | Index over the whole `eql_v2_encrypted` column via a custom btree opclass | `CREATE INDEX … ON users (email_encrypted eql_v2.encrypted_operator_class);` |
 
-The operator-class recipe ships with EQL and still works, but functional indexes are the recommended path for new schemas because:
+The operator-class recipe ships with EQL and still works, but **functional indexes are the recommended path for new schemas** because:
 
-1. **Small leaves.** A functional index on `eql_v2.hmac_256(col)` stores only the 32-byte HMAC per row. The operator-class index stores the entire encrypted payload (often kilobytes), inflating the btree and risking the `index row size N exceeds btree version 4 maximum 2704` error on full-payload columns.
+1. **Small leaves (space efficiency).** A functional index on `eql_v2.hmac_256(col)` stores only the 32-byte HMAC per row. The operator-class index stores the entire encrypted payload (often kilobytes), inflating the btree and risking the `index row size N exceeds btree version 4 maximum 2704` error on full-payload columns.
 2. **No superuser required.** Functional indexes work on Supabase and managed PostgreSQL installations that don't ship the `eql_v2.encrypted_operator_class`.
 3. **The planner can match them structurally.** EQL's operators on `eql_v2_encrypted` (`=`, `<>`, `<`, `<=`, `>`, `>=`, `LIKE`, `ILIKE`, `@>`, `<@`) are now inlinable SQL functions whose bodies reduce to a comparison on the extracted term. The planner inlines the operator at planning time, rewrites the predicate into the same expression as the index, and uses the index — without any query rewriting on the caller's side.
 
@@ -85,7 +85,9 @@ If you see the *operator* in the plan rather than the *extractor* (`Filter: (col
 
 ## 3. Natural form vs extractor form
 
-The operators ship with three overloads each — `(encrypted, encrypted)`, `(encrypted, jsonb)`, `(jsonb, encrypted)` — so all three predicate shapes inline equivalently. After inlining, `col = $1`, `col = '{…}'::jsonb` and `'{…}'::jsonb = col` all reduce to the same canonical expression. There's no perf penalty for any of those bindings; pick whichever fits your client.
+There are a few ways to write a comparison against an encrypted column. They differ only in how explicit you make the extractor; after inlining they reach the same index.
+
+The operators ship with three overloads each — `(encrypted, encrypted)`, `(encrypted, jsonb)`, `(jsonb, encrypted)` — so all three predicate shapes inline equivalently. After inlining, `col = $1`, `col = '{…}'::jsonb` and `'{…}'::jsonb = col` all reduce to the same canonical expression. There's no performance penalty for any of those bindings; pick whichever fits your client.
 
 **Natural form.** Write the query the way you would for an unencrypted column. The operator inlines, the canonical extractor appears in the predicate, and the functional index matches structurally.
 
@@ -126,7 +128,9 @@ Reach for the extractor form when:
 
 ## 4. `ORDER BY`: the sort-key trap
 
-Functional indexes can satisfy `ORDER BY` only when the sort key **syntactically matches** the index expression. The planner doesn't reason about monotonicity, so an index over `eql_v2.ore_block_u64_8_256(col)` will not satisfy `ORDER BY col` directly even though ORE is order-preserving.
+`WHERE` and `ORDER BY` look symmetric in SQL, but they reach a functional index through different paths. The planner inlines operators in predicates, so `WHERE col < $1` rewrites itself to match an index on `f(col)`. It does no such rewrite for sort keys: `ORDER BY col` and `ORDER BY f(col)` are not interchangeable to the planner, even when they'd sort the rows identically.
+
+Concretely: functional indexes can satisfy `ORDER BY` only when the sort key **syntactically matches** the index expression. The planner doesn't reason about monotonicity, so an index over `eql_v2.ore_block_u64_8_256(col)` will not satisfy `ORDER BY col` directly even though ORE is order-preserving.
 
 Three query shapes to compare:
 
@@ -178,7 +182,7 @@ CREATE INDEX users_age_oc_idx
 ANALYZE users;
 ```
 
-(The `eql_v2.ore_cllw_ops` opclass is `DEFAULT FOR TYPE eql_v2.ore_cllw`, so no explicit opclass annotation is needed.)
+The `eql_v2.ore_cllw_ops` opclass is `DEFAULT FOR TYPE eql_v2.ore_cllw`, so no explicit opclass annotation is needed.
 
 Two query shapes at the field level:
 
@@ -220,16 +224,16 @@ The fix is to keep the sort scope clear of the cast. Two options:
 --     sort key. Requires a driver that can decode eql_v2_encrypted
 --     directly (e.g. via a custom sqlx Type).
 SELECT id, value FROM events
-  WHERE encrypted_at < $1
-  ORDER BY encrypted_at LIMIT 10;
+  WHERE value < $1
+  ORDER BY value LIMIT 10;
 
 -- (ii) Wrap the sort in a subquery so the cast applies outside the LIMIT.
 --     The inner plan sees only `value`; the cast runs on the 10 emitted
 --     rows in the outer projection.
 SELECT id, value::jsonb FROM (
   SELECT id, value FROM events
-  WHERE encrypted_at < $1
-  ORDER BY encrypted_at LIMIT 10
+  WHERE value < $1
+  ORDER BY value LIMIT 10
 ) sub;
 ```
 
@@ -237,7 +241,7 @@ Important: this trap only fires when the sort key column is the same as the proj
 
 The bench suite at `cipherstash/benches` ships a custom `EqlV2Encrypted` sqlx type and projects `value` raw across every scenario for exactly this reason: a future scenario that adds `ORDER BY value` (or `ORDER BY (value -> 'sel')` at the field level) can't accidentally walk into the trap.
 
-(Why does PostgreSQL push the cast into the scan? It's a projection-pushdown optimisation: computing `value::jsonb` early narrows the rows fed into Sort/Hash/Materialize nodes — `1100 → 36` bytes per row in the bench's ORE-encoded `i32` case. That's normally a big win; the cost model just doesn't account for "preserving sort-key matchability against an indexed expression." The optimisation is right in expectation and wrong in this specific case.)
+Why does PostgreSQL push the cast into the scan? It's a projection-pushdown optimisation: computing `value::jsonb` early narrows the rows fed into Sort/Hash/Materialize nodes — `1100 → 36` bytes per row in the bench's ORE-encoded `i32` case. That's normally a big win; the cost model just doesn't account for "preserving sort-key matchability against an indexed expression." The optimisation is right in expectation and wrong in this specific case.
 
 ---
 
@@ -353,7 +357,7 @@ SELECT * FROM orders WHERE data_encrypted @> $1::jsonb;
 --   Index Cond: (eql_v2.jsonb_array(data_encrypted) @> eql_v2.jsonb_array('...'::eql_v2_encrypted))
 ```
 
-For field-level lookups (`data_encrypted->'email' = $1`), use the per-selector hash recipe for hot paths and the all-selector GIN recipe for everything else. Both are described in §1; both require the extractor form because the selector isn't part of any native SQL operator.
+For field-level lookups (`data_encrypted->'email' = $1`), use the per-selector hash recipe for hot paths and the all-selector GIN recipe for everything else. Both are listed in §1; both require the extractor form because the selector isn't part of any native SQL operator.
 
 `eql_v2.jsonb_path_query`, `_first`, and `_exists` are inlinable SQL functions that walk the `sv` array filtering by selector. Use them when you need the full sub-payload back; use `eql_v2.hmac_256(col, '<selector>')` when you only need an equality check on the selector's value.
 
@@ -361,7 +365,7 @@ For field-level lookups (`data_encrypted->'email' = $1`), use the per-selector h
 
 ## 8. A short list of common pitfalls
 
-- **Index created before data was populated through your EQL client.** EQL search-config + functional index is a two-phase process: configure the index, repopulate the column through your EQL client so the encrypted terms land in the payload, *then* `CREATE INDEX … ANALYZE`. The other order silently leaves the index without the values it needs.
+- **Index created before data was populated through Proxy or Stack.** EQL search-config + functional index is a two-phase process: configure the index, repopulate the column through [Proxy](https://github.com/cipherstash/proxy) or [Stack](https://github.com/cipherstash/stack) so the encrypted terms land in the payload, *then* `CREATE INDEX … ANALYZE`. The other order silently leaves the index without the values it needs.
 - **`ANALYZE` not run.** PostgreSQL's planner uses table statistics. Small tables get sequential scans even when an index would be cheaper, but on larger tables a missing `ANALYZE` can also mask an index that *should* be picked.
 - **Stale opclass index alongside a functional index.** If you migrate an old schema from `eql_v2.encrypted_operator_class` to functional indexes, drop the old opclass index. Two btree indexes on the same column compete for cache and double the maintenance cost on writes.
 - **Pinning `search_path` on an EQL function.** Adding `SET search_path = …` to an `eql_v2.*` function disables inlining and reverts queries through that function to sequential scans. The EQL build allowlists operator wrappers that must stay inlinable; if you're customising the install, preserve that allowlist.
@@ -425,7 +429,7 @@ Measured: a `hash` functional index on a 10M-row encrypted-JSONB column ran for 
 
 ### The de-TOAST floor
 
-A functional index over a large encrypted column de-TOASTs the whole stored value once per row to evaluate the extractor — and an ste_vec JSONB document is large. This cost is unavoidable and identical across access methods: a GIN, btree, or hash build on the same column all pay it. It sets the build's *floor* rate; the memory and index-type choices above decide whether you stay near that floor or fall far below it. (There is no partial de-TOAST for JSONB — `col -> 'selector'` materialises the entire document.)
+A functional index over a large encrypted column [de-TOASTs](https://www.postgresql.org/docs/current/storage-toast.html) the whole stored value once per row to evaluate the extractor — and an ste_vec JSONB document is large. This cost is unavoidable and identical across access methods: a GIN, btree, or hash build on the same column all pay it. It sets the build's *floor* rate; the memory and index-type choices above decide whether you stay near that floor or fall far below it. (There is no partial de-TOAST for JSONB — `col -> 'selector'` materialises the entire document.)
 
 ### Storage matters more than it does for queries
 
