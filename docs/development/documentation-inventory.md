@@ -77,13 +77,6 @@ Generated: Mon 27 Oct 2025 11:39:50 AEDT
 ## src/crypto.sql
 
 
-## src/encrypted/aggregates.sql
-
-- CREATE FUNCTION eql_v2.min(a eql_v2_encrypted, b eql_v2_encrypted)
-- CREATE AGGREGATE eql_v2.min(eql_v2_encrypted)
-- CREATE FUNCTION eql_v2.max(a eql_v2_encrypted, b eql_v2_encrypted)
-- CREATE AGGREGATE eql_v2.max(eql_v2_encrypted)
-
 ## src/encrypted/casts.sql
 
 - CREATE FUNCTION eql_v2.to_encrypted(data jsonb)

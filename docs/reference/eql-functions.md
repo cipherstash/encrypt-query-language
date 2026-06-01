@@ -422,6 +422,33 @@ eql_v2.ste_vec(val eql_v2_encrypted) RETURNS eql_v2_encrypted[]
 eql_v2.ste_vec(val jsonb) RETURNS eql_v2_encrypted[]
 ```
 
+### `eql_v2.eq_term()` / `eql_v2.ord_term()` (encrypted-domain)
+
+Extract the equality (`hm`) or ordering (`ob`) index term from a scalar
+encrypted-domain value. Generated per eq/ord-capable variant of every
+scalar type — see [Encrypted-Domain Code Generator](./encrypted-domain-generator.md).
+The argument type selects the overload, and both are inlinable so a
+functional index built on the extractor engages.
+
+```sql
+-- int4 — generated for every scalar type's eq / ord variants.
+eql_v2.eq_term(a eql_v2_int4_eq)       RETURNS eql_v2.hmac_256
+eql_v2.ord_term(a eql_v2_int4_ord)     RETURNS eql_v2.ore_block_u64_8_256
+eql_v2.ord_term(a eql_v2_int4_ord_ore) RETURNS eql_v2.ore_block_u64_8_256
+```
+
+**Example:**
+```sql
+-- Functional indexes on the extracted terms (see Database Indexes)
+CREATE INDEX ON users USING hash  (eql_v2.eq_term(salary_encrypted));
+CREATE INDEX ON users USING btree (eql_v2.ord_term(salary_encrypted));
+```
+
+> The full per-domain operator/wrapper/blocker surface (and the
+> `eql_v2_<T>` / `_eq` / `_ord` / `_ord_ore` domain types themselves) is
+> documented in [SQL support](./sql-support.md#encrypted-domain-scalar-types-eql_v2_t)
+> and the [generator reference](./encrypted-domain-generator.md).
+
 ---
 
 ## JSONB Path Functions
@@ -540,10 +567,11 @@ eql_v2.meta_data(val jsonb) RETURNS jsonb
 
 ### `eql_v2.selector()`
 
-Extract selector hash from encrypted value.
+Extract selector hash from an encrypted payload (`jsonb`) or a ste_vec entry.
 
 ```sql
-eql_v2.selector(val eql_v2_encrypted) RETURNS text
+eql_v2.selector(val jsonb) RETURNS text
+eql_v2.selector(entry eql_v2.ste_vec_entry) RETURNS text
 ```
 
 ### `eql_v2.is_ste_vec_array()`
@@ -624,33 +652,50 @@ FROM products
 GROUP BY eql_v2.jsonb_path_query_first(encrypted_json, 'color_selector');
 ```
 
-### `eql_v2.min()`
+### `eql_v2.min()` / `eql_v2.max()` (composite type)
 
-Returns the minimum encrypted value in a set (requires `ore` index for ordering).
+Returns the minimum or maximum encrypted value in a set on an `eql_v2_encrypted` column (requires `ore` index terms for ordering).
 
 ```sql
 eql_v2.min(eql_v2_encrypted) RETURNS eql_v2_encrypted
+eql_v2.max(eql_v2_encrypted) RETURNS eql_v2_encrypted
 ```
+
+Comparison routes through the `<` / `>` operator on `eql_v2_encrypted`, which uses the ORE block term — no decryption.
 
 **Example:**
 ```sql
 SELECT eql_v2.min(encrypted_date) FROM events;
-SELECT eql_v2.min(encrypted_price) FROM products WHERE category = 'electronics';
+SELECT eql_v2.max(encrypted_price) FROM products WHERE category = 'electronics';
 ```
 
-### `eql_v2.max()`
+### `eql_v2.min()` / `eql_v2.max()` (per-domain)
 
-Returns the maximum encrypted value in a set (requires `ore` index for ordering).
+Returns the minimum or maximum encrypted value in a set on an ordered encrypted-domain column. Defined per ord-capable variant of every scalar type (`eql_v2_<T>_ord`, `eql_v2_<T>_ord_ore`); the input type selects the aggregate via PostgreSQL's overload resolution. These are type-safe alternatives to the composite-type aggregates above and coexist with them.
 
 ```sql
-eql_v2.max(eql_v2_encrypted) RETURNS eql_v2_encrypted
+-- int4 — generated for every ordered variant of every scalar type.
+eql_v2.min(eql_v2_int4_ord)      RETURNS eql_v2_int4_ord
+eql_v2.max(eql_v2_int4_ord)      RETURNS eql_v2_int4_ord
+eql_v2.min(eql_v2_int4_ord_ore)  RETURNS eql_v2_int4_ord_ore
+eql_v2.max(eql_v2_int4_ord_ore)  RETURNS eql_v2_int4_ord_ore
 ```
+
+Comparison routes through the variant's `<` / `>` operator, which uses the ORE block term — no decryption. The state function is `STRICT`, so `NULL` inputs are skipped and an all-`NULL` input set returns `NULL`.
 
 **Example:**
 ```sql
-SELECT eql_v2.max(encrypted_date) FROM events;
-SELECT eql_v2.max(encrypted_price) FROM products WHERE category = 'electronics';
+-- ord-capable column (e.g. price_encrypted typed as eql_v2_int4_ord)
+SELECT eql_v2.min(price_encrypted) FROM products;
+SELECT eql_v2.max(price_encrypted) FROM products WHERE category = 'electronics';
+
+-- Equivalent on a generic jsonb column (cast to the right domain)
+SELECT eql_v2.min(price_jsonb::eql_v2_int4_ord) FROM products;
 ```
+
+`SUM` / `AVG` and other numeric aggregates are not supported on encrypted columns — decrypt at the application boundary. `MIN` / `MAX` only require comparator-revealing terms; arithmetic aggregates would require homomorphic encryption.
+
+**See also:** [`docs/reference/sql-support.md`](./sql-support.md) for the per-variant capability table.
 
 ---
 

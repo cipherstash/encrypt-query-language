@@ -1,0 +1,88 @@
+//! Structural guard for the blocked native-jsonb operator enumeration.
+//!
+//! The storage-only domains (`eql_v2_int4`, future scalars) promise that
+//! *every* native jsonb operator is blocked, so an encrypted column can never
+//! fall through to plaintext-jsonb semantics. That promise rests on three
+//! hand-maintained lists in `tasks/codegen/operator_surface.py`
+//! (`SYMMETRIC_OPERATORS`, `PATH_OPERATORS`, `BLOCKER_ONLY_OPERATORS`), whose
+//! union is `KNOWN_JSONB_OPERATORS`.
+//!
+//! Those lists are an *enumeration*, not a structural guarantee: a future PG
+//! version could add a jsonb operator that nobody adds here, and it would
+//! silently route to native jsonb behaviour. This test closes that gap by
+//! asking the live catalog which *native* operators touch `jsonb` and failing
+//! if any symbol is absent from the known union. EQL's own cross-type operators
+//! on the legacy `eql_v2_encrypted` composite (which also take a jsonb operand,
+//! e.g. `~~` / `~~*`) are excluded — they are not native and are unreachable
+//! from a storage scalar domain.
+//!
+//! Source of truth: `tasks/codegen/operator_surface.py::KNOWN_JSONB_OPERATORS`
+//! (asserted complete by `tasks/codegen/test_operator_surface.py`). The set
+//! below is hardcoded — the lowest-friction bridge from a Python constant to a
+//! Rust test — and must be kept in sync with that module. If you add an
+//! operator there, add it here; the Python test pins the union so the two can
+//! only drift in this file.
+
+use anyhow::Result;
+use sqlx::PgPool;
+
+/// Mirror of `KNOWN_JSONB_OPERATORS` in
+/// `tasks/codegen/operator_surface.py`. Keep in sync with that module.
+const KNOWN_JSONB_OPERATORS: &[&str] = &[
+    // symmetric (supported wrappers)
+    "=", "<>", "<", "<=", ">", ">=", "@>", "<@", //
+    // path
+    "->", "->>", //
+    // blocker-only native jsonb fallbacks
+    "?", "?|", "?&", "@?", "@@", "#>", "#>>", "-", "#-", "||",
+];
+
+#[sqlx::test]
+async fn every_native_jsonb_operator_is_known_to_the_generator(pool: PgPool) -> Result<()> {
+    // Distinct operator symbols whose left OR right argument is `jsonb` — the
+    // native surface a value typed as a jsonb-backed domain can reach via
+    // operator resolution against the ultimate base type.
+    //
+    // Exclude EQL's own cross-type operators on the legacy `eql_v2_encrypted`
+    // composite (e.g. `eql_v2_encrypted ~~ jsonb`, `jsonb ~~ eql_v2_encrypted`).
+    // They take a jsonb operand but are NOT native plaintext-jsonb operators and
+    // are unreachable from a storage scalar domain: a `eql_v2_int4` operand
+    // resolves to the domain / its jsonb base, never to `eql_v2_encrypted`, so
+    // `col ~~ x` finds no operator (asserted by the matrix `native_absent_ops`
+    // arm). Matching on `typname` is search_path-independent and a harmless
+    // no-op when the type is absent (e.g. the Protect build variant).
+    let native: Vec<String> = sqlx::query_scalar(
+        r#"
+        SELECT DISTINCT o.oprname
+        FROM pg_catalog.pg_operator o
+        WHERE (o.oprleft = 'jsonb'::regtype OR o.oprright = 'jsonb'::regtype)
+          AND o.oprleft  NOT IN (SELECT oid FROM pg_catalog.pg_type WHERE typname = 'eql_v2_encrypted')
+          AND o.oprright NOT IN (SELECT oid FROM pg_catalog.pg_type WHERE typname = 'eql_v2_encrypted')
+        ORDER BY 1
+        "#,
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    assert!(
+        !native.is_empty(),
+        "expected pg_operator to expose jsonb operators; query returned none"
+    );
+
+    let missing: Vec<&String> = native
+        .iter()
+        .filter(|sym| !KNOWN_JSONB_OPERATORS.contains(&sym.as_str()))
+        .collect();
+
+    assert!(
+        missing.is_empty(),
+        "PostgreSQL exposes jsonb operator(s) not enumerated in \
+         tasks/codegen/operator_surface.py (KNOWN_JSONB_OPERATORS): {missing:#?}. \
+         A storage-only encrypted domain would route these to native \
+         plaintext-jsonb semantics instead of an EQL blocker. Add each symbol \
+         to the appropriate list in operator_surface.py (and to the mirror in \
+         this test) and regenerate the SQL surface."
+    );
+
+    Ok(())
+}

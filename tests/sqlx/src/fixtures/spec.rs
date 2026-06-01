@@ -21,12 +21,13 @@
 //! is finished.
 
 use super::eql_plaintext::EqlPlaintext;
+use super::index_kind::IndexKind;
 use super::validation::{ColumnType, FixtureIdentifier};
 
 /// A fully specified fixture, ready to `.run()`.
 pub struct FixtureSpec<'a, T> {
     name: FixtureIdentifier,
-    indexes: Vec<FixtureIdentifier>,
+    indexes: Vec<IndexKind>,
     column_type: ColumnType,
     values: &'a [T],
 }
@@ -51,14 +52,10 @@ impl<'a, T> FixtureSpec<'a, T> {
         }
     }
 
-    /// Add a search index (`"unique"`, `"ore"`, ...). Chainable.
-    ///
-    /// # Panics
-    /// Panics if `index_name` is not a valid identifier.
-    pub fn with_index(mut self, index_name: &str) -> Self {
-        let id =
-            FixtureIdentifier::try_from(index_name).unwrap_or_else(|e| panic!("index name: {e}"));
-        self.indexes.push(id);
+    /// Add a search index. `IndexKind` is a closed enum — a typo at the
+    /// call site is a compile error rather than a runtime panic.
+    pub fn with_index(mut self, kind: IndexKind) -> Self {
+        self.indexes.push(kind);
         self
     }
 
@@ -90,7 +87,7 @@ impl<'a, T> FixtureSpec<'a, T> {
         self.name.as_str()
     }
 
-    pub fn indexes(&self) -> &[FixtureIdentifier] {
+    pub fn indexes(&self) -> &[IndexKind] {
         &self.indexes
     }
 
@@ -140,7 +137,7 @@ impl<'a, T> FixtureSpec<'a, T> {
              CREATE TABLE public.{working} (\n    \
              id BIGINT PRIMARY KEY,\n    \
              plaintext {plaintext_type} NOT NULL,\n    \
-             payload jsonb\n);\n",
+             payload jsonb NOT NULL\n);\n",
             plaintext_type = T::PLAINTEXT_SQL_TYPE,
         )
     }
@@ -216,8 +213,8 @@ mod tests {
     fn int4_spec() -> FixtureSpec<'static, i32> {
         const VALUES: &[i32] = &[-1, 1, 42];
         FixtureSpec::new("eql_v2_int4")
-            .with_index("unique")
-            .with_index("ore")
+            .with_index(IndexKind::Unique)
+            .with_index(IndexKind::Ore)
             .with_column_type("jsonb")
             .with_values(VALUES)
     }
@@ -233,14 +230,15 @@ mod tests {
     #[test]
     fn records_indexes_in_order() {
         let s = int4_spec();
-        let names: Vec<&str> = s.indexes().iter().map(FixtureIdentifier::as_str).collect();
-        assert_eq!(names, vec!["unique", "ore"]);
+        assert_eq!(s.indexes(), &[IndexKind::Unique, IndexKind::Ore]);
     }
 
     #[test]
     fn column_type_defaults_to_jsonb() {
         const V: &[i32] = &[1];
-        let s = FixtureSpec::new("x").with_index("unique").with_values(V);
+        let s = FixtureSpec::new("x")
+            .with_index(IndexKind::Unique)
+            .with_values(V);
         assert_eq!(s.column_type().as_str(), "jsonb");
     }
 
@@ -263,12 +261,9 @@ mod tests {
         let _ = FixtureSpec::<'static, i32>::new("x").with_column_type("text");
     }
 
-    #[test]
-    #[should_panic(expected = "is not a valid identifier")]
-    fn validation_rejects_a_bad_index_name() {
-        // A bad index name panics in `.with_index()`.
-        let _ = FixtureSpec::<'static, i32>::new("x").with_index("BAD IX");
-    }
+    // Note: `with_index` formerly panicked on a malformed identifier (a
+    // `FixtureIdentifier::try_from` failure). The typed `IndexKind` enum
+    // makes that case unrepresentable — a typo is now a compile error.
 
     #[test]
     fn completeness_rejects_a_spec_with_no_indexes() {
@@ -280,7 +275,9 @@ mod tests {
     #[test]
     fn completeness_rejects_a_spec_with_no_values() {
         const V: &[i32] = &[];
-        let s = FixtureSpec::new("x").with_index("unique").with_values(V);
+        let s = FixtureSpec::new("x")
+            .with_index(IndexKind::Unique)
+            .with_values(V);
         assert!(s.check_complete().is_err());
     }
 

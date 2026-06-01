@@ -8,28 +8,46 @@
 use anyhow::Result;
 use sqlx::PgPool;
 
-/// The 14 values from `src/fixtures/eql_v2_int4.rs`, in id order. Kept here
+/// The 17 values from `src/fixtures/eql_v2_int4.rs`, in id order. Kept here
 /// only to assert the in-table `plaintext` oracle matches what was generated.
 /// If `plaintext_column_matches_the_generated_values` fails, the generator's
 /// `VALUES` and this constant have drifted — re-run
 /// `mise run fixture:generate eql_v2_int4` and update this list to match.
-const EXPECTED_PLAINTEXTS: &[i32] = &[-100, -1, 1, 2, 5, 10, 17, 25, 42, 50, 100, 250, 1000, 9999];
+const EXPECTED_PLAINTEXTS: &[i32] = &[
+    i32::MIN,
+    -100,
+    -1,
+    0,
+    1,
+    2,
+    5,
+    10,
+    17,
+    25,
+    42,
+    50,
+    100,
+    250,
+    1000,
+    9999,
+    i32::MAX,
+];
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v2_int4")))]
-async fn fixture_has_fourteen_rows(pool: PgPool) -> Result<()> {
+async fn fixture_has_seventeen_rows(pool: PgPool) -> Result<()> {
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM fixtures.eql_v2_int4")
         .fetch_one(&pool)
         .await?;
-    assert_eq!(count, 14, "eql_v2_int4 fixture should have 14 rows");
+    assert_eq!(count, 17, "eql_v2_int4 fixture should have 17 rows");
     Ok(())
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v2_int4")))]
-async fn ids_are_sequential_one_to_fourteen(pool: PgPool) -> Result<()> {
+async fn ids_are_sequential_one_to_seventeen(pool: PgPool) -> Result<()> {
     let ids: Vec<i64> = sqlx::query_scalar("SELECT id FROM fixtures.eql_v2_int4 ORDER BY id")
         .fetch_all(&pool)
         .await?;
-    assert_eq!(ids, (1..=14).collect::<Vec<i64>>());
+    assert_eq!(ids, (1..=17).collect::<Vec<i64>>());
     Ok(())
 }
 
@@ -95,22 +113,22 @@ async fn plaintext_oracle_supports_value_filtering(pool: PgPool) -> Result<()> {
             .await?;
     assert_eq!(
         ids,
-        vec![9],
-        "expected exactly one row with plaintext = 42 at id 9"
+        vec![11],
+        "expected exactly one row with plaintext = 42 at id 11"
     );
     Ok(())
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v2_int4")))]
 async fn hmac_equality_terms_are_distinct_for_distinct_values(pool: PgPool) -> Result<()> {
-    // All 14 plaintext values are distinct, so all 14 `hm` terms must be too.
+    // All 17 plaintext values are distinct, so all 17 `hm` terms must be too.
     let distinct_hm: i64 =
         sqlx::query_scalar("SELECT COUNT(DISTINCT payload->>'hm') FROM fixtures.eql_v2_int4")
             .fetch_one(&pool)
             .await?;
     assert_eq!(
-        distinct_hm, 14,
-        "14 distinct values -> 14 distinct hm terms"
+        distinct_hm, 17,
+        "17 distinct values -> 17 distinct hm terms"
     );
     Ok(())
 }
