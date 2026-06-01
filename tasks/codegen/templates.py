@@ -49,13 +49,24 @@ def _sql_str(s: str) -> str:
 
     Use this at every `'{...}'` interpolation boundary in the render_*
     helpers — payload keys, operator symbols, domain names rendered into
-    RAISE messages, etc.
+    RAISE messages, etc. NOT for schema-qualified identifiers like
+    ``eql_v3.foo``: those are emitted unquoted and must not be doubled.
 
     Today every catalog string (term keys, operator symbols) is quote-free,
     so this is a no-op on real input and output stays byte-identical. It
     exists so a future quote-bearing catalog string can never break out of
     its SQL literal — nothing else enforces the quote-free invariant."""
     return s.replace("'", "''")
+
+
+# Schema housing the encrypted-domain families: the domains themselves plus
+# their index-term extractors, comparison wrappers, blockers, and aggregates.
+# New in v3 and distinct from the core eql_v2 schema, which still owns the
+# shared index-term types the extractors return and construct
+# (eql_v2.hmac_256, eql_v2.ore_block_u64_8_256).
+DOMAIN_SCHEMA = "eql_v3"
+# Schema owning the core index-term types/constructors the extractors reuse.
+CORE_SCHEMA = "eql_v2"
 
 
 def render_fixture_values_rs(spec: TypeSpec) -> str:
@@ -170,8 +181,8 @@ def brief_role_clause(domain: DomainSpec, token: str) -> str:
 
 
 def domain_name(domain: str) -> str:
-    """The public SQL domain type name."""
-    return f"eql_v2_{domain}"
+    """The schema-qualified SQL domain type name, e.g. ``eql_v3.int4_eq``."""
+    return f"{DOMAIN_SCHEMA}.{domain}"
 
 
 def _arg_label(dom: str, arg_type: str) -> str:
@@ -203,10 +214,10 @@ def render_domain_block(domain: DomainSpec, token: str) -> str:
         f"  --! @brief {phrase} encrypted {token} domain.{clause}\n"
         f"  IF NOT EXISTS (\n"
         f"    SELECT 1 FROM pg_type\n"
-        f"    WHERE typname = '{_sql_str(dom)}' "
-        f"AND typnamespace = 'public'::regnamespace\n"
+        f"    WHERE typname = '{_sql_str(domain.name)}' "
+        f"AND typnamespace = '{DOMAIN_SCHEMA}'::regnamespace\n"
         f"  ) THEN\n"
-        f"    CREATE DOMAIN public.{dom} AS jsonb\n"
+        f"    CREATE DOMAIN {dom} AS jsonb\n"
         f"      CHECK (\n"
         f"        jsonb_typeof(VALUE) = 'object'\n"
         f"        AND {checks}\n"
@@ -224,18 +235,18 @@ def render_extractor(domain: DomainSpec, term: Term) -> str:
         f"--! @return {term.returns}\n"
     )
     return doxy + (
-        f"CREATE FUNCTION eql_v2.{term.extractor}(a {dom})\n"
+        f"CREATE FUNCTION {DOMAIN_SCHEMA}.{term.extractor}(a {dom})\n"
         f"RETURNS {term.returns}\n"
         f"LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE\n"
-        f"AS $$ SELECT eql_v2.{term.ctor}(a::jsonb) $$;\n"
+        f"AS $$ SELECT {CORE_SCHEMA}.{term.ctor}(a::jsonb) $$;\n"
     )
 
 
 def _extract_arg(arg_type: str, extractor: str, domain: str, arg: str) -> str:
     """The extractor-call SQL for one operand, casting jsonb to the domain first."""
     if arg_type == "jsonb":
-        return f"eql_v2.{extractor}({arg}::{domain})"
-    return f"eql_v2.{extractor}({arg})"
+        return f"{DOMAIN_SCHEMA}.{extractor}({arg}::{domain})"
+    return f"{DOMAIN_SCHEMA}.{extractor}({arg})"
 
 
 def render_wrapper(
@@ -254,7 +265,7 @@ def render_wrapper(
         f"--! @return boolean\n"
     )
     return doxy + (
-        f"CREATE FUNCTION eql_v2.{backing}(a {arg_a}, b {arg_b})\n"
+        f"CREATE FUNCTION {DOMAIN_SCHEMA}.{backing}(a {arg_a}, b {arg_b})\n"
         f"RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE\n"
         f"AS $$ SELECT {call_a} {op} {call_b} $$;\n"
     )
@@ -276,9 +287,9 @@ def render_blocker_bool(
         f"--! @return boolean (never returns; always raises)\n"
     )
     return doxy + (
-        f"CREATE FUNCTION eql_v2.{backing}(a {arg_a}, b {arg_b})\n"
+        f"CREATE FUNCTION {DOMAIN_SCHEMA}.{backing}(a {arg_a}, b {arg_b})\n"
         f"RETURNS boolean IMMUTABLE PARALLEL SAFE\n"
-        f"AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool("
+        f"AS $$ BEGIN RETURN {DOMAIN_SCHEMA}.encrypted_domain_unsupported_bool("
         f"'{_sql_str(dom)}', '{_sql_str(op)}'); END; $$\n"
         f"LANGUAGE plpgsql;\n"
     )
@@ -301,7 +312,7 @@ def render_blocker_path(
         f"--! @return {returns} (never returns; always raises)\n"
     )
     return doxy + (
-        f"CREATE FUNCTION eql_v2.{backing}(a {arg_a}, selector {arg_b})\n"
+        f"CREATE FUNCTION {DOMAIN_SCHEMA}.{backing}(a {arg_a}, selector {arg_b})\n"
         f"RETURNS {returns} IMMUTABLE PARALLEL SAFE\n"
         f"AS $$ BEGIN RAISE EXCEPTION "
         f"'operator % is not supported for %', '{_sql_str(op)}', "
@@ -328,7 +339,7 @@ def render_blocker_native(
     )
     if returns == "boolean":
         body = (
-            "BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool("
+            f"BEGIN RETURN {DOMAIN_SCHEMA}.encrypted_domain_unsupported_bool("
             f"'{_sql_str(dom)}', '{_sql_str(op)}'); END;"
         )
     else:
@@ -338,7 +349,7 @@ def render_blocker_native(
             f"'{_sql_str(dom)}'; END;"
         )
     return doxy + (
-        f"CREATE FUNCTION eql_v2.{backing}(a {arg_a}, b {arg_b})\n"
+        f"CREATE FUNCTION {DOMAIN_SCHEMA}.{backing}(a {arg_a}, b {arg_b})\n"
         f"RETURNS {returns} IMMUTABLE PARALLEL SAFE\n"
         f"AS $$ {body} $$\n"
         f"LANGUAGE plpgsql;\n"
@@ -407,7 +418,7 @@ def render_aggregate(domain: DomainSpec, op: AggregateOp) -> str:
         "-- also work, but the procedural form mirrors the blocker convention.)\n"
     )
     sfunc = sfunc_rationale + (
-        f"CREATE FUNCTION eql_v2.{op.sfunc_name}(state {dom}, value {dom})\n"
+        f"CREATE FUNCTION {DOMAIN_SCHEMA}.{op.sfunc_name}(state {dom}, value {dom})\n"
         f"RETURNS {dom}\n"
         f"LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE\n"
         f"SET search_path = pg_catalog, extensions, public\n"
@@ -442,10 +453,10 @@ def render_aggregate(domain: DomainSpec, op: AggregateOp) -> str:
         "-- combinefunc = sfunc: min/max are associative, so merging two partial\n"
         "-- extrema is the same comparison. PARALLEL SAFE enables partial and\n"
         "-- parallel aggregation on large GROUP BY workloads, with no decryption.\n"
-        f"CREATE AGGREGATE eql_v2.{op.name}({dom}) (\n"
-        f"  sfunc = eql_v2.{op.sfunc_name},\n"
+        f"CREATE AGGREGATE {DOMAIN_SCHEMA}.{op.name}({dom}) (\n"
+        f"  sfunc = {DOMAIN_SCHEMA}.{op.sfunc_name},\n"
         f"  stype = {dom},\n"
-        f"  combinefunc = eql_v2.{op.sfunc_name},\n"
+        f"  combinefunc = {DOMAIN_SCHEMA}.{op.sfunc_name},\n"
         f"  parallel = safe\n"
         f");\n"
     )
@@ -470,7 +481,7 @@ def render_operator(
         )
     lines += [
         f"CREATE OPERATOR {op} (",
-        f"  FUNCTION = eql_v2.{backing},",
+        f"  FUNCTION = {DOMAIN_SCHEMA}.{backing},",
         f"  LEFTARG = {leftarg}, RIGHTARG = {rightarg}",
     ]
     if supported and meta.kind == "symmetric":

@@ -180,11 +180,11 @@ macro_rules! ordered_numeric_matrix {
             eq_ops = [(eq, "="), (neq, "<>")],
             ord_ops = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
             index_combos = [
-                (eq, Eq, "eql_v2.eq_term", "btree", [(eq, "=")]),
-                (eq, Eq, "eql_v2.eq_term", "hash", [(eq, "=")]),
-                (ord, Ord, "eql_v2.ord_term", "btree",
+                (eq, Eq, "eql_v3.eq_term", "btree", [(eq, "=")]),
+                (eq, Eq, "eql_v3.eq_term", "hash", [(eq, "=")]),
+                (ord, Ord, "eql_v3.ord_term", "btree",
                     [(eq, "="), (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")]),
-                (ord_ore, OrdOre, "eql_v2.ord_term", "btree",
+                (ord_ore, OrdOre, "eql_v3.ord_term", "btree",
                     [(eq, "="), (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")]),
             ],
             blocker_combos = [
@@ -204,7 +204,7 @@ macro_rules! ordered_numeric_matrix {
             // converged ordered domain, ord_term btree. One curated combo keeps
             // PR CI cost bounded.
             scale_default_combos = [
-                (ord, Ord, "eql_v2.ord_term", "btree"),
+                (ord, Ord, "eql_v3.ord_term", "btree"),
             ],
         }
     };
@@ -246,8 +246,8 @@ macro_rules! eq_only_scalar_matrix {
             eq_ops = [(eq, "="), (neq, "<>")],
             ord_ops = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
             index_combos = [
-                (eq, Eq, "eql_v2.eq_term", "btree", [(eq, "=")]),
-                (eq, Eq, "eql_v2.eq_term", "hash",  [(eq, "=")]),
+                (eq, Eq, "eql_v3.eq_term", "btree", [(eq, "=")]),
+                (eq, Eq, "eql_v3.eq_term", "hash",  [(eq, "=")]),
             ],
             blocker_combos = [
                 (storage, Storage, [
@@ -1095,7 +1095,7 @@ macro_rules! __scalar_matrix_planner_metadata_case {
                     JOIN pg_catalog.pg_type lt ON lt.oid = o.oprleft
                     JOIN pg_catalog.pg_type rt ON rt.oid = o.oprright
                     WHERE o.oprname IN ({op_list})
-                      AND (lt.typname = '{d}' OR rt.typname = '{d}')
+                      AND ('{d}'::regtype = o.oprleft OR '{d}'::regtype = o.oprright)
                     "#
                 );
                 let rows: Vec<(String, String, String, bool, bool, bool, bool)> =
@@ -1205,15 +1205,15 @@ SELECT $1::jsonb::{d} FROM generate_series(1, 5000)",
                     .execute(&mut *tx).await?;
 
                 let lit = pivot_payload.replace('\'', "''");
-                let plan: Vec<String> = sqlx::query_scalar(&format!(
-                    "EXPLAIN SELECT * FROM {table} WHERE value = '{lit}'::jsonb::{d}",
-                )).fetch_all(&mut *tx).await?;
-                let plan_text = plan.join("\n");
-                anyhow::ensure!(plan_text.contains(index),
-                    "with seqscan enabled the planner must prefer the {extractor} \
-{using} index for a selective = ; plan:\n{plan_text}",
-                    extractor = $extractor, using = $using,
-                );
+                $crate::matrix::assert_index_scan_uses(
+                    &mut *tx,
+                    &format!("SELECT * FROM {table} WHERE value = '{lit}'::jsonb::{d}"),
+                    index,
+                    &format!(
+                        "with seqscan enabled the planner must prefer the {extractor} {using} index for a selective =",
+                        extractor = $extractor, using = $using,
+                    ),
+                ).await?;
 
                 tx.commit().await?;
                 Ok(())
@@ -1411,7 +1411,7 @@ macro_rules! __scalar_matrix_fixture_shape {
 // ============================================================================
 // Ord-routes-through-ob category — ordered variants carry `c + ob` and
 // drop `hm`. Equality on an ord variant must therefore route through
-// `eql_v2.ord_term` (the `ob` term), never HMAC. Strip `hm` from every
+// `eql_v3.ord_term` (the `ob` term), never HMAC. Strip `hm` from every
 // fixture payload so an accidental regression to HMAC equality fails
 // rather than passing on the hm-carrying fixture.
 // ============================================================================
@@ -1474,7 +1474,7 @@ macro_rules! __scalar_matrix_ord_routes_case {
                 anyhow::ensure!(with_hm == 0, "test rows must not carry hm");
 
                 sqlx::query(&format!(
-                    "CREATE INDEX {index} ON {table} USING btree (eql_v2.ord_term(value))",
+                    "CREATE INDEX {index} ON {table} USING btree (eql_v3.ord_term(value))",
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!("ANALYZE {table}"))
                     .execute(&mut *tx).await?;
@@ -1518,7 +1518,7 @@ macro_rules! __scalar_matrix_ord_routes_case {
                 // VALIDITY, NOT PREFERENCE: this runs with
                 // `enable_seqscan = off` (set above) on the ~17-row fixture,
                 // so the planner picks the only usable alternative. A green
-                // assertion proves the `eql_v2.ord_term` functional btree is
+                // assertion proves the `eql_v3.ord_term` functional btree is
                 // *usable* for `=` with no hm present, NOT that the planner
                 // would *prefer* it at realistic scale. Cost-preference lives
                 // in the `*_scale_preference_*` tests
@@ -1534,7 +1534,7 @@ macro_rules! __scalar_matrix_ord_routes_case {
                     &mut *tx,
                     &format!("SELECT * FROM {table} WHERE value = '{lit}'::jsonb::{d}"),
                     index,
-                    "= must engage the eql_v2.ord_term functional btree with no hm",
+                    "= must engage the eql_v3.ord_term functional btree with no hm",
                 ).await?;
 
                 tx.commit().await?;
@@ -1786,7 +1786,7 @@ macro_rules! __scalar_matrix_order_by_case {
                     <$scalar as $crate::scalar_domains::ScalarType>::fixture_table_name();
                 let sql = format!(
                     "SELECT plaintext FROM {fixture}{where_clause} \
-ORDER BY eql_v2.ord_term(payload::{d}) {dir}",
+ORDER BY eql_v3.ord_term(payload::{d}) {dir}",
                     fixture = fixture_table, where_clause = $where_clause,
                     d = &spec.sql_domain, dir = $direction,
                 );
@@ -1816,7 +1816,7 @@ ORDER BY eql_v2.ord_term(payload::{d}) {dir}",
 // which has no NULL rows, so NULLS placement goes untested there. This arm
 // builds an isolated temp table mixing NULL-valued rows with the fixture rows
 // and pins that the NULL sort keys land at the requested end while the
-// non-NULL rows stay in plaintext order. `eql_v2.ord_term` is STRICT, so a
+// non-NULL rows stay in plaintext order. `eql_v3.ord_term` is STRICT, so a
 // NULL domain value yields a NULL sort key; a regression making it non-STRICT
 // would let NULL rows interleave — see the `family::mutations` negative
 // control for that dimension.
@@ -1911,7 +1911,7 @@ SELECT NULL::{pg}, NULL::{d} FROM generate_series(1, {n})", n = NULL_ROWS,
 
                 let sql = format!(
                     "SELECT plaintext FROM {table} \
-ORDER BY eql_v2.ord_term(value) {dir} NULLS {nulls}",
+ORDER BY eql_v3.ord_term(value) {dir} NULLS {nulls}",
                     dir = $direction, nulls = $nulls,
                 );
                 let actual: Vec<Option<$scalar>> =
@@ -2029,7 +2029,7 @@ domain by design) but succeeded",
 // Aggregate category — per (ord domain, op ∈ {min, max}), three tests:
 // extremum identity (payload of the min/max FIXTURE_VALUES row), all-NULL
 // returns NULL, and mixed NULL/non-NULL returns the correct extremum from
-// the non-NULL subset. Pins that `eql_v2.min` / `eql_v2.max` aggregates
+// the non-NULL subset. Pins that `eql_v3.min` / `eql_v3.max` aggregates
 // route through the domain's `<` / `>` and that the STRICT state function
 // correctly seeds + skips NULLs. Emits zero tests when ord_domains is
 // empty — eq-only umbrellas pick that up naturally.
@@ -2103,13 +2103,13 @@ macro_rules! __scalar_matrix_aggregate_case {
                 )).fetch_one(&pool).await?;
 
                 let actual: String = sqlx::query_scalar(&format!(
-                    "SELECT eql_v2.{agg}(payload::{d})::text FROM {fixture}",
+                    "SELECT eql_v3.{agg}(payload::{d})::text FROM {fixture}",
                     agg = $agg_fn,
                 )).fetch_one(&pool).await?;
 
                 assert_eq!(
                     actual, expected,
-                    "eql_v2.{}({}) must return the payload of plaintext={:?} (the fixture {})",
+                    "eql_v3.{}({}) must return the payload of plaintext={:?} (the fixture {})",
                     $agg_fn, d, extremum, $agg_fn,
                 );
 
@@ -2120,8 +2120,8 @@ macro_rules! __scalar_matrix_aggregate_case {
                 // where payload text matches but `ord_term` resolves to a
                 // different value (e.g. due to payload-key reordering).
                 let ord_terms_match: bool = sqlx::query_scalar(&format!(
-                    "SELECT eql_v2.ord_term(eql_v2.{agg}(payload::{d})) \
-                          = eql_v2.ord_term($1::jsonb::{d}) \
+                    "SELECT eql_v3.ord_term(eql_v3.{agg}(payload::{d})) \
+                          = eql_v3.ord_term($1::jsonb::{d}) \
                      FROM {fixture}",
                     agg = $agg_fn,
                 ))
@@ -2130,7 +2130,7 @@ macro_rules! __scalar_matrix_aggregate_case {
                 .await?;
                 anyhow::ensure!(
                     ord_terms_match,
-                    "eql_v2.ord_term(eql_v2.{}({})) must equal eql_v2.ord_term(<expected payload>) \
+                    "eql_v3.ord_term(eql_v3.{}({})) must equal eql_v3.ord_term(<expected payload>) \
                      for plaintext={:?}",
                     $agg_fn, d, extremum,
                 );
@@ -2152,12 +2152,12 @@ macro_rules! __scalar_matrix_aggregate_case {
                     "CREATE TEMP TABLE empty_agg (value {d}) ON COMMIT DROP",
                 )).execute(&mut *tx).await?;
                 let result: Option<String> = sqlx::query_scalar(&format!(
-                    "SELECT eql_v2.{agg}(value)::text FROM empty_agg",
+                    "SELECT eql_v3.{agg}(value)::text FROM empty_agg",
                     agg = $agg_fn,
                 )).fetch_one(&mut *tx).await?;
                 anyhow::ensure!(
                     result.is_none(),
-                    "empty rowset to eql_v2.{} on {} must return NULL, got {:?}",
+                    "empty rowset to eql_v3.{} on {} must return NULL, got {:?}",
                     $agg_fn, d, result,
                 );
                 tx.commit().await?;
@@ -2173,7 +2173,7 @@ macro_rules! __scalar_matrix_aggregate_case {
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
                 let sql = format!(
-                    "SELECT eql_v2.{agg}(NULL::{d})::text FROM generate_series(1, 3)",
+                    "SELECT eql_v3.{agg}(NULL::{d})::text FROM generate_series(1, 3)",
                     agg = $agg_fn,
                 );
                 let result: Option<String> = sqlx::query_scalar(&sql)
@@ -2181,7 +2181,7 @@ macro_rules! __scalar_matrix_aggregate_case {
                     .await?;
                 anyhow::ensure!(
                     result.is_none(),
-                    "all-NULL input to eql_v2.{} on {} must return NULL, got {:?}; SQL={}",
+                    "all-NULL input to eql_v3.{} on {} must return NULL, got {:?}; SQL={}",
                     $agg_fn, d, result, sql,
                 );
                 Ok(())
@@ -2237,13 +2237,13 @@ macro_rules! __scalar_matrix_aggregate_case {
                 )).fetch_one(&mut *tx).await?;
 
                 let actual: Option<String> = sqlx::query_scalar(&format!(
-                    "SELECT eql_v2.{agg}(value)::text FROM mixed_null",
+                    "SELECT eql_v3.{agg}(value)::text FROM mixed_null",
                     agg = $agg_fn,
                 )).fetch_one(&mut *tx).await?;
 
                 anyhow::ensure!(
                     actual.as_deref() == Some(expected.as_str()),
-                    "eql_v2.{} on mixed NULL/non-NULL must return the {} non-NULL value (plaintext={:?}); want {expected:?}, got {actual:?}",
+                    "eql_v3.{} on mixed NULL/non-NULL must return the {} non-NULL value (plaintext={:?}); want {expected:?}, got {actual:?}",
                     $agg_fn, $agg_fn, expected_plaintext,
                 );
 
@@ -2298,7 +2298,7 @@ macro_rules! __scalar_matrix_aggregate_parallel_case {
                          FROM pg_proc p \
                          JOIN pg_aggregate a ON a.aggfnoid = p.oid \
                          WHERE p.proname = $1 \
-                           AND p.pronamespace = 'eql_v2'::regnamespace \
+                           AND p.pronamespace = 'eql_v3'::regnamespace \
                            AND p.proargtypes[0]::regtype = $2::regtype",
                     )
                     .bind(agg)
@@ -2306,9 +2306,9 @@ macro_rules! __scalar_matrix_aggregate_parallel_case {
                     .fetch_one(&pool)
                     .await?;
                     anyhow::ensure!(proparallel == "s",
-                        "eql_v2.{agg}({d}) must be PARALLEL SAFE (proparallel='s'), got {proparallel:?}");
+                        "eql_v3.{agg}({d}) must be PARALLEL SAFE (proparallel='s'), got {proparallel:?}");
                     anyhow::ensure!(has_combine,
-                        "eql_v2.{agg}({d}) must declare a combinefunc for partial aggregation");
+                        "eql_v3.{agg}({d}) must declare a combinefunc for partial aggregation");
                 }
                 Ok(())
             }
@@ -2320,7 +2320,7 @@ macro_rules! __scalar_matrix_aggregate_parallel_case {
 // Aggregate GROUP BY category — per (ord domain, op ∈ {min, max}), build a
 // temp table partitioned into two groups, populate each with a known
 // subset of fixture rows, GROUP BY the group key, and assert that
-// `eql_v2.<op>(value)` returns the correct extremum payload per group.
+// `eql_v3.<op>(value)` returns the correct extremum payload per group.
 // Pins that the aggregate composes correctly under GROUP BY (state is
 // reset between groups, the sfunc routes through the variant's
 // comparator inside each partition).
@@ -2430,7 +2430,7 @@ SELECT 2, payload::{d} FROM {fixture} WHERE plaintext = {lit}",
                 )).fetch_one(&mut *tx).await?;
 
                 let rows: Vec<(i32, String)> = sqlx::query_as(&format!(
-                    "SELECT group_key, eql_v2.{agg}(value)::text \
+                    "SELECT group_key, eql_v3.{agg}(value)::text \
 FROM group_test GROUP BY group_key ORDER BY group_key",
                     agg = $agg_fn,
                 )).fetch_all(&mut *tx).await?;
@@ -2442,13 +2442,13 @@ FROM group_test GROUP BY group_key ORDER BY group_key",
                 );
                 anyhow::ensure!(
                     rows[0].0 == 1 && rows[0].1 == g1_expected,
-                    "group 1 eql_v2.{}({}) must yield payload for plaintext={:?}; \
+                    "group 1 eql_v3.{}({}) must yield payload for plaintext={:?}; \
 want ({}, {:?}), got {:?}",
                     $agg_fn, d, group1_extremum, 1, g1_expected, rows[0],
                 );
                 anyhow::ensure!(
                     rows[1].0 == 2 && rows[1].1 == g2_expected,
-                    "group 2 eql_v2.{}({}) must yield payload for plaintext={:?}; \
+                    "group 2 eql_v3.{}({}) must yield payload for plaintext={:?}; \
 want ({}, {:?}), got {:?}",
                     $agg_fn, d, group2_extremum, 2, g2_expected, rows[1],
                 );
@@ -2462,7 +2462,7 @@ want ({}, {:?}), got {:?}",
 
 // ============================================================================
 // Aggregate type-safety category — for variants that do NOT support ord
-// (Storage, Eq), `eql_v2.min(<variant-column>)` / `eql_v2.max(...)` must
+// (Storage, Eq), `eql_v3.min(<variant-column>)` / `eql_v3.max(...)` must
 // resolve to "function does not exist" (SQLSTATE 42883). Pins that
 // codegen correctly omits MIN/MAX wrappers for these variants — a
 // SQL-level regression test complementing the codegen unit test.
@@ -2548,14 +2548,14 @@ macro_rules! __scalar_matrix_aggregate_typecheck_case {
                 // can succeed cleanly.
                 sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
                 let sql = format!(
-                    "SELECT eql_v2.{agg}(value) FROM typecheck_table",
+                    "SELECT eql_v3.{agg}(value) FROM typecheck_table",
                     agg = $agg_fn,
                 );
                 let err = sqlx::query_scalar::<_, String>(&sql)
                     .fetch_one(&mut *tx)
                     .await
                     .expect_err(&format!(
-                        "eql_v2.{} on non-ord variant {} must raise but succeeded",
+                        "eql_v3.{} on non-ord variant {} must raise but succeeded",
                         $agg_fn, d,
                     ));
                 // 42883 = undefined_function (no overload defined at all);
@@ -2571,7 +2571,7 @@ macro_rules! __scalar_matrix_aggregate_typecheck_case {
                 anyhow::ensure!(
                     code.as_deref() == Some("42883") || code.as_deref() == Some("42725"),
                     "expected SQLSTATE 42883 (undefined_function) or 42725 \
-(ambiguous_function) for eql_v2.{}({}), got {:?} (message: {})",
+(ambiguous_function) for eql_v3.{}({}), got {:?} (message: {})",
                     $agg_fn, d, code, db_err.message(),
                 );
                 sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
@@ -2594,7 +2594,7 @@ macro_rules! __scalar_matrix_aggregate_typecheck_case {
 // which only covered plain COUNT and only against the eql_v2_encrypted
 // type. Pinning per-variant DISTINCT catches the breakage class where
 // picking the wrong extractor would fail at runtime ("function
-// eql_v2.eq_term(eql_v2_int4_ord) does not exist") — exactly the kind of
+// eql_v3.eq_term(eql_v3.int4_ord) does not exist") — exactly the kind of
 // thing the variant-aware matrix is meant to surface mechanically.
 // ============================================================================
 
@@ -2689,8 +2689,8 @@ macro_rules! __scalar_matrix_count_case {
 // Dispatch on variant ident: Storage has no discriminating extractor, so
 // emits no DISTINCT test. The other three (Eq, Ord, OrdOre) each emit one
 // test that reads the extractor function name from the runtime
-// `ScalarDomainSpec::extractor_fn()` accessor (Eq -> `eql_v2.eq_term`,
-// Ord/OrdOre -> `eql_v2.ord_term`) and appends `(value)` at the call site.
+// `ScalarDomainSpec::extractor_fn()` accessor (Eq -> `eql_v3.eq_term`,
+// Ord/OrdOre -> `eql_v3.ord_term`) and appends `(value)` at the call site.
 #[macro_export]
 #[doc(hidden)]
 macro_rules! __scalar_matrix_count_distinct_dispatch {

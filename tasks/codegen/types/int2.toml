@@ -1,0 +1,19 @@
+# Encrypted-domain scalar manifest for int2.
+# The filename supplies the type token. Each domain lists the index terms
+# it carries; term capabilities are fixed in tasks/codegen/terms.py.
+
+[domain]
+int2 = []
+int2_eq = ["hm"]
+int2_ord_ore = ["ore"]
+int2_ord = ["ore"]
+
+# Single source of truth for the int2 fixture plaintext list. Drives the
+# generated tests/sqlx/src/fixtures/int2_values.rs const, shared by the fixture
+# generator and the matrix oracle. Sentinels MIN/MAX/ZERO map to i16 named
+# consts; the set MUST include MIN, MAX, and zero (matrix comparison pivots).
+[fixture]
+values = [
+  "MIN", "-30000", "-100", "-1", "ZERO", "1", "2", "5", "10", "17", "25",
+  "42", "50", "100", "250", "1000", "9999", "30000", "MAX",
+]

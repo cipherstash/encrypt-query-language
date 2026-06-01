@@ -54,10 +54,10 @@ def load(tmp_path):
 def test_types_file_has_all_four_domains(tmp_path):
     spec = load(tmp_path)
     sql = render_types_file(spec)
-    assert "-- REQUIRE: src/schema.sql" in sql
-    for dom in ("eql_v2_int4", "eql_v2_int4_eq",
-                "eql_v2_int4_ord", "eql_v2_int4_ord_ore"):
-        assert f"CREATE DOMAIN public.{dom} AS jsonb" in sql
+    assert "-- REQUIRE: src/schema-v3.sql" in sql
+    for dom in ("int4", "int4_eq",
+                "int4_ord", "int4_ord_ore"):
+        assert f"CREATE DOMAIN eql_v3.{dom} AS jsonb" in sql
 
 
 def test_storage_functions_file_is_all_blockers(tmp_path):
@@ -75,7 +75,7 @@ def test_eq_functions_file_counts_and_extractor(tmp_path):
     eq = next(d for d in spec.domains if d.name == "int4_eq")
     sql = render_functions_file(spec, eq)
     assert sql.count("CREATE FUNCTION") == 45
-    assert "CREATE FUNCTION eql_v2.eq_term(a eql_v2_int4_eq)" in sql
+    assert "CREATE FUNCTION eql_v3.eq_term(a eql_v3.int4_eq)" in sql
     assert "RETURNS eql_v2.hmac_256" in sql
     # 1 extractor + 6 wrappers (=, <> across 3 arg-shapes) inlined as SQL;
     # 38 blockers across the remaining native jsonb surface as plpgsql.
@@ -89,7 +89,7 @@ def test_ore_functions_file_counts_and_extractor(tmp_path):
     ordered = next(d for d in spec.domains if d.name == "int4_ord")
     sql = render_functions_file(spec, ordered)
     assert sql.count("CREATE FUNCTION") == 45
-    assert "CREATE FUNCTION eql_v2.ord_term(a eql_v2_int4_ord)" in sql
+    assert "CREATE FUNCTION eql_v3.ord_term(a eql_v3.int4_ord)" in sql
     assert "RETURNS eql_v2.ore_block_u64_8_256" in sql
     # 1 extractor + 18 wrappers (=, <>, <, <=, >, >= across 3 shapes);
     # 26 blockers across containment/path/native-jsonb fallback ops.
@@ -343,8 +343,8 @@ def test_render_aggregates_file_carries_both_min_and_max(tmp_path):
     assert sql is not None
     assert sql.count("CREATE FUNCTION") == 2
     assert sql.count("CREATE AGGREGATE") == 2
-    assert "eql_v2.min_sfunc" in sql
-    assert "eql_v2.max_sfunc" in sql
+    assert "eql_v3.min_sfunc" in sql
+    assert "eql_v3.max_sfunc" in sql
     # REQUIRE edges: types + functions + operators must all be declared.
     assert "-- REQUIRE: src/encrypted_domain/int4/int4_ord_operators.sql" in sql
     assert "-- REQUIRE: src/encrypted_domain/int4/int4_ord_functions.sql" in sql

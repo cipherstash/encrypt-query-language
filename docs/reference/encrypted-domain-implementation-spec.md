@@ -8,8 +8,9 @@ the fixed term catalog in `tasks/codegen/terms.py`.
 
 ## 1. Model
 
-Each generated public domain is a concrete `jsonb` domain named
-`public.eql_v2_<domain>`. The manifest is intentionally small:
+Each generated domain is a concrete `jsonb` domain in the `eql_v3`
+schema named `eql_v3.<domain>` (dropped by `DROP SCHEMA eql_v3 CASCADE`;
+survives an `eql_v2` uninstall). The manifest is intentionally small:
 
 ```toml
 [domain]
@@ -82,13 +83,21 @@ future migration.
 - [ ] Put optional hand-written SQL in
       `src/encrypted_domain/<T>/<T>_extensions.sql` with explicit
       `-- REQUIRE:` edges. This file IS committed.
-- [ ] Create a hand-reviewed byte-parity baseline under
-      `tests/codegen/reference/<T>/` — one file per generated SQL output plus
-      `<T>_values.rs`, each headed with the `-- REFERENCE:` / `// REFERENCE:`
-      marker. `tasks/codegen/test_against_reference.py` only guards types that
-      have a baseline directory, so without it the new type gets no
-      drift protection. The committed-fixture parity assertion is currently
-      `int4`-only; extend it to cover `<T>`.
+- [ ] Do **not** add a `tests/codegen/reference/<T>/` baseline. `int4` is the
+      single golden master for the type-generic generator: the SQL templates are
+      pure token substitution and the only type-specific rendering is
+      `<T>_values.rs`, so a per-type baseline can only fail when `int4`'s already
+      would. Drift protection for the new type comes from the `int4` reference
+      (shared templates + `terms.py`), the committed `<T>_values.rs` const guarded
+      by the CI staleness check (`mise run codegen:domain <T>` + `git diff
+      --exit-code`) and the `<T>` cases in `tasks/codegen/test_scalars.py`, and
+      the `ordered_numeric_matrix!` SQLx suite (behaviour, not bytes).
+- [ ] Run `mise run test:matrix:inventory` and commit the regenerated
+      `tests/sqlx/snapshots/<T>_matrix_tests.txt` — the sorted inventory of every
+      `scalars::<T>::*` test name in the `encrypted_domain` binary. CI diffs it
+      (same as `<T>_values.rs`); a stale snapshot fails the `matrix-coverage`
+      job with "Coverage inventory stale". This baseline is what catches a
+      silently dropped, renamed, or `#[cfg]`-gated matrix test. See §8.
 - [ ] Run `mise run test:codegen`, the relevant SQLx suites, and the
       PostgreSQL matrix before merging.
 
@@ -110,10 +119,10 @@ with `v` pinned to `2`. Beyond key presence and the version value, a malformed
 term can still fail later inside its extractor unless a future catalog design
 adds stronger validation.
 
-Every generated domain is a concrete domain over `jsonb`. Do not define
-one generated domain over another generated domain; PostgreSQL resolves
-operators against the underlying base type in ways that bypass the fixed
-operator surface.
+Every generated domain is a concrete domain over `jsonb` in the `eql_v3`
+schema. Do not define one generated domain over another generated domain;
+PostgreSQL resolves operators against the underlying base type in ways
+that bypass the fixed operator surface.
 
 ## 4. Extractors And Wrappers
 
@@ -179,7 +188,7 @@ minimal metadata because they should never be planner-visible supported
 paths.
 
 PostgreSQL's operator resolver still prefers the built-in `jsonb` operator
-for untyped string literals in forms such as `payload::eql_v2_int4 ? 'c'`.
+for untyped string literals in forms such as `payload::eql_v3.int4 ? 'c'`.
 Use typed parameters or explicit casts (`'c'::text`) to route those forms
 to the generated blocker. The generated surface blocks the typed native
 operator shapes exposed by the catalog.
@@ -189,8 +198,8 @@ operator shapes exposed by the catalog.
 Each ordered (ord-capable) domain additionally gets a generated
 `<domain>_aggregates.sql` file declaring `MIN` / `MAX`:
 
-- two state functions, `eql_v2.min_sfunc` and `eql_v2.max_sfunc`, and
-- two aggregates, `eql_v2.min(<domain>)` and `eql_v2.max(<domain>)`.
+- two state functions, `eql_v3.min_sfunc` and `eql_v3.max_sfunc`, and
+- two aggregates, `eql_v3.min(<domain>)` and `eql_v3.max(<domain>)`.
 
 Comparison routes through the domain's `<` / `>` operator (the ORE block
 term — no decryption). The state functions are `LANGUAGE plpgsql
@@ -224,12 +233,12 @@ generated siblings, `<T>_extensions.sql` IS committed.
 
 ## 7. Indexing
 
-Do not create operator classes on generated public domains. Index through
+Do not create operator classes on generated domains. Index through
 the extractor:
 
 ```sql
-CREATE INDEX ... ON table_name USING btree (eql_v2.ord_term(col));
-CREATE INDEX ... ON table_name USING hash (eql_v2.eq_term(col));
+CREATE INDEX ... ON table_name USING btree (eql_v3.ord_term(col));
+CREATE INDEX ... ON table_name USING hash (eql_v3.eq_term(col));
 ```
 
 The extractor return type must already have the needed PostgreSQL access
@@ -251,8 +260,9 @@ Cover each generated domain with SQLx tests appropriate to its terms:
 - domain `CHECK` rejects non-object and under-populated payloads;
 - real typed columns are tested, not only cast literals;
 - generated ordered-domain twins remain byte-identical modulo type name
-  (verified by `tasks/codegen/test_against_reference.py` against the
-  hand-reviewed baseline in `tests/codegen/reference/<T>/`).
+  (the shared generator is anchored by the `int4` golden master in
+  `tests/codegen/reference/int4/` via `tasks/codegen/test_against_reference.py`;
+  new types add no baseline of their own — see §2).
 
 For ordered numeric scalars this coverage is generated by the
 `ordered_numeric_matrix!` convention wrapper in `tests/sqlx/src/matrix.rs`:
@@ -270,6 +280,24 @@ count here.
 For ordered `int4`, keep the assertion that distinct plaintext values
 produce distinct ORE blocks. Do not add assertions for term behavior that
 the catalog does not promise.
+
+### Matrix coverage inventory snapshot
+
+The *set of test names* the matrix emits is itself guarded. `mise run
+test:matrix:inventory` lists every test in the `encrypted_domain` binary
+under a pinned feature set (`--no-default-features`, which deliberately
+excludes the `scale` arm — see the task comment in `mise.toml`), greps it to
+each `scalars::<T>::*` matrix, `LC_ALL=C sort`s for byte-stable ordering, and
+writes one committed snapshot per scalar at
+`tests/sqlx/snapshots/<T>_matrix_tests.txt`. The CI `matrix-coverage` job
+regenerates with the same feature set and `git diff --exit-code`s every
+snapshot; a divergence fails with "Coverage inventory stale". This is the
+guard that catches a silently dropped, renamed, or `#[cfg]`-gated matrix
+test — a behaviour the SQLx assertions above cannot see, because a deleted
+test simply stops running. When you add a scalar you add a new snapshot;
+when you add or remove matrix tests you regenerate and commit the affected
+snapshot in the same change. The files are a committed test baseline, **not**
+gitignored generated SQL. See `tests/sqlx/snapshots/README.md`.
 
 ## 9. Fixtures
 

@@ -31,3 +31,9 @@ pub mod driver;
 pub mod int4_values;
 
 pub mod eql_v2_int4;
+
+/// Generated from tasks/codegen/types/int2.toml `[fixture] values`.
+/// Committed and verified by CI; never hand-edit (`mise run codegen:domain int2`).
+pub mod int2_values;
+
+pub mod eql_v2_int2;

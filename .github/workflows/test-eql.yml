@@ -121,6 +121,7 @@ jobs:
         run: |
           mise run test:matrix:inventory
           git diff --exit-code -- tests/sqlx/snapshots/int4_matrix_tests.txt \
+                                  tests/sqlx/snapshots/int2_matrix_tests.txt \
             || { echo "Coverage inventory stale — run 'mise run test:matrix:inventory' and commit."; exit 1; }
 
   test:
