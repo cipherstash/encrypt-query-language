@@ -60,8 +60,16 @@ macro_rules! scalar_fixture {
                 // smaller list would not cover.
                 let spec = spec();
                 let values = spec.values();
-                assert!(values.contains(&<$ty>::MIN), "spec must include {}::MIN", stringify!($ty));
-                assert!(values.contains(&<$ty>::MAX), "spec must include {}::MAX", stringify!($ty));
+                assert!(
+                    values.contains(&<$ty>::MIN),
+                    "spec must include {}::MIN",
+                    stringify!($ty)
+                );
+                assert!(
+                    values.contains(&<$ty>::MAX),
+                    "spec must include {}::MAX",
+                    stringify!($ty)
+                );
                 assert!(values.contains(&0), "spec must include 0");
             }
 
