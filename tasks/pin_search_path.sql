@@ -250,7 +250,7 @@ BEGIN
     SELECT p.oid
     FROM pg_catalog.pg_proc p
     JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'eql_v2'
+    WHERE n.nspname IN ('eql_v2', 'eql_v3')
       -- Only normal functions ('f') and window functions ('w') accept
       -- ALTER FUNCTION ... SET. Aggregates ('a') would be rejected by
       -- ALTER ROUTINE/FUNCTION, and procedures ('p') would need ALTER
@@ -266,13 +266,16 @@ BEGIN
       -- A new encrypted-domain type needs NO edit here: its inline-critical
       -- extractors and comparison wrappers are recognised by the identity
       -- predicate — LANGUAGE sql, IMMUTABLE, and taking at least one argument
-      -- typed as a jsonb-backed DOMAIN in `public` named `eql_v2_*`. The
+      -- typed as a jsonb-backed DOMAIN of the encrypted-domain families. The
+      -- families live in the `eql_v3` schema (e.g. `eql_v3.int4_eq`); the
+      -- legacy `public.eql_v2_*` form is kept for any pre-v3 domain. The
       -- predicate is proconfig-independent: the outer loop has already
       -- excluded any function with a pinned `search_path`, so the only
       -- functions reaching here are unpinned. This catches no core function:
       -- `eql_v2_encrypted` is a composite type (not a domain), `ste_vec_entry`
-      -- is a domain in `eql_v2` (not `public`), and `hmac_256` is a domain
-      -- over `text` (not `jsonb`).
+      -- is a domain in `eql_v2` (not `eql_v3`/`public`), and `hmac_256` is a
+      -- domain over `text` (not `jsonb`). The eql_v3 blockers are plpgsql, so
+      -- the LANGUAGE-sql guard leaves them to be pinned as intended.
       AND NOT (
         p.prolang = (SELECT l.oid FROM pg_catalog.pg_language l
                      WHERE l.lanname = 'sql')
@@ -283,9 +286,11 @@ BEGIN
           JOIN pg_catalog.pg_type dt ON dt.oid = arg.typ
           JOIN pg_catalog.pg_namespace dn ON dn.oid = dt.typnamespace
           WHERE dt.typtype = 'd'
-            AND dn.nspname = 'public'
-            AND dt.typname LIKE 'eql_v2\_%'
             AND dt.typbasetype = jsonb_oid
+            AND (
+              dn.nspname = 'eql_v3'
+              OR (dn.nspname = 'public' AND dt.typname LIKE 'eql_v2\_%')
+            )
         )
       )
       -- Encrypted-domain family — comment-marker fallback. Covers a

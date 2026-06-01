@@ -1,17 +1,18 @@
 //! Global guard for the encrypted-domain inline-critical SQL surface.
 //!
 //! `tasks/pin_search_path.sql` runs after every build and pins a fixed
-//! `search_path` on every `eql_v2` function — except the inline-critical
-//! ones, which must stay unpinned so the planner can inline them and the
-//! documented functional indexes (`eql_v2.eq_term(col)`,
-//! `eql_v2.ord_term(col)`, …) engage.
+//! `search_path` on every `eql_v2`/`eql_v3` function — except the
+//! inline-critical ones, which must stay unpinned so the planner can
+//! inline them and the documented functional indexes (`eql_v3.eq_term(col)`,
+//! `eql_v3.ord_term(col)`, …) engage.
 //!
 //! The encrypted-domain family is skipped by a structural rule anchored
 //! on the *identity predicate*: a `LANGUAGE sql`, `IMMUTABLE` function
-//! taking at least one argument typed as a jsonb-backed DOMAIN in
-//! `public` named `eql_v2_*`. The identity predicate is
-//! proconfig-independent — it describes what a function intrinsically
-//! IS, not whether it has been pinned.
+//! taking at least one argument typed as a jsonb-backed DOMAIN of the
+//! encrypted-domain families — a domain in the `eql_v3` schema (e.g.
+//! `eql_v3.int4_eq`) or the legacy `public.eql_v2_*` form. The identity
+//! predicate is proconfig-independent — it describes what a function
+//! intrinsically IS, not whether it has been pinned.
 //!
 //! This test is the global net for that rule. It uses the identity
 //! predicate VERBATIM and appends one offender filter:
@@ -35,11 +36,12 @@ use sqlx::PgPool;
 async fn no_encrypted_domain_inline_critical_function_is_pinned(pool: PgPool) -> Result<()> {
     // The identity predicate is shared verbatim with the structural skip
     // clause in tasks/pin_search_path.sql: LANGUAGE sql, IMMUTABLE, and
-    // taking at least one argument typed as a `public.eql_v2_*` domain
-    // over jsonb. It is proconfig-independent. The ONLY addition here is
-    // the offender filter `p.proconfig IS NOT NULL` — a function that
-    // matches the identity predicate but DID get pinned. That set must be
-    // empty.
+    // taking at least one argument typed as an encrypted-domain-family
+    // domain over jsonb (an `eql_v3.*` domain or the legacy
+    // `public.eql_v2_*` form). It is proconfig-independent. The ONLY
+    // addition here is the offender filter `p.proconfig IS NOT NULL` — a
+    // function that matches the identity predicate but DID get pinned.
+    // That set must be empty.
     let offenders: Vec<(String, String)> = sqlx::query_as(
         r#"
         SELECT p.oid::regprocedure::text AS signature,
@@ -47,7 +49,7 @@ async fn no_encrypted_domain_inline_critical_function_is_pinned(pool: PgPool) ->
         FROM pg_catalog.pg_proc p
         JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
         JOIN pg_catalog.pg_language  l ON l.oid = p.prolang
-        WHERE n.nspname = 'eql_v2'
+        WHERE n.nspname IN ('eql_v2', 'eql_v3')
           AND l.lanname = 'sql'
           AND p.provolatile = 'i'
           AND p.proconfig IS NOT NULL
@@ -58,9 +60,11 @@ async fn no_encrypted_domain_inline_critical_function_is_pinned(pool: PgPool) ->
             JOIN pg_catalog.pg_namespace dn ON dn.oid = dt.typnamespace
             JOIN pg_catalog.pg_type bt ON bt.oid = dt.typbasetype
             WHERE dt.typtype = 'd'
-              AND dn.nspname = 'public'
-              AND dt.typname LIKE 'eql_v2\_%'
               AND bt.typname = 'jsonb'
+              AND (
+                   dn.nspname = 'eql_v3'
+                OR (dn.nspname = 'public' AND dt.typname LIKE 'eql_v2\_%')
+              )
           )
         ORDER BY signature
         "#,
@@ -88,17 +92,18 @@ async fn every_inline_critical_eligible_domain_has_inline_critical_functions(
     pool: PgPool,
 ) -> Result<()> {
     // Stronger than a bare `count > 0`: if a future change accidentally
-    // narrows the structural predicate (e.g. hard-codes `eql_v2_int4_%`),
-    // a `count > 0` assertion would still pass while int8/bool/date
+    // narrows the structural predicate (e.g. hard-codes `int4_%`), a
+    // `count > 0` assertion would still pass while int8/bool/date
     // domains silently lose inline-critical coverage. Instead, assert
-    // that EVERY inline-critical-eligible domain (any `public.eql_v2_*`
-    // domain over jsonb that carries a capability suffix — `_eq`, `_ord`,
-    // `_ord_ore`) appears as an argument type of at least one
-    // inline-critical function.
+    // that EVERY inline-critical-eligible domain (any encrypted-domain
+    // family domain over jsonb — `eql_v3.*` or legacy `public.eql_v2_*` —
+    // that carries a capability suffix — `_eq`, `_ord`, `_ord_ore`)
+    // appears as an argument type of at least one inline-critical
+    // function.
     //
-    // Storage-only variants (the bare `eql_v2_<T>` domain, with no
-    // capability suffix) intentionally have NO inline-critical surface
-    // and are excluded from the eligibility set.
+    // Storage-only variants (the bare `eql_v3.<T>` / `eql_v2_<T>` domain,
+    // with no capability suffix) intentionally have NO inline-critical
+    // surface and are excluded from the eligibility set.
     let unbound: Vec<String> = sqlx::query_scalar(
         r#"
         SELECT dt.typname
@@ -106,9 +111,11 @@ async fn every_inline_critical_eligible_domain_has_inline_critical_functions(
         JOIN pg_catalog.pg_namespace dn ON dn.oid = dt.typnamespace
         JOIN pg_catalog.pg_type bt ON bt.oid = dt.typbasetype
         WHERE dt.typtype = 'd'
-          AND dn.nspname = 'public'
           AND bt.typname = 'jsonb'
-          AND dt.typname LIKE 'eql_v2\_%'
+          AND (
+               dn.nspname = 'eql_v3'
+            OR (dn.nspname = 'public' AND dt.typname LIKE 'eql_v2\_%')
+          )
           AND (
                dt.typname LIKE '%\_eq'
             OR dt.typname LIKE '%\_ord'
@@ -119,7 +126,7 @@ async fn every_inline_critical_eligible_domain_has_inline_critical_functions(
             FROM pg_catalog.pg_proc p
             JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
             JOIN pg_catalog.pg_language  l ON l.oid = p.prolang
-            WHERE n.nspname = 'eql_v2'
+            WHERE n.nspname IN ('eql_v2', 'eql_v3')
               AND l.lanname = 'sql'
               AND p.provolatile = 'i'
               AND dt.oid = ANY(p.proargtypes::oid[])
@@ -158,7 +165,7 @@ async fn encrypted_domain_blockers_are_plpgsql_and_non_strict(pool: PgPool) -> R
         FROM pg_catalog.pg_proc p
         JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
         JOIN pg_catalog.pg_language  l ON l.oid = p.prolang
-        WHERE n.nspname = 'eql_v2'
+        WHERE n.nspname IN ('eql_v2', 'eql_v3')
           AND (p.prosrc LIKE '%encrypted_domain_unsupported_bool%'
             OR p.prosrc LIKE '%is not supported for%')
           AND EXISTS (
@@ -168,9 +175,11 @@ async fn encrypted_domain_blockers_are_plpgsql_and_non_strict(pool: PgPool) -> R
             JOIN pg_catalog.pg_namespace dn ON dn.oid = dt.typnamespace
             JOIN pg_catalog.pg_type bt ON bt.oid = dt.typbasetype
             WHERE dt.typtype = 'd'
-              AND dn.nspname = 'public'
-              AND dt.typname LIKE 'eql_v2\_%'
               AND bt.typname = 'jsonb'
+              AND (
+                   dn.nspname = 'eql_v3'
+                OR (dn.nspname = 'public' AND dt.typname LIKE 'eql_v2\_%')
+              )
           )
           AND (l.lanname <> 'plpgsql' OR p.proisstrict)
         ORDER BY signature
@@ -187,10 +196,10 @@ async fn encrypted_domain_blockers_are_plpgsql_and_non_strict(pool: PgPool) -> R
     Ok(())
 }
 
-/// No `eql_v2_*` domain may be derived from another `eql_v2_*` domain —
-/// operators resolve against the ultimate base type, so a derived domain
-/// inherits jsonb's operator surface and not the base domain's blockers.
-/// All family domains must be defined directly over jsonb.
+/// No encrypted-domain family domain may be derived from another family
+/// domain — operators resolve against the ultimate base type, so a derived
+/// domain inherits jsonb's operator surface and not the base domain's
+/// blockers. All family domains must be defined directly over jsonb.
 #[sqlx::test]
 async fn no_eql_v2_domain_is_derived_from_another_eql_v2_domain(pool: PgPool) -> Result<()> {
     let offenders: Vec<(String, String)> = sqlx::query_as(
@@ -202,10 +211,15 @@ async fn no_eql_v2_domain_is_derived_from_another_eql_v2_domain(pool: PgPool) ->
         JOIN pg_catalog.pg_type bt ON bt.oid = dt.typbasetype
         JOIN pg_catalog.pg_namespace bn ON bn.oid = bt.typnamespace
         WHERE dt.typtype = 'd'
-          AND dn.nspname = 'public'
-          AND dt.typname LIKE 'eql_v2\_%'
+          AND (
+               dn.nspname = 'eql_v3'
+            OR (dn.nspname = 'public' AND dt.typname LIKE 'eql_v2\_%')
+          )
           AND bt.typtype = 'd'
-          AND bt.typname LIKE 'eql_v2\_%'
+          AND (
+               bn.nspname = 'eql_v3'
+            OR (bn.nspname = 'public' AND bt.typname LIKE 'eql_v2\_%')
+          )
         ORDER BY derived
         "#,
     )
@@ -214,16 +228,16 @@ async fn no_eql_v2_domain_is_derived_from_another_eql_v2_domain(pool: PgPool) ->
 
     assert!(
         offenders.is_empty(),
-        "eql_v2_* domains must be defined directly over jsonb, not derived \
-         from another eql_v2_* domain. Offenders (derived, base): {offenders:#?}"
+        "encrypted-domain family domains must be defined directly over jsonb, \
+         not derived from another family domain. Offenders (derived, base): {offenders:#?}"
     );
     Ok(())
 }
 
-/// No operator class may be declared `FOR TYPE` on an `eql_v2_*` domain.
-/// Opclasses on domains bypass the operator-resolution that storage
-/// blockers depend on. The recommended index pattern is a functional
-/// index on the extractor (e.g. `eql_v2.eq_term(col)`).
+/// No operator class may be declared `FOR TYPE` on an encrypted-domain
+/// family domain. Opclasses on domains bypass the operator-resolution that
+/// storage blockers depend on. The recommended index pattern is a functional
+/// index on the extractor (e.g. `eql_v3.eq_term(col)`).
 #[sqlx::test]
 async fn no_opclass_targets_eql_v2_domain(pool: PgPool) -> Result<()> {
     let offenders: Vec<(String, String)> = sqlx::query_as(
@@ -235,8 +249,10 @@ async fn no_opclass_targets_eql_v2_domain(pool: PgPool) -> Result<()> {
         JOIN pg_catalog.pg_namespace tn ON tn.oid = t.typnamespace
         JOIN pg_catalog.pg_namespace cn ON cn.oid = oc.opcnamespace
         WHERE t.typtype = 'd'
-          AND tn.nspname = 'public'
-          AND t.typname LIKE 'eql_v2\_%'
+          AND (
+               tn.nspname = 'eql_v3'
+            OR (tn.nspname = 'public' AND t.typname LIKE 'eql_v2\_%')
+          )
         ORDER BY opclass
         "#,
     )
@@ -245,8 +261,8 @@ async fn no_opclass_targets_eql_v2_domain(pool: PgPool) -> Result<()> {
 
     assert!(
         offenders.is_empty(),
-        "no operator class may target an eql_v2_* domain — use a functional \
-         index on the extractor instead. Offenders (opclass, for_type): {offenders:#?}"
+        "no operator class may target an encrypted-domain family domain — use a \
+         functional index on the extractor instead. Offenders (opclass, for_type): {offenders:#?}"
     );
     Ok(())
 }

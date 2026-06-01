@@ -8,8 +8,9 @@ the fixed term catalog in `tasks/codegen/terms.py`.
 
 ## 1. Model
 
-Each generated public domain is a concrete `jsonb` domain named
-`public.eql_v2_<domain>`. The manifest is intentionally small:
+Each generated domain is a concrete `jsonb` domain in the `eql_v3`
+schema named `eql_v3.<domain>` (dropped by `DROP SCHEMA eql_v3 CASCADE`;
+survives an `eql_v2` uninstall). The manifest is intentionally small:
 
 ```toml
 [domain]
@@ -110,10 +111,10 @@ with `v` pinned to `2`. Beyond key presence and the version value, a malformed
 term can still fail later inside its extractor unless a future catalog design
 adds stronger validation.
 
-Every generated domain is a concrete domain over `jsonb`. Do not define
-one generated domain over another generated domain; PostgreSQL resolves
-operators against the underlying base type in ways that bypass the fixed
-operator surface.
+Every generated domain is a concrete domain over `jsonb` in the `eql_v3`
+schema. Do not define one generated domain over another generated domain;
+PostgreSQL resolves operators against the underlying base type in ways
+that bypass the fixed operator surface.
 
 ## 4. Extractors And Wrappers
 
@@ -179,7 +180,7 @@ minimal metadata because they should never be planner-visible supported
 paths.
 
 PostgreSQL's operator resolver still prefers the built-in `jsonb` operator
-for untyped string literals in forms such as `payload::eql_v2_int4 ? 'c'`.
+for untyped string literals in forms such as `payload::eql_v3.int4 ? 'c'`.
 Use typed parameters or explicit casts (`'c'::text`) to route those forms
 to the generated blocker. The generated surface blocks the typed native
 operator shapes exposed by the catalog.
@@ -189,8 +190,8 @@ operator shapes exposed by the catalog.
 Each ordered (ord-capable) domain additionally gets a generated
 `<domain>_aggregates.sql` file declaring `MIN` / `MAX`:
 
-- two state functions, `eql_v2.min_sfunc` and `eql_v2.max_sfunc`, and
-- two aggregates, `eql_v2.min(<domain>)` and `eql_v2.max(<domain>)`.
+- two state functions, `eql_v3.min_sfunc` and `eql_v3.max_sfunc`, and
+- two aggregates, `eql_v3.min(<domain>)` and `eql_v3.max(<domain>)`.
 
 Comparison routes through the domain's `<` / `>` operator (the ORE block
 term — no decryption). The state functions are `LANGUAGE plpgsql
@@ -224,12 +225,12 @@ generated siblings, `<T>_extensions.sql` IS committed.
 
 ## 7. Indexing
 
-Do not create operator classes on generated public domains. Index through
+Do not create operator classes on generated domains. Index through
 the extractor:
 
 ```sql
-CREATE INDEX ... ON table_name USING btree (eql_v2.ord_term(col));
-CREATE INDEX ... ON table_name USING hash (eql_v2.eq_term(col));
+CREATE INDEX ... ON table_name USING btree (eql_v3.ord_term(col));
+CREATE INDEX ... ON table_name USING hash (eql_v3.eq_term(col));
 ```
 
 The extractor return type must already have the needed PostgreSQL access

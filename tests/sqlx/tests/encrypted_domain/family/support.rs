@@ -13,29 +13,29 @@ use sqlx::PgPool;
 #[test]
 fn variant_derives_consistent_sql_domain_and_capabilities() {
     let storage = ScalarDomainSpec::new::<i32>(Variant::Storage);
-    assert_eq!(storage.sql_domain, "eql_v2_int4");
+    assert_eq!(storage.sql_domain, "eql_v3.int4");
     assert!(!storage.supports_eq());
     assert!(!storage.supports_ord());
     assert_eq!(storage.extractor_fn(), None);
     assert_eq!(Variant::Storage.required_term(), None);
 
     let eq = ScalarDomainSpec::new::<i32>(Variant::Eq);
-    assert_eq!(eq.sql_domain, "eql_v2_int4_eq");
+    assert_eq!(eq.sql_domain, "eql_v3.int4_eq");
     assert!(eq.supports_eq());
     assert!(!eq.supports_ord());
-    assert_eq!(eq.extractor_fn(), Some("eql_v2.eq_term"));
+    assert_eq!(eq.extractor_fn(), Some("eql_v3.eq_term"));
     assert_eq!(Variant::Eq.required_term(), Some("hm"));
 
     let ord = ScalarDomainSpec::new::<i32>(Variant::Ord);
-    assert_eq!(ord.sql_domain, "eql_v2_int4_ord");
+    assert_eq!(ord.sql_domain, "eql_v3.int4_ord");
     assert!(ord.supports_ord());
-    assert_eq!(ord.extractor_fn(), Some("eql_v2.ord_term"));
+    assert_eq!(ord.extractor_fn(), Some("eql_v3.ord_term"));
     assert_eq!(Variant::Ord.required_term(), Some("ob"));
 
     let ord_ore = ScalarDomainSpec::new::<i32>(Variant::OrdOre);
-    assert_eq!(ord_ore.sql_domain, "eql_v2_int4_ord_ore");
+    assert_eq!(ord_ore.sql_domain, "eql_v3.int4_ord_ore");
     assert!(ord_ore.supports_ord());
-    assert_eq!(ord_ore.extractor_fn(), Some("eql_v2.ord_term"));
+    assert_eq!(ord_ore.extractor_fn(), Some("eql_v3.ord_term"));
 }
 
 #[test]
@@ -103,8 +103,8 @@ async fn fetch_fixture_payload_returns_keyed_row(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_int4")))]
 async fn assert_scalar_plaintexts_reports_sql_context(pool: PgPool) -> Result<()> {
     let lit = sql_string_literal(&fetch_fixture_payload::<i32>(&pool, 42).await?);
-    let predicate = format!("payload::eql_v2_int4_ord_ore = {lit}::jsonb::eql_v2_int4_ord_ore");
-    assert_scalar_plaintexts::<i32>(&pool, "eql_v2_int4_ord_ore", "=", &predicate, &[42]).await?;
+    let predicate = format!("payload::eql_v3.int4_ord_ore = {lit}::jsonb::eql_v3.int4_ord_ore");
+    assert_scalar_plaintexts::<i32>(&pool, "eql_v3.int4_ord_ore", "=", &predicate, &[42]).await?;
     Ok(())
 }
 
@@ -134,10 +134,10 @@ async fn placeholder_payload_satisfies_every_variant_check(pool: PgPool) -> Resu
 
 #[sqlx::test]
 async fn assert_raises_two_bind_blocker(pool: PgPool) -> Result<()> {
-    let msg = blocker_msg("eql_v2_int4", "=");
+    let msg = blocker_msg("eql_v3.int4", "=");
     assert_raises(
         &pool,
-        "SELECT $1::jsonb::eql_v2_int4 = $2::jsonb::eql_v2_int4",
+        "SELECT $1::jsonb::eql_v3.int4 = $2::jsonb::eql_v3.int4",
         &[Some(PLACEHOLDER_PAYLOAD), Some(PLACEHOLDER_PAYLOAD)],
         &msg,
     )
@@ -146,10 +146,10 @@ async fn assert_raises_two_bind_blocker(pool: PgPool) -> Result<()> {
 
 #[sqlx::test]
 async fn assert_raises_one_bind_path_blocker(pool: PgPool) -> Result<()> {
-    let msg = blocker_msg("eql_v2_int4", "->");
+    let msg = blocker_msg("eql_v3.int4", "->");
     assert_raises(
         &pool,
-        "SELECT $1::jsonb::eql_v2_int4 -> 'field'::text",
+        "SELECT $1::jsonb::eql_v3.int4 -> 'field'::text",
         &[Some(PLACEHOLDER_PAYLOAD)],
         &msg,
     )
@@ -162,7 +162,7 @@ async fn assert_raises_native_operator_absent(pool: PgPool) -> Result<()> {
     // "operator does not exist", not an EQL blocker message.
     assert_raises(
         &pool,
-        "SELECT $1::jsonb::eql_v2_int4 ~~ $2::jsonb::eql_v2_int4",
+        "SELECT $1::jsonb::eql_v3.int4 ~~ $2::jsonb::eql_v3.int4",
         &[Some(PLACEHOLDER_PAYLOAD), Some(PLACEHOLDER_PAYLOAD)],
         "operator does not exist",
     )
@@ -173,79 +173,79 @@ async fn assert_raises_native_operator_absent(pool: PgPool) -> Result<()> {
 async fn omitted_native_jsonb_operators_raise_eql_blockers(pool: PgPool) -> Result<()> {
     let cases: &[(&str, &[Option<&str>], &str)] = &[
         (
-            "SELECT $1::jsonb::eql_v2_int4 ? 'c'::text",
+            "SELECT $1::jsonb::eql_v3.int4 ? 'c'::text",
             &[Some(PLACEHOLDER_PAYLOAD)],
             "?",
         ),
         (
-            "SELECT $1::jsonb::eql_v2_int4 ?| ARRAY['c']",
+            "SELECT $1::jsonb::eql_v3.int4 ?| ARRAY['c']",
             &[Some(PLACEHOLDER_PAYLOAD)],
             "?|",
         ),
         (
-            "SELECT $1::jsonb::eql_v2_int4 ?& ARRAY['c']",
+            "SELECT $1::jsonb::eql_v3.int4 ?& ARRAY['c']",
             &[Some(PLACEHOLDER_PAYLOAD)],
             "?&",
         ),
         (
-            "SELECT $1::jsonb::eql_v2_int4 #> ARRAY['i']",
+            "SELECT $1::jsonb::eql_v3.int4 #> ARRAY['i']",
             &[Some(PLACEHOLDER_PAYLOAD)],
             "#>",
         ),
         (
-            "SELECT $1::jsonb::eql_v2_int4 #>> ARRAY['i', 'c']",
+            "SELECT $1::jsonb::eql_v3.int4 #>> ARRAY['i', 'c']",
             &[Some(PLACEHOLDER_PAYLOAD)],
             "#>>",
         ),
         (
-            "SELECT $1::jsonb::eql_v2_int4 @? '$.c'::jsonpath",
+            "SELECT $1::jsonb::eql_v3.int4 @? '$.c'::jsonpath",
             &[Some(PLACEHOLDER_PAYLOAD)],
             "@?",
         ),
         (
-            "SELECT $1::jsonb::eql_v2_int4 @@ '$.c == \"placeholder\"'::jsonpath",
+            "SELECT $1::jsonb::eql_v3.int4 @@ '$.c == \"placeholder\"'::jsonpath",
             &[Some(PLACEHOLDER_PAYLOAD)],
             "@@",
         ),
         (
-            "SELECT $1::jsonb::eql_v2_int4 - 'c'::text",
+            "SELECT $1::jsonb::eql_v3.int4 - 'c'::text",
             &[Some(PLACEHOLDER_PAYLOAD)],
             "-",
         ),
         (
-            "SELECT $1::jsonb::eql_v2_int4 - 0",
+            "SELECT $1::jsonb::eql_v3.int4 - 0",
             &[Some(PLACEHOLDER_PAYLOAD)],
             "-",
         ),
         (
-            "SELECT $1::jsonb::eql_v2_int4 - ARRAY['c']",
+            "SELECT $1::jsonb::eql_v3.int4 - ARRAY['c']",
             &[Some(PLACEHOLDER_PAYLOAD)],
             "-",
         ),
         (
-            "SELECT $1::jsonb::eql_v2_int4 #- ARRAY['i']",
+            "SELECT $1::jsonb::eql_v3.int4 #- ARRAY['i']",
             &[Some(PLACEHOLDER_PAYLOAD)],
             "#-",
         ),
         (
-            "SELECT $1::jsonb::eql_v2_int4 || $2::jsonb",
+            "SELECT $1::jsonb::eql_v3.int4 || $2::jsonb",
             &[Some(PLACEHOLDER_PAYLOAD), Some(PLACEHOLDER_PAYLOAD)],
             "||",
         ),
         (
-            "SELECT $1::jsonb || $2::jsonb::eql_v2_int4",
+            "SELECT $1::jsonb || $2::jsonb::eql_v3.int4",
             &[Some(PLACEHOLDER_PAYLOAD), Some(PLACEHOLDER_PAYLOAD)],
             "||",
         ),
         (
-            "SELECT $1::jsonb::eql_v2_int4 || $2::jsonb::eql_v2_int4",
+            "SELECT $1::jsonb::eql_v3.int4 || $2::jsonb::eql_v3.int4",
             &[Some(PLACEHOLDER_PAYLOAD), Some(PLACEHOLDER_PAYLOAD)],
             "||",
         ),
     ];
 
     for (sql, binds, op) in cases {
-        assert_raises(&pool, sql, binds, &blocker_msg("eql_v2_int4", op)).await?;
+        assert_raises(&pool, sql, binds, &blocker_msg("eql_v3.int4", op)).await?;
     }
     Ok(())
 }
@@ -253,10 +253,10 @@ async fn omitted_native_jsonb_operators_raise_eql_blockers(pool: PgPool) -> Resu
 #[sqlx::test]
 async fn assert_raises_engages_on_all_null(pool: PgPool) -> Result<()> {
     // Non-STRICT blocker proof — must raise even with NULL on both sides.
-    let msg = blocker_msg("eql_v2_int4", "=");
+    let msg = blocker_msg("eql_v3.int4", "=");
     assert_raises(
         &pool,
-        "SELECT $1::jsonb::eql_v2_int4 = $2::jsonb::eql_v2_int4",
+        "SELECT $1::jsonb::eql_v3.int4 = $2::jsonb::eql_v3.int4",
         &[None, None],
         &msg,
     )
@@ -268,7 +268,7 @@ async fn assert_null_propagates_through_supported_op(pool: PgPool) -> Result<()>
     // STRICT supported op with one NULL operand yields NULL.
     assert_null(
         &pool,
-        "SELECT $1::jsonb::eql_v2_int4_eq = $2::jsonb::eql_v2_int4_eq",
+        "SELECT $1::jsonb::eql_v3.int4_eq = $2::jsonb::eql_v3.int4_eq",
         &[Some(PLACEHOLDER_PAYLOAD), None],
     )
     .await
@@ -286,7 +286,7 @@ async fn neq_propagates_null_under_three_valued_logic(pool: PgPool) -> Result<()
     ] {
         assert_null(
             &pool,
-            "SELECT $1::jsonb::eql_v2_int4_eq <> $2::jsonb::eql_v2_int4_eq",
+            "SELECT $1::jsonb::eql_v3.int4_eq <> $2::jsonb::eql_v3.int4_eq",
             binds,
         )
         .await?;
@@ -297,7 +297,7 @@ async fn neq_propagates_null_under_three_valued_logic(pool: PgPool) -> Result<()
 #[sqlx::test]
 async fn no_cross_variant_equality_operator_is_declared(pool: PgPool) -> Result<()> {
     // The family deliberately does NOT define operators that mix two
-    // different capability variants — `eql_v2_int4_eq = eql_v2_int4_ord`
+    // different capability variants — `eql_v3.int4_eq = eql_v3.int4_ord`
     // would resolve against jsonb (the ultimate base type) and silently
     // bypass the per-variant blockers. If someone accidentally adds such
     // an operator, this test fails.
@@ -311,9 +311,11 @@ async fn no_cross_variant_equality_operator_is_declared(pool: PgPool) -> Result<
                       o.oprname, lt.typname, rt.typname)
         FROM pg_catalog.pg_operator o
         JOIN pg_catalog.pg_type lt ON lt.oid = o.oprleft
+        JOIN pg_catalog.pg_namespace ln ON ln.oid = lt.typnamespace
         JOIN pg_catalog.pg_type rt ON rt.oid = o.oprright
-        WHERE lt.typname LIKE 'eql_v2\_%'
-          AND rt.typname LIKE 'eql_v2\_%'
+        JOIN pg_catalog.pg_namespace rn ON rn.oid = rt.typnamespace
+        WHERE ln.nspname = 'eql_v3'
+          AND rn.nspname = 'eql_v3'
           AND lt.typname <> rt.typname
         ORDER BY 1
         "#,
@@ -323,7 +325,7 @@ async fn no_cross_variant_equality_operator_is_declared(pool: PgPool) -> Result<
 
     assert!(
         cross_variant.is_empty(),
-        "no operator should mix two different eql_v2_* domain types, but found: {cross_variant:#?}"
+        "no operator should mix two different eql_v3 domain types, but found: {cross_variant:#?}"
     );
     Ok(())
 }

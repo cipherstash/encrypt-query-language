@@ -1,4 +1,5 @@
 -- REQUIRE: src/schema.sql
+-- REQUIRE: src/schema-v3.sql
 
 --! @brief EQL lint: detect non-inlinable operator implementation functions
 --!
@@ -92,7 +93,8 @@ AS $$
         SELECT 1 FROM pg_type t
          WHERE t.oid IN (op.oprleft, op.oprright)
            AND (t.typname LIKE 'eql_v2%'
-             OR t.typnamespace = 'eql_v2'::regnamespace)
+             OR t.typnamespace = 'eql_v2'::regnamespace
+             OR t.typnamespace = 'eql_v3'::regnamespace)
       )
   ),
 
@@ -132,7 +134,7 @@ AS $$
     FROM pg_catalog.pg_proc p
     JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
     JOIN pg_catalog.pg_language lang_l ON lang_l.oid = p.prolang
-    WHERE n.nspname = 'eql_v2'
+    WHERE n.nspname IN ('eql_v2', 'eql_v3')
       AND (p.prosrc LIKE '%encrypted_domain_unsupported_bool%'
         OR p.prosrc LIKE '%is not supported for%')
       AND EXISTS (
@@ -142,9 +144,11 @@ AS $$
         JOIN pg_catalog.pg_namespace dn ON dn.oid = dt.typnamespace
         JOIN pg_catalog.pg_type bt ON bt.oid = dt.typbasetype
         WHERE dt.typtype = 'd'
-          AND dn.nspname = 'public'
-          AND dt.typname LIKE 'eql_v2\_%'
           AND bt.typname = 'jsonb'
+          AND (
+            dn.nspname = 'eql_v3'
+            OR (dn.nspname = 'public' AND dt.typname LIKE 'eql_v2\_%')
+          )
       )
   )
 
@@ -320,10 +324,15 @@ AS $$
   JOIN pg_catalog.pg_type bt ON bt.oid = dt.typbasetype
   JOIN pg_catalog.pg_namespace bn ON bn.oid = bt.typnamespace
   WHERE dt.typtype = 'd'
-    AND dn.nspname = 'public'
-    AND dt.typname LIKE 'eql_v2\_%'
+    AND (
+      dn.nspname = 'eql_v3'
+      OR (dn.nspname = 'public' AND dt.typname LIKE 'eql_v2\_%')
+    )
     AND bt.typtype = 'd'
-    AND bt.typname LIKE 'eql_v2\_%'
+    AND (
+      bn.nspname = 'eql_v3'
+      OR (bn.nspname = 'public' AND bt.typname LIKE 'eql_v2\_%')
+    )
 
   -- ┌─────────────────────────────────────────────────────────────────┐
   -- │ Domain opclass: an operator class declared FOR TYPE on an       │
@@ -345,8 +354,10 @@ AS $$
   JOIN pg_catalog.pg_namespace tn ON tn.oid = t.typnamespace
   JOIN pg_catalog.pg_namespace cn ON cn.oid = oc.opcnamespace
   WHERE t.typtype = 'd'
-    AND tn.nspname = 'public'
-    AND t.typname LIKE 'eql_v2\_%'
+    AND (
+      tn.nspname = 'eql_v3'
+      OR (tn.nspname = 'public' AND t.typname LIKE 'eql_v2\_%')
+    )
 
   ORDER BY 1, 2, 3;
 $$;

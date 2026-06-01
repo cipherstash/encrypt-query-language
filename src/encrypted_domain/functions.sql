@@ -1,9 +1,9 @@
--- REQUIRE: src/schema.sql
+-- REQUIRE: src/schema-v3.sql
 
 --! @file encrypted_domain/functions.sql
---! @brief Shared blocker helper for the eql_v2_int4 domain family.
+--! @brief Shared blocker helper for the eql_v3 encrypted-domain families.
 --!
---! Per-domain wrapper functions live in src/encrypted_domain/int4/.
+--! Per-domain wrapper functions live in src/encrypted_domain/<T>/.
 --! Blockers in those files delegate to encrypted_domain_unsupported_bool
 --! so every domain raises a uniform domain-specific error rather than
 --! letting an unsupported operator fall through to native jsonb
@@ -12,10 +12,10 @@
 --! @brief Shared blocker helper. Raises 'operator X is not supported
 --!        for TYPE' so unsupported domain operators surface a clear
 --!        error rather than fall through to native jsonb behaviour.
---! @param type_name Domain type name (eql_v2_int4*)
+--! @param type_name Domain type name (eql_v3.<T>*)
 --! @param operator_name Operator symbol (=, <, @>, ->, etc.)
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v2.encrypted_domain_unsupported_bool(type_name text, operator_name text)
+CREATE FUNCTION eql_v3.encrypted_domain_unsupported_bool(type_name text, operator_name text)
 RETURNS boolean
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public

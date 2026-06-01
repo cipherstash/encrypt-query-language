@@ -10,7 +10,7 @@
 set -euo pipefail
 
 # Scope: only findings in EQL-owned schemas are gated.
-EQL_OWNED_SCHEMAS="('eql_v2')"
+EQL_OWNED_SCHEMAS="('eql_v2', 'eql_v3')"
 
 # Pinned to splinter main as of 2026-04-27. Bump intentionally.
 SPLINTER_SHA="55db5b1f28e58d816f7d9136eed87eabcd95868d"
@@ -84,12 +84,12 @@ function_search_path_mutable	eql_v2	jsonb_contained_by	function	GIN-inlining: sa
 function_search_path_mutable	eql_v2	ore_cllw	function	Consolidated ORE-CLLW extractor (U-006): inlinable SQL so the planner can fold `eql_v2.ore_cllw(col -> 'sel')` calls into the calling query. SET search_path would silently undo the inlining and prevent functional-index match through the extractor form. Two overloads: (jsonb), (eql_v2.ste_vec_entry).
 function_search_path_mutable	eql_v2	has_ore_cllw	function	Consolidated ORE-CLLW presence check (U-006): inlinable SQL counterpart to `eql_v2.ore_cllw`. Same rationale as `ore_cllw` — must stay unpinned to inline into the calling query. Two overloads: (jsonb), (eql_v2.ste_vec_entry).
 function_search_path_mutable	eql_v2	selector	function	STE-vec entry selector extractor (#219): typed (eql_v2.ste_vec_entry) overload, inlinable so the planner can fold `eql_v2.selector(col -> 'sel')` into the calling query.
-function_search_path_mutable	eql_v2	eq	function	Equality backing function for `eql_v2.ste_vec_entry × eql_v2.ste_vec_entry` (#219). Inlines to `hmac_256(a) = hmac_256(b)`; the `=` operator must reach the functional hash index on `eql_v2.hmac_256(col -> 'sel')` for bare-form field equality to engage Index Scan. Splinter matches by name only, so this row also covers the converged eql_v2.eq wrappers on eql_v2_int4_eq / _ord / _ord_ore (PR #225).
-function_search_path_mutable	eql_v2	neq	function	Inequality backing function for `eql_v2.ste_vec_entry`. Same rationale as `eq`. Also covers the converged eql_v2.neq wrappers on eql_v2_int4_eq / _ord / _ord_ore (PR #225).
-function_search_path_mutable	eql_v2	lt	function	Less-than backing function for `eql_v2.ste_vec_entry`. Inlines to `ore_cllw(a) < ore_cllw(b)`; must reach the functional btree opclass on `eql_v2.ore_cllw` for ordered field queries to engage Index Scan. Splinter matches by name only, so this row also covers the converged eql_v2.lt wrappers on eql_v2_int4_ord / _ord_ore (PR #225).
-function_search_path_mutable	eql_v2	lte	function	Less-than-or-equal backing function for `eql_v2.ste_vec_entry`. Same rationale as `lt`. Also covers the converged eql_v2.lte wrappers on eql_v2_int4_ord / _ord_ore (PR #225).
-function_search_path_mutable	eql_v2	gt	function	Greater-than backing function for `eql_v2.ste_vec_entry`. Same rationale as `lt`. Also covers the converged eql_v2.gt wrappers on eql_v2_int4_ord / _ord_ore (PR #225).
-function_search_path_mutable	eql_v2	gte	function	Greater-than-or-equal backing function for `eql_v2.ste_vec_entry`. Same rationale as `lt`. Also covers the converged eql_v2.gte wrappers on eql_v2_int4_ord / _ord_ore (PR #225).
+function_search_path_mutable	eql_v2	eq	function	Equality backing function for `eql_v2.ste_vec_entry × eql_v2.ste_vec_entry` (#219). Inlines to `hmac_256(a) = hmac_256(b)`; the `=` operator must reach the functional hash index on `eql_v2.hmac_256(col -> 'sel')` for bare-form field equality to engage Index Scan. (The converged int4 wrappers moved to the eql_v3 schema — see the eql_v3 rows below.)
+function_search_path_mutable	eql_v2	neq	function	Inequality backing function for `eql_v2.ste_vec_entry`. Same rationale as `eq`.
+function_search_path_mutable	eql_v2	lt	function	Less-than backing function for `eql_v2.ste_vec_entry`. Inlines to `ore_cllw(a) < ore_cllw(b)`; must reach the functional btree opclass on `eql_v2.ore_cllw` for ordered field queries to engage Index Scan.
+function_search_path_mutable	eql_v2	lte	function	Less-than-or-equal backing function for `eql_v2.ste_vec_entry`. Same rationale as `lt`.
+function_search_path_mutable	eql_v2	gt	function	Greater-than backing function for `eql_v2.ste_vec_entry`. Same rationale as `lt`.
+function_search_path_mutable	eql_v2	gte	function	Greater-than-or-equal backing function for `eql_v2.ste_vec_entry`. Same rationale as `lt`.
 function_search_path_mutable	eql_v2	ore_cllw_eq	function	Inner comparator for the `eql_v2.ore_cllw` type's `=` operator (#221). The outer same-type operators back the btree opclass on `eql_v2.ore_cllw`; the planner only carries the inlined form through to functional-index match if this inner function is also inlinable (no SET, IMMUTABLE). Mirrors ore_block_u64_8_256_eq.
 function_search_path_mutable	eql_v2	ore_cllw_neq	function	Inner comparator for the `eql_v2.ore_cllw` type's `<>` operator (#221). Same rationale as `ore_cllw_eq`.
 function_search_path_mutable	eql_v2	ore_cllw_lt	function	Inner comparator for the `eql_v2.ore_cllw` type's `<` operator (#221). Same rationale as `ore_cllw_eq`.
@@ -97,11 +97,26 @@ function_search_path_mutable	eql_v2	ore_cllw_lte	function	Inner comparator for t
 function_search_path_mutable	eql_v2	ore_cllw_gt	function	Inner comparator for the `eql_v2.ore_cllw` type's `>` operator (#221). Same rationale as `ore_cllw_eq`.
 function_search_path_mutable	eql_v2	ore_cllw_gte	function	Inner comparator for the `eql_v2.ore_cllw` type's `>=` operator (#221). Same rationale as `ore_cllw_eq`.
 function_search_path_mutable	eql_v2	->	function	Typed sv-element selector lookup (U-007): inlinable SQL so the planner can fold `col -> '<sel>'` into the calling query, preserving functional-index match for the chained recipes `WHERE col -> 'sel' = $1::ste_vec_entry` (via eq_term) and `ORDER BY eql_v2.ore_cllw(col -> 'sel')`. Three overloads: (enc, text), (enc, enc), (enc, int).
-function_search_path_mutable	eql_v2	eq_term	function	XOR-aware equality term extractor on a ste_vec entry (U-007): coalesces hm and oc as bytea. Must inline so `eql_v2.eq_term(col -> 'sel')` folds into the calling query and matches a functional hash index built on the same expression — same precedent as ore_cllw / hmac_256 extractors on ste_vec_entry. Also covers the eql_v2_int4_eq eq_term overload (PR #225).
+function_search_path_mutable	eql_v2	eq_term	function	XOR-aware equality term extractor on a ste_vec entry (U-007): coalesces hm and oc as bytea. Must inline so `eql_v2.eq_term(col -> 'sel')` folds into the calling query and matches a functional hash index built on the same expression — same precedent as ore_cllw / hmac_256 extractors on ste_vec_entry. (The eql_v3.int4_eq eq_term extractor is a separate overload in the eql_v3 schema — see the eql_v3 rows below.)
 function_search_path_mutable	eql_v2	min	function	Aggregate (splinter labels these type=function): ALTER AGGREGATE has no SET configuration_parameter syntax, and ALTER ROUTINE/FUNCTION reject aggregates. The aggregate's SFUNC has a pinned search_path.
 function_search_path_mutable	eql_v2	max	function	Aggregate: same as min.
 function_search_path_mutable	eql_v2	grouped_value	function	Aggregate: same as min.
-function_search_path_mutable	eql_v2	ord_term	function	eql_v2_int4 ordered-variant index extractor: returns eql_v2.ore_block_u64_8_256 (carrying main DEFAULT btree opclass). Used inside the inlinable comparison wrappers and as the functional-index expression USING btree (eql_v2.ord_term(col)); must inline. SET search_path would disable SQL function inlining (see PostgreSQL inline_function). Covers both ord_term overloads (eql_v2_int4_ord_ore, eql_v2_int4_ord).
+# Encrypted-domain families live in the eql_v3 schema (the int4 family and
+# future scalar domains). Their inlinable extractors and comparison wrappers
+# must stay unpinned for functional-index matching, exactly as the eql_v2
+# encrypted-type operators above; splinter matches by (schema, name, type), so
+# they need their own rows. The plpgsql blockers are pinned by
+# tasks/pin_search_path.sql and do not surface here.
+function_search_path_mutable	eql_v3	eq_term	function	HMAC equality term extractor for the eql_v3 *_eq domains: returns eql_v2.hmac_256. Must inline so `eql_v3.eq_term(col)` folds into the calling query and matches the functional hash/btree index built on the same expression. SET search_path would disable SQL function inlining (see PostgreSQL inline_function).
+function_search_path_mutable	eql_v3	ord_term	function	ORE-block order term extractor for the eql_v3 ordered domains: returns eql_v2.ore_block_u64_8_256 (carrying the main DEFAULT btree opclass). Used inside the inlinable comparison wrappers and as the functional-index expression USING btree (eql_v3.ord_term(col)); must inline. Covers both ord_term overloads (eql_v3.int4_ord, eql_v3.int4_ord_ore).
+function_search_path_mutable	eql_v3	eq	function	Equality comparison wrapper on the eql_v3 domains. Inlines to `eq_term(a) = eq_term(b)`; must reach the functional index on eql_v3.eq_term(col) for bare-form equality to engage Index Scan. Covers the converged eq wrappers on the eql_v3 int4 variants.
+function_search_path_mutable	eql_v3	neq	function	Inequality comparison wrapper on the eql_v3 domains. Same rationale as eql_v3.eq.
+function_search_path_mutable	eql_v3	lt	function	Less-than comparison wrapper on the eql_v3 ordered domains. Inlines to `ord_term(a) < ord_term(b)`; must reach the functional btree index on eql_v3.ord_term(col) for range queries to engage Index Scan.
+function_search_path_mutable	eql_v3	lte	function	Less-than-or-equal comparison wrapper on the eql_v3 ordered domains. Same rationale as eql_v3.lt.
+function_search_path_mutable	eql_v3	gt	function	Greater-than comparison wrapper on the eql_v3 ordered domains. Same rationale as eql_v3.lt.
+function_search_path_mutable	eql_v3	gte	function	Greater-than-or-equal comparison wrapper on the eql_v3 ordered domains. Same rationale as eql_v3.lt.
+function_search_path_mutable	eql_v3	min	function	Per-domain MIN aggregate on the eql_v3 ordered domains (splinter labels aggregates type=function): ALTER AGGREGATE has no SET configuration_parameter syntax, and ALTER ROUTINE/FUNCTION reject aggregates. The aggregate's SFUNC carries a pinned search_path.
+function_search_path_mutable	eql_v3	max	function	Per-domain MAX aggregate on the eql_v3 ordered domains. Same as eql_v3.min.
 ALLOW
 
 # Wrap splinter (a single bare SELECT expression) into a subquery we can
