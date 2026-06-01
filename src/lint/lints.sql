@@ -304,7 +304,7 @@ AS $$
   WHERE isstrict
 
   -- ┌─────────────────────────────────────────────────────────────────┐
-  -- │ Domain identity: an eql_v2_* domain must be defined directly    │
+  -- │ Domain identity: an encrypted-domain must be defined directly   │
   -- │ over jsonb. Operators resolve against the ultimate base type,   │
   -- │ so domain-over-domain inherits jsonb's operator surface and not │
   -- │ the base domain's blockers.                                     │
@@ -317,7 +317,7 @@ AS $$
     'domain_over_domain',
     format('domain %I.%I', dn.nspname, dt.typname),
     format(
-      'Domain `%s.%s` is derived from another eql_v2_* domain `%s.%s` rather than jsonb. Operators resolve against the ultimate base type, so the derived domain does not inherit the base domain''s operator surface and storage blockers do not engage. Define this domain directly over jsonb.',
+      'Domain `%s.%s` is derived from another encrypted-domain `%s.%s` rather than jsonb. Operators resolve against the ultimate base type, so the derived domain does not inherit the base domain''s operator surface and storage blockers do not engage. Define this domain directly over jsonb.',
       dn.nspname, dt.typname, bn.nspname, bt.typname)
   FROM pg_catalog.pg_type dt
   JOIN pg_catalog.pg_namespace dn ON dn.oid = dt.typnamespace
@@ -336,7 +336,7 @@ AS $$
 
   -- ┌─────────────────────────────────────────────────────────────────┐
   -- │ Domain opclass: an operator class declared FOR TYPE on an       │
-  -- │ eql_v2_* domain bypasses operator resolution at index time.     │
+  -- │ encrypted-domain bypasses operator resolution at index time.    │
   -- │ Use a functional index on the extractor instead.                │
   -- └─────────────────────────────────────────────────────────────────┘
 
@@ -347,8 +347,8 @@ AS $$
     'domain_opclass',
     format('opclass %I.%I FOR TYPE %s.%s', cn.nspname, oc.opcname, tn.nspname, t.typname),
     format(
-      'Operator class `%s.%s` is declared FOR TYPE `%s.%s`, which is an eql_v2_* domain. Opclasses on domains bypass operator resolution. Use a functional index on the extractor (e.g. `eql_v2.eq_term(col)`, `eql_v2.ord_term(col)`) instead.',
-      cn.nspname, oc.opcname, tn.nspname, t.typname)
+      'Operator class `%s.%s` is declared FOR TYPE `%s.%s`, which is an encrypted-domain type. Opclasses on domains bypass operator resolution. Use a functional index on the extractor (e.g. `%s.eq_term(col)`, `%s.ord_term(col)`) instead.',
+      cn.nspname, oc.opcname, tn.nspname, t.typname, tn.nspname, tn.nspname)
   FROM pg_catalog.pg_opclass oc
   JOIN pg_catalog.pg_type t ON t.oid = oc.opcintype
   JOIN pg_catalog.pg_namespace tn ON tn.oid = t.typnamespace
