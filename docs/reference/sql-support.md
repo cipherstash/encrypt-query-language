@@ -59,6 +59,25 @@ Use the equivalent [`jsonb_path_query`](#jsonb-functions-and-selectors-enabled-b
 
 ---
 
+## Encrypted-domain scalar types (`eql_v2_<T>`)
+
+Scalar encrypted-domain types (e.g. `eql_v2_int4`; see the [generator reference](./encrypted-domain-generator.md)) are a different access model from the matrix above. Instead of configuring a search index on an `eql_v2_encrypted` column, you type the column as a specific domain *variant* whose operator surface is fixed at generation time. The index terms travel in the payload; there is no `add_search_config` step.
+
+Each scalar type `<T>` generates one storage-only variant plus eq/ord query variants:
+
+| Domain variant                 | Term carried        | `=` `<>` | `<` `<=` `>` `>=` | `MIN` / `MAX` | `LIKE`/`ILIKE`, JSONB / ste_vec ops |
+| ------------------------------- | ------------------- | :------: | :---------------: | :-----------: | :---------------------------------: |
+| `eql_v2_<T>`                    | none (storage only) |    ❌    |        ❌         |      ❌       |                 ❌                  |
+| `eql_v2_<T>_eq`                 | `hm` (hmac_256)     |    ✅    |        ❌         |      ❌       |                 ❌                  |
+| `eql_v2_<T>_ord` / `_ord_ore`   | `ob` (ore_block)    |    ✅    |        ✅         |      ✅       |                 ❌                  |
+
+- The bare `eql_v2_<T>` variant carries no index term and **blocks every comparison operator** — it is storage / decryption only. Type the column as `_eq` or `_ord` (or cast at the call site) when you need to query.
+- Unsupported operators are not silent no-ops: they route to blocker functions that `RAISE` an "operator not supported" exception (a `NULL` operand still raises — the blockers are deliberately not `STRICT`).
+- `LIKE` / `ILIKE` and the native JSONB operators (`@>`, `<@`, `->`, `->>`, `?`, `?|`, `?&`, `@?`, `@@`, `#>`, `#>>`, `-`, `#-`, `||`) are blocked on **every** scalar domain variant — they are meaningless on a scalar payload.
+- `MIN` / `MAX` are exposed only on the ordered variants as `eql_v2.min(eql_v2_<T>_ord)` / `eql_v2.max(...)` — see [EQL Functions Reference](./eql-functions.md#eql_v2min--eql_v2max-per-domain).
+
+---
+
 ## SQL syntax / feature support
 
 This matrix covers higher-level SQL constructs rather than individual operators. As above, ✅ requires the listed index to be configured on the column; ❌ means the construct cannot be used against that column (without first decrypting via CipherStash Proxy or Protect.js).
@@ -76,7 +95,7 @@ This matrix covers higher-level SQL constructs rather than individual operators.
 | `GROUP BY col`                     | requires `unique` on the whole column; `ore` / `ope` not yet supported (see note below). Extracted JSON paths have separate caveats — see [ste_vec section](#index-terms-by-json-node-type). |    ✅    |  ❌   |  ❌   |   ❌    |    ❌     |
 | `DISTINCT` / `DISTINCT ON (col)`   | `unique`, `ore`, or `ope`                                  |    ✅    |  ✅   |  ✅   |   ❌    |    ❌     |
 | `HAVING`                           | same index requirements as the predicates used in `HAVING` (see operator matrix) | varies | varies | varies | varies | varies |
-| `MIN(col)` / `MAX(col)`            |                                  |    ❌    |  ✅   |  ✅   |   ❌    |    ❌     |
+| `MIN(col)` / `MAX(col)`            | `eql_v2.min(eql_v2_encrypted)` / `max` work on any `eql_v2_encrypted` column with `ore` terms. The encrypted-domain family additionally exposes type-safe `eql_v2.min(eql_v2_<T>_ord)` / `max` (and the `_ord_ore` twin); `Storage` and `Eq` variants have no comparator and do not declare these aggregates. |    ❌    |  ✅   |  ✅   |   ❌    |    ❌     |
 | `COUNT(col)` / `COUNT(DISTINCT col)` | `ore` / `ope` or `unique` for `DISTINCT`; none for plain `COUNT(col)` |    ✅    |  ✅   |  ✅   |   ✅    |    ✅     |
 | `JOIN … ON lhs.col = rhs.col`      | same index and keyset on both sides      |    ✅    |  ✅   |  ✅   |   ❌    |    ❌     |
 | `JOIN … ON lhs.col < rhs.col` etc. | same index and keyset on both sides     |    ❌    |  ✅   |  ✅   |   ❌    |    ❌     |
@@ -89,7 +108,8 @@ Notes:
 - **Cross-column / cross-table comparisons** (joins, `IN (subquery)`, `UNION` dedup, etc.) require both sides to have been encrypted with the *same* keyset and the matching search index. Encrypted values from different `ste_vec` prefixes are deliberately incomparable.
 - **`GROUP BY`** on encrypted columns relies on an operator class which currently only supports encrypted values with a `unique` index term. This is a surprising limitation because it would be natural to expect `ore` / `ope` index terms to also work. This limitation will be lifted in the future. See [Database Indexes](./database-indexes.md#group-by) for performance considerations.
 - **`ORDER BY`** without an `ore` or `ope` index will still *run* (the EQL `compare` function has a deterministic literal fallback to avoid btree errors), but the resulting order is not meaningful. Configure `ore` (or `ope`) whenever ordering matters.
-- **Aggregates beyond `MIN`/`MAX`** (e.g. `SUM`, `AVG`) are not supported on encrypted values — decrypt and perform those aggregate operations on the client-side instead.
+- **`MIN(col)` / `MAX(col)`** is available two ways. The composite-type aggregates `eql_v2.min(eql_v2_encrypted)` / `eql_v2.max(eql_v2_encrypted)` work on any `eql_v2_encrypted` column carrying `ore` terms. The encrypted-domain family additionally exposes type-safe per-variant aggregates — see `eql_v2.min(eql_v2_<T>_ord)` / `eql_v2.max(eql_v2_<T>_ord)` (and the `_ord_ore` twin) in [EQL Functions Reference](./eql-functions.md#eql_v2min--eql_v2max-per-domain). For a domain-typed column, type it as the appropriate `_ord` variant or cast at the call site (`eql_v2.min(col::eql_v2_int4_ord)`).
+- **Aggregates beyond `MIN`/`MAX`** (e.g. `SUM`, `AVG`) are not supported on encrypted values — they would require homomorphic encryption. Decrypt at the application boundary and perform those aggregates client-side.
 - **Parameter binding**: CipherStash Proxy rewrites bound parameters in `WHERE`, `JOIN`, and `RETURNING` clauses with `::JSONB::eql_v2_encrypted` casts so that the encrypted operator and any B-tree / GIN indexes are selected. Writing those casts yourself is only required when bypassing the proxy.
 
 ---

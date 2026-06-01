@@ -1,13 +1,33 @@
 #!/usr/bin/env bash
 #MISE description="Build SQL into single release file"
 #MISE alias="b"
-#MISE sources=["src/**/*.sql", "tasks/pin_search_path.sql", "tasks/uninstall.sql", "tasks/uninstall-protect.sql"]
+#MISE sources=["src/**/*.sql", "tasks/pin_search_path.sql", "tasks/uninstall.sql", "tasks/uninstall-protect.sql", "tasks/codegen/types/*.toml", "tasks/codegen/*.py"]
 #MISE outputs=["release/cipherstash-encrypt.sql","release/cipherstash-encrypt-uninstall.sql","release/cipherstash-encrypt-protect.sql","release/cipherstash-encrypt-protect-uninstall.sql"]
 #USAGE flag "--version <version>" help="Specify release version of EQL" default="DEV"
 
 #!/bin/bash
 
 set -euo pipefail
+
+# Regenerate encrypted-domain SQL from TOML specs before building.
+# Generated files (src/encrypted_domain/<T>/<T>_*.sql) are gitignored; the
+# manifest at tasks/codegen/types/<T>.toml is the source of truth.
+#
+# Nuke every generated file first so a deleted or renamed manifest can't
+# leave orphans in src/ that the `src/**/*.sql` build glob would silently
+# pick up. writer.py cleans within a directory it's regenerating, but it
+# never runs for a type whose manifest no longer exists. Hand-written
+# *_extensions.sql is preserved by the name patterns; -mindepth 2 keeps
+# the type-agnostic src/encrypted_domain/functions.sql safe.
+find src/encrypted_domain -mindepth 2 -type f \
+  \( -name '*_types.sql' -o -name '*_functions.sql' -o -name '*_operators.sql' \
+     -o -name '*_aggregates.sql' \) \
+  -delete 2>/dev/null || true
+
+# Regenerate every type — single source of truth for the enumeration lives in
+# tasks/codegen/generate.py (sorted, deterministic, aggregate exit code). The
+# orphan sweep above still handles the manifest-deleted case --all cannot.
+mise exec python -- python -m tasks.codegen.generate --all
 
 # Fail loudly if any file referenced in a tsorted dep list doesn't exist.
 # Without this, `xargs cat` would print `cat: foo.sql: No such file or directory`

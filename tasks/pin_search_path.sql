@@ -215,13 +215,16 @@ BEGIN
              OR p.proargtypes[1] = (SELECT t.oid FROM pg_catalog.pg_type t
                                      JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
                                      WHERE n.nspname = 'pg_catalog' AND t.typname = 'int4')))
-      -- XOR-aware equality term extractor on a ste_vec entry. Must
-      -- inline so `eql_v2.eq_term(col -> 'sel')` folds into the
-      -- calling query and matches a functional hash index built on
-      -- the same expression.
-      OR (p.pronargs = 1
-        AND p.proname = 'eq_term'
-        AND p.proargtypes[0] = entry_oid)
+      -- Equality-term and order-term extractors — `eq_term` / `ord_term`
+      -- on a ste_vec entry and on the encrypted-domain family. Must
+      -- inline so `eql_v2.eq_term(col)` / `eql_v2.ord_term(col)` fold
+      -- into the calling query and match a functional index built on the
+      -- same expression. Name-only match (any arity-1 overload). The
+      -- encrypted-domain overloads are also covered by the identity
+      -- predicate's structural skip in the pin loop; these name-only
+      -- clauses are kept as belt-and-suspenders.
+      OR (p.pronargs = 1 AND p.proname = 'eq_term')
+      OR (p.pronargs = 1 AND p.proname = 'ord_term')
       -- Type-safe `@>` / `<@` overloads with typed needles
       -- (`stevec_query`, `ste_vec_entry`). Inline to the existing
       -- `ste_vec_contains` machinery — must stay unpinned to engage
@@ -259,6 +262,44 @@ BEGIN
         WHERE c LIKE 'search_path=%'
       )
       AND NOT (p.oid = ANY (coalesce(inline_critical_oids, '{}'::oid[])))
+      -- Encrypted-domain family — structural skip (hybrid primary mechanism).
+      -- A new encrypted-domain type needs NO edit here: its inline-critical
+      -- extractors and comparison wrappers are recognised by the identity
+      -- predicate — LANGUAGE sql, IMMUTABLE, and taking at least one argument
+      -- typed as a jsonb-backed DOMAIN in `public` named `eql_v2_*`. The
+      -- predicate is proconfig-independent: the outer loop has already
+      -- excluded any function with a pinned `search_path`, so the only
+      -- functions reaching here are unpinned. This catches no core function:
+      -- `eql_v2_encrypted` is a composite type (not a domain), `ste_vec_entry`
+      -- is a domain in `eql_v2` (not `public`), and `hmac_256` is a domain
+      -- over `text` (not `jsonb`).
+      AND NOT (
+        p.prolang = (SELECT l.oid FROM pg_catalog.pg_language l
+                     WHERE l.lanname = 'sql')
+        AND p.provolatile = 'i'
+        AND EXISTS (
+          SELECT 1
+          FROM pg_catalog.unnest(p.proargtypes::oid[]) AS arg(typ)
+          JOIN pg_catalog.pg_type dt ON dt.oid = arg.typ
+          JOIN pg_catalog.pg_namespace dn ON dn.oid = dt.typnamespace
+          WHERE dt.typtype = 'd'
+            AND dn.nspname = 'public'
+            AND dt.typname LIKE 'eql_v2\_%'
+            AND dt.typbasetype = jsonb_oid
+        )
+      )
+      -- Encrypted-domain family — comment-marker fallback. Covers a
+      -- hand-written extension function that is inline-critical but takes no
+      -- domain argument (invisible to the identity predicate). The generator
+      -- does NOT emit this marker — every function it produces takes a domain
+      -- argument and is covered by the structural skip above. The marker is a
+      -- manual opt-in for hand-written extension functions only.
+      AND NOT EXISTS (
+        SELECT 1 FROM pg_catalog.pg_description d
+        WHERE d.objoid = p.oid
+          AND d.classoid = 'pg_catalog.pg_proc'::regclass
+          AND d.description LIKE 'eql-inline-critical%'
+      )
   LOOP
     -- oid::regprocedure renders as `schema.name(argtype, argtype)` and is a
     -- valid target for ALTER FUNCTION regardless of caller search_path.

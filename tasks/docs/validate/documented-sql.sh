@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Validates SQL syntax for all documented files"
+# Build first so generated encrypted-domain SQL exists under src/.
+#MISE depends=["build"]
 
 set -e
 

@@ -61,6 +61,7 @@ This is the **Encrypt Query Language (EQL)** - a PostgreSQL extension for search
 - `src/operators/` - SQL operators for encrypted data comparisons
 - `src/config/` - Configuration management functions
 - `src/blake3/`, `src/hmac_256/`, `src/bloom_filter/`, `src/ore_*` - Index implementations
+- `src/encrypted_domain/` - Encrypted-domain type families (jsonb-backed PostgreSQL domains, one per operator/index capability)
 - `tasks/` - mise task scripts
 - `tests/sqlx/` - Rust/SQLx test framework (PostgreSQL 14-17 support)
 - `release/` - Generated SQL installation files
@@ -71,6 +72,25 @@ This is the **Encrypt Query Language (EQL)** - a PostgreSQL extension for search
 - **Index Terms**: Transient types for search operations (blake3, hmac_256, etc.)
 - **Operators**: Support comparisons between encrypted and plain JSONB data
 - **CipherStash Proxy**: Required for encryption/decryption operations
+
+### Encrypted-Domain Types
+
+`src/encrypted_domain/` holds **encrypted-domain type families** — jsonb-backed PostgreSQL domains, one domain per operator/index capability (`eql_v2_<T>` storage-only, `eql_v2_<T>_eq`, `eql_v2_<T>_ord`). `eql_v2_int4` (PR #225) is the reference scalar implementation; future scalar types such as `int8`, `bool`, `date`, `float`, `numeric`, and `timestamp` follow this materializer pattern. `jsonb` needs a separate design and is out of scope for the scalar materializer.
+
+Adding a scalar encrypted-domain type is generated from a minimal manifest at `tasks/codegen/types/<T>.toml`: the filename supplies `<T>`, and the `[domain]` table maps each generated domain name to the fixed index terms it carries. Example: `int4_eq = ["hm"]`, `int4_ord = ["ore"]`. Term capabilities are fixed in `tasks/codegen/terms.py`: `hm` provides equality, and `ore` provides equality plus ordering. `mise run build` regenerates the scalar SQL surface into `src/encrypted_domain/<T>/` from every manifest at the start of every build; that surface includes supported comparison wrappers plus blockers for native `jsonb` operators that would otherwise be reachable through domain fallback. Use `mise run codegen:domain <T>` to refresh a single type manually while iterating on its manifest, or `mise run codegen:domain:all` to regenerate every type at once (the same enumeration `mise run build` uses). The generated `*_types.sql` / `*_functions.sql` / `*_operators.sql` files are gitignored and never committed — the TOML manifest plus `tasks/codegen/terms.py` are the source of truth. Generated files carry an `AUTO-GENERATED — DO NOT EDIT` header; change the manifest or term catalog and rebuild, never hand-edit. Hand-written SQL beyond the fixed surface goes in `src/encrypted_domain/<T>/<T>_extensions.sql` with no auto-generated header and explicit `-- REQUIRE:` edges — that file IS committed. `text` and `jsonb` are out of scope for this scalar materializer.
+
+**Adding a new encrypted-domain type: follow `docs/reference/encrypted-domain-implementation-spec.md`.** The mechanics are fixed for ordered scalar domains; the manifest only declares domain names and terms. New term behavior belongs in `tasks/codegen/terms.py` with tests, not in free-form TOML fields.
+
+Regeneration is deterministic: identical manifest + term catalog produce byte-identical SQL. If `mise run build` produces unexpected output, the change is in the manifest, `tasks/codegen/terms.py`, or `tasks/codegen/templates.py` — not in random run-to-run variation.
+
+Footguns the spec exists to prevent:
+
+- **Blockers must never be `STRICT`.** A `STRICT` blocker lets PostgreSQL skip the body and return `NULL` on a `NULL` argument, silently bypassing the "operator not supported" exception.
+- **No domain-over-domain** (`CREATE DOMAIN a AS b`). Operators resolve against the ultimate base type (`jsonb`), so a derived domain does not inherit the base domain's operator surface — blockers stop engaging.
+- **No operator class on a domain.** Index through a functional index on the extractor (`eq_term` / `ord_term`), whose return type already carries a default opclass.
+- **Inlinable functions** (extractors, comparison wrappers) need `LANGUAGE sql`, a single-statement `SELECT`, `IMMUTABLE`, and **no `SET` clause** — a pinned `search_path` disables inlining. No per-type allowlist edit: the `pin_search_path.sql` structural rule recognises encrypted-domain functions intrinsically and `tasks/test/splinter.sh` covers the converged extractor/wrapper names.
+- **Blockers must be `LANGUAGE plpgsql`, not `LANGUAGE sql`.** The inverse of the rule above. A blocker exists to always raise, but a `LANGUAGE sql` body is inlinable and the planner can elide the call when the result is provably unused (dead `CASE` branch, folded predicate). `LANGUAGE plpgsql` is opaque to the planner, so the call — and its `RAISE` — survives. The generator in `tasks/codegen/templates.py` enforces this; don't "simplify" the rendered blockers to `LANGUAGE sql` even though the body is a single expression.
+- **Build with `mise run clean && mise run build`** — a bare build can leave stale `release/*.sql`.
 
 ### Testing Infrastructure
 - Tests are written in Rust using SQLx, located in `tests/sqlx/`
@@ -199,6 +219,7 @@ Prefer `LANGUAGE SQL` over `LANGUAGE plpgsql` unless you need procedural feature
 - Exception handling (`BEGIN...EXCEPTION...END`)
 - Complex control flow (loops, early returns)
 - Dynamic SQL (`EXECUTE`)
+- Functions that must remain opaque to the planner — typically blockers whose only job is to `RAISE`. `LANGUAGE sql` would be inlined and may be elided when the result is provably unused; `LANGUAGE plpgsql` is never inlined, so the body always runs. See the encrypted-domain footgun list above and the blocker renderers in `tasks/codegen/templates.py`.
 
 ## Release & changelog discipline
 
@@ -222,7 +243,7 @@ What does *not* need an entry:
 
 Pick the right section (`Added` / `Changed` / `Deprecated` / `Removed` / `Fixed` / `Security`). Lead with the user-visible fact, then a short "Why." explanation, then a PR link in parentheses. Match the tone and density of existing entries — a single dense paragraph per entry, not a bullet list.
 
-Example shape (real entry from `2.3.0`):
+Example entry (real entry from `2.3.0`):
 
 > **`=`, `<>`, `~~` (`LIKE`), `~~*` (`ILIKE`) on `eql_v2_encrypted` are now inlinable SQL functions.** The planner can structurally match these operators against the documented functional indexes (`eql_v2.hmac_256(col)` for equality, `eql_v2.bloom_filter(col)` for `LIKE`/`ILIKE`), so bare-form queries (`WHERE col = $1`) engage the index without per-query rewriting. Previously these operators wrapped multi-branch PL/pgSQL bodies that the planner could not inline, forcing seq scans on Supabase / managed Postgres installations that lack operator-class indexes. ([#193](...), [#196](...))
 
