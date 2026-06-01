@@ -110,11 +110,15 @@ where
     /// Generate and write `tests/sqlx/fixtures/<name>.sql`.
     ///
     /// The production entry point. Parses the env-driven `DriverConfig`
-    /// once, opens a direct Postgres connection, then delegates the
-    /// schema + teardown orchestration to `run_with`, supplying
-    /// `insert_direct` as the closure. After `run_with` returns the
-    /// rendered INSERT lines, this method composes them with
+    /// once, opens a single direct Postgres connection, runs the
+    /// schema/insert/render/drop pipeline inline against that connection
+    /// (no second connection needed — encryption happens in Rust via
+    /// cipherstash-client), then composes the rendered INSERT lines with
     /// `fixture_script_preamble` and writes the committed script to disk.
+    ///
+    /// The pipeline mirrors the teardown contract in `run_with`: drop the
+    /// working table unconditionally once it has been created, and
+    /// propagate failures in causal order (insert error first).
     pub async fn run(&self) -> Result<()> {
         let config = DriverConfig::from_env()?;
 
@@ -125,21 +129,42 @@ where
             .await
             .context("connecting to Postgres (direct)")?;
 
-        // Second direct connection for the inserter closure. `run_with`
-        // borrows the first connection mutably for the duration of the
-        // pipeline, so the inserter must hold its own.
-        let mut inserter_conn = config
-            .direct
-            .clone()
-            .connect()
+        self.check_complete().context("invalid FixtureSpec")?;
+
+        sqlx::raw_sql(&self.working_schema_sql())
+            .execute(&mut direct)
             .await
-            .context("connecting to Postgres (direct inserter)")?;
+            .context("applying working-table schema")?;
 
-        let lines = self
-            .run_with(&mut direct, || self.insert_direct(&mut inserter_conn))
-            .await?;
+        // Insert directly on the same connection used for schema/render/drop.
+        // The earlier two-connection design existed because `run_with` borrows
+        // `direct` mutably across the closure call; production has no such
+        // need — `insert_direct` is the only caller of cipherstash-client and
+        // can hold the same `&mut direct` for its duration.
+        let insert_result = self.insert_direct(&mut direct).await;
+        let render_result = if insert_result.is_ok() {
+            sqlx::query(&self.render_rows_sql())
+                .fetch_all(&mut direct)
+                .await
+                .context("rendering fixture rows")
+        } else {
+            Ok(Vec::new())
+        };
 
-        let _ = inserter_conn.close().await;
+        let working = self.working_table();
+        let drop_result = sqlx::raw_sql(&format!("DROP TABLE IF EXISTS public.{working};"))
+            .execute(&mut direct)
+            .await;
+
+        insert_result?;
+        let rows = render_result?;
+        drop_result.context("dropping the working table")?;
+
+        let lines: Vec<String> = rows
+            .iter()
+            .map(|r| r.try_get::<String, _>(0).context("reading rendered INSERT"))
+            .collect::<Result<_>>()?;
+
         let _ = direct.close().await;
 
         let mut script = self.fixture_script_preamble();
@@ -190,29 +215,34 @@ where
         Ok(())
     }
 
-    /// Orchestrates the schema-apply / insert / render / teardown pipeline
-    /// against a caller-supplied `direct` connection, with the insert step
-    /// pluggable via `insert_rows`. The pipeline is:
+    /// **Test seam** for the schema-apply / insert / render / teardown
+    /// pipeline. Production code uses `run()`, which inlines the same
+    /// pipeline on a single connection. This entry point exists so tests
+    /// can plug in arbitrary insert behavior (hand-crafted JSONB,
+    /// deliberate failures) without going through cipherstash-client.
+    /// Gated behind `#[cfg(test)]` so it is never linked into a
+    /// production build.
     ///
+    /// Pipeline:
     /// 1. Check the spec is complete.
     /// 2. Apply `working_schema_sql` on `direct`. After this succeeds the
     ///    `public._fixture_<name>` table exists and MUST be dropped before
     ///    return, whatever happens next.
-    /// 3. Run `insert_rows()`. Its result is captured (not `?`-propagated)
-    ///    so the drop in step 5 always runs.
+    /// 3. Run `insert_rows()`. Its result is captured (not
+    ///    `?`-propagated) so the drop in step 5 always runs.
     /// 4. If the inserter succeeded, render the committed rows via
     ///    `render_rows_sql` on `direct`. Skipped on inserter error.
     /// 5. Drop the working table on `direct` unconditionally.
     /// 6. Propagate failures in causal order: inserter error first
     ///    (root cause), then render, then drop.
     ///
-    /// `run()` calls this with `insert_direct`. Tests call it with
-    /// closures that insert hand-crafted JSONB payloads directly (no
-    /// cipherstash-client required), or with closures that return `Err`
-    /// to exercise the teardown contract.
+    /// The closure has no `&mut PgConnection` parameter because the
+    /// caller (a test) closes over its own pool / connection — the
+    /// production path's single-connection invariant is enforced inside
+    /// `run`, not here.
     ///
-    /// Private by design: this is a test seam, not a public API. Other
-    /// fixtures must go through `run`.
+    /// Private by design: this is a test seam, not a public API.
+    #[cfg(test)]
     async fn run_with<F, Fut>(
         &self,
         direct: &mut PgConnection,
@@ -263,10 +293,11 @@ mod tests {
     /// A small int4 spec for driver tests. Three values keeps the test fast;
     /// the driver's orchestration is independent of value count.
     fn small_spec(name: &'static str) -> FixtureSpec<'static, i32> {
+        use super::super::index_kind::IndexKind;
         const VALUES: &[i32] = &[-1, 1, 42];
         FixtureSpec::new(name)
-            .with_index("unique")
-            .with_index("ore")
+            .with_index(IndexKind::Unique)
+            .with_index(IndexKind::Ore)
             .with_column_type("jsonb")
             .with_values(VALUES)
     }
@@ -280,9 +311,13 @@ mod tests {
 
         let mut conn = pool.acquire().await?;
 
+        // `run_with` is the test seam; it borrows `&mut conn` for the
+        // schema/render/drop steps, so a test that wants to insert via
+        // sqlx must close over its own connection — exactly the
+        // two-connection shape production (`run`) was rewritten to
+        // avoid. Tests pay this cost so production doesn't have to.
         let lines = spec
-            .run_with(&mut *conn, move || async move {
-                // Working table should exist while the closure runs.
+            .run_with(&mut conn, move || async move {
                 let mut c = pool_for_closure.acquire().await?;
                 let exists: Option<String> = sqlx::query_scalar(&format!(
                     "SELECT to_regclass('public.{working_for_closure}')::text"
@@ -344,7 +379,7 @@ mod tests {
         let mut conn = pool.acquire().await?;
 
         let result = spec
-            .run_with(&mut *conn, || async {
+            .run_with(&mut conn, || async {
                 anyhow::bail!("forced failure for test")
             })
             .await;

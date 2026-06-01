@@ -15,8 +15,12 @@ description = "Generate a SQLx fixture script via cipherstash-client"
 dir = "{{config_root}}/tests/sqlx"
 run = """
 fixture="{{arg(name="fixture")}}"
+# Match the Rust `FixtureIdentifier` rule: `^[a-z][a-z0-9_]*$`. Reject
+# empty, leading-digit, and any non-lowercase-alphanumeric-underscore
+# input here so the failure mode is a clear shell error rather than a
+# Rust panic during the cargo test invocation.
 case "$fixture" in
-  (*[!a-z0-9_]*|'') echo "Invalid fixture name: $fixture (expected [a-z0-9_]+)" >&2; exit 1 ;;
+  (''|[0-9]*|*[!a-z0-9_]*) echo "Invalid fixture name: $fixture (expected ^[a-z][a-z0-9_]*$)" >&2; exit 1 ;;
 esac
 
 cargo test --features fixture-gen --lib \
