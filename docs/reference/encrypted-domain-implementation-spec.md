@@ -92,12 +92,38 @@ future migration.
       by the CI staleness check (`mise run codegen:domain <T>` + `git diff
       --exit-code`) and the `<T>` cases in `tasks/codegen/test_scalars.py`, and
       the `ordered_numeric_matrix!` SQLx suite (behaviour, not bytes).
+- [ ] Wire the SQLx matrix oracle. The generated SQL is enough to install the
+      domains, but the `ordered_numeric_matrix!` suite only runs once the Rust
+      harness knows about the scalar. Copy each piece from the `int4`/`int8`
+      reference — six files, each a small registration:
+
+      | File | Add |
+      |------|-----|
+      | `tests/sqlx/src/fixtures/eql_plaintext.rs` | A sealed `EqlPlaintext` impl for the scalar's Rust type: `impl Sealed for <R> {}`, a `PlaintextSqlType` const for its base column type, `impl EqlPlaintext for <R>` (`CAST`, `PLAINTEXT_SQL_TYPE`, `to_plaintext` → the right `Plaintext` variant), plus the two `#[test]` casts. |
+      | `tests/sqlx/src/fixtures/eql_v2_<T>.rs` | `crate::scalar_fixture!("eql_v2_<T>", <R>, VALUES);` (pulls `super::<T>_values::VALUES`). |
+      | `tests/sqlx/src/fixtures/mod.rs` | `pub mod <T>_values;` and `pub mod eql_v2_<T>;`. |
+      | `tests/sqlx/src/scalar_domains.rs` | `impl ScalarType for <R>` — `PG_TYPE` (the base PG type, e.g. `"int8"`) and `FIXTURE_VALUES = crate::fixtures::<T>_values::VALUES`. |
+      | `tests/sqlx/tests/encrypted_domain/scalars/<T>.rs` | `ordered_numeric_matrix! { suite = <T>, scalar = <R>, eql_type = "eql_v2_<T>" }`. |
+      | `tests/sqlx/tests/encrypted_domain/scalars/mod.rs` | `pub mod <T>;`. |
+
+      `<R>` is the scalar's Rust type (`i32` for `int4`, `i64` for `int8`). The
+      two `mod.rs` declarations and the `ScalarType` / `EqlPlaintext` impls are
+      hand-maintained registration lists: forget one and the matrix simply does
+      not run for the type (the inventory snapshot in the next step is the guard
+      that surfaces it).
 - [ ] Run `mise run test:matrix:inventory` and commit the regenerated
       `tests/sqlx/snapshots/<T>_matrix_tests.txt` — the sorted inventory of every
-      `scalars::<T>::*` test name in the `encrypted_domain` binary. CI diffs it
-      (same as `<T>_values.rs`); a stale snapshot fails the `matrix-coverage`
-      job with "Coverage inventory stale". This baseline is what catches a
-      silently dropped, renamed, or `#[cfg]`-gated matrix test. See §8.
+      `scalars::<T>::*` test name in the `encrypted_domain` binary. **You do not
+      edit `mise.toml` or `.github/workflows/test-eql.yml` for this** (#249): the
+      task enumerates every manifest with a `[fixture]` table and the CI job
+      diffs the whole `snapshots/` directory, so authoring the `<T>.toml`
+      manifest is enough for the new snapshot to be generated and gated. The
+      task fails if a `[fixture]` manifest produces no `scalars::<T>::*` tests
+      (oracle not wired — see the previous step) or if a snapshot has no manifest
+      (stale, from a removed type). A stale or uncommitted snapshot fails the CI
+      `matrix-coverage` job with "Coverage inventory stale or uncommitted". This
+      baseline is what catches a silently dropped, renamed, or `#[cfg]`-gated
+      matrix test. See §8 and `tests/sqlx/snapshots/README.md`.
 - [ ] Run `mise run test:codegen`, the relevant SQLx suites, and the
       PostgreSQL matrix before merging.
 
@@ -283,21 +309,20 @@ the catalog does not promise.
 
 ### Matrix coverage inventory snapshot
 
-The *set of test names* the matrix emits is itself guarded. `mise run
-test:matrix:inventory` lists every test in the `encrypted_domain` binary
-under a pinned feature set (`--no-default-features`, which deliberately
-excludes the `scale` arm — see the task comment in `mise.toml`), greps it to
-each `scalars::<T>::*` matrix, `LC_ALL=C sort`s for byte-stable ordering, and
-writes one committed snapshot per scalar at
-`tests/sqlx/snapshots/<T>_matrix_tests.txt`. The CI `matrix-coverage` job
-regenerates with the same feature set and `git diff --exit-code`s every
-snapshot; a divergence fails with "Coverage inventory stale". This is the
-guard that catches a silently dropped, renamed, or `#[cfg]`-gated matrix
-test — a behaviour the SQLx assertions above cannot see, because a deleted
-test simply stops running. When you add a scalar you add a new snapshot;
-when you add or remove matrix tests you regenerate and commit the affected
-snapshot in the same change. The files are a committed test baseline, **not**
-gitignored generated SQL. See `tests/sqlx/snapshots/README.md`.
+The *set of test names* the matrix emits is itself guarded by one committed
+snapshot per scalar at `tests/sqlx/snapshots/<T>_matrix_tests.txt` — the sorted
+inventory of every `scalars::<T>::*` test name. This is the guard that catches a
+silently dropped, renamed, or `#[cfg]`-gated matrix test, a behaviour the SQLx
+assertions above cannot see (a deleted test simply stops running). The snapshots
+are a committed test baseline, **not** gitignored generated SQL.
+
+`mise run test:matrix:inventory` regenerates them and the CI `matrix-coverage`
+job gates them; both enumerate the scalar set from the `[fixture]` manifests in
+`tasks/codegen/types/` rather than a hand-maintained list, so adding `<T>.toml`
+is enough — no task or workflow edit. **`tests/sqlx/snapshots/README.md` is the
+source of truth** for the mechanics (pinned feature set, the manifest⇄snapshot
+reconciliation, the CI diff, and when to regenerate); see it rather than
+duplicating the detail here.
 
 ## 9. Fixtures
 
