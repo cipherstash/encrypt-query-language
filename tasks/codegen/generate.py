@@ -87,7 +87,7 @@ def render_types_file(spec: TypeSpec) -> str:
     """
     blocks = [render_domain_block(domain, spec.token) for domain in spec.domains]
     return (
-        "-- REQUIRE: src/schema.sql\n\n"
+        "-- REQUIRE: src/schema-v3.sql\n\n"
         f"--! @file encrypted_domain/{spec.token}/{spec.token}_types.sql\n"
         f"--! @brief Encrypted-domain type family for {spec.token}.\n\n"
         "DO $$\nBEGIN\n"
@@ -99,6 +99,7 @@ def render_types_file(spec: TypeSpec) -> str:
 def _functions_requires(spec: TypeSpec, domain: DomainSpec) -> list[str]:
     reqs = [
         "src/schema.sql",
+        "src/schema-v3.sql",
         _types_path(spec.token),
         "src/encrypted_domain/functions.sql",
     ]
@@ -181,7 +182,7 @@ def render_operators_file(spec: TypeSpec, domain: DomainSpec) -> str:
             )
 
     requires = (
-        "-- REQUIRE: src/schema.sql\n"
+        "-- REQUIRE: src/schema-v3.sql\n"
         f"-- REQUIRE: {_types_path(spec.token)}\n"
         f"-- REQUIRE: src/encrypted_domain/{spec.token}/"
         f"{domain.name}_functions.sql\n"
@@ -202,7 +203,7 @@ def render_aggregates_file(spec: TypeSpec, domain: DomainSpec) -> str | None:
         return None
     parts = [render_aggregate(domain, AGGREGATE_OPS[name]) for name in ("min", "max")]
     requires = (
-        "-- REQUIRE: src/schema.sql\n"
+        "-- REQUIRE: src/schema-v3.sql\n"
         f"-- REQUIRE: {_types_path(spec.token)}\n"
         f"-- REQUIRE: src/encrypted_domain/{spec.token}/"
         f"{domain.name}_functions.sql\n"
