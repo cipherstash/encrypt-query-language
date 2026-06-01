@@ -1205,15 +1205,15 @@ SELECT $1::jsonb::{d} FROM generate_series(1, 5000)",
                     .execute(&mut *tx).await?;
 
                 let lit = pivot_payload.replace('\'', "''");
-                let plan: Vec<String> = sqlx::query_scalar(&format!(
-                    "EXPLAIN SELECT * FROM {table} WHERE value = '{lit}'::jsonb::{d}",
-                )).fetch_all(&mut *tx).await?;
-                let plan_text = plan.join("\n");
-                anyhow::ensure!(plan_text.contains(index),
-                    "with seqscan enabled the planner must prefer the {extractor} \
-{using} index for a selective = ; plan:\n{plan_text}",
-                    extractor = $extractor, using = $using,
-                );
+                $crate::matrix::assert_index_scan_uses(
+                    &mut *tx,
+                    &format!("SELECT * FROM {table} WHERE value = '{lit}'::jsonb::{d}"),
+                    index,
+                    &format!(
+                        "with seqscan enabled the planner must prefer the {extractor} {using} index for a selective =",
+                        extractor = $extractor, using = $using,
+                    ),
+                ).await?;
 
                 tx.commit().await?;
                 Ok(())
