@@ -29,6 +29,7 @@ This project uses `mise` for task management. Common commands:
 - Run SQLx tests directly: `mise run test:sqlx`
 - Run SQLx tests in watch mode: `mise run test:sqlx:watch`
 - Tests are located in `tests/sqlx/` using Rust and SQLx framework
+- Regenerate the scalar matrix coverage snapshots: `mise run test:matrix:inventory` (no database required). These committed `tests/sqlx/snapshots/<T>_matrix_tests.txt` baselines pin the set of `scalars::<T>::*` test names so a silently dropped/renamed/`#[cfg]`-gated test fails CI's `matrix-coverage` job. When you add or remove matrix tests (or add a scalar type), regenerate and commit the affected snapshot in the same change. See `tests/sqlx/snapshots/README.md`.
 
 ### Build System
 - Dependencies are resolved using `-- REQUIRE:` comments in SQL files
