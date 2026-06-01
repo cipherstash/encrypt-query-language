@@ -50,7 +50,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
-          workspaces: tests/sqlx
+          workspaces: .
           shared-key: sqlx-tests
 
       - name: Validate v2.2 / v2.3 payload schemas
@@ -108,7 +108,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
-          workspaces: tests/sqlx
+          workspaces: .
           shared-key: sqlx-tests
 
       # Regenerate the matrix test-name inventory with the SAME pinned feature
@@ -159,7 +159,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
-          workspaces: tests/sqlx
+          workspaces: .
           shared-key: sqlx-tests
 
       - name: Setup database (Postgres ${{ matrix.postgres-version }})
