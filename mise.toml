@@ -99,7 +99,7 @@ mise exec python -- python -m pytest tasks/codegen -q
 """
 
 [tasks."test:matrix:inventory"]
-description = "Regenerate the int4/int2 matrix test-name inventory snapshots (no database required)"
+description = "Regenerate the int4/int2/int8 matrix test-name inventory snapshots (no database required)"
 dir = "{{config_root}}/tests/sqlx"
 run = """
 # Pin an explicit feature set so the inventory is deterministic regardless of
@@ -108,7 +108,7 @@ run = """
 # of this default-feature inventory, covered instead by the scale gate + the
 # family::mutations negative controls. `--list` enumerates the whole
 # encrypted_domain binary (family::support, family::inlinability,
-# family::mutations, scalars::int4, scalars::int2); the per-scalar `grep`
+# family::mutations, scalars::int4, scalars::int2, scalars::int8); the per-scalar `grep`
 # scopes each snapshot to that matrix only, so landing other family tests
 # never dirties it. `LC_ALL=C sort` makes ordering byte-stable across locales
 # (a bare `sort` is locale-dependent and yields spurious CI diffs).
@@ -122,4 +122,8 @@ cargo test --no-default-features --test encrypted_domain -- --list |
   sed -n 's/: test$//p' |
   grep '^scalars::int2' |
   LC_ALL=C sort > snapshots/int2_matrix_tests.txt
+cargo test --no-default-features --test encrypted_domain -- --list |
+  sed -n 's/: test$//p' |
+  grep '^scalars::int8' |
+  LC_ALL=C sort > snapshots/int8_matrix_tests.txt
 """

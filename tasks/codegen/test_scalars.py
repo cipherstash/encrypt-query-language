@@ -80,3 +80,21 @@ def test_int2_kind_rejects_out_of_range():
     kind = require_scalar("int2")
     with pytest.raises(ScalarError, match="out of range"):
         kind.numeric_value("40000")
+
+
+def test_int8_kind_resolves_and_renders():
+    kind = require_scalar("int8")
+    assert kind.rust_type == "i64"
+    assert kind.numeric_value("MIN") == -9223372036854775808
+    assert kind.numeric_value("MAX") == 9223372036854775807
+    assert kind.numeric_value("ZERO") == 0
+    assert kind.render_literal("MIN") == "i64::MIN"
+    assert kind.render_literal("MAX") == "i64::MAX"
+    assert kind.render_literal("ZERO") == "0"
+    assert kind.render_literal("5000000000") == "5000000000"
+
+
+def test_int8_kind_rejects_out_of_range():
+    kind = require_scalar("int8")
+    with pytest.raises(ScalarError, match="out of range"):
+        kind.numeric_value("9223372036854775808")  # i64::MAX + 1

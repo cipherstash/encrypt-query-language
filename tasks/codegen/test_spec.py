@@ -199,10 +199,10 @@ def test_fixture_values_reject_sentinel_literal_alias(tmp_path):
 def test_fixture_for_unknown_scalar_token_raises(tmp_path):
     bad = textwrap.dedent("""
         [domain]
-        int8 = []
+        bogus = []
 
         [fixture]
         values = ["1"]
     """)
-    with pytest.raises(SpecError, match="unknown scalar token 'int8'"):
-        load_spec(write(tmp_path, "int8.toml", bad))
+    with pytest.raises(SpecError, match="unknown scalar token 'bogus'"):
+        load_spec(write(tmp_path, "bogus.toml", bad))

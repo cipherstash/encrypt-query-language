@@ -88,6 +88,15 @@ SCALAR_KINDS: dict[str, ScalarKind] = {
         min_value=-32768,
         max_value=32767,
     ),
+    "int8": ScalarKind(
+        token="int8",
+        rust_type="i64",
+        min_symbol="i64::MIN",
+        max_symbol="i64::MAX",
+        zero_symbol="0",
+        min_value=-9223372036854775808,
+        max_value=9223372036854775807,
+    ),
 }
 
 

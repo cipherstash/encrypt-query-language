@@ -37,3 +37,9 @@ pub mod eql_v2_int4;
 pub mod int2_values;
 
 pub mod eql_v2_int2;
+
+/// Generated from tasks/codegen/types/int8.toml `[fixture] values`.
+/// Committed and verified by CI; never hand-edit (`mise run codegen:domain int8`).
+pub mod int8_values;
+
+pub mod eql_v2_int8;
