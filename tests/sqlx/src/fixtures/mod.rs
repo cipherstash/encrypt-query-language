@@ -19,6 +19,9 @@ pub mod spec;
 
 pub use spec::FixtureSpec;
 
+#[macro_use]
+pub mod scalar_fixture;
+
 pub mod cipherstash;
 
 pub mod driver;
