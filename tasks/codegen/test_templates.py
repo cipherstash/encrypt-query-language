@@ -72,7 +72,7 @@ def test_render_fixture_values_rs_preserves_manifest_order():
 def test_domain_block_storage_uses_fixed_envelope_only():
     domain = DomainSpec(name="int4", terms=[])
     sql = render_domain_block(domain, "int4")
-    assert "CREATE DOMAIN public.eql_v2_int4 AS jsonb" in sql
+    assert "CREATE DOMAIN eql_v3.int4 AS jsonb" in sql
     assert "VALUE ? 'v'" in sql
     assert "VALUE ? 'i'" in sql
     assert "VALUE ? 'c'" in sql
@@ -83,7 +83,7 @@ def test_domain_block_storage_uses_fixed_envelope_only():
 def test_domain_block_uses_catalog_json_keys():
     domain = DomainSpec(name="int4_ord", terms=["ore"])
     sql = render_domain_block(domain, "int4")
-    assert "CREATE DOMAIN public.eql_v2_int4_ord AS jsonb" in sql
+    assert "CREATE DOMAIN eql_v3.int4_ord AS jsonb" in sql
     assert "VALUE ? 'ob'" in sql
     assert "VALUE ? 'ore'" not in sql
 
@@ -109,7 +109,7 @@ def test_domain_block_check_pins_envelope_version():
 def test_extractor_is_catalog_derived_and_inlinable():
     domain = DomainSpec(name="int4_eq", terms=["hm"])
     sql = render_extractor(domain, TERM_CATALOG["hm"])
-    assert "CREATE FUNCTION eql_v2.eq_term(a eql_v2_int4_eq)" in sql
+    assert "CREATE FUNCTION eql_v3.eq_term(a eql_v3.int4_eq)" in sql
     assert "RETURNS eql_v2.hmac_256" in sql
     assert "LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE" in sql
     assert "SELECT eql_v2.hmac_256(a::jsonb)" in sql
@@ -121,12 +121,12 @@ def test_wrapper_uses_term_extractor_for_supported_operator():
     sql = render_wrapper(
         domain,
         op="<",
-        arg_a="eql_v2_int4_ord",
+        arg_a="eql_v3.int4_ord",
         arg_b="jsonb",
         extractor="ord_term",
     )
-    assert "CREATE FUNCTION eql_v2.lt(a eql_v2_int4_ord, b jsonb)" in sql
-    assert "SELECT eql_v2.ord_term(a) < eql_v2.ord_term(b::eql_v2_int4_ord)" in sql
+    assert "CREATE FUNCTION eql_v3.lt(a eql_v3.int4_ord, b jsonb)" in sql
+    assert "SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b::eql_v3.int4_ord)" in sql
 
 
 def test_wrapper_is_inlinable_sql():
@@ -135,8 +135,8 @@ def test_wrapper_is_inlinable_sql():
     sql = render_wrapper(
         domain,
         op="=",
-        arg_a="eql_v2_int4_eq",
-        arg_b="eql_v2_int4_eq",
+        arg_a="eql_v3.int4_eq",
+        arg_b="eql_v3.int4_eq",
         extractor="eq_term",
     )
     assert "LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE" in sql
@@ -161,10 +161,10 @@ def test_blocker_bool_is_not_strict():
     attribute line so any future refactor that re-adds STRICT fails loudly."""
     domain = DomainSpec(name="int4", terms=[])
     sql = render_blocker_bool(
-        domain, op="<", arg_a="eql_v2_int4", arg_b="eql_v2_int4",
+        domain, op="<", arg_a="eql_v3.int4", arg_b="eql_v3.int4",
     )
-    assert "CREATE FUNCTION eql_v2.lt(a eql_v2_int4, b eql_v2_int4)" in sql
-    assert "encrypted_domain_unsupported_bool('eql_v2_int4', '<')" in sql
+    assert "CREATE FUNCTION eql_v3.lt(a eql_v3.int4, b eql_v3.int4)" in sql
+    assert "encrypted_domain_unsupported_bool('eql_v3.int4', '<')" in sql
     assert "RETURNS boolean IMMUTABLE PARALLEL SAFE\n" in sql
     assert "LANGUAGE plpgsql" in sql
     assert "STRICT" not in sql
@@ -174,9 +174,9 @@ def test_blocker_path_is_not_strict():
     """Mirror of test_blocker_bool_is_not_strict for path blockers."""
     domain = DomainSpec(name="int4", terms=[])
     sql = render_blocker_path(
-        domain, op="->", arg_a="eql_v2_int4", arg_b="text",
+        domain, op="->", arg_a="eql_v3.int4", arg_b="text",
     )
-    assert "RETURNS eql_v2_int4 IMMUTABLE PARALLEL SAFE\n" in sql
+    assert "RETURNS eql_v3.int4 IMMUTABLE PARALLEL SAFE\n" in sql
     assert "LANGUAGE plpgsql" in sql
     assert "STRICT" not in sql
 
@@ -184,12 +184,12 @@ def test_blocker_path_is_not_strict():
 def test_blocker_path_returns_domain_or_text():
     domain = DomainSpec(name="int4", terms=[])
     arrow = render_blocker_path(
-        domain, op="->", arg_a="eql_v2_int4", arg_b="text",
+        domain, op="->", arg_a="eql_v3.int4", arg_b="text",
     )
-    assert 'CREATE FUNCTION eql_v2."->"(a eql_v2_int4, selector text)' in arrow
-    assert "RETURNS eql_v2_int4" in arrow
+    assert 'CREATE FUNCTION eql_v3."->"(a eql_v3.int4, selector text)' in arrow
+    assert "RETURNS eql_v3.int4" in arrow
     arrow2 = render_blocker_path(
-        domain, op="->>", arg_a="eql_v2_int4", arg_b="text",
+        domain, op="->>", arg_a="eql_v3.int4", arg_b="text",
     )
     assert "RETURNS text" in arrow2
 
@@ -199,19 +199,19 @@ def test_blocker_path_for_jsonb_left_arg_returns_domain():
     return type for `->` (only `->>` returns text)."""
     domain = DomainSpec(name="int4", terms=[])
     sql = render_blocker_path(
-        domain, op="->", arg_a="jsonb", arg_b="eql_v2_int4",
+        domain, op="->", arg_a="jsonb", arg_b="eql_v3.int4",
     )
-    assert 'CREATE FUNCTION eql_v2."->"(a jsonb, selector eql_v2_int4)' in sql
-    assert "RETURNS eql_v2_int4" in sql
+    assert 'CREATE FUNCTION eql_v3."->"(a jsonb, selector eql_v3.int4)' in sql
+    assert "RETURNS eql_v3.int4" in sql
 
 
 def test_blocker_native_bool_uses_helper_and_is_not_strict():
     domain = DomainSpec(name="int4", terms=[])
     sql = render_blocker_native(
-        domain, op="?", arg_a="eql_v2_int4", arg_b="text", returns="boolean",
+        domain, op="?", arg_a="eql_v3.int4", arg_b="text", returns="boolean",
     )
-    assert 'CREATE FUNCTION eql_v2."?"(a eql_v2_int4, b text)' in sql
-    assert "encrypted_domain_unsupported_bool('eql_v2_int4', '?')" in sql
+    assert 'CREATE FUNCTION eql_v3."?"(a eql_v3.int4, b text)' in sql
+    assert "encrypted_domain_unsupported_bool('eql_v3.int4', '?')" in sql
     assert "RETURNS boolean IMMUTABLE PARALLEL SAFE\n" in sql
     assert "LANGUAGE plpgsql" in sql
     assert "STRICT" not in sql
@@ -220,11 +220,11 @@ def test_blocker_native_bool_uses_helper_and_is_not_strict():
 def test_blocker_native_jsonb_result_raises_and_is_not_strict():
     domain = DomainSpec(name="int4", terms=[])
     sql = render_blocker_native(
-        domain, op="#>", arg_a="eql_v2_int4", arg_b="text[]", returns="jsonb",
+        domain, op="#>", arg_a="eql_v3.int4", arg_b="text[]", returns="jsonb",
     )
-    assert 'CREATE FUNCTION eql_v2."#>"(a eql_v2_int4, b text[])' in sql
+    assert 'CREATE FUNCTION eql_v3."#>"(a eql_v3.int4, b text[])' in sql
     assert "RETURNS jsonb IMMUTABLE PARALLEL SAFE\n" in sql
-    assert "RAISE EXCEPTION 'operator % is not supported for %', '#>', 'eql_v2_int4'" in sql
+    assert "RAISE EXCEPTION 'operator % is not supported for %', '#>', 'eql_v3.int4'" in sql
     assert "LANGUAGE plpgsql" in sql
     assert "STRICT" not in sql
 
@@ -232,9 +232,9 @@ def test_blocker_native_jsonb_result_raises_and_is_not_strict():
 def test_blocker_native_text_result_raises_and_is_not_strict():
     domain = DomainSpec(name="int4", terms=[])
     sql = render_blocker_native(
-        domain, op="#>>", arg_a="eql_v2_int4", arg_b="text[]", returns="text",
+        domain, op="#>>", arg_a="eql_v3.int4", arg_b="text[]", returns="text",
     )
-    assert 'CREATE FUNCTION eql_v2."#>>"(a eql_v2_int4, b text[])' in sql
+    assert 'CREATE FUNCTION eql_v3."#>>"(a eql_v3.int4, b text[])' in sql
     assert "RETURNS text IMMUTABLE PARALLEL SAFE\n" in sql
     assert "LANGUAGE plpgsql" in sql
     assert "STRICT" not in sql
@@ -243,21 +243,21 @@ def test_blocker_native_text_result_raises_and_is_not_strict():
 def test_blocker_native_concat_cross_shape():
     domain = DomainSpec(name="int4", terms=[])
     sql = render_blocker_native(
-        domain, op="||", arg_a="jsonb", arg_b="eql_v2_int4", returns="jsonb",
+        domain, op="||", arg_a="jsonb", arg_b="eql_v3.int4", returns="jsonb",
     )
-    assert 'CREATE FUNCTION eql_v2."||"(a jsonb, b eql_v2_int4)' in sql
+    assert 'CREATE FUNCTION eql_v3."||"(a jsonb, b eql_v3.int4)' in sql
     assert "RETURNS jsonb" in sql
 
 
 def test_operator_symmetric_metadata():
     sql = render_operator(
         op="=", backing="eq",
-        leftarg="eql_v2_int4_eq", rightarg="eql_v2_int4_eq",
+        leftarg="eql_v3.int4_eq", rightarg="eql_v3.int4_eq",
         supported=True,
     )
     assert "CREATE OPERATOR = (" in sql
-    assert "FUNCTION = eql_v2.eq" in sql
-    assert "LEFTARG = eql_v2_int4_eq, RIGHTARG = eql_v2_int4_eq" in sql
+    assert "FUNCTION = eql_v3.eq" in sql
+    assert "LEFTARG = eql_v3.int4_eq, RIGHTARG = eql_v3.int4_eq" in sql
     assert "NEGATOR = <>" in sql
     assert "RESTRICT = eqsel" in sql
 
@@ -267,12 +267,12 @@ def test_render_operator_unsupported_emits_only_function_and_args():
     (those would lie about selectivity for a function that always raises)."""
     sql = render_operator(
         op="=", backing="eq",
-        leftarg="eql_v2_int4", rightarg="eql_v2_int4",
+        leftarg="eql_v3.int4", rightarg="eql_v3.int4",
         supported=False,
     )
     assert "CREATE OPERATOR = (" in sql
-    assert "FUNCTION = eql_v2.eq" in sql
-    assert "LEFTARG = eql_v2_int4, RIGHTARG = eql_v2_int4" in sql
+    assert "FUNCTION = eql_v3.eq" in sql
+    assert "LEFTARG = eql_v3.int4, RIGHTARG = eql_v3.int4" in sql
     assert "NEGATOR" not in sql
     assert "RESTRICT" not in sql
     assert "JOIN" not in sql
@@ -283,23 +283,23 @@ def test_render_aggregate_min_int4_ord_emits_state_function_and_aggregate():
     """Pin the rendered shape for the canonical (int4_ord, min) case."""
     domain = DomainSpec(name="int4_ord", terms=["ore"])
     sql = render_aggregate(domain, AGGREGATE_OPS["min"])
-    assert "CREATE FUNCTION eql_v2.min_sfunc(state eql_v2_int4_ord, value eql_v2_int4_ord)" in sql
-    assert "RETURNS eql_v2_int4_ord" in sql
+    assert "CREATE FUNCTION eql_v3.min_sfunc(state eql_v3.int4_ord, value eql_v3.int4_ord)" in sql
+    assert "RETURNS eql_v3.int4_ord" in sql
     assert "LANGUAGE plpgsql IMMUTABLE STRICT" in sql
     assert "SET search_path = pg_catalog, extensions, public" in sql
     assert "IF value < state THEN" in sql
-    assert "CREATE AGGREGATE eql_v2.min(eql_v2_int4_ord) (" in sql
-    assert "sfunc = eql_v2.min_sfunc" in sql
-    assert "stype = eql_v2_int4_ord" in sql
+    assert "CREATE AGGREGATE eql_v3.min(eql_v3.int4_ord) (" in sql
+    assert "sfunc = eql_v3.min_sfunc" in sql
+    assert "stype = eql_v3.int4_ord" in sql
 
 
 def test_render_aggregate_max_uses_greater_than_comparator():
     """Symmetric pin: max uses `>` not `<`."""
     domain = DomainSpec(name="int4_ord_ore", terms=["ore"])
     sql = render_aggregate(domain, AGGREGATE_OPS["max"])
-    assert "CREATE FUNCTION eql_v2.max_sfunc(state eql_v2_int4_ord_ore, value eql_v2_int4_ord_ore)" in sql
+    assert "CREATE FUNCTION eql_v3.max_sfunc(state eql_v3.int4_ord_ore, value eql_v3.int4_ord_ore)" in sql
     assert "IF value > state THEN" in sql
-    assert "CREATE AGGREGATE eql_v2.max(eql_v2_int4_ord_ore) (" in sql
+    assert "CREATE AGGREGATE eql_v3.max(eql_v3.int4_ord_ore) (" in sql
 
 
 def test_render_aggregate_state_function_is_not_inlinable():
@@ -326,11 +326,11 @@ def test_render_operator_for_containment_omits_commutator():
     must still omit those clauses."""
     sql = render_operator(
         op="@>", backing="contains",
-        leftarg="eql_v2_int4_ord", rightarg="eql_v2_int4_ord",
+        leftarg="eql_v3.int4_ord", rightarg="eql_v3.int4_ord",
         supported=True,
     )
     assert "CREATE OPERATOR @> (" in sql
-    assert "FUNCTION = eql_v2.contains" in sql
+    assert "FUNCTION = eql_v3.contains" in sql
     assert "COMMUTATOR" not in sql
     assert "NEGATOR" not in sql
     assert "RESTRICT" not in sql
@@ -347,7 +347,7 @@ def test_render_operator_unsupported_emits_placeholder_comment():
     domain."""
     sql = render_operator(
         op="<", backing="lt",
-        leftarg="eql_v2_int4_eq", rightarg="eql_v2_int4_eq",
+        leftarg="eql_v3.int4_eq", rightarg="eql_v3.int4_eq",
         supported=False,
     )
     assert sql.startswith("-- Placeholder:")
@@ -361,7 +361,7 @@ def test_render_operator_supported_has_no_placeholder_comment():
     """Supported operators route to real wrappers — no placeholder comment."""
     sql = render_operator(
         op="=", backing="eq",
-        leftarg="eql_v2_int4_eq", rightarg="eql_v2_int4_eq",
+        leftarg="eql_v3.int4_eq", rightarg="eql_v3.int4_eq",
         supported=True,
     )
     assert "Placeholder" not in sql
@@ -380,7 +380,7 @@ def test_render_aggregate_state_function_emits_plpgsql_rationale_comment():
     assert "not index" in sql
     # The rationale precedes the state-function definition.
     assert sql.index("-- LANGUAGE plpgsql, not sql:") < sql.index(
-        "CREATE FUNCTION eql_v2.min_sfunc"
+        "CREATE FUNCTION eql_v3.min_sfunc"
     )
 
 
@@ -396,8 +396,8 @@ def test_render_aggregate_enables_parallel_and_combinefunc():
         assert "LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE" in sql
         # ...and the aggregate must declare the combinefunc + parallel safety
         # inside the CREATE AGGREGATE option list (not merely in prose).
-        aggregate_body = sql[sql.index(f"CREATE AGGREGATE eql_v2.{op_name}"):]
-        assert f"combinefunc = eql_v2.{sfunc}" in aggregate_body
+        aggregate_body = sql[sql.index(f"CREATE AGGREGATE eql_v3.{op_name}"):]
+        assert f"combinefunc = eql_v3.{sfunc}" in aggregate_body
         assert "parallel = safe" in aggregate_body
         # The stale "intentionally disabled" omission note must be gone.
         assert "intentionally disabled" not in sql
@@ -479,13 +479,13 @@ def test_blocker_escapes_quote_bearing_domain_in_rendered_sql():
     string literals.)"""
     domain = DomainSpec(name="o'dom", terms=[])
     sql = render_blocker_bool(
-        domain, op="<", arg_a="eql_v2_o'dom", arg_b="eql_v2_o'dom",
+        domain, op="<", arg_a="eql_v3.o'dom", arg_b="eql_v3.o'dom",
     )
     # The dom flows into encrypted_domain_unsupported_bool('<dom>', '<op>')
     # as a single-quoted literal — the quote must be doubled.
-    assert "encrypted_domain_unsupported_bool('eql_v2_o''dom', '<')" in sql
+    assert "encrypted_domain_unsupported_bool('eql_v3.o''dom', '<')" in sql
     # The raw, unescaped single-quoted form must not appear.
-    assert "'eql_v2_o'dom'" not in sql
+    assert "'eql_v3.o'dom'" not in sql
 
 
 def test_domain_block_escapes_quote_bearing_key_in_check():
@@ -495,5 +495,5 @@ def test_domain_block_escapes_quote_bearing_key_in_check():
     # literal escaping in the IF NOT EXISTS guard.
     quoted = DomainSpec(name="we'ird", terms=[])
     sql = render_domain_block(quoted, "int4")
-    assert "typname = 'eql_v2_we''ird'" in sql
-    assert "typname = 'eql_v2_we'ird'" not in sql
+    assert "typname = 'we''ird'" in sql
+    assert "typname = 'we'ird'" not in sql

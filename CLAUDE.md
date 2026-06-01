@@ -29,6 +29,7 @@ This project uses `mise` for task management. Common commands:
 - Run SQLx tests directly: `mise run test:sqlx`
 - Run SQLx tests in watch mode: `mise run test:sqlx:watch`
 - Tests are located in `tests/sqlx/` using Rust and SQLx framework
+- Regenerate the scalar matrix coverage snapshots: `mise run test:matrix:inventory` (no database required). These committed `tests/sqlx/snapshots/<T>_matrix_tests.txt` baselines pin the set of `scalars::<T>::*` test names so a silently dropped/renamed/`#[cfg]`-gated test fails CI's `matrix-coverage` job. When you add or remove matrix tests (or add a scalar type), regenerate and commit the affected snapshot in the same change. See `tests/sqlx/snapshots/README.md`.
 
 ### Build System
 - Dependencies are resolved using `-- REQUIRE:` comments in SQL files
@@ -50,7 +51,7 @@ This project uses `mise` for task management. Common commands:
 This is the **Encrypt Query Language (EQL)** - a PostgreSQL extension for searchable encryption. Key architectural components:
 
 ### Core Structure
-- **Schema**: All EQL functions/types are in `eql_v2` PostgreSQL schema
+- **Schema**: Core EQL functions/types are in the `eql_v2` PostgreSQL schema. The encrypted-domain type families (`int4` and future scalar domains) live in a separate `eql_v3` schema (see below); they reuse the core `eql_v2` index-term types cross-schema. `eql_v2` is unchanged and remains the documented public API.
 - **Main Type**: `eql_v2_encrypted` - composite type for encrypted columns (stored as JSONB)
 - **Configuration**: `eql_v2_configuration` table tracks encryption configs
 - **Index Types**: Various encrypted index types (blake3, hmac_256, bloom_filter, ore variants)
@@ -75,7 +76,7 @@ This is the **Encrypt Query Language (EQL)** - a PostgreSQL extension for search
 
 ### Encrypted-Domain Types
 
-`src/encrypted_domain/` holds **encrypted-domain type families** — jsonb-backed PostgreSQL domains, one domain per operator/index capability (`eql_v2_<T>` storage-only, `eql_v2_<T>_eq`, `eql_v2_<T>_ord`). `eql_v2_int4` (PR #225) is the reference scalar implementation; future scalar types such as `int8`, `bool`, `date`, `float`, `numeric`, and `timestamp` follow this materializer pattern. `jsonb` needs a separate design and is out of scope for the scalar materializer.
+`src/encrypted_domain/` holds **encrypted-domain type families** — jsonb-backed PostgreSQL domains in the **`eql_v3` schema**, one domain per operator/index capability (`eql_v3.<T>` storage-only, `eql_v3.<T>_eq`, `eql_v3.<T>_ord`). The schema qualifier replaces the old version-prefixed name, so the domains are `eql_v3.int4`, `eql_v3.int4_eq`, `eql_v3.int4_ord`, `eql_v3.int4_ord_ore` — created in `eql_v3`, not `public`. Their extractors/wrappers/aggregates (`eql_v3.eq_term`, `eql_v3.ord_term`, `eql_v3.eq`/`lt`/…, `eql_v3.min`/`max`) also live in `eql_v3`, but the index-term types they return and construct (`eql_v2.hmac_256`, `eql_v2.ore_block_u64_8_256`) stay in `eql_v2` and are referenced cross-schema. `eql_v3.int4` (PR #239, supersedes #225) is the reference scalar implementation; future scalar types such as `int8`, `bool`, `date`, `float`, `numeric`, and `timestamp` follow this materializer pattern. `jsonb` needs a separate design and is out of scope for the scalar materializer.
 
 Adding a scalar encrypted-domain type is generated from a minimal manifest at `tasks/codegen/types/<T>.toml`: the filename supplies `<T>`, and the `[domain]` table maps each generated domain name to the fixed index terms it carries. Example: `int4_eq = ["hm"]`, `int4_ord = ["ore"]`. Term capabilities are fixed in `tasks/codegen/terms.py`: `hm` provides equality, and `ore` provides equality plus ordering. `mise run build` regenerates the scalar SQL surface into `src/encrypted_domain/<T>/` from every manifest at the start of every build; that surface includes supported comparison wrappers plus blockers for native `jsonb` operators that would otherwise be reachable through domain fallback. Use `mise run codegen:domain <T>` to refresh a single type manually while iterating on its manifest, or `mise run codegen:domain:all` to regenerate every type at once (the same enumeration `mise run build` uses). The generated `*_types.sql` / `*_functions.sql` / `*_operators.sql` files are gitignored and never committed — the TOML manifest plus `tasks/codegen/terms.py` are the source of truth. Generated files carry an `AUTO-GENERATED — DO NOT EDIT` header; change the manifest or term catalog and rebuild, never hand-edit. Hand-written SQL beyond the fixed surface goes in `src/encrypted_domain/<T>/<T>_extensions.sql` with no auto-generated header and explicit `-- REQUIRE:` edges — that file IS committed. `text` and `jsonb` are out of scope for this scalar materializer.
 
@@ -260,7 +261,7 @@ The entry under `Changed` / `Deprecated` should cross-link to the `U-NNN`. See `
 
 ### Versioning
 
-The `eql_v2` PostgreSQL schema name is part of the public API and is **independent of the EQL release version**. Major-version bumps to EQL do not rename the schema. When deciding on a version bump:
+The `eql_v2` PostgreSQL schema name is part of the public API and is **independent of the EQL release version**. Major-version bumps to EQL do not rename the schema. The `eql_v3` schema is **not** a rename of `eql_v2`: it is a separate, additional schema introduced to namespace the encrypted-domain type families. Both schemas coexist; `eql_v2` keeps the core types/operators and is unchanged. Adding a new schema for a new surface is additive, not a public-API break. When deciding on a version bump:
 
 - **Patch (`2.3.x`)** — bug fixes, no behaviour changes
 - **Minor (`2.x.0`)** — additive changes, behaviour changes that don't break the public API (signatures, schema name, payload format, operator names)

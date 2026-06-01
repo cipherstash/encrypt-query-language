@@ -7,7 +7,7 @@ The contract those outputs must satisfy is in
 [`encrypted-domain-implementation-spec.md`](./encrypted-domain-implementation-spec.md);
 this file describes the machine that produces them.
 
-The reference type is `eql_v2_int4` (PR #239). `text` and `jsonb` are
+The reference type is `eql_v3.int4` (PR #239). `text` and `jsonb` are
 outside scope.
 
 ## 1. Why a generator
@@ -245,7 +245,7 @@ operators are always blockers.
 The table above covers `<domain>_functions.sql` only. Ordered domains
 additionally emit `<domain>_aggregates.sql` — two state functions
 (`min_sfunc`, `max_sfunc`) and two `CREATE AGGREGATE` declarations
-(`eql_v2.min`, `eql_v2.max`). Each aggregate declares
+(`eql_v3.min`, `eql_v3.max`). Each aggregate declares
 `combinefunc = <sfunc>` and `parallel = safe`: min/max are associative, so
 the state function doubles as the combine function, enabling partial and
 parallel aggregation on large `GROUP BY` ORE workloads with no decryption.
@@ -280,13 +280,13 @@ incorrect SQL unreachable. Invariants encoded in code:
   (`templates.py:46`), which doubles embedded single quotes. Today's catalog
   strings are all quote-free so it is a no-op, but it guarantees a future
   quote-bearing catalog string cannot break out of its literal.
-- **No domain-over-domain.** Every domain is `CREATE DOMAIN ... AS
-  jsonb`, never `AS <some_other_domain>` (`templates.py:72`). PostgreSQL
+- **No domain-over-domain.** Every domain is `CREATE DOMAIN eql_v3.<name>
+  AS jsonb`, never `AS <some_other_domain>` (`templates.py:72`). PostgreSQL
   resolves operators against the underlying base type; a derived domain
   would silently bypass the fixed operator surface.
 - **No operator class on a domain.** The generator emits operators,
   not operator classes. Callers index through the extractor function
-  (e.g. `USING btree (eql_v2.ord_term(col))`), whose return type
+  (e.g. `USING btree (eql_v3.ord_term(col))`), whose return type
   already carries a default opclass.
 - **Ownership boundary.** `writer.is_generated` recognises owned files
   by their header line and refuses to overwrite anything else
@@ -323,7 +323,7 @@ output without per-type edits:
 - **`tasks/pin_search_path.sql:265-290`** — structural skip identifies
   encrypted-domain functions by language (`sql`), volatility
   (`IMMUTABLE`), and the presence of at least one argument typed as a
-  jsonb-backed `DOMAIN` in `public` named `eql_v2_*`. New scalar types
+  jsonb-backed `DOMAIN` in the `eql_v3` schema. New scalar types
   need no edit here.
 - **`tasks/test/splinter.sh`** — name-based allowlist. The converged
   wrapper names (`eq`, `neq`, `lt`, `lte`, `gt`, `gte`, `eq_term`,
@@ -377,12 +377,23 @@ The end-to-end shape from a generator perspective:
 4. **Build picks it up automatically** — `tasks/build.sh` regenerates
    before computing the `tsort` graph, so the new files appear in the
    dependency walk via the `-- REQUIRE:` edges the generator emits.
-5. **Baseline & test.** Create a hand-reviewed byte-parity baseline under
-   `tests/codegen/reference/<token>/` (each file marked `-- REFERENCE:` /
-   `// REFERENCE:`) so `test_against_reference.py` guards the new type — it
-   only covers types that have a baseline directory. Then run
-   `mise run test:codegen`, the relevant SQLx suites, and the PostgreSQL
-   matrix.
+5. **Test.** Do **not** add a `tests/codegen/reference/<token>/` baseline.
+   `int4` is the sole golden master for the type-generic generator: the SQL
+   templates are pure token substitution and the only type-specific rendering
+   is `<token>_values.rs`, so a per-type baseline can only fail where `int4`'s
+   already would. Drift protection for the new type comes from the `int4`
+   reference (shared templates + `terms.py`), the committed `<token>_values.rs`
+   const guarded by the codegen staleness check, the `<token>` cases in
+   `test_scalars.py`, and the `ordered_numeric_matrix!` SQLx suite (behaviour,
+   not bytes). Run `mise run test:codegen`, the relevant SQLx suites, and the
+   PostgreSQL matrix.
+6. **Snapshot the matrix inventory.** Run `mise run test:matrix:inventory`
+   and commit the new `tests/sqlx/snapshots/<token>_matrix_tests.txt` — the
+   sorted list of the type's `scalars::<token>::*` test names. CI's
+   `matrix-coverage` job `git diff --exit-code`s it (like `<token>_values.rs`)
+   to catch a silently dropped or renamed matrix test. The snapshot is a
+   committed test baseline, not gitignored generated SQL. See
+   `tests/sqlx/snapshots/README.md`.
 
 Adding a new **term** is a bigger move — edit `terms.py`, add tests,
 audit `splinter.sh` for a name collision, and update the reference

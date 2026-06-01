@@ -81,6 +81,15 @@ impl ScalarType for i32 {
     const FIXTURE_VALUES: &'static [i32] = crate::fixtures::int4_values::VALUES;
 }
 
+impl ScalarType for i16 {
+    const PG_TYPE: &'static str = "int2";
+    /// Single-sourced from `tasks/codegen/types/int2.toml` `[fixture] values`
+    /// via the generated `fixtures::int2_values::VALUES` const — the same list
+    /// the fixture generator encrypts, so the oracle cannot drift from the
+    /// fixture. Spans the negative boundary, the i16 signed extremes, and zero.
+    const FIXTURE_VALUES: &'static [i16] = crate::fixtures::int2_values::VALUES;
+}
+
 /// Per-domain capability + payload shape. Storage carries no terms, `Eq`
 /// adds `hm`, `Ord`/`OrdOre` add `ob`. `Ord` and `OrdOre` are deliberate
 /// twins — same operator surface, different SQL domain names — for the
@@ -143,20 +152,21 @@ impl Variant {
     /// or `None` if the variant carries no extractor (`Storage`). Returns
     /// just the function name — call sites append `(column)` themselves so
     /// the accessor is decoupled from any specific column-naming
-    /// convention. `Eq` resolves to `eql_v2.eq_term`; `Ord` and `OrdOre`
-    /// both resolve to `eql_v2.ord_term`.
+    /// convention. `Eq` resolves to `eql_v3.eq_term`; `Ord` and `OrdOre`
+    /// both resolve to `eql_v3.ord_term`.
     pub const fn extractor_fn(self) -> Option<&'static str> {
         match self {
             Variant::Storage => None,
-            Variant::Eq => Some("eql_v2.eq_term"),
-            Variant::Ord | Variant::OrdOre => Some("eql_v2.ord_term"),
+            Variant::Eq => Some("eql_v3.eq_term"),
+            Variant::Ord | Variant::OrdOre => Some("eql_v3.ord_term"),
         }
     }
 }
 
 /// Runtime spec built from `(T, Variant)`. The matrix macro consumes
 /// this; nothing here is `const` because `sql_domain` is derived via
-/// `format!` from `T::PG_TYPE`.
+/// `format!` from `T::PG_TYPE`. The domains live in the `eql_v3` schema,
+/// so `sql_domain` is schema-qualified (e.g. `eql_v3.int4_eq`).
 #[derive(Debug, Clone)]
 pub struct ScalarDomainSpec {
     pub sql_domain: String,
@@ -166,7 +176,7 @@ pub struct ScalarDomainSpec {
 impl ScalarDomainSpec {
     pub fn new<T: ScalarType>(variant: Variant) -> Self {
         Self {
-            sql_domain: format!("eql_v2_{}{}", T::PG_TYPE, variant.suffix()),
+            sql_domain: format!("eql_v3.{}{}", T::PG_TYPE, variant.suffix()),
             variant,
         }
     }

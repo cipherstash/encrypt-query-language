@@ -51,6 +51,9 @@ cd tests/sqlx
 sqlx migrate run
 
 # Regenerate fixtures every run — they are not committed (see .gitignore).
+# fixture:generate:all enumerates every scalar manifest in
+# tasks/codegen/types/ that declares a [fixture] table, so new scalar types
+# are picked up automatically without editing this task.
 # Generator encrypts via cipherstash-client directly, which needs BOTH a
 # ZeroKMS auth credential (CS_CLIENT_ACCESS_KEY + CS_WORKSPACE_CRN, via
 # AutoStrategy) AND a client key (CS_CLIENT_ID + CS_CLIENT_KEY, via
@@ -58,7 +61,7 @@ sqlx migrate run
 # separate roles — the two pairs are not alternatives.
 echo "Regenerating SQLx fixtures..."
 cd "{{config_root}}"
-mise run fixture:generate eql_v2_int4
+mise run fixture:generate:all
 
 echo "Running Rust tests..."
 cd tests/sqlx
@@ -96,7 +99,7 @@ mise exec python -- python -m pytest tasks/codegen -q
 """
 
 [tasks."test:matrix:inventory"]
-description = "Regenerate the int4 matrix test-name inventory snapshot (no database required)"
+description = "Regenerate the int4/int2 matrix test-name inventory snapshots (no database required)"
 dir = "{{config_root}}/tests/sqlx"
 run = """
 # Pin an explicit feature set so the inventory is deterministic regardless of
@@ -105,14 +108,18 @@ run = """
 # of this default-feature inventory, covered instead by the scale gate + the
 # family::mutations negative controls. `--list` enumerates the whole
 # encrypted_domain binary (family::support, family::inlinability,
-# family::mutations, scalars::int4); `grep '^scalars::int4'` scopes the
-# snapshot to the matrix only, so landing other family tests never dirties it.
-# `LC_ALL=C sort` makes ordering byte-stable across locales (a bare `sort` is
-# locale-dependent and yields spurious CI diffs).
+# family::mutations, scalars::int4, scalars::int2); the per-scalar `grep`
+# scopes each snapshot to that matrix only, so landing other family tests
+# never dirties it. `LC_ALL=C sort` makes ordering byte-stable across locales
+# (a bare `sort` is locale-dependent and yields spurious CI diffs).
 set -euo pipefail
 mkdir -p snapshots
 cargo test --no-default-features --test encrypted_domain -- --list |
   sed -n 's/: test$//p' |
   grep '^scalars::int4' |
   LC_ALL=C sort > snapshots/int4_matrix_tests.txt
+cargo test --no-default-features --test encrypted_domain -- --list |
+  sed -n 's/: test$//p' |
+  grep '^scalars::int2' |
+  LC_ALL=C sort > snapshots/int2_matrix_tests.txt
 """
