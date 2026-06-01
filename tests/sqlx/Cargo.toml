@@ -12,6 +12,7 @@ anyhow = "1"
 hex = "0.4"
 jsonschema = { version = "0.46.4", default-features = false }
 cipherstash-client = { version = "0.35", features = ["tokio"] }
+paste = "1"
 
 [dev-dependencies]
 # None needed - tests live in this crate
@@ -23,6 +24,13 @@ default = []
 # it on push to main and on a nightly schedule. Run locally with:
 #   mise run test:bench
 bench = []
+# Opt-in to the matrix's per-(variant, index) scale tests. Each builds
+# ~5000 rows of filler plus a single selective pivot and asserts the
+# planner *prefers* the functional index with `enable_seqscan` left on.
+# The default index tests force seqscan off and only prove the index is
+# *usable*. Off by default to keep `mise run test` fast; CI runs with
+# `--features scale`.
+scale = []
 # Opt-in to compiling the fixture generators. Without this feature the
 # `#[cfg(feature = "fixture-gen")]` generator tests do not exist, so
 # `cargo test` and CI never see them. Generators need a live Postgres and

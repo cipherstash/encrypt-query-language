@@ -81,15 +81,18 @@ pub trait EqlPlaintext: sealed::Sealed {
     /// EQL encryption pipeline consumes. The mapping is total — every
     /// `EqlPlaintext` impl maps cleanly onto a `Plaintext::*(Some(_))`
     /// variant.
-    fn to_plaintext(self) -> Plaintext;
+    ///
+    /// Takes `&self` so future non-`Copy` plaintexts (`String`,
+    /// `BigDecimal`, `Vec<u8>`) implement without unnecessary clones.
+    fn to_plaintext(&self) -> Plaintext;
 }
 
 impl EqlPlaintext for i32 {
     const CAST: Cast = Cast::INT;
     const PLAINTEXT_SQL_TYPE: PlaintextSqlType = PlaintextSqlType::INTEGER;
 
-    fn to_plaintext(self) -> Plaintext {
-        Plaintext::Int(Some(self))
+    fn to_plaintext(&self) -> Plaintext {
+        Plaintext::Int(Some(*self))
     }
 }
 
@@ -114,7 +117,7 @@ mod tests {
     fn i32_to_plaintext_wraps_in_int_variant() {
         // The trait must lift the raw i32 into the EQL pipeline's Plaintext
         // enum so the fixture driver can hand it to `eql::encrypt_eql`.
-        match (42_i32).to_plaintext() {
+        match 42_i32.to_plaintext() {
             Plaintext::Int(Some(value)) => assert_eq!(value, 42),
             other => panic!("expected Plaintext::Int(Some(42)), got {other:?}"),
         }

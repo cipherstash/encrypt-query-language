@@ -1,14 +1,20 @@
 //! Aggregate function tests
 //!
-//! Tests COUNT, MAX, MIN with encrypted data including eql_v2.min() and eql_v2.max()
+//! Covers native `COUNT` / `GROUP BY` on `eql_v2_encrypted` and the
+//! `eql_v2.min(eql_v2_encrypted)` / `eql_v2.max(eql_v2_encrypted)` aggregates
+//! on the composite type. Per-domain aggregates
+//! (`eql_v2.min(eql_v2_<T>_ord)` etc.) are additionally covered by the
+//! encrypted-domain test matrix (`tests/sqlx/src/matrix.rs`, instantiated per
+//! scalar type from `tests/sqlx/tests/encrypted_domain/scalars/<T>.rs`).
 
 use anyhow::Result;
 use sqlx::PgPool;
 
 #[sqlx::test]
 async fn count_aggregate_on_encrypted_column(pool: PgPool) -> Result<()> {
-    // Test: COUNT works on encrypted columns (counts non-NULL encrypted values)
-
+    // COUNT on an `eql_v2_encrypted` column is PostgreSQL-native — no
+    // aggregate declaration is required. Pin that it still counts non-NULL
+    // encrypted rows on the legacy composite type.
     let count: i64 = sqlx::query_scalar("SELECT COUNT(e) FROM ore")
         .fetch_one(&pool)
         .await?;
@@ -68,9 +74,9 @@ async fn min_aggregate_on_encrypted_column(pool: PgPool) -> Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
 async fn group_by_with_encrypted_column(pool: PgPool) -> Result<()> {
-    // Test: GROUP BY works with encrypted data
-    // Fixture creates 3 distinct encrypted records, each unique
-
+    // GROUP BY on `eql_v2_encrypted` works natively against the fixture's
+    // distinct payloads. Pin that grouping by an encrypted column returns
+    // the expected number of groups.
     let group_count: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM (
             SELECT e, COUNT(*) FROM encrypted GROUP BY e
