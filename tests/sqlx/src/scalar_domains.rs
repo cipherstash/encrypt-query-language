@@ -143,20 +143,21 @@ impl Variant {
     /// or `None` if the variant carries no extractor (`Storage`). Returns
     /// just the function name — call sites append `(column)` themselves so
     /// the accessor is decoupled from any specific column-naming
-    /// convention. `Eq` resolves to `eql_v2.eq_term`; `Ord` and `OrdOre`
-    /// both resolve to `eql_v2.ord_term`.
+    /// convention. `Eq` resolves to `eql_v3.eq_term`; `Ord` and `OrdOre`
+    /// both resolve to `eql_v3.ord_term`.
     pub const fn extractor_fn(self) -> Option<&'static str> {
         match self {
             Variant::Storage => None,
-            Variant::Eq => Some("eql_v2.eq_term"),
-            Variant::Ord | Variant::OrdOre => Some("eql_v2.ord_term"),
+            Variant::Eq => Some("eql_v3.eq_term"),
+            Variant::Ord | Variant::OrdOre => Some("eql_v3.ord_term"),
         }
     }
 }
 
 /// Runtime spec built from `(T, Variant)`. The matrix macro consumes
 /// this; nothing here is `const` because `sql_domain` is derived via
-/// `format!` from `T::PG_TYPE`.
+/// `format!` from `T::PG_TYPE`. The domains live in the `eql_v3` schema,
+/// so `sql_domain` is schema-qualified (e.g. `eql_v3.int4_eq`).
 #[derive(Debug, Clone)]
 pub struct ScalarDomainSpec {
     pub sql_domain: String,
@@ -166,7 +167,7 @@ pub struct ScalarDomainSpec {
 impl ScalarDomainSpec {
     pub fn new<T: ScalarType>(variant: Variant) -> Self {
         Self {
-            sql_domain: format!("eql_v2_{}{}", T::PG_TYPE, variant.suffix()),
+            sql_domain: format!("eql_v3.{}{}", T::PG_TYPE, variant.suffix()),
             variant,
         }
     }
