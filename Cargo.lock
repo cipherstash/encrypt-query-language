@@ -1156,6 +1156,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "eql-codegen"
+version = "0.1.0"
+
+[[package]]
+name = "eql-scalars"
+version = "0.1.0"
+
+[[package]]
 name = "eql_tests"
 version = "0.1.0"
 dependencies = [

@@ -1,0 +1,8 @@
+[package]
+name = "eql-codegen"
+version = "0.1.0"
+edition = "2021"
+description = "SQL generator for EQL encrypted-domain types (stub; implemented in Plan 2)."
+
+# Stub: Plan 2 adds `eql-scalars` as a path dependency and implements the binary.
+[dependencies]
