@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Validates required Doxygen tags are present"
+# Build first so generated encrypted-domain SQL exists under src/.
+#MISE depends=["build"]
 
 set -e
 
