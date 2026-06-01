@@ -76,3 +76,41 @@ dir = "{{config_root}}/tests/sqlx"
 run = """
 cargo test --test payload_schema_tests
 """
+
+[tasks."codegen:domain:all"]
+description = "Regenerate every encrypted-domain type from its TOML manifest"
+dir = "{{config_root}}"
+run = """
+mise exec python -- python -m tasks.codegen.generate --all
+"""
+
+[tasks."test:codegen"]
+description = "Run the encrypted-domain codegen generator tests (no database required)"
+dir = "{{config_root}}"
+run = """
+# pytest is the only non-stdlib dependency; the install is a fast no-op once satisfied.
+mise exec python -- python -m pip install --quiet --disable-pip-version-check pytest
+mise exec python -- python -m pytest tasks/codegen -q
+"""
+
+[tasks."test:matrix:inventory"]
+description = "Regenerate the int4 matrix test-name inventory snapshot (no database required)"
+dir = "{{config_root}}/tests/sqlx"
+run = """
+# Pin an explicit feature set so the inventory is deterministic regardless of
+# the caller's local flags. `--no-default-features` keeps the `scale` arm
+# (`#[cfg(feature = "scale")]`) excluded — its add/delete is a known blind spot
+# of this default-feature inventory, covered instead by the scale gate + the
+# family::mutations negative controls. `--list` enumerates the whole
+# encrypted_domain binary (family::support, family::inlinability,
+# family::mutations, scalars::int4); `grep '^scalars::int4'` scopes the
+# snapshot to the matrix only, so landing other family tests never dirties it.
+# `LC_ALL=C sort` makes ordering byte-stable across locales (a bare `sort` is
+# locale-dependent and yields spurious CI diffs).
+set -euo pipefail
+mkdir -p snapshots
+cargo test --no-default-features --test encrypted_domain -- --list |
+  sed -n 's/: test$//p' |
+  grep '^scalars::int4' |
+  LC_ALL=C sort > snapshots/int4_matrix_tests.txt
+"""
