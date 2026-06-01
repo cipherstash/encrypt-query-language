@@ -99,31 +99,71 @@ mise exec python -- python -m pytest tasks/codegen -q
 """
 
 [tasks."test:matrix:inventory"]
-description = "Regenerate the int4/int2/int8 matrix test-name inventory snapshots (no database required)"
+description = "Regenerate the per-scalar matrix test-name inventory snapshots from type manifests (no database required)"
 dir = "{{config_root}}/tests/sqlx"
 run = """
+# Regenerate one committed snapshot per scalar encrypted-domain type, enumerated
+# dynamically from the type manifests — the SAME source of truth that
+# `fixture:generate:all` and `codegen:domain:all` use. Adding a new scalar type
+# (a new <T>.toml with a [fixture] table) is picked up automatically; this task
+# never hand-lists a type. The manifests live at the repo root, but this task
+# runs in tests/sqlx (dir = .../tests/sqlx), so the glob is ../../tasks/...
+#
 # Pin an explicit feature set so the inventory is deterministic regardless of
 # the caller's local flags. `--no-default-features` keeps the `scale` arm
 # (`#[cfg(feature = "scale")]`) excluded — its add/delete is a known blind spot
 # of this default-feature inventory, covered instead by the scale gate + the
 # family::mutations negative controls. `--list` enumerates the whole
 # encrypted_domain binary (family::support, family::inlinability,
-# family::mutations, scalars::int4, scalars::int2, scalars::int8); the per-scalar `grep`
-# scopes each snapshot to that matrix only, so landing other family tests
-# never dirties it. `LC_ALL=C sort` makes ordering byte-stable across locales
-# (a bare `sort` is locale-dependent and yields spurious CI diffs).
+# family::mutations, scalars::<T> for each scalar); the per-scalar `grep` scopes
+# each snapshot to that matrix only, so landing other family tests never dirties
+# it. `LC_ALL=C sort` makes ordering byte-stable across locales (a bare `sort`
+# is locale-dependent and yields spurious CI diffs). `--list` is run ONCE and
+# reused — its output is deterministic, so the single invocation is faithful and
+# avoids three redundant cargo passes.
 set -euo pipefail
 mkdir -p snapshots
-cargo test --no-default-features --test encrypted_domain -- --list |
-  sed -n 's/: test$//p' |
-  grep '^scalars::int4' |
-  LC_ALL=C sort > snapshots/int4_matrix_tests.txt
-cargo test --no-default-features --test encrypted_domain -- --list |
-  sed -n 's/: test$//p' |
-  grep '^scalars::int2' |
-  LC_ALL=C sort > snapshots/int2_matrix_tests.txt
-cargo test --no-default-features --test encrypted_domain -- --list |
-  sed -n 's/: test$//p' |
-  grep '^scalars::int8' |
-  LC_ALL=C sort > snapshots/int8_matrix_tests.txt
+
+# One enumeration pass for the whole binary, reused per type below.
+listing=$(cargo test --no-default-features --test encrypted_domain -- --list | sed -n 's/: test$//p')
+
+generated=0
+for manifest in ../../tasks/codegen/types/*.toml; do
+  # Guard the no-match case (glob stays literal under POSIX sh).
+  [ -e "$manifest" ] || continue
+  # Only types that declare a [fixture] table participate in the matrix suite.
+  grep -qE '^\\[fixture\\]' "$manifest" || continue
+  token=$(basename "$manifest" .toml)
+  printf '%s\\n' "$listing" |
+    grep "^scalars::${token}::" |
+    LC_ALL=C sort > "snapshots/${token}_matrix_tests.txt"
+  # A manifest with a [fixture] table MUST have matching matrix tests. An empty
+  # snapshot means the scalars::<token> module is missing or mis-named — fail
+  # loudly rather than committing an empty baseline.
+  if [ ! -s "snapshots/${token}_matrix_tests.txt" ]; then
+    echo "No 'scalars::${token}::*' tests found for manifest ${manifest} — matrix suite missing or mis-named." >&2
+    exit 1
+  fi
+  generated=$((generated + 1))
+done
+
+if [ "$generated" -eq 0 ]; then
+  echo "No scalar manifests with a [fixture] table found in ../../tasks/codegen/types/" >&2
+  exit 1
+fi
+
+# Reconcile the other direction: every committed snapshot must map to a manifest
+# with a [fixture] table. A stale snapshot left behind when a scalar type is
+# removed would otherwise silently survive (git diff sees no change to it).
+for snapshot in snapshots/*_matrix_tests.txt; do
+  [ -e "$snapshot" ] || continue
+  token=$(basename "$snapshot" _matrix_tests.txt)
+  manifest="../../tasks/codegen/types/${token}.toml"
+  if [ ! -f "$manifest" ] || ! grep -qE '^\\[fixture\\]' "$manifest"; then
+    echo "Stale snapshot ${snapshot}: no type manifest with a [fixture] table at ${manifest}. Remove the snapshot or restore the manifest." >&2
+    exit 1
+  fi
+done
+
+echo "Regenerated ${generated} matrix inventory snapshot(s)."
 """
