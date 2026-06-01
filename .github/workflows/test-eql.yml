@@ -120,10 +120,15 @@ jobs:
       - name: Regenerate and verify the matrix test-name inventory
         run: |
           mise run test:matrix:inventory
-          git diff --exit-code -- tests/sqlx/snapshots/int4_matrix_tests.txt \
-                                  tests/sqlx/snapshots/int2_matrix_tests.txt \
-                                  tests/sqlx/snapshots/int8_matrix_tests.txt \
-            || { echo "Coverage inventory stale — run 'mise run test:matrix:inventory' and commit."; exit 1; }
+          # `git add -N` registers any brand-new untracked snapshot (e.g. a new
+          # scalar type whose baseline was never committed) so a forgotten
+          # commit also trips the diff — `git diff --exit-code` ignores wholly
+          # untracked files otherwise. Diff the whole snapshots/ directory so no
+          # per-type file is hardcoded here; the mise task already enumerates the
+          # type set from the manifests and fails on a missing/stale snapshot.
+          git add -N tests/sqlx/snapshots
+          git diff --exit-code -- tests/sqlx/snapshots \
+            || { echo "Coverage inventory stale or uncommitted — run 'mise run test:matrix:inventory' and commit tests/sqlx/snapshots."; exit 1; }
 
   test:
     name: "Test & Validate EQL (Postgres ${{ matrix.postgres-version }})"
