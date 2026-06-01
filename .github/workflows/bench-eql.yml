@@ -50,7 +50,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: tests/sqlx
+          workspaces: .
           shared-key: sqlx-tests
 
       - name: Setup database
