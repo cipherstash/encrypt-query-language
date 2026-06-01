@@ -204,7 +204,7 @@ macro_rules! ordered_numeric_matrix {
             // converged ordered domain, ord_term btree. One curated combo keeps
             // PR CI cost bounded.
             scale_default_combos = [
-                (ord, Ord, "eql_v2.ord_term", "btree"),
+                (ord, Ord, "eql_v3.ord_term", "btree"),
             ],
         }
     };
@@ -2298,7 +2298,7 @@ macro_rules! __scalar_matrix_aggregate_parallel_case {
                          FROM pg_proc p \
                          JOIN pg_aggregate a ON a.aggfnoid = p.oid \
                          WHERE p.proname = $1 \
-                           AND p.pronamespace = 'eql_v2'::regnamespace \
+                           AND p.pronamespace = 'eql_v3'::regnamespace \
                            AND p.proargtypes[0]::regtype = $2::regtype",
                     )
                     .bind(agg)
@@ -2306,9 +2306,9 @@ macro_rules! __scalar_matrix_aggregate_parallel_case {
                     .fetch_one(&pool)
                     .await?;
                     anyhow::ensure!(proparallel == "s",
-                        "eql_v2.{agg}({d}) must be PARALLEL SAFE (proparallel='s'), got {proparallel:?}");
+                        "eql_v3.{agg}({d}) must be PARALLEL SAFE (proparallel='s'), got {proparallel:?}");
                     anyhow::ensure!(has_combine,
-                        "eql_v2.{agg}({d}) must declare a combinefunc for partial aggregation");
+                        "eql_v3.{agg}({d}) must declare a combinefunc for partial aggregation");
                 }
                 Ok(())
             }
