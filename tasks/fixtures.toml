@@ -27,3 +27,32 @@ cargo test --features fixture-gen --lib \
   "fixtures::${fixture}::generate" \
   -- --ignored --exact --nocapture
 """
+
+["fixture:generate:all"]
+description = "Regenerate every scalar SQLx fixture declared by a type manifest"
+# Enumerates tasks/codegen/types/*.toml — the SAME manifests that
+# `codegen:domain:all` drives — and regenerates the SQLx fixture for each type
+# whose manifest declares a [fixture] table. This keeps the test fixtures in
+# lockstep with the declared scalar types: adding a new scalar type (a new
+# <T>.toml with a [fixture] table) is picked up automatically, so the test
+# task never has to hand-list each fixture. Same prerequisites as
+# `fixture:generate` (Postgres up + CS_* credentials).
+dir = "{{config_root}}"
+run = """
+generated=0
+for manifest in tasks/codegen/types/*.toml; do
+  # Guard the no-match case (glob stays literal under POSIX sh).
+  [ -e "$manifest" ] || continue
+  # Only types that declare a [fixture] table have a SQLx fixture generator.
+  grep -qE '^\\[fixture\\]' "$manifest" || continue
+  token=$(basename "$manifest" .toml)
+  echo "Generating fixture eql_v2_${token}..."
+  mise run fixture:generate "eql_v2_${token}"
+  generated=$((generated + 1))
+done
+if [ "$generated" -eq 0 ]; then
+  echo "No scalar manifests with a [fixture] table found in tasks/codegen/types/" >&2
+  exit 1
+fi
+echo "Regenerated ${generated} scalar fixture(s)."
+"""
