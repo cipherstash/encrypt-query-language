@@ -377,12 +377,23 @@ The end-to-end shape from a generator perspective:
 4. **Build picks it up automatically** — `tasks/build.sh` regenerates
    before computing the `tsort` graph, so the new files appear in the
    dependency walk via the `-- REQUIRE:` edges the generator emits.
-5. **Baseline & test.** Create a hand-reviewed byte-parity baseline under
-   `tests/codegen/reference/<token>/` (each file marked `-- REFERENCE:` /
-   `// REFERENCE:`) so `test_against_reference.py` guards the new type — it
-   only covers types that have a baseline directory. Then run
-   `mise run test:codegen`, the relevant SQLx suites, and the PostgreSQL
-   matrix.
+5. **Test.** Do **not** add a `tests/codegen/reference/<token>/` baseline.
+   `int4` is the sole golden master for the type-generic generator: the SQL
+   templates are pure token substitution and the only type-specific rendering
+   is `<token>_values.rs`, so a per-type baseline can only fail where `int4`'s
+   already would. Drift protection for the new type comes from the `int4`
+   reference (shared templates + `terms.py`), the committed `<token>_values.rs`
+   const guarded by the codegen staleness check, the `<token>` cases in
+   `test_scalars.py`, and the `ordered_numeric_matrix!` SQLx suite (behaviour,
+   not bytes). Run `mise run test:codegen`, the relevant SQLx suites, and the
+   PostgreSQL matrix.
+6. **Snapshot the matrix inventory.** Run `mise run test:matrix:inventory`
+   and commit the new `tests/sqlx/snapshots/<token>_matrix_tests.txt` — the
+   sorted list of the type's `scalars::<token>::*` test names. CI's
+   `matrix-coverage` job `git diff --exit-code`s it (like `<token>_values.rs`)
+   to catch a silently dropped or renamed matrix test. The snapshot is a
+   committed test baseline, not gitignored generated SQL. See
+   `tests/sqlx/snapshots/README.md`.
 
 Adding a new **term** is a bigger move — edit `terms.py`, add tests,
 audit `splinter.sh` for a name collision, and update the reference
