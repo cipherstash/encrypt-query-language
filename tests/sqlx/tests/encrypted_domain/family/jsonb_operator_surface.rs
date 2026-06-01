@@ -10,8 +10,11 @@
 //! Those lists are an *enumeration*, not a structural guarantee: a future PG
 //! version could add a jsonb operator that nobody adds here, and it would
 //! silently route to native jsonb behaviour. This test closes that gap by
-//! asking the live catalog which operators actually touch `jsonb` and failing
-//! if any symbol is absent from the known union.
+//! asking the live catalog which *native* operators touch `jsonb` and failing
+//! if any symbol is absent from the known union. EQL's own cross-type operators
+//! on the legacy `eql_v2_encrypted` composite (which also take a jsonb operand,
+//! e.g. `~~` / `~~*`) are excluded — they are not native and are unreachable
+//! from a storage scalar domain.
 //!
 //! Source of truth: `tasks/codegen/operator_surface.py::KNOWN_JSONB_OPERATORS`
 //! (asserted complete by `tasks/codegen/test_operator_surface.py`). The set
@@ -36,15 +39,25 @@ const KNOWN_JSONB_OPERATORS: &[&str] = &[
 
 #[sqlx::test]
 async fn every_native_jsonb_operator_is_known_to_the_generator(pool: PgPool) -> Result<()> {
-    // Distinct operator symbols whose left OR right argument is `jsonb`. This
-    // is the full surface a value typed as a jsonb-backed domain can reach via
+    // Distinct operator symbols whose left OR right argument is `jsonb` — the
+    // native surface a value typed as a jsonb-backed domain can reach via
     // operator resolution against the ultimate base type.
+    //
+    // Exclude EQL's own cross-type operators on the legacy `eql_v2_encrypted`
+    // composite (e.g. `eql_v2_encrypted ~~ jsonb`, `jsonb ~~ eql_v2_encrypted`).
+    // They take a jsonb operand but are NOT native plaintext-jsonb operators and
+    // are unreachable from a storage scalar domain: a `eql_v2_int4` operand
+    // resolves to the domain / its jsonb base, never to `eql_v2_encrypted`, so
+    // `col ~~ x` finds no operator (asserted by the matrix `native_absent_ops`
+    // arm). Matching on `typname` is search_path-independent and a harmless
+    // no-op when the type is absent (e.g. the Protect build variant).
     let native: Vec<String> = sqlx::query_scalar(
         r#"
         SELECT DISTINCT o.oprname
         FROM pg_catalog.pg_operator o
-        WHERE o.oprleft = 'jsonb'::regtype
-           OR o.oprright = 'jsonb'::regtype
+        WHERE (o.oprleft = 'jsonb'::regtype OR o.oprright = 'jsonb'::regtype)
+          AND o.oprleft  NOT IN (SELECT oid FROM pg_catalog.pg_type WHERE typname = 'eql_v2_encrypted')
+          AND o.oprright NOT IN (SELECT oid FROM pg_catalog.pg_type WHERE typname = 'eql_v2_encrypted')
         ORDER BY 1
         "#,
     )
