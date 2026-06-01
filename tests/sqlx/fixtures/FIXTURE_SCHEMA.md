@@ -9,7 +9,6 @@ EQL Extension (via migrations)
   ├── encrypted_json.sql
   │   └── array_data.sql (extends `encrypted` table from encrypted_json)
   ├── match_data.sql
-  ├── aggregate_minmax_data.sql
   ├── config_tables.sql
   ├── constraint_tables.sql
   ├── encryptindex_tables.sql
@@ -231,7 +230,7 @@ CREATE TABLE fixtures.eql_v2_int4 (
   (`k = "ct"`, `v = 2`).
 
 **Used By:**
-- eql_v2_int4_fixture_tests.rs (structural verification)
+- `__scalar_matrix_fixture_shape!` arm in `tests/sqlx/src/matrix.rs` (structural verification, generated per type)
 - (#225) the `eql_v2_int4` domain operator tests, via per-query `payload` casts
 
 **Opt-in:** Not a migration — a SQLx fixture script. Each consuming test opts

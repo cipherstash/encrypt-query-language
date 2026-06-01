@@ -148,3 +148,51 @@ impl<'a> QueryAssertion<'a> {
         );
     }
 }
+
+/// Assert a `sqlx::Error` is a database error with the given SQLSTATE,
+/// optionally with the given constraint name. Includes the actual error
+/// in the panic message so a failing test prints *why* it failed, not
+/// just *that* it failed — `assert!(result.is_err(), "…")` swallows the
+/// underlying error so a constraint engagement against the wrong
+/// constraint or SQLSTATE passes silently.
+///
+/// # SQLSTATEs commonly seen on encrypted columns
+/// - `23505` — unique_violation
+/// - `23502` — not_null_violation
+/// - `23514` — check_violation
+/// - `23503` — foreign_key_violation
+/// - `P0001` — raise_exception (PL/pgSQL `RAISE EXCEPTION`)
+/// - `42704` — undefined_object (no operator class found, etc.)
+///
+/// # Example
+/// ```ignore
+/// let result = sqlx::query(...).execute(&pool).await.unwrap_err();
+/// assert_db_error(&result, "23514", Some("encrypted_check_c_constrained"));
+/// ```
+pub fn assert_db_error(
+    err: &sqlx::Error,
+    expected_sqlstate: &str,
+    expected_constraint: Option<&str>,
+) {
+    let db_err = err
+        .as_database_error()
+        .unwrap_or_else(|| panic!("expected database error, got: {err:?}"));
+
+    let code = db_err.code();
+    assert_eq!(
+        code.as_deref(),
+        Some(expected_sqlstate),
+        "expected SQLSTATE {expected_sqlstate}, got {code:?} (message: {})",
+        db_err.message(),
+    );
+
+    if let Some(expected) = expected_constraint {
+        let constraint = db_err.constraint();
+        assert_eq!(
+            constraint,
+            Some(expected),
+            "expected constraint name {expected:?}, got {constraint:?} (message: {})",
+            db_err.message(),
+        );
+    }
+}
