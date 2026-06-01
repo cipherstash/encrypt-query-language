@@ -53,6 +53,7 @@ pub struct PlaintextSqlType(&'static str);
 
 impl PlaintextSqlType {
     pub const INTEGER: PlaintextSqlType = PlaintextSqlType("integer");
+    pub const SMALLINT: PlaintextSqlType = PlaintextSqlType("smallint");
 
     pub fn as_str(&self) -> &'static str {
         self.0
@@ -68,6 +69,7 @@ impl fmt::Display for PlaintextSqlType {
 mod sealed {
     pub trait Sealed {}
     impl Sealed for i32 {}
+    impl Sealed for i16 {}
 }
 
 /// A Rust type usable as a fixture `plaintext` value, carrying its EQL cast
@@ -96,6 +98,15 @@ impl EqlPlaintext for i32 {
     }
 }
 
+impl EqlPlaintext for i16 {
+    const CAST: Cast = Cast::SMALL_INT;
+    const PLAINTEXT_SQL_TYPE: PlaintextSqlType = PlaintextSqlType::SMALLINT;
+
+    fn to_plaintext(&self) -> Plaintext {
+        Plaintext::SmallInt(Some(*self))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -120,6 +131,29 @@ mod tests {
         match 42_i32.to_plaintext() {
             Plaintext::Int(Some(value)) => assert_eq!(value, 42),
             other => panic!("expected Plaintext::Int(Some(42)), got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn i16_casts_to_small_int() {
+        assert_eq!(<i16 as EqlPlaintext>::CAST.as_str(), "small_int");
+    }
+
+    #[test]
+    fn i16_plaintext_sql_type_is_smallint() {
+        assert_eq!(
+            <i16 as EqlPlaintext>::PLAINTEXT_SQL_TYPE.as_str(),
+            "smallint"
+        );
+    }
+
+    #[test]
+    fn i16_to_plaintext_wraps_in_small_int_variant() {
+        // i16 must lift into the SmallInt variant so the fixture driver
+        // encrypts it under the `small_int` cast, not `int`.
+        match 42_i16.to_plaintext() {
+            Plaintext::SmallInt(Some(value)) => assert_eq!(value, 42),
+            other => panic!("expected Plaintext::SmallInt(Some(42)), got {other:?}"),
         }
     }
 }

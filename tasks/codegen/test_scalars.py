@@ -62,3 +62,21 @@ def test_require_scalar_unknown_raises():
 
 def test_int4_registered_in_catalog():
     assert "int4" in SCALAR_KINDS
+
+
+def test_int2_kind_resolves_and_renders():
+    kind = require_scalar("int2")
+    assert kind.rust_type == "i16"
+    assert kind.numeric_value("MIN") == -32768
+    assert kind.numeric_value("MAX") == 32767
+    assert kind.numeric_value("ZERO") == 0
+    assert kind.render_literal("MIN") == "i16::MIN"
+    assert kind.render_literal("MAX") == "i16::MAX"
+    assert kind.render_literal("ZERO") == "0"
+    assert kind.render_literal("30000") == "30000"
+
+
+def test_int2_kind_rejects_out_of_range():
+    kind = require_scalar("int2")
+    with pytest.raises(ScalarError, match="out of range"):
+        kind.numeric_value("40000")

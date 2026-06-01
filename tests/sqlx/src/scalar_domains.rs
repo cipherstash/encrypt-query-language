@@ -81,6 +81,15 @@ impl ScalarType for i32 {
     const FIXTURE_VALUES: &'static [i32] = crate::fixtures::int4_values::VALUES;
 }
 
+impl ScalarType for i16 {
+    const PG_TYPE: &'static str = "int2";
+    /// Single-sourced from `tasks/codegen/types/int2.toml` `[fixture] values`
+    /// via the generated `fixtures::int2_values::VALUES` const — the same list
+    /// the fixture generator encrypts, so the oracle cannot drift from the
+    /// fixture. Spans the negative boundary, the i16 signed extremes, and zero.
+    const FIXTURE_VALUES: &'static [i16] = crate::fixtures::int2_values::VALUES;
+}
+
 /// Per-domain capability + payload shape. Storage carries no terms, `Eq`
 /// adds `hm`, `Ord`/`OrdOre` add `ob`. `Ord` and `OrdOre` are deliberate
 /// twins — same operator surface, different SQL domain names — for the
