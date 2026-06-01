@@ -96,15 +96,15 @@ async fn lint_categories_are_well_known(pool: PgPool) -> Result<()> {
 /// planner can fold or elide the call when the result is provably unused
 /// (a dead CASE branch, a folded predicate), silently bypassing the RAISE
 /// and re-enabling the operator. See CLAUDE.md footguns. This test plants
-/// a fake LANGUAGE sql blocker on `eql_v2_int4` and asserts the lint
+/// a fake LANGUAGE sql blocker on `eql_v3.int4` and asserts the lint
 /// surfaces it under category `blocker_language`.
 #[sqlx::test]
 async fn lint_flags_blocker_in_language_sql(pool: PgPool) -> Result<()> {
     sqlx::query(
         r#"
-        CREATE FUNCTION eql_v2.test_bad_blocker_sql(a eql_v2_int4, b eql_v2_int4)
+        CREATE FUNCTION eql_v2.test_bad_blocker_sql(a eql_v3.int4, b eql_v3.int4)
         RETURNS boolean LANGUAGE sql IMMUTABLE
-        AS $$ SELECT eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '=') $$;
+        AS $$ SELECT eql_v3.encrypted_domain_unsupported_bool('eql_v3.int4', '=') $$;
         "#,
     )
     .execute(&pool)
@@ -134,15 +134,15 @@ async fn lint_flags_blocker_in_language_sql(pool: PgPool) -> Result<()> {
 /// A blocker marked `STRICT` lets PostgreSQL skip the body and return NULL
 /// on a NULL argument — silently bypassing the "operator not supported"
 /// RAISE. See CLAUDE.md footguns. This test plants a fake STRICT plpgsql
-/// blocker on `eql_v2_int4` and asserts the lint surfaces it under
+/// blocker on `eql_v3.int4` and asserts the lint surfaces it under
 /// `blocker_strict`.
 #[sqlx::test]
 async fn lint_flags_strict_blocker(pool: PgPool) -> Result<()> {
     sqlx::query(
         r#"
-        CREATE FUNCTION eql_v2.test_bad_blocker_strict(a eql_v2_int4, b eql_v2_int4)
+        CREATE FUNCTION eql_v2.test_bad_blocker_strict(a eql_v3.int4, b eql_v3.int4)
         RETURNS boolean LANGUAGE plpgsql IMMUTABLE STRICT
-        AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4', '='); END; $$;
+        AS $$ BEGIN RETURN eql_v3.encrypted_domain_unsupported_bool('eql_v3.int4', '='); END; $$;
         "#,
     )
     .execute(&pool)
@@ -186,7 +186,7 @@ async fn lint_does_not_report_generated_blockers_as_inlinability_errors(
                     | "inlinability_volatility"
                     | "inlinability_set_clause"
                     | "inlinability_secdef"
-            ) && r.object_name.contains("eql_v2_int4")
+            ) && r.object_name.contains("eql_v3.int4")
                 && (r.object_name.contains("operator =(")
                     || r.object_name.contains("operator ->(")
                     || r.object_name.contains("operator ?("))
@@ -209,7 +209,7 @@ async fn lint_does_not_report_generated_blockers_as_inlinability_errors(
 /// surfaces it under `domain_over_domain`.
 #[sqlx::test]
 async fn lint_flags_domain_over_domain(pool: PgPool) -> Result<()> {
-    sqlx::query(r#"CREATE DOMAIN public.eql_v2_test_baddom AS public.eql_v2_int4;"#)
+    sqlx::query(r#"CREATE DOMAIN public.eql_v2_test_baddom AS eql_v3.int4;"#)
         .execute(&pool)
         .await?;
 
@@ -330,7 +330,7 @@ async fn scalar_family_inlinable_operators_are_clean(pool: PgPool) -> Result<()>
             if matches!(variant, Variant::Storage) {
                 continue;
             }
-            let domain = format!("eql_v2_{pg_type}{}", variant.suffix());
+            let domain = format!("eql_v3.{pg_type}{}", variant.suffix());
             let supported_ops: &[&str] = if variant.supports_ord() {
                 &["=", "<>", "<", "<=", ">", ">="]
             } else {

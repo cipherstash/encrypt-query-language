@@ -36,23 +36,23 @@ async fn mutate(pool: &PgPool, ddl: &str) -> Result<()> {
 //    catch a blocker that silently stopped raising.
 #[sqlx::test]
 async fn disabling_storage_eq_blocker_flips_blocker_arm(pool: PgPool) -> Result<()> {
-    let sql = "SELECT $1::jsonb::eql_v2_int4 = $2::jsonb::eql_v2_int4";
+    let sql = "SELECT $1::jsonb::eql_v3.int4 = $2::jsonb::eql_v3.int4";
 
     // Baseline: the storage `=` blocker raises.
     assert_raises(
         &pool,
         sql,
         &[Some(PLACEHOLDER_PAYLOAD), Some(PLACEHOLDER_PAYLOAD)],
-        &blocker_msg("eql_v2_int4", "="),
+        &blocker_msg("eql_v3.int4", "="),
     )
     .await?;
 
     // Mutation: replace the plpgsql blocker with an inlinable SQL body that
     // returns true. CREATE OR REPLACE keeps the oid, so the `=` operator on
-    // (eql_v2_int4, eql_v2_int4) now resolves to this no-raise body.
+    // (eql_v3.int4, eql_v3.int4) now resolves to this no-raise body.
     mutate(
         &pool,
-        "CREATE OR REPLACE FUNCTION eql_v2.eq(a eql_v2_int4, b eql_v2_int4) \
+        "CREATE OR REPLACE FUNCTION eql_v3.eq(a eql_v3.int4, b eql_v3.int4) \
          RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$ SELECT true $$",
     )
     .await?;
@@ -84,8 +84,8 @@ async fn unsetting_restrict_flips_planner_metadata_arm(pool: PgPool) -> Result<(
             JOIN pg_catalog.pg_type lt ON lt.oid = o.oprleft
             JOIN pg_catalog.pg_type rt ON rt.oid = o.oprright
             WHERE o.oprname = '='
-              AND lt.typname = 'eql_v2_int4_ord'
-              AND rt.typname = 'eql_v2_int4_ord'
+              AND lt.typname = 'int4_ord'
+              AND rt.typname = 'int4_ord'
             "#,
         )
         .fetch_one(pool)
@@ -96,14 +96,14 @@ async fn unsetting_restrict_flips_planner_metadata_arm(pool: PgPool) -> Result<(
     // Baseline: `=` on (ord, ord) declares a RESTRICT estimator.
     ensure!(
         restrict_present(&pool).await?,
-        "baseline: `=` on eql_v2_int4_ord must declare a RESTRICT estimator"
+        "baseline: `=` on eql_v3.int4_ord must declare a RESTRICT estimator"
     );
 
     // Mutation: unset RESTRICT. DROP OPERATOR would hit COMMUTATOR/NEGATOR
     // dependency links; ALTER ... SET (RESTRICT = NONE) avoids that.
     mutate(
         &pool,
-        "ALTER OPERATOR = (eql_v2_int4_ord, eql_v2_int4_ord) SET (RESTRICT = NONE)",
+        "ALTER OPERATOR = (eql_v3.int4_ord, eql_v3.int4_ord) SET (RESTRICT = NONE)",
     )
     .await?;
 
@@ -130,7 +130,7 @@ async fn rerouting_ord_eq_through_hm_flips_ord_routes_arm(pool: PgPool) -> Resul
     .await?;
 
     let count_sql = "SELECT count(*) FROM fixtures.eql_v2_int4 \
-                     WHERE (payload - 'hm')::eql_v2_int4_ord = $1::jsonb::eql_v2_int4_ord";
+                     WHERE (payload - 'hm')::eql_v3.int4_ord = $1::jsonb::eql_v3.int4_ord";
 
     // Baseline: with `hm` stripped, `=` still matches the pivot via `ord_term`
     // (the `ob` term survives) — exactly one row.
@@ -148,7 +148,7 @@ async fn rerouting_ord_eq_through_hm_flips_ord_routes_arm(pool: PgPool) -> Resul
     // nothing.
     mutate(
         &pool,
-        "CREATE OR REPLACE FUNCTION eql_v2.eq(a eql_v2_int4_ord, b eql_v2_int4_ord) \
+        "CREATE OR REPLACE FUNCTION eql_v3.eq(a eql_v3.int4_ord, b eql_v3.int4_ord) \
          RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE \
          AS $$ SELECT eql_v2.hmac_256(a::jsonb) = eql_v2.hmac_256(b::jsonb) $$",
     )
@@ -171,7 +171,7 @@ async fn rerouting_ord_eq_through_hm_flips_ord_routes_arm(pool: PgPool) -> Resul
 //    the `supported_null` arm has teeth.
 #[sqlx::test]
 async fn dropping_strict_on_eq_flips_supported_null_arm(pool: PgPool) -> Result<()> {
-    let sql = "SELECT $1::jsonb::eql_v2_int4_eq = $2::jsonb::eql_v2_int4_eq";
+    let sql = "SELECT $1::jsonb::eql_v3.int4_eq = $2::jsonb::eql_v3.int4_eq";
 
     // Baseline: STRICT `=` propagates NULL when one side is NULL.
     assert_null(&pool, sql, &[Some(PLACEHOLDER_PAYLOAD), None]).await?;
@@ -180,7 +180,7 @@ async fn dropping_strict_on_eq_flips_supported_null_arm(pool: PgPool) -> Result<
     // keeps the oid; the operator now ignores NULL semantics.
     mutate(
         &pool,
-        "CREATE OR REPLACE FUNCTION eql_v2.eq(a eql_v2_int4_eq, b eql_v2_int4_eq) \
+        "CREATE OR REPLACE FUNCTION eql_v3.eq(a eql_v3.int4_eq, b eql_v3.int4_eq) \
          RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$ SELECT true $$",
     )
     .await?;
@@ -205,9 +205,9 @@ async fn dropping_strict_on_eq_flips_supported_null_arm(pool: PgPool) -> Result<
 //    sort key. Blocking `<` alone must not disturb ORDER BY.
 #[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_int4")))]
 async fn blocking_lt_flips_lt_arm_but_not_order_by(pool: PgPool) -> Result<()> {
-    let lt_sql = "SELECT $1::jsonb::eql_v2_int4_ord < $2::jsonb::eql_v2_int4_ord";
+    let lt_sql = "SELECT $1::jsonb::eql_v3.int4_ord < $2::jsonb::eql_v3.int4_ord";
     let order_by_sql = "SELECT plaintext FROM fixtures.eql_v2_int4 \
-                        ORDER BY eql_v2.ord_term(payload::eql_v2_int4_ord) ASC";
+                        ORDER BY eql_v3.ord_term(payload::eql_v3.int4_ord) ASC";
 
     let mut ascending: Vec<i32> = <i32 as ScalarType>::FIXTURE_VALUES.to_vec();
     ascending.sort();
@@ -228,13 +228,13 @@ async fn blocking_lt_flips_lt_arm_but_not_order_by(pool: PgPool) -> Result<()> {
         "baseline: ORDER BY ord_term ASC must be plaintext-sorted"
     );
 
-    // Mutation: turn `eql_v2.lt(_ord, _ord)` into a blocker. Must be
+    // Mutation: turn `eql_v3.lt(_ord, _ord)` into a blocker. Must be
     // LANGUAGE plpgsql and non-STRICT so the RAISE always fires.
     mutate(
         &pool,
-        "CREATE OR REPLACE FUNCTION eql_v2.lt(a eql_v2_int4_ord, b eql_v2_int4_ord) \
+        "CREATE OR REPLACE FUNCTION eql_v3.lt(a eql_v3.int4_ord, b eql_v3.int4_ord) \
          RETURNS boolean LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE \
-         AS $$ BEGIN RETURN eql_v2.encrypted_domain_unsupported_bool('eql_v2_int4_ord', '<'); END; $$",
+         AS $$ BEGIN RETURN eql_v3.encrypted_domain_unsupported_bool('eql_v3.int4_ord', '<'); END; $$",
     )
     .await?;
 
@@ -243,7 +243,7 @@ async fn blocking_lt_flips_lt_arm_but_not_order_by(pool: PgPool) -> Result<()> {
         &pool,
         lt_sql,
         &[Some(PLACEHOLDER_PAYLOAD), Some(PLACEHOLDER_PAYLOAD)],
-        &blocker_msg("eql_v2_int4_ord", "<"),
+        &blocker_msg("eql_v3.int4_ord", "<"),
     )
     .await?;
 
@@ -283,7 +283,7 @@ async fn rerouting_eq_eq_through_ob_flips_eq_arm(pool: PgPool) -> Result<()> {
     .await?;
 
     let count_sql = "SELECT count(*) FROM fixtures.eql_v2_int4 \
-                     WHERE (payload - 'ob')::eql_v2_int4_eq = $1::jsonb::eql_v2_int4_eq";
+                     WHERE (payload - 'ob')::eql_v3.int4_eq = $1::jsonb::eql_v3.int4_eq";
 
     // Baseline: with `ob` stripped, `=` still matches the pivot via `eq_term`
     // (the `hm` term survives) — exactly one row.
@@ -300,7 +300,7 @@ async fn rerouting_eq_eq_through_ob_flips_eq_arm(pool: PgPool) -> Result<()> {
     // `eql_v2.ore_block_u64_8_256(jsonb)` raises rather than matching.
     mutate(
         &pool,
-        "CREATE OR REPLACE FUNCTION eql_v2.eq(a eql_v2_int4_eq, b eql_v2_int4_eq) \
+        "CREATE OR REPLACE FUNCTION eql_v3.eq(a eql_v3.int4_eq, b eql_v3.int4_eq) \
          RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE \
          AS $$ SELECT eql_v2.ore_block_u64_8_256(a::jsonb) = eql_v2.ore_block_u64_8_256(b::jsonb) $$",
     )
@@ -334,7 +334,7 @@ async fn rerouting_eq_eq_through_ob_flips_eq_arm(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_int4")))]
 async fn collapsing_ord_term_flips_order_by_arm(pool: PgPool) -> Result<()> {
     let order_by_desc = "SELECT plaintext FROM fixtures.eql_v2_int4 \
-                         ORDER BY eql_v2.ord_term(payload::eql_v2_int4_ord) DESC";
+                         ORDER BY eql_v3.ord_term(payload::eql_v3.int4_ord) DESC";
 
     let mut descending: Vec<i32> = <i32 as ScalarType>::FIXTURE_VALUES.to_vec();
     descending.sort();
@@ -353,7 +353,7 @@ async fn collapsing_ord_term_flips_order_by_arm(pool: PgPool) -> Result<()> {
     // function body.
     let const_payload = fetch_fixture_payload::<i32>(&pool, 0).await?;
     let ddl = format!(
-        "CREATE OR REPLACE FUNCTION eql_v2.ord_term(a eql_v2_int4_ord) \
+        "CREATE OR REPLACE FUNCTION eql_v3.ord_term(a eql_v3.int4_ord) \
          RETURNS eql_v2.ore_block_u64_8_256 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE \
          AS $mutbody$ SELECT eql_v2.ore_block_u64_8_256('{esc}'::jsonb) $mutbody$",
         esc = const_payload.replace('\'', "''"),
@@ -384,11 +384,11 @@ async fn making_ord_term_non_strict_flips_order_by_nulls_arm(pool: PgPool) -> Re
     const NULL_ROWS: usize = 3;
     let order_by = format!(
         "SELECT plaintext FROM ( \
-           SELECT plaintext, payload::eql_v2_int4_ord AS value FROM fixtures.eql_v2_int4 \
+           SELECT plaintext, payload::eql_v3.int4_ord AS value FROM fixtures.eql_v2_int4 \
            UNION ALL \
-           SELECT NULL::int4, NULL::eql_v2_int4_ord FROM generate_series(1, {NULL_ROWS}) \
+           SELECT NULL::int4, NULL::eql_v3.int4_ord FROM generate_series(1, {NULL_ROWS}) \
          ) s \
-         ORDER BY eql_v2.ord_term(value) ASC NULLS LAST"
+         ORDER BY eql_v3.ord_term(value) ASC NULLS LAST"
     );
 
     let tail_all_none =
@@ -408,10 +408,10 @@ async fn making_ord_term_non_strict_flips_order_by_nulls_arm(pool: PgPool) -> Re
     // unchanged. Unique dollar-quote tag guards the embedded jsonb literal.
     let const_payload = fetch_fixture_payload::<i32>(&pool, 0).await?;
     let ddl = format!(
-        "CREATE OR REPLACE FUNCTION eql_v2.ord_term(a eql_v2_int4_ord) \
+        "CREATE OR REPLACE FUNCTION eql_v3.ord_term(a eql_v3.int4_ord) \
          RETURNS eql_v2.ore_block_u64_8_256 LANGUAGE sql IMMUTABLE PARALLEL SAFE \
          AS $mutbody$ SELECT eql_v2.ore_block_u64_8_256(\
-         coalesce(a, '{esc}'::jsonb::eql_v2_int4_ord)::jsonb) $mutbody$",
+         coalesce(a, '{esc}'::jsonb::eql_v3.int4_ord)::jsonb) $mutbody$",
         esc = const_payload.replace('\'', "''"),
     );
     mutate(&pool, &ddl).await?;

@@ -10,3 +10,8 @@ END
 $$;
 
 DROP SCHEMA IF EXISTS eql_v2 CASCADE;
+
+-- Encrypted-domain families (eql_v3.int4 and future scalar domains) live in
+-- their own schema; drop it too. CASCADE removes the domains and any columns
+-- typed with them.
+DROP SCHEMA IF EXISTS eql_v3 CASCADE;
