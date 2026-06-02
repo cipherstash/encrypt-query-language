@@ -14,17 +14,20 @@ pub fn render_fixture_values_rs(spec: &ScalarSpec) -> String {
     for &f in spec.fixtures {
         literals.push_str(&format!("    {},\n", f.render_literal(spec.kind)));
     }
+    // Raw string keeps the emitted shape legible while staying byte-exact;
+    // lines are flush-left because raw-string whitespace is literal output.
     format!(
-        "//! Fixture plaintext values for the {token} encrypted-domain family.\n\
-         //!\n\
-         //! Generated from the `{token}` row in `eql-scalars::CATALOG` (`fixtures`) —\n\
-         //! the single source of truth shared by the fixture generator\n\
-         //! (`fixtures::eql_v2_{token}`) and the matrix oracle\n\
-         //! (`ScalarType::FIXTURE_VALUES`).\n\n\
-         /// Distinct plaintext values present in the `eql_v2_{token}` fixture.\n\
-         pub const VALUES: &[{rust_type}] = &[\n\
-         {literals}\
-         ];\n"
+        r#"//! Fixture plaintext values for the {token} encrypted-domain family.
+//!
+//! Generated from the `{token}` row in `eql-scalars::CATALOG` (`fixtures`) —
+//! the single source of truth shared by the fixture generator
+//! (`fixtures::eql_v2_{token}`) and the matrix oracle
+//! (`ScalarType::FIXTURE_VALUES`).
+
+/// Distinct plaintext values present in the `eql_v2_{token}` fixture.
+pub const VALUES: &[{rust_type}] = &[
+{literals}];
+"#
     )
 }
 
