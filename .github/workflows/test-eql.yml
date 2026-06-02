@@ -9,6 +9,9 @@ on:
       - "sql/**/*.sql"
       - "tests/**/*"
       - "tasks/**/*"
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
 
   pull_request:
     # run on all pull requests
@@ -18,6 +21,9 @@ on:
       - "sql/**/*.sql"
       - "tests/**/*"
       - "tasks/**/*"
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
 
   workflow_dispatch:
 
@@ -56,6 +62,34 @@ jobs:
       - name: Validate v2.2 / v2.3 payload schemas
         run: |
           mise run test:schema
+
+  rust-crates:
+    name: "Rust workspace crates"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: .
+          shared-key: sqlx-tests
+
+      # fmt + clippy + test for the std-only catalog/generator crates. No
+      # Postgres: these never touch a database, so they run standalone and fast.
+      - name: Compile, lint and test the Rust workspace crates
+        run: |
+          export active_rust_toolchain=$(rustup show active-toolchain | cut -d' ' -f1)
+          rustup component add --toolchain ${active_rust_toolchain} rustfmt clippy
+          mise run test:crates
 
   codegen:
     name: "Encrypted-domain codegen"
