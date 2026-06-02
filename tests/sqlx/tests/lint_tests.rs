@@ -19,7 +19,7 @@ use sqlx::PgPool;
 /// materialised. Extending the family (e.g. when `int8`/`bool`/`date`
 /// land) is a one-line array extension here — every downstream
 /// parameterised test picks it up automatically.
-const SCALAR_PG_TYPES: &[&str] = &["int4"];
+const SCALAR_PG_TYPES: &[&str] = &["int4", "int2"];
 
 #[derive(Debug, sqlx::FromRow)]
 struct LintRow {

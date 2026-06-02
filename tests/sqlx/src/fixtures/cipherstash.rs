@@ -294,7 +294,7 @@ mod live_tests {
 
     /// Assert the well-formed Store shape: the payload is a JSON object
     /// with non-null `v`, `c`, `hm`, `ob`, and `i` fields. Mirrors the
-    /// per-key assertions in `tests/encrypted_domain/scalars/int4/fixture.rs`.
+    /// per-key assertions in `tests/sqlx/tests/encrypted_domain/scalars/int4.rs`.
     fn assert_store_shape(payload: &Value) {
         let obj = payload.as_object().expect("payload must be a JSON object");
         for key in ["v", "c", "hm", "ob", "i"] {

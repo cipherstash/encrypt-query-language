@@ -1,7 +1,7 @@
 // AUTOMATICALLY GENERATED FILE.
 //! Fixture plaintext values for the int4 encrypted-domain family.
 //!
-//! Generated from tasks/codegen/types/int4.toml `[fixture] values` —
+//! Generated from the `int4` row in `eql-scalars::CATALOG` (`fixtures`) —
 //! the single source of truth shared by the fixture generator
 //! (`fixtures::eql_v2_int4`) and the matrix oracle
 //! (`ScalarType::FIXTURE_VALUES`).

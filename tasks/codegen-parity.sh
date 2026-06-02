@@ -21,6 +21,13 @@ for f in tests/codegen/reference/int4/*.sql; do
 done
 
 echo "==> Verifying committed <T>_values.rs are byte-identical (git clean)"
-git diff --exit-code -- tests/sqlx/src/fixtures/*_values.rs
+# `git diff` only catches modifications to tracked files; a newly-generated but
+# uncommitted <T>_values.rs would slip through. `git status --porcelain` also
+# reports untracked files, mirroring the CI codegen job.
+if [ -n "$(git status --porcelain -- tests/sqlx/src/fixtures/)" ]; then
+  echo "values.rs stale or uncommitted after regeneration" >&2
+  git status --porcelain -- tests/sqlx/src/fixtures/ >&2
+  exit 1
+fi
 
 echo "PARITY OK: Rust generator matches the int4 golden (normalized) and committed values.rs."
