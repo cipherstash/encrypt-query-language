@@ -49,7 +49,7 @@ def test_render_fixture_values_rs_emits_typed_const():
     )
     body = render_fixture_values_rs(spec)
     assert "pub const VALUES: &[i32] = &[" in body
-    assert "tasks/codegen/types/int4.toml" in body
+    assert "`int4` row in `eql-scalars::CATALOG`" in body
     # Sentinels map to named consts; numeric tokens pass through.
     assert "i32::MIN," in body
     assert "i32::MAX," in body
