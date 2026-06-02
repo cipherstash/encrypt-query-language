@@ -129,29 +129,65 @@ cargo test -p eql-scalars -p eql-codegen
 """
 
 [tasks."test:matrix:inventory"]
-description = "Regenerate the int4/int2 matrix test-name inventory snapshots (no database required)"
+description = "Verify the matrix test-name set against the single canonical snapshot, catalog-cross-checked (no database required)"
 dir = "{{config_root}}/tests/sqlx"
 run = """
-# Pin an explicit feature set so the inventory is deterministic regardless of
-# the caller's local flags. `--no-default-features` keeps the `scale` arm
-# (`#[cfg(feature = "scale")]`) excluded — its add/delete is a known blind spot
-# of this default-feature inventory, covered instead by the scale gate + the
-# family::mutations negative controls. `--list` enumerates the whole
-# encrypted_domain binary (family::support, family::inlinability,
-# family::mutations, scalars::int4, scalars::int2); the per-scalar `grep`
-# scopes each snapshot to that matrix only, so landing other family tests
-# never dirties it. `LC_ALL=C sort` makes ordering byte-stable across locales
-# (a bare `sort` is locale-dependent and yields spurious CI diffs).
+# ONE canonical, token-normalized snapshot (snapshots/matrix_tests.txt) pins the
+# set of macro-emitted matrix test names. The two per-type snapshots are gone:
+# they were byte-identical modulo the type token, so one canonical set plus a
+# per-type normalize+compare carries the same signal at 1/N the committed surface.
+#
+# Steps:
+#   1. List the encrypted_domain binary ONCE (deterministic; reused below).
+#   2. Discover the set of scalar types present FROM THE BINARY'S OWN OUTPUT
+#      (scalars::<X>:: prefixes) — never a directory glob.
+#   3. For each discovered type, normalize its token to <T> and assert its set
+#      equals the canonical snapshot. Assert at least one type is present.
+#   4. Completeness cross-check: assert the discovered type set equals
+#      `eql-codegen list-types`. A catalog type added without its matrix wiring
+#      (no scalars::<T>:: tests in the binary) fails here.
+#
+# `--no-default-features` excludes the `scale` arm (a known, documented blind
+# spot, covered by the scale gate + family::mutations negative controls).
+# `LC_ALL=C sort` makes ordering byte-stable across locales. No database needed.
 set -euo pipefail
-mkdir -p snapshots
-cargo test --no-default-features --test encrypted_domain -- --list |
-  sed -n 's/: test$//p' |
-  grep '^scalars::int4' |
-  LC_ALL=C sort > snapshots/int4_matrix_tests.txt
-cargo test --no-default-features --test encrypted_domain -- --list |
-  sed -n 's/: test$//p' |
-  grep '^scalars::int2' |
-  LC_ALL=C sort > snapshots/int2_matrix_tests.txt
+
+test -f snapshots/matrix_tests.txt || { echo "snapshots/matrix_tests.txt missing — regenerate (see snapshots/README.md)." >&2; exit 1; }
+
+listing=$(cargo test --no-default-features --test encrypted_domain -- --list | sed -n 's/: test$//p')
+
+# Types present in the binary, from scalars::<X>:: prefixes.
+discovered=$(printf '%s\\n' "$listing" \
+  | sed -n 's/^scalars::\\([a-z0-9_]*\\)::.*/\\1/p' \
+  | LC_ALL=C sort -u)
+[ -n "$discovered" ] || { echo "No scalars::<X>:: tests found in the encrypted_domain binary." >&2; exit 1; }
+
+# Per-type normalize + compare against the canonical snapshot.
+checked=0
+while IFS= read -r t; do
+  [ -n "$t" ] || continue
+  printf '%s\\n' "$listing" | grep "^scalars::${t}::" \
+    | sed -e "s/^scalars::${t}::/scalars::<T>::/" -e "s/_${t}_/_<T>_/g" | LC_ALL=C sort > "/tmp/matrix-norm-${t}.txt"
+  if ! cmp -s "/tmp/matrix-norm-${t}.txt" snapshots/matrix_tests.txt; then
+    echo "Matrix test-name set for '${t}' differs from snapshots/matrix_tests.txt:" >&2
+    diff snapshots/matrix_tests.txt "/tmp/matrix-norm-${t}.txt" >&2 || true
+    exit 1
+  fi
+  checked=$((checked + 1))
+done <<< "$discovered"
+[ "$checked" -gt 0 ] || { echo "No scalar type matched the canonical snapshot." >&2; exit 1; }
+
+# Completeness cross-check against the catalog (the single source of truth).
+catalog=$(cd "{{config_root}}" && cargo run -p eql-codegen -- list-types | LC_ALL=C sort -u)
+if [ "$discovered" != "$catalog" ]; then
+  echo "Catalog types and matrix-wired types disagree." >&2
+  echo "  catalog (eql-codegen list-types): $(echo "$catalog" | tr '\\n' ' ')" >&2
+  echo "  matrix-wired (binary --list):     $(echo "$discovered" | tr '\\n' ' ')" >&2
+  echo "A catalog type missing its matrix wiring (or a wired type not in the catalog) trips this." >&2
+  exit 1
+fi
+
+echo "Matrix inventory OK: ${checked} type(s) match the canonical snapshot; catalog reconciled."
 """
 
 [tasks."test:matrix:expand"]
