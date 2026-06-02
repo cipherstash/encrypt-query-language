@@ -85,7 +85,6 @@ pub fn domain_block(token: &str, domain: &DomainSpec) -> DomainBlock {
     let name = full_domain_name(token, domain.suffix);
 
     let mut keys: Vec<String> = ENVELOPE_KEYS.iter().map(|k| sql_str(k)).collect();
-    keys.push(sql_str(CIPHERTEXT_KEY));
     for k in Term::term_json_keys(domain.terms) {
         keys.push(sql_str(k));
     }
