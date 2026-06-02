@@ -1,73 +1,117 @@
-//! Scalar/term catalog for EQL encrypted-domain codegen.
+//! Scalar/term catalog for EQL encrypted-domain codegen — the Rust source of
+//! truth replacing `tasks/codegen/{scalars,terms,spec}.py` and the
+//! `types/*.toml` manifests. Std-only, no dependencies.
 //!
-//! Replaces the Python `tasks/codegen/scalars.py`, `terms.py`, and `spec.py`
-//! plus the `tasks/codegen/types/*.toml` manifests. Plain Rust data + enums;
-//! std-only, no dependencies.
+//! `Fixture` is value-kind tagged (one non-generic enum, variant = value kind),
+//! so a single `CATALOG` spans every scalar kind. Integer literals are
+//! range-checked at their definition site by `fixtures!` (`N(-40000)` for `i16`
+//! does not compile).
 //!
-//! Plans 2 and 3 depend on the public names here verbatim — do not rename.
+//! Capability axes are independent: equality covers every kind; order covers
+//! every kind except `jsonb` (ORE compares ciphertext, so it is
+//! plaintext-agnostic — `text`/`date` order like integers); only the integer
+//! kinds have an i128 range with `Min`/`Max`/`Zero` sentinels. `numeric_value`
+//! cannot yet express the order of a non-integer fixture set.
+//!
+//! Public names are consumed verbatim by the later codegen plans — do not rename.
 
-/// The native Rust scalar a domain type maps onto.
+/// The native scalar a domain type maps onto. Integer kinds carry i128 bounds;
+/// the others (`Numeric`/`Text`/`Jsonb`) have string fixtures and no numeric
+/// range — though `Numeric`/`Text` are still ORE-orderable, only `Jsonb` is not.
+/// Capability layer only: `CATALOG` declares which kinds actually exist.
 ///
-/// Mirrors `scalars.py`'s `ScalarKind` rendering facts. `min_value`/`max_value`
-/// are widened to `i128` so a single accessor type covers `i16`..`i64` bounds.
-/// This is the fixed capability layer: a variant being present here only means
-/// the generator *can* render that Rust kind; the `CATALOG` registry below is
-/// what declares which scalar types actually exist.
+/// The bounded-numeric accessors below `panic!` on non-integer kinds; callers
+/// gate with `is_int()`, so the panic guards against misuse rather than being a
+/// reachable path (kept over `Option` to spare every integer caller an unwrap).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ScalarKind {
     I16,
     I32,
     I64,
+    Numeric,
+    Text,
+    Jsonb,
 }
 
 impl ScalarKind {
+    /// Fixed-width integer kinds — those with i128 bounds and `Min`/`Max`/`Zero`
+    /// sentinels. Gates the bounded-numeric accessors and invariants. NOT an
+    /// orderability test: `Numeric`/`Text` are ORE-orderable yet not integers.
+    pub const fn is_int(self) -> bool {
+        matches!(self, ScalarKind::I16 | ScalarKind::I32 | ScalarKind::I64)
+    }
+
     /// The Rust type name as it appears in generated source (e.g. `"i32"`).
     pub const fn rust_type(self) -> &'static str {
         match self {
             ScalarKind::I16 => "i16",
             ScalarKind::I32 => "i32",
             ScalarKind::I64 => "i64",
+            ScalarKind::Numeric => "numeric",
+            ScalarKind::Text => "text",
+            ScalarKind::Jsonb => "jsonb",
         }
     }
 
-    /// The `MIN` named-constant symbol (e.g. `"i32::MIN"`).
+    /// The `MIN` named-constant symbol (e.g. `"i32::MIN"`). Integer kinds only.
     pub const fn min_symbol(self) -> &'static str {
         match self {
             ScalarKind::I16 => "i16::MIN",
             ScalarKind::I32 => "i32::MIN",
             ScalarKind::I64 => "i64::MIN",
+            // Explicit (not `_`) so a future integer variant is a compile
+            // error here rather than silently hitting the panic.
+            ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
+                panic!("min_symbol is only defined for integer kinds")
+            }
         }
     }
 
-    /// The `MAX` named-constant symbol (e.g. `"i32::MAX"`).
+    /// The `MAX` named-constant symbol (e.g. `"i32::MAX"`). Integer kinds only.
     pub const fn max_symbol(self) -> &'static str {
         match self {
             ScalarKind::I16 => "i16::MAX",
             ScalarKind::I32 => "i32::MAX",
             ScalarKind::I64 => "i64::MAX",
+            ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
+                panic!("max_symbol is only defined for integer kinds")
+            }
         }
     }
 
-    /// The zero literal symbol (always `"0"`).
+    /// The zero literal symbol (always `"0"`). Integer kinds only.
     pub const fn zero_symbol(self) -> &'static str {
-        "0"
+        match self {
+            ScalarKind::I16 | ScalarKind::I32 | ScalarKind::I64 => "0",
+            ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
+                panic!("zero_symbol is only defined for integer kinds")
+            }
+        }
     }
 
     /// Inclusive lower bound of the representable range, widened to `i128`.
+    /// Integer kinds only.
     pub const fn min_value(self) -> i128 {
         match self {
             ScalarKind::I16 => i16::MIN as i128,
             ScalarKind::I32 => i32::MIN as i128,
             ScalarKind::I64 => i64::MIN as i128,
+            ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
+                panic!("min_value is only defined for integer kinds")
+            }
         }
     }
 
     /// Inclusive upper bound of the representable range, widened to `i128`.
+    /// Integer kinds only.
     pub const fn max_value(self) -> i128 {
         match self {
             ScalarKind::I16 => i16::MAX as i128,
             ScalarKind::I32 => i32::MAX as i128,
             ScalarKind::I64 => i64::MAX as i128,
+            ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
+                panic!("max_value is only defined for integer kinds")
+            }
         }
     }
 }
@@ -148,9 +192,7 @@ impl Term {
 impl Term {
     /// Stable dedupe — first occurrence wins. The Rust analogue of
     /// `terms.py`'s `dict.fromkeys` ordering contract.
-    fn dedupe_preserving_order<'a>(
-        items: impl IntoIterator<Item = &'a str>,
-    ) -> Vec<&'a str> {
+    fn dedupe_preserving_order<'a>(items: impl IntoIterator<Item = &'a str>) -> Vec<&'a str> {
         let mut out: Vec<&'a str> = Vec::new();
         for item in items {
             if !out.contains(&item) {
@@ -163,9 +205,7 @@ impl Term {
     /// Supported operators for the union of a domain's terms (catalog order,
     /// deduped). Mirrors `terms.py::operators_for_terms`.
     pub fn operators_for_terms(terms: &[Term]) -> Vec<&'static str> {
-        Self::dedupe_preserving_order(
-            terms.iter().flat_map(|t| t.operators().iter().copied()),
-        )
+        Self::dedupe_preserving_order(terms.iter().flat_map(|t| t.operators().iter().copied()))
     }
 
     /// JSON payload keys required by these terms (deduped, in order).
@@ -177,9 +217,7 @@ impl Term {
     /// SQL `-- REQUIRE:` edges needed by these terms (deduped, in order).
     /// Mirrors `terms.py::term_requires`.
     pub fn term_requires(terms: &[Term]) -> Vec<&'static str> {
-        Self::dedupe_preserving_order(
-            terms.iter().flat_map(|t| t.requires().iter().copied()),
-        )
+        Self::dedupe_preserving_order(terms.iter().flat_map(|t| t.requires().iter().copied()))
     }
 
     /// The extractor that supports `op` for a domain carrying `terms`, or
@@ -203,46 +241,49 @@ impl Term {
     }
 }
 
-/// A single fixture plaintext value for a scalar type.
+/// A single fixture plaintext value, value-kind tagged: `Min`/`Max`/`Zero` are
+/// the integer matrix pivots (resolved per-kind); `Int` is an integer literal;
+/// `Numeric`/`Text`/`Jsonb` carry rendered string literals.
 ///
-/// Mirrors `scalars.py`'s fixture-token handling, but typed: the sentinels
-/// `MIN`/`MAX`/`ZERO` (the matrix comparison pivots) are dedicated variants,
-/// and `N(i128)` is any explicit numeric literal. Range validity of committed
-/// catalog data is enforced by the invariant `#[test]`s, not here.
+/// `fixtures!` range-checks `Int` literals at compile time, but a hand-built
+/// `Fixture::Int(n)` is not — hence the runtime invariant tests. `Int(MIN)` and
+/// `Min` resolve equal but render differently (`"-32768"` vs `"i16::MIN"`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Fixture {
     Min,
     Max,
     Zero,
-    N(i128),
+    Int(i128),
+    Numeric(&'static str),
+    Text(&'static str),
+    Jsonb(&'static str),
 }
 
 impl Fixture {
-    /// Resolve this fixture to its numeric value for the given scalar kind.
-    /// Mirrors `scalars.py::numeric_value`. Infallible: `Min`/`Max` resolve to
-    /// the kind's bounds, `Zero` to `0`, and `N(n)` to `n` verbatim. It does
-    /// NOT range-check — for committed catalog data the range is statically
-    /// un-failable, and the bounds guard the old `Result` encoded lives in the
-    /// invariant test `every_fixture_value_is_within_kind_bounds`
-    /// (which compares this value against `[min_value(), max_value()]`).
-    pub fn numeric_value(self, kind: ScalarKind) -> i128 {
+    /// The integer value for this fixture (`Min`/`Max` -> kind bounds, `Zero` ->
+    /// 0, `Int(n)` -> n), or `None` for the string-backed kinds. Does not
+    /// range-check; `every_fixture_value_is_within_kind_bounds` guards the bounds.
+    pub fn numeric_value(self, kind: ScalarKind) -> Option<i128> {
         match self {
-            Fixture::Min => kind.min_value(),
-            Fixture::Max => kind.max_value(),
-            Fixture::Zero => 0,
-            Fixture::N(n) => n,
+            Fixture::Min => Some(kind.min_value()),
+            Fixture::Max => Some(kind.max_value()),
+            Fixture::Zero => Some(0),
+            Fixture::Int(n) => Some(n),
+            Fixture::Numeric(_) | Fixture::Text(_) | Fixture::Jsonb(_) => None,
         }
     }
 
-    /// Render this fixture as a Rust source literal of the given scalar kind.
-    /// Sentinels render to their named constant; `N` renders the integer.
-    /// Mirrors `scalars.py::render_literal`.
+    /// Render as a Rust source literal: sentinels -> named constant, `Int` -> the
+    /// number, string kinds -> a `Debug`-quoted (Rust-escaped, not SQL) literal.
     pub fn render_literal(self, kind: ScalarKind) -> String {
         match self {
             Fixture::Min => kind.min_symbol().to_string(),
             Fixture::Max => kind.max_symbol().to_string(),
             Fixture::Zero => kind.zero_symbol().to_string(),
-            Fixture::N(n) => n.to_string(),
+            Fixture::Int(n) => n.to_string(),
+            Fixture::Numeric(s) | Fixture::Text(s) | Fixture::Jsonb(s) => {
+                format!("{s:?}")
+            }
         }
     }
 }
@@ -276,55 +317,56 @@ impl ScalarSpec {
 /// Domains shared by every ordered-integer scalar, in manifest file order:
 /// storage (no terms), `_eq` (hm), `_ord_ore` (ore), `_ord` (ore).
 const ORDERED_INT_DOMAINS: &[DomainSpec] = &[
-    DomainSpec { suffix: "", terms: &[] },
-    DomainSpec { suffix: "_eq", terms: &[Term::Hm] },
-    DomainSpec { suffix: "_ord_ore", terms: &[Term::Ore] },
-    DomainSpec { suffix: "_ord", terms: &[Term::Ore] },
+    DomainSpec {
+        suffix: "",
+        terms: &[],
+    },
+    DomainSpec {
+        suffix: "_eq",
+        terms: &[Term::Hm],
+    },
+    DomainSpec {
+        suffix: "_ord_ore",
+        terms: &[Term::Ore],
+    },
+    DomainSpec {
+        suffix: "_ord",
+        terms: &[Term::Ore],
+    },
 ];
+
+/// Builds a `&[Fixture]`. The `int <ty>;` arm (a tt-muncher over `Min`/`Max`/
+/// `Zero` and `N(<lit>)`) range-checks each literal against `<ty>` at compile
+/// time via `const _RANGE_CHECK`, so out-of-range literals do not compile;
+/// `text;`/`numeric;`/`jsonb;` wrap string literals. The reject case has no
+/// in-crate test (macro isn't exported, no `trybuild` under zero-deps) — verify
+/// by hand with a bad `N(..)`.
+macro_rules! fixtures {
+    (int $t:ty; $($body:tt)*) => { fixtures!(@int $t; [] $($body)*) };
+    (@int $t:ty; [$($acc:expr),*]) => { &[$($acc),*] };
+    (@int $t:ty; [$($acc:expr),*] , $($r:tt)*) => { fixtures!(@int $t; [$($acc),*] $($r)*) };
+    (@int $t:ty; [$($acc:expr),*] Min  $($r:tt)*) => { fixtures!(@int $t; [$($acc,)* Fixture::Min ] $($r)*) };
+    (@int $t:ty; [$($acc:expr),*] Max  $($r:tt)*) => { fixtures!(@int $t; [$($acc,)* Fixture::Max ] $($r)*) };
+    (@int $t:ty; [$($acc:expr),*] Zero $($r:tt)*) => { fixtures!(@int $t; [$($acc,)* Fixture::Zero] $($r)*) };
+    (@int $t:ty; [$($acc:expr),*] N($v:literal) $($r:tt)*) => {
+        fixtures!(@int $t; [$($acc,)* Fixture::Int({ const _RANGE_CHECK: $t = $v; $v as i128 })] $($r)*)
+    };
+    (text;    $($s:literal),* $(,)?) => { &[$(Fixture::Text($s)),*] };
+    (numeric; $($s:literal),* $(,)?) => { &[$(Fixture::Numeric($s)),*] };
+    (jsonb;   $($s:literal),* $(,)?) => { &[$(Fixture::Jsonb($s)),*] };
+}
 
 /// int4 fixture plaintexts — verbatim from `tasks/codegen/types/int4.toml`.
-const INT4_FIXTURES: &[Fixture] = &[
-    Fixture::Min,
-    Fixture::N(-100),
-    Fixture::N(-1),
-    Fixture::Zero,
-    Fixture::N(1),
-    Fixture::N(2),
-    Fixture::N(5),
-    Fixture::N(10),
-    Fixture::N(17),
-    Fixture::N(25),
-    Fixture::N(42),
-    Fixture::N(50),
-    Fixture::N(100),
-    Fixture::N(250),
-    Fixture::N(1000),
-    Fixture::N(9999),
-    Fixture::Max,
-];
+/// `N(..)` literals are range-checked against `i32` at compile time.
+const INT4_FIXTURES: &[Fixture] = fixtures!(int i32;
+    Min, N(-100), N(-1), Zero, N(1), N(2), N(5), N(10), N(17), N(25),
+    N(42), N(50), N(100), N(250), N(1000), N(9999), Max);
 
 /// int2 fixture plaintexts — verbatim from `tasks/codegen/types/int2.toml`.
-const INT2_FIXTURES: &[Fixture] = &[
-    Fixture::Min,
-    Fixture::N(-30000),
-    Fixture::N(-100),
-    Fixture::N(-1),
-    Fixture::Zero,
-    Fixture::N(1),
-    Fixture::N(2),
-    Fixture::N(5),
-    Fixture::N(10),
-    Fixture::N(17),
-    Fixture::N(25),
-    Fixture::N(42),
-    Fixture::N(50),
-    Fixture::N(100),
-    Fixture::N(250),
-    Fixture::N(1000),
-    Fixture::N(9999),
-    Fixture::N(30000),
-    Fixture::Max,
-];
+/// `N(..)` literals are range-checked against `i16` at compile time.
+const INT2_FIXTURES: &[Fixture] = fixtures!(int i16;
+    Min, N(-30000), N(-100), N(-1), Zero, N(1), N(2), N(5), N(10), N(17),
+    N(25), N(42), N(50), N(100), N(250), N(1000), N(9999), N(30000), Max);
 
 const INT4: ScalarSpec = ScalarSpec {
     token: "int4",
@@ -340,12 +382,8 @@ const INT2: ScalarSpec = ScalarSpec {
     fixtures: INT2_FIXTURES,
 };
 
-/// The scalar catalog: the single source of truth replacing the TOML manifests
-/// present on this branch (`int4`, `int2`). Order is significant (it drives
-/// generation/enumeration order). `int8` is intentionally absent here — it is
-/// added on the branch that introduces the int8 SQL surface by appending its
-/// `ScalarSpec`; the capability layer above (`ScalarKind::I64`) already supports
-/// it, so that addition is a pure append.
+/// The scalar catalog — the single source of truth. Order is significant (it
+/// drives generation order). New types are appended as their SQL surface lands.
 pub const CATALOG: &[ScalarSpec] = &[INT4, INT2];
 
 #[cfg(test)]
@@ -370,6 +408,47 @@ mod rust_tests {
         assert_eq!(ScalarKind::I16.zero_symbol(), "0");
         assert_eq!(ScalarKind::I16.min_value(), -32_768_i128);
         assert_eq!(ScalarKind::I16.max_value(), 32_767_i128);
+    }
+
+    #[test]
+    fn is_int_classifies_kinds() {
+        assert!(ScalarKind::I16.is_int());
+        assert!(ScalarKind::I32.is_int());
+        assert!(ScalarKind::I64.is_int());
+        assert!(!ScalarKind::Numeric.is_int());
+        assert!(!ScalarKind::Text.is_int());
+        assert!(!ScalarKind::Jsonb.is_int());
+    }
+
+    // Pin that the bounded-numeric accessors panic (with message) on non-int kinds.
+    #[test]
+    #[should_panic(expected = "min_symbol is only defined for integer kinds")]
+    fn min_symbol_panics_on_non_int_kind() {
+        ScalarKind::Text.min_symbol();
+    }
+
+    #[test]
+    #[should_panic(expected = "max_symbol is only defined for integer kinds")]
+    fn max_symbol_panics_on_non_int_kind() {
+        ScalarKind::Numeric.max_symbol();
+    }
+
+    #[test]
+    #[should_panic(expected = "zero_symbol is only defined for integer kinds")]
+    fn zero_symbol_panics_on_non_int_kind() {
+        ScalarKind::Jsonb.zero_symbol();
+    }
+
+    #[test]
+    #[should_panic(expected = "min_value is only defined for integer kinds")]
+    fn min_value_panics_on_non_int_kind() {
+        ScalarKind::Text.min_value();
+    }
+
+    #[test]
+    #[should_panic(expected = "max_value is only defined for integer kinds")]
+    fn max_value_panics_on_non_int_kind() {
+        ScalarKind::Jsonb.max_value();
     }
 
     #[test]
@@ -469,8 +548,14 @@ mod term_helper_tests {
 
     #[test]
     fn extractor_for_operator_picks_first_supporting_term() {
-        assert_eq!(Term::extractor_for_operator(&[Term::Hm], "="), Some("eq_term"));
-        assert_eq!(Term::extractor_for_operator(&[Term::Ore], "<"), Some("ord_term"));
+        assert_eq!(
+            Term::extractor_for_operator(&[Term::Hm], "="),
+            Some("eq_term")
+        );
+        assert_eq!(
+            Term::extractor_for_operator(&[Term::Ore], "<"),
+            Some("ord_term")
+        );
         assert_eq!(
             Term::extractor_for_operator(&[Term::Hm, Term::Ore], "="),
             Some("eq_term")
@@ -494,26 +579,51 @@ mod fixture_tests {
 
     #[test]
     fn numeric_value_resolves_sentinels_and_literals_for_i32() {
-        assert_eq!(Fixture::Min.numeric_value(ScalarKind::I32), -2_147_483_648);
-        assert_eq!(Fixture::Max.numeric_value(ScalarKind::I32), 2_147_483_647);
-        assert_eq!(Fixture::Zero.numeric_value(ScalarKind::I32), 0);
-        assert_eq!(Fixture::N(42).numeric_value(ScalarKind::I32), 42);
-        assert_eq!(Fixture::N(-1).numeric_value(ScalarKind::I32), -1);
+        assert_eq!(
+            Fixture::Min.numeric_value(ScalarKind::I32),
+            Some(-2_147_483_648)
+        );
+        assert_eq!(
+            Fixture::Max.numeric_value(ScalarKind::I32),
+            Some(2_147_483_647)
+        );
+        assert_eq!(Fixture::Zero.numeric_value(ScalarKind::I32), Some(0));
+        assert_eq!(Fixture::Int(42).numeric_value(ScalarKind::I32), Some(42));
+        assert_eq!(Fixture::Int(-1).numeric_value(ScalarKind::I32), Some(-1));
     }
 
     #[test]
     fn numeric_value_resolves_sentinels_per_kind() {
         // Sentinels resolve to the kind's bounds; zero is always 0.
-        assert_eq!(Fixture::Min.numeric_value(ScalarKind::I16), -32_768);
-        assert_eq!(Fixture::Max.numeric_value(ScalarKind::I16), 32_767);
-        assert_eq!(Fixture::Min.numeric_value(ScalarKind::I64), -9_223_372_036_854_775_808);
-        assert_eq!(Fixture::Max.numeric_value(ScalarKind::I64), 9_223_372_036_854_775_807);
-        assert_eq!(Fixture::Zero.numeric_value(ScalarKind::I64), 0);
-        // `numeric_value` is infallible: it resolves a literal verbatim and does
-        // NOT range-check. Range validity of committed catalog data is enforced
-        // by the invariant test `every_fixture_value_is_within_kind_bounds`,
-        // which compares `numeric_value` against `[min_value(), max_value()]`.
-        assert_eq!(Fixture::N(5_000_000_000).numeric_value(ScalarKind::I64), 5_000_000_000);
+        assert_eq!(Fixture::Min.numeric_value(ScalarKind::I16), Some(-32_768));
+        assert_eq!(Fixture::Max.numeric_value(ScalarKind::I16), Some(32_767));
+        assert_eq!(
+            Fixture::Min.numeric_value(ScalarKind::I64),
+            Some(-9_223_372_036_854_775_808)
+        );
+        assert_eq!(
+            Fixture::Max.numeric_value(ScalarKind::I64),
+            Some(9_223_372_036_854_775_807)
+        );
+        assert_eq!(Fixture::Zero.numeric_value(ScalarKind::I64), Some(0));
+        // `Int` resolves verbatim; no runtime range-check here.
+        assert_eq!(
+            Fixture::Int(5_000_000_000).numeric_value(ScalarKind::I64),
+            Some(5_000_000_000)
+        );
+    }
+
+    #[test]
+    fn numeric_value_is_none_for_string_variants() {
+        assert_eq!(Fixture::Text("alice").numeric_value(ScalarKind::Text), None);
+        assert_eq!(
+            Fixture::Numeric("3.14").numeric_value(ScalarKind::Numeric),
+            None
+        );
+        assert_eq!(
+            Fixture::Jsonb(r#"{"a":1}"#).numeric_value(ScalarKind::Jsonb),
+            None
+        );
     }
 
     #[test]
@@ -527,9 +637,69 @@ mod fixture_tests {
 
     #[test]
     fn render_literal_passes_through_numeric() {
-        assert_eq!(Fixture::N(-100).render_literal(ScalarKind::I32), "-100");
-        assert_eq!(Fixture::N(9999).render_literal(ScalarKind::I32), "9999");
-        assert_eq!(Fixture::N(5_000_000_000).render_literal(ScalarKind::I64), "5000000000");
+        assert_eq!(Fixture::Int(-100).render_literal(ScalarKind::I32), "-100");
+        assert_eq!(Fixture::Int(9999).render_literal(ScalarKind::I32), "9999");
+        assert_eq!(
+            Fixture::Int(5_000_000_000).render_literal(ScalarKind::I64),
+            "5000000000"
+        );
+    }
+
+    #[test]
+    fn render_literal_quotes_string_variants() {
+        // String-backed kinds render a valid quoted Rust literal.
+        assert_eq!(
+            Fixture::Text("alice").render_literal(ScalarKind::Text),
+            "\"alice\""
+        );
+        assert_eq!(
+            Fixture::Numeric("3.14").render_literal(ScalarKind::Numeric),
+            "\"3.14\""
+        );
+        assert_eq!(
+            Fixture::Jsonb(r#"{"a":1}"#).render_literal(ScalarKind::Jsonb),
+            r#""{\"a\":1}""#
+        );
+    }
+
+    #[test]
+    fn fixtures_macro_builds_each_kind() {
+        // The int arm range-checks at compile time; sentinels + literals mix.
+        const INTS: &[Fixture] = fixtures!(int i16; Min, N(-1), Zero, N(30000), Max);
+        assert_eq!(
+            INTS,
+            &[
+                Fixture::Min,
+                Fixture::Int(-1),
+                Fixture::Zero,
+                Fixture::Int(30000),
+                Fixture::Max
+            ]
+        );
+        // The string arms wrap into the matching variant.
+        const TEXTS: &[Fixture] = fixtures!(text; "alice", "bob");
+        assert_eq!(TEXTS, &[Fixture::Text("alice"), Fixture::Text("bob")]);
+        const NUMS: &[Fixture] = fixtures!(numeric; "0.1", "-2.5");
+        assert_eq!(NUMS, &[Fixture::Numeric("0.1"), Fixture::Numeric("-2.5")]);
+        const JSONS: &[Fixture] = fixtures!(jsonb; r#"{"a":1}"#);
+        assert_eq!(JSONS, &[Fixture::Jsonb(r#"{"a":1}"#)]);
+    }
+
+    #[test]
+    fn fixtures_macro_handles_degenerate_inputs() {
+        // Empty list — every arm accepts zero elements.
+        const NO_INT: &[Fixture] = fixtures!(int i32;);
+        const NO_TEXT: &[Fixture] = fixtures!(text;);
+        assert_eq!(NO_INT, &[] as &[Fixture]);
+        assert_eq!(NO_TEXT, &[] as &[Fixture]);
+        // Trailing comma — int muncher (leading-comma rule) and string arm `$(,)?`.
+        const TRAILING_INT: &[Fixture] = fixtures!(int i32; Min, N(1),);
+        const TRAILING_TEXT: &[Fixture] = fixtures!(text; "a",);
+        assert_eq!(TRAILING_INT, &[Fixture::Min, Fixture::Int(1)]);
+        assert_eq!(TRAILING_TEXT, &[Fixture::Text("a")]);
+        // Sentinels-only, no `N(..)`.
+        const SENTINELS: &[Fixture] = fixtures!(int i32; Min, Zero, Max);
+        assert_eq!(SENTINELS, &[Fixture::Min, Fixture::Zero, Fixture::Max]);
     }
 }
 
@@ -602,21 +772,21 @@ mod catalog_tests {
         // From int4.toml [fixture] values, in order.
         let expected = vec![
             Fixture::Min,
-            Fixture::N(-100),
-            Fixture::N(-1),
+            Fixture::Int(-100),
+            Fixture::Int(-1),
             Fixture::Zero,
-            Fixture::N(1),
-            Fixture::N(2),
-            Fixture::N(5),
-            Fixture::N(10),
-            Fixture::N(17),
-            Fixture::N(25),
-            Fixture::N(42),
-            Fixture::N(50),
-            Fixture::N(100),
-            Fixture::N(250),
-            Fixture::N(1000),
-            Fixture::N(9999),
+            Fixture::Int(1),
+            Fixture::Int(2),
+            Fixture::Int(5),
+            Fixture::Int(10),
+            Fixture::Int(17),
+            Fixture::Int(25),
+            Fixture::Int(42),
+            Fixture::Int(50),
+            Fixture::Int(100),
+            Fixture::Int(250),
+            Fixture::Int(1000),
+            Fixture::Int(9999),
             Fixture::Max,
         ];
         assert_eq!(s.fixtures, expected.as_slice());
@@ -627,8 +797,8 @@ mod catalog_tests {
         let s = scalar("int2");
         // From int2.toml [fixture] values, in order — includes the wide
         // ±30000 values that exercise the i16 bounds.
-        assert!(s.fixtures.contains(&Fixture::N(-30000)));
-        assert!(s.fixtures.contains(&Fixture::N(30000)));
+        assert!(s.fixtures.contains(&Fixture::Int(-30000)));
+        assert!(s.fixtures.contains(&Fixture::Int(30000)));
         assert_eq!(s.fixtures.first(), Some(&Fixture::Min));
         assert_eq!(s.fixtures.last(), Some(&Fixture::Max));
     }
@@ -660,13 +830,34 @@ mod invariant_tests {
         }
     }
 
+    /// Cross-kind distinctness key: integer fixtures dedupe by their resolved
+    /// number, string-backed fixtures by their literal. Generalises the Python
+    /// distinct-plaintext contract to every scalar kind.
+    #[derive(Debug, PartialEq, Eq, Hash)]
+    enum DistinctKey {
+        Num(i128),
+        Str(&'static str),
+    }
+
+    fn distinct_key(f: Fixture, kind: ScalarKind) -> DistinctKey {
+        match f {
+            Fixture::Numeric(s) | Fixture::Text(s) | Fixture::Jsonb(s) => DistinctKey::Str(s),
+            _ => DistinctKey::Num(
+                f.numeric_value(kind)
+                    .expect("sentinel/Int fixtures resolve to a number"),
+            ),
+        }
+    }
+
     #[test]
     fn fixtures_include_min_max_and_zero() {
-        for s in CATALOG {
+        // The MIN/MAX/ZERO pivots are an integer-kind invariant; non-integer
+        // kinds (text/numeric/jsonb) have no such pivots.
+        for s in CATALOG.iter().filter(|s| s.kind.is_int()) {
             let resolved: Vec<i128> = s
                 .fixtures
                 .iter()
-                .map(|f| f.numeric_value(s.kind))
+                .filter_map(|f| f.numeric_value(s.kind))
                 .collect();
             assert!(
                 resolved.contains(&s.kind.min_value()),
@@ -685,28 +876,46 @@ mod invariant_tests {
     #[test]
     fn fixture_values_are_distinct_by_resolved_number() {
         for s in CATALOG {
-            let mut seen: HashMap<i128, Fixture> = HashMap::new();
+            let mut seen: HashMap<DistinctKey, Fixture> = HashMap::new();
             for f in s.fixtures {
-                let n = f.numeric_value(s.kind);
-                if let Some(prev) = seen.insert(n, *f) {
-                    panic!(
-                        "{}: {f:?} duplicates {prev:?} (both resolve to {n})",
-                        s.token
-                    );
+                if let Some(prev) = seen.insert(distinct_key(*f, s.kind), *f) {
+                    panic!("{}: {f:?} duplicates {prev:?}", s.token);
                 }
             }
         }
     }
 
     #[test]
+    fn distinct_key_separates_string_fixtures() {
+        // CATALOG is int-only, so the `Str` path is otherwise unexercised.
+        assert_eq!(
+            distinct_key(Fixture::Text("a"), ScalarKind::Text),
+            distinct_key(Fixture::Text("a"), ScalarKind::Text)
+        );
+        assert_ne!(
+            distinct_key(Fixture::Text("a"), ScalarKind::Text),
+            distinct_key(Fixture::Text("b"), ScalarKind::Text)
+        );
+        assert_eq!(
+            distinct_key(Fixture::Numeric("x"), ScalarKind::Numeric),
+            distinct_key(Fixture::Jsonb("x"), ScalarKind::Jsonb)
+        );
+        // Str and Num keys never collide.
+        assert_ne!(
+            distinct_key(Fixture::Text("0"), ScalarKind::Text),
+            distinct_key(Fixture::Zero, ScalarKind::I32)
+        );
+    }
+
+    #[test]
     fn every_fixture_value_is_within_kind_bounds() {
-        // `numeric_value` is infallible, so the range guarantee the old
-        // `Result` encoded is asserted explicitly here: this is the ONLY guard
-        // against an out-of-range `N` in committed catalog data.
-        for s in CATALOG {
+        // Asserts the resolved sentinels stay within bounds (integer kinds only).
+        for s in CATALOG.iter().filter(|s| s.kind.is_int()) {
             let (lo, hi) = (s.kind.min_value(), s.kind.max_value());
             for f in s.fixtures {
-                let n = f.numeric_value(s.kind);
+                let Some(n) = f.numeric_value(s.kind) else {
+                    continue;
+                };
                 assert!(
                     n >= lo && n <= hi,
                     "{}: fixture {f:?} resolves to {n}, out of range [{lo}, {hi}]",
