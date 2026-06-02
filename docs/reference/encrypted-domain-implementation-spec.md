@@ -69,6 +69,13 @@ future migration.
       and no Python: the catalog is the source of truth, validated by the
       compiler (an undefined `Term` or unknown `ScalarKind` is a compile error)
       plus catalog `#[test]`s over `CATALOG`.
+- [ ] Materialise the type's plaintext fixture list as a typed const next to
+      `CATALOG`: add `int_values!(<T_UPPER>_VALUES, <R>, <T_UPPER>);` (e.g.
+      `int_values!(INT8_VALUES, i64, INT8);`). The macro resolves the row's
+      `Fixture` list into a compile-time `&'static [<R>]` — the single source the
+      SQLx matrix reads as `FIXTURE_VALUES`. Pin the exact list with a
+      `values_tests` assertion. This replaces the old generated, committed
+      `<T>_values.rs`.
 - [ ] **If `<T>` needs a new scalar width**, add a `ScalarKind` enum variant in
       `crates/eql-scalars/src/lib.rs` with its rust-type name, `MIN`/`MAX`/zero
       symbols, and numeric bounds, and unit-test its `impl` methods. New term
@@ -76,10 +83,11 @@ future migration.
       — not in free-form catalog data.
 - [ ] Run `cargo run -p eql-codegen` to materialise the generated SQL
       (`src/encrypted_domain/<T>/<T>_{types,functions,operators,aggregates}.sql`,
-      gitignored) and the committed `tests/sqlx/src/fixtures/<T>_values.rs`
-      const, or just `mise run build` — every build runs the generator first.
-      Commit the regenerated `<T>_values.rs` (CI diffs it). There is no per-type
-      codegen task: one run generates every type from `CATALOG`.
+      gitignored), or just `mise run build` — every build runs the generator
+      first. There is no per-type codegen task: one run generates every type from
+      `CATALOG`. The plaintext fixture list is **not** generated — it is
+      materialised from the catalog row at compile time (see the next step), so
+      there is nothing to regenerate-and-commit on the test side.
 - [ ] Generated `*_types.sql` / `*_functions.sql` / `*_operators.sql` /
       `*_aggregates.sql` are gitignored and never committed. The catalog
       (`eql-scalars::CATALOG`) plus the `eql-codegen` renderers are the source
@@ -89,12 +97,11 @@ future migration.
       `-- REQUIRE:` edges. This file IS committed.
 - [ ] Do **not** add a `tests/codegen/reference/<T>/` baseline. `int4` is the
       single golden master for the type-generic generator: the SQL templates are
-      pure token substitution and the only type-specific rendering is
-      `<T>_values.rs`, so a per-type baseline can only fail when `int4`'s already
-      would. Drift protection for the new type comes from the `int4` reference,
-      the committed `<T>_values.rs` const guarded by the CI staleness check
-      (`cargo run -p eql-codegen` + `git diff --exit-code`) and the catalog/
-      generator `#[test]`s (`cargo test -p eql-scalars -p eql-codegen`), and the
+      pure token substitution, so a per-type baseline can only fail when `int4`'s
+      already would. Drift protection for the new type comes from the `int4`
+      reference, the catalog `values_tests` pinning the materialised
+      `eql_scalars::<T>_VALUES` const, the catalog/generator `#[test]`s
+      (`cargo test -p eql-scalars -p eql-codegen`), and the
       `ordered_numeric_matrix!` SQLx suite (behaviour, not bytes).
 - [ ] Wire the SQLx matrix oracle. The generated SQL is enough to install the
       domains, but the `ordered_numeric_matrix!` suite only runs once the Rust
@@ -105,10 +112,10 @@ future migration.
       | File | Add |
       |------|-----|
       | `tests/sqlx/src/fixtures/eql_plaintext.rs` | A sealed `EqlPlaintext` impl for the scalar's Rust type: `impl Sealed for <R> {}`, a `PlaintextSqlType` const for its base column type, `impl EqlPlaintext for <R>` (`CAST`, `PLAINTEXT_SQL_TYPE`, `to_plaintext` → the right `Plaintext` variant), plus the two `#[test]` casts. |
-      | `tests/sqlx/src/fixtures/eql_v2_<T>.rs` | `crate::scalar_fixture!("eql_v2_<T>", <R>, VALUES);` (pulls `super::<T>_values::VALUES`). |
-      | `tests/sqlx/src/fixtures/mod.rs` | `pub mod <T>_values;` and `pub mod eql_v2_<T>;`. |
+      | `tests/sqlx/src/fixtures/eql_v2_<T>.rs` | `use eql_scalars::<T_UPPER>_VALUES as VALUES;` then `crate::scalar_fixture!("eql_v2_<T>", <R>, VALUES);`. |
+      | `tests/sqlx/src/fixtures/mod.rs` | `pub mod eql_v2_<T>;`. |
       | `tests/sqlx/tests/generate_all_fixtures.rs` | An arm in `generate_for_token`: `"<T>" => fixtures::eql_v2_<T>::spec().run().await,`. The match is exhaustive over the catalog — a catalog token with no arm fails the generator loudly. |
-      | `tests/sqlx/src/scalar_domains.rs` | `impl ScalarType for <R>` — `PG_TYPE` (the base PG type, e.g. `"int8"`) and `FIXTURE_VALUES = crate::fixtures::<T>_values::VALUES`. |
+      | `tests/sqlx/src/scalar_domains.rs` | `impl ScalarType for <R>` — `PG_TYPE` (the base PG type, e.g. `"int8"`) and `FIXTURE_VALUES = eql_scalars::<T_UPPER>_VALUES`. |
       | `tests/sqlx/tests/encrypted_domain/scalars/<T>.rs` | `ordered_numeric_matrix! { suite = <T>, scalar = <R>, eql_type = "eql_v2_<T>" }`. |
       | `tests/sqlx/tests/encrypted_domain/scalars/mod.rs` | `pub mod <T>;`. |
 
@@ -347,7 +354,8 @@ absent.
 ### Single-sourcing the value list
 
 The plaintext value list is declared **once**, in the catalog row's `fixtures`
-field, and generated into Rust — never hand-maintained in two places:
+field, and materialised into a typed Rust const — never hand-maintained in two
+places:
 
 ```rust
 fixtures: &[Fixture::Min, Fixture::N(-100), Fixture::N(-1), Fixture::Zero,
@@ -365,24 +373,21 @@ explicit invariant `every_fixture_value_is_within_kind_bounds`). The same test
 enforces the matrix invariant: the set **must** include `Min`, `Max`, and zero,
 or the test fails (the compile-time analogue of the old `load_spec` validation).
 
-`eql-codegen` emits `tests/sqlx/src/fixtures/<T>_values.rs` exposing one
-`pub const VALUES: &[<rust_type>]`. Both consumers reference that single
-symbol — the fixture generator (`fixtures::eql_v2_<T>::spec`) and the matrix
-oracle (`impl ScalarType for <rust> { const FIXTURE_VALUES }`) — so the oracle
-cannot drift from the values the generator encrypts.
-
-Unlike the gitignored `*_*.sql` surface and the gitignored encrypted
-`tests/sqlx/fixtures/eql_v2_<T>.sql` (whose ciphertext is non-deterministic
-per-encrypt), `<T>_values.rs` **is committed**: its rendering is deterministic,
-so the CI `codegen` job regenerates it (`cargo run -p eql-codegen`) and runs
-`git diff --exit-code` to catch a catalog edit that wasn't regenerated.
-Regenerate with `cargo run -p eql-codegen` (or `mise run build`) and commit the
-result; never hand-edit it.
+The `int_values!` macro (in `crates/eql-scalars/src/lib.rs`) materialises that
+`Fixture` list into a `pub const <T_UPPER>_VALUES: &[<rust_type>]` at compile
+time, sitting next to `CATALOG`. Both consumers reference that single symbol —
+the fixture generator (`fixtures::eql_v2_<T>::spec`) and the matrix oracle
+(`impl ScalarType for <rust> { const FIXTURE_VALUES = eql_scalars::<T_UPPER>_VALUES }`)
+— so the oracle cannot drift from the values the generator encrypts. There is no
+generated `<T>_values.rs`: a Rust source of truth does not round-trip through
+generated Rust. The exact list is pinned by a `values_tests` assertion, and the
+`Fixture`-list invariants (`Min`/`Max`/zero present, in-bounds) by the catalog
+`#[test]`s.
 
 ## 10. Build And Verification
 
-- `cargo run -p eql-codegen` (optional; refreshes all generated SQL +
-  `<T>_values.rs` from the catalog before a full build)
+- `cargo run -p eql-codegen` (optional; refreshes all generated SQL from the
+  catalog before a full build)
 - `mise run test:codegen` (`cargo test -p eql-scalars -p eql-codegen`)
 - `mise run clean && mise run build` (regenerates every type's SQL from
   the catalog first, then builds the release artefacts)

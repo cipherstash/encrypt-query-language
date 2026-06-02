@@ -26,9 +26,10 @@ find src/encrypted_domain -mindepth 2 -type f \
   -delete 2>/dev/null || true
 
 # Regenerate every type — the catalog (eql-scalars::CATALOG) is the single
-# source of truth for the enumeration; eql-codegen renders all SQL and all
-# tests/sqlx/src/fixtures/<T>_values.rs in one deterministic run. The orphan
-# sweep above still handles the catalog-removed case the generator cannot.
+# source of truth for the enumeration; eql-codegen renders all SQL in one
+# deterministic run. The plaintext fixture lists are not generated — the SQLx
+# tests read them straight from the catalog (eql_scalars::INT4_VALUES / …). The
+# orphan sweep above still handles the catalog-removed case the generator cannot.
 cargo run -p eql-codegen
 
 # Fail loudly if any file referenced in a tsorted dep list doesn't exist.

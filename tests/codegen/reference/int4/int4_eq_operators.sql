@@ -1,4 +1,4 @@
--- REFERENCE: hand-written parity baseline for tasks/codegen/ — see ../README.md
+-- REFERENCE: hand-written parity baseline for crates/eql-codegen — see ../README.md
 -- AUTOMATICALLY GENERATED FILE.
 -- REQUIRE: src/schema-v3.sql
 -- REQUIRE: src/encrypted_domain/int4/int4_types.sql
