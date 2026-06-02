@@ -17,7 +17,7 @@ pub fn render_fixture_values_rs(spec: &ScalarSpec) -> String {
     format!(
         "//! Fixture plaintext values for the {token} encrypted-domain family.\n\
          //!\n\
-         //! Generated from tasks/codegen/types/{token}.toml `[fixture] values` —\n\
+         //! Generated from the `{token}` row in `eql-scalars::CATALOG` (`fixtures`) —\n\
          //! the single source of truth shared by the fixture generator\n\
          //! (`fixtures::eql_v2_{token}`) and the matrix oracle\n\
          //! (`ScalarType::FIXTURE_VALUES`).\n\n\
@@ -44,7 +44,7 @@ mod tests {
     fn fixture_values_rs_emits_typed_const_for_int4() {
         let body = render_fixture_values_rs(spec("int4"));
         assert!(body.contains("pub const VALUES: &[i32] = &["));
-        assert!(body.contains("tasks/codegen/types/int4.toml"));
+        assert!(body.contains("eql-scalars::CATALOG"));
         assert!(body.contains("    i32::MIN,\n"));
         assert!(body.contains("    i32::MAX,\n"));
         assert!(body.contains("    -1,\n"));

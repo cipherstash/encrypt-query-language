@@ -30,10 +30,10 @@ fn main() -> ExitCode {
         // No args: generate every type's SQL + <T>_values.rs.
         match generate_all(&repo_root()) {
             Ok(0) => return ExitCode::SUCCESS,
-            Ok(code) => return ExitCode::from(code.clamp(0, 255) as u8),
+            Ok(_) => return ExitCode::FAILURE, // any non-zero codegen result is a failure
             Err(e) => {
                 eprintln!("error: {e}");
-                return ExitCode::from(1);
+                return ExitCode::FAILURE;
             }
         }
     }
