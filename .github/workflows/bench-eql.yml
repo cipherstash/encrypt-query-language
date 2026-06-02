@@ -15,6 +15,9 @@ on:
       - "src/**/*.sql"
       - "tests/sqlx/**/*"
       - "tasks/**/*"
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
 
   schedule:
     # 02:00 UTC daily
