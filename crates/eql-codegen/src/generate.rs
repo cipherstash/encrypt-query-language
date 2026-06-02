@@ -5,55 +5,21 @@ use std::path::{Path, PathBuf};
 use eql_scalars::{DomainSpec, ScalarSpec, Term};
 
 use crate::context::{domain_name, is_ord_capable};
-use crate::operator_surface::{
-    backing_function, BLOCKER_ONLY_OPERATORS, PATH_OPERATORS, SYMMETRIC_OPERATORS,
-};
+use crate::operator_surface::OPERATORS;
 
 /// The full domain name (token + suffix). suffix "" => bare token.
 fn full_name(token: &str, suffix: &str) -> String {
     format!("{token}{suffix}")
 }
 
-/// Symmetric-operator argument shapes. Port of `_symmetric_shapes`.
-fn symmetric_shapes(dom: &str) -> Vec<(String, String)> {
-    vec![
-        (dom.to_string(), dom.to_string()),
-        (dom.to_string(), "jsonb".to_string()),
-        ("jsonb".to_string(), dom.to_string()),
-    ]
-}
-
-/// Path-operator argument shapes. Port of `_path_shapes`.
-fn path_shapes(dom: &str) -> Vec<(String, String)> {
-    vec![
-        (dom.to_string(), "text".to_string()),
-        (dom.to_string(), "integer".to_string()),
-        ("jsonb".to_string(), dom.to_string()),
-    ]
-}
-
-/// Blocker-only argument shapes for a native jsonb operator.
-/// Port of `_blocker_only_shapes`. Returns (arg_a, arg_b, returns).
-fn blocker_only_shapes(dom: &str, op: &str) -> Vec<(String, String, String)> {
-    let d = dom.to_string();
-    match op {
-        "?" => vec![(d, "text".into(), "boolean".into())],
-        "?|" | "?&" => vec![(d, "text[]".into(), "boolean".into())],
-        "@?" | "@@" => vec![(d, "jsonpath".into(), "boolean".into())],
-        "#>" => vec![(d, "text[]".into(), "jsonb".into())],
-        "#>>" => vec![(d, "text[]".into(), "text".into())],
-        "-" => vec![
-            (d.clone(), "text".into(), "jsonb".into()),
-            (d.clone(), "integer".into(), "jsonb".into()),
-            (d, "text[]".into(), "jsonb".into()),
-        ],
-        "#-" => vec![(d, "text[]".into(), "jsonb".into())],
-        "||" => vec![
-            (d.clone(), d.clone(), "jsonb".into()),
-            (d.clone(), "jsonb".into(), "jsonb".into()),
-            ("jsonb".into(), d, "jsonb".into()),
-        ],
-        other => panic!("unhandled blocker-only operator: {other}"),
+/// The second-parameter name for an operator's generated signature. The `->` and
+/// `->>` path operators take a path *selector* as their right operand; every
+/// other operator uses the generic `b`. This is a naming convention only — it
+/// has no bearing on whether the operator is supported.
+fn arg_b_name(symbol: &str) -> &'static str {
+    match symbol {
+        "->" | "->>" => "selector",
+        _ => "b",
     }
 }
 
@@ -125,7 +91,7 @@ fn extractor_terms(terms: &[Term]) -> Vec<Term> {
 pub fn render_functions_file(token: &str, domain: &DomainSpec) -> String {
     use crate::consts::sql_str;
     use crate::context::{
-        blocker_entry, environment, extractor_entry, wrapper_entry, FunctionsContext, SqlParam,
+        environment, extractor_entry, unsupported_entry, wrapper_entry, FunctionsContext, SqlParam,
     };
     let name = full_name(token, domain.suffix);
     let dom = domain_name(&name);
@@ -137,61 +103,33 @@ pub fn render_functions_file(token: &str, domain: &DomainSpec) -> String {
     for term in extractor_terms(domain.terms) {
         entries.push(extractor_entry(term));
     }
-    for &op in SYMMETRIC_OPERATORS {
-        let extractor = Term::extractor_for_operator(domain.terms, op);
-        for (arg_a, arg_b) in symmetric_shapes(&dom) {
-            if is_supported(op) {
+    for op in OPERATORS {
+        let extractor = Term::extractor_for_operator(domain.terms, op.symbol);
+        for sig in op.signatures {
+            let rendered = sig.render(&dom);
+            if is_supported(op.symbol) {
                 if let Some(ex) = extractor {
-                    entries.push(wrapper_entry(&dom, op, &arg_a, &arg_b, ex));
+                    entries.push(wrapper_entry(
+                        &dom,
+                        op.symbol,
+                        &rendered.left,
+                        &rendered.right,
+                        ex,
+                    ));
                     continue;
                 }
             }
             let args = [
                 SqlParam {
                     name: "a",
-                    ty: arg_a,
+                    ty: rendered.left,
                 },
                 SqlParam {
-                    name: "b",
-                    ty: arg_b,
+                    name: arg_b_name(op.symbol),
+                    ty: rendered.right,
                 },
             ];
-            entries.push(blocker_entry(op, args, "boolean"));
-        }
-    }
-    for &op in PATH_OPERATORS {
-        for (arg_a, arg_b) in path_shapes(&dom) {
-            let returns = if op == "->>" {
-                "text".to_string()
-            } else {
-                dom.clone()
-            };
-            let args = [
-                SqlParam {
-                    name: "a",
-                    ty: arg_a,
-                },
-                SqlParam {
-                    name: "selector",
-                    ty: arg_b,
-                },
-            ];
-            entries.push(blocker_entry(op, args, &returns));
-        }
-    }
-    for &op in BLOCKER_ONLY_OPERATORS {
-        for (arg_a, arg_b, returns) in blocker_only_shapes(&dom, op) {
-            let args = [
-                SqlParam {
-                    name: "a",
-                    ty: arg_a,
-                },
-                SqlParam {
-                    name: "b",
-                    ty: arg_b,
-                },
-            ];
-            entries.push(blocker_entry(op, args, &returns));
+            entries.push(unsupported_entry(op.symbol, args, &rendered.returns));
         }
     }
 
@@ -219,22 +157,17 @@ pub fn render_operators_file(token: &str, domain: &DomainSpec) -> String {
     let is_supported = |op: &str| supported.contains(&op);
 
     let mut operators = Vec::new();
-    for &op in SYMMETRIC_OPERATORS {
-        let function_name = backing_function(op);
-        for (l, r) in symmetric_shapes(&dom) {
-            operators.push(operator_entry(op, function_name, &l, &r, is_supported(op)));
-        }
-    }
-    for &op in PATH_OPERATORS {
-        let function_name = backing_function(op);
-        for (l, r) in path_shapes(&dom) {
-            operators.push(operator_entry(op, function_name, &l, &r, false));
-        }
-    }
-    for &op in BLOCKER_ONLY_OPERATORS {
-        let function_name = backing_function(op);
-        for (l, r, _ret) in blocker_only_shapes(&dom, op) {
-            operators.push(operator_entry(op, function_name, &l, &r, false));
+    for op in OPERATORS {
+        for sig in op.signatures {
+            // CREATE OPERATOR only needs the operand types; `rendered.returns` is
+            // intentionally discarded here (it matters only for the function body).
+            let rendered = sig.render(&dom);
+            operators.push(operator_entry(
+                op,
+                &rendered.left,
+                &rendered.right,
+                is_supported(op.symbol),
+            ));
         }
     }
 
@@ -426,6 +359,28 @@ mod tests {
             }
         }
         panic!("unrecognised reference filename: {name}");
+    }
+
+    #[test]
+    fn arg_b_name_is_selector_only_for_path_operators() {
+        assert_eq!(arg_b_name("->"), "selector");
+        assert_eq!(arg_b_name("->>"), "selector");
+        assert_eq!(arg_b_name("="), "b");
+        assert_eq!(arg_b_name("||"), "b");
+        assert_eq!(arg_b_name("@>"), "b");
+    }
+
+    #[test]
+    fn functions_render_supported_wrappers_and_unsupported_entries_from_catalog() {
+        let s = spec("int4");
+        let d = domain(s, "_eq");
+        let sql = render_functions_file("int4", d);
+        assert!(sql.contains("CREATE FUNCTION eql_v3.eq("));
+        assert!(sql.contains("AS $$ SELECT"));
+        assert!(sql.contains("CREATE FUNCTION eql_v3.lt("));
+        assert!(sql.contains("RAISE EXCEPTION 'operator % is not supported for %', '<'"));
+        assert!(sql.contains("CREATE FUNCTION eql_v3.\"->\"("));
+        assert!(sql.contains("RAISE EXCEPTION 'operator % is not supported for %', '->'"));
     }
 
     #[test]
@@ -747,12 +702,12 @@ mod tests {
     // --- Escaping guards over the context builders (synthetic inputs) ---
 
     #[test]
-    fn blocker_entry_preserves_operator_literal_and_domain_lit_is_escaped() {
+    fn unsupported_entry_preserves_operator_literal_and_domain_lit_is_escaped() {
         use crate::consts::sql_str;
-        use crate::context::{blocker_entry, FnEntry, SqlParam};
+        use crate::context::{unsupported_entry, FnEntry, SqlParam};
         let dom = "eql_v3.o'dom";
         let domain_lit = sql_str(dom);
-        let entry = blocker_entry(
+        let entry = unsupported_entry(
             "<",
             [
                 SqlParam {
@@ -767,11 +722,11 @@ mod tests {
             "boolean",
         );
         match entry {
-            FnEntry::Blocker { operator_lit, .. } => {
+            FnEntry::Unsupported { operator_lit, .. } => {
                 assert_eq!(domain_lit, "eql_v3.o''dom"); // quote doubled by sql_str
                 assert_eq!(operator_lit, "<");
             }
-            _ => panic!("expected blocker"),
+            _ => panic!("expected unsupported-operator entry"),
         }
     }
 
