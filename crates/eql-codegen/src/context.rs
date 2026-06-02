@@ -1,6 +1,7 @@
 //! minijinja environment + serde context structs + relocated logic helpers.
 
 use crate::consts::*;
+use crate::operator_surface::Operator;
 use eql_scalars::{DomainSpec, Term};
 
 /// Line-normalize SQL for best-effort byte-exact comparison: trim each line's
@@ -77,8 +78,8 @@ pub fn domain_block(token: &str, domain: &DomainSpec) -> DomainBlock {
     }
 }
 
-/// One SQL parameter (name + SQL type), shared by wrapper/blocker signatures
-/// and their `@param` docs tags.
+/// One SQL parameter (name + SQL type), shared by wrapper and
+/// unsupported-operator signatures and their `@param` docs tags.
 #[derive(serde::Serialize)]
 pub struct SqlParam {
     pub name: &'static str, // "a", "b", or "selector"
@@ -86,7 +87,8 @@ pub struct SqlParam {
 }
 
 /// One generated function entry. The serde tag drives the template's three-way
-/// switch; the blocker arm is never merged with the others (footgun separation).
+/// switch; the unsupported-operator arm is never merged with the others (footgun
+/// separation — its body must always raise).
 #[derive(serde::Serialize)]
 #[serde(tag = "kind")]
 pub enum FnEntry {
@@ -102,7 +104,7 @@ pub enum FnEntry {
         call_a: String, // e.g. eql_v3.eq_term(a)   (embeds extract_arg cast logic)
         call_b: String, // e.g. eql_v3.eq_term(b::eql_v3.int4_eq)
     },
-    Blocker {
+    Unsupported {
         operator_lit: String,  // sql_str(op), escaped content for the RAISE literal
         function_name: String, // e.g. lt / "->" / "#>"
         args: [SqlParam; 2],
@@ -132,10 +134,10 @@ pub fn extractor_entry(term: Term) -> FnEntry {
 /// Build an inlinable comparison-wrapper entry for a supported operator.
 /// `dom` is the schema-qualified domain name.
 pub fn wrapper_entry(dom: &str, op: &str, arg_a: &str, arg_b: &str, extractor: &str) -> FnEntry {
-    use crate::operator_surface::backing_function;
+    use crate::operator_surface::operator_function_name;
     FnEntry::Wrapper {
         op: op.to_string(),
-        function_name: backing_function(op).to_string(),
+        function_name: operator_function_name(op).to_string(),
         args: [
             SqlParam {
                 name: "a",
@@ -151,14 +153,14 @@ pub fn wrapper_entry(dom: &str, op: &str, arg_a: &str, arg_b: &str, extractor: &
     }
 }
 
-/// Build an unsupported-operator blocker entry. Every blocker shares one
-/// uniform `RAISE EXCEPTION` body; only signature facts vary.
-pub fn blocker_entry(op: &str, args: [SqlParam; 2], returns: &str) -> FnEntry {
-    use crate::operator_surface::backing_function;
-    FnEntry::Blocker {
+/// Build an unsupported-operator entry. Every such entry shares one uniform
+/// `RAISE EXCEPTION` body; only signature facts vary.
+pub fn unsupported_entry(op: &str, args: [SqlParam; 2], returns: &str) -> FnEntry {
+    use crate::operator_surface::operator_function_name;
+    FnEntry::Unsupported {
         // operator_lit is sql_str-escaped defensively for the single-quoted RAISE literal.
         operator_lit: sql_str(op),
-        function_name: backing_function(op).to_string(),
+        function_name: operator_function_name(op).to_string(),
         args,
         returns: returns.to_string(),
     }
@@ -183,39 +185,18 @@ pub struct OperatorsContext {
     pub operators: Vec<OpEntry>,
 }
 
-/// Build one CREATE OPERATOR entry. The metadata line exists only for supported
-/// symmetric operators that carry at least one extra (the `@>`/`<@` symmetric-
-/// but-empty trap collapses to `None`).
-pub fn operator_entry(
-    op: &str,
-    function_name: &str,
-    leftarg: &str,
-    rightarg: &str,
-    supported: bool,
-) -> OpEntry {
-    use crate::operator_surface::{operator, Kind};
-    let meta = operator(op);
-    let metadata = if supported && meta.kind == Kind::Symmetric {
-        let mut extras = Vec::new();
-        if let Some(c) = meta.commutator {
-            extras.push(format!("COMMUTATOR = {c}"));
-        }
-        if let Some(n) = meta.negator {
-            extras.push(format!("NEGATOR = {n}"));
-        }
-        if let Some(r) = meta.restrict {
-            extras.push(format!("RESTRICT = {r}"));
-        }
-        if let Some(j) = meta.join {
-            extras.push(format!("JOIN = {j}"));
-        }
-        (!extras.is_empty()).then(|| extras.join(", ")) // empty → None (the @>/<@ trap)
+/// Build one CREATE OPERATOR entry. Planner metadata is emitted only when the
+/// current domain supports the operator and the operator carries metadata (the
+/// `@>`/`<@` empty-metadata case collapses to `None`).
+pub fn operator_entry(op: &Operator, leftarg: &str, rightarg: &str, supported: bool) -> OpEntry {
+    let metadata = if supported {
+        op.metadata.render()
     } else {
         None
     };
     OpEntry {
-        symbol: op.to_string(),
-        function_name: function_name.to_string(),
+        symbol: op.symbol.to_string(),
+        function_name: op.function_name.to_string(),
         leftarg: leftarg.to_string(),
         rightarg: rightarg.to_string(),
         metadata,
@@ -328,5 +309,24 @@ mod tests {
         ] {
             assert!(env.get_template(name).is_ok(), "missing template {name}");
         }
+    }
+
+    #[test]
+    fn operator_entry_emits_metadata_only_when_supported() {
+        use crate::operator_surface::operator;
+        // Supported comparison operator carries its planner metadata.
+        let eq = operator_entry(&operator("="), "eql_v3.int4_eq", "eql_v3.int4_eq", true);
+        assert_eq!(eq.symbol, "=");
+        assert_eq!(eq.function_name, "eq");
+        assert_eq!(
+            eq.metadata.as_deref(),
+            Some("COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel")
+        );
+        // The same operator, unsupported on this domain → no metadata line.
+        let eq_unsupported = operator_entry(&operator("="), "eql_v3.int4", "eql_v3.int4", false);
+        assert_eq!(eq_unsupported.metadata, None);
+        // Supported but metadata-less operator (`@>`) → still no metadata line.
+        let contains = operator_entry(&operator("@>"), "eql_v3.int4_eq", "eql_v3.int4_eq", true);
+        assert_eq!(contains.metadata, None);
     }
 }
