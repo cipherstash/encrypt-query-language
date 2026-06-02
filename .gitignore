@@ -246,3 +246,6 @@ docs/superpowers/
 # Build variants - protect variant deps
 src/deps-protect.txt
 src/deps-ordered-protect.txt
+
+# Cargo workspace root build artifacts
+/target/
