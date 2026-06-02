@@ -18,6 +18,9 @@
 # macro-expand-eql.yml workflow's mise-action step), so there is no separate
 # hardcoded version to keep in lockstep.
 "cargo:cargo-expand" = "1.0.122"
+# Still required by the documentation tooling (`tasks/docs/generate/*.py`, run
+# by `docs:generate:markdown` in the release workflow). The encrypted-domain
+# codegen toolchain is now Rust (eql-scalars/eql-codegen) and needs no Python.
 "python" = "3.13"
 
 [task_config]
@@ -90,25 +93,16 @@ run = """
 cargo test --test payload_schema_tests
 """
 
-[tasks."codegen:domain:all"]
-description = "Regenerate every encrypted-domain type from its TOML manifest"
-dir = "{{config_root}}"
-run = """
-mise exec python -- python -m tasks.codegen.generate --all
-"""
-
 [tasks."codegen:parity"]
-description = "Parity gate: Rust eql-codegen output byte-identical to the Python oracle"
+description = "Parity gate: Rust eql-codegen output matches the int4 golden (normalized) + committed values.rs"
 dir = "{{config_root}}"
 run = "bash tasks/codegen-parity.sh"
 
 [tasks."test:codegen"]
-description = "Run the encrypted-domain codegen generator tests (no database required)"
+description = "Run the encrypted-domain catalog + generator tests (no database required)"
 dir = "{{config_root}}"
 run = """
-# pytest is the only non-stdlib dependency; the install is a fast no-op once satisfied.
-mise exec python -- python -m pip install --quiet --disable-pip-version-check pytest
-mise exec python -- python -m pytest tasks/codegen -q
+cargo test -p eql-scalars -p eql-codegen
 """
 
 [tasks."test:crates"]
