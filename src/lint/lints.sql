@@ -48,13 +48,15 @@
 --!                                PostgreSQL skips the body and returns NULL
 --!                                on NULL arguments, silently bypassing the
 --!                                RAISE.
---!   `domain_over_domain`      — an `eql_v2_*` domain is derived from another
---!                                `eql_v2_*` domain rather than jsonb.
+--!   `domain_over_domain`      — an encrypted domain (`eql_v3.*` or
+--!                                `public.eql_v2_*`) is derived from another
+--!                                encrypted domain rather than jsonb.
 --!                                Operators resolve against the ultimate base
 --!                                type, so the derived domain does not
 --!                                inherit the base domain's blocker surface.
 --!   `domain_opclass`          — an operator class is declared FOR TYPE on an
---!                                `eql_v2_*` domain. Opclasses on domains
+--!                                encrypted domain (`eql_v3.*` or
+--!                                `public.eql_v2_*`). Opclasses on domains
 --!                                bypass operator resolution; use a
 --!                                functional index on the extractor instead.
 --!
