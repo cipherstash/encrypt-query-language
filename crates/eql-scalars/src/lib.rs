@@ -263,7 +263,10 @@ impl Fixture {
     /// The integer value for this fixture (`Min`/`Max` -> kind bounds, `Zero` ->
     /// 0, `Int(n)` -> n), or `None` for the string-backed kinds. Does not
     /// range-check; `every_fixture_value_is_within_kind_bounds` guards the bounds.
-    pub fn numeric_value(self, kind: ScalarKind) -> Option<i128> {
+    ///
+    /// `const fn` so the `int_values!` materialiser can resolve a whole fixture
+    /// list into a typed `&'static` array at compile time.
+    pub const fn numeric_value(self, kind: ScalarKind) -> Option<i128> {
         match self {
             Fixture::Min => Some(kind.min_value()),
             Fixture::Max => Some(kind.max_value()),
@@ -385,6 +388,43 @@ const INT2: ScalarSpec = ScalarSpec {
 /// The scalar catalog — the single source of truth. Order is significant (it
 /// drives generation order). New types are appended as their SQL surface lands.
 pub const CATALOG: &[ScalarSpec] = &[INT4, INT2];
+
+/// Materialise an integer scalar's fixtures into a typed `&'static` slice at
+/// compile time. This is the **single-sourced** plaintext list the SQLx test
+/// matrix reads as `ScalarType::FIXTURE_VALUES` and the fixture generator
+/// encrypts — derived from the same `CATALOG` row that drives SQL generation,
+/// so the oracle cannot drift from the fixture. (It replaces the old generated,
+/// committed `tests/sqlx/src/fixtures/<T>_values.rs` — a Rust source of truth no
+/// longer needs to round-trip through generated Rust.)
+///
+/// Integer kinds only: a non-numeric fixture (`Text`/`Numeric`/`Jsonb`) is a
+/// const-eval error, mirroring `numeric_value`'s `None`.
+macro_rules! int_values {
+    ($name:ident, $ty:ty, $spec:expr) => {
+        #[doc = concat!("Distinct plaintext fixture values for `", stringify!($spec), "`, ")]
+        #[doc = "materialised from its `CATALOG` row (see `int_values!`)."]
+        pub const $name: &[$ty] = {
+            const SPEC: ScalarSpec = $spec;
+            const N: usize = SPEC.fixtures.len();
+            const ARR: [$ty; N] = {
+                let mut out = [0 as $ty; N];
+                let mut i = 0;
+                while i < N {
+                    out[i] = match SPEC.fixtures[i].numeric_value(SPEC.kind) {
+                        Some(v) => v as $ty,
+                        None => panic!("integer scalar fixture must resolve to a number"),
+                    };
+                    i += 1;
+                }
+                out
+            };
+            &ARR
+        };
+    };
+}
+
+int_values!(INT4_VALUES, i32, INT4);
+int_values!(INT2_VALUES, i16, INT2);
 
 #[cfg(test)]
 mod rust_tests {
@@ -801,6 +841,80 @@ mod catalog_tests {
         assert!(s.fixtures.contains(&Fixture::Int(30000)));
         assert_eq!(s.fixtures.first(), Some(&Fixture::Min));
         assert_eq!(s.fixtures.last(), Some(&Fixture::Max));
+    }
+}
+
+#[cfg(test)]
+mod values_tests {
+    use super::*;
+
+    // The exact typed lists the SQLx matrix consumes. These pin the values the
+    // deleted golden `int4_values.rs` / committed `<T>_values.rs` used to pin:
+    // a catalog edit that changes a fixture must update these assertions.
+    #[test]
+    fn int4_values_materialise_to_typed_array() {
+        assert_eq!(
+            INT4_VALUES,
+            &[
+                i32::MIN,
+                -100,
+                -1,
+                0,
+                1,
+                2,
+                5,
+                10,
+                17,
+                25,
+                42,
+                50,
+                100,
+                250,
+                1000,
+                9999,
+                i32::MAX
+            ]
+        );
+    }
+
+    #[test]
+    fn int2_values_materialise_to_typed_array() {
+        assert_eq!(
+            INT2_VALUES,
+            &[
+                i16::MIN,
+                -30000,
+                -100,
+                -1,
+                0,
+                1,
+                2,
+                5,
+                10,
+                17,
+                25,
+                42,
+                50,
+                100,
+                250,
+                1000,
+                9999,
+                30000,
+                i16::MAX
+            ]
+        );
+    }
+
+    #[test]
+    fn materialised_values_track_their_fixture_lists() {
+        // One value per fixture, in catalog order; sentinels resolve to extremes.
+        assert_eq!(INT4_VALUES.len(), INT4_FIXTURES.len());
+        assert_eq!(INT2_VALUES.len(), INT2_FIXTURES.len());
+        assert_eq!(INT4_VALUES.first(), Some(&i32::MIN));
+        assert_eq!(INT4_VALUES.last(), Some(&i32::MAX));
+        assert_eq!(INT2_VALUES.first(), Some(&i16::MIN));
+        assert_eq!(INT2_VALUES.last(), Some(&i16::MAX));
+        assert!(INT4_VALUES.contains(&0) && INT2_VALUES.contains(&0));
     }
 }
 

@@ -4,16 +4,11 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::consts::{AUTO_GENERATED_HEADER, AUTO_GENERATED_HEADER_RS};
+use crate::consts::AUTO_GENERATED_HEADER;
 
 /// First line of the SQL header — the ownership marker.
 fn sql_marker() -> &'static str {
     AUTO_GENERATED_HEADER.lines().next().unwrap()
-}
-
-/// First line of the Rust header — the ownership marker.
-fn rs_marker() -> &'static str {
-    AUTO_GENERATED_HEADER_RS.lines().next().unwrap()
 }
 
 /// Raised when the generator would clobber a hand-written file.
@@ -51,11 +46,6 @@ fn first_line(path: &Path) -> io::Result<String> {
 /// True if the file carries the SQL AUTO-GENERATED marker. Port of `is_generated`.
 pub fn is_generated(path: &Path) -> bool {
     path.is_file() && first_line(path).map(|l| l == sql_marker()).unwrap_or(false)
-}
-
-/// True if the file carries the Rust AUTO-GENERATED marker. Port of `is_generated_rs`.
-pub fn is_generated_rs(path: &Path) -> bool {
-    path.is_file() && first_line(path).map(|l| l == rs_marker()).unwrap_or(false)
 }
 
 /// Delete every generated .sql file in `directory`, returning removed paths.
@@ -104,21 +94,6 @@ pub fn write_generated_file(path: &Path, body: &str) -> Result<(), WriteError> {
         fs::create_dir_all(parent)?;
     }
     fs::write(path, body)?;
-    Ok(())
-}
-
-/// Write `body` to a Rust file prefixed with the Rust header. Port of `write_generated_rs`.
-pub fn write_generated_rs(path: &Path, body: &str) -> Result<(), WriteError> {
-    if path.exists() && !is_generated_rs(path) {
-        return Err(WriteError::Ownership(format!(
-            "refusing to overwrite hand-written file: {} (no AUTO-GENERATED header).",
-            path.display()
-        )));
-    }
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    fs::write(path, format!("{AUTO_GENERATED_HEADER_RS}{body}"))?;
     Ok(())
 }
 
@@ -254,55 +229,5 @@ mod tests {
     fn clean_on_empty_directory() {
         let d = tmp();
         assert!(clean_generated_files(d.path()).unwrap().is_empty());
-    }
-
-    #[test]
-    fn write_generated_rs_creates_with_rust_header() {
-        let d = tmp();
-        let p = d.path().join("int4_values.rs");
-        write_generated_rs(&p, "pub const VALUES: &[i32] = &[];\n").unwrap();
-        let text = fs::read_to_string(&p).unwrap();
-        assert!(text.starts_with(AUTO_GENERATED_HEADER_RS));
-        assert!(text.contains("pub const VALUES"));
-    }
-
-    #[test]
-    fn is_generated_rs_true_for_rust_header() {
-        let d = tmp();
-        let p = d.path().join("int4_values.rs");
-        fs::write(
-            &p,
-            format!("{AUTO_GENERATED_HEADER_RS}pub const VALUES: &[i32] = &[];\n"),
-        )
-        .unwrap();
-        assert!(is_generated_rs(&p));
-    }
-
-    #[test]
-    fn is_generated_rs_false_for_handwritten() {
-        let d = tmp();
-        let p = d.path().join("int4_values.rs");
-        fs::write(&p, "//! hand-written\npub const VALUES: &[i32] = &[];\n").unwrap();
-        assert!(!is_generated_rs(&p));
-    }
-
-    #[test]
-    fn write_generated_rs_refuses_handwritten() {
-        let d = tmp();
-        let p = d.path().join("int4_values.rs");
-        fs::write(&p, "//! hand-written\n").unwrap();
-        let err = write_generated_rs(&p, "pub const VALUES: &[i32] = &[];\n").unwrap_err();
-        assert!(err.to_string().contains("hand-written"));
-    }
-
-    #[test]
-    fn write_generated_rs_overwrites_existing_generated() {
-        let d = tmp();
-        let p = d.path().join("int4_values.rs");
-        fs::write(&p, format!("{AUTO_GENERATED_HEADER_RS}// old\n")).unwrap();
-        write_generated_rs(&p, "// new\n").unwrap();
-        let text = fs::read_to_string(&p).unwrap();
-        assert!(text.contains("// new"));
-        assert!(!text.contains("// old"));
     }
 }

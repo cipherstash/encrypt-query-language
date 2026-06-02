@@ -1,8 +1,10 @@
 //! THE PARITY GATE. Runs the Rust generator (into a temp dir) and asserts the
-//! int4 SQL surface is line-normalized-equal to the `tests/codegen/reference/int4`
-//! golden, and that committed `<T>_values.rs` are byte-identical to the
-//! generator output. The golden reference — not the retired Python generator —
-//! is the sole oracle.
+//! int4 SQL surface is byte-for-byte equal to the `tests/codegen/reference/int4`
+//! golden (modulo the one leading `-- REFERENCE:` provenance line). The golden
+//! reference — not the retired Python generator — is the sole oracle. The
+//! plaintext fixture lists are not generated; they live in the catalog
+//! (`eql_scalars::INT4_VALUES` / `INT2_VALUES`) and are pinned by
+//! `eql-scalars`'s own `values_tests`.
 
 use std::fs;
 use std::path::PathBuf;
@@ -28,25 +30,6 @@ fn tempdir(tag: &str) -> PathBuf {
 }
 
 #[test]
-fn rust_generator_matches_committed_values_rs() {
-    let root = repo_root();
-    let out = tempdir("rust-values");
-    eql_codegen::generate::generate_all(&out).expect("rust generate_all");
-
-    for spec in eql_scalars::CATALOG {
-        let token = spec.token;
-        let generated = out.join(format!("tests/sqlx/src/fixtures/{token}_values.rs"));
-        let committed = root.join(format!("tests/sqlx/src/fixtures/{token}_values.rs"));
-        let g = fs::read(&generated).expect("generated values.rs");
-        let c = fs::read(&committed).expect("committed values.rs");
-        assert_eq!(
-            g, c,
-            "{token}_values.rs: Rust generator output differs from the committed file"
-        );
-    }
-}
-
-#[test]
 fn rust_generator_matches_int4_golden_files() {
     let root = repo_root();
     let out = tempdir("rust-golden");
@@ -61,20 +44,20 @@ fn rust_generator_matches_int4_golden_files() {
         }
         let name = path.file_name().unwrap().to_str().unwrap();
         let reference = fs::read_to_string(&path).unwrap();
-        // Strip the leading `-- REFERENCE:` provenance line. What remains is the
-        // generated body, which already starts with the template-owned
-        // `-- AUTOMATICALLY GENERATED FILE.` marker — the same first line the
-        // materialised file carries, so no header is re-added here.
+        // Strip the leading `-- REFERENCE:` provenance line(s), preserving the
+        // remaining bytes verbatim (`split_inclusive` keeps the `\n`
+        // terminators). What remains is the generated body, which already starts
+        // with the template-owned `-- AUTOMATICALLY GENERATED FILE.` marker — the
+        // same first line the materialised file carries — so the comparison is
+        // byte-for-byte with no header re-added.
         let expected: String = reference
-            .lines()
+            .split_inclusive('\n')
             .skip_while(|l| l.starts_with("-- REFERENCE:") || l.starts_with("// REFERENCE:"))
-            .map(|l| format!("{l}\n"))
             .collect();
         let actual = fs::read_to_string(gen_dir.join(name)).unwrap();
         assert_eq!(
-            eql_codegen::context::normalize_sql(&actual),
-            eql_codegen::context::normalize_sql(&expected),
-            "{name}: materialised output differs from golden (normalized)"
+            actual, expected,
+            "{name}: materialised output differs from golden"
         );
     }
 }

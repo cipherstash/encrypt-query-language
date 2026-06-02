@@ -6,6 +6,6 @@
 //! no EQL dependency; #225 layers the `eql_v3.int4` domain on top by casting
 //! `payload` per query.
 
-use super::int4_values::VALUES;
+use eql_scalars::INT4_VALUES as VALUES;
 
 crate::scalar_fixture!("eql_v2_int4", i32, VALUES);

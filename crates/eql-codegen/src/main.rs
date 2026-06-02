@@ -27,7 +27,7 @@ fn main() -> ExitCode {
     }
 
     if args.len() == 1 {
-        // No args: generate every type's SQL + <T>_values.rs.
+        // No args: generate every type's gitignored SQL surface.
         match generate_all(&repo_root()) {
             Ok(0) => return ExitCode::SUCCESS,
             Ok(_) => return ExitCode::FAILURE, // any non-zero codegen result is a failure

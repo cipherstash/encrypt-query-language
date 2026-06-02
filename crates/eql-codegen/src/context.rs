@@ -4,17 +4,6 @@ use crate::consts::*;
 use crate::operator_surface::Operator;
 use eql_scalars::{DomainSpec, Term};
 
-/// Line-normalize SQL for best-effort byte-exact comparison: trim each line's
-/// leading/trailing whitespace and drop blank lines; preserve intra-line
-/// spacing. NOT used for `<T>_values.rs` (which stays byte-exact).
-pub fn normalize_sql(s: &str) -> String {
-    s.lines()
-        .map(|l| l.trim())
-        .filter(|l| !l.is_empty())
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
 /// Build the minijinja environment with the embedded templates: one whole-file
 /// template per output file (`types`/`functions`/`operators`/`aggregates`) plus
 /// the per-kind function-body partials that `functions.sql` dynamically
@@ -294,28 +283,6 @@ mod tests {
         assert!(is_ord_capable(&[Term::Ore]));
         assert!(!is_ord_capable(&[Term::Hm]));
         assert!(!is_ord_capable(&[]));
-    }
-
-    #[test]
-    fn normalize_trims_lines_and_drops_blanks() {
-        let input = "  CREATE DOMAIN x\n\n    CHECK (a)  \n\n";
-        assert_eq!(normalize_sql(input), "CREATE DOMAIN x\nCHECK (a)");
-    }
-
-    #[test]
-    fn normalize_preserves_intra_line_spacing() {
-        let input = "RAISE EXCEPTION 'operator % is not supported for %';";
-        assert_eq!(
-            normalize_sql(input),
-            "RAISE EXCEPTION 'operator % is not supported for %';"
-        );
-    }
-
-    #[test]
-    fn normalize_equal_modulo_indentation_and_blank_lines() {
-        let a = "DO $$\nBEGIN\n  IF NOT EXISTS (\n  ) THEN\n  END IF;\nEND\n$$;\n";
-        let b = "DO $$\n\nBEGIN\n    IF NOT EXISTS (\n        ) THEN\nEND IF;\nEND\n$$;";
-        assert_eq!(normalize_sql(a), normalize_sql(b));
     }
 
     #[test]
