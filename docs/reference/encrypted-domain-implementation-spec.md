@@ -2,7 +2,7 @@
 
 This is the scalar encrypted-domain generator contract used by `int4`.
 It applies to scalar domains whose searchable payloads are represented by
-the fixed term catalog in `tasks/codegen/terms.py`.
+the fixed `Term` catalog in `crates/eql-scalars/src`.
 
 `text` and `jsonb` are outside this scalar materializer.
 
@@ -10,33 +10,41 @@ the fixed term catalog in `tasks/codegen/terms.py`.
 
 Each generated domain is a concrete `jsonb` domain in the `eql_v3`
 schema named `eql_v3.<domain>` (dropped by `DROP SCHEMA eql_v3 CASCADE`;
-survives an `eql_v2` uninstall). The manifest is intentionally small:
+survives an `eql_v2` uninstall). A type's catalog row is intentionally
+small — a `ScalarSpec` whose `domains` field lists each generated domain
+as a `DomainSpec` (a `suffix` plus the fixed terms it carries):
 
-```toml
-[domain]
-int4 = []
-int4_eq = ["hm"]
-int4_ord_ore = ["ore"]
-int4_ord = ["ore"]
+```rust
+ScalarSpec {
+    token: "int4",
+    kind: ScalarKind::I32,
+    domains: &[
+        DomainSpec { suffix: "",         terms: &[] },
+        DomainSpec { suffix: "_eq",      terms: &[Term::Hm] },
+        DomainSpec { suffix: "_ord_ore", terms: &[Term::Ore] },
+        DomainSpec { suffix: "_ord",     terms: &[Term::Ore] },
+    ],
+    fixtures: &[/* see §9 */],
+}
 ```
 
-The TOML filename supplies the type token. The `[domain]` table maps each
-generated domain name to the fixed terms it carries. The generator
-emits files in the manifest's declared order, so order keys in the TOML
-in the order you want them to appear in generated output. Term capabilities
-come only from `tasks/codegen/terms.py`:
+The `token` supplies the type token; each domain's full name is `token`
++ `suffix`. The generator emits domains in the order the `domains` slice
+declares them, so order the slice the way you want the generated output to
+read. Term capabilities are fixed by the `Term` enum
+(`crates/eql-scalars/src`):
 
 | Term | JSON key | Extractor | Return type | Supported operators |
 |---|---|---|---|---|
-| `hm` | `hm` | `eq_term` | `eql_v2.hmac_256` | `=` / `<>` |
-| `ore` | `ob` | `ord_term` | `eql_v2.ore_block_u64_8_256` | `=` / `<>` / `<` / `<=` / `>` / `>=` |
+| `Hm` | `hm` | `eq_term` | `eql_v2.hmac_256` | `=` / `<>` |
+| `Ore` | `ob` | `ord_term` | `eql_v2.ore_block_u64_8_256` | `=` / `<>` / `<` / `<=` / `>` / `>=` |
 
-For current `int4`, domains carrying `ore` use JSON key `ob`, extractor
+For current `int4`, domains carrying `Ore` use JSON key `ob`, extractor
 `ord_term`, and the ORE block supports equality plus ordering. A type
 that needs a non-ORE equality term on an ordered domain needs a new
-catalog term design, not a manifest flag.
+`Term` design, not a catalog flag.
 
-The manifest above declares two ordered domains, `int4_ord` and
+The row above declares two ordered domains, `int4_ord` and
 `int4_ord_ore`, carrying the same term. They are intentional twins: the
 generator emits byte-identical SQL (modulo type name) so callers can pick
 a name that documents intent without committing to a term family in a
@@ -44,42 +52,38 @@ future migration.
 
 ## 2. Checklist
 
-- [ ] Author `tasks/codegen/types/<T>.toml`. The filename supplies `<T>`.
-      The `[domain]` table maps generated domain names to fixed terms:
+- [ ] Add a row to the Rust catalog `eql-scalars::CATALOG`
+      (`crates/eql-scalars/src/lib.rs`). A `ScalarSpec` declares:
 
-      ```toml
-      [domain]
-      int4 = []
-      int4_eq = ["hm"]
-      int4_ord_ore = ["ore"]
-      int4_ord = ["ore"]
-      ```
+      - `token` — the type token (e.g. `int8`); supplies `<T>` everywhere.
+      - `kind` — the `ScalarKind` (`I16` / `I32` / `I64`), which carries the
+        Rust type name, the `MIN`/`MAX`/zero symbols, and the numeric bounds.
+      - `domains` — a `&[DomainSpec]`, each a `suffix` + the fixed `Term`s it
+        carries. The storage domain is suffix `""` with no terms; `_eq => [Hm]`;
+        `_ord` and `_ord_ore => [Ore]`.
+      - `fixtures` — the `Fixture` value list (see §9). It MUST include `Min`,
+        `Max`, and zero.
 
-      Terms determine operator support: `hm` provides `=` / `<>`; `ore`
-      provides `=` / `<>` / `<` / `<=` / `>` / `>=`.
-- [ ] Add or update catalog terms in `tasks/codegen/terms.py` with tests.
-- [ ] **If `<T>` is a new scalar kind, register a `ScalarKind` in
-      `tasks/codegen/scalars.py`** (use the `int4` entry as the template): its
-      `token`, `rust_type`, the `MIN` / `MAX` / `ZERO` Rust symbols, and the
-      numeric `min_value` / `max_value` bounds. This is a code change with
-      tests, exactly like a new catalog term in `terms.py` — not a manifest
-      field. `load_spec` resolves the scalar before it validates anything, so
-      without this entry `mise run codegen:domain <T>` raises
-      `ScalarError: unknown scalar token '<T>'` and emits nothing. Then search
-      the codegen tests for any fixture using `<T>` as a negative "unknown
-      scalar" example (e.g. `test_spec.py`) and update it — registering the
-      kind makes that token valid.
-- [ ] Declare the fixture plaintext list once in the manifest's `[fixture]`
-      table (see §9). The list MUST include `MIN`, `MAX`, and zero.
-- [ ] Run `mise run codegen:domain <T>` to materialise generated SQL and the
-      committed `tests/sqlx/src/fixtures/<T>_values.rs` while iterating, or
-      just `mise run build` — every build regenerates from the manifest first.
-      Commit the regenerated `<T>_values.rs` (CI diffs it).
+      Terms determine operator support: `Hm` provides `=` / `<>`; `Ore`
+      provides `=` / `<>` / `<` / `<=` / `>` / `>=`. There is no TOML manifest
+      and no Python: the catalog is the source of truth, validated by the
+      compiler (an undefined `Term` or unknown `ScalarKind` is a compile error)
+      plus catalog `#[test]`s over `CATALOG`.
+- [ ] **If `<T>` needs a new scalar width**, add a `ScalarKind` enum variant in
+      `crates/eql-scalars/src/lib.rs` with its rust-type name, `MIN`/`MAX`/zero
+      symbols, and numeric bounds, and unit-test its `impl` methods. New term
+      behaviour likewise belongs in the `Term` enum's `impl` methods with tests
+      — not in free-form catalog data.
+- [ ] Run `cargo run -p eql-codegen` to materialise the generated SQL
+      (`src/encrypted_domain/<T>/<T>_{types,functions,operators,aggregates}.sql`,
+      gitignored) and the committed `tests/sqlx/src/fixtures/<T>_values.rs`
+      const, or just `mise run build` — every build runs the generator first.
+      Commit the regenerated `<T>_values.rs` (CI diffs it). There is no per-type
+      codegen task: one run generates every type from `CATALOG`.
 - [ ] Generated `*_types.sql` / `*_functions.sql` / `*_operators.sql` /
-      `*_aggregates.sql` are gitignored and never committed. The TOML
-      manifest plus `tasks/codegen/terms.py` are the source of truth.
-      Change the manifest or catalog and rebuild; do not hand-edit
-      generated SQL.
+      `*_aggregates.sql` are gitignored and never committed. The catalog
+      (`eql-scalars::CATALOG`) plus the `eql-codegen` renderers are the source
+      of truth. Change the catalog and rebuild; do not hand-edit generated SQL.
 - [ ] Put optional hand-written SQL in
       `src/encrypted_domain/<T>/<T>_extensions.sql` with explicit
       `-- REQUIRE:` edges. This file IS committed.
@@ -87,25 +91,47 @@ future migration.
       single golden master for the type-generic generator: the SQL templates are
       pure token substitution and the only type-specific rendering is
       `<T>_values.rs`, so a per-type baseline can only fail when `int4`'s already
-      would. Drift protection for the new type comes from the `int4` reference
-      (shared templates + `terms.py`), the committed `<T>_values.rs` const guarded
-      by the CI staleness check (`mise run codegen:domain <T>` + `git diff
-      --exit-code`) and the `<T>` cases in `tasks/codegen/test_scalars.py`, and
-      the `ordered_numeric_matrix!` SQLx suite (behaviour, not bytes).
-- [ ] Run `mise run test:matrix:inventory` and commit the regenerated
-      `tests/sqlx/snapshots/<T>_matrix_tests.txt` — the sorted inventory of every
-      `scalars::<T>::*` test name in the `encrypted_domain` binary. CI diffs it
-      (same as `<T>_values.rs`); a stale snapshot fails the `matrix-coverage`
-      job with "Coverage inventory stale". This baseline is what catches a
-      silently dropped, renamed, or `#[cfg]`-gated matrix test. See §8.
-- [ ] Run `mise run test:codegen`, the relevant SQLx suites, and the
-      PostgreSQL matrix before merging.
+      would. Drift protection for the new type comes from the `int4` reference,
+      the committed `<T>_values.rs` const guarded by the CI staleness check
+      (`cargo run -p eql-codegen` + `git diff --exit-code`) and the catalog/
+      generator `#[test]`s (`cargo test -p eql-scalars -p eql-codegen`), and the
+      `ordered_numeric_matrix!` SQLx suite (behaviour, not bytes).
+- [ ] Wire the SQLx matrix oracle. The generated SQL is enough to install the
+      domains, but the `ordered_numeric_matrix!` suite only runs once the Rust
+      harness knows about the scalar. Copy each piece from the `int4`
+      reference — these are hand-maintained registration lists (the Phase-4
+      `scalar_types!` registry, a separate plan, will collapse them):
+
+      | File | Add |
+      |------|-----|
+      | `tests/sqlx/src/fixtures/eql_plaintext.rs` | A sealed `EqlPlaintext` impl for the scalar's Rust type: `impl Sealed for <R> {}`, a `PlaintextSqlType` const for its base column type, `impl EqlPlaintext for <R>` (`CAST`, `PLAINTEXT_SQL_TYPE`, `to_plaintext` → the right `Plaintext` variant), plus the two `#[test]` casts. |
+      | `tests/sqlx/src/fixtures/eql_v2_<T>.rs` | `crate::scalar_fixture!("eql_v2_<T>", <R>, VALUES);` (pulls `super::<T>_values::VALUES`). |
+      | `tests/sqlx/src/fixtures/mod.rs` | `pub mod <T>_values;` and `pub mod eql_v2_<T>;`. |
+      | `tests/sqlx/tests/generate_all_fixtures.rs` | An arm in `generate_for_token`: `"<T>" => fixtures::eql_v2_<T>::spec().run().await,`. The match is exhaustive over the catalog — a catalog token with no arm fails the generator loudly. |
+      | `tests/sqlx/src/scalar_domains.rs` | `impl ScalarType for <R>` — `PG_TYPE` (the base PG type, e.g. `"int8"`) and `FIXTURE_VALUES = crate::fixtures::<T>_values::VALUES`. |
+      | `tests/sqlx/tests/encrypted_domain/scalars/<T>.rs` | `ordered_numeric_matrix! { suite = <T>, scalar = <R>, eql_type = "eql_v2_<T>" }`. |
+      | `tests/sqlx/tests/encrypted_domain/scalars/mod.rs` | `pub mod <T>;`. |
+
+      `<R>` is the scalar's Rust type (`i32` for `int4`, `i16` for `int2`).
+      Forget one and the matrix simply does not run for the type — the matrix
+      inventory cross-check (next step) surfaces it, because the catalog has the
+      type but the binary has no `scalars::<T>::` tests.
+- [ ] Run `mise run test:matrix:inventory`. It verifies every present type's
+      token-normalized `scalars::<T>::*` name set equals the single canonical
+      `tests/sqlx/snapshots/matrix_tests.txt`, and cross-checks the present type
+      set against `cargo run -p eql-codegen -- list-types`. You do **not** edit a
+      per-type snapshot — there is one canonical snapshot; you only regenerate it
+      when the macro's emitted name set itself changes. A catalog type missing
+      its matrix wiring fails the cross-check. See §8 and
+      `tests/sqlx/snapshots/README.md`.
+- [ ] Run `mise run test:codegen` (`cargo test -p eql-scalars -p eql-codegen`),
+      the relevant SQLx suites, and the PostgreSQL matrix before merging.
 
 ## 3. Domain Generation
 
 The generator emits `src/encrypted_domain/<T>/<T>_types.sql` (gitignored;
-materialised on every `mise run build` and on `mise run codegen:domain
-<T>`) with one idempotent `DO $$ ... $$` block. Domain `CHECK`
+materialised on every `mise run build` and every `cargo run -p eql-codegen`)
+with one idempotent `DO $$ ... $$` block. Domain `CHECK`
 constraints always require:
 
 - fixed envelope keys `v` and `i`;
@@ -126,9 +152,9 @@ that bypass the fixed operator surface.
 
 ## 4. Extractors And Wrappers
 
-Extractor names and return types come from `tasks/codegen/terms.py`, not
-from TOML. Generated extractors and supported comparison wrappers are
-inline-friendly SQL functions:
+Extractor names and return types come from the `Term` enum
+(`crates/eql-scalars/src`), not from catalog data. Generated extractors and
+supported comparison wrappers are inline-friendly SQL functions:
 
 ```sql
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -225,7 +251,7 @@ Optional hand-written SQL beyond the fixed scalar surface belongs in:
 src/encrypted_domain/<T>/<T>_extensions.sql
 ```
 
-The generator must not create this file, list it in TOML, add an
+The generator must not create this file, list it in the catalog, add an
 auto-generated header, or clean it during regeneration. The file must
 declare its own `-- REQUIRE:` edges, usually to `<T>_types.sql` and
 whichever generated function or operator file it extends. Unlike the
@@ -261,7 +287,7 @@ Cover each generated domain with SQLx tests appropriate to its terms:
 - real typed columns are tested, not only cast literals;
 - generated ordered-domain twins remain byte-identical modulo type name
   (the shared generator is anchored by the `int4` golden master in
-  `tests/codegen/reference/int4/` via `tasks/codegen/test_against_reference.py`;
+  `tests/codegen/reference/int4/` via the eql-codegen parity test;
   new types add no baseline of their own — see §2).
 
 For ordered numeric scalars this coverage is generated by the
@@ -283,21 +309,24 @@ the catalog does not promise.
 
 ### Matrix coverage inventory snapshot
 
-The *set of test names* the matrix emits is itself guarded. `mise run
-test:matrix:inventory` lists every test in the `encrypted_domain` binary
-under a pinned feature set (`--no-default-features`, which deliberately
-excludes the `scale` arm — see the task comment in `mise.toml`), greps it to
-each `scalars::<T>::*` matrix, `LC_ALL=C sort`s for byte-stable ordering, and
-writes one committed snapshot per scalar at
-`tests/sqlx/snapshots/<T>_matrix_tests.txt`. The CI `matrix-coverage` job
-regenerates with the same feature set and `git diff --exit-code`s every
-snapshot; a divergence fails with "Coverage inventory stale". This is the
-guard that catches a silently dropped, renamed, or `#[cfg]`-gated matrix
-test — a behaviour the SQLx assertions above cannot see, because a deleted
-test simply stops running. When you add a scalar you add a new snapshot;
-when you add or remove matrix tests you regenerate and commit the affected
-snapshot in the same change. The files are a committed test baseline, **not**
-gitignored generated SQL. See `tests/sqlx/snapshots/README.md`.
+The *set of test names* the matrix emits is guarded by ONE committed,
+token-normalized snapshot at `tests/sqlx/snapshots/matrix_tests.txt` — the
+sorted inventory of every `scalars::<T>::*` test name with the type token
+replaced by the literal `<T>`. (The per-type `<T>_matrix_tests.txt` files are
+gone: they were byte-identical modulo the token, so one canonical set plus a
+per-type normalize-and-compare carries the same signal at a fraction of the
+committed surface.) This is the guard that catches a silently dropped, renamed,
+or `#[cfg]`-gated matrix test, a behaviour the SQLx assertions above cannot see.
+The snapshot is a committed test baseline, **not** gitignored generated SQL.
+
+`mise run test:matrix:inventory` discovers the present scalar types from the
+`encrypted_domain` binary's `--list`, normalizes each type's token to `<T>`,
+asserts every type's set equals the canonical snapshot, and cross-checks the
+discovered type set against `cargo run -p eql-codegen -- list-types` (the catalog
+is the single source). The CI `matrix-coverage` job gates it. **`tests/sqlx/snapshots/README.md`
+is the source of truth** for the mechanics (pinned feature set, the catalog
+cross-check, the CI diff, and when to regenerate); see it rather than
+duplicating the detail here.
 
 ## 9. Fixtures
 
@@ -317,47 +346,46 @@ absent.
 
 ### Single-sourcing the value list
 
-The plaintext value list is declared **once**, in the manifest's optional
-`[fixture]` table, and generated into Rust — never hand-maintained in two
-places:
+The plaintext value list is declared **once**, in the catalog row's `fixtures`
+field, and generated into Rust — never hand-maintained in two places:
 
-```toml
-[fixture]
-values = [
-  "MIN", "-100", "-1", "ZERO", "1", "2", "5", "10", "17", "25",
-  "42", "50", "100", "250", "1000", "9999", "MAX",
-]
+```rust
+fixtures: &[Fixture::Min, Fixture::N(-100), Fixture::N(-1), Fixture::Zero,
+            Fixture::N(1), Fixture::N(2), Fixture::N(5), Fixture::N(10),
+            Fixture::N(17), Fixture::N(25), Fixture::N(42), Fixture::N(50),
+            Fixture::N(100), Fixture::N(250), Fixture::N(1000),
+            Fixture::N(9999), Fixture::Max],
 ```
 
-Values are strings so the convention is type-agnostic. The sentinels `MIN`,
-`MAX`, and `ZERO` map to the scalar's Rust named consts (for `int4`:
-`i32::MIN`, `i32::MAX`, `0`); every other token is a numeric literal
-validated against the type's representable range. The per-type rendering
-rules live in `tasks/codegen/scalars.py` (mirroring `terms.py`), not in
-free-form TOML fields. `load_spec` enforces the matrix invariant: the set
-**must** include `MIN`, `MAX`, and zero, or the build fails.
+`Fixture::Min` / `Fixture::Max` / `Fixture::Zero` resolve to the scalar's Rust
+named consts (for `int4`: `i32::MIN`, `i32::MAX`, `0`); every `Fixture::N(_)` is
+a numeric literal validated against the `ScalarKind`'s representable range by a
+catalog `#[test]` (`numeric_value` is infallible, so the range check is the
+explicit invariant `every_fixture_value_is_within_kind_bounds`). The same test
+enforces the matrix invariant: the set **must** include `Min`, `Max`, and zero,
+or the test fails (the compile-time analogue of the old `load_spec` validation).
 
-The generator emits `tests/sqlx/src/fixtures/<T>_values.rs` exposing one
+`eql-codegen` emits `tests/sqlx/src/fixtures/<T>_values.rs` exposing one
 `pub const VALUES: &[<rust_type>]`. Both consumers reference that single
 symbol — the fixture generator (`fixtures::eql_v2_<T>::spec`) and the matrix
-oracle (`impl ScalarType for <rust> { const FIXTURE_VALUES }`) — so the
-oracle cannot drift from the values the generator encrypts.
+oracle (`impl ScalarType for <rust> { const FIXTURE_VALUES }`) — so the oracle
+cannot drift from the values the generator encrypts.
 
 Unlike the gitignored `*_*.sql` surface and the gitignored encrypted
 `tests/sqlx/fixtures/eql_v2_<T>.sql` (whose ciphertext is non-deterministic
-per-encrypt), `<T>_values.rs` **is committed**: its rendering is
-deterministic, so the CI `codegen` job regenerates it and runs
-`git diff --exit-code` to catch a manifest edit that wasn't regenerated.
-Regenerate with `mise run codegen:domain <T>` and commit the result; never
-hand-edit it.
+per-encrypt), `<T>_values.rs` **is committed**: its rendering is deterministic,
+so the CI `codegen` job regenerates it (`cargo run -p eql-codegen`) and runs
+`git diff --exit-code` to catch a catalog edit that wasn't regenerated.
+Regenerate with `cargo run -p eql-codegen` (or `mise run build`) and commit the
+result; never hand-edit it.
 
 ## 10. Build And Verification
 
-- `mise run codegen:domain <T>` (optional; refreshes one type while
-  iterating on its manifest before a full build)
-- `mise run test:codegen`
-- `mise run clean && mise run build` (regenerates every type's SQL
-  from its manifest first, then builds the release artefacts)
+- `cargo run -p eql-codegen` (optional; refreshes all generated SQL +
+  `<T>_values.rs` from the catalog before a full build)
+- `mise run test:codegen` (`cargo test -p eql-scalars -p eql-codegen`)
+- `mise run clean && mise run build` (regenerates every type's SQL from
+  the catalog first, then builds the release artefacts)
 - relevant SQLx suites
 - `mise run test` across supported PostgreSQL versions
 - `mise run --output prefix test:splinter --postgres 17` after a
