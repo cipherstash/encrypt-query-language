@@ -15,6 +15,9 @@ on:
       - "src/**/*.sql"
       - "tests/sqlx/**/*"
       - "tasks/**/*"
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
 
   schedule:
     # 02:00 UTC daily
@@ -50,7 +53,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: tests/sqlx
+          workspaces: .
           shared-key: sqlx-tests
 
       - name: Setup database
