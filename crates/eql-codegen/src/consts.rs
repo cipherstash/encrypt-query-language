@@ -43,7 +43,10 @@ mod tests {
 
     #[test]
     fn rust_marker_is_a_rust_comment() {
-        assert_eq!(AUTO_GENERATED_HEADER_RS, "// AUTOMATICALLY GENERATED FILE.\n");
+        assert_eq!(
+            AUTO_GENERATED_HEADER_RS,
+            "// AUTOMATICALLY GENERATED FILE.\n"
+        );
         for line in AUTO_GENERATED_HEADER_RS.lines() {
             assert!(
                 !line.starts_with("--"),

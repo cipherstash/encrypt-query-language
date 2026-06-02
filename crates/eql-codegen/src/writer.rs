@@ -129,16 +129,25 @@ pub(crate) mod test_support {
 
     pub struct TempDir(PathBuf);
     impl TempDir {
-        pub fn path(&self) -> &Path { &self.0 }
+        pub fn path(&self) -> &Path {
+            &self.0
+        }
     }
     impl Drop for TempDir {
-        fn drop(&mut self) { let _ = fs::remove_dir_all(&self.0); }
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
     }
     pub fn tempdir() -> TempDir {
         let mut p = std::env::temp_dir();
         let nanos = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
-        p.push(format!("eql-codegen-test-{nanos}-{:?}", std::thread::current().id()));
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        p.push(format!(
+            "eql-codegen-test-{nanos}-{:?}",
+            std::thread::current().id()
+        ));
         fs::create_dir_all(&p).unwrap();
         TempDir(p)
     }
@@ -146,8 +155,8 @@ pub(crate) mod test_support {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::test_support::tempdir as tmp;
+    use super::*;
 
     #[test]
     fn is_generated_true_for_header() {
@@ -202,7 +211,11 @@ mod tests {
         let d = tmp();
         let generated = d.path().join("int4_types.sql");
         let hand = d.path().join("int4_eq_functions.sql");
-        fs::write(&generated, format!("{AUTO_GENERATED_HEADER}-- old generated\n")).unwrap();
+        fs::write(
+            &generated,
+            format!("{AUTO_GENERATED_HEADER}-- old generated\n"),
+        )
+        .unwrap();
         fs::write(&hand, "-- REQUIRE: src/schema.sql\n-- hand-written\n").unwrap();
         let err = ensure_generated_paths_writable(&[generated.clone(), hand.clone()]).unwrap_err();
         assert!(err.to_string().contains("int4_eq_functions.sql"));
@@ -257,7 +270,11 @@ mod tests {
     fn is_generated_rs_true_for_rust_header() {
         let d = tmp();
         let p = d.path().join("int4_values.rs");
-        fs::write(&p, format!("{AUTO_GENERATED_HEADER_RS}pub const VALUES: &[i32] = &[];\n")).unwrap();
+        fs::write(
+            &p,
+            format!("{AUTO_GENERATED_HEADER_RS}pub const VALUES: &[i32] = &[];\n"),
+        )
+        .unwrap();
         assert!(is_generated_rs(&p));
     }
 

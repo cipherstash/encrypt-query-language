@@ -41,26 +41,186 @@ pub fn backing_function(symbol: &str) -> &'static str {
 
 /// The 20-operator table. Order matches the SYMMETRIC/PATH/BLOCKER_ONLY lists.
 pub const OPERATORS: &[Operator] = &[
-    Operator { symbol: "=",  backing: "eq",           kind: Kind::Symmetric,   restrict: Some("eqsel"),       join: Some("eqjoinsel"),       commutator: Some("="),  negator: Some("<>") },
-    Operator { symbol: "<>", backing: "neq",          kind: Kind::Symmetric,   restrict: Some("neqsel"),      join: Some("neqjoinsel"),      commutator: Some("<>"), negator: Some("=") },
-    Operator { symbol: "<",  backing: "lt",           kind: Kind::Symmetric,   restrict: Some("scalarltsel"), join: Some("scalarltjoinsel"), commutator: Some(">"),  negator: Some(">=") },
-    Operator { symbol: "<=", backing: "lte",          kind: Kind::Symmetric,   restrict: Some("scalarlesel"), join: Some("scalarlejoinsel"), commutator: Some(">="), negator: Some(">") },
-    Operator { symbol: ">",  backing: "gt",           kind: Kind::Symmetric,   restrict: Some("scalargtsel"), join: Some("scalargtjoinsel"), commutator: Some("<"),  negator: Some("<=") },
-    Operator { symbol: ">=", backing: "gte",          kind: Kind::Symmetric,   restrict: Some("scalargesel"), join: Some("scalargejoinsel"), commutator: Some("<="), negator: Some("<") },
-    Operator { symbol: "@>", backing: "contains",     kind: Kind::Symmetric,   restrict: None, join: None, commutator: None, negator: None },
-    Operator { symbol: "<@", backing: "contained_by", kind: Kind::Symmetric,   restrict: None, join: None, commutator: None, negator: None },
-    Operator { symbol: "->",  backing: "\"->\"",      kind: Kind::Path,        restrict: None, join: None, commutator: None, negator: None },
-    Operator { symbol: "->>", backing: "\"->>\"",     kind: Kind::Path,        restrict: None, join: None, commutator: None, negator: None },
-    Operator { symbol: "?",   backing: "\"?\"",       kind: Kind::BlockerOnly, restrict: None, join: None, commutator: None, negator: None },
-    Operator { symbol: "?|",  backing: "\"?|\"",      kind: Kind::BlockerOnly, restrict: None, join: None, commutator: None, negator: None },
-    Operator { symbol: "?&",  backing: "\"?&\"",      kind: Kind::BlockerOnly, restrict: None, join: None, commutator: None, negator: None },
-    Operator { symbol: "@?",  backing: "\"@?\"",      kind: Kind::BlockerOnly, restrict: None, join: None, commutator: None, negator: None },
-    Operator { symbol: "@@",  backing: "\"@@\"",      kind: Kind::BlockerOnly, restrict: None, join: None, commutator: None, negator: None },
-    Operator { symbol: "#>",  backing: "\"#>\"",      kind: Kind::BlockerOnly, restrict: None, join: None, commutator: None, negator: None },
-    Operator { symbol: "#>>", backing: "\"#>>\"",     kind: Kind::BlockerOnly, restrict: None, join: None, commutator: None, negator: None },
-    Operator { symbol: "-",   backing: "\"-\"",       kind: Kind::BlockerOnly, restrict: None, join: None, commutator: None, negator: None },
-    Operator { symbol: "#-",  backing: "\"#-\"",      kind: Kind::BlockerOnly, restrict: None, join: None, commutator: None, negator: None },
-    Operator { symbol: "||",  backing: "\"||\"",      kind: Kind::BlockerOnly, restrict: None, join: None, commutator: None, negator: None },
+    Operator {
+        symbol: "=",
+        backing: "eq",
+        kind: Kind::Symmetric,
+        restrict: Some("eqsel"),
+        join: Some("eqjoinsel"),
+        commutator: Some("="),
+        negator: Some("<>"),
+    },
+    Operator {
+        symbol: "<>",
+        backing: "neq",
+        kind: Kind::Symmetric,
+        restrict: Some("neqsel"),
+        join: Some("neqjoinsel"),
+        commutator: Some("<>"),
+        negator: Some("="),
+    },
+    Operator {
+        symbol: "<",
+        backing: "lt",
+        kind: Kind::Symmetric,
+        restrict: Some("scalarltsel"),
+        join: Some("scalarltjoinsel"),
+        commutator: Some(">"),
+        negator: Some(">="),
+    },
+    Operator {
+        symbol: "<=",
+        backing: "lte",
+        kind: Kind::Symmetric,
+        restrict: Some("scalarlesel"),
+        join: Some("scalarlejoinsel"),
+        commutator: Some(">="),
+        negator: Some(">"),
+    },
+    Operator {
+        symbol: ">",
+        backing: "gt",
+        kind: Kind::Symmetric,
+        restrict: Some("scalargtsel"),
+        join: Some("scalargtjoinsel"),
+        commutator: Some("<"),
+        negator: Some("<="),
+    },
+    Operator {
+        symbol: ">=",
+        backing: "gte",
+        kind: Kind::Symmetric,
+        restrict: Some("scalargesel"),
+        join: Some("scalargejoinsel"),
+        commutator: Some("<="),
+        negator: Some("<"),
+    },
+    Operator {
+        symbol: "@>",
+        backing: "contains",
+        kind: Kind::Symmetric,
+        restrict: None,
+        join: None,
+        commutator: None,
+        negator: None,
+    },
+    Operator {
+        symbol: "<@",
+        backing: "contained_by",
+        kind: Kind::Symmetric,
+        restrict: None,
+        join: None,
+        commutator: None,
+        negator: None,
+    },
+    Operator {
+        symbol: "->",
+        backing: "\"->\"",
+        kind: Kind::Path,
+        restrict: None,
+        join: None,
+        commutator: None,
+        negator: None,
+    },
+    Operator {
+        symbol: "->>",
+        backing: "\"->>\"",
+        kind: Kind::Path,
+        restrict: None,
+        join: None,
+        commutator: None,
+        negator: None,
+    },
+    Operator {
+        symbol: "?",
+        backing: "\"?\"",
+        kind: Kind::BlockerOnly,
+        restrict: None,
+        join: None,
+        commutator: None,
+        negator: None,
+    },
+    Operator {
+        symbol: "?|",
+        backing: "\"?|\"",
+        kind: Kind::BlockerOnly,
+        restrict: None,
+        join: None,
+        commutator: None,
+        negator: None,
+    },
+    Operator {
+        symbol: "?&",
+        backing: "\"?&\"",
+        kind: Kind::BlockerOnly,
+        restrict: None,
+        join: None,
+        commutator: None,
+        negator: None,
+    },
+    Operator {
+        symbol: "@?",
+        backing: "\"@?\"",
+        kind: Kind::BlockerOnly,
+        restrict: None,
+        join: None,
+        commutator: None,
+        negator: None,
+    },
+    Operator {
+        symbol: "@@",
+        backing: "\"@@\"",
+        kind: Kind::BlockerOnly,
+        restrict: None,
+        join: None,
+        commutator: None,
+        negator: None,
+    },
+    Operator {
+        symbol: "#>",
+        backing: "\"#>\"",
+        kind: Kind::BlockerOnly,
+        restrict: None,
+        join: None,
+        commutator: None,
+        negator: None,
+    },
+    Operator {
+        symbol: "#>>",
+        backing: "\"#>>\"",
+        kind: Kind::BlockerOnly,
+        restrict: None,
+        join: None,
+        commutator: None,
+        negator: None,
+    },
+    Operator {
+        symbol: "-",
+        backing: "\"-\"",
+        kind: Kind::BlockerOnly,
+        restrict: None,
+        join: None,
+        commutator: None,
+        negator: None,
+    },
+    Operator {
+        symbol: "#-",
+        backing: "\"#-\"",
+        kind: Kind::BlockerOnly,
+        restrict: None,
+        join: None,
+        commutator: None,
+        negator: None,
+    },
+    Operator {
+        symbol: "||",
+        backing: "\"||\"",
+        kind: Kind::BlockerOnly,
+        restrict: None,
+        join: None,
+        commutator: None,
+        negator: None,
+    },
 ];
 
 #[cfg(test)]
@@ -74,7 +234,10 @@ mod tests {
 
     #[test]
     fn operator_lists_match() {
-        assert_eq!(SYMMETRIC_OPERATORS, &["=", "<>", "<", "<=", ">", ">=", "@>", "<@"]);
+        assert_eq!(
+            SYMMETRIC_OPERATORS,
+            &["=", "<>", "<", "<=", ">", ">=", "@>", "<@"]
+        );
         assert_eq!(PATH_OPERATORS, &["->", "->>"]);
         assert_eq!(
             BLOCKER_ONLY_OPERATORS,
@@ -84,7 +247,9 @@ mod tests {
 
     #[test]
     fn no_like_operators() {
-        assert!(OPERATORS.iter().all(|o| o.symbol != "~~" && o.symbol != "~~*"));
+        assert!(OPERATORS
+            .iter()
+            .all(|o| o.symbol != "~~" && o.symbol != "~~*"));
     }
 
     #[test]
