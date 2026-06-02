@@ -4,10 +4,10 @@ use std::path::{Path, PathBuf};
 
 use eql_scalars::{DomainSpec, ScalarSpec, Term};
 
+use crate::context::{domain_name, is_ord_capable};
 use crate::operator_surface::{
     backing_function, BLOCKER_ONLY_OPERATORS, PATH_OPERATORS, SYMMETRIC_OPERATORS,
 };
-use crate::context::{domain_name, is_ord_capable};
 
 /// The full domain name (token + suffix). suffix "" => bare token.
 fn full_name(token: &str, suffix: &str) -> String {
@@ -131,7 +131,7 @@ pub fn render_functions_file(token: &str, domain: &DomainSpec) -> String {
     let dom = domain_name(&name);
     let domain_lit = sql_str(&dom);
     let supported = Term::operators_for_terms(domain.terms);
-    let is_supported = |op: &str| supported.iter().any(|s| *s == op);
+    let is_supported = |op: &str| supported.contains(&op);
 
     let mut entries = Vec::new();
     for term in extractor_terms(domain.terms) {
@@ -147,18 +147,34 @@ pub fn render_functions_file(token: &str, domain: &DomainSpec) -> String {
                 }
             }
             let args = [
-                SqlParam { name: "a", ty: arg_a },
-                SqlParam { name: "b", ty: arg_b },
+                SqlParam {
+                    name: "a",
+                    ty: arg_a,
+                },
+                SqlParam {
+                    name: "b",
+                    ty: arg_b,
+                },
             ];
             entries.push(blocker_entry(op, args, "boolean"));
         }
     }
     for &op in PATH_OPERATORS {
         for (arg_a, arg_b) in path_shapes(&dom) {
-            let returns = if op == "->>" { "text".to_string() } else { dom.clone() };
+            let returns = if op == "->>" {
+                "text".to_string()
+            } else {
+                dom.clone()
+            };
             let args = [
-                SqlParam { name: "a", ty: arg_a },
-                SqlParam { name: "selector", ty: arg_b },
+                SqlParam {
+                    name: "a",
+                    ty: arg_a,
+                },
+                SqlParam {
+                    name: "selector",
+                    ty: arg_b,
+                },
             ];
             entries.push(blocker_entry(op, args, &returns));
         }
@@ -166,8 +182,14 @@ pub fn render_functions_file(token: &str, domain: &DomainSpec) -> String {
     for &op in BLOCKER_ONLY_OPERATORS {
         for (arg_a, arg_b, returns) in blocker_only_shapes(&dom, op) {
             let args = [
-                SqlParam { name: "a", ty: arg_a },
-                SqlParam { name: "b", ty: arg_b },
+                SqlParam {
+                    name: "a",
+                    ty: arg_a,
+                },
+                SqlParam {
+                    name: "b",
+                    ty: arg_b,
+                },
             ];
             entries.push(blocker_entry(op, args, &returns));
         }
@@ -194,7 +216,7 @@ pub fn render_operators_file(token: &str, domain: &DomainSpec) -> String {
     let name = full_name(token, domain.suffix);
     let dom = domain_name(&name);
     let supported = Term::operators_for_terms(domain.terms);
-    let is_supported = |op: &str| supported.iter().any(|s| *s == op);
+    let is_supported = |op: &str| supported.contains(&op);
 
     let mut operators = Vec::new();
     for &op in SYMMETRIC_OPERATORS {
@@ -252,7 +274,7 @@ pub fn render_aggregates_file(token: &str, domain: &DomainSpec) -> Option<String
         ],
         token: token.to_string(),
         name,
-        dom, // hoisted: one copy, template reads {{ dom }}
+        dom,                       // hoisted: one copy, template reads {{ dom }}
         aggregates: AGGREGATE_OPS, // iterate the const directly (no per-entry wrapper)
     };
     Some(
@@ -316,10 +338,7 @@ pub fn generate_type(spec: &ScalarSpec, out_dir: &Path) -> Result<Vec<PathBuf>, 
 pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
     for spec in eql_scalars::CATALOG {
         let token = spec.token;
-        let out_dir = out_root
-            .join("src")
-            .join("encrypted_domain")
-            .join(token);
+        let out_dir = out_root.join("src").join("encrypted_domain").join(token);
         let mut written = generate_type(spec, &out_dir)?;
 
         let rs_path = fixture_values_rs_path(out_root, token);
@@ -347,11 +366,17 @@ mod tests {
     use eql_scalars::CATALOG;
 
     fn spec(token: &str) -> &'static ScalarSpec {
-        CATALOG.iter().find(|s| s.token == token).expect("catalog token")
+        CATALOG
+            .iter()
+            .find(|s| s.token == token)
+            .expect("catalog token")
     }
 
     fn domain<'a>(spec: &'a ScalarSpec, suffix: &str) -> &'a DomainSpec {
-        spec.domains.iter().find(|d| d.suffix == suffix).expect("domain suffix")
+        spec.domains
+            .iter()
+            .find(|d| d.suffix == suffix)
+            .expect("domain suffix")
     }
 
     use crate::templates::render_fixture_values_rs;
@@ -441,7 +466,11 @@ mod tests {
             let path = root.join(format!("tests/codegen/reference/int4/{full}_operators.sql"));
             let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
             let actual = render_operators_file("int4", d);
-            assert_eq!(normalize_sql(&actual), normalize_sql(&expected), "{full}_operators.sql");
+            assert_eq!(
+                normalize_sql(&actual),
+                normalize_sql(&expected),
+                "{full}_operators.sql"
+            );
         }
     }
 
@@ -453,9 +482,15 @@ mod tests {
         for d in s.domains {
             if let Some(actual) = render_aggregates_file("int4", d) {
                 let full = full_name("int4", d.suffix);
-                let path = root.join(format!("tests/codegen/reference/int4/{full}_aggregates.sql"));
+                let path = root.join(format!(
+                    "tests/codegen/reference/int4/{full}_aggregates.sql"
+                ));
                 let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
-                assert_eq!(normalize_sql(&actual), normalize_sql(&expected), "{full}_aggregates.sql");
+                assert_eq!(
+                    normalize_sql(&actual),
+                    normalize_sql(&expected),
+                    "{full}_aggregates.sql"
+                );
             }
         }
     }
@@ -482,7 +517,10 @@ mod tests {
             );
             checked += 1;
         }
-        assert!(checked >= 11, "expected >=11 reference SQL files, checked {checked}");
+        assert!(
+            checked >= 11,
+            "expected >=11 reference SQL files, checked {checked}"
+        );
     }
 
     #[test]
@@ -491,7 +529,10 @@ mod tests {
         let path = root.join("tests/codegen/reference/int4/int4_values.rs");
         let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
         let actual = render_fixture_values_rs(spec("int4"));
-        assert_eq!(actual, expected, "int4_values.rs: generator diverged from golden reference");
+        assert_eq!(
+            actual, expected,
+            "int4_values.rs: generator diverged from golden reference"
+        );
     }
 
     #[test]
@@ -515,7 +556,9 @@ mod tests {
         assert!(names.contains(&"int4_ord_aggregates.sql".to_string()));
         assert_eq!(written.len(), 11);
         for p in &written {
-            assert!(fs::read_to_string(p).unwrap().starts_with(crate::consts::AUTO_GENERATED_HEADER));
+            assert!(fs::read_to_string(p)
+                .unwrap()
+                .starts_with(crate::consts::AUTO_GENERATED_HEADER));
         }
     }
 
@@ -524,7 +567,10 @@ mod tests {
         let sql = render_types_file(spec("int4"));
         assert!(sql.contains("-- REQUIRE: src/schema-v3.sql"));
         for dom in ["int4", "int4_eq", "int4_ord_ore", "int4_ord"] {
-            assert!(sql.contains(&format!("CREATE DOMAIN eql_v3.{dom} AS jsonb")), "missing {dom}");
+            assert!(
+                sql.contains(&format!("CREATE DOMAIN eql_v3.{dom} AS jsonb")),
+                "missing {dom}"
+            );
         }
     }
 
@@ -535,7 +581,11 @@ mod tests {
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 44);
         assert!(!sql.contains("SET search_path"));
         assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 44);
-        assert_eq!(sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE").count(), 0);
+        assert_eq!(
+            sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
+                .count(),
+            0
+        );
     }
 
     #[test]
@@ -545,7 +595,11 @@ mod tests {
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
         assert!(sql.contains("CREATE FUNCTION eql_v3.eq_term(a eql_v3.int4_eq)"));
         assert!(sql.contains("RETURNS eql_v2.hmac_256"));
-        assert_eq!(sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE").count(), 7);
+        assert_eq!(
+            sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
+                .count(),
+            7
+        );
         assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 38);
         assert!(!sql.contains("SET search_path"));
     }
@@ -557,7 +611,11 @@ mod tests {
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
         assert!(sql.contains("CREATE FUNCTION eql_v3.ord_term(a eql_v3.int4_ord)"));
         assert!(sql.contains("RETURNS eql_v2.ore_block_u64_8_256"));
-        assert_eq!(sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE").count(), 19);
+        assert_eq!(
+            sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
+                .count(),
+            19
+        );
         assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 26);
     }
 
@@ -596,8 +654,14 @@ mod tests {
         let ord = domain(s, "_ord");
         let ore = domain(s, "_ord_ore");
         let norm = |sql: String| sql.replace("int4_ord_ore", "T").replace("int4_ord", "T");
-        assert_eq!(norm(render_functions_file(s.token, ord)), norm(render_functions_file(s.token, ore)));
-        assert_eq!(norm(render_operators_file(s.token, ord)), norm(render_operators_file(s.token, ore)));
+        assert_eq!(
+            norm(render_functions_file(s.token, ord)),
+            norm(render_functions_file(s.token, ore))
+        );
+        assert_eq!(
+            norm(render_operators_file(s.token, ord)),
+            norm(render_operators_file(s.token, ore))
+        );
         assert_eq!(
             norm(render_aggregates_file(s.token, ord).unwrap()),
             norm(render_aggregates_file(s.token, ore).unwrap())
@@ -643,8 +707,16 @@ mod tests {
         let s = spec("int4");
         let sql = render_aggregates_file("int4", domain(s, "_ord")).unwrap();
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 2);
-        assert_eq!(sql.matches("LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE").count(), 2);
-        assert_eq!(sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE").count(), 0);
+        assert_eq!(
+            sql.matches("LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE")
+                .count(),
+            2
+        );
+        assert_eq!(
+            sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
+                .count(),
+            0
+        );
     }
 
     #[test]
@@ -683,8 +755,14 @@ mod tests {
         let entry = blocker_entry(
             "<",
             [
-                SqlParam { name: "a", ty: dom.into() },
-                SqlParam { name: "b", ty: dom.into() },
+                SqlParam {
+                    name: "a",
+                    ty: dom.into(),
+                },
+                SqlParam {
+                    name: "b",
+                    ty: dom.into(),
+                },
             ],
             "boolean",
         );
@@ -701,9 +779,15 @@ mod tests {
     fn domain_block_escapes_quote_bearing_name() {
         use crate::context::domain_block;
         use eql_scalars::DomainSpec;
-        let block = domain_block("int4", &DomainSpec { suffix: "_q", terms: &[] });
+        let block = domain_block(
+            "int4",
+            &DomainSpec {
+                suffix: "_q",
+                terms: &[],
+            },
+        );
         assert_eq!(block.typname, "int4_q"); // no quote present → unchanged
-        // keys are sql_str-escaped key tokens; none should carry a bare unescaped quote.
+                                             // keys are sql_str-escaped key tokens; none should carry a bare unescaped quote.
         assert!(block.keys.iter().all(|k| !k.contains("o'")));
     }
 }

@@ -23,12 +23,21 @@ pub fn environment() -> minijinja::Environment<'static> {
     env.set_keep_trailing_newline(true);
     env.add_template("types.sql", include_str!("../templates/types.sql.j2"))
         .expect("types.sql template");
-    env.add_template("functions.sql", include_str!("../templates/functions.sql.j2"))
-        .expect("functions.sql template");
-    env.add_template("operators.sql", include_str!("../templates/operators.sql.j2"))
-        .expect("operators.sql template");
-    env.add_template("aggregates.sql", include_str!("../templates/aggregates.sql.j2"))
-        .expect("aggregates.sql template");
+    env.add_template(
+        "functions.sql",
+        include_str!("../templates/functions.sql.j2"),
+    )
+    .expect("functions.sql template");
+    env.add_template(
+        "operators.sql",
+        include_str!("../templates/operators.sql.j2"),
+    )
+    .expect("operators.sql template");
+    env.add_template(
+        "aggregates.sql",
+        include_str!("../templates/aggregates.sql.j2"),
+    )
+    .expect("aggregates.sql template");
     env.add_global("domain_schema", DOMAIN_SCHEMA);
     env.add_global("core_schema", CORE_SCHEMA);
     env
@@ -87,8 +96,8 @@ pub enum FnEntry {
         ctor: String,      // e.g. hmac_256 (called as {{ core_schema }}.{{ ctor }})
     },
     Wrapper {
-        op: String,             // SQL operator used in the body, e.g. =
-        function_name: String,  // e.g. eq
+        op: String,            // SQL operator used in the body, e.g. =
+        function_name: String, // e.g. eq
         args: [SqlParam; 2],
         call_a: String, // e.g. eql_v3.eq_term(a)   (embeds extract_arg cast logic)
         call_b: String, // e.g. eql_v3.eq_term(b::eql_v3.int4_eq)
@@ -128,8 +137,14 @@ pub fn wrapper_entry(dom: &str, op: &str, arg_a: &str, arg_b: &str, extractor: &
         op: op.to_string(),
         function_name: backing_function(op).to_string(),
         args: [
-            SqlParam { name: "a", ty: arg_a.to_string() },
-            SqlParam { name: "b", ty: arg_b.to_string() },
+            SqlParam {
+                name: "a",
+                ty: arg_a.to_string(),
+            },
+            SqlParam {
+                name: "b",
+                ty: arg_b.to_string(),
+            },
         ],
         call_a: extract_arg(arg_a, extractor, dom, "a"),
         call_b: extract_arg(arg_b, extractor, dom, "b"),
@@ -248,8 +263,14 @@ pub struct AggregateOp {
 
 /// The two aggregate ops in (min, max) order. Port of `AGGREGATE_OPS`.
 pub const AGGREGATE_OPS: &[AggregateOp] = &[
-    AggregateOp { name: "min", comparator: "<" },
-    AggregateOp { name: "max", comparator: ">" },
+    AggregateOp {
+        name: "min",
+        comparator: "<",
+    },
+    AggregateOp {
+        name: "max",
+        comparator: ">",
+    },
 ];
 
 /// True if the domain carries a comparator term (supports `<`).
@@ -299,7 +320,12 @@ mod tests {
     #[test]
     fn environment_has_four_templates() {
         let env = environment();
-        for name in ["types.sql", "functions.sql", "operators.sql", "aggregates.sql"] {
+        for name in [
+            "types.sql",
+            "functions.sql",
+            "operators.sql",
+            "aggregates.sql",
+        ] {
             assert!(env.get_template(name).is_ok(), "missing template {name}");
         }
     }

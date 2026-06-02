@@ -34,7 +34,10 @@ mod tests {
     use eql_scalars::CATALOG;
 
     fn spec(token: &str) -> &'static ScalarSpec {
-        CATALOG.iter().find(|s| s.token == token).expect("catalog token")
+        CATALOG
+            .iter()
+            .find(|s| s.token == token)
+            .expect("catalog token")
     }
 
     #[test]

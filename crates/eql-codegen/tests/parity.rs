@@ -9,15 +9,19 @@ use std::path::PathBuf;
 
 fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent().unwrap()
-        .parent().unwrap()
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
         .to_path_buf()
 }
 
 fn tempdir(tag: &str) -> PathBuf {
     let mut p = std::env::temp_dir();
     let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
     p.push(format!("eql-parity-{tag}-{nanos}"));
     fs::create_dir_all(&p).unwrap();
     p
@@ -52,14 +56,17 @@ fn rust_generator_matches_int4_golden_files() {
     let gen_dir = out.join("src/encrypted_domain/int4");
     for entry in fs::read_dir(&ref_dir).unwrap() {
         let path = entry.unwrap().path();
-        if path.extension().and_then(|e| e.to_str()) != Some("sql") { continue; }
+        if path.extension().and_then(|e| e.to_str()) != Some("sql") {
+            continue;
+        }
         let name = path.file_name().unwrap().to_str().unwrap();
         let reference = fs::read_to_string(&path).unwrap();
         // Strip the leading `-- REFERENCE:` provenance line. What remains is the
         // generated body, which already starts with the template-owned
         // `-- AUTOMATICALLY GENERATED FILE.` marker — the same first line the
         // materialised file carries, so no header is re-added here.
-        let expected: String = reference.lines()
+        let expected: String = reference
+            .lines()
             .skip_while(|l| l.starts_with("-- REFERENCE:") || l.starts_with("// REFERENCE:"))
             .map(|l| format!("{l}\n"))
             .collect();
