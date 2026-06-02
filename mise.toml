@@ -58,9 +58,10 @@ cd tests/sqlx
 sqlx migrate run
 
 # Regenerate fixtures every run — they are not committed (see .gitignore).
-# fixture:generate:all enumerates every scalar manifest in
-# tasks/codegen/types/ that declares a [fixture] table, so new scalar types
-# are picked up automatically without editing this task.
+# fixture:generate:all iterates eql-scalars::CATALOG and generates every
+# scalar fixture in one process, so new scalar types are picked up
+# automatically (add the catalog row + the fixture wiring) without editing
+# this task.
 # Generator encrypts via cipherstash-client directly, which needs BOTH a
 # ZeroKMS auth credential (CS_CLIENT_ACCESS_KEY + CS_WORKSPACE_CRN, via
 # AutoStrategy) AND a client key (CS_CLIENT_ID + CS_CLIENT_KEY, via
