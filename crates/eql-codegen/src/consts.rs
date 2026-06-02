@@ -2,29 +2,25 @@
 
 /// SQL generated-file marker. The SQL templates emit this as their first line;
 /// the writer uses it only to recognise files it owns (overwrite/clean safety).
-pub const AUTO_GENERATED_HEADER: &str = "-- AUTOMATICALLY GENERATED FILE.\n";
+pub(crate) const AUTO_GENERATED_HEADER: &str = "-- AUTOMATICALLY GENERATED FILE.\n";
 
 /// Rust generated-file marker, prepended to `<T>_values.rs` (which has no
 /// template). Rust comment syntax so the `.rs` file stays valid.
-pub const AUTO_GENERATED_HEADER_RS: &str = "// AUTOMATICALLY GENERATED FILE.\n";
+pub(crate) const AUTO_GENERATED_HEADER_RS: &str = "// AUTOMATICALLY GENERATED FILE.\n";
 
 /// Schema housing the encrypted-domain families.
-pub const DOMAIN_SCHEMA: &str = "eql_v3";
+pub(crate) const DOMAIN_SCHEMA: &str = "eql_v3";
 /// Schema owning the core index-term types/constructors.
-pub const CORE_SCHEMA: &str = "eql_v2";
+pub(crate) const CORE_SCHEMA: &str = "eql_v2";
 
-/// Envelope keys checked for presence in every domain CHECK, in order.
-pub const ENVELOPE_KEYS: &[&str] = &["v", "i"];
-/// Ciphertext payload key.
-pub const CIPHERTEXT_KEY: &str = "c";
-/// Envelope-version key whose value is pinned.
-pub const VERSION_KEY: &str = "v";
-/// EQL payload-format version pinned by the domain CHECK.
-pub const ENVELOPE_VERSION: u32 = 2;
+/// Always-present payload keys checked for presence in every domain CHECK, in
+/// order: envelope version (`v`), ident (`i`), ciphertext (`c`). Term-specific
+/// keys are appended after these by `context::domain_block`.
+pub(crate) const ENVELOPE_KEYS: &[&str] = &["v", "i", "c"];
 
 /// Escape a string for use inside a single-quoted SQL literal by doubling
 /// embedded single quotes. Port of templates.py `_sql_str`.
-pub fn sql_str(s: &str) -> String {
+pub(crate) fn sql_str(s: &str) -> String {
     s.replace('\'', "''")
 }
 
