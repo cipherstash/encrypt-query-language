@@ -98,6 +98,23 @@ mise exec python -- python -m pip install --quiet --disable-pip-version-check py
 mise exec python -- python -m pytest tasks/codegen -q
 """
 
+[tasks."test:crates"]
+description = "Compile, lint and test the std-only Rust workspace crates (no database)"
+dir = "{{config_root}}"
+run = """
+# eql-scalars / eql-codegen are the lean workspace members. Scope explicitly to
+# them (NOT --workspace): a workspace-wide test would drag in tests/sqlx, whose
+# suite needs Postgres + CS_* secrets and is already covered by the `test` job.
+# clippy is likewise scoped — a workspace clippy recompiles the heavy
+# sqlx/tokio/cipherstash-client tree for no added coverage of these crates.
+# `set -eu` only (no pipefail): mise runs tasks under `sh`, which is dash on the
+# CI runners, and dash rejects `set -o pipefail`. There are no pipes here.
+set -eu
+cargo fmt --check
+cargo clippy -p eql-scalars -p eql-codegen --all-targets -- -D warnings
+cargo test -p eql-scalars -p eql-codegen
+"""
+
 [tasks."test:matrix:inventory"]
 description = "Regenerate the int4/int2 matrix test-name inventory snapshots (no database required)"
 dir = "{{config_root}}/tests/sqlx"
