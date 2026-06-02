@@ -113,31 +113,30 @@ jobs:
           workspaces: .
           shared-key: sqlx-tests
 
-      # The Python `test:codegen` drift suite is intentionally not run here: the
-      # Python generator is deprecated and removed in the following PR. The
-      # hand-written reference (tests/codegen/reference/) is now gated against
-      # the Rust generator by the `mise run codegen:parity` step below.
+      # Crate compile/lint/test (cargo test -p eql-scalars -p eql-codegen) runs
+      # in the dedicated `test:crates` job; this job covers the codegen-specific
+      # gates only — fixture-value regeneration and golden/values parity.
 
       # Regenerate the committed Rust fixture-value consts for EVERY type from
-      # their manifests and fail if any differ from / are missing in the tree.
-      # The value lists are rendered deterministically (unlike the encrypted
-      # .sql fixtures, whose ciphertext is non-deterministic and gitignored), so
-      # a plain diff is the right guard — it catches a manifest edit that wasn't
-      # regenerated. `git add -N` registers any brand-new untracked const so a
-      # forgotten-to-commit file also trips the diff. No Postgres needed: this
-      # only runs the Python generator.
+      # the catalog and fail if any differ from / are missing in the tree.
+      # eql-codegen renders all <T>_values.rs deterministically (unlike the
+      # encrypted .sql fixtures, whose ciphertext is non-deterministic and
+      # gitignored), so a plain diff is the right guard — it catches a catalog
+      # edit that wasn't regenerated. `git add -N` registers any brand-new
+      # untracked const so a forgotten-to-commit file also trips the diff. No
+      # Postgres needed: the generator is std-only.
       - name: Regenerate and verify fixture-value consts (all types)
         run: |
-          mise run codegen:domain:all
+          cargo run -p eql-codegen
           git add -N tests/sqlx/src/fixtures
           git diff --exit-code -- tests/sqlx/src/fixtures \
-            || { echo "Fixture value const(s) stale or uncommitted — run 'mise run codegen:domain:all' and commit tests/sqlx/src/fixtures."; exit 1; }
+            || { echo "Fixture value const(s) stale or uncommitted — run 'cargo run -p eql-codegen' and commit tests/sqlx/src/fixtures."; exit 1; }
 
-      # Cross-generator parity: assert the Rust eql-codegen output is byte-
-      # identical to the Python oracle across all types, the committed
-      # <T>_values.rs, and the int4 golden reference. No Postgres needed — both
-      # generators are deterministic and run offline.
-      - name: Verify Rust↔Python generator parity
+      # Parity gate: assert the Rust eql-codegen output is line-normalized-equal
+      # to the int4 golden reference and the committed <T>_values.rs are byte-
+      # identical (git-clean) after regeneration. Python is no longer an oracle
+      # (retired in P2). No Postgres needed — the generator runs offline.
+      - name: Verify generator parity (golden + values)
         run: |
           mise run codegen:parity
 
