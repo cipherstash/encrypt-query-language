@@ -1,0 +1,34 @@
+-- AUTOMATICALLY GENERATED FILE.
+{% for r in requires -%}
+-- REQUIRE: {{ r }}
+{% endfor %}
+--! @file encrypted_domain/{{ token }}/{{ name }}_functions.sql
+--! @brief Functions for {{ dom }}.
+{% for e in entries %}
+{% if e.kind == "Extractor" -%}
+--! @brief Index extractor for {{ dom }}.
+--! @param a {{ dom }}
+--! @return {{ e.ret }}
+CREATE FUNCTION {{ domain_schema }}.{{ e.extractor }}(a {{ dom }})
+RETURNS {{ e.ret }}
+LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT {{ core_schema }}.{{ e.ctor }}(a::jsonb) $$;
+{% elif e.kind == "Wrapper" -%}
+--! @brief Operator wrapper for {{ dom }}.
+--! @param {{ e.args[0].name }} {{ e.args[0].ty }}
+--! @param {{ e.args[1].name }} {{ e.args[1].ty }}
+--! @return boolean
+CREATE FUNCTION {{ domain_schema }}.{{ e.function_name }}({{ e.args[0].name }} {{ e.args[0].ty }}, {{ e.args[1].name }} {{ e.args[1].ty }})
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT {{ e.call_a }} {{ e.op }} {{ e.call_b }} $$;
+{% else -%}
+--! @brief Unsupported operator blocker for {{ dom }}.
+--! @param {{ e.args[0].name }} {{ e.args[0].ty }}
+--! @param {{ e.args[1].name }} {{ e.args[1].ty }}
+--! @return {{ e.returns }}
+CREATE FUNCTION {{ domain_schema }}.{{ e.function_name }}({{ e.args[0].name }} {{ e.args[0].ty }}, {{ e.args[1].name }} {{ e.args[1].ty }})
+RETURNS {{ e.returns }} IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '{{ e.operator_lit }}', '{{ domain_lit }}'; END; $$
+LANGUAGE plpgsql;
+{% endif -%}
+{% endfor -%}
