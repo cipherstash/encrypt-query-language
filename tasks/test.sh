@@ -22,24 +22,22 @@ echo ""
 echo "Building EQL..."
 mise run --output prefix --force build
 
-# Run encrypted-domain codegen generator tests
-echo ""
-echo "=============================================="
-echo "1/3: Running encrypted-domain codegen tests"
-echo "=============================================="
-mise run --output prefix test:codegen
+# The encrypted-domain codegen drift suite (`test:codegen`) is the deprecated
+# Python generator's pytest and is intentionally not run here. The Rust
+# generator is gated against the hand-written reference by the dedicated
+# "Encrypted-domain codegen" CI job (`mise run codegen:parity`).
 
 # Run lints on sqlx tests
 echo ""
 echo "=============================================="
-echo "2/3: Running linting checks on SQLx Rust tests"
+echo "1/2: Running linting checks on SQLx Rust tests"
 echo "=============================================="
 mise run --output prefix test:lint
 
 # Run SQLx Rust tests
 echo ""
 echo "=============================================="
-echo "3/3: Running SQLx Rust Tests"
+echo "2/2: Running SQLx Rust Tests"
 echo "=============================================="
 mise run --output prefix test:sqlx
 
@@ -49,7 +47,6 @@ echo "✅ ALL TESTS PASSED"
 echo "=============================================="
 echo ""
 echo "Summary:"
-echo "  ✓ Encrypted-domain codegen tests"
 echo "  ✓ SQLx Rust lint checks"
 echo "  ✓ SQLx Rust tests"
 echo ""

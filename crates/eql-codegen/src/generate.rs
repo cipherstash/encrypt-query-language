@@ -1,0 +1,709 @@
+//! File renderers and orchestrator (port of generate.py).
+
+use std::path::{Path, PathBuf};
+
+use eql_scalars::{DomainSpec, ScalarSpec, Term};
+
+use crate::operator_surface::{
+    backing_function, BLOCKER_ONLY_OPERATORS, PATH_OPERATORS, SYMMETRIC_OPERATORS,
+};
+use crate::context::{domain_name, is_ord_capable};
+
+/// The full domain name (token + suffix). suffix "" => bare token.
+fn full_name(token: &str, suffix: &str) -> String {
+    format!("{token}{suffix}")
+}
+
+/// Symmetric-operator argument shapes. Port of `_symmetric_shapes`.
+fn symmetric_shapes(dom: &str) -> Vec<(String, String)> {
+    vec![
+        (dom.to_string(), dom.to_string()),
+        (dom.to_string(), "jsonb".to_string()),
+        ("jsonb".to_string(), dom.to_string()),
+    ]
+}
+
+/// Path-operator argument shapes. Port of `_path_shapes`.
+fn path_shapes(dom: &str) -> Vec<(String, String)> {
+    vec![
+        (dom.to_string(), "text".to_string()),
+        (dom.to_string(), "integer".to_string()),
+        ("jsonb".to_string(), dom.to_string()),
+    ]
+}
+
+/// Blocker-only argument shapes for a native jsonb operator.
+/// Port of `_blocker_only_shapes`. Returns (arg_a, arg_b, returns).
+fn blocker_only_shapes(dom: &str, op: &str) -> Vec<(String, String, String)> {
+    let d = dom.to_string();
+    match op {
+        "?" => vec![(d, "text".into(), "boolean".into())],
+        "?|" | "?&" => vec![(d, "text[]".into(), "boolean".into())],
+        "@?" | "@@" => vec![(d, "jsonpath".into(), "boolean".into())],
+        "#>" => vec![(d, "text[]".into(), "jsonb".into())],
+        "#>>" => vec![(d, "text[]".into(), "text".into())],
+        "-" => vec![
+            (d.clone(), "text".into(), "jsonb".into()),
+            (d.clone(), "integer".into(), "jsonb".into()),
+            (d, "text[]".into(), "jsonb".into()),
+        ],
+        "#-" => vec![(d, "text[]".into(), "jsonb".into())],
+        "||" => vec![
+            (d.clone(), d.clone(), "jsonb".into()),
+            (d.clone(), "jsonb".into(), "jsonb".into()),
+            ("jsonb".into(), d, "jsonb".into()),
+        ],
+        other => panic!("unhandled blocker-only operator: {other}"),
+    }
+}
+
+/// REQUIRE path for a type's _types.sql. Port of `_types_path`.
+fn types_path(token: &str) -> String {
+    format!("src/encrypted_domain/{token}/{token}_types.sql")
+}
+
+/// Committed Rust fixture-value const path. Port of `fixture_values_rs_path`.
+pub fn fixture_values_rs_path(out_root: &Path, token: &str) -> PathBuf {
+    out_root
+        .join("tests")
+        .join("sqlx")
+        .join("src")
+        .join("fixtures")
+        .join(format!("{token}_values.rs"))
+}
+
+/// Body for <T>_types.sql: every domain in one idempotent DO block.
+/// Port of `render_types_file`.
+pub fn render_types_file(spec: &ScalarSpec) -> String {
+    use crate::context::{domain_block, environment, TypesContext};
+    let ctx = TypesContext {
+        token: spec.token.to_string(),
+        domains: spec
+            .domains
+            .iter()
+            .map(|d| domain_block(spec.token, d))
+            .collect(),
+    };
+    environment()
+        .get_template("types.sql")
+        .unwrap()
+        .render(&ctx)
+        .expect("render types.sql")
+}
+
+/// REQUIRE edges for a domain's _functions.sql. Port of `_functions_requires`.
+fn functions_requires(token: &str, terms: &[Term]) -> Vec<String> {
+    let mut reqs = vec![
+        "src/schema.sql".to_string(),
+        "src/schema-v3.sql".to_string(),
+        types_path(token),
+        "src/encrypted_domain/functions.sql".to_string(),
+    ];
+    for extra in Term::term_requires(terms) {
+        if !reqs.iter().any(|r| r == extra) {
+            reqs.push(extra.to_string());
+        }
+    }
+    reqs
+}
+
+/// Distinct extractor-bearing terms (first occurrence per extractor).
+/// Port of `_extractor_terms`.
+fn extractor_terms(terms: &[Term]) -> Vec<Term> {
+    let mut seen: Vec<&str> = Vec::new();
+    let mut out: Vec<Term> = Vec::new();
+    for &t in terms {
+        if !seen.contains(&t.extractor()) {
+            seen.push(t.extractor());
+            out.push(t);
+        }
+    }
+    out
+}
+
+/// Body for a domain's _functions.sql. Port of `render_functions_file`.
+pub fn render_functions_file(token: &str, domain: &DomainSpec) -> String {
+    use crate::consts::sql_str;
+    use crate::context::{
+        blocker_entry, environment, extractor_entry, wrapper_entry, FunctionsContext, SqlParam,
+    };
+    let name = full_name(token, domain.suffix);
+    let dom = domain_name(&name);
+    let domain_lit = sql_str(&dom);
+    let supported = Term::operators_for_terms(domain.terms);
+    let is_supported = |op: &str| supported.iter().any(|s| *s == op);
+
+    let mut entries = Vec::new();
+    for term in extractor_terms(domain.terms) {
+        entries.push(extractor_entry(term));
+    }
+    for &op in SYMMETRIC_OPERATORS {
+        let extractor = Term::extractor_for_operator(domain.terms, op);
+        for (arg_a, arg_b) in symmetric_shapes(&dom) {
+            if is_supported(op) {
+                if let Some(ex) = extractor {
+                    entries.push(wrapper_entry(&dom, op, &arg_a, &arg_b, ex));
+                    continue;
+                }
+            }
+            let args = [
+                SqlParam { name: "a", ty: arg_a },
+                SqlParam { name: "b", ty: arg_b },
+            ];
+            entries.push(blocker_entry(op, args, "boolean"));
+        }
+    }
+    for &op in PATH_OPERATORS {
+        for (arg_a, arg_b) in path_shapes(&dom) {
+            let returns = if op == "->>" { "text".to_string() } else { dom.clone() };
+            let args = [
+                SqlParam { name: "a", ty: arg_a },
+                SqlParam { name: "selector", ty: arg_b },
+            ];
+            entries.push(blocker_entry(op, args, &returns));
+        }
+    }
+    for &op in BLOCKER_ONLY_OPERATORS {
+        for (arg_a, arg_b, returns) in blocker_only_shapes(&dom, op) {
+            let args = [
+                SqlParam { name: "a", ty: arg_a },
+                SqlParam { name: "b", ty: arg_b },
+            ];
+            entries.push(blocker_entry(op, args, &returns));
+        }
+    }
+
+    let ctx = FunctionsContext {
+        requires: functions_requires(token, domain.terms),
+        token: token.to_string(),
+        name,
+        dom,
+        domain_lit,
+        entries,
+    };
+    environment()
+        .get_template("functions.sql")
+        .unwrap()
+        .render(&ctx)
+        .expect("render functions.sql")
+}
+
+/// Body for a domain's _operators.sql. Port of `render_operators_file`.
+pub fn render_operators_file(token: &str, domain: &DomainSpec) -> String {
+    use crate::context::{environment, operator_entry, OperatorsContext};
+    let name = full_name(token, domain.suffix);
+    let dom = domain_name(&name);
+    let supported = Term::operators_for_terms(domain.terms);
+    let is_supported = |op: &str| supported.iter().any(|s| *s == op);
+
+    let mut operators = Vec::new();
+    for &op in SYMMETRIC_OPERATORS {
+        let function_name = backing_function(op);
+        for (l, r) in symmetric_shapes(&dom) {
+            operators.push(operator_entry(op, function_name, &l, &r, is_supported(op)));
+        }
+    }
+    for &op in PATH_OPERATORS {
+        let function_name = backing_function(op);
+        for (l, r) in path_shapes(&dom) {
+            operators.push(operator_entry(op, function_name, &l, &r, false));
+        }
+    }
+    for &op in BLOCKER_ONLY_OPERATORS {
+        let function_name = backing_function(op);
+        for (l, r, _ret) in blocker_only_shapes(&dom, op) {
+            operators.push(operator_entry(op, function_name, &l, &r, false));
+        }
+    }
+
+    let ctx = OperatorsContext {
+        requires: vec![
+            "src/schema-v3.sql".to_string(),
+            types_path(token),
+            format!("src/encrypted_domain/{token}/{name}_functions.sql"),
+        ],
+        token: token.to_string(),
+        name,
+        dom,
+        operators,
+    };
+    environment()
+        .get_template("operators.sql")
+        .unwrap()
+        .render(&ctx)
+        .expect("render operators.sql")
+}
+
+/// Body for a domain's _aggregates.sql, or None if not ord-capable.
+/// Port of `render_aggregates_file`.
+pub fn render_aggregates_file(token: &str, domain: &DomainSpec) -> Option<String> {
+    use crate::context::{environment, AggregatesContext, AGGREGATE_OPS};
+    if !is_ord_capable(domain.terms) {
+        return None;
+    }
+    let name = full_name(token, domain.suffix);
+    let dom = domain_name(&name);
+    let ctx = AggregatesContext {
+        requires: vec![
+            "src/schema-v3.sql".to_string(),
+            types_path(token),
+            format!("src/encrypted_domain/{token}/{name}_functions.sql"),
+            format!("src/encrypted_domain/{token}/{name}_operators.sql"),
+        ],
+        token: token.to_string(),
+        name,
+        dom, // hoisted: one copy, template reads {{ dom }}
+        aggregates: AGGREGATE_OPS, // iterate the const directly (no per-entry wrapper)
+    };
+    Some(
+        environment()
+            .get_template("aggregates.sql")
+            .unwrap()
+            .render(&ctx)
+            .expect("render aggregates.sql"),
+    )
+}
+
+use crate::templates::render_fixture_values_rs;
+use crate::writer::{
+    clean_generated_files, ensure_generated_paths_writable, write_generated_file,
+    write_generated_rs, WriteError,
+};
+
+/// Regenerate every generated file for one type into `out_dir`.
+/// Port of `generate_type`. Returns the written paths.
+pub fn generate_type(spec: &ScalarSpec, out_dir: &Path) -> Result<Vec<PathBuf>, WriteError> {
+    let token = spec.token;
+    let mut targets = vec![out_dir.join(format!("{token}_types.sql"))];
+    for d in spec.domains {
+        let name = full_name(token, d.suffix);
+        targets.push(out_dir.join(format!("{name}_functions.sql")));
+        targets.push(out_dir.join(format!("{name}_operators.sql")));
+        if is_ord_capable(d.terms) {
+            targets.push(out_dir.join(format!("{name}_aggregates.sql")));
+        }
+    }
+    ensure_generated_paths_writable(&targets)?;
+    clean_generated_files(out_dir)?;
+
+    let mut written: Vec<PathBuf> = Vec::new();
+
+    let types_path = out_dir.join(format!("{token}_types.sql"));
+    write_generated_file(&types_path, &render_types_file(spec))?;
+    written.push(types_path);
+
+    for d in spec.domains {
+        let name = full_name(token, d.suffix);
+        let fn_path = out_dir.join(format!("{name}_functions.sql"));
+        write_generated_file(&fn_path, &render_functions_file(token, d))?;
+        written.push(fn_path);
+
+        let op_path = out_dir.join(format!("{name}_operators.sql"));
+        write_generated_file(&op_path, &render_operators_file(token, d))?;
+        written.push(op_path);
+
+        if let Some(agg) = render_aggregates_file(token, d) {
+            let agg_path = out_dir.join(format!("{name}_aggregates.sql"));
+            write_generated_file(&agg_path, &agg)?;
+            written.push(agg_path);
+        }
+    }
+    Ok(written)
+}
+
+/// Generate every catalog type's SQL + committed <T>_values.rs under `out_root`.
+/// The single entry point: replaces Python's per-type and --all forms.
+pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
+    for spec in eql_scalars::CATALOG {
+        let token = spec.token;
+        let out_dir = out_root
+            .join("src")
+            .join("encrypted_domain")
+            .join(token);
+        let mut written = generate_type(spec, &out_dir)?;
+
+        let rs_path = fixture_values_rs_path(out_root, token);
+        write_generated_rs(&rs_path, &render_fixture_values_rs(spec))?;
+        written.push(rs_path);
+
+        for p in &written {
+            let rel = p.strip_prefix(out_root).unwrap_or(p);
+            println!("generated {}", rel.display());
+        }
+        println!("generated {} files for {token}", written.len());
+    }
+    let tokens: Vec<&str> = eql_scalars::CATALOG.iter().map(|s| s.token).collect();
+    println!(
+        "codegen: ok ({} types: {})",
+        tokens.len(),
+        tokens.join(", ")
+    );
+    Ok(0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use eql_scalars::CATALOG;
+
+    fn spec(token: &str) -> &'static ScalarSpec {
+        CATALOG.iter().find(|s| s.token == token).expect("catalog token")
+    }
+
+    fn domain<'a>(spec: &'a ScalarSpec, suffix: &str) -> &'a DomainSpec {
+        spec.domains.iter().find(|d| d.suffix == suffix).expect("domain suffix")
+    }
+
+    use crate::templates::render_fixture_values_rs;
+    use std::fs;
+
+    fn repo_root() -> PathBuf {
+        // crates/eql-codegen/ -> repo root is two parents up from CARGO_MANIFEST_DIR.
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .to_path_buf()
+    }
+
+    fn strip_reference_marker(text: &str) -> String {
+        let mut lines: Vec<&str> = text.lines().collect();
+        // .lines() drops the trailing newline; re-add per line and handle the
+        // first marker line(s).
+        while !lines.is_empty()
+            && (lines[0].starts_with("-- REFERENCE:") || lines[0].starts_with("// REFERENCE:"))
+        {
+            lines.remove(0);
+        }
+        let mut out = lines.join("\n");
+        if text.ends_with('\n') {
+            out.push('\n');
+        }
+        out
+    }
+
+    fn rendered_for(token: &str, name: &str, spec: &ScalarSpec) -> String {
+        if name == format!("{token}_types.sql") {
+            return render_types_file(spec);
+        }
+        for d in spec.domains {
+            let full = full_name(token, d.suffix);
+            if name == format!("{full}_functions.sql") {
+                return render_functions_file(token, d);
+            }
+            if name == format!("{full}_operators.sql") {
+                return render_operators_file(token, d);
+            }
+            if name == format!("{full}_aggregates.sql") {
+                return render_aggregates_file(token, d)
+                    .expect("reference exists but generator skipped (not ord-capable)");
+            }
+        }
+        panic!("unrecognised reference filename: {name}");
+    }
+
+    #[test]
+    fn types_file_normalized_matches_golden() {
+        use crate::context::normalize_sql;
+        let root = repo_root();
+        let path = root.join("tests/codegen/reference/int4/int4_types.sql");
+        let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
+        let actual = render_types_file(spec("int4"));
+        assert_eq!(normalize_sql(&actual), normalize_sql(&expected));
+    }
+
+    #[test]
+    fn functions_files_normalized_match_golden() {
+        use crate::context::normalize_sql;
+        let root = repo_root();
+        let s = spec("int4");
+        for d in s.domains {
+            let full = full_name("int4", d.suffix);
+            let path = root.join(format!("tests/codegen/reference/int4/{full}_functions.sql"));
+            let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
+            let actual = render_functions_file("int4", d);
+            assert_eq!(
+                normalize_sql(&actual),
+                normalize_sql(&expected),
+                "{full}_functions.sql diverged"
+            );
+        }
+    }
+
+    #[test]
+    fn operators_files_normalized_match_golden() {
+        use crate::context::normalize_sql;
+        let root = repo_root();
+        let s = spec("int4");
+        for d in s.domains {
+            let full = full_name("int4", d.suffix);
+            let path = root.join(format!("tests/codegen/reference/int4/{full}_operators.sql"));
+            let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
+            let actual = render_operators_file("int4", d);
+            assert_eq!(normalize_sql(&actual), normalize_sql(&expected), "{full}_operators.sql");
+        }
+    }
+
+    #[test]
+    fn aggregates_files_normalized_match_golden() {
+        use crate::context::normalize_sql;
+        let root = repo_root();
+        let s = spec("int4");
+        for d in s.domains {
+            if let Some(actual) = render_aggregates_file("int4", d) {
+                let full = full_name("int4", d.suffix);
+                let path = root.join(format!("tests/codegen/reference/int4/{full}_aggregates.sql"));
+                let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
+                assert_eq!(normalize_sql(&actual), normalize_sql(&expected), "{full}_aggregates.sql");
+            }
+        }
+    }
+
+    #[test]
+    fn generator_matches_int4_reference_golden() {
+        let root = repo_root();
+        let ref_dir = root.join("tests/codegen/reference/int4");
+        let s = spec("int4");
+        let mut checked = 0;
+        for entry in fs::read_dir(&ref_dir).expect("reference dir") {
+            let path = entry.unwrap().path();
+            if path.extension().and_then(|e| e.to_str()) != Some("sql") {
+                continue;
+            }
+            let name = path.file_name().unwrap().to_str().unwrap().to_string();
+            use crate::context::normalize_sql;
+            let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
+            let actual = rendered_for("int4", &name, s);
+            assert_eq!(
+                normalize_sql(&actual),
+                normalize_sql(&expected),
+                "{name}: generator diverged from golden reference (normalized)"
+            );
+            checked += 1;
+        }
+        assert!(checked >= 11, "expected >=11 reference SQL files, checked {checked}");
+    }
+
+    #[test]
+    fn generator_matches_int4_values_rs_reference() {
+        let root = repo_root();
+        let path = root.join("tests/codegen/reference/int4/int4_values.rs");
+        let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
+        let actual = render_fixture_values_rs(spec("int4"));
+        assert_eq!(actual, expected, "int4_values.rs: generator diverged from golden reference");
+    }
+
+    #[test]
+    fn generate_type_writes_expected_files() {
+        let d = crate::writer::test_support::tempdir();
+        let s = spec("int4");
+        let out = d.path().join("int4");
+        let written = generate_type(s, &out).unwrap();
+        let names: Vec<String> = written
+            .iter()
+            .map(|p| p.file_name().unwrap().to_str().unwrap().to_string())
+            .collect();
+        assert!(names.contains(&"int4_types.sql".to_string()));
+        for dom in ["int4", "int4_eq", "int4_ord_ore", "int4_ord"] {
+            assert!(names.contains(&format!("{dom}_functions.sql")));
+            assert!(names.contains(&format!("{dom}_operators.sql")));
+        }
+        assert!(!names.contains(&"int4_aggregates.sql".to_string()));
+        assert!(!names.contains(&"int4_eq_aggregates.sql".to_string()));
+        assert!(names.contains(&"int4_ord_ore_aggregates.sql".to_string()));
+        assert!(names.contains(&"int4_ord_aggregates.sql".to_string()));
+        assert_eq!(written.len(), 11);
+        for p in &written {
+            assert!(fs::read_to_string(p).unwrap().starts_with(crate::consts::AUTO_GENERATED_HEADER));
+        }
+    }
+
+    #[test]
+    fn types_file_has_all_four_domains() {
+        let sql = render_types_file(spec("int4"));
+        assert!(sql.contains("-- REQUIRE: src/schema-v3.sql"));
+        for dom in ["int4", "int4_eq", "int4_ord_ore", "int4_ord"] {
+            assert!(sql.contains(&format!("CREATE DOMAIN eql_v3.{dom} AS jsonb")), "missing {dom}");
+        }
+    }
+
+    #[test]
+    fn storage_functions_file_is_all_blockers() {
+        let s = spec("int4");
+        let sql = render_functions_file(s.token, domain(s, ""));
+        assert_eq!(sql.matches("CREATE FUNCTION").count(), 44);
+        assert!(!sql.contains("SET search_path"));
+        assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 44);
+        assert_eq!(sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE").count(), 0);
+    }
+
+    #[test]
+    fn eq_functions_file_counts() {
+        let s = spec("int4");
+        let sql = render_functions_file(s.token, domain(s, "_eq"));
+        assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
+        assert!(sql.contains("CREATE FUNCTION eql_v3.eq_term(a eql_v3.int4_eq)"));
+        assert!(sql.contains("RETURNS eql_v2.hmac_256"));
+        assert_eq!(sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE").count(), 7);
+        assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 38);
+        assert!(!sql.contains("SET search_path"));
+    }
+
+    #[test]
+    fn ore_functions_file_counts() {
+        let s = spec("int4");
+        let sql = render_functions_file(s.token, domain(s, "_ord"));
+        assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
+        assert!(sql.contains("CREATE FUNCTION eql_v3.ord_term(a eql_v3.int4_ord)"));
+        assert!(sql.contains("RETURNS eql_v2.ore_block_u64_8_256"));
+        assert_eq!(sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE").count(), 19);
+        assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 26);
+    }
+
+    #[test]
+    fn operators_file_has_forty_four() {
+        let s = spec("int4");
+        let sql = render_operators_file(s.token, domain(s, "_eq"));
+        assert_eq!(sql.matches("CREATE OPERATOR").count(), 44);
+    }
+
+    #[test]
+    fn aggregates_file_only_for_ord_variants() {
+        let s = spec("int4");
+        assert!(render_aggregates_file(s.token, domain(s, "")).is_none());
+        assert!(render_aggregates_file(s.token, domain(s, "_eq")).is_none());
+        assert!(render_aggregates_file(s.token, domain(s, "_ord")).is_some());
+        assert!(render_aggregates_file(s.token, domain(s, "_ord_ore")).is_some());
+    }
+
+    #[test]
+    fn aggregates_file_carries_min_and_max_and_requires() {
+        let s = spec("int4");
+        let sql = render_aggregates_file(s.token, domain(s, "_ord")).unwrap();
+        assert_eq!(sql.matches("CREATE FUNCTION").count(), 2);
+        assert_eq!(sql.matches("CREATE AGGREGATE").count(), 2);
+        assert!(sql.contains("eql_v3.min_sfunc"));
+        assert!(sql.contains("eql_v3.max_sfunc"));
+        assert!(sql.contains("-- REQUIRE: src/encrypted_domain/int4/int4_ord_operators.sql"));
+        assert!(sql.contains("-- REQUIRE: src/encrypted_domain/int4/int4_ord_functions.sql"));
+        assert!(sql.contains("-- REQUIRE: src/encrypted_domain/int4/int4_types.sql"));
+    }
+
+    #[test]
+    fn ordered_files_byte_identical_modulo_typename() {
+        let s = spec("int4");
+        let ord = domain(s, "_ord");
+        let ore = domain(s, "_ord_ore");
+        let norm = |sql: String| sql.replace("int4_ord_ore", "T").replace("int4_ord", "T");
+        assert_eq!(norm(render_functions_file(s.token, ord)), norm(render_functions_file(s.token, ore)));
+        assert_eq!(norm(render_operators_file(s.token, ord)), norm(render_operators_file(s.token, ore)));
+        assert_eq!(
+            norm(render_aggregates_file(s.token, ord).unwrap()),
+            norm(render_aggregates_file(s.token, ore).unwrap())
+        );
+    }
+
+    // --- Coarsened footgun invariant guards (whole-file scans) ---
+
+    #[test]
+    fn blockers_are_never_strict_and_always_plpgsql() {
+        let s = spec("int4");
+        // Storage domain functions file is all blockers.
+        let sql = render_functions_file("int4", domain(s, ""));
+        // Every CREATE FUNCTION here is a blocker: none may be STRICT, all plpgsql.
+        assert!(!sql.contains("STRICT"), "blocker marked STRICT");
+        assert_eq!(
+            sql.matches("CREATE FUNCTION").count(),
+            sql.matches("LANGUAGE plpgsql").count(),
+            "every blocker must be LANGUAGE plpgsql"
+        );
+    }
+
+    #[test]
+    fn inlinable_functions_have_no_set_search_path() {
+        let s = spec("int4");
+        // Extractors and wrappers (eq/ord functions files) are inlinable SQL.
+        for suffix in ["_eq", "_ord"] {
+            let sql = render_functions_file("int4", domain(s, suffix));
+            // Inlinable rows are the LANGUAGE sql ones; none may pin search_path.
+            for block in sql.split("CREATE FUNCTION").skip(1) {
+                if block.contains("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE") {
+                    assert!(
+                        !block.contains("SET search_path"),
+                        "inlinable SQL function pins search_path"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn aggregate_state_functions_are_plpgsql_not_inlinable() {
+        let s = spec("int4");
+        let sql = render_aggregates_file("int4", domain(s, "_ord")).unwrap();
+        assert_eq!(sql.matches("CREATE FUNCTION").count(), 2);
+        assert_eq!(sql.matches("LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE").count(), 2);
+        assert_eq!(sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE").count(), 0);
+    }
+
+    #[test]
+    fn generated_function_like_docs_keep_required_tags() {
+        let s = spec("int4");
+        for d in s.domains {
+            let sql = render_functions_file("int4", d);
+            let functions = sql.matches("CREATE FUNCTION").count();
+            assert_eq!(sql.matches("--! @return").count(), functions);
+            assert!(
+                sql.matches("--! @param").count() >= functions,
+                "each generated function must keep at least one @param tag"
+            );
+            assert!(
+                sql.matches("--! @brief").count() >= functions,
+                "each generated function must keep @brief"
+            );
+        }
+
+        let sql = render_aggregates_file("int4", domain(s, "_ord")).unwrap();
+        let function_like =
+            sql.matches("CREATE FUNCTION").count() + sql.matches("CREATE AGGREGATE").count();
+        assert_eq!(sql.matches("--! @return").count(), function_like);
+        assert!(sql.matches("--! @param").count() >= function_like);
+        assert!(sql.matches("--! @brief").count() >= function_like);
+    }
+
+    // --- Escaping guards over the context builders (synthetic inputs) ---
+
+    #[test]
+    fn blocker_entry_preserves_operator_literal_and_domain_lit_is_escaped() {
+        use crate::consts::sql_str;
+        use crate::context::{blocker_entry, FnEntry, SqlParam};
+        let dom = "eql_v3.o'dom";
+        let domain_lit = sql_str(dom);
+        let entry = blocker_entry(
+            "<",
+            [
+                SqlParam { name: "a", ty: dom.into() },
+                SqlParam { name: "b", ty: dom.into() },
+            ],
+            "boolean",
+        );
+        match entry {
+            FnEntry::Blocker { operator_lit, .. } => {
+                assert_eq!(domain_lit, "eql_v3.o''dom"); // quote doubled by sql_str
+                assert_eq!(operator_lit, "<");
+            }
+            _ => panic!("expected blocker"),
+        }
+    }
+
+    #[test]
+    fn domain_block_escapes_quote_bearing_name() {
+        use crate::context::domain_block;
+        use eql_scalars::DomainSpec;
+        let block = domain_block("int4", &DomainSpec { suffix: "_q", terms: &[] });
+        assert_eq!(block.typname, "int4_q"); // no quote present → unchanged
+        // keys are sql_str-escaped key tokens; none should carry a bare unescaped quote.
+        assert!(block.keys.iter().all(|k| !k.contains("o'")));
+    }
+}
