@@ -191,9 +191,11 @@ CREATE TABLE bench (
 
 ## eql_v2_int4.sql
 
-**Purpose:** 14 encrypted integers for verifying encrypted-integer fixture
-structure. Unlike its neighbours, this is a **generated** fixture — produced by
-`mise run fixture:generate eql_v2_int4` (the Rust fixture framework in
+**Purpose:** 17 encrypted integers for verifying encrypted-integer fixture
+structure. The set MUST include the signed extremes (`i32::MIN`/`i32::MAX`) and
+zero — they are the matrix comparison pivots, which is why the count grew from
+14 to 17. Unlike its neighbours, this is a **generated** fixture — produced by
+`mise run fixture:generate:all` (the Rust fixture framework in
 `tests/sqlx/src/fixtures/`) and **not committed** (see `.gitignore`). It is
 plain SQL with **no EQL dependency**: `payload` is `jsonb`, so the script
 applies standalone.
@@ -220,9 +222,10 @@ CREATE TABLE fixtures.eql_v2_int4 (
 ```
 
 **Data:**
-- 14 rows, ids 1-14; `id = N` is the Nth generated value.
-- `plaintext` values: `-100, -1, 1, 2, 5, 10, 17, 25, 42, 50, 100, 250, 1000, 9999`
-  — a negative boundary plus small/medium/large/extreme magnitudes.
+- 17 rows, ids 1-17; `id = N` is the Nth generated value.
+- `plaintext` values: `i32::MIN, -100, -1, 0, 1, 2, 5, 10, 17, 25, 42, 50, 100, 250, 1000, 9999, i32::MAX`
+  — the signed extremes and zero (matrix comparison pivots) plus
+  small/medium/large magnitudes.
 - `plaintext` is the **in-table oracle**: consuming tests filter
   `WHERE plaintext = N` directly, so no Rust value constant is shared.
 - Each `payload` is a cipherstash-client-encrypted JSONB object carrying
