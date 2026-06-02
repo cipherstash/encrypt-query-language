@@ -1,23 +1,26 @@
-# Matrix coverage inventory snapshots
+# Matrix coverage inventory snapshot
 
-This directory holds one committed snapshot per scalar encrypted-domain type:
+This directory holds ONE committed snapshot, `matrix_tests.txt` — the canonical,
+token-normalized list of every `scalars::<T>::*` test name in the
+`encrypted_domain` SQLx binary, with each type token replaced by the literal
+`<T>`. It is a **committed test baseline**, not gitignored generated SQL — keep
+it in version control.
 
-- `int4_matrix_tests.txt`
-- `int2_matrix_tests.txt`
+The per-type `<T>_matrix_tests.txt` files are gone. They were byte-identical
+modulo the type token (the matrix tests are macro-generated from one
+`ordered_numeric_matrix!` invocation per type with no per-type variation), so a
+single canonical set plus a per-type normalize-and-compare carries the same
+signal at a fraction of the committed surface.
 
-Each file is a sorted, byte-stable list of every `scalars::<T>::*` test name in
-the `encrypted_domain` SQLx binary. They are a **committed test baseline**, not
-gitignored generated SQL — keep them in version control.
-
-## What they guard
+## What it guards
 
 The SQLx assertions verify that the tests which run produce the right results.
 They cannot see a test that *stops running* — a matrix test that is deleted,
 renamed, or hidden behind a `#[cfg]` gate simply vanishes silently, quietly
-shrinking coverage. These snapshots close that gap: they pin the *set of test
+shrinking coverage. This snapshot closes that gap: it pins the *set of test
 names* so any such change shows up as an added/removed line in the PR diff.
 
-## How they are generated
+## How it is generated / checked
 
 Run:
 
@@ -25,11 +28,21 @@ Run:
 mise run test:matrix:inventory
 ```
 
-The task (`mise.toml`, `[tasks."test:matrix:inventory"]`) enumerates the binary
-with `cargo test --test encrypted_domain -- --list`, greps each
-`scalars::<T>` matrix into its own file, and `LC_ALL=C sort`s for ordering
-that is byte-stable across locales. No database is required — `--list` only
-enumerates; the suite uses runtime queries.
+The task (`mise.toml`, `[tasks."test:matrix:inventory"]`):
+
+1. Lists the `encrypted_domain` binary ONCE with
+   `cargo test --no-default-features --test encrypted_domain -- --list`.
+2. Discovers the set of scalar types present **from the binary's own output**
+   (the `scalars::<X>::` prefixes) — never a directory glob.
+3. Normalizes each type's token to `<T>` and asserts that type's set equals the
+   canonical `matrix_tests.txt`. Asserts at least one type is present.
+4. **Completeness cross-check:** asserts the discovered type set equals
+   `cargo run -p eql-codegen -- list-types` (the catalog is the single source).
+   A catalog type added without its matrix wiring — no `scalars::<T>::` tests in
+   the binary — fails here.
+
+`LC_ALL=C sort` makes ordering byte-stable across locales. No database is
+required — `--list` only enumerates; the suite uses runtime queries.
 
 It pins `--no-default-features` so the inventory is deterministic regardless of
 the caller's local flags. That deliberately excludes the `scale` feature arm
@@ -38,16 +51,29 @@ instead by the scale gate plus the `family::mutations` negative controls.
 
 ## CI enforcement
 
-The `matrix-coverage` job in `.github/workflows/test-eql.yml` regenerates with
-the same pinned feature set and runs `git diff --exit-code` against every
-snapshot in this directory. A divergence fails the job with:
+The `matrix-coverage` job in `.github/workflows/test-eql.yml` runs the same
+task, then `git add -N tests/sqlx/snapshots` and
+`git diff --exit-code -- tests/sqlx/snapshots`. The `git add -N` makes a
+brand-new, never-committed snapshot trip the diff too. A divergence (or a failed
+catalog cross-check) fails the job.
 
-> Coverage inventory stale — run 'mise run test:matrix:inventory' and commit.
+## When you must update this
 
-## When you must update these
-
-- **Adding a new scalar type** → a new `<T>_matrix_tests.txt` appears; commit it.
-- **Adding / removing / renaming matrix tests** → regenerate and commit the
-  affected snapshot in the same change.
+- **Adding a new scalar type** → add the catalog row in
+  `eql-scalars::CATALOG`, wire the SQLx matrix oracle (see the implementation
+  spec §2), then run `mise run test:matrix:inventory`. If the new type's
+  normalized name set matches the canonical snapshot (it will, for a standard
+  `ordered_numeric_matrix!` type), no snapshot edit is needed — the cross-check
+  just confirms the type is wired.
+- **Removing a scalar type** → remove the catalog row and its matrix wiring; the
+  cross-check then sees the type gone from both sides.
+- **Changing which matrix tests the macro emits** → regenerate and commit
+  `matrix_tests.txt` in the same change:
+  ```bash
+  cd tests/sqlx
+  cargo test --no-default-features --test encrypted_domain -- --list \
+    | sed -n 's/: test$//p' | grep '^scalars::int4::' \
+    | sed -e 's/^scalars::int4::/scalars::<T>::/' -e 's/_int4_/_<T>_/g' | LC_ALL=C sort > snapshots/matrix_tests.txt
+  ```
 
 See `docs/reference/encrypted-domain-implementation-spec.md` §2 and §8.
