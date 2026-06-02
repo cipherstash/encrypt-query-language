@@ -15,8 +15,11 @@ pub fn normalize_sql(s: &str) -> String {
         .join("\n")
 }
 
-/// Build the minijinja environment with the four embedded whole-file templates.
-/// Templates are compiled in via `include_str!` — no runtime file IO.
+/// Build the minijinja environment with the embedded templates: one whole-file
+/// template per output file (`types`/`functions`/`operators`/`aggregates`) plus
+/// the per-kind function-body partials that `functions.sql` dynamically
+/// `{% include %}`s. Templates are compiled in via `include_str!` — no runtime
+/// file IO.
 pub fn environment() -> minijinja::Environment<'static> {
     let mut env = minijinja::Environment::new();
     // Preserve each template file's trailing newline so generated SQL files end
@@ -29,6 +32,24 @@ pub fn environment() -> minijinja::Environment<'static> {
         include_str!("../templates/functions.sql.j2"),
     )
     .expect("functions.sql template");
+    // Per-kind function bodies, dynamically `{% include %}`d by the parent
+    // `functions.sql` template based on each entry's `kind` tag
+    // (Extractor/Wrapper/Unsupported -> extractor/wrapper/unsupported).
+    env.add_template(
+        "functions/extractor.sql.j2",
+        include_str!("../templates/functions/extractor.sql.j2"),
+    )
+    .expect("functions/extractor.sql.j2 template");
+    env.add_template(
+        "functions/wrapper.sql.j2",
+        include_str!("../templates/functions/wrapper.sql.j2"),
+    )
+    .expect("functions/wrapper.sql.j2 template");
+    env.add_template(
+        "functions/unsupported.sql.j2",
+        include_str!("../templates/functions/unsupported.sql.j2"),
+    )
+    .expect("functions/unsupported.sql.j2 template");
     env.add_template(
         "operators.sql",
         include_str!("../templates/operators.sql.j2"),
@@ -299,13 +320,18 @@ mod tests {
     }
 
     #[test]
-    fn environment_has_four_templates() {
+    fn environment_has_whole_file_and_partial_templates() {
         let env = environment();
         for name in [
+            // One whole-file template per generated SQL file.
             "types.sql",
             "functions.sql",
             "operators.sql",
             "aggregates.sql",
+            // Per-kind partials included by functions.sql.
+            "functions/extractor.sql.j2",
+            "functions/wrapper.sql.j2",
+            "functions/unsupported.sql.j2",
         ] {
             assert!(env.get_template(name).is_ok(), "missing template {name}");
         }
