@@ -16,7 +16,7 @@
 /// - `$name` — the fixture name (`"eql_v2_int2"`), drives every derived path.
 /// - `$ty` — the Rust plaintext type (`i16`); `<$ty>::MIN`/`MAX` supply the
 ///   signed-extreme assertions.
-/// - `$values` — the generated value const (`int2_values::VALUES`).
+/// - `$values` — the catalog-materialised value const (`eql_scalars::INT2_VALUES`).
 ///
 /// Indexes are fixed to `Unique` (HMAC, drives `=` / `<>`) and `Ore` (ORE
 /// block terms, drives `<` `<=` `>` `>=`) with a committed `jsonb` payload —

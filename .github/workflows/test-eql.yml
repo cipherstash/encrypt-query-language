@@ -115,28 +115,15 @@ jobs:
 
       # Crate compile/lint/test (cargo test -p eql-scalars -p eql-codegen) runs
       # in the dedicated `test:crates` job; this job covers the codegen-specific
-      # gates only — fixture-value regeneration and golden/values parity.
-
-      # Regenerate the committed Rust fixture-value consts for EVERY type from
-      # the catalog and fail if any differ from / are missing in the tree.
-      # eql-codegen renders all <T>_values.rs deterministically (unlike the
-      # encrypted .sql fixtures, whose ciphertext is non-deterministic and
-      # gitignored), so a plain diff is the right guard — it catches a catalog
-      # edit that wasn't regenerated. `git add -N` registers any brand-new
-      # untracked const so a forgotten-to-commit file also trips the diff. No
-      # Postgres needed: the generator is std-only.
-      - name: Regenerate and verify fixture-value consts (all types)
-        run: |
-          cargo run -p eql-codegen
-          git add -N tests/sqlx/src/fixtures
-          git diff --exit-code -- tests/sqlx/src/fixtures \
-            || { echo "Fixture value const(s) stale or uncommitted — run 'cargo run -p eql-codegen' and commit tests/sqlx/src/fixtures."; exit 1; }
+      # gate only — golden parity. The plaintext fixture lists are no longer a
+      # generated file: they live in the catalog (`eql_scalars::INT4_VALUES` /
+      # `INT2_VALUES`) and are pinned by `eql-scalars`'s own unit tests, so there
+      # is nothing to regenerate-and-diff here.
 
       # Parity gate: assert the Rust eql-codegen output is line-normalized-equal
-      # to the int4 golden reference and the committed <T>_values.rs are byte-
-      # identical (git-clean) after regeneration. Python is no longer an oracle
-      # (retired in P2). No Postgres needed — the generator runs offline.
-      - name: Verify generator parity (golden + values)
+      # to the int4 golden reference. Python is no longer an oracle (retired in
+      # P2). No Postgres needed — the generator runs offline.
+      - name: Verify generator parity (golden)
         run: |
           mise run codegen:parity
 

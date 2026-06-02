@@ -28,16 +28,6 @@ fn types_path(token: &str) -> String {
     format!("src/encrypted_domain/{token}/{token}_types.sql")
 }
 
-/// Committed Rust fixture-value const path. Port of `fixture_values_rs_path`.
-pub fn fixture_values_rs_path(out_root: &Path, token: &str) -> PathBuf {
-    out_root
-        .join("tests")
-        .join("sqlx")
-        .join("src")
-        .join("fixtures")
-        .join(format!("{token}_values.rs"))
-}
-
 /// Body for <T>_types.sql: every domain in one idempotent DO block.
 /// Port of `render_types_file`.
 pub fn render_types_file(spec: &ScalarSpec) -> String {
@@ -219,10 +209,8 @@ pub fn render_aggregates_file(token: &str, domain: &DomainSpec) -> Option<String
     )
 }
 
-use crate::templates::render_fixture_values_rs;
 use crate::writer::{
-    clean_generated_files, ensure_generated_paths_writable, write_generated_file,
-    write_generated_rs, WriteError,
+    clean_generated_files, ensure_generated_paths_writable, write_generated_file, WriteError,
 };
 
 /// Regenerate every generated file for one type into `out_dir`.
@@ -266,17 +254,15 @@ pub fn generate_type(spec: &ScalarSpec, out_dir: &Path) -> Result<Vec<PathBuf>, 
     Ok(written)
 }
 
-/// Generate every catalog type's SQL + committed <T>_values.rs under `out_root`.
-/// The single entry point: replaces Python's per-type and --all forms.
+/// Generate every catalog type's gitignored SQL surface under `out_root`. The
+/// single entry point: replaces Python's per-type and --all forms. The
+/// plaintext fixture lists are not generated — they live in the catalog
+/// (`eql_scalars::INT4_VALUES` / `INT2_VALUES`), read directly by the SQLx tests.
 pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
     for spec in eql_scalars::CATALOG {
         let token = spec.token;
         let out_dir = out_root.join("src").join("encrypted_domain").join(token);
-        let mut written = generate_type(spec, &out_dir)?;
-
-        let rs_path = fixture_values_rs_path(out_root, token);
-        write_generated_rs(&rs_path, &render_fixture_values_rs(spec))?;
-        written.push(rs_path);
+        let written = generate_type(spec, &out_dir)?;
 
         for p in &written {
             let rel = p.strip_prefix(out_root).unwrap_or(p);
@@ -312,7 +298,6 @@ mod tests {
             .expect("domain suffix")
     }
 
-    use crate::templates::render_fixture_values_rs;
     use std::fs;
 
     fn repo_root() -> PathBuf {
@@ -384,18 +369,16 @@ mod tests {
     }
 
     #[test]
-    fn types_file_normalized_matches_golden() {
-        use crate::context::normalize_sql;
+    fn types_file_matches_golden() {
         let root = repo_root();
         let path = root.join("tests/codegen/reference/int4/int4_types.sql");
         let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
         let actual = render_types_file(spec("int4"));
-        assert_eq!(normalize_sql(&actual), normalize_sql(&expected));
+        assert_eq!(actual, expected);
     }
 
     #[test]
-    fn functions_files_normalized_match_golden() {
-        use crate::context::normalize_sql;
+    fn functions_files_match_golden() {
         let root = repo_root();
         let s = spec("int4");
         for d in s.domains {
@@ -403,17 +386,12 @@ mod tests {
             let path = root.join(format!("tests/codegen/reference/int4/{full}_functions.sql"));
             let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
             let actual = render_functions_file("int4", d);
-            assert_eq!(
-                normalize_sql(&actual),
-                normalize_sql(&expected),
-                "{full}_functions.sql diverged"
-            );
+            assert_eq!(actual, expected, "{full}_functions.sql diverged");
         }
     }
 
     #[test]
-    fn operators_files_normalized_match_golden() {
-        use crate::context::normalize_sql;
+    fn operators_files_match_golden() {
         let root = repo_root();
         let s = spec("int4");
         for d in s.domains {
@@ -421,17 +399,12 @@ mod tests {
             let path = root.join(format!("tests/codegen/reference/int4/{full}_operators.sql"));
             let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
             let actual = render_operators_file("int4", d);
-            assert_eq!(
-                normalize_sql(&actual),
-                normalize_sql(&expected),
-                "{full}_operators.sql"
-            );
+            assert_eq!(actual, expected, "{full}_operators.sql");
         }
     }
 
     #[test]
-    fn aggregates_files_normalized_match_golden() {
-        use crate::context::normalize_sql;
+    fn aggregates_files_match_golden() {
         let root = repo_root();
         let s = spec("int4");
         for d in s.domains {
@@ -441,11 +414,7 @@ mod tests {
                     "tests/codegen/reference/int4/{full}_aggregates.sql"
                 ));
                 let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
-                assert_eq!(
-                    normalize_sql(&actual),
-                    normalize_sql(&expected),
-                    "{full}_aggregates.sql"
-                );
+                assert_eq!(actual, expected, "{full}_aggregates.sql");
             }
         }
     }
@@ -462,31 +431,17 @@ mod tests {
                 continue;
             }
             let name = path.file_name().unwrap().to_str().unwrap().to_string();
-            use crate::context::normalize_sql;
             let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
             let actual = rendered_for("int4", &name, s);
             assert_eq!(
-                normalize_sql(&actual),
-                normalize_sql(&expected),
-                "{name}: generator diverged from golden reference (normalized)"
+                actual, expected,
+                "{name}: generator diverged from golden reference"
             );
             checked += 1;
         }
         assert!(
             checked >= 11,
             "expected >=11 reference SQL files, checked {checked}"
-        );
-    }
-
-    #[test]
-    fn generator_matches_int4_values_rs_reference() {
-        let root = repo_root();
-        let path = root.join("tests/codegen/reference/int4/int4_values.rs");
-        let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
-        let actual = render_fixture_values_rs(spec("int4"));
-        assert_eq!(
-            actual, expected,
-            "int4_values.rs: generator diverged from golden reference"
         );
     }
 
