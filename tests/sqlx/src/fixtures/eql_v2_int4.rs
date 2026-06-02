@@ -3,7 +3,7 @@
 //! 17 integers spanning a negative boundary, the i32 signed extremes
 //! (`MIN`/`MAX`), zero, and small/medium/large magnitudes. The generated
 //! `tests/sqlx/fixtures/eql_v2_int4.sql` is a plain `jsonb`-payload table with
-//! no EQL dependency; #225 layers the `eql_v2_int4` domain on top by casting
+//! no EQL dependency; #225 layers the `eql_v3.int4` domain on top by casting
 //! `payload` per query.
 
 use super::int4_values::VALUES;
