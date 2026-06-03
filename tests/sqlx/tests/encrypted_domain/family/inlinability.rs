@@ -106,7 +106,8 @@ async fn eql_v3_sem_inline_critical_functions_are_unpinned(pool: PgPool) -> Resu
               'ore_block_u64_8_256_eq','ore_block_u64_8_256_neq',
               'ore_block_u64_8_256_lt','ore_block_u64_8_256_lte',
               'ore_block_u64_8_256_gt','ore_block_u64_8_256_gte'))
-            OR (p.pronargs = 1 AND p.proname = 'hmac_256')
+            OR (p.pronargs = 1 AND p.proname = 'hmac_256'
+                AND p.proargtypes[0] = 'jsonb'::regtype)
           )
           AND (
             -- offender: pinned search_path, or not inlinable SQL/IMMUTABLE
