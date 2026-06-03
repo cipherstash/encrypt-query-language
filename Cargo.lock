@@ -1169,12 +1169,22 @@ name = "eql-scalars"
 version = "0.1.0"
 
 [[package]]
+name = "eql-tests-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.108",
+]
+
+[[package]]
 name = "eql_tests"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "cipherstash-client",
  "eql-scalars",
+ "eql-tests-macros",
  "hex",
  "jsonschema",
  "paste",

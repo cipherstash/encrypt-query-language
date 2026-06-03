@@ -1,0 +1,13 @@
+[package]
+name = "eql-tests-macros"
+version = "0.1.0"
+edition = "2021"
+description = "Proc-macros that expand a single scalar-harness list into the per-type SQLx-matrix wiring (ScalarType impls, fixture modules, matrix suites, fixture dispatch)."
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "2", features = ["full"] }
+quote = "1"
+proc-macro2 = "1"

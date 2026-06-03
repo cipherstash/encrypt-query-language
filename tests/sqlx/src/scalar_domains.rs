@@ -1,11 +1,13 @@
 //! Type-generic substrate for the encrypted-scalar-domain test matrix.
 //!
 //! Adding a new encrypted scalar type (e.g. `i64` for int8, `f64` for
-//! float8) is a 4-line `impl ScalarType` plus a Proxy-encrypted fixture.
-//! Everything else — the four `eql_v2_<T>{,_eq,_ord,_ord_ore}` domains,
-//! per-domain payload shapes, supported operators, index extractor
-//! expressions, ground-truth result sets — is derived from
-//! `T::PG_TYPE`, `T::FIXTURE_VALUES`, and the `Variant` enum.
+//! float8) is one `<T> => <R>` line in the `scalar_types!` list
+//! (`scalar_types.rs`) plus an `EqlPlaintext` impl and a catalog row.
+//! The `impl ScalarType` below is generated from that list. Everything
+//! else — the four `eql_v2_<T>{,_eq,_ord,_ord_ore}` domains, per-domain
+//! payload shapes, supported operators, index extractor expressions,
+//! ground-truth result sets — is derived from `T::PG_TYPE`,
+//! `T::FIXTURE_VALUES`, and the `Variant` enum.
 
 use anyhow::{bail, Context, Result};
 use sqlx::PgPool;
@@ -72,23 +74,11 @@ pub trait ScalarType:
     }
 }
 
-impl ScalarType for i32 {
-    const PG_TYPE: &'static str = "int4";
-    /// Single-sourced from the `int4` row in `eql-scalars::CATALOG`
-    /// (`eql_scalars::INT4_VALUES`, materialised from its `Fixture` list) — the
-    /// same list the fixture generator encrypts, so the oracle cannot drift from
-    /// the fixture. Spans the negative boundary, the i32 signed extremes, and zero.
-    const FIXTURE_VALUES: &'static [i32] = eql_scalars::INT4_VALUES;
-}
-
-impl ScalarType for i16 {
-    const PG_TYPE: &'static str = "int2";
-    /// Single-sourced from the `int2` row in `eql-scalars::CATALOG`
-    /// (`eql_scalars::INT2_VALUES`, materialised from its `Fixture` list) — the
-    /// same list the fixture generator encrypts, so the oracle cannot drift from
-    /// the fixture. Spans the negative boundary, the i16 signed extremes, and zero.
-    const FIXTURE_VALUES: &'static [i16] = eql_scalars::INT2_VALUES;
-}
+// The per-type `impl ScalarType` blocks (one per scalar, each carrying its
+// `PG_TYPE` token string and `FIXTURE_VALUES = eql_scalars::<TOKEN>_VALUES`)
+// are generated from the single harness list in `scalar_types.rs`. To add a
+// type, add a `token => rust_type` line there — not an impl here.
+crate::scalar_types!(scalar_type_impls);
 
 /// Per-domain capability + payload shape. Storage carries no terms, `Eq`
 /// adds `hm`, `Ord`/`OrdOre` add `ob`. `Ord` and `OrdOre` are deliberate
