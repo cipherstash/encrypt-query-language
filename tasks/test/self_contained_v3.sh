@@ -11,9 +11,12 @@ fail=0
 # Symbol level (design goal 1): no eql_v2.<symbol> anywhere under src/v3 — the
 # hand-written SEM + foundation files plus the gitignored generated scalar
 # surface (present because build runs codegen). Run `mise run build` first.
-echo "==> Symbol gate: no 'eql_v2.' under src/v3"
-if grep -rn 'eql_v2\.' src/v3; then
-  echo "ERROR: eql_v2.<symbol> reference found in src/v3 (must be self-contained)" >&2
+# Match both schema-qualified refs (`eql_v2.<fn>`) and bare v2 entity names
+# (`eql_v2_encrypted`, `eql_v2_configuration`, …). Prose like "the eql_v2
+# original is unchanged" in doc comments is intentionally still allowed.
+echo "==> Symbol gate: no 'eql_v2.' / 'eql_v2_' under src/v3"
+if grep -rnE 'eql_v2[._]' src/v3; then
+  echo "ERROR: eql_v2 symbol/entity reference found in src/v3 (must be self-contained)" >&2
   fail=1
 fi
 
@@ -30,13 +33,13 @@ if grep -v '^src/v3/' src/deps-ordered-v3.txt; then
 fi
 
 # Belt-and-braces: the assembled artifact carries no eql_v2 symbol.
-echo "==> Artifact gate: release/cipherstash-encrypt-v3.sql has no 'eql_v2.'"
+echo "==> Artifact gate: release/cipherstash-encrypt-v3.sql has no 'eql_v2.' / 'eql_v2_'"
 if [[ ! -f release/cipherstash-encrypt-v3.sql ]]; then
   echo "ERROR: release/cipherstash-encrypt-v3.sql missing — run 'mise run build' first" >&2
   exit 2
 fi
-if grep -n 'eql_v2\.' release/cipherstash-encrypt-v3.sql; then
-  echo "ERROR: assembled v3 artifact contains an eql_v2. reference" >&2
+if grep -nE 'eql_v2[._]' release/cipherstash-encrypt-v3.sql; then
+  echo "ERROR: assembled v3 artifact contains an eql_v2 symbol/entity reference" >&2
   fail=1
 fi
 
