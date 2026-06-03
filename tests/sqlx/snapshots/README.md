@@ -60,8 +60,9 @@ catalog cross-check) fails the job.
 ## When you must update this
 
 - **Adding a new scalar type** → add the catalog row in
-  `eql-scalars::CATALOG`, wire the SQLx matrix oracle (see the implementation
-  spec §2), then run `mise run test:matrix:inventory`. If the new type's
+  `eql-scalars::CATALOG`, wire the SQLx matrix oracle (see
+  `docs/reference/adding-a-scalar-encrypted-domain-type.md` §3), then run
+  `mise run test:matrix:inventory`. If the new type's
   normalized name set matches the canonical snapshot (it will, for a standard
   `ordered_numeric_matrix!` type), no snapshot edit is needed — the cross-check
   just confirms the type is wired.
@@ -76,4 +77,4 @@ catalog cross-check) fails the job.
     | sed -e 's/^scalars::int4::/scalars::<T>::/' -e 's/_int4_/_<T>_/g' | LC_ALL=C sort > snapshots/matrix_tests.txt
   ```
 
-See `docs/reference/encrypted-domain-implementation-spec.md` §2 and §8.
+See `docs/reference/adding-a-scalar-encrypted-domain-type.md` §3 (matrix oracle + inventory snapshot).
