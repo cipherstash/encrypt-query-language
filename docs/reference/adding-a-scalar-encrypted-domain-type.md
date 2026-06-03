@@ -11,9 +11,11 @@ A scalar encrypted-domain type is a family of concrete `jsonb` domains in the
 **`eql_v3`** schema (`eql_v3.<token>`, `eql_v3.<token>_eq`,
 `eql_v3.<token>_ord`, …), dropped by `DROP SCHEMA eql_v3 CASCADE` and surviving
 an `eql_v2` uninstall. Their extractors, comparison wrappers, and MIN/MAX
-aggregates also live in `eql_v3`; the index-term types they return
-(`eql_v2.hmac_256`, `eql_v2.ore_block_u64_8_256`) stay in `eql_v2` and are
-referenced cross-schema.
+aggregates also live in `eql_v3`; the searchable-encrypted-metadata (SEM)
+index-term types they return (`eql_v3.hmac_256`,
+`eql_v3.ore_block_u64_8_256`) are **also `eql_v3`** — hand-written under
+`src/v3/sem/`. The whole v3 surface is self-contained: it owns every type it
+needs and has no runtime dependency on `eql_v2` (CI gates this — see §6).
 
 The whole SQL surface is **generated** from a single Rust source of truth: the
 `CATALOG` const in [`crates/eql-scalars/src/lib.rs`](../../crates/eql-scalars/src/lib.rs),
@@ -60,7 +62,7 @@ Things you do **not** do:
   has a new name (§5).
 
 Hand-written SQL beyond the fixed surface goes in
-`src/encrypted_domain/<T>/<T>_extensions.sql` with explicit `-- REQUIRE:` edges
+`src/v3/scalars/<T>/<T>_extensions.sql` with explicit `-- REQUIRE:` edges
 — and **that file IS committed** (§5).
 
 ---
@@ -111,8 +113,8 @@ contract — changing one is a generated-SQL behaviour change, not a refactor:
 
 | Term  | JSON key | Extractor   | Returns                          | Operators                  |
 | ----- | -------- | ----------- | -------------------------------- | -------------------------- |
-| `Hm`  | `hm`     | `eq_term`   | `eql_v2.hmac_256`                | `=` `<>`                   |
-| `Ore` | `ob`     | `ord_term`  | `eql_v2.ore_block_u64_8_256`     | `=` `<>` `<` `<=` `>` `>=` |
+| `Hm`  | `hm`     | `eq_term`   | `eql_v3.hmac_256`                | `=` `<>`                   |
+| `Ore` | `ob`     | `ord_term`  | `eql_v3.ore_block_u64_8_256`     | `=` `<>` `<` `<=` `>` `>=` |
 
 A type that needs a non-ORE equality term on an ordered domain needs a **new
 `Term`**, not a catalog flag. Adding a term is a code change to the `Term`
@@ -290,7 +292,7 @@ This is the contract the generated SQL satisfies. You normally never read it to
 
 ### Domains and CHECK constraints
 
-The generator emits `src/encrypted_domain/<T>/<T>_types.sql` (gitignored;
+The generator emits `src/v3/scalars/<T>/<T>_types.sql` (gitignored;
 materialised on every build) with one idempotent `DO $$ ... $$` block. Every
 domain is a concrete domain over `jsonb` in the `eql_v3` schema — **never**
 `CREATE DOMAIN a AS b` over another generated domain (PostgreSQL resolves
@@ -411,14 +413,14 @@ CREATE INDEX ... ON table_name USING btree (eql_v3.ord_term(col));
 CREATE INDEX ... ON table_name USING hash  (eql_v3.eq_term(col));
 ```
 
-`ore` depends on `src/ore_block_u64_8_256/functions.sql` and
-`src/ore_block_u64_8_256/operators.sql`; `hm` depends on
-`src/hmac_256/functions.sql`.
+`ore` depends on `src/v3/sem/ore_block_u64_8_256/functions.sql` and
+`src/v3/sem/ore_block_u64_8_256/operators.sql`; `hm` depends on
+`src/v3/sem/hmac_256/functions.sql`.
 
 ### Extension files
 
 Optional hand-written SQL beyond the fixed surface belongs in
-`src/encrypted_domain/<T>/<T>_extensions.sql`. The generator never creates,
+`src/v3/scalars/<T>/<T>_extensions.sql`. The generator never creates,
 lists, headers, or cleans it; it must declare its own `-- REQUIRE:` edges
 (usually to `<T>_types.sql` and whichever generated function or operator file it
 extends). Use it for cross-domain casts, helper functions, or type-specific
@@ -495,7 +497,7 @@ silently bypasses its exception; a pinned `search_path` reverts queries to seq
 scans. The generator exists so each new type adds one `CATALOG` row rather than
 ninety hand-written declarations that must agree with each other and with
 `pin_search_path.sql`, `tasks/test/splinter.sh`, and
-`src/encrypted_domain/functions.sql`.
+`src/v3/scalars/functions.sql`.
 
 ### Pipeline
 
@@ -503,15 +505,20 @@ ninety hand-written declarations that must agree with each other and with
 runs as `cargo run -p eql-codegen` (no subcommand), which calls
 `generate::generate_all` (`crates/eql-codegen/src/generate.rs`) over every row of
 `eql_scalars::CATALOG`, writing each type's SQL into
-`src/encrypted_domain/<token>/`. A second subcommand, `cargo run -p eql-codegen
+`src/v3/scalars/<token>/`. A second subcommand, `cargo run -p eql-codegen
 -- list-types`, prints the catalog tokens one per line (consumed by the fixture
 and matrix-inventory enumeration). `main` (`crates/eql-codegen/src/main.rs`)
 recognises exactly these two forms; any other argument is a usage error.
 
+The generator targets the `eql_v3` schema throughout: `CORE_SCHEMA = "eql_v3"`
+(`crates/eql-codegen/src/consts.rs`) qualifies both the domain families and the
+SEM index-term types the extractors return (`eql_v3.hmac_256`,
+`eql_v3.ore_block_u64_8_256`), so no generated SQL references `eql_v2`.
+
 `tasks/build.sh` runs `cargo run -p eql-codegen` at the start of every `mise run
 build`, so the generated SQL is never checked in. (The build first sweeps every
 generated `*_{types,functions,operators,aggregates}.sql` under
-`src/encrypted_domain` so a type removed from `CATALOG` cannot leave orphans the
+`src/v3/scalars` so a type removed from `CATALOG` cannot leave orphans the
 `src/**/*.sql` build glob would pick up; hand-written `*_extensions.sql` is
 preserved by the name patterns.)
 
@@ -549,9 +556,9 @@ output for every catalog type from scratch.
 ### Generated outputs
 
 For a type with `D` domains of which `A` are ordered, the generator writes `1 +
-2D + A` SQL files into `src/encrypted_domain/<token>/`. For `int4` (`D = 4`, `A =
+2D + A` SQL files into `src/v3/scalars/<token>/`. For `int4` (`D = 4`, `A =
 2`): eleven SQL files. The outputs are gitignored
-(`.gitignore` excludes `src/encrypted_domain/*/*_{types,functions,operators,aggregates}.sql`)
+(`.gitignore` excludes `src/v3/scalars/*/*_{types,functions,operators,aggregates}.sql`)
 and regenerated at the start of every build.
 
 | File                              | Content                                                                                  |
@@ -564,11 +571,11 @@ and regenerated at the start of every build.
 Every file opens with the `-- AUTOMATICALLY GENERATED FILE.` marker (the
 project-wide marker `docs:validate` greps on to skip generated SQL —
 `crates/eql-codegen/src/consts.rs`), declares its `-- REQUIRE:` edges in
-dependency order (types files require `src/schema-v3.sql`; function files require
-both `src/schema.sql` and `src/schema-v3.sql`, the types file, and
-`src/encrypted_domain/functions.sql` plus each term's `requires` set; operator
-files require `src/schema-v3.sql`, the types file, and their domain's function
-file; aggregate files require `src/schema-v3.sql`, the types file, and their
+dependency order (types files require `src/v3/schema.sql`; function files require
+`src/v3/schema.sql`, the types file, and
+`src/v3/scalars/functions.sql` plus each term's `requires` set; operator
+files require `src/v3/schema.sql`, the types file, and their domain's function
+file; aggregate files require `src/v3/schema.sql`, the types file, and their
 domain's function and operator files), and carries Doxygen `--! @file` /
 `--! @brief` headers.
 
