@@ -99,7 +99,8 @@ BEGIN
   SELECT pg_catalog.array_agg(p.oid) INTO inline_critical_oids
   FROM pg_catalog.pg_proc p
   JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
-  WHERE n.nspname = 'eql_v2'
+  WHERE (
+    n.nspname = 'eql_v2'
     AND (
       -- Same-type (encrypted, encrypted) operators that must inline.
       -- `like`/`ilike` are the SQL helpers that `~~`/`~~*` delegate to;
@@ -244,7 +245,28 @@ BEGIN
              OR p.proargtypes[0] = (SELECT t.oid FROM pg_catalog.pg_type t
                                      JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
                                      WHERE n.nspname = 'eql_v2' AND t.typname = 'stevec_query')))
-    );
+    )
+  )
+  OR (
+    -- eql_v3 SEM index-term functions (self-contained fork). These mirror the
+    -- eql_v2 ore_block / hmac_256 inline-critical clauses above: the
+    -- comparison-wrapper inlining for the eql_v3 *_ord domains and eq_term only
+    -- reaches functional-index matching if these inner functions stay inlinable
+    -- (no SET, IMMUTABLE). The generated extractors/wrappers themselves are
+    -- spared by the jsonb-DOMAIN structural skip below; these SEM functions take
+    -- a composite (ore_block) or raw jsonb (hmac_256) arg, so they need an
+    -- explicit entry here.
+    n.nspname = 'eql_v3'
+    AND (
+      (p.pronargs = 2
+        AND p.proname IN ('ore_block_u64_8_256_eq', 'ore_block_u64_8_256_neq',
+                          'ore_block_u64_8_256_lt', 'ore_block_u64_8_256_lte',
+                          'ore_block_u64_8_256_gt', 'ore_block_u64_8_256_gte'))
+      OR (p.pronargs = 1
+        AND p.proname = 'hmac_256'
+        AND p.proargtypes[0] = jsonb_oid)
+    )
+  );
 
   FOR fn_oid IN
     SELECT p.oid
