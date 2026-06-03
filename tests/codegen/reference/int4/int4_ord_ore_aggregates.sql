@@ -1,9 +1,9 @@
--- REFERENCE: hand-written parity baseline for crates/eql-codegen — see ../README.md
+-- REFERENCE: hand-maintained parity baseline for crates/eql-codegen - see ../README.md
 -- AUTOMATICALLY GENERATED FILE.
--- REQUIRE: src/schema-v3.sql
--- REQUIRE: src/encrypted_domain/int4/int4_types.sql
--- REQUIRE: src/encrypted_domain/int4/int4_ord_ore_functions.sql
--- REQUIRE: src/encrypted_domain/int4/int4_ord_ore_operators.sql
+-- REQUIRE: src/v3/schema.sql
+-- REQUIRE: src/v3/scalars/int4/int4_types.sql
+-- REQUIRE: src/v3/scalars/int4/int4_ord_ore_functions.sql
+-- REQUIRE: src/v3/scalars/int4/int4_ord_ore_operators.sql
 
 --! @file encrypted_domain/int4/int4_ord_ore_aggregates.sql
 --! @brief Aggregates for eql_v3.int4_ord_ore.
