@@ -58,6 +58,7 @@ macro_rules! scalar_harness {
         $crate::eql_tests_macros::$emitter! {
             int4 => i32,
             int2 => i16,
+            int8 => i64,
         }
     };
 }
