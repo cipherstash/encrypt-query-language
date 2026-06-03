@@ -441,9 +441,11 @@ eql_v3.ord_term(a eql_v3.int4_ord_ore) RETURNS eql_v2.ore_block_u64_8_256
 
 **Example:**
 ```sql
--- Functional indexes on the extracted terms (see Database Indexes)
-CREATE INDEX ON users USING hash  (eql_v3.eq_term(salary_encrypted));
-CREATE INDEX ON users USING btree (eql_v3.ord_term(salary_encrypted));
+-- Functional indexes on the extracted terms (see Database Indexes).
+-- A column carries a single domain type, so `eq_term` and `ord_term`
+-- apply to different columns (an `_eq` column vs an `_ord`/`_ord_ore` one).
+CREATE INDEX ON users USING hash  (eql_v3.eq_term(salary_eq));
+CREATE INDEX ON users USING btree (eql_v3.ord_term(salary_ord));
 ```
 
 > The full per-domain operator/wrapper/blocker surface (and the
