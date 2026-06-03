@@ -1,6 +1,6 @@
--- REQUIRE: src/schema-v3.sql
+-- REQUIRE: src/v3/schema.sql
 
---! @file encrypted_domain/functions.sql
+--! @file v3/scalars/functions.sql
 --! @brief Shared blocker helper for the eql_v3 encrypted-domain families.
 --!
 --! Per-domain wrapper functions live in src/encrypted_domain/<T>/.
