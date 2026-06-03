@@ -9,7 +9,7 @@
 --! @param state {{ dom }}
 --! @param value {{ dom }}
 --! @return {{ dom }}
-CREATE FUNCTION {{ domain_schema }}.{{ a.name }}_sfunc(state {{ dom }}, value {{ dom }})
+CREATE FUNCTION {{ schema }}.{{ a.name }}_sfunc(state {{ dom }}, value {{ dom }})
 RETURNS {{ dom }}
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
@@ -25,10 +25,10 @@ $$;
 --! @brief {{ a.name }} aggregate for {{ dom }}.
 --! @param input {{ dom }}
 --! @return {{ dom }}
-CREATE AGGREGATE {{ domain_schema }}.{{ a.name }}({{ dom }}) (
-  sfunc = {{ domain_schema }}.{{ a.name }}_sfunc,
+CREATE AGGREGATE {{ schema }}.{{ a.name }}({{ dom }}) (
+  sfunc = {{ schema }}.{{ a.name }}_sfunc,
   stype = {{ dom }},
-  combinefunc = {{ domain_schema }}.{{ a.name }}_sfunc,
+  combinefunc = {{ schema }}.{{ a.name }}_sfunc,
   parallel = safe
 );
 {% endfor -%}

@@ -4,10 +4,12 @@
 /// the writer uses it only to recognise files it owns (overwrite/clean safety).
 pub(crate) const AUTO_GENERATED_HEADER: &str = "-- AUTOMATICALLY GENERATED FILE.\n";
 
-/// Schema housing the encrypted-domain families.
-pub(crate) const DOMAIN_SCHEMA: &str = "eql_v3";
-/// Schema owning the core index-term types/constructors.
-pub(crate) const CORE_SCHEMA: &str = "eql_v3";
+/// The single schema housing the self-contained `eql_v3` surface: the
+/// encrypted-domain families AND the SEM index-term types/constructors they
+/// call. v3 has zero dependency on `eql_v2`, so domains and core index-term
+/// types share one schema by construction — there is no second schema to point
+/// the core types at.
+pub(crate) const SCHEMA: &str = "eql_v3";
 
 /// Always-present payload keys checked for presence in every domain CHECK, in
 /// order: envelope version (`v`), ident (`i`), ciphertext (`c`). Term-specific
