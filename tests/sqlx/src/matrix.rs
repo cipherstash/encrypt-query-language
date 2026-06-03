@@ -142,9 +142,11 @@ fn collect_index_scan_nodes(value: &serde_json::Value, found: &mut Vec<(String, 
 /// supported comparison operators, 2 path operators, and the standard
 /// blocker / index partitions.
 ///
-/// `eql_type` is the EQL domain type name (e.g. `"eql_v2_int4"`). It is
-/// used as the SQLx fixture `scripts(...)` ref, which sqlx parses as a
-/// token-level string literal — so it must be a literal, not derived.
+/// `eql_type` is the fixture/table name (e.g. `"eql_v2_int4"`), used as the
+/// SQLx fixture `scripts(...)` ref — sqlx parses it as a token-level string
+/// literal, so it must be a literal, not derived. It is NOT a domain type
+/// name: the `eql_v3.*` domains exercised here are derived from the scalar
+/// type (see `scalar_domains.rs`, `format!("eql_v3.{}…", T::PG_TYPE)`).
 ///
 /// Pivots — the comparison anchors swept by the correctness / cross-shape
 /// arms — are derived from the scalar type: `MIN`, `MAX`, and zero

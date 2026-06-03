@@ -1,12 +1,13 @@
 -- REFERENCE: hand-written parity baseline for tasks/codegen/ — see ../README.md
+-- AUTOMATICALLY GENERATED FILE.
 -- REQUIRE: src/schema-v3.sql
 
 --! @file encrypted_domain/int4/int4_types.sql
---! @brief Encrypted-domain type family for int4.
+--! @brief Encrypted-domain types for int4.
 
 DO $$
 BEGIN
-  --! @brief Storage-only encrypted int4 domain.
+  --! @brief Encrypted domain eql_v3.int4.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
     WHERE typname = 'int4' AND typnamespace = 'eql_v3'::regnamespace
@@ -21,7 +22,7 @@ BEGIN
       );
   END IF;
 
-  --! @brief Equality-only encrypted int4 domain.
+  --! @brief Encrypted domain eql_v3.int4_eq.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
     WHERE typname = 'int4_eq' AND typnamespace = 'eql_v3'::regnamespace
@@ -37,7 +38,7 @@ BEGIN
       );
   END IF;
 
-  --! @brief Ordered encrypted int4 domain. Scheme-explicit twin pinning the ore scheme; prefer the converged int4_ord name.
+  --! @brief Encrypted domain eql_v3.int4_ord_ore.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
     WHERE typname = 'int4_ord_ore' AND typnamespace = 'eql_v3'::regnamespace
@@ -53,7 +54,7 @@ BEGIN
       );
   END IF;
 
-  --! @brief Ordered encrypted int4 domain. Recommended converged name for this role.
+  --! @brief Encrypted domain eql_v3.int4_ord.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
     WHERE typname = 'int4_ord' AND typnamespace = 'eql_v3'::regnamespace
