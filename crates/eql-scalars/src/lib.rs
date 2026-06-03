@@ -145,14 +145,6 @@ impl Term {
         }
     }
 
-    /// Cross-schema return type of the extractor (in `eql_v2`).
-    pub const fn returns(self) -> &'static str {
-        match self {
-            Term::Hm => "eql_v2.hmac_256",
-            Term::Ore => "eql_v2.ore_block_u64_8_256",
-        }
-    }
-
     /// Constructor name for the index-term type (unqualified).
     pub const fn ctor(self) -> &'static str {
         match self {
@@ -513,7 +505,6 @@ mod term_tests {
         let hm = Term::Hm;
         assert_eq!(hm.json_key(), "hm");
         assert_eq!(hm.extractor(), "eq_term");
-        assert_eq!(hm.returns(), "eql_v2.hmac_256");
         assert_eq!(hm.ctor(), "hmac_256");
         assert_eq!(hm.role(), "eq");
         assert_eq!(hm.operators(), &["=", "<>"]);
@@ -525,7 +516,6 @@ mod term_tests {
         let ore = Term::Ore;
         assert_eq!(ore.json_key(), "ob");
         assert_eq!(ore.extractor(), "ord_term");
-        assert_eq!(ore.returns(), "eql_v2.ore_block_u64_8_256");
         assert_eq!(ore.ctor(), "ore_block_u64_8_256");
         assert_eq!(ore.role(), "ord");
         assert_eq!(ore.operators(), &["=", "<>", "<", "<=", ">", ">="]);
