@@ -138,3 +138,52 @@ fn protect_variant_is_smaller_than_full() {
         full.len()
     );
 }
+
+// =============================================================================
+// v3-only Variant Tests (design D9/D11 — self-contained eql_v3 surface)
+// =============================================================================
+
+#[test]
+fn v3_variant_file_exists() {
+    assert!(
+        Path::new("../../release/cipherstash-encrypt-v3.sql").exists(),
+        "v3-only variant installer should exist"
+    );
+}
+
+#[test]
+fn v3_uninstaller_exists() {
+    assert!(
+        Path::new("../../release/cipherstash-encrypt-v3-uninstall.sql").exists(),
+        "v3-only variant uninstaller should exist"
+    );
+}
+
+#[test]
+fn v3_variant_creates_eql_v3_schema() {
+    let sql = read_release_sql("cipherstash-encrypt-v3.sql");
+    assert!(
+        sql.contains("CREATE SCHEMA eql_v3"),
+        "v3 variant must create the eql_v3 schema"
+    );
+}
+
+#[test]
+fn v3_variant_has_no_eql_v2_symbol() {
+    let sql = read_release_sql("cipherstash-encrypt-v3.sql");
+    assert!(
+        !sql.contains("eql_v2."),
+        "v3 variant must be self-contained (no eql_v2.<symbol> reference)"
+    );
+}
+
+#[test]
+fn v3_variant_omits_v2_coupled_pin_search_path() {
+    // D11: the v3 artifact must NOT append tasks/pin_search_path.sql, which is
+    // eql_v2-coupled (references eql_v2_encrypted / ste_vec_entry).
+    let sql = read_release_sql("cipherstash-encrypt-v3.sql");
+    assert!(
+        !sql.contains("ste_vec_entry") && !sql.contains("eql_v2_encrypted"),
+        "v3 variant must not carry the eql_v2-coupled pin_search_path script"
+    );
+}
