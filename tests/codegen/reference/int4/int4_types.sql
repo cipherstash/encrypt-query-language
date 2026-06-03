@@ -1,8 +1,8 @@
--- REFERENCE: hand-written parity baseline for crates/eql-codegen — see ../README.md
+-- REFERENCE: hand-maintained parity baseline for crates/eql-codegen - see ../README.md
 -- AUTOMATICALLY GENERATED FILE.
--- REQUIRE: src/schema-v3.sql
+-- REQUIRE: src/v3/schema.sql
 
---! @file encrypted_domain/int4/int4_types.sql
+--! @file v3/scalars/int4/int4_types.sql
 --! @brief Encrypted-domain types for int4.
 
 DO $$
