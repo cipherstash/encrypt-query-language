@@ -57,6 +57,7 @@ impl PlaintextSqlType {
     pub const SMALLINT: PlaintextSqlType = PlaintextSqlType("smallint");
     pub const BIGINT: PlaintextSqlType = PlaintextSqlType("bigint");
     pub const DATE: PlaintextSqlType = PlaintextSqlType("date");
+    pub const TIMESTAMPTZ: PlaintextSqlType = PlaintextSqlType("timestamp with time zone");
 
     pub fn as_str(&self) -> &'static str {
         self.0
@@ -71,15 +72,17 @@ impl fmt::Display for PlaintextSqlType {
 
 /// The EQL `cast_as` for a scalar kind, drawn from the `Cast` allowlist.
 ///
-/// Only the wired kinds (the integer kinds plus `Date`) have `EqlPlaintext`
-/// impls, so only those resolve; the remaining kinds mirror the `eql_scalars`
-/// accessor convention and `panic!`, since no impl can ever reach them.
+/// Only the wired kinds (the integer kinds plus `Date` / `Timestamptz`) have
+/// `EqlPlaintext` impls, so only those resolve; the remaining kinds mirror the
+/// `eql_scalars` accessor convention and `panic!`, since no impl can ever reach
+/// them.
 const fn cast_for_kind(kind: ScalarKind) -> Cast {
     match kind {
         ScalarKind::I32 => Cast::INT,
         ScalarKind::I16 => Cast::SMALL_INT,
         ScalarKind::I64 => Cast::BIG_INT,
         ScalarKind::Date => Cast::DATE,
+        ScalarKind::Timestamptz => Cast::TIMESTAMP,
         ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
             panic!("EqlPlaintext is only implemented for the wired scalar kinds")
         }
@@ -88,13 +91,14 @@ const fn cast_for_kind(kind: ScalarKind) -> Cast {
 
 /// The `plaintext` oracle column SQL type for a scalar kind, drawn from the
 /// `PlaintextSqlType` allowlist. As with `cast_for_kind`, only the wired kinds
-/// (integers plus `Date`) resolve.
+/// (integers plus `Date` / `Timestamptz`) resolve.
 const fn plaintext_sql_type_for_kind(kind: ScalarKind) -> PlaintextSqlType {
     match kind {
         ScalarKind::I32 => PlaintextSqlType::INTEGER,
         ScalarKind::I16 => PlaintextSqlType::SMALLINT,
         ScalarKind::I64 => PlaintextSqlType::BIGINT,
         ScalarKind::Date => PlaintextSqlType::DATE,
+        ScalarKind::Timestamptz => PlaintextSqlType::TIMESTAMPTZ,
         ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
             panic!("EqlPlaintext is only implemented for the wired scalar kinds")
         }
@@ -107,6 +111,7 @@ mod sealed {
     impl Sealed for i16 {}
     impl Sealed for i64 {}
     impl Sealed for chrono::NaiveDate {}
+    impl Sealed for chrono::DateTime<chrono::Utc> {}
 }
 
 /// A Rust type usable as a fixture `plaintext` value, carrying its EQL cast
@@ -163,6 +168,14 @@ impl EqlPlaintext for chrono::NaiveDate {
 
     fn to_plaintext(&self) -> Plaintext {
         Plaintext::NaiveDate(Some(*self))
+    }
+}
+
+impl EqlPlaintext for chrono::DateTime<chrono::Utc> {
+    const KIND: ScalarKind = ScalarKind::Timestamptz;
+
+    fn to_plaintext(&self) -> Plaintext {
+        Plaintext::Timestamp(Some(*self))
     }
 }
 
@@ -257,6 +270,35 @@ mod tests {
         match d.to_plaintext() {
             Plaintext::NaiveDate(Some(value)) => assert_eq!(value, d),
             other => panic!("expected Plaintext::NaiveDate(Some(1970-01-01)), got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn datetime_utc_casts_to_timestamp() {
+        // timestamptz is UTC-normalized — cipherstash has no tz-preserving
+        // type, so it encrypts under the `timestamp` cast.
+        assert_eq!(
+            <chrono::DateTime<chrono::Utc> as EqlPlaintext>::CAST.as_str(),
+            "timestamp"
+        );
+    }
+
+    #[test]
+    fn datetime_utc_plaintext_sql_type_is_timestamptz() {
+        assert_eq!(
+            <chrono::DateTime<chrono::Utc> as EqlPlaintext>::PLAINTEXT_SQL_TYPE.as_str(),
+            "timestamp with time zone"
+        );
+    }
+
+    #[test]
+    fn datetime_utc_to_plaintext_wraps_in_timestamp_variant() {
+        // A DateTime<Utc> must lift into the Timestamp variant so the fixture
+        // driver encrypts it under the `timestamp` cast.
+        let ts = chrono::DateTime::<chrono::Utc>::default();
+        match ts.to_plaintext() {
+            Plaintext::Timestamp(Some(value)) => assert_eq!(value, ts),
+            other => panic!("expected Plaintext::Timestamp(Some(epoch)), got {other:?}"),
         }
     }
 }
