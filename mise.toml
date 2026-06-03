@@ -94,7 +94,7 @@ cargo test --test payload_schema_tests
 """
 
 [tasks."codegen:parity"]
-description = "Parity gate: Rust eql-codegen output matches the int4 golden (normalized) + committed values.rs"
+description = "Parity gate: Rust eql-codegen output matches the int4 golden (byte-for-byte)"
 dir = "{{config_root}}"
 run = "bash tasks/codegen-parity.sh"
 
