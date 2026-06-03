@@ -67,11 +67,7 @@ async fn ore_v2_v3_comparator_parity_on_real_fixtures(pool: PgPool) -> Result<()
 
     let mut v3_signs: HashSet<i32> = HashSet::new();
     for (x, y) in pairs {
-        let (v2, v3): (i32, i32) = sqlx::query_as(sql)
-            .bind(x)
-            .bind(y)
-            .fetch_one(&pool)
-            .await?;
+        let (v2, v3): (i32, i32) = sqlx::query_as(sql).bind(x).bind(y).fetch_one(&pool).await?;
         assert_eq!(
             v2, v3,
             "eql_v2 and eql_v3 ORE comparators disagree on ids ({x},{y}): v2={v2} v3={v3}"
@@ -81,7 +77,10 @@ async fn ore_v2_v3_comparator_parity_on_real_fixtures(pool: PgPool) -> Result<()
 
     // Non-triviality: the sample must have actually exercised lt, eq, and gt —
     // otherwise the parity check could pass on a degenerate all-equal path.
-    assert!(v3_signs.contains(&0), "sample must include an equal pair (0)");
+    assert!(
+        v3_signs.contains(&0),
+        "sample must include an equal pair (0)"
+    );
     assert!(
         v3_signs.contains(&-1),
         "sample must include a less-than pair (-1)"
@@ -183,10 +182,19 @@ async fn ore_terms_array_null_and_empty_base_cases(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn sem_presence_checks_and_missing_ob_behaviour(pool: PgPool) -> Result<()> {
     let bool_cases = [
-        (r#"SELECT eql_v3.has_ore_block_u64_8_256('{"ob":["aa"]}'::jsonb)"#, true),
-        (r#"SELECT eql_v3.has_ore_block_u64_8_256('{}'::jsonb)"#, false),
+        (
+            r#"SELECT eql_v3.has_ore_block_u64_8_256('{"ob":["aa"]}'::jsonb)"#,
+            true,
+        ),
+        (
+            r#"SELECT eql_v3.has_ore_block_u64_8_256('{}'::jsonb)"#,
+            false,
+        ),
         // json-null `ob` → `->>` yields NULL → absent.
-        (r#"SELECT eql_v3.has_ore_block_u64_8_256('{"ob":null}'::jsonb)"#, false),
+        (
+            r#"SELECT eql_v3.has_ore_block_u64_8_256('{"ob":null}'::jsonb)"#,
+            false,
+        ),
         (r#"SELECT eql_v3.has_hmac_256('{"hm":"abc"}'::jsonb)"#, true),
         (r#"SELECT eql_v3.has_hmac_256('{}'::jsonb)"#, false),
     ];
@@ -209,6 +217,9 @@ async fn sem_presence_checks_and_missing_ob_behaviour(pool: PgPool) -> Result<()
         sqlx::query_scalar("SELECT eql_v3.ore_block_u64_8_256(NULL::jsonb) IS NULL")
             .fetch_one(&pool)
             .await?;
-    assert!(is_null, "NULL jsonb must extract to a NULL composite, not raise");
+    assert!(
+        is_null,
+        "NULL jsonb must extract to a NULL composite, not raise"
+    );
     Ok(())
 }
