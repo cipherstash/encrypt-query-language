@@ -16,6 +16,13 @@ DROP OPERATOR FAMILY IF EXISTS eql_v2.encrypted_hash_operator_family USING hash 
 DROP OPERATOR CLASS IF EXISTS eql_v2.ore_block_u64_8_256_operator_class USING btree CASCADE;
 DROP OPERATOR FAMILY IF EXISTS eql_v2.ore_block_u64_8_256_operator_family USING btree CASCADE;
 
+-- Drop the self-contained eql_v3 ORE btree operator class too — its file carries
+-- the `*operator_class.sql` suffix, so the Supabase build's `**/*operator_class.sql`
+-- glob excludes it as well. Without this the unqualified-name opclass check below
+-- still finds the eql_v3 copy.
+DROP OPERATOR CLASS IF EXISTS eql_v3.ore_block_u64_8_256_operator_class USING btree CASCADE;
+DROP OPERATOR FAMILY IF EXISTS eql_v3.ore_block_u64_8_256_operator_family USING btree CASCADE;
+
 -- Drop ore_block_u64_8_256 operators (also excluded from Supabase build)
 DROP OPERATOR IF EXISTS = (eql_v2.ore_block_u64_8_256, eql_v2.ore_block_u64_8_256) CASCADE;
 DROP OPERATOR IF EXISTS <> (eql_v2.ore_block_u64_8_256, eql_v2.ore_block_u64_8_256) CASCADE;
