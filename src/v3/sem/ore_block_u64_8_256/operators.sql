@@ -10,6 +10,12 @@
 
 --! @brief Equality backing function for ORE block types
 --! @internal
+--!
+--! @param a eql_v3.ore_block_u64_8_256 Left operand
+--! @param b eql_v3.ore_block_u64_8_256 Right operand
+--! @return boolean True if the ORE blocks are equal
+--!
+--! @see eql_v3.compare_ore_block_u64_8_256_terms
 CREATE FUNCTION eql_v3.ore_block_u64_8_256_eq(a eql_v3.ore_block_u64_8_256, b eql_v3.ore_block_u64_8_256)
 RETURNS boolean
   LANGUAGE sql
@@ -20,6 +26,12 @@ $$;
 
 --! @brief Not-equal backing function for ORE block types
 --! @internal
+--!
+--! @param a eql_v3.ore_block_u64_8_256 Left operand
+--! @param b eql_v3.ore_block_u64_8_256 Right operand
+--! @return boolean True if the ORE blocks are not equal
+--!
+--! @see eql_v3.compare_ore_block_u64_8_256_terms
 CREATE FUNCTION eql_v3.ore_block_u64_8_256_neq(a eql_v3.ore_block_u64_8_256, b eql_v3.ore_block_u64_8_256)
 RETURNS boolean
   LANGUAGE sql
@@ -30,6 +42,12 @@ $$;
 
 --! @brief Less-than backing function for ORE block types
 --! @internal
+--!
+--! @param a eql_v3.ore_block_u64_8_256 Left operand
+--! @param b eql_v3.ore_block_u64_8_256 Right operand
+--! @return boolean True if the left operand is less than the right operand
+--!
+--! @see eql_v3.compare_ore_block_u64_8_256_terms
 CREATE FUNCTION eql_v3.ore_block_u64_8_256_lt(a eql_v3.ore_block_u64_8_256, b eql_v3.ore_block_u64_8_256)
 RETURNS boolean
   LANGUAGE sql
@@ -40,6 +58,12 @@ $$;
 
 --! @brief Less-than-or-equal backing function for ORE block types
 --! @internal
+--!
+--! @param a eql_v3.ore_block_u64_8_256 Left operand
+--! @param b eql_v3.ore_block_u64_8_256 Right operand
+--! @return boolean True if the left operand is less than or equal to the right operand
+--!
+--! @see eql_v3.compare_ore_block_u64_8_256_terms
 CREATE FUNCTION eql_v3.ore_block_u64_8_256_lte(a eql_v3.ore_block_u64_8_256, b eql_v3.ore_block_u64_8_256)
 RETURNS boolean
   LANGUAGE sql
@@ -50,6 +74,12 @@ $$;
 
 --! @brief Greater-than backing function for ORE block types
 --! @internal
+--!
+--! @param a eql_v3.ore_block_u64_8_256 Left operand
+--! @param b eql_v3.ore_block_u64_8_256 Right operand
+--! @return boolean True if the left operand is greater than the right operand
+--!
+--! @see eql_v3.compare_ore_block_u64_8_256_terms
 CREATE FUNCTION eql_v3.ore_block_u64_8_256_gt(a eql_v3.ore_block_u64_8_256, b eql_v3.ore_block_u64_8_256)
 RETURNS boolean
   LANGUAGE sql
@@ -60,6 +90,12 @@ $$;
 
 --! @brief Greater-than-or-equal backing function for ORE block types
 --! @internal
+--!
+--! @param a eql_v3.ore_block_u64_8_256 Left operand
+--! @param b eql_v3.ore_block_u64_8_256 Right operand
+--! @return boolean True if the left operand is greater than or equal to the right operand
+--!
+--! @see eql_v3.compare_ore_block_u64_8_256_terms
 CREATE FUNCTION eql_v3.ore_block_u64_8_256_gte(a eql_v3.ore_block_u64_8_256, b eql_v3.ore_block_u64_8_256)
 RETURNS boolean
   LANGUAGE sql
