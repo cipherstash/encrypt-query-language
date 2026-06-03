@@ -426,7 +426,7 @@ eql_v2.ste_vec(val jsonb) RETURNS eql_v2_encrypted[]
 
 Extract the equality (`hm`) or ordering (`ob`) index term from a scalar
 encrypted-domain value. Generated per eq/ord-capable variant of every
-scalar type — see [Encrypted-Domain Code Generator](./encrypted-domain-generator.md).
+scalar type — see [Adding a Scalar Encrypted-Domain Type](./adding-a-scalar-encrypted-domain-type.md).
 The argument type selects the overload, and both are inlinable so a
 functional index built on the extractor engages. The extractors live in
 the `eql_v3` schema; their return types remain the core `eql_v2`
@@ -449,7 +449,7 @@ CREATE INDEX ON users USING btree (eql_v3.ord_term(salary_encrypted));
 > The full per-domain operator/wrapper/blocker surface (and the
 > `eql_v3.<T>` / `_eq` / `_ord` / `_ord_ore` domain types themselves) is
 > documented in [SQL support](./sql-support.md#encrypted-domain-scalar-types-eql_v3t)
-> and the [generator reference](./encrypted-domain-generator.md).
+> and the [scalar encrypted-domain type reference](./adding-a-scalar-encrypted-domain-type.md).
 
 ---
 

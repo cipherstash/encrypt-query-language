@@ -12,7 +12,7 @@ The parity gate runs the generator (`cargo run -p eql-codegen`, which writes the
 
 The golden reference, not any retired generator, is the sole oracle. If the generator diverges, either it regressed (fix `crates/eql-codegen`) or the reference is being updated deliberately (commit the new `int4` reference in the same PR).
 
-See `docs/reference/encrypted-domain-generator.md` for the full generator story (manifest-free catalog, templates, term capabilities).
+See `docs/reference/adding-a-scalar-encrypted-domain-type.md` §6 for the full generator story (catalog source of truth, minijinja templates, term capabilities).
 
 ## No committed fixture values
 
