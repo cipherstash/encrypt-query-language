@@ -31,8 +31,13 @@ pub trait ScalarType:
     /// name and the fixture script name. Examples: `"int4"`, `"int8"`.
     const PG_TYPE: &'static str;
 
-    /// Distinct plaintext values present in the fixture. Order doesn't
-    /// matter — `expected_forward` sorts before returning.
+    /// Distinct plaintext values present in the fixture, in a stable
+    /// order that MUST match fixture insertion order (the SQL script's
+    /// `id` sequence). Callers rely on this: the fixture-shape test
+    /// compares this slice element-wise against the `ORDER BY id`
+    /// plaintext column, and the scale/index arms index positionally
+    /// (`[0]`, `[len / 2]`) without sorting. A lazily-built `Vec` impl
+    /// must therefore be built deterministically in that same order.
     ///
     /// A method rather than a `const` so a scalar whose values can't be
     /// `const`-constructed can return a borrow of a lazily-built `Vec`;
