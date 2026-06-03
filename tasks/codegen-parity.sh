@@ -16,9 +16,12 @@ echo "==> Comparing int4 generated SQL file SET vs golden (catches extra/dropped
 # is never iterated. Assert the sets are equal first to close that blind spot.
 # "Generated" excludes any committed, hand-written SQL (e.g. int4_extensions.sql),
 # which lives in this dir but has no golden counterpart; git-tracked == hand-written.
-golden_set=$(cd tests/codegen/reference/int4 && ls *.sql | LC_ALL=C sort)
+# find (not `ls *.sql`) so an empty dir yields zero lines instead of aborting
+# under `set -e`; `-maxdepth 1` + sed strips the leading `./` for bare names.
+golden_set=$(cd tests/codegen/reference/int4 \
+  && find . -maxdepth 1 -name '*.sql' | sed 's#.*/##' | LC_ALL=C sort)
 gen_set=$(cd src/v3/scalars/int4 \
-  && comm -23 <(ls *.sql | LC_ALL=C sort) \
+  && comm -23 <(find . -maxdepth 1 -name '*.sql' | sed 's#.*/##' | LC_ALL=C sort) \
               <(git ls-files . | sed 's#.*/##' | LC_ALL=C sort))
 if [ "$golden_set" != "$gen_set" ]; then
   echo "int4 generated SQL file set differs from golden (< golden, > generated):" >&2
