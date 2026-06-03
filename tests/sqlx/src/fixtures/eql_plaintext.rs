@@ -14,6 +14,7 @@
 use std::fmt;
 
 use cipherstash_client::encryption::Plaintext;
+use eql_scalars::ScalarKind;
 
 /// The `cast_as` argument for `eql_v2.add_search_config`. The field is
 /// private so the allowlist is the set of `pub const`s below.
@@ -66,6 +67,34 @@ impl fmt::Display for PlaintextSqlType {
     }
 }
 
+/// The EQL `cast_as` for a scalar kind, drawn from the `Cast` allowlist.
+///
+/// Only the integer kinds have `EqlPlaintext` impls, so only those resolve;
+/// the non-integer kinds mirror the `eql_scalars` accessor convention and
+/// `panic!`, since no impl can ever reach them.
+const fn cast_for_kind(kind: ScalarKind) -> Cast {
+    match kind {
+        ScalarKind::I32 => Cast::INT,
+        ScalarKind::I16 => Cast::SMALL_INT,
+        ScalarKind::I64 | ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
+            panic!("EqlPlaintext is only implemented for integer scalar kinds")
+        }
+    }
+}
+
+/// The `plaintext` oracle column SQL type for a scalar kind, drawn from the
+/// `PlaintextSqlType` allowlist. As with `cast_for_kind`, only integer kinds
+/// resolve.
+const fn plaintext_sql_type_for_kind(kind: ScalarKind) -> PlaintextSqlType {
+    match kind {
+        ScalarKind::I32 => PlaintextSqlType::INTEGER,
+        ScalarKind::I16 => PlaintextSqlType::SMALLINT,
+        ScalarKind::I64 | ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
+            panic!("EqlPlaintext is only implemented for integer scalar kinds")
+        }
+    }
+}
+
 mod sealed {
     pub trait Sealed {}
     impl Sealed for i32 {}
@@ -75,9 +104,17 @@ mod sealed {
 /// A Rust type usable as a fixture `plaintext` value, carrying its EQL cast
 /// and the SQL type of the `plaintext` column. Sealed; only this crate may
 /// add impls.
+///
+/// Each impl supplies a single `KIND`; the EQL cast and `plaintext` column
+/// SQL type are derived from it via `cast_for_kind` /
+/// `plaintext_sql_type_for_kind`, so they cannot drift from the kind.
 pub trait EqlPlaintext: sealed::Sealed {
-    const CAST: Cast;
-    const PLAINTEXT_SQL_TYPE: PlaintextSqlType;
+    /// The scalar kind this plaintext type maps to. The single source of
+    /// truth from which `CAST` and `PLAINTEXT_SQL_TYPE` are derived.
+    const KIND: ScalarKind;
+
+    const CAST: Cast = cast_for_kind(Self::KIND);
+    const PLAINTEXT_SQL_TYPE: PlaintextSqlType = plaintext_sql_type_for_kind(Self::KIND);
 
     /// Lift the Rust value into the cipherstash-client `Plaintext` enum the
     /// EQL encryption pipeline consumes. The mapping is total — every
@@ -90,8 +127,7 @@ pub trait EqlPlaintext: sealed::Sealed {
 }
 
 impl EqlPlaintext for i32 {
-    const CAST: Cast = Cast::INT;
-    const PLAINTEXT_SQL_TYPE: PlaintextSqlType = PlaintextSqlType::INTEGER;
+    const KIND: ScalarKind = ScalarKind::I32;
 
     fn to_plaintext(&self) -> Plaintext {
         Plaintext::Int(Some(*self))
@@ -99,8 +135,7 @@ impl EqlPlaintext for i32 {
 }
 
 impl EqlPlaintext for i16 {
-    const CAST: Cast = Cast::SMALL_INT;
-    const PLAINTEXT_SQL_TYPE: PlaintextSqlType = PlaintextSqlType::SMALLINT;
+    const KIND: ScalarKind = ScalarKind::I16;
 
     fn to_plaintext(&self) -> Plaintext {
         Plaintext::SmallInt(Some(*self))

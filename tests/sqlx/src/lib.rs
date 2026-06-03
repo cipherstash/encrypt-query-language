@@ -10,6 +10,8 @@ pub mod helpers;
 pub mod index_types;
 pub mod matrix;
 pub mod scalar_domains;
+#[macro_use]
+pub mod scalar_types;
 pub mod selectors;
 
 // Re-export `paste` under a stable path so the `scalar_domain_matrix!` macro
@@ -17,6 +19,12 @@ pub mod selectors;
 // the `paste` crate directly.
 #[doc(hidden)]
 pub use paste;
+
+// Re-export the harness proc-macro crate under a stable path so the
+// `scalar_types!` macro can refer to `$crate::eql_tests_macros::<emitter>!`
+// without each call site depending on the proc-macro crate directly.
+#[doc(hidden)]
+pub use eql_tests_macros;
 
 pub use assertions::{assert_db_error, QueryAssertion};
 pub use helpers::{
