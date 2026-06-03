@@ -7,7 +7,7 @@
 //! else — the four `eql_v2_<T>{,_eq,_ord,_ord_ore}` domains, per-domain
 //! payload shapes, supported operators, index extractor expressions,
 //! ground-truth result sets — is derived from `T::PG_TYPE`,
-//! `T::FIXTURE_VALUES`, and the `Variant` enum.
+//! `T::fixture_values()`, and the `Variant` enum.
 
 use anyhow::{bail, Context, Result};
 use sqlx::PgPool;
@@ -34,12 +34,27 @@ pub trait ScalarType:
     /// Distinct plaintext values present in the fixture. Order doesn't
     /// matter — `expected_forward` sorts before returning.
     ///
-    /// For types driven by `ordered_numeric_matrix!`, the fixture MUST
-    /// include `MIN`, `MAX`, and zero (`Default::default()`): the matrix
-    /// uses those three as comparison pivots and fetches each one's
-    /// ciphertext via `fetch_fixture_payload`, which fails loudly if the
-    /// row is absent.
-    const FIXTURE_VALUES: &'static [Self];
+    /// A method rather than a `const` so a scalar whose values can't be
+    /// `const`-constructed can return a borrow of a lazily-built `Vec`;
+    /// integer scalars return their `eql_scalars::<T>_VALUES` const directly.
+    ///
+    /// For types driven by `ordered_numeric_matrix!`, the values MUST
+    /// include the three pivots (`min_pivot()`, `max_pivot()`, and zero
+    /// `Default::default()`): the matrix uses those as comparison pivots and
+    /// fetches each one's ciphertext via `fetch_fixture_payload`, which fails
+    /// loudly if the row is absent.
+    fn fixture_values() -> &'static [Self];
+
+    /// The low comparison pivot swept by the correctness / cross-shape arms.
+    /// Integer scalars return `Self::MIN`. A trait method (rather than the
+    /// matrix referencing `Self::MIN` directly) so a scalar without an inherent
+    /// `::MIN` const can supply an explicit sentinel; the returned value must be
+    /// present verbatim in `fixture_values()`.
+    fn min_pivot() -> Self;
+
+    /// The high comparison pivot. Integer scalars return `Self::MAX`. Must be
+    /// present verbatim in `fixture_values()`.
+    fn max_pivot() -> Self;
 
     /// `fixtures.eql_v2_<pg_type>`.
     fn fixture_table_name() -> String {
@@ -64,7 +79,7 @@ pub trait ScalarType:
             ">=" => |a, b| a >= b,
             other => panic!("expected_forward: unsupported operator {other}"),
         };
-        let mut values: Vec<Self> = Self::FIXTURE_VALUES
+        let mut values: Vec<Self> = Self::fixture_values()
             .iter()
             .copied()
             .filter(|v| predicate(*v, pivot))
@@ -75,9 +90,10 @@ pub trait ScalarType:
 }
 
 // The per-type `impl ScalarType` blocks (one per scalar, each carrying its
-// `PG_TYPE` token string and `FIXTURE_VALUES = eql_scalars::<TOKEN>_VALUES`)
-// are generated from the single harness list in `scalar_types.rs`. To add a
-// type, add a `token => rust_type` line there — not an impl here.
+// `PG_TYPE` token string, `fixture_values() = eql_scalars::<TOKEN>_VALUES`, and
+// `min_pivot()`/`max_pivot()` = `Self::MIN`/`Self::MAX`) are generated from the
+// single harness list in `scalar_types.rs`. To add a type, add a
+// `token => rust_type` line there — not an impl here.
 crate::scalar_types!(scalar_type_impls);
 
 /// Per-domain capability + payload shape. Storage carries no terms, `Eq`
