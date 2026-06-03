@@ -74,20 +74,20 @@ pub trait ScalarType:
 
 impl ScalarType for i32 {
     const PG_TYPE: &'static str = "int4";
-    /// Single-sourced from `tasks/codegen/types/int4.toml` `[fixture] values`
-    /// via the generated `fixtures::int4_values::VALUES` const — the same list
-    /// the fixture generator encrypts, so the oracle cannot drift from the
-    /// fixture. Spans the negative boundary, the i32 signed extremes, and zero.
-    const FIXTURE_VALUES: &'static [i32] = crate::fixtures::int4_values::VALUES;
+    /// Single-sourced from the `int4` row in `eql-scalars::CATALOG`
+    /// (`eql_scalars::INT4_VALUES`, materialised from its `Fixture` list) — the
+    /// same list the fixture generator encrypts, so the oracle cannot drift from
+    /// the fixture. Spans the negative boundary, the i32 signed extremes, and zero.
+    const FIXTURE_VALUES: &'static [i32] = eql_scalars::INT4_VALUES;
 }
 
 impl ScalarType for i16 {
     const PG_TYPE: &'static str = "int2";
-    /// Single-sourced from `tasks/codegen/types/int2.toml` `[fixture] values`
-    /// via the generated `fixtures::int2_values::VALUES` const — the same list
-    /// the fixture generator encrypts, so the oracle cannot drift from the
-    /// fixture. Spans the negative boundary, the i16 signed extremes, and zero.
-    const FIXTURE_VALUES: &'static [i16] = crate::fixtures::int2_values::VALUES;
+    /// Single-sourced from the `int2` row in `eql-scalars::CATALOG`
+    /// (`eql_scalars::INT2_VALUES`, materialised from its `Fixture` list) — the
+    /// same list the fixture generator encrypts, so the oracle cannot drift from
+    /// the fixture. Spans the negative boundary, the i16 signed extremes, and zero.
+    const FIXTURE_VALUES: &'static [i16] = eql_scalars::INT2_VALUES;
 }
 
 /// Per-domain capability + payload shape. Storage carries no terms, `Eq`
