@@ -16,11 +16,11 @@
 use eql_scalars::CATALOG;
 
 // `generate_for_token(token: &str) -> anyhow::Result<()>` is generated from the
-// single harness list in `tests/sqlx/src/scalar_harness.rs`: one match arm per
+// single harness list in `tests/sqlx/src/scalar_types.rs`: one match arm per
 // token (`"int4" => fixtures::eql_v2_int4::spec().run().await`) plus a loud
 // catch-all. A catalog token absent from that list hits the catch-all and fails
 // the generator loudly, so a new scalar type cannot silently skip generation.
-eql_tests::scalar_harness!(fixture_dispatch);
+eql_tests::scalar_types!(fixture_dispatch);
 
 #[tokio::test]
 #[ignore = "generator — run via `mise run fixture:generate:all`"]
