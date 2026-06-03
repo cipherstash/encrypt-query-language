@@ -11,7 +11,7 @@ fn sql_marker() -> &'static str {
     AUTO_GENERATED_HEADER.lines().next().unwrap()
 }
 
-/// Raised when the generator would clobber a hand-written file.
+/// Error returned when the generator would clobber a hand-written file.
 #[derive(Debug)]
 pub enum WriteError {
     Ownership(String),

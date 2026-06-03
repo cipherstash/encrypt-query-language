@@ -113,16 +113,9 @@ jobs:
           workspaces: .
           shared-key: sqlx-tests
 
-      # Crate compile/lint/test (cargo test -p eql-scalars -p eql-codegen) runs
-      # in the dedicated `test:crates` job; this job covers the codegen-specific
-      # gate only — golden parity. The plaintext fixture lists are no longer a
-      # generated file: they live in the catalog (`eql_scalars::INT4_VALUES` /
-      # `INT2_VALUES`) and are pinned by `eql-scalars`'s own unit tests, so there
-      # is nothing to regenerate-and-diff here.
-
-      # Parity gate: assert the Rust eql-codegen output is line-normalized-equal
-      # to the int4 golden reference. Python is no longer an oracle (retired in
-      # P2). No Postgres needed — the generator runs offline.
+      # Workspace crate compile/lint/test runs in `test:crates` (including
+      # eql-scalars, eql-codegen, and eql-tests-macros). This job only checks
+      # generated SQL against the int4 golden reference.
       - name: Verify generator parity (golden)
         run: |
           mise run codegen:parity

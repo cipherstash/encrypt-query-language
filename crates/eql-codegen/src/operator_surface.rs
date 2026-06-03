@@ -32,8 +32,7 @@ impl OperatorMetadata {
         }
     }
 
-    /// Render the `CREATE OPERATOR` metadata clause, or `None` when no hint is
-    /// present (the `@>`/`<@` symmetric-but-empty case collapses to `None`).
+    /// Render the CREATE OPERATOR metadata clause, or None when no planner hints are present.
     pub fn render(self) -> Option<String> {
         let mut extras = Vec::new();
         if let Some(c) = self.commutator {

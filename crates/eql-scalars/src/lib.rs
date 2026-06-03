@@ -1,19 +1,16 @@
-//! Scalar/term catalog for EQL encrypted-domain codegen — the Rust source of
-//! truth replacing `tasks/codegen/{scalars,terms,spec}.py` and the
-//! `types/*.toml` manifests. Std-only, no dependencies.
+//! Scalar/term catalog for EQL encrypted-domain codegen and SQLx scalar
+//! fixtures. Std-only, no dependencies.
 //!
 //! `Fixture` is value-kind tagged (one non-generic enum, variant = value kind),
 //! so a single `CATALOG` spans every scalar kind. Integer literals are
 //! range-checked at their definition site by `fixtures!` (`N(-40000)` for `i16`
 //! does not compile).
 //!
-//! Capability axes are independent: equality covers every kind; order covers
-//! every kind except `jsonb` (ORE compares ciphertext, so it is
-//! plaintext-agnostic — `text`/`date` order like integers); only the integer
-//! kinds have an i128 range with `Min`/`Max`/`Zero` sentinels. `numeric_value`
-//! cannot yet express the order of a non-integer fixture set.
+//! Capability axes are independent: orderability is not the same as integer
+//! range support. Only integer kinds have i128 bounds and `Min`/`Max`/`Zero`
+//! sentinels.
 //!
-//! Public names are consumed verbatim by the later codegen plans — do not rename.
+//! Public names are consumed verbatim by codegen — do not rename.
 
 /// The native scalar a domain type maps onto. Integer kinds carry i128 bounds;
 /// the others (`Numeric`/`Text`/`Jsonb`) have string fixtures and no numeric
@@ -338,12 +335,9 @@ const ORDERED_INT_DOMAINS: &[DomainSpec] = &[
     },
 ];
 
-/// Builds a `&[Fixture]`. The `int <ty>;` arm (a tt-muncher over `Min`/`Max`/
-/// `Zero` and `N(<lit>)`) range-checks each literal against `<ty>` at compile
-/// time via `const _RANGE_CHECK`, so out-of-range literals do not compile;
-/// `text;`/`numeric;`/`jsonb;` wrap string literals. The reject case has no
-/// in-crate test (macro isn't exported, no `trybuild` under zero-deps) — verify
-/// by hand with a bad `N(..)`.
+/// Builds a `&[Fixture]`. The `int <ty>;` arm range-checks each `N(<lit>)`
+/// against `<ty>` at compile time; `text;`/`numeric;`/`jsonb;` wrap string
+/// literals.
 macro_rules! fixtures {
     (int $t:ty; $($body:tt)*) => { fixtures!(@int $t; [] $($body)*) };
     (@int $t:ty; [$($acc:expr),*]) => { &[$($acc),*] };
@@ -403,13 +397,8 @@ const INT8: ScalarSpec = ScalarSpec {
 /// drives generation order). New types are appended as their SQL surface lands.
 pub const CATALOG: &[ScalarSpec] = &[INT4, INT2, INT8];
 
-/// Materialise an integer scalar's fixtures into a typed `&'static` slice at
-/// compile time. This is the **single-sourced** plaintext list the SQLx test
-/// matrix reads as `ScalarType::FIXTURE_VALUES` and the fixture generator
-/// encrypts — derived from the same `CATALOG` row that drives SQL generation,
-/// so the oracle cannot drift from the fixture. (It replaces the old generated,
-/// committed `tests/sqlx/src/fixtures/<T>_values.rs` — a Rust source of truth no
-/// longer needs to round-trip through generated Rust.)
+/// Materialises integer catalog fixtures into typed static slices used by the
+/// SQLx matrix and fixture generation.
 ///
 /// Integer kinds only: a non-numeric fixture (`Text`/`Numeric`/`Jsonb`) is a
 /// const-eval error, mirroring `numeric_value`'s `None`.
@@ -508,8 +497,7 @@ mod rust_tests {
 
     #[test]
     fn i64_facts() {
-        // Capability-layer fact: i64 is the Rust kind a future int8 maps onto.
-        // Present here so adding int8 later is a pure `CATALOG` append.
+        // Capability-layer fact: `int8` maps to the Rust `i64` kind.
         assert_eq!(ScalarKind::I64.rust_type(), "i64");
         assert_eq!(ScalarKind::I64.min_symbol(), "i64::MIN");
         assert_eq!(ScalarKind::I64.max_symbol(), "i64::MAX");
@@ -777,12 +765,7 @@ mod catalog_tests {
 
     #[test]
     fn all_types_share_the_same_domain_shape() {
-        // Every scalar declares the same four domains with the same terms;
-        // only the token differs (the matrix-snapshot collapse depends on this).
-        // Generic over CATALOG, so it covers every type — including new ones —
-        // and subsumes the old per-type `<T>_maps_to_*_with_four_domains` /
-        // `<T>_domain_terms_match_manifest` tests (which only restated the
-        // catalog literal for one token).
+        // Every scalar declares the same domain shape; only the token differs.
         for s in CATALOG {
             let shape: Vec<(&str, &[Term])> =
                 s.domains.iter().map(|d| (d.suffix, d.terms)).collect();
@@ -829,12 +812,8 @@ mod catalog_tests {
 mod values_tests {
     use super::*;
 
-    /// Every materialised `<T>_VALUES` array equals its catalog row's fixtures,
-    /// resolved per kind, in order. Computed from the fixtures — no hardcoded
-    /// expected array — so it cannot drift and adding a type needs only one
-    /// `check(&INTx, INTx_VALUES)` line, not a duplicated golden list. Subsumes
-    /// the old per-type `<T>_values_materialise_to_typed_array` goldens and
-    /// `materialised_values_track_their_fixture_lists`.
+    /// Asserts the materialised `<T>_VALUES` array matches catalog fixtures per
+    /// kind and order.
     fn check<T: Copy + Into<i128>>(spec: &ScalarSpec, values: &[T]) {
         assert_eq!(
             values.len(),

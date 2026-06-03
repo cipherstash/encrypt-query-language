@@ -1,4 +1,4 @@
-//! AUTO-GENERATED headers, schema constants, and SQL-string escaping.
+//! Generated-file marker, schema constants, and SQL-string escaping.
 
 /// SQL generated-file marker. The SQL templates emit this as their first line;
 /// the writer uses it only to recognise files it owns (overwrite/clean safety).
@@ -26,9 +26,7 @@ mod tests {
 
     #[test]
     fn sql_marker_is_grep_compatible_single_line() {
-        // The `^-- AUTOMATICALLY GENERATED FILE` marker is what
-        // tasks/docs/validate/{coverage,required-tags}.sh grep on to skip
-        // generated SQL — keep this assertion and that grep in lockstep.
+        // Validation scripts grep for this marker to skip generated SQL; keep them in sync.
         assert_eq!(AUTO_GENERATED_HEADER, "-- AUTOMATICALLY GENERATED FILE.\n");
         assert!(AUTO_GENERATED_HEADER.contains("AUTOMATICALLY GENERATED FILE"));
     }

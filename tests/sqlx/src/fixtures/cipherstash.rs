@@ -15,10 +15,9 @@
 //! `encrypt_store` call, so the cipher is built once per process by
 //! construction — no static cache, no cross-runtime hazard.
 //!
-//! `column_config_for` is the bridge between the fixture spec's string-typed
-//! index names (`"unique"`, `"ore"`, …) and the typed `IndexType` enum
-//! cipherstash-config uses. Unknown names raise immediately so a typo at
-//! spec construction fails fast.
+//! `column_config_for` maps the fixture spec's typed `IndexKind` values onto
+//! the `IndexType` enum cipherstash-config uses. Extending index coverage
+//! requires one new `IndexKind` variant and one checked mapping arm.
 
 use std::borrow::Cow;
 use std::sync::Arc;

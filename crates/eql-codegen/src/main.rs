@@ -17,8 +17,7 @@ fn repo_root() -> PathBuf {
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().collect();
 
-    // `list-types`: print catalog tokens, one per line. Consumed by Plan 3's
-    // fixtures-all and matrix-inventory enumeration.
+    // list-types: print catalog tokens, one per line for fixture and matrix inventory tasks.
     if args.len() == 2 && args[1] == "list-types" {
         for spec in eql_scalars::CATALOG {
             println!("{}", spec.token);

@@ -59,7 +59,7 @@ pub fn environment() -> minijinja::Environment<'static> {
 pub struct DomainBlock {
     pub typname: String,   // sql_str-escaped bare name, e.g. int4_ord_ore
     pub name: String,      // raw bare name (unescaped), e.g. int4_ord_ore
-    pub keys: Vec<String>, // ordered, sql_str-escaped key tokens (envelope + ciphertext + term keys)
+    pub keys: Vec<String>, // ordered, sql_str-escaped key tokens (envelope + term keys)
 }
 
 #[derive(serde::Serialize)]
@@ -96,8 +96,8 @@ pub struct SqlParam {
 }
 
 /// One generated function entry. The serde tag drives the template's three-way
-/// switch; the unsupported-operator arm is never merged with the others (footgun
-/// separation — its body must always raise).
+/// switch.
+/// The unsupported-operator arm stays separate because its body must always raise.
 #[derive(serde::Serialize)]
 #[serde(tag = "kind")]
 pub enum FnEntry {
@@ -242,9 +242,7 @@ pub fn extract_arg(arg_type: &str, extractor: &str, dom: &str, arg: &str) -> Str
     }
 }
 
-/// One aggregate operator definition (min or max). Only SQL-required facts: the
-/// state-function name is the mechanical suffix `{{ a.name }}_sfunc` in the
-/// template, and English comment phrases are template-resident.
+/// One aggregate operator definition; the template derives the state-function name from this data.
 #[derive(serde::Serialize)]
 pub struct AggregateOp {
     pub name: &'static str,       // min / max

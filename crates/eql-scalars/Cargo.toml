@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Scalar/term catalog for EQL encrypted-domain codegen (std-only, no deps)."
 
-# INTENTIONALLY no dependencies. This crate must stay std-only so the future
-# generator (eql-codegen) compiles in ~1-2s and never drags serde/toml onto the
-# SQL build's critical path. Do not add deps here.
+# INTENTIONALLY no dependencies. This crate stays std-only so eql-codegen
+# compiles quickly and does not drag serde/toml onto the SQL build critical path.
+# Do not add deps here.
 [dependencies]

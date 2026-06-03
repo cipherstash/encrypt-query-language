@@ -1,12 +1,14 @@
 # Codegen reference
 
-The SQL files under `int4/` are the hand-maintained golden reference for the encrypted-domain scalar generator, the Rust crate `crates/eql-codegen` (embedded minijinja templates in `crates/eql-codegen/templates/*.j2`). `int4` is the **single golden master**: the generator is type-generic — its templates are pure token substitution driven by the `eql_scalars::CATALOG` rows (`crates/eql-scalars/src/lib.rs`) — so one anchored type detects all template/term drift for every current and future scalar.
+The SQL files under `int4/` are the hand-maintained golden reference for the encrypted-domain scalar generator, `crates/eql-codegen`.
+
+`int4` is the **single golden master**. The generator is type-generic: its embedded minijinja templates are token substitution driven by the `eql_scalars::CATALOG` rows (`crates/eql-scalars/src/lib.rs`). One anchored type detects template and term drift for every current and future scalar.
 
 Each reference file's first line is a `-- REFERENCE:` provenance marker; everything after it is the generated body verbatim, starting with the template-owned `-- AUTOMATICALLY GENERATED FILE.` header.
 
-The parity gate runs the generator (`cargo run -p eql-codegen`, which writes the real `src/encrypted_domain/int4/` tree) and asserts its output matches these files **byte-for-byte** after dropping that single provenance line. It runs three ways, all on the same reference:
+The parity gate runs the generator and asserts its output matches these files **byte-for-byte** after dropping that single provenance line. It runs three ways, all on the same reference:
 
-- `mise run codegen:parity` (`tasks/codegen-parity.sh`) — the CI shell gate. It first compares the generated `int4` SQL *file set* against the golden `*.sql` set (`comm -23` against `git ls-files` excludes the committed, hand-written `int4_extensions.sql`, which has no golden counterpart) to catch extra/dropped files, then `diff`s each golden file against its generated counterpart after `tail -n +2` drops the provenance line. Any whitespace or blank-line drift fails — there is no normalization.
+- `mise run codegen:parity` (`tasks/codegen-parity.sh`) — the CI shell gate. It runs `cargo run -p eql-codegen`, compares the generated `int4` SQL file set against the golden `*.sql` set, then `diff`s each generated file against its golden after `tail -n +2` drops the provenance line. Any whitespace or blank-line drift fails.
 - `crates/eql-codegen/tests/parity.rs` (`rust_generator_matches_int4_golden_files`) — runs `generate_all` into a temp dir and byte-compares the materialised `int4` SQL surface against the same golden.
 - the in-crate golden tests in `crates/eql-codegen/src/generate.rs` — byte-compare each `render_*_file` output against the corresponding reference.
 

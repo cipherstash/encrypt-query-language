@@ -8,7 +8,7 @@
 //! beats a partial fixture.
 //!
 //! The `public._fixture_<name>` working table is transient plumbing: `.run()`
-//! creates it, encrypts into it, renders the committed rows from it, then
+//! creates it, encrypts into it, uses the rendered fixture rows, then
 //! drops it before returning. The drop runs unconditionally once the table
 //! exists — on success *and* on any returned error: `run` captures the
 //! post-schema result, drops the table, and only then propagates a failure.
@@ -114,7 +114,7 @@ where
     /// schema/insert/render/drop pipeline inline against that connection
     /// (no second connection needed — encryption happens in Rust via
     /// cipherstash-client), then composes the rendered INSERT lines with
-    /// `fixture_script_preamble` and writes the committed script to disk.
+    /// `fixture_script_preamble` and writes the generated fixture script to disk.
     ///
     /// The pipeline mirrors the teardown contract in `run_with`: drop the
     /// working table unconditionally once it has been created, and
@@ -182,7 +182,7 @@ where
 
     /// Encrypt every plaintext value via cipherstash-client in **one
     /// batched call**, then INSERT each ciphertext into the working
-    /// table as plain JSONB. The committed `ColumnConfig` is built once
+    /// table as plain JSONB. The fixture `ColumnConfig` is built once
     /// from the spec's indexes + cast — the fixture name is fed as the
     /// table identifier so the resulting payload's `i.t` field matches
     /// the working table, preserving the shape Proxy used to emit.
@@ -215,33 +215,9 @@ where
         Ok(())
     }
 
-    /// **Test seam** for the schema-apply / insert / render / teardown
-    /// pipeline. Production code uses `run()`, which inlines the same
-    /// pipeline on a single connection. This entry point exists so tests
-    /// can plug in arbitrary insert behavior (hand-crafted JSONB,
-    /// deliberate failures) without going through cipherstash-client.
-    /// Gated behind `#[cfg(test)]` so it is never linked into a
-    /// production build.
-    ///
-    /// Pipeline:
-    /// 1. Check the spec is complete.
-    /// 2. Apply `working_schema_sql` on `direct`. After this succeeds the
-    ///    `public._fixture_<name>` table exists and MUST be dropped before
-    ///    return, whatever happens next.
-    /// 3. Run `insert_rows()`. Its result is captured (not
-    ///    `?`-propagated) so the drop in step 5 always runs.
-    /// 4. If the inserter succeeded, render the committed rows via
-    ///    `render_rows_sql` on `direct`. Skipped on inserter error.
-    /// 5. Drop the working table on `direct` unconditionally.
-    /// 6. Propagate failures in causal order: inserter error first
-    ///    (root cause), then render, then drop.
-    ///
-    /// The closure has no `&mut PgConnection` parameter because the
-    /// caller (a test) closes over its own pool / connection — the
-    /// production path's single-connection invariant is enforced inside
-    /// `run`, not here.
-    ///
-    /// Private by design: this is a test seam, not a public API.
+    /// Test-only variant of run() that lets tests supply the insert step. It
+    /// always drops the working table after schema creation and reports the
+    /// inserter error before render/drop errors.
     #[cfg(test)]
     async fn run_with<F, Fut>(
         &self,

@@ -1,24 +1,14 @@
 //! EQL lint runtime tests
 //!
-//! These tests run `eql_v2.lints()` against the installed EQL surface and
-//! assert on the shape of the result.
-//!
-//! The lint is intentionally noisy on the current state of EQL — every
-//! plpgsql / VOLATILE / SET-clause-bearing operator implementation is
-//! reported. The tests here validate that the lint *runs* and that its
-//! schema is sensible. A separate stacked PR (#193, the Phase 1 operator
-//! inlining work) reduces the violation count, and at that point a
-//! tighter test asserting `count = 0` for specific operators becomes
-//! appropriate.
+//! These tests validate eql_v2.lints() schema and pin selected lint
+//! rules/regression surfaces, including operators that must remain lint-clean.
 
 use anyhow::Result;
 use eql_tests::Variant;
 use sqlx::PgPool;
 
-/// Pg-type tokens for the encrypted-scalar-domain families currently
-/// materialised. Extending the family (e.g. when `int8`/`bool`/`date`
-/// land) is a one-line array extension here — every downstream
-/// parameterised test picks it up automatically.
+/// Pg-type tokens for encrypted-scalar-domain families, manually kept in sync
+/// with the scalar harness/catalog until dynamic derivation replaces it.
 const SCALAR_PG_TYPES: &[&str] = &["int4", "int2"];
 
 #[derive(Debug, sqlx::FromRow)]
@@ -310,10 +300,8 @@ async fn lint_phase_1_operators_are_clean(pool: PgPool) -> Result<()> {
 /// them is a non-STRICT plpgsql blocker, which doesn't need to be
 /// inlinable.
 ///
-/// Discovers the eligible operator set from `pg_operator` rather than
-/// hardcoding the int4 inventory — when `int8` (or `bool`, `date`, ...)
-/// lands, this test picks it up automatically with no edit. The earlier
-/// hardcoded list was a copy-paste hazard.
+/// Builds the expected signatures from `SCALAR_PG_TYPES` and `Variant::ALL`,
+/// then asserts none appear in `eql_v2.lints()`.
 #[sqlx::test]
 async fn scalar_family_inlinable_operators_are_clean(pool: PgPool) -> Result<()> {
     // Build the inline-critical signature set Rust-side from

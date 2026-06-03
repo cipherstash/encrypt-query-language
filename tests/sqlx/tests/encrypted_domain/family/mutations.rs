@@ -5,7 +5,7 @@
 //! vacuous and still pass. Each test here applies one surgical mutation to
 //! the installed `eql_v2` schema and asserts that the property a specific
 //! matrix arm guards now flips. If a mutation does NOT flip the property,
-//! that arm has no teeth.
+//! the probe is vacuous.
 //!
 //! Mechanism: `CREATE OR REPLACE FUNCTION` keeps the function oid, so the
 //! operators / aggregates that reference it keep resolving to the (now
@@ -57,7 +57,7 @@ async fn disabling_storage_eq_blocker_flips_blocker_arm(pool: PgPool) -> Result<
     )
     .await?;
 
-    // Post: the operator returns true instead of raising — arm has teeth.
+    // Post: the operator returns true instead of raising — non-vacuous.
     let result: Option<bool> = sqlx::query_scalar(sql)
         .bind(PLACEHOLDER_PAYLOAD)
         .bind(PLACEHOLDER_PAYLOAD)
@@ -72,8 +72,7 @@ async fn disabling_storage_eq_blocker_flips_blocker_arm(pool: PgPool) -> Result<
 
 // 2. Planner-metadata RESTRICT selectivity — unsetting it makes the
 //    `planner_metadata` arm's `oprrest <> 0` check report false. (COMMUTATOR
-//    cannot be unset via ALTER, so RESTRICT is the pragmatic teeth probe for
-//    this arm.)
+//    cannot be unset via ALTER, so RESTRICT proves this arm would catch the regression.)
 #[sqlx::test]
 async fn unsetting_restrict_flips_planner_metadata_arm(pool: PgPool) -> Result<()> {
     async fn restrict_present(pool: &PgPool) -> Result<bool> {
@@ -107,7 +106,7 @@ async fn unsetting_restrict_flips_planner_metadata_arm(pool: PgPool) -> Result<(
     )
     .await?;
 
-    // Post: the planner-metadata check now reports false — arm has teeth.
+    // Post: the planner-metadata check now reports false — non-vacuous.
     ensure!(
         !restrict_present(&pool).await?,
         "after SET (RESTRICT = NONE), the planner-metadata check must report false"
@@ -117,7 +116,7 @@ async fn unsetting_restrict_flips_planner_metadata_arm(pool: PgPool) -> Result<(
 
 // 3. `_ord` equality must route through `ord_term` (`ob`), never HMAC.
 //    Rerouting it through `hmac_256` (`hm`) over hm-stripped rows makes `=`
-//    stop matching. Proves the `ord_routes_through_ob` arm has teeth.
+//    stop matching. Proves the `ord_routes_through_ob` arm would catch the regression.
 #[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_int4")))]
 async fn rerouting_ord_eq_through_hm_flips_ord_routes_arm(pool: PgPool) -> Result<()> {
     // Strip `hm` per-row inline; the `_ord` CHECK only requires `ob`, so the
@@ -154,7 +153,7 @@ async fn rerouting_ord_eq_through_hm_flips_ord_routes_arm(pool: PgPool) -> Resul
     )
     .await?;
 
-    // Post: routing through the absent `hm` matches zero rows — arm has teeth.
+    // Post: routing through the absent `hm` matches zero rows — non-vacuous.
     let mutated: i64 = sqlx::query_scalar(count_sql)
         .bind(&pivot_payload)
         .fetch_one(&pool)
@@ -168,7 +167,7 @@ async fn rerouting_ord_eq_through_hm_flips_ord_routes_arm(pool: PgPool) -> Resul
 
 // 4. Supported `=` on `_eq` is STRICT — it must propagate NULL. Dropping
 //    STRICT (and returning non-NULL) makes `x = NULL` return a value. Proves
-//    the `supported_null` arm has teeth.
+//    the `supported_null` arm would catch the regression.
 #[sqlx::test]
 async fn dropping_strict_on_eq_flips_supported_null_arm(pool: PgPool) -> Result<()> {
     let sql = "SELECT $1::jsonb::eql_v3.int4_eq = $2::jsonb::eql_v3.int4_eq";
@@ -185,7 +184,7 @@ async fn dropping_strict_on_eq_flips_supported_null_arm(pool: PgPool) -> Result<
     )
     .await?;
 
-    // Post: `x = NULL` returns true instead of NULL — arm has teeth.
+    // Post: `x = NULL` returns true instead of NULL — non-vacuous.
     let result: Option<bool> = sqlx::query_scalar(sql)
         .bind(PLACEHOLDER_PAYLOAD)
         .bind(Option::<&str>::None)
@@ -199,7 +198,7 @@ async fn dropping_strict_on_eq_flips_supported_null_arm(pool: PgPool) -> Result<
 }
 
 // 5. Ord `<` correctness routes through `eql_v2.lt`. Turning `lt` into a
-//    blocker makes `<` raise — proving the ord `<` correctness arm has teeth.
+//    blocker makes `<` raise, proving the ord `<` correctness arm is non-vacuous.
 //    Crucially, ORDER BY routes through `ord_term`, NOT `<`, so it must stay
 //    green here. This is the #5-vs-#7 split: #5 attacks `<`, #7 attacks the
 //    sort key. Blocking `<` alone must not disturb ORDER BY.
@@ -238,7 +237,7 @@ async fn blocking_lt_flips_lt_arm_but_not_order_by(pool: PgPool) -> Result<()> {
     )
     .await?;
 
-    // Post: `<` now raises — the ord `<` arm has teeth.
+    // Post: `<` now raises — non-vacuous.
     assert_raises(
         &pool,
         lt_sql,
@@ -257,20 +256,10 @@ async fn blocking_lt_flips_lt_arm_but_not_order_by(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-// 6. `_eq` equality must route through `eq_term` (`hm`), never ORE — the
-//    mirror of #3 for the eq path. Rerouting it through
-//    `ore_block_u64_8_256` (`ob`) over ob-stripped rows breaks equality.
-//
-//    Two notes on why this is shaped differently from the plan's literal
-//    "returns 0 where forward expects 1":
-//    - The fixture payloads carry BOTH `hm` and `ob`, so rerouting `_eq`
-//      `=` through ORE on the RAW fixture would still match (both terms are
-//      injective per plaintext) — vacuous. Stripping `ob` forces the
-//      rerouted operator onto an absent term, exactly as #3 strips `hm`.
-//    - `ore_block_u64_8_256(jsonb)` RAISES on an absent `ob` ("Expected an
-//      ore index (ob)"), whereas `hmac_256(jsonb)` returns NULL on an absent
-//      `hm`. So the eq path breaks via a raise, not a 0-count. Either way the
-//      correct hm-routed equality matches and the rerouted one does not.
+// 6. `_eq` equality must route through `eq_term` (`hm`), never ORE.
+//    Rerouting _eq equality through ORE would be vacuous on full payloads
+//    because fixtures carry both hm and ob. Strip ob first so the mutated
+//    operator fails while the correct hm route still matches.
 #[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_int4")))]
 async fn rerouting_eq_eq_through_ob_flips_eq_arm(pool: PgPool) -> Result<()> {
     // Strip `ob` per-row inline; the `_eq` CHECK only requires `hm`, so the
@@ -307,7 +296,7 @@ async fn rerouting_eq_eq_through_ob_flips_eq_arm(pool: PgPool) -> Result<()> {
     .await?;
 
     // Post: routing through the absent `ob` raises ("Expected an ore index")
-    // instead of matching the pivot — equality is broken, arm has teeth.
+    // instead of matching the pivot — equality is broken, non-vacuous.
     let err = sqlx::query_scalar::<_, i64>(count_sql)
         .bind(&pivot_payload)
         .fetch_one(&pool)
@@ -323,7 +312,7 @@ async fn rerouting_eq_eq_through_ob_flips_eq_arm(pool: PgPool) -> Result<()> {
 
 // 7. ORDER BY routes through `ord_term` — the sort key, NOT `<` (see #5).
 //    Collapsing `ord_term` to a constant makes ORDER BY DESC no longer
-//    plaintext-sorted. Proves the ORDER BY arm has teeth independently of the
+//    plaintext-sorted. Proves the ORDER BY arm is non-vacuous independently of the
 //    `<` arm.
 //
 //    A constant key collapses ASC and DESC to the same heap order. The
@@ -361,7 +350,7 @@ async fn collapsing_ord_term_flips_order_by_arm(pool: PgPool) -> Result<()> {
     mutate(&pool, &ddl).await?;
 
     // Post: every row now sorts equal, so DESC collapses to heap (ascending)
-    // order and can no longer equal the descending expectation — arm has teeth.
+    // order and can no longer equal the descending expectation — non-vacuous.
     let mutated: Vec<i32> = sqlx::query_scalar(order_by_desc).fetch_all(&pool).await?;
     ensure!(
         mutated != descending,
@@ -375,7 +364,7 @@ async fn collapsing_ord_term_flips_order_by_arm(pool: PgPool) -> Result<()> {
 //    value yields a NULL sort key, so `NULLS LAST` parks those rows at the tail.
 //    Dropping STRICT (coalescing a NULL input to a real payload) gives NULL-valued
 //    rows a concrete sort key, so they stop clustering at the end. Proves the
-//    ORDER BY NULLS arm has teeth on the NULL-placement dimension — one #5 (block
+//    ORDER BY NULLS arm is non-vacuous on the NULL-placement dimension — one #5 (block
 //    `lt`) and #7 (collapse `ord_term`) do not exercise, since both run on the
 //    NULL-free fixture. A UNION ALL subquery supplies the NULL rows inline, so no
 //    session-local temp table is needed and the global `mutate()` stays valid.

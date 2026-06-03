@@ -217,9 +217,10 @@ BEGIN
                                      WHERE n.nspname = 'pg_catalog' AND t.typname = 'int4')))
       -- Equality-term and order-term extractors — `eq_term` / `ord_term`
       -- on a ste_vec entry and on the encrypted-domain family. Must
-      -- inline so `eql_v2.eq_term(col)` / `eql_v2.ord_term(col)` fold
-      -- into the calling query and match a functional index built on the
-      -- same expression. Name-only match (any arity-1 overload). The
+      -- inline so `eql_v2.eq_term(col)` / `eql_v3.eq_term(col)` /
+      -- `eql_v3.ord_term(col)` fold into the calling query and match a
+      -- functional index built on the same expression. Name-only match
+      -- (any arity-1 overload). The
       -- encrypted-domain overloads are also covered by the identity
       -- predicate's structural skip in the pin loop; these name-only
       -- clauses are kept as belt-and-suspenders.

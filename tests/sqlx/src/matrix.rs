@@ -1517,16 +1517,7 @@ macro_rules! __scalar_matrix_ord_routes_case {
                     "<> must match every non-pivot fixture row (want {expected_neq}, got {neq_count})",
                 );
 
-                // VALIDITY, NOT PREFERENCE: this runs with
-                // `enable_seqscan = off` (set above) on the ~17-row fixture,
-                // so the planner picks the only usable alternative. A green
-                // assertion proves the `eql_v3.ord_term` functional btree is
-                // *usable* for `=` with no hm present, NOT that the planner
-                // would *prefer* it at realistic scale. Cost-preference lives
-                // in the `*_scale_preference_*` tests
-                // (`#[cfg(feature = "scale")]`, OFF in PR CI). See the module
-                // header on `assert_index_scan_uses` for the full caveat.
-                //
+                // Validity only: enable_seqscan=off proves the functional index is usable here; scale tests cover planner preference.
                 // Node-type-aware (not a name substring): we require a genuine
                 // Index/Index-Only/Bitmap-Index-Scan node referencing `index`,
                 // so an incidental textual mention of the index name in an
@@ -1677,17 +1668,7 @@ macro_rules! __scalar_matrix_index_case {
                     $crate::scalar_domains::fetch_fixture_payload::<$scalar>(&pool, pivot).await?;
                 let lit = $crate::scalar_domains::sql_string_literal(&payload);
 
-                // VALIDITY, NOT PREFERENCE: `enable_seqscan = off` is set
-                // above and the table holds only the ~17 fixture rows, so the
-                // planner has no cheaper option than the functional index.
-                // These arms therefore prove the index is *usable* for each
-                // (op, rhs-cast) shape — that the operator resolves through
-                // `{extractor}` and produces a real index-scan node — NOT that
-                // the planner would *prefer* the index under realistic costs.
-                // Cost-preference is proven ONLY by the `*_scale_preference_*`
-                // tests (`#[cfg(feature = "scale")]`), which are OFF in default
-                // PR CI. See the module header on `assert_index_scan_uses`.
-                //
+                // Validity only: enable_seqscan=off proves the functional index is usable here; scale tests cover planner preference.
                 // The assertion is node-type-aware (Index / Index Only /
                 // Bitmap Index Scan referencing `index`), not a bare substring
                 // match on the text plan, so an index name that merely appears

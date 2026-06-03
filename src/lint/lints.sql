@@ -119,14 +119,9 @@ AS $$
     JOIN pg_language lang_l ON lang_l.oid = p.prolang
   ),
 
-  -- Encrypted-domain blockers: functions in `eql_v2` whose body contains
-  -- one of the two blocker markers emitted by the codegen
-  -- (`encrypted_domain_unsupported_bool` for boolean blockers; the literal
-  -- `is not supported for` for path-operator blockers) AND that take at
-  -- least one `public.eql_v2_*` domain over jsonb argument. The argument
-  -- filter excludes the shared `encrypted_domain_unsupported_bool(text,
-  -- text)` helper itself, which contains the marker in its body but is
-  -- not a blocker.
+  -- Encrypted-domain blockers: functions in EQL schemas whose body contains a
+  -- blocker marker and that take at least one jsonb-backed encrypted-domain
+  -- argument (`eql_v3.*` or `public.eql_v2_*`).
   encrypted_domain_blockers AS (
     SELECT
       p.oid                                        AS oid,

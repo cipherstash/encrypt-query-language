@@ -149,14 +149,10 @@ impl<'a> QueryAssertion<'a> {
     }
 }
 
-/// Assert a `sqlx::Error` is a database error with the given SQLSTATE,
-/// optionally with the given constraint name. Includes the actual error
-/// in the panic message so a failing test prints *why* it failed, not
-/// just *that* it failed — `assert!(result.is_err(), "…")` swallows the
-/// underlying error so a constraint engagement against the wrong
-/// constraint or SQLSTATE passes silently.
+/// Assert that a sqlx error is a database error with the expected SQLSTATE and,
+/// optionally, constraint name. Panics include the actual database message for diagnosis.
 ///
-/// # SQLSTATEs commonly seen on encrypted columns
+/// # Common SQLSTATEs
 /// - `23505` — unique_violation
 /// - `23502` — not_null_violation
 /// - `23514` — check_violation

@@ -1,4 +1,4 @@
--- REFERENCE: hand-written parity baseline for crates/eql-codegen — see ../README.md
+-- REFERENCE: hand-maintained parity baseline for crates/eql-codegen - see ../README.md
 -- AUTOMATICALLY GENERATED FILE.
 -- REQUIRE: src/schema-v3.sql
 

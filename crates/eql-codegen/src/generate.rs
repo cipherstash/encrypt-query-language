@@ -578,7 +578,7 @@ mod tests {
         );
     }
 
-    // --- Coarsened footgun invariant guards (whole-file scans) ---
+    // --- Whole-file invariant guards ---
 
     #[test]
     fn blockers_are_never_strict_and_always_plpgsql() {
@@ -696,8 +696,9 @@ mod tests {
                 terms: &[],
             },
         );
-        assert_eq!(block.typname, "int4_q"); // no quote present → unchanged
-                                             // keys are sql_str-escaped key tokens; none should carry a bare unescaped quote.
+        // No quote present, so the escaped typname is unchanged.
+        assert_eq!(block.typname, "int4_q");
+        // Generated key tokens should not contain bare, unescaped quotes.
         assert!(block.keys.iter().all(|k| !k.contains("o'")));
     }
 }
