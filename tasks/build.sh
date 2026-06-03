@@ -177,7 +177,7 @@ cat tasks/uninstall-protect.sql >> release/cipherstash-encrypt-protect-uninstall
 # ever pins eql_v2 functions), so appending it would both fail a clean v3
 # install and break the self-containment grep.
 find src/v3 -type f -path "*.sql" ! -path "*_test.sql" | while IFS= read -r sql_file; do
-    echo $sql_file
+    echo "$sql_file"
 
     echo "$sql_file $sql_file" >> src/deps-v3.txt
 
