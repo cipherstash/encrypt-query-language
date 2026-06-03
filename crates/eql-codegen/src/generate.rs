@@ -25,7 +25,7 @@ fn arg_b_name(symbol: &str) -> &'static str {
 
 /// REQUIRE path for a type's _types.sql. Port of `_types_path`.
 fn types_path(token: &str) -> String {
-    format!("src/encrypted_domain/{token}/{token}_types.sql")
+    format!("src/v3/scalars/{token}/{token}_types.sql")
 }
 
 /// Body for <T>_types.sql: every domain in one idempotent DO block.
@@ -50,10 +50,9 @@ pub fn render_types_file(spec: &ScalarSpec) -> String {
 /// REQUIRE edges for a domain's _functions.sql. Port of `_functions_requires`.
 fn functions_requires(token: &str, terms: &[Term]) -> Vec<String> {
     let mut reqs = vec![
-        "src/schema.sql".to_string(),
-        "src/schema-v3.sql".to_string(),
+        "src/v3/schema.sql".to_string(),
         types_path(token),
-        "src/encrypted_domain/functions.sql".to_string(),
+        "src/v3/scalars/functions.sql".to_string(),
     ];
     for extra in Term::term_requires(terms) {
         if !reqs.iter().any(|r| r == extra) {
@@ -163,9 +162,9 @@ pub fn render_operators_file(token: &str, domain: &DomainSpec) -> String {
 
     let ctx = OperatorsContext {
         requires: vec![
-            "src/schema-v3.sql".to_string(),
+            "src/v3/schema.sql".to_string(),
             types_path(token),
-            format!("src/encrypted_domain/{token}/{name}_functions.sql"),
+            format!("src/v3/scalars/{token}/{name}_functions.sql"),
         ],
         token: token.to_string(),
         name,
@@ -190,10 +189,10 @@ pub fn render_aggregates_file(token: &str, domain: &DomainSpec) -> Option<String
     let dom = domain_name(&name);
     let ctx = AggregatesContext {
         requires: vec![
-            "src/schema-v3.sql".to_string(),
+            "src/v3/schema.sql".to_string(),
             types_path(token),
-            format!("src/encrypted_domain/{token}/{name}_functions.sql"),
-            format!("src/encrypted_domain/{token}/{name}_operators.sql"),
+            format!("src/v3/scalars/{token}/{name}_functions.sql"),
+            format!("src/v3/scalars/{token}/{name}_operators.sql"),
         ],
         token: token.to_string(),
         name,
@@ -261,7 +260,7 @@ pub fn generate_type(spec: &ScalarSpec, out_dir: &Path) -> Result<Vec<PathBuf>, 
 pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
     for spec in eql_scalars::CATALOG {
         let token = spec.token;
-        let out_dir = out_root.join("src").join("encrypted_domain").join(token);
+        let out_dir = out_root.join("src").join("v3").join("scalars").join(token);
         let written = generate_type(spec, &out_dir)?;
 
         for p in &written {
@@ -475,7 +474,7 @@ mod tests {
     #[test]
     fn types_file_has_all_four_domains() {
         let sql = render_types_file(spec("int4"));
-        assert!(sql.contains("-- REQUIRE: src/schema-v3.sql"));
+        assert!(sql.contains("-- REQUIRE: src/v3/schema.sql"));
         for dom in ["int4", "int4_eq", "int4_ord_ore", "int4_ord"] {
             assert!(
                 sql.contains(&format!("CREATE DOMAIN eql_v3.{dom} AS jsonb")),
@@ -504,7 +503,7 @@ mod tests {
         let sql = render_functions_file(s.token, domain(s, "_eq"));
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
         assert!(sql.contains("CREATE FUNCTION eql_v3.eq_term(a eql_v3.int4_eq)"));
-        assert!(sql.contains("RETURNS eql_v2.hmac_256"));
+        assert!(sql.contains("RETURNS eql_v3.hmac_256"));
         assert_eq!(
             sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
                 .count(),
@@ -520,7 +519,7 @@ mod tests {
         let sql = render_functions_file(s.token, domain(s, "_ord"));
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
         assert!(sql.contains("CREATE FUNCTION eql_v3.ord_term(a eql_v3.int4_ord)"));
-        assert!(sql.contains("RETURNS eql_v2.ore_block_u64_8_256"));
+        assert!(sql.contains("RETURNS eql_v3.ore_block_u64_8_256"));
         assert_eq!(
             sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
                 .count(),
@@ -553,9 +552,9 @@ mod tests {
         assert_eq!(sql.matches("CREATE AGGREGATE").count(), 2);
         assert!(sql.contains("eql_v3.min_sfunc"));
         assert!(sql.contains("eql_v3.max_sfunc"));
-        assert!(sql.contains("-- REQUIRE: src/encrypted_domain/int4/int4_ord_operators.sql"));
-        assert!(sql.contains("-- REQUIRE: src/encrypted_domain/int4/int4_ord_functions.sql"));
-        assert!(sql.contains("-- REQUIRE: src/encrypted_domain/int4/int4_types.sql"));
+        assert!(sql.contains("-- REQUIRE: src/v3/scalars/int4/int4_ord_operators.sql"));
+        assert!(sql.contains("-- REQUIRE: src/v3/scalars/int4/int4_ord_functions.sql"));
+        assert!(sql.contains("-- REQUIRE: src/v3/scalars/int4/int4_types.sql"));
     }
 
     #[test]

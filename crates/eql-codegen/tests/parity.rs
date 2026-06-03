@@ -36,7 +36,7 @@ fn rust_generator_matches_int4_golden_files() {
     eql_codegen::generate::generate_all(&out).expect("rust generate_all");
 
     let ref_dir = root.join("tests/codegen/reference/int4");
-    let gen_dir = out.join("src/encrypted_domain/int4");
+    let gen_dir = out.join("src/v3/scalars/int4");
     for entry in fs::read_dir(&ref_dir).unwrap() {
         let path = entry.unwrap().path();
         if path.extension().and_then(|e| e.to_str()) != Some("sql") {
