@@ -5,6 +5,8 @@
 #                         truth for the Rust generator (Plan 2) and the SQLx test
 #                         harness (Plan 3).
 #   crates/eql-codegen  — the SQL generator binary (stub here; Plan 2 fills it in).
+#   crates/eql-tests-macros — proc-macros expanding the single scalar-harness
+#                         list into the per-type SQLx-matrix wiring.
 #   tests/sqlx          — the existing `eql_tests` SQLx integration crate.
 #
 # resolver = "2" keeps the heavy test-crate feature set (sqlx/tokio/cipherstash-
@@ -17,6 +19,7 @@ resolver = "2"
 members = [
     "crates/eql-scalars",
     "crates/eql-codegen",
+    "crates/eql-tests-macros",
     "tests/sqlx",
 ]
 default-members = ["tests/sqlx"]

@@ -14,6 +14,7 @@ jsonschema = { version = "0.46.4", default-features = false }
 cipherstash-client = { version = "0.35", features = ["tokio"] }
 paste = "1"
 eql-scalars = { path = "../../crates/eql-scalars" }
+eql-tests-macros = { path = "../../crates/eql-tests-macros" }
 
 [dev-dependencies]
 # None needed - tests live in this crate

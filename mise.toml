@@ -110,18 +110,20 @@ description = "Compile, lint and test the std-only Rust workspace crates (no dat
 dir = "{{config_root}}"
 run = """
 #!/usr/bin/env bash
-# eql-scalars / eql-codegen are the lean workspace members. Scope explicitly to
-# them (NOT --workspace): a workspace-wide test would drag in tests/sqlx, whose
-# suite needs Postgres + CS_* secrets and is already covered by the `test` job.
-# clippy is likewise scoped — a workspace clippy recompiles the heavy
-# sqlx/tokio/cipherstash-client tree for no added coverage of these crates.
+# eql-scalars / eql-codegen / eql-tests-macros are the lean workspace members.
+# Scope explicitly to them (NOT --workspace): a workspace-wide test would drag
+# in tests/sqlx, whose suite needs Postgres + CS_* secrets and is already
+# covered by the `test` job. eql-tests-macros only pulls syn/quote/proc-macro2,
+# so it stays in the lean set. clippy is likewise scoped — a workspace clippy
+# recompiles the heavy sqlx/tokio/cipherstash-client tree for no added coverage
+# of these crates.
 # bash is pinned via the `#!/usr/bin/env bash` shebang above (mise honors a
 # `#!` first line), so `set -o pipefail` is available regardless of the runner's
 # /bin/sh (dash on the CI images).
 set -euo pipefail
 cargo fmt --check
-cargo clippy -p eql-scalars -p eql-codegen --all-targets -- -D warnings
-cargo test -p eql-scalars -p eql-codegen
+cargo clippy -p eql-scalars -p eql-codegen -p eql-tests-macros --all-targets -- -D warnings
+cargo test -p eql-scalars -p eql-codegen -p eql-tests-macros
 """
 
 [tasks."test:matrix:inventory"]

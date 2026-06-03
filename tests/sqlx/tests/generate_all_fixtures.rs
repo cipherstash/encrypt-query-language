@@ -14,22 +14,13 @@
 #![cfg(feature = "fixture-gen")]
 
 use eql_scalars::CATALOG;
-use eql_tests::fixtures;
 
-/// Map a catalog token to its fixture generator and run it. A token present in
-/// the catalog but missing here is a wiring gap — fail loudly so a new scalar
-/// type cannot silently skip fixture generation.
-async fn generate_for_token(token: &str) -> anyhow::Result<()> {
-    match token {
-        "int2" => fixtures::eql_v2_int2::spec().run().await,
-        "int4" => fixtures::eql_v2_int4::spec().run().await,
-        other => anyhow::bail!(
-            "no fixture generator wired for catalog token '{other}'. \
-             Add an arm to generate_for_token in tests/sqlx/tests/generate_all_fixtures.rs \
-             (and the eql_v2_{other} fixture module). See the encrypted-domain spec §9."
-        ),
-    }
-}
+// `generate_for_token(token: &str) -> anyhow::Result<()>` is generated from the
+// single harness list in `tests/sqlx/src/scalar_harness.rs`: one match arm per
+// token (`"int4" => fixtures::eql_v2_int4::spec().run().await`) plus a loud
+// catch-all. A catalog token absent from that list hits the catch-all and fails
+// the generator loudly, so a new scalar type cannot silently skip generation.
+eql_tests::scalar_harness!(fixture_dispatch);
 
 #[tokio::test]
 #[ignore = "generator — run via `mise run fixture:generate:all`"]
