@@ -371,6 +371,13 @@ const INT2_FIXTURES: &[Fixture] = fixtures!(int i16;
     Min, N(-30000), N(-100), N(-1), Zero, N(1), N(2), N(5), N(10), N(17),
     N(25), N(42), N(50), N(100), N(250), N(1000), N(9999), N(30000), Max);
 
+/// int8 fixture plaintexts — the int4 set plus two values beyond the i32 range
+/// (`±5_000_000_000`) so the matrix exercises the full 64-bit width. `N(..)`
+/// literals are range-checked against `i64` at compile time.
+const INT8_FIXTURES: &[Fixture] = fixtures!(int i64;
+    Min, N(-5000000000), N(-100), N(-1), Zero, N(1), N(2), N(5), N(10), N(17),
+    N(25), N(42), N(50), N(100), N(250), N(1000), N(9999), N(5000000000), Max);
+
 const INT4: ScalarSpec = ScalarSpec {
     token: "int4",
     kind: ScalarKind::I32,
@@ -385,9 +392,16 @@ const INT2: ScalarSpec = ScalarSpec {
     fixtures: INT2_FIXTURES,
 };
 
+const INT8: ScalarSpec = ScalarSpec {
+    token: "int8",
+    kind: ScalarKind::I64,
+    domains: ORDERED_INT_DOMAINS,
+    fixtures: INT8_FIXTURES,
+};
+
 /// The scalar catalog — the single source of truth. Order is significant (it
 /// drives generation order). New types are appended as their SQL surface lands.
-pub const CATALOG: &[ScalarSpec] = &[INT4, INT2];
+pub const CATALOG: &[ScalarSpec] = &[INT4, INT2, INT8];
 
 /// Materialise an integer scalar's fixtures into a typed `&'static` slice at
 /// compile time. This is the **single-sourced** plaintext list the SQLx test
@@ -425,6 +439,7 @@ macro_rules! int_values {
 
 int_values!(INT4_VALUES, i32, INT4);
 int_values!(INT2_VALUES, i16, INT2);
+int_values!(INT8_VALUES, i64, INT8);
 
 #[cfg(test)]
 mod rust_tests {
@@ -755,9 +770,9 @@ mod catalog_tests {
     }
 
     #[test]
-    fn catalog_has_int4_int2_in_order() {
+    fn catalog_has_int4_int2_int8_in_order() {
         let tokens: Vec<&str> = CATALOG.iter().map(|s| s.token).collect();
-        assert_eq!(tokens, vec!["int4", "int2"]);
+        assert_eq!(tokens, vec!["int4", "int2", "int8"]);
     }
 
     #[test]
@@ -842,6 +857,7 @@ mod values_tests {
     fn materialised_values_match_resolved_fixtures() {
         check(&INT4, INT4_VALUES);
         check(&INT2, INT2_VALUES);
+        check(&INT8, INT8_VALUES);
     }
 }
 

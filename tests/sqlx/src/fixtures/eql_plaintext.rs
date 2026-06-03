@@ -55,6 +55,7 @@ pub struct PlaintextSqlType(&'static str);
 impl PlaintextSqlType {
     pub const INTEGER: PlaintextSqlType = PlaintextSqlType("integer");
     pub const SMALLINT: PlaintextSqlType = PlaintextSqlType("smallint");
+    pub const BIGINT: PlaintextSqlType = PlaintextSqlType("bigint");
 
     pub fn as_str(&self) -> &'static str {
         self.0
@@ -76,7 +77,8 @@ const fn cast_for_kind(kind: ScalarKind) -> Cast {
     match kind {
         ScalarKind::I32 => Cast::INT,
         ScalarKind::I16 => Cast::SMALL_INT,
-        ScalarKind::I64 | ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
+        ScalarKind::I64 => Cast::BIG_INT,
+        ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
             panic!("EqlPlaintext is only implemented for integer scalar kinds")
         }
     }
@@ -89,7 +91,8 @@ const fn plaintext_sql_type_for_kind(kind: ScalarKind) -> PlaintextSqlType {
     match kind {
         ScalarKind::I32 => PlaintextSqlType::INTEGER,
         ScalarKind::I16 => PlaintextSqlType::SMALLINT,
-        ScalarKind::I64 | ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
+        ScalarKind::I64 => PlaintextSqlType::BIGINT,
+        ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
             panic!("EqlPlaintext is only implemented for integer scalar kinds")
         }
     }
@@ -99,6 +102,7 @@ mod sealed {
     pub trait Sealed {}
     impl Sealed for i32 {}
     impl Sealed for i16 {}
+    impl Sealed for i64 {}
 }
 
 /// A Rust type usable as a fixture `plaintext` value, carrying its EQL cast
@@ -139,6 +143,14 @@ impl EqlPlaintext for i16 {
 
     fn to_plaintext(&self) -> Plaintext {
         Plaintext::SmallInt(Some(*self))
+    }
+}
+
+impl EqlPlaintext for i64 {
+    const KIND: ScalarKind = ScalarKind::I64;
+
+    fn to_plaintext(&self) -> Plaintext {
+        Plaintext::BigInt(Some(*self))
     }
 }
 
@@ -189,6 +201,26 @@ mod tests {
         match 42_i16.to_plaintext() {
             Plaintext::SmallInt(Some(value)) => assert_eq!(value, 42),
             other => panic!("expected Plaintext::SmallInt(Some(42)), got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn i64_casts_to_big_int() {
+        assert_eq!(<i64 as EqlPlaintext>::CAST.as_str(), "big_int");
+    }
+
+    #[test]
+    fn i64_plaintext_sql_type_is_bigint() {
+        assert_eq!(<i64 as EqlPlaintext>::PLAINTEXT_SQL_TYPE.as_str(), "bigint");
+    }
+
+    #[test]
+    fn i64_to_plaintext_wraps_in_big_int_variant() {
+        // i64 must lift into the BigInt variant so the fixture driver
+        // encrypts it under the `big_int` cast, not `int`.
+        match 42_i64.to_plaintext() {
+            Plaintext::BigInt(Some(value)) => assert_eq!(value, 42),
+            other => panic!("expected Plaintext::BigInt(Some(42)), got {other:?}"),
         }
     }
 }
