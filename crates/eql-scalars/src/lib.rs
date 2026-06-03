@@ -180,10 +180,10 @@ impl Term {
     /// SQL `-- REQUIRE:` edges this term pulls in, in catalog order.
     pub const fn requires(self) -> &'static [&'static str] {
         match self {
-            Term::Hm => &["src/hmac_256/functions.sql"],
+            Term::Hm => &["src/v3/sem/hmac_256/functions.sql"],
             Term::Ore => &[
-                "src/ore_block_u64_8_256/functions.sql",
-                "src/ore_block_u64_8_256/operators.sql",
+                "src/v3/sem/ore_block_u64_8_256/functions.sql",
+                "src/v3/sem/ore_block_u64_8_256/operators.sql",
             ],
         }
     }
@@ -517,7 +517,7 @@ mod term_tests {
         assert_eq!(hm.ctor(), "hmac_256");
         assert_eq!(hm.role(), "eq");
         assert_eq!(hm.operators(), &["=", "<>"]);
-        assert_eq!(hm.requires(), &["src/hmac_256/functions.sql"]);
+        assert_eq!(hm.requires(), &["src/v3/sem/hmac_256/functions.sql"]);
     }
 
     #[test]
@@ -532,8 +532,8 @@ mod term_tests {
         assert_eq!(
             ore.requires(),
             &[
-                "src/ore_block_u64_8_256/functions.sql",
-                "src/ore_block_u64_8_256/operators.sql",
+                "src/v3/sem/ore_block_u64_8_256/functions.sql",
+                "src/v3/sem/ore_block_u64_8_256/operators.sql",
             ]
         );
     }
@@ -571,9 +571,9 @@ mod term_helper_tests {
         assert_eq!(
             Term::term_requires(&[Term::Ore, Term::Ore, Term::Hm]),
             vec![
-                "src/ore_block_u64_8_256/functions.sql",
-                "src/ore_block_u64_8_256/operators.sql",
-                "src/hmac_256/functions.sql",
+                "src/v3/sem/ore_block_u64_8_256/functions.sql",
+                "src/v3/sem/ore_block_u64_8_256/operators.sql",
+                "src/v3/sem/hmac_256/functions.sql",
             ]
         );
         assert!(Term::term_requires(&[]).is_empty());
