@@ -64,6 +64,13 @@ pub enum ScalarKind {
     /// live on `BoundedIntKind`, which `Date` cannot be, so they are
     /// unreachable for it by construction rather than by a runtime panic.
     Date,
+    /// UTC timestamp (`chrono::DateTime<Utc>`). Ordered like the integer kinds
+    /// via ORE, but string-backed (RFC3339) at the catalog layer and with no
+    /// i128 range — so it is *not* `is_int()` and the bounded-numeric accessors
+    /// panic for it, exactly like the other non-integer kinds. UTC-normalized:
+    /// cipherstash has no tz-preserving type, so it maps to the `timestamp`
+    /// cast and the SQL `timestamp with time zone` plaintext type.
+    Timestamptz,
 }
 
 /// A fixed index term known to the scalar materializer.
@@ -99,6 +106,10 @@ pub enum Fixture {
     /// the string is parsed into a `chrono::NaiveDate` in the SQLx harness, not
     /// here. Distinct by literal, like the other string-backed fixtures.
     Date(&'static str),
+    /// An RFC3339 UTC timestamp string (`"1970-01-01T00:00:00Z"`). The catalog
+    /// stays zero-dep, so the string is parsed into a `chrono::DateTime<Utc>` in
+    /// the SQLx harness, not here. Distinct by literal, like `Date`.
+    Timestamptz(&'static str),
 }
 
 /// One generated public domain: a suffix appended to the type token and the
@@ -140,6 +151,7 @@ macro_rules! fixtures {
     (numeric; $($s:literal),* $(,)?) => { &[$(Fixture::Numeric($s)),*] };
     (jsonb;   $($s:literal),* $(,)?) => { &[$(Fixture::Jsonb($s)),*] };
     (date;    $($s:literal),* $(,)?) => { &[$(Fixture::Date($s)),*] };
+    (timestamptz; $($s:literal),* $(,)?) => { &[$(Fixture::Timestamptz($s)),*] };
 }
 
 /// Domains shared by every ordered-integer scalar, in manifest file order:
@@ -160,6 +172,24 @@ const ORDERED_INT_DOMAINS: &[DomainSpec] = &[
     DomainSpec {
         suffix: "_ord",
         terms: &[Term::Ore],
+    },
+];
+
+/// Equality-only domains: storage (no terms) + `_eq` (hm). Used by scalar types
+/// that can hash for equality but cannot (yet) be ordered. `timestamptz` is the
+/// first such type: cipherstash encrypts `Plaintext::Timestamp` at native
+/// 12-block ORE width, but EQL's only ORE comparator
+/// (`eql_v2.compare_ore_block_u64_8_256_term`) is hardcoded to 8 blocks, so an
+/// ordered domain would silently mis-order. Ordering is deferred until a
+/// wide-ORE (12-block) term exists.
+const EQ_ONLY_DOMAINS: &[DomainSpec] = &[
+    DomainSpec {
+        suffix: "",
+        terms: &[],
+    },
+    DomainSpec {
+        suffix: "_eq",
+        terms: &[Term::Hm],
     },
 ];
 
@@ -195,6 +225,21 @@ const DATE_FIXTURES: &[Fixture] = fixtures!(date;
     "1980-02-29", "1991-11-09", "1999-12-31", "2000-01-01", "2004-02-29",
     "2012-06-30", "2016-03-15", "2020-10-21", "2024-02-29", "2038-01-19",
     "2099-12-31");
+
+/// timestamptz fixture plaintexts — RFC3339 UTC strings, parsed into
+/// `chrono::DateTime<Utc>` in the SQLx harness (the catalog stays zero-dep).
+/// The three temporal pivots MUST be present verbatim: `"1900-01-01T00:00:00Z"`
+/// (min_pivot), `"1970-01-01T00:00:00Z"` (zero = `DateTime::<Utc>::default()`,
+/// the Unix epoch), and `"2099-12-31T23:59:59Z"` (max_pivot) — the matrix
+/// fetches each one's ciphertext via `fetch_fixture_payload`, which fails loudly
+/// if a row is absent. The interior timestamps span varied dates AND times of
+/// day so range operators yield distinguishable counts. All distinct.
+const TIMESTAMPTZ_FIXTURES: &[Fixture] = fixtures!(timestamptz;
+    "1900-01-01T00:00:00Z", "1950-07-15T06:30:00Z", "1969-12-31T23:59:59Z",
+    "1970-01-01T00:00:00Z", "1970-01-01T00:00:01Z", "1985-04-12T23:20:50Z",
+    "1999-12-31T23:59:59Z", "2000-01-01T00:00:00Z", "2004-02-29T12:00:00Z",
+    "2012-06-30T11:59:59Z", "2016-03-15T08:15:30Z", "2020-10-21T14:45:00Z",
+    "2024-02-29T17:30:45Z", "2038-01-19T03:14:07Z", "2099-12-31T23:59:59Z");
 
 const INT4: ScalarSpec = ScalarSpec {
     token: "int4",
@@ -232,9 +277,30 @@ pub const DATE: ScalarSpec = ScalarSpec {
     fixtures: DATE_FIXTURES,
 };
 
+/// `timestamptz` — an **equality-only** (UTC-normalized) non-integer scalar.
+/// Uses `EQ_ONLY_DOMAINS` (storage + `_eq`) rather than the four-domain ordered
+/// shape: cipherstash encrypts `Plaintext::Timestamp` at native 12-block ORE
+/// width, but EQL's only ORE comparator
+/// (`eql_v2.compare_ore_block_u64_8_256_term`) is hardcoded to 8 blocks, so an
+/// ordered timestamptz domain would silently mis-order. Ordering is deferred to
+/// a future PR that adds a wide-ORE (12-block) term. The three "pivot" fixture
+/// values are retained as equality pivots; the kind stays ordered-shaped
+/// (carries a rust type, no i128 range) so the harness can parse them.
+///
+/// Public (like `DATE`) because the SQLx harness reads `TIMESTAMPTZ.fixtures`
+/// directly to parse the RFC3339 strings into `chrono::DateTime<Utc>` at
+/// runtime — there is no `TIMESTAMPTZ_VALUES` const (chrono is not
+/// `const`-friendly and `eql-scalars` stays zero-dep).
+pub const TIMESTAMPTZ: ScalarSpec = ScalarSpec {
+    token: "timestamptz",
+    kind: ScalarKind::Timestamptz,
+    domains: EQ_ONLY_DOMAINS,
+    fixtures: TIMESTAMPTZ_FIXTURES,
+};
+
 /// The scalar catalog — the single source of truth. Order is significant (it
 /// drives generation order). New types are appended as their SQL surface lands.
-pub const CATALOG: &[ScalarSpec] = &[INT4, INT2, INT8, DATE];
+pub const CATALOG: &[ScalarSpec] = &[INT4, INT2, INT8, DATE, TIMESTAMPTZ];
 
 /// Materialise an integer scalar's fixtures into a typed `&'static` slice at
 /// compile time. This is the **single-sourced** plaintext list the SQLx test
