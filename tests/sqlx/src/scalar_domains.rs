@@ -205,6 +205,31 @@ temporal_values! {
     sql_lit   = |v| format!("'{v}'"),
 }
 
+// `timestamptz`'s `ScalarType` wiring, generated from its catalog row by the
+// same `temporal_values!` path as `date`. timestamptz is equality-only (its
+// catalog row uses the eq-only domain shape), but the *value* wiring is
+// identical to any temporal scalar: RFC3339 strings parsed once into
+// `DateTime<Utc>` behind `timestamptz_values()`. The pivots are retained as the
+// three equality anchors the matrix sweeps.
+temporal_values! {
+    cell      = TIMESTAMPTZ_VALUES_CELL,
+    accessor  = timestamptz_values,
+    rust_type = chrono::DateTime<chrono::Utc>,
+    spec      = eql_scalars::TIMESTAMPTZ,
+    variant   = Timestamptz,
+    pg_type   = "timestamptz",
+    parse     = |s| chrono::DateTime::parse_from_rfc3339(s)
+        .expect("catalog timestamptz fixture must be RFC3339")
+        .with_timezone(&chrono::Utc),
+    min_pivot = "1900-01-01T00:00:00Z"
+        .parse()
+        .expect("1900-01-01T00:00:00Z is a valid timestamp"),
+    max_pivot = "2099-12-31T23:59:59Z"
+        .parse()
+        .expect("2099-12-31T23:59:59Z is a valid timestamp"),
+    sql_lit   = |v| format!("'{}'", v.to_rfc3339()),
+}
+
 /// Per-domain capability + payload shape. Storage carries no terms, `Eq`
 /// adds `hm`, `Ord`/`OrdOre` add `ob`. `Ord` and `OrdOre` are deliberate
 /// twins — same operator surface, different SQL domain names — for the
