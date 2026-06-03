@@ -7,6 +7,20 @@ use eql_scalars::{DomainSpec, ScalarSpec, Term};
 use crate::context::{domain_name, is_ord_capable};
 use crate::operator_surface::OPERATORS;
 
+/// REQUIRE edge for the v3 schema file — pulled in by every generated file.
+const V3_SCHEMA: &str = "src/v3/schema.sql";
+/// REQUIRE edge for the hand-written shared blocker helper.
+const V3_SCALARS_BLOCKER: &str = "src/v3/scalars/functions.sql";
+/// Root of the generated per-token scalar surface. The single place the tree
+/// layout is spelled out — keeps `types_path`/`scalar_path` and the REQUIRE
+/// vecs from drifting if the surface ever relocates again.
+const V3_SCALARS_DIR: &str = "src/v3/scalars";
+
+/// REQUIRE path for a generated file `file` under a token's scalar dir.
+fn scalar_path(token: &str, file: &str) -> String {
+    format!("{V3_SCALARS_DIR}/{token}/{file}")
+}
+
 /// The full domain name (token + suffix). suffix "" => bare token.
 fn full_name(token: &str, suffix: &str) -> String {
     format!("{token}{suffix}")
@@ -25,7 +39,7 @@ fn arg_b_name(symbol: &str) -> &'static str {
 
 /// REQUIRE path for a type's _types.sql. Port of `_types_path`.
 fn types_path(token: &str) -> String {
-    format!("src/v3/scalars/{token}/{token}_types.sql")
+    scalar_path(token, &format!("{token}_types.sql"))
 }
 
 /// Body for <T>_types.sql: every domain in one idempotent DO block.
@@ -50,9 +64,9 @@ pub fn render_types_file(spec: &ScalarSpec) -> String {
 /// REQUIRE edges for a domain's _functions.sql. Port of `_functions_requires`.
 fn functions_requires(token: &str, terms: &[Term]) -> Vec<String> {
     let mut reqs = vec![
-        "src/v3/schema.sql".to_string(),
+        V3_SCHEMA.to_string(),
         types_path(token),
-        "src/v3/scalars/functions.sql".to_string(),
+        V3_SCALARS_BLOCKER.to_string(),
     ];
     for extra in Term::term_requires(terms) {
         if !reqs.iter().any(|r| r == extra) {
@@ -162,9 +176,9 @@ pub fn render_operators_file(token: &str, domain: &DomainSpec) -> String {
 
     let ctx = OperatorsContext {
         requires: vec![
-            "src/v3/schema.sql".to_string(),
+            V3_SCHEMA.to_string(),
             types_path(token),
-            format!("src/v3/scalars/{token}/{name}_functions.sql"),
+            scalar_path(token, &format!("{name}_functions.sql")),
         ],
         token: token.to_string(),
         name,
@@ -189,10 +203,10 @@ pub fn render_aggregates_file(token: &str, domain: &DomainSpec) -> Option<String
     let dom = domain_name(&name);
     let ctx = AggregatesContext {
         requires: vec![
-            "src/v3/schema.sql".to_string(),
+            V3_SCHEMA.to_string(),
             types_path(token),
-            format!("src/v3/scalars/{token}/{name}_functions.sql"),
-            format!("src/v3/scalars/{token}/{name}_operators.sql"),
+            scalar_path(token, &format!("{name}_functions.sql")),
+            scalar_path(token, &format!("{name}_operators.sql")),
         ],
         token: token.to_string(),
         name,
@@ -260,7 +274,7 @@ pub fn generate_type(spec: &ScalarSpec, out_dir: &Path) -> Result<Vec<PathBuf>, 
 pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
     for spec in eql_scalars::CATALOG {
         let token = spec.token;
-        let out_dir = out_root.join("src").join("v3").join("scalars").join(token);
+        let out_dir = out_root.join(V3_SCALARS_DIR).join(token);
         let written = generate_type(spec, &out_dir)?;
 
         for p in &written {
