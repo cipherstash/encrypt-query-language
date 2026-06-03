@@ -171,9 +171,12 @@ fn v3_variant_creates_eql_v3_schema() {
 #[test]
 fn v3_variant_has_no_eql_v2_symbol() {
     let sql = read_release_sql("cipherstash-encrypt-v3.sql");
+    // Reject both schema-qualified refs (`eql_v2.<fn>`) and bare v2 entity names
+    // (`eql_v2_encrypted`, `eql_v2_configuration`, …). Prose mentions like
+    // "the eql_v2 original is unchanged" in doc comments are still allowed.
     assert!(
-        !sql.contains("eql_v2."),
-        "v3 variant must be self-contained (no eql_v2.<symbol> reference)"
+        !sql.contains("eql_v2.") && !sql.contains("eql_v2_"),
+        "v3 variant must be self-contained (no eql_v2.<symbol> or eql_v2_<entity> reference)"
     );
 }
 
