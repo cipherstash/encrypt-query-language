@@ -6,7 +6,7 @@
 --! @brief Operators for {{ dom }}.
 {% for o in operators %}
 CREATE OPERATOR {{ o.symbol }} (
-  FUNCTION = {{ domain_schema }}.{{ o.function_name }},
+  FUNCTION = {{ schema }}.{{ o.function_name }},
   LEFTARG = {{ o.leftarg }}, RIGHTARG = {{ o.rightarg }}{% if o.metadata %},
   {{ o.metadata }}{% endif %}
 );
