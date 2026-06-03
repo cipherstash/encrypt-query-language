@@ -761,40 +761,43 @@ mod catalog_tests {
     }
 
     #[test]
-    fn int4_maps_to_i32_with_four_domains() {
-        let s = scalar("int4");
-        assert_eq!(s.kind, ScalarKind::I32);
-        let suffixes: Vec<&str> = s.domains.iter().map(|d| d.suffix).collect();
-        // File order from int4.toml: storage, _eq, _ord_ore, _ord.
-        assert_eq!(suffixes, vec!["", "_eq", "_ord_ore", "_ord"]);
-    }
-
-    #[test]
-    fn int4_domain_terms_match_manifest() {
-        let s = scalar("int4");
-        assert_eq!(s.domains[0].terms, &[] as &[Term]); // storage
-        assert_eq!(s.domains[1].terms, &[Term::Hm]); // _eq
-        assert_eq!(s.domains[2].terms, &[Term::Ore]); // _ord_ore
-        assert_eq!(s.domains[3].terms, &[Term::Ore]); // _ord
-    }
-
-    #[test]
-    fn int2_rust_type() {
-        assert_eq!(scalar("int2").kind, ScalarKind::I16);
-    }
-
-    #[test]
     fn all_types_share_the_same_domain_shape() {
         // Every scalar declares the same four domains with the same terms;
         // only the token differs (the matrix-snapshot collapse depends on this).
+        // Generic over CATALOG, so it covers every type — including new ones —
+        // and subsumes the old per-type `<T>_maps_to_*_with_four_domains` /
+        // `<T>_domain_terms_match_manifest` tests (which only restated the
+        // catalog literal for one token).
         for s in CATALOG {
-            let suffixes: Vec<&str> = s.domains.iter().map(|d| d.suffix).collect();
+            let shape: Vec<(&str, &[Term])> =
+                s.domains.iter().map(|d| (d.suffix, d.terms)).collect();
             assert_eq!(
-                suffixes,
-                vec!["", "_eq", "_ord_ore", "_ord"],
-                "{} has unexpected domain set",
+                shape,
+                vec![
+                    ("", &[] as &[Term]),
+                    ("_eq", &[Term::Hm][..]),
+                    ("_ord_ore", &[Term::Ore][..]),
+                    ("_ord", &[Term::Ore][..]),
+                ],
+                "{} has unexpected domain shape",
                 s.token
             );
+        }
+    }
+
+    #[test]
+    fn every_int_kind_matches_its_rust_type() {
+        // The kind↔rust-type pairing for every integer scalar, generic over
+        // CATALOG. Replaces the per-type `<T>_maps_to_iNN` / `<T>_rust_type`
+        // restatements.
+        for s in CATALOG.iter().filter(|s| s.kind.is_int()) {
+            let expected = match s.token {
+                "int2" => ScalarKind::I16,
+                "int4" => ScalarKind::I32,
+                "int8" => ScalarKind::I64,
+                other => panic!("unmapped integer scalar token {other}"),
+            };
+            assert_eq!(s.kind, expected, "{} maps to the wrong kind", s.token);
         }
     }
 
@@ -805,116 +808,40 @@ mod catalog_tests {
         assert_eq!(s.domain_name(&s.domains[1]), "int4_eq");
         assert_eq!(s.domain_name(&s.domains[3]), "int4_ord");
     }
-
-    #[test]
-    fn int4_fixtures_match_manifest() {
-        let s = scalar("int4");
-        // From int4.toml [fixture] values, in order.
-        let expected = vec![
-            Fixture::Min,
-            Fixture::Int(-100),
-            Fixture::Int(-1),
-            Fixture::Zero,
-            Fixture::Int(1),
-            Fixture::Int(2),
-            Fixture::Int(5),
-            Fixture::Int(10),
-            Fixture::Int(17),
-            Fixture::Int(25),
-            Fixture::Int(42),
-            Fixture::Int(50),
-            Fixture::Int(100),
-            Fixture::Int(250),
-            Fixture::Int(1000),
-            Fixture::Int(9999),
-            Fixture::Max,
-        ];
-        assert_eq!(s.fixtures, expected.as_slice());
-    }
-
-    #[test]
-    fn int2_fixtures_match_manifest() {
-        let s = scalar("int2");
-        // From int2.toml [fixture] values, in order — includes the wide
-        // ±30000 values that exercise the i16 bounds.
-        assert!(s.fixtures.contains(&Fixture::Int(-30000)));
-        assert!(s.fixtures.contains(&Fixture::Int(30000)));
-        assert_eq!(s.fixtures.first(), Some(&Fixture::Min));
-        assert_eq!(s.fixtures.last(), Some(&Fixture::Max));
-    }
 }
 
 #[cfg(test)]
 mod values_tests {
     use super::*;
 
-    // The exact typed lists the SQLx matrix consumes. These pin the values the
-    // deleted golden `int4_values.rs` / committed `<T>_values.rs` used to pin:
-    // a catalog edit that changes a fixture must update these assertions.
-    #[test]
-    fn int4_values_materialise_to_typed_array() {
+    /// Every materialised `<T>_VALUES` array equals its catalog row's fixtures,
+    /// resolved per kind, in order. Computed from the fixtures — no hardcoded
+    /// expected array — so it cannot drift and adding a type needs only one
+    /// `check(&INTx, INTx_VALUES)` line, not a duplicated golden list. Subsumes
+    /// the old per-type `<T>_values_materialise_to_typed_array` goldens and
+    /// `materialised_values_track_their_fixture_lists`.
+    fn check<T: Copy + Into<i128>>(spec: &ScalarSpec, values: &[T]) {
         assert_eq!(
-            INT4_VALUES,
-            &[
-                i32::MIN,
-                -100,
-                -1,
-                0,
-                1,
-                2,
-                5,
-                10,
-                17,
-                25,
-                42,
-                50,
-                100,
-                250,
-                1000,
-                9999,
-                i32::MAX
-            ]
+            values.len(),
+            spec.fixtures.len(),
+            "{}: value count != fixture count",
+            spec.token
         );
+        for (i, (v, f)) in values.iter().zip(spec.fixtures).enumerate() {
+            assert_eq!(
+                (*v).into(),
+                f.numeric_value(spec.kind)
+                    .expect("integer scalar fixture resolves to a number"),
+                "{}: value[{i}] does not match resolved fixture {f:?}",
+                spec.token
+            );
+        }
     }
 
     #[test]
-    fn int2_values_materialise_to_typed_array() {
-        assert_eq!(
-            INT2_VALUES,
-            &[
-                i16::MIN,
-                -30000,
-                -100,
-                -1,
-                0,
-                1,
-                2,
-                5,
-                10,
-                17,
-                25,
-                42,
-                50,
-                100,
-                250,
-                1000,
-                9999,
-                30000,
-                i16::MAX
-            ]
-        );
-    }
-
-    #[test]
-    fn materialised_values_track_their_fixture_lists() {
-        // One value per fixture, in catalog order; sentinels resolve to extremes.
-        assert_eq!(INT4_VALUES.len(), INT4_FIXTURES.len());
-        assert_eq!(INT2_VALUES.len(), INT2_FIXTURES.len());
-        assert_eq!(INT4_VALUES.first(), Some(&i32::MIN));
-        assert_eq!(INT4_VALUES.last(), Some(&i32::MAX));
-        assert_eq!(INT2_VALUES.first(), Some(&i16::MIN));
-        assert_eq!(INT2_VALUES.last(), Some(&i16::MAX));
-        assert!(INT4_VALUES.contains(&0) && INT2_VALUES.contains(&0));
+    fn materialised_values_match_resolved_fixtures() {
+        check(&INT4, INT4_VALUES);
+        check(&INT2, INT2_VALUES);
     }
 }
 
