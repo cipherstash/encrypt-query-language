@@ -2,6 +2,6 @@
 --! @param {{ e.args[0].name }} {{ e.args[0].ty }}
 --! @param {{ e.args[1].name }} {{ e.args[1].ty }}
 --! @return boolean
-CREATE FUNCTION {{ domain_schema }}.{{ e.function_name }}({{ e.args[0].name }} {{ e.args[0].ty }}, {{ e.args[1].name }} {{ e.args[1].ty }})
+CREATE FUNCTION {{ schema }}.{{ e.function_name }}({{ e.args[0].name }} {{ e.args[0].ty }}, {{ e.args[1].name }} {{ e.args[1].ty }})
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT {{ e.call_a }} {{ e.op }} {{ e.call_b }} $$;

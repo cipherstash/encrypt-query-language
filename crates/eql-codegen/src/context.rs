@@ -49,8 +49,7 @@ pub fn environment() -> minijinja::Environment<'static> {
         include_str!("../templates/aggregates.sql.j2"),
     )
     .expect("aggregates.sql template");
-    env.add_global("domain_schema", DOMAIN_SCHEMA);
-    env.add_global("core_schema", CORE_SCHEMA);
+    env.add_global("schema", SCHEMA);
     env
 }
 
@@ -104,7 +103,7 @@ pub enum FnEntry {
     Extractor {
         ret: String,       // e.g. eql_v2.hmac_256 (selection STAYS in Rust)
         extractor: String, // e.g. eq_term
-        ctor: String,      // e.g. hmac_256 (called as {{ core_schema }}.{{ ctor }})
+        ctor: String,      // e.g. hmac_256 (called as {{ schema }}.{{ ctor }})
     },
     Wrapper {
         op: String,            // SQL operator used in the body, e.g. =
@@ -134,12 +133,12 @@ pub struct FunctionsContext {
 /// Build the inlinable index-extractor entry for a domain term.
 ///
 /// The `RETURNS` type name equals the constructor name (`hmac_256`,
-/// `ore_block_u64_8_256`); qualify it with `CORE_SCHEMA` here so flipping the
-/// core schema moves BOTH the body's constructor call and the declared return
-/// type together (design D12). `Term::returns()` is intentionally not used.
+/// `ore_block_u64_8_256`); qualify it with `SCHEMA` — the same schema as the
+/// body's constructor call — so the declared return type and the call stay in
+/// lockstep. `Term::returns()` is intentionally not used.
 pub fn extractor_entry(term: Term) -> FnEntry {
     FnEntry::Extractor {
-        ret: format!("{CORE_SCHEMA}.{}", term.ctor()),
+        ret: format!("{SCHEMA}.{}", term.ctor()),
         extractor: term.extractor().to_string(),
         ctor: term.ctor().to_string(),
     }
@@ -229,7 +228,7 @@ pub struct AggregatesContext {
 /// The schema-qualified SQL domain type name, e.g. `eql_v3.int4_eq`.
 /// Port of `domain_name`.
 pub fn domain_name(name: &str) -> String {
-    format!("{DOMAIN_SCHEMA}.{name}")
+    format!("{SCHEMA}.{name}")
 }
 
 /// The full domain name from a token + suffix (suffix "" => bare token).
@@ -241,9 +240,9 @@ pub fn full_domain_name(token: &str, suffix: &str) -> String {
 /// Port of `_extract_arg`. `dom` is the schema-qualified domain name.
 pub fn extract_arg(arg_type: &str, extractor: &str, dom: &str, arg: &str) -> String {
     if arg_type == "jsonb" {
-        format!("{DOMAIN_SCHEMA}.{extractor}({arg}::{dom})")
+        format!("{SCHEMA}.{extractor}({arg}::{dom})")
     } else {
-        format!("{DOMAIN_SCHEMA}.{extractor}({arg})")
+        format!("{SCHEMA}.{extractor}({arg})")
     }
 }
 
