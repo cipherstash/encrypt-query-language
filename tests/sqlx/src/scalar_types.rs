@@ -4,7 +4,11 @@
 //! To add a scalar encrypted-domain type to the SQLx matrix, add one
 //! `token => rust_type` line below (plus the catalog row in `eql-scalars` and
 //! the `EqlPlaintext` impl, owned separately — see
-//! `docs/reference/adding-a-scalar-encrypted-domain-type.md` §3).
+//! `docs/reference/adding-a-scalar-encrypted-domain-type.md` §3). A temporal
+//! (chrono-backed) scalar adds a trailing `[temporal]` marker
+//! (`date => chrono::NaiveDate [temporal]`): it hand-writes its `impl
+//! ScalarType` in `scalar_domains.rs` and gets pivot-presence fixture asserts
+//! instead of the integer signed-extreme ones.
 //!
 //! The harness pieces live in three separate compilation contexts (the
 //! `eql-tests` lib, the `encrypted_domain` integration-test binary, and the
@@ -48,6 +52,7 @@ macro_rules! scalar_types {
             int4 => i32,
             int2 => i16,
             int8 => i64,
+            date => chrono::NaiveDate [temporal],
         }
     };
 }

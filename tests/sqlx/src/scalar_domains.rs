@@ -12,6 +12,7 @@
 use anyhow::{bail, Context, Result};
 use sqlx::PgPool;
 use std::fmt::{Debug, Display};
+use std::sync::LazyLock;
 
 /// One impl per scalar type. Two `const`s and the rest defaults.
 pub trait ScalarType:
@@ -39,9 +40,11 @@ pub trait ScalarType:
     /// (`[0]`, `[len / 2]`) without sorting. A lazily-built `Vec` impl
     /// must therefore be built deterministically in that same order.
     ///
-    /// A method rather than a `const` so a scalar whose values can't be
-    /// `const`-constructed can return a borrow of a lazily-built `Vec`;
-    /// integer scalars return their `eql_scalars::<T>_VALUES` const directly.
+    /// A method rather than a `const` because non-integer scalars (e.g.
+    /// `chrono::NaiveDate`, whose `from_ymd_opt` is not `const`) cannot be
+    /// materialised into a const slice; the harness builds those into a
+    /// `LazyLock<Vec<_>>` and returns a borrow of it (see `date_values`).
+    /// Integer scalars return their `eql_scalars::<T>_VALUES` const directly.
     ///
     /// For types driven by `ordered_numeric_matrix!`, the values MUST
     /// include the three pivots (`min_pivot()`, `max_pivot()`, and zero
@@ -51,14 +54,15 @@ pub trait ScalarType:
     fn fixture_values() -> &'static [Self];
 
     /// The low comparison pivot swept by the correctness / cross-shape arms.
-    /// Integer scalars return `Self::MIN`. A trait method (rather than the
-    /// matrix referencing `Self::MIN` directly) so a scalar without an inherent
-    /// `::MIN` const can supply an explicit sentinel; the returned value must be
-    /// present verbatim in `fixture_values()`.
+    /// Integer scalars return `Self::MIN`; temporal scalars return an explicit
+    /// sentinel (e.g. `1900-01-01`). A trait method rather than `Self::MIN`
+    /// because `chrono::DateTime<Utc>` exposes `MAX_UTC`, not an inherent
+    /// `::MAX` const. The pivot must be present verbatim in `fixture_values()`.
     fn min_pivot() -> Self;
 
-    /// The high comparison pivot. Integer scalars return `Self::MAX`. Must be
-    /// present verbatim in `fixture_values()`.
+    /// The high comparison pivot. Integer scalars return `Self::MAX`; temporal
+    /// scalars return an explicit sentinel (e.g. `2099-12-31`). Must be present
+    /// verbatim in `fixture_values()`.
     fn max_pivot() -> Self;
 
     /// `fixtures.eql_v2_<pg_type>`.
@@ -94,12 +98,121 @@ pub trait ScalarType:
     }
 }
 
-// The per-type `impl ScalarType` blocks (one per scalar, each carrying its
-// `PG_TYPE` token string, `fixture_values() = eql_scalars::<TOKEN>_VALUES`, and
-// `min_pivot()`/`max_pivot()` = `Self::MIN`/`Self::MAX`) are generated from the
-// single harness list in `scalar_types.rs`. To add a type, add a
+// The per-type `impl ScalarType` blocks for the **integer** scalars (each
+// carrying its `PG_TYPE` token, `fixture_values() = eql_scalars::<TOKEN>_VALUES`,
+// and `min_pivot()`/`max_pivot()` = `Self::MIN`/`Self::MAX`) are generated from
+// the single harness list in `scalar_types.rs`. To add an integer type, add a
 // `token => rust_type` line there — not an impl here.
+//
+// Temporal scalars (`chrono::NaiveDate`, and `DateTime<Utc>` in the stacked
+// timestamptz PR) are hand-written below instead: their fixture values cannot be
+// a `const` slice (chrono constructors are not `const`), and their pivots are
+// explicit sentinels rather than `Self::MIN`/`Self::MAX`. The macro emits only
+// integer impls.
 crate::scalar_types!(scalar_type_impls);
+
+/// Typed `chrono::NaiveDate` fixture values, parsed once from `date`'s catalog
+/// row. The catalog stores ISO strings (zero-dep); parsing into `NaiveDate`
+/// lives here. `from_ymd_opt` is not `const`, so this cannot be a const slice —
+/// hence the `LazyLock<Vec<_>>` + `fixture_values()`-returns-a-borrow shape that
+/// the const→fn trait change exists to allow.
+static DATE_VALUES_CELL: LazyLock<Vec<chrono::NaiveDate>> = LazyLock::new(|| {
+    eql_scalars::DATE
+        .fixtures
+        .iter()
+        .map(|f| match f {
+            eql_scalars::Fixture::Date(s) => chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
+                .unwrap_or_else(|e| panic!("invalid date fixture {s:?}: {e}")),
+            other => panic!("date catalog fixture must be Fixture::Date, got {other:?}"),
+        })
+        .collect()
+});
+
+/// The parsed `chrono::NaiveDate` fixture values, in catalog order. Mirrors the
+/// `eql_scalars::<T>_VALUES` accessor pattern for the integer scalars; the
+/// stacked timestamptz PR adds a sibling `timestamptz_values()`. Public so the
+/// `eql_v2_date` fixture module (emitted by `scalar_types!(fixture_modules)`)
+/// can hand the slice to `scalar_fixture!` — temporal scalars have no
+/// `eql_scalars::<T>_VALUES` const to point at.
+pub fn date_values() -> &'static [chrono::NaiveDate] {
+    &DATE_VALUES_CELL
+}
+
+impl ScalarType for chrono::NaiveDate {
+    const PG_TYPE: &'static str = "date";
+
+    fn fixture_values() -> &'static [Self] {
+        date_values()
+    }
+
+    /// Temporal min pivot — `1900-01-01`, present verbatim in the catalog
+    /// fixtures (not `Self::MIN`, which would be far outside the fixture set).
+    fn min_pivot() -> Self {
+        chrono::NaiveDate::from_ymd_opt(1900, 1, 1).expect("1900-01-01 is a valid date")
+    }
+
+    /// Temporal max pivot — `2099-12-31`, present verbatim in the catalog
+    /// fixtures.
+    fn max_pivot() -> Self {
+        chrono::NaiveDate::from_ymd_opt(2099, 12, 31).expect("2099-12-31 is a valid date")
+    }
+
+    /// `Display` renders a `NaiveDate` as `2099-12-31` (unquoted), which is not
+    /// a valid SQL literal on its own — wrap it in single quotes.
+    fn to_sql_literal(value: Self) -> String {
+        format!("'{value}'")
+    }
+}
+
+#[cfg(test)]
+mod date_value_tests {
+    use super::*;
+
+    /// The parsed `NaiveDate` values match the catalog fixture strings in
+    /// order and count — the harness oracle cannot drift from the catalog the
+    /// fixture generator encrypts.
+    #[test]
+    fn date_values_match_catalog_fixtures() {
+        let catalog: Vec<&str> = eql_scalars::DATE
+            .fixtures
+            .iter()
+            .map(|f| match f {
+                eql_scalars::Fixture::Date(s) => *s,
+                other => panic!("unexpected non-date fixture {other:?}"),
+            })
+            .collect();
+        let parsed = <chrono::NaiveDate as ScalarType>::fixture_values();
+        assert_eq!(
+            parsed.len(),
+            catalog.len(),
+            "parsed date count must match catalog fixture count"
+        );
+        for (date, iso) in parsed.iter().zip(&catalog) {
+            assert_eq!(&date.format("%Y-%m-%d").to_string(), iso);
+        }
+    }
+
+    /// The three temporal pivots resolve to fixture rows present verbatim.
+    #[test]
+    fn date_pivots_are_in_fixture_values() {
+        let values = <chrono::NaiveDate as ScalarType>::fixture_values();
+        let min = <chrono::NaiveDate as ScalarType>::min_pivot();
+        let max = <chrono::NaiveDate as ScalarType>::max_pivot();
+        let zero = chrono::NaiveDate::default();
+        assert!(values.contains(&min), "min_pivot {min} must be a fixture");
+        assert!(values.contains(&max), "max_pivot {max} must be a fixture");
+        assert!(
+            values.contains(&zero),
+            "zero pivot {zero} must be a fixture"
+        );
+        // Default is 1970-01-01, the documented zero pivot.
+        assert_eq!(
+            zero,
+            chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(),
+            "NaiveDate::default() must be 1970-01-01"
+        );
+    }
+}
 
 /// Per-domain capability + payload shape. Storage carries no terms, `Eq`
 /// adds `hm`, `Ord`/`OrdOre` add `ob`. `Ord` and `OrdOre` are deliberate

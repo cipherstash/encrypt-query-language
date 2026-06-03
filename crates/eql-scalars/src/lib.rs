@@ -31,6 +31,11 @@ pub enum ScalarKind {
     Numeric,
     Text,
     Jsonb,
+    /// Calendar date (`chrono::NaiveDate`). Ordered like the integer kinds via
+    /// ORE, but string-backed (ISO-8601) at the catalog layer and with no i128
+    /// range — so it is *not* `is_int()` and the bounded-numeric accessors
+    /// panic for it, exactly like the other non-integer kinds.
+    Date,
 }
 
 impl ScalarKind {
@@ -50,6 +55,7 @@ impl ScalarKind {
             ScalarKind::Numeric => "numeric",
             ScalarKind::Text => "text",
             ScalarKind::Jsonb => "jsonb",
+            ScalarKind::Date => "chrono::NaiveDate",
         }
     }
 
@@ -61,7 +67,7 @@ impl ScalarKind {
             ScalarKind::I64 => "i64::MIN",
             // Explicit (not `_`) so a future integer variant is a compile
             // error here rather than silently hitting the panic.
-            ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
+            ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb | ScalarKind::Date => {
                 panic!("min_symbol is only defined for integer kinds")
             }
         }
@@ -73,7 +79,7 @@ impl ScalarKind {
             ScalarKind::I16 => "i16::MAX",
             ScalarKind::I32 => "i32::MAX",
             ScalarKind::I64 => "i64::MAX",
-            ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
+            ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb | ScalarKind::Date => {
                 panic!("max_symbol is only defined for integer kinds")
             }
         }
@@ -83,7 +89,7 @@ impl ScalarKind {
     pub const fn zero_symbol(self) -> &'static str {
         match self {
             ScalarKind::I16 | ScalarKind::I32 | ScalarKind::I64 => "0",
-            ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
+            ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb | ScalarKind::Date => {
                 panic!("zero_symbol is only defined for integer kinds")
             }
         }
@@ -96,7 +102,7 @@ impl ScalarKind {
             ScalarKind::I16 => i16::MIN as i128,
             ScalarKind::I32 => i32::MIN as i128,
             ScalarKind::I64 => i64::MIN as i128,
-            ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
+            ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb | ScalarKind::Date => {
                 panic!("min_value is only defined for integer kinds")
             }
         }
@@ -109,7 +115,7 @@ impl ScalarKind {
             ScalarKind::I16 => i16::MAX as i128,
             ScalarKind::I32 => i32::MAX as i128,
             ScalarKind::I64 => i64::MAX as i128,
-            ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
+            ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb | ScalarKind::Date => {
                 panic!("max_value is only defined for integer kinds")
             }
         }
@@ -249,6 +255,10 @@ pub enum Fixture {
     Numeric(&'static str),
     Text(&'static str),
     Jsonb(&'static str),
+    /// An ISO-8601 date string (`"1970-01-01"`). The catalog stays zero-dep, so
+    /// the string is parsed into a `chrono::NaiveDate` in the SQLx harness, not
+    /// here. Distinct by literal, like the other string-backed fixtures.
+    Date(&'static str),
 }
 
 impl Fixture {
@@ -264,7 +274,7 @@ impl Fixture {
             Fixture::Max => Some(kind.max_value()),
             Fixture::Zero => Some(0),
             Fixture::Int(n) => Some(n),
-            Fixture::Numeric(_) | Fixture::Text(_) | Fixture::Jsonb(_) => None,
+            Fixture::Numeric(_) | Fixture::Text(_) | Fixture::Jsonb(_) | Fixture::Date(_) => None,
         }
     }
 
@@ -276,7 +286,7 @@ impl Fixture {
             Fixture::Max => kind.max_symbol().to_string(),
             Fixture::Zero => kind.zero_symbol().to_string(),
             Fixture::Int(n) => n.to_string(),
-            Fixture::Numeric(s) | Fixture::Text(s) | Fixture::Jsonb(s) => {
+            Fixture::Numeric(s) | Fixture::Text(s) | Fixture::Jsonb(s) | Fixture::Date(s) => {
                 format!("{s:?}")
             }
         }
@@ -349,6 +359,7 @@ macro_rules! fixtures {
     (text;    $($s:literal),* $(,)?) => { &[$(Fixture::Text($s)),*] };
     (numeric; $($s:literal),* $(,)?) => { &[$(Fixture::Numeric($s)),*] };
     (jsonb;   $($s:literal),* $(,)?) => { &[$(Fixture::Jsonb($s)),*] };
+    (date;    $($s:literal),* $(,)?) => { &[$(Fixture::Date($s)),*] };
 }
 
 /// int4 fixture plaintexts — verbatim from `tasks/codegen/types/int4.toml`.
@@ -369,6 +380,20 @@ const INT2_FIXTURES: &[Fixture] = fixtures!(int i16;
 const INT8_FIXTURES: &[Fixture] = fixtures!(int i64;
     Min, N(-5000000000), N(-100), N(-1), Zero, N(1), N(2), N(5), N(10), N(17),
     N(25), N(42), N(50), N(100), N(250), N(1000), N(9999), N(5000000000), Max);
+
+/// date fixture plaintexts — ISO-8601 (`YYYY-MM-DD`) strings, parsed into
+/// `chrono::NaiveDate` in the SQLx harness (the catalog stays zero-dep). The
+/// three temporal pivots MUST be present verbatim: `"1900-01-01"` (min_pivot),
+/// `"1970-01-01"` (zero = `NaiveDate::default()`), and `"2099-12-31"`
+/// (max_pivot) — the matrix fetches each one's ciphertext via
+/// `fetch_fixture_payload`, which fails loudly if a row is absent. The interior
+/// dates span varied years/months so range operators yield distinguishable
+/// counts. All distinct.
+const DATE_FIXTURES: &[Fixture] = fixtures!(date;
+    "1900-01-01", "1950-07-15", "1969-12-31", "1970-01-01", "1970-01-02",
+    "1980-02-29", "1991-11-09", "1999-12-31", "2000-01-01", "2004-02-29",
+    "2012-06-30", "2016-03-15", "2020-10-21", "2024-02-29", "2038-01-19",
+    "2099-12-31");
 
 const INT4: ScalarSpec = ScalarSpec {
     token: "int4",
@@ -391,13 +416,28 @@ const INT8: ScalarSpec = ScalarSpec {
     fixtures: INT8_FIXTURES,
 };
 
+/// `date` — an ordered, non-integer scalar. Reuses `ORDERED_INT_DOMAINS` (the
+/// four-domain ordered shape is identical to the integer scalars); only the
+/// kind and fixtures differ.
+///
+/// Public (unlike the integer specs) because the SQLx harness reads
+/// `DATE.fixtures` directly to parse the ISO strings into `chrono::NaiveDate`
+/// at runtime — there is no `DATE_VALUES` const (chrono is not `const`-friendly
+/// and `eql-scalars` stays zero-dep, so no typed slice is materialised here).
+pub const DATE: ScalarSpec = ScalarSpec {
+    token: "date",
+    kind: ScalarKind::Date,
+    domains: ORDERED_INT_DOMAINS,
+    fixtures: DATE_FIXTURES,
+};
+
 /// The scalar catalog — the single source of truth. Order is significant (it
 /// drives generation order). New types are appended as their SQL surface lands.
-pub const CATALOG: &[ScalarSpec] = &[INT4, INT2, INT8];
+pub const CATALOG: &[ScalarSpec] = &[INT4, INT2, INT8, DATE];
 
 /// Materialise an integer scalar's fixtures into a typed `&'static` slice at
 /// compile time. This is the **single-sourced** plaintext list the SQLx test
-/// matrix reads as `ScalarType::FIXTURE_VALUES` and the fixture generator
+/// matrix reads via `ScalarType::fixture_values()` and the fixture generator
 /// encrypts — derived from the same `CATALOG` row that drives SQL generation,
 /// so the oracle cannot drift from the fixture. (It replaces the old generated,
 /// committed `tests/sqlx/src/fixtures/<T>_values.rs` — a Rust source of truth no
@@ -478,6 +518,7 @@ mod rust_tests {
         assert!(!ScalarKind::Numeric.is_int());
         assert!(!ScalarKind::Text.is_int());
         assert!(!ScalarKind::Jsonb.is_int());
+        assert!(!ScalarKind::Date.is_int());
     }
 
     // Pin that the bounded-numeric accessors panic (with message) on non-int kinds.
@@ -521,6 +562,46 @@ mod rust_tests {
         assert_eq!(ScalarKind::I64.zero_symbol(), "0");
         assert_eq!(ScalarKind::I64.min_value(), -9_223_372_036_854_775_808_i128);
         assert_eq!(ScalarKind::I64.max_value(), 9_223_372_036_854_775_807_i128);
+    }
+
+    #[test]
+    fn date_maps_to_naive_date() {
+        // Ordered, non-integer kind: it carries a rust type but no i128 range,
+        // so it is not `is_int()` and the bounded accessors panic (below).
+        assert_eq!(ScalarKind::Date.rust_type(), "chrono::NaiveDate");
+        assert!(!ScalarKind::Date.is_int());
+    }
+
+    // The bounded-numeric accessors panic on Date exactly as on the other
+    // non-integer kinds — Date is not an integer kind.
+    #[test]
+    #[should_panic(expected = "min_symbol is only defined for integer kinds")]
+    fn min_symbol_panics_on_date() {
+        ScalarKind::Date.min_symbol();
+    }
+
+    #[test]
+    #[should_panic(expected = "max_symbol is only defined for integer kinds")]
+    fn max_symbol_panics_on_date() {
+        ScalarKind::Date.max_symbol();
+    }
+
+    #[test]
+    #[should_panic(expected = "zero_symbol is only defined for integer kinds")]
+    fn zero_symbol_panics_on_date() {
+        ScalarKind::Date.zero_symbol();
+    }
+
+    #[test]
+    #[should_panic(expected = "min_value is only defined for integer kinds")]
+    fn min_value_panics_on_date() {
+        ScalarKind::Date.min_value();
+    }
+
+    #[test]
+    #[should_panic(expected = "max_value is only defined for integer kinds")]
+    fn max_value_panics_on_date() {
+        ScalarKind::Date.max_value();
     }
 }
 
@@ -682,6 +763,10 @@ mod fixture_tests {
             Fixture::Jsonb(r#"{"a":1}"#).numeric_value(ScalarKind::Jsonb),
             None
         );
+        assert_eq!(
+            Fixture::Date("1970-01-01").numeric_value(ScalarKind::Date),
+            None
+        );
     }
 
     #[test]
@@ -718,6 +803,10 @@ mod fixture_tests {
             Fixture::Jsonb(r#"{"a":1}"#).render_literal(ScalarKind::Jsonb),
             r#""{\"a\":1}""#
         );
+        assert_eq!(
+            Fixture::Date("1970-01-01").render_literal(ScalarKind::Date),
+            "\"1970-01-01\""
+        );
     }
 
     #[test]
@@ -741,6 +830,11 @@ mod fixture_tests {
         assert_eq!(NUMS, &[Fixture::Numeric("0.1"), Fixture::Numeric("-2.5")]);
         const JSONS: &[Fixture] = fixtures!(jsonb; r#"{"a":1}"#);
         assert_eq!(JSONS, &[Fixture::Jsonb(r#"{"a":1}"#)]);
+        const DATES: &[Fixture] = fixtures!(date; "1970-01-01", "2099-12-31");
+        assert_eq!(
+            DATES,
+            &[Fixture::Date("1970-01-01"), Fixture::Date("2099-12-31")]
+        );
     }
 
     #[test]
@@ -773,9 +867,33 @@ mod catalog_tests {
     }
 
     #[test]
-    fn catalog_has_int4_int2_int8_in_order() {
+    fn catalog_has_int4_int2_int8_date_in_order() {
         let tokens: Vec<&str> = CATALOG.iter().map(|s| s.token).collect();
-        assert_eq!(tokens, vec!["int4", "int2", "int8"]);
+        assert_eq!(tokens, vec!["int4", "int2", "int8", "date"]);
+    }
+
+    /// The three temporal matrix pivots must be present verbatim in DATE's
+    /// fixture strings — `fetch_fixture_payload` fetches each one's ciphertext,
+    /// failing loudly if absent. The integer `fixtures_include_min_max_and_zero`
+    /// invariant filters `is_int()` and skips date, so this is its temporal
+    /// analogue.
+    #[test]
+    fn temporal_fixtures_include_pivot_plaintexts() {
+        let date = scalar("date");
+        let strings: Vec<&str> = date
+            .fixtures
+            .iter()
+            .filter_map(|f| match f {
+                Fixture::Date(s) => Some(*s),
+                _ => None,
+            })
+            .collect();
+        for pivot in ["1900-01-01", "1970-01-01", "2099-12-31"] {
+            assert!(
+                strings.contains(&pivot),
+                "date fixtures missing temporal pivot {pivot}"
+            );
+        }
     }
 
     #[test]
@@ -901,7 +1019,9 @@ mod invariant_tests {
 
     fn distinct_key(f: Fixture, kind: ScalarKind) -> DistinctKey {
         match f {
-            Fixture::Numeric(s) | Fixture::Text(s) | Fixture::Jsonb(s) => DistinctKey::Str(s),
+            Fixture::Numeric(s) | Fixture::Text(s) | Fixture::Jsonb(s) | Fixture::Date(s) => {
+                DistinctKey::Str(s)
+            }
             _ => DistinctKey::Num(
                 f.numeric_value(kind)
                     .expect("sentinel/Int fixtures resolve to a number"),
