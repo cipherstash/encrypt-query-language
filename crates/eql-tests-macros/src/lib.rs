@@ -267,10 +267,13 @@ mod tests {
         assert!(out.contains(":: eql_scalars :: INT8_VALUES"));
         // const→fn: fixture values is a method now, plus the integer pivots.
         assert!(out.contains("fn fixture_values"));
-        assert!(out.contains("fn min_pivot"));
-        assert!(out.contains("fn max_pivot"));
-        assert!(out.contains("MIN"));
-        assert!(out.contains("MAX"));
+        // Assert the emitted pivot bodies, not bare `MIN`/`MAX` substrings:
+        // the latter also appear in the doc comment, so a loose check would
+        // pass even if the bodies stopped returning the inherent bounds.
+        assert!(out.contains("fn min_pivot () -> i32 { < i32 > :: MIN }"));
+        assert!(out.contains("fn max_pivot () -> i32 { < i32 > :: MAX }"));
+        assert!(out.contains("fn min_pivot () -> i64 { < i64 > :: MIN }"));
+        assert!(out.contains("fn max_pivot () -> i64 { < i64 > :: MAX }"));
     }
 
     #[test]
