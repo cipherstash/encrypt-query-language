@@ -132,9 +132,14 @@ pub struct FunctionsContext {
 }
 
 /// Build the inlinable index-extractor entry for a domain term.
+///
+/// The `RETURNS` type name equals the constructor name (`hmac_256`,
+/// `ore_block_u64_8_256`); qualify it with `CORE_SCHEMA` here so flipping the
+/// core schema moves BOTH the body's constructor call and the declared return
+/// type together (design D12). `Term::returns()` is intentionally not used.
 pub fn extractor_entry(term: Term) -> FnEntry {
     FnEntry::Extractor {
-        ret: term.returns().to_string(),
+        ret: format!("{CORE_SCHEMA}.{}", term.ctor()),
         extractor: term.extractor().to_string(),
         ctor: term.ctor().to_string(),
     }
