@@ -1,8 +1,8 @@
 //! Type-generic substrate for the encrypted-scalar-domain test matrix.
 //!
 //! Adding a new encrypted scalar type (e.g. `i64` for int8, `f64` for
-//! float8) is one `<T> => <R>` line in the `scalar_harness!` list
-//! (`scalar_harness.rs`) plus an `EqlPlaintext` impl and a catalog row.
+//! float8) is one `<T> => <R>` line in the `scalar_types!` list
+//! (`scalar_types.rs`) plus an `EqlPlaintext` impl and a catalog row.
 //! The `impl ScalarType` below is generated from that list. Everything
 //! else — the four `eql_v2_<T>{,_eq,_ord,_ord_ore}` domains, per-domain
 //! payload shapes, supported operators, index extractor expressions,
@@ -76,9 +76,9 @@ pub trait ScalarType:
 
 // The per-type `impl ScalarType` blocks (one per scalar, each carrying its
 // `PG_TYPE` token string and `FIXTURE_VALUES = eql_scalars::<TOKEN>_VALUES`)
-// are generated from the single harness list in `scalar_harness.rs`. To add a
+// are generated from the single harness list in `scalar_types.rs`. To add a
 // type, add a `token => rust_type` line there — not an impl here.
-crate::scalar_harness!(scalar_type_impls);
+crate::scalar_types!(scalar_type_impls);
 
 /// Per-domain capability + payload shape. Storage carries no terms, `Eq`
 /// adds `hm`, `Ord`/`OrdOre` add `ob`. `Ord` and `OrdOre` are deliberate
