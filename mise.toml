@@ -109,14 +109,16 @@ cargo test -p eql-scalars -p eql-codegen
 description = "Compile, lint and test the std-only Rust workspace crates (no database)"
 dir = "{{config_root}}"
 run = """
+#!/usr/bin/env bash
 # eql-scalars / eql-codegen are the lean workspace members. Scope explicitly to
 # them (NOT --workspace): a workspace-wide test would drag in tests/sqlx, whose
 # suite needs Postgres + CS_* secrets and is already covered by the `test` job.
 # clippy is likewise scoped — a workspace clippy recompiles the heavy
 # sqlx/tokio/cipherstash-client tree for no added coverage of these crates.
-# `set -eu` only (no pipefail): mise runs tasks under `sh`, which is dash on the
-# CI runners, and dash rejects `set -o pipefail`. There are no pipes here.
-set -eu
+# bash is pinned via the `#!/usr/bin/env bash` shebang above (mise honors a
+# `#!` first line), so `set -o pipefail` is available regardless of the runner's
+# /bin/sh (dash on the CI images).
+set -euo pipefail
 cargo fmt --check
 cargo clippy -p eql-scalars -p eql-codegen --all-targets -- -D warnings
 cargo test -p eql-scalars -p eql-codegen
@@ -126,6 +128,7 @@ cargo test -p eql-scalars -p eql-codegen
 description = "Verify the matrix test-name set against the single canonical snapshot, catalog-cross-checked (no database required)"
 dir = "{{config_root}}/tests/sqlx"
 run = """
+#!/usr/bin/env bash
 # ONE canonical, token-normalized snapshot (snapshots/matrix_tests.txt) pins the
 # set of macro-emitted matrix test names. The two per-type snapshots are gone:
 # they were byte-identical modulo the type token, so one canonical set plus a
@@ -188,6 +191,7 @@ echo "Matrix inventory OK: ${checked} type(s) match the canonical snapshot; cata
 description = "Regenerate the int4 matrix cargo-expand snapshot (requires the pinned nightly + cargo-expand)"
 dir = "{{config_root}}/tests/sqlx"
 run = """
+#!/usr/bin/env bash
 # Body-level fidelity backstop for the macro: the expanded source of the int4
 # matrix arms. The `cargo +nightly-...` invocation below is the SINGLE source of
 # the pinned nightly date — .github/workflows/macro-expand-eql.yml greps it from
