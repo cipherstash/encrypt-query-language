@@ -1174,6 +1174,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "cipherstash-client",
+ "eql-scalars",
  "hex",
  "jsonschema",
  "paste",

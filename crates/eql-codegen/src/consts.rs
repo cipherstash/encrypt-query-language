@@ -4,10 +4,6 @@
 /// the writer uses it only to recognise files it owns (overwrite/clean safety).
 pub(crate) const AUTO_GENERATED_HEADER: &str = "-- AUTOMATICALLY GENERATED FILE.\n";
 
-/// Rust generated-file marker, prepended to `<T>_values.rs` (which has no
-/// template). Rust comment syntax so the `.rs` file stays valid.
-pub(crate) const AUTO_GENERATED_HEADER_RS: &str = "// AUTOMATICALLY GENERATED FILE.\n";
-
 /// Schema housing the encrypted-domain families.
 pub(crate) const DOMAIN_SCHEMA: &str = "eql_v3";
 /// Schema owning the core index-term types/constructors.
@@ -35,20 +31,6 @@ mod tests {
         // generated SQL — keep this assertion and that grep in lockstep.
         assert_eq!(AUTO_GENERATED_HEADER, "-- AUTOMATICALLY GENERATED FILE.\n");
         assert!(AUTO_GENERATED_HEADER.contains("AUTOMATICALLY GENERATED FILE"));
-    }
-
-    #[test]
-    fn rust_marker_is_a_rust_comment() {
-        assert_eq!(
-            AUTO_GENERATED_HEADER_RS,
-            "// AUTOMATICALLY GENERATED FILE.\n"
-        );
-        for line in AUTO_GENERATED_HEADER_RS.lines() {
-            assert!(
-                !line.starts_with("--"),
-                "rust marker must not contain SQL comments"
-            );
-        }
     }
 
     #[test]

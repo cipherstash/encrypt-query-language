@@ -113,31 +113,17 @@ jobs:
           workspaces: .
           shared-key: sqlx-tests
 
-      # The Python `test:codegen` drift suite is intentionally not run here: the
-      # Python generator is deprecated and removed in the following PR. The
-      # hand-written reference (tests/codegen/reference/) is now gated against
-      # the Rust generator by the `mise run codegen:parity` step below.
+      # Crate compile/lint/test (cargo test -p eql-scalars -p eql-codegen) runs
+      # in the dedicated `test:crates` job; this job covers the codegen-specific
+      # gate only — golden parity. The plaintext fixture lists are no longer a
+      # generated file: they live in the catalog (`eql_scalars::INT4_VALUES` /
+      # `INT2_VALUES`) and are pinned by `eql-scalars`'s own unit tests, so there
+      # is nothing to regenerate-and-diff here.
 
-      # Regenerate the committed Rust fixture-value consts for EVERY type from
-      # their manifests and fail if any differ from / are missing in the tree.
-      # The value lists are rendered deterministically (unlike the encrypted
-      # .sql fixtures, whose ciphertext is non-deterministic and gitignored), so
-      # a plain diff is the right guard — it catches a manifest edit that wasn't
-      # regenerated. `git add -N` registers any brand-new untracked const so a
-      # forgotten-to-commit file also trips the diff. No Postgres needed: this
-      # only runs the Python generator.
-      - name: Regenerate and verify fixture-value consts (all types)
-        run: |
-          mise run codegen:domain:all
-          git add -N tests/sqlx/src/fixtures
-          git diff --exit-code -- tests/sqlx/src/fixtures \
-            || { echo "Fixture value const(s) stale or uncommitted — run 'mise run codegen:domain:all' and commit tests/sqlx/src/fixtures."; exit 1; }
-
-      # Cross-generator parity: assert the Rust eql-codegen output is byte-
-      # identical to the Python oracle across all types, the committed
-      # <T>_values.rs, and the int4 golden reference. No Postgres needed — both
-      # generators are deterministic and run offline.
-      - name: Verify Rust↔Python generator parity
+      # Parity gate: assert the Rust eql-codegen output is line-normalized-equal
+      # to the int4 golden reference. Python is no longer an oracle (retired in
+      # P2). No Postgres needed — the generator runs offline.
+      - name: Verify generator parity (golden)
         run: |
           mise run codegen:parity
 
@@ -161,17 +147,21 @@ jobs:
           workspaces: .
           shared-key: sqlx-tests
 
-      # Regenerate the matrix test-name inventory with the SAME pinned feature
-      # set the local task uses (`--no-default-features`, scale excluded), then
-      # fail if it differs from the committed snapshot. A coverage change shows
-      # up as added/removed names in the PR diff — e.g. emptying `ord_domains`
-      # drops ~140 names, impossible to miss in review. No Postgres needed:
-      # `--list` only enumerates, the suite uses runtime queries.
-      - name: Regenerate and verify the matrix test-name inventory
+      # Verify the matrix test-name set against the SINGLE canonical snapshot
+      # (snapshots/matrix_tests.txt) with the SAME pinned feature set the local
+      # task uses (`--no-default-features`, scale excluded), and cross-check the
+      # binary's discovered type set against `eql-codegen list-types`. A coverage
+      # change shows up as a diff in the snapshot; a catalog type missing its
+      # matrix wiring fails the cross-check. No Postgres needed: `--list` only
+      # enumerates, the suite uses runtime queries.
+      - name: Verify the matrix test-name inventory
         run: |
           mise run test:matrix:inventory
-          git diff --exit-code -- tests/sqlx/snapshots/int4_matrix_tests.txt \
-                                  tests/sqlx/snapshots/int2_matrix_tests.txt \
+          # Diff the whole snapshots/ directory so the single canonical file
+          # isn't hardcoded here; the mise task discovers the type set from the
+          # binary and reconciles it against `eql-codegen list-types`.
+          git add -N tests/sqlx/snapshots
+          git diff --exit-code -- tests/sqlx/snapshots \
             || { echo "Coverage inventory stale — run 'mise run test:matrix:inventory' and commit."; exit 1; }
 
   test:
