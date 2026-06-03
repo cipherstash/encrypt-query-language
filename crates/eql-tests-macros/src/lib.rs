@@ -85,10 +85,26 @@ fn scalar_type_impls_tokens(list: &ScalarList) -> TokenStream2 {
         quote! {
             impl ScalarType for #rust_type {
                 const PG_TYPE: &'static str = #token_str;
+
                 /// The catalog `eql_scalars::*_VALUES` list — the same values
                 /// the fixture generator encrypts, so the oracle can't drift
-                /// from the fixture.
-                const FIXTURE_VALUES: &'static [#rust_type] = ::eql_scalars::#values;
+                /// from the fixture. A method (not a `const`) so non-integer
+                /// scalars whose values can't be `const`-constructed can return
+                /// a borrow of a lazily-built `Vec`; integer scalars hand back
+                /// their catalog const directly.
+                fn fixture_values() -> &'static [#rust_type] {
+                    ::eql_scalars::#values
+                }
+
+                /// Integer scalars pivot on their inherent `MIN`/`MAX` consts;
+                /// the fixture lists include both (`fixtures!(int …; Min, …, Max)`).
+                fn min_pivot() -> #rust_type {
+                    <#rust_type>::MIN
+                }
+
+                fn max_pivot() -> #rust_type {
+                    <#rust_type>::MAX
+                }
             }
         }
     });
@@ -249,6 +265,12 @@ mod tests {
         assert!(out.contains(r#"const PG_TYPE : & 'static str = "int8""#));
         assert!(out.contains(":: eql_scalars :: INT4_VALUES"));
         assert!(out.contains(":: eql_scalars :: INT8_VALUES"));
+        // const→fn: fixture values is a method now, plus the integer pivots.
+        assert!(out.contains("fn fixture_values"));
+        assert!(out.contains("fn min_pivot"));
+        assert!(out.contains("fn max_pivot"));
+        assert!(out.contains("MIN"));
+        assert!(out.contains("MAX"));
     }
 
     #[test]

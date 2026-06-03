@@ -149,10 +149,11 @@ fn collect_index_scan_nodes(value: &serde_json::Value, found: &mut Vec<(String, 
 /// type (see `scalar_domains.rs`, `format!("eql_v3.{}…", T::PG_TYPE)`).
 ///
 /// Pivots — the comparison anchors swept by the correctness / cross-shape
-/// arms — are derived from the scalar type: `MIN`, `MAX`, and zero
-/// (`Default::default()`). The fixture must contain those three plaintext
-/// rows, since each pivot's ciphertext is fetched at test time via
-/// `fetch_fixture_payload`.
+/// arms — are derived from the scalar type: `min_pivot()`, `max_pivot()`, and
+/// zero (`Default::default()`). Integer scalars resolve `min_pivot`/`max_pivot`
+/// to `Self::MIN`/`Self::MAX`; temporal scalars use explicit sentinel dates. The
+/// fixture must contain those three plaintext rows, since each pivot's
+/// ciphertext is fetched at test time via `fetch_fixture_payload`.
 #[macro_export]
 macro_rules! ordered_numeric_matrix {
     (
@@ -175,8 +176,8 @@ macro_rules! ordered_numeric_matrix {
             ord_domains = [(ord, Ord), (ord_ore, OrdOre)],
             ord_ore_domains = [(ord_ore, OrdOre)],
             pivots = [
-                (min,  <$scalar>::MIN),
-                (max,  <$scalar>::MAX),
+                (min,  <$scalar as $crate::scalar_domains::ScalarType>::min_pivot()),
+                (max,  <$scalar as $crate::scalar_domains::ScalarType>::max_pivot()),
                 (zero, <$scalar as ::core::default::Default>::default()),
             ],
             eq_ops = [(eq, "="), (neq, "<>")],
@@ -1179,7 +1180,7 @@ macro_rules! __scalar_matrix_scale_case {
                     "_scale_", $using, "_idx",
                 );
 
-                let values: &[$scalar] = <$scalar as ScalarType>::FIXTURE_VALUES;
+                let values: &[$scalar] = <$scalar as ScalarType>::fixture_values();
                 anyhow::ensure!(values.len() >= 2,
                     "scale test requires >= 2 fixture rows for distinct filler/pivot");
                 let filler = values[0];
@@ -1277,7 +1278,7 @@ macro_rules! __scalar_matrix_scale_default_case {
                     "_scaledef_", $using, "_idx",
                 );
 
-                let values: &[$scalar] = <$scalar as ScalarType>::FIXTURE_VALUES;
+                let values: &[$scalar] = <$scalar as ScalarType>::fixture_values();
                 anyhow::ensure!(values.len() >= 2,
                     "scale test requires >= 2 fixture rows for distinct filler/pivot");
                 let filler = values[0];
@@ -1324,8 +1325,8 @@ SELECT $1::jsonb::{d} FROM generate_series(1, 5000)",
 
 // ============================================================================
 // Fixture-shape category — one test per type that pins the fixture's
-// structural invariants: row count matches `T::FIXTURE_VALUES.len()`,
-// ids are sequential from 1, plaintext column matches FIXTURE_VALUES in
+// structural invariants: row count matches `T::fixture_values().len()`,
+// ids are sequential from 1, plaintext column matches fixture_values() in
 // order, every payload carries the variant terms (`hm`, `ob`, `c`),
 // distinct plaintexts produce distinct hm terms, every payload declares
 // `v=2`. A single test runs all assertions to keep pool-setup cost
@@ -1345,7 +1346,7 @@ macro_rules! __scalar_matrix_fixture_shape {
             ) -> anyhow::Result<()> {
                 use $crate::scalar_domains::ScalarType;
                 let table = <$scalar as ScalarType>::fixture_table_name();
-                let expected: &[$scalar] = <$scalar as ScalarType>::FIXTURE_VALUES;
+                let expected: &[$scalar] = <$scalar as ScalarType>::fixture_values();
                 let n = expected.len() as i64;
 
                 let count: i64 = sqlx::query_scalar(&format!(
@@ -1457,7 +1458,7 @@ macro_rules! __scalar_matrix_ord_routes_case {
                 let fixture_table =
                     <$scalar as $crate::scalar_domains::ScalarType>::fixture_table_name();
                 let pivot: $scalar =
-                    <$scalar as $crate::scalar_domains::ScalarType>::FIXTURE_VALUES[0];
+                    <$scalar as $crate::scalar_domains::ScalarType>::fixture_values()[0];
                 let pivot_lit =
                     <$scalar as $crate::scalar_domains::ScalarType>::to_sql_literal(pivot);
 
@@ -1508,7 +1509,7 @@ macro_rules! __scalar_matrix_ord_routes_case {
                 // relaxed the two assertions cannot silently compensate for
                 // each other — the derivation stays honest regardless.
                 let expected_neq =
-                    <$scalar as $crate::scalar_domains::ScalarType>::FIXTURE_VALUES.len() as i64
+                    <$scalar as $crate::scalar_domains::ScalarType>::fixture_values().len() as i64
                     - eq_count;
                 let neq_count: i64 = sqlx::query_scalar(&format!(
                     "SELECT count(*) FROM {table} WHERE value <> $1::jsonb::{d}",
@@ -1672,7 +1673,7 @@ macro_rules! __scalar_matrix_index_case {
                     .execute(&mut *tx).await?;
                 sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
 
-                let pivot: $scalar = <$scalar as $crate::scalar_domains::ScalarType>::FIXTURE_VALUES[0];
+                let pivot: $scalar = <$scalar as $crate::scalar_domains::ScalarType>::fixture_values()[0];
                 let payload =
                     $crate::scalar_domains::fetch_fixture_payload::<$scalar>(&pool, pivot).await?;
                 let lit = $crate::scalar_domains::sql_string_literal(&payload);
@@ -1747,24 +1748,22 @@ macro_rules! __scalar_matrix_order_by_domain {
         $crate::__scalar_matrix_order_by_case! {
             suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
             dom_name = $dom_name, variant = $variant,
-            mode_name = asc_no_where, direction = "ASC", where_clause = "",
+            mode_name = asc_no_where, direction = "ASC", filter = all,
         }
         $crate::__scalar_matrix_order_by_case! {
             suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
             dom_name = $dom_name, variant = $variant,
-            mode_name = desc_no_where, direction = "DESC", where_clause = "",
+            mode_name = desc_no_where, direction = "DESC", filter = all,
         }
         $crate::__scalar_matrix_order_by_case! {
             suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
             dom_name = $dom_name, variant = $variant,
-            mode_name = asc_with_where, direction = "ASC",
-            where_clause = " WHERE plaintext > 0",
+            mode_name = asc_with_where, direction = "ASC", filter = gt_zero,
         }
         $crate::__scalar_matrix_order_by_case! {
             suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
             dom_name = $dom_name, variant = $variant,
-            mode_name = desc_with_where, direction = "DESC",
-            where_clause = " WHERE plaintext > 0",
+            mode_name = desc_with_where, direction = "DESC", filter = gt_zero,
         }
     };
 }
@@ -1776,29 +1775,40 @@ macro_rules! __scalar_matrix_order_by_case {
         suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
         dom_name = $dom_name:ident, variant = $variant:ident,
         mode_name = $mode_name:ident, direction = $direction:literal,
-        where_clause = $where_clause:literal $(,)?
+        filter = $filter:ident $(,)?
     ) => {
         $crate::paste::paste! {
             #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
             async fn [<matrix_ $suite _ $dom_name _order_by_ $mode_name>](
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
+                use $crate::scalar_domains::ScalarType;
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
-                let fixture_table =
-                    <$scalar as $crate::scalar_domains::ScalarType>::fixture_table_name();
+                let fixture_table = <$scalar as ScalarType>::fixture_table_name();
+
+                let zero: $scalar = Default::default();
+                let gt_zero = stringify!($filter) == "gt_zero";
+                // Build the WHERE clause from the zero pivot's SQL literal so it
+                // is type-agnostic: `plaintext > 0` for integers, `plaintext >
+                // '1970-01-01'` for dates. A hardcoded `> 0` would not typecheck
+                // against a non-integer plaintext column.
+                let where_clause = if gt_zero {
+                    format!(" WHERE plaintext > {}", <$scalar as ScalarType>::to_sql_literal(zero))
+                } else {
+                    String::new()
+                };
                 let sql = format!(
                     "SELECT plaintext FROM {fixture}{where_clause} \
 ORDER BY eql_v3.ord_term(payload::{d}) {dir}",
-                    fixture = fixture_table, where_clause = $where_clause,
+                    fixture = fixture_table,
                     d = &spec.sql_domain, dir = $direction,
                 );
                 let actual: Vec<$scalar> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
 
-                let zero: $scalar = Default::default();
                 let mut expected: Vec<$scalar> =
-                    <$scalar as $crate::scalar_domains::ScalarType>::FIXTURE_VALUES.to_vec();
+                    <$scalar as ScalarType>::fixture_values().to_vec();
                 expected.sort();
-                if $where_clause.contains("plaintext > 0") {
+                if gt_zero {
                     expected.retain(|v| *v > zero);
                 }
                 if $direction == "DESC" { expected.reverse(); }
@@ -1922,7 +1932,7 @@ ORDER BY eql_v3.ord_term(value) {dir} NULLS {nulls}",
                 // Ground truth: non-NULL plaintexts sorted (reversed for DESC),
                 // with NULL_ROWS Nones at the requested end.
                 let mut non_null: Vec<$scalar> =
-                    <$scalar as $crate::scalar_domains::ScalarType>::FIXTURE_VALUES.to_vec();
+                    <$scalar as $crate::scalar_domains::ScalarType>::fixture_values().to_vec();
                 non_null.sort();
                 if $direction == "DESC" { non_null.reverse(); }
                 let sorted = non_null.into_iter().map(Some);
@@ -2093,7 +2103,7 @@ macro_rules! __scalar_matrix_aggregate_case {
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
                 let fixture = <$scalar as ScalarType>::fixture_table_name();
-                let extremum: $scalar = <$scalar as ScalarType>::FIXTURE_VALUES
+                let extremum: $scalar = <$scalar as ScalarType>::fixture_values()
                     .iter()
                     .copied()
                     .$picker()
@@ -2202,7 +2212,7 @@ macro_rules! __scalar_matrix_aggregate_case {
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
                 let fixture = <$scalar as ScalarType>::fixture_table_name();
-                let values: &[$scalar] = <$scalar as ScalarType>::FIXTURE_VALUES;
+                let values: &[$scalar] = <$scalar as ScalarType>::fixture_values();
                 anyhow::ensure!(
                     values.len() >= 2,
                     "mixed-NULL test needs >= 2 fixture values; got {}",
@@ -2381,7 +2391,7 @@ macro_rules! __scalar_matrix_aggregate_group_by_case {
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
                 let fixture = <$scalar as ScalarType>::fixture_table_name();
-                let values: &[$scalar] = <$scalar as ScalarType>::FIXTURE_VALUES;
+                let values: &[$scalar] = <$scalar as ScalarType>::fixture_values();
                 anyhow::ensure!(
                     values.len() >= 5,
                     "GROUP BY test needs >= 5 fixture values; got {}",
@@ -2638,7 +2648,7 @@ macro_rules! __scalar_matrix_count_case {
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
                 let fixture = <$scalar as ScalarType>::fixture_table_name();
-                let expected = <$scalar as ScalarType>::FIXTURE_VALUES.len() as i64;
+                let expected = <$scalar as ScalarType>::fixture_values().len() as i64;
 
                 let mut tx = pool.begin().await?;
                 sqlx::query(&format!(
@@ -2671,7 +2681,7 @@ macro_rules! __scalar_matrix_count_case {
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
                 let fixture = <$scalar as ScalarType>::fixture_table_name();
-                let expected = <$scalar as ScalarType>::FIXTURE_VALUES.len() as i64;
+                let expected = <$scalar as ScalarType>::fixture_values().len() as i64;
 
                 let sql = format!(
                     "SELECT COUNT(payload::{d}) FROM {fixture}",
@@ -2718,7 +2728,7 @@ macro_rules! __scalar_matrix_count_distinct_dispatch {
                     .expect("non-Storage variant must expose an extractor");
                 let extractor = format!("{extractor_fn}(value)");
                 let fixture = <$scalar as ScalarType>::fixture_table_name();
-                let expected = <$scalar as ScalarType>::FIXTURE_VALUES.len() as i64;
+                let expected = <$scalar as ScalarType>::fixture_values().len() as i64;
 
                 let mut tx = pool.begin().await?;
                 sqlx::query(&format!(
