@@ -114,10 +114,11 @@ async fn placeholder_payload_satisfies_every_variant_check(pool: PgPool) -> Resu
     // successfully to every domain in the family. If a variant CHECK
     // tightens, this test fails and PLACEHOLDER_PAYLOAD needs updating.
     //
-    // Iterates `Variant::ALL` against `<T as ScalarType>::PG_TYPE`
-    // rather than hardcoding domain names — when `int8` (or any future
-    // scalar) lands, this test picks it up automatically by extending
-    // the type list below.
+    // Iterates `Variant::ALL` for `i32`, deriving each domain name from
+    // `ScalarDomainSpec::new::<i32>(variant).sql_domain` rather than
+    // hardcoding the names. Currently `i32`-only; when `int8` (or any
+    // future scalar) lands, wrap this in a per-type loop so the
+    // PLACEHOLDER_PAYLOAD cast is exercised against every scalar.
     for variant in Variant::ALL {
         let spec = ScalarDomainSpec::new::<i32>(*variant);
         let sql = format!("SELECT $1::jsonb::{}", spec.sql_domain);
@@ -295,12 +296,13 @@ async fn neq_propagates_null_under_three_valued_logic(pool: PgPool) -> Result<()
 }
 
 #[sqlx::test]
-async fn no_cross_variant_equality_operator_is_declared(pool: PgPool) -> Result<()> {
-    // The family deliberately does NOT define operators that mix two
-    // different capability variants — `eql_v3.int4_eq = eql_v3.int4_ord`
+async fn no_cross_variant_operator_is_declared(pool: PgPool) -> Result<()> {
+    // The family deliberately does NOT define ANY operator that mixes two
+    // different capability variants — e.g. `eql_v3.int4_eq = eql_v3.int4_ord`
     // would resolve against jsonb (the ultimate base type) and silently
-    // bypass the per-variant blockers. If someone accidentally adds such
-    // an operator, this test fails.
+    // bypass the per-variant blockers. The query below has no `oprname`
+    // filter, so it catches a cross-variant operator of any kind, not just
+    // `=`. If someone accidentally adds such an operator, this test fails.
     //
     // The check is structural (`pg_operator`) rather than dynamic
     // ("invoke and see it raise") so a future PG version with stricter

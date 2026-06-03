@@ -1,10 +1,11 @@
 -- REFERENCE: hand-written parity baseline for tasks/codegen/ — see ../README.md
+-- AUTOMATICALLY GENERATED FILE.
 -- REQUIRE: src/schema-v3.sql
 -- REQUIRE: src/encrypted_domain/int4/int4_types.sql
 -- REQUIRE: src/encrypted_domain/int4/int4_ord_functions.sql
 
 --! @file encrypted_domain/int4/int4_ord_operators.sql
---! @brief Ordered domain of the int4 encrypted-domain family — operator declarations.
+--! @brief Operators for eql_v3.int4_ord.
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3.eq,
@@ -114,157 +115,131 @@ CREATE OPERATOR >= (
   COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
 );
 
--- Placeholder: this domain's term set does not support @>; the backing function always raises.
 CREATE OPERATOR @> (
   FUNCTION = eql_v3.contains,
   LEFTARG = eql_v3.int4_ord, RIGHTARG = eql_v3.int4_ord
 );
 
--- Placeholder: this domain's term set does not support @>; the backing function always raises.
 CREATE OPERATOR @> (
   FUNCTION = eql_v3.contains,
   LEFTARG = eql_v3.int4_ord, RIGHTARG = jsonb
 );
 
--- Placeholder: this domain's term set does not support @>; the backing function always raises.
 CREATE OPERATOR @> (
   FUNCTION = eql_v3.contains,
   LEFTARG = jsonb, RIGHTARG = eql_v3.int4_ord
 );
 
--- Placeholder: this domain's term set does not support <@; the backing function always raises.
 CREATE OPERATOR <@ (
   FUNCTION = eql_v3.contained_by,
   LEFTARG = eql_v3.int4_ord, RIGHTARG = eql_v3.int4_ord
 );
 
--- Placeholder: this domain's term set does not support <@; the backing function always raises.
 CREATE OPERATOR <@ (
   FUNCTION = eql_v3.contained_by,
   LEFTARG = eql_v3.int4_ord, RIGHTARG = jsonb
 );
 
--- Placeholder: this domain's term set does not support <@; the backing function always raises.
 CREATE OPERATOR <@ (
   FUNCTION = eql_v3.contained_by,
   LEFTARG = jsonb, RIGHTARG = eql_v3.int4_ord
 );
 
--- Placeholder: this domain's term set does not support ->; the backing function always raises.
 CREATE OPERATOR -> (
   FUNCTION = eql_v3."->",
   LEFTARG = eql_v3.int4_ord, RIGHTARG = text
 );
 
--- Placeholder: this domain's term set does not support ->; the backing function always raises.
 CREATE OPERATOR -> (
   FUNCTION = eql_v3."->",
   LEFTARG = eql_v3.int4_ord, RIGHTARG = integer
 );
 
--- Placeholder: this domain's term set does not support ->; the backing function always raises.
 CREATE OPERATOR -> (
   FUNCTION = eql_v3."->",
   LEFTARG = jsonb, RIGHTARG = eql_v3.int4_ord
 );
 
--- Placeholder: this domain's term set does not support ->>; the backing function always raises.
 CREATE OPERATOR ->> (
   FUNCTION = eql_v3."->>",
   LEFTARG = eql_v3.int4_ord, RIGHTARG = text
 );
 
--- Placeholder: this domain's term set does not support ->>; the backing function always raises.
 CREATE OPERATOR ->> (
   FUNCTION = eql_v3."->>",
   LEFTARG = eql_v3.int4_ord, RIGHTARG = integer
 );
 
--- Placeholder: this domain's term set does not support ->>; the backing function always raises.
 CREATE OPERATOR ->> (
   FUNCTION = eql_v3."->>",
   LEFTARG = jsonb, RIGHTARG = eql_v3.int4_ord
 );
 
--- Placeholder: this domain's term set does not support ?; the backing function always raises.
 CREATE OPERATOR ? (
   FUNCTION = eql_v3."?",
   LEFTARG = eql_v3.int4_ord, RIGHTARG = text
 );
 
--- Placeholder: this domain's term set does not support ?|; the backing function always raises.
 CREATE OPERATOR ?| (
   FUNCTION = eql_v3."?|",
   LEFTARG = eql_v3.int4_ord, RIGHTARG = text[]
 );
 
--- Placeholder: this domain's term set does not support ?&; the backing function always raises.
 CREATE OPERATOR ?& (
   FUNCTION = eql_v3."?&",
   LEFTARG = eql_v3.int4_ord, RIGHTARG = text[]
 );
 
--- Placeholder: this domain's term set does not support @?; the backing function always raises.
 CREATE OPERATOR @? (
   FUNCTION = eql_v3."@?",
   LEFTARG = eql_v3.int4_ord, RIGHTARG = jsonpath
 );
 
--- Placeholder: this domain's term set does not support @@; the backing function always raises.
 CREATE OPERATOR @@ (
   FUNCTION = eql_v3."@@",
   LEFTARG = eql_v3.int4_ord, RIGHTARG = jsonpath
 );
 
--- Placeholder: this domain's term set does not support #>; the backing function always raises.
 CREATE OPERATOR #> (
   FUNCTION = eql_v3."#>",
   LEFTARG = eql_v3.int4_ord, RIGHTARG = text[]
 );
 
--- Placeholder: this domain's term set does not support #>>; the backing function always raises.
 CREATE OPERATOR #>> (
   FUNCTION = eql_v3."#>>",
   LEFTARG = eql_v3.int4_ord, RIGHTARG = text[]
 );
 
--- Placeholder: this domain's term set does not support -; the backing function always raises.
 CREATE OPERATOR - (
   FUNCTION = eql_v3."-",
   LEFTARG = eql_v3.int4_ord, RIGHTARG = text
 );
 
--- Placeholder: this domain's term set does not support -; the backing function always raises.
 CREATE OPERATOR - (
   FUNCTION = eql_v3."-",
   LEFTARG = eql_v3.int4_ord, RIGHTARG = integer
 );
 
--- Placeholder: this domain's term set does not support -; the backing function always raises.
 CREATE OPERATOR - (
   FUNCTION = eql_v3."-",
   LEFTARG = eql_v3.int4_ord, RIGHTARG = text[]
 );
 
--- Placeholder: this domain's term set does not support #-; the backing function always raises.
 CREATE OPERATOR #- (
   FUNCTION = eql_v3."#-",
   LEFTARG = eql_v3.int4_ord, RIGHTARG = text[]
 );
 
--- Placeholder: this domain's term set does not support ||; the backing function always raises.
 CREATE OPERATOR || (
   FUNCTION = eql_v3."||",
   LEFTARG = eql_v3.int4_ord, RIGHTARG = eql_v3.int4_ord
 );
 
--- Placeholder: this domain's term set does not support ||; the backing function always raises.
 CREATE OPERATOR || (
   FUNCTION = eql_v3."||",
   LEFTARG = eql_v3.int4_ord, RIGHTARG = jsonb
 );
 
--- Placeholder: this domain's term set does not support ||; the backing function always raises.
 CREATE OPERATOR || (
   FUNCTION = eql_v3."||",
   LEFTARG = jsonb, RIGHTARG = eql_v3.int4_ord

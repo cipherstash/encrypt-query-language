@@ -24,16 +24,17 @@ from tasks.codegen.terms import TERM_CATALOG
 
 
 def test_auto_generated_header_present():
-    assert "AUTO-GENERATED" in AUTO_GENERATED_HEADER
-    assert "DO NOT EDIT" in AUTO_GENERATED_HEADER
+    # Byte-identical to the Rust generator's marker
+    # (crates/eql-codegen/src/consts.rs) and to the `^-- AUTOMATICALLY GENERATED
+    # FILE` prefix that tasks/docs/validate/*.sh grep on to skip generated SQL.
+    assert AUTO_GENERATED_HEADER == "-- AUTOMATICALLY GENERATED FILE.\n"
+    assert "AUTOMATICALLY GENERATED FILE" in AUTO_GENERATED_HEADER
 
 
-def test_rust_header_is_comment_and_marks_committed():
-    # Rust uses // comments, not SQL's --, and unlike the gitignored SQL
-    # surface this file is committed and CI-verified.
-    assert AUTO_GENERATED_HEADER_RS.startswith("// AUTO-GENERATED")
-    assert "DO NOT EDIT" in AUTO_GENERATED_HEADER_RS
-    assert "committed" in AUTO_GENERATED_HEADER_RS
+def test_rust_header_is_a_rust_comment():
+    # Rust uses // comments, not SQL's --. Byte-identical to the Rust
+    # generator's AUTO_GENERATED_HEADER_RS (crates/eql-codegen/src/consts.rs).
+    assert AUTO_GENERATED_HEADER_RS == "// AUTOMATICALLY GENERATED FILE.\n"
     # No line is an SQL-style (`--`) comment — this is Rust, not SQL.
     assert not any(
         line.startswith("--") for line in AUTO_GENERATED_HEADER_RS.splitlines()
@@ -48,15 +49,15 @@ def test_render_fixture_values_rs_emits_typed_const():
     )
     body = render_fixture_values_rs(spec)
     assert "pub const VALUES: &[i32] = &[" in body
-    assert "tasks/codegen/types/int4.toml" in body
+    assert "`int4` row in `eql-scalars::CATALOG`" in body
     # Sentinels map to named consts; numeric tokens pass through.
     assert "i32::MIN," in body
     assert "i32::MAX," in body
     assert "    -1,\n" in body
     assert "    0,\n" in body  # ZERO and "1" both literal
     assert "    1,\n" in body
-    # No AUTO-GENERATED header in the body — the writer prepends it.
-    assert "AUTO-GENERATED" not in body
+    # No generated-file marker in the body — the writer prepends it.
+    assert "AUTOMATICALLY GENERATED FILE" not in body
 
 
 def test_render_fixture_values_rs_preserves_manifest_order():
