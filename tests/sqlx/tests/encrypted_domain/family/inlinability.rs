@@ -87,6 +87,47 @@ async fn no_encrypted_domain_inline_critical_function_is_pinned(pool: PgPool) ->
     Ok(())
 }
 
+/// Direct guard for the self-contained eql_v3 SEM index-term functions. Unlike
+/// the structural guard above (which covers jsonb-domain-arg functions), these
+/// take a composite (ore_block_u64_8_256) or raw jsonb (hmac_256) arg, so they
+/// are NOT caught by the structural pin-skip and need explicit inline_critical
+/// allowlisting. If pin_search_path.sql pins any of them, v3 functional-index
+/// inlining silently regresses to Seq Scan — this test fails instead.
+#[sqlx::test]
+async fn eql_v3_sem_inline_critical_functions_are_unpinned(pool: PgPool) -> Result<()> {
+    let rows: Vec<(String,)> = sqlx::query_as(
+        r#"
+        SELECT p.proname || '(' || pg_catalog.pg_get_function_arguments(p.oid) || ')'
+        FROM pg_catalog.pg_proc p
+        JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname = 'eql_v3'
+          AND (
+            (p.pronargs = 2 AND p.proname IN (
+              'ore_block_u64_8_256_eq','ore_block_u64_8_256_neq',
+              'ore_block_u64_8_256_lt','ore_block_u64_8_256_lte',
+              'ore_block_u64_8_256_gt','ore_block_u64_8_256_gte'))
+            OR (p.pronargs = 1 AND p.proname = 'hmac_256')
+          )
+          AND (
+            -- offender: pinned search_path, or not inlinable SQL/IMMUTABLE
+            EXISTS (SELECT 1 FROM unnest(coalesce(p.proconfig,'{}'::text[])) c WHERE c LIKE 'search_path=%')
+            OR p.provolatile <> 'i'
+            OR p.prolang <> (SELECT l.oid FROM pg_catalog.pg_language l WHERE l.lanname = 'sql')
+          )
+        ORDER BY 1
+        "#,
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    assert!(
+        rows.is_empty(),
+        "eql_v3 SEM inline-critical functions must stay unpinned + inlinable SQL; offenders: {:?}",
+        rows.iter().map(|r| &r.0).collect::<Vec<_>>()
+    );
+    Ok(())
+}
+
 #[sqlx::test]
 async fn every_inline_critical_eligible_domain_has_inline_critical_functions(
     pool: PgPool,

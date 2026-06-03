@@ -107,8 +107,8 @@ function_search_path_mutable	eql_v2	grouped_value	function	Aggregate: same as mi
 # encrypted-type operators above; splinter matches by (schema, name, type), so
 # they need their own rows. The plpgsql blockers are pinned by
 # tasks/pin_search_path.sql and do not surface here.
-function_search_path_mutable	eql_v3	eq_term	function	HMAC equality term extractor for the eql_v3 *_eq domains: returns eql_v2.hmac_256. Must inline so `eql_v3.eq_term(col)` folds into the calling query and matches the functional hash/btree index built on the same expression. SET search_path would disable SQL function inlining (see PostgreSQL inline_function).
-function_search_path_mutable	eql_v3	ord_term	function	ORE-block order term extractor for the eql_v3 ordered domains: returns eql_v2.ore_block_u64_8_256 (carrying the main DEFAULT btree opclass). Used inside the inlinable comparison wrappers and as the functional-index expression USING btree (eql_v3.ord_term(col)); must inline. Covers both ord_term overloads (eql_v3.int4_ord, eql_v3.int4_ord_ore).
+function_search_path_mutable	eql_v3	eq_term	function	HMAC equality term extractor for the eql_v3 *_eq domains: returns eql_v3.hmac_256. Must inline so `eql_v3.eq_term(col)` folds into the calling query and matches the functional hash/btree index built on the same expression. SET search_path would disable SQL function inlining (see PostgreSQL inline_function).
+function_search_path_mutable	eql_v3	ord_term	function	ORE-block order term extractor for the eql_v3 ordered domains: returns eql_v3.ore_block_u64_8_256 (carrying the main DEFAULT btree opclass). Used inside the inlinable comparison wrappers and as the functional-index expression USING btree (eql_v3.ord_term(col)); must inline. Covers both ord_term overloads (eql_v3.int4_ord, eql_v3.int4_ord_ore).
 function_search_path_mutable	eql_v3	eq	function	Equality comparison wrapper on the eql_v3 domains. Inlines to `eq_term(a) = eq_term(b)`; must reach the functional index on eql_v3.eq_term(col) for bare-form equality to engage Index Scan. Covers the converged eq wrappers on the eql_v3 int4 variants.
 function_search_path_mutable	eql_v3	neq	function	Inequality comparison wrapper on the eql_v3 domains. Same rationale as eql_v3.eq.
 function_search_path_mutable	eql_v3	lt	function	Less-than comparison wrapper on the eql_v3 ordered domains. Inlines to `ord_term(a) < ord_term(b)`; must reach the functional btree index on eql_v3.ord_term(col) for range queries to engage Index Scan.
@@ -117,6 +117,13 @@ function_search_path_mutable	eql_v3	gt	function	Greater-than comparison wrapper 
 function_search_path_mutable	eql_v3	gte	function	Greater-than-or-equal comparison wrapper on the eql_v3 ordered domains. Same rationale as eql_v3.lt.
 function_search_path_mutable	eql_v3	min	function	Per-domain MIN aggregate on the eql_v3 ordered domains (splinter labels aggregates type=function): ALTER AGGREGATE has no SET configuration_parameter syntax, and ALTER ROUTINE/FUNCTION reject aggregates. The aggregate's SFUNC carries a pinned search_path.
 function_search_path_mutable	eql_v3	max	function	Per-domain MAX aggregate on the eql_v3 ordered domains. Same as eql_v3.min.
+function_search_path_mutable	eql_v3	ore_block_u64_8_256_eq	function	Inner comparator for the eql_v3 ore_block_u64_8_256 type's `=` operator (self-contained SEM fork). The eql_v3 *_ord comparison wrappers inline to `ord_term(a) op ord_term(b)`; the planner only carries that through to the functional ORE index if this inner function is also inlinable (no SET, IMMUTABLE). Mirrors eql_v2.ore_block_u64_8_256_eq.
+function_search_path_mutable	eql_v3	ore_block_u64_8_256_neq	function	Inner comparator for the eql_v3 ore_block_u64_8_256 `<>` operator. Same rationale as eql_v3.ore_block_u64_8_256_eq.
+function_search_path_mutable	eql_v3	ore_block_u64_8_256_lt	function	Inner comparator for the eql_v3 ore_block_u64_8_256 `<` operator. Same rationale as eql_v3.ore_block_u64_8_256_eq.
+function_search_path_mutable	eql_v3	ore_block_u64_8_256_lte	function	Inner comparator for the eql_v3 ore_block_u64_8_256 `<=` operator. Same rationale as eql_v3.ore_block_u64_8_256_eq.
+function_search_path_mutable	eql_v3	ore_block_u64_8_256_gt	function	Inner comparator for the eql_v3 ore_block_u64_8_256 `>` operator. Same rationale as eql_v3.ore_block_u64_8_256_eq.
+function_search_path_mutable	eql_v3	ore_block_u64_8_256_gte	function	Inner comparator for the eql_v3 ore_block_u64_8_256 `>=` operator. Same rationale as eql_v3.ore_block_u64_8_256_eq.
+function_search_path_mutable	eql_v3	hmac_256	function	HMAC equality extractor for the eql_v3 SEM fork: inlinable SQL (jsonb) constructor used inside eql_v3.eq_term. Must inline so the functional hash/btree index on eql_v3.eq_term(col) engages. Mirrors eql_v2.hmac_256.
 ALLOW
 
 # Wrap splinter (a single bare SELECT expression) into a subquery we can
