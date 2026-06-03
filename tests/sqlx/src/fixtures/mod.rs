@@ -26,11 +26,8 @@ pub mod cipherstash;
 
 pub mod driver;
 
-// The per-type scalar fixture modules (`eql_v2_int4`, `eql_v2_int2`,
-// `eql_v2_int8`, …) are generated from the single harness list in
-// `scalar_types.rs`. Each expands to `pub mod eql_v2_<T> { … scalar_fixture!
-// … }` — the same three items the old per-type `eql_v2_<T>.rs` files held.
-// Scalar fixtures read their plaintext value lists directly from the catalog
-// (`eql_scalars::<TOKEN>_VALUES`) — see `scalar_fixture!`. There is no
-// generated `<T>_values.rs` module.
+// The per-type scalar fixture modules (`eql_v2_int4`, `eql_v2_int2`, …) are
+// generated from the harness list in `scalar_types.rs`. Each expands to
+// `pub mod eql_v2_<T> { … scalar_fixture! … }`, reading its plaintext values
+// directly from the catalog (`eql_scalars::<TOKEN>_VALUES`).
 crate::scalar_types!(fixture_modules);
