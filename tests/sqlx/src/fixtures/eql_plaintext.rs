@@ -56,6 +56,7 @@ impl PlaintextSqlType {
     pub const INTEGER: PlaintextSqlType = PlaintextSqlType("integer");
     pub const SMALLINT: PlaintextSqlType = PlaintextSqlType("smallint");
     pub const BIGINT: PlaintextSqlType = PlaintextSqlType("bigint");
+    pub const DATE: PlaintextSqlType = PlaintextSqlType("date");
 
     pub fn as_str(&self) -> &'static str {
         self.0
@@ -70,30 +71,32 @@ impl fmt::Display for PlaintextSqlType {
 
 /// The EQL `cast_as` for a scalar kind, drawn from the `Cast` allowlist.
 ///
-/// Only the integer kinds have `EqlPlaintext` impls, so only those resolve;
-/// the non-integer kinds mirror the `eql_scalars` accessor convention and
-/// `panic!`, since no impl can ever reach them.
+/// Only the wired kinds (the integer kinds plus `Date`) have `EqlPlaintext`
+/// impls, so only those resolve; the remaining kinds mirror the `eql_scalars`
+/// accessor convention and `panic!`, since no impl can ever reach them.
 const fn cast_for_kind(kind: ScalarKind) -> Cast {
     match kind {
         ScalarKind::I32 => Cast::INT,
         ScalarKind::I16 => Cast::SMALL_INT,
         ScalarKind::I64 => Cast::BIG_INT,
+        ScalarKind::Date => Cast::DATE,
         ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
-            panic!("EqlPlaintext is only implemented for integer scalar kinds")
+            panic!("EqlPlaintext is only implemented for the wired scalar kinds")
         }
     }
 }
 
 /// The `plaintext` oracle column SQL type for a scalar kind, drawn from the
-/// `PlaintextSqlType` allowlist. As with `cast_for_kind`, only integer kinds
-/// resolve.
+/// `PlaintextSqlType` allowlist. As with `cast_for_kind`, only the wired kinds
+/// (integers plus `Date`) resolve.
 const fn plaintext_sql_type_for_kind(kind: ScalarKind) -> PlaintextSqlType {
     match kind {
         ScalarKind::I32 => PlaintextSqlType::INTEGER,
         ScalarKind::I16 => PlaintextSqlType::SMALLINT,
         ScalarKind::I64 => PlaintextSqlType::BIGINT,
+        ScalarKind::Date => PlaintextSqlType::DATE,
         ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
-            panic!("EqlPlaintext is only implemented for integer scalar kinds")
+            panic!("EqlPlaintext is only implemented for the wired scalar kinds")
         }
     }
 }
@@ -103,6 +106,7 @@ mod sealed {
     impl Sealed for i32 {}
     impl Sealed for i16 {}
     impl Sealed for i64 {}
+    impl Sealed for chrono::NaiveDate {}
 }
 
 /// A Rust type usable as a fixture `plaintext` value, carrying its EQL cast
@@ -151,6 +155,14 @@ impl EqlPlaintext for i64 {
 
     fn to_plaintext(&self) -> Plaintext {
         Plaintext::BigInt(Some(*self))
+    }
+}
+
+impl EqlPlaintext for chrono::NaiveDate {
+    const KIND: ScalarKind = ScalarKind::Date;
+
+    fn to_plaintext(&self) -> Plaintext {
+        Plaintext::NaiveDate(Some(*self))
     }
 }
 
@@ -221,6 +233,30 @@ mod tests {
         match 42_i64.to_plaintext() {
             Plaintext::BigInt(Some(value)) => assert_eq!(value, 42),
             other => panic!("expected Plaintext::BigInt(Some(42)), got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn naive_date_casts_to_date() {
+        assert_eq!(<chrono::NaiveDate as EqlPlaintext>::CAST.as_str(), "date");
+    }
+
+    #[test]
+    fn naive_date_plaintext_sql_type_is_date() {
+        assert_eq!(
+            <chrono::NaiveDate as EqlPlaintext>::PLAINTEXT_SQL_TYPE.as_str(),
+            "date"
+        );
+    }
+
+    #[test]
+    fn naive_date_to_plaintext_wraps_in_naive_date_variant() {
+        // A NaiveDate must lift into the NaiveDate variant so the fixture
+        // driver encrypts it under the `date` cast.
+        let d = chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
+        match d.to_plaintext() {
+            Plaintext::NaiveDate(Some(value)) => assert_eq!(value, d),
+            other => panic!("expected Plaintext::NaiveDate(Some(1970-01-01)), got {other:?}"),
         }
     }
 }
