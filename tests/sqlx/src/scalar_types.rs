@@ -14,7 +14,7 @@
 //! to forward it to the matching `eql_tests_macros` proc-macro:
 //!
 //! - `scalar_type_impls` — `scalar_domains.rs` (lib): the `impl ScalarType` block.
-//! - `fixture_modules` — `fixtures/mod.rs` (lib): the `pub mod eql_v2_<T>` modules.
+//! - `fixture_modules` — `fixtures/mod.rs` (lib): the `pub mod eql_v3_<T>` modules.
 //! - `matrix_suites` — `tests/encrypted_domain/scalars/mod.rs` (test binary):
 //!   the `ordered_numeric_matrix!` suites.
 //! - `fixture_dispatch` — `tests/generate_all_fixtures.rs` (test binary): the

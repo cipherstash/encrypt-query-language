@@ -403,7 +403,20 @@ macro_rules! int_values {
                 let mut i = 0;
                 while i < N {
                     out[i] = match SPEC.fixtures[i].numeric_value(SPEC.kind) {
-                        Some(v) => v as $ty,
+                        Some(v) => {
+                            // Const-eval bounds check: a fixture value that does
+                            // not fit the narrowed target type would otherwise be
+                            // silently truncated/wrapped by `as`. Make it a
+                            // compile-time error instead.
+                            if v < <$ty>::MIN as i128 || v > <$ty>::MAX as i128 {
+                                panic!(concat!(
+                                    "integer scalar fixture value out of range for `",
+                                    stringify!($ty),
+                                    "`"
+                                ));
+                            }
+                            v as $ty
+                        }
                         None => panic!("integer scalar fixture must resolve to a number"),
                     };
                     i += 1;

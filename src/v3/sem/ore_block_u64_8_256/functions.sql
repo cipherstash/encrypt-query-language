@@ -17,24 +17,34 @@
 --! @internal
 --! @param val jsonb Array of hex-encoded ORE block terms
 --! @return eql_v3.ore_block_u64_8_256 ORE block composite, or NULL if input is null
+--! @note Inlinable `LANGUAGE sql` IMMUTABLE form (no `SET search_path`) so the
+--!   planner can fold this per-encrypted-value helper into the calling query.
+--!   This deliberately diverges from the v2 plpgsql equivalent (intentionally
+--!   left unchanged): the `CASE WHEN jsonb_typeof(val) = 'array'` guard only
+--!   evaluates the array path for an array, so a non-array JSON scalar returns
+--!   NULL here instead of raising. The sole caller passes `val->'ob'`, always an
+--!   array or JSON null, so the divergence is unreachable in practice; JSON null
+--!   and empty array still return NULL exactly as before.
 CREATE FUNCTION eql_v3.jsonb_array_to_ore_block_u64_8_256(val jsonb)
 RETURNS eql_v3.ore_block_u64_8_256
-  SET search_path = pg_catalog, extensions, public
+  IMMUTABLE
 AS $$
-DECLARE
-  terms eql_v3.ore_block_u64_8_256_term[];
-BEGIN
-  IF jsonb_typeof(val) = 'null' THEN
-    RETURN NULL;
-  END IF;
+  SELECT CASE WHEN jsonb_typeof(val) = 'array'
+    THEN ROW((
+      SELECT array_agg(ROW(b)::eql_v3.ore_block_u64_8_256_term)
+      FROM unnest(eql_v3.jsonb_array_to_bytea_array(val)) AS b
+    ))::eql_v3.ore_block_u64_8_256
+    ELSE NULL
+  END;
+$$ LANGUAGE sql;
 
-  SELECT array_agg(ROW(b)::eql_v3.ore_block_u64_8_256_term)
-  INTO terms
-  FROM unnest(eql_v3.jsonb_array_to_bytea_array(val)) AS b;
-
-  RETURN ROW(terms)::eql_v3.ore_block_u64_8_256;
-END;
-$$ LANGUAGE plpgsql;
+--! @internal Mark this hand-written helper inline-critical so the post-install
+--! pin_search_path pass leaves it unpinned (no `SET search_path`), preserving
+--! SQL-function inlining. It takes a bare `jsonb` arg (not a jsonb-backed
+--! encrypted DOMAIN), so the structural skip in tasks/pin_search_path.sql does
+--! not recognise it; this marker is the documented manual opt-in.
+COMMENT ON FUNCTION eql_v3.jsonb_array_to_ore_block_u64_8_256(jsonb) IS
+  'eql-inline-critical: per-encrypted-value ORE helper; must stay inlinable (unpinned search_path)';
 
 
 --! @brief Extract ORE block index term from JSONB payload

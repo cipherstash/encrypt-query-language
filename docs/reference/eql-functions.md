@@ -429,14 +429,14 @@ encrypted-domain value. Generated per eq/ord-capable variant of every
 scalar type — see [Adding a Scalar Encrypted-Domain Type](./adding-a-scalar-encrypted-domain-type.md).
 The argument type selects the overload, and both are inlinable so a
 functional index built on the extractor engages. The extractors live in
-the `eql_v3` schema; their return types remain the core `eql_v2`
-index-term types.
+the `eql_v3` schema; their return types are the self-contained `eql_v3`
+SEM index-term types.
 
 ```sql
 -- int4 — generated for every scalar type's eq / ord variants.
-eql_v3.eq_term(a eql_v3.int4_eq)       RETURNS eql_v2.hmac_256
-eql_v3.ord_term(a eql_v3.int4_ord)     RETURNS eql_v2.ore_block_u64_8_256
-eql_v3.ord_term(a eql_v3.int4_ord_ore) RETURNS eql_v2.ore_block_u64_8_256
+eql_v3.eq_term(a eql_v3.int4_eq)       RETURNS eql_v3.hmac_256
+eql_v3.ord_term(a eql_v3.int4_ord)     RETURNS eql_v3.ore_block_u64_8_256
+eql_v3.ord_term(a eql_v3.int4_ord_ore) RETURNS eql_v3.ore_block_u64_8_256
 ```
 
 **Example:**

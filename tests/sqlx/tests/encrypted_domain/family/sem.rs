@@ -223,3 +223,173 @@ async fn sem_presence_checks_and_missing_ob_behaviour(pool: PgPool) -> Result<()
     );
     Ok(())
 }
+
+/// T6 — Characterization of `eql_v3.jsonb_array_to_bytea_array(jsonb)` across its
+/// three real-world input shapes. This is the safety net for the plpgsql→sql
+/// inlining refactor (the function is reached per-encrypted-value, so it must be
+/// inlinable). Behaviour pinned:
+///   - JSON null  (`'null'`) → NULL          (the load-bearing null guard)
+///   - empty array (`'[]'`)  → NULL          (array_agg over zero rows is NULL)
+///   - populated array       → decoded bytea[]
+///
+/// Note the deliberate divergence the inlinable CASE form introduces vs. the
+/// v2 plpgsql equivalent: a non-array JSON *scalar* (e.g. a number) returns NULL
+/// rather than raising `cannot extract elements from a scalar`. Both callers only
+/// ever pass an array or json-null (`val->'ob'`), so this is unreachable in
+/// practice; we pin it here so the divergence is intentional and visible.
+#[sqlx::test]
+async fn jsonb_array_to_bytea_array_input_shapes(pool: PgPool) -> Result<()> {
+    // SQL NULL (distinct from JSON null `'null'`). The function is NOT STRICT,
+    // so the body runs: `jsonb_typeof(NULL)` is NULL → the CASE guard
+    // `WHEN jsonb_typeof(val) = 'array'` is not-true → ELSE NULL.
+    let is_null: bool =
+        sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_bytea_array(NULL::jsonb) IS NULL")
+            .fetch_one(&pool)
+            .await?;
+    assert!(
+        is_null,
+        "SQL NULL must yield NULL bytea[] (function is not STRICT)"
+    );
+
+    // JSON null → NULL.
+    let is_null: bool =
+        sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_bytea_array('null'::jsonb) IS NULL")
+            .fetch_one(&pool)
+            .await?;
+    assert!(is_null, "JSON null must yield NULL bytea[]");
+
+    // Empty array → NULL (array_agg over zero rows).
+    let is_null: bool =
+        sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_bytea_array('[]'::jsonb) IS NULL")
+            .fetch_one(&pool)
+            .await?;
+    assert!(is_null, "empty JSON array must yield NULL bytea[]");
+
+    // Single-element array → one decoded bytea element.
+    let decoded: Vec<Vec<u8>> =
+        sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_bytea_array('[\"aabb\"]'::jsonb)")
+            .fetch_one(&pool)
+            .await?;
+    assert_eq!(
+        decoded,
+        vec![vec![0xaau8, 0xbb]],
+        "single-element array must hex-decode to a 1-element bytea[]"
+    );
+
+    // Populated array → hex-decoded bytea[] round-trip.
+    let decoded: Vec<Vec<u8>> = sqlx::query_scalar(
+        "SELECT eql_v3.jsonb_array_to_bytea_array('[\"aabb\",\"ccdd\"]'::jsonb)",
+    )
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(
+        decoded,
+        vec![vec![0xaau8, 0xbb], vec![0xccu8, 0xdd]],
+        "populated array must hex-decode to bytea[]"
+    );
+
+    // Deliberate delta: a non-array JSON scalar returns NULL (not a raise).
+    let is_null: bool =
+        sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_bytea_array('5'::jsonb) IS NULL")
+            .fetch_one(&pool)
+            .await?;
+    assert!(
+        is_null,
+        "non-array JSON scalar must yield NULL (documented delta)"
+    );
+
+    // Same delta for a non-array JSON object — `jsonb_typeof` is 'object', so
+    // the CASE guard is not-true → ELSE NULL (not a raise).
+    let is_null: bool =
+        sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_bytea_array('{}'::jsonb) IS NULL")
+            .fetch_one(&pool)
+            .await?;
+    assert!(
+        is_null,
+        "non-array JSON object must yield NULL (documented delta)"
+    );
+
+    Ok(())
+}
+
+/// T7 — Characterization of `eql_v3.jsonb_array_to_ore_block_u64_8_256(jsonb)`
+/// across the same three input shapes. Safety net for the same plpgsql→sql
+/// inlining refactor. Behaviour pinned:
+///   - JSON null  (`'null'`) → NULL composite
+///   - empty array (`'[]'`)  → NULL composite (inner array_agg is NULL)
+///   - populated array       → non-NULL composite with one term per element
+///
+/// Same documented delta as T6 for a non-array JSON scalar.
+#[sqlx::test]
+async fn jsonb_array_to_ore_block_input_shapes(pool: PgPool) -> Result<()> {
+    // SQL NULL (distinct from JSON null `'null'`). Not STRICT, so the body
+    // runs: `jsonb_typeof(NULL)` is NULL → CASE guard not-true → ELSE NULL.
+    let is_null: bool =
+        sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_ore_block_u64_8_256(NULL::jsonb) IS NULL")
+            .fetch_one(&pool)
+            .await?;
+    assert!(
+        is_null,
+        "SQL NULL must yield NULL composite (function is not STRICT)"
+    );
+
+    // JSON null → NULL composite.
+    let is_null: bool = sqlx::query_scalar(
+        "SELECT eql_v3.jsonb_array_to_ore_block_u64_8_256('null'::jsonb) IS NULL",
+    )
+    .fetch_one(&pool)
+    .await?;
+    assert!(is_null, "JSON null must yield NULL composite");
+
+    // Empty array → NULL composite.
+    let is_null: bool =
+        sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_ore_block_u64_8_256('[]'::jsonb) IS NULL")
+            .fetch_one(&pool)
+            .await?;
+    assert!(is_null, "empty JSON array must yield NULL composite");
+
+    // Single-element array → non-NULL composite with exactly 1 term.
+    let term_count: i32 = sqlx::query_scalar(
+        "SELECT cardinality((eql_v3.jsonb_array_to_ore_block_u64_8_256('[\"aabb\"]'::jsonb)).terms)",
+    )
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(
+        term_count, 1,
+        "single-element array must yield exactly one term"
+    );
+
+    // Populated array → non-NULL composite with one term per element.
+    let term_count: i32 = sqlx::query_scalar(
+        "SELECT cardinality((eql_v3.jsonb_array_to_ore_block_u64_8_256('[\"aabb\",\"ccdd\",\"eeff\"]'::jsonb)).terms)",
+    )
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(
+        term_count, 3,
+        "populated array must yield one term per element"
+    );
+
+    // Deliberate delta: a non-array JSON scalar returns NULL (not a raise).
+    let is_null: bool =
+        sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_ore_block_u64_8_256('5'::jsonb) IS NULL")
+            .fetch_one(&pool)
+            .await?;
+    assert!(
+        is_null,
+        "non-array JSON scalar must yield NULL (documented delta)"
+    );
+
+    // Same delta for a non-array JSON object — `jsonb_typeof` is 'object', so
+    // the CASE guard is not-true → ELSE NULL (not a raise).
+    let is_null: bool =
+        sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_ore_block_u64_8_256('{}'::jsonb) IS NULL")
+            .fetch_one(&pool)
+            .await?;
+    assert!(
+        is_null,
+        "non-array JSON object must yield NULL (documented delta)"
+    );
+
+    Ok(())
+}

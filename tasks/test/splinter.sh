@@ -124,6 +124,8 @@ function_search_path_mutable	eql_v3	ore_block_u64_8_256_lte	function	Inner compa
 function_search_path_mutable	eql_v3	ore_block_u64_8_256_gt	function	Inner comparator for the eql_v3 ore_block_u64_8_256 `>` operator. Same rationale as eql_v3.ore_block_u64_8_256_eq.
 function_search_path_mutable	eql_v3	ore_block_u64_8_256_gte	function	Inner comparator for the eql_v3 ore_block_u64_8_256 `>=` operator. Same rationale as eql_v3.ore_block_u64_8_256_eq.
 function_search_path_mutable	eql_v3	hmac_256	function	HMAC equality extractor for the eql_v3 SEM fork: inlinable SQL (jsonb) constructor used inside eql_v3.eq_term. Must inline so the functional hash/btree index on eql_v3.eq_term(col) engages. Mirrors eql_v2.hmac_256.
+function_search_path_mutable	eql_v3	jsonb_array_to_bytea_array	function	Hand-written jsonb→bytea[] helper for the eql_v3 SEM fork: inlinable SQL (no SET, IMMUTABLE). Reached per-encrypted-value through eql_v3.ore_block_u64_8_256; must inline so the planner can fold it into the calling query. Pinned by neither the structural skip (it takes bare jsonb, not a jsonb-backed domain) nor an inline-critical OID clause — it carries the documented `eql-inline-critical` COMMENT marker that tasks/pin_search_path.sql honours. The eql_v2 copy stays plpgsql (pinned) by design.
+function_search_path_mutable	eql_v3	jsonb_array_to_ore_block_u64_8_256	function	Hand-written jsonb→ore_block composite helper for the eql_v3 SEM fork: inlinable SQL (no SET, IMMUTABLE). Same rationale as eql_v3.jsonb_array_to_bytea_array — reached per-encrypted-value through eql_v3.ore_block_u64_8_256, carries the `eql-inline-critical` COMMENT marker. The eql_v2 copy stays plpgsql (pinned) by design.
 ALLOW
 
 # Wrap splinter (a single bare SELECT expression) into a subquery we can

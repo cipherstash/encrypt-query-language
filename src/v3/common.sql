@@ -18,21 +18,32 @@
 --!
 --! @note Returns NULL if input is JSON null
 --! @note Each array element is hex-decoded to bytea
+--! @note Inlinable `LANGUAGE sql` IMMUTABLE form (no `SET search_path`) so the
+--!   planner can fold this per-encrypted-value helper into the calling query.
+--!   This deliberately diverges from the v2 plpgsql equivalent (intentionally
+--!   left unchanged): the `CASE WHEN jsonb_typeof(val) = 'array'` guard only
+--!   evaluates the set-returning `jsonb_array_elements_text` for an array, so a
+--!   non-array JSON scalar returns NULL here instead of raising "cannot extract
+--!   elements from a scalar". Both callers only ever pass an array or JSON null
+--!   (`val->'ob'`), so the divergence is unreachable in practice; JSON null and
+--!   empty array still return NULL exactly as before.
 CREATE FUNCTION eql_v3.jsonb_array_to_bytea_array(val jsonb)
 RETURNS bytea[]
-  SET search_path = pg_catalog, extensions, public
+  IMMUTABLE
 AS $$
-DECLARE
-  terms_arr bytea[];
-BEGIN
-  IF jsonb_typeof(val) = 'null' THEN
-    RETURN NULL;
-  END IF;
+  SELECT CASE WHEN jsonb_typeof(val) = 'array'
+    THEN (
+      SELECT array_agg(decode(value::text, 'hex')::bytea)
+      FROM jsonb_array_elements_text(val) AS value
+    )
+    ELSE NULL
+  END;
+$$ LANGUAGE sql;
 
-  SELECT array_agg(decode(value::text, 'hex')::bytea)
-    INTO terms_arr
-  FROM jsonb_array_elements_text(val) AS value;
-
-  RETURN terms_arr;
-END;
-$$ LANGUAGE plpgsql;
+--! @internal Mark this hand-written helper inline-critical so the post-install
+--! pin_search_path pass leaves it unpinned (no `SET search_path`), preserving
+--! SQL-function inlining. It takes a bare `jsonb` arg (not a jsonb-backed
+--! encrypted DOMAIN), so the structural skip in tasks/pin_search_path.sql does
+--! not recognise it; this marker is the documented manual opt-in.
+COMMENT ON FUNCTION eql_v3.jsonb_array_to_bytea_array(jsonb) IS
+  'eql-inline-critical: per-encrypted-value ORE helper; must stay inlinable (unpinned search_path)';
