@@ -209,7 +209,7 @@ async fn blocking_lt_flips_lt_arm_but_not_order_by(pool: PgPool) -> Result<()> {
     let order_by_sql = "SELECT plaintext FROM fixtures.eql_v2_int4 \
                         ORDER BY eql_v3.ord_term(payload::eql_v3.int4_ord) ASC";
 
-    let mut ascending: Vec<i32> = <i32 as ScalarType>::FIXTURE_VALUES.to_vec();
+    let mut ascending: Vec<i32> = <i32 as ScalarType>::fixture_values().to_vec();
     ascending.sort();
 
     // Baseline: `<` works (no raise) and ORDER BY is plaintext-sorted.
@@ -336,7 +336,7 @@ async fn collapsing_ord_term_flips_order_by_arm(pool: PgPool) -> Result<()> {
     let order_by_desc = "SELECT plaintext FROM fixtures.eql_v2_int4 \
                          ORDER BY eql_v3.ord_term(payload::eql_v3.int4_ord) DESC";
 
-    let mut descending: Vec<i32> = <i32 as ScalarType>::FIXTURE_VALUES.to_vec();
+    let mut descending: Vec<i32> = <i32 as ScalarType>::fixture_values().to_vec();
     descending.sort();
     descending.reverse();
 
