@@ -87,6 +87,119 @@ async fn no_encrypted_domain_inline_critical_function_is_pinned(pool: PgPool) ->
     Ok(())
 }
 
+/// Direct guard for the self-contained eql_v3 SEM index-term functions. Unlike
+/// the structural guard above (which covers jsonb-domain-arg functions), these
+/// take a composite (ore_block_u64_8_256) or raw jsonb (hmac_256/the two
+/// per-encrypted-value `jsonb_array_to_*` helpers) arg, so they are NOT caught
+/// by the structural pin-skip and need explicit inline_critical allowlisting.
+/// If pin_search_path.sql pins any of them, v3 functional-index inlining
+/// silently regresses to Seq Scan — this test fails instead.
+///
+/// `jsonb_array_to_bytea_array(jsonb)` and
+/// `jsonb_array_to_ore_block_u64_8_256(jsonb)` are included here: both take a
+/// bare `jsonb` arg (not a jsonb-backed encrypted DOMAIN), so the structural
+/// skip in tasks/pin_search_path.sql does not recognise them — they are kept
+/// unpinned by the `eql-inline-critical` COMMENT marker instead. This test
+/// asserts the unpinned + inlinable-SQL state directly; the companion
+/// `eql_v3_sem_inline_critical_functions_carry_marker` test below asserts the
+/// marker itself, so an edit that drops the marker (or a pin_search_path.sql
+/// refactor that stops honouring it) fails CI even though both checks live in
+/// separate tests.
+#[sqlx::test]
+async fn eql_v3_sem_inline_critical_functions_are_unpinned(pool: PgPool) -> Result<()> {
+    let rows: Vec<(String,)> = sqlx::query_as(
+        r#"
+        SELECT p.proname || '(' || pg_catalog.pg_get_function_arguments(p.oid) || ')'
+        FROM pg_catalog.pg_proc p
+        JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname = 'eql_v3'
+          AND (
+            (p.pronargs = 2 AND p.proname IN (
+              'ore_block_u64_8_256_eq','ore_block_u64_8_256_neq',
+              'ore_block_u64_8_256_lt','ore_block_u64_8_256_lte',
+              'ore_block_u64_8_256_gt','ore_block_u64_8_256_gte'))
+            OR (p.pronargs = 1 AND p.proname IN (
+              'hmac_256',
+              'jsonb_array_to_bytea_array',
+              'jsonb_array_to_ore_block_u64_8_256')
+                AND p.proargtypes[0] = 'jsonb'::regtype)
+          )
+          AND (
+            -- offender: pinned search_path, or not inlinable SQL/IMMUTABLE
+            EXISTS (SELECT 1 FROM unnest(coalesce(p.proconfig,'{}'::text[])) c WHERE c LIKE 'search_path=%')
+            OR p.provolatile <> 'i'
+            OR p.prolang <> (SELECT l.oid FROM pg_catalog.pg_language l WHERE l.lanname = 'sql')
+          )
+        ORDER BY 1
+        "#,
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    assert!(
+        rows.is_empty(),
+        "eql_v3 SEM inline-critical functions must stay unpinned + inlinable SQL; offenders: {:?}",
+        rows.iter().map(|r| &r.0).collect::<Vec<_>>()
+    );
+    Ok(())
+}
+
+/// Companion guard for the two bare-`jsonb` per-encrypted-value helpers
+/// (`jsonb_array_to_bytea_array`, `jsonb_array_to_ore_block_u64_8_256`). The
+/// unpinned state asserted above is only DURABLE because each helper carries an
+/// `eql-inline-critical` COMMENT marker that `tasks/pin_search_path.sql` honours
+/// (it skips pinning functions whose `pg_description` matches
+/// `'eql-inline-critical%'`). Neither helper is caught by the structural
+/// jsonb-domain skip, so the marker is the ONLY thing keeping them unpinned —
+/// an edit that removes the marker, or a pin_search_path.sql refactor that drops
+/// the marker handling, would silently re-pin them and break inlining. This test
+/// asserts the marker is present (and the helpers are SQL/IMMUTABLE) so that
+/// failure surfaces here.
+#[sqlx::test]
+async fn eql_v3_sem_inline_critical_helpers_carry_marker(pool: PgPool) -> Result<()> {
+    // Each expected helper must appear with a present inline-critical marker
+    // and be inlinable SQL/IMMUTABLE. Any helper that is missing, unmarked, or
+    // not inlinable SQL/IMMUTABLE is an offender.
+    let offenders: Vec<(String, Option<String>, String, String)> = sqlx::query_as(
+        r#"
+        WITH expected(proname) AS (
+          VALUES ('jsonb_array_to_bytea_array'),
+                 ('jsonb_array_to_ore_block_u64_8_256')
+        )
+        SELECT e.proname AS proname,
+               d.description AS marker,
+               l.lanname AS prolang,
+               p.provolatile::text AS provolatile
+        FROM expected e
+        LEFT JOIN pg_catalog.pg_proc p
+          ON p.proname = e.proname
+         AND p.pronamespace = 'eql_v3'::regnamespace
+         AND p.pronargs = 1
+         AND p.proargtypes[0] = 'jsonb'::regtype
+        LEFT JOIN pg_catalog.pg_language l ON l.oid = p.prolang
+        LEFT JOIN pg_catalog.pg_description d
+          ON d.objoid = p.oid AND d.classoid = 'pg_proc'::regclass
+        WHERE p.oid IS NULL
+           OR d.description IS NULL
+           OR d.description NOT LIKE 'eql-inline-critical%'
+           OR l.lanname IS DISTINCT FROM 'sql'
+           OR p.provolatile IS DISTINCT FROM 'i'
+        ORDER BY e.proname
+        "#,
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    assert!(
+        offenders.is_empty(),
+        "eql_v3 SEM bare-jsonb helpers must carry an `eql-inline-critical` COMMENT \
+         marker and be inlinable SQL/IMMUTABLE — the marker is what keeps \
+         pin_search_path.sql from pinning them. Offenders \
+         (proname, marker, prolang, provolatile): {offenders:#?}"
+    );
+    Ok(())
+}
+
 #[sqlx::test]
 async fn every_inline_critical_eligible_domain_has_inline_critical_functions(
     pool: PgPool,

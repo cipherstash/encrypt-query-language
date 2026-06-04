@@ -196,12 +196,19 @@ where
             .context("building ColumnConfig from FixtureSpec indexes")?;
 
         let working = self.working_table();
-        let payloads = cipherstash::encrypt_store(&working, "payload", self.values(), &config)
-            .await
-            .context("encrypting fixture values")?;
+        let payloads = cipherstash::encrypt_store(
+            &working,
+            cipherstash::PAYLOAD_COLUMN,
+            self.values(),
+            &config,
+        )
+        .await
+        .context("encrypting fixture values")?;
 
-        let insert =
-            format!("INSERT INTO public.{working} (id, plaintext, payload) VALUES ($1, $2, $3)");
+        let insert = format!(
+            "INSERT INTO public.{working} (id, plaintext, {col}) VALUES ($1, $2, $3)",
+            col = cipherstash::PAYLOAD_COLUMN
+        );
         for (i, (value, payload)) in self.values().iter().zip(payloads).enumerate() {
             let id = (i as i64) + 1;
             sqlx::query(&insert)

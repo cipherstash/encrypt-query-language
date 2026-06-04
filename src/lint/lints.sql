@@ -1,5 +1,5 @@
 -- REQUIRE: src/schema.sql
--- REQUIRE: src/schema-v3.sql
+-- REQUIRE: src/v3/schema.sql
 
 --! @brief EQL lint: detect non-inlinable operator implementation functions
 --!
