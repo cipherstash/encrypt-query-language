@@ -48,6 +48,29 @@ verify_deps_exist() {
   fi
 }
 
+# Fail loudly if any v3 REQUIRE edge points OUTSIDE src/v3. The v3-only build
+# must be self-contained (no eql_v2 coupling); a stray `-- REQUIRE: src/...`
+# edge to a non-v3 file would silently pull eql_v2 SQL into the v3 artefact (or
+# tsort would drop it), breaking self-containment. Each line in deps-v3.txt is
+# "<file> <dep>"; self-edges (file == dep) are skipped, every other dep target
+# must start with src/v3/.
+verify_v3_self_contained() {
+  local dep_file=$1
+  local offending=0
+  while IFS=' ' read -r src dep; do
+    [[ -z "$dep" ]] && continue
+    [[ "$src" == "$dep" ]] && continue
+    if [[ "$dep" != src/v3/* ]]; then
+      echo "ERROR: v3 REQUIRE edge points outside src/v3: $src -- REQUIRE: $dep" >&2
+      offending=1
+    fi
+  done < "$dep_file"
+  if [[ $offending -ne 0 ]]; then
+    echo "ERROR: v3-only build is not self-contained — a -- REQUIRE: target lives outside src/v3 (see above)." >&2
+    exit 1
+  fi
+}
+
 mkdir -p release
 
 rm -f release/cipherstash-encrypt-uninstall.sql
@@ -190,6 +213,8 @@ find src/v3 -type f -path "*.sql" ! -path "*_test.sql" | while IFS= read -r sql_
         fi
     done < "$sql_file"
 done
+
+verify_v3_self_contained src/deps-v3.txt
 
 cat src/deps-v3.txt | tsort | tac > src/deps-ordered-v3.txt
 verify_deps_exist src/deps-ordered-v3.txt

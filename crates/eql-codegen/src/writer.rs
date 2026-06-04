@@ -90,6 +90,25 @@ pub fn ensure_generated_paths_writable(paths: &[PathBuf]) -> Result<(), WriteErr
 /// — it does not prepend a header.
 pub fn write_generated_file(path: &Path, body: &str) -> Result<(), WriteError> {
     ensure_generated_paths_writable(std::slice::from_ref(&path.to_path_buf()))?;
+    // The template is trusted to carry the ownership marker as its first line,
+    // but a renderer bug (or a hand-edited template) could drop it — which would
+    // then defeat `is_generated`/`clean_generated_files`, leaving an unowned file
+    // the next run refuses to overwrite. Validate the marker before writing.
+    let first = body
+        .lines()
+        .next()
+        .unwrap_or("")
+        .trim_end_matches(['\r', '\n']);
+    if first != sql_marker() {
+        return Err(WriteError::Ownership(format!(
+            "refusing to write generated file without the AUTO-GENERATED marker as its \
+             first line: {} (expected first line {:?}, got {:?}). The SQL template must \
+             emit the marker.",
+            path.display(),
+            sql_marker(),
+            first
+        )));
+    }
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
@@ -169,6 +188,22 @@ mod tests {
         let text = fs::read_to_string(&p).unwrap();
         assert_eq!(text, body);
         assert!(is_generated(&p));
+    }
+
+    #[test]
+    fn write_rejects_body_without_marker() {
+        let d = tmp();
+        let p = d.path().join("int4_types.sql");
+        // A body whose first line is NOT the AUTO-GENERATED marker must be
+        // rejected — the template is required to emit it.
+        let body = "-- REQUIRE: src/v3/schema.sql\nDO $$ BEGIN END $$;\n";
+        let err = write_generated_file(&p, body).unwrap_err();
+        assert!(matches!(err, WriteError::Ownership(_)));
+        assert!(err.to_string().contains("AUTO-GENERATED marker"));
+        assert!(
+            !p.exists(),
+            "no file should be written when the marker is missing"
+        );
     }
 
     #[test]
