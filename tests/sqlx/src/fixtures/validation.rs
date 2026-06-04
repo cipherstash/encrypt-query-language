@@ -5,8 +5,17 @@
 
 use std::fmt;
 
-/// Lowercase snake-case identifier, must start with a letter: `^[a-z][a-z0-9_]*$`.
+/// Maximum unquoted identifier length PostgreSQL preserves; longer identifiers
+/// are silently truncated (`NAMEDATALEN - 1`).
+const MAX_IDENTIFIER_LEN: usize = 63;
+
+/// Lowercase snake-case identifier, must start with a letter and be at most
+/// 63 bytes (PostgreSQL truncates beyond that): `^[a-z][a-z0-9_]{0,62}$`.
 fn is_valid_identifier(s: &str) -> bool {
+    // All accepted chars are single-byte ASCII, so byte length == char count.
+    if s.len() > MAX_IDENTIFIER_LEN {
+        return false;
+    }
     let mut chars = s.chars();
     match chars.next() {
         Some(c) if c.is_ascii_lowercase() => {}
@@ -105,6 +114,22 @@ mod tests {
         assert!(FixtureIdentifier::try_from("a-b").is_err()); // hyphen
         assert!(FixtureIdentifier::try_from("a b").is_err()); // space
         assert!(FixtureIdentifier::try_from("a;DROP").is_err()); // injection attempt
+    }
+
+    #[test]
+    fn accepts_63_char_identifier() {
+        // 63 bytes is the longest PostgreSQL preserves unquoted.
+        let id = format!("a{}", "b".repeat(62));
+        assert_eq!(id.len(), 63);
+        assert!(FixtureIdentifier::try_from(id.as_str()).is_ok());
+    }
+
+    #[test]
+    fn rejects_64_char_identifier() {
+        // 64 bytes would be silently truncated by PostgreSQL.
+        let id = format!("a{}", "b".repeat(63));
+        assert_eq!(id.len(), 64);
+        assert!(FixtureIdentifier::try_from(id.as_str()).is_err());
     }
 
     #[test]

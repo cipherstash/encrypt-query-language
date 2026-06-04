@@ -1,5 +1,5 @@
 --! @file pin_search_path.sql
---! @brief Post-install: pin search_path on every eql_v2.* function
+--! @brief Post-install: pin search_path on every eql_v2.* and eql_v3.* function
 --!
 --! This file is appended verbatim by `tasks/build.sh` to the end of every
 --! release variant (main, supabase, protect/stack), AFTER all `src/**/*.sql`

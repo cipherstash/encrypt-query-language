@@ -37,6 +37,29 @@ fn rust_generator_matches_int4_golden_files() {
 
     let ref_dir = root.join("tests/codegen/reference/int4");
     let gen_dir = out.join("src/v3/scalars/int4");
+
+    // Assert the generated .sql file SET matches the reference set first — the
+    // per-file byte comparison below only iterates reference files, so a missing
+    // generated file (or an extra one the reference never pins) would otherwise
+    // pass silently.
+    let sql_names = |dir: &std::path::Path| -> Vec<String> {
+        let mut names: Vec<String> = fs::read_dir(dir)
+            .unwrap()
+            .filter_map(|e| e.ok().map(|e| e.path()))
+            .filter(|p| p.extension().and_then(|x| x.to_str()) == Some("sql"))
+            .map(|p| p.file_name().unwrap().to_str().unwrap().to_string())
+            .collect();
+        names.sort();
+        names
+    };
+    let ref_names = sql_names(&ref_dir);
+    let gen_names = sql_names(&gen_dir);
+    assert_eq!(
+        gen_names, ref_names,
+        "generated int4 .sql file set differs from golden reference set \
+         (reference: {ref_names:?}, generated: {gen_names:?})"
+    );
+
     for entry in fs::read_dir(&ref_dir).unwrap() {
         let path = entry.unwrap().path();
         if path.extension().and_then(|e| e.to_str()) != Some("sql") {

@@ -42,8 +42,8 @@ run = """
   rm -f release/cipherstash-encrypt.sql
 """
 
-[tasks."test:sqlx"]
-description = "Run SQLx tests with hybrid migration approach"
+[tasks."test:sqlx:prep"]
+description = "Prepare the SQLx test DB: cp built EQL into migrations, migrate, regenerate fixtures"
 # `build` produces release/cipherstash-encrypt.sql, which is then cp'd into
 # tests/sqlx/migrations/001_install_eql.sql below. Without this dep, a stale
 # release artifact silently ships an old EQL extension into the test DB and
@@ -73,14 +73,23 @@ sqlx migrate run
 echo "Regenerating SQLx fixtures..."
 cd "{{config_root}}"
 mise run fixture:generate:all
+"""
 
+[tasks."test:sqlx"]
+description = "Run SQLx tests with hybrid migration approach"
+# Prep (build + cp + migrate + fixtures) is shared with test:sqlx:watch.
+depends = ["test:sqlx:prep"]
+dir = "{{config_root}}/tests/sqlx"
+run = """
 echo "Running Rust tests..."
-cd tests/sqlx
 cargo test
 """
 
 [tasks."test:sqlx:watch"]
 description = "Run SQLx tests in watch mode (rebuild EQL on changes)"
+# Same prep as test:sqlx so watch mode starts from a migrated DB + fresh
+# fixtures, not a stale checkout.
+depends = ["test:sqlx:prep"]
 dir = "{{config_root}}/tests/sqlx"
 run = """
 cargo watch -x test
