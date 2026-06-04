@@ -127,6 +127,34 @@ jobs:
         run: |
           mise run codegen:parity
 
+  self-contained-v3:
+    name: "eql_v3 self-containment"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: .
+          shared-key: sqlx-tests
+
+      # Build to materialise release/cipherstash-encrypt-v3.sql and
+      # src/deps-ordered-v3.txt, then assert no eql_v2 symbol/file leakage.
+      - name: Build EQL
+        run: mise run --force build
+
+      - name: Assert eql_v3 is self-contained
+        run: mise run test:self_contained_v3
+
   matrix-coverage:
     name: "Matrix coverage inventory"
     runs-on: ubuntu-latest
@@ -215,6 +243,11 @@ jobs:
           export active_rust_toolchain=$(rustup show active-toolchain | cut -d' ' -f1)
           rustup component add --toolchain ${active_rust_toolchain} rustfmt clippy
           mise run --output prefix test --postgres ${POSTGRES_VERSION}
+
+      - name: Clean-DB v3 install smoke (Postgres ${{ matrix.postgres-version }})
+        run: |
+          mise run build
+          mise run test:clean_install_v3
 
   splinter:
     name: "Supabase splinter"

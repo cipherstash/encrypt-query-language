@@ -4,7 +4,7 @@ The SQL files under `int4/` are the hand-maintained golden reference for the enc
 
 Each reference file's first line is a `-- REFERENCE:` provenance marker; everything after it is the generated body verbatim, starting with the template-owned `-- AUTOMATICALLY GENERATED FILE.` header.
 
-The parity gate runs the generator (`cargo run -p eql-codegen`, which writes the real `src/encrypted_domain/int4/` tree) and asserts its output matches these files **byte-for-byte** after dropping that single provenance line. It runs three ways, all on the same reference:
+The parity gate runs the generator (`cargo run -p eql-codegen`, which writes the real `src/v3/scalars/int4/` tree) and asserts its output matches these files **byte-for-byte** after dropping that single provenance line. It runs three ways, all on the same reference:
 
 - `mise run codegen:parity` (`tasks/codegen-parity.sh`) — the CI shell gate. It first compares the generated `int4` SQL *file set* against the golden `*.sql` set (`comm -23` against `git ls-files` excludes the committed, hand-written `int4_extensions.sql`, which has no golden counterpart) to catch extra/dropped files, then `diff`s each golden file against its generated counterpart after `tail -n +2` drops the provenance line. Any whitespace or blank-line drift fails — there is no normalization.
 - `crates/eql-codegen/tests/parity.rs` (`rust_generator_matches_int4_golden_files`) — runs `generate_all` into a temp dir and byte-compares the materialised `int4` SQL surface against the same golden.

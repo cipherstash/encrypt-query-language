@@ -4,4 +4,5 @@
 pub mod inlinability;
 pub mod jsonb_operator_surface;
 pub mod mutations;
+pub mod sem;
 pub mod support;

@@ -59,9 +59,14 @@ async fn build_cipher() -> Result<Arc<ScopedCipher<AutoStrategy>>> {
 /// fail on an unknown index name. Extending fixture coverage to a new
 /// index is one variant on `IndexKind` plus one arm here, both compile-
 /// time checked.
+/// The single encrypted-payload column name. Single-sourced here so the
+/// `ColumnConfig` built for encryption and the `INSERT` target column in the
+/// driver cannot drift apart.
+pub const PAYLOAD_COLUMN: &str = "payload";
+
 pub fn column_config_for(spec_indexes: &[IndexKind], cast: Cast) -> Result<ColumnConfig> {
     let column_type = cast_to_column_type(cast)?;
-    let mut config = ColumnConfig::build("payload").casts_as(column_type);
+    let mut config = ColumnConfig::build(PAYLOAD_COLUMN).casts_as(column_type);
 
     for ix in spec_indexes {
         config = config.add_index(Index::new(index_type_for(*ix)));

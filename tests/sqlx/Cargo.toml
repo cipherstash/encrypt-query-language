@@ -39,6 +39,6 @@ scale = []
 # in the process env, BOTH a ZeroKMS auth credential (`CS_CLIENT_ACCESS_KEY`
 # + `CS_WORKSPACE_CRN`, via AutoStrategy) AND a client key (`CS_CLIENT_ID` +
 # `CS_CLIENT_KEY`, via EnvKeyProvider) — the two pairs are not alternatives.
-# Run one with:
-#   mise run fixture:generate <name>
+# Regenerate all fixtures with:
+#   mise run fixture:generate:all
 fixture-gen = []

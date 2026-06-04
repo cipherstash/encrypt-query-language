@@ -1,21 +1,20 @@
--- REFERENCE: hand-written parity baseline for crates/eql-codegen — see ../README.md
+-- REFERENCE: hand-maintained parity baseline for crates/eql-codegen - see ../README.md
 -- AUTOMATICALLY GENERATED FILE.
--- REQUIRE: src/schema.sql
--- REQUIRE: src/schema-v3.sql
--- REQUIRE: src/encrypted_domain/int4/int4_types.sql
--- REQUIRE: src/encrypted_domain/functions.sql
--- REQUIRE: src/hmac_256/functions.sql
+-- REQUIRE: src/v3/schema.sql
+-- REQUIRE: src/v3/scalars/int4/int4_types.sql
+-- REQUIRE: src/v3/scalars/functions.sql
+-- REQUIRE: src/v3/sem/hmac_256/functions.sql
 
 --! @file encrypted_domain/int4/int4_eq_functions.sql
 --! @brief Functions for eql_v3.int4_eq.
 
 --! @brief Index extractor for eql_v3.int4_eq.
 --! @param a eql_v3.int4_eq
---! @return eql_v2.hmac_256
+--! @return eql_v3.hmac_256
 CREATE FUNCTION eql_v3.eq_term(a eql_v3.int4_eq)
-RETURNS eql_v2.hmac_256
+RETURNS eql_v3.hmac_256
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v2.hmac_256(a::jsonb) $$;
+AS $$ SELECT eql_v3.hmac_256(a::jsonb) $$;
 
 --! @brief Operator wrapper for eql_v3.int4_eq.
 --! @param a eql_v3.int4_eq
