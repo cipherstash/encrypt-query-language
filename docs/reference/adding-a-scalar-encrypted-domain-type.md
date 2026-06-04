@@ -175,10 +175,40 @@ int_values!(INT4_VALUES, i32, INT4);
 ```
 
 Both consumers reference that single symbol — the fixture generator
-(`fixtures::eql_v2_<T>::spec`) and the matrix oracle's `FIXTURE_VALUES` — so the
-oracle cannot drift from the values the generator encrypts. There is no
+(`fixtures::eql_v2_<T>::spec`) and the matrix oracle's `fixture_values()` — so
+the oracle cannot drift from the values the generator encrypts. There is no
 committed `<T>_values.rs`: a Rust source of truth does not round-trip through
 generated Rust. Pin the exact materialised list with a `values_tests` assertion.
+
+### Temporal kinds — string-backed fixtures and the pivot trait
+
+A **temporal** scalar (the `date` reference; `timestamptz` follows the same
+shape) is *ordered but non-integer*, so it diverges from the integer path in
+three places — all in the catalog/harness, never the SQL codegen (domains stay
+jsonb-backed and token-driven):
+
+- **String-backed fixtures.** `eql-scalars` stays zero-dependency, so the
+  catalog stores ISO strings (`Fixture::Date("1970-01-01")`), not `chrono`
+  values. There is **no** `int_values!` / `<T>_VALUES` const for a temporal kind
+  (chrono constructors are not `const`). The SQLx harness parses the catalog
+  strings into a `LazyLock<Vec<chrono::NaiveDate>>` and exposes them via a
+  `date_values()` accessor; `ScalarType::fixture_values()` returns a borrow of
+  that. The fixtures must include the three pivot plaintexts verbatim — for
+  `date`: `"1900-01-01"` (min), `"1970-01-01"` (zero = `NaiveDate::default()`),
+  `"2099-12-31"` (max) — guarded by `temporal_fixtures_include_pivot_plaintexts`.
+- **The pivot trait, not `Self::MIN`/`MAX`.** `ScalarType::fixture_values()` is a
+  method (not a `const`), and the comparison pivots come from
+  `ScalarType::min_pivot()` / `max_pivot()` (zero stays `Default::default()`).
+  Integer impls return `Self::MIN`/`Self::MAX` (emitted by the proc-macro);
+  temporal impls return explicit sentinel dates and are **hand-written** in
+  `scalar_domains.rs` (the macro emits only integer impls). `to_sql_literal` is
+  overridden to single-quote the value (`'1970-01-01'`), since a bare `Display`
+  date is not a valid SQL literal.
+- **The sqlx `chrono` feature.** The test crate enables sqlx's `chrono` feature
+  (and depends on `chrono` directly) so `Encode`/`Decode`/`Type` resolve for
+  `NaiveDate`. The integer-only fixture asserts (`<T>::MIN`, `contains(&0)`,
+  `v < 0`) are stamped only for `int` entries; temporal entries stamp a
+  pivot-presence assert instead (the `kind` discriminator on `scalar_fixture!`).
 
 ---
 

@@ -32,15 +32,74 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
-use syn::{Ident, Token, Type};
+use syn::{bracketed, Ident, Token, Type};
 
-/// One `token => rust_type` entry.
+/// One `token => rust_type` entry, with an optional trailing `[temporal]` flag.
 struct ScalarEntry {
     /// Postgres type token (`int4`); also the fixture/domain suffix and the
     /// matrix `suite` ident.
     token: Ident,
     /// Rust plaintext type (`i32`).
     rust_type: Type,
+    /// Whether this entry is a **temporal** (chrono-backed) scalar rather than a
+    /// fixed-width integer. Declared explicitly via a trailing `[temporal]`
+    /// marker in the dispatch list (`date => chrono::NaiveDate [temporal]`)
+    /// rather than sniffed from the Rust type path — so a temporal type that
+    /// isn't chrono-spelled, or a non-temporal type whose path happens to
+    /// contain `DateTime`, cannot be misclassified.
+    temporal: bool,
+}
+
+/// The recognised optional entry markers, written in `[brackets]` after the
+/// rust type (`date => chrono::NaiveDate [temporal]`). `temporal` is the only
+/// one today; a new marker is added here so the accepted set stays a single
+/// source of truth — `parse_optional_marker` validates against this slice and
+/// the rejection message lists it verbatim.
+const SUPPORTED_MARKERS: &[&str] = &["temporal"];
+
+/// Parse the optional trailing `[marker]` on a scalar entry, returning whether
+/// the `temporal` marker was present.
+///
+/// Absent brackets → `false` (an ordinary integer scalar). When brackets are
+/// present they must hold exactly one recognised identifier: an unknown marker
+/// (`[temporial]`), empty brackets (`[]`), or trailing junk (`[temporal foo]`)
+/// are all hard parse errors. The whole point of the explicit marker is that a
+/// typo fails loudly rather than silently defaulting an entry to integer, so
+/// the parse is strict on every malformed shape, not just unknown names.
+fn parse_optional_marker(input: ParseStream) -> syn::Result<bool> {
+    if !input.peek(syn::token::Bracket) {
+        return Ok(false);
+    }
+    let content;
+    bracketed!(content in input);
+
+    let marker: Ident = content.parse()?;
+    // Reject anything after the single marker ident (`[temporal foo]`,
+    // `[temporal, bar]`) — otherwise `bracketed!` would silently drop it.
+    if !content.is_empty() {
+        let rest: TokenStream2 = content.parse()?;
+        return Err(syn::Error::new_spanned(
+            rest,
+            "expected a single marker identifier, e.g. `[temporal]`",
+        ));
+    }
+
+    let name = marker.to_string();
+    if !SUPPORTED_MARKERS.contains(&name.as_str()) {
+        let supported = SUPPORTED_MARKERS
+            .iter()
+            .map(|m| format!("`{m}`"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        return Err(syn::Error::new(
+            marker.span(),
+            format!("unknown scalar marker `{name}`; supported markers: {supported}"),
+        ));
+    }
+
+    // Only `temporal` flips the temporal flag; a future non-temporal marker
+    // would pass validation above but leave this `false`.
+    Ok(name == "temporal")
 }
 
 impl Parse for ScalarEntry {
@@ -48,7 +107,28 @@ impl Parse for ScalarEntry {
         let token: Ident = input.parse()?;
         input.parse::<Token![=>]>()?;
         let rust_type: Type = input.parse()?;
-        Ok(ScalarEntry { token, rust_type })
+        let temporal = parse_optional_marker(input)?;
+        Ok(ScalarEntry {
+            token,
+            rust_type,
+            temporal,
+        })
+    }
+}
+
+impl ScalarEntry {
+    /// Whether this entry is a **temporal** (chrono-backed) scalar rather than a
+    /// fixed-width integer, as declared by the `[temporal]` marker. It drives
+    /// two divergences:
+    ///
+    /// 1. The `impl ScalarType` for a temporal scalar is **hand-written** in
+    ///    `scalar_domains.rs` (chrono values can't be a `const` slice and the
+    ///    pivots are explicit sentinels), so `emit_scalar_type_impls` skips it.
+    /// 2. The integer-only fixture asserts (`<T>::MIN`, `contains(&0)`,
+    ///    `any(|v| v < 0)`) don't typecheck for a date, so `scalar_fixture!`
+    ///    stamps a temporal (pivot-presence) variant instead.
+    fn is_temporal(&self) -> bool {
+        self.temporal
     }
 }
 
@@ -78,7 +158,9 @@ fn values_const_ident(token: &Ident) -> Ident {
 /// Emit one `impl ScalarType for <rust_type>` per entry. See
 /// [`emit_scalar_type_impls`].
 fn scalar_type_impls_tokens(list: &ScalarList) -> TokenStream2 {
-    let impls = list.entries.iter().map(|e| {
+    // Temporal scalars hand-write their `impl ScalarType` (see `is_temporal`);
+    // only integer scalars get a macro-generated impl.
+    let impls = list.entries.iter().filter(|e| !e.is_temporal()).map(|e| {
         let token_str = e.token.to_string();
         let rust_type = &e.rust_type;
         let values = values_const_ident(&e.token);
@@ -88,10 +170,7 @@ fn scalar_type_impls_tokens(list: &ScalarList) -> TokenStream2 {
 
                 /// The catalog `eql_scalars::*_VALUES` list — the same values
                 /// the fixture generator encrypts, so the oracle can't drift
-                /// from the fixture. A method (not a `const`) so non-integer
-                /// scalars whose values can't be `const`-constructed can return
-                /// a borrow of a lazily-built `Vec`; integer scalars hand back
-                /// their catalog const directly.
+                /// from the fixture.
                 fn fixture_values() -> &'static [#rust_type] {
                     ::eql_scalars::#values
                 }
@@ -117,16 +196,33 @@ fn scalar_fixture_modules_tokens(list: &ScalarList) -> TokenStream2 {
     let mods = list.entries.iter().map(|e| {
         let token_str = e.token.to_string();
         let rust_type = &e.rust_type;
-        let values = values_const_ident(&e.token);
         let mod_ident = format_ident!("eql_v2_{}", e.token);
         let fixture_name = format!("eql_v2_{}", token_str);
-        quote! {
-            #[doc = concat!("`eql_v2_", #token_str, "` scalar fixture — generated by `scalar_types!`.")]
-            pub mod #mod_ident {
-                use ::eql_scalars::#values as VALUES;
-                // `scalar_fixture!` is `#[macro_export]`ed by `eql-tests`;
-                // these modules expand into that lib, so `crate::` resolves it.
-                crate::scalar_fixture!(#fixture_name, #rust_type, VALUES);
+        if e.is_temporal() {
+            // Temporal scalars have no `eql_scalars::<T>_VALUES` const (chrono
+            // is not `const`-friendly). The values come from the harness
+            // accessor (`<token>_values()`), and the fixture stamps the
+            // `temporal` kind so the integer-only signed-extreme asserts are
+            // replaced by a pivot-presence assert. The accessor name mirrors
+            // the token (`date` -> `date_values`).
+            let values_fn = format_ident!("{}_values", e.token);
+            quote! {
+                #[doc = concat!("`eql_v2_", #token_str, "` temporal scalar fixture — generated by `scalar_types!`.")]
+                pub mod #mod_ident {
+                    use crate::scalar_domains::#values_fn as values;
+                    crate::scalar_fixture!(temporal, #fixture_name, #rust_type, values());
+                }
+            }
+        } else {
+            let values = values_const_ident(&e.token);
+            quote! {
+                #[doc = concat!("`eql_v2_", #token_str, "` scalar fixture — generated by `scalar_types!`.")]
+                pub mod #mod_ident {
+                    use ::eql_scalars::#values as VALUES;
+                    // `scalar_fixture!` is `#[macro_export]`ed by `eql-tests`;
+                    // these modules expand into that lib, so `crate::` resolves it.
+                    crate::scalar_fixture!(int, #fixture_name, #rust_type, VALUES);
+                }
             }
         }
     });
@@ -284,6 +380,100 @@ mod tests {
         assert!(out.contains("crate :: scalar_fixture !"));
         assert!(out.contains(r#""eql_v2_int4""#));
         assert!(out.contains(":: eql_scalars :: INT4_VALUES as VALUES"));
+        // Integer entries stamp the `int` kind discriminator.
+        assert!(out.contains("int ,"));
+    }
+
+    #[test]
+    fn temporal_entry_skips_impl_and_stamps_temporal_fixture() {
+        let list =
+            syn::parse_str::<ScalarList>("int4 => i32, date => chrono::NaiveDate [temporal],")
+                .unwrap();
+        // Impl emitter skips the temporal entry (hand-written impl).
+        let impls = norm(&scalar_type_impls_tokens(&list));
+        assert!(impls.contains("impl ScalarType for i32"));
+        assert!(!impls.contains("NaiveDate"));
+        // Fixture-module emitter stamps the temporal kind + harness accessor.
+        let mods = norm(&scalar_fixture_modules_tokens(&list));
+        assert!(mods.contains("pub mod eql_v2_date"));
+        assert!(mods.contains("temporal ,"));
+        assert!(mods.contains("date_values"));
+        // Matrix + dispatch emitters include the temporal entry like any other.
+        let suites = norm(&scalar_matrix_suites_tokens(&list));
+        assert!(suites.contains("pub mod date"));
+        assert!(suites.contains("scalar = chrono :: NaiveDate"));
+        let dispatch = norm(&fixture_dispatch_tokens(&list));
+        assert!(dispatch.contains(r#""date" =>"#));
+    }
+
+    /// Parse a single entry, asserting it parses, and return whether it is
+    /// temporal. Keeps the per-shape assertions below to one line each.
+    fn parse_entry_is_temporal(src: &str) -> bool {
+        syn::parse_str::<ScalarEntry>(src)
+            .unwrap_or_else(|e| panic!("`{src}` should parse: {e}"))
+            .is_temporal()
+    }
+
+    /// Parse a single entry expecting a parse error, returning the message.
+    fn parse_entry_err(src: &str) -> String {
+        match syn::parse_str::<ScalarEntry>(src) {
+            Ok(_) => panic!("`{src}` should have failed to parse"),
+            Err(e) => e.to_string(),
+        }
+    }
+
+    #[test]
+    fn no_marker_is_integer() {
+        // No brackets → integer, even when the type path mentions chrono:
+        // temporal-ness is declared, never inferred from the rust type.
+        assert!(!parse_entry_is_temporal("int4 => i32"));
+        assert!(!parse_entry_is_temporal("date => chrono::NaiveDate"));
+    }
+
+    #[test]
+    fn temporal_marker_sets_the_flag() {
+        assert!(parse_entry_is_temporal(
+            "date => chrono::NaiveDate [temporal]"
+        ));
+        // Marker binds to its own entry, not the next one, across a list.
+        let list =
+            syn::parse_str::<ScalarList>("date => chrono::NaiveDate [temporal], int4 => i32,")
+                .unwrap();
+        assert!(list.entries[0].is_temporal());
+        assert!(!list.entries[1].is_temporal());
+    }
+
+    #[test]
+    fn unknown_marker_errors_and_lists_the_supported_set() {
+        let msg = parse_entry_err("date => chrono::NaiveDate [temporial]");
+        // Names the offending marker and the supported set, so the message is
+        // actionable rather than just "parse error".
+        assert!(msg.contains("unknown scalar marker"), "got: {msg}");
+        assert!(
+            msg.contains("temporial"),
+            "should name the bad marker: {msg}"
+        );
+        assert!(
+            msg.contains("`temporal`"),
+            "should list supported markers: {msg}"
+        );
+    }
+
+    #[test]
+    fn empty_marker_brackets_error() {
+        // `[]` has no marker ident to parse — a malformed entry, not a no-op.
+        let msg = parse_entry_err("date => chrono::NaiveDate []");
+        assert!(!msg.is_empty());
+    }
+
+    #[test]
+    fn trailing_junk_in_marker_brackets_errors() {
+        // Regression guard: `[temporal foo]` / `[temporal, bar]` must NOT be
+        // silently accepted as `temporal` with the extra tokens dropped.
+        let msg = parse_entry_err("date => chrono::NaiveDate [temporal foo]");
+        assert!(msg.contains("single marker identifier"), "got: {msg}");
+        let msg = parse_entry_err("date => chrono::NaiveDate [temporal, bar]");
+        assert!(msg.contains("single marker identifier"), "got: {msg}");
     }
 
     #[test]
