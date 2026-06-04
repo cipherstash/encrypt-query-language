@@ -93,12 +93,16 @@ than a runtime validator:
   domain's full name is `token` + `suffix` (`ScalarSpec::domain_name`), pinned by
   `every_domain_name_starts_with_its_token`.
 - **`kind`** — a `ScalarKind` (`I16` / `I32` / `I64` / `Numeric` / `Text` /
-  `Jsonb`), carrying the Rust type name, the `MIN`/`MAX`/zero symbols, and the
-  numeric bounds. Only the integer kinds have an i128 range with `Min`/`Max`/`Zero`
-  sentinels; the bounded accessors `panic!` on the others (a misuse guard gated
-  by `is_int()`). **If `<T>` needs a new scalar width, add a `ScalarKind`
-  variant** (rust-type name, `MIN`/`MAX`/zero symbols, bounds) with unit tests
-  over its `impl` methods.
+  `Jsonb` / `Date`), carrying the Rust type name. Only the integer kinds have an
+  i128 range with `Min`/`Max`/`Zero` sentinels: those bounded accessors
+  (`min_symbol`/`max_symbol`/`zero_symbol`/`min_value`/`max_value`) live on the
+  total `BoundedIntKind` sub-enum, reached via `ScalarKind::as_bounded_int() ->
+  Option<BoundedIntKind>`. Non-integer kinds (`Numeric`/`Text`/`Jsonb`/`Date`)
+  return `None` and simply have no bounded accessor — misuse is a compile error,
+  not a runtime panic. **If `<T>` needs a new fixed-width integer, add a
+  `BoundedIntKind` variant** (rust-type name, `MIN`/`MAX`/zero symbols, bounds)
+  plus its `ScalarKind` variant and `as_bounded_int` arm, with unit tests over
+  the `impl` methods.
 - **`domains`** — a non-empty `&[DomainSpec]` (pinned by
   `every_type_has_at_least_one_domain`), each a `suffix` + the fixed `&[Term]` it
   carries. The storage domain is `suffix: ""` with no terms; `_eq => [Term::Hm]`;
