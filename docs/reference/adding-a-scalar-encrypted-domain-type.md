@@ -653,7 +653,8 @@ golden reference under `tests/codegen/reference/int4/`.
 `text` and `jsonb` are **not** materialised through this generator. The
 `ScalarKind` enum carries `Text` / `Numeric` / `Jsonb` variants and the
 `Fixture` enum carries their string-backed shapes at the capability layer, but
-`CATALOG` declares only the integer scalars today, so no `text` / `jsonb` SQL
+`CATALOG` declares only the ordered scalars today — the fixed-width integers
+(`int2` / `int4` / `int8`) and the temporal `date` — so no `text` / `jsonb` SQL
 surface is generated. Text and JSONB encrypted behaviour lives on the composite
 `eql_v2_encrypted` type and its hand-written operator surface in `src/encrypted/`
 and `src/operators/`, not the scalar materializer. `jsonb` in particular needs a
