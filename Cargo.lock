@@ -1172,6 +1172,7 @@ version = "0.1.0"
 name = "eql-tests-macros"
 version = "0.1.0"
 dependencies = [
+ "eql-scalars",
  "proc-macro2",
  "quote",
  "syn 2.0.108",
