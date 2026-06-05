@@ -269,8 +269,133 @@ macro_rules! eq_only_scalar_matrix {
     };
 }
 
-/// Low-level entry point. Use `ordered_numeric_matrix!` instead unless
-/// your type's surface deviates from the standard ordered-numeric shape.
+/// Unified convention wrapper for scalar encrypted-domain suites. Replaces the
+/// two parallel wrappers (`ordered_numeric_matrix!` + `eq_only_scalar_matrix!`)
+/// with one entry point selected by a `caps` capability marker:
+///
+/// - `caps = [eq, ord]` — the ordered-numeric shape (all four variants;
+///   `=`/`<>`/`<`/`<=`/`>`/`>=`; ORDER BY / ORDER BY USING; ORE injectivity;
+///   the ordered functional index). Consumers: `int2`/`int4`/`int8`/`date`.
+/// - `caps = [eq]` — equality-only (storage + `_eq` only; `=`/`<>` meaningful,
+///   the four ord operators are deliberate blockers). The empty `ord_domains`
+///   make the order-by / ORE arms emit zero tests. First consumer:
+///   `timestamptz`.
+///
+/// Both arms take the identical `(suite, scalar, eql_type)` signature and derive
+/// the three comparison pivots from the `ScalarType` impl
+/// (`min_pivot()`/`max_pivot()`/`Default`), so the invocation shape is the same
+/// regardless of capability — only the `caps` marker differs. The emitted test
+/// names for an ordered type are byte-identical to the old
+/// `ordered_numeric_matrix!`; the eq-only name set is exactly that set minus the
+/// `_ord` / `order_by` / `routes_through_ob` lines.
+#[macro_export]
+macro_rules! scalar_matrix {
+    (
+        suite = $suite:ident,
+        scalar = $scalar:ty,
+        eql_type = $eql_type:literal,
+        caps = [eq, ord] $(,)?
+    ) => {
+        $crate::scalar_domain_matrix! {
+            suite = $suite,
+            scalar = $scalar,
+            eql_type = $eql_type,
+            // Relative to the suite source file at
+            // tests/sqlx/tests/encrypted_domain/scalars/<T>.rs; sqlx's
+            // include_str! resolves it against that file. Every scalar
+            // suite lives at this depth, so the path is fixed here rather
+            // than repeated per invocation.
+            fixture_path = "../../../fixtures",
+            all_domains = [(storage, Storage), (eq, Eq), (ord, Ord), (ord_ore, OrdOre)],
+            eq_domains = [(eq, Eq), (ord, Ord), (ord_ore, OrdOre)],
+            ord_domains = [(ord, Ord), (ord_ore, OrdOre)],
+            ord_ore_domains = [(ord_ore, OrdOre)],
+            pivots = [
+                (min,  <$scalar as $crate::scalar_domains::ScalarType>::min_pivot()),
+                (max,  <$scalar as $crate::scalar_domains::ScalarType>::max_pivot()),
+                (zero, <$scalar as ::core::default::Default>::default()),
+            ],
+            eq_ops = [(eq, "="), (neq, "<>")],
+            ord_ops = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
+            index_combos = [
+                (eq, Eq, "eql_v3.eq_term", "btree", [(eq, "=")]),
+                (eq, Eq, "eql_v3.eq_term", "hash", [(eq, "=")]),
+                (ord, Ord, "eql_v3.ord_term", "btree",
+                    [(eq, "="), (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")]),
+                (ord_ore, OrdOre, "eql_v3.ord_term", "btree",
+                    [(eq, "="), (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")]),
+            ],
+            blocker_combos = [
+                (storage, Storage, [
+                    (eq, "="), (neq, "<>"),
+                    (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">="),
+                    (contains, "@>"), (contained_by, "<@"),
+                ]),
+                (eq, Eq, [
+                    (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">="),
+                    (contains, "@>"), (contained_by, "<@"),
+                ]),
+                (ord, Ord, [(contains, "@>"), (contained_by, "<@")]),
+                (ord_ore, OrdOre, [(contains, "@>"), (contained_by, "<@")]),
+            ],
+            // Always-on cost-preference proof (#239 thread 17): the recommended
+            // converged ordered domain, ord_term btree. One curated combo keeps
+            // PR CI cost bounded.
+            scale_default_combos = [
+                (ord, Ord, "eql_v3.ord_term", "btree"),
+            ],
+        }
+    };
+    (
+        suite = $suite:ident,
+        scalar = $scalar:ty,
+        eql_type = $eql_type:literal,
+        caps = [eq] $(,)?
+    ) => {
+        $crate::scalar_domain_matrix! {
+            suite = $suite,
+            scalar = $scalar,
+            eql_type = $eql_type,
+            // Fixed path; see the `caps = [eq, ord]` arm for the rationale.
+            fixture_path = "../../../fixtures",
+            all_domains = [(storage, Storage), (eq, Eq)],
+            eq_domains = [(eq, Eq)],
+            ord_domains = [],
+            ord_ore_domains = [],
+            // Pivots derived from the scalar type exactly like the ordered arm
+            // (`min_pivot()`/`max_pivot()`/`Default`), so the equality
+            // correctness / cross-shape arms sweep the same three anchors and
+            // the eq-only name set stays a clean subset of the ordered one.
+            pivots = [
+                (min,  <$scalar as $crate::scalar_domains::ScalarType>::min_pivot()),
+                (max,  <$scalar as $crate::scalar_domains::ScalarType>::max_pivot()),
+                (zero, <$scalar as ::core::default::Default>::default()),
+            ],
+            eq_ops = [(eq, "="), (neq, "<>")],
+            ord_ops = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
+            index_combos = [
+                (eq, Eq, "eql_v3.eq_term", "btree", [(eq, "=")]),
+                (eq, Eq, "eql_v3.eq_term", "hash",  [(eq, "=")]),
+            ],
+            blocker_combos = [
+                (storage, Storage, [
+                    (eq, "="), (neq, "<>"),
+                    (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">="),
+                    (contains, "@>"), (contained_by, "<@"),
+                ]),
+                (eq, Eq, [
+                    (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">="),
+                    (contains, "@>"), (contained_by, "<@"),
+                ]),
+            ],
+            // Equality-only scalars have no ordered functional index to prefer.
+            scale_default_combos = [],
+        }
+    };
+}
+
+/// Low-level entry point. Use `scalar_matrix!` instead unless
+/// your type's surface deviates from the standard scalar shapes.
 #[macro_export]
 macro_rules! scalar_domain_matrix {
     (
