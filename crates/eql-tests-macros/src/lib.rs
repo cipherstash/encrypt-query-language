@@ -114,32 +114,32 @@ fn scalar_type_impls_tokens(list: &ScalarList) -> TokenStream2 {
         .iter()
         .filter(|e| !is_temporal_token(&e.token.to_string()))
         .map(|e| {
-        let token_str = e.token.to_string();
-        let rust_type = &e.rust_type;
-        let values = values_const_ident(&e.token);
-        quote! {
-            impl ScalarType for #rust_type {
-                const PG_TYPE: &'static str = #token_str;
+            let token_str = e.token.to_string();
+            let rust_type = &e.rust_type;
+            let values = values_const_ident(&e.token);
+            quote! {
+                impl ScalarType for #rust_type {
+                    const PG_TYPE: &'static str = #token_str;
 
-                /// The catalog `eql_scalars::*_VALUES` list — the same values
-                /// the fixture generator encrypts, so the oracle can't drift
-                /// from the fixture.
-                fn fixture_values() -> &'static [#rust_type] {
-                    ::eql_scalars::#values
-                }
+                    /// The catalog `eql_scalars::*_VALUES` list — the same values
+                    /// the fixture generator encrypts, so the oracle can't drift
+                    /// from the fixture.
+                    fn fixture_values() -> &'static [#rust_type] {
+                        ::eql_scalars::#values
+                    }
 
-                /// Integer scalars pivot on their inherent `MIN`/`MAX` consts;
-                /// the fixture lists include both (`fixtures!(int …; Min, …, Max)`).
-                fn min_pivot() -> #rust_type {
-                    <#rust_type>::MIN
-                }
+                    /// Integer scalars pivot on their inherent `MIN`/`MAX` consts;
+                    /// the fixture lists include both (`fixtures!(int …; Min, …, Max)`).
+                    fn min_pivot() -> #rust_type {
+                        <#rust_type>::MIN
+                    }
 
-                fn max_pivot() -> #rust_type {
-                    <#rust_type>::MAX
+                    fn max_pivot() -> #rust_type {
+                        <#rust_type>::MAX
+                    }
                 }
             }
-        }
-    });
+        });
     quote! { #(#impls)* }
 }
 
@@ -243,7 +243,11 @@ fn matrix_suite_for_entry(token: &Ident, rust_type: &Type, eq_only: bool) -> Tok
 /// See [`emit_scalar_matrix_suites`] and [`matrix_suite_for_entry`].
 fn scalar_matrix_suites_tokens(list: &ScalarList) -> TokenStream2 {
     let mods = list.entries.iter().map(|e| {
-        matrix_suite_for_entry(&e.token, &e.rust_type, is_eq_only_token(&e.token.to_string()))
+        matrix_suite_for_entry(
+            &e.token,
+            &e.rust_type,
+            is_eq_only_token(&e.token.to_string()),
+        )
     });
     quote! { #(#mods)* }
 }
@@ -358,8 +362,7 @@ mod tests {
     #[test]
     fn temporal_entry_skips_impl_and_stamps_temporal_fixture() {
         // No marker: `date`'s temporal shape is read from eql-scalars::CATALOG.
-        let list =
-            syn::parse_str::<ScalarList>("int4 => i32, date => chrono::NaiveDate").unwrap();
+        let list = syn::parse_str::<ScalarList>("int4 => i32, date => chrono::NaiveDate").unwrap();
         // Impl emitter skips the temporal entry (handed to `temporal_values!`).
         let impls = norm(&scalar_type_impls_tokens(&list));
         assert!(impls.contains("impl ScalarType for i32"));
