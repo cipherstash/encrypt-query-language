@@ -15,14 +15,80 @@
 //!
 //! Public names are consumed verbatim by the later codegen plans — do not rename.
 
+/// The fixed-width integer kinds — exactly those scalar kinds with an `i128`
+/// range and `MIN`/`MAX`/`Zero` sentinels. These accessors are **total**: every
+/// variant answers every method. Non-integer kinds (`Numeric`/`Text`/`Jsonb`/
+/// `Date`) are simply not representable here, so there is no partial function to
+/// panic — `ScalarKind::Date` cannot call `min_symbol()` because `Date` is not a
+/// `BoundedIntKind`. Reach this type from a `ScalarKind` via
+/// [`ScalarKind::as_bounded_int`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BoundedIntKind {
+    I16,
+    I32,
+    I64,
+}
+
+impl BoundedIntKind {
+    /// The Rust type name as it appears in generated source (e.g. `"i32"`).
+    pub const fn rust_type(self) -> &'static str {
+        match self {
+            BoundedIntKind::I16 => "i16",
+            BoundedIntKind::I32 => "i32",
+            BoundedIntKind::I64 => "i64",
+        }
+    }
+
+    /// The `MIN` named-constant symbol (e.g. `"i32::MIN"`).
+    pub const fn min_symbol(self) -> &'static str {
+        match self {
+            BoundedIntKind::I16 => "i16::MIN",
+            BoundedIntKind::I32 => "i32::MIN",
+            BoundedIntKind::I64 => "i64::MIN",
+        }
+    }
+
+    /// The `MAX` named-constant symbol (e.g. `"i32::MAX"`).
+    pub const fn max_symbol(self) -> &'static str {
+        match self {
+            BoundedIntKind::I16 => "i16::MAX",
+            BoundedIntKind::I32 => "i32::MAX",
+            BoundedIntKind::I64 => "i64::MAX",
+        }
+    }
+
+    /// The zero literal symbol (always `"0"`).
+    pub const fn zero_symbol(self) -> &'static str {
+        "0"
+    }
+
+    /// Inclusive lower bound of the representable range, widened to `i128`.
+    pub const fn min_value(self) -> i128 {
+        match self {
+            BoundedIntKind::I16 => i16::MIN as i128,
+            BoundedIntKind::I32 => i32::MIN as i128,
+            BoundedIntKind::I64 => i64::MIN as i128,
+        }
+    }
+
+    /// Inclusive upper bound of the representable range, widened to `i128`.
+    pub const fn max_value(self) -> i128 {
+        match self {
+            BoundedIntKind::I16 => i16::MAX as i128,
+            BoundedIntKind::I32 => i32::MAX as i128,
+            BoundedIntKind::I64 => i64::MAX as i128,
+        }
+    }
+}
+
 /// The native scalar a domain type maps onto. Integer kinds carry i128 bounds;
 /// the others (`Numeric`/`Text`/`Jsonb`) have string fixtures and no numeric
 /// range — though `Numeric`/`Text` are still ORE-orderable, only `Jsonb` is not.
 /// Capability layer only: `CATALOG` declares which kinds actually exist.
 ///
-/// The bounded-numeric accessors below `panic!` on non-integer kinds; callers
-/// gate with `is_int()`, so the panic guards against misuse rather than being a
-/// reachable path (kept over `Option` to spare every integer caller an unwrap).
+/// The bounded-numeric accessors live on the total [`BoundedIntKind`], reached
+/// via [`ScalarKind::as_bounded_int`]; non-integer kinds have no such accessor,
+/// so misuse is a compile error rather than a runtime panic.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ScalarKind {
     I16,
@@ -33,17 +99,33 @@ pub enum ScalarKind {
     Jsonb,
     /// Calendar date (`chrono::NaiveDate`). Ordered like the integer kinds via
     /// ORE, but string-backed (ISO-8601) at the catalog layer and with no i128
-    /// range — so it is *not* `is_int()` and the bounded-numeric accessors
-    /// panic for it, exactly like the other non-integer kinds.
+    /// range — so it is *not* `is_int()` and `as_bounded_int()` returns `None`
+    /// for it, like the other non-integer kinds. The bounded-numeric accessors
+    /// live on `BoundedIntKind`, which `Date` cannot be, so they are
+    /// unreachable for it by construction rather than by a runtime panic.
     Date,
 }
 
 impl ScalarKind {
-    /// Fixed-width integer kinds — those with i128 bounds and `Min`/`Max`/`Zero`
-    /// sentinels. Gates the bounded-numeric accessors and invariants. NOT an
-    /// orderability test: `Numeric`/`Text` are ORE-orderable yet not integers.
+    /// The fixed-width integer kinds — those with `i128` bounds and
+    /// `Min`/`Max`/`Zero` sentinels — projected onto [`BoundedIntKind`], or
+    /// `None` for the non-integer kinds. The single boundary where "this kind has
+    /// bounds" is decided; the bounded accessors live on `BoundedIntKind` and are
+    /// total there. NOT an orderability test: `Numeric`/`Text`/`Date` are
+    /// ORE-orderable yet not integers.
+    pub const fn as_bounded_int(self) -> Option<BoundedIntKind> {
+        match self {
+            ScalarKind::I16 => Some(BoundedIntKind::I16),
+            ScalarKind::I32 => Some(BoundedIntKind::I32),
+            ScalarKind::I64 => Some(BoundedIntKind::I64),
+            ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb | ScalarKind::Date => None,
+        }
+    }
+
+    /// True for the fixed-width integer kinds. Gates the bounded-numeric
+    /// invariants. Equivalent to `self.as_bounded_int().is_some()`.
     pub const fn is_int(self) -> bool {
-        matches!(self, ScalarKind::I16 | ScalarKind::I32 | ScalarKind::I64)
+        self.as_bounded_int().is_some()
     }
 
     /// The Rust type name as it appears in generated source (e.g. `"i32"`).
@@ -56,68 +138,6 @@ impl ScalarKind {
             ScalarKind::Text => "text",
             ScalarKind::Jsonb => "jsonb",
             ScalarKind::Date => "chrono::NaiveDate",
-        }
-    }
-
-    /// The `MIN` named-constant symbol (e.g. `"i32::MIN"`). Integer kinds only.
-    pub const fn min_symbol(self) -> &'static str {
-        match self {
-            ScalarKind::I16 => "i16::MIN",
-            ScalarKind::I32 => "i32::MIN",
-            ScalarKind::I64 => "i64::MIN",
-            // Explicit (not `_`) so a future integer variant is a compile
-            // error here rather than silently hitting the panic.
-            ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb | ScalarKind::Date => {
-                panic!("min_symbol is only defined for integer kinds")
-            }
-        }
-    }
-
-    /// The `MAX` named-constant symbol (e.g. `"i32::MAX"`). Integer kinds only.
-    pub const fn max_symbol(self) -> &'static str {
-        match self {
-            ScalarKind::I16 => "i16::MAX",
-            ScalarKind::I32 => "i32::MAX",
-            ScalarKind::I64 => "i64::MAX",
-            ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb | ScalarKind::Date => {
-                panic!("max_symbol is only defined for integer kinds")
-            }
-        }
-    }
-
-    /// The zero literal symbol (always `"0"`). Integer kinds only.
-    pub const fn zero_symbol(self) -> &'static str {
-        match self {
-            ScalarKind::I16 | ScalarKind::I32 | ScalarKind::I64 => "0",
-            ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb | ScalarKind::Date => {
-                panic!("zero_symbol is only defined for integer kinds")
-            }
-        }
-    }
-
-    /// Inclusive lower bound of the representable range, widened to `i128`.
-    /// Integer kinds only.
-    pub const fn min_value(self) -> i128 {
-        match self {
-            ScalarKind::I16 => i16::MIN as i128,
-            ScalarKind::I32 => i32::MIN as i128,
-            ScalarKind::I64 => i64::MIN as i128,
-            ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb | ScalarKind::Date => {
-                panic!("min_value is only defined for integer kinds")
-            }
-        }
-    }
-
-    /// Inclusive upper bound of the representable range, widened to `i128`.
-    /// Integer kinds only.
-    pub const fn max_value(self) -> i128 {
-        match self {
-            ScalarKind::I16 => i16::MAX as i128,
-            ScalarKind::I32 => i32::MAX as i128,
-            ScalarKind::I64 => i64::MAX as i128,
-            ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb | ScalarKind::Date => {
-                panic!("max_value is only defined for integer kinds")
-            }
         }
     }
 }
@@ -270,8 +290,18 @@ impl Fixture {
     /// list into a typed `&'static` array at compile time.
     pub const fn numeric_value(self, kind: ScalarKind) -> Option<i128> {
         match self {
-            Fixture::Min => Some(kind.min_value()),
-            Fixture::Max => Some(kind.max_value()),
+            // `?` is not allowed in `const fn`, so match `as_bounded_int()`
+            // explicitly. A pivot on a non-integer kind resolves to `None`; the
+            // `pivot_sentinels_only_appear_with_integer_kinds` catalog test
+            // guarantees that combination never reaches a real `CATALOG` row.
+            Fixture::Min => match kind.as_bounded_int() {
+                Some(k) => Some(k.min_value()),
+                None => None,
+            },
+            Fixture::Max => match kind.as_bounded_int() {
+                Some(k) => Some(k.max_value()),
+                None => None,
+            },
             Fixture::Zero => Some(0),
             Fixture::Int(n) => Some(n),
             Fixture::Numeric(_) | Fixture::Text(_) | Fixture::Jsonb(_) | Fixture::Date(_) => None,
@@ -281,10 +311,23 @@ impl Fixture {
     /// Render as a Rust source literal: sentinels -> named constant, `Int` -> the
     /// number, string kinds -> a `Debug`-quoted (Rust-escaped, not SQL) literal.
     pub fn render_literal(self, kind: ScalarKind) -> String {
+        const PIVOT_MSG: &str = "Min/Max/Zero fixtures require an integer kind";
         match self {
-            Fixture::Min => kind.min_symbol().to_string(),
-            Fixture::Max => kind.max_symbol().to_string(),
-            Fixture::Zero => kind.zero_symbol().to_string(),
+            Fixture::Min => kind
+                .as_bounded_int()
+                .expect(PIVOT_MSG)
+                .min_symbol()
+                .to_string(),
+            Fixture::Max => kind
+                .as_bounded_int()
+                .expect(PIVOT_MSG)
+                .max_symbol()
+                .to_string(),
+            Fixture::Zero => kind
+                .as_bounded_int()
+                .expect(PIVOT_MSG)
+                .zero_symbol()
+                .to_string(),
             Fixture::Int(n) => n.to_string(),
             Fixture::Numeric(s) | Fixture::Text(s) | Fixture::Jsonb(s) | Fixture::Date(s) => {
                 format!("{s:?}")
@@ -491,23 +534,64 @@ mod rust_tests {
     use super::*;
 
     #[test]
+    fn bounded_int_kind_accessors_are_total() {
+        assert_eq!(BoundedIntKind::I16.rust_type(), "i16");
+        assert_eq!(BoundedIntKind::I16.min_symbol(), "i16::MIN");
+        assert_eq!(BoundedIntKind::I16.max_symbol(), "i16::MAX");
+        assert_eq!(BoundedIntKind::I16.zero_symbol(), "0");
+        assert_eq!(BoundedIntKind::I16.min_value(), -32_768_i128);
+        assert_eq!(BoundedIntKind::I16.max_value(), 32_767_i128);
+
+        assert_eq!(BoundedIntKind::I32.min_symbol(), "i32::MIN");
+        assert_eq!(BoundedIntKind::I32.min_value(), -2_147_483_648_i128);
+        assert_eq!(BoundedIntKind::I32.max_value(), 2_147_483_647_i128);
+
+        assert_eq!(BoundedIntKind::I64.max_symbol(), "i64::MAX");
+        assert_eq!(
+            BoundedIntKind::I64.min_value(),
+            -9_223_372_036_854_775_808_i128
+        );
+        assert_eq!(
+            BoundedIntKind::I64.max_value(),
+            9_223_372_036_854_775_807_i128
+        );
+    }
+
+    #[test]
+    fn as_bounded_int_maps_integer_kinds_only() {
+        assert_eq!(ScalarKind::I16.as_bounded_int(), Some(BoundedIntKind::I16));
+        assert_eq!(ScalarKind::I32.as_bounded_int(), Some(BoundedIntKind::I32));
+        assert_eq!(ScalarKind::I64.as_bounded_int(), Some(BoundedIntKind::I64));
+        assert_eq!(ScalarKind::Numeric.as_bounded_int(), None);
+        assert_eq!(ScalarKind::Text.as_bounded_int(), None);
+        assert_eq!(ScalarKind::Jsonb.as_bounded_int(), None);
+        assert_eq!(ScalarKind::Date.as_bounded_int(), None);
+    }
+
+    #[test]
     fn i32_facts_match_int4() {
         assert_eq!(ScalarKind::I32.rust_type(), "i32");
-        assert_eq!(ScalarKind::I32.min_symbol(), "i32::MIN");
-        assert_eq!(ScalarKind::I32.max_symbol(), "i32::MAX");
-        assert_eq!(ScalarKind::I32.zero_symbol(), "0");
-        assert_eq!(ScalarKind::I32.min_value(), -2_147_483_648_i128);
-        assert_eq!(ScalarKind::I32.max_value(), 2_147_483_647_i128);
+        let k = ScalarKind::I32
+            .as_bounded_int()
+            .expect("I32 is an integer kind");
+        assert_eq!(k.min_symbol(), "i32::MIN");
+        assert_eq!(k.max_symbol(), "i32::MAX");
+        assert_eq!(k.zero_symbol(), "0");
+        assert_eq!(k.min_value(), -2_147_483_648_i128);
+        assert_eq!(k.max_value(), 2_147_483_647_i128);
     }
 
     #[test]
     fn i16_facts_match_int2() {
         assert_eq!(ScalarKind::I16.rust_type(), "i16");
-        assert_eq!(ScalarKind::I16.min_symbol(), "i16::MIN");
-        assert_eq!(ScalarKind::I16.max_symbol(), "i16::MAX");
-        assert_eq!(ScalarKind::I16.zero_symbol(), "0");
-        assert_eq!(ScalarKind::I16.min_value(), -32_768_i128);
-        assert_eq!(ScalarKind::I16.max_value(), 32_767_i128);
+        let k = ScalarKind::I16
+            .as_bounded_int()
+            .expect("I16 is an integer kind");
+        assert_eq!(k.min_symbol(), "i16::MIN");
+        assert_eq!(k.max_symbol(), "i16::MAX");
+        assert_eq!(k.zero_symbol(), "0");
+        assert_eq!(k.min_value(), -32_768_i128);
+        assert_eq!(k.max_value(), 32_767_i128);
     }
 
     #[test]
@@ -521,87 +605,50 @@ mod rust_tests {
         assert!(!ScalarKind::Date.is_int());
     }
 
-    // Pin that the bounded-numeric accessors panic (with message) on non-int kinds.
-    #[test]
-    #[should_panic(expected = "min_symbol is only defined for integer kinds")]
-    fn min_symbol_panics_on_non_int_kind() {
-        ScalarKind::Text.min_symbol();
-    }
-
-    #[test]
-    #[should_panic(expected = "max_symbol is only defined for integer kinds")]
-    fn max_symbol_panics_on_non_int_kind() {
-        ScalarKind::Numeric.max_symbol();
-    }
-
-    #[test]
-    #[should_panic(expected = "zero_symbol is only defined for integer kinds")]
-    fn zero_symbol_panics_on_non_int_kind() {
-        ScalarKind::Jsonb.zero_symbol();
-    }
-
-    #[test]
-    #[should_panic(expected = "min_value is only defined for integer kinds")]
-    fn min_value_panics_on_non_int_kind() {
-        ScalarKind::Text.min_value();
-    }
-
-    #[test]
-    #[should_panic(expected = "max_value is only defined for integer kinds")]
-    fn max_value_panics_on_non_int_kind() {
-        ScalarKind::Jsonb.max_value();
-    }
-
     #[test]
     fn i64_facts() {
         // Capability-layer fact: i64 is the Rust kind a future int8 maps onto.
         // Present here so adding int8 later is a pure `CATALOG` append.
         assert_eq!(ScalarKind::I64.rust_type(), "i64");
-        assert_eq!(ScalarKind::I64.min_symbol(), "i64::MIN");
-        assert_eq!(ScalarKind::I64.max_symbol(), "i64::MAX");
-        assert_eq!(ScalarKind::I64.zero_symbol(), "0");
-        assert_eq!(ScalarKind::I64.min_value(), -9_223_372_036_854_775_808_i128);
-        assert_eq!(ScalarKind::I64.max_value(), 9_223_372_036_854_775_807_i128);
+        let k = ScalarKind::I64
+            .as_bounded_int()
+            .expect("I64 is an integer kind");
+        assert_eq!(k.min_symbol(), "i64::MIN");
+        assert_eq!(k.max_symbol(), "i64::MAX");
+        assert_eq!(k.zero_symbol(), "0");
+        assert_eq!(k.min_value(), -9_223_372_036_854_775_808_i128);
+        assert_eq!(k.max_value(), 9_223_372_036_854_775_807_i128);
     }
 
     #[test]
     fn date_maps_to_naive_date() {
         // Ordered, non-integer kind: it carries a rust type but no i128 range,
-        // so it is not `is_int()` and the bounded accessors panic (below).
+        // so it is not `is_int()` and `as_bounded_int()` returns `None` — the
+        // bounded accessors are simply not reachable for it.
         assert_eq!(ScalarKind::Date.rust_type(), "chrono::NaiveDate");
         assert!(!ScalarKind::Date.is_int());
+        assert_eq!(ScalarKind::Date.as_bounded_int(), None);
     }
 
-    // The bounded-numeric accessors panic on Date exactly as on the other
-    // non-integer kinds — Date is not an integer kind.
+    /// The structural guarantee that replaces the old runtime panics: a
+    /// `Min`/`Max`/`Zero` pivot sentinel may only appear in a `CATALOG` row whose
+    /// kind is an integer kind. `render_literal` would `expect`-panic and
+    /// `numeric_value` would resolve to `None` for a pivot on a non-integer kind;
+    /// this test makes such a row a test failure at the source of truth.
     #[test]
-    #[should_panic(expected = "min_symbol is only defined for integer kinds")]
-    fn min_symbol_panics_on_date() {
-        ScalarKind::Date.min_symbol();
-    }
-
-    #[test]
-    #[should_panic(expected = "max_symbol is only defined for integer kinds")]
-    fn max_symbol_panics_on_date() {
-        ScalarKind::Date.max_symbol();
-    }
-
-    #[test]
-    #[should_panic(expected = "zero_symbol is only defined for integer kinds")]
-    fn zero_symbol_panics_on_date() {
-        ScalarKind::Date.zero_symbol();
-    }
-
-    #[test]
-    #[should_panic(expected = "min_value is only defined for integer kinds")]
-    fn min_value_panics_on_date() {
-        ScalarKind::Date.min_value();
-    }
-
-    #[test]
-    #[should_panic(expected = "max_value is only defined for integer kinds")]
-    fn max_value_panics_on_date() {
-        ScalarKind::Date.max_value();
+    fn pivot_sentinels_only_appear_with_integer_kinds() {
+        for spec in CATALOG {
+            for fixture in spec.fixtures {
+                if matches!(fixture, Fixture::Min | Fixture::Max | Fixture::Zero) {
+                    assert!(
+                        spec.kind.is_int(),
+                        "pivot sentinel {fixture:?} on non-integer kind {:?} (token `{}`)",
+                        spec.kind,
+                        spec.token,
+                    );
+                }
+            }
+        }
     }
 }
 
@@ -1034,18 +1081,22 @@ mod invariant_tests {
         // The MIN/MAX/ZERO pivots are an integer-kind invariant; non-integer
         // kinds (text/numeric/jsonb) have no such pivots.
         for s in CATALOG.iter().filter(|s| s.kind.is_int()) {
+            let bk = s
+                .kind
+                .as_bounded_int()
+                .expect("loop is filtered to integer kinds");
             let resolved: Vec<i128> = s
                 .fixtures
                 .iter()
                 .filter_map(|f| f.numeric_value(s.kind))
                 .collect();
             assert!(
-                resolved.contains(&s.kind.min_value()),
+                resolved.contains(&bk.min_value()),
                 "{} fixtures missing MIN",
                 s.token
             );
             assert!(
-                resolved.contains(&s.kind.max_value()),
+                resolved.contains(&bk.max_value()),
                 "{} fixtures missing MAX",
                 s.token
             );
@@ -1091,7 +1142,11 @@ mod invariant_tests {
     fn every_fixture_value_is_within_kind_bounds() {
         // Asserts the resolved sentinels stay within bounds (integer kinds only).
         for s in CATALOG.iter().filter(|s| s.kind.is_int()) {
-            let (lo, hi) = (s.kind.min_value(), s.kind.max_value());
+            let bk = s
+                .kind
+                .as_bounded_int()
+                .expect("loop is filtered to integer kinds");
+            let (lo, hi) = (bk.min_value(), bk.max_value());
             for f in s.fixtures {
                 let Some(n) = f.numeric_value(s.kind) else {
                     continue;
