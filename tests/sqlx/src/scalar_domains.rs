@@ -111,6 +111,81 @@ pub trait ScalarType:
 // integer impls.
 crate::scalar_types!(scalar_type_impls);
 
+/// Generate the test wiring for one chrono-backed (temporal) scalar from its
+/// catalog row: a `LazyLock<Vec<T>>` parsing the catalog fixture strings, a
+/// public `<accessor>()` returning a borrow of it, `impl ScalarType for T`, and
+/// a `#[cfg(test)]` module asserting the parsed values track the catalog and
+/// include the pivots. The chrono analogue of `eql_scalars::int_values!`
+/// (integers materialise a `const` slice; temporals can't, so values live in a
+/// `LazyLock`). `parse`/`min_pivot`/`max_pivot`/`sql_lit` are expressions so each
+/// type supplies its own chrono parsing, sentinel pivots, and SQL literal form.
+macro_rules! temporal_values {
+    (
+        cell      = $cell:ident,
+        accessor  = $accessor:ident,
+        rust_type = $ty:ty,
+        spec      = $spec:path,
+        variant   = $variant:ident,
+        pg_type   = $pg:literal,
+        parse     = $parse:expr,
+        min_pivot = $min:expr,
+        max_pivot = $max:expr,
+        sql_lit   = $sql_lit:expr $(,)?
+    ) => {
+        static $cell: std::sync::LazyLock<Vec<$ty>> = std::sync::LazyLock::new(|| {
+            let parse: fn(&str) -> $ty = $parse;
+            $spec
+                .fixtures
+                .iter()
+                .map(|f| match f {
+                    ::eql_scalars::Fixture::$variant(s) => parse(s),
+                    other => panic!(concat!("non-", $pg, " fixture in ", $pg, " catalog row: {:?}"), other),
+                })
+                .collect()
+        });
+
+        #[doc = concat!("Typed `", stringify!($ty), "` fixtures for `", $pg, "`, parsed once from the catalog.")]
+        pub fn $accessor() -> &'static [$ty] {
+            &$cell
+        }
+
+        impl ScalarType for $ty {
+            const PG_TYPE: &'static str = $pg;
+            fn fixture_values() -> &'static [$ty] { $accessor() }
+            fn min_pivot() -> $ty { $min }
+            fn max_pivot() -> $ty { $max }
+            fn to_sql_literal(value: $ty) -> String {
+                let f: fn(&$ty) -> String = $sql_lit;
+                f(&value)
+            }
+        }
+
+        #[cfg(test)]
+        mod $accessor {
+            use super::*;
+            #[test]
+            fn values_match_catalog_fixtures() {
+                let parse: fn(&str) -> $ty = $parse;
+                let want: Vec<$ty> = $spec.fixtures.iter().map(|f| match f {
+                    ::eql_scalars::Fixture::$variant(s) => parse(s),
+                    other => panic!("non-{} fixture: {:?}", $pg, other),
+                }).collect();
+                assert_eq!($accessor(), want.as_slice());
+            }
+            #[test]
+            fn pivots_present_in_fixtures() {
+                let vals = $accessor();
+                assert!(vals.contains(&<$ty as ScalarType>::min_pivot()), "min pivot missing");
+                assert!(vals.contains(&<$ty as ScalarType>::max_pivot()), "max pivot missing");
+                // The matrix sweeps a zero pivot (`Default::default()`) on every
+                // ordered/eq-only suite and fetches its ciphertext via
+                // `fetch_fixture_payload`, so it must be present verbatim too.
+                assert!(vals.contains(&<$ty as Default>::default()), "zero/default pivot missing");
+            }
+        }
+    };
+}
+
 /// Typed `chrono::NaiveDate` fixture values, parsed once from `date`'s catalog
 /// row. The catalog stores ISO strings (zero-dep); parsing into `NaiveDate`
 /// lives here. `from_ymd_opt` is not `const`, so this cannot be a const slice —
