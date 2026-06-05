@@ -45,7 +45,7 @@ pub trait ScalarType:
     /// `LazyLock<Vec<_>>` and returns a borrow of it (see `date_values`).
     /// Integer scalars return their `eql_scalars::<T>_VALUES` const directly.
     ///
-    /// For types driven by `ordered_numeric_matrix!`, the values MUST
+    /// For types driven by `scalar_matrix!`, the values MUST
     /// include the three pivots (`min_pivot()`, `max_pivot()`, and zero
     /// `Default::default()`): the matrix uses those as comparison pivots and
     /// fetches each one's ciphertext via `fetch_fixture_payload`, which fails

@@ -2,17 +2,20 @@
 //!
 //! Two entry points:
 //!
-//! - **`ordered_numeric_matrix!`** — the recommended wrapper. For an
-//!   ordered numeric scalar (i32, i64, f64, date, numeric, timestamp,
-//!   ...) all four variants are present, the operator surface is
-//!   identical, and the only inputs that change per type are the scalar
-//!   itself, the suite token (used to derive domain + test names), the
-//!   EQL type name (the fixture `scripts(...)` ref), and the pivot
-//!   values. Invocation is ~5 lines.
+//! - **`scalar_matrix!`** — the recommended wrapper. One invocation per type
+//!   (~5 lines), with a `caps` capability marker selecting the shape:
+//!   `caps = [eq, ord]` for an ordered scalar (i32, i64, date, ...) where all
+//!   four variants are present and the full `=`/`<>`/`<`/`>`/`min`/`max`
+//!   surface applies; `caps = [eq]` for an equality-only scalar (timestamptz,
+//!   bool, ...) where only storage + `_eq` materialise and the ord operators
+//!   are blockers. The only other inputs that change per type are the scalar
+//!   itself, the suite token (used to derive domain + test names), and the EQL
+//!   type name (the fixture `scripts(...)` ref); pivots are derived from the
+//!   `ScalarType` impl.
 //!
 //! - **`scalar_domain_matrix!`** — the lower-level macro the wrapper
 //!   expands to. Use directly only for types with a non-standard surface
-//!   (e.g. equality-only scalars like bool).
+//!   that neither `caps` shape covers.
 //!
 //! Each invocation emits one `#[sqlx::test]` per (category, domain,
 //! operator, pivot) tuple. Categories: sanity, correctness, cross-shape,
@@ -135,138 +138,6 @@ fn collect_index_scan_nodes(value: &serde_json::Value, found: &mut Vec<(String, 
         }
         _ => {}
     }
-}
-
-/// Convention wrapper for ordered numeric scalars. Expands to a
-/// `scalar_domain_matrix!` invocation with the standard 4 variants, 6
-/// supported comparison operators, 2 path operators, and the standard
-/// blocker / index partitions.
-///
-/// `eql_type` is the fixture/table name (e.g. `"eql_v2_int4"`), used as the
-/// SQLx fixture `scripts(...)` ref — sqlx parses it as a token-level string
-/// literal, so it must be a literal, not derived. It is NOT a domain type
-/// name: the `eql_v3.*` domains exercised here are derived from the scalar
-/// type (see `scalar_domains.rs`, `format!("eql_v3.{}…", T::PG_TYPE)`).
-///
-/// Pivots — the comparison anchors swept by the correctness / cross-shape
-/// arms — are derived from the scalar type: `min_pivot()`, `max_pivot()`, and
-/// zero (`Default::default()`). Integer scalars resolve `min_pivot`/`max_pivot`
-/// to `Self::MIN`/`Self::MAX`; temporal scalars use explicit sentinel dates. The
-/// fixture must contain those three plaintext rows, since each pivot's
-/// ciphertext is fetched at test time via `fetch_fixture_payload`.
-#[macro_export]
-macro_rules! ordered_numeric_matrix {
-    (
-        suite = $suite:ident,
-        scalar = $scalar:ty,
-        eql_type = $eql_type:literal $(,)?
-    ) => {
-        $crate::scalar_domain_matrix! {
-            suite = $suite,
-            scalar = $scalar,
-            eql_type = $eql_type,
-            // Relative to the suite source file at
-            // tests/sqlx/tests/encrypted_domain/scalars/<T>.rs; sqlx's
-            // include_str! resolves it against that file. Every scalar
-            // suite lives at this depth, so the path is fixed here rather
-            // than repeated per invocation.
-            fixture_path = "../../../fixtures",
-            all_domains = [(storage, Storage), (eq, Eq), (ord, Ord), (ord_ore, OrdOre)],
-            eq_domains = [(eq, Eq), (ord, Ord), (ord_ore, OrdOre)],
-            ord_domains = [(ord, Ord), (ord_ore, OrdOre)],
-            ord_ore_domains = [(ord_ore, OrdOre)],
-            pivots = [
-                (min,  <$scalar as $crate::scalar_domains::ScalarType>::min_pivot()),
-                (max,  <$scalar as $crate::scalar_domains::ScalarType>::max_pivot()),
-                (zero, <$scalar as ::core::default::Default>::default()),
-            ],
-            eq_ops = [(eq, "="), (neq, "<>")],
-            ord_ops = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
-            index_combos = [
-                (eq, Eq, "eql_v3.eq_term", "btree", [(eq, "=")]),
-                (eq, Eq, "eql_v3.eq_term", "hash", [(eq, "=")]),
-                (ord, Ord, "eql_v3.ord_term", "btree",
-                    [(eq, "="), (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")]),
-                (ord_ore, OrdOre, "eql_v3.ord_term", "btree",
-                    [(eq, "="), (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")]),
-            ],
-            blocker_combos = [
-                (storage, Storage, [
-                    (eq, "="), (neq, "<>"),
-                    (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">="),
-                    (contains, "@>"), (contained_by, "<@"),
-                ]),
-                (eq, Eq, [
-                    (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">="),
-                    (contains, "@>"), (contained_by, "<@"),
-                ]),
-                (ord, Ord, [(contains, "@>"), (contained_by, "<@")]),
-                (ord_ore, OrdOre, [(contains, "@>"), (contained_by, "<@")]),
-            ],
-            // Always-on cost-preference proof (#239 thread 17): the recommended
-            // converged ordered domain, ord_term btree. One curated combo keeps
-            // PR CI cost bounded.
-            scale_default_combos = [
-                (ord, Ord, "eql_v3.ord_term", "btree"),
-            ],
-        }
-    };
-}
-
-/// Convention wrapper for equality-only scalars (no ord variants). Bool
-/// is the canonical consumer: `=` / `<>` are meaningful; the four ord
-/// operators are deliberate blockers.
-///
-/// Expands to `scalar_domain_matrix!` with `ord_domains = []`,
-/// `ord_ore_domains = []`, no btree-ord index combo, and blocker_combos
-/// covering the ord operators on every materialised variant. Order-by /
-/// order-by-using arms emit zero tests because they iterate empty
-/// ord_domains.
-///
-/// **Status:** this umbrella has no in-tree consumer yet. It exists so
-/// that adding `bool` (or any other equality-only scalar) is one
-/// `impl ScalarType` + fixture + one-line macro invocation, with no
-/// macro authoring required. Runtime validation lands with bool.
-#[macro_export]
-macro_rules! eq_only_scalar_matrix {
-    (
-        suite = $suite:ident,
-        scalar = $scalar:ty,
-        eql_type = $eql_type:literal,
-        pivots = [$($pivot:tt),+ $(,)?] $(,)?
-    ) => {
-        $crate::scalar_domain_matrix! {
-            suite = $suite,
-            scalar = $scalar,
-            eql_type = $eql_type,
-            // Fixed path; see `ordered_numeric_matrix!` for the rationale.
-            fixture_path = "../../../fixtures",
-            all_domains = [(storage, Storage), (eq, Eq)],
-            eq_domains = [(eq, Eq)],
-            ord_domains = [],
-            ord_ore_domains = [],
-            pivots = [$($pivot),+],
-            eq_ops = [(eq, "="), (neq, "<>")],
-            ord_ops = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
-            index_combos = [
-                (eq, Eq, "eql_v3.eq_term", "btree", [(eq, "=")]),
-                (eq, Eq, "eql_v3.eq_term", "hash",  [(eq, "=")]),
-            ],
-            blocker_combos = [
-                (storage, Storage, [
-                    (eq, "="), (neq, "<>"),
-                    (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">="),
-                    (contains, "@>"), (contained_by, "<@"),
-                ]),
-                (eq, Eq, [
-                    (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">="),
-                    (contains, "@>"), (contained_by, "<@"),
-                ]),
-            ],
-            // Equality-only scalars have no ordered functional index to prefer.
-            scale_default_combos = [],
-        }
-    };
 }
 
 /// Unified convention wrapper for scalar encrypted-domain suites. Replaces the
