@@ -393,3 +393,46 @@ async fn jsonb_array_to_ore_block_input_shapes(pool: PgPool) -> Result<()> {
 
     Ok(())
 }
+
+/// T8 — Volatility pin: all three `compare_ore_block_u64_8_256_term(s)` overloads
+/// (term×term, term[]×term[], composite×composite) must be `IMMUTABLE`
+/// (`provolatile = 'i'`). This deliberately diverges from the `eql_v2`
+/// originals, which carry no marker and default to `VOLATILE`. The comparison
+/// is deterministic — pgcrypto `encrypt()` is itself `IMMUTABLE` — and the
+/// marker is what lets the planner fold/cache these in ordering/index contexts,
+/// so a silent regression to `VOLATILE` (e.g. dropping the keyword on a future
+/// edit) must fail CI.
+#[sqlx::test]
+async fn ore_comparators_are_immutable(pool: PgPool) -> Result<()> {
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        r#"
+        SELECT pg_catalog.pg_get_function_arguments(p.oid) AS args,
+               p.provolatile::text                         AS provolatile
+        FROM pg_catalog.pg_proc p
+        WHERE p.pronamespace = 'eql_v3'::regnamespace
+          AND p.proname IN (
+            'compare_ore_block_u64_8_256_term',
+            'compare_ore_block_u64_8_256_terms'
+          )
+        ORDER BY args
+        "#,
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    // Pin the count so an overload silently disappearing (or a fourth appearing)
+    // also fails, not just a volatility flip.
+    assert_eq!(
+        rows.len(),
+        3,
+        "expected exactly 3 compare overloads, found: {rows:?}"
+    );
+
+    for (args, provolatile) in &rows {
+        assert_eq!(
+            provolatile, "i",
+            "compare_ore_block_u64_8_256_term(s)({args}) must be IMMUTABLE, got provolatile={provolatile}"
+        );
+    }
+    Ok(())
+}
