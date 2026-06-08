@@ -136,21 +136,26 @@ cargo test -p eql-scalars -p eql-codegen -p eql-tests-macros
 """
 
 [tasks."test:matrix:inventory"]
-description = "Verify the matrix test-name set against the single canonical snapshot, catalog-cross-checked (no database required)"
+description = "Verify the matrix test-name set against the single canonical snapshot (or its derived eq-only subset), catalog-cross-checked (no database required)"
 dir = "{{config_root}}/tests/sqlx"
 run = """
 #!/usr/bin/env bash
 # ONE canonical, token-normalized snapshot (snapshots/matrix_tests.txt) pins the
-# set of macro-emitted matrix test names. The two per-type snapshots are gone:
-# they were byte-identical modulo the type token, so one canonical set plus a
-# per-type normalize+compare carries the same signal at 1/N the committed surface.
+# set of macro-emitted matrix test names for the ORDERED scalar shape. There is
+# no second committed file for the equality-only shape: an eq-only type's name
+# set is exactly the ordered set MINUS the ord-only lines, so the inventory
+# DERIVES it from the one baseline (ordered minus `_ord`/`order_by`/
+# `routes_through_ob`). Each discovered type must match either the full baseline
+# (ordered) or that derived subset (eq-only). This keeps one committed snapshot
+# however many ordered/eq-only types exist.
 #
 # Steps:
 #   1. List the encrypted_domain binary ONCE (deterministic; reused below).
 #   2. Discover the set of scalar types present FROM THE BINARY'S OWN OUTPUT
 #      (scalars::<X>:: prefixes) — never a directory glob.
 #   3. For each discovered type, normalize its token to <T> and assert its set
-#      equals the canonical snapshot. Assert at least one type is present.
+#      equals EITHER the canonical snapshot (ordered) OR the derived eq-only
+#      subset. Assert at least one type is present.
 #   4. Completeness cross-check: assert the discovered type set equals
 #      `eql-codegen list-types`. A catalog type added without its matrix wiring
 #      (no scalars::<T>:: tests in the binary) fails here.
@@ -170,20 +175,40 @@ discovered=$(printf '%s\\n' "$listing" \
   | LC_ALL=C sort -u)
 [ -n "$discovered" ] || { echo "No scalars::<X>:: tests found in the encrypted_domain binary." >&2; exit 1; }
 
-# Per-type normalize + compare against the canonical snapshot.
+# An equality-only type (no `_ord` domain) emits a strict SUBSET of the
+# canonical (ordered) snapshot: the same names minus every ord-only line
+# (`_ord` / `order_by` / `routes_through_ob`). Derive that subset once into a
+# file, so an equality-only scalar (e.g. timestamptz) needs NO second committed
+# snapshot — it is validated against this derivation from the single baseline.
+# Materialise to a file (not a shell variable) so both shapes compare via the
+# same `cmp`/`diff` path: a variable would strip trailing newlines on capture
+# and force the failure diff to reconstruct the string with `printf`.
+eq_only_expected="/tmp/matrix-eq-only-expected.txt"
+grep -vE '_ord|order_by|routes_through_ob' snapshots/matrix_tests.txt | LC_ALL=C sort -u > "$eq_only_expected"
+
+# Per-type normalize + compare: each type must match EITHER the full canonical
+# snapshot (ordered shape) OR the derived eq-only subset (equality-only shape).
 checked=0
 while IFS= read -r t; do
   [ -n "$t" ] || continue
   printf '%s\\n' "$listing" | grep "^scalars::${t}::" \
     | sed -e "s/^scalars::${t}::/scalars::<T>::/" -e "s/_${t}_/_<T>_/g" | LC_ALL=C sort > "/tmp/matrix-norm-${t}.txt"
-  if ! cmp -s "/tmp/matrix-norm-${t}.txt" snapshots/matrix_tests.txt; then
-    echo "Matrix test-name set for '${t}' differs from snapshots/matrix_tests.txt:" >&2
+  if cmp -s "/tmp/matrix-norm-${t}.txt" snapshots/matrix_tests.txt; then
+    shape="ordered"
+  elif cmp -s "/tmp/matrix-norm-${t}.txt" "$eq_only_expected"; then
+    shape="eq_only"
+  else
+    echo "Matrix test-name set for '${t}' matches NEITHER the canonical snapshot nor its derived eq-only subset." >&2
+    echo "  vs ordered (snapshots/matrix_tests.txt):" >&2
     diff snapshots/matrix_tests.txt "/tmp/matrix-norm-${t}.txt" >&2 || true
+    echo "  vs derived eq-only (ordered minus _ord/order_by/routes_through_ob):" >&2
+    diff "$eq_only_expected" "/tmp/matrix-norm-${t}.txt" >&2 || true
     exit 1
   fi
+  echo "  ${t}: ${shape}"
   checked=$((checked + 1))
 done <<< "$discovered"
-[ "$checked" -gt 0 ] || { echo "No scalar type matched the canonical snapshot." >&2; exit 1; }
+[ "$checked" -gt 0 ] || { echo "No scalar type matched the canonical snapshot or its derived eq-only subset." >&2; exit 1; }
 
 # Completeness cross-check against the catalog (the single source of truth).
 catalog=$(cd "{{config_root}}" && cargo run -p eql-codegen -- list-types | LC_ALL=C sort -u)
@@ -195,7 +220,7 @@ if [ "$discovered" != "$catalog" ]; then
   exit 1
 fi
 
-echo "Matrix inventory OK: ${checked} type(s) match the canonical snapshot; catalog reconciled."
+echo "Matrix inventory OK: ${checked} type(s) match the canonical snapshot or its derived eq-only subset; catalog reconciled."
 """
 
 [tasks."test:matrix:expand"]

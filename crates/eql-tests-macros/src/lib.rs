@@ -32,74 +32,19 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
-use syn::{bracketed, Ident, Token, Type};
+use syn::{Ident, Token, Type};
 
-/// One `token => rust_type` entry, with an optional trailing `[temporal]` flag.
+/// One `token => rust_type` entry. The type's *shape* (temporal vs integer,
+/// equality-only vs ordered) is **not** declared here — it is read from the
+/// `eql-scalars::CATALOG` row for `token` via [`is_temporal_token`] /
+/// [`is_eq_only_token`]. The catalog is the single source of truth; this list
+/// only maps a token to the Rust plaintext type the harness compiles against.
 struct ScalarEntry {
     /// Postgres type token (`int4`); also the fixture/domain suffix and the
-    /// matrix `suite` ident.
+    /// matrix `suite` ident. Must name a row in `eql-scalars::CATALOG`.
     token: Ident,
     /// Rust plaintext type (`i32`).
     rust_type: Type,
-    /// Whether this entry is a **temporal** (chrono-backed) scalar rather than a
-    /// fixed-width integer. Declared explicitly via a trailing `[temporal]`
-    /// marker in the dispatch list (`date => chrono::NaiveDate [temporal]`)
-    /// rather than sniffed from the Rust type path — so a temporal type that
-    /// isn't chrono-spelled, or a non-temporal type whose path happens to
-    /// contain `DateTime`, cannot be misclassified.
-    temporal: bool,
-}
-
-/// The recognised optional entry markers, written in `[brackets]` after the
-/// rust type (`date => chrono::NaiveDate [temporal]`). `temporal` is the only
-/// one today; a new marker is added here so the accepted set stays a single
-/// source of truth — `parse_optional_marker` validates against this slice and
-/// the rejection message lists it verbatim.
-const SUPPORTED_MARKERS: &[&str] = &["temporal"];
-
-/// Parse the optional trailing `[marker]` on a scalar entry, returning whether
-/// the `temporal` marker was present.
-///
-/// Absent brackets → `false` (an ordinary integer scalar). When brackets are
-/// present they must hold exactly one recognised identifier: an unknown marker
-/// (`[temporial]`), empty brackets (`[]`), or trailing junk (`[temporal foo]`)
-/// are all hard parse errors. The whole point of the explicit marker is that a
-/// typo fails loudly rather than silently defaulting an entry to integer, so
-/// the parse is strict on every malformed shape, not just unknown names.
-fn parse_optional_marker(input: ParseStream) -> syn::Result<bool> {
-    if !input.peek(syn::token::Bracket) {
-        return Ok(false);
-    }
-    let content;
-    bracketed!(content in input);
-
-    let marker: Ident = content.parse()?;
-    // Reject anything after the single marker ident (`[temporal foo]`,
-    // `[temporal, bar]`) — otherwise `bracketed!` would silently drop it.
-    if !content.is_empty() {
-        let rest: TokenStream2 = content.parse()?;
-        return Err(syn::Error::new_spanned(
-            rest,
-            "expected a single marker identifier, e.g. `[temporal]`",
-        ));
-    }
-
-    let name = marker.to_string();
-    if !SUPPORTED_MARKERS.contains(&name.as_str()) {
-        let supported = SUPPORTED_MARKERS
-            .iter()
-            .map(|m| format!("`{m}`"))
-            .collect::<Vec<_>>()
-            .join(", ");
-        return Err(syn::Error::new(
-            marker.span(),
-            format!("unknown scalar marker `{name}`; supported markers: {supported}"),
-        ));
-    }
-
-    // Only `temporal` flips the temporal flag; a future non-temporal marker
-    // would pass validation above but leave this `false`.
-    Ok(name == "temporal")
 }
 
 impl Parse for ScalarEntry {
@@ -107,29 +52,33 @@ impl Parse for ScalarEntry {
         let token: Ident = input.parse()?;
         input.parse::<Token![=>]>()?;
         let rust_type: Type = input.parse()?;
-        let temporal = parse_optional_marker(input)?;
-        Ok(ScalarEntry {
-            token,
-            rust_type,
-            temporal,
-        })
+        Ok(ScalarEntry { token, rust_type })
     }
 }
 
-impl ScalarEntry {
-    /// Whether this entry is a **temporal** (chrono-backed) scalar rather than a
-    /// fixed-width integer, as declared by the `[temporal]` marker. It drives
-    /// two divergences:
-    ///
-    /// 1. The `impl ScalarType` for a temporal scalar is **hand-written** in
-    ///    `scalar_domains.rs` (chrono values can't be a `const` slice and the
-    ///    pivots are explicit sentinels), so `emit_scalar_type_impls` skips it.
-    /// 2. The integer-only fixture asserts (`<T>::MIN`, `contains(&0)`,
-    ///    `any(|v| v < 0)`) don't typecheck for a date, so `scalar_fixture!`
-    ///    stamps a temporal (pivot-presence) variant instead.
-    fn is_temporal(&self) -> bool {
-        self.temporal
-    }
+/// The `eql-scalars::CATALOG` row for `token`, or a hard panic at macro-expansion
+/// time if the token is unknown — a dispatch-list entry must name a catalog type.
+fn spec_for_token(token: &str) -> &'static eql_scalars::ScalarSpec {
+    eql_scalars::CATALOG
+        .iter()
+        .find(|s| s.token == token)
+        .unwrap_or_else(|| panic!("scalar token `{token}` not in eql-scalars::CATALOG"))
+}
+
+/// True when `token`'s catalog kind is temporal (chrono-backed). Replaces the
+/// `[temporal]` marker: temporal scalars hand off their `impl ScalarType` to
+/// `temporal_values!` (so `emit_scalar_type_impls` skips them) and stamp the
+/// `temporal` fixture variant.
+fn is_temporal_token(token: &str) -> bool {
+    spec_for_token(token).kind.is_temporal()
+}
+
+/// True when `token`'s catalog row declares no ordered domain — equality-only.
+/// Replaces the `[eq_only]` marker. Consumed by [`matrix_suite_for_entry`] to
+/// keep an eq-only type out of the ordered matrix (which exercises ordering
+/// operators it does not support).
+fn is_eq_only_token(token: &str) -> bool {
+    spec_for_token(token).is_eq_only()
 }
 
 /// The comma-separated list (optional trailing comma).
@@ -158,35 +107,39 @@ fn values_const_ident(token: &Ident) -> Ident {
 /// Emit one `impl ScalarType for <rust_type>` per entry. See
 /// [`emit_scalar_type_impls`].
 fn scalar_type_impls_tokens(list: &ScalarList) -> TokenStream2 {
-    // Temporal scalars hand-write their `impl ScalarType` (see `is_temporal`);
-    // only integer scalars get a macro-generated impl.
-    let impls = list.entries.iter().filter(|e| !e.is_temporal()).map(|e| {
-        let token_str = e.token.to_string();
-        let rust_type = &e.rust_type;
-        let values = values_const_ident(&e.token);
-        quote! {
-            impl ScalarType for #rust_type {
-                const PG_TYPE: &'static str = #token_str;
+    // Temporal scalars hand off their `impl ScalarType` to `temporal_values!`
+    // (catalog-driven); only integer scalars get a macro-generated impl here.
+    let impls = list
+        .entries
+        .iter()
+        .filter(|e| !is_temporal_token(&e.token.to_string()))
+        .map(|e| {
+            let token_str = e.token.to_string();
+            let rust_type = &e.rust_type;
+            let values = values_const_ident(&e.token);
+            quote! {
+                impl ScalarType for #rust_type {
+                    const PG_TYPE: &'static str = #token_str;
 
-                /// The catalog `eql_scalars::*_VALUES` list — the same values
-                /// the fixture generator encrypts, so the oracle can't drift
-                /// from the fixture.
-                fn fixture_values() -> &'static [#rust_type] {
-                    ::eql_scalars::#values
-                }
+                    /// The catalog `eql_scalars::*_VALUES` list — the same values
+                    /// the fixture generator encrypts, so the oracle can't drift
+                    /// from the fixture.
+                    fn fixture_values() -> &'static [#rust_type] {
+                        ::eql_scalars::#values
+                    }
 
-                /// Integer scalars pivot on their inherent `MIN`/`MAX` consts;
-                /// the fixture lists include both (`fixtures!(int …; Min, …, Max)`).
-                fn min_pivot() -> #rust_type {
-                    <#rust_type>::MIN
-                }
+                    /// Integer scalars pivot on their inherent `MIN`/`MAX` consts;
+                    /// the fixture lists include both (`fixtures!(int …; Min, …, Max)`).
+                    fn min_pivot() -> #rust_type {
+                        <#rust_type>::MIN
+                    }
 
-                fn max_pivot() -> #rust_type {
-                    <#rust_type>::MAX
+                    fn max_pivot() -> #rust_type {
+                        <#rust_type>::MAX
+                    }
                 }
             }
-        }
-    });
+        });
     quote! { #(#impls)* }
 }
 
@@ -198,7 +151,7 @@ fn scalar_fixture_modules_tokens(list: &ScalarList) -> TokenStream2 {
         let rust_type = &e.rust_type;
         let mod_ident = format_ident!("eql_v2_{}", e.token);
         let fixture_name = format!("eql_v2_{}", token_str);
-        if e.is_temporal() {
+        if is_temporal_token(&e.token.to_string()) {
             // Temporal scalars have no `eql_scalars::<T>_VALUES` const (chrono
             // is not `const`-friendly). The values come from the harness
             // accessor (`<token>_values()`), and the fixture stamps the
@@ -255,24 +208,45 @@ fn fixture_dispatch_tokens(list: &ScalarList) -> TokenStream2 {
     }
 }
 
-/// Emit one `pub mod <token> { ordered_numeric_matrix! { ... } }` per entry.
-/// See [`emit_scalar_matrix_suites`].
-fn scalar_matrix_suites_tokens(list: &ScalarList) -> TokenStream2 {
-    let mods = list.entries.iter().map(|e| {
-        let token = &e.token;
-        let token_str = e.token.to_string();
-        let rust_type = &e.rust_type;
-        let eql_type = format!("eql_v2_{}", token_str);
-        quote! {
-            #[doc = concat!("`eql_v2_", #token_str, "` matrix suite — generated by `scalar_types!`.")]
-            pub mod #token {
-                ::eql_tests::ordered_numeric_matrix! {
-                    suite = #token,
-                    scalar = #rust_type,
-                    eql_type = #eql_type,
-                }
+/// Build the matrix suite for one entry. Both shapes route through the unified
+/// `scalar_matrix!` wrapper, selected by a `caps` capability marker derived from
+/// the catalog (`eq_only` = [`is_eq_only_token`]): an ordered type emits
+/// `caps = [eq, ord]` (`=`/`<>`/`<`/`>`/`min`/`max`); an equality-only type (no
+/// `_ord` domain) emits `caps = [eq]`, whose empty `ord_domains` make the
+/// ordering arms emit zero tests rather than exercising operators the type does
+/// not support. `eq_only` is passed in so this stays a pure function of its
+/// inputs and both arms are unit-testable without an eq-only row in the live
+/// catalog.
+fn matrix_suite_for_entry(token: &Ident, rust_type: &Type, eq_only: bool) -> TokenStream2 {
+    let token_str = token.to_string();
+    let eql_type = format!("eql_v2_{}", token_str);
+    let caps = if eq_only {
+        quote! { caps = [eq] }
+    } else {
+        quote! { caps = [eq, ord] }
+    };
+    quote! {
+        #[doc = concat!("`eql_v2_", #token_str, "` matrix suite — generated by `scalar_types!`.")]
+        pub mod #token {
+            ::eql_tests::scalar_matrix! {
+                suite = #token,
+                scalar = #rust_type,
+                eql_type = #eql_type,
+                #caps
             }
         }
+    }
+}
+
+/// Emit one `pub mod <token> { scalar_matrix! { ... } }` per entry.
+/// See [`emit_scalar_matrix_suites`] and [`matrix_suite_for_entry`].
+fn scalar_matrix_suites_tokens(list: &ScalarList) -> TokenStream2 {
+    let mods = list.entries.iter().map(|e| {
+        matrix_suite_for_entry(
+            &e.token,
+            &e.rust_type,
+            is_eq_only_token(&e.token.to_string()),
+        )
     });
     quote! { #(#mods)* }
 }
@@ -317,7 +291,7 @@ pub fn emit_fixture_dispatch(input: TokenStream) -> TokenStream {
     fixture_dispatch_tokens(&list).into()
 }
 
-/// Emit one `pub mod <token> { ordered_numeric_matrix! { ... } }` per entry.
+/// Emit one `pub mod <token> { scalar_matrix! { ... } }` per entry.
 ///
 /// Invoked via `scalar_types!` in
 /// `tests/sqlx/tests/encrypted_domain/scalars/mod.rs`, so the matrix suites land
@@ -386,10 +360,9 @@ mod tests {
 
     #[test]
     fn temporal_entry_skips_impl_and_stamps_temporal_fixture() {
-        let list =
-            syn::parse_str::<ScalarList>("int4 => i32, date => chrono::NaiveDate [temporal],")
-                .unwrap();
-        // Impl emitter skips the temporal entry (hand-written impl).
+        // No marker: `date`'s temporal shape is read from eql-scalars::CATALOG.
+        let list = syn::parse_str::<ScalarList>("int4 => i32, date => chrono::NaiveDate").unwrap();
+        // Impl emitter skips the temporal entry (handed to `temporal_values!`).
         let impls = norm(&scalar_type_impls_tokens(&list));
         assert!(impls.contains("impl ScalarType for i32"));
         assert!(!impls.contains("NaiveDate"));
@@ -406,74 +379,53 @@ mod tests {
         assert!(dispatch.contains(r#""date" =>"#));
     }
 
-    /// Parse a single entry, asserting it parses, and return whether it is
-    /// temporal. Keeps the per-shape assertions below to one line each.
-    fn parse_entry_is_temporal(src: &str) -> bool {
-        syn::parse_str::<ScalarEntry>(src)
-            .unwrap_or_else(|e| panic!("`{src}` should parse: {e}"))
-            .is_temporal()
-    }
-
-    /// Parse a single entry expecting a parse error, returning the message.
-    fn parse_entry_err(src: &str) -> String {
-        match syn::parse_str::<ScalarEntry>(src) {
-            Ok(_) => panic!("`{src}` should have failed to parse"),
-            Err(e) => e.to_string(),
-        }
+    #[test]
+    fn entry_parses_without_markers() {
+        let list = syn::parse_str::<ScalarList>("int4 => i32, date => chrono::NaiveDate")
+            .expect("bare token => rust_type must parse");
+        assert_eq!(list.entries.len(), 2);
     }
 
     #[test]
-    fn no_marker_is_integer() {
-        // No brackets → integer, even when the type path mentions chrono:
-        // temporal-ness is declared, never inferred from the rust type.
-        assert!(!parse_entry_is_temporal("int4 => i32"));
-        assert!(!parse_entry_is_temporal("date => chrono::NaiveDate"));
+    fn temporal_is_read_from_catalog_not_a_marker() {
+        assert!(!is_temporal_token("int4"));
+        assert!(is_temporal_token("date"));
     }
 
     #[test]
-    fn temporal_marker_sets_the_flag() {
-        assert!(parse_entry_is_temporal(
-            "date => chrono::NaiveDate [temporal]"
-        ));
-        // Marker binds to its own entry, not the next one, across a list.
-        let list =
-            syn::parse_str::<ScalarList>("date => chrono::NaiveDate [temporal], int4 => i32,")
-                .unwrap();
-        assert!(list.entries[0].is_temporal());
-        assert!(!list.entries[1].is_temporal());
+    fn eq_only_is_read_from_catalog_not_a_marker() {
+        assert!(!is_eq_only_token("int4"));
+        assert!(!is_eq_only_token("date"));
     }
 
     #[test]
-    fn unknown_marker_errors_and_lists_the_supported_set() {
-        let msg = parse_entry_err("date => chrono::NaiveDate [temporial]");
-        // Names the offending marker and the supported set, so the message is
-        // actionable rather than just "parse error".
-        assert!(msg.contains("unknown scalar marker"), "got: {msg}");
-        assert!(
-            msg.contains("temporial"),
-            "should name the bad marker: {msg}"
-        );
-        assert!(
-            msg.contains("`temporal`"),
-            "should list supported markers: {msg}"
-        );
+    fn ordered_entry_emits_scalar_matrix_with_eq_ord_caps() {
+        let token: Ident = syn::parse_str("int4").unwrap();
+        let rust_type: Type = syn::parse_str("i32").unwrap();
+        let out = norm(&matrix_suite_for_entry(&token, &rust_type, false));
+        assert!(out.contains(":: eql_tests :: scalar_matrix !"));
+        assert!(out.contains("caps = [eq , ord]"));
+        assert!(out.contains("suite = int4"));
     }
 
     #[test]
-    fn empty_marker_brackets_error() {
-        // `[]` has no marker ident to parse — a malformed entry, not a no-op.
-        let msg = parse_entry_err("date => chrono::NaiveDate []");
-        assert!(!msg.is_empty());
+    fn eq_only_entry_emits_scalar_matrix_with_eq_caps_only() {
+        // No eq-only row exists in the live catalog yet, so pass the shape
+        // directly: an eq-only token routes to the `caps = [eq]` arm (empty
+        // ord_domains), never the ordered `caps = [eq, ord]` arm.
+        let token: Ident = syn::parse_str("timestamptz").unwrap();
+        let rust_type: Type = syn::parse_str("chrono::DateTime<chrono::Utc>").unwrap();
+        let out = norm(&matrix_suite_for_entry(&token, &rust_type, true));
+        assert!(out.contains(":: eql_tests :: scalar_matrix !"));
+        assert!(out.contains("caps = [eq]"));
+        assert!(!out.contains("caps = [eq , ord]"));
+        assert!(!out.contains("compile_error"));
     }
 
     #[test]
-    fn trailing_junk_in_marker_brackets_errors() {
-        // Regression guard: `[temporal foo]` / `[temporal, bar]` must NOT be
-        // silently accepted as `temporal` with the extra tokens dropped.
-        let msg = parse_entry_err("date => chrono::NaiveDate [temporal foo]");
-        assert!(msg.contains("single marker identifier"), "got: {msg}");
-        let msg = parse_entry_err("date => chrono::NaiveDate [temporal, bar]");
-        assert!(msg.contains("single marker identifier"), "got: {msg}");
+    #[should_panic(expected = "not in eql-scalars::CATALOG")]
+    fn unknown_token_fails_loudly() {
+        is_temporal_token("nonesuch");
     }
 
     #[test]
@@ -493,7 +445,7 @@ mod tests {
         let out = norm(&scalar_matrix_suites_tokens(&sample()));
         assert!(out.contains("pub mod int4"));
         assert!(out.contains("pub mod int8"));
-        assert!(out.contains(":: eql_tests :: ordered_numeric_matrix !"));
+        assert!(out.contains(":: eql_tests :: scalar_matrix !"));
         // suite/scalar/eql_type must match the old per-type files so test names
         // (and the snapshot) are unchanged.
         assert!(out.contains("suite = int4"));
@@ -502,5 +454,18 @@ mod tests {
         assert!(out.contains("suite = int8"));
         assert!(out.contains("scalar = i64"));
         assert!(out.contains(r#"eql_type = "eql_v2_int8""#));
+    }
+
+    #[test]
+    fn matrix_suites_emit_unified_macro_with_caps() {
+        // Both base types are ordered, so the emitter routes them through the
+        // unified wrapper with the ordered capability marker and never names
+        // either of the now-deleted parallel wrappers.
+        let list = syn::parse_str::<ScalarList>("int4 => i32, date => chrono::NaiveDate").unwrap();
+        let out = norm(&scalar_matrix_suites_tokens(&list));
+        assert!(out.contains(":: eql_tests :: scalar_matrix !"));
+        assert!(out.contains("caps = [eq , ord]"));
+        assert!(!out.contains("ordered_numeric_matrix"));
+        assert!(!out.contains("eq_only_scalar_matrix"));
     }
 }
