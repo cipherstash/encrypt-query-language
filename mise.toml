@@ -177,10 +177,14 @@ discovered=$(printf '%s\\n' "$listing" \
 
 # An equality-only type (no `_ord` domain) emits a strict SUBSET of the
 # canonical (ordered) snapshot: the same names minus every ord-only line
-# (`_ord` / `order_by` / `routes_through_ob`). Derive that subset once here, so
-# an equality-only scalar (e.g. timestamptz) needs NO second committed snapshot
-# — it is validated against this derivation from the single baseline.
-eq_only_expected=$(grep -vE '_ord|order_by|routes_through_ob' snapshots/matrix_tests.txt | LC_ALL=C sort -u)
+# (`_ord` / `order_by` / `routes_through_ob`). Derive that subset once into a
+# file, so an equality-only scalar (e.g. timestamptz) needs NO second committed
+# snapshot — it is validated against this derivation from the single baseline.
+# Materialise to a file (not a shell variable) so both shapes compare via the
+# same `cmp`/`diff` path: a variable would strip trailing newlines on capture
+# and force the failure diff to reconstruct the string with `printf`.
+eq_only_expected="/tmp/matrix-eq-only-expected.txt"
+grep -vE '_ord|order_by|routes_through_ob' snapshots/matrix_tests.txt | LC_ALL=C sort -u > "$eq_only_expected"
 
 # Per-type normalize + compare: each type must match EITHER the full canonical
 # snapshot (ordered shape) OR the derived eq-only subset (equality-only shape).
@@ -191,14 +195,14 @@ while IFS= read -r t; do
     | sed -e "s/^scalars::${t}::/scalars::<T>::/" -e "s/_${t}_/_<T>_/g" | LC_ALL=C sort > "/tmp/matrix-norm-${t}.txt"
   if cmp -s "/tmp/matrix-norm-${t}.txt" snapshots/matrix_tests.txt; then
     shape="ordered"
-  elif [ "$(cat "/tmp/matrix-norm-${t}.txt")" = "$eq_only_expected" ]; then
+  elif cmp -s "/tmp/matrix-norm-${t}.txt" "$eq_only_expected"; then
     shape="eq_only"
   else
     echo "Matrix test-name set for '${t}' matches NEITHER the canonical snapshot nor its derived eq-only subset." >&2
     echo "  vs ordered (snapshots/matrix_tests.txt):" >&2
     diff snapshots/matrix_tests.txt "/tmp/matrix-norm-${t}.txt" >&2 || true
     echo "  vs derived eq-only (ordered minus _ord/order_by/routes_through_ob):" >&2
-    diff <(printf '%s\\n' "$eq_only_expected") "/tmp/matrix-norm-${t}.txt" >&2 || true
+    diff "$eq_only_expected" "/tmp/matrix-norm-${t}.txt" >&2 || true
     exit 1
   fi
   echo "  ${t}: ${shape}"
