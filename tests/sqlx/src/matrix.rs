@@ -2,17 +2,20 @@
 //!
 //! Two entry points:
 //!
-//! - **`ordered_numeric_matrix!`** — the recommended wrapper. For an
-//!   ordered numeric scalar (i32, i64, f64, date, numeric, timestamp,
-//!   ...) all four variants are present, the operator surface is
-//!   identical, and the only inputs that change per type are the scalar
-//!   itself, the suite token (used to derive domain + test names), the
-//!   EQL type name (the fixture `scripts(...)` ref), and the pivot
-//!   values. Invocation is ~5 lines.
+//! - **`scalar_matrix!`** — the recommended wrapper. One invocation per type
+//!   (~5 lines), with a `caps` capability marker selecting the shape:
+//!   `caps = [eq, ord]` for an ordered scalar (i32, i64, date, ...) where all
+//!   four variants are present and the full `=`/`<>`/`<`/`>`/`min`/`max`
+//!   surface applies; `caps = [eq]` for an equality-only scalar (timestamptz,
+//!   bool, ...) where only storage + `_eq` materialise and the ord operators
+//!   are blockers. The only other inputs that change per type are the scalar
+//!   itself, the suite token (used to derive domain + test names), and the EQL
+//!   type name (the fixture `scripts(...)` ref); pivots are derived from the
+//!   `ScalarType` impl.
 //!
 //! - **`scalar_domain_matrix!`** — the lower-level macro the wrapper
 //!   expands to. Use directly only for types with a non-standard surface
-//!   (e.g. equality-only scalars like bool).
+//!   that neither `caps` shape covers.
 //!
 //! Each invocation emits one `#[sqlx::test]` per (category, domain,
 //! operator, pivot) tuple. Categories: sanity, correctness, cross-shape,
@@ -137,29 +140,32 @@ fn collect_index_scan_nodes(value: &serde_json::Value, found: &mut Vec<(String, 
     }
 }
 
-/// Convention wrapper for ordered numeric scalars. Expands to a
-/// `scalar_domain_matrix!` invocation with the standard 4 variants, 6
-/// supported comparison operators, 2 path operators, and the standard
-/// blocker / index partitions.
+/// Unified convention wrapper for scalar encrypted-domain suites. Replaces the
+/// two parallel wrappers (`ordered_numeric_matrix!` + `eq_only_scalar_matrix!`)
+/// with one entry point selected by a `caps` capability marker:
 ///
-/// `eql_type` is the fixture/table name (e.g. `"eql_v2_int4"`), used as the
-/// SQLx fixture `scripts(...)` ref — sqlx parses it as a token-level string
-/// literal, so it must be a literal, not derived. It is NOT a domain type
-/// name: the `eql_v3.*` domains exercised here are derived from the scalar
-/// type (see `scalar_domains.rs`, `format!("eql_v3.{}…", T::PG_TYPE)`).
+/// - `caps = [eq, ord]` — the ordered-numeric shape (all four variants;
+///   `=`/`<>`/`<`/`<=`/`>`/`>=`; ORDER BY / ORDER BY USING; ORE injectivity;
+///   the ordered functional index). Consumers: `int2`/`int4`/`int8`/`date`.
+/// - `caps = [eq]` — equality-only (storage + `_eq` only; `=`/`<>` meaningful,
+///   the four ord operators are deliberate blockers). The empty `ord_domains`
+///   make the order-by / ORE arms emit zero tests. First consumer:
+///   `timestamptz`.
 ///
-/// Pivots — the comparison anchors swept by the correctness / cross-shape
-/// arms — are derived from the scalar type: `min_pivot()`, `max_pivot()`, and
-/// zero (`Default::default()`). Integer scalars resolve `min_pivot`/`max_pivot`
-/// to `Self::MIN`/`Self::MAX`; temporal scalars use explicit sentinel dates. The
-/// fixture must contain those three plaintext rows, since each pivot's
-/// ciphertext is fetched at test time via `fetch_fixture_payload`.
+/// Both arms take the identical `(suite, scalar, eql_type)` signature and derive
+/// the three comparison pivots from the `ScalarType` impl
+/// (`min_pivot()`/`max_pivot()`/`Default`), so the invocation shape is the same
+/// regardless of capability — only the `caps` marker differs. The emitted test
+/// names for an ordered type are byte-identical to the old
+/// `ordered_numeric_matrix!`; the eq-only name set is exactly that set minus the
+/// `_ord` / `order_by` / `routes_through_ob` lines.
 #[macro_export]
-macro_rules! ordered_numeric_matrix {
+macro_rules! scalar_matrix {
     (
         suite = $suite:ident,
         scalar = $scalar:ty,
-        eql_type = $eql_type:literal $(,)?
+        eql_type = $eql_type:literal,
+        caps = [eq, ord] $(,)?
     ) => {
         $crate::scalar_domain_matrix! {
             suite = $suite,
@@ -211,41 +217,31 @@ macro_rules! ordered_numeric_matrix {
             ],
         }
     };
-}
-
-/// Convention wrapper for equality-only scalars (no ord variants). Bool
-/// is the canonical consumer: `=` / `<>` are meaningful; the four ord
-/// operators are deliberate blockers.
-///
-/// Expands to `scalar_domain_matrix!` with `ord_domains = []`,
-/// `ord_ore_domains = []`, no btree-ord index combo, and blocker_combos
-/// covering the ord operators on every materialised variant. Order-by /
-/// order-by-using arms emit zero tests because they iterate empty
-/// ord_domains.
-///
-/// **Status:** this umbrella has no in-tree consumer yet. It exists so
-/// that adding `bool` (or any other equality-only scalar) is one
-/// `impl ScalarType` + fixture + one-line macro invocation, with no
-/// macro authoring required. Runtime validation lands with bool.
-#[macro_export]
-macro_rules! eq_only_scalar_matrix {
     (
         suite = $suite:ident,
         scalar = $scalar:ty,
         eql_type = $eql_type:literal,
-        pivots = [$($pivot:tt),+ $(,)?] $(,)?
+        caps = [eq] $(,)?
     ) => {
         $crate::scalar_domain_matrix! {
             suite = $suite,
             scalar = $scalar,
             eql_type = $eql_type,
-            // Fixed path; see `ordered_numeric_matrix!` for the rationale.
+            // Fixed path; see the `caps = [eq, ord]` arm for the rationale.
             fixture_path = "../../../fixtures",
             all_domains = [(storage, Storage), (eq, Eq)],
             eq_domains = [(eq, Eq)],
             ord_domains = [],
             ord_ore_domains = [],
-            pivots = [$($pivot),+],
+            // Pivots derived from the scalar type exactly like the ordered arm
+            // (`min_pivot()`/`max_pivot()`/`Default`), so the equality
+            // correctness / cross-shape arms sweep the same three anchors and
+            // the eq-only name set stays a clean subset of the ordered one.
+            pivots = [
+                (min,  <$scalar as $crate::scalar_domains::ScalarType>::min_pivot()),
+                (max,  <$scalar as $crate::scalar_domains::ScalarType>::max_pivot()),
+                (zero, <$scalar as ::core::default::Default>::default()),
+            ],
             eq_ops = [(eq, "="), (neq, "<>")],
             ord_ops = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
             index_combos = [
@@ -269,8 +265,8 @@ macro_rules! eq_only_scalar_matrix {
     };
 }
 
-/// Low-level entry point. Use `ordered_numeric_matrix!` instead unless
-/// your type's surface deviates from the standard ordered-numeric shape.
+/// Low-level entry point. Use `scalar_matrix!` instead unless
+/// your type's surface deviates from the standard scalar shapes.
 #[macro_export]
 macro_rules! scalar_domain_matrix {
     (

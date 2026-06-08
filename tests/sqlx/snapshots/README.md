@@ -8,9 +8,16 @@ it in version control.
 
 The per-type `<T>_matrix_tests.txt` files are gone. They were byte-identical
 modulo the type token (the matrix tests are macro-generated from one
-`ordered_numeric_matrix!` invocation per type with no per-type variation), so a
+`scalar_matrix!` invocation per type with no per-type variation), so a
 single canonical set plus a per-type normalize-and-compare carries the same
 signal at a fraction of the committed surface.
+
+There is also **no** separate snapshot for equality-only types. An eq-only
+scalar (`scalar_matrix! { caps = [eq] }`, e.g. `timestamptz`) emits exactly the
+ordered name set MINUS the ord-only lines, so the inventory **derives** its
+expected set from this one baseline — `matrix_tests.txt` minus every line
+matching `_ord` / `order_by` / `routes_through_ob`. The baseline file itself is
+always the ordered (`caps = [eq, ord]`) shape.
 
 ## What it guards
 
@@ -34,8 +41,11 @@ The task (`mise.toml`, `[tasks."test:matrix:inventory"]`):
    `cargo test --no-default-features --test encrypted_domain -- --list`.
 2. Discovers the set of scalar types present **from the binary's own output**
    (the `scalars::<X>::` prefixes) — never a directory glob.
-3. Normalizes each type's token to `<T>` and asserts that type's set equals the
-   canonical `matrix_tests.txt`. Asserts at least one type is present.
+3. Normalizes each type's token to `<T>` and asserts that type's set equals
+   **either** the canonical `matrix_tests.txt` (ordered shape) **or** the derived
+   eq-only subset (`matrix_tests.txt` minus `_ord`/`order_by`/`routes_through_ob`).
+   Prints each type's resolved shape (`ordered` / `eq_only`). Asserts at least
+   one type is present.
 4. **Completeness cross-check:** asserts the discovered type set equals
    `cargo run -p eql-codegen -- list-types` (the catalog is the single source).
    A catalog type added without its matrix wiring — no `scalars::<T>::` tests in
@@ -62,10 +72,10 @@ catalog cross-check) fails the job.
 - **Adding a new scalar type** → add the catalog row in
   `eql-scalars::CATALOG`, wire the SQLx matrix oracle (see
   `docs/reference/adding-a-scalar-encrypted-domain-type.md` §3), then run
-  `mise run test:matrix:inventory`. If the new type's
-  normalized name set matches the canonical snapshot (it will, for a standard
-  `ordered_numeric_matrix!` type), no snapshot edit is needed — the cross-check
-  just confirms the type is wired.
+  `mise run test:matrix:inventory`. No snapshot edit is needed: an ordered
+  (`caps = [eq, ord]`) type matches the canonical baseline, and an equality-only
+  (`caps = [eq]`) type matches the derived eq-only subset — both are checked
+  against this one file. The cross-check just confirms the type is wired.
 - **Removing a scalar type** → remove the catalog row and its matrix wiring; the
   cross-check then sees the type gone from both sides.
 - **Changing which matrix tests the macro emits** → regenerate and commit

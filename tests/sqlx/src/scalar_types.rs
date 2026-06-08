@@ -4,11 +4,13 @@
 //! To add a scalar encrypted-domain type to the SQLx matrix, add one
 //! `token => rust_type` line below (plus the catalog row in `eql-scalars` and
 //! the `EqlPlaintext` impl, owned separately — see
-//! `docs/reference/adding-a-scalar-encrypted-domain-type.md` §3). A temporal
-//! (chrono-backed) scalar adds a trailing `[temporal]` marker
-//! (`date => chrono::NaiveDate [temporal]`): it hand-writes its `impl
-//! ScalarType` in `scalar_domains.rs` and gets pivot-presence fixture asserts
-//! instead of the integer signed-extreme ones.
+//! `docs/reference/adding-a-scalar-encrypted-domain-type.md` §3). The entry
+//! carries no shape marker: whether a type is temporal (chrono-backed) or
+//! equality-only is read from its `eql-scalars::CATALOG` row
+//! (`ScalarKind::is_temporal()` / `ScalarSpec::is_eq_only()`). A temporal
+//! scalar generates its `impl ScalarType` via `temporal_values!` in
+//! `scalar_domains.rs` and gets pivot-presence fixture asserts instead of the
+//! integer signed-extreme ones.
 //!
 //! The harness pieces live in three separate compilation contexts (the
 //! `eql-tests` lib, the `encrypted_domain` integration-test binary, and the
@@ -20,7 +22,7 @@
 //! - `scalar_type_impls` — `scalar_domains.rs` (lib): the `impl ScalarType` block.
 //! - `fixture_modules` — `fixtures/mod.rs` (lib): the `pub mod eql_v3_<T>` modules.
 //! - `matrix_suites` — `tests/encrypted_domain/scalars/mod.rs` (test binary):
-//!   the `ordered_numeric_matrix!` suites.
+//!   the `scalar_matrix!` suites.
 //! - `fixture_dispatch` — `tests/generate_all_fixtures.rs` (test binary): the
 //!   `generate_for_token` dispatch fn.
 //!
@@ -52,7 +54,7 @@ macro_rules! scalar_types {
             int4 => i32,
             int2 => i16,
             int8 => i64,
-            date => chrono::NaiveDate [temporal],
+            date => chrono::NaiveDate,
         }
     };
 }

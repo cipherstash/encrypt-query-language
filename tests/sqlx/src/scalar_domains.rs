@@ -12,7 +12,6 @@
 use anyhow::{bail, Context, Result};
 use sqlx::PgPool;
 use std::fmt::{Debug, Display};
-use std::sync::LazyLock;
 
 /// One impl per scalar type. Two `const`s and the rest defaults.
 pub trait ScalarType:
@@ -46,7 +45,7 @@ pub trait ScalarType:
     /// `LazyLock<Vec<_>>` and returns a borrow of it (see `date_values`).
     /// Integer scalars return their `eql_scalars::<T>_VALUES` const directly.
     ///
-    /// For types driven by `ordered_numeric_matrix!`, the values MUST
+    /// For types driven by `scalar_matrix!`, the values MUST
     /// include the three pivots (`min_pivot()`, `max_pivot()`, and zero
     /// `Default::default()`): the matrix uses those as comparison pivots and
     /// fetches each one's ciphertext via `fetch_fixture_payload`, which fails
@@ -111,107 +110,99 @@ pub trait ScalarType:
 // integer impls.
 crate::scalar_types!(scalar_type_impls);
 
-/// Typed `chrono::NaiveDate` fixture values, parsed once from `date`'s catalog
-/// row. The catalog stores ISO strings (zero-dep); parsing into `NaiveDate`
-/// lives here. `from_ymd_opt` is not `const`, so this cannot be a const slice —
-/// hence the `LazyLock<Vec<_>>` + `fixture_values()`-returns-a-borrow shape that
-/// the const→fn trait change exists to allow.
-static DATE_VALUES_CELL: LazyLock<Vec<chrono::NaiveDate>> = LazyLock::new(|| {
-    eql_scalars::DATE
-        .fixtures
-        .iter()
-        .map(|f| match f {
-            eql_scalars::Fixture::Date(s) => chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
-                .unwrap_or_else(|e| panic!("invalid date fixture {s:?}: {e}")),
-            other => panic!("date catalog fixture must be Fixture::Date, got {other:?}"),
-        })
-        .collect()
-});
+/// Generate the test wiring for one chrono-backed (temporal) scalar from its
+/// catalog row: a `LazyLock<Vec<T>>` parsing the catalog fixture strings, a
+/// public `<accessor>()` returning a borrow of it, `impl ScalarType for T`, and
+/// a `#[cfg(test)]` module asserting the parsed values track the catalog and
+/// include the pivots. The chrono analogue of `eql_scalars::int_values!`
+/// (integers materialise a `const` slice; temporals can't, so values live in a
+/// `LazyLock`). `parse`/`min_pivot`/`max_pivot`/`sql_lit` are expressions so each
+/// type supplies its own chrono parsing, sentinel pivots, and SQL literal form.
+macro_rules! temporal_values {
+    (
+        cell      = $cell:ident,
+        accessor  = $accessor:ident,
+        rust_type = $ty:ty,
+        spec      = $spec:path,
+        variant   = $variant:ident,
+        pg_type   = $pg:literal,
+        parse     = $parse:expr,
+        min_pivot = $min:expr,
+        max_pivot = $max:expr,
+        sql_lit   = $sql_lit:expr $(,)?
+    ) => {
+        static $cell: std::sync::LazyLock<Vec<$ty>> = std::sync::LazyLock::new(|| {
+            let parse: fn(&str) -> $ty = $parse;
+            $spec
+                .fixtures
+                .iter()
+                .map(|f| match f {
+                    ::eql_scalars::Fixture::$variant(s) => parse(s),
+                    other => panic!(concat!("non-", $pg, " fixture in ", $pg, " catalog row: {:?}"), other),
+                })
+                .collect()
+        });
 
-/// The parsed `chrono::NaiveDate` fixture values, in catalog order. Mirrors the
-/// `eql_scalars::<T>_VALUES` accessor pattern for the integer scalars; the
-/// stacked timestamptz PR adds a sibling `timestamptz_values()`. Public so the
-/// `eql_v2_date` fixture module (emitted by `scalar_types!(fixture_modules)`)
-/// can hand the slice to `scalar_fixture!` — temporal scalars have no
-/// `eql_scalars::<T>_VALUES` const to point at.
-pub fn date_values() -> &'static [chrono::NaiveDate] {
-    &DATE_VALUES_CELL
-}
-
-impl ScalarType for chrono::NaiveDate {
-    const PG_TYPE: &'static str = "date";
-
-    fn fixture_values() -> &'static [Self] {
-        date_values()
-    }
-
-    /// Temporal min pivot — `1900-01-01`, present verbatim in the catalog
-    /// fixtures (not `Self::MIN`, which would be far outside the fixture set).
-    fn min_pivot() -> Self {
-        chrono::NaiveDate::from_ymd_opt(1900, 1, 1).expect("1900-01-01 is a valid date")
-    }
-
-    /// Temporal max pivot — `2099-12-31`, present verbatim in the catalog
-    /// fixtures.
-    fn max_pivot() -> Self {
-        chrono::NaiveDate::from_ymd_opt(2099, 12, 31).expect("2099-12-31 is a valid date")
-    }
-
-    /// `Display` renders a `NaiveDate` as `2099-12-31` (unquoted), which is not
-    /// a valid SQL literal on its own — wrap it in single quotes.
-    fn to_sql_literal(value: Self) -> String {
-        format!("'{value}'")
-    }
-}
-
-#[cfg(test)]
-mod date_value_tests {
-    use super::*;
-
-    /// The parsed `NaiveDate` values match the catalog fixture strings in
-    /// order and count — the harness oracle cannot drift from the catalog the
-    /// fixture generator encrypts.
-    #[test]
-    fn date_values_match_catalog_fixtures() {
-        let catalog: Vec<&str> = eql_scalars::DATE
-            .fixtures
-            .iter()
-            .map(|f| match f {
-                eql_scalars::Fixture::Date(s) => *s,
-                other => panic!("unexpected non-date fixture {other:?}"),
-            })
-            .collect();
-        let parsed = <chrono::NaiveDate as ScalarType>::fixture_values();
-        assert_eq!(
-            parsed.len(),
-            catalog.len(),
-            "parsed date count must match catalog fixture count"
-        );
-        for (date, iso) in parsed.iter().zip(&catalog) {
-            assert_eq!(&date.format("%Y-%m-%d").to_string(), iso);
+        #[doc = concat!("Typed `", stringify!($ty), "` fixtures for `", $pg, "`, parsed once from the catalog.")]
+        pub fn $accessor() -> &'static [$ty] {
+            &$cell
         }
-    }
 
-    /// The three temporal pivots resolve to fixture rows present verbatim.
-    #[test]
-    fn date_pivots_are_in_fixture_values() {
-        let values = <chrono::NaiveDate as ScalarType>::fixture_values();
-        let min = <chrono::NaiveDate as ScalarType>::min_pivot();
-        let max = <chrono::NaiveDate as ScalarType>::max_pivot();
-        let zero = chrono::NaiveDate::default();
-        assert!(values.contains(&min), "min_pivot {min} must be a fixture");
-        assert!(values.contains(&max), "max_pivot {max} must be a fixture");
-        assert!(
-            values.contains(&zero),
-            "zero pivot {zero} must be a fixture"
-        );
-        // Default is 1970-01-01, the documented zero pivot.
-        assert_eq!(
-            zero,
-            chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(),
-            "NaiveDate::default() must be 1970-01-01"
-        );
-    }
+        impl ScalarType for $ty {
+            const PG_TYPE: &'static str = $pg;
+            fn fixture_values() -> &'static [$ty] { $accessor() }
+            fn min_pivot() -> $ty { $min }
+            fn max_pivot() -> $ty { $max }
+            fn to_sql_literal(value: $ty) -> String {
+                let f: fn(&$ty) -> String = $sql_lit;
+                f(&value)
+            }
+        }
+
+        #[cfg(test)]
+        mod $accessor {
+            use super::*;
+            #[test]
+            fn values_match_catalog_fixtures() {
+                let parse: fn(&str) -> $ty = $parse;
+                let want: Vec<$ty> = $spec.fixtures.iter().map(|f| match f {
+                    ::eql_scalars::Fixture::$variant(s) => parse(s),
+                    other => panic!("non-{} fixture: {:?}", $pg, other),
+                }).collect();
+                assert_eq!($accessor(), want.as_slice());
+            }
+            #[test]
+            fn pivots_present_in_fixtures() {
+                let vals = $accessor();
+                assert!(vals.contains(&<$ty as ScalarType>::min_pivot()), "min pivot missing");
+                assert!(vals.contains(&<$ty as ScalarType>::max_pivot()), "max pivot missing");
+                // The matrix sweeps a zero pivot (`Default::default()`) on every
+                // ordered/eq-only suite and fetches its ciphertext via
+                // `fetch_fixture_payload`, so it must be present verbatim too.
+                assert!(vals.contains(&<$ty as Default>::default()), "zero/default pivot missing");
+            }
+        }
+    };
+}
+
+// `date`'s `ScalarType` wiring is generated from its catalog row by
+// `temporal_values!` — the chrono analogue of the integer `int_values!` path.
+// Values can't be a `const` slice (`from_ymd_opt` is not `const`), so they live
+// in a `LazyLock<Vec<_>>` behind `date_values()`. `date_values()` is public so
+// the `eql_v2_date` fixture module (emitted by `scalar_types!(fixture_modules)`)
+// can hand the slice to `scalar_fixture!`.
+temporal_values! {
+    cell      = DATE_VALUES_CELL,
+    accessor  = date_values,
+    rust_type = chrono::NaiveDate,
+    spec      = eql_scalars::DATE,
+    variant   = Date,
+    pg_type   = "date",
+    parse     = |s| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
+        .expect("catalog date fixture must be YYYY-MM-DD"),
+    min_pivot = chrono::NaiveDate::from_ymd_opt(1900, 1, 1).expect("1900-01-01 valid"),
+    max_pivot = chrono::NaiveDate::from_ymd_opt(2099, 12, 31).expect("2099-12-31 valid"),
+    sql_lit   = |v| format!("'{v}'"),
 }
 
 /// Per-domain capability + payload shape. Storage carries no terms, `Eq`
