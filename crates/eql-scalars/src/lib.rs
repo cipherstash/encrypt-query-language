@@ -1,6 +1,6 @@
-//! Scalar/term catalog for EQL encrypted-domain codegen — the Rust source of
-//! truth replacing `tasks/codegen/{scalars,terms,spec}.py` and the
-//! `types/*.toml` manifests. Std-only, no dependencies.
+//! Scalar/term catalog for EQL encrypted-domain codegen — the single Rust
+//! source of truth for every scalar type, term, and fixture. Std-only, no
+//! dependencies.
 //!
 //! `Fixture` is value-kind tagged (one non-generic enum, variant = value kind),
 //! so a single `CATALOG` spans every scalar kind. Integer literals are
@@ -151,9 +151,8 @@ impl ScalarKind {
 
 /// A fixed index term known to the scalar materializer.
 ///
-/// Mirrors `terms.py`'s `TERM_CATALOG`. `Hm` provides equality; `Ore` provides
-/// equality plus ordering. The `json_key`/`extractor`/`returns`/`ctor` values
-/// are the cross-schema SQL contract and are copied verbatim from `terms.py` —
+/// `Hm` provides equality; `Ore` provides equality plus ordering. The
+/// `json_key`/`extractor`/`ctor` values are the cross-schema SQL contract —
 /// changing one is a generated-SQL behaviour change, not a refactor.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Term {
@@ -215,8 +214,7 @@ impl Term {
 }
 
 impl Term {
-    /// Stable dedupe — first occurrence wins. The Rust analogue of
-    /// `terms.py`'s `dict.fromkeys` ordering contract.
+    /// Stable dedupe — first occurrence wins.
     fn dedupe_preserving_order<'a>(items: impl IntoIterator<Item = &'a str>) -> Vec<&'a str> {
         let mut out: Vec<&'a str> = Vec::new();
         for item in items {
@@ -228,26 +226,23 @@ impl Term {
     }
 
     /// Supported operators for the union of a domain's terms (catalog order,
-    /// deduped). Mirrors `terms.py::operators_for_terms`.
+    /// deduped).
     pub fn operators_for_terms(terms: &[Term]) -> Vec<&'static str> {
         Self::dedupe_preserving_order(terms.iter().flat_map(|t| t.operators().iter().copied()))
     }
 
     /// JSON payload keys required by these terms (deduped, in order).
-    /// Mirrors `terms.py::term_json_keys`.
     pub fn term_json_keys(terms: &[Term]) -> Vec<&'static str> {
         Self::dedupe_preserving_order(terms.iter().map(|t| t.json_key()))
     }
 
     /// SQL `-- REQUIRE:` edges needed by these terms (deduped, in order).
-    /// Mirrors `terms.py::term_requires`.
     pub fn term_requires(terms: &[Term]) -> Vec<&'static str> {
         Self::dedupe_preserving_order(terms.iter().flat_map(|t| t.requires().iter().copied()))
     }
 
     /// The extractor that supports `op` for a domain carrying `terms`, or
-    /// `None`. First supporting term wins. Mirrors
-    /// `terms.py::extractor_for_operator`.
+    /// `None`. First supporting term wins.
     pub fn extractor_for_operator(terms: &[Term], op: &str) -> Option<&'static str> {
         terms
             .iter()
@@ -256,8 +251,7 @@ impl Term {
     }
 
     /// Generated-file role label for a domain with these terms. No terms =>
-    /// `"storage"`; otherwise the first term's role. Mirrors
-    /// `terms.py::role_for_terms`.
+    /// `"storage"`; otherwise the first term's role.
     pub fn role_for_terms(terms: &[Term]) -> &'static str {
         match terms.first() {
             None => "storage",
@@ -420,13 +414,13 @@ macro_rules! fixtures {
     (date;    $($s:literal),* $(,)?) => { &[$(Fixture::Date($s)),*] };
 }
 
-/// int4 fixture plaintexts — verbatim from `tasks/codegen/types/int4.toml`.
+/// int4 fixture plaintexts.
 /// `N(..)` literals are range-checked against `i32` at compile time.
 const INT4_FIXTURES: &[Fixture] = fixtures!(int i32;
     Min, N(-100), N(-1), Zero, N(1), N(2), N(5), N(10), N(17), N(25),
     N(42), N(50), N(100), N(250), N(1000), N(9999), Max);
 
-/// int2 fixture plaintexts — verbatim from `tasks/codegen/types/int2.toml`.
+/// int2 fixture plaintexts.
 /// `N(..)` literals are range-checked against `i16` at compile time.
 const INT2_FIXTURES: &[Fixture] = fixtures!(int i16;
     Min, N(-30000), N(-100), N(-1), Zero, N(1), N(2), N(5), N(10), N(17),

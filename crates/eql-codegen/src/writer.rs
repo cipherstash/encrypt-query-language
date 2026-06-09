@@ -1,4 +1,4 @@
-//! Ownership-guarded file writer (port of writer.py).
+//! Ownership-guarded file writer.
 
 use std::fs;
 use std::io;

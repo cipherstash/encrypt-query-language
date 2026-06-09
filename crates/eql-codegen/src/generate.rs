@@ -1,4 +1,4 @@
-//! File renderers and orchestrator (port of generate.py).
+//! File renderers and orchestrator.
 
 use std::path::{Path, PathBuf};
 
