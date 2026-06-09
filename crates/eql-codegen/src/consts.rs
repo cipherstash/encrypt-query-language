@@ -17,7 +17,7 @@ pub(crate) const SCHEMA: &str = "eql_v3";
 pub(crate) const ENVELOPE_KEYS: &[&str] = &["v", "i", "c"];
 
 /// Escape a string for use inside a single-quoted SQL literal by doubling
-/// embedded single quotes. Port of templates.py `_sql_str`.
+/// embedded single quotes.
 pub(crate) fn sql_str(s: &str) -> String {
     s.replace('\'', "''")
 }
