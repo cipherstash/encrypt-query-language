@@ -205,6 +205,86 @@ temporal_values! {
     sql_lit   = |v| format!("'{v}'"),
 }
 
+// `timestamptz`'s `ScalarType` wiring, generated from its catalog row by the
+// same `temporal_values!` path as `date`. timestamptz is equality-only (its
+// catalog row uses the eq-only domain shape), but the *value* wiring is
+// identical to any temporal scalar: RFC3339 strings parsed once into
+// `DateTime<Utc>` behind `timestamptz_values()`. The pivots are retained as the
+// three equality anchors the matrix sweeps.
+temporal_values! {
+    cell      = TIMESTAMPTZ_VALUES_CELL,
+    accessor  = timestamptz_values,
+    rust_type = chrono::DateTime<chrono::Utc>,
+    spec      = eql_scalars::TIMESTAMPTZ,
+    variant   = Timestamptz,
+    pg_type   = "timestamptz",
+    parse     = |s| chrono::DateTime::parse_from_rfc3339(s)
+        .expect("catalog timestamptz fixture must be RFC3339")
+        .with_timezone(&chrono::Utc),
+    min_pivot = "1900-01-01T00:00:00Z"
+        .parse()
+        .expect("1900-01-01T00:00:00Z is a valid timestamp"),
+    max_pivot = "2099-12-31T23:59:59Z"
+        .parse()
+        .expect("2099-12-31T23:59:59Z is a valid timestamp"),
+    sql_lit   = |v| format!("'{}'", v.to_rfc3339()),
+}
+
+/// Focused guards for the timestamptz value wiring that the `temporal_values!`
+/// auto-generated tests can't cover, because every catalog fixture is already
+/// `…Z` (UTC). Both tests intentionally live in the harness, not in
+/// `eql-scalars`, which is deliberately zero-dep (no chrono).
+#[cfg(test)]
+mod timestamptz_value_guards {
+    use super::*;
+
+    // Mirror of the `temporal_values!` parse closure above. Kept independent so
+    // a regression that drops the offset→UTC conversion in the macro invocation
+    // is caught here rather than re-running the (all-UTC, tautological) catalog
+    // fixtures.
+    fn parse(s: &str) -> chrono::DateTime<chrono::Utc> {
+        chrono::DateTime::parse_from_rfc3339(s)
+            .expect("RFC3339")
+            .with_timezone(&chrono::Utc)
+    }
+
+    /// The type's headline guarantee ("Values are UTC-normalized") exercised
+    /// with a genuinely non-UTC input. Passes today; fails the moment the parse
+    /// path stops converting offsets to UTC (e.g. a switch to `.naive_utc()` or
+    /// constructing the `DateTime<Utc>` from the naive local time).
+    #[test]
+    fn rfc3339_offset_is_normalized_to_utc() {
+        use chrono::{Datelike, Timelike};
+        // 05:00 at +05:00 is midnight UTC — same instant as the Z form.
+        assert_eq!(
+            parse("2000-01-01T05:00:00+05:00"),
+            parse("2000-01-01T00:00:00Z"),
+        );
+        // …and it lands on the UTC wall-clock, not the offset-local one.
+        let utc = parse("2000-01-01T05:00:00+05:00");
+        assert_eq!((utc.hour(), utc.day()), (0, 1));
+    }
+
+    /// `eql-scalars::invariant_tests::fixture_values_are_distinct_by_resolved_number`
+    /// keys `Fixture::Timestamptz` by its literal string, so two RFC3339 strings
+    /// that denote the same UTC instant (e.g. `…00:00Z` vs `…01:00+01:00`) would
+    /// pass as "distinct" there. The fixture *table* keys on the parsed
+    /// `DateTime<Utc>`, so an aliasing pair would silently insert duplicate
+    /// `plaintext` rows and break `fetch_fixture_payload`'s `fetch_one`. This
+    /// guards distinctness by instant, which is the property the table relies on.
+    #[test]
+    fn fixtures_are_distinct_by_instant() {
+        use std::collections::HashSet;
+        let vals = timestamptz_values(); // &[DateTime<Utc>], parsed from the catalog
+        let unique: HashSet<_> = vals.iter().collect();
+        assert_eq!(
+            unique.len(),
+            vals.len(),
+            "two timestamptz fixtures alias to the same UTC instant",
+        );
+    }
+}
+
 /// Per-domain capability + payload shape. Storage carries no terms, `Eq`
 /// adds `hm`, `Ord`/`OrdOre` add `ob`. `Ord` and `OrdOre` are deliberate
 /// twins — same operator surface, different SQL domain names — for the

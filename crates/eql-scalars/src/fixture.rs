@@ -27,7 +27,11 @@ impl Fixture {
             },
             Fixture::Zero => Some(0),
             Fixture::Int(n) => Some(n),
-            Fixture::Numeric(_) | Fixture::Text(_) | Fixture::Jsonb(_) | Fixture::Date(_) => None,
+            Fixture::Numeric(_)
+            | Fixture::Text(_)
+            | Fixture::Jsonb(_)
+            | Fixture::Date(_)
+            | Fixture::Timestamptz(_) => None,
         }
     }
 
@@ -52,7 +56,11 @@ impl Fixture {
                 .zero_symbol()
                 .to_string(),
             Fixture::Int(n) => n.to_string(),
-            Fixture::Numeric(s) | Fixture::Text(s) | Fixture::Jsonb(s) | Fixture::Date(s) => {
+            Fixture::Numeric(s)
+            | Fixture::Text(s)
+            | Fixture::Jsonb(s)
+            | Fixture::Date(s)
+            | Fixture::Timestamptz(s) => {
                 format!("{s:?}")
             }
         }

@@ -41,6 +41,7 @@ mod rust_tests {
         assert_eq!(ScalarKind::Text.as_bounded_int(), None);
         assert_eq!(ScalarKind::Jsonb.as_bounded_int(), None);
         assert_eq!(ScalarKind::Date.as_bounded_int(), None);
+        assert_eq!(ScalarKind::Timestamptz.as_bounded_int(), None);
     }
 
     #[test]
@@ -78,6 +79,7 @@ mod rust_tests {
         assert!(!ScalarKind::Text.is_int());
         assert!(!ScalarKind::Jsonb.is_int());
         assert!(!ScalarKind::Date.is_int());
+        assert!(!ScalarKind::Timestamptz.is_int());
     }
 
     #[test]
@@ -105,6 +107,16 @@ mod rust_tests {
         assert_eq!(ScalarKind::Date.as_bounded_int(), None);
     }
 
+    #[test]
+    fn timestamptz_maps_to_datetime() {
+        // Temporal, non-integer, equality-only kind: it carries a rust type but
+        // no i128 range, so it is not `is_int()` and `as_bounded_int()` returns
+        // `None` — the bounded accessors are not reachable for it.
+        assert_eq!(ScalarKind::Timestamptz.rust_type(), "chrono::DateTime<Utc>");
+        assert!(!ScalarKind::Timestamptz.is_int());
+        assert_eq!(ScalarKind::Timestamptz.as_bounded_int(), None);
+    }
+
     /// The structural guarantee that replaces the old runtime panics: a
     /// `Min`/`Max`/`Zero` pivot sentinel may only appear in a `CATALOG` row whose
     /// kind is an integer kind. `render_literal` would `expect`-panic and
@@ -129,10 +141,10 @@ mod rust_tests {
     #[test]
     fn is_temporal_classifies_chrono_kinds() {
         assert!(ScalarKind::Date.is_temporal());
+        assert!(ScalarKind::Timestamptz.is_temporal());
         assert!(!ScalarKind::I16.is_temporal());
         assert!(!ScalarKind::I32.is_temporal());
         assert!(!ScalarKind::I64.is_temporal());
-        // Timestamptz arrives in Phase 5; assert it here once present.
     }
 
     #[test]
@@ -141,6 +153,8 @@ mod rust_tests {
         assert!(!int4.is_eq_only(), "int4 is ordered");
         let date = CATALOG.iter().find(|s| s.token == "date").unwrap();
         assert!(!date.is_eq_only(), "date is ordered");
+        let ts = CATALOG.iter().find(|s| s.token == "timestamptz").unwrap();
+        assert!(ts.is_eq_only(), "timestamptz is equality-only");
     }
 }
 
@@ -303,6 +317,10 @@ mod fixture_tests {
             Fixture::Date("1970-01-01").numeric_value(ScalarKind::Date),
             None
         );
+        assert_eq!(
+            Fixture::Timestamptz("1970-01-01T00:00:00Z").numeric_value(ScalarKind::Timestamptz),
+            None
+        );
     }
 
     #[test]
@@ -343,6 +361,10 @@ mod fixture_tests {
             Fixture::Date("1970-01-01").render_literal(ScalarKind::Date),
             "\"1970-01-01\""
         );
+        assert_eq!(
+            Fixture::Timestamptz("1970-01-01T00:00:00Z").render_literal(ScalarKind::Timestamptz),
+            "\"1970-01-01T00:00:00Z\""
+        );
     }
 
     #[test]
@@ -370,6 +392,15 @@ mod fixture_tests {
         assert_eq!(
             DATES,
             &[Fixture::Date("1970-01-01"), Fixture::Date("2099-12-31")]
+        );
+        const STAMPS: &[Fixture] =
+            fixtures!(timestamptz; "1970-01-01T00:00:00Z", "2099-12-31T23:59:59Z");
+        assert_eq!(
+            STAMPS,
+            &[
+                Fixture::Timestamptz("1970-01-01T00:00:00Z"),
+                Fixture::Timestamptz("2099-12-31T23:59:59Z")
+            ]
         );
     }
 
@@ -402,9 +433,9 @@ mod catalog_tests {
     }
 
     #[test]
-    fn catalog_has_int4_int2_int8_date_in_order() {
+    fn catalog_has_int4_int2_int8_date_timestamptz_in_order() {
         let tokens: Vec<&str> = CATALOG.iter().map(|s| s.token).collect();
-        assert_eq!(tokens, vec!["int4", "int2", "int8", "date"]);
+        assert_eq!(tokens, vec!["int4", "int2", "int8", "date", "timestamptz"]);
     }
 
     /// The three temporal matrix pivots must be present verbatim in DATE's
@@ -431,26 +462,71 @@ mod catalog_tests {
         }
     }
 
+    /// The three temporal matrix pivots must be present verbatim in
+    /// TIMESTAMPTZ's fixture strings — the timestamptz analogue of
+    /// `temporal_fixtures_include_pivot_plaintexts`.
     #[test]
-    fn all_types_share_the_same_domain_shape() {
-        // Every scalar declares the same four domains with the same terms;
-        // only the token differs (the matrix-snapshot collapse depends on this).
-        // Generic over CATALOG, so it covers every type — including new ones —
-        // and subsumes the old per-type `<T>_maps_to_*_with_four_domains` /
-        // `<T>_domain_terms_match_manifest` tests (which only restated the
-        // catalog literal for one token).
+    fn timestamptz_fixtures_include_pivot_plaintexts() {
+        let ts = scalar("timestamptz");
+        let strings: Vec<&str> = ts
+            .fixtures
+            .iter()
+            .filter_map(|f| match f {
+                Fixture::Timestamptz(s) => Some(*s),
+                _ => None,
+            })
+            .collect();
+        for pivot in [
+            "1900-01-01T00:00:00Z",
+            "1970-01-01T00:00:00Z",
+            "2099-12-31T23:59:59Z",
+        ] {
+            assert!(
+                strings.contains(&pivot),
+                "timestamptz fixtures missing temporal pivot {pivot}"
+            );
+        }
+    }
+
+    #[test]
+    fn every_type_uses_a_known_domain_shape() {
+        // Each scalar's domain shape must be one of the two known-valid shapes:
+        // the four-domain ORDERED shape (storage + `_eq` + `_ord_ore` + `_ord`)
+        // or the two-domain EQ-ONLY shape (storage + `_eq`). This catches
+        // accidental drift — a typo'd suffix, a wrong term, a dropped domain —
+        // without hardcoding which token gets which shape (that is the catalog's
+        // job; the matrix dispatch and the inventory snapshots are shape-aware).
+        // Subsumes the old per-type `<T>_maps_to_*_with_four_domains` /
+        // `<T>_domain_terms_match_manifest` tests.
+        let ordered: Vec<(&str, &[Term])> = vec![
+            ("", &[] as &[Term]),
+            ("_eq", &[Term::Hm][..]),
+            ("_ord_ore", &[Term::Ore][..]),
+            ("_ord", &[Term::Ore][..]),
+        ];
+        let eq_only: Vec<(&str, &[Term])> = vec![("", &[] as &[Term]), ("_eq", &[Term::Hm][..])];
         for s in CATALOG {
             let shape: Vec<(&str, &[Term])> =
                 s.domains.iter().map(|d| (d.suffix, d.terms)).collect();
+            assert!(
+                shape == ordered || shape == eq_only,
+                "{} has an unrecognised domain shape: {shape:?}",
+                s.token
+            );
+        }
+    }
+
+    #[test]
+    fn ordered_and_eq_only_shapes_are_used_as_declared() {
+        // Pin which catalog tokens carry which shape, so a row silently flipping
+        // ORDERED_INT_DOMAINS <-> EQ_ONLY_DOMAINS is caught. timestamptz is
+        // equality-only (12-block ORE vs 8-block comparator); the rest ordered.
+        for s in CATALOG {
+            let is_eq_only = s.domains.len() == 2;
+            let expect_eq_only = s.token == "timestamptz";
             assert_eq!(
-                shape,
-                vec![
-                    ("", &[] as &[Term]),
-                    ("_eq", &[Term::Hm][..]),
-                    ("_ord_ore", &[Term::Ore][..]),
-                    ("_ord", &[Term::Ore][..]),
-                ],
-                "{} has unexpected domain shape",
+                is_eq_only, expect_eq_only,
+                "{} domain shape (eq_only={is_eq_only}) does not match expectation",
                 s.token
             );
         }
@@ -552,9 +628,11 @@ mod invariant_tests {
 
     fn distinct_key(f: Fixture, kind: ScalarKind) -> DistinctKey {
         match f {
-            Fixture::Numeric(s) | Fixture::Text(s) | Fixture::Jsonb(s) | Fixture::Date(s) => {
-                DistinctKey::Str(s)
-            }
+            Fixture::Numeric(s)
+            | Fixture::Text(s)
+            | Fixture::Jsonb(s)
+            | Fixture::Date(s)
+            | Fixture::Timestamptz(s) => DistinctKey::Str(s),
             _ => DistinctKey::Num(
                 f.numeric_value(kind)
                     .expect("sentinel/Int fixtures resolve to a number"),
