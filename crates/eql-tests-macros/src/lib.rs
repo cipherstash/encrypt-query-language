@@ -150,7 +150,9 @@ fn scalar_type_impls_tokens(list: &ScalarList) -> TokenStream2 {
                     fn fixture_values() -> &'static [#rust_type] {
                         ::eql_scalars::#values
                     }
+                }
 
+                impl OrderedScalar for #rust_type {
                     /// Integer scalars pivot on their inherent `MIN`/`MAX` consts;
                     /// the fixture lists include both (`fixtures!(int …; Min, …, Max)`).
                     fn min_pivot() -> #rust_type {
@@ -159,6 +161,16 @@ fn scalar_type_impls_tokens(list: &ScalarList) -> TokenStream2 {
 
                     fn max_pivot() -> #rust_type {
                         <#rust_type>::MAX
+                    }
+                    // `mid_pivot` inherits the default `Self::default()` = `0`,
+                    // which is the numeric origin and a `Zero` fixture row.
+                }
+
+                impl SignedScalar for #rust_type {
+                    /// Integers are signed about `0`; the fixtures straddle it
+                    /// (negatives below, positives above).
+                    fn origin() -> #rust_type {
+                        0
                     }
                 }
             }

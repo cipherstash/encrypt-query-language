@@ -660,10 +660,15 @@ mod values_tests {
         for v in TEXT_VALUES {
             assert!(seen.insert(*v), "duplicate text fixture: {v}");
         }
-        // empty string present as the lexicographic zero pivot
+        // The interior `mid_pivot` ("frank") must be present; the empty string
+        // must NOT (text has no numeric origin — see issue #262).
         assert!(
-            TEXT_VALUES.contains(&""),
-            "TEXT_VALUES must include the empty string"
+            TEXT_VALUES.contains(&"frank"),
+            "TEXT_VALUES must include the mid pivot \"frank\""
+        );
+        assert!(
+            !TEXT_VALUES.contains(&""),
+            "TEXT_VALUES must not include the empty string"
         );
     }
 

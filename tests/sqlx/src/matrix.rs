@@ -152,13 +152,20 @@ fn collect_index_scan_nodes(value: &serde_json::Value, found: &mut Vec<(String, 
 ///   make the order-by / ORE arms emit zero tests. First consumer:
 ///   `timestamptz`.
 ///
-/// Both arms take the identical `(suite, scalar, eql_type)` signature and derive
-/// the three comparison pivots from the `ScalarType` impl
-/// (`min_pivot()`/`max_pivot()`/`Default`), so the invocation shape is the same
-/// regardless of capability — only the `caps` marker differs. The emitted test
-/// names for an ordered type are byte-identical to the old
-/// `ordered_numeric_matrix!`; the eq-only name set is exactly that set minus the
-/// `_ord` / `order_by` / `routes_through_ob` lines.
+/// Both arms take the identical `(suite, scalar, eql_type)` signature, so the
+/// invocation shape is the same regardless of capability — only the `caps`
+/// marker differs. The emitted test names for an ordered type are byte-identical
+/// to the old `ordered_numeric_matrix!`; the eq-only name set is exactly that
+/// set minus the `_ord` / `order_by` / `routes_through_ob` lines.
+///
+/// Pivots — the comparison anchors swept by the correctness / cross-shape
+/// arms — are the `OrderedScalar` anchors: `min_pivot()`, `max_pivot()`, and the
+/// interior `mid_pivot()`. Integer scalars resolve `min`/`max` to
+/// `Self::MIN`/`Self::MAX` and `mid` to the origin `0`; temporal scalars use
+/// explicit sentinel dates (`mid` = the epoch); `text` uses a real median
+/// fixture for `mid` (its `Default` `""` is degenerate for ORE, #262). The
+/// fixture must contain those three plaintext rows, since each pivot's
+/// ciphertext is fetched at test time via `fetch_fixture_payload`.
 #[macro_export]
 macro_rules! scalar_matrix {
     (
@@ -182,9 +189,9 @@ macro_rules! scalar_matrix {
             ord_domains = [(ord, Ord), (ord_ore, OrdOre)],
             ord_ore_domains = [(ord_ore, OrdOre)],
             pivots = [
-                (min,  <$scalar as $crate::scalar_domains::ScalarType>::min_pivot()),
-                (max,  <$scalar as $crate::scalar_domains::ScalarType>::max_pivot()),
-                (zero, <$scalar as ::core::default::Default>::default()),
+                (min, <$scalar as $crate::scalar_domains::OrderedScalar>::min_pivot()),
+                (max, <$scalar as $crate::scalar_domains::OrderedScalar>::max_pivot()),
+                (mid, <$scalar as $crate::scalar_domains::OrderedScalar>::mid_pivot()),
             ],
             eq_ops = [(eq, "="), (neq, "<>")],
             ord_ops = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
@@ -234,13 +241,14 @@ macro_rules! scalar_matrix {
             ord_domains = [],
             ord_ore_domains = [],
             // Pivots derived from the scalar type exactly like the ordered arm
-            // (`min_pivot()`/`max_pivot()`/`Default`), so the equality
-            // correctness / cross-shape arms sweep the same three anchors and
-            // the eq-only name set stays a clean subset of the ordered one.
+            // (`OrderedScalar::min_pivot()`/`max_pivot()`/`mid_pivot()`), so the
+            // equality correctness / cross-shape arms sweep the same three
+            // anchors and the eq-only name set stays a clean subset of the
+            // ordered one.
             pivots = [
-                (min,  <$scalar as $crate::scalar_domains::ScalarType>::min_pivot()),
-                (max,  <$scalar as $crate::scalar_domains::ScalarType>::max_pivot()),
-                (zero, <$scalar as ::core::default::Default>::default()),
+                (min, <$scalar as $crate::scalar_domains::OrderedScalar>::min_pivot()),
+                (max, <$scalar as $crate::scalar_domains::OrderedScalar>::max_pivot()),
+                (mid, <$scalar as $crate::scalar_domains::OrderedScalar>::mid_pivot()),
             ],
             eq_ops = [(eq, "="), (neq, "<>")],
             ord_ops = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
@@ -1754,12 +1762,12 @@ macro_rules! __scalar_matrix_order_by_domain {
         $crate::__scalar_matrix_order_by_case! {
             suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
             dom_name = $dom_name, variant = $variant,
-            mode_name = asc_with_where, direction = "ASC", filter = gt_zero,
+            mode_name = asc_with_where, direction = "ASC", filter = gt_mid,
         }
         $crate::__scalar_matrix_order_by_case! {
             suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
             dom_name = $dom_name, variant = $variant,
-            mode_name = desc_with_where, direction = "DESC", filter = gt_zero,
+            mode_name = desc_with_where, direction = "DESC", filter = gt_mid,
         }
     };
 }
@@ -1778,18 +1786,19 @@ macro_rules! __scalar_matrix_order_by_case {
             async fn [<matrix_ $suite _ $dom_name _order_by_ $mode_name>](
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
-                use $crate::scalar_domains::ScalarType;
+                use $crate::scalar_domains::{OrderedScalar, ScalarType};
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let fixture_table = <$scalar as ScalarType>::fixture_table_name();
 
-                let zero: $scalar = Default::default();
-                let gt_zero = stringify!($filter) == "gt_zero";
-                // Build the WHERE clause from the zero pivot's SQL literal so it
-                // is type-agnostic: `plaintext > 0` for integers, `plaintext >
-                // '1970-01-01'` for dates. A hardcoded `> 0` would not typecheck
-                // against a non-integer plaintext column.
-                let where_clause = if gt_zero {
-                    format!(" WHERE plaintext > {}", <$scalar as ScalarType>::to_sql_literal(&zero))
+                let mid: $scalar = <$scalar as OrderedScalar>::mid_pivot();
+                let gt_mid = stringify!($filter) == "gt_mid";
+                // Build the WHERE clause from the interior pivot's SQL literal so
+                // it is type-agnostic: `plaintext > 0` for integers, `plaintext >
+                // '1970-01-01'` for dates, `plaintext > 'frank'` for text. A
+                // hardcoded `> 0` would not typecheck against a non-integer
+                // plaintext column.
+                let where_clause = if gt_mid {
+                    format!(" WHERE plaintext > {}", <$scalar as ScalarType>::to_sql_literal(&mid))
                 } else {
                     String::new()
                 };
@@ -1804,8 +1813,8 @@ ORDER BY eql_v3.ord_term(payload::{d}) {dir}",
                 let mut expected: Vec<$scalar> =
                     <$scalar as ScalarType>::fixture_values().to_vec();
                 expected.sort();
-                if gt_zero {
-                    expected.retain(|v| *v > zero);
+                if gt_mid {
+                    expected.retain(|v| *v > mid);
                 }
                 if $direction == "DESC" { expected.reverse(); }
 
