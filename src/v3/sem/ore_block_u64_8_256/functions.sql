@@ -57,10 +57,8 @@ CREATE FUNCTION eql_v3.ore_block_u64_8_256(val jsonb)
   SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
-    IF val IS NULL THEN
-      RETURN NULL;
-    END IF;
-
+    -- Declared STRICT: PostgreSQL returns NULL for a NULL argument without
+    -- entering the body, so no explicit `val IS NULL` guard is needed.
     IF eql_v3.has_ore_block_u64_8_256(val) THEN
       RETURN eql_v3.jsonb_array_to_ore_block_u64_8_256(val->'ob');
     END IF;
