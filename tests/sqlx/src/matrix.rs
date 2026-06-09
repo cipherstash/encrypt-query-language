@@ -589,7 +589,7 @@ macro_rules! __scalar_matrix_correctness_case {
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let pivot: $scalar = $pivot_val;
                 let payload =
-                    $crate::scalar_domains::fetch_fixture_payload::<$scalar>(&pool, pivot).await?;
+                    $crate::scalar_domains::fetch_fixture_payload::<$scalar>(&pool, pivot.clone()).await?;
                 let lit = $crate::scalar_domains::sql_string_literal(&payload);
                 let predicate = format!(
                     "payload::{d} {op} {lit}::jsonb::{d}",
@@ -630,13 +630,13 @@ macro_rules! __scalar_matrix_cross_shape_case {
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let pivot: $scalar = $pivot_val;
                 let payload =
-                    $crate::scalar_domains::fetch_fixture_payload::<$scalar>(&pool, pivot).await?;
+                    $crate::scalar_domains::fetch_fixture_payload::<$scalar>(&pool, pivot.clone()).await?;
                 let lit = $crate::scalar_domains::sql_string_literal(&payload);
                 let forward_count =
-                    <$scalar as $crate::scalar_domains::ScalarType>::expected_forward($op, pivot)
+                    <$scalar as $crate::scalar_domains::ScalarType>::expected_forward($op, pivot.clone())
                         .len() as i64;
                 let commuted_count = <$scalar as $crate::scalar_domains::ScalarType>::expected_forward(
-                    $crate::scalar_domains::commute_op($op), pivot,
+                    $crate::scalar_domains::commute_op($op), pivot.clone(),
                 ).len() as i64;
                 let d = &spec.sql_domain;
                 let shapes = [
@@ -1179,8 +1179,8 @@ macro_rules! __scalar_matrix_scale_case {
                 let values: &[$scalar] = <$scalar as ScalarType>::fixture_values();
                 anyhow::ensure!(values.len() >= 2,
                     "scale test requires >= 2 fixture rows for distinct filler/pivot");
-                let filler = values[0];
-                let pivot = values[values.len() / 2];
+                let filler = values[0].clone();
+                let pivot = values[values.len() / 2].clone();
                 let filler_payload =
                     $crate::scalar_domains::fetch_fixture_payload::<$scalar>(&pool, filler).await?;
                 let pivot_payload =
@@ -1277,8 +1277,8 @@ macro_rules! __scalar_matrix_scale_default_case {
                 let values: &[$scalar] = <$scalar as ScalarType>::fixture_values();
                 anyhow::ensure!(values.len() >= 2,
                     "scale test requires >= 2 fixture rows for distinct filler/pivot");
-                let filler = values[0];
-                let pivot = values[values.len() / 2];
+                let filler = values[0].clone();
+                let pivot = values[values.len() / 2].clone();
                 let filler_payload =
                     $crate::scalar_domains::fetch_fixture_payload::<$scalar>(&pool, filler).await?;
                 let pivot_payload =
@@ -1391,7 +1391,7 @@ macro_rules! __scalar_matrix_fixture_shape {
                 // Value-filtering oracle: take the midpoint of FIXTURE_VALUES,
                 // derive its expected id from position, assert exactly one row.
                 if !expected.is_empty() {
-                    let probe = expected[expected.len() / 2];
+                    let probe = &expected[expected.len() / 2];
                     let probe_lit = <$scalar as ScalarType>::to_sql_literal(probe);
                     let expected_id = (expected.len() / 2 + 1) as i64;
                     let ids: Vec<i64> = sqlx::query_scalar(&format!(
@@ -1454,9 +1454,9 @@ macro_rules! __scalar_matrix_ord_routes_case {
                 let fixture_table =
                     <$scalar as $crate::scalar_domains::ScalarType>::fixture_table_name();
                 let pivot: $scalar =
-                    <$scalar as $crate::scalar_domains::ScalarType>::fixture_values()[0];
+                    <$scalar as $crate::scalar_domains::ScalarType>::fixture_values()[0].clone();
                 let pivot_lit =
-                    <$scalar as $crate::scalar_domains::ScalarType>::to_sql_literal(pivot);
+                    <$scalar as $crate::scalar_domains::ScalarType>::to_sql_literal(&pivot);
 
                 let mut tx = pool.begin().await?;
                 sqlx::query(&format!(
@@ -1669,7 +1669,7 @@ macro_rules! __scalar_matrix_index_case {
                     .execute(&mut *tx).await?;
                 sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
 
-                let pivot: $scalar = <$scalar as $crate::scalar_domains::ScalarType>::fixture_values()[0];
+                let pivot: $scalar = <$scalar as $crate::scalar_domains::ScalarType>::fixture_values()[0].clone();
                 let payload =
                     $crate::scalar_domains::fetch_fixture_payload::<$scalar>(&pool, pivot).await?;
                 let lit = $crate::scalar_domains::sql_string_literal(&payload);
@@ -1789,7 +1789,7 @@ macro_rules! __scalar_matrix_order_by_case {
                 // '1970-01-01'` for dates. A hardcoded `> 0` would not typecheck
                 // against a non-integer plaintext column.
                 let where_clause = if gt_zero {
-                    format!(" WHERE plaintext > {}", <$scalar as ScalarType>::to_sql_literal(zero))
+                    format!(" WHERE plaintext > {}", <$scalar as ScalarType>::to_sql_literal(&zero))
                 } else {
                     String::new()
                 };
@@ -2101,10 +2101,10 @@ macro_rules! __scalar_matrix_aggregate_case {
                 let fixture = <$scalar as ScalarType>::fixture_table_name();
                 let extremum: $scalar = <$scalar as ScalarType>::fixture_values()
                     .iter()
-                    .copied()
+                    .cloned()
                     .$picker()
                     .expect("FIXTURE_VALUES must be non-empty");
-                let extremum_lit = <$scalar as ScalarType>::to_sql_literal(extremum);
+                let extremum_lit = <$scalar as ScalarType>::to_sql_literal(&extremum);
 
                 let expected: String = sqlx::query_scalar(&format!(
                     "SELECT payload::text FROM {fixture} WHERE plaintext = {lit}", lit = extremum_lit,
@@ -2219,13 +2219,14 @@ macro_rules! __scalar_matrix_aggregate_case {
                 // Span the fixture's extremes — for signed numeric scalars this
                 // exercises the ORE sign-bit edges in addition to pinning STRICT
                 // sfunc behaviour.
-                let low: $scalar = *sorted.first().expect("non-empty after len check");
-                let high: $scalar = *sorted.last().expect("non-empty after len check");
+                let low: $scalar = sorted.first().expect("non-empty after len check").clone();
+                let high: $scalar = sorted.last().expect("non-empty after len check").clone();
                 // .min() / .max() on two values resolves to the correct picker.
-                let expected_plaintext: $scalar = low.$picker(high);
-                let low_lit = <$scalar as ScalarType>::to_sql_literal(low);
-                let high_lit = <$scalar as ScalarType>::to_sql_literal(high);
-                let expected_lit = <$scalar as ScalarType>::to_sql_literal(expected_plaintext);
+                // Clone so `low`/`high` survive for the literals below.
+                let expected_plaintext: $scalar = low.clone().$picker(high.clone());
+                let low_lit = <$scalar as ScalarType>::to_sql_literal(&low);
+                let high_lit = <$scalar as ScalarType>::to_sql_literal(&high);
+                let expected_lit = <$scalar as ScalarType>::to_sql_literal(&expected_plaintext);
 
                 let mut tx = pool.begin().await?;
                 sqlx::query(&format!(
@@ -2399,12 +2400,12 @@ macro_rules! __scalar_matrix_aggregate_group_by_case {
                 // the ground truth.
                 let group1: &[$scalar] = &values[..3];
                 let group2: &[$scalar] = &values[3..5];
-                let group1_extremum: $scalar = group1.iter().copied().$picker()
+                let group1_extremum: $scalar = group1.iter().cloned().$picker()
                     .expect("group 1 is non-empty");
-                let group2_extremum: $scalar = group2.iter().copied().$picker()
+                let group2_extremum: $scalar = group2.iter().cloned().$picker()
                     .expect("group 2 is non-empty");
-                let g1_lit = <$scalar as ScalarType>::to_sql_literal(group1_extremum);
-                let g2_lit = <$scalar as ScalarType>::to_sql_literal(group2_extremum);
+                let g1_lit = <$scalar as ScalarType>::to_sql_literal(&group1_extremum);
+                let g2_lit = <$scalar as ScalarType>::to_sql_literal(&group2_extremum);
 
                 let mut tx = pool.begin().await?;
                 sqlx::query(&format!(
@@ -2414,7 +2415,7 @@ ON COMMIT DROP",
 
                 // Insert group 1 rows.
                 for v in group1 {
-                    let lit = <$scalar as ScalarType>::to_sql_literal(*v);
+                    let lit = <$scalar as ScalarType>::to_sql_literal(v);
                     sqlx::query(&format!(
                         "INSERT INTO group_test(group_key, value) \
 SELECT 1, payload::{d} FROM {fixture} WHERE plaintext = {lit}",
@@ -2422,7 +2423,7 @@ SELECT 1, payload::{d} FROM {fixture} WHERE plaintext = {lit}",
                 }
                 // Insert group 2 rows.
                 for v in group2 {
-                    let lit = <$scalar as ScalarType>::to_sql_literal(*v);
+                    let lit = <$scalar as ScalarType>::to_sql_literal(v);
                     sqlx::query(&format!(
                         "INSERT INTO group_test(group_key, value) \
 SELECT 2, payload::{d} FROM {fixture} WHERE plaintext = {lit}",

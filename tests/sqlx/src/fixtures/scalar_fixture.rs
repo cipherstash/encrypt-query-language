@@ -13,28 +13,34 @@
 /// Stamp out the `spec()` builder, the `fixture-gen` generator test, and the
 /// property-test module for a scalar fixture.
 ///
-/// The leading **kind** discriminator (`int` / `temporal`) selects which
-/// property asserts are stamped — the rest of the expansion is identical:
+/// The leading **kind** discriminator (`int` / `temporal` / `text`) selects
+/// which property asserts are stamped and which index set the fixture declares
+/// — the rest of the expansion is identical:
 ///
 /// - `int` — signed-extreme asserts (`<$ty>::MIN`/`MAX`, `contains(&0)`,
-///   `any(|v| v < 0)`). These typecheck only for integer plaintexts.
+///   `any(|v| v < 0)`). These typecheck only for integer plaintexts. Indexes
+///   `Unique` + `Ore`.
 /// - `temporal` — a pivot-presence assert (`min_pivot`/`max_pivot`/zero from the
 ///   `ScalarType` impl all appear in the values). `<$ty>::MIN` / `< 0` don't
 ///   exist for a `chrono::NaiveDate`, so the integer asserts can't be reused.
+///   Indexes `Unique` + `Ore`.
+/// - `text` — pivot-presence asserts (same as `temporal`; text has no signed
+///   extremes), plus a third `Match` index so generated payloads carry `bf` for
+///   the `text_match` containment surface. Indexes `Unique` + `Ore` + `Match`.
 ///
 /// - `$name` — the fixture name (`"eql_v2_int2"`), drives every derived path.
-/// - `$ty` — the Rust plaintext type (`i16` / `chrono::NaiveDate`).
+/// - `$ty` — the Rust plaintext type (`i16` / `chrono::NaiveDate` / `String`).
 /// - `$values` — the value source: the catalog const (`eql_scalars::INT2_VALUES`)
-///   for integers, or the harness accessor (`date_values()`) for temporal.
+///   for integers, or the harness accessor (`date_values()` / `text_values()`).
 ///
-/// Indexes are fixed to `Unique` (HMAC, drives `=` / `<>`) and `Ore` (ORE
-/// block terms, drives `<` `<=` `>` `>=`) with a committed `jsonb` payload —
-/// the shape shared by every ordered scalar domain.
+/// `Unique` drives `=` / `<>` (HMAC); `Ore` drives `<` `<=` `>` `>=` (ORE block
+/// terms); `Match` drives `@>` / `<@` (bloom filter). The committed payload is
+/// always `jsonb`.
 #[macro_export]
 macro_rules! scalar_fixture {
     // Integer scalars: signed-extreme property asserts.
     (int, $name:literal, $ty:ty, $values:expr $(,)?) => {
-        $crate::scalar_fixture!(@common $name, $ty, $values);
+        $crate::scalar_fixture!(@common $name, $ty, $values, [Unique, Ore]);
 
         #[cfg(test)]
         mod tests {
@@ -73,7 +79,7 @@ macro_rules! scalar_fixture {
 
     // Temporal scalars: pivot-presence property assert (no signed extremes).
     (temporal, $name:literal, $ty:ty, $values:expr $(,)?) => {
-        $crate::scalar_fixture!(@common $name, $ty, $values);
+        $crate::scalar_fixture!(@common $name, $ty, $values, [Unique, Ore]);
 
         #[cfg(test)]
         mod tests {
@@ -101,15 +107,46 @@ macro_rules! scalar_fixture {
         }
     };
 
-    // Shared expansion: the `spec()` builder + the gated generator test.
-    (@common $name:literal, $ty:ty, $values:expr) => {
+    // Text scalars: pivot-presence asserts (like temporal) + the `Match` index
+    // so generated payloads carry `bf` for the `text_match` containment surface.
+    (text, $name:literal, $ty:ty, $values:expr $(,)?) => {
+        $crate::scalar_fixture!(@common $name, $ty, $values, [Unique, Ore, Match]);
+
+        #[cfg(test)]
+        mod tests {
+            use super::*;
+            use $crate::scalar_domains::ScalarType;
+
+            #[test]
+            fn spec_is_complete() {
+                assert!(spec().check_complete().is_ok());
+            }
+
+            #[test]
+            fn spec_includes_pivots() {
+                // text has no signed extremes; assert the ScalarType pivots are
+                // present (min/max/zero), like the temporal arm.
+                let spec = spec();
+                let values = spec.values();
+                let min = <$ty as ScalarType>::min_pivot();
+                let max = <$ty as ScalarType>::max_pivot();
+                let zero: $ty = ::core::default::Default::default();
+                assert!(values.contains(&min), "spec must include min_pivot {min:?}");
+                assert!(values.contains(&max), "spec must include max_pivot {max:?}");
+                assert!(values.contains(&zero), "spec must include zero pivot {zero:?}");
+            }
+        }
+    };
+
+    // Shared expansion: the `spec()` builder + the gated generator test. The
+    // trailing `[Unique, Ore, ...]` token list parametrizes the index set.
+    (@common $name:literal, $ty:ty, $values:expr, [$($ix:ident),+ $(,)?]) => {
         /// The complete fixture definition. `IndexKind::Unique` drives `=` /
         /// `<>` (HMAC); `IndexKind::Ore` drives `<` `<=` `>` `>=` (ORE block
-        /// terms).
+        /// terms); `IndexKind::Match` (when present) drives `@>` / `<@` (bloom).
         pub fn spec() -> $crate::fixtures::FixtureSpec<'static, $ty> {
             $crate::fixtures::FixtureSpec::new($name)
-                .with_index($crate::fixtures::IndexKind::Unique)
-                .with_index($crate::fixtures::IndexKind::Ore)
+                $(.with_index($crate::fixtures::IndexKind::$ix))+
                 .with_column_type("jsonb")
                 .with_values($values)
         }

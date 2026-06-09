@@ -56,6 +56,7 @@ macro_rules! scalar_types {
             int8 => i64,
             date => chrono::NaiveDate,
             timestamptz => chrono::DateTime<chrono::Utc>,
+            text => String,
         }
     };
 }
