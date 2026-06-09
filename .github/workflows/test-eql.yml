@@ -16,6 +16,13 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   MISE_VERBOSE: "1"
+  # CI compile-time tuning (CI-only; local dev keeps full debuginfo + incremental).
+  # Clean CI builds never reuse incremental state, so it only bloats target/ and
+  # the rust-cache up/download. line-tables-only keeps readable panic backtraces
+  # for failing tests at a fraction of full-debuginfo compile cost. nextest's
+  # `test` profile inherits these from `dev`.
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "line-tables-only"
 
 defaults:
   run:
@@ -134,6 +141,10 @@ jobs:
         with:
           workspaces: .
           shared-key: sqlx-tests
+          # The sole saver of the shared cache: this job compiles the full heavy
+          # dep tree, so it must own the `sqlx-tests` key. All other jobs set
+          # `save-if: false` so a fast-finishing light job can't win the save race
+          # and overwrite the key with a deps-less target/.
 
       - name: Setup database (Postgres 17)
         run: |
@@ -197,6 +208,7 @@ jobs:
         with:
           workspaces: .
           shared-key: sqlx-tests
+          save-if: false
 
       - uses: actions/download-artifact@v4
         with:
@@ -242,6 +254,7 @@ jobs:
         with:
           workspaces: .
           shared-key: sqlx-tests
+          save-if: false
 
       - name: Setup database (Postgres ${{ matrix.postgres-version }})
         run: |
@@ -277,6 +290,7 @@ jobs:
         with:
           workspaces: .
           shared-key: sqlx-tests
+          save-if: false
       - name: Validate v2.2 / v2.3 payload schemas
         run: |
           mise run test:schema
@@ -302,6 +316,7 @@ jobs:
         with:
           workspaces: .
           shared-key: sqlx-tests
+          save-if: false
       # `mise run test:crates` runs `cargo fmt --check` at the workspace root,
       # which covers tests/sqlx (a workspace member). This subsumes the old
       # standalone `test:lint` step that the removed per-version test job ran.
@@ -332,6 +347,7 @@ jobs:
         with:
           workspaces: .
           shared-key: sqlx-tests
+          save-if: false
       - name: Verify generator parity (golden)
         run: |
           mise run codegen:parity
@@ -357,6 +373,7 @@ jobs:
         with:
           workspaces: .
           shared-key: sqlx-tests
+          save-if: false
       - name: Build EQL
         run: mise run --force build
       - name: Assert eql_v3 is self-contained
@@ -383,6 +400,7 @@ jobs:
         with:
           workspaces: .
           shared-key: sqlx-tests
+          save-if: false
       - name: Verify the matrix test-name inventory
         run: |
           mise run test:matrix:inventory
