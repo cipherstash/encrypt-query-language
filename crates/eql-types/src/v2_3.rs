@@ -16,8 +16,17 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-/// `eql_v2_encrypted` — the EQL v2.3 storage payload. Discriminated on `k`.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+/// `eql_v2_encrypted` — the EQL v2.3 storage payload.
+///
+/// **Serialization** always emits the `k` discriminator (`"ct"` / `"sv"`) —
+/// this is what drives the internally-tagged TypeScript union and the JSON
+/// Schema `oneOf`. **Deserialization** is hand-written (below) because the
+/// v2.3 wire contract makes `k` *optional* on the scalar form:
+/// `eql_v2.check_encrypted` and `eql-payload-v2.3.schema.json` discriminate on
+/// the presence of `c` vs `sv`, not on `k` (the scalar form requires only
+/// `v`, `c`, `i`). A `#[serde(tag = "k")]`-derived `Deserialize` would reject a
+/// schema-valid scalar payload that omits `k`.
+#[derive(Clone, Debug, PartialEq, Serialize, TS, JsonSchema)]
 #[ts(export)]
 #[serde(tag = "k")]
 pub enum EqlEncrypted {
@@ -27,6 +36,39 @@ pub enum EqlEncrypted {
     /// STE-vector payload (jsonb / structured values).
     #[serde(rename = "sv")]
     Sv(SteVecPayload),
+}
+
+impl<'de> Deserialize<'de> for EqlEncrypted {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::Error;
+        // Mirror eql_v2.check_encrypted: key off `k` when present, otherwise
+        // fall back to which body field is present (`sv` => STE vector,
+        // otherwise scalar `ct`). `k` is optional on the scalar form per
+        // eql-payload-v2.3.schema.json (required there: only `v`, `c`, `i`).
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let is_sv = match value.get("k").and_then(serde_json::Value::as_str) {
+            Some("sv") => true,
+            Some("ct") => false,
+            Some(other) => {
+                return Err(D::Error::custom(format!(
+                    "unknown EQL payload kind: k = {other:?}"
+                )))
+            }
+            None => value.get("sv").is_some(),
+        };
+        if is_sv {
+            serde_json::from_value(value)
+                .map(EqlEncrypted::Sv)
+                .map_err(D::Error::custom)
+        } else {
+            serde_json::from_value(value)
+                .map(EqlEncrypted::Ct)
+                .map_err(D::Error::custom)
+        }
+    }
 }
 
 /// Scalar storage payload (`k = "ct"`).
@@ -49,9 +91,14 @@ pub struct EncryptedPayload {
     #[ts(optional)]
     pub hm: Option<String>,
     /// Bloom filter term — present iff a `match` index is configured.
+    ///
+    /// Array of set bit positions. EQL stores these as `smallint[]` (signed
+    /// `i16`); a `match` filter sized above 32768 (configurable up to 65536)
+    /// emits upper-half positions as negative signed values, so this is `i16`,
+    /// not `u16` — a `u16` cannot deserialize a real large-filter payload.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
-    pub bf: Option<Vec<u16>>,
+    pub bf: Option<Vec<i16>>,
     /// Block ORE term — present iff an `ore` index is configured.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
