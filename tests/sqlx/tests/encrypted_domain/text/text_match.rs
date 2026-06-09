@@ -133,3 +133,70 @@ async fn bare_operator_uses_functional_index(pool: PgPool) -> anyhow::Result<()>
     .await?;
     Ok(())
 }
+
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_text")))]
+async fn needle_contained_by_haystack(pool: PgPool) -> anyhow::Result<()> {
+    // `<@` (contained-by) is the COMMUTATOR of `@>`; the implemented
+    // `eql_v3.contained_by` is otherwise untested. `aard <@ aardvark` holds for
+    // the same shared-ngram reason `aardvark @> aard` does.
+    let needle = payload_for(&pool, "aard").await?;
+    let hay = payload_for(&pool, "aardvark").await?;
+    let hit: bool = sqlx::query_scalar(
+        "SELECT ($1::jsonb::eql_v3.text_match) <@ ($2::jsonb::eql_v3.text_match)",
+    )
+    .bind(&needle)
+    .bind(&hay)
+    .fetch_one(&pool)
+    .await?;
+    assert!(
+        hit,
+        "'aard' bloom must be contained by 'aardvark' (shared ngrams)"
+    );
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_text")))]
+async fn disjoint_value_not_contained_by(pool: PgPool) -> anyhow::Result<()> {
+    // `<@` negative, mirroring `disjoint_value_does_not_match`. "zzzz" (3-gram
+    // `zzz`) and "aard" (`aar`, `ard`) are ngram-disjoint in TEXT_FIXTURES, so
+    // this is a deterministic true negative (bloom filters admit false positives
+    // only for inputs that share n-grams). Keep them disjoint if the fixture
+    // list changes.
+    let needle = payload_for(&pool, "zzzz").await?;
+    let hay = payload_for(&pool, "aard").await?;
+    let hit: bool = sqlx::query_scalar(
+        "SELECT ($1::jsonb::eql_v3.text_match) <@ ($2::jsonb::eql_v3.text_match)",
+    )
+    .bind(&needle)
+    .bind(&hay)
+    .fetch_one(&pool)
+    .await?;
+    assert!(
+        !hit,
+        "disjoint 'zzzz' must not be contained by 'aard' (no shared ngrams)"
+    );
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_text")))]
+async fn contains_and_contained_by_are_commutative(pool: PgPool) -> anyhow::Result<()> {
+    // Pin the `COMMUTATOR = @>/<@` declaration behaviorally: `a @> b` must equal
+    // `b <@ a` for the same operand pair, and both hold for the superset/subset
+    // pair `aardvark`/`aard`.
+    let sup = payload_for(&pool, "aardvark").await?;
+    let sub = payload_for(&pool, "aard").await?;
+    let (contains, contained_by): (bool, bool) = sqlx::query_as(
+        "SELECT ($1::jsonb::eql_v3.text_match) @> ($2::jsonb::eql_v3.text_match),
+                ($2::jsonb::eql_v3.text_match) <@ ($1::jsonb::eql_v3.text_match)",
+    )
+    .bind(&sup)
+    .bind(&sub)
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(
+        contains, contained_by,
+        "`a @> b` and `b <@ a` must agree (COMMUTATOR)"
+    );
+    assert!(contains, "'aardvark' @> 'aard' must hold for the curated pair");
+    Ok(())
+}
