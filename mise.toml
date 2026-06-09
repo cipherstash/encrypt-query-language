@@ -101,11 +101,16 @@ cargo watch -x test
 
 [tasks."test:sqlx:archive"]
 description = "Build EQL + compile the sqlx test binaries once into a reusable nextest archive"
-# `build` produces release/cipherstash-encrypt.sql, uploaded alongside the
-# archive and consumed by every shard. This mirrors test:sqlx:prep (mise.toml:51):
-# the `#MISE depends` directive in the script is inert under `bash tasks/...`, so
-# the dependency MUST be declared here.
-depends = ["build"]
+# Depends on test:sqlx:prep (NOT just build): `#[sqlx::test(fixtures(scripts(…)))]`
+# embeds the per-type fixture SQL AND the 001_install_eql.sql migration into the
+# compiled test binaries via `include_str!` at COMPILE time. So the fixtures +
+# migration must exist on disk BEFORE `cargo nextest archive` compiles — prep
+# produces both (build → cp migration → sqlx migrate → fixture:generate:all).
+# Consequence: this task needs a live Postgres + CS_* creds (prep's
+# fixture:generate:all prerequisites), so the build-archive CI job runs
+# postgres:up and carries the CS_* env. The `#MISE depends` directive in the
+# script is inert under `bash tasks/...`, so the dependency MUST be declared here.
+depends = ["test:sqlx:prep"]
 dir = "{{config_root}}"
 run = "bash tasks/test/sqlx-archive.sh"
 
