@@ -252,3 +252,7 @@ src/deps-ordered-protect.txt
 
 # Cargo workspace root build artifacts
 /target/
+
+# Prebuilt nextest archive (transient build-once output for the sharded sqlx
+# suite; uploaded as a CI artifact, never committed — see tasks/test/sqlx-archive.sh)
+nextest.tar.zst
