@@ -3,7 +3,6 @@
 //! Tests PostgreSQL operator class definitions and index behavior
 
 use anyhow::Result;
-use eql_tests::get_ore_encrypted;
 use sqlx::PgPool;
 
 /// Helper to create encrypted table for testing
