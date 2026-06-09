@@ -89,8 +89,16 @@ $$ LANGUAGE plpgsql;
 --! @param b eql_v3.ore_block_u64_8_256_term Second ORE term
 --! @return integer -1 if a < b, 0 if a = b, 1 if a > b
 --! @throws Exception if ciphertexts are different lengths
+--! @note Marked `IMMUTABLE` (the three `compare_ore_block_u64_8_256_term(s)`
+--!   overloads all are). This deliberately diverges from the v2 originals,
+--!   which carry no volatility marker and so default to `VOLATILE`. The
+--!   comparison is deterministic — its only crypto call, pgcrypto `encrypt()`,
+--!   is itself `IMMUTABLE STRICT PARALLEL SAFE` — so `IMMUTABLE` lets the
+--!   planner fold/cache these in ordering and index contexts. NOT `STRICT`:
+--!   the NULL-handling branches below are load-bearing for the array overload.
 CREATE FUNCTION eql_v3.compare_ore_block_u64_8_256_term(a eql_v3.ore_block_u64_8_256_term, b eql_v3.ore_block_u64_8_256_term)
   RETURNS integer
+  IMMUTABLE
   SET search_path = pg_catalog, extensions, public
 AS $$
   DECLARE
@@ -169,6 +177,7 @@ $$ LANGUAGE plpgsql;
 --! @return integer -1/0/1, or NULL if either array is NULL
 CREATE FUNCTION eql_v3.compare_ore_block_u64_8_256_terms(a eql_v3.ore_block_u64_8_256_term[], b eql_v3.ore_block_u64_8_256_term[])
 RETURNS integer
+  IMMUTABLE
   SET search_path = pg_catalog, extensions, public
 AS $$
   DECLARE
@@ -208,6 +217,7 @@ $$ LANGUAGE plpgsql;
 --! @return integer -1/0/1
 CREATE FUNCTION eql_v3.compare_ore_block_u64_8_256_terms(a eql_v3.ore_block_u64_8_256, b eql_v3.ore_block_u64_8_256)
 RETURNS integer
+  IMMUTABLE
   SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
