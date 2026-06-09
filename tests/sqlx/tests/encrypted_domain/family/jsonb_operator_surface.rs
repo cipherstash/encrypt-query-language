@@ -2,10 +2,9 @@
 //!
 //! The storage-only domains (`eql_v3.int4`, future scalars) promise that
 //! *every* native jsonb operator is blocked, so an encrypted column can never
-//! fall through to plaintext-jsonb semantics. That promise rests on three
-//! hand-maintained lists in `tasks/codegen/operator_surface.py`
-//! (`SYMMETRIC_OPERATORS`, `PATH_OPERATORS`, `BLOCKER_ONLY_OPERATORS`), whose
-//! union is `KNOWN_JSONB_OPERATORS`.
+//! fall through to plaintext-jsonb semantics. That promise rests on the
+//! enumerated operator surface in `crates/eql-codegen/src/operator_surface.rs`
+//! (the `OPERATORS` const), mirrored locally below as `KNOWN_JSONB_OPERATORS`.
 //!
 //! Those lists are an *enumeration*, not a structural guarantee: a future PG
 //! version could add a jsonb operator that nobody adds here, and it would
@@ -16,18 +15,17 @@
 //! e.g. `~~` / `~~*`) are excluded — they are not native and are unreachable
 //! from a storage scalar domain.
 //!
-//! Source of truth: `tasks/codegen/operator_surface.py::KNOWN_JSONB_OPERATORS`
-//! (asserted complete by `tasks/codegen/test_operator_surface.py`). The set
-//! below is hardcoded — the lowest-friction bridge from a Python constant to a
-//! Rust test — and must be kept in sync with that module. If you add an
-//! operator there, add it here; the Python test pins the union so the two can
-//! only drift in this file.
+//! Source of truth: `crates/eql-codegen/src/operator_surface.rs` (the
+//! `OPERATORS` const, pinned at 20 entries by its own unit tests). The set
+//! below is a hardcoded mirror and must be kept in sync with that module. If
+//! you add an operator there, add it here.
 
 use anyhow::Result;
 use sqlx::PgPool;
 
-/// Mirror of `KNOWN_JSONB_OPERATORS` in
-/// `tasks/codegen/operator_surface.py`. Keep in sync with that module.
+/// Mirror of the enumerated operator surface in
+/// `crates/eql-codegen/src/operator_surface.rs` (`OPERATORS`). Keep in sync
+/// with that module.
 const KNOWN_JSONB_OPERATORS: &[&str] = &[
     // symmetric (supported wrappers)
     "=", "<>", "<", "<=", ">", ">=", "@>", "<@", //
@@ -77,11 +75,11 @@ async fn every_native_jsonb_operator_is_known_to_the_generator(pool: PgPool) -> 
     assert!(
         missing.is_empty(),
         "PostgreSQL exposes jsonb operator(s) not enumerated in \
-         tasks/codegen/operator_surface.py (KNOWN_JSONB_OPERATORS): {missing:#?}. \
+         crates/eql-codegen/src/operator_surface.rs (OPERATORS): {missing:#?}. \
          A storage-only encrypted domain would route these to native \
          plaintext-jsonb semantics instead of an EQL blocker. Add each symbol \
-         to the appropriate list in operator_surface.py (and to the mirror in \
-         this test) and regenerate the SQL surface."
+         to OPERATORS in operator_surface.rs (and to the mirror in this test) \
+         and regenerate the SQL surface."
     );
 
     Ok(())

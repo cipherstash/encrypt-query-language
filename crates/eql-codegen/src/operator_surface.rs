@@ -1,4 +1,4 @@
-//! The generated operator surface (port of operator_surface.py).
+//! The generated operator surface.
 
 /// One operator in the generated surface.
 #[derive(Clone, Copy)]
