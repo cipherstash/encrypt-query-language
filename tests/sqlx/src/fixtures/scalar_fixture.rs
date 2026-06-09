@@ -84,7 +84,7 @@ macro_rules! scalar_fixture {
         #[cfg(test)]
         mod tests {
             use super::*;
-            use $crate::scalar_domains::ScalarType;
+            use $crate::scalar_domains::OrderedScalar;
 
             #[test]
             fn spec_is_complete() {
@@ -93,16 +93,16 @@ macro_rules! scalar_fixture {
 
             #[test]
             fn spec_includes_pivots() {
-                // The three matrix pivots (min/max/zero) must be present in the
+                // The three matrix pivots (min/mid/max) must be present in the
                 // fixture — `fetch_fixture_payload` fetches each at test time.
                 let spec = spec();
                 let values = spec.values();
-                let min = <$ty as ScalarType>::min_pivot();
-                let max = <$ty as ScalarType>::max_pivot();
-                let zero: $ty = ::core::default::Default::default();
+                let min = <$ty as OrderedScalar>::min_pivot();
+                let mid = <$ty as OrderedScalar>::mid_pivot();
+                let max = <$ty as OrderedScalar>::max_pivot();
                 assert!(values.contains(&min), "spec must include min_pivot {min:?}");
+                assert!(values.contains(&mid), "spec must include mid_pivot {mid:?}");
                 assert!(values.contains(&max), "spec must include max_pivot {max:?}");
-                assert!(values.contains(&zero), "spec must include zero pivot {zero:?}");
             }
         }
     };
@@ -115,7 +115,7 @@ macro_rules! scalar_fixture {
         #[cfg(test)]
         mod tests {
             use super::*;
-            use $crate::scalar_domains::ScalarType;
+            use $crate::scalar_domains::OrderedScalar;
 
             #[test]
             fn spec_is_complete() {
@@ -124,16 +124,16 @@ macro_rules! scalar_fixture {
 
             #[test]
             fn spec_includes_pivots() {
-                // text has no signed extremes; assert the ScalarType pivots are
-                // present (min/max/zero), like the temporal arm.
+                // text has no signed extremes; assert the OrderedScalar pivots
+                // (min/mid/max) are present, like the temporal arm.
                 let spec = spec();
                 let values = spec.values();
-                let min = <$ty as ScalarType>::min_pivot();
-                let max = <$ty as ScalarType>::max_pivot();
-                let zero: $ty = ::core::default::Default::default();
+                let min = <$ty as OrderedScalar>::min_pivot();
+                let mid = <$ty as OrderedScalar>::mid_pivot();
+                let max = <$ty as OrderedScalar>::max_pivot();
                 assert!(values.contains(&min), "spec must include min_pivot {min:?}");
+                assert!(values.contains(&mid), "spec must include mid_pivot {mid:?}");
                 assert!(values.contains(&max), "spec must include max_pivot {max:?}");
-                assert!(values.contains(&zero), "spec must include zero pivot {zero:?}");
             }
         }
     };
