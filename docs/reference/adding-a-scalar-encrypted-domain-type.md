@@ -22,8 +22,9 @@ The whole SQL surface is **generated** from a single Rust source of truth: the
 rendered by the [`eql-codegen`](../../crates/eql-codegen/) crate. There is no
 TOML manifest and no Python — adding a type is adding one `ScalarSpec` row,
 validated by the compiler plus catalog `#[test]`s. The reference type is
-`eql_v3.int4`. **`text` and `jsonb` are out of scope** for this materializer
-(see §7).
+`eql_v3.int4`; `eql_v3.text` is the worked non-integer example (ordered +
+equality + a `match` capability via the `Bloom` term). **`jsonb` remains out of
+scope** for this materializer (see §7).
 
 ---
 
@@ -38,7 +39,7 @@ To add a scalar type `<T>` (e.g. `int8`), with Rust type `<R>` (e.g. `i64`):
 2. **Materialise the value list** — `int_values!(<T_UPPER>_VALUES, <R>, <T_UPPER>);`
    next to `CATALOG`, pinned by a `values_tests` assertion (§2). This is the
    single source the SQLx matrix reads; there is no generated `<T>_values.rs`.
-3. **Wire the SQLx matrix oracle** — copy the seven small registrations from the
+3. **Wire the SQLx matrix oracle** — copy the two small registrations from the
    `int4` reference (§3).
 4. **Regenerate** — `cargo run -p eql-codegen` (or just `mise run build`, which
    runs the generator first). One run regenerates *every* catalog type; there is
@@ -116,10 +117,11 @@ than a runtime validator:
 Returns column below is `eql_v3.` + `ctor`) — changing one is a generated-SQL
 behaviour change, not a refactor:
 
-| Term  | JSON key | Extractor   | Returns                          | Operators                  |
-| ----- | -------- | ----------- | -------------------------------- | -------------------------- |
-| `Hm`  | `hm`     | `eq_term`   | `eql_v3.hmac_256`                | `=` `<>`                   |
-| `Ore` | `ob`     | `ord_term`  | `eql_v3.ore_block_u64_8_256`     | `=` `<>` `<` `<=` `>` `>=` |
+| Term    | JSON key | Extractor    | Returns                          | Operators                  |
+| ------- | -------- | ------------ | -------------------------------- | -------------------------- |
+| `Hm`    | `hm`     | `eq_term`    | `eql_v3.hmac_256`                | `=` `<>`                   |
+| `Ore`   | `ob`     | `ord_term`   | `eql_v3.ore_block_u64_8_256`     | `=` `<>` `<` `<=` `>` `>=` |
+| `Bloom` | `bf`     | `match_term` | `eql_v3.bloom_filter`            | `@>` `<@`                  |
 
 A type that needs a non-ORE equality term on an ordered domain needs a **new
 `Term`**, not a catalog flag. Adding a term is a code change to the `Term`
@@ -199,15 +201,25 @@ jsonb-backed and token-driven):
   strings into a `LazyLock<Vec<chrono::NaiveDate>>` and exposes them via a
   `date_values()` accessor; `ScalarType::fixture_values()` returns a borrow of
   that. The fixtures must include the three pivot plaintexts verbatim — for
-  `date`: `"1900-01-01"` (min), `"1970-01-01"` (zero = `NaiveDate::default()`),
-  `"2099-12-31"` (max) — guarded by `temporal_fixtures_include_pivot_plaintexts`.
-- **The pivot trait, not `Self::MIN`/`MAX`.** `ScalarType::fixture_values()` is a
-  method (not a `const`), and the comparison pivots come from
-  `ScalarType::min_pivot()` / `max_pivot()` (zero stays `Default::default()`).
-  Integer impls return `Self::MIN`/`Self::MAX` (emitted by the proc-macro);
-  temporal impls return explicit sentinel dates and are emitted by the
-  `temporal_values!` declarative macro in `scalar_domains.rs` (the proc-macro
-  emits only integer impls). `to_sql_literal` is
+  `date`: `"1900-01-01"` (min), `"1970-01-01"` (mid = the epoch =
+  `NaiveDate::default()` = `origin()`), `"2099-12-31"` (max) — guarded by
+  `temporal_fixtures_include_pivot_plaintexts` (catalog) and the
+  `temporal_values!`-generated `pivots_present_in_fixtures`.
+- **The pivot traits, not `Self::MIN`/`MAX`.** `ScalarType::fixture_values()` is a
+  method (not a `const`); the comparison pivots live on a small trait hierarchy
+  over `ScalarType` (`scalar_domains.rs`): **`OrderedScalar`** carries the
+  `min_pivot()` / `max_pivot()` boundaries and the interior `mid_pivot()` (default
+  `Self::default()`); **`SignedScalar: OrderedScalar`** adds `origin()` (the
+  numeric zero / sign boundary). Integer impls (`min=MIN`, `max=MAX`, `mid`
+  inherits `0`, `origin=0`) are emitted by the proc-macro; the temporal `date`
+  impl returns explicit sentinel dates (`mid` inherits the epoch = `origin()`) and
+  is emitted by the `temporal_values!` declarative macro in `scalar_domains.rs`,
+  which emits the `ScalarType` + `OrderedScalar` + `SignedScalar` impls together
+  (the proc-macro emits only integer impls). `date` is both `OrderedScalar` and
+  `SignedScalar`; `text` is `OrderedScalar` only and **hand-written** in
+  `scalar_domains.rs` (lexicographic order has no origin, so it overrides
+  `mid_pivot()` with a real median fixture rather than the degenerate
+  `String::default()` empty string — see issue #262). `to_sql_literal` is
   overridden to single-quote the value (`'1970-01-01'`), since a bare `Display`
   date is not a valid SQL literal.
 - **The sqlx `chrono` feature.** The test crate enables sqlx's `chrono` feature
@@ -246,16 +258,21 @@ the `scalar_types!` list also fails the `generate_for_token` catch-all loudly
 at fixture-generation time.
 
 The coverage these registrations unlock comes from the `scalar_matrix!`
-convention wrapper in `tests/sqlx/src/matrix.rs`: one `impl ScalarType` plus a
-single invocation taking `suite`, `scalar`, `eql_type`, and a `caps` capability
-marker. The matrix derives its comparison pivots — the scalar's `MIN`, `MAX`,
-and zero (`Default::default()`) — from the type rather than a hand-written list,
-so the invocation carries no pivot argument. `caps = [eq, ord]` selects the
+convention wrapper in `tests/sqlx/src/matrix.rs`: one `impl ScalarType` (plus
+`OrderedScalar`, and `SignedScalar` for signed kinds) and a single invocation
+taking `suite`, `scalar`, `eql_type`, and a `caps` capability marker. The matrix
+derives its comparison pivots — the scalar's `min_pivot()`, `max_pivot()`, and
+the interior `mid_pivot()` — from `OrderedScalar` rather than a hand-written
+list, so the invocation carries no pivot argument. `caps = [eq, ord]` selects the
 ordered-numeric shape (all four variants; `=`/`<>`/`<`/`<=`/`>`/`>=`; ORDER BY /
 ORDER BY USING; ORE injectivity); `caps = [eq]` selects the equality-only shape
 (storage + `_eq` only; the four ord operators are deliberate blockers). Both
-expand to the lower-level `scalar_domain_matrix!`. The `matrix.rs` module header
-is the canonical,
+expand to the lower-level `scalar_domain_matrix!`. The pivot *sweep* is uniform
+across every ordered type (one canonical snapshot); the signed-only sign-boundary
+test (`SignedScalar`, `int`/`date`) lives outside `scalars::` in
+`encrypted_domain/signed.rs`, so a `text` instantiation of it is a compile error
+and it never enters the inventory snapshot. The `matrix.rs` module header is the
+canonical,
 current list of the categories the matrix emits (sanity, correctness,
 cross-shape, supported-NULL, blocker raises, index engagement, ORDER BY, ORDER
 BY USING) — read it rather than duplicating a count here. For ordered `int4`,
@@ -406,14 +423,15 @@ enables them — and the native `jsonb` operators are blocker-only.
 
 The wrapper/blocker split per domain (the 44-operator total never moves):
 
-| Domain terms     | Extractors | Wrappers | Blockers | Functions | Operators |
-| ---------------- | ---------: | -------: | -------: | --------: | --------: |
-| none             |          0 |        0 |       44 |        44 |        44 |
-| `&[Term::Hm]`    |          1 (`eq_term`)  |  6 | 38 | 45 | 44 |
-| `&[Term::Ore]`   |          1 (`ord_term`) | 18 | 26 | 45 | 44 |
+| Domain terms      | Extractors | Wrappers | Blockers | Functions | Operators |
+| ----------------- | ---------: | -------: | -------: | --------: | --------: |
+| none              |          0 |        0 |       44 |        44 |        44 |
+| `&[Term::Hm]`     |          1 (`eq_term`)    |  6 | 38 | 45 | 44 |
+| `&[Term::Bloom]`  |          1 (`match_term`) |  6 | 38 | 45 | 44 |
+| `&[Term::Ore]`    |          1 (`ord_term`)   | 18 | 26 | 45 | 44 |
 
-Six wrappers for `Hm` = `=` and `<>` × three shapes; eighteen for `Ore` = six
-operators × three shapes.
+Six wrappers for `Hm` = `=` and `<>` × three shapes; six for `Bloom` = `@>` and
+`<@` × three shapes; eighteen for `Ore` = six operators × three shapes.
 
 **Untyped-literal resolver edge.** PostgreSQL's operator resolver still prefers
 the built-in `jsonb` operator for untyped string literals in forms such as
@@ -658,14 +676,26 @@ golden reference under `tests/codegen/reference/int4/`.
 
 ---
 
-## 7. Out of scope — `text` and `jsonb`
+## 7. `text` (in scope) and `jsonb` (out of scope)
 
-`text` and `jsonb` are **not** materialised through this generator. The
-`ScalarKind` enum carries `Text` / `Numeric` / `Jsonb` variants and the
-`Fixture` enum carries their string-backed shapes at the capability layer, but
-`CATALOG` declares only the ordered scalars today — the fixed-width integers
-(`int2` / `int4` / `int8`) and the temporal `date` — so no `text` / `jsonb` SQL
-surface is generated. Text and JSONB encrypted behaviour lives on the composite
+`text` **is** materialised through this generator. It is the worked example of
+an ordered, non-integer, unbounded scalar: it hand-writes its `impl ScalarType`
++ `OrderedScalar` (its `text` shape is read from the catalog `ScalarKind`, like
+`date`'s temporal shape — there is no dispatch-list marker) with explicit
+lexicographic `min`/`max` pivots instead of `::MIN`/`::MAX` and a real median
+`mid_pivot()`. It is **`OrderedScalar` but not `SignedScalar`** —
+lexicographic text has no numeric origin, so it does not get the signed-only
+sign-boundary test, and the empty string is deliberately not a fixture (`""`
+encrypts to an empty ORE term; issue #262). `text` is also the first type to add
+a new index `Term` (`Bloom`) — giving it a `match` capability (`@>`/`<@`
+bloom-filter containment on the `eql_v3.text_match` domain) on top of equality
+(`Hm`) and ordering (`Ore`). Match is deliberately **not** SQL `LIKE`: it is
+probabilistic ngram-bloom containment, exposed only on `text_match`, and never
+backs equality.
+
+`jsonb` remains **out of scope**. The `ScalarKind`/`Fixture` enums carry its
+string-backed shape at the capability layer, but no `jsonb` SQL surface is
+generated — it needs a separate SQL design beyond this ordered-scalar
+materializer. JSONB encrypted behaviour today lives on the composite
 `eql_v2_encrypted` type and its hand-written operator surface in `src/encrypted/`
-and `src/operators/`, not the scalar materializer. `jsonb` in particular needs a
-separate SQL design beyond this ordered-scalar materializer.
+and `src/operators/`, not the scalar materializer.
