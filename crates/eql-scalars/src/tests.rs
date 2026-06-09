@@ -356,6 +356,20 @@ mod fixture_tests {
     }
 
     #[test]
+    fn sentinel_value_is_none_on_non_integer_kinds() {
+        // Directly pins the `kind.as_bounded_int() => None` arm of
+        // `numeric_value` for the pivot sentinels. Previously `Fixture::Zero`
+        // returned `Some(0)` unconditionally; a refactor that restored that
+        // would make the two `Zero` cases below fail. The
+        // `pivot_sentinels_only_appear_with_integer_kinds` catalog invariant
+        // guards this only indirectly.
+        assert_eq!(Fixture::Zero.numeric_value(ScalarKind::Date), None);
+        assert_eq!(Fixture::Zero.numeric_value(ScalarKind::Text), None);
+        assert_eq!(Fixture::Min.numeric_value(ScalarKind::Text), None);
+        assert_eq!(Fixture::Max.numeric_value(ScalarKind::Date), None);
+    }
+
+    #[test]
     fn render_literal_maps_sentinels() {
         assert_eq!(Fixture::Min.render_literal(ScalarKind::I32), "i32::MIN");
         assert_eq!(Fixture::Max.render_literal(ScalarKind::I32), "i32::MAX");

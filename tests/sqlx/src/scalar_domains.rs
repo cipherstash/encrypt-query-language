@@ -435,6 +435,25 @@ mod text_value_tests {
             .collect();
         assert_eq!(got, eql_scalars::TEXT_VALUES.to_vec());
     }
+
+    /// Directly exercises the `String` `to_sql_literal` override's
+    /// single-quote-doubling branch. Every `TEXT_VALUES` fixture is quote-free,
+    /// so no DB-backed test reaches the `.replace('\'', "''")`; this pins it so a
+    /// quoting/injection regression in the override is caught. (The sibling
+    /// `sql_string_literal` helper is tested separately — this covers the
+    /// trait method itself.)
+    #[test]
+    fn text_to_sql_literal_escapes_single_quotes() {
+        assert_eq!(
+            <String as ScalarType>::to_sql_literal(&"O'Brien".to_string()),
+            "'O''Brien'"
+        );
+        // a quote-free value is wrapped but otherwise untouched
+        assert_eq!(
+            <String as ScalarType>::to_sql_literal(&"frank".to_string()),
+            "'frank'"
+        );
+    }
 }
 
 /// Per-domain capability + payload shape. Storage carries no terms, `Eq`
