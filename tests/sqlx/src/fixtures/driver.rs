@@ -32,7 +32,7 @@ use super::spec::FixtureSpec;
 /// already satisfies the bounds.
 pub trait FixtureValue:
     EqlPlaintext
-    + Copy
+    + Clone
     + Send
     + Sync
     + for<'q> sqlx::Encode<'q, sqlx::Postgres>
@@ -42,7 +42,7 @@ pub trait FixtureValue:
 
 impl<T> FixtureValue for T where
     T: EqlPlaintext
-        + Copy
+        + Clone
         + Send
         + Sync
         + for<'q> sqlx::Encode<'q, sqlx::Postgres>
@@ -213,7 +213,7 @@ where
             let id = (i as i64) + 1;
             sqlx::query(&insert)
                 .bind(id)
-                .bind(*value)
+                .bind(value.clone())
                 .bind(sqlx::types::Json(payload))
                 .execute(&mut *direct)
                 .await

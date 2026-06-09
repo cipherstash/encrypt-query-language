@@ -15,7 +15,7 @@ use std::fmt::{Debug, Display};
 
 /// One impl per scalar type. Two `const`s and the rest defaults.
 pub trait ScalarType:
-    Copy
+    Clone
     + Ord
     + Default
     + Debug
@@ -69,16 +69,20 @@ pub trait ScalarType:
         format!("fixtures.eql_v2_{}", Self::PG_TYPE)
     }
 
-    /// SQL-literal rendering via `Display`. Override for types whose
-    /// `Display` form isn't a valid SQL literal (e.g. strings, dates).
-    fn to_sql_literal(value: Self) -> String {
+    /// SQL-literal rendering via `Display`. Takes `&Self` so a non-`Copy`
+    /// scalar (e.g. `String`) can be rendered without being consumed. Override
+    /// for types whose `Display` form isn't a valid SQL literal (e.g. strings,
+    /// dates).
+    fn to_sql_literal(value: &Self) -> String {
         value.to_string()
     }
 
     /// Ground-truth result set for `WHERE col op pivot`. Default works
     /// for any `Ord` scalar; override only for non-orderable types.
     fn expected_forward(op: &str, pivot: Self) -> Vec<Self> {
-        let predicate: fn(Self, Self) -> bool = match op {
+        // `&Self`-taking predicate so the default impl stays generic over a
+        // merely-`Clone` (non-`Copy`) scalar like `String`.
+        let predicate: fn(&Self, &Self) -> bool = match op {
             "=" => |a, b| a == b,
             "<>" => |a, b| a != b,
             "<" => |a, b| a < b,
@@ -89,8 +93,8 @@ pub trait ScalarType:
         };
         let mut values: Vec<Self> = Self::fixture_values()
             .iter()
-            .copied()
-            .filter(|v| predicate(*v, pivot))
+            .filter(|v| predicate(v, &pivot))
+            .cloned()
             .collect();
         values.sort();
         values
@@ -153,9 +157,9 @@ macro_rules! temporal_values {
             fn fixture_values() -> &'static [$ty] { $accessor() }
             fn min_pivot() -> $ty { $min }
             fn max_pivot() -> $ty { $max }
-            fn to_sql_literal(value: $ty) -> String {
+            fn to_sql_literal(value: &$ty) -> String {
                 let f: fn(&$ty) -> String = $sql_lit;
-                f(&value)
+                f(value)
             }
         }
 
@@ -282,6 +286,90 @@ mod timestamptz_value_guards {
             vals.len(),
             "two timestamptz fixtures alias to the same UTC instant",
         );
+    }
+}
+
+// `text` is hand-written rather than driven by `temporal_values!`: it is an
+// owned `String` (not chrono-backed), so it materialises its values from the
+// `eql_scalars::TEXT_VALUES` const slice rather than parsing catalog strings.
+// `text_values()` is public so the `eql_v2_text` fixture module (emitted by
+// `scalar_types!(fixture_modules)`) can hand the slice to `scalar_fixture!`.
+
+/// Typed `String` fixture values, built once from `text`'s catalog row.
+/// `eql_scalars::TEXT_VALUES` is a `&[&'static str]` const, but the `ScalarType`
+/// contract returns `&[Self]` = `&[String]` (owned), so we materialise them into
+/// a `LazyLock<Vec<String>>` and return a borrow — the same shape as
+/// `date_values`. (Unlike `date`, no parsing is needed; the values are the
+/// strings verbatim.)
+static TEXT_VALUES_CELL: std::sync::LazyLock<Vec<String>> = std::sync::LazyLock::new(|| {
+    eql_scalars::TEXT_VALUES
+        .iter()
+        .map(|s| s.to_string())
+        .collect()
+});
+
+/// The `String` fixture values, in catalog order. Public so the `eql_v2_text`
+/// fixture module (emitted by `scalar_types!(fixture_modules)`) can hand the
+/// slice to `scalar_fixture!` — `text` is owned `String`, so there is no
+/// `eql_scalars::<T>_VALUES`-typed `&[String]` const to point at directly.
+pub fn text_values() -> &'static [String] {
+    &TEXT_VALUES_CELL
+}
+
+impl ScalarType for String {
+    const PG_TYPE: &'static str = "text";
+
+    fn fixture_values() -> &'static [Self] {
+        text_values()
+    }
+
+    /// Lexicographic min pivot — the lexicographically-smallest non-empty
+    /// fixture (`"aard"`; the empty-string zero pivot sorts below it). Present
+    /// verbatim in `fixture_values()`; keep in sync with `TEXT_FIXTURES`.
+    fn min_pivot() -> Self {
+        "aard".to_string()
+    }
+
+    /// Lexicographic max pivot — the lexicographically-largest fixture
+    /// (`"zzzz"`).
+    fn max_pivot() -> Self {
+        "zzzz".to_string()
+    }
+
+    /// `Display` for a `String` is the unquoted text, which is not a valid SQL
+    /// literal; quote it and double any embedded single quotes.
+    fn to_sql_literal(value: &Self) -> String {
+        format!("'{}'", value.replace('\'', "''"))
+    }
+}
+
+#[cfg(test)]
+mod text_value_tests {
+    use super::*;
+
+    /// The `min`/`max`/zero pivots resolve to fixture rows present verbatim, so
+    /// `fetch_fixture_payload` can resolve each one's ciphertext.
+    #[test]
+    fn text_pivots_are_in_fixture_values() {
+        let values = <String as ScalarType>::fixture_values();
+        let min = <String as ScalarType>::min_pivot();
+        let max = <String as ScalarType>::max_pivot();
+        let zero = String::default();
+        assert!(values.contains(&min), "min_pivot {min:?} must be a fixture");
+        assert!(values.contains(&max), "max_pivot {max:?} must be a fixture");
+        assert!(values.contains(&zero), "zero pivot \"\" must be a fixture");
+        assert!(min <= max, "lexicographic min must not exceed max");
+    }
+
+    /// The harness value list matches the catalog `TEXT_VALUES` in order — the
+    /// oracle cannot drift from the catalog the fixture generator encrypts.
+    #[test]
+    fn text_values_match_catalog() {
+        let got: Vec<&str> = <String as ScalarType>::fixture_values()
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
+        assert_eq!(got, eql_scalars::TEXT_VALUES.to_vec());
     }
 }
 
@@ -414,7 +502,7 @@ pub async fn fetch_fixture_payload<T: ScalarType>(pool: &PgPool, plaintext: T) -
     let sql = format!(
         "SELECT payload::text FROM {table} WHERE plaintext = {lit}",
         table = T::fixture_table_name(),
-        lit = T::to_sql_literal(plaintext),
+        lit = T::to_sql_literal(&plaintext),
     );
     sqlx::query_scalar(&sql)
         .fetch_one(pool)
