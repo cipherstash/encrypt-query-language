@@ -449,3 +449,48 @@ async fn ore_comparators_are_immutable(pool: PgPool) -> Result<()> {
     }
     Ok(())
 }
+
+/// T7 — Bloom-filter SEM extractor (`eql_v3.bloom_filter(jsonb)`): reads the
+/// `bf` array out of a payload. Inlinable SQL mirroring `hmac_256` — NULL on a
+/// missing key, not a raise (the `match` capability is tied to the domain,
+/// whose CHECK guarantees `bf`).
+#[sqlx::test]
+async fn bloom_filter_extractor_reads_bf_array(pool: PgPool) -> Result<()> {
+    let got: Vec<i16> =
+        sqlx::query_scalar("SELECT eql_v3.bloom_filter('{\"bf\":[1,2,3]}'::jsonb)::smallint[]")
+            .fetch_one(&pool)
+            .await?;
+    assert_eq!(got, vec![1i16, 2, 3]);
+    Ok(())
+}
+
+#[sqlx::test]
+async fn bloom_filter_extractor_returns_null_without_bf(pool: PgPool) -> Result<()> {
+    // Inlinable SQL extractor (like hmac_256): a payload without `bf` yields
+    // NULL, not an exception. The RAISE is redundant because the `text_match`
+    // domain CHECK already guarantees `bf` is present on the typed path.
+    let got: Option<Vec<i16>> =
+        sqlx::query_scalar("SELECT eql_v3.bloom_filter('{\"hm\":\"x\"}'::jsonb)::smallint[]")
+            .fetch_one(&pool)
+            .await?;
+    assert!(
+        got.is_none(),
+        "absent bf must return NULL (capability is tied to the domain)"
+    );
+    Ok(())
+}
+
+#[sqlx::test]
+async fn bloom_filter_extractor_returns_null_for_non_array_bf(pool: PgPool) -> Result<()> {
+    // A degenerate raw payload where `bf` is present but not a json array
+    // (`{"bf": null}`) must return NULL, not error inside `jsonb_array_elements`.
+    // The extractor gates on `jsonb_typeof(...) = 'array'`, so a malformed key —
+    // only reachable outside the domain, whose CHECK guarantees an array — is
+    // treated like an absent one.
+    let got: Option<Vec<i16>> =
+        sqlx::query_scalar("SELECT eql_v3.bloom_filter('{\"bf\":null}'::jsonb)::smallint[]")
+            .fetch_one(&pool)
+            .await?;
+    assert!(got.is_none(), "non-array bf must return NULL, not raise");
+    Ok(())
+}
