@@ -65,6 +65,65 @@ fn legacy_payload_silently_accepts_missing_terms() {
 }
 
 #[test]
+fn v2_3_scalar_without_k_is_accepted() {
+    // The canonical v2.3 schema makes `k` optional on the scalar form
+    // (required: v, c, i) and check_encrypted discriminates on c-vs-sv, not k.
+    // A scalar payload that omits `k` must still deserialize as `Ct`.
+    let wire = json!({
+        "v": 2,
+        "i": { "t": "users", "c": "age" },
+        "c": "mp_base85_ciphertext",
+        "hm": "deadbeef"
+    });
+    let parsed: EqlEncrypted = serde_json::from_value(wire).unwrap();
+    assert!(matches!(parsed, EqlEncrypted::Ct(_)));
+    // Serialization always re-emits the discriminator.
+    assert_eq!(
+        serde_json::to_value(&parsed).unwrap(),
+        json!({
+            "k": "ct", "v": 2,
+            "i": { "t": "users", "c": "age" },
+            "c": "mp_base85_ciphertext",
+            "hm": "deadbeef"
+        })
+    );
+}
+
+#[test]
+fn v2_3_bf_accepts_negative_smallint() {
+    // `bf` is stored as smallint[] (signed i16). A `match` filter sized above
+    // 32768 (allowed up to 65536) emits upper-half bit positions as negative
+    // signed smallints; the type must round-trip them.
+    let wire = json!({
+        "k": "ct", "v": 2,
+        "i": { "t": "users", "c": "email" },
+        "c": "mp_base85_ciphertext",
+        "bf": [-1, -32768, 32767, 0]
+    });
+    let parsed: EqlEncrypted = serde_json::from_value(wire.clone()).unwrap();
+    assert!(matches!(parsed, EqlEncrypted::Ct(_)));
+    assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
+}
+
+#[test]
+fn v2_3_ste_vec_round_trips() {
+    // Exercises the `sv` path: SteVecPayload plus the flatten + untagged
+    // SteVecTerm (both `hm` and `oc` elements) — the crate's most fragile serde
+    // construct, and the route the hand-written EqlEncrypted::deserialize takes.
+    let wire = json!({
+        "k": "sv", "v": 2,
+        "i": { "t": "users", "c": "profile" },
+        "sv": [
+            { "s": "selector_root", "c": "ct_root", "hm": "deadbeef" },
+            { "s": "selector_name", "c": "ct_name", "oc": "00cafe", "a": true }
+        ]
+    });
+    let parsed: EqlEncrypted = serde_json::from_value(wire.clone()).unwrap();
+    assert!(matches!(parsed, EqlEncrypted::Sv(_)));
+    assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
+}
+
+#[test]
 fn int4_tagged_proposal_round_trips_and_discriminates() {
     let wire = json!({
         "x": "int4_eq", "v": 2,

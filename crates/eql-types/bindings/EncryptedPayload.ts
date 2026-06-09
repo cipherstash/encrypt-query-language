@@ -28,6 +28,11 @@ c: string,
 hm?: string, 
 /**
  * Bloom filter term — present iff a `match` index is configured.
+ *
+ * Array of set bit positions. EQL stores these as `smallint[]` (signed
+ * `i16`); a `match` filter sized above 32768 (configurable up to 65536)
+ * emits upper-half positions as negative signed values, so this is `i16`,
+ * not `u16` — a `u16` cannot deserialize a real large-filter payload.
  */
 bf?: Array<number>, 
 /**
