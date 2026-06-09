@@ -85,7 +85,13 @@ impl ScalarKind {
         matches!(self, ScalarKind::Date)
     }
 
-    /// The Rust type name as it appears in generated source (e.g. `"i32"`).
+    /// A debug/identifier string for the kind. For the codegen-supported kinds
+    /// (`I16`/`I32`/`I64`/`Date`) this is the canonical Rust plaintext type name
+    /// (`"i32"`, `"chrono::NaiveDate"`). For the not-yet-wired kinds
+    /// (`Numeric`/`Text`/`Jsonb`) it returns the SQL/type token (`"numeric"`,
+    /// `"text"`, `"jsonb"`) as a placeholder — those variants have no generated
+    /// surface, so the string is not consumed by codegen. Only call site is
+    /// `crates/eql-scalars/src/tests.rs`.
     pub const fn rust_type(self) -> &'static str {
         match self {
             ScalarKind::I16 => "i16",
