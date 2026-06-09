@@ -1,31 +1,17 @@
 name: "Test EQL"
+
+# NB: NO path filter at on: level. A workflow skipped by a path/branch filter
+# leaves its required checks stuck Pending and blocks merge. Relevance is
+# computed by the `changes` job and applied per-job via `if:` instead.
+#
+# NB: NO `push:` trigger. Under a required merge queue, push-to-main validation
+# is redundant — the queue already validated the exact merge commit, and branch
+# protection blocks direct pushes. (Resolves the design's ambiguous "light jobs
+# only on push:main" sanity net by dropping the trigger entirely.)
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/test-eql.yml"
-      - "src/**/*.sql"
-      - "sql/**/*.sql"
-      - "tests/**/*"
-      - "tasks/**/*"
-      - "crates/**"
-      - "Cargo.toml"
-      - "Cargo.lock"
-
-  pull_request:
-    # run on all pull requests
-    paths:
-      - ".github/workflows/test-eql.yml"
-      - "src/**/*.sql"
-      - "sql/**/*.sql"
-      - "tests/**/*"
-      - "tasks/**/*"
-      - "crates/**"
-      - "Cargo.toml"
-      - "Cargo.lock"
-
-  workflow_dispatch:
+  pull_request: {}
+  merge_group: {}            # required pre-merge gate; runs the full matrix
+  workflow_dispatch: {}      # manual runs use the PR shape (PG17 x 4 shards)
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -38,63 +24,88 @@ defaults:
 permissions:
   contents: read
 
+# PRs cancel superseded runs; the merge queue must NOT cancel — a cancelled
+# merge_group run never reports a final status and ejects the PR from the queue.
+concurrency:
+  group: test-eql-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  schema:
-    name: "JSON Schema validation"
+  # Runs on EVERY event and MUST always succeed (never skipped, never failed) —
+  # downstream heavy jobs `needs: [changes]`, and a skipped/failed `changes`
+  # would either skip the merge-queue matrix or deadlock `ci-required`.
+  changes:
+    name: "Detect relevant changes"
     runs-on: ubuntu-latest
-
+    outputs:
+      relevant: ${{ steps.r.outputs.relevant }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
 
-      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+      # Diff ONLY on pull_request, where a base ref is well-defined. On
+      # merge_group/workflow_dispatch the base ref is absent and the filter errors/empties.
+      - id: f
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v3
         with:
-          version: 2026.4.0
-          install: true
-          cache: true
+          filters: |
+            relevant:
+              - ".github/workflows/test-eql.yml"
+              - "src/**"
+              - "sql/**"
+              - "tests/**"
+              - "tasks/**"
+              - "crates/**"
+              - "Cargo.toml"
+              - "Cargo.lock"
 
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
-        with:
-          workspaces: .
-          shared-key: sqlx-tests
-
-      - name: Validate v2.2 / v2.3 payload schemas
+      # Explicit default (not `|| 'true'`, which trips GitHub's inconsistent
+      # treatment of the string 'false'). merge_group/workflow_dispatch never
+      # read this value — their downstream `if:` branch ignores `relevant` — but
+      # default true is the safe value regardless.
+      - id: r
         run: |
-          mise run test:schema
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "relevant=${{ steps.f.outputs.relevant }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          fi
 
-  rust-crates:
-    name: "Rust workspace crates"
+  # Pure bash; no checkout/toolchain. Derives the PG-version + shard fan-out
+  # from the event: PR -> PG17 x 4 shards; merge queue -> PG 14-17 x 2 shards.
+  setup:
+    name: "Compute matrix"
     runs-on: ubuntu-latest
-
+    outputs:
+      pg-versions: ${{ steps.cfg.outputs.pg }}
+      shard-total: ${{ steps.cfg.outputs.shard_total }}
+      shards: ${{ steps.cfg.outputs.shards }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          persist-credentials: false
-
-      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
-        with:
-          version: 2026.4.0
-          install: true
-          cache: true
-
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
-        with:
-          workspaces: .
-          shared-key: sqlx-tests
-
-      # fmt + clippy + test for the std-only catalog/generator crates. No
-      # Postgres: these never touch a database, so they run standalone and fast.
-      - name: Compile, lint and test the Rust workspace crates
+      - id: cfg
         run: |
-          export active_rust_toolchain=$(rustup show active-toolchain | cut -d' ' -f1)
-          rustup component add --toolchain ${active_rust_toolchain} rustfmt clippy
-          mise run test:crates
+          if [ "${{ github.event_name }}" = "merge_group" ]; then
+            echo 'pg=[14,15,16,17]' >> "$GITHUB_OUTPUT"
+            echo 'shard_total=2'    >> "$GITHUB_OUTPUT"
+            echo 'shards=[1,2]'     >> "$GITHUB_OUTPUT"
+          else
+            echo 'pg=[17]'          >> "$GITHUB_OUTPUT"
+            echo 'shard_total=4'    >> "$GITHUB_OUTPUT"
+            echo 'shards=[1,2,3,4]' >> "$GITHUB_OUTPUT"
+          fi
 
-  codegen:
-    name: "Encrypted-domain codegen"
+  # Compile the test binaries ONCE. Runs in the queue and on workflow_dispatch
+  # always, and on PRs only when relevant files changed (docs-only PRs never pay
+  # the ~4-min compile).
+  build-archive:
+    name: "Build test archive"
+    needs: [changes]
+    if: >-
+      github.event_name == 'merge_group'
+      || github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true')
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -106,114 +117,97 @@ jobs:
           install: true
           cache: true
 
-      # Shared with the sibling Rust jobs so the eql-codegen build artifacts the
-      # parity gate needs are reused rather than rebuilt from scratch.
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
           workspaces: .
           shared-key: sqlx-tests
 
-      # Crate compile/lint/test (cargo test -p eql-scalars -p eql-codegen) runs
-      # in the dedicated `test:crates` job; this job covers the codegen-specific
-      # gate only — golden parity. The plaintext fixture lists are no longer a
-      # generated file: they live in the catalog (`eql_scalars::INT4_VALUES` /
-      # `INT2_VALUES`) and are pinned by `eql-scalars`'s own unit tests, so there
-      # is nothing to regenerate-and-diff here.
-
-      # Parity gate: assert the Rust eql-codegen output is line-normalized-equal
-      # to the int4 golden reference. Python is no longer an oracle (retired in
-      # P2). No Postgres needed — the generator runs offline.
-      - name: Verify generator parity (golden)
+      - name: Build EQL + archive test binaries
         run: |
-          mise run codegen:parity
+          mise run test:sqlx:archive
 
-  self-contained-v3:
-    name: "eql_v3 self-containment"
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/upload-artifact@v4
         with:
-          persist-credentials: false
+          name: nextest-archive
+          path: |
+            nextest.tar.zst
+            release/cipherstash-encrypt.sql
+          retention-days: 1
+          if-no-files-found: error
 
-      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
-        with:
-          version: 2026.4.0
-          install: true
-          cache: true
-
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
-        with:
-          workspaces: .
-          shared-key: sqlx-tests
-
-      # Build to materialise release/cipherstash-encrypt-v3.sql and
-      # src/deps-ordered-v3.txt, then assert no eql_v2 symbol/file leakage.
-      - name: Build EQL
-        run: mise run --force build
-
-      - name: Assert eql_v3 is self-contained
-        run: mise run test:self_contained_v3
-
-  matrix-coverage:
-    name: "Matrix coverage inventory"
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          persist-credentials: false
-
-      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
-        with:
-          version: 2026.4.0
-          install: true
-          cache: true
-
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
-        with:
-          workspaces: .
-          shared-key: sqlx-tests
-
-      # Verify the matrix test-name set against the SINGLE canonical snapshot
-      # (snapshots/matrix_tests.txt) with the SAME pinned feature set the local
-      # task uses (`--no-default-features`, scale excluded), and cross-check the
-      # binary's discovered type set against `eql-codegen list-types`. A coverage
-      # change shows up as a diff in the snapshot; a catalog type missing its
-      # matrix wiring fails the cross-check. No Postgres needed: `--list` only
-      # enumerates, the suite uses runtime queries.
-      - name: Verify the matrix test-name inventory
-        run: |
-          mise run test:matrix:inventory
-          # Diff the whole snapshots/ directory so the single canonical file
-          # isn't hardcoded here; the mise task discovers the type set from the
-          # binary and reconciles it against `eql-codegen list-types`.
-          git add -N tests/sqlx/snapshots
-          git diff --exit-code -- tests/sqlx/snapshots \
-            || { echo "Coverage inventory stale — run 'mise run test:matrix:inventory' and commit."; exit 1; }
-
+  # Sharded sqlx suite. No longer needs [schema, codegen] (gate removed) —
+  # shards start right after build-archive.
   test:
-    name: "Test & Validate EQL (Postgres ${{ matrix.postgres-version }})"
+    name: "Shard PG${{ matrix.postgres-version }} ${{ matrix.shard }}/${{ needs.setup.outputs.shard-total }}"
+    needs: [changes, setup, build-archive]
+    if: >-
+      github.event_name == 'merge_group'
+      || github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true')
     runs-on: ubuntu-latest-m
-    needs: [schema, codegen]
-
     strategy:
       fail-fast: false
       matrix:
-        postgres-version: [17, 16, 15, 14]
-
+        postgres-version: ${{ fromJSON(needs.setup.outputs.pg-versions) }}
+        shard: ${{ fromJSON(needs.setup.outputs.shards) }}
     env:
       POSTGRES_VERSION: ${{ matrix.postgres-version }}
-      # CS_* are required for `mise run test:sqlx` to regenerate the
-      # cipherstash-client-encrypted fixtures before the suite runs.
-      # This repository does not accept fork PRs, so the secrets-on-
-      # `pull_request` constraint that breaks the fork CI flow does not
-      # apply here — leave the env block unconditional.
+      SHARD: ${{ matrix.shard }}
+      SHARD_TOTAL: ${{ needs.setup.outputs.shard-total }}
+      # CS_* are required for per-shard fixture regeneration (see plan Task 3).
+      # This repo does not accept fork PRs, so the secrets-on-pull_request
+      # constraint does not apply — leave the block unconditional.
       CS_CLIENT_ACCESS_KEY: ${{ secrets.CS_CLIENT_ACCESS_KEY }}
       CS_WORKSPACE_CRN: ${{ secrets.CS_WORKSPACE_CRN }}
       CS_CLIENT_ID: ${{ secrets.CS_CLIENT_ID }}
       CS_CLIENT_KEY: ${{ secrets.CS_CLIENT_KEY }}
+    steps:
+      # Checkout path MUST be identical to build-archive so the archive's
+      # workspace remap lines up (design: archive<->commit coupling).
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: .
+          shared-key: sqlx-tests
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: nextest-archive
+
+      - name: Setup database (Postgres ${{ matrix.postgres-version }})
+        run: |
+          mise run postgres:up postgres-${POSTGRES_VERSION} --extra-args "--detach --wait"
+
+      - name: Run shard ${{ matrix.shard }}/${{ needs.setup.outputs.shard-total }}
+        run: |
+          mise run test:sqlx:partition
+
+  # docs:validate + Clean-DB v3 install smoke. Both are version-relevant, so
+  # they follow the event's PG set (PG17 on PR; 14-17 in the queue). Moved out
+  # of the old per-version test job so they run ONCE per version, not per shard.
+  validate:
+    name: "Validate (Postgres ${{ matrix.postgres-version }})"
+    needs: [changes, setup]
+    if: >-
+      github.event_name == 'merge_group'
+      || github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true')
+    runs-on: ubuntu-latest-m
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres-version: ${{ fromJSON(needs.setup.outputs.pg-versions) }}
+    env:
+      POSTGRES_VERSION: ${{ matrix.postgres-version }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -222,8 +216,8 @@ jobs:
       - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: 2026.4.0
-          install: true # [default: true] run `mise install`
-          cache: true # [default: true] cache mise using GitHub's cache
+          install: true
+          cache: true
 
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
@@ -238,39 +232,167 @@ jobs:
         run: |
           mise run docs:validate
 
-      - name: Test EQL for Postgres ${{ matrix.postgres-version }}
-        run: |
-          export active_rust_toolchain=$(rustup show active-toolchain | cut -d' ' -f1)
-          rustup component add --toolchain ${active_rust_toolchain} rustfmt clippy
-          mise run --output prefix test --postgres ${POSTGRES_VERSION}
-
       - name: Clean-DB v3 install smoke (Postgres ${{ matrix.postgres-version }})
         run: |
           mise run build
           mise run test:clean_install_v3
 
-  splinter:
-    name: "Supabase splinter"
-    runs-on: ubuntu-latest-m
-
-    env:
-      POSTGRES_VERSION: "17"
-
+  schema:
+    name: "JSON Schema validation"
+    needs: [changes]
+    if: >-
+      github.event_name == 'merge_group'
+      || github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true')
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
-
       - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: 2026.4.0
           install: true
           cache: true
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: .
+          shared-key: sqlx-tests
+      - name: Validate v2.2 / v2.3 payload schemas
+        run: |
+          mise run test:schema
 
+  rust-crates:
+    name: "Rust workspace crates"
+    needs: [changes]
+    if: >-
+      github.event_name == 'merge_group'
+      || github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: .
+          shared-key: sqlx-tests
+      # `mise run test:crates` runs `cargo fmt --check` at the workspace root,
+      # which covers tests/sqlx (a workspace member). This subsumes the old
+      # standalone `test:lint` step that the removed per-version test job ran.
+      - name: Compile, lint and test the Rust workspace crates
+        run: |
+          export active_rust_toolchain=$(rustup show active-toolchain | cut -d' ' -f1)
+          rustup component add --toolchain ${active_rust_toolchain} rustfmt clippy
+          mise run test:crates
+
+  codegen:
+    name: "Encrypted-domain codegen"
+    needs: [changes]
+    if: >-
+      github.event_name == 'merge_group'
+      || github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: .
+          shared-key: sqlx-tests
+      - name: Verify generator parity (golden)
+        run: |
+          mise run codegen:parity
+
+  self-contained-v3:
+    name: "eql_v3 self-containment"
+    needs: [changes]
+    if: >-
+      github.event_name == 'merge_group'
+      || github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: .
+          shared-key: sqlx-tests
+      - name: Build EQL
+        run: mise run --force build
+      - name: Assert eql_v3 is self-contained
+        run: mise run test:self_contained_v3
+
+  matrix-coverage:
+    name: "Matrix coverage inventory"
+    needs: [changes]
+    if: >-
+      github.event_name == 'merge_group'
+      || github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: .
+          shared-key: sqlx-tests
+      - name: Verify the matrix test-name inventory
+        run: |
+          mise run test:matrix:inventory
+          git add -N tests/sqlx/snapshots
+          git diff --exit-code -- tests/sqlx/snapshots \
+            || { echo "Coverage inventory stale — run 'mise run test:matrix:inventory' and commit."; exit 1; }
+
+  splinter:
+    name: "Supabase splinter"
+    needs: [changes]
+    if: >-
+      github.event_name == 'merge_group'
+      || github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true')
+    runs-on: ubuntu-latest-m
+    env:
+      POSTGRES_VERSION: "17"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
       - name: Setup database
         run: |
           mise run postgres:up postgres-${POSTGRES_VERSION} --extra-args "--detach --wait"
-
       - name: Build and install EQL
         run: |
           mise run --output prefix --force build
@@ -278,9 +400,31 @@ jobs:
             | docker exec -i postgres-${POSTGRES_VERSION} \
                 psql -v ON_ERROR_STOP=1 \
                   postgresql://cipherstash:password@localhost/cipherstash -f-
-
       - name: Run splinter
         run: |
           mise run --output prefix test:splinter --postgres ${POSTGRES_VERSION}
 
-
+  # The ONE required status check. Stable name on every event, so branch
+  # protection never references an event-dependent leaf name (which would
+  # deadlock). Passes iff every needed job is success or skipped. Treating
+  # skipped as pass is intentional: heavy jobs are legitimately skipped on
+  # docs-only PRs, and a genuine failure is still caught because the FAILING
+  # source job is itself in `needs` and reports failure.
+  ci-required:
+    name: "CI required"
+    needs: [changes, setup, build-archive, test, validate, schema, rust-crates,
+            codegen, self-contained-v3, matrix-coverage, splinter]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assert all required jobs passed or were skipped
+        run: |
+          results='${{ join(needs.*.result, ' ') }}'
+          echo "needed results: $results"
+          for r in $results; do
+            case "$r" in
+              success|skipped) ;;
+              *) echo "gate fail: a needed job reported '$r'"; exit 1 ;;
+            esac
+          done
+          echo "ci-required: all needed jobs passed or were skipped"
