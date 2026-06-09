@@ -11,6 +11,10 @@
 "rust" = { version = "latest", components = "rustc,rust-std,cargo,rustfmt,rust-docs,clippy" }
 "cargo:cargo-binstall" = "latest"
 "cargo:sqlx-cli" = "latest"
+# Installed via the already-present cargo-binstall (fast in CI). Drives the
+# sharded sqlx suite: `cargo nextest archive` builds the test binaries once and
+# `cargo nextest run --partition hash:K/N` runs a stable hash-partitioned shard.
+"cargo:cargo-nextest" = "latest"
 # Single source of truth for the cargo-expand version used by `test:matrix:expand`.
 # Pinned in lockstep with the nightly date in that task: cargo-expand drives the
 # rustfmt pass, so an unpinned version can drift the matrix snapshot even with a
