@@ -25,7 +25,10 @@ impl Fixture {
                 Some(k) => Some(k.max_value()),
                 None => None,
             },
-            Fixture::Zero => Some(0),
+            Fixture::Zero => match kind.as_bounded_int() {
+                Some(_) => Some(0),
+                None => None,
+            },
             Fixture::Int(n) => Some(n),
             Fixture::Numeric(_)
             | Fixture::Text(_)
