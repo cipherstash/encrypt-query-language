@@ -90,10 +90,13 @@ async fn match_null_propagates(pool: PgPool) -> anyhow::Result<()> {
 #[sqlx::test]
 async fn text_match_contained_by_engages(pool: PgPool) -> anyhow::Result<()> {
     // `<@` is the COMMUTATOR of `@>` and otherwise unexercised on literals.
-    let hit: bool =
-        sqlx::query_scalar(&format!("SELECT ({}) <@ ({})", match_cast("[2]"), match_cast("[1,2,3]")))
-            .fetch_one(&pool)
-            .await?;
+    let hit: bool = sqlx::query_scalar(&format!(
+        "SELECT ({}) <@ ({})",
+        match_cast("[2]"),
+        match_cast("[1,2,3]")
+    ))
+    .fetch_one(&pool)
+    .await?;
     assert!(hit, "[2] <@ [1,2,3] must hold");
     Ok(())
 }
@@ -102,19 +105,25 @@ async fn text_match_contained_by_engages(pool: PgPool) -> anyhow::Result<()> {
 async fn empty_bloom_contained_by_semantics(pool: PgPool) -> anyhow::Result<()> {
     // `<@` mirror of the `@>` empty-set test: the empty filter is contained by
     // everything; a non-empty filter is not contained by the empty filter.
-    let empty_in_everything: bool =
-        sqlx::query_scalar(&format!("SELECT ({}) <@ ({})", match_cast("[]"), match_cast("[1,2,3]")))
-            .fetch_one(&pool)
-            .await?;
+    let empty_in_everything: bool = sqlx::query_scalar(&format!(
+        "SELECT ({}) <@ ({})",
+        match_cast("[]"),
+        match_cast("[1,2,3]")
+    ))
+    .fetch_one(&pool)
+    .await?;
     assert!(
         empty_in_everything,
         "the empty filter must be contained by every filter"
     );
 
-    let nonempty_not_in_empty: bool =
-        sqlx::query_scalar(&format!("SELECT ({}) <@ ({})", match_cast("[1,2,3]"), match_cast("[]")))
-            .fetch_one(&pool)
-            .await?;
+    let nonempty_not_in_empty: bool = sqlx::query_scalar(&format!(
+        "SELECT ({}) <@ ({})",
+        match_cast("[1,2,3]"),
+        match_cast("[]")
+    ))
+    .fetch_one(&pool)
+    .await?;
     assert!(
         !nonempty_not_in_empty,
         "a non-empty filter must not be contained by the empty filter"
@@ -136,7 +145,10 @@ async fn text_match_containment_requires_all_elements(pool: PgPool) -> anyhow::R
     for (hay, needle, expected) in cases {
         let sql = format!("SELECT ({}) @> ({})", match_cast(hay), match_cast(needle));
         let hit: bool = sqlx::query_scalar(&sql).fetch_one(&pool).await?;
-        assert_eq!(hit, expected, "bf {hay} @> bf {needle} should be {expected}");
+        assert_eq!(
+            hit, expected,
+            "bf {hay} @> bf {needle} should be {expected}"
+        );
     }
     Ok(())
 }
@@ -150,10 +162,14 @@ async fn text_match_like_ilike_absent(pool: PgPool) -> anyhow::Result<()> {
     // domain a `LIKE` user would reach for.
     const BF: &str = r#"{"v":"2","i":{},"c":"x","bf":[1]}"#;
     for op in ["~~", "~~*"] {
-        let sql =
-            format!("SELECT $1::jsonb::eql_v3.text_match {op} $2::jsonb::eql_v3.text_match");
-        eql_tests::assert_raises(&pool, &sql, &[Some(BF), Some(BF)], "operator does not exist")
-            .await?;
+        let sql = format!("SELECT $1::jsonb::eql_v3.text_match {op} $2::jsonb::eql_v3.text_match");
+        eql_tests::assert_raises(
+            &pool,
+            &sql,
+            &[Some(BF), Some(BF)],
+            "operator does not exist",
+        )
+        .await?;
     }
     Ok(())
 }

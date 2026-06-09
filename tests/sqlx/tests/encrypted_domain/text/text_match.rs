@@ -197,6 +197,9 @@ async fn contains_and_contained_by_are_commutative(pool: PgPool) -> anyhow::Resu
         contains, contained_by,
         "`a @> b` and `b <@ a` must agree (COMMUTATOR)"
     );
-    assert!(contains, "'aardvark' @> 'aard' must hold for the curated pair");
+    assert!(
+        contains,
+        "'aardvark' @> 'aard' must hold for the curated pair"
+    );
     Ok(())
 }
