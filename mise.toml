@@ -99,6 +99,16 @@ run = """
 cargo watch -x test
 """
 
+[tasks."test:sqlx:archive"]
+description = "Build EQL + compile the sqlx test binaries once into a reusable nextest archive"
+# `build` produces release/cipherstash-encrypt.sql, uploaded alongside the
+# archive and consumed by every shard. This mirrors test:sqlx:prep (mise.toml:51):
+# the `#MISE depends` directive in the script is inert under `bash tasks/...`, so
+# the dependency MUST be declared here.
+depends = ["build"]
+dir = "{{config_root}}"
+run = "bash tasks/test/sqlx-archive.sh"
+
 [tasks."test:schema"]
 description = "Validate sample payloads against the v2.2 / v2.3 JSON Schemas (no database required)"
 dir = "{{config_root}}/tests/sqlx"
