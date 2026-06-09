@@ -326,14 +326,19 @@ const TEXT_DOMAINS: &[DomainSpec] = &[
     },
 ];
 
-/// `text` fixture plaintexts — curated so eq/ord give a lexicographic spread,
-/// `""` is the ordered "zero" pivot (`String::default()`), and the match suite
-/// has a known substring pair (`"aardvark"`/`"aard"`, sharing 3-grams) and a
-/// disjoint value (`"zzzz"`, no shared 3-grams). `"aard"` is the lexicographic
-/// `min_pivot` (after `""`) and `"zzzz"` the `max_pivot`; both must be present
-/// verbatim so the matrix can fetch their ciphertext. All distinct.
+/// `text` fixture plaintexts — curated so eq/ord give a lexicographic spread
+/// and the match suite has a known substring pair (`"aardvark"`/`"aard"`,
+/// sharing 3-grams) and a disjoint value (`"zzzz"`, no shared 3-grams).
+/// `"aard"` is the lexicographic `min_pivot`, `"zzzz"` the `max_pivot`, and
+/// `"frank"` the interior `mid_pivot`; all three must be present verbatim so the
+/// matrix can fetch their ciphertext. All distinct.
+///
+/// The empty string is deliberately **not** a fixture: text is an ordered, not
+/// signed, scalar (no numeric origin), and `""` encrypts to an empty ORE term
+/// whose comparison is undefined (see issue #262). The interior pivot is a real
+/// median value, not `String::default()`.
 const TEXT_FIXTURES: &[Fixture] = fixtures!(text;
-    "", "aard", "aardvark", "alice", "bob", "carol",
+    "aard", "aardvark", "alice", "bob", "carol",
     "dave", "erin", "frank", "mallory", "trent", "zzzz");
 
 /// `text` — an ordered, non-integer, unbounded scalar. Adds a `_match` domain

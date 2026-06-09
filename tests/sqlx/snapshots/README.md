@@ -19,6 +19,14 @@ expected set from this one baseline — `matrix_tests.txt` minus every line
 matching `_ord` / `order_by` / `routes_through_ob`. The baseline file itself is
 always the ordered (`caps = [eq, ord]`) shape.
 
+The "no per-type variation" property is preserved by design: every ordered
+scalar sweeps the same three `OrderedScalar` pivots (`min`/`mid`/`max`), so the
+`_pivot_mid_*` arms are identical modulo token across `int`/`date`/`text`. The
+**signed-only** sign-boundary test (`SignedScalar`, `int`/`date` only) lives
+*outside* the `scalars::<T>::` namespace (in `encrypted_domain/signed.rs`,
+mirroring the `text_match` suites), so it is deliberately invisible to this
+inventory — keeping one canonical set rather than per-capability snapshots.
+
 ## What it guards
 
 The SQLx assertions verify that the tests which run produce the right results.
