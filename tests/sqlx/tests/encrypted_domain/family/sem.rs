@@ -394,20 +394,29 @@ async fn jsonb_array_to_ore_block_input_shapes(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-/// T8 — Volatility pin: all three `compare_ore_block_u64_8_256_term(s)` overloads
-/// (term×term, term[]×term[], composite×composite) must be `IMMUTABLE`
-/// (`provolatile = 'i'`). This deliberately diverges from the `eql_v2`
-/// originals, which carry no marker and default to `VOLATILE`. The comparison
-/// is deterministic — pgcrypto `encrypt()` is itself `IMMUTABLE` — and the
-/// marker is what lets the planner fold/cache these in ordering/index contexts,
-/// so a silent regression to `VOLATILE` (e.g. dropping the keyword on a future
-/// edit) must fail CI.
+/// T8 — Catalog pin for all three `compare_ore_block_u64_8_256_term(s)` overloads
+/// (term×term, term[]×term[], composite×composite). Two load-bearing catalog
+/// properties are pinned at the same layer:
+///
+///   - `IMMUTABLE` (`provolatile = 'i'`). This deliberately diverges from the
+///     `eql_v2` originals, which carry no marker and default to `VOLATILE`. The
+///     comparison is deterministic — pgcrypto `encrypt()` is itself `IMMUTABLE`
+///     — and the marker is what lets the planner fold/cache these in
+///     ordering/index contexts, so a silent regression to `VOLATILE` (e.g.
+///     dropping the keyword on a future edit) must fail CI.
+///   - NOT `STRICT` (`proisstrict = false`). The NULL-handling branches inside
+///     the comparators are load-bearing (T3 pins their behaviour for the term
+///     overload). A stray `STRICT` would let PostgreSQL skip the body on a NULL
+///     argument, silently bypassing those branches. T3 guards this behaviourally
+///     for the term overload; this pins it at the catalog layer for all three,
+///     including the array/composite overloads T3 does not directly assert.
 #[sqlx::test]
 async fn ore_comparators_are_immutable(pool: PgPool) -> Result<()> {
-    let rows: Vec<(String, String)> = sqlx::query_as(
+    let rows: Vec<(String, String, bool)> = sqlx::query_as(
         r#"
         SELECT pg_catalog.pg_get_function_arguments(p.oid) AS args,
-               p.provolatile::text                         AS provolatile
+               p.provolatile::text                         AS provolatile,
+               p.proisstrict                               AS isstrict
         FROM pg_catalog.pg_proc p
         WHERE p.pronamespace = 'eql_v3'::regnamespace
           AND p.proname IN (
@@ -421,17 +430,21 @@ async fn ore_comparators_are_immutable(pool: PgPool) -> Result<()> {
     .await?;
 
     // Pin the count so an overload silently disappearing (or a fourth appearing)
-    // also fails, not just a volatility flip.
+    // also fails, not just a volatility/strictness flip.
     assert_eq!(
         rows.len(),
         3,
         "expected exactly 3 compare overloads, found: {rows:?}"
     );
 
-    for (args, provolatile) in &rows {
+    for (args, provolatile, isstrict) in &rows {
         assert_eq!(
             provolatile, "i",
             "compare_ore_block_u64_8_256_term(s)({args}) must be IMMUTABLE, got provolatile={provolatile}"
+        );
+        assert!(
+            !isstrict,
+            "compare_ore_block_u64_8_256_term(s)({args}) must NOT be STRICT (NULL branches are load-bearing)"
         );
     }
     Ok(())
