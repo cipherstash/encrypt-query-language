@@ -310,19 +310,43 @@ mod tests {
     #[test]
     fn operator_entry_emits_metadata_only_when_supported() {
         use crate::operator_surface::operator;
-        // Supported comparison operator carries its planner metadata.
-        let eq = operator_entry(&operator("="), "eql_v3.int4_eq", "eql_v3.int4_eq", true);
-        assert_eq!(eq.symbol, "=");
-        assert_eq!(eq.function_name, "eq");
-        assert_eq!(
-            eq.metadata.as_deref(),
-            Some("COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel")
-        );
-        // The same operator, unsupported on this domain → no metadata line.
-        let eq_unsupported = operator_entry(&operator("="), "eql_v3.int4", "eql_v3.int4", false);
-        assert_eq!(eq_unsupported.metadata, None);
-        // Supported but metadata-less operator (`@>`) → still no metadata line.
-        let contains = operator_entry(&operator("@>"), "eql_v3.int4_eq", "eql_v3.int4_eq", true);
-        assert_eq!(contains.metadata, None);
+
+        // (symbol, domain, supported) -> expected `CREATE OPERATOR` metadata
+        // clause. Adding a term that carries operator metadata is one new row
+        // here, not another hand-rolled assertion block.
+        let cases: &[(&str, &str, bool, Option<&str>)] = &[
+            // Supported comparison operator carries its planner metadata.
+            (
+                "=",
+                "eql_v3.int4_eq",
+                true,
+                Some("COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel"),
+            ),
+            // The same operator, unsupported on this domain → no metadata line.
+            ("=", "eql_v3.int4", false, None),
+            // Supported but metadata-less operator (`->`) → still no metadata.
+            ("->", "eql_v3.int4_eq", true, None),
+            // `@>` carries containment metadata when supported (the Bloom
+            // `text_match` path).
+            (
+                "@>",
+                "eql_v3.text_match",
+                true,
+                Some("COMMUTATOR = <@, RESTRICT = contsel, JOIN = contjoinsel"),
+            ),
+            // ... but suppressed when `@>` is a blocker (non-Bloom domains),
+            // which is why the int4 golden is unchanged.
+            ("@>", "eql_v3.int4_eq", false, None),
+        ];
+
+        for (symbol, dom, supported, expected) in cases {
+            let entry = operator_entry(&operator(symbol), dom, dom, *supported);
+            assert_eq!(entry.symbol, *symbol);
+            assert_eq!(
+                entry.metadata.as_deref(),
+                *expected,
+                "operator {symbol} on {dom} (supported={supported})",
+            );
+        }
     }
 }

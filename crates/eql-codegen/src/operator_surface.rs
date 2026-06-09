@@ -33,7 +33,7 @@ impl OperatorMetadata {
     }
 
     /// Render the `CREATE OPERATOR` metadata clause, or `None` when no hint is
-    /// present (the `@>`/`<@` symmetric-but-empty case collapses to `None`).
+    /// present (e.g. the path-selector operators, which carry no metadata).
     pub fn render(self) -> Option<String> {
         let mut extras = Vec::new();
         if let Some(c) = self.commutator {
@@ -208,6 +208,18 @@ const fn cmp_metadata(
     }
 }
 
+/// Containment-operator metadata (`@>` / `<@`): commutator is the mirror
+/// operator, no negator (a non-containment is not another listed operator),
+/// containment selectivity estimators.
+const fn containment_metadata(commutator: &'static str) -> OperatorMetadata {
+    OperatorMetadata {
+        restrict: Some("contsel"),
+        join: Some("contjoinsel"),
+        commutator: Some(commutator),
+        negator: None,
+    }
+}
+
 /// The 20-operator catalog. Order is: comparison operators, then path-selector
 /// operators, then the remaining native jsonb operators.
 pub const OPERATORS: &[Operator] = &[
@@ -251,13 +263,13 @@ pub const OPERATORS: &[Operator] = &[
         symbol: "@>",
         function_name: "contains",
         signatures: BOOL_SYMMETRIC_SIGNATURES,
-        metadata: OperatorMetadata::none(),
+        metadata: containment_metadata("<@"),
     },
     Operator {
         symbol: "<@",
         function_name: "contained_by",
         signatures: BOOL_SYMMETRIC_SIGNATURES,
-        metadata: OperatorMetadata::none(),
+        metadata: containment_metadata("@>"),
     },
     Operator {
         symbol: "->",
@@ -519,7 +531,25 @@ mod tests {
             "COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel"
         );
         assert_eq!(operator("->").metadata.render(), None);
-        assert_eq!(operator("@>").metadata.render(), None);
+        // `@>`/`<@` now carry containment metadata (no negator).
+        assert_eq!(
+            operator("@>").metadata.render().unwrap(),
+            "COMMUTATOR = <@, RESTRICT = contsel, JOIN = contjoinsel"
+        );
+    }
+
+    #[test]
+    fn containment_operators_have_containment_metadata() {
+        let c = operator("@>");
+        assert_eq!(c.metadata.commutator, Some("<@"));
+        assert_eq!(c.metadata.restrict, Some("contsel"));
+        assert_eq!(c.metadata.join, Some("contjoinsel"));
+        assert_eq!(c.metadata.negator, None);
+        let cb = operator("<@");
+        assert_eq!(cb.metadata.commutator, Some("@>"));
+        assert_eq!(cb.metadata.restrict, Some("contsel"));
+        assert_eq!(cb.metadata.join, Some("contjoinsel"));
+        assert_eq!(cb.metadata.negator, None);
     }
 
     #[test]
