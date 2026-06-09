@@ -7,3 +7,10 @@
 //! automatically. The old per-type `scalars/<token>.rs` files are gone.
 
 eql_tests::scalar_types!(matrix_suites);
+
+// NOTE: the `text_match` / `text_smoke` behavioural suites live in the sibling
+// `encrypted_domain/text/` module tree, NOT here. The matrix-inventory gate
+// discovers scalar types from every `scalars::<X>::` test-name prefix
+// (`tasks`/`mise.toml`), so a `scalars::text_smoke::` module would be
+// mis-discovered as a scalar type `text_smoke` and pollute the snapshot /
+// catalog cross-check. Keeping them out of `scalars::` avoids that.
