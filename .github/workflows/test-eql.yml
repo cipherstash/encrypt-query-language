@@ -176,13 +176,10 @@ jobs:
       POSTGRES_VERSION: ${{ matrix.postgres-version }}
       SHARD: ${{ matrix.shard }}
       SHARD_TOTAL: ${{ needs.setup.outputs.shard-total }}
-      # CS_* are required for per-shard fixture regeneration (see plan Task 3).
-      # This repo does not accept fork PRs, so the secrets-on-pull_request
-      # constraint does not apply — leave the block unconditional.
-      CS_CLIENT_ACCESS_KEY: ${{ secrets.CS_CLIENT_ACCESS_KEY }}
-      CS_WORKSPACE_CRN: ${{ secrets.CS_WORKSPACE_CRN }}
-      CS_CLIENT_ID: ${{ secrets.CS_CLIENT_ID }}
-      CS_CLIENT_KEY: ${{ secrets.CS_CLIENT_KEY }}
+      # No CS_* here: the shard runs the prebuilt archive (fixtures + migration
+      # embedded by build-archive), so it does not regenerate fixtures and needs
+      # no credentials. It only needs the live Postgres (below) for sqlx::test's
+      # per-test scratch databases and the release/*.sql from the artifact.
     steps:
       # Checkout path MUST be identical to build-archive so the archive's
       # workspace remap lines up (design: archive<->commit coupling).

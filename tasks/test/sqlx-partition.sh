@@ -14,26 +14,22 @@ ARCHIVE="${NEXTEST_ARCHIVE:-nextest.tar.zst}"
 
 test -f "${ARCHIVE}" \
   || { echo "archive ${ARCHIVE} missing — run test:sqlx:archive / download the artifact first" >&2; exit 2; }
-test -f release/cipherstash-encrypt.sql \
-  || { echo "release/cipherstash-encrypt.sql missing — download the build-archive artifact first" >&2; exit 2; }
 
-# 1. Install the built EQL into the SQLx migration set (same as test:sqlx:prep,
-#    but WITHOUT rebuilding — the SQL comes from the build-archive artifact).
-echo "==> installing built EQL into tests/sqlx/migrations/001_install_eql.sql"
-cp release/cipherstash-encrypt.sql tests/sqlx/migrations/001_install_eql.sql
-
-# 2. Migrate this shard's own Postgres.
-echo "==> running sqlx migrations"
-(cd tests/sqlx && sqlx migrate run)
-
-# 3. Regenerate the gitignored per-test fixtures for THIS shard's DB. Not in the
-#    archive/artifact (see plan Task 3 header); needs CS_* + a live PG.
-echo "==> regenerating SQLx fixtures for this shard"
-mise run fixture:generate:all
-
-# 4. Run this partition from the prebuilt archive. Default features (matching the
-#    archive). `hash:` is stable across test add/remove (see design decision 4).
-echo "==> running nextest partition hash:${SHARD}/${SHARD_TOTAL}"
+# The archive already carries everything compiled-in: build-archive ran prep
+# (build → cp 001_install_eql.sql → sqlx migrate → fixture:generate:all) BEFORE
+# `cargo nextest archive`, so the migration AND the per-type fixtures are
+# include_str!'d into the binaries. The shard therefore does NOT re-run prep or
+# regenerate fixtures — doing so would force a full `cargo test` compile on every
+# shard (defeating the build-once archive) for no effect, since sqlx::test uses
+# the embedded copies. `sqlx::test` provisions its own per-test scratch databases
+# against the live Postgres (the job's postgres:up step) and applies the embedded
+# migrations + fixtures to each.
+#
+# The only on-disk runtime dependency is release/*.sql (read by
+# build_validation_tests via std::fs); those arrive with the downloaded artifact.
+# release/ is NOT touched here — no cp, no migrate, no CS_* — the shard just runs
+# the prebuilt binaries.
+echo "==> running nextest partition hash:${SHARD}/${SHARD_TOTAL} from ${ARCHIVE}"
 cd tests/sqlx
 cargo nextest run \
   --archive-file "${REPO_ROOT}/${ARCHIVE}" \
