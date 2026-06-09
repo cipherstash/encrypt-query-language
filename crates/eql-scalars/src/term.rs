@@ -11,6 +11,7 @@ impl Term {
         match self {
             Term::Hm => "hm",
             Term::Ore => "ob",
+            Term::Bloom => "bf",
         }
     }
 
@@ -19,6 +20,7 @@ impl Term {
         match self {
             Term::Hm => "eq_term",
             Term::Ore => "ord_term",
+            Term::Bloom => "match_term",
         }
     }
 
@@ -27,6 +29,7 @@ impl Term {
         match self {
             Term::Hm => "hmac_256",
             Term::Ore => "ore_block_u64_8_256",
+            Term::Bloom => "bloom_filter",
         }
     }
 
@@ -35,6 +38,7 @@ impl Term {
         match self {
             Term::Hm => "eq",
             Term::Ore => "ord",
+            Term::Bloom => "match",
         }
     }
 
@@ -43,6 +47,7 @@ impl Term {
         match self {
             Term::Hm => &["=", "<>"],
             Term::Ore => &["=", "<>", "<", "<=", ">", ">="],
+            Term::Bloom => &["@>", "<@"],
         }
     }
 
@@ -54,6 +59,7 @@ impl Term {
                 "src/v3/sem/ore_block_u64_8_256/functions.sql",
                 "src/v3/sem/ore_block_u64_8_256/operators.sql",
             ],
+            Term::Bloom => &["src/v3/sem/bloom_filter/functions.sql"],
         }
     }
 }

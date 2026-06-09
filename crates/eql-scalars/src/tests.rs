@@ -188,6 +188,38 @@ mod term_tests {
             ]
         );
     }
+
+    #[test]
+    fn bloom_term_contract() {
+        let b = Term::Bloom;
+        assert_eq!(b.json_key(), "bf");
+        assert_eq!(b.extractor(), "match_term");
+        assert_eq!(b.ctor(), "bloom_filter");
+        assert_eq!(b.role(), "match");
+        assert_eq!(b.operators(), &["@>", "<@"]);
+        assert_eq!(b.requires(), &["src/v3/sem/bloom_filter/functions.sql"]);
+    }
+
+    #[test]
+    fn bloom_extractor_routes_match_operators() {
+        let terms = &[Term::Bloom];
+        assert_eq!(
+            Term::extractor_for_operator(terms, "@>"),
+            Some("match_term")
+        );
+        assert_eq!(
+            Term::extractor_for_operator(terms, "<@"),
+            Some("match_term")
+        );
+        assert_eq!(Term::extractor_for_operator(terms, "="), None);
+    }
+
+    #[test]
+    fn bloom_role_is_match_not_ord() {
+        assert_eq!(Term::role_for_terms(&[Term::Bloom]), "match");
+        // match is not ord-capable: no aggregates.
+        assert_ne!(Term::role_for_terms(&[Term::Bloom]), "ord");
+    }
 }
 
 mod term_helper_tests {
@@ -433,9 +465,27 @@ mod catalog_tests {
     }
 
     #[test]
-    fn catalog_has_int4_int2_int8_date_timestamptz_in_order() {
+    fn catalog_has_int4_int2_int8_date_timestamptz_text_in_order() {
         let tokens: Vec<&str> = CATALOG.iter().map(|s| s.token).collect();
-        assert_eq!(tokens, vec!["int4", "int2", "int8", "date", "timestamptz"]);
+        assert_eq!(
+            tokens,
+            vec!["int4", "int2", "int8", "date", "timestamptz", "text"]
+        );
+    }
+
+    #[test]
+    fn text_spec_is_in_catalog() {
+        let text = scalar("text");
+        assert_eq!(text.kind, ScalarKind::Text);
+        let suffixes: Vec<_> = text.domains.iter().map(|d| d.suffix).collect();
+        assert_eq!(suffixes, vec!["", "_eq", "_match", "_ord_ore", "_ord"]);
+    }
+
+    #[test]
+    fn text_match_domain_carries_only_bloom() {
+        let text = scalar("text");
+        let m = text.domains.iter().find(|d| d.suffix == "_match").unwrap();
+        assert_eq!(m.terms, &[Term::Bloom]);
     }
 
     /// The three temporal matrix pivots must be present verbatim in DATE's
@@ -490,9 +540,10 @@ mod catalog_tests {
 
     #[test]
     fn every_type_uses_a_known_domain_shape() {
-        // Each scalar's domain shape must be one of the two known-valid shapes:
-        // the four-domain ORDERED shape (storage + `_eq` + `_ord_ore` + `_ord`)
-        // or the two-domain EQ-ONLY shape (storage + `_eq`). This catches
+        // Each scalar's domain shape must be one of the known-valid shapes:
+        // the four-domain ORDERED shape (storage + `_eq` + `_ord_ore` + `_ord`),
+        // the two-domain EQ-ONLY shape (storage + `_eq`), or the ORDERED shape
+        // plus a `_match` domain (text's Bloom containment). This catches
         // accidental drift — a typo'd suffix, a wrong term, a dropped domain —
         // without hardcoding which token gets which shape (that is the catalog's
         // job; the matrix dispatch and the inventory snapshots are shape-aware).
@@ -505,11 +556,18 @@ mod catalog_tests {
             ("_ord", &[Term::Ore][..]),
         ];
         let eq_only: Vec<(&str, &[Term])> = vec![("", &[] as &[Term]), ("_eq", &[Term::Hm][..])];
+        let ordered_match: Vec<(&str, &[Term])> = vec![
+            ("", &[] as &[Term]),
+            ("_eq", &[Term::Hm][..]),
+            ("_match", &[Term::Bloom][..]),
+            ("_ord_ore", &[Term::Ore][..]),
+            ("_ord", &[Term::Ore][..]),
+        ];
         for s in CATALOG {
             let shape: Vec<(&str, &[Term])> =
                 s.domains.iter().map(|d| (d.suffix, d.terms)).collect();
             assert!(
-                shape == ordered || shape == eq_only,
+                shape == ordered || shape == eq_only || shape == ordered_match,
                 "{} has an unrecognised domain shape: {shape:?}",
                 s.token
             );
@@ -520,7 +578,8 @@ mod catalog_tests {
     fn ordered_and_eq_only_shapes_are_used_as_declared() {
         // Pin which catalog tokens carry which shape, so a row silently flipping
         // ORDERED_INT_DOMAINS <-> EQ_ONLY_DOMAINS is caught. timestamptz is
-        // equality-only (12-block ORE vs 8-block comparator); the rest ordered.
+        // equality-only (12-block ORE vs 8-block comparator); the rest ordered
+        // (text adds a `_match` domain on top, so it is not eq_only either).
         for s in CATALOG {
             let is_eq_only = s.domains.len() == 2;
             let expect_eq_only = s.token == "timestamptz";
@@ -589,6 +648,35 @@ mod values_tests {
         check(&INT4, INT4_VALUES);
         check(&INT2, INT2_VALUES);
         check(&INT8, INT8_VALUES);
+    }
+
+    #[test]
+    // `TEXT_VALUES` is a compile-time const slice, so clippy can prove the
+    // non-emptiness guard true; keep it as an explicit invariant regardless.
+    #[allow(clippy::const_is_empty)]
+    fn text_values_are_distinct_and_nonempty() {
+        assert!(!TEXT_VALUES.is_empty());
+        let mut seen = std::collections::HashSet::new();
+        for v in TEXT_VALUES {
+            assert!(seen.insert(*v), "duplicate text fixture: {v}");
+        }
+        // empty string present as the lexicographic zero pivot
+        assert!(
+            TEXT_VALUES.contains(&""),
+            "TEXT_VALUES must include the empty string"
+        );
+    }
+
+    #[test]
+    fn text_values_match_fixtures_in_order() {
+        let from_fixtures: Vec<&str> = TEXT_FIXTURES
+            .iter()
+            .map(|f| match f {
+                Fixture::Text(s) => *s,
+                other => panic!("text fixture must be Fixture::Text, got {other:?}"),
+            })
+            .collect();
+        assert_eq!(TEXT_VALUES.to_vec(), from_fixtures);
     }
 }
 
