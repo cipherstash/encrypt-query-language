@@ -482,11 +482,11 @@ async fn bloom_filter_extractor_returns_null_without_bf(pool: PgPool) -> Result<
 
 #[sqlx::test]
 async fn bloom_filter_extractor_returns_null_for_non_array_bf(pool: PgPool) -> Result<()> {
-    // A degenerate raw payload where `bf` is present but not a json array
-    // (`{"bf": null}`) must return NULL, not error inside `jsonb_array_elements`.
-    // The extractor gates on `jsonb_typeof(...) = 'array'`, so a malformed key —
-    // only reachable outside the domain, whose CHECK guarantees an array — is
-    // treated like an absent one.
+    // A payload where `bf` is present but not a json array (`{"bf": null}`) must
+    // return NULL, not error inside `jsonb_array_elements`. The `text_match`
+    // domain CHECK only requires the `bf` key to be present, not that it is an
+    // array, so a non-array `bf` can reach the extractor even on a typed value;
+    // gating on `jsonb_typeof(...) = 'array'` treats it like an absent key.
     let got: Option<Vec<i16>> =
         sqlx::query_scalar("SELECT eql_v3.bloom_filter('{\"bf\":null}'::jsonb)::smallint[]")
             .fetch_one(&pool)

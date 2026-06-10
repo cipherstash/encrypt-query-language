@@ -35,15 +35,15 @@ $$ LANGUAGE plpgsql;
 --! Inlinable single-statement SQL — the planner can fold this into the calling
 --! query so the functional GIN index built on `eql_v3.match_term(col)` (which
 --! calls this) engages structurally. Mirrors `eql_v3.hmac_256(jsonb)`: no RAISE
---! and no pinned `search_path`. Returns NULL when `bf` is absent (or present but
---! not a json array) rather than raising — the `match` capability is tied to the
---! domain, whose CHECK already guarantees `bf` is a present array, so a missing
---! or malformed key can only occur on raw jsonb outside the domain (where NULL,
---! like the HMAC extractor, is the right answer). Gating on `jsonb_typeof(...) =
---! 'array'` keeps a degenerate payload such as `{"bf": null}` returning NULL
---! instead of erroring inside `jsonb_array_elements`. An empty `bf` array yields
---! an empty filter (contains nothing, contained by everything), matching
---! set-containment semantics.
+--! and no pinned `search_path`. Returns NULL when `bf` is absent or present but
+--! not a json array, rather than raising. The `text_match` domain CHECK
+--! guarantees the `bf` *key* is present but not that it is an array, so a
+--! non-array `bf` (e.g. `{"bf": null}`) can reach here even on a typed value;
+--! gating on `jsonb_typeof(...) = 'array'` returns NULL for that case — and for
+--! raw jsonb outside the domain — instead of erroring inside
+--! `jsonb_array_elements`. NULL, like the HMAC extractor, is the right answer. An
+--! empty `bf` array yields an empty filter (contains nothing, contained by
+--! everything), matching set-containment semantics.
 --!
 --! @param val jsonb The encrypted payload.
 --! @return eql_v3.bloom_filter The `bf` array as a smallint[] domain value, or
