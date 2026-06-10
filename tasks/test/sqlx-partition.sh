@@ -10,10 +10,16 @@ cd "$REPO_ROOT"
 # Required: which shard (1-based) and how many shards total.
 : "${SHARD:?SHARD (1-based shard index) must be set}"
 : "${SHARD_TOTAL:?SHARD_TOTAL (number of shards) must be set}"
-ARCHIVE="${NEXTEST_ARCHIVE:-nextest.tar.zst}"
+# A relative NEXTEST_ARCHIVE is resolved against REPO_ROOT; an absolute override
+# is used verbatim (matching tasks/test/sqlx-archive.sh).
+ARCHIVE_INPUT="${NEXTEST_ARCHIVE:-nextest.tar.zst}"
+case "${ARCHIVE_INPUT}" in
+  /*) ARCHIVE_PATH="${ARCHIVE_INPUT}" ;;
+  *)  ARCHIVE_PATH="${REPO_ROOT}/${ARCHIVE_INPUT}" ;;
+esac
 
-test -f "${ARCHIVE}" \
-  || { echo "archive ${ARCHIVE} missing — run test:sqlx:archive / download the artifact first" >&2; exit 2; }
+test -f "${ARCHIVE_PATH}" \
+  || { echo "archive ${ARCHIVE_PATH} missing — run test:sqlx:archive / download the artifact first" >&2; exit 2; }
 
 # The archive already carries everything compiled-in: build-archive ran prep
 # (build → cp 001_install_eql.sql → sqlx migrate → fixture:generate:all) BEFORE
@@ -29,9 +35,9 @@ test -f "${ARCHIVE}" \
 # build_validation_tests via std::fs); those arrive with the downloaded artifact.
 # release/ is NOT touched here — no cp, no migrate, no CS_* — the shard just runs
 # the prebuilt binaries.
-echo "==> running nextest partition hash:${SHARD}/${SHARD_TOTAL} from ${ARCHIVE}"
+echo "==> running nextest partition hash:${SHARD}/${SHARD_TOTAL} from ${ARCHIVE_PATH}"
 cd tests/sqlx
 cargo nextest run \
-  --archive-file "${REPO_ROOT}/${ARCHIVE}" \
+  --archive-file "${ARCHIVE_PATH}" \
   --workspace-remap "${REPO_ROOT}" \
   --partition "hash:${SHARD}/${SHARD_TOTAL}"
