@@ -2,14 +2,17 @@
 //! [`crate::v3::int4`] plus a `_match` domain backed by the Bloom-filter
 //! term (`@>`/`<@` containment for `LIKE`-style matching).
 
+use schemars::{schema::RootSchema, schema_for};
+
 use crate::v3::terms::{BloomFilter, Ciphertext, Hmac256, OreBlockU64_8_256};
 use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 /// `eql_v3.text` — storage only; every operator is blocked.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct Text {
@@ -30,10 +33,14 @@ impl DomainType for Text {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+
+    fn schema(&self) -> RootSchema {
+        schema_for!(Text)
+    }
 }
 
 /// `eql_v3.text_eq` — HMAC equality (`=`, `<>`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct TextEq {
@@ -56,10 +63,14 @@ impl DomainType for TextEq {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+
+    fn schema(&self) -> RootSchema {
+        schema_for!(TextEq)
+    }
 }
 
 /// `eql_v3.text_match` — Bloom-filter containment match.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct TextMatch {
@@ -82,13 +93,17 @@ impl DomainType for TextMatch {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+
+    fn schema(&self) -> RootSchema {
+        schema_for!(TextMatch)
+    }
 }
 
 /// `eql_v3.text_ord_ore` — full lexicographic comparison,
 /// scheme-explicit name. Unlike the integer ordered domains (`[Ore]` only),
 /// text routes equality through `hm` rather than the ORE term, so the domain
 /// carries both `hm` and `ob` (`[Hm, Ore]`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct TextOrdOre {
@@ -113,12 +128,16 @@ impl DomainType for TextOrdOre {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+
+    fn schema(&self) -> RootSchema {
+        schema_for!(TextOrdOre)
+    }
 }
 
 /// `eql_v3.text_ord` — full lexicographic comparison
 /// (`=` `<>` `<` `<=` `>` `>=`). Carries both `hm` (equality) and `ob`
 /// (ordering) — text routes equality through `hm` (`[Hm, Ore]`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct TextOrd {
@@ -143,12 +162,16 @@ impl DomainType for TextOrd {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+
+    fn schema(&self) -> RootSchema {
+        schema_for!(TextOrd)
+    }
 }
 
 /// `eql_v3.text_search` — the full text search surface: HMAC equality, ORE
 /// ordering, and Bloom-filter containment match (`[Hm, Ore, Bloom]`). The
 /// superset domain combining `_eq`, `_ord`, and `_match`.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct TextSearch {
@@ -174,5 +197,9 @@ impl DomainType for TextSearch {
 
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
+    }
+
+    fn schema(&self) -> RootSchema {
+        schema_for!(TextSearch)
     }
 }

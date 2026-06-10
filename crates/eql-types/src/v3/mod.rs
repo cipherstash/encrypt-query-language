@@ -46,6 +46,8 @@
 
 use std::marker::PhantomData;
 
+use schemars::{schema::RootSchema, schema_for, JsonSchema};
+
 pub mod date;
 pub mod int2;
 pub mod int4;
@@ -88,6 +90,9 @@ pub trait DomainType {
             .strip_prefix("eql_v3.")
             .expect("sql_domain must be qualified with the eql_v3 schema")
     }
+
+    /// The type's JSON Schema.
+    fn schema(&self) -> RootSchema;
 }
 
 /// Type-level handle: lets [`all`] enumerate the domain types without
@@ -96,7 +101,7 @@ pub trait DomainType {
 /// payload instance is ever constructed.
 impl<T> DomainType for PhantomData<T>
 where
-    T: DomainType,
+    T: DomainType + JsonSchema,
 {
     fn sql_domain_static() -> &'static str {
         T::sql_domain_static()
@@ -104,6 +109,10 @@ where
 
     fn sql_domain(&self) -> &'static str {
         T::sql_domain_static()
+    }
+
+    fn schema(&self) -> RootSchema {
+        schema_for!(T)
     }
 }
 
