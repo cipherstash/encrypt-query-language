@@ -502,7 +502,10 @@ impl Variant {
     /// matrix `payload_check` arm iterates this to assert each key's
     /// absence is rejected at the cast.
     pub fn payload_required_keys(self) -> impl Iterator<Item = &'static str> {
-        ["v", "i", "c"].into_iter().chain(self.required_term())
+        eql_scalars::ENVELOPE_KEYS
+            .iter()
+            .copied()
+            .chain(self.required_term())
     }
 
     pub const fn supports_eq(self) -> bool {

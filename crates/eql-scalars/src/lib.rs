@@ -73,6 +73,17 @@ pub enum ScalarKind {
     Timestamptz,
 }
 
+/// Always-present payload keys required by every generated domain CHECK,
+/// before the domain's term keys, in order: envelope version (`v`), ident
+/// (`i`), ciphertext (`c`).
+///
+/// Lives here — in the catalog — because it is cross-schema contract data
+/// consumed on both sides of the generated surface: `eql-codegen` builds
+/// every domain CHECK from it, and `eql-types` builds its payload structs
+/// and parity tests against it. One definition, so the envelope cannot
+/// drift between the SQL and the canonical types.
+pub const ENVELOPE_KEYS: &[&str] = &["v", "i", "c"];
+
 /// A fixed index term known to the scalar materializer.
 ///
 /// `Hm` provides equality; `Ore` provides equality plus ordering. The
