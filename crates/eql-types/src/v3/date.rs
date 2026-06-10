@@ -3,33 +3,82 @@
 //! ciphertext, so dates order like integers); see that module for the
 //! capability table.
 
-use crate::v3::eql_v3_domain;
-use crate::v3::terms::{Hmac256, OreBlockU64_8_256};
+use crate::v3::terms::{Ciphertext, Hmac256, OreBlockU64_8_256};
+use crate::Identifier;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
-eql_v3_domain!(
-    /// `eql_v3.date` — storage only; every operator is blocked.
-    Date, domain = "date");
+/// `eql_v3.date` — storage only; every operator is blocked.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+pub struct Date {
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
+    pub v: u16,
+    /// Table/column identifier. Required by the domain CHECK.
+    pub i: Identifier,
+    /// mp_base85 source ciphertext. Required by the domain CHECK.
+    pub c: Ciphertext,
+}
 
-eql_v3_domain!(
+impl Date {
+    /// Fully-qualified SQL domain this payload inhabits.
+    pub const SQL_DOMAIN: &'static str = "eql_v3.date";
+}
+
 /// `eql_v3.date_eq` — HMAC equality (`=`, `<>`).
-DateEq, domain = "date_eq",
-terms {
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+pub struct DateEq {
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
+    pub v: u16,
+    /// Table/column identifier. Required by the domain CHECK.
+    pub i: Identifier,
+    /// mp_base85 source ciphertext. Required by the domain CHECK.
+    pub c: Ciphertext,
     /// HMAC-SHA-256 equality term.
-    hm: Hmac256,
-});
+    pub hm: Hmac256,
+}
 
-eql_v3_domain!(
+impl DateEq {
+    /// Fully-qualified SQL domain this payload inhabits.
+    pub const SQL_DOMAIN: &'static str = "eql_v3.date_eq";
+}
+
 /// `eql_v3.date_ord_ore` — full comparison, scheme-explicit name.
-DateOrdOre, domain = "date_ord_ore",
-terms {
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+pub struct DateOrdOre {
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
+    pub v: u16,
+    /// Table/column identifier. Required by the domain CHECK.
+    pub i: Identifier,
+    /// mp_base85 source ciphertext. Required by the domain CHECK.
+    pub c: Ciphertext,
     /// Block-ORE order term. Serves equality too.
-    ob: OreBlockU64_8_256,
-});
+    pub ob: OreBlockU64_8_256,
+}
 
-eql_v3_domain!(
+impl DateOrdOre {
+    /// Fully-qualified SQL domain this payload inhabits.
+    pub const SQL_DOMAIN: &'static str = "eql_v3.date_ord_ore";
+}
+
 /// `eql_v3.date_ord` — full comparison (`=` `<>` `<` `<=` `>` `>=`).
-DateOrd, domain = "date_ord",
-terms {
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+pub struct DateOrd {
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
+    pub v: u16,
+    /// Table/column identifier. Required by the domain CHECK.
+    pub i: Identifier,
+    /// mp_base85 source ciphertext. Required by the domain CHECK.
+    pub c: Ciphertext,
     /// Block-ORE order term. Serves equality too.
-    ob: OreBlockU64_8_256,
-});
+    pub ob: OreBlockU64_8_256,
+}
+
+impl DateOrd {
+    /// Fully-qualified SQL domain this payload inhabits.
+    pub const SQL_DOMAIN: &'static str = "eql_v3.date_ord";
+}

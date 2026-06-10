@@ -1,33 +1,82 @@
 //! The `int2` encrypted-domain family. Same four-domain ordered shape as
 //! [`crate::v3::int4`] — see that module for the capability table.
 
-use crate::v3::eql_v3_domain;
-use crate::v3::terms::{Hmac256, OreBlockU64_8_256};
+use crate::v3::terms::{Ciphertext, Hmac256, OreBlockU64_8_256};
+use crate::Identifier;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
-eql_v3_domain!(
-    /// `eql_v3.int2` — storage only; every operator is blocked.
-    Int2, domain = "int2");
+/// `eql_v3.int2` — storage only; every operator is blocked.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+pub struct Int2 {
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
+    pub v: u16,
+    /// Table/column identifier. Required by the domain CHECK.
+    pub i: Identifier,
+    /// mp_base85 source ciphertext. Required by the domain CHECK.
+    pub c: Ciphertext,
+}
 
-eql_v3_domain!(
+impl Int2 {
+    /// Fully-qualified SQL domain this payload inhabits.
+    pub const SQL_DOMAIN: &'static str = "eql_v3.int2";
+}
+
 /// `eql_v3.int2_eq` — HMAC equality (`=`, `<>`).
-Int2Eq, domain = "int2_eq",
-terms {
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+pub struct Int2Eq {
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
+    pub v: u16,
+    /// Table/column identifier. Required by the domain CHECK.
+    pub i: Identifier,
+    /// mp_base85 source ciphertext. Required by the domain CHECK.
+    pub c: Ciphertext,
     /// HMAC-SHA-256 equality term.
-    hm: Hmac256,
-});
+    pub hm: Hmac256,
+}
 
-eql_v3_domain!(
+impl Int2Eq {
+    /// Fully-qualified SQL domain this payload inhabits.
+    pub const SQL_DOMAIN: &'static str = "eql_v3.int2_eq";
+}
+
 /// `eql_v3.int2_ord_ore` — full comparison, scheme-explicit name.
-Int2OrdOre, domain = "int2_ord_ore",
-terms {
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+pub struct Int2OrdOre {
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
+    pub v: u16,
+    /// Table/column identifier. Required by the domain CHECK.
+    pub i: Identifier,
+    /// mp_base85 source ciphertext. Required by the domain CHECK.
+    pub c: Ciphertext,
     /// Block-ORE order term. Serves equality too.
-    ob: OreBlockU64_8_256,
-});
+    pub ob: OreBlockU64_8_256,
+}
 
-eql_v3_domain!(
+impl Int2OrdOre {
+    /// Fully-qualified SQL domain this payload inhabits.
+    pub const SQL_DOMAIN: &'static str = "eql_v3.int2_ord_ore";
+}
+
 /// `eql_v3.int2_ord` — full comparison (`=` `<>` `<` `<=` `>` `>=`).
-Int2Ord, domain = "int2_ord",
-terms {
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+pub struct Int2Ord {
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
+    pub v: u16,
+    /// Table/column identifier. Required by the domain CHECK.
+    pub i: Identifier,
+    /// mp_base85 source ciphertext. Required by the domain CHECK.
+    pub c: Ciphertext,
     /// Block-ORE order term. Serves equality too.
-    ob: OreBlockU64_8_256,
-});
+    pub ob: OreBlockU64_8_256,
+}
+
+impl Int2Ord {
+    /// Fully-qualified SQL domain this payload inhabits.
+    pub const SQL_DOMAIN: &'static str = "eql_v3.int2_ord";
+}
