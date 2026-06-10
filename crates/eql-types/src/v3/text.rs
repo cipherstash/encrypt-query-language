@@ -6,9 +6,11 @@ use crate::v3::terms::{BloomFilter, Ciphertext, Hmac256, OreBlockU64_8_256};
 use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// `eql_v3.text` — storage only; every operator is blocked.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct Text {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -31,7 +33,8 @@ impl DomainType for Text {
 }
 
 /// `eql_v3.text_eq` — HMAC equality (`=`, `<>`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct TextEq {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -56,7 +59,8 @@ impl DomainType for TextEq {
 }
 
 /// `eql_v3.text_match` — Bloom-filter containment match.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct TextMatch {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -84,7 +88,8 @@ impl DomainType for TextMatch {
 /// scheme-explicit name. Unlike the integer ordered domains (`[Ore]` only),
 /// text routes equality through `hm` rather than the ORE term, so the domain
 /// carries both `hm` and `ob` (`[Hm, Ore]`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct TextOrdOre {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -113,7 +118,8 @@ impl DomainType for TextOrdOre {
 /// `eql_v3.text_ord` — full lexicographic comparison
 /// (`=` `<>` `<` `<=` `>` `>=`). Carries both `hm` (equality) and `ob`
 /// (ordering) — text routes equality through `hm` (`[Hm, Ore]`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct TextOrd {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -142,7 +148,8 @@ impl DomainType for TextOrd {
 /// `eql_v3.text_search` — the full text search surface: HMAC equality, ORE
 /// ordering, and Bloom-filter containment match (`[Hm, Ore, Bloom]`). The
 /// superset domain combining `_eq`, `_ord`, and `_match`.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct TextSearch {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other

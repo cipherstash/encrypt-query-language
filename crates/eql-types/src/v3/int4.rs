@@ -11,9 +11,11 @@ use crate::v3::terms::{Ciphertext, Hmac256, OreBlockU64_8_256};
 use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// `eql_v3.int4` — storage only; every operator is blocked.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct Int4 {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -36,7 +38,8 @@ impl DomainType for Int4 {
 }
 
 /// `eql_v3.int4_eq` — HMAC equality (`=`, `<>`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct Int4Eq {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -62,7 +65,8 @@ impl DomainType for Int4Eq {
 
 /// `eql_v3.int4_ord_ore` — full comparison (`=` `<>` `<` `<=` `>` `>=`),
 /// scheme-explicit name. Same shape as [`Int4Ord`], distinct SQL domain.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct Int4OrdOre {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -88,7 +92,8 @@ impl DomainType for Int4OrdOre {
 }
 
 /// `eql_v3.int4_ord` — full comparison (`=` `<>` `<` `<=` `>` `>=`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct Int4Ord {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
