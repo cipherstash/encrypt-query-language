@@ -6,14 +6,9 @@
 //! carrying exactly the catalog's keys must round-trip identically, and
 //! removing any one of them must be a deserialization error.
 
-use eql_scalars::{Term, CATALOG};
+use eql_scalars::{Term, CATALOG, ENVELOPE_KEYS};
 use eql_types::v3::registry;
 use serde_json::{json, Value};
-
-/// Mirrors `ENVELOPE_KEYS` in `eql-codegen/src/consts.rs` (`pub(crate)`
-/// there, so restated here): the keys every generated domain CHECK requires
-/// before its term keys.
-const ENVELOPE_KEYS: &[&str] = &["v", "i", "c"];
 
 /// A synthetic wire value for a required key, by key name.
 fn synthesize(key: &str) -> Value {
@@ -47,7 +42,11 @@ fn registry_exactly_covers_catalog() {
 /// - a payload carrying exactly those keys round-trips **identically**, so
 ///   the type requires nothing more and emits nothing less;
 /// - removing any one key fails deserialization, so every key is required
-///   (no `Option` has crept in).
+///   (no `Option` has crept in);
+/// - adding a key outside the set fails deserialization
+///   (`deny_unknown_fields` — no silent stripping on re-serialize);
+/// - a wrong envelope version fails deserialization (`SchemaVersion`
+///   mirrors the domain CHECK's `VALUE->>'v' = '2'`).
 #[test]
 fn required_keys_match_catalog_terms() {
     let entries = registry::all();
@@ -91,6 +90,28 @@ fn required_keys_match_catalog_terms() {
                     entry.type_name
                 );
             }
+
+            let mut extra = full.clone();
+            extra
+                .as_object_mut()
+                .unwrap()
+                .insert("zz".into(), json!(true));
+            assert!(
+                (entry.roundtrip)(extra).is_err(),
+                "{name} ({}): must reject payload carrying an unknown key",
+                entry.type_name
+            );
+
+            let mut wrong_version = full.clone();
+            wrong_version
+                .as_object_mut()
+                .unwrap()
+                .insert("v".into(), json!(3));
+            assert!(
+                (entry.roundtrip)(wrong_version).is_err(),
+                "{name} ({}): must reject envelope version other than 2",
+                entry.type_name
+            );
         }
     }
 }

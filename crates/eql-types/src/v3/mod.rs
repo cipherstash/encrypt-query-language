@@ -24,6 +24,13 @@
 //! (SQL-side) by the domain CHECK. A missing term key is a deserialization
 //! error — the Rust analogue of the CHECK constraint.
 //!
+//! The types are also **strict**: every struct is
+//! `#[serde(deny_unknown_fields)]`, so a payload carrying keys outside the
+//! domain's set fails to deserialize rather than being silently stripped on
+//! the next serialize (a pass-through consumer must not lose data it didn't
+//! know about), and the `v` field is [`crate::SchemaVersion`], which rejects
+//! any version other than `2`.
+//!
 //! ## Why there is no discriminated enum
 //!
 //! Cross-token: impossible — an `int4_eq` and an `int8_eq` payload are
@@ -45,3 +52,15 @@ pub mod timestamptz;
 
 /// The PostgreSQL schema every domain in this module inhabits.
 pub const SQL_SCHEMA: &str = "eql_v3";
+
+/// Implemented by every v3 domain payload type: the fully-qualified SQL
+/// domain the payload inhabits (e.g. `"eql_v3.int4_eq"`).
+///
+/// The [`registry`] derives its domain names from this constant, so the
+/// type ↔ domain binding has exactly one definition per type — there is no
+/// second string to keep in sync, and two same-shaped types (`_ord` vs
+/// `_ord_ore`) cannot be registered under each other's domain.
+pub trait V3Domain {
+    /// Fully-qualified SQL domain, e.g. `"eql_v3.int4_eq"`.
+    const SQL_DOMAIN: &'static str;
+}

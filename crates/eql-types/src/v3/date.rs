@@ -4,30 +4,34 @@
 //! capability table.
 
 use crate::v3::terms::{Ciphertext, Hmac256, OreBlockU64_8_256};
-use crate::Identifier;
+use crate::v3::V3Domain;
+use crate::{Identifier, SchemaVersion};
 use serde::{Deserialize, Serialize};
 
 /// `eql_v3.date` — storage only; every operator is blocked.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Date {
-    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
-    pub v: u16,
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
+    /// value fails deserialization.
+    pub v: SchemaVersion,
     /// Table/column identifier. Required by the domain CHECK.
     pub i: Identifier,
     /// mp_base85 source ciphertext. Required by the domain CHECK.
     pub c: Ciphertext,
 }
 
-impl Date {
-    /// Fully-qualified SQL domain this payload inhabits.
-    pub const SQL_DOMAIN: &'static str = "eql_v3.date";
+impl V3Domain for Date {
+    const SQL_DOMAIN: &'static str = "eql_v3.date";
 }
 
 /// `eql_v3.date_eq` — HMAC equality (`=`, `<>`).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct DateEq {
-    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
-    pub v: u16,
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
+    /// value fails deserialization.
+    pub v: SchemaVersion,
     /// Table/column identifier. Required by the domain CHECK.
     pub i: Identifier,
     /// mp_base85 source ciphertext. Required by the domain CHECK.
@@ -36,16 +40,17 @@ pub struct DateEq {
     pub hm: Hmac256,
 }
 
-impl DateEq {
-    /// Fully-qualified SQL domain this payload inhabits.
-    pub const SQL_DOMAIN: &'static str = "eql_v3.date_eq";
+impl V3Domain for DateEq {
+    const SQL_DOMAIN: &'static str = "eql_v3.date_eq";
 }
 
 /// `eql_v3.date_ord_ore` — full comparison, scheme-explicit name.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct DateOrdOre {
-    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
-    pub v: u16,
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
+    /// value fails deserialization.
+    pub v: SchemaVersion,
     /// Table/column identifier. Required by the domain CHECK.
     pub i: Identifier,
     /// mp_base85 source ciphertext. Required by the domain CHECK.
@@ -54,16 +59,17 @@ pub struct DateOrdOre {
     pub ob: OreBlockU64_8_256,
 }
 
-impl DateOrdOre {
-    /// Fully-qualified SQL domain this payload inhabits.
-    pub const SQL_DOMAIN: &'static str = "eql_v3.date_ord_ore";
+impl V3Domain for DateOrdOre {
+    const SQL_DOMAIN: &'static str = "eql_v3.date_ord_ore";
 }
 
 /// `eql_v3.date_ord` — full comparison (`=` `<>` `<` `<=` `>` `>=`).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct DateOrd {
-    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
-    pub v: u16,
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
+    /// value fails deserialization.
+    pub v: SchemaVersion,
     /// Table/column identifier. Required by the domain CHECK.
     pub i: Identifier,
     /// mp_base85 source ciphertext. Required by the domain CHECK.
@@ -72,7 +78,6 @@ pub struct DateOrd {
     pub ob: OreBlockU64_8_256,
 }
 
-impl DateOrd {
-    /// Fully-qualified SQL domain this payload inhabits.
-    pub const SQL_DOMAIN: &'static str = "eql_v3.date_ord";
+impl V3Domain for DateOrd {
+    const SQL_DOMAIN: &'static str = "eql_v3.date_ord";
 }

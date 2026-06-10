@@ -8,30 +8,34 @@
 //! | [`Int4Ord`]    | `eql_v3.int4_ord`      | `v` `i` `c` `ob`   | `=` `<>` `<` `<=` `>` `>=` |
 
 use crate::v3::terms::{Ciphertext, Hmac256, OreBlockU64_8_256};
-use crate::Identifier;
+use crate::v3::V3Domain;
+use crate::{Identifier, SchemaVersion};
 use serde::{Deserialize, Serialize};
 
 /// `eql_v3.int4` — storage only; every operator is blocked.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Int4 {
-    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
-    pub v: u16,
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
+    /// value fails deserialization.
+    pub v: SchemaVersion,
     /// Table/column identifier. Required by the domain CHECK.
     pub i: Identifier,
     /// mp_base85 source ciphertext. Required by the domain CHECK.
     pub c: Ciphertext,
 }
 
-impl Int4 {
-    /// Fully-qualified SQL domain this payload inhabits.
-    pub const SQL_DOMAIN: &'static str = "eql_v3.int4";
+impl V3Domain for Int4 {
+    const SQL_DOMAIN: &'static str = "eql_v3.int4";
 }
 
 /// `eql_v3.int4_eq` — HMAC equality (`=`, `<>`).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Int4Eq {
-    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
-    pub v: u16,
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
+    /// value fails deserialization.
+    pub v: SchemaVersion,
     /// Table/column identifier. Required by the domain CHECK.
     pub i: Identifier,
     /// mp_base85 source ciphertext. Required by the domain CHECK.
@@ -40,17 +44,18 @@ pub struct Int4Eq {
     pub hm: Hmac256,
 }
 
-impl Int4Eq {
-    /// Fully-qualified SQL domain this payload inhabits.
-    pub const SQL_DOMAIN: &'static str = "eql_v3.int4_eq";
+impl V3Domain for Int4Eq {
+    const SQL_DOMAIN: &'static str = "eql_v3.int4_eq";
 }
 
 /// `eql_v3.int4_ord_ore` — full comparison (`=` `<>` `<` `<=` `>` `>=`),
 /// scheme-explicit name. Same shape as [`Int4Ord`], distinct SQL domain.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Int4OrdOre {
-    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
-    pub v: u16,
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
+    /// value fails deserialization.
+    pub v: SchemaVersion,
     /// Table/column identifier. Required by the domain CHECK.
     pub i: Identifier,
     /// mp_base85 source ciphertext. Required by the domain CHECK.
@@ -60,16 +65,17 @@ pub struct Int4OrdOre {
     pub ob: OreBlockU64_8_256,
 }
 
-impl Int4OrdOre {
-    /// Fully-qualified SQL domain this payload inhabits.
-    pub const SQL_DOMAIN: &'static str = "eql_v3.int4_ord_ore";
+impl V3Domain for Int4OrdOre {
+    const SQL_DOMAIN: &'static str = "eql_v3.int4_ord_ore";
 }
 
 /// `eql_v3.int4_ord` — full comparison (`=` `<>` `<` `<=` `>` `>=`).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Int4Ord {
-    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
-    pub v: u16,
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
+    /// value fails deserialization.
+    pub v: SchemaVersion,
     /// Table/column identifier. Required by the domain CHECK.
     pub i: Identifier,
     /// mp_base85 source ciphertext. Required by the domain CHECK.
@@ -78,7 +84,6 @@ pub struct Int4Ord {
     pub ob: OreBlockU64_8_256,
 }
 
-impl Int4Ord {
-    /// Fully-qualified SQL domain this payload inhabits.
-    pub const SQL_DOMAIN: &'static str = "eql_v3.int4_ord";
+impl V3Domain for Int4Ord {
+    const SQL_DOMAIN: &'static str = "eql_v3.int4_ord";
 }
