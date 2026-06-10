@@ -15,7 +15,7 @@ use std::fmt::{Debug, Display};
 
 /// One impl per scalar type. Two `const`s and the rest defaults.
 pub trait ScalarType:
-    Copy
+    Clone
     + Ord
     + Default
     + Debug
@@ -45,40 +45,32 @@ pub trait ScalarType:
     /// `LazyLock<Vec<_>>` and returns a borrow of it (see `date_values`).
     /// Integer scalars return their `eql_scalars::<T>_VALUES` const directly.
     ///
-    /// For types driven by `scalar_matrix!`, the values MUST
-    /// include the three pivots (`min_pivot()`, `max_pivot()`, and zero
-    /// `Default::default()`): the matrix uses those as comparison pivots and
-    /// fetches each one's ciphertext via `fetch_fixture_payload`, which fails
-    /// loudly if the row is absent.
+    /// For types driven by `scalar_matrix!` (caps = [eq, ord]), the values MUST
+    /// include the three `OrderedScalar` pivots (`min_pivot()`, `max_pivot()`,
+    /// `mid_pivot()`): the matrix uses those as comparison pivots and fetches
+    /// each one's ciphertext via `fetch_fixture_payload`, which fails loudly if
+    /// the row is absent.
     fn fixture_values() -> &'static [Self];
-
-    /// The low comparison pivot swept by the correctness / cross-shape arms.
-    /// Integer scalars return `Self::MIN`; temporal scalars return an explicit
-    /// sentinel (e.g. `1900-01-01`). A trait method rather than `Self::MIN`
-    /// because `chrono::DateTime<Utc>` exposes `MAX_UTC`, not an inherent
-    /// `::MAX` const. The pivot must be present verbatim in `fixture_values()`.
-    fn min_pivot() -> Self;
-
-    /// The high comparison pivot. Integer scalars return `Self::MAX`; temporal
-    /// scalars return an explicit sentinel (e.g. `2099-12-31`). Must be present
-    /// verbatim in `fixture_values()`.
-    fn max_pivot() -> Self;
 
     /// `fixtures.eql_v2_<pg_type>`.
     fn fixture_table_name() -> String {
         format!("fixtures.eql_v2_{}", Self::PG_TYPE)
     }
 
-    /// SQL-literal rendering via `Display`. Override for types whose
-    /// `Display` form isn't a valid SQL literal (e.g. strings, dates).
-    fn to_sql_literal(value: Self) -> String {
+    /// SQL-literal rendering via `Display`. Takes `&Self` so a non-`Copy`
+    /// scalar (e.g. `String`) can be rendered without being consumed. Override
+    /// for types whose `Display` form isn't a valid SQL literal (e.g. strings,
+    /// dates).
+    fn to_sql_literal(value: &Self) -> String {
         value.to_string()
     }
 
     /// Ground-truth result set for `WHERE col op pivot`. Default works
     /// for any `Ord` scalar; override only for non-orderable types.
     fn expected_forward(op: &str, pivot: Self) -> Vec<Self> {
-        let predicate: fn(Self, Self) -> bool = match op {
+        // `&Self`-taking predicate so the default impl stays generic over a
+        // merely-`Clone` (non-`Copy`) scalar like `String`.
+        let predicate: fn(&Self, &Self) -> bool = match op {
             "=" => |a, b| a == b,
             "<>" => |a, b| a != b,
             "<" => |a, b| a < b,
@@ -89,12 +81,52 @@ pub trait ScalarType:
         };
         let mut values: Vec<Self> = Self::fixture_values()
             .iter()
-            .copied()
-            .filter(|v| predicate(*v, pivot))
+            .filter(|v| predicate(v, &pivot))
+            .cloned()
             .collect();
         values.sort();
         values
     }
+}
+
+/// An **ordered** scalar — one whose `_ord` domains support `<`/`<=`/`>`/`>=`.
+/// Carries the three comparison anchors the `scalar_matrix!` ordered arm sweeps:
+/// the `min`/`max` boundaries and an interior `mid` pivot. All three must be
+/// present verbatim in `fixture_values()` (the matrix fetches each pivot's
+/// ciphertext via `fetch_fixture_payload`).
+///
+/// `min`/`max` are boundary anchors; `mid` is an interior anchor used by the
+/// correctness/cross-shape sweep and the ORDER-BY-with-filter arm. `mid`
+/// defaults to `Self::default()` — for signed scalars that is the numeric
+/// origin (`0`, epoch), which is a fine interior anchor; lexicographic scalars
+/// (e.g. `String`, whose `Default` is the degenerate empty string) override it
+/// with a real median fixture.
+pub trait OrderedScalar: ScalarType {
+    /// The low boundary pivot. Integer scalars return `Self::MIN`; others an
+    /// explicit sentinel. Present verbatim in `fixture_values()`.
+    fn min_pivot() -> Self;
+
+    /// The high boundary pivot. Integer scalars return `Self::MAX`; others an
+    /// explicit sentinel. Present verbatim in `fixture_values()`.
+    fn max_pivot() -> Self;
+
+    /// The interior pivot. Defaults to `Self::default()` (the numeric origin for
+    /// signed scalars); override where `Default` is not a usable fixture anchor.
+    /// Present verbatim in `fixture_values()`.
+    fn mid_pivot() -> Self {
+        Self::default()
+    }
+}
+
+/// A **signed** scalar — an ordered scalar with a numeric origin / sign
+/// boundary (`int`, `date`). `text` is `OrderedScalar` but **not**
+/// `SignedScalar`: lexicographic order has no origin. The bound gates the
+/// signed-only sign-boundary test, so a `text` instantiation of it is a compile
+/// error.
+pub trait SignedScalar: OrderedScalar {
+    /// The numeric origin (the sign boundary): `0` for integers, the epoch for
+    /// dates. Fixtures straddle it (negatives below, positives above).
+    fn origin() -> Self;
 }
 
 // The per-type `impl ScalarType` blocks for the **integer** scalars (each
@@ -151,12 +183,25 @@ macro_rules! temporal_values {
         impl ScalarType for $ty {
             const PG_TYPE: &'static str = $pg;
             fn fixture_values() -> &'static [$ty] { $accessor() }
+            fn to_sql_literal(value: &$ty) -> String {
+                let f: fn(&$ty) -> String = $sql_lit;
+                f(value)
+            }
+        }
+
+        impl OrderedScalar for $ty {
             fn min_pivot() -> $ty { $min }
             fn max_pivot() -> $ty { $max }
-            fn to_sql_literal(value: $ty) -> String {
-                let f: fn(&$ty) -> String = $sql_lit;
-                f(&value)
-            }
+            // `mid_pivot` inherits the default `Self::default()`. Every chrono
+            // temporal type's `Default` is the epoch (`1970-01-01` for a date),
+            // which is also `origin()` — a real fixture and the sign boundary.
+        }
+
+        impl SignedScalar for $ty {
+            // Temporal scalars encrypt as a signed offset from the epoch, so the
+            // numeric origin is `Self::default()` (e.g. `1970-01-01`); fixtures
+            // straddle it (earlier dates below, later dates above).
+            fn origin() -> $ty { <$ty as ::core::default::Default>::default() }
         }
 
         #[cfg(test)]
@@ -174,12 +219,17 @@ macro_rules! temporal_values {
             #[test]
             fn pivots_present_in_fixtures() {
                 let vals = $accessor();
-                assert!(vals.contains(&<$ty as ScalarType>::min_pivot()), "min pivot missing");
-                assert!(vals.contains(&<$ty as ScalarType>::max_pivot()), "max pivot missing");
-                // The matrix sweeps a zero pivot (`Default::default()`) on every
-                // ordered/eq-only suite and fetches its ciphertext via
+                assert!(vals.contains(&<$ty as OrderedScalar>::min_pivot()), "min pivot missing");
+                assert!(vals.contains(&<$ty as OrderedScalar>::max_pivot()), "max pivot missing");
+                // The matrix sweeps the interior `mid_pivot()` (here the default
+                // origin) on every ordered suite and fetches its ciphertext via
                 // `fetch_fixture_payload`, so it must be present verbatim too.
-                assert!(vals.contains(&<$ty as Default>::default()), "zero/default pivot missing");
+                assert!(vals.contains(&<$ty as OrderedScalar>::mid_pivot()), "mid/default pivot missing");
+                assert_eq!(
+                    <$ty as OrderedScalar>::mid_pivot(),
+                    <$ty as SignedScalar>::origin(),
+                    "for a signed temporal scalar mid_pivot == origin",
+                );
             }
         }
     };
@@ -281,6 +331,126 @@ mod timestamptz_value_guards {
             unique.len(),
             vals.len(),
             "two timestamptz fixtures alias to the same UTC instant",
+        );
+    }
+}
+
+// `text` is hand-written rather than driven by `temporal_values!`: it is an
+// owned `String` (not chrono-backed), so it materialises its values from the
+// `eql_scalars::TEXT_VALUES` const slice rather than parsing catalog strings.
+// `text_values()` is public so the `eql_v2_text` fixture module (emitted by
+// `scalar_types!(fixture_modules)`) can hand the slice to `scalar_fixture!`.
+
+/// Typed `String` fixture values, built once from `text`'s catalog row.
+/// `eql_scalars::TEXT_VALUES` is a `&[&'static str]` const, but the `ScalarType`
+/// contract returns `&[Self]` = `&[String]` (owned), so we materialise them into
+/// a `LazyLock<Vec<String>>` and return a borrow — the same shape as
+/// `date_values`. (Unlike `date`, no parsing is needed; the values are the
+/// strings verbatim.)
+static TEXT_VALUES_CELL: std::sync::LazyLock<Vec<String>> = std::sync::LazyLock::new(|| {
+    eql_scalars::TEXT_VALUES
+        .iter()
+        .map(|s| s.to_string())
+        .collect()
+});
+
+/// The `String` fixture values, in catalog order. Public so the `eql_v2_text`
+/// fixture module (emitted by `scalar_types!(fixture_modules)`) can hand the
+/// slice to `scalar_fixture!`.
+pub fn text_values() -> &'static [String] {
+    &TEXT_VALUES_CELL
+}
+
+impl ScalarType for String {
+    const PG_TYPE: &'static str = "text";
+
+    fn fixture_values() -> &'static [Self] {
+        text_values()
+    }
+
+    /// `Display` for a `String` is the unquoted text, which is not a valid SQL
+    /// literal; quote it and double any embedded single quotes.
+    fn to_sql_literal(value: &Self) -> String {
+        format!("'{}'", value.replace('\'', "''"))
+    }
+}
+
+impl OrderedScalar for String {
+    /// Lexicographic min pivot — the lexicographically-smallest fixture
+    /// (`"aard"`). Present verbatim in `fixture_values()`; keep in sync with
+    /// `TEXT_FIXTURES`.
+    fn min_pivot() -> Self {
+        "aard".to_string()
+    }
+
+    /// Lexicographic max pivot — the lexicographically-largest fixture
+    /// (`"zzzz"`).
+    fn max_pivot() -> Self {
+        "zzzz".to_string()
+    }
+
+    /// Interior pivot — a real median fixture. `String::default()` is `""`,
+    /// which is degenerate for ORE (issue #262), so `text` overrides the
+    /// inherited default with a genuine middle value.
+    fn mid_pivot() -> Self {
+        "frank".to_string()
+    }
+}
+
+// `String` is deliberately NOT `SignedScalar`: lexicographic text has no
+// numeric origin / sign boundary. The signed-only sign-boundary test bounds on
+// `SignedScalar`, so a `String` instantiation of it would not compile.
+
+#[cfg(test)]
+mod text_value_tests {
+    use super::*;
+
+    /// The `min`/`mid`/`max` pivots resolve to fixture rows present verbatim, so
+    /// `fetch_fixture_payload` can resolve each one's ciphertext.
+    #[test]
+    fn text_pivots_are_in_fixture_values() {
+        let values = <String as ScalarType>::fixture_values();
+        let min = <String as OrderedScalar>::min_pivot();
+        let mid = <String as OrderedScalar>::mid_pivot();
+        let max = <String as OrderedScalar>::max_pivot();
+        assert!(values.contains(&min), "min_pivot {min:?} must be a fixture");
+        assert!(values.contains(&mid), "mid_pivot {mid:?} must be a fixture");
+        assert!(values.contains(&max), "max_pivot {max:?} must be a fixture");
+        assert!(min <= mid && mid <= max, "min <= mid <= max must hold");
+        // text has no numeric origin: the empty string is not a fixture.
+        assert!(
+            !values.iter().any(|v| v.is_empty()),
+            "the empty string must not be a text fixture"
+        );
+    }
+
+    /// The harness value list matches the catalog `TEXT_VALUES` in order — the
+    /// oracle cannot drift from the catalog the fixture generator encrypts.
+    #[test]
+    fn text_values_match_catalog() {
+        let got: Vec<&str> = <String as ScalarType>::fixture_values()
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
+        assert_eq!(got, eql_scalars::TEXT_VALUES.to_vec());
+    }
+
+    /// Directly exercises the `String` `to_sql_literal` override's
+    /// single-quote-doubling branch. Every `TEXT_VALUES` fixture is quote-free,
+    /// so no DB-backed test reaches the `.replace('\'', "''")`; this pins it so a
+    /// quoting/injection regression in the override is caught. (The sibling
+    /// `sql_string_literal` helper is tested separately — this covers the
+    /// trait method itself.)
+    #[test]
+    fn text_to_sql_literal_escapes_single_quotes() {
+        assert_eq!(
+            <String as ScalarType>::to_sql_literal(&"O'Brien".to_string()),
+            "'O''Brien'"
+        );
+        // a quote-free value is wrapped but otherwise untouched
+        assert_eq!(
+            <String as ScalarType>::to_sql_literal(&"frank".to_string()),
+            "'frank'"
         );
     }
 }
@@ -414,7 +584,7 @@ pub async fn fetch_fixture_payload<T: ScalarType>(pool: &PgPool, plaintext: T) -
     let sql = format!(
         "SELECT payload::text FROM {table} WHERE plaintext = {lit}",
         table = T::fixture_table_name(),
-        lit = T::to_sql_literal(plaintext),
+        lit = T::to_sql_literal(&plaintext),
     );
     sqlx::query_scalar(&sql)
         .fetch_one(pool)

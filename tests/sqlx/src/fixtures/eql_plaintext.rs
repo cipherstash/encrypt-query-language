@@ -58,6 +58,7 @@ impl PlaintextSqlType {
     pub const BIGINT: PlaintextSqlType = PlaintextSqlType("bigint");
     pub const DATE: PlaintextSqlType = PlaintextSqlType("date");
     pub const TIMESTAMPTZ: PlaintextSqlType = PlaintextSqlType("timestamp with time zone");
+    pub const TEXT: PlaintextSqlType = PlaintextSqlType("text");
 
     pub fn as_str(&self) -> &'static str {
         self.0
@@ -72,8 +73,8 @@ impl fmt::Display for PlaintextSqlType {
 
 /// The EQL `cast_as` for a scalar kind, drawn from the `Cast` allowlist.
 ///
-/// Only the wired kinds (the integer kinds plus `Date` / `Timestamptz`) have
-/// `EqlPlaintext` impls, so only those resolve; the remaining kinds mirror the
+/// Only the wired kinds (the integer kinds, `Text`, plus `Date` / `Timestamptz`)
+/// have `EqlPlaintext` impls, so only those resolve; the remaining kinds mirror the
 /// `eql_scalars` accessor convention and `panic!`, since no impl can ever reach
 /// them.
 const fn cast_for_kind(kind: ScalarKind) -> Cast {
@@ -83,7 +84,8 @@ const fn cast_for_kind(kind: ScalarKind) -> Cast {
         ScalarKind::I64 => Cast::BIG_INT,
         ScalarKind::Date => Cast::DATE,
         ScalarKind::Timestamptz => Cast::TIMESTAMP,
-        ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
+        ScalarKind::Text => Cast::TEXT,
+        ScalarKind::Numeric | ScalarKind::Jsonb => {
             panic!("EqlPlaintext is only implemented for the wired scalar kinds")
         }
     }
@@ -91,7 +93,7 @@ const fn cast_for_kind(kind: ScalarKind) -> Cast {
 
 /// The `plaintext` oracle column SQL type for a scalar kind, drawn from the
 /// `PlaintextSqlType` allowlist. As with `cast_for_kind`, only the wired kinds
-/// (integers plus `Date` / `Timestamptz`) resolve.
+/// (integers, `Text`, plus `Date` / `Timestamptz`) resolve.
 const fn plaintext_sql_type_for_kind(kind: ScalarKind) -> PlaintextSqlType {
     match kind {
         ScalarKind::I32 => PlaintextSqlType::INTEGER,
@@ -99,7 +101,8 @@ const fn plaintext_sql_type_for_kind(kind: ScalarKind) -> PlaintextSqlType {
         ScalarKind::I64 => PlaintextSqlType::BIGINT,
         ScalarKind::Date => PlaintextSqlType::DATE,
         ScalarKind::Timestamptz => PlaintextSqlType::TIMESTAMPTZ,
-        ScalarKind::Numeric | ScalarKind::Text | ScalarKind::Jsonb => {
+        ScalarKind::Text => PlaintextSqlType::TEXT,
+        ScalarKind::Numeric | ScalarKind::Jsonb => {
             panic!("EqlPlaintext is only implemented for the wired scalar kinds")
         }
     }
@@ -112,6 +115,7 @@ mod sealed {
     impl Sealed for i64 {}
     impl Sealed for chrono::NaiveDate {}
     impl Sealed for chrono::DateTime<chrono::Utc> {}
+    impl Sealed for String {}
 }
 
 /// A Rust type usable as a fixture `plaintext` value, carrying its EQL cast
@@ -176,6 +180,14 @@ impl EqlPlaintext for chrono::DateTime<chrono::Utc> {
 
     fn to_plaintext(&self) -> Plaintext {
         Plaintext::Timestamp(Some(*self))
+    }
+}
+
+impl EqlPlaintext for String {
+    const KIND: ScalarKind = ScalarKind::Text;
+
+    fn to_plaintext(&self) -> Plaintext {
+        Plaintext::Text(Some(self.clone()))
     }
 }
 
@@ -300,5 +312,26 @@ mod tests {
             Plaintext::Timestamp(Some(value)) => assert_eq!(value, ts),
             other => panic!("expected Plaintext::Timestamp(Some(epoch)), got {other:?}"),
         }
+    }
+
+    #[test]
+    fn string_cast_is_text() {
+        assert_eq!(<String as EqlPlaintext>::CAST, Cast::TEXT);
+    }
+
+    #[test]
+    fn string_plaintext_sql_type_is_text() {
+        assert_eq!(
+            <String as EqlPlaintext>::PLAINTEXT_SQL_TYPE,
+            PlaintextSqlType::TEXT
+        );
+    }
+
+    #[test]
+    fn string_to_plaintext_is_text() {
+        // A String must lift into the Text variant so the fixture driver
+        // encrypts it under the `text` cast.
+        let p = "hi".to_string().to_plaintext();
+        assert!(matches!(p, Plaintext::Text(Some(ref s)) if s == "hi"));
     }
 }

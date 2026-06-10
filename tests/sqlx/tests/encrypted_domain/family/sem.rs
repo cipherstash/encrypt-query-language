@@ -449,3 +449,100 @@ async fn ore_comparators_are_immutable(pool: PgPool) -> Result<()> {
     }
     Ok(())
 }
+
+/// T7 — Bloom-filter SEM extractor (`eql_v3.bloom_filter(jsonb)`): reads the
+/// `bf` array out of a payload. Inlinable SQL mirroring `hmac_256` — NULL on a
+/// missing key, not a raise (the `match` capability is tied to the domain,
+/// whose CHECK guarantees `bf`).
+#[sqlx::test]
+async fn bloom_filter_extractor_reads_bf_array(pool: PgPool) -> Result<()> {
+    let got: Vec<i16> =
+        sqlx::query_scalar("SELECT eql_v3.bloom_filter('{\"bf\":[1,2,3]}'::jsonb)::smallint[]")
+            .fetch_one(&pool)
+            .await?;
+    assert_eq!(got, vec![1i16, 2, 3]);
+    Ok(())
+}
+
+#[sqlx::test]
+async fn bloom_filter_extractor_returns_null_without_bf(pool: PgPool) -> Result<()> {
+    // Inlinable SQL extractor (like hmac_256): a payload without `bf` yields
+    // NULL, not an exception. The RAISE is redundant because the `text_match`
+    // domain CHECK already guarantees `bf` is present on the typed path.
+    let got: Option<Vec<i16>> =
+        sqlx::query_scalar("SELECT eql_v3.bloom_filter('{\"hm\":\"x\"}'::jsonb)::smallint[]")
+            .fetch_one(&pool)
+            .await?;
+    assert!(
+        got.is_none(),
+        "absent bf must return NULL (capability is tied to the domain)"
+    );
+    Ok(())
+}
+
+#[sqlx::test]
+async fn bloom_filter_extractor_returns_null_for_non_array_bf(pool: PgPool) -> Result<()> {
+    // A payload where `bf` is present but not a json array (`{"bf": null}`) must
+    // return NULL, not error inside `jsonb_array_elements`. The `text_match`
+    // domain CHECK only requires the `bf` key to be present, not that it is an
+    // array, so a non-array `bf` can reach the extractor even on a typed value;
+    // gating on `jsonb_typeof(...) = 'array'` treats it like an absent key.
+    let got: Option<Vec<i16>> =
+        sqlx::query_scalar("SELECT eql_v3.bloom_filter('{\"bf\":null}'::jsonb)::smallint[]")
+            .fetch_one(&pool)
+            .await?;
+    assert!(got.is_none(), "non-array bf must return NULL, not raise");
+    Ok(())
+}
+
+#[sqlx::test]
+async fn bloom_filter_extractor_empty_array_is_empty_not_null(pool: PgPool) -> Result<()> {
+    // An empty `bf` array hits the `jsonb_typeof(...) = 'array'` branch with
+    // zero elements and must extract as an EMPTY filter — `Some([])`, not NULL.
+    // This is the extractor-level basis for the empty-set containment semantics
+    // ("contains nothing, contained by everything") the smoke tests assert only
+    // via literal `text_match` casts. Distinct from the absent/non-array NULL
+    // branches above.
+    let got: Option<Vec<i16>> =
+        sqlx::query_scalar("SELECT eql_v3.bloom_filter('{\"bf\":[]}'::jsonb)::smallint[]")
+            .fetch_one(&pool)
+            .await?;
+    assert_eq!(
+        got,
+        Some(vec![]),
+        "empty bf array must extract as empty array, not NULL"
+    );
+    Ok(())
+}
+
+/// T8 — `eql_v3.has_bloom_filter(jsonb)` presence predicate. Mirrors the
+/// `has_hmac_256` / `has_ore_block_u64_8_256` coverage in T5: its two-part guard
+/// (`val ? 'bf'` AND `val ->> 'bf' IS NOT NULL`) is exercised across present,
+/// absent, and json-null cases. The `{"bf":null}` → false case pins the
+/// `IS NOT NULL` half — the predicate is not reached transitively by the
+/// extractor or the domain CHECK, so it needs direct coverage.
+#[sqlx::test]
+async fn has_bloom_filter_detects_bf_presence(pool: PgPool) -> Result<()> {
+    let bool_cases = [
+        // present + non-null array → true
+        (
+            r#"SELECT eql_v3.has_bloom_filter('{"bf":[1,2,3]}'::jsonb)"#,
+            true,
+        ),
+        // key absent → false
+        (
+            r#"SELECT eql_v3.has_bloom_filter('{"hm":"x"}'::jsonb)"#,
+            false,
+        ),
+        // key present but json-null → false (the `->> ... IS NOT NULL` half)
+        (
+            r#"SELECT eql_v3.has_bloom_filter('{"bf":null}'::jsonb)"#,
+            false,
+        ),
+    ];
+    for (sql, expected) in bool_cases {
+        let got: bool = sqlx::query_scalar(sql).fetch_one(&pool).await?;
+        assert_eq!(got, expected, "presence check: {sql}");
+    }
+    Ok(())
+}
