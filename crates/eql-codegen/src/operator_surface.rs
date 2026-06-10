@@ -34,6 +34,11 @@ impl OperatorMetadata {
 
     /// Render the `CREATE OPERATOR` metadata clause, or `None` when no hint is
     /// present (e.g. the path-selector operators, which carry no metadata).
+    ///
+    /// The emission order (COMMUTATOR, NEGATOR, RESTRICT, JOIN) is **load-bearing
+    /// for the golden byte-match** — reordering these blocks changes generated
+    /// SQL and breaks the parity gate. Keep it fixed regardless of struct field
+    /// order.
     pub fn render(self) -> Option<String> {
         let mut extras = Vec::new();
         if let Some(c) = self.commutator {
@@ -463,6 +468,14 @@ mod tests {
     #[test]
     fn twenty_operators_total() {
         assert_eq!(OPERATORS.len(), 20);
+    }
+
+    #[test]
+    #[should_panic(expected = "unknown operator symbol")]
+    fn operator_panics_on_unknown_symbol() {
+        // The generator only ever passes catalog symbols; an unknown symbol is a
+        // programming error and must fail loudly rather than silently no-op.
+        let _ = operator("~~");
     }
 
     #[test]

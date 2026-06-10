@@ -166,6 +166,7 @@ run = """
 set -euo pipefail
 
 test -f snapshots/matrix_tests.txt || { echo "snapshots/matrix_tests.txt missing — regenerate (see snapshots/README.md)." >&2; exit 1; }
+test -f snapshots/matrix_tests_eq_only.txt || { echo "snapshots/matrix_tests_eq_only.txt missing — regenerate (see snapshots/README.md)." >&2; exit 1; }
 
 listing=$(cargo test --no-default-features --test encrypted_domain -- --list | sed -n 's/: test$//p')
 
@@ -185,6 +186,19 @@ discovered=$(printf '%s\\n' "$listing" \
 # and force the failure diff to reconstruct the string with `printf`.
 eq_only_expected="/tmp/matrix-eq-only-expected.txt"
 grep -vE '_ord|order_by|routes_through_ob' snapshots/matrix_tests.txt | LC_ALL=C sort -u > "$eq_only_expected"
+
+# Pin the derivation: the runtime-derived eq-only set must equal the COMMITTED
+# snapshot. This closes the blind spot where the strip filter (or a new ordered
+# test name that the filter wrongly keeps/drops) silently changes what the
+# eq-only gate accepts — any such change now diffs against a committed artifact
+# and must be re-committed deliberately.
+if ! cmp -s "$eq_only_expected" snapshots/matrix_tests_eq_only.txt; then
+  echo "Derived eq-only set differs from committed snapshots/matrix_tests_eq_only.txt." >&2
+  echo "If the ordered baseline changed intentionally, regenerate the eq-only snapshot:" >&2
+  echo "  grep -vE '_ord|order_by|routes_through_ob' snapshots/matrix_tests.txt | LC_ALL=C sort -u > snapshots/matrix_tests_eq_only.txt" >&2
+  diff snapshots/matrix_tests_eq_only.txt "$eq_only_expected" >&2 || true
+  exit 1
+fi
 
 # Per-type normalize + compare: each type must match EITHER the full canonical
 # snapshot (ordered shape) OR the derived eq-only subset (equality-only shape).
