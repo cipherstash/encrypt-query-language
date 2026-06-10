@@ -39,8 +39,10 @@ To add a scalar type `<T>` (e.g. `int8`), with Rust type `<R>` (e.g. `i64`):
 2. **Materialise the value list** — `int_values!(<T_UPPER>_VALUES, <R>, <T_UPPER>);`
    next to `CATALOG`, pinned by a `values_tests` assertion (§2). This is the
    single source the SQLx matrix reads; there is no generated `<T>_values.rs`.
-3. **Wire the SQLx matrix oracle** — copy the two small registrations from the
-   `int4` reference (§3).
+3. **Wire the SQLx matrix oracle** — for an integer type, copy the two small
+   registrations from the `int4` reference; a non-integer (string-backed) type
+   needs a third (`scalar_domains.rs`), and `date`/`text` are the references
+   there (§3).
 4. **Regenerate** — `cargo run -p eql-codegen` (or just `mise run build`, which
    runs the generator first). One run regenerates *every* catalog type; there is
    no per-type codegen task. The generated `*_{types,functions,operators,aggregates}.sql`
@@ -94,11 +96,13 @@ than a runtime validator:
   domain's full name is `token` + `suffix` (`ScalarSpec::domain_name`), pinned by
   `every_domain_name_starts_with_its_token`.
 - **`kind`** — a `ScalarKind` (`I16` / `I32` / `I64` / `Numeric` / `Text` /
-  `Jsonb` / `Date`), carrying the Rust type name. Only the integer kinds have an
+  `Jsonb` / `Date` / `Timestamptz`), carrying the Rust type name. Only the
+  integer kinds have an
   i128 range with `Min`/`Max`/`Zero` sentinels: those bounded accessors
   (`min_symbol`/`max_symbol`/`zero_symbol`/`min_value`/`max_value`) live on the
   total `BoundedIntKind` sub-enum, reached via `ScalarKind::as_bounded_int() ->
-  Option<BoundedIntKind>`. Non-integer kinds (`Numeric`/`Text`/`Jsonb`/`Date`)
+  Option<BoundedIntKind>`. Non-integer kinds
+  (`Numeric`/`Text`/`Jsonb`/`Date`/`Timestamptz`)
   return `None` and simply have no bounded accessor — misuse is a compile error,
   not a runtime panic. **If `<T>` needs a new fixed-width integer, add a
   `BoundedIntKind` variant** (rust-type name, `MIN`/`MAX`/zero symbols, bounds)
@@ -146,7 +150,8 @@ The `fixtures` field is an ordered `&[Fixture]` — the single source of truth
 for the type's plaintext list, consumed by both the SQLx fixture generator and
 the matrix oracle. A `Fixture` is value-kind tagged: `Min` / `Max` / `Zero` (the
 integer matrix pivots, resolved per-kind), `Int(i128)` (an integer literal), and
-`Numeric` / `Text` / `Jsonb` string variants. The `fixtures!` macro
+`Numeric` / `Text` / `Jsonb` / `Date` / `Timestamptz` string variants. The
+`fixtures!` macro
 range-checks each `Int` literal against the kind at compile time (`N(-40000)`
 for an `i16` kind does not compile):
 
@@ -187,12 +192,26 @@ the oracle cannot drift from the values the generator encrypts. There is no
 committed `<T>_values.rs`: a Rust source of truth does not round-trip through
 generated Rust. Pin the exact materialised list with a `values_tests` assertion.
 
+The materialiser macro differs by kind: `int_values!` for integers, `text_values!`
+for `text` (a `Fixture::Text(&'static str)` is already `const`, so it too
+materialises a typed `&'static` slice), and **none** for the chrono-backed
+temporal kinds (`date`/`timestamptz`) — chrono constructors are not `const`, so
+there is no `<T>_VALUES` const; the SQLx harness parses the catalog strings into a
+`LazyLock<Vec<_>>` instead (§"Temporal kinds" and `scalar_domains.rs`).
+
 ### Temporal kinds — string-backed fixtures and the pivot trait
 
-A **temporal** scalar (the `date` reference; `timestamptz` follows the same
-shape) is *ordered but non-integer*, so it diverges from the integer path in
-three places — all in the catalog/harness, never the SQL codegen (domains stay
-jsonb-backed and token-driven):
+A **temporal** scalar (`date` is the *ordered* temporal reference) is *ordered
+but non-integer*, so it diverges from the integer path in three places — all in
+the catalog/harness, never the SQL codegen (domains stay jsonb-backed and
+token-driven). **`timestamptz` is the exception: it is equality-only, not
+ordered** — its catalog row uses `EQ_ONLY_DOMAINS` (storage + `_eq`, no
+`_ord`/`_ord_ore`), the eq-only shape of §3, because cipherstash encrypts
+`Plaintext::Timestamp` at native 12-block ORE width while EQL's only comparator
+(`eql_v2.compare_ore_block_u64_8_256_term`) is hardcoded to 8 blocks, so an
+ordered `timestamptz` domain would silently mis-order (see the catalog comment on
+the `TIMESTAMPTZ` spec). Its value-wiring is still the temporal path below; only
+its domain set differs. The three divergences (for the ordered `date`):
 
 - **String-backed fixtures.** `eql-scalars` stays zero-dependency, so the
   catalog stores ISO strings (`Fixture::Date("1970-01-01")`), not `chrono`
@@ -235,12 +254,17 @@ jsonb-backed and token-driven):
 The generated SQL is enough to *install* the domains, but the
 `scalar_matrix!` suite only runs once the Rust harness knows about the
 scalar. `<R>` is the scalar's Rust type (`i32` for `int4`, `i16` for `int2`).
-There are now **two** registrations:
+The registrations depend on whether `<R>` is an **integer** kind. For an
+integer type (the `int4` reference) there are **two**; a **non-integer
+(string-backed)** type — `date`, `timestamptz`, `text` — needs a **third**
+(`scalar_domains.rs`), because the proc-macro emits `impl ScalarType` only for
+integer kinds:
 
 | File | Add |
 |------|-----|
-| `tests/sqlx/src/scalar_types.rs` | One `<T> => <R>` line in the `scalar_types!` list (e.g. `int8 => i64,`). This single line drives the `impl ScalarType`, the `eql_v2_<T>` fixture module, the `scalar_matrix!` suite, and the `generate_for_token` arm — all generated by the `eql-tests-macros` proc-macros. |
-| `tests/sqlx/src/fixtures/eql_plaintext.rs` | A sealed `EqlPlaintext` impl for `<R>`: `impl Sealed for <R> {}` and `impl EqlPlaintext for <R>` carrying just `const KIND: ScalarKind` plus the value-typed `to_plaintext` → the right `Plaintext` variant. `CAST` and `PLAINTEXT_SQL_TYPE` are **derived** from `KIND` via the `cast_for_kind` / `plaintext_sql_type_for_kind` `const fn` defaults, so a brand-new integer kind needs an arm in those two helpers — not a per-type const. Keep the three `#[test]`s (cast / sql-type / to_plaintext) mirroring the existing ones. |
+| `tests/sqlx/src/scalar_types.rs` | One `<T> => <R>` line in the `scalar_types!` list (e.g. `int8 => i64,`). This single line drives the `impl ScalarType` **(integer kinds only)**, the `eql_v2_<T>` fixture module, the `scalar_matrix!` suite, and the `generate_for_token` arm — all generated by the `eql-tests-macros` proc-macros. |
+| `tests/sqlx/src/fixtures/eql_plaintext.rs` | A sealed `EqlPlaintext` impl for `<R>`: `impl Sealed for <R> {}` and `impl EqlPlaintext for <R>` carrying just `const KIND: ScalarKind` plus the value-typed `to_plaintext` → the right `Plaintext` variant. `CAST` and `PLAINTEXT_SQL_TYPE` are **derived** from `KIND` via the `cast_for_kind` / `plaintext_sql_type_for_kind` `const fn` defaults, so a brand-new kind needs an arm in those two helpers — not a per-type const (see §3.1 for a non-integer kind's full wiring). Keep the three `#[test]`s (cast / sql-type / to_plaintext) mirroring the existing ones. |
+| `tests/sqlx/src/scalar_domains.rs` **(non-integer only)** | The `impl ScalarType` the proc-macro skips for non-integer kinds. For a **chrono-backed** kind (`date`, `timestamptz`) this is a `temporal_values!` invocation that materialises the catalog ISO/RFC3339 strings into a `LazyLock<Vec<_>>` and emits `impl ScalarType` + `OrderedScalar` (+ `SignedScalar` for `date`). For **`text`** it is a hand-written `impl ScalarType` / `OrderedScalar` block (lexicographic `min`/`max`/`mid` pivots, `to_sql_literal` override) — `String` has no numeric origin, so it is deliberately **not** `SignedScalar`. |
 
 The single `<T> => <R>` line in `scalar_types.rs` is the harness source of
 truth. The four code-generators (`emit_scalar_type_impls`,
@@ -267,7 +291,13 @@ list, so the invocation carries no pivot argument. `caps = [eq, ord]` selects th
 ordered-numeric shape (all four variants; `=`/`<>`/`<`/`<=`/`>`/`>=`; ORDER BY /
 ORDER BY USING; ORE injectivity); `caps = [eq]` selects the equality-only shape
 (storage + `_eq` only; the four ord operators are deliberate blockers). Both
-expand to the lower-level `scalar_domain_matrix!`. The pivot *sweep* is uniform
+expand to the lower-level `scalar_domain_matrix!`. **You never write `caps`**:
+the `scalar_matrix!` proc-macro derives it from the catalog row via
+`ScalarSpec::is_eq_only()` (`is_eq_only_token` in `eql-tests-macros`), so the
+ordered-vs-eq-only selection is a pure function of which domain-suffix slice the
+catalog row uses — `EQ_ONLY_DOMAINS` (→ `[eq]`) vs `ORDERED_INT_DOMAINS` (→ `[eq,
+ord]`). `timestamptz` is the worked eq-only example: its `EQ_ONLY_DOMAINS` row
+auto-emits `caps = [eq]`, no harness flag. The pivot *sweep* is uniform
 across every ordered type (one canonical snapshot); the signed-only sign-boundary
 test (`SignedScalar`, `int`/`date`) lives outside `scalars::` in
 `encrypted_domain/signed.rs`, so a `text` instantiation of it is a compile error
@@ -278,6 +308,40 @@ cross-shape, supported-NULL, blocker raises, index engagement, ORDER BY, ORDER
 BY USING) — read it rather than duplicating a count here. For ordered `int4`,
 keep the assertion that distinct plaintext values produce distinct ORE blocks;
 do not add assertions for term behaviour the catalog does not promise.
+
+### 3.1 Wiring a brand-new non-integer kind
+
+The integer arms above suffice for a new *width* of an existing integer kind. A
+brand-new **non-integer** kind (the way `Date`/`Timestamptz`/`Text` were each
+first added) also needs, in `tests/sqlx/src/fixtures/eql_plaintext.rs`:
+
+- a `Cast` const + a `PlaintextSqlType` const (e.g. `Cast::DATE`,
+  `PlaintextSqlType::TIMESTAMPTZ`) on those two newtypes;
+- an arm in **`cast_for_kind`** and in **`plaintext_sql_type_for_kind`** mapping
+  the new `ScalarKind` to those consts (a missing arm is a `panic!`, not a silent
+  default);
+- a `sealed::Sealed` impl for the Rust plaintext type (so the `EqlPlaintext` impl
+  is admissible);
+- an `impl EqlPlaintext` whose `to_plaintext` maps onto the correct
+  `Plaintext::*` variant (`Plaintext::NaiveDate` / `Plaintext::Timestamp` /
+  `Plaintext::Text`), plus the three mirrored `#[test]`s.
+
+### New-capability domains (e.g. `_match` / `Bloom`)
+
+A domain carrying a capability the matrix does not model — `text`'s `_match`
+(`Bloom`, `@>`/`<@`) is the only example today — is **not** covered by the
+auto-generated `scalar_matrix!`, which only understands the eq/ord caps. So for
+such a domain you must, in addition to the catalog row:
+
+- **write hand-written behavioural suites** — see
+  `tests/sqlx/tests/encrypted_domain/text/text_match.rs` (fixture-backed
+  bloom-containment) and `text_smoke.rs` (literal-payload `@>`/`<@` engage, `=`
+  raises, `~~`/`~~*` absent, CHECK requires `bf`);
+- **register them via `#[path]` mod declarations** in
+  `tests/sqlx/tests/encrypted_domain.rs`, kept **outside** the `scalars::` module
+  on purpose: the matrix-inventory gate treats every `scalars::<X>::` prefix as a
+  scalar type, so a suite registered there would be mis-discovered as a phantom
+  type (and would pollute the inventory snapshot).
 
 ### Matrix coverage inventory snapshot
 
@@ -419,7 +483,11 @@ the operator. Supported operators are emitted with full planner metadata
 (`COMMUTATOR`, `NEGATOR`, `RESTRICT`, `JOIN` selectivity estimators) backing
 onto inlinable wrappers; everything else carries minimal metadata backing onto
 blockers. Path operators always back onto blockers — neither current term
-enables them — and the native `jsonb` operators are blocker-only.
+enables them — and the native `jsonb` operators are blocker-only **except
+`@>`/`<@`**, which back onto inlinable containment wrappers (`eql_v3.contains` /
+`eql_v3.contained_by`) on a `Bloom` `_match` domain (e.g. `eql_v3.text_match`)
+and elsewhere stay blockers — matching the per-domain table just below, where the
+`&[Term::Bloom]` row carries six containment wrappers.
 
 The wrapper/blocker split per domain (the 44-operator total never moves):
 
@@ -533,10 +601,14 @@ edits:
   functions by language (`sql`), volatility (`IMMUTABLE`), and a jsonb-backed
   `DOMAIN` argument in the `eql_v3` schema. New scalar types need no edit.
 - **`tasks/test/splinter.sh`** — name-based allowlist. The converged wrapper /
-  extractor names (`eq`, `neq`, `lt`, `lte`, `gt`, `gte`, `eq_term`, `ord_term`)
-  plus the generated `min` / `max` aggregates are already covered by
-  `eql_v3`-schema entries. A new scalar type inherits coverage; **only a new
-  term whose extractor has a new name requires a splinter entry.**
+  extractor names (`eq`, `neq`, `lt`, `lte`, `gt`, `gte`, `eq_term`, `ord_term`,
+  the `Bloom` term's `match_term` extractor and its `contains` / `contained_by`
+  containment wrappers) plus the generated `min` / `max` aggregates and the SEM
+  `hmac_256` / `ore_block_u64_8_256` / `bloom_filter` constructors are already
+  covered by `eql_v3`-schema entries. A new scalar type inherits coverage; **a
+  new term needs splinter entries for each new name it introduces — both its
+  extractor and its comparison wrappers** (adding `Bloom` required `match_term`,
+  `contains`, `contained_by`, and the SEM `bloom_filter`).
 
 ---
 
@@ -547,9 +619,12 @@ adding a type.
 
 ### Why a generator
 
-A single scalar type emits several hundred SQL declarations across eleven files:
-four domains, three extractors, dozens of wrappers and blockers, 176 `CREATE
-OPERATOR` statements (44 per domain), and MIN/MAX aggregates per ordered domain.
+A single scalar type emits several hundred SQL declarations. For `int4`: eleven
+files, four domains, three extractors, dozens of wrappers and blockers, 176
+`CREATE OPERATOR` statements (44 per domain), and MIN/MAX aggregates per ordered
+domain. (The per-domain figure is fixed — 44 operators per domain, the `1 + 2D +
+A` file formula below — so a type with more domains, e.g. `text`'s five, scales
+those totals up.)
 The shape is mechanical and the invariants are unforgiving — a `STRICT` blocker
 silently bypasses its exception; a pinned `search_path` reverts queries to seq
 scans. The generator exists so each new type adds one `CATALOG` row rather than
@@ -670,8 +745,10 @@ test:matrix:inventory`). The codegen job is a prerequisite of the PostgreSQL
 test matrix.
 
 Adding a new **term** is a bigger move than adding a type: edit the `Term` enum's
-`impl` methods, add `#[test]`s, audit `splinter.sh` for a name collision if the
-extractor name is new, and — because it changes the int4 surface — update the
+`impl` methods, add `#[test]`s, add a `splinter.sh` entry for **each new name the
+term introduces** — its extractor *and* its comparison wrappers, plus any new SEM
+constructor (adding `Bloom` required `match_term`, `contains`, `contained_by`,
+and the SEM `bloom_filter`) — and, because it changes the int4 surface, update the
 golden reference under `tests/codegen/reference/int4/`.
 
 ---
