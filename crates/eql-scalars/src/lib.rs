@@ -86,14 +86,39 @@ pub enum Term {
     Bloom,
 }
 
+/// The generated-file role of a domain, derived from its first term (or
+/// `Storage` for a term-less domain). Gates ord-only codegen (aggregates) via an
+/// exhaustive `==` against [`Role::Ord`] rather than a stringly-typed compare —
+/// a typo can no longer silently disable aggregate generation. `label` is the
+/// `&'static str` form for any future template/serde consumer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Role {
+    Storage,
+    Eq,
+    Ord,
+    Match,
+}
+
+impl Role {
+    /// The lowercase label (`"storage"`/`"eq"`/`"ord"`/`"match"`).
+    pub const fn label(self) -> &'static str {
+        match self {
+            Role::Storage => "storage",
+            Role::Eq => "eq",
+            Role::Ord => "ord",
+            Role::Match => "match",
+        }
+    }
+}
+
 /// A single fixture plaintext value, value-kind tagged: `Min`/`Max`/`Zero` are
 /// the integer matrix pivots (resolved per-kind); `Int` is an integer literal;
 /// `Numeric`/`Text`/`Jsonb` carry rendered string literals.
 ///
 /// `fixtures!` range-checks `Int` literals at compile time, but a hand-built
 /// `Fixture::Int(n)` is not — hence the runtime invariant tests. `Int(MIN)` and
-/// `Min` resolve equal but render differently (`"-32768"` vs `"i16::MIN"`).
-/// (`numeric_value`/`render_literal` are impl'd in `fixture`.)
+/// `Min` resolve to the same numeric value via `numeric_value`.
+/// (`numeric_value` is impl'd in `fixture`.)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Fixture {
     Min,

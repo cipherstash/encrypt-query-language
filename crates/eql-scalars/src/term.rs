@@ -3,7 +3,7 @@
 //! helpers that resolve a domain's `&[Term]` to its operators, keys, requires,
 //! role, and extractor. Definition lives in `lib.rs`.
 
-use crate::Term;
+use crate::{Role, Term};
 
 impl Term {
     /// JSON payload key carrying this term (`"hm"` / `"ob"`).
@@ -33,12 +33,12 @@ impl Term {
         }
     }
 
-    /// Generated-file role label for a domain whose first term is this one.
-    pub const fn role(self) -> &'static str {
+    /// Generated-file [`Role`] for a domain whose first term is this one.
+    pub const fn role(self) -> Role {
         match self {
-            Term::Hm => "eq",
-            Term::Ore => "ord",
-            Term::Bloom => "match",
+            Term::Hm => Role::Eq,
+            Term::Ore => Role::Ord,
+            Term::Bloom => Role::Match,
         }
     }
 
@@ -87,6 +87,21 @@ impl Term {
         Self::dedupe_preserving_order(terms.iter().map(|t| t.json_key()))
     }
 
+    /// Distinct extractor-bearing terms, first occurrence per extractor wins.
+    /// Two terms sharing an extractor collapse to the first, since the generated
+    /// `eq_term`/`ord_term`/`match_term` function is emitted once per extractor.
+    pub fn extractor_terms(terms: &[Term]) -> Vec<Term> {
+        let mut seen: Vec<&str> = Vec::new();
+        let mut out: Vec<Term> = Vec::new();
+        for &t in terms {
+            if !seen.contains(&t.extractor()) {
+                seen.push(t.extractor());
+                out.push(t);
+            }
+        }
+        out
+    }
+
     /// SQL `-- REQUIRE:` edges needed by these terms (deduped, in order).
     pub fn term_requires(terms: &[Term]) -> Vec<&'static str> {
         Self::dedupe_preserving_order(terms.iter().flat_map(|t| t.requires().iter().copied()))
@@ -101,11 +116,11 @@ impl Term {
             .map(|t| t.extractor())
     }
 
-    /// Generated-file role label for a domain with these terms. No terms =>
-    /// `"storage"`; otherwise the first term's role.
-    pub fn role_for_terms(terms: &[Term]) -> &'static str {
+    /// Generated-file [`Role`] for a domain with these terms. No terms =>
+    /// [`Role::Storage`]; otherwise the first term's role.
+    pub fn role_for_terms(terms: &[Term]) -> Role {
         match terms.first() {
-            None => "storage",
+            None => Role::Storage,
             Some(t) => t.role(),
         }
     }

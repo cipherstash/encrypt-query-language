@@ -395,14 +395,19 @@ Run, in order:
 The CI codegen job is a prerequisite of the PostgreSQL test matrix, so
 generated-SQL drift is caught before database tests run.
 
-**Why no per-type golden baseline.** Do **not** add a
-`tests/codegen/reference/<T>/` baseline. `int4` is the sole golden master for
-the type-generic generator: the templates are pure token substitution, so a
-per-type baseline can only fail where `int4`'s already would. Drift protection
-for a new type comes from the `int4` reference (shared templates + `Term` enum),
-the catalog `values_tests` pinning the materialised `<T>_VALUES`, the
-catalog/generator `#[test]`s, and the `scalar_matrix!` SQLx suite
-(behaviour, not bytes).
+**Commit a per-type golden baseline.** Every catalog type **must** have a
+committed `tests/codegen/reference/<T>/` baseline, generated once and checked in
+(see `tests/codegen/reference/README.md` for the regenerate-and-commit recipe).
+The generator is type-generic, but per-type domain *shapes* differ — ordered
+types carry `_ord`/`_ord_ore` + aggregates, equality-only types (`timestamptz`)
+omit them, and the Bloom `text_match` domain renders `@>`/`<@` as supported
+containment operators no ordered type emits — so anchoring every type catches a
+regression in any shape, not just the ordered one. `reference_dirs_match_catalog_tokens`
+(in `crates/eql-codegen/tests/parity.rs`) fails CI if a catalog row has no golden
+or a golden has no catalog row. Drift protection is further reinforced by the
+catalog `values_tests` pinning the materialised `<T>_VALUES`, the
+catalog/generator `#[test]`s, and the `scalar_matrix!` SQLx suite (behaviour, not
+bytes).
 
 ---
 
@@ -726,16 +731,19 @@ clippy ... -D warnings`.
   escaping guards, and twin byte-identity
   (`crates/eql-codegen/src/generate.rs` `#[cfg(test)]`).
 - **The parity gate** — `mise run codegen:parity` (`tasks/codegen-parity.sh`).
-  It runs the generator into the real tree, then (1) compares the int4 generated
-  SQL **file set** against the golden under `tests/codegen/reference/int4/*.sql`,
-  excluding committed hand-written files (`comm -23` of `ls` against `git
-  ls-files`), so an extra or dropped generated file fails; and (2) diffs each
-  golden file **byte-for-byte** against its generated counterpart, after dropping
-  the golden's single leading `-- REFERENCE:` provenance line (`tail -n +2`). The
-  same byte-for-byte assertion runs in-crate as
-  `crates/eql-codegen/tests/parity.rs`
-  (`rust_generator_matches_int4_golden_files`). The golden reference — not any
-  Python oracle — is the sole contract that survives generator refactors.
+  It runs the generator into the real tree, then for **every** committed
+  reference token dir (1) compares that type's generated SQL **file set** against
+  the golden under `tests/codegen/reference/<token>/*.sql`, excluding committed
+  hand-written files (`comm -23` of `ls` against `git ls-files`), so an extra or
+  dropped generated file fails; and (2) diffs each golden file **byte-for-byte**
+  against its generated counterpart, after dropping the golden's single leading
+  `-- REFERENCE:` provenance line (`tail -n +2`). The same byte-for-byte
+  assertion runs in-crate as `crates/eql-codegen/tests/parity.rs`
+  (`rust_generator_matches_golden_files`), alongside
+  `generate_all_is_deterministic_across_runs` (two runs are byte-identical) and
+  `reference_dirs_match_catalog_tokens` (reference dirs == catalog tokens). The
+  golden reference — not any Python oracle — is the sole contract that survives
+  generator refactors.
 
 CI runs these in three jobs in `.github/workflows/test-eql.yml`: `rust-crates`
 (`Rust workspace crates`, runs `mise run test:crates`), `codegen`
@@ -748,8 +756,9 @@ Adding a new **term** is a bigger move than adding a type: edit the `Term` enum'
 `impl` methods, add `#[test]`s, add a `splinter.sh` entry for **each new name the
 term introduces** — its extractor *and* its comparison wrappers, plus any new SEM
 constructor (adding `Bloom` required `match_term`, `contains`, `contained_by`,
-and the SEM `bloom_filter`) — and, because it changes the int4 surface, update the
-golden reference under `tests/codegen/reference/int4/`.
+and the SEM `bloom_filter`) — and, because it changes the generated surface,
+regenerate and commit the affected golden references under
+`tests/codegen/reference/<token>/`.
 
 ---
 

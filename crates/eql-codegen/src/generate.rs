@@ -21,11 +21,6 @@ fn scalar_path(token: &str, file: &str) -> String {
     format!("{V3_SCALARS_DIR}/{token}/{file}")
 }
 
-/// The full domain name (token + suffix). suffix "" => bare token.
-fn full_name(token: &str, suffix: &str) -> String {
-    format!("{token}{suffix}")
-}
-
 /// The second-parameter name for an operator's generated signature. The `->` and
 /// `->>` path operators take a path *selector* as their right operand; every
 /// other operator uses the generic `b`. This is a naming convention only — it
@@ -76,34 +71,20 @@ fn functions_requires(token: &str, terms: &[Term]) -> Vec<String> {
     reqs
 }
 
-/// Distinct extractor-bearing terms (first occurrence per extractor).
-/// Port of `_extractor_terms`.
-fn extractor_terms(terms: &[Term]) -> Vec<Term> {
-    let mut seen: Vec<&str> = Vec::new();
-    let mut out: Vec<Term> = Vec::new();
-    for &t in terms {
-        if !seen.contains(&t.extractor()) {
-            seen.push(t.extractor());
-            out.push(t);
-        }
-    }
-    out
-}
-
 /// Body for a domain's _functions.sql. Port of `render_functions_file`.
 pub fn render_functions_file(token: &str, domain: &DomainSpec) -> String {
     use crate::consts::sql_str;
     use crate::context::{
         environment, extractor_entry, unsupported_entry, wrapper_entry, FunctionsContext, SqlParam,
     };
-    let name = full_name(token, domain.suffix);
+    let name = domain.name_with_token(token);
     let dom = domain_name(&name);
     let domain_lit = sql_str(&dom);
     let supported = Term::operators_for_terms(domain.terms);
     let is_supported = |op: &str| supported.contains(&op);
 
     let mut entries = Vec::new();
-    for term in extractor_terms(domain.terms) {
+    for term in Term::extractor_terms(domain.terms) {
         entries.push(extractor_entry(term));
     }
     for op in OPERATORS {
@@ -114,7 +95,7 @@ pub fn render_functions_file(token: &str, domain: &DomainSpec) -> String {
                 if let Some(ex) = extractor {
                     entries.push(wrapper_entry(
                         &dom,
-                        op.symbol,
+                        op,
                         &rendered.left,
                         &rendered.right,
                         ex,
@@ -132,7 +113,7 @@ pub fn render_functions_file(token: &str, domain: &DomainSpec) -> String {
                     ty: rendered.right,
                 },
             ];
-            entries.push(unsupported_entry(op.symbol, args, &rendered.returns));
+            entries.push(unsupported_entry(op, args, &rendered.returns));
         }
     }
 
@@ -154,7 +135,7 @@ pub fn render_functions_file(token: &str, domain: &DomainSpec) -> String {
 /// Body for a domain's _operators.sql. Port of `render_operators_file`.
 pub fn render_operators_file(token: &str, domain: &DomainSpec) -> String {
     use crate::context::{environment, operator_entry, OperatorsContext};
-    let name = full_name(token, domain.suffix);
+    let name = domain.name_with_token(token);
     let dom = domain_name(&name);
     let supported = Term::operators_for_terms(domain.terms);
     let is_supported = |op: &str| supported.contains(&op);
@@ -199,7 +180,7 @@ pub fn render_aggregates_file(token: &str, domain: &DomainSpec) -> Option<String
     if !is_ord_capable(domain.terms) {
         return None;
     }
-    let name = full_name(token, domain.suffix);
+    let name = domain.name_with_token(token);
     let dom = domain_name(&name);
     let ctx = AggregatesContext {
         requires: vec![
@@ -232,7 +213,7 @@ pub fn generate_type(spec: &ScalarSpec, out_dir: &Path) -> Result<Vec<PathBuf>, 
     let token = spec.token;
     let mut targets = vec![out_dir.join(format!("{token}_types.sql"))];
     for d in spec.domains {
-        let name = full_name(token, d.suffix);
+        let name = d.name_with_token(token);
         targets.push(out_dir.join(format!("{name}_functions.sql")));
         targets.push(out_dir.join(format!("{name}_operators.sql")));
         if is_ord_capable(d.terms) {
@@ -249,7 +230,7 @@ pub fn generate_type(spec: &ScalarSpec, out_dir: &Path) -> Result<Vec<PathBuf>, 
     written.push(types_path);
 
     for d in spec.domains {
-        let name = full_name(token, d.suffix);
+        let name = d.name_with_token(token);
         let fn_path = out_dir.join(format!("{name}_functions.sql"));
         write_generated_file(&fn_path, &render_functions_file(token, d))?;
         written.push(fn_path);
@@ -311,17 +292,8 @@ mod tests {
             .expect("domain suffix")
     }
 
+    use crate::repo_root;
     use std::fs;
-
-    fn repo_root() -> PathBuf {
-        // crates/eql-codegen/ -> repo root is two parents up from CARGO_MANIFEST_DIR.
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .to_path_buf()
-    }
 
     fn strip_reference_marker(text: &str) -> String {
         let mut lines: Vec<&str> = text.lines().collect();
@@ -344,7 +316,7 @@ mod tests {
             return render_types_file(spec);
         }
         for d in spec.domains {
-            let full = full_name(token, d.suffix);
+            let full = d.name_with_token(token);
             if name == format!("{full}_functions.sql") {
                 return render_functions_file(token, d);
             }
@@ -381,82 +353,52 @@ mod tests {
         assert!(sql.contains("RAISE EXCEPTION 'operator % is not supported for %', '->'"));
     }
 
-    #[test]
-    fn types_file_matches_golden() {
-        let root = repo_root();
-        let path = root.join("tests/codegen/reference/int4/int4_types.sql");
-        let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
-        let actual = render_types_file(spec("int4"));
-        assert_eq!(actual, expected);
+    /// The committed reference token dirs under `tests/codegen/reference/`.
+    fn reference_tokens(root: &std::path::Path) -> Vec<String> {
+        let mut tokens: Vec<String> = fs::read_dir(root.join("tests/codegen/reference"))
+            .expect("reference dir")
+            .filter_map(|e| e.ok())
+            .filter(|e| e.path().is_dir())
+            .map(|e| e.file_name().to_str().unwrap().to_string())
+            .collect();
+        tokens.sort();
+        tokens
     }
 
+    /// Byte-compare every `render_*_file` output against its committed golden,
+    /// for **every** catalog type with a reference dir (not just int4). This is
+    /// the in-crate golden gate over the render functions directly (the
+    /// integration `parity.rs` gate runs `generate_all` to disk). The reference
+    /// dirs are cross-checked against the catalog by `parity.rs`'s
+    /// `reference_dirs_match_catalog_tokens`.
     #[test]
-    fn functions_files_match_golden() {
+    fn generator_matches_reference_goldens() {
         let root = repo_root();
-        let s = spec("int4");
-        for d in s.domains {
-            let full = full_name("int4", d.suffix);
-            let path = root.join(format!("tests/codegen/reference/int4/{full}_functions.sql"));
-            let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
-            let actual = render_functions_file("int4", d);
-            assert_eq!(actual, expected, "{full}_functions.sql diverged");
-        }
-    }
-
-    #[test]
-    fn operators_files_match_golden() {
-        let root = repo_root();
-        let s = spec("int4");
-        for d in s.domains {
-            let full = full_name("int4", d.suffix);
-            let path = root.join(format!("tests/codegen/reference/int4/{full}_operators.sql"));
-            let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
-            let actual = render_operators_file("int4", d);
-            assert_eq!(actual, expected, "{full}_operators.sql");
-        }
-    }
-
-    #[test]
-    fn aggregates_files_match_golden() {
-        let root = repo_root();
-        let s = spec("int4");
-        for d in s.domains {
-            if let Some(actual) = render_aggregates_file("int4", d) {
-                let full = full_name("int4", d.suffix);
-                let path = root.join(format!(
-                    "tests/codegen/reference/int4/{full}_aggregates.sql"
-                ));
-                let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
-                assert_eq!(actual, expected, "{full}_aggregates.sql");
-            }
-        }
-    }
-
-    #[test]
-    fn generator_matches_int4_reference_golden() {
-        let root = repo_root();
-        let ref_dir = root.join("tests/codegen/reference/int4");
-        let s = spec("int4");
         let mut checked = 0;
-        for entry in fs::read_dir(&ref_dir).expect("reference dir") {
-            let path = entry.unwrap().path();
-            if path.extension().and_then(|e| e.to_str()) != Some("sql") {
-                continue;
+        for token in reference_tokens(&root) {
+            let s = spec(&token);
+            let ref_dir = root.join("tests/codegen/reference").join(&token);
+            for entry in fs::read_dir(&ref_dir).expect("reference dir") {
+                let path = entry.unwrap().path();
+                if path.extension().and_then(|e| e.to_str()) != Some("sql") {
+                    continue;
+                }
+                let name = path.file_name().unwrap().to_str().unwrap().to_string();
+                let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
+                let actual = rendered_for(&token, &name, s);
+                assert_eq!(
+                    actual, expected,
+                    "{token}/{name}: generator diverged from golden reference"
+                );
+                checked += 1;
             }
-            let name = path.file_name().unwrap().to_str().unwrap().to_string();
-            let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
-            let actual = rendered_for("int4", &name, s);
-            assert_eq!(
-                actual, expected,
-                "{name}: generator diverged from golden reference"
-            );
-            checked += 1;
         }
         assert!(
             checked >= 11,
-            "expected >=11 reference SQL files, checked {checked}"
+            "expected >=11 reference SQL files across all tokens, checked {checked}"
         );
     }
+
 
     #[test]
     fn generate_type_writes_expected_files() {
@@ -673,10 +615,11 @@ mod tests {
     fn unsupported_entry_preserves_operator_literal_and_domain_lit_is_escaped() {
         use crate::consts::sql_str;
         use crate::context::{unsupported_entry, FnEntry, SqlParam};
+        use crate::operator_surface::operator;
         let dom = "eql_v3.o'dom";
         let domain_lit = sql_str(dom);
         let entry = unsupported_entry(
-            "<",
+            &operator("<"),
             [
                 SqlParam {
                     name: "a",

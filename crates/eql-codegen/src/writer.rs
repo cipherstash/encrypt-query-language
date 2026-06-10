@@ -4,33 +4,22 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::consts::AUTO_GENERATED_HEADER;
+use crate::consts::AUTO_GENERATED_MARKER;
 
 /// First line of the SQL header — the ownership marker.
-fn sql_marker() -> &'static str {
-    AUTO_GENERATED_HEADER.lines().next().unwrap()
+const fn sql_marker() -> &'static str {
+    AUTO_GENERATED_MARKER
 }
 
-/// Raised when the generator would clobber a hand-written file.
-#[derive(Debug)]
+/// Raised when the generator would clobber a hand-written file, or on an
+/// underlying IO error. Implements `std::error::Error` (via `thiserror`) so it
+/// composes with `?`, `Box<dyn Error>`, and `source()` chains.
+#[derive(Debug, thiserror::Error)]
 pub enum WriteError {
+    #[error("{0}")]
     Ownership(String),
-    Io(io::Error),
-}
-
-impl From<io::Error> for WriteError {
-    fn from(e: io::Error) -> Self {
-        WriteError::Io(e)
-    }
-}
-
-impl std::fmt::Display for WriteError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            WriteError::Ownership(m) => write!(f, "{m}"),
-            WriteError::Io(e) => write!(f, "io error: {e}"),
-        }
-    }
+    #[error("io error: {0}")]
+    Io(#[from] io::Error),
 }
 
 fn first_line(path: &Path) -> io::Result<String> {
@@ -151,6 +140,7 @@ pub(crate) mod test_support {
 mod tests {
     use super::test_support::tempdir as tmp;
     use super::*;
+    use crate::consts::AUTO_GENERATED_HEADER;
 
     #[test]
     fn is_generated_true_for_header() {
@@ -264,5 +254,20 @@ mod tests {
     fn clean_on_empty_directory() {
         let d = tmp();
         assert!(clean_generated_files(d.path()).unwrap().is_empty());
+    }
+
+    #[test]
+    fn write_surfaces_io_error_via_from_and_display() {
+        // Exercise the `WriteError::Io` arm and its `From<io::Error>` conversion:
+        // a marker-valid body whose parent path is a *file* makes `create_dir_all`
+        // fail, which `?`-converts into `WriteError::Io`.
+        let d = tmp();
+        let blocker = d.path().join("not-a-dir");
+        fs::write(&blocker, "i am a file\n").unwrap();
+        let target = blocker.join("int4_types.sql"); // parent is a file
+        let body = format!("{AUTO_GENERATED_HEADER}DO $$ BEGIN END $$;\n");
+        let err = write_generated_file(&target, &body).unwrap_err();
+        assert!(matches!(err, WriteError::Io(_)), "expected Io, got {err:?}");
+        assert!(err.to_string().starts_with("io error: "));
     }
 }
