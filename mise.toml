@@ -147,8 +147,8 @@ run = """
 # workspace members. Scope explicitly to them (NOT --workspace): a
 # workspace-wide test would drag in tests/sqlx, whose suite needs Postgres +
 # CS_* secrets and is already covered by the `test` job. eql-tests-macros only
-# pulls syn/quote/proc-macro2 and eql-types only serde/serde_json, so they
-# stay in the lean set. clippy is likewise scoped — a workspace clippy
+# pulls syn/quote/proc-macro2 and eql-types only serde/serde_json/ts-rs, so
+# they stay in the lean set. clippy is likewise scoped — a workspace clippy
 # recompiles the heavy sqlx/tokio/cipherstash-client tree for no added coverage
 # of these crates.
 # bash is pinned via the `#!/usr/bin/env bash` shebang above (mise honors a
@@ -158,6 +158,49 @@ set -euo pipefail
 cargo fmt --check
 cargo clippy -p eql-scalars -p eql-codegen -p eql-tests-macros -p eql-types --all-targets -- -D warnings
 cargo test -p eql-scalars -p eql-codegen -p eql-tests-macros -p eql-types
+"""
+
+[tasks."types:generate"]
+description = "Regenerate eql-types TypeScript bindings from the Rust types (no database required)"
+dir = "{{config_root}}"
+run = """
+#!/usr/bin/env bash
+# Clean-then-regenerate: ts-rs only ever ADDS files, so a renamed or removed
+# type would otherwise leave an orphaned binding behind — we need a clean dir,
+# not an overlay. But we must NOT rm the checked-in bindings before the build:
+# a failing or interrupted `cargo test` would then leave the working tree
+# missing them. Instead, export into a throwaway temp dir (ts-rs honors
+# TS_RS_EXPORT_DIR as the base, and every v3 type uses export_to = "v3/", so
+# the temp dir mirrors crates/eql-types/bindings exactly) and only swap it into
+# place after the tests succeed. The swap stays out of the tests themselves —
+# they run in parallel and can't safely rm.
+set -euo pipefail
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+TS_RS_EXPORT_DIR="$tmp" cargo test -p eql-types
+rm -rf crates/eql-types/bindings
+mv "$tmp" crates/eql-types/bindings
+trap - EXIT
+"""
+
+[tasks."types:check"]
+description = "Verify the checked-in eql-types bindings/ are fresh (regenerate + git diff)"
+dir = "{{config_root}}"
+depends = ["types:generate"]
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+git diff --exit-code -- crates/eql-types/bindings || {
+  echo "eql-types bindings/ are stale — run 'mise run types:generate' and commit the result" >&2
+  exit 1
+}
+# git diff is blind to brand-new files; untracked output is stale too.
+untracked=$(git ls-files --others --exclude-standard -- crates/eql-types/bindings)
+if [ -n "$untracked" ]; then
+  echo "eql-types has uncommitted generated files:" >&2
+  echo "$untracked" >&2
+  exit 1
+fi
 """
 
 [tasks."test:matrix:inventory"]

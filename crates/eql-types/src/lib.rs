@@ -3,8 +3,13 @@
 //! One Rust definition per EQL payload shape — the single source of truth
 //! for every tool that produces or consumes EQL payloads
 //! (`cipherstash-client`, `protect-ffi`, CipherStash Proxy). TypeScript
-//! bindings and JSON Schemas are generated from these definitions in
-//! stacked changes; the Rust types are the contract.
+//! bindings are generated from these definitions via `ts-rs` (run
+//! `cargo test`, see `bindings/v3/`); JSON Schemas follow in a stacked
+//! change. The Rust types are the contract.
+//!
+//! ts-rs rule (learned from the original spike): ts-rs silently drops a
+//! serde attribute it cannot parse, so keep field-level serde attributes
+//! out of these types — which the wire rule below already demands.
 //!
 //! The [`v3`] module holds the `eql_v3` encrypted-domain types: one struct
 //! per SQL domain (`eql_v3.int4_eq`, `eql_v3.text_match`, …),
@@ -16,6 +21,7 @@
 //! anywhere. The struct definition reads exactly like the JSON payload.
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 pub mod v3;
 
@@ -30,8 +36,9 @@ pub const EQL_SCHEMA_VERSION: u16 = 2;
 /// CHECK's `VALUE->>'v' = '2'`, so a wrong-version payload fails at the type
 /// boundary instead of at INSERT. The inner value is private; the only
 /// constructible instance is the current version.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
-pub struct SchemaVersion(u16);
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, TS)]
+#[ts(export, export_to = "v3/")]
+pub struct SchemaVersion(#[ts(type = "2")] u16);
 
 impl SchemaVersion {
     /// The current (only) wire version, `2`.
@@ -68,7 +75,8 @@ impl<'de> Deserialize<'de> for SchemaVersion {
 /// Table + column identifier — wire shape `{"t": "...", "c": "..."}`.
 ///
 /// Shared by every payload.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct Identifier {
     /// Table name.
