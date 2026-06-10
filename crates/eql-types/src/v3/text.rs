@@ -2,43 +2,103 @@
 //! [`crate::v3::int4`] plus a `_match` domain backed by the Bloom-filter
 //! term (`@>`/`<@` containment for `LIKE`-style matching).
 
-use crate::v3::eql_v3_domain;
-use crate::v3::terms::{BloomFilter, Hmac256, OreBlockU64_8_256};
+use crate::v3::terms::{BloomFilter, Ciphertext, Hmac256, OreBlockU64_8_256};
+use crate::Identifier;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
-eql_v3_domain!(
-    /// `eql_v3.text` — storage only; every operator is blocked.
-    Text, domain = "text");
+/// `eql_v3.text` — storage only; every operator is blocked.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+pub struct Text {
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
+    pub v: u16,
+    /// Table/column identifier. Required by the domain CHECK.
+    pub i: Identifier,
+    /// mp_base85 source ciphertext. Required by the domain CHECK.
+    pub c: Ciphertext,
+}
 
-eql_v3_domain!(
+impl Text {
+    /// Fully-qualified SQL domain this payload inhabits.
+    pub const SQL_DOMAIN: &'static str = "eql_v3.text";
+}
+
 /// `eql_v3.text_eq` — HMAC equality (`=`, `<>`).
-TextEq, domain = "text_eq",
-terms {
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+pub struct TextEq {
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
+    pub v: u16,
+    /// Table/column identifier. Required by the domain CHECK.
+    pub i: Identifier,
+    /// mp_base85 source ciphertext. Required by the domain CHECK.
+    pub c: Ciphertext,
     /// HMAC-SHA-256 equality term.
-    hm: Hmac256,
-});
+    pub hm: Hmac256,
+}
 
-eql_v3_domain!(
+impl TextEq {
+    /// Fully-qualified SQL domain this payload inhabits.
+    pub const SQL_DOMAIN: &'static str = "eql_v3.text_eq";
+}
+
 /// `eql_v3.text_match` — Bloom-filter containment match.
-TextMatch, domain = "text_match",
-terms {
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+pub struct TextMatch {
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
+    pub v: u16,
+    /// Table/column identifier. Required by the domain CHECK.
+    pub i: Identifier,
+    /// mp_base85 source ciphertext. Required by the domain CHECK.
+    pub c: Ciphertext,
     /// Bloom-filter match term (signed smallint bit positions).
-    bf: BloomFilter,
-});
+    pub bf: BloomFilter,
+}
 
-eql_v3_domain!(
+impl TextMatch {
+    /// Fully-qualified SQL domain this payload inhabits.
+    pub const SQL_DOMAIN: &'static str = "eql_v3.text_match";
+}
+
 /// `eql_v3.text_ord_ore` — full lexicographic comparison,
 /// scheme-explicit name.
-TextOrdOre, domain = "text_ord_ore",
-terms {
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+pub struct TextOrdOre {
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
+    pub v: u16,
+    /// Table/column identifier. Required by the domain CHECK.
+    pub i: Identifier,
+    /// mp_base85 source ciphertext. Required by the domain CHECK.
+    pub c: Ciphertext,
     /// Block-ORE order term. Serves equality too.
-    ob: OreBlockU64_8_256,
-});
+    pub ob: OreBlockU64_8_256,
+}
 
-eql_v3_domain!(
+impl TextOrdOre {
+    /// Fully-qualified SQL domain this payload inhabits.
+    pub const SQL_DOMAIN: &'static str = "eql_v3.text_ord_ore";
+}
+
 /// `eql_v3.text_ord` — full lexicographic comparison
 /// (`=` `<>` `<` `<=` `>` `>=`).
-TextOrd, domain = "text_ord",
-terms {
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+pub struct TextOrd {
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
+    pub v: u16,
+    /// Table/column identifier. Required by the domain CHECK.
+    pub i: Identifier,
+    /// mp_base85 source ciphertext. Required by the domain CHECK.
+    pub c: Ciphertext,
     /// Block-ORE order term. Serves equality too.
-    ob: OreBlockU64_8_256,
-});
+    pub ob: OreBlockU64_8_256,
+}
+
+impl TextOrd {
+    /// Fully-qualified SQL domain this payload inhabits.
+    pub const SQL_DOMAIN: &'static str = "eql_v3.text_ord";
+}
