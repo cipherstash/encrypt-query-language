@@ -3,14 +3,17 @@
 //! ciphertext, so dates order like integers); see that module for the
 //! capability table.
 
+use schemars::{schema::RootSchema, schema_for};
+
 use crate::v3::terms::{Ciphertext, Hmac256, OreBlockU64_8_256};
 use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 /// `eql_v3.date` — storage only; every operator is blocked.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct Date {
@@ -31,10 +34,14 @@ impl DomainType for Date {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+
+    fn schema(&self) -> RootSchema {
+        schema_for!(Date)
+    }
 }
 
 /// `eql_v3.date_eq` — HMAC equality (`=`, `<>`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct DateEq {
@@ -57,10 +64,14 @@ impl DomainType for DateEq {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+
+    fn schema(&self) -> RootSchema {
+        schema_for!(DateEq)
+    }
 }
 
 /// `eql_v3.date_ord_ore` — full comparison, scheme-explicit name.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct DateOrdOre {
@@ -83,10 +94,14 @@ impl DomainType for DateOrdOre {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+
+    fn schema(&self) -> RootSchema {
+        schema_for!(DateOrdOre)
+    }
 }
 
 /// `eql_v3.date_ord` — full comparison (`=` `<>` `<` `<=` `>` `>=`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct DateOrd {
@@ -108,5 +123,9 @@ impl DomainType for DateOrd {
 
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
+    }
+
+    fn schema(&self) -> RootSchema {
+        schema_for!(DateOrd)
     }
 }

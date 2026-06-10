@@ -4,14 +4,17 @@
 //! 8 blocks, so an ordered timestamptz domain would silently mis-order.
 //! Ordering arrives with a future wide-ORE term (see `eql-scalars`).
 
+use schemars::{schema::RootSchema, schema_for};
+
 use crate::v3::terms::{Ciphertext, Hmac256};
 use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 /// `eql_v3.timestamptz` — storage only; every operator is blocked.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct Timestamptz {
@@ -32,10 +35,14 @@ impl DomainType for Timestamptz {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+
+    fn schema(&self) -> RootSchema {
+        schema_for!(Timestamptz)
+    }
 }
 
 /// `eql_v3.timestamptz_eq` — HMAC equality (`=`, `<>`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct TimestamptzEq {
@@ -57,5 +64,9 @@ impl DomainType for TimestamptzEq {
 
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
+    }
+
+    fn schema(&self) -> RootSchema {
+        schema_for!(TimestamptzEq)
     }
 }
