@@ -90,7 +90,7 @@ pub trait ScalarType:
 }
 
 /// An **ordered** scalar — one whose `_ord` domains support `<`/`<=`/`>`/`>=`.
-/// Carries the three comparison anchors the `ordered_numeric_matrix!` sweeps:
+/// Carries the three comparison anchors the `scalar_matrix!` ordered arm sweeps:
 /// the `min`/`max` boundaries and an interior `mid` pivot. All three must be
 /// present verbatim in `fixture_values()` (the matrix fetches each pivot's
 /// ciphertext via `fetch_fixture_payload`).
@@ -356,8 +356,7 @@ static TEXT_VALUES_CELL: std::sync::LazyLock<Vec<String>> = std::sync::LazyLock:
 
 /// The `String` fixture values, in catalog order. Public so the `eql_v2_text`
 /// fixture module (emitted by `scalar_types!(fixture_modules)`) can hand the
-/// slice to `scalar_fixture!` — `text` is owned `String`, so there is no
-/// `eql_scalars::<T>_VALUES`-typed `&[String]` const to point at directly.
+/// slice to `scalar_fixture!`.
 pub fn text_values() -> &'static [String] {
     &TEXT_VALUES_CELL
 }
