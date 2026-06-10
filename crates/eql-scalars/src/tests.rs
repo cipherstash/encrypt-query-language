@@ -83,6 +83,22 @@ mod rust_tests {
     }
 
     #[test]
+    fn is_text_classifies_only_text() {
+        assert!(ScalarKind::Text.is_text());
+        for k in [
+            ScalarKind::I16,
+            ScalarKind::I32,
+            ScalarKind::I64,
+            ScalarKind::Numeric,
+            ScalarKind::Jsonb,
+            ScalarKind::Date,
+            ScalarKind::Timestamptz,
+        ] {
+            assert!(!k.is_text());
+        }
+    }
+
+    #[test]
     fn i64_facts() {
         // Capability-layer fact: i64 is the Rust kind a future int8 maps onto.
         // Present here so adding int8 later is a pure `CATALOG` append.
@@ -119,9 +135,9 @@ mod rust_tests {
 
     /// The structural guarantee that replaces the old runtime panics: a
     /// `Min`/`Max`/`Zero` pivot sentinel may only appear in a `CATALOG` row whose
-    /// kind is an integer kind. `render_literal` would `expect`-panic and
-    /// `numeric_value` would resolve to `None` for a pivot on a non-integer kind;
-    /// this test makes such a row a test failure at the source of truth.
+    /// kind is an integer kind. `numeric_value` would resolve to `None` for a
+    /// pivot on a non-integer kind; this test makes such a row a test failure at
+    /// the source of truth.
     #[test]
     fn pivot_sentinels_only_appear_with_integer_kinds() {
         for spec in CATALOG {
@@ -167,7 +183,7 @@ mod term_tests {
         assert_eq!(hm.json_key(), "hm");
         assert_eq!(hm.extractor(), "eq_term");
         assert_eq!(hm.ctor(), "hmac_256");
-        assert_eq!(hm.role(), "eq");
+        assert_eq!(hm.role(), Role::Eq);
         assert_eq!(hm.operators(), &["=", "<>"]);
         assert_eq!(hm.requires(), &["src/v3/sem/hmac_256/functions.sql"]);
     }
@@ -178,7 +194,7 @@ mod term_tests {
         assert_eq!(ore.json_key(), "ob");
         assert_eq!(ore.extractor(), "ord_term");
         assert_eq!(ore.ctor(), "ore_block_u64_8_256");
-        assert_eq!(ore.role(), "ord");
+        assert_eq!(ore.role(), Role::Ord);
         assert_eq!(ore.operators(), &["=", "<>", "<", "<=", ">", ">="]);
         assert_eq!(
             ore.requires(),
@@ -195,7 +211,7 @@ mod term_tests {
         assert_eq!(b.json_key(), "bf");
         assert_eq!(b.extractor(), "match_term");
         assert_eq!(b.ctor(), "bloom_filter");
-        assert_eq!(b.role(), "match");
+        assert_eq!(b.role(), Role::Match);
         assert_eq!(b.operators(), &["@>", "<@"]);
         assert_eq!(b.requires(), &["src/v3/sem/bloom_filter/functions.sql"]);
     }
@@ -216,9 +232,17 @@ mod term_tests {
 
     #[test]
     fn bloom_role_is_match_not_ord() {
-        assert_eq!(Term::role_for_terms(&[Term::Bloom]), "match");
+        assert_eq!(Term::role_for_terms(&[Term::Bloom]), Role::Match);
         // match is not ord-capable: no aggregates.
-        assert_ne!(Term::role_for_terms(&[Term::Bloom]), "ord");
+        assert_ne!(Term::role_for_terms(&[Term::Bloom]), Role::Ord);
+    }
+
+    #[test]
+    fn role_labels_are_stable() {
+        assert_eq!(Role::Storage.label(), "storage");
+        assert_eq!(Role::Eq.label(), "eq");
+        assert_eq!(Role::Ord.label(), "ord");
+        assert_eq!(Role::Match.label(), "match");
     }
 }
 
@@ -263,9 +287,26 @@ mod term_helper_tests {
 
     #[test]
     fn role_for_terms_handles_storage_eq_ord() {
-        assert_eq!(Term::role_for_terms(&[]), "storage");
-        assert_eq!(Term::role_for_terms(&[Term::Hm]), "eq");
-        assert_eq!(Term::role_for_terms(&[Term::Ore]), "ord");
+        assert_eq!(Term::role_for_terms(&[]), Role::Storage);
+        assert_eq!(Term::role_for_terms(&[Term::Hm]), Role::Eq);
+        assert_eq!(Term::role_for_terms(&[Term::Ore]), Role::Ord);
+    }
+
+    #[test]
+    fn extractor_terms_dedupes_by_extractor_first_occurrence_wins() {
+        // No catalog domain currently carries two terms sharing an extractor, so
+        // this exercises the dedupe branch directly: Hm and Ore have distinct
+        // extractors (eq_term / ord_term) and survive; the repeated term collapses.
+        assert_eq!(
+            Term::extractor_terms(&[Term::Hm, Term::Ore, Term::Hm]),
+            vec![Term::Hm, Term::Ore]
+        );
+        // First-occurrence order: Ore before Hm stays Ore, Hm.
+        assert_eq!(
+            Term::extractor_terms(&[Term::Ore, Term::Hm, Term::Ore]),
+            vec![Term::Ore, Term::Hm]
+        );
+        assert_eq!(Term::extractor_terms(&[]), Vec::<Term>::new());
     }
 
     #[test]
@@ -367,50 +408,6 @@ mod fixture_tests {
         assert_eq!(Fixture::Zero.numeric_value(ScalarKind::Text), None);
         assert_eq!(Fixture::Min.numeric_value(ScalarKind::Text), None);
         assert_eq!(Fixture::Max.numeric_value(ScalarKind::Date), None);
-    }
-
-    #[test]
-    fn render_literal_maps_sentinels() {
-        assert_eq!(Fixture::Min.render_literal(ScalarKind::I32), "i32::MIN");
-        assert_eq!(Fixture::Max.render_literal(ScalarKind::I32), "i32::MAX");
-        assert_eq!(Fixture::Zero.render_literal(ScalarKind::I32), "0");
-        assert_eq!(Fixture::Min.render_literal(ScalarKind::I16), "i16::MIN");
-        assert_eq!(Fixture::Max.render_literal(ScalarKind::I64), "i64::MAX");
-    }
-
-    #[test]
-    fn render_literal_passes_through_numeric() {
-        assert_eq!(Fixture::Int(-100).render_literal(ScalarKind::I32), "-100");
-        assert_eq!(Fixture::Int(9999).render_literal(ScalarKind::I32), "9999");
-        assert_eq!(
-            Fixture::Int(5_000_000_000).render_literal(ScalarKind::I64),
-            "5000000000"
-        );
-    }
-
-    #[test]
-    fn render_literal_quotes_string_variants() {
-        // String-backed kinds render a valid quoted Rust literal.
-        assert_eq!(
-            Fixture::Text("alice").render_literal(ScalarKind::Text),
-            "\"alice\""
-        );
-        assert_eq!(
-            Fixture::Numeric("3.14").render_literal(ScalarKind::Numeric),
-            "\"3.14\""
-        );
-        assert_eq!(
-            Fixture::Jsonb(r#"{"a":1}"#).render_literal(ScalarKind::Jsonb),
-            r#""{\"a\":1}""#
-        );
-        assert_eq!(
-            Fixture::Date("1970-01-01").render_literal(ScalarKind::Date),
-            "\"1970-01-01\""
-        );
-        assert_eq!(
-            Fixture::Timestamptz("1970-01-01T00:00:00Z").render_literal(ScalarKind::Timestamptz),
-            "\"1970-01-01T00:00:00Z\""
-        );
     }
 
     #[test]
@@ -836,17 +833,17 @@ mod invariant_tests {
         // Cross-check the Term helpers against a known domain shape on int4.
         let s = CATALOG.iter().find(|s| s.token == "int4").unwrap();
         // storage domain: no terms.
-        assert_eq!(Term::role_for_terms(s.domains[0].terms), "storage");
+        assert_eq!(Term::role_for_terms(s.domains[0].terms), Role::Storage);
         assert!(Term::operators_for_terms(s.domains[0].terms).is_empty());
         // _eq domain: hm => equality only.
-        assert_eq!(Term::role_for_terms(s.domains[1].terms), "eq");
+        assert_eq!(Term::role_for_terms(s.domains[1].terms), Role::Eq);
         assert_eq!(
             Term::operators_for_terms(s.domains[1].terms),
             vec!["=", "<>"]
         );
         assert_eq!(Term::term_json_keys(s.domains[1].terms), vec!["hm"]);
         // _ord domain: ore => full ordering.
-        assert_eq!(Term::role_for_terms(s.domains[3].terms), "ord");
+        assert_eq!(Term::role_for_terms(s.domains[3].terms), Role::Ord);
         assert_eq!(
             Term::operators_for_terms(s.domains[3].terms),
             vec!["=", "<>", "<", "<=", ">", ">="]

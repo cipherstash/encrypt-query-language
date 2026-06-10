@@ -90,7 +90,7 @@ fn is_int_token(token: &str) -> bool {
 /// generated payloads carry `bf`) and draws its values from the harness accessor
 /// (`text_values()`). Replaces the `[text]` marker.
 fn is_text_token(token: &str) -> bool {
-    matches!(spec_for_token(token).kind, eql_scalars::ScalarKind::Text)
+    spec_for_token(token).kind.is_text()
 }
 
 /// True when `token`'s catalog row declares no ordered domain — equality-only.

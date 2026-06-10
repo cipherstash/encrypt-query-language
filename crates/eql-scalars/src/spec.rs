@@ -4,11 +4,21 @@
 
 use crate::{DomainSpec, ScalarSpec};
 
+impl DomainSpec {
+    /// The full (unqualified) domain name for this domain under `token`:
+    /// `token` + `suffix` (suffix `""` => bare token). The **single** source for
+    /// the token+suffix concatenation — codegen builds every domain name through
+    /// this, so the "domain name starts with the token" rule is structural.
+    pub fn name_with_token(&self, token: &str) -> String {
+        format!("{token}{}", self.suffix)
+    }
+}
+
 impl ScalarSpec {
     /// The fully-qualified domain name: `token` + `suffix`. Makes the old
     /// "domain name must start with the token" validation structural.
     pub fn domain_name(&self, domain: &DomainSpec) -> String {
-        format!("{}{}", self.token, domain.suffix)
+        domain.name_with_token(self.token)
     }
 
     /// True when this type declares no ordered (`_ord`) domain — i.e. equality-only

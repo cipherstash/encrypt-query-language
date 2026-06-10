@@ -681,3 +681,34 @@ pub async fn assert_null(pool: &PgPool, sql: &str, binds: &[Option<&str>]) -> Re
 pub fn blocker_msg(domain: &str, op: &str) -> String {
     format!("operator {op} is not supported for {domain}")
 }
+
+#[cfg(test)]
+mod helper_panic_tests {
+    use super::*;
+
+    // The cross-shape arm only ever passes the six comparison operators to these
+    // helpers; an unexpected symbol is a harness bug and must fail loudly rather
+    // than silently mis-route a row set. These pin that guard.
+
+    #[test]
+    fn commute_op_maps_the_six_comparisons() {
+        assert_eq!(commute_op("="), "=");
+        assert_eq!(commute_op("<>"), "<>");
+        assert_eq!(commute_op("<"), ">");
+        assert_eq!(commute_op("<="), ">=");
+        assert_eq!(commute_op(">"), "<");
+        assert_eq!(commute_op(">="), "<=");
+    }
+
+    #[test]
+    #[should_panic(expected = "commute_op: unsupported operator")]
+    fn commute_op_panics_on_unsupported() {
+        let _ = commute_op("@>");
+    }
+
+    #[test]
+    #[should_panic(expected = "expected_forward: unsupported operator")]
+    fn expected_forward_panics_on_unsupported() {
+        let _ = <i32 as ScalarType>::expected_forward("@>", 0);
+    }
+}
