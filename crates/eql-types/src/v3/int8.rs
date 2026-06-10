@@ -5,9 +5,11 @@ use crate::v3::terms::{Ciphertext, Hmac256, OreBlockU64_8_256};
 use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// `eql_v3.int8` — storage only; every operator is blocked.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct Int8 {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -30,7 +32,8 @@ impl DomainType for Int8 {
 }
 
 /// `eql_v3.int8_eq` — HMAC equality (`=`, `<>`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct Int8Eq {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -55,7 +58,8 @@ impl DomainType for Int8Eq {
 }
 
 /// `eql_v3.int8_ord_ore` — full comparison, scheme-explicit name.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct Int8OrdOre {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -80,7 +84,8 @@ impl DomainType for Int8OrdOre {
 }
 
 /// `eql_v3.int8_ord` — full comparison (`=` `<>` `<` `<=` `>` `>=`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct Int8Ord {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
