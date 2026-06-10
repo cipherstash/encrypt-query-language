@@ -1,13 +1,11 @@
 //! Runtime registry of every v3 domain type — the one hand-maintained
 //! mapping from SQL domain name to Rust type.
 //!
-//! Three consumers: `tests/catalog_parity.rs` (asserts this list exactly
-//! covers `eql-scalars::CATALOG`, so it cannot silently go stale), the
-//! generic round-trip loop in `tests/v3_conformance.rs`, and the JSON Schema
-//! exporter in `tests/export.rs`. Public so FFI consumers can enumerate the
-//! protocol surface too.
+//! Consumed by `tests/catalog_parity.rs` (which asserts this list exactly
+//! covers `eql-scalars::CATALOG`, so it cannot silently go stale) and by
+//! the binding/schema exporters added in stacked changes. Public so FFI
+//! consumers can enumerate the protocol surface too.
 
-use schemars::{schema::RootSchema, schema_for, JsonSchema};
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::v3::{date, int2, int4, int8, text, timestamptz};
@@ -19,8 +17,6 @@ pub struct DomainType {
     pub domain: &'static str,
     /// The Rust type's full path (via `std::any::type_name`).
     pub type_name: &'static str,
-    /// The type's JSON Schema.
-    pub schema: fn() -> RootSchema,
     /// serde round-trip through the concrete type
     /// (`Value` → `T` → `Value`).
     pub roundtrip: fn(serde_json::Value) -> Result<serde_json::Value, serde_json::Error>,
@@ -28,12 +24,11 @@ pub struct DomainType {
 
 fn entry<T>(domain: &'static str) -> DomainType
 where
-    T: DeserializeOwned + Serialize + JsonSchema,
+    T: DeserializeOwned + Serialize,
 {
     DomainType {
         domain,
         type_name: std::any::type_name::<T>(),
-        schema: || schema_for!(T),
         roundtrip: |value| {
             let parsed: T = serde_json::from_value(value)?;
             serde_json::to_value(&parsed)
