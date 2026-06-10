@@ -5,13 +5,10 @@
 
 use crate::v3::terms::{Ciphertext, Hmac256, OreBlockU64_8_256};
 use crate::Identifier;
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
 
 /// `eql_v3.date` — storage only; every operator is blocked.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
-#[ts(export, export_to = "v3/")]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Date {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
     pub v: u16,
@@ -27,8 +24,7 @@ impl Date {
 }
 
 /// `eql_v3.date_eq` — HMAC equality (`=`, `<>`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
-#[ts(export, export_to = "v3/")]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DateEq {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
     pub v: u16,
@@ -46,8 +42,7 @@ impl DateEq {
 }
 
 /// `eql_v3.date_ord_ore` — full comparison, scheme-explicit name.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
-#[ts(export, export_to = "v3/")]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DateOrdOre {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
     pub v: u16,
@@ -65,8 +60,7 @@ impl DateOrdOre {
 }
 
 /// `eql_v3.date_ord` — full comparison (`=` `<>` `<` `<=` `>` `>=`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
-#[ts(export, export_to = "v3/")]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DateOrd {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
     pub v: u16,

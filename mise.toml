@@ -123,7 +123,7 @@ run = """
 # workspace members. Scope explicitly to them (NOT --workspace): a
 # workspace-wide test would drag in tests/sqlx, whose suite needs Postgres +
 # CS_* secrets and is already covered by the `test` job. eql-tests-macros only
-# pulls syn/quote/proc-macro2 and eql-types only serde/ts-rs/schemars, so they
+# pulls syn/quote/proc-macro2 and eql-types only serde/serde_json, so they
 # stay in the lean set. clippy is likewise scoped — a workspace clippy
 # recompiles the heavy sqlx/tokio/cipherstash-client tree for no added coverage
 # of these crates.
@@ -134,41 +134,6 @@ set -euo pipefail
 cargo fmt --check
 cargo clippy -p eql-scalars -p eql-codegen -p eql-tests-macros -p eql-types --all-targets -- -D warnings
 cargo test -p eql-scalars -p eql-codegen -p eql-tests-macros -p eql-types
-"""
-
-[tasks."types:generate"]
-description = "Regenerate eql-types TypeScript bindings and JSON Schemas from the Rust types (no database required)"
-dir = "{{config_root}}"
-run = """
-#!/usr/bin/env bash
-# Clean-then-regenerate: ts-rs and tests/export.rs only ever ADD files, so a
-# renamed or removed type would otherwise leave an orphaned binding/schema
-# behind. The rm lives here (not in the tests — they run in parallel).
-# v2.3 outputs at the top level of bindings/ and schema/ are frozen alongside
-# their types and are regenerated in place, not cleaned.
-set -euo pipefail
-rm -rf crates/eql-types/bindings/v3 crates/eql-types/schema/v3
-cargo test -p eql-types
-"""
-
-[tasks."types:check"]
-description = "Verify the checked-in eql-types bindings/ and schema/ are fresh (regenerate + git diff)"
-dir = "{{config_root}}"
-depends = ["types:generate"]
-run = """
-#!/usr/bin/env bash
-set -euo pipefail
-git diff --exit-code -- crates/eql-types/bindings crates/eql-types/schema || {
-  echo "eql-types bindings/ or schema/ are stale — run 'mise run types:generate' and commit the result" >&2
-  exit 1
-}
-# git diff is blind to brand-new files; untracked output is stale too.
-untracked=$(git ls-files --others --exclude-standard -- crates/eql-types/bindings crates/eql-types/schema)
-if [ -n "$untracked" ]; then
-  echo "eql-types has uncommitted generated files:" >&2
-  echo "$untracked" >&2
-  exit 1
-fi
 """
 
 [tasks."test:matrix:inventory"]

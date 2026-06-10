@@ -4,13 +4,10 @@
 
 use crate::v3::terms::{BloomFilter, Ciphertext, Hmac256, OreBlockU64_8_256};
 use crate::Identifier;
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
 
 /// `eql_v3.text` — storage only; every operator is blocked.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
-#[ts(export, export_to = "v3/")]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Text {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
     pub v: u16,
@@ -26,8 +23,7 @@ impl Text {
 }
 
 /// `eql_v3.text_eq` — HMAC equality (`=`, `<>`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
-#[ts(export, export_to = "v3/")]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct TextEq {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
     pub v: u16,
@@ -45,8 +41,7 @@ impl TextEq {
 }
 
 /// `eql_v3.text_match` — Bloom-filter containment match.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
-#[ts(export, export_to = "v3/")]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct TextMatch {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
     pub v: u16,
@@ -65,8 +60,7 @@ impl TextMatch {
 
 /// `eql_v3.text_ord_ore` — full lexicographic comparison,
 /// scheme-explicit name.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
-#[ts(export, export_to = "v3/")]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct TextOrdOre {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
     pub v: u16,
@@ -85,8 +79,7 @@ impl TextOrdOre {
 
 /// `eql_v3.text_ord` — full lexicographic comparison
 /// (`=` `<>` `<` `<=` `>` `>=`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
-#[ts(export, export_to = "v3/")]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct TextOrd {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
     pub v: u16,
