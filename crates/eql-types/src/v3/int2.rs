@@ -3,13 +3,10 @@
 
 use crate::v3::terms::{Ciphertext, Hmac256, OreBlockU64_8_256};
 use crate::Identifier;
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
 
 /// `eql_v3.int2` — storage only; every operator is blocked.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
-#[ts(export, export_to = "v3/")]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Int2 {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
     pub v: u16,
@@ -25,8 +22,7 @@ impl Int2 {
 }
 
 /// `eql_v3.int2_eq` — HMAC equality (`=`, `<>`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
-#[ts(export, export_to = "v3/")]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Int2Eq {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
     pub v: u16,
@@ -44,8 +40,7 @@ impl Int2Eq {
 }
 
 /// `eql_v3.int2_ord_ore` — full comparison, scheme-explicit name.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
-#[ts(export, export_to = "v3/")]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Int2OrdOre {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
     pub v: u16,
@@ -63,8 +58,7 @@ impl Int2OrdOre {
 }
 
 /// `eql_v3.int2_ord` — full comparison (`=` `<>` `<` `<=` `>` `>=`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
-#[ts(export, export_to = "v3/")]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Int2Ord {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
     pub v: u16,

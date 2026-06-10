@@ -1,11 +1,12 @@
 # eql-types
 
 Canonical wire types for EQL payloads — **one Rust definition per payload
-shape**, intended as the single source of truth for:
+shape**, the single source of truth for every tool that produces or consumes
+EQL payloads (`cipherstash-client`, `protect-ffi`, CipherStash Proxy).
 
-- **Rust** — consumed directly by `cipherstash-client` / `protect-ffi`
-- **TypeScript** — generated via [`ts-rs`] into [`bindings/`](bindings/)
-- **JSON Schema** — generated via [`schemars`] into [`schema/`](schema/)
+TypeScript bindings (via [`ts-rs`]) and JSON Schemas (via [`schemars`]) are
+generated from these definitions in stacked changes; this crate is the
+Rust contract only.
 
 ## Why
 
@@ -13,24 +14,18 @@ Type information is lost at every hop of `EQL → cipherstash-client →
 protect-ffi → stack`. protect-ffi hand-writes its TypeScript types; they drift
 from the Rust they describe; stack widens them further. The result is bugs
 like the `protect-dynamodb` search-term check that validates a payload shape
-EQL v2.3 never actually defined. A generated, single-source crate removes the
+EQL never actually defined. A generated, single-source crate removes the
 hand-copying.
 
-## Two tiers
+## Capability-encoded types
 
-| Module | Tier | Rule |
-|--------|------|------|
-| [`src/v2_3.rs`](src/v2_3.rs) | `eql_v2_encrypted` v2.3 wire contract | **FROZEN** — in production; mirrors `eql-payload-v2.3.schema.json`; must not change |
-| [`src/v3/`](src/v3/) | `eql_v3` encrypted-domain families | One struct per SQL domain, parity-tested against `eql-scalars::CATALOG` |
-
-## Capability-encoded types (the v3 tier)
-
-`eql_v2_encrypted` is one type with every index term optional, so consumers
-must guess at runtime which terms are present. The v3 tier instead has one
-type per **SQL domain** — `Int4` / `Int4Eq` / `Int4Ord` / `Int4OrdOre`, and
-likewise for `int2`, `int8`, `date`, `timestamptz` (eq-only), and `text`
-(which adds `TextMatch`) — each carrying its index terms as **required**
-fields. The capability is the type identity; `Option` never appears.
+The [`src/v3/`](src/v3/) module has one type per **SQL domain** in the
+`eql_v3` schema — `Int4` / `Int4Eq` / `Int4Ord` / `Int4OrdOre`, and likewise
+for `int2`, `int8`, `date`, `timestamptz` (eq-only), and `text` (which adds
+`TextMatch`) — each carrying its index terms as **required** fields. The
+capability is the type identity; `Option` never appears. A payload missing
+its term key fails to deserialize: the Rust analogue of the SQL domain's
+CHECK constraint.
 
 Shared wire fields are reusable newtypes in
 [`src/v3/terms.rs`](src/v3/terms.rs):
@@ -47,26 +42,23 @@ version is still `v: 2` — the generated domain CHECKs assert it, and the wire
 field names are unchanged from v2 (the purpose-named rename in
 `docs/plans/eql-payload-scheme-discipline-rfc.md` is deferred).
 
-### Drift protection
+## Drift protection
 
 `tests/catalog_parity.rs` asserts the [`v3::registry`](src/v3/registry.rs)
-exactly covers `eql-scalars::CATALOG` (every domain, in order) and that each
-type's required JSON keys equal the envelope keys plus the catalog's term
-keys. Adding a scalar to the catalog without adding its types here fails the
-build; so does accidentally making a term field `Option`.
+exactly covers `eql-scalars::CATALOG` — the same catalog that generates the
+`eql_v3` SQL surface — every domain, in order, and proves behaviourally that
+each type's wire keys are exactly the envelope (`v`, `i`, `c`) plus the
+catalog's term keys. Adding a scalar to the catalog without adding its types
+here fails the build; so does accidentally making a term field `Option`.
 
 ## Develop
 
 ```sh
-mise run types:generate   # clean-regenerate bindings/ and schema/
-mise run types:check      # regenerate + fail if checked-in outputs are stale
+cargo test -p eql-types
 ```
 
-Both wrap `cargo test -p eql-types`, which runs the conformance round-trip
-tests and regenerates `bindings/` (TypeScript, via ts-rs) and `schema/`
-(JSON Schema, via `tests/export.rs`). Both directories are checked in so
-reviewers can see the codegen output without running anything; CI runs
-`types:check` to keep them fresh.
+The crate is also part of the lean `mise run test:crates` set (fmt, clippy,
+test — no database).
 
 ## Future direction: self-describing payloads
 

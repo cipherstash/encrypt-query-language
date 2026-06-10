@@ -6,13 +6,10 @@
 
 use crate::v3::terms::{Ciphertext, Hmac256};
 use crate::Identifier;
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
 
 /// `eql_v3.timestamptz` — storage only; every operator is blocked.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
-#[ts(export, export_to = "v3/")]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Timestamptz {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
     pub v: u16,
@@ -28,8 +25,7 @@ impl Timestamptz {
 }
 
 /// `eql_v3.timestamptz_eq` — HMAC equality (`=`, `<>`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
-#[ts(export, export_to = "v3/")]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct TimestamptzEq {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
     pub v: u16,
