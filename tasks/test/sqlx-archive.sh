@@ -12,7 +12,13 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
 # Archive lands at the repo root so the workflow can upload it by a stable path.
-ARCHIVE="${NEXTEST_ARCHIVE:-nextest.tar.zst}"
+# A relative NEXTEST_ARCHIVE is resolved against REPO_ROOT; an absolute override
+# is used verbatim (otherwise it would be mangled into "${REPO_ROOT}/abs/path").
+ARCHIVE_INPUT="${NEXTEST_ARCHIVE:-nextest.tar.zst}"
+case "${ARCHIVE_INPUT}" in
+  /*) ARCHIVE_PATH="${ARCHIVE_INPUT}" ;;
+  *)  ARCHIVE_PATH="${REPO_ROOT}/${ARCHIVE_INPUT}" ;;
+esac
 
 # The mise task's `depends = ["test:sqlx:prep"]` has already produced
 # release/cipherstash-encrypt.sql, copied it to migrations/001_install_eql.sql,
@@ -32,8 +38,8 @@ ls tests/sqlx/fixtures/eql_v2_*.sql >/dev/null 2>&1 \
 # migration + fixtures (embedded via include_str at compile time) are baked into
 # the archive, so the shards consume them without regenerating. The shards still
 # need their own live Postgres for sqlx::test's per-test scratch databases.
-echo "==> archiving sqlx test binaries to ${ARCHIVE}"
+echo "==> archiving sqlx test binaries to ${ARCHIVE_PATH}"
 cd tests/sqlx
-cargo nextest archive --archive-file "${REPO_ROOT}/${ARCHIVE}"
+cargo nextest archive --archive-file "${ARCHIVE_PATH}"
 
-echo "==> archive written: ${REPO_ROOT}/${ARCHIVE}"
+echo "==> archive written: ${ARCHIVE_PATH}"
