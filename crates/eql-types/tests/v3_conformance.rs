@@ -5,6 +5,7 @@
 
 use eql_types::v3::int4::{Int4, Int4Eq, Int4Ord, Int4OrdOre};
 use eql_types::v3::text::TextMatch;
+use eql_types::v3::V3Domain;
 use serde_json::json;
 
 #[test]
@@ -60,6 +61,43 @@ fn int4_eq_rejects_missing_hmac() {
     });
     let result: Result<Int4Eq, _> = serde_json::from_value(no_hm);
     assert!(result.is_err(), "Int4Eq must reject a payload with no hm");
+}
+
+#[test]
+fn rejects_wrong_envelope_version() {
+    // The SchemaVersion field is the Rust analogue of the domain CHECK's
+    // `VALUE->>'v' = '2'`: any other version — including a string "2",
+    // which the CHECK's `->>` coercion would accept — fails at the type
+    // boundary instead of at INSERT.
+    for v in [json!(1), json!(3), json!("2")] {
+        let wire = json!({
+            "v": v,
+            "i": { "t": "users", "c": "age" },
+            "c": "mp_base85_ciphertext",
+            "hm": "deadbeef"
+        });
+        let result: Result<Int4Eq, _> = serde_json::from_value(wire);
+        assert!(result.is_err(), "Int4Eq must reject v = {v}");
+    }
+}
+
+#[test]
+fn rejects_unknown_keys() {
+    // deny_unknown_fields: a payload carrying keys outside the domain's set
+    // is not silently accepted-and-stripped — a pass-through consumer must
+    // not lose data it didn't know about.
+    let wire = json!({
+        "v": 2,
+        "i": { "t": "users", "c": "age" },
+        "c": "mp_base85_ciphertext",
+        "hm": "deadbeef",
+        "ob": ["ore_block_0"]
+    });
+    let result: Result<Int4Eq, _> = serde_json::from_value(wire);
+    assert!(
+        result.is_err(),
+        "Int4Eq must reject a payload carrying keys beyond its domain (here: ob)"
+    );
 }
 
 #[test]
