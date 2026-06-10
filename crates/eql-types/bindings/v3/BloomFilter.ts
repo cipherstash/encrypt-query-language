@@ -2,7 +2,7 @@
 
 /**
  * Bloom-filter match term — the `bf` wire key. Backs the `_match` domains
- * (`~~` containment via `@>`/`<@`).
+ * (`@>`/`<@` containment).
  *
  * **Signed** i16, not u16: EQL stores the filter as PostgreSQL `smallint[]`,
  * and filters sized above 32768 emit upper-half bit positions as negative
