@@ -103,16 +103,15 @@ jobs:
             echo 'shards=[1,2,3,4]' >> "$GITHUB_OUTPUT"
           fi
 
-  # Compile the test binaries ONCE. Runs in the queue and on workflow_dispatch
-  # always, and on PRs only when relevant files changed (docs-only PRs never pay
-  # the ~4-min compile).
-  build-archive:
-    name: "Build test archive"
-    needs: [changes]
-    if: >-
-      github.event_name == 'merge_group'
-      || github.event_name == 'workflow_dispatch'
-      || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true')
+      # Freshness gate for the eql-types codegen output: regenerate the
+      # TypeScript bindings and JSON Schemas and fail if the checked-in
+      # copies differ. Reuses the build artifacts from the step above.
+      - name: Verify eql-types bindings and schemas are fresh
+        run: |
+          mise run types:check
+
+  codegen:
+    name: "Encrypted-domain codegen"
     runs-on: ubuntu-latest
     env:
       # test:sqlx:archive depends on test:sqlx:prep, which copies the built EQL
