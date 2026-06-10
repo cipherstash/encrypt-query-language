@@ -1,7 +1,8 @@
 //! # `eql_v3` domain payload types
 //!
 //! One Rust struct per **SQL domain** in the `eql_v3` schema — the
-//! capability-encoded design from the [`crate::int4`] prototype, formalized:
+//! capability-encoded design from the original `eql_v2_int4` prototype
+//! (PR #236's first cut), formalized:
 //! the SQL surface is generated from `eql-scalars::CATALOG`, and these types
 //! mirror it 1:1 (enforced by `tests/catalog_parity.rs`, which fails if the
 //! catalog and this module ever disagree on domains or required wire keys).
@@ -14,12 +15,14 @@
 //!
 //! ## Shape of every payload
 //!
-//! Envelope (required by every domain CHECK): `v`, `i`, `c`. Then the
-//! domain's required term keys — `hm` for `_eq`, `ob` for `_ord`/`_ord_ore`,
-//! `bf` for `_match`, none for storage-only. `Option` does not appear in
-//! this module: the capability **is** the type identity. Hold a
+//! Envelope (required by every domain CHECK, mirroring `ENVELOPE_KEYS` in
+//! `eql-codegen/src/consts.rs`): `v`, `i`, `c`. Then the domain's required
+//! term keys — `hm` for `_eq`, `ob` for `_ord`/`_ord_ore`, `bf` for
+//! `_match`, none for storage-only. `Option` does not appear in this
+//! module: the capability **is** the type identity. Hold a
 //! [`int4::Int4Eq`] and `hm` is present, guaranteed by the Rust type and
-//! (SQL-side) by the domain CHECK.
+//! (SQL-side) by the domain CHECK. A missing term key is a deserialization
+//! error — the Rust analogue of the CHECK constraint.
 //!
 //! ## Why there is no discriminated enum
 //!
@@ -42,39 +45,3 @@ pub mod timestamptz;
 
 /// The PostgreSQL schema every domain in this module inhabits.
 pub const SQL_SCHEMA: &str = "eql_v3";
-
-/// Defines one `eql_v3` domain payload type: the required envelope
-/// (`v`, `i`, `c` — mirrors `ENVELOPE_KEYS` in `eql-codegen/src/consts.rs`)
-/// plus the domain's required term fields. No `Option`, ever — a missing
-/// term key is a deserialization error, the Rust analogue of the SQL
-/// domain's CHECK constraint.
-macro_rules! eql_v3_domain {
-    (
-        $(#[$meta:meta])*
-        $name:ident, domain = $domain:literal
-        $(, terms { $( $(#[$tmeta:meta])* $tkey:ident : $tty:ty ),+ $(,)? })?
-    ) => {
-        $(#[$meta])*
-        #[derive(Clone, Debug, PartialEq, ::serde::Serialize, ::serde::Deserialize,
-                 ::ts_rs::TS, ::schemars::JsonSchema)]
-        #[ts(export, export_to = "v3/")]
-        pub struct $name {
-            /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`).
-            pub v: u16,
-            /// Table/column identifier. Required by the domain CHECK.
-            pub i: $crate::Identifier,
-            /// mp_base85 source ciphertext. Required by the domain CHECK.
-            pub c: $crate::v3::terms::Ciphertext,
-            $($(
-                $(#[$tmeta])*
-                pub $tkey: $tty,
-            )+)?
-        }
-
-        impl $name {
-            /// Fully-qualified SQL domain this payload inhabits.
-            pub const SQL_DOMAIN: &'static str = concat!("eql_v3.", $domain);
-        }
-    };
-}
-pub(crate) use eql_v3_domain;
