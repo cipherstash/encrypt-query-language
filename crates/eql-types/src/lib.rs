@@ -11,9 +11,11 @@
 //! - [`v2_3`] — **FROZEN.** The `eql_v2_encrypted` wire contract, in production
 //!   use by customers. Mirrors `eql-payload-v2.3.schema.json`, imperfections
 //!   included. Nothing here may change.
-//! - [`int4`] — **NEW** (targets EQL 2.4). Design freedom. Demonstrates
-//!   *capability-encoded types* — the pattern that removes the runtime
-//!   index-term guessing `eql_v2_encrypted` forces onto every consumer.
+//! - [`v3`] — the `eql_v3` schema's encrypted-domain types: one struct per
+//!   SQL domain (`eql_v3.int4_eq`, `eql_v3.text_match`, …), *capability-encoded*
+//!   — index terms are required fields, never `Option`. Mirrors
+//!   `eql-scalars::CATALOG` 1:1, enforced by `tests/catalog_parity.rs`.
+//!   The wire envelope version stays `v: 2` — see the [`v3`] module docs.
 //!
 //! ## Codegen rules (learned from the ts-rs spike)
 //!
@@ -28,8 +30,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-pub mod int4;
 pub mod v2_3;
+pub mod v3;
 
 /// EQL wire-format version. Hard-coded to `2` for every v2.x payload.
 pub const EQL_SCHEMA_VERSION: u16 = 2;

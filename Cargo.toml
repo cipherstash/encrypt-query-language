@@ -7,6 +7,9 @@
 #   crates/eql-codegen  — the SQL generator binary (stub here; Plan 2 fills it in).
 #   crates/eql-tests-macros — proc-macros expanding the single scalar-harness
 #                         list into the per-type SQLx-matrix wiring.
+#   crates/eql-types    — canonical wire types for EQL payloads (Rust → ts-rs
+#                         TypeScript bindings + schemars JSON Schema); parity-
+#                         tested against the eql-scalars catalog.
 #   tests/sqlx          — the existing `eql_tests` SQLx integration crate.
 #
 # resolver = "2" keeps the heavy test-crate feature set (sqlx/tokio/cipherstash-
@@ -20,6 +23,7 @@ members = [
     "crates/eql-scalars",
     "crates/eql-codegen",
     "crates/eql-tests-macros",
+    "crates/eql-types",
     "tests/sqlx",
 ]
 default-members = ["tests/sqlx"]

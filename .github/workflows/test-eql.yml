@@ -91,6 +91,13 @@ jobs:
           rustup component add --toolchain ${active_rust_toolchain} rustfmt clippy
           mise run test:crates
 
+      # Freshness gate for the eql-types codegen output: regenerate the
+      # TypeScript bindings and JSON Schemas and fail if the checked-in
+      # copies differ. Reuses the build artifacts from the step above.
+      - name: Verify eql-types bindings and schemas are fresh
+        run: |
+          mise run types:check
+
   codegen:
     name: "Encrypted-domain codegen"
     runs-on: ubuntu-latest
