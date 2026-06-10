@@ -254,8 +254,8 @@ BEGIN
     -- reaches functional-index matching if these inner functions stay inlinable
     -- (no SET, IMMUTABLE). The generated extractors/wrappers themselves are
     -- spared by the jsonb-DOMAIN structural skip below; these SEM functions take
-    -- a composite (ore_block) or raw jsonb (hmac_256) arg, so they need an
-    -- explicit entry here.
+    -- a composite (ore_block) or raw jsonb (hmac_256, bloom_filter) arg, so they
+    -- need an explicit entry here.
     n.nspname = 'eql_v3'
     AND (
       (p.pronargs = 2
@@ -264,6 +264,9 @@ BEGIN
                           'ore_block_u64_8_256_gt', 'ore_block_u64_8_256_gte'))
       OR (p.pronargs = 1
         AND p.proname = 'hmac_256'
+        AND p.proargtypes[0] = jsonb_oid)
+      OR (p.pronargs = 1
+        AND p.proname = 'bloom_filter'
         AND p.proargtypes[0] = jsonb_oid)
     )
   );

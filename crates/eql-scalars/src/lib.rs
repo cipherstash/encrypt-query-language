@@ -83,6 +83,7 @@ pub enum ScalarKind {
 pub enum Term {
     Hm,
     Ore,
+    Bloom,
 }
 
 /// A single fixture plaintext value, value-kind tagged: `Min`/`Max`/`Zero` are
@@ -298,9 +299,61 @@ pub const TIMESTAMPTZ: ScalarSpec = ScalarSpec {
     fixtures: TIMESTAMPTZ_FIXTURES,
 };
 
+/// Domains for `text`: the ordered shape plus a `_match` domain backed by the
+/// `Bloom` term (`@>`/`<@` containment). The ordered subset (`""`, `_eq`,
+/// `_ord_ore`, `_ord`) is identical to `ORDERED_INT_DOMAINS`; `_match` is the
+/// only addition, so text still runs the standard ordered matrix.
+const TEXT_DOMAINS: &[DomainSpec] = &[
+    DomainSpec {
+        suffix: "",
+        terms: &[],
+    },
+    DomainSpec {
+        suffix: "_eq",
+        terms: &[Term::Hm],
+    },
+    DomainSpec {
+        suffix: "_match",
+        terms: &[Term::Bloom],
+    },
+    DomainSpec {
+        suffix: "_ord_ore",
+        terms: &[Term::Ore],
+    },
+    DomainSpec {
+        suffix: "_ord",
+        terms: &[Term::Ore],
+    },
+];
+
+/// `text` fixture plaintexts — curated so eq/ord give a lexicographic spread
+/// and the match suite has a known substring pair (`"aardvark"`/`"aard"`,
+/// sharing 3-grams) and a disjoint value (`"zzzz"`, no shared 3-grams).
+/// `"aard"` is the lexicographic `min_pivot`, `"zzzz"` the `max_pivot`, and
+/// `"frank"` the interior `mid_pivot`; all three must be present verbatim so the
+/// matrix can fetch their ciphertext. All distinct.
+///
+/// The empty string is deliberately **not** a fixture: text is an ordered, not
+/// signed, scalar (no numeric origin), and `""` encrypts to an empty ORE term
+/// whose comparison is undefined (see issue #262). The interior pivot is a real
+/// median value, not `String::default()`.
+const TEXT_FIXTURES: &[Fixture] = fixtures!(text;
+    "aard", "aardvark", "alice", "bob", "carol",
+    "dave", "erin", "frank", "mallory", "trent", "zzzz");
+
+/// `text` — an ordered, non-integer, unbounded scalar. Adds a `_match` domain
+/// (the `Bloom` term) on top of the ordered shape. Public because the SQLx
+/// harness reads `TEXT_VALUES` (materialised below).
+pub const TEXT: ScalarSpec = ScalarSpec {
+    token: "text",
+    kind: ScalarKind::Text,
+    domains: TEXT_DOMAINS,
+    fixtures: TEXT_FIXTURES,
+};
+
 /// The scalar catalog — the single source of truth. Order is significant (it
 /// drives generation order). New types are appended as their SQL surface lands.
-pub const CATALOG: &[ScalarSpec] = &[INT4, INT2, INT8, DATE, TIMESTAMPTZ];
+pub const CATALOG: &[ScalarSpec] = &[INT4, INT2, INT8, DATE, TIMESTAMPTZ, TEXT];
 
 /// Materialise an integer scalar's fixtures into a typed `&'static` slice at
 /// compile time. This is the **single-sourced** plaintext list the SQLx test
@@ -352,6 +405,38 @@ macro_rules! int_values {
 int_values!(INT4_VALUES, i32, INT4);
 int_values!(INT2_VALUES, i16, INT2);
 int_values!(INT8_VALUES, i64, INT8);
+
+/// Materialise a `text` scalar's fixtures into a `&'static [&'static str]` at
+/// compile time — the single-sourced plaintext list the SQLx matrix reads via
+/// `ScalarType::fixture_values()` and the fixture generator encrypts. Unlike
+/// `date` (chrono is not `const`-friendly), a `Fixture::Text(&'static str)` is
+/// already const, so text materialises a typed slice like the integer kinds.
+/// A non-text fixture is a const-eval panic (compile-time guard).
+macro_rules! text_values {
+    ($name:ident, $spec:expr) => {
+        #[doc = concat!("Distinct plaintext fixture values for `", stringify!($spec), "`, ")]
+        #[doc = "materialised from its `CATALOG` row (see `text_values!`)."]
+        pub const $name: &[&'static str] = {
+            const SPEC: ScalarSpec = $spec;
+            const N: usize = SPEC.fixtures.len();
+            const ARR: [&'static str; N] = {
+                let mut out = [""; N];
+                let mut i = 0;
+                while i < N {
+                    out[i] = match SPEC.fixtures[i] {
+                        Fixture::Text(s) => s,
+                        _ => panic!("text scalar fixture must be Fixture::Text"),
+                    };
+                    i += 1;
+                }
+                out
+            };
+            &ARR
+        };
+    };
+}
+
+text_values!(TEXT_VALUES, TEXT);
 
 #[cfg(test)]
 mod tests;
