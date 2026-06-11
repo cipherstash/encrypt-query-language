@@ -2,7 +2,7 @@
 
 use crate::consts::*;
 use crate::operator_surface::Operator;
-use eql_scalars::{DomainSpec, Term};
+use eql_scalars::{DomainSpec, Role, Term};
 
 /// Build the minijinja environment with the embedded templates: one whole-file
 /// template per output file (`types`/`functions`/`operators`/`aggregates`) plus
@@ -70,7 +70,7 @@ pub struct TypesContext {
 /// Build the per-domain block data (port of `render_domain_block`'s value logic,
 /// minus comment prose and the CHECK skeleton — those are template-resident).
 pub fn domain_block(token: &str, domain: &DomainSpec) -> DomainBlock {
-    let name = full_domain_name(token, domain.suffix);
+    let name = domain.name_with_token(token);
 
     let mut keys: Vec<String> = ENVELOPE_KEYS.iter().map(|k| sql_str(k)).collect();
     for k in Term::term_json_keys(domain.terms) {
@@ -101,7 +101,7 @@ pub struct SqlParam {
 #[serde(tag = "kind")]
 pub enum FnEntry {
     Extractor {
-        ret: String,       // e.g. eql_v2.hmac_256 (selection STAYS in Rust)
+        ret: String,       // e.g. eql_v3.hmac_256 (selection STAYS in Rust)
         extractor: String, // e.g. eq_term
         ctor: String,      // e.g. hmac_256 (called as {{ schema }}.{{ ctor }})
     },
@@ -145,12 +145,18 @@ pub fn extractor_entry(term: Term) -> FnEntry {
 }
 
 /// Build an inlinable comparison-wrapper entry for a supported operator.
-/// `dom` is the schema-qualified domain name.
-pub fn wrapper_entry(dom: &str, op: &str, arg_a: &str, arg_b: &str, extractor: &str) -> FnEntry {
-    use crate::operator_surface::operator_function_name;
+/// `dom` is the schema-qualified domain name; `op` is the already-resolved
+/// operator (the caller iterates `OPERATORS`, so no symbol re-lookup is needed).
+pub fn wrapper_entry(
+    dom: &str,
+    op: &Operator,
+    arg_a: &str,
+    arg_b: &str,
+    extractor: &str,
+) -> FnEntry {
     FnEntry::Wrapper {
-        op: op.to_string(),
-        function_name: operator_function_name(op).to_string(),
+        op: op.symbol.to_string(),
+        function_name: op.function_name.to_string(),
         args: [
             SqlParam {
                 name: "a",
@@ -167,13 +173,13 @@ pub fn wrapper_entry(dom: &str, op: &str, arg_a: &str, arg_b: &str, extractor: &
 }
 
 /// Build an unsupported-operator entry. Every such entry shares one uniform
-/// `RAISE EXCEPTION` body; only signature facts vary.
-pub fn unsupported_entry(op: &str, args: [SqlParam; 2], returns: &str) -> FnEntry {
-    use crate::operator_surface::operator_function_name;
+/// `RAISE EXCEPTION` body; only signature facts vary. `op` is the
+/// already-resolved operator (no symbol re-lookup needed).
+pub fn unsupported_entry(op: &Operator, args: [SqlParam; 2], returns: &str) -> FnEntry {
     FnEntry::Unsupported {
         // operator_lit is sql_str-escaped defensively for the single-quoted RAISE literal.
-        operator_lit: sql_str(op),
-        function_name: operator_function_name(op).to_string(),
+        operator_lit: sql_str(op.symbol),
+        function_name: op.function_name.to_string(),
         args,
         returns: returns.to_string(),
     }
@@ -231,11 +237,6 @@ pub fn domain_name(name: &str) -> String {
     format!("{SCHEMA}.{name}")
 }
 
-/// The full domain name from a token + suffix (suffix "" => bare token).
-pub fn full_domain_name(token: &str, suffix: &str) -> String {
-    format!("{token}{suffix}")
-}
-
 /// The extractor-call SQL for one operand, casting jsonb to the domain first.
 /// Port of `_extract_arg`. `dom` is the schema-qualified domain name.
 pub fn extract_arg(arg_type: &str, extractor: &str, dom: &str, arg: &str) -> String {
@@ -270,7 +271,7 @@ pub const AGGREGATE_OPS: &[AggregateOp] = &[
 /// True if the domain carries a comparator term (supports `<`).
 /// Port of `is_ord_capable`.
 pub fn is_ord_capable(terms: &[Term]) -> bool {
-    Term::role_for_terms(terms) == "ord"
+    Term::role_for_terms(terms) == Role::Ord
 }
 
 #[cfg(test)]
@@ -335,7 +336,7 @@ mod tests {
                 Some("COMMUTATOR = <@, RESTRICT = contsel, JOIN = contjoinsel"),
             ),
             // ... but suppressed when `@>` is a blocker (non-Bloom domains),
-            // which is why the int4 golden is unchanged.
+            // which is why the int4 reference is unchanged.
             ("@>", "eql_v3.int4_eq", false, None),
         ];
 

@@ -89,23 +89,30 @@ impl ScalarKind {
         matches!(self, ScalarKind::Date | ScalarKind::Timestamptz)
     }
 
-    /// A debug/identifier string for the kind. For the codegen-supported kinds
-    /// (`I16`/`I32`/`I64`/`Date`) this is the canonical Rust plaintext type name
-    /// (`"i32"`, `"chrono::NaiveDate"`). For the not-yet-wired kinds
-    /// (`Numeric`/`Text`/`Jsonb`) it returns the SQL/type token (`"numeric"`,
-    /// `"text"`, `"jsonb"`) as a placeholder — those variants have no generated
-    /// surface, so the string is not consumed by codegen. Only call site is
+    /// True for the `Text` kind — an unbounded, owned-`String` scalar. Keeps
+    /// "textness" classification in the catalog crate alongside `is_int` /
+    /// `is_temporal`, rather than matching the variant at each call site.
+    pub const fn is_text(self) -> bool {
+        matches!(self, ScalarKind::Text)
+    }
+
+    /// A debug/identifier string for the kind: the canonical Rust plaintext type
+    /// name (`"i32"`, `"chrono::NaiveDate"`). `Numeric`/`Jsonb` have **no
+    /// generated SQL surface** and no catalog row, so calling this on them is a
+    /// programming error and panics loudly rather than returning a plausible SQL
+    /// token a premature caller might feed into codegen. Only call site today is
     /// `crates/eql-scalars/src/tests.rs`.
     pub const fn rust_type(self) -> &'static str {
         match self {
             ScalarKind::I16 => "i16",
             ScalarKind::I32 => "i32",
             ScalarKind::I64 => "i64",
-            ScalarKind::Numeric => "numeric",
             ScalarKind::Text => "text",
-            ScalarKind::Jsonb => "jsonb",
             ScalarKind::Date => "chrono::NaiveDate",
             ScalarKind::Timestamptz => "chrono::DateTime<Utc>",
+            ScalarKind::Numeric | ScalarKind::Jsonb => {
+                panic!("ScalarKind::rust_type: numeric/jsonb have no generated surface yet")
+            }
         }
     }
 }

@@ -1,18 +1,7 @@
-use std::path::PathBuf;
 use std::process::ExitCode;
 
 use eql_codegen::generate::generate_all;
-
-fn repo_root() -> PathBuf {
-    // The binary runs from the repo root via `cargo run`; CARGO_MANIFEST_DIR
-    // points at crates/eql-codegen, so the repo root is two parents up.
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .to_path_buf()
-}
+use eql_codegen::repo_root;
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().collect();

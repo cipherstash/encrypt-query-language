@@ -1,8 +1,10 @@
 //! AUTO-GENERATED headers, schema constants, and SQL-string escaping.
 
-/// SQL generated-file marker. The SQL templates emit this as their first line;
-/// the writer uses it only to recognise files it owns (overwrite/clean safety).
-pub(crate) const AUTO_GENERATED_HEADER: &str = "-- AUTOMATICALLY GENERATED FILE.\n";
+/// SQL generated-file marker — the header's first line, with no trailing
+/// newline. The SQL templates emit it (followed by a newline) as line 1, and the
+/// writer uses it to recognise files it owns (overwrite/clean safety). Tests that
+/// synthesise file bodies append `\n` to form the full header line.
+pub(crate) const AUTO_GENERATED_MARKER: &str = "-- AUTOMATICALLY GENERATED FILE.";
 
 /// The single schema housing the self-contained `eql_v3` surface: the
 /// encrypted-domain families AND the SEM index-term types/constructors they
@@ -30,9 +32,10 @@ mod tests {
     fn sql_marker_is_grep_compatible_single_line() {
         // The `^-- AUTOMATICALLY GENERATED FILE` marker is what
         // tasks/docs/validate/{coverage,required-tags}.sh grep on to skip
-        // generated SQL — keep this assertion and that grep in lockstep.
-        assert_eq!(AUTO_GENERATED_HEADER, "-- AUTOMATICALLY GENERATED FILE.\n");
-        assert!(AUTO_GENERATED_HEADER.contains("AUTOMATICALLY GENERATED FILE"));
+        // generated SQL — keep this assertion and that grep in lockstep. The
+        // marker is a single line with no embedded newline (tests append `\n`).
+        assert_eq!(AUTO_GENERATED_MARKER, "-- AUTOMATICALLY GENERATED FILE.");
+        assert!(!AUTO_GENERATED_MARKER.contains('\n'));
     }
 
     #[test]
