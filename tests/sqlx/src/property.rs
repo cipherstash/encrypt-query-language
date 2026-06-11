@@ -140,9 +140,15 @@ pub async fn assert_ord_oracle<T: ScalarType>(
             let pa = &a.plaintext;
             let pb = &b.plaintext;
             anyhow::ensure!(lt == Some(pa < pb), "< mismatch on {domain}: {pa:?}<{pb:?}");
-            anyhow::ensure!(lte == Some(pa <= pb), "<= mismatch on {domain}: {pa:?}<={pb:?}");
+            anyhow::ensure!(
+                lte == Some(pa <= pb),
+                "<= mismatch on {domain}: {pa:?}<={pb:?}"
+            );
             anyhow::ensure!(gt == Some(pa > pb), "> mismatch on {domain}: {pa:?}>{pb:?}");
-            anyhow::ensure!(gte == Some(pa >= pb), ">= mismatch on {domain}: {pa:?}>={pb:?}");
+            anyhow::ensure!(
+                gte == Some(pa >= pb),
+                ">= mismatch on {domain}: {pa:?}>={pb:?}"
+            );
             anyhow::ensure!(
                 term_lt == Some(pa < pb),
                 "ord_term ordering mismatch on {domain}: {pa:?}<{pb:?}"
