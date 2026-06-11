@@ -17,3 +17,6 @@ path = "src/main.rs"
 [lib]
 name = "eql_codegen"
 path = "src/lib.rs"
+
+[lints]
+workspace = true
