@@ -546,3 +546,54 @@ async fn has_bloom_filter_detects_bf_presence(pool: PgPool) -> Result<()> {
     }
     Ok(())
 }
+
+/// T11 — Planner-selectivity metadata for the `eql_v3.ore_block_u64_8_256`
+/// `=` / `<>` operators. `<>` must use the inequality estimators
+/// (`neqsel` / `neqjoinsel`) and must NOT declare `HASHES` — an earlier revision
+/// copied `=`'s `eqsel` / `eqjoinsel` + `HASHES` onto `<>`, which is meaningless
+/// (you cannot hash-join on inequality) and mis-estimates selectivity (#267
+/// review / aa13065). `=` is the contrast: it keeps `eqsel` / `eqjoinsel` and
+/// `HASHES`. A catalog pin (deterministic, no plan dependence).
+#[sqlx::test]
+async fn ore_block_comparison_operators_declare_correct_selectivity(pool: PgPool) -> Result<()> {
+    let (eq_rest, eq_join, eq_hashes, eq_merges): (String, String, bool, bool) = sqlx::query_as(
+        r#"
+        SELECT o.oprrest::text, o.oprjoin::text, o.oprcanhash, o.oprcanmerge
+        FROM pg_operator o
+        WHERE o.oprname = '='
+          AND o.oprleft  = 'eql_v3.ore_block_u64_8_256'::regtype
+          AND o.oprright = 'eql_v3.ore_block_u64_8_256'::regtype
+        "#,
+    )
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(eq_rest, "eqsel", "= must use eqsel");
+    assert_eq!(eq_join, "eqjoinsel", "= must use eqjoinsel");
+    assert!(eq_hashes, "= must declare HASHES");
+    assert!(eq_merges, "= must declare MERGES");
+
+    let (neq_rest, neq_join, neq_hashes): (String, String, bool) = sqlx::query_as(
+        r#"
+        SELECT o.oprrest::text, o.oprjoin::text, o.oprcanhash
+        FROM pg_operator o
+        WHERE o.oprname = '<>'
+          AND o.oprleft  = 'eql_v3.ore_block_u64_8_256'::regtype
+          AND o.oprright = 'eql_v3.ore_block_u64_8_256'::regtype
+        "#,
+    )
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(
+        neq_rest, "neqsel",
+        "<> must use neqsel (not eqsel — it estimates the inequality fraction)"
+    );
+    assert_eq!(
+        neq_join, "neqjoinsel",
+        "<> must use neqjoinsel (not eqjoinsel)"
+    );
+    assert!(
+        !neq_hashes,
+        "<> must NOT declare HASHES — hash joins are meaningless for inequality"
+    );
+    Ok(())
+}
