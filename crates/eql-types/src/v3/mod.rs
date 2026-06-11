@@ -5,7 +5,10 @@
 //! (PR #236's first cut), formalized:
 //! the SQL surface is generated from `eql-scalars::CATALOG`, and these types
 //! mirror it 1:1 (enforced by `tests/catalog_parity.rs`, which fails if the
-//! catalog and this module ever disagree on domains or required wire keys).
+//! catalog and [`all`] ever disagree on the set or order of domains; the
+//! catalog-derived wire-key gate is schema-based and lands with the stacked
+//! schemars change, with per-type strictness spot checks in
+//! `tests/v3_conformance.rs`).
 //!
 //! **Versioning.** "v3" is the SQL schema generation (`eql_v3.*` domains).
 //! The JSON envelope version is still `v: 2` ([`crate::EQL_SCHEMA_VERSION`]) —
@@ -43,8 +46,6 @@
 
 use std::marker::PhantomData;
 
-use serde::{de::DeserializeOwned, Serialize};
-
 pub mod date;
 pub mod int2;
 pub mod int4;
@@ -73,10 +74,10 @@ pub trait V3Domain {
 ///
 /// Implemented once, by the blanket impl below, for `PhantomData<T>` over
 /// every payload type: a `Box<dyn DomainType>` is a zero-sized type-level
-/// handle, not a payload instance. (The trait cannot be [`V3Domain`] itself:
-/// an associated const is not object-safe, and [`Self::roundtrip`] needs
-/// `Deserialize`, which is `Sized`-only — so the dyn surface lives on the
-/// handle, and `V3Domain` stays the compile-time anchor it reads from.)
+/// handle, not a payload instance (there are no payload instances to box;
+/// the trait cannot be [`V3Domain`] itself because an associated const is
+/// not object-safe — so the dyn surface lives on the handle, and `V3Domain`
+/// stays the one-line-per-type anchor it derives from).
 ///
 /// Consumed by `tests/catalog_parity.rs` (which asserts [`all`] exactly
 /// covers `eql-scalars::CATALOG`, so the list cannot silently go stale) and
@@ -97,14 +98,11 @@ pub trait DomainType {
 
     /// The Rust type's full path (via `std::any::type_name`).
     fn type_name(&self) -> &'static str;
-
-    /// serde round-trip through the concrete type (`Value` → `T` → `Value`).
-    fn roundtrip(&self, value: serde_json::Value) -> Result<serde_json::Value, serde_json::Error>;
 }
 
 impl<T> DomainType for PhantomData<T>
 where
-    T: V3Domain + DeserializeOwned + Serialize,
+    T: V3Domain,
 {
     fn sql_domain(&self) -> &'static str {
         T::SQL_DOMAIN
@@ -112,11 +110,6 @@ where
 
     fn type_name(&self) -> &'static str {
         std::any::type_name::<T>()
-    }
-
-    fn roundtrip(&self, value: serde_json::Value) -> Result<serde_json::Value, serde_json::Error> {
-        let parsed: T = serde_json::from_value(value)?;
-        serde_json::to_value(&parsed)
     }
 }
 
