@@ -7,6 +7,7 @@ use sqlx::PgPool;
 pub mod assertions;
 pub mod fixtures;
 pub mod helpers;
+pub mod jsonb_entry;
 pub mod matrix;
 pub mod scalar_domains;
 #[macro_use]
