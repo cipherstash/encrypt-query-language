@@ -23,6 +23,9 @@ eql-tests-macros = { path = "../../crates/eql-tests-macros" }
 [dev-dependencies]
 # None needed - tests live in this crate
 
+[lints]
+workspace = true
+
 [features]
 default = []
 # Opt-in to slow benchmark / regression / scale tests. Without this feature

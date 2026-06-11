@@ -23,3 +23,9 @@ members = [
     "tests/sqlx",
 ]
 default-members = ["tests/sqlx"]
+
+# Dead code is a hard error. Note: rustc exempts unused `pub` items in a lib, so
+# don't `pub` a test-support item unless an integration test consumes it.
+[workspace.lints.rust]
+dead_code = "deny"
+unused_imports = "deny"
