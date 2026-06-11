@@ -68,7 +68,7 @@ impl<'de> Deserialize<'de> for SchemaVersion {
 /// Table + column identifier — wire shape `{"t": "...", "c": "..."}`.
 ///
 /// Shared by every payload.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Identifier {
     /// Table name.
