@@ -3,15 +3,13 @@
 //! ciphertext, so dates order like integers); see that module for the
 //! capability table.
 
-use std::marker::PhantomData;
-
 use crate::v3::terms::{Ciphertext, Hmac256, OreBlockU64_8_256};
 use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
 use serde::{Deserialize, Serialize};
 
 /// `eql_v3.date` — storage only; every operator is blocked.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Date {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -23,14 +21,14 @@ pub struct Date {
     pub c: Ciphertext,
 }
 
-impl DomainType for PhantomData<Date> {
+impl DomainType for Date {
     fn sql_domain(&self) -> &'static str {
         "eql_v3.date"
     }
 }
 
 /// `eql_v3.date_eq` — HMAC equality (`=`, `<>`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DateEq {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -44,14 +42,14 @@ pub struct DateEq {
     pub hm: Hmac256,
 }
 
-impl DomainType for PhantomData<DateEq> {
+impl DomainType for DateEq {
     fn sql_domain(&self) -> &'static str {
         "eql_v3.date_eq"
     }
 }
 
 /// `eql_v3.date_ord_ore` — full comparison, scheme-explicit name.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DateOrdOre {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -65,14 +63,14 @@ pub struct DateOrdOre {
     pub ob: OreBlockU64_8_256,
 }
 
-impl DomainType for PhantomData<DateOrdOre> {
+impl DomainType for DateOrdOre {
     fn sql_domain(&self) -> &'static str {
         "eql_v3.date_ord_ore"
     }
 }
 
 /// `eql_v3.date_ord` — full comparison (`=` `<>` `<` `<=` `>` `>=`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DateOrd {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -86,7 +84,7 @@ pub struct DateOrd {
     pub ob: OreBlockU64_8_256,
 }
 
-impl DomainType for PhantomData<DateOrd> {
+impl DomainType for DateOrd {
     fn sql_domain(&self) -> &'static str {
         "eql_v3.date_ord"
     }

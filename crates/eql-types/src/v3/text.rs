@@ -2,15 +2,13 @@
 //! [`crate::v3::int4`] plus a `_match` domain backed by the Bloom-filter
 //! term (`@>`/`<@` containment for `LIKE`-style matching).
 
-use std::marker::PhantomData;
-
 use crate::v3::terms::{BloomFilter, Ciphertext, Hmac256, OreBlockU64_8_256};
 use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
 use serde::{Deserialize, Serialize};
 
 /// `eql_v3.text` — storage only; every operator is blocked.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Text {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -22,14 +20,14 @@ pub struct Text {
     pub c: Ciphertext,
 }
 
-impl DomainType for PhantomData<Text> {
+impl DomainType for Text {
     fn sql_domain(&self) -> &'static str {
         "eql_v3.text"
     }
 }
 
 /// `eql_v3.text_eq` — HMAC equality (`=`, `<>`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TextEq {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -43,14 +41,14 @@ pub struct TextEq {
     pub hm: Hmac256,
 }
 
-impl DomainType for PhantomData<TextEq> {
+impl DomainType for TextEq {
     fn sql_domain(&self) -> &'static str {
         "eql_v3.text_eq"
     }
 }
 
 /// `eql_v3.text_match` — Bloom-filter containment match.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TextMatch {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -64,7 +62,7 @@ pub struct TextMatch {
     pub bf: BloomFilter,
 }
 
-impl DomainType for PhantomData<TextMatch> {
+impl DomainType for TextMatch {
     fn sql_domain(&self) -> &'static str {
         "eql_v3.text_match"
     }
@@ -72,7 +70,7 @@ impl DomainType for PhantomData<TextMatch> {
 
 /// `eql_v3.text_ord_ore` — full lexicographic comparison,
 /// scheme-explicit name.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TextOrdOre {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -86,7 +84,7 @@ pub struct TextOrdOre {
     pub ob: OreBlockU64_8_256,
 }
 
-impl DomainType for PhantomData<TextOrdOre> {
+impl DomainType for TextOrdOre {
     fn sql_domain(&self) -> &'static str {
         "eql_v3.text_ord_ore"
     }
@@ -94,7 +92,7 @@ impl DomainType for PhantomData<TextOrdOre> {
 
 /// `eql_v3.text_ord` — full lexicographic comparison
 /// (`=` `<>` `<` `<=` `>` `>=`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TextOrd {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -108,7 +106,7 @@ pub struct TextOrd {
     pub ob: OreBlockU64_8_256,
 }
 
-impl DomainType for PhantomData<TextOrd> {
+impl DomainType for TextOrd {
     fn sql_domain(&self) -> &'static str {
         "eql_v3.text_ord"
     }

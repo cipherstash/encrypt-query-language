@@ -57,16 +57,14 @@ pub mod timestamptz;
 /// The PostgreSQL schema every domain in this module inhabits.
 pub const SQL_SCHEMA: &str = "eql_v3";
 
-/// One v3 domain type — what [`all`] enumerates.
+/// One v3 domain type — implemented by every payload type, so any payload
+/// value can report the SQL domain it inhabits (`payload.sql_domain()`).
 ///
-/// Each token file implements this for `PhantomData<T>` next to the payload
-/// type `T` it describes, e.g. `impl DomainType for PhantomData<Int4Eq>`:
-/// a `Box<dyn DomainType>` is a zero-sized type-level handle, not a payload
-/// instance (payload types have no instances to box, so the dyn surface
-/// lives on the handle). The SQL domain string is defined exactly once, in
-/// that impl, and `tests/catalog_parity.rs` cross-checks every handle
-/// against `eql-scalars::CATALOG` — a typo'd or mis-ordered domain fails
-/// there. Public so FFI consumers can enumerate the protocol surface too.
+/// Each token file implements this next to the type it describes; the SQL
+/// domain string is defined exactly once, in that impl, and
+/// `tests/catalog_parity.rs` cross-checks every entry of [`all`] against
+/// `eql-scalars::CATALOG` — a typo'd or mis-ordered domain fails there.
+/// Public so FFI consumers can enumerate the protocol surface too.
 pub trait DomainType {
     /// Fully-qualified SQL domain name, e.g. `"eql_v3.int4_eq"`.
     fn sql_domain(&self) -> &'static str;
@@ -78,6 +76,22 @@ pub trait DomainType {
         self.sql_domain()
             .strip_prefix("eql_v3.")
             .expect("sql_domain must be qualified with the eql_v3 schema")
+    }
+}
+
+/// Type-level handle: lets [`all`] enumerate the domain types without
+/// payload values to box — `Box::new(PhantomData::<Int4Eq>)` is zero-sized.
+///
+/// Delegates through a transient `T::default()`, which is allocation-free
+/// (every field defaults to an empty string/vec). `Default` exists on the
+/// payload types only to power this: a default payload is structurally
+/// complete but semantically empty — never serialize one.
+impl<T> DomainType for PhantomData<T>
+where
+    T: DomainType + Default,
+{
+    fn sql_domain(&self) -> &'static str {
+        T::default().sql_domain()
     }
 }
 

@@ -15,19 +15,19 @@ use serde::{Deserialize, Serialize};
 /// mp_base85 source ciphertext — the `c` envelope key.
 ///
 /// Required by every v3 domain CHECK; present on every payload.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Ciphertext(pub String);
 
 /// HMAC-SHA-256 equality term — the `hm` wire key. Backs the `_eq` domains
 /// (`=`, `<>`). SQL-side constructor: `eql_v3.hmac_256`.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Hmac256(pub String);
 
 /// Block-ORE (u64, 8 blocks, 256) order term — the `ob` wire key. Backs the
 /// `_ord` / `_ord_ore` domains (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless
 /// over the scalar's domain, so it serves equality too. SQL-side constructor:
 /// `eql_v3.ore_block_u64_8_256`.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct OreBlockU64_8_256(pub Vec<String>);
 
 /// Bloom-filter match term — the `bf` wire key. Backs the `_match` domains
@@ -36,7 +36,7 @@ pub struct OreBlockU64_8_256(pub Vec<String>);
 /// **Signed** i16, not u16: EQL stores the filter as PostgreSQL `smallint[]`,
 /// and filters sized above 32768 emit upper-half bit positions as negative
 /// signed values.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct BloomFilter(pub Vec<i16>);
 
 impl From<String> for Ciphertext {
