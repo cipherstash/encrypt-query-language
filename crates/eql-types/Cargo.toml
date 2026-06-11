@@ -6,10 +6,10 @@ description = "Canonical wire types for EQL payloads — the single Rust source 
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
 
 [dev-dependencies]
-# Parity oracle: tests/catalog_parity.rs asserts the v3 registry exactly
-# covers eql_scalars::CATALOG, so the types here cannot drift from the
-# generated SQL surface.
+# Parity oracle: tests/catalog_parity.rs asserts the v3 domain inventory
+# exactly covers eql_scalars::CATALOG, so the types here cannot drift from
+# the generated SQL surface.
 eql-scalars = { path = "../eql-scalars" }
+serde_json = "1"

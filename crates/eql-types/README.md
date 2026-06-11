@@ -46,11 +46,12 @@ field names are unchanged from v2 (the purpose-named rename in
 
 `tests/catalog_parity.rs` asserts the domain inventory —
 [`v3::all()`](src/v3/mod.rs), a `Vec<Box<dyn DomainType>>` of zero-sized
-type-level handles — exactly covers `eql-scalars::CATALOG` — the same catalog that generates the
-`eql_v3` SQL surface — every domain, in order, and proves behaviourally that
-each type's wire keys are exactly the envelope (`v`, `i`, `c`) plus the
-catalog's term keys. Adding a scalar to the catalog without adding its types
-here fails the build; so does accidentally making a term field `Option`.
+type-level handles — exactly covers `eql-scalars::CATALOG` (the same catalog
+that generates the `eql_v3` SQL surface): every domain, in order. Adding a
+scalar to the catalog without adding its types here fails the build.
+Wire-key strictness (required term keys, unknown-key rejection, envelope
+version) is covered per-type in `tests/v3_conformance.rs` and pinned against
+the catalog by the JSON Schema parity test in the stacked schemars change.
 
 ## Develop
 
