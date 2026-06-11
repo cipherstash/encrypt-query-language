@@ -577,3 +577,6 @@ text_values!(TEXT_VALUES, TEXT);
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod proptest_invariants;
