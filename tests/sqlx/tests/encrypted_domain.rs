@@ -26,3 +26,10 @@ mod text_match;
 // uniform per-type set) does not see the signed-only delta.
 #[path = "encrypted_domain/signed.rs"]
 mod signed;
+
+// SteVec jsonb-entry behaviour matrix (the reduced `jsonb_entry_matrix!`).
+// Deliberately NOT under `scalars::` — `JsonbEntryInt4` is not a catalog scalar,
+// so its names live under `jsonb_entry::…` and are pinned by the separate
+// `test:matrix:inventory:jsonb_entry` task, not the scalar inventory.
+#[path = "encrypted_domain/jsonb_entry.rs"]
+mod jsonb_entry;

@@ -329,11 +329,14 @@ macro_rules! jsonb_entry_matrix {
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = "../../fixtures",
             domains = [(entry, Ord)],
         }
-        $crate::__scalar_matrix_index_outer! {
-            suite = $suite, scalar = $scalar, script = $eql_type, script_path = "../../fixtures",
-            combos = [(entry, Ord, "eql_v3.ore_cllw", "btree",
-                [(eq, "="), (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")])],
-        }
+        // Index engagement is NOT driven by `__scalar_matrix_index_outer!` for
+        // entries: that shared driver also sweeps a bare-jsonb RHS
+        // (`value < '<lit>'::jsonb`), which is load-bearing for scalars (they have
+        // `(domain, jsonb)` cross-type operators) but UNSAFE for entries —
+        // `ste_vec_entry` has no `(entry, jsonb)` operator, so a bare-jsonb RHS
+        // flattens to native `jsonb < jsonb` (no ore_cllw, no index) rather than
+        // the entry operator. The hand-written `jsonb_entry_int4_index_engages`
+        // test in the suite probes index engagement with the domain-cast RHS only.
     };
 }
 
