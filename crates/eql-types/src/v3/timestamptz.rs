@@ -4,8 +4,10 @@
 //! 8 blocks, so an ordered timestamptz domain would silently mis-order.
 //! Ordering arrives with a future wide-ORE term (see `eql-scalars`).
 
+use std::marker::PhantomData;
+
 use crate::v3::terms::{Ciphertext, Hmac256};
-use crate::v3::V3Domain;
+use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
 use serde::{Deserialize, Serialize};
 
@@ -22,8 +24,10 @@ pub struct Timestamptz {
     pub c: Ciphertext,
 }
 
-impl V3Domain for Timestamptz {
-    const SQL_DOMAIN: &'static str = "eql_v3.timestamptz";
+impl DomainType for PhantomData<Timestamptz> {
+    fn sql_domain(&self) -> &'static str {
+        "eql_v3.timestamptz"
+    }
 }
 
 /// `eql_v3.timestamptz_eq` — HMAC equality (`=`, `<>`).
@@ -41,6 +45,8 @@ pub struct TimestamptzEq {
     pub hm: Hmac256,
 }
 
-impl V3Domain for TimestamptzEq {
-    const SQL_DOMAIN: &'static str = "eql_v3.timestamptz_eq";
+impl DomainType for PhantomData<TimestamptzEq> {
+    fn sql_domain(&self) -> &'static str {
+        "eql_v3.timestamptz_eq"
+    }
 }

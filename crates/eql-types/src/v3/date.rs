@@ -3,8 +3,10 @@
 //! ciphertext, so dates order like integers); see that module for the
 //! capability table.
 
+use std::marker::PhantomData;
+
 use crate::v3::terms::{Ciphertext, Hmac256, OreBlockU64_8_256};
-use crate::v3::V3Domain;
+use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
 use serde::{Deserialize, Serialize};
 
@@ -21,8 +23,10 @@ pub struct Date {
     pub c: Ciphertext,
 }
 
-impl V3Domain for Date {
-    const SQL_DOMAIN: &'static str = "eql_v3.date";
+impl DomainType for PhantomData<Date> {
+    fn sql_domain(&self) -> &'static str {
+        "eql_v3.date"
+    }
 }
 
 /// `eql_v3.date_eq` — HMAC equality (`=`, `<>`).
@@ -40,8 +44,10 @@ pub struct DateEq {
     pub hm: Hmac256,
 }
 
-impl V3Domain for DateEq {
-    const SQL_DOMAIN: &'static str = "eql_v3.date_eq";
+impl DomainType for PhantomData<DateEq> {
+    fn sql_domain(&self) -> &'static str {
+        "eql_v3.date_eq"
+    }
 }
 
 /// `eql_v3.date_ord_ore` — full comparison, scheme-explicit name.
@@ -59,8 +65,10 @@ pub struct DateOrdOre {
     pub ob: OreBlockU64_8_256,
 }
 
-impl V3Domain for DateOrdOre {
-    const SQL_DOMAIN: &'static str = "eql_v3.date_ord_ore";
+impl DomainType for PhantomData<DateOrdOre> {
+    fn sql_domain(&self) -> &'static str {
+        "eql_v3.date_ord_ore"
+    }
 }
 
 /// `eql_v3.date_ord` — full comparison (`=` `<>` `<` `<=` `>` `>=`).
@@ -78,6 +86,8 @@ pub struct DateOrd {
     pub ob: OreBlockU64_8_256,
 }
 
-impl V3Domain for DateOrd {
-    const SQL_DOMAIN: &'static str = "eql_v3.date_ord";
+impl DomainType for PhantomData<DateOrd> {
+    fn sql_domain(&self) -> &'static str {
+        "eql_v3.date_ord"
+    }
 }
