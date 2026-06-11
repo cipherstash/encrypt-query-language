@@ -267,7 +267,7 @@ jobs:
 
       - name: Clean-DB v3 install smoke (Postgres ${{ matrix.postgres-version }})
         run: |
-          mise run build
+          mise run clean && mise run build
           mise run test:clean_install_v3
 
   schema:
@@ -376,7 +376,7 @@ jobs:
           shared-key: sqlx-tests
           save-if: false
       - name: Build EQL
-        run: mise run --force build
+        run: mise run clean && mise run --force build
       - name: Assert eql_v3 is self-contained
         run: mise run test:self_contained_v3
 
@@ -405,6 +405,7 @@ jobs:
       - name: Verify the matrix test-name inventory
         run: |
           mise run test:matrix:inventory
+          mise run test:matrix:inventory:jsonb_entry
           mise run test:v3-jsonb:inventory
           git add -N tests/sqlx/snapshots
           git diff --exit-code -- tests/sqlx/snapshots \
@@ -434,7 +435,7 @@ jobs:
           mise run postgres:up postgres-${POSTGRES_VERSION} --extra-args "--detach --wait"
       - name: Build and install EQL
         run: |
-          mise run --output prefix --force build
+          mise run clean && mise run --output prefix --force build
           cat release/cipherstash-encrypt.sql \
             | docker exec -i postgres-${POSTGRES_VERSION} \
                 psql -v ON_ERROR_STOP=1 \
