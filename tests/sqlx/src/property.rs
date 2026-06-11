@@ -57,10 +57,20 @@ pub async fn ensure_fixture_loaded<T: ScalarType>(pool: &PgPool) -> Result<()> {
 /// A single corpus entry: a plaintext and its EQL payload rendered as a JSON
 /// text literal (the `payload::text` form `fetch_fixture_payload` returns, or
 /// `serde_json::Value::to_string()` for a freshly encrypted value).
+#[derive(Clone)]
 pub struct Row<T> {
     pub plaintext: T,
     pub payload_json: String,
 }
+
+/// One ordering-oracle result row: `(lt, lte, gt, gte, ord_term_lt)` for a pair.
+type OrdRow = (
+    Option<bool>,
+    Option<bool>,
+    Option<bool>,
+    Option<bool>,
+    Option<bool>,
+);
 
 /// Cast a JSON text literal into a domain value: `'<json>'::jsonb::<domain>`.
 fn cast(payload_json: &str, domain: &str) -> String {
@@ -126,13 +136,7 @@ pub async fn assert_ord_oracle<T: ScalarType>(
                 a = a_cast,
                 b = b_cast,
             );
-            let (lt, lte, gt, gte, term_lt): (
-                Option<bool>,
-                Option<bool>,
-                Option<bool>,
-                Option<bool>,
-                Option<bool>,
-            ) = sqlx::query_as(&sql)
+            let (lt, lte, gt, gte, term_lt): OrdRow = sqlx::query_as(&sql)
                 .fetch_one(pool)
                 .await
                 .with_context(|| format!("ord-oracle pair query: {sql}"))?;
