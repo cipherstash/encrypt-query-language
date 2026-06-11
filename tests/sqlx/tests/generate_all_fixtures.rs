@@ -41,5 +41,13 @@ async fn generate_all() -> anyhow::Result<()> {
     eprintln!("Generating fixture v3_ste_vec (jsonb SteVec document)...");
     eql_tests::fixtures::v3_ste_vec::generate().await?;
     eprintln!("Regenerated v3_ste_vec.");
+
+    // The scalar-shaped SteVec document fixture — one `{"field": <int4>}`
+    // document per `eql_scalars::INT4_VALUES`, with an int4 plaintext oracle —
+    // drives the jsonb-entry behaviour matrix. Same pipeline, split payload
+    // (jsonb-document encryption input, int4 oracle column).
+    eprintln!("Generating fixture v3_doc_int4 (scalar-shaped SteVec document)...");
+    eql_tests::fixtures::v3_doc_int4::generate().await?;
+    eprintln!("Regenerated v3_doc_int4.");
     Ok(())
 }
