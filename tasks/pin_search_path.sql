@@ -262,6 +262,29 @@ BEGIN
         AND p.proname IN ('ore_block_u64_8_256_eq', 'ore_block_u64_8_256_neq',
                           'ore_block_u64_8_256_lt', 'ore_block_u64_8_256_lte',
                           'ore_block_u64_8_256_gt', 'ore_block_u64_8_256_gte'))
+      -- Inner ORE-CLLW comparison helpers backing the `<`, `<=`, `=`, `>=`,
+      -- `>`, `<>` operators on the eql_v3.ore_cllw composite type (registered
+      -- via the DEFAULT eql_v3.ore_cllw_ops btree opclass). Same precedent as
+      -- the ore_block_u64_8_256_* helpers above and the eql_v2.ore_cllw_*
+      -- helpers: PG only carries the inlined operator wrapper through to
+      -- functional-index match if the inner backing function is also
+      -- inlinable. They take the composite arg (not a jsonb-backed domain),
+      -- so the structural skip below does not spare them — they need an
+      -- explicit entry here. The plpgsql FUNCTION 1 comparator
+      -- (compare_ore_cllw_term) stays pinned by design.
+      OR (p.pronargs = 2
+        AND p.proname IN ('ore_cllw_eq', 'ore_cllw_neq',
+                          'ore_cllw_lt', 'ore_cllw_lte',
+                          'ore_cllw_gt', 'ore_cllw_gte'))
+      -- Raw-jsonb CLLW extractor / presence helper. Inlinable SQL — pinning
+      -- would silently undo the fold of `eql_v3.ore_cllw(col -> 'sel')` into
+      -- the calling query and break functional-index match. (These also carry
+      -- the `eql-inline-critical` COMMENT marker honoured by the fallback
+      -- below; listed here too so the intent is explicit alongside the
+      -- operators they support. Single (jsonb) overload in the v3 fork.)
+      OR (p.pronargs = 1
+        AND p.proname IN ('ore_cllw', 'has_ore_cllw')
+        AND p.proargtypes[0] = jsonb_oid)
       OR (p.pronargs = 1
         AND p.proname = 'hmac_256'
         AND p.proargtypes[0] = jsonb_oid)
