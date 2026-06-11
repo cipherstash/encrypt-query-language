@@ -33,3 +33,9 @@ mod signed;
 // `test:matrix:inventory:jsonb_entry` task, not the scalar inventory.
 #[path = "encrypted_domain/jsonb_entry.rs"]
 mod jsonb_entry;
+
+// Property-based + edge-case tests (CIP-3141). Three tiers under `property::`,
+// kept outside `scalars::` so the matrix-inventory gate does not mis-read them
+// as scalar types. See `encrypted_domain/property/mod.rs`.
+#[path = "encrypted_domain/property/mod.rs"]
+mod property;
