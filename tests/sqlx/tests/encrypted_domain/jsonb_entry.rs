@@ -154,9 +154,8 @@ async fn jsonb_entry_int4_index_engages(pool: sqlx::PgPool) -> anyhow::Result<()
         .await?;
 
     for op in ["<", "<=", ">", ">="] {
-        let query = format!(
-            "SELECT * FROM entry_idx WHERE value {op} '{lit}'::eql_v3.ste_vec_entry",
-        );
+        let query =
+            format!("SELECT * FROM entry_idx WHERE value {op} '{lit}'::eql_v3.ste_vec_entry",);
         eql_tests::matrix::assert_index_scan_uses(
             &mut *tx,
             &query,

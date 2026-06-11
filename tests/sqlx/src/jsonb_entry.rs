@@ -31,9 +31,9 @@ impl sqlx::Type<sqlx::Postgres> for JsonbEntryInt4 {
 
 impl<'r> sqlx::Decode<'r, sqlx::Postgres> for JsonbEntryInt4 {
     fn decode(value: sqlx::postgres::PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
-        Ok(JsonbEntryInt4(<i32 as sqlx::Decode<sqlx::Postgres>>::decode(
-            value,
-        )?))
+        Ok(JsonbEntryInt4(
+            <i32 as sqlx::Decode<sqlx::Postgres>>::decode(value)?,
+        ))
     }
 }
 
