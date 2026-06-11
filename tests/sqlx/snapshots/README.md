@@ -24,7 +24,7 @@ Eq-only types are then matched against the committed snapshot. The
 `matrix_tests.txt` baseline itself is always the ordered (`caps = [eq, ord]`)
 shape. Regenerate the eq-only snapshot with:
 
-```
+```bash
 grep -vE '_ord|order_by|routes_through_ob' snapshots/matrix_tests.txt | LC_ALL=C sort -u > snapshots/matrix_tests_eq_only.txt
 ```
 
