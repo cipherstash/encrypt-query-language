@@ -95,15 +95,18 @@ proptest! {
 fn every_catalog_domain_payload_keys_match_its_terms() {
     for spec in CATALOG {
         for dom in spec.domains {
-            let keys = Term::term_json_keys(dom.terms);
-            // Each term contributes exactly its json_key; deduped.
-            for t in dom.terms {
-                assert!(
-                    keys.contains(&t.json_key()),
-                    "domain {} missing json key for {t:?}",
-                    spec.domain_name(dom)
-                );
-            }
+            // Exact set equality: the payload keys are precisely each term's
+            // json_key (deduped) — no missing keys and no extras.
+            let actual: std::collections::HashSet<&str> =
+                Term::term_json_keys(dom.terms).into_iter().collect();
+            let expected: std::collections::HashSet<&str> =
+                dom.terms.iter().map(|t| t.json_key()).collect();
+            assert_eq!(
+                actual,
+                expected,
+                "domain {} payload-key set mismatch",
+                spec.domain_name(dom)
+            );
         }
     }
 }

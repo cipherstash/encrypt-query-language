@@ -25,6 +25,15 @@ where
 {
     let config = column_config_for(&[IndexKind::Unique, IndexKind::Ore], cast)?;
     let payloads = encrypt_store(pool_table, "payload", values, &config).await?;
+    // Fail fast on a count mismatch: a silent `zip` truncation would weaken the
+    // oracle (fewer pairs than intended) and hide an encrypt_store contract
+    // regression. (encrypt_store already checks this, but keep it local/explicit.)
+    anyhow::ensure!(
+        payloads.len() == values.len(),
+        "encrypt_store returned {} payloads for {} plaintext values",
+        payloads.len(),
+        values.len()
+    );
     Ok(values
         .iter()
         .cloned()

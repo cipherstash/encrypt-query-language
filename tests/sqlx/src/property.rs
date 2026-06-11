@@ -162,6 +162,18 @@ pub async fn assert_ord_oracle<T: ScalarType>(
     Ok(())
 }
 
+/// Replace any `user:password@` userinfo in a connection URL with `***@` so it
+/// is safe to put in error context / logs (the password never appears).
+fn redact_url(url: &str) -> String {
+    match url.split_once("://") {
+        Some((scheme, rest)) => match rest.rsplit_once('@') {
+            Some((_userinfo, host)) => format!("{scheme}://***@{host}"),
+            None => format!("{scheme}://{rest}"),
+        },
+        None => "<redacted>".to_string(),
+    }
+}
+
 /// Connect to the shared SQLx test database. Reads `DATABASE_URL`, falling back
 /// to the documented local default (`localhost:7432`, cipherstash/password).
 /// Used by the proptest tiers, which cannot use `#[sqlx::test]`'s injected pool
@@ -172,5 +184,6 @@ pub async fn connect_pool() -> Result<PgPool> {
     });
     PgPool::connect(&url)
         .await
-        .with_context(|| format!("connecting property-test pool to {url}"))
+        // Redact userinfo so a connection failure never logs the password.
+        .with_context(|| format!("connecting property-test pool to {}", redact_url(&url)))
 }
