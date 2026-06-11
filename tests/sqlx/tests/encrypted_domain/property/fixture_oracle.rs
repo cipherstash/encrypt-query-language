@@ -37,16 +37,9 @@ async fn load_fixture_rows<T: ScalarType>(pool: &PgPool) -> Result<Vec<Row<T>>> 
 }
 
 /// Build a corpus by sampling indices (with repeats) into the loaded fixtures.
-fn pick<'a, T>(all: &'a [Row<T>], idxs: &[usize]) -> Vec<Row<T>>
-where
-    T: Clone,
-{
-    idxs.iter()
-        .map(|&i| Row {
-            plaintext: all[i % all.len()].plaintext.clone(),
-            payload_json: all[i % all.len()].payload_json.clone(),
-        })
-        .collect()
+/// `idxs` are already bounded to `0..all.len()` by the proptest strategy.
+fn pick<T: Clone>(all: &[Row<T>], idxs: &[usize]) -> Vec<Row<T>> {
+    idxs.iter().map(|&i| all[i].clone()).collect()
 }
 
 /// Drive proptest from a sync context: sample `cases` index-multisets, and for
