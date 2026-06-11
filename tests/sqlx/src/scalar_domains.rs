@@ -797,7 +797,10 @@ mod seam_tests {
             (spec.eq_extractor)("value"),
             "eql_v3.eq_term(value)".to_string(),
         );
-        assert_eq!(spec.placeholder_payload, crate::helpers::PLACEHOLDER_PAYLOAD);
+        assert_eq!(
+            spec.placeholder_payload,
+            crate::helpers::PLACEHOLDER_PAYLOAD
+        );
     }
 
     /// The Eq variant routes through the equality extractor; Storage has none.
@@ -805,7 +808,10 @@ mod seam_tests {
     fn scalar_eq_and_storage_extractor_routes() {
         let eq = ScalarDomainSpec::new::<i32>(Variant::Eq);
         assert_eq!(eq.sql_domain, "eql_v3.int4_eq");
-        assert_eq!(eq.extractor_expr("value"), Some("eql_v3.eq_term(value)".to_string()));
+        assert_eq!(
+            eq.extractor_expr("value"),
+            Some("eql_v3.eq_term(value)".to_string())
+        );
 
         let storage = ScalarDomainSpec::new::<i32>(Variant::Storage);
         assert_eq!(storage.sql_domain, "eql_v3.int4");
