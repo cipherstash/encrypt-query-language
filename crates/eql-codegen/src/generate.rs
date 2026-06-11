@@ -93,13 +93,7 @@ pub fn render_functions_file(token: &str, domain: &DomainSpec) -> String {
             let rendered = sig.render(&dom);
             if is_supported(op.symbol) {
                 if let Some(ex) = extractor {
-                    entries.push(wrapper_entry(
-                        &dom,
-                        op,
-                        &rendered.left,
-                        &rendered.right,
-                        ex,
-                    ));
+                    entries.push(wrapper_entry(&dom, op, &rendered.left, &rendered.right, ex));
                     continue;
                 }
             }
@@ -398,7 +392,6 @@ mod tests {
             "expected >=11 reference SQL files across all tokens, checked {checked}"
         );
     }
-
 
     #[test]
     fn generate_type_writes_expected_files() {

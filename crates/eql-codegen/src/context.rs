@@ -147,7 +147,13 @@ pub fn extractor_entry(term: Term) -> FnEntry {
 /// Build an inlinable comparison-wrapper entry for a supported operator.
 /// `dom` is the schema-qualified domain name; `op` is the already-resolved
 /// operator (the caller iterates `OPERATORS`, so no symbol re-lookup is needed).
-pub fn wrapper_entry(dom: &str, op: &Operator, arg_a: &str, arg_b: &str, extractor: &str) -> FnEntry {
+pub fn wrapper_entry(
+    dom: &str,
+    op: &Operator,
+    arg_a: &str,
+    arg_b: &str,
+    extractor: &str,
+) -> FnEntry {
     FnEntry::Wrapper {
         op: op.symbol.to_string(),
         function_name: op.function_name.to_string(),
