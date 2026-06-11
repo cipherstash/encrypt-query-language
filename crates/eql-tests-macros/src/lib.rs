@@ -93,6 +93,14 @@ fn is_text_token(token: &str) -> bool {
     spec_for_token(token).kind.is_text()
 }
 
+/// True when `token`'s catalog row is the `numeric` kind (owned
+/// `rust_decimal::Decimal`). Like `text` it is ordered but non-integer and
+/// non-chrono, so it stamps the `numeric` fixture discriminator and draws its
+/// values from the harness accessor (`numeric_values()`).
+fn is_numeric_token(token: &str) -> bool {
+    matches!(spec_for_token(token).kind, eql_scalars::ScalarKind::Numeric)
+}
+
 /// True when `token`'s catalog row declares no ordered domain — equality-only.
 /// Replaces the `[eq_only]` marker. Consumed by [`matrix_suite_for_entry`] to
 /// keep an eq-only type out of the ordered matrix (which exercises ordering
@@ -224,10 +232,12 @@ fn scalar_fixture_modules_tokens(list: &ScalarList) -> TokenStream2 {
                 format_ident!("temporal")
             } else if is_text_token(&token_str) {
                 format_ident!("text")
+            } else if is_numeric_token(&token_str) {
+                format_ident!("numeric")
             } else {
                 panic!(
-                    "scalar token `{token_str}` is neither integer, temporal, nor \
-                     text — no fixture discriminator is wired for its kind"
+                    "scalar token `{token_str}` is neither integer, temporal, text, \
+                     nor numeric — no fixture discriminator is wired for its kind"
                 )
             };
             quote! {

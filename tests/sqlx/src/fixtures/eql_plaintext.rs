@@ -60,6 +60,7 @@ impl PlaintextSqlType {
     pub const TIMESTAMPTZ: PlaintextSqlType = PlaintextSqlType("timestamp with time zone");
     pub const TEXT: PlaintextSqlType = PlaintextSqlType("text");
     pub const JSONB: PlaintextSqlType = PlaintextSqlType("jsonb");
+    pub const NUMERIC: PlaintextSqlType = PlaintextSqlType("numeric");
 
     pub fn as_str(&self) -> &'static str {
         self.0
@@ -86,7 +87,8 @@ const fn cast_for_kind(kind: ScalarKind) -> Cast {
         ScalarKind::Date => Cast::DATE,
         ScalarKind::Timestamptz => Cast::TIMESTAMP,
         ScalarKind::Text => Cast::TEXT,
-        ScalarKind::Numeric | ScalarKind::Jsonb => {
+        ScalarKind::Numeric => Cast::DECIMAL,
+        ScalarKind::Jsonb => {
             panic!("EqlPlaintext is only implemented for the wired scalar kinds")
         }
     }
@@ -103,7 +105,8 @@ const fn plaintext_sql_type_for_kind(kind: ScalarKind) -> PlaintextSqlType {
         ScalarKind::Date => PlaintextSqlType::DATE,
         ScalarKind::Timestamptz => PlaintextSqlType::TIMESTAMPTZ,
         ScalarKind::Text => PlaintextSqlType::TEXT,
-        ScalarKind::Numeric | ScalarKind::Jsonb => {
+        ScalarKind::Numeric => PlaintextSqlType::NUMERIC,
+        ScalarKind::Jsonb => {
             panic!("EqlPlaintext is only implemented for the wired scalar kinds")
         }
     }
@@ -118,6 +121,7 @@ mod sealed {
     impl Sealed for chrono::DateTime<chrono::Utc> {}
     impl Sealed for String {}
     impl Sealed for serde_json::Value {}
+    impl Sealed for rust_decimal::Decimal {}
 }
 
 /// A Rust type usable as a fixture `plaintext` value, carrying its EQL cast
@@ -210,6 +214,14 @@ impl EqlPlaintext for serde_json::Value {
 
     fn to_plaintext(&self) -> Plaintext {
         Plaintext::Json(Some(self.clone()))
+    }
+}
+
+impl EqlPlaintext for rust_decimal::Decimal {
+    const KIND: ScalarKind = ScalarKind::Numeric;
+
+    fn to_plaintext(&self) -> Plaintext {
+        Plaintext::Decimal(Some(*self))
     }
 }
 
