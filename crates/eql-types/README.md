@@ -44,8 +44,9 @@ field names are unchanged from v2 (the purpose-named rename in
 
 ## Drift protection
 
-`tests/catalog_parity.rs` asserts the [`v3::registry`](src/v3/registry.rs)
-exactly covers `eql-scalars::CATALOG` — the same catalog that generates the
+`tests/catalog_parity.rs` asserts the domain inventory —
+[`v3::all()`](src/v3/mod.rs), a `Vec<Box<dyn DomainType>>` of zero-sized
+type-level handles — exactly covers `eql-scalars::CATALOG` — the same catalog that generates the
 `eql_v3` SQL surface — every domain, in order, and proves behaviourally that
 each type's wire keys are exactly the envelope (`v`, `i`, `c`) plus the
 catalog's term keys. Adding a scalar to the catalog without adding its types
