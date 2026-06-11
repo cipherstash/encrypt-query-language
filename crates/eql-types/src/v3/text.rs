@@ -8,7 +8,7 @@ use crate::{Identifier, SchemaVersion};
 use serde::{Deserialize, Serialize};
 
 /// `eql_v3.text` — storage only; every operator is blocked.
-#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Text {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -21,13 +21,17 @@ pub struct Text {
 }
 
 impl DomainType for Text {
-    fn sql_domain(&self) -> &'static str {
+    fn sql_domain_static() -> &'static str {
         "eql_v3.text"
+    }
+
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
     }
 }
 
 /// `eql_v3.text_eq` — HMAC equality (`=`, `<>`).
-#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TextEq {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -42,13 +46,17 @@ pub struct TextEq {
 }
 
 impl DomainType for TextEq {
-    fn sql_domain(&self) -> &'static str {
+    fn sql_domain_static() -> &'static str {
         "eql_v3.text_eq"
+    }
+
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
     }
 }
 
 /// `eql_v3.text_match` — Bloom-filter containment match.
-#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TextMatch {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -63,14 +71,18 @@ pub struct TextMatch {
 }
 
 impl DomainType for TextMatch {
-    fn sql_domain(&self) -> &'static str {
+    fn sql_domain_static() -> &'static str {
         "eql_v3.text_match"
+    }
+
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
     }
 }
 
 /// `eql_v3.text_ord_ore` — full lexicographic comparison,
 /// scheme-explicit name.
-#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TextOrdOre {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -85,14 +97,18 @@ pub struct TextOrdOre {
 }
 
 impl DomainType for TextOrdOre {
-    fn sql_domain(&self) -> &'static str {
+    fn sql_domain_static() -> &'static str {
         "eql_v3.text_ord_ore"
+    }
+
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
     }
 }
 
 /// `eql_v3.text_ord` — full lexicographic comparison
 /// (`=` `<>` `<` `<=` `>` `>=`).
-#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TextOrd {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -107,7 +123,11 @@ pub struct TextOrd {
 }
 
 impl DomainType for TextOrd {
-    fn sql_domain(&self) -> &'static str {
+    fn sql_domain_static() -> &'static str {
         "eql_v3.text_ord"
+    }
+
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
     }
 }
