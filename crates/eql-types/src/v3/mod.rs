@@ -41,11 +41,14 @@
 //! shapes that no sniffing can separate. Consumers read from a typed column
 //! and already know the domain.
 
+use std::marker::PhantomData;
+
+use serde::{de::DeserializeOwned, Serialize};
+
 pub mod date;
 pub mod int2;
 pub mod int4;
 pub mod int8;
-pub mod registry;
 pub mod terms;
 pub mod text;
 pub mod timestamptz;
@@ -56,11 +59,94 @@ pub const SQL_SCHEMA: &str = "eql_v3";
 /// Implemented by every v3 domain payload type: the fully-qualified SQL
 /// domain the payload inhabits (e.g. `"eql_v3.int4_eq"`).
 ///
-/// The [`registry`] derives its domain names from this constant, so the
-/// type ↔ domain binding has exactly one definition per type — there is no
-/// second string to keep in sync, and two same-shaped types (`_ord` vs
-/// `_ord_ore`) cannot be registered under each other's domain.
+/// The [`DomainType`] blanket impl derives everything else from this
+/// constant, so the type ↔ domain binding has exactly one definition per
+/// type — there is no second string to keep in sync, and two same-shaped
+/// types (`_ord` vs `_ord_ore`) cannot be enumerated under each other's
+/// domain.
 pub trait V3Domain {
     /// Fully-qualified SQL domain, e.g. `"eql_v3.int4_eq"`.
     const SQL_DOMAIN: &'static str;
+}
+
+/// Object-safe view of one v3 domain type — what [`all`] enumerates.
+///
+/// Implemented once, by the blanket impl below, for `PhantomData<T>` over
+/// every payload type: a `Box<dyn DomainType>` is a zero-sized type-level
+/// handle, not a payload instance. (The trait cannot be [`V3Domain`] itself:
+/// an associated const is not object-safe, and [`Self::roundtrip`] needs
+/// `Deserialize`, which is `Sized`-only — so the dyn surface lives on the
+/// handle, and `V3Domain` stays the compile-time anchor it reads from.)
+///
+/// Consumed by `tests/catalog_parity.rs` (which asserts [`all`] exactly
+/// covers `eql-scalars::CATALOG`, so the list cannot silently go stale) and
+/// by the binding/schema exporters added in stacked changes. Public so FFI
+/// consumers can enumerate the protocol surface too.
+pub trait DomainType {
+    /// Fully-qualified SQL domain name, e.g. `"eql_v3.int4_eq"`.
+    fn sql_domain(&self) -> &'static str;
+
+    /// Unqualified SQL domain name (e.g. `"int4_eq"`) — [`Self::sql_domain`]
+    /// minus the schema qualifier; matches `eql-scalars`
+    /// `ScalarSpec::domain_name`.
+    fn domain(&self) -> &'static str {
+        self.sql_domain()
+            .strip_prefix("eql_v3.")
+            .expect("SQL_DOMAIN must be qualified with the eql_v3 schema")
+    }
+
+    /// The Rust type's full path (via `std::any::type_name`).
+    fn type_name(&self) -> &'static str;
+
+    /// serde round-trip through the concrete type (`Value` → `T` → `Value`).
+    fn roundtrip(&self, value: serde_json::Value) -> Result<serde_json::Value, serde_json::Error>;
+}
+
+impl<T> DomainType for PhantomData<T>
+where
+    T: V3Domain + DeserializeOwned + Serialize,
+{
+    fn sql_domain(&self) -> &'static str {
+        T::SQL_DOMAIN
+    }
+
+    fn type_name(&self) -> &'static str {
+        std::any::type_name::<T>()
+    }
+
+    fn roundtrip(&self, value: serde_json::Value) -> Result<serde_json::Value, serde_json::Error> {
+        let parsed: T = serde_json::from_value(value)?;
+        serde_json::to_value(&parsed)
+    }
+}
+
+/// Every v3 domain type, in `eql-scalars::CATALOG` order (token order, then
+/// each token's domains in manifest order) — the one hand-maintained list of
+/// types in the crate.
+pub fn all() -> Vec<Box<dyn DomainType>> {
+    vec![
+        Box::new(PhantomData::<int4::Int4>),
+        Box::new(PhantomData::<int4::Int4Eq>),
+        Box::new(PhantomData::<int4::Int4OrdOre>),
+        Box::new(PhantomData::<int4::Int4Ord>),
+        Box::new(PhantomData::<int2::Int2>),
+        Box::new(PhantomData::<int2::Int2Eq>),
+        Box::new(PhantomData::<int2::Int2OrdOre>),
+        Box::new(PhantomData::<int2::Int2Ord>),
+        Box::new(PhantomData::<int8::Int8>),
+        Box::new(PhantomData::<int8::Int8Eq>),
+        Box::new(PhantomData::<int8::Int8OrdOre>),
+        Box::new(PhantomData::<int8::Int8Ord>),
+        Box::new(PhantomData::<date::Date>),
+        Box::new(PhantomData::<date::DateEq>),
+        Box::new(PhantomData::<date::DateOrdOre>),
+        Box::new(PhantomData::<date::DateOrd>),
+        Box::new(PhantomData::<timestamptz::Timestamptz>),
+        Box::new(PhantomData::<timestamptz::TimestamptzEq>),
+        Box::new(PhantomData::<text::Text>),
+        Box::new(PhantomData::<text::TextEq>),
+        Box::new(PhantomData::<text::TextMatch>),
+        Box::new(PhantomData::<text::TextOrdOre>),
+        Box::new(PhantomData::<text::TextOrd>),
+    ]
 }
