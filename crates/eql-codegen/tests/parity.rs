@@ -146,7 +146,12 @@ fn generate_all_is_deterministic_across_runs() {
                 if path.is_dir() {
                     stack.push(path);
                 } else if path.extension().and_then(|x| x.to_str()) == Some("sql") {
-                    let rel = path.strip_prefix(&base).unwrap().to_str().unwrap().to_string();
+                    let rel = path
+                        .strip_prefix(&base)
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                        .to_string();
                     files.push((rel, fs::read_to_string(&path).unwrap()));
                 }
             }
