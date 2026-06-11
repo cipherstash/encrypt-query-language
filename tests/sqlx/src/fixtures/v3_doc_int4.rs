@@ -78,10 +78,8 @@ pub async fn generate() -> Result<()> {
         .with_values(&plaintexts);
     let working = spec.working_table();
 
-    let config = cipherstash::column_config_for(
-        spec.indexes(),
-        <serde_json::Value as EqlPlaintext>::CAST,
-    )?;
+    let config =
+        cipherstash::column_config_for(spec.indexes(), <serde_json::Value as EqlPlaintext>::CAST)?;
     let payloads =
         cipherstash::encrypt_store(&working, cipherstash::PAYLOAD_COLUMN, &docs, &config).await?;
     anyhow::ensure!(
