@@ -1,11 +1,12 @@
 //! THE PARITY GATE. Runs the Rust generator (into a temp dir) and asserts the
-//! generated SQL surface is byte-for-byte equal to the committed golden under
-//! `tests/codegen/reference/<token>/` (modulo the one leading `-- REFERENCE:`
-//! provenance line). Every catalog type has a committed golden, generated once;
-//! the golden — not the retired Python generator — is the sole oracle. The
-//! reference dirs are *discovered* dynamically and cross-checked against
-//! `eql_scalars::CATALOG`, so a new catalog type with no golden (or a stale
-//! golden with no catalog row) fails here. The plaintext fixture lists are not
+//! generated SQL surface is byte-for-byte equal to the committed reference SQL
+//! files under `tests/codegen/reference/<token>/` (modulo the one leading
+//! `-- REFERENCE:` provenance line). Every catalog type has a committed
+//! reference, generated once; the reference — not the retired Python generator
+//! — is the sole oracle. The reference dirs are *discovered* dynamically and
+//! cross-checked against `eql_scalars::CATALOG`, so a new catalog type with no
+//! reference (or a stale reference with no catalog row) fails here. The
+//! plaintext fixture lists are not
 //! generated; they live in the catalog (`eql_scalars::INT4_VALUES` /
 //! `INT2_VALUES`) and are pinned by `eql-scalars`'s own `values_tests`.
 
@@ -85,16 +86,16 @@ fn reference_dirs_match_catalog_tokens() {
     assert_eq!(
         refs, catalog,
         "committed reference dirs must equal the catalog token set: a new \
-         catalog type needs a committed `tests/codegen/reference/<token>/` golden \
+         catalog type needs a committed `tests/codegen/reference/<token>/` reference \
          (generate it with `cargo run -p eql-codegen` and prepend a `-- REFERENCE:` \
-         line), and a stale golden with no catalog row must be removed"
+         line), and a stale reference with no catalog row must be removed"
     );
 }
 
 #[test]
-fn rust_generator_matches_golden_files() {
+fn rust_generator_matches_reference_files() {
     let root = repo_root();
-    let out = tempdir("rust-golden");
+    let out = tempdir("rust-reference");
     eql_codegen::generate::generate_all(out.path()).expect("rust generate_all");
 
     for token in reference_tokens(&root) {
@@ -109,7 +110,7 @@ fn rust_generator_matches_golden_files() {
         let gen_names = sql_names(&gen_dir);
         assert_eq!(
             gen_names, ref_names,
-            "{token}: generated .sql file set differs from golden reference set \
+            "{token}: generated .sql file set differs from reference set \
              (reference: {ref_names:?}, generated: {gen_names:?})"
         );
 
@@ -119,7 +120,7 @@ fn rust_generator_matches_golden_files() {
             let actual = fs::read_to_string(gen_dir.join(name)).unwrap();
             assert_eq!(
                 actual, expected,
-                "{token}/{name}: materialised output differs from golden"
+                "{token}/{name}: materialised output differs from reference"
             );
         }
     }
@@ -173,7 +174,7 @@ fn generate_all_is_deterministic_across_runs() {
 }
 
 /// Both Rust strippers (the in-crate `strip_reference_marker` and this file's
-/// golden test) skip a variable number of leading `-- REFERENCE:` lines, while
+/// reference test) skip a variable number of leading `-- REFERENCE:` lines, while
 /// the shell gate skips exactly one with `tail -n +2`. They agree only while
 /// every reference file carries exactly one marker line — make that explicit
 /// across every committed reference dir.

@@ -336,7 +336,7 @@ mod tests {
                 Some("COMMUTATOR = <@, RESTRICT = contsel, JOIN = contjoinsel"),
             ),
             // ... but suppressed when `@>` is a blocker (non-Bloom domains),
-            // which is why the int4 golden is unchanged.
+            // which is why the int4 reference is unchanged.
             ("@>", "eql_v3.int4_eq", false, None),
         ];
 

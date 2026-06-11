@@ -633,8 +633,8 @@ mod values_tests {
     /// Every materialised `<T>_VALUES` array equals its catalog row's fixtures,
     /// resolved per kind, in order. Computed from the fixtures — no hardcoded
     /// expected array — so it cannot drift and adding a type needs only one
-    /// `check(&INTx, INTx_VALUES)` line, not a duplicated golden list. Subsumes
-    /// the old per-type `<T>_values_materialise_to_typed_array` goldens and
+    /// `check(&INTx, INTx_VALUES)` line, not a duplicated reference list. Subsumes
+    /// the old per-type `<T>_values_materialise_to_typed_array` references and
     /// `materialised_values_track_their_fixture_lists`.
     fn check<T: Copy + Into<i128>>(spec: &ScalarSpec, values: &[T]) {
         assert_eq!(

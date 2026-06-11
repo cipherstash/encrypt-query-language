@@ -359,14 +359,14 @@ mod tests {
         tokens
     }
 
-    /// Byte-compare every `render_*_file` output against its committed golden,
+    /// Byte-compare every `render_*_file` output against its committed reference,
     /// for **every** catalog type with a reference dir (not just int4). This is
-    /// the in-crate golden gate over the render functions directly (the
+    /// the in-crate reference gate over the render functions directly (the
     /// integration `parity.rs` gate runs `generate_all` to disk). The reference
     /// dirs are cross-checked against the catalog by `parity.rs`'s
     /// `reference_dirs_match_catalog_tokens`.
     #[test]
-    fn generator_matches_reference_goldens() {
+    fn generator_matches_reference_files() {
         let root = repo_root();
         let mut checked = 0;
         for token in reference_tokens(&root) {
@@ -382,7 +382,7 @@ mod tests {
                 let actual = rendered_for(&token, &name, s);
                 assert_eq!(
                     actual, expected,
-                    "{token}/{name}: generator diverged from golden reference"
+                    "{token}/{name}: generator diverged from reference"
                 );
                 checked += 1;
             }
