@@ -337,6 +337,23 @@ macro_rules! jsonb_entry_matrix {
         // flattens to native `jsonb < jsonb` (no ore_cllw, no index) rather than
         // the entry operator. The hand-written `jsonb_entry_int4_index_engages`
         // test in the suite probes index engagement with the domain-cast RHS only.
+
+        // Aggregates: eql_v3.min/max over ste_vec_entry (src/v3/jsonb/aggregates.sql).
+        // The aggregate leaf cases compare extrema via the ord-extractor seam
+        // (eql_v3.ore_cllw for entries), so the entry min/max route through the
+        // `oc` (CLLW ORE) term exactly like the comparison operators.
+        $crate::__scalar_matrix_aggregate_outer! {
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = "../../fixtures",
+            domains = [(entry, Ord)],
+        }
+        $crate::__scalar_matrix_aggregate_group_by_outer! {
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = "../../fixtures",
+            domains = [(entry, Ord)],
+        }
+        $crate::__scalar_matrix_aggregate_parallel_outer! {
+            suite = $suite, scalar = $scalar,
+            domains = [(entry, Ord)],
+        }
     };
 }
 
