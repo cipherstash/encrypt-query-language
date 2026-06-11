@@ -326,6 +326,42 @@ first added) also needs, in `tests/sqlx/src/fixtures/eql_plaintext.rs`:
   `Plaintext::*` variant (`Plaintext::NaiveDate` / `Plaintext::Timestamp` /
   `Plaintext::Text`), plus the three mirrored `#[test]`s.
 
+#### A fourth fixture shape: non-integer, non-chrono, non-text (`numeric` / `Decimal`)
+
+`numeric` (backed by `rust_decimal::Decimal`, 14-block ORE — the first scalar
+whose ORE term is wider than 8 blocks) is ordered but is **neither** the integer
+materialiser, **nor** chrono (`temporal`), **nor** `text` (it owns a `Decimal`,
+not a `String`, and has no `Match` index). It therefore introduces a **fourth
+fixture discriminator**, which means touching the proc-macro routing, not just
+the type list. Beyond the §3.1 `eql_plaintext.rs` wiring above (`Cast::DECIMAL`,
+`PlaintextSqlType::NUMERIC`, the `cast_for_kind` / `plaintext_sql_type_for_kind`
+arms, `Sealed for Decimal`, `EqlPlaintext for Decimal` → `Plaintext::Decimal`),
+it also needs:
+
+- an **`is_numeric_token`** arm in `crates/eql-tests-macros/src/lib.rs`'s
+  fixture-module router — without it `scalar_types!(fixture_modules)` panics at
+  compile time on the unrecognised kind (the router handled only `temporal` /
+  `text` before);
+- a **`numeric` arm** in the `scalar_fixture!` macro
+  (`tests/sqlx/src/fixtures/scalar_fixture.rs`) — the temporal arm's twin
+  (`[Unique, Ore]`, pivot-presence asserts via `OrderedScalar`), but no `Match`
+  and no chrono;
+- a hand-written **`numeric_values()`** accessor plus `impl ScalarType` /
+  `OrderedScalar for Decimal` in `tests/sqlx/src/scalar_domains.rs` — parsing the
+  catalog's `Fixture::Numeric` strings into a `LazyLock<Vec<Decimal>>` (the
+  catalog stays zero-dep; the parse lives in the harness). `Decimal: Ord` supplies
+  the expected sort order — `ore-rs` guarantees the ciphertext order agrees, and
+  equivalent scales (`1` ≡ `1.0`) collide like `Decimal`'s own `Ord`. Add a
+  **`fixtures_are_distinct_by_value`** guard (parse → `HashSet`): the zero-dep
+  catalog only dedupes by literal string, so `"1"` / `"1.0"` would slip past it
+  but collide in both the ORE ciphertext and the fixture table;
+- the **`rust_decimal` dependency** + the sqlx **`rust_decimal` feature** in
+  `tests/sqlx/Cargo.toml` (in `[dependencies]`, not `[dev-dependencies]` — the
+  `Decimal` impls live in the crate's library code).
+
+See `docs/plans/2026-06-11-ore-block-comparator-n-blocks-design.md` for the full
+worked example (and the N-block ORE comparator change the wide term relies on).
+
 ### New-capability domains (e.g. `_match` / `Bloom`)
 
 A domain carrying a capability the matrix does not model — `text`'s `_match`
