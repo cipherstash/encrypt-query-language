@@ -1,15 +1,19 @@
 //! The drift gate: the v3 domain inventory must mirror `eql-scalars::CATALOG`
 //! — the same catalog that generates the `eql_v3` SQL surface — exactly:
-//! every domain, in catalog order, and every domain's wire keys, pinned
-//! through the published JSON Schema (schemars `required` reflects the real
-//! serde contract, so an `Option` term field or a wrong wire key fails
-//! here). Per-type strictness (unknown-key rejection, envelope version) is
-//! covered behaviourally in `tests/v3_conformance.rs`.
+//! every domain, in catalog order, and every domain's wire contract, pinned
+//! through the published JSON Schema. schemars output reflects the real
+//! serde contract, so per domain this catches an `Option` term field or a
+//! wrong wire key (`required`), a struct that lost
+//! `#[serde(deny_unknown_fields)]` (`additionalProperties: false`), and a
+//! `v` field that is not [`eql_types::SchemaVersion`] (the `$ref` and its
+//! `const: 2`). Behavioural spot checks of the same properties live in
+//! `tests/v3_conformance.rs`.
 
 use std::collections::BTreeSet;
 
 use eql_scalars::{Term, CATALOG, ENVELOPE_KEYS};
-use eql_types::v3;
+use eql_types::{v3, EQL_SCHEMA_VERSION};
+use serde_json::{json, Value};
 
 #[test]
 fn inventory_exactly_covers_catalog() {
@@ -58,5 +62,44 @@ fn schema_required_keys_match_catalog_terms() {
                 "{name}: schema required keys must be envelope + catalog terms"
             );
         }
+    }
+}
+
+/// Every published schema must be *strict*, not just complete: unknown keys
+/// rejected at the root and inside the nested `Identifier`, and the `v`
+/// property pinned to the `SchemaVersion` definition whose `const` is the
+/// wire version. `required` alone (the test above) would stay green if a
+/// struct lost `#[serde(deny_unknown_fields)]` or swapped `SchemaVersion`
+/// for a bare integer — both regenerate a permissive schema that
+/// `types:check` would happily commit as the new baseline.
+#[test]
+fn schemas_are_strict() {
+    for entry in v3::all() {
+        let name = entry.domain();
+        let schema: Value = serde_json::to_value(entry.schema())
+            .unwrap_or_else(|e| panic!("{name}: schema does not serialize: {e}"));
+
+        assert_eq!(
+            schema.pointer("/additionalProperties"),
+            Some(&json!(false)),
+            "{name}: schema must set additionalProperties: false \
+             (struct lost #[serde(deny_unknown_fields)]?)"
+        );
+        assert_eq!(
+            schema.pointer("/definitions/Identifier/additionalProperties"),
+            Some(&json!(false)),
+            "{name}: Identifier definition must set additionalProperties: false"
+        );
+        assert_eq!(
+            schema.pointer("/properties/v/allOf/0/$ref"),
+            Some(&json!("#/definitions/SchemaVersion")),
+            "{name}: the v property must $ref the SchemaVersion definition \
+             (field declared as a bare integer instead of SchemaVersion?)"
+        );
+        assert_eq!(
+            schema.pointer("/definitions/SchemaVersion/const"),
+            Some(&json!(EQL_SCHEMA_VERSION)),
+            "{name}: SchemaVersion must pin const: {EQL_SCHEMA_VERSION}"
+        );
     }
 }
