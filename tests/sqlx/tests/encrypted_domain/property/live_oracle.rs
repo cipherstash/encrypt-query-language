@@ -1,10 +1,10 @@
 //! Tier B (CIP-3141): property tests over freshly generated, live-encrypted
 //! values. Gated behind `proptest-live` (declared in property/mod.rs) — needs
 //! CS_* creds, which `mise run test:sqlx` enables for CI/local full SQLx runs.
-//! Each proptest case generates one corpus of random integers
-//! (seeded with type-specific extremes, zero, and DELIBERATE DUPLICATES so the equality-true
-//! branch fires across distinct ciphertexts), encrypts it in ONE batched
-//! ZeroKMS call, then runs the all-pairs oracle.
+//! Each proptest case generates one corpus of random integers — seeded with
+//! type-specific extremes, zero, and deliberate duplicates so the equality-true
+//! branch fires across distinct ciphertexts of the same plaintext — encrypts it
+//! in one batched ZeroKMS call, then runs the all-pairs oracle.
 
 use anyhow::Result;
 use eql_tests::fixtures::cipherstash::{column_config_for, encrypt_store};
