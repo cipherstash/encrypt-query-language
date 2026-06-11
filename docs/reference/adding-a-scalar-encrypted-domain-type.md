@@ -47,7 +47,9 @@ To add a scalar type `<T>` (e.g. `int8`), with Rust type `<R>` (e.g. `i64`):
    runs the generator first). One run regenerates *every* catalog type; there is
    no per-type codegen task. The generated `*_{types,functions,operators,aggregates}.sql`
    are gitignored and never committed.
-5. **Snapshot the matrix inventory** — `mise run test:matrix:inventory` (§3).
+5. **Snapshot the matrix inventory and commit the reference SQL files** —
+   `mise run test:matrix:inventory` (§3), and commit the per-type reference SQL
+   files under `tests/codegen/reference/<T>/` (every catalog type must have them — §4).
 6. **Verify** — `mise run test:codegen`, the relevant SQLx suites, and the
    PostgreSQL matrix (§4).
 
@@ -57,8 +59,6 @@ Things you do **not** do:
   `*_operators.sql` / `*_aggregates.sql` are gitignored; the catalog plus the
   renderers are the source of truth. Change the catalog and rebuild — never
   hand-edit generated SQL.
-- **Don't add a `tests/codegen/reference/<T>/` baseline.** `int4` is the sole
-  reference (§4).
 - **Don't edit `mise.toml`, the CI workflow, `pin_search_path.sql`, or
   `splinter.sh`** for an ordinary type — they recognise the generated surface
   intrinsically (§5, §6). The exception is a brand-new *term* whose extractor
