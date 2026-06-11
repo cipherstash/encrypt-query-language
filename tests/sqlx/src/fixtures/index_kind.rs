@@ -21,6 +21,10 @@ pub enum IndexKind {
     Ore,
     /// `match` — drives `LIKE` / `ILIKE` via the bloom filter.
     Match,
+    /// `ste_vec` — drives the encrypted-JSONB (SteVec) document surface:
+    /// per-leaf HMAC (`hm`, equality) + ORE-CLLW (`oc`, ordered) terms. Used
+    /// by the `v3_ste_vec` document fixture, not the scalar matrix.
+    SteVec,
 }
 
 impl IndexKind {
@@ -29,6 +33,7 @@ impl IndexKind {
             IndexKind::Unique => "unique",
             IndexKind::Ore => "ore",
             IndexKind::Match => "match",
+            IndexKind::SteVec => "ste_vec",
         }
     }
 }
@@ -48,6 +53,7 @@ mod tests {
         assert_eq!(IndexKind::Unique.as_str(), "unique");
         assert_eq!(IndexKind::Ore.as_str(), "ore");
         assert_eq!(IndexKind::Match.as_str(), "match");
+        assert_eq!(IndexKind::SteVec.as_str(), "ste_vec");
     }
 
     #[test]
@@ -55,5 +61,6 @@ mod tests {
         assert_eq!(format!("{}", IndexKind::Unique), "unique");
         assert_eq!(format!("{}", IndexKind::Ore), "ore");
         assert_eq!(format!("{}", IndexKind::Match), "match");
+        assert_eq!(format!("{}", IndexKind::SteVec), "ste_vec");
     }
 }

@@ -405,9 +405,10 @@ jobs:
       - name: Verify the matrix test-name inventory
         run: |
           mise run test:matrix:inventory
+          mise run test:v3-jsonb:inventory
           git add -N tests/sqlx/snapshots
           git diff --exit-code -- tests/sqlx/snapshots \
-            || { echo "Coverage inventory stale — run 'mise run test:matrix:inventory' and commit."; exit 1; }
+            || { echo "Coverage inventory stale — run the relevant inventory task and commit."; exit 1; }
 
   splinter:
     name: "Supabase splinter"

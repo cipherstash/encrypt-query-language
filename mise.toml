@@ -266,6 +266,26 @@ fi
 echo "Matrix inventory OK: ${checked} type(s) match the canonical snapshot or its derived eq-only subset; catalog reconciled."
 """
 
+[tasks."test:v3-jsonb:inventory"]
+description = "Verify the v3 jsonb SQLx test-name inventory snapshot (no database required)"
+dir = "{{config_root}}/tests/sqlx"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+test -f snapshots/v3_jsonb_tests.txt || { echo "snapshots/v3_jsonb_tests.txt missing — regenerate and commit it." >&2; exit 1; }
+
+tmp=$(mktemp)
+trap 'rm -f "$tmp"' EXIT
+
+cargo test --test v3_jsonb_tests --test v3_jsonb_operator_surface_tests -- --list \
+  | sed -n 's/: test$//p' \
+  | LC_ALL=C sort > "$tmp"
+
+diff -u snapshots/v3_jsonb_tests.txt "$tmp"
+echo "v3 jsonb inventory OK"
+"""
+
 [tasks."test:matrix:expand"]
 description = "Regenerate the int4 matrix cargo-expand snapshot (requires the pinned nightly + cargo-expand)"
 dir = "{{config_root}}/tests/sqlx"
