@@ -130,9 +130,8 @@ CREATE OPERATOR <> (
   RIGHTARG=eql_v3.ore_block_u64_8_256,
   COMMUTATOR = <>,
   NEGATOR = =,
-  RESTRICT = eqsel,
-  JOIN = eqjoinsel,
-  HASHES,
+  RESTRICT = neqsel,
+  JOIN = neqjoinsel,
   MERGES
 );
 

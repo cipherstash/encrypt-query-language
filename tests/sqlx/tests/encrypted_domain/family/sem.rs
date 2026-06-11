@@ -450,7 +450,7 @@ async fn ore_comparators_are_immutable(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-/// T7 — Bloom-filter SEM extractor (`eql_v3.bloom_filter(jsonb)`): reads the
+/// T9 — Bloom-filter SEM extractor (`eql_v3.bloom_filter(jsonb)`): reads the
 /// `bf` array out of a payload. Inlinable SQL mirroring `hmac_256` — NULL on a
 /// missing key, not a raise (the `match` capability is tied to the domain,
 /// whose CHECK guarantees `bf`).
@@ -515,7 +515,7 @@ async fn bloom_filter_extractor_empty_array_is_empty_not_null(pool: PgPool) -> R
     Ok(())
 }
 
-/// T8 — `eql_v3.has_bloom_filter(jsonb)` presence predicate. Mirrors the
+/// T10 — `eql_v3.has_bloom_filter(jsonb)` presence predicate. Mirrors the
 /// `has_hmac_256` / `has_ore_block_u64_8_256` coverage in T5: its two-part guard
 /// (`val ? 'bf'` AND `val ->> 'bf' IS NOT NULL`) is exercised across present,
 /// absent, and json-null cases. The `{"bf":null}` → false case pins the
