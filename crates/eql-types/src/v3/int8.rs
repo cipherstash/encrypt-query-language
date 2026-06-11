@@ -1,8 +1,10 @@
 //! The `int8` encrypted-domain family. Same four-domain ordered shape as
 //! [`crate::v3::int4`] — see that module for the capability table.
 
+use std::marker::PhantomData;
+
 use crate::v3::terms::{Ciphertext, Hmac256, OreBlockU64_8_256};
-use crate::v3::V3Domain;
+use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
 use serde::{Deserialize, Serialize};
 
@@ -19,8 +21,10 @@ pub struct Int8 {
     pub c: Ciphertext,
 }
 
-impl V3Domain for Int8 {
-    const SQL_DOMAIN: &'static str = "eql_v3.int8";
+impl DomainType for PhantomData<Int8> {
+    fn sql_domain(&self) -> &'static str {
+        "eql_v3.int8"
+    }
 }
 
 /// `eql_v3.int8_eq` — HMAC equality (`=`, `<>`).
@@ -38,8 +42,10 @@ pub struct Int8Eq {
     pub hm: Hmac256,
 }
 
-impl V3Domain for Int8Eq {
-    const SQL_DOMAIN: &'static str = "eql_v3.int8_eq";
+impl DomainType for PhantomData<Int8Eq> {
+    fn sql_domain(&self) -> &'static str {
+        "eql_v3.int8_eq"
+    }
 }
 
 /// `eql_v3.int8_ord_ore` — full comparison, scheme-explicit name.
@@ -57,8 +63,10 @@ pub struct Int8OrdOre {
     pub ob: OreBlockU64_8_256,
 }
 
-impl V3Domain for Int8OrdOre {
-    const SQL_DOMAIN: &'static str = "eql_v3.int8_ord_ore";
+impl DomainType for PhantomData<Int8OrdOre> {
+    fn sql_domain(&self) -> &'static str {
+        "eql_v3.int8_ord_ore"
+    }
 }
 
 /// `eql_v3.int8_ord` — full comparison (`=` `<>` `<` `<=` `>` `>=`).
@@ -76,6 +84,8 @@ pub struct Int8Ord {
     pub ob: OreBlockU64_8_256,
 }
 
-impl V3Domain for Int8Ord {
-    const SQL_DOMAIN: &'static str = "eql_v3.int8_ord";
+impl DomainType for PhantomData<Int8Ord> {
+    fn sql_domain(&self) -> &'static str {
+        "eql_v3.int8_ord"
+    }
 }
