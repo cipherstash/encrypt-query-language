@@ -273,6 +273,70 @@ macro_rules! scalar_matrix {
     };
 }
 
+/// Reduced behaviour matrix for a SteVec **entry** view type (e.g.
+/// `JsonbEntryInt4`). Runs only the leaf drivers that are surface-agnostic
+/// once routed through the access-path seam: correctness (d,d only),
+/// supported_null, order_by(+nulls/+using), count, index_engages, and — once
+/// `src/v3/jsonb/aggregates.sql` exists — aggregate(+group_by/+parallel).
+/// Containment / blockers / payload_check / path-op / native-absent /
+/// planner-metadata stay in the hand-written `v3_jsonb_tests` suite — they have
+/// no scalar analogue or assert document-specific surface.
+/// `ord_routes_through_ob` and scalar `ore_injectivity` are also excluded: they
+/// are scalar-term invariants and are not semantically correct for
+/// `ste_vec_entry` (entry equality routes through `eq_term`, not ORE).
+///
+/// The single `(entry, Ord)` "domain" is variant-independent — `ste_vec_entry`
+/// has one domain. Equality reduces through `eql_v3.eq_term`; ordering, index,
+/// count-distinct, and aggregates reduce through `eql_v3.ore_cllw` via the
+/// `JsonbEntryInt4` extractor overrides.
+#[macro_export]
+macro_rules! jsonb_entry_matrix {
+    (
+        suite = $suite:ident,
+        scalar = $scalar:ty,
+        eql_type = $eql_type:literal $(,)?
+    ) => {
+        $crate::__scalar_matrix_dxop_outer! {
+            case = __scalar_matrix_correctness_case,
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = "../../fixtures",
+            domains = [(entry, Ord)],
+            ops_list = [(eq, "="), (neq, "<>"), (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
+            pivots_list = [
+                (min, <$scalar as $crate::scalar_domains::OrderedScalar>::min_pivot()),
+                (max, <$scalar as $crate::scalar_domains::OrderedScalar>::max_pivot()),
+                (mid, <$scalar as $crate::scalar_domains::OrderedScalar>::mid_pivot()),
+            ],
+        }
+        $crate::__scalar_matrix_dxo_outer! {
+            case = __scalar_matrix_supported_null_case,
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = "../../fixtures",
+            domains = [(entry, Ord)],
+            ops_list = [(eq, "="), (neq, "<>"), (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
+        }
+        $crate::__scalar_matrix_order_by_outer! {
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = "../../fixtures",
+            domains = [(entry, Ord)],
+        }
+        $crate::__scalar_matrix_order_by_nulls_outer! {
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = "../../fixtures",
+            domains = [(entry, Ord)],
+        }
+        $crate::__scalar_matrix_order_by_using_outer! {
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = "../../fixtures",
+            domains = [(entry, Ord)], ops_list = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
+        }
+        $crate::__scalar_matrix_count_outer! {
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = "../../fixtures",
+            domains = [(entry, Ord)],
+        }
+        $crate::__scalar_matrix_index_outer! {
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = "../../fixtures",
+            combos = [(entry, Ord, "eql_v3.ore_cllw", "btree",
+                [(eq, "="), (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")])],
+        }
+    };
+}
+
 /// Low-level entry point. Use `scalar_matrix!` instead unless
 /// your type's surface deviates from the standard scalar shapes.
 #[macro_export]
@@ -600,8 +664,8 @@ macro_rules! __scalar_matrix_correctness_case {
                     $crate::scalar_domains::fetch_fixture_payload::<$scalar>(&pool, pivot.clone()).await?;
                 let lit = $crate::scalar_domains::sql_string_literal(&payload);
                 let predicate = format!(
-                    "payload::{d} {op} {lit}::jsonb::{d}",
-                    d = &spec.sql_domain, op = $op,
+                    "({col})::{d} {op} {lit}::jsonb::{d}",
+                    col = &spec.column_expr, d = &spec.sql_domain, op = $op,
                 );
                 let expected =
                     <$scalar as $crate::scalar_domains::ScalarType>::expected_forward($op, pivot);
@@ -647,10 +711,11 @@ macro_rules! __scalar_matrix_cross_shape_case {
                     $crate::scalar_domains::commute_op($op), pivot.clone(),
                 ).len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
-                    ("d_d", format!("payload::{d} {op} {lit}::jsonb::{d}", op = $op), forward_count),
-                    ("d_j", format!("payload::{d} {op} {lit}::jsonb", op = $op), forward_count),
-                    ("j_d", format!("{lit}::jsonb {op} payload::{d}", op = $op), commuted_count),
+                    ("d_d", format!("({col})::{d} {op} {lit}::jsonb::{d}", op = $op), forward_count),
+                    ("d_j", format!("({col})::{d} {op} {lit}::jsonb", op = $op), forward_count),
+                    ("j_d", format!("{lit}::jsonb {op} ({col})::{d}", op = $op), commuted_count),
                 ];
                 let table = <$scalar as $crate::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
@@ -688,7 +753,7 @@ macro_rules! __scalar_matrix_supported_null_case {
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
-                let payload = $crate::helpers::PLACEHOLDER_PAYLOAD;
+                let payload = spec.placeholder_payload;
                 let sql = format!(
                     "SELECT $1::jsonb::{d} {op} $2::jsonb::{d}",
                     d = &spec.sql_domain, op = $op,
@@ -1668,7 +1733,7 @@ macro_rules! __scalar_matrix_index_case {
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!(
                     "INSERT INTO {table}(plaintext, value) \
-                     SELECT plaintext, payload::{d} FROM {fixture}", d = &spec.sql_domain, fixture = fixture_table,
+                     SELECT plaintext, ({col})::{d} FROM {fixture}", col = &spec.column_expr, d = &spec.sql_domain, fixture = fixture_table,
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!(
                     "CREATE INDEX {index} ON {table} USING {using} ({extractor}(value))", using = $using, extractor = $extractor,
@@ -1802,11 +1867,14 @@ macro_rules! __scalar_matrix_order_by_case {
                 } else {
                     String::new()
                 };
+                let col = &spec.column_expr;
+                let d = &spec.sql_domain;
+                let ord = (spec.ord_extractor)(&format!("({col})::{d}"));
                 let sql = format!(
                     "SELECT plaintext FROM {fixture}{where_clause} \
-ORDER BY eql_v3.ord_term(payload::{d}) {dir}",
+ORDER BY {ord} {dir}",
                     fixture = fixture_table,
-                    d = &spec.sql_domain, dir = $direction,
+                    dir = $direction,
                 );
                 let actual: Vec<$scalar> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
 
@@ -1917,7 +1985,7 @@ macro_rules! __scalar_matrix_order_by_nulls_case {
                 // Non-NULL rows: every fixture row, carrying its plaintext.
                 sqlx::query(&format!(
                     "INSERT INTO {table}(plaintext, value) \
-SELECT plaintext, payload::{d} FROM {fixture}", fixture = fixture_table,
+SELECT plaintext, ({col})::{d} FROM {fixture}", col = &spec.column_expr, fixture = fixture_table,
                 )).execute(&mut *tx).await?;
                 // NULL-valued rows: NULL plaintext too, so they surface as None
                 // and their position is what the assertion pins.
@@ -1926,9 +1994,10 @@ SELECT plaintext, payload::{d} FROM {fixture}", fixture = fixture_table,
 SELECT NULL::{pg}, NULL::{d} FROM generate_series(1, {n})", n = NULL_ROWS,
                 )).execute(&mut *tx).await?;
 
+                let ord = (spec.ord_extractor)("value");
                 let sql = format!(
                     "SELECT plaintext FROM {table} \
-ORDER BY eql_v3.ord_term(value) {dir} NULLS {nulls}",
+ORDER BY {ord} {dir} NULLS {nulls}",
                     dir = $direction, nulls = $nulls,
                 );
                 let actual: Vec<Option<$scalar>> =
@@ -2018,8 +2087,8 @@ macro_rules! __scalar_matrix_order_by_using_case {
                 let fixture_table =
                     <$scalar as $crate::scalar_domains::ScalarType>::fixture_table_name();
                 let sql = format!(
-                    "SELECT plaintext FROM {fixture} ORDER BY payload::{d} USING {op}",
-                    fixture = fixture_table, d = &spec.sql_domain, op = $op,
+                    "SELECT plaintext FROM {fixture} ORDER BY ({col})::{d} USING {op}",
+                    fixture = fixture_table, col = &spec.column_expr, d = &spec.sql_domain, op = $op,
                 );
                 let err = sqlx::query_scalar::<_, $scalar>(&sql)
                     .fetch_all(&pool)
@@ -2107,6 +2176,7 @@ macro_rules! __scalar_matrix_aggregate_case {
                 use $crate::scalar_domains::ScalarType;
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let fixture = <$scalar as ScalarType>::fixture_table_name();
                 let extremum: $scalar = <$scalar as ScalarType>::fixture_values()
                     .iter()
@@ -2116,11 +2186,11 @@ macro_rules! __scalar_matrix_aggregate_case {
                 let extremum_lit = <$scalar as ScalarType>::to_sql_literal(&extremum);
 
                 let expected: String = sqlx::query_scalar(&format!(
-                    "SELECT payload::text FROM {fixture} WHERE plaintext = {lit}", lit = extremum_lit,
+                    "SELECT (({col})::{d})::text FROM {fixture} WHERE plaintext = {lit}", lit = extremum_lit,
                 )).fetch_one(&pool).await?;
 
                 let actual: String = sqlx::query_scalar(&format!(
-                    "SELECT eql_v3.{agg}(payload::{d})::text FROM {fixture}",
+                    "SELECT eql_v3.{agg}(({col})::{d})::text FROM {fixture}",
                     agg = $agg_fn,
                 )).fetch_one(&pool).await?;
 
@@ -2131,16 +2201,17 @@ macro_rules! __scalar_matrix_aggregate_case {
                 );
 
                 // Secondary diagnostic: when the primary identity holds,
-                // the ORE comparator must agree. The check is reached only
+                // the ordering comparator must agree. The check is reached only
                 // on success of `assert_eq!`, so it's a self-consistency
                 // assertion on the comparator — catches the regression
-                // where payload text matches but `ord_term` resolves to a
-                // different value (e.g. due to payload-key reordering).
+                // where payload text matches but the ordering term resolves to a
+                // different value (e.g. due to payload-key reordering). Routed
+                // through the ord-extractor seam so scalars use `eql_v3.ord_term`
+                // and SteVec entries use `eql_v3.ore_cllw`.
+                let lhs_ord = (spec.ord_extractor)(&format!("eql_v3.{}(({col})::{d})", $agg_fn));
+                let rhs_ord = (spec.ord_extractor)(&format!("$1::jsonb::{d}"));
                 let ord_terms_match: bool = sqlx::query_scalar(&format!(
-                    "SELECT eql_v3.ord_term(eql_v3.{agg}(payload::{d})) \
-                          = eql_v3.ord_term($1::jsonb::{d}) \
-                     FROM {fixture}",
-                    agg = $agg_fn,
+                    "SELECT {lhs_ord} = {rhs_ord} FROM {fixture}",
                 ))
                 .bind(&expected)
                 .fetch_one(&pool)
@@ -2216,6 +2287,7 @@ macro_rules! __scalar_matrix_aggregate_case {
                 use $crate::scalar_domains::ScalarType;
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let fixture = <$scalar as ScalarType>::fixture_table_name();
                 let values: &[$scalar] = <$scalar as ScalarType>::fixture_values();
                 anyhow::ensure!(
@@ -2244,14 +2316,14 @@ macro_rules! __scalar_matrix_aggregate_case {
                 sqlx::query(&format!(
                     "INSERT INTO mixed_null(value) \
                      SELECT NULL::{d} \
-                     UNION ALL SELECT payload::{d} FROM {fixture} WHERE plaintext = {low} \
+                     UNION ALL SELECT ({col})::{d} FROM {fixture} WHERE plaintext = {low} \
                      UNION ALL SELECT NULL::{d} \
-                     UNION ALL SELECT payload::{d} FROM {fixture} WHERE plaintext = {high} \
+                     UNION ALL SELECT ({col})::{d} FROM {fixture} WHERE plaintext = {high} \
                      UNION ALL SELECT NULL::{d}", low = low_lit, high = high_lit,
                 )).execute(&mut *tx).await?;
 
                 let expected: String = sqlx::query_scalar(&format!(
-                    "SELECT payload::text FROM {fixture} WHERE plaintext = {lit}", lit = expected_lit,
+                    "SELECT (({col})::{d})::text FROM {fixture} WHERE plaintext = {lit}", lit = expected_lit,
                 )).fetch_one(&mut *tx).await?;
 
                 let actual: Option<String> = sqlx::query_scalar(&format!(
@@ -2396,6 +2468,7 @@ macro_rules! __scalar_matrix_aggregate_group_by_case {
                 use $crate::scalar_domains::ScalarType;
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let fixture = <$scalar as ScalarType>::fixture_table_name();
                 let values: &[$scalar] = <$scalar as ScalarType>::fixture_values();
                 anyhow::ensure!(
@@ -2427,7 +2500,7 @@ ON COMMIT DROP",
                     let lit = <$scalar as ScalarType>::to_sql_literal(v);
                     sqlx::query(&format!(
                         "INSERT INTO group_test(group_key, value) \
-SELECT 1, payload::{d} FROM {fixture} WHERE plaintext = {lit}",
+SELECT 1, ({col})::{d} FROM {fixture} WHERE plaintext = {lit}",
                     )).execute(&mut *tx).await?;
                 }
                 // Insert group 2 rows.
@@ -2435,16 +2508,16 @@ SELECT 1, payload::{d} FROM {fixture} WHERE plaintext = {lit}",
                     let lit = <$scalar as ScalarType>::to_sql_literal(v);
                     sqlx::query(&format!(
                         "INSERT INTO group_test(group_key, value) \
-SELECT 2, payload::{d} FROM {fixture} WHERE plaintext = {lit}",
+SELECT 2, ({col})::{d} FROM {fixture} WHERE plaintext = {lit}",
                     )).execute(&mut *tx).await?;
                 }
 
                 // Lookup the expected payload texts for each group's extremum.
                 let g1_expected: String = sqlx::query_scalar(&format!(
-                    "SELECT payload::text FROM {fixture} WHERE plaintext = {lit}", lit = g1_lit,
+                    "SELECT (({col})::{d})::text FROM {fixture} WHERE plaintext = {lit}", lit = g1_lit,
                 )).fetch_one(&mut *tx).await?;
                 let g2_expected: String = sqlx::query_scalar(&format!(
-                    "SELECT payload::text FROM {fixture} WHERE plaintext = {lit}", lit = g2_lit,
+                    "SELECT (({col})::{d})::text FROM {fixture} WHERE plaintext = {lit}", lit = g2_lit,
                 )).fetch_one(&mut *tx).await?;
 
                 let rows: Vec<(i32, String)> = sqlx::query_as(&format!(
@@ -2661,7 +2734,8 @@ macro_rules! __scalar_matrix_count_case {
                     "CREATE TEMP TABLE typed_count (value {d}) ON COMMIT DROP",
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!(
-                    "INSERT INTO typed_count(value) SELECT payload::{d} FROM {fixture}",
+                    "INSERT INTO typed_count(value) SELECT ({col})::{d} FROM {fixture}",
+                    col = &spec.column_expr,
                 )).execute(&mut *tx).await?;
 
                 let actual: i64 = sqlx::query_scalar(
@@ -2690,13 +2764,14 @@ macro_rules! __scalar_matrix_count_case {
                 let expected = <$scalar as ScalarType>::fixture_values().len() as i64;
 
                 let sql = format!(
-                    "SELECT COUNT(payload::{d}) FROM {fixture}",
+                    "SELECT COUNT(({col})::{d}) FROM {fixture}",
+                    col = &spec.column_expr,
                 );
                 let actual: i64 = sqlx::query_scalar(&sql).fetch_one(&pool).await?;
                 anyhow::ensure!(
                     actual == expected,
-                    "COUNT(payload::{}) on {}: want {}, got {}; SQL={}",
-                    d, fixture, expected, actual, sql,
+                    "COUNT(({})::{}) on {}: want {}, got {}; SQL={}",
+                    &spec.column_expr, d, fixture, expected, actual, sql,
                 );
                 Ok(())
             }
@@ -2730,9 +2805,8 @@ macro_rules! __scalar_matrix_count_distinct_dispatch {
                 use $crate::scalar_domains::ScalarType;
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
-                let extractor_fn = spec.extractor_fn()
+                let extractor = spec.extractor_expr("value")
                     .expect("non-Storage variant must expose an extractor");
-                let extractor = format!("{extractor_fn}(value)");
                 let fixture = <$scalar as ScalarType>::fixture_table_name();
                 let expected = <$scalar as ScalarType>::fixture_values().len() as i64;
 
@@ -2741,7 +2815,8 @@ macro_rules! __scalar_matrix_count_distinct_dispatch {
                     "CREATE TEMP TABLE distinct_count (value {d}) ON COMMIT DROP",
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!(
-                    "INSERT INTO distinct_count(value) SELECT payload::{d} FROM {fixture}",
+                    "INSERT INTO distinct_count(value) SELECT ({col})::{d} FROM {fixture}",
+                    col = &spec.column_expr,
                 )).execute(&mut *tx).await?;
 
                 let sql = format!(

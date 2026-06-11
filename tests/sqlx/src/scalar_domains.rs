@@ -57,6 +57,45 @@ pub trait ScalarType:
         format!("fixtures.eql_v2_{}", Self::PG_TYPE)
     }
 
+    /// SQL domain the comparable value is cast to. Default: the generated
+    /// scalar domain `eql_v3.<pg_type><variant_suffix>`. A non-scalar surface
+    /// (e.g. a SteVec entry, whose single domain `eql_v3.ste_vec_entry` is
+    /// variant-independent) overrides this to ignore the suffix.
+    fn sql_domain(variant: Variant) -> String {
+        format!("eql_v3.{}{}", Self::PG_TYPE, variant.suffix())
+    }
+
+    /// SQL expression that yields the comparable value from a fixture row.
+    /// Default: the bare `payload` column (a whole encrypted-scalar payload).
+    /// A SteVec-entry view overrides this with an extraction expression such
+    /// as `(payload -> '<selector>')`, which already has type
+    /// `eql_v3.ste_vec_entry`. The expression is cast to `sql_domain(variant)`
+    /// at every call site, so a redundant `::eql_v3.ste_vec_entry` cast on an
+    /// already-entry expression is a harmless no-op.
+    fn column_expr() -> String {
+        "payload".to_string()
+    }
+
+    /// A valid payload literal for this SQL domain family. Used by NULL
+    /// propagation and typecheck tests where the payload is bound but never
+    /// decrypted. Default: scalar root-envelope placeholder.
+    fn placeholder_payload() -> &'static str {
+        crate::helpers::PLACEHOLDER_PAYLOAD
+    }
+
+    /// Equality extractor expression for a domain-typed value expression.
+    /// Default scalar Eq path is `eql_v3.eq_term(value)`.
+    fn eq_extractor_expr(value_expr: &str) -> String {
+        format!("eql_v3.eq_term({value_expr})")
+    }
+
+    /// Ordering extractor expression for a domain-typed value expression.
+    /// Default scalar Ord/OrdOre path is `eql_v3.ord_term(value)`.
+    /// SteVec entries override this to `eql_v3.ore_cllw(value)`.
+    fn ord_extractor_expr(value_expr: &str) -> String {
+        format!("eql_v3.ord_term({value_expr})")
+    }
+
     /// SQL-literal rendering via `Display`. Takes `&Self` so a non-`Copy`
     /// scalar (e.g. `String`) can be rendered without being consumed. Override
     /// for types whose `Display` form isn't a valid SQL literal (e.g. strings,
@@ -535,14 +574,23 @@ impl Variant {
 #[derive(Debug, Clone)]
 pub struct ScalarDomainSpec {
     pub sql_domain: String,
+    /// SQL expression yielding the comparable value (default `"payload"`).
+    pub column_expr: String,
     pub variant: Variant,
+    pub placeholder_payload: &'static str,
+    pub eq_extractor: fn(&str) -> String,
+    pub ord_extractor: fn(&str) -> String,
 }
 
 impl ScalarDomainSpec {
     pub fn new<T: ScalarType>(variant: Variant) -> Self {
         Self {
-            sql_domain: format!("eql_v3.{}{}", T::PG_TYPE, variant.suffix()),
+            sql_domain: T::sql_domain(variant),
+            column_expr: T::column_expr(),
             variant,
+            placeholder_payload: T::placeholder_payload(),
+            eq_extractor: T::eq_extractor_expr,
+            ord_extractor: T::ord_extractor_expr,
         }
     }
 
@@ -556,6 +604,19 @@ impl ScalarDomainSpec {
 
     pub fn extractor_fn(&self) -> Option<&'static str> {
         self.variant.extractor_fn()
+    }
+
+    /// Extractor expression for the variant's discriminating term applied to
+    /// `value_expr`. Routes through the per-type `eq_extractor` / `ord_extractor`
+    /// seams, so scalars produce `eql_v3.eq_term(...)` / `eql_v3.ord_term(...)`
+    /// and a SteVec-entry view produces `eql_v3.eq_term(...)` / `eql_v3.ore_cllw(...)`.
+    /// `Storage` has no discriminating term and returns `None`.
+    pub fn extractor_expr(&self, value_expr: &str) -> Option<String> {
+        match self.variant {
+            Variant::Storage => None,
+            Variant::Eq => Some((self.eq_extractor)(value_expr)),
+            Variant::Ord | Variant::OrdOre => Some((self.ord_extractor)(value_expr)),
+        }
     }
 }
 
@@ -582,7 +643,8 @@ pub fn commute_op(op: &str) -> &'static str {
 /// Fetch the payload row keyed by `plaintext` from `T`'s fixture table.
 pub async fn fetch_fixture_payload<T: ScalarType>(pool: &PgPool, plaintext: T) -> Result<String> {
     let sql = format!(
-        "SELECT payload::text FROM {table} WHERE plaintext = {lit}",
+        "SELECT ({col})::text FROM {table} WHERE plaintext = {lit}",
+        col = T::column_expr(),
         table = T::fixture_table_name(),
         lit = T::to_sql_literal(&plaintext),
     );
@@ -710,5 +772,43 @@ mod helper_panic_tests {
     #[should_panic(expected = "expected_forward: unsupported operator")]
     fn expected_forward_panics_on_unsupported() {
         let _ = <i32 as ScalarType>::expected_forward("@>", 0);
+    }
+}
+
+#[cfg(test)]
+mod seam_tests {
+    use super::*;
+
+    /// The access-path / extractor seam defaults must reproduce today's scalar
+    /// SQL exactly: bare `payload`, `eql_v3.<pg_type><suffix>`, and
+    /// `eql_v3.ord_term(...)` for the ordered extractor. A view type that
+    /// overrides these (e.g. `JsonbEntryInt4`) is what makes entry reuse
+    /// possible — but the defaults are the no-regression contract.
+    #[test]
+    fn scalar_defaults_reproduce_today_sql() {
+        let spec = ScalarDomainSpec::new::<i32>(Variant::Ord);
+        assert_eq!(spec.column_expr, "payload");
+        assert_eq!(spec.sql_domain, "eql_v3.int4_ord");
+        assert_eq!(
+            spec.extractor_expr("value"),
+            Some("eql_v3.ord_term(value)".to_string()),
+        );
+        assert_eq!(
+            (spec.eq_extractor)("value"),
+            "eql_v3.eq_term(value)".to_string(),
+        );
+        assert_eq!(spec.placeholder_payload, crate::helpers::PLACEHOLDER_PAYLOAD);
+    }
+
+    /// The Eq variant routes through the equality extractor; Storage has none.
+    #[test]
+    fn scalar_eq_and_storage_extractor_routes() {
+        let eq = ScalarDomainSpec::new::<i32>(Variant::Eq);
+        assert_eq!(eq.sql_domain, "eql_v3.int4_eq");
+        assert_eq!(eq.extractor_expr("value"), Some("eql_v3.eq_term(value)".to_string()));
+
+        let storage = ScalarDomainSpec::new::<i32>(Variant::Storage);
+        assert_eq!(storage.sql_domain, "eql_v3.int4");
+        assert_eq!(storage.extractor_expr("value"), None);
     }
 }
