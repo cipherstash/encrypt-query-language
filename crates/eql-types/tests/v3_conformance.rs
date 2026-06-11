@@ -7,7 +7,6 @@ use eql_types::v3::int4::{Int4, Int4Eq, Int4Ord, Int4OrdOre};
 use eql_types::v3::text::TextMatch;
 use eql_types::v3::DomainType;
 use serde_json::json;
-use std::marker::PhantomData;
 
 #[test]
 fn int4_storage_round_trips() {
@@ -18,7 +17,7 @@ fn int4_storage_round_trips() {
     });
     let parsed: Int4 = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
-    assert_eq!(PhantomData::<Int4>.sql_domain(), "eql_v3.int4");
+    assert_eq!(Int4::sql_domain_static(), "eql_v3.int4");
 }
 
 #[test]
@@ -31,7 +30,7 @@ fn int4_eq_round_trips() {
     });
     let parsed: Int4Eq = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
-    assert_eq!(PhantomData::<Int4Eq>.sql_domain(), "eql_v3.int4_eq");
+    assert_eq!(Int4Eq::sql_domain_static(), "eql_v3.int4_eq");
 }
 
 #[test]
@@ -47,10 +46,7 @@ fn int4_ord_round_trips() {
     // `_ord_ore` is the same shape under the scheme-explicit domain name.
     let parsed: Int4OrdOre = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
-    assert_eq!(
-        PhantomData::<Int4OrdOre>.sql_domain(),
-        "eql_v3.int4_ord_ore"
-    );
+    assert_eq!(Int4OrdOre::sql_domain_static(), "eql_v3.int4_ord_ore");
 }
 
 #[test]

@@ -66,7 +66,18 @@ pub const SQL_SCHEMA: &str = "eql_v3";
 /// `eql-scalars::CATALOG` — a typo'd or mis-ordered domain fails there.
 /// Public so FFI consumers can enumerate the protocol surface too.
 pub trait DomainType {
-    /// Fully-qualified SQL domain name, e.g. `"eql_v3.int4_eq"`.
+    /// Fully-qualified SQL domain name, e.g. `"eql_v3.int4_eq"` — the
+    /// per-type fact everything else derives from, defined once in each
+    /// type's impl.
+    ///
+    /// `where Self: Sized` keeps the trait object-safe (the method is
+    /// excluded from the vtable); through `dyn DomainType`, use
+    /// [`Self::sql_domain`].
+    fn sql_domain_static() -> &'static str
+    where
+        Self: Sized;
+
+    /// Fully-qualified SQL domain name of this payload value.
     fn sql_domain(&self) -> &'static str;
 
     /// Unqualified SQL domain name (e.g. `"int4_eq"`) — [`Self::sql_domain`]
@@ -80,18 +91,19 @@ pub trait DomainType {
 }
 
 /// Type-level handle: lets [`all`] enumerate the domain types without
-/// payload values to box — `Box::new(PhantomData::<Int4Eq>)` is zero-sized.
-///
-/// Delegates through a transient `T::default()`, which is allocation-free
-/// (every field defaults to an empty string/vec). `Default` exists on the
-/// payload types only to power this: a default payload is structurally
-/// complete but semantically empty — never serialize one.
+/// payload values to box — `Box::new(PhantomData::<Int4Eq>)` is zero-sized,
+/// and the delegation goes through [`DomainType::sql_domain_static`], so no
+/// payload instance is ever constructed.
 impl<T> DomainType for PhantomData<T>
 where
-    T: DomainType + Default,
+    T: DomainType,
 {
+    fn sql_domain_static() -> &'static str {
+        T::sql_domain_static()
+    }
+
     fn sql_domain(&self) -> &'static str {
-        T::default().sql_domain()
+        T::sql_domain_static()
     }
 }
 

@@ -10,7 +10,7 @@ use crate::{Identifier, SchemaVersion};
 use serde::{Deserialize, Serialize};
 
 /// `eql_v3.timestamptz` — storage only; every operator is blocked.
-#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Timestamptz {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -23,13 +23,17 @@ pub struct Timestamptz {
 }
 
 impl DomainType for Timestamptz {
-    fn sql_domain(&self) -> &'static str {
+    fn sql_domain_static() -> &'static str {
         "eql_v3.timestamptz"
+    }
+
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
     }
 }
 
 /// `eql_v3.timestamptz_eq` — HMAC equality (`=`, `<>`).
-#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TimestamptzEq {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
@@ -44,7 +48,11 @@ pub struct TimestamptzEq {
 }
 
 impl DomainType for TimestamptzEq {
-    fn sql_domain(&self) -> &'static str {
+    fn sql_domain_static() -> &'static str {
         "eql_v3.timestamptz_eq"
+    }
+
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
     }
 }
