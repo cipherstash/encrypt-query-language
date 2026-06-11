@@ -4,7 +4,10 @@
 //! `scalars::<X>::` test-name prefix, so a `scalars::property::…` test would be
 //! mis-read as a scalar type and break the catalog cross-check.
 
-mod fixture_oracle; // Tier A: oracle over the live-encrypted fixture corpus.
+// NULL / blocker / CHECK-constraint unit tests.
+mod edge_cases;
+// Tier A: oracle over the live-encrypted fixture corpus.
+mod fixture_oracle;
+// Tier B: oracle over freshly generated + batch-encrypted values.
 #[cfg(feature = "proptest-live")]
-mod live_oracle; // Tier B: oracle over freshly generated + batch-encrypted values.
-mod edge_cases; // NULL / blocker / CHECK-constraint unit tests.
+mod live_oracle;

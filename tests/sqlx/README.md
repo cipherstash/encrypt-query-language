@@ -275,6 +275,9 @@ Tests connect to PostgreSQL database configured by SQLx:
 ## Future Work
 
 - ✅ ~~Convert remaining SQL tests~~ **COMPLETE!**
-- Property-based tests: Add encryption round-trip property tests
+- Property-based tests: implemented in `tests/encrypted_domain/property/` and
+  `crates/eql-scalars/src/proptest_invariants.rs` (CIP-3141). Three tiers:
+  catalog invariants (no DB), fixture-corpus oracle, and live-encryption oracle
+  (`--features proptest-live`).
 - Performance benchmarks: Measure query performance with encrypted data
 - Integration tests: Test with CipherStash Proxy
