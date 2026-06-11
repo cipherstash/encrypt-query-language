@@ -9,6 +9,7 @@ pub mod fixtures;
 pub mod helpers;
 pub mod jsonb_entry;
 pub mod matrix;
+pub mod property;
 pub mod scalar_domains;
 #[macro_use]
 pub mod scalar_types;
