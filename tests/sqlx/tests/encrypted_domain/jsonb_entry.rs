@@ -90,6 +90,49 @@ async fn jsonb_entry_int4_fixture_shape(pool: sqlx::PgPool) -> anyhow::Result<()
 }
 
 // ----------------------------------------------------------------------------
+// Selector drift guard. The whole entry suite is bound to ONE CipherStash
+// workspace: a SteVec selector is a keyed MAC over (workspace keyset,
+// STE_VEC_PREFIX, path), so regenerating `v3_doc_int4` against a different
+// keyset (rotated/changed CS_WORKSPACE_CRN / CS_CLIENT_KEY) re-pins the
+// `$.field` selector. This reads the LIVE selector from the loaded fixture and
+// asserts it equals the pinned `SELECTOR`, so drift surfaces as one
+// self-explaining, copy-pasteable re-pin message instead of ~40 confusing
+// NULL-extraction failures across the matrix. Supporting multiple workspaces
+// would require runtime selector resolution, which the static
+// `ScalarType::column_expr()` seam cannot do — out of scope here.
+// ----------------------------------------------------------------------------
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_int4")))]
+async fn jsonb_entry_int4_selector_matches_fixture(pool: sqlx::PgPool) -> anyhow::Result<()> {
+    // The `$.field` ORE-CLLW entry is the sv element carrying `oc`. Cast the
+    // `eql_v3.json` payload to bare jsonb FIRST so `-> 'sv'` is the native array
+    // accessor, not the custom `eql_v3.json -> text` selector-lookup operator.
+    let live: Vec<String> = sqlx::query_scalar(
+        "SELECT DISTINCT elem ->> 's' \
+         FROM fixtures.v3_doc_int4, \
+              jsonb_array_elements(payload::jsonb -> 'sv') AS elem \
+         WHERE elem ? 'oc'",
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    anyhow::ensure!(
+        live.len() == 1,
+        "expected exactly one distinct $.field oc-selector in v3_doc_int4, got {live:?}",
+    );
+    let live = &live[0];
+    anyhow::ensure!(
+        live == SELECTOR,
+        "v3_doc_int4 $.field oc-selector drifted from the pinned constant.\n  \
+         pinned v3_doc_int4::SELECTOR = {SELECTOR}\n  \
+         live fixture selector        = {live}\n\
+         The SteVec selector is keyed by the CipherStash workspace; if the \
+         workspace/keyset changed, re-pin SELECTOR to the live value above and \
+         regenerate the matrix_jsonb_entry_tests snapshot.",
+    );
+    Ok(())
+}
+
+// ----------------------------------------------------------------------------
 // ORE-CLLW injectivity. Distinct plaintexts must produce distinct ore_cllw
 // terms. Compares `eql_v3.ore_cllw(...)` outputs directly — NOT entry `=`, which
 // tests `eq_term`, not ORE.
