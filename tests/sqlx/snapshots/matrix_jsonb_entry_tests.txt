@@ -1,6 +1,17 @@
 jsonb_entry::jsonb_entry_<T>_fixture_shape
 jsonb_entry::jsonb_entry_<T>_index_engages
 jsonb_entry::jsonb_entry_<T>_ore_cllw_injectivity
+jsonb_entry::matrix_jsonb_entry_<T>_entry_aggregate_group_by_max
+jsonb_entry::matrix_jsonb_entry_<T>_entry_aggregate_group_by_min
+jsonb_entry::matrix_jsonb_entry_<T>_entry_aggregate_max
+jsonb_entry::matrix_jsonb_entry_<T>_entry_aggregate_max_all_null
+jsonb_entry::matrix_jsonb_entry_<T>_entry_aggregate_max_empty
+jsonb_entry::matrix_jsonb_entry_<T>_entry_aggregate_max_mixed_null
+jsonb_entry::matrix_jsonb_entry_<T>_entry_aggregate_min
+jsonb_entry::matrix_jsonb_entry_<T>_entry_aggregate_min_all_null
+jsonb_entry::matrix_jsonb_entry_<T>_entry_aggregate_min_empty
+jsonb_entry::matrix_jsonb_entry_<T>_entry_aggregate_min_mixed_null
+jsonb_entry::matrix_jsonb_entry_<T>_entry_aggregate_parallel_safe
 jsonb_entry::matrix_jsonb_entry_<T>_entry_count_distinct_extractor
 jsonb_entry::matrix_jsonb_entry_<T>_entry_count_path_cast
 jsonb_entry::matrix_jsonb_entry_<T>_entry_count_typed_column
