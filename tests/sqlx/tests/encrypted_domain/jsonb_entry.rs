@@ -211,3 +211,86 @@ async fn jsonb_entry_int4_index_engages(pool: sqlx::PgPool) -> anyhow::Result<()
     tx.commit().await?;
     Ok(())
 }
+
+// ----------------------------------------------------------------------------
+// Aggregate robustness over non-orderable (oc-less) entries. `eql_v3.ore_cllw`
+// is NULL for an entry without an `oc` term, so a naive `ore_cllw(value) <
+// ore_cllw(state)` would be NULL whenever the running extremum is oc-less —
+// pinning a wrong result when the FIRST aggregated row (the STRICT seed) is
+// oc-less. The min/max sfuncs explicitly skip oc-less entries. This feeds a
+// forged hm-only (oc-less) entry in the SEED position alongside real oc-carrying
+// entries and asserts the extremum is the correct ORDERABLE entry, never the
+// oc-less seed. The whole-suite matrix never exercises this (every v3_doc_int4
+// entry carries oc).
+// ----------------------------------------------------------------------------
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_int4")))]
+async fn jsonb_entry_int4_aggregate_ignores_oc_less_entries(
+    pool: sqlx::PgPool,
+) -> anyhow::Result<()> {
+    let sel = SELECTOR;
+    // A valid eql_v3.ste_vec_entry that is NOT orderable: string s, string c,
+    // exactly one of hm/oc — here `hm`, so `eql_v3.ore_cllw(entry)` is NULL.
+    let oc_less = r#"{"s":"forged","c":"x","hm":"00"}"#;
+
+    let mut sorted: Vec<i32> = <JsonbEntryInt4 as ScalarType>::fixture_values()
+        .iter()
+        .map(|e| e.0)
+        .collect();
+    sorted.sort();
+    let low = sorted[0];
+    let high = *sorted.last().expect("fixture is non-empty");
+
+    let mut tx = pool.begin().await?;
+    sqlx::query("CREATE TEMP TABLE oc_mix (value eql_v3.ste_vec_entry) ON COMMIT DROP")
+        .execute(&mut *tx)
+        .await?;
+    // SEED position: the oc-less entry is inserted FIRST, so the STRICT seed is
+    // non-orderable — the exact case the sfunc guard must survive.
+    sqlx::query("INSERT INTO oc_mix(value) VALUES ($1::jsonb::eql_v3.ste_vec_entry)")
+        .bind(oc_less)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query(&format!(
+        "INSERT INTO oc_mix(value) \
+         SELECT (payload -> '{sel}'::text)::eql_v3.ste_vec_entry \
+         FROM fixtures.v3_doc_int4 WHERE plaintext IN ({low}, {high})",
+    ))
+    .execute(&mut *tx)
+    .await?;
+
+    // Expected extrema: the orderable entries for the smallest / largest int4,
+    // NOT the oc-less seed.
+    let expect_min: String = sqlx::query_scalar(&format!(
+        "SELECT ((payload -> '{sel}'::text)::eql_v3.ste_vec_entry)::text \
+         FROM fixtures.v3_doc_int4 WHERE plaintext = {low}",
+    ))
+    .fetch_one(&mut *tx)
+    .await?;
+    let expect_max: String = sqlx::query_scalar(&format!(
+        "SELECT ((payload -> '{sel}'::text)::eql_v3.ste_vec_entry)::text \
+         FROM fixtures.v3_doc_int4 WHERE plaintext = {high}",
+    ))
+    .fetch_one(&mut *tx)
+    .await?;
+
+    let got_min: String = sqlx::query_scalar("SELECT eql_v3.min(value)::text FROM oc_mix")
+        .fetch_one(&mut *tx)
+        .await?;
+    let got_max: String = sqlx::query_scalar("SELECT eql_v3.max(value)::text FROM oc_mix")
+        .fetch_one(&mut *tx)
+        .await?;
+
+    anyhow::ensure!(
+        got_min == expect_min,
+        "eql_v3.min must ignore the oc-less seed and return the smallest orderable entry;\n  \
+         want {expect_min}\n  got  {got_min}",
+    );
+    anyhow::ensure!(
+        got_max == expect_max,
+        "eql_v3.max must ignore the oc-less entry and return the largest orderable entry;\n  \
+         want {expect_max}\n  got  {got_max}",
+    );
+
+    tx.commit().await?;
+    Ok(())
+}

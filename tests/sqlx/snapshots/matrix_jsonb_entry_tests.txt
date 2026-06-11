@@ -1,3 +1,4 @@
+jsonb_entry::jsonb_entry_<T>_aggregate_ignores_oc_less_entries
 jsonb_entry::jsonb_entry_<T>_fixture_shape
 jsonb_entry::jsonb_entry_<T>_index_engages
 jsonb_entry::jsonb_entry_<T>_ore_cllw_injectivity

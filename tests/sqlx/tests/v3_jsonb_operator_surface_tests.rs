@@ -358,3 +358,122 @@ async fn v3_jsonb_surface_blocker_signatures(pool: PgPool) -> anyhow::Result<()>
     );
     Ok(())
 }
+
+// ============================================================================
+// (4) Each blocker's RETURN type matches the native operator it shadows, so a
+//     COMPOSED expression resolves and the blocker body raises 'is not
+//     supported' — rather than failing earlier at type resolution with a
+//     misleading 'operator does not exist' on a boolean intermediate. (#267
+//     review / aa13065.)
+// ============================================================================
+
+/// The non-boolean blocker functions and the native result type they must
+/// shadow. Every other `jsonb_blocked%` function returns `boolean`.
+const NON_BOOLEAN_BLOCKER_RETURN_TYPES: &[(&str, &str)] = &[
+    ("jsonb_blocked_path_extract", "jsonb"),     // #>
+    ("jsonb_blocked_path_extract_text", "text"), // #>>
+    ("jsonb_blocked_delete_text", "jsonb"),      // - (text)
+    ("jsonb_blocked_delete_int", "jsonb"),       // - (integer)
+    ("jsonb_blocked_delete_array", "jsonb"),     // - (text[])
+    ("jsonb_blocked_delete_path", "jsonb"),      // #-
+    ("jsonb_blocked_concat", "jsonb"),           // ||  (json on left)
+    ("jsonb_blocked_concat_rhs", "jsonb"),       // ||  (json on right)
+];
+
+#[sqlx::test]
+async fn v3_jsonb_blocker_return_types_match_native(pool: PgPool) -> anyhow::Result<()> {
+    // Every eql_v3 jsonb_blocked% function with its declared return type.
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        r#"
+        SELECT p.proname, pg_catalog.format_type(p.prorettype, NULL)
+        FROM pg_proc p
+        WHERE p.pronamespace = 'eql_v3'::regnamespace
+          AND p.proname LIKE 'jsonb_blocked%'
+        "#,
+    )
+    .fetch_all(&pool)
+    .await?;
+    assert!(
+        !rows.is_empty(),
+        "expected eql_v3 jsonb_blocked% functions to exist"
+    );
+
+    let non_boolean: std::collections::BTreeMap<&str, &str> =
+        NON_BOOLEAN_BLOCKER_RETURN_TYPES.iter().copied().collect();
+
+    for (name, rettype) in &rows {
+        let want = non_boolean.get(name.as_str()).copied().unwrap_or("boolean");
+        assert_eq!(
+            rettype, want,
+            "blocker {name} must RETURN {want} (the native operator's result type) so composed \
+             expressions resolve and the body raises; got {rettype}. A boolean here would make a \
+             surrounding operator fail with 'operator does not exist'."
+        );
+    }
+
+    // Cross-check: every name in the expected non-boolean list is actually present
+    // (guards against a renamed/removed blocker silently dropping the guarantee).
+    let present: BTreeSet<&str> = rows.iter().map(|(n, _)| n.as_str()).collect();
+    let missing: Vec<&str> = NON_BOOLEAN_BLOCKER_RETURN_TYPES
+        .iter()
+        .map(|(n, _)| *n)
+        .filter(|n| !present.contains(n))
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "expected non-boolean blocker(s) absent: {missing:?}"
+    );
+    Ok(())
+}
+
+/// Assert a COMPOSED expression that wraps a blocked operator fails with the
+/// blocker's `is not supported` (proving the composition RESOLVED and the
+/// blocker body ran), NOT `operator does not exist` (which is the regression
+/// signature of a blocker reverting to a boolean return type).
+async fn assert_composed_blocked(pool: &PgPool, sql: &str) -> anyhow::Result<()> {
+    let err = sqlx::query(sql)
+        .fetch_optional(pool)
+        .await
+        .err()
+        .ok_or_else(|| anyhow::anyhow!("composed blocked expression must raise: {sql}"))?;
+    let msg = err.to_string();
+    anyhow::ensure!(
+        msg.contains("is not supported"),
+        "expected the blocker's 'is not supported' (composition resolved, blocker fired); \
+         got: {msg}\n  SQL: {sql}",
+    );
+    anyhow::ensure!(
+        !msg.contains("operator does not exist"),
+        "composed expression failed at TYPE RESOLUTION ('operator does not exist') — a blocker's \
+         RETURN type no longer matches its native operator, so a surrounding operator cannot \
+         resolve.\n  SQL: {sql}\n  err: {msg}",
+    );
+    Ok(())
+}
+
+#[sqlx::test]
+async fn v3_jsonb_blocked_composed_expression_raises(pool: PgPool) -> anyhow::Result<()> {
+    // A valid eql_v3.json document literal (empty sv array satisfies the CHECK).
+    let j = r#"'{"i":{},"v":2,"sv":[]}'::eql_v3.json"#;
+
+    // Each case wraps a blocked operator (whose return type was boolean before
+    // the fix) in a surrounding operator that only resolves against the NATIVE
+    // result type. With a boolean blocker these fail to type-resolve; with the
+    // correct return type they resolve and the blocker raises 'is not supported'.
+    let cases = [
+        // #> returns jsonb → wrap with native jsonb @>
+        format!("SELECT ({j} #> '{{a}}'::text[]) @> '{{}}'::jsonb"),
+        // #>> returns text → wrap with native text ||
+        format!("SELECT ({j} #>> '{{a}}'::text[]) || 'x'::text"),
+        // - (text) returns jsonb → wrap with native jsonb @>
+        format!("SELECT ({j} - 'a'::text) @> '{{}}'::jsonb"),
+        // #- returns jsonb → wrap with native jsonb @>
+        format!("SELECT ({j} #- '{{a}}'::text[]) @> '{{}}'::jsonb"),
+        // || (json on left) returns jsonb → wrap with native jsonb @>
+        format!("SELECT ({j} || '{{}}'::jsonb) @> '{{}}'::jsonb"),
+    ];
+    for sql in &cases {
+        assert_composed_blocked(&pool, sql).await?;
+    }
+    Ok(())
+}

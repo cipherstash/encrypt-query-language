@@ -15,16 +15,27 @@
 --! Per the encrypted-domain footgun rules the state functions are
 --! `LANGUAGE plpgsql` with the pinned `search_path` — a `LANGUAGE sql` body would
 --! be inlinable and the planner could elide it.
+--!
+--! @note **Only `oc`-carrying entries are orderable.** `eql_v3.ore_cllw(entry)`
+--!   returns NULL when an entry has no `oc` (CLLW ORE) term — the same entries a
+--!   `eql_v3.ore_cllw` btree NULL-filters from range scans. The state functions
+--!   therefore IGNORE `oc`-less entries (they never become or survive as the
+--!   extremum), so `min`/`max` is well-defined over a mix of `oc`-carrying and
+--!   `oc`-less entries and is not corrupted by an `oc`-less seed. A naive
+--!   `ore_cllw(value) < ore_cllw(state)` would be NULL whenever either side
+--!   lacks `oc`, pinning a wrong (`oc`-less) extremum when the first aggregated
+--!   row is `oc`-less. An all-`oc`-less input has no orderable extremum and
+--!   returns the (arbitrary) STRICT seed.
 
 --! @brief State function for min on eql_v3.ste_vec_entry.
 --!
---! Keeps whichever entry has the lesser CLLW ORE term. STRICT, so NULL entries
---! (and entries whose `oc` is absent, yielding a NULL `ore_cllw`) are skipped by
---! the aggregate machinery / fall through to `state`.
+--! Keeps whichever orderable entry has the lesser CLLW ORE term. STRICT, so SQL
+--! NULL entries are skipped by the aggregate machinery; `oc`-less (non-orderable)
+--! entries are skipped explicitly (see the @note on this file).
 --!
 --! @param state eql_v3.ste_vec_entry Running extremum.
 --! @param value eql_v3.ste_vec_entry Candidate entry.
---! @return eql_v3.ste_vec_entry The lesser of the two by `ore_cllw`.
+--! @return eql_v3.ste_vec_entry The lesser orderable entry by `ore_cllw`.
 CREATE FUNCTION eql_v3.ste_vec_entry_min_sfunc(
   state eql_v3.ste_vec_entry,
   value eql_v3.ste_vec_entry
@@ -33,8 +44,17 @@ RETURNS eql_v3.ste_vec_entry
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
+DECLARE
+  value_ore eql_v3.ore_cllw := eql_v3.ore_cllw(value);
+  state_ore eql_v3.ore_cllw := eql_v3.ore_cllw(state);
 BEGIN
-  IF eql_v3.ore_cllw(value) < eql_v3.ore_cllw(state) THEN
+  -- A non-orderable (oc-less) candidate never replaces the running extremum.
+  IF value_ore IS NULL THEN
+    RETURN state;
+  END IF;
+  -- Adopt the candidate when the running extremum is itself non-orderable
+  -- (e.g. an oc-less STRICT seed) or strictly greater.
+  IF state_ore IS NULL OR value_ore < state_ore THEN
     RETURN value;
   END IF;
   RETURN state;
@@ -53,12 +73,12 @@ CREATE AGGREGATE eql_v3.min(eql_v3.ste_vec_entry) (
 
 --! @brief State function for max on eql_v3.ste_vec_entry.
 --!
---! Keeps whichever entry has the greater CLLW ORE term. STRICT, mirroring
---! `ste_vec_entry_min_sfunc`.
+--! Keeps whichever orderable entry has the greater CLLW ORE term. `oc`-less
+--! entries are skipped, mirroring `ste_vec_entry_min_sfunc` (see the file @note).
 --!
 --! @param state eql_v3.ste_vec_entry Running extremum.
 --! @param value eql_v3.ste_vec_entry Candidate entry.
---! @return eql_v3.ste_vec_entry The greater of the two by `ore_cllw`.
+--! @return eql_v3.ste_vec_entry The greater orderable entry by `ore_cllw`.
 CREATE FUNCTION eql_v3.ste_vec_entry_max_sfunc(
   state eql_v3.ste_vec_entry,
   value eql_v3.ste_vec_entry
@@ -67,8 +87,17 @@ RETURNS eql_v3.ste_vec_entry
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
+DECLARE
+  value_ore eql_v3.ore_cllw := eql_v3.ore_cllw(value);
+  state_ore eql_v3.ore_cllw := eql_v3.ore_cllw(state);
 BEGIN
-  IF eql_v3.ore_cllw(value) > eql_v3.ore_cllw(state) THEN
+  -- A non-orderable (oc-less) candidate never replaces the running extremum.
+  IF value_ore IS NULL THEN
+    RETURN state;
+  END IF;
+  -- Adopt the candidate when the running extremum is itself non-orderable
+  -- (e.g. an oc-less STRICT seed) or strictly lesser.
+  IF state_ore IS NULL OR value_ore > state_ore THEN
     RETURN value;
   END IF;
   RETURN state;
