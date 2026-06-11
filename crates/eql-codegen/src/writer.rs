@@ -140,13 +140,12 @@ pub(crate) mod test_support {
 mod tests {
     use super::test_support::tempdir as tmp;
     use super::*;
-    use crate::consts::AUTO_GENERATED_HEADER;
 
     #[test]
     fn is_generated_true_for_header() {
         let d = tmp();
         let p = d.path().join("x.sql");
-        fs::write(&p, format!("{AUTO_GENERATED_HEADER}SELECT 1;\n")).unwrap();
+        fs::write(&p, format!("{AUTO_GENERATED_MARKER}\nSELECT 1;\n")).unwrap();
         assert!(is_generated(&p));
     }
 
@@ -173,7 +172,7 @@ mod tests {
         let p = d.path().join("int4_types.sql");
         // The template render carries the marker on line 1; the writer writes it
         // through unchanged.
-        let body = format!("{AUTO_GENERATED_HEADER}DO $$ BEGIN END $$;\n");
+        let body = format!("{AUTO_GENERATED_MARKER}\nDO $$ BEGIN END $$;\n");
         write_generated_file(&p, &body).unwrap();
         let text = fs::read_to_string(&p).unwrap();
         assert_eq!(text, body);
@@ -213,7 +212,7 @@ mod tests {
         let hand = d.path().join("int4_eq_functions.sql");
         fs::write(
             &generated,
-            format!("{AUTO_GENERATED_HEADER}-- old generated\n"),
+            format!("{AUTO_GENERATED_MARKER}\n-- old generated\n"),
         )
         .unwrap();
         fs::write(&hand, "-- REQUIRE: src/schema.sql\n-- hand-written\n").unwrap();
@@ -227,8 +226,8 @@ mod tests {
     fn write_overwrites_existing_generated_file() {
         let d = tmp();
         let p = d.path().join("int4_types.sql");
-        fs::write(&p, format!("{AUTO_GENERATED_HEADER}-- old content\n")).unwrap();
-        write_generated_file(&p, &format!("{AUTO_GENERATED_HEADER}-- new content\n")).unwrap();
+        fs::write(&p, format!("{AUTO_GENERATED_MARKER}\n-- old content\n")).unwrap();
+        write_generated_file(&p, &format!("{AUTO_GENERATED_MARKER}\n-- new content\n")).unwrap();
         let text = fs::read_to_string(&p).unwrap();
         assert!(text.contains("-- new content"));
         assert!(!text.contains("-- old content"));
@@ -240,8 +239,8 @@ mod tests {
         let gen1 = d.path().join("int4_eq_functions.sql");
         let gen2 = d.path().join("int4_old_domain_functions.sql");
         let hand = d.path().join("int4_jsonb_extra.sql");
-        fs::write(&gen1, format!("{AUTO_GENERATED_HEADER}SELECT 1;\n")).unwrap();
-        fs::write(&gen2, format!("{AUTO_GENERATED_HEADER}SELECT 2;\n")).unwrap();
+        fs::write(&gen1, format!("{AUTO_GENERATED_MARKER}\nSELECT 1;\n")).unwrap();
+        fs::write(&gen2, format!("{AUTO_GENERATED_MARKER}\nSELECT 2;\n")).unwrap();
         fs::write(&hand, "-- REQUIRE: src/schema.sql\n-- hand-written\n").unwrap();
         let removed = clean_generated_files(d.path()).unwrap();
         assert!(!gen1.exists());
@@ -265,7 +264,7 @@ mod tests {
         let blocker = d.path().join("not-a-dir");
         fs::write(&blocker, "i am a file\n").unwrap();
         let target = blocker.join("int4_types.sql"); // parent is a file
-        let body = format!("{AUTO_GENERATED_HEADER}DO $$ BEGIN END $$;\n");
+        let body = format!("{AUTO_GENERATED_MARKER}\nDO $$ BEGIN END $$;\n");
         let err = write_generated_file(&target, &body).unwrap_err();
         assert!(matches!(err, WriteError::Io(_)), "expected Io, got {err:?}");
         assert!(err.to_string().starts_with("io error: "));
