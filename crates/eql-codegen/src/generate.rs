@@ -416,7 +416,7 @@ mod tests {
         for p in &written {
             assert!(fs::read_to_string(p)
                 .unwrap()
-                .starts_with(crate::consts::AUTO_GENERATED_HEADER));
+                .starts_with(&format!("{}\n", crate::consts::AUTO_GENERATED_MARKER)));
         }
     }
 
