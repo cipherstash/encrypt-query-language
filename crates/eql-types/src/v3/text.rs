@@ -2,8 +2,10 @@
 //! [`crate::v3::int4`] plus a `_match` domain backed by the Bloom-filter
 //! term (`@>`/`<@` containment for `LIKE`-style matching).
 
+use std::marker::PhantomData;
+
 use crate::v3::terms::{BloomFilter, Ciphertext, Hmac256, OreBlockU64_8_256};
-use crate::v3::V3Domain;
+use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
 use serde::{Deserialize, Serialize};
 
@@ -20,8 +22,10 @@ pub struct Text {
     pub c: Ciphertext,
 }
 
-impl V3Domain for Text {
-    const SQL_DOMAIN: &'static str = "eql_v3.text";
+impl DomainType for PhantomData<Text> {
+    fn sql_domain(&self) -> &'static str {
+        "eql_v3.text"
+    }
 }
 
 /// `eql_v3.text_eq` — HMAC equality (`=`, `<>`).
@@ -39,8 +43,10 @@ pub struct TextEq {
     pub hm: Hmac256,
 }
 
-impl V3Domain for TextEq {
-    const SQL_DOMAIN: &'static str = "eql_v3.text_eq";
+impl DomainType for PhantomData<TextEq> {
+    fn sql_domain(&self) -> &'static str {
+        "eql_v3.text_eq"
+    }
 }
 
 /// `eql_v3.text_match` — Bloom-filter containment match.
@@ -58,8 +64,10 @@ pub struct TextMatch {
     pub bf: BloomFilter,
 }
 
-impl V3Domain for TextMatch {
-    const SQL_DOMAIN: &'static str = "eql_v3.text_match";
+impl DomainType for PhantomData<TextMatch> {
+    fn sql_domain(&self) -> &'static str {
+        "eql_v3.text_match"
+    }
 }
 
 /// `eql_v3.text_ord_ore` — full lexicographic comparison,
@@ -78,8 +86,10 @@ pub struct TextOrdOre {
     pub ob: OreBlockU64_8_256,
 }
 
-impl V3Domain for TextOrdOre {
-    const SQL_DOMAIN: &'static str = "eql_v3.text_ord_ore";
+impl DomainType for PhantomData<TextOrdOre> {
+    fn sql_domain(&self) -> &'static str {
+        "eql_v3.text_ord_ore"
+    }
 }
 
 /// `eql_v3.text_ord` — full lexicographic comparison
@@ -98,6 +108,8 @@ pub struct TextOrd {
     pub ob: OreBlockU64_8_256,
 }
 
-impl V3Domain for TextOrd {
-    const SQL_DOMAIN: &'static str = "eql_v3.text_ord";
+impl DomainType for PhantomData<TextOrd> {
+    fn sql_domain(&self) -> &'static str {
+        "eql_v3.text_ord"
+    }
 }

@@ -57,32 +57,16 @@ pub mod timestamptz;
 /// The PostgreSQL schema every domain in this module inhabits.
 pub const SQL_SCHEMA: &str = "eql_v3";
 
-/// Implemented by every v3 domain payload type: the fully-qualified SQL
-/// domain the payload inhabits (e.g. `"eql_v3.int4_eq"`).
+/// One v3 domain type — what [`all`] enumerates.
 ///
-/// The [`DomainType`] blanket impl derives everything else from this
-/// constant, so the type ↔ domain binding has exactly one definition per
-/// type — there is no second string to keep in sync, and two same-shaped
-/// types (`_ord` vs `_ord_ore`) cannot be enumerated under each other's
-/// domain.
-pub trait V3Domain {
-    /// Fully-qualified SQL domain, e.g. `"eql_v3.int4_eq"`.
-    const SQL_DOMAIN: &'static str;
-}
-
-/// Object-safe view of one v3 domain type — what [`all`] enumerates.
-///
-/// Implemented once, by the blanket impl below, for `PhantomData<T>` over
-/// every payload type: a `Box<dyn DomainType>` is a zero-sized type-level
-/// handle, not a payload instance (there are no payload instances to box;
-/// the trait cannot be [`V3Domain`] itself because an associated const is
-/// not object-safe — so the dyn surface lives on the handle, and `V3Domain`
-/// stays the one-line-per-type anchor it derives from).
-///
-/// Consumed by `tests/catalog_parity.rs` (which asserts [`all`] exactly
-/// covers `eql-scalars::CATALOG`, so the list cannot silently go stale) and
-/// by the binding/schema exporters added in stacked changes. Public so FFI
-/// consumers can enumerate the protocol surface too.
+/// Each token file implements this for `PhantomData<T>` next to the payload
+/// type `T` it describes, e.g. `impl DomainType for PhantomData<Int4Eq>`:
+/// a `Box<dyn DomainType>` is a zero-sized type-level handle, not a payload
+/// instance (payload types have no instances to box, so the dyn surface
+/// lives on the handle). The SQL domain string is defined exactly once, in
+/// that impl, and `tests/catalog_parity.rs` cross-checks every handle
+/// against `eql-scalars::CATALOG` — a typo'd or mis-ordered domain fails
+/// there. Public so FFI consumers can enumerate the protocol surface too.
 pub trait DomainType {
     /// Fully-qualified SQL domain name, e.g. `"eql_v3.int4_eq"`.
     fn sql_domain(&self) -> &'static str;
@@ -93,23 +77,7 @@ pub trait DomainType {
     fn domain(&self) -> &'static str {
         self.sql_domain()
             .strip_prefix("eql_v3.")
-            .expect("SQL_DOMAIN must be qualified with the eql_v3 schema")
-    }
-
-    /// The Rust type's full path (via `std::any::type_name`).
-    fn type_name(&self) -> &'static str;
-}
-
-impl<T> DomainType for PhantomData<T>
-where
-    T: V3Domain,
-{
-    fn sql_domain(&self) -> &'static str {
-        T::SQL_DOMAIN
-    }
-
-    fn type_name(&self) -> &'static str {
-        std::any::type_name::<T>()
+            .expect("sql_domain must be qualified with the eql_v3 schema")
     }
 }
 

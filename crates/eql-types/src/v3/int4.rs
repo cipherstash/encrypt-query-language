@@ -7,8 +7,10 @@
 //! | [`Int4OrdOre`] | `eql_v3.int4_ord_ore`  | `v` `i` `c` `ob`   | `=` `<>` `<` `<=` `>` `>=` |
 //! | [`Int4Ord`]    | `eql_v3.int4_ord`      | `v` `i` `c` `ob`   | `=` `<>` `<` `<=` `>` `>=` |
 
+use std::marker::PhantomData;
+
 use crate::v3::terms::{Ciphertext, Hmac256, OreBlockU64_8_256};
-use crate::v3::V3Domain;
+use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
 use serde::{Deserialize, Serialize};
 
@@ -25,8 +27,10 @@ pub struct Int4 {
     pub c: Ciphertext,
 }
 
-impl V3Domain for Int4 {
-    const SQL_DOMAIN: &'static str = "eql_v3.int4";
+impl DomainType for PhantomData<Int4> {
+    fn sql_domain(&self) -> &'static str {
+        "eql_v3.int4"
+    }
 }
 
 /// `eql_v3.int4_eq` — HMAC equality (`=`, `<>`).
@@ -44,8 +48,10 @@ pub struct Int4Eq {
     pub hm: Hmac256,
 }
 
-impl V3Domain for Int4Eq {
-    const SQL_DOMAIN: &'static str = "eql_v3.int4_eq";
+impl DomainType for PhantomData<Int4Eq> {
+    fn sql_domain(&self) -> &'static str {
+        "eql_v3.int4_eq"
+    }
 }
 
 /// `eql_v3.int4_ord_ore` — full comparison (`=` `<>` `<` `<=` `>` `>=`),
@@ -65,8 +71,10 @@ pub struct Int4OrdOre {
     pub ob: OreBlockU64_8_256,
 }
 
-impl V3Domain for Int4OrdOre {
-    const SQL_DOMAIN: &'static str = "eql_v3.int4_ord_ore";
+impl DomainType for PhantomData<Int4OrdOre> {
+    fn sql_domain(&self) -> &'static str {
+        "eql_v3.int4_ord_ore"
+    }
 }
 
 /// `eql_v3.int4_ord` — full comparison (`=` `<>` `<` `<=` `>` `>=`).
@@ -84,6 +92,8 @@ pub struct Int4Ord {
     pub ob: OreBlockU64_8_256,
 }
 
-impl V3Domain for Int4Ord {
-    const SQL_DOMAIN: &'static str = "eql_v3.int4_ord";
+impl DomainType for PhantomData<Int4Ord> {
+    fn sql_domain(&self) -> &'static str {
+        "eql_v3.int4_ord"
+    }
 }
