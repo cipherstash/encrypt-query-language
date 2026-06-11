@@ -11,7 +11,8 @@ use sqlx::PgPool;
 /// A well-formed int4 storage/eq payload literal — has v/i/c + hm + ob, so it
 /// casts into any int4 domain. Hand-written (no encryption needed); the term
 /// VALUES are placeholders, which is fine for NULL/blocker/CHECK shape tests.
-const WELL_FORMED: &str = r#"{"v":2,"i":{"t":"edge","c":"payload"},"c":"AAAA","hm":"deadbeef","ob":["00"]}"#;
+const WELL_FORMED: &str =
+    r#"{"v":2,"i":{"t":"edge","c":"payload"},"c":"AAAA","hm":"deadbeef","ob":["00"]}"#;
 
 fn int4(variant: Variant) -> String {
     ScalarDomainSpec::new::<i32>(variant).sql_domain
