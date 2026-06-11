@@ -78,6 +78,58 @@ async fn ordering_is_deferred_on_timestamptz_eq(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
+async fn every_eql_v3_blocker_is_non_strict_plpgsql(pool: PgPool) -> Result<()> {
+    // The footgun guard, applied to EVERY generated blocker at once.
+    //
+    // Codegen emits a blocker for each native-jsonb operator a domain does NOT
+    // support (`->`, `->>`, `@>`, `<@`, `||`, `?`, `?|`, `?&`, `@?`, `@@`, `#>`,
+    // `#>>`, `-`, `#-`, plus the unsupported comparison ops) across every
+    // eql_v3 scalar domain (storage / _eq / _ord / _ord_ore / _match). Each MUST
+    // be `LANGUAGE plpgsql` and MUST NOT be `STRICT`:
+    //   * a `STRICT` blocker is skipped on a NULL argument, silently returning
+    //     NULL instead of raising — falling through to native jsonb semantics;
+    //   * a `LANGUAGE sql` blocker is inlinable and the planner can elide the
+    //     call (and its RAISE) when the result is provably unused.
+    // The behavioural tests above prove the raise for representative operators
+    // (`<`, `->`, `@>`); this proves the structural contract for the WHOLE set,
+    // and against the *installed* catalog (catching build/install drift the
+    // codegen golden test cannot see). Blockers are identified by their RAISE
+    // body — the `'operator % is not supported for %'` message every blocker
+    // carries and nothing else does.
+    let (total, strict, non_plpgsql): (i64, i64, i64) = sqlx::query_as(
+        r#"
+        SELECT count(*),
+               count(*) FILTER (WHERE p.proisstrict),
+               count(*) FILTER (WHERE l.lanname <> 'plpgsql')
+        FROM pg_catalog.pg_proc p
+        JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+        JOIN pg_catalog.pg_language  l ON l.oid = p.prolang
+        WHERE n.nspname = 'eql_v3'
+          AND p.prosrc LIKE '%is not supported for %'
+        "#,
+    )
+    .fetch_one(&pool)
+    .await?;
+
+    anyhow::ensure!(
+        total > 0,
+        "found no eql_v3 blocker functions — did the extension install?"
+    );
+    anyhow::ensure!(
+        strict == 0,
+        "{strict} of {total} eql_v3 blocker(s) are STRICT — a STRICT blocker is \
+         elided on a NULL argument, bypassing the not-supported RAISE"
+    );
+    anyhow::ensure!(
+        non_plpgsql == 0,
+        "{non_plpgsql} of {total} eql_v3 blocker(s) are not LANGUAGE plpgsql — a \
+         LANGUAGE sql blocker is inlinable and can be elided when the result is \
+         provably unused"
+    );
+    Ok(())
+}
+
+#[sqlx::test]
 async fn check_rejects_payload_missing_envelope(pool: PgPool) -> Result<()> {
     // The storage domain's CHECK requires the EQL envelope (`v`, `i`, `c`). A
     // payload missing the top-level ciphertext `c` must be rejected at the cast.
