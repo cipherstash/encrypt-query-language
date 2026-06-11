@@ -183,10 +183,13 @@ fn v3_variant_has_no_eql_v2_symbol() {
 #[test]
 fn v3_variant_omits_v2_coupled_pin_search_path() {
     // D11: the v3 artifact must NOT append tasks/pin_search_path.sql, which is
-    // eql_v2-coupled (references eql_v2_encrypted / ste_vec_entry).
+    // eql_v2-coupled (it references public.eql_v2_encrypted / eql_v2.ste_vec_entry
+    // and only pins eql_v2 functions). Match the eql_v2-QUALIFIED markers: a bare
+    // `ste_vec_entry` substring would false-positive on the legitimate
+    // `eql_v3.ste_vec_entry` DOMAIN that the v3 jsonb document surface defines.
     let sql = read_release_sql("cipherstash-encrypt-v3.sql");
     assert!(
-        !sql.contains("ste_vec_entry") && !sql.contains("eql_v2_encrypted"),
+        !sql.contains("eql_v2.ste_vec_entry") && !sql.contains("eql_v2_encrypted"),
         "v3 variant must not carry the eql_v2-coupled pin_search_path script"
     );
 }

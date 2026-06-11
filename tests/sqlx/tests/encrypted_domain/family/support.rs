@@ -297,12 +297,19 @@ async fn neq_propagates_null_under_three_valued_logic(pool: PgPool) -> Result<()
 
 #[sqlx::test]
 async fn no_cross_variant_operator_is_declared(pool: PgPool) -> Result<()> {
-    // The family deliberately does NOT define ANY operator that mixes two
-    // different capability variants — e.g. `eql_v3.int4_eq = eql_v3.int4_ord`
+    // The SCALAR family deliberately does NOT define ANY operator that mixes
+    // two different capability variants — e.g. `eql_v3.int4_eq = eql_v3.int4_ord`
     // would resolve against jsonb (the ultimate base type) and silently
     // bypass the per-variant blockers. The query below has no `oprname`
     // filter, so it catches a cross-variant operator of any kind, not just
     // `=`. If someone accidentally adds such an operator, this test fails.
+    //
+    // The jsonb DOCUMENT surface is excluded: it intentionally defines
+    // cross-type containment operators (`json @> ste_vec_query`,
+    // `json @> ste_vec_entry` and their `<@` commutators) — the documented
+    // document-containment API, not scalar capability variants that must
+    // resolve to a blocker. So `json` / `ste_vec_entry` / `ste_vec_query` are
+    // out of scope for this scalar-variant guard.
     //
     // The check is structural (`pg_operator`) rather than dynamic
     // ("invoke and see it raise") so a future PG version with stricter
@@ -319,6 +326,8 @@ async fn no_cross_variant_operator_is_declared(pool: PgPool) -> Result<()> {
         WHERE ln.nspname = 'eql_v3'
           AND rn.nspname = 'eql_v3'
           AND lt.typname <> rt.typname
+          AND lt.typname NOT IN ('json', 'ste_vec_entry', 'ste_vec_query')
+          AND rt.typname NOT IN ('json', 'ste_vec_entry', 'ste_vec_query')
         ORDER BY 1
         "#,
     )

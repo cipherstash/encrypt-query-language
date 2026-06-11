@@ -24,10 +24,12 @@ fn is_valid_identifier(s: &str) -> bool {
     chars.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
 }
 
-/// Allowlist of committed `payload` column types. `{ jsonb }` for #224 — no
-/// domain types exist yet. Extending to domain-typed fixtures means extending
-/// this list with validated, optionally schema-qualified type tokens.
-pub const ALLOWED_COLUMN_TYPES: &[&str] = &["jsonb"];
+/// Allowlist of committed `payload` column types. `jsonb` for the scalar
+/// fixtures; `eql_v3.json` for the v3 jsonb (SteVec document) fixture, whose
+/// committed `payload` column is the `eql_v3.json` DOMAIN so the domain CHECK
+/// runs on load. Schema-qualified tokens are allowed — each is an exact,
+/// vetted entry here, never a free-form `&str`.
+pub const ALLOWED_COLUMN_TYPES: &[&str] = &["jsonb", "eql_v3.json"];
 
 fn is_valid_column_type(s: &str) -> bool {
     ALLOWED_COLUMN_TYPES.contains(&s)
@@ -139,10 +141,12 @@ mod tests {
     }
 
     #[test]
-    fn column_type_accepts_jsonb_only() {
+    fn column_type_accepts_allowlisted_tokens_only() {
         assert!(ColumnType::try_from("jsonb").is_ok());
+        assert!(ColumnType::try_from("eql_v3.json").is_ok());
         assert!(ColumnType::try_from("text").is_err());
         assert!(ColumnType::try_from("eql_v2_int4").is_err());
+        assert!(ColumnType::try_from("eql_v3.jsonb").is_err());
         assert!(ColumnType::try_from("jsonb; DROP TABLE x").is_err());
     }
 
