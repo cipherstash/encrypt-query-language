@@ -1,6 +1,5 @@
 //! Inherent impls for [`Fixture`] — resolving a fixture to its integer value
-//! (`numeric_value`) and rendering it as a Rust source literal
-//! (`render_literal`). Definition lives in `lib.rs`.
+//! (`numeric_value`). Definition lives in `lib.rs`.
 
 use crate::{Fixture, ScalarKind};
 
@@ -35,37 +34,6 @@ impl Fixture {
             | Fixture::Jsonb(_)
             | Fixture::Date(_)
             | Fixture::Timestamptz(_) => None,
-        }
-    }
-
-    /// Render as a Rust source literal: sentinels -> named constant, `Int` -> the
-    /// number, string kinds -> a `Debug`-quoted (Rust-escaped, not SQL) literal.
-    pub fn render_literal(self, kind: ScalarKind) -> String {
-        const PIVOT_MSG: &str = "Min/Max/Zero fixtures require an integer kind";
-        match self {
-            Fixture::Min => kind
-                .as_bounded_int()
-                .expect(PIVOT_MSG)
-                .min_symbol()
-                .to_string(),
-            Fixture::Max => kind
-                .as_bounded_int()
-                .expect(PIVOT_MSG)
-                .max_symbol()
-                .to_string(),
-            Fixture::Zero => kind
-                .as_bounded_int()
-                .expect(PIVOT_MSG)
-                .zero_symbol()
-                .to_string(),
-            Fixture::Int(n) => n.to_string(),
-            Fixture::Numeric(s)
-            | Fixture::Text(s)
-            | Fixture::Jsonb(s)
-            | Fixture::Date(s)
-            | Fixture::Timestamptz(s) => {
-                format!("{s:?}")
-            }
         }
     }
 }

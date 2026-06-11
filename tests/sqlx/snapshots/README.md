@@ -12,12 +12,21 @@ modulo the type token (the matrix tests are macro-generated from one
 single canonical set plus a per-type normalize-and-compare carries the same
 signal at a fraction of the committed surface.
 
-There is also **no** separate snapshot for equality-only types. An eq-only
-scalar (`scalar_matrix! { caps = [eq] }`, e.g. `timestamptz`) emits exactly the
-ordered name set MINUS the ord-only lines, so the inventory **derives** its
-expected set from this one baseline — `matrix_tests.txt` minus every line
-matching `_ord` / `order_by` / `routes_through_ob`. The baseline file itself is
-always the ordered (`caps = [eq, ord]`) shape.
+For equality-only types there is a second committed snapshot,
+`matrix_tests_eq_only.txt`. An eq-only scalar (`scalar_matrix! { caps = [eq] }`,
+e.g. `timestamptz`) emits exactly the ordered name set MINUS the ord-only lines,
+so this file is **derived** from `matrix_tests.txt` (minus every line matching
+`_ord` / `order_by` / `routes_through_ob`) — but it is committed and pinned: the
+inventory gate re-derives the set at runtime and asserts it equals this
+committed file, so a change to the ordered baseline or the strip filter that
+alters the eq-only set fails until the snapshot is deliberately regenerated.
+Eq-only types are then matched against the committed snapshot. The
+`matrix_tests.txt` baseline itself is always the ordered (`caps = [eq, ord]`)
+shape. Regenerate the eq-only snapshot with:
+
+```bash
+grep -vE '_ord|order_by|routes_through_ob' snapshots/matrix_tests.txt | LC_ALL=C sort -u > snapshots/matrix_tests_eq_only.txt
+```
 
 The "no per-type variation" property is preserved by design: every ordered
 scalar sweeps the same three `OrderedScalar` pivots (`min`/`mid`/`max`), so the
