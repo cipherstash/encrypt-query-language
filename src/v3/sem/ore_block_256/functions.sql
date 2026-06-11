@@ -109,7 +109,16 @@ AS $$
 
     left_block_size CONSTANT smallint := 16;
     right_block_size CONSTANT smallint := 32;
-    right_offset CONSTANT smallint := 136; -- 8 * 17
+
+    -- Block count N is DERIVED from the ciphertext length, not hardcoded to 8.
+    -- Wire format per term:
+    --   [ N PRP bytes ][ N*16B left blocks ][ 16B hash key ][ N*32B right blocks ]
+    --   octet_length = 17*N + 16 + 32*N = 49*N + 16  =>  N = (octet_length - 16) / 49
+    -- This serves int4 (N=8, 408B), timestamp (N=12, 604B), and numeric
+    -- (N=14, 702B) with one comparator.
+    n            integer;
+    left_offset  integer;  -- ordinal offset of the first left block (1 + N PRP bytes)
+    right_offset integer;  -- ordinal start of the right CT (= total left CT length = 17*N)
 
     indicator smallint := 0;
   BEGIN
@@ -129,10 +138,23 @@ AS $$
       RAISE EXCEPTION 'Ciphertexts are different lengths';
     END IF;
 
-    FOR block IN 0..7 LOOP
+    -- Well-formedness: length must be exactly 49*N + 16 for some N >= 1. The
+    -- modulo alone is insufficient -- a 16-byte term passes (16 - 16) % 49 = 0
+    -- and derives N = 0, which would fall through to the all-blocks-equal path
+    -- and return 0 instead of raising. The `<= 16` clause is load-bearing.
+    IF octet_length(a.bytes) <= 16 OR (octet_length(a.bytes) - 16) % 49 != 0 THEN
+      RAISE EXCEPTION 'Malformed ORE term: % bytes', octet_length(a.bytes);
+    END IF;
+
+    n := (octet_length(a.bytes) - 16) / 49;
+    left_offset := 1 + n;     -- left blocks begin right after the N PRP bytes
+    right_offset := 17 * n;   -- right CT begins right after the 17*N-byte left CT
+
+    FOR block IN 0..n-1 LOOP
+      -- Compare each PRP byte (the first N bytes) and its 16-byte left block.
       IF
         substr(a.bytes, 1 + block, 1) != substr(b.bytes, 1 + block, 1)
-        OR substr(a.bytes, 9 + left_block_size * block, left_block_size) != substr(b.bytes, 9 + left_block_size * block, left_block_size)
+        OR substr(a.bytes, left_offset + left_block_size * block, left_block_size) != substr(b.bytes, left_offset + left_block_size * block, left_block_size)
       THEN
         IF eq THEN
           unequal_block := block;
@@ -145,11 +167,13 @@ AS $$
       RETURN 0::integer;
     END IF;
 
+    -- Hash key is the IV from the right CT of b.
     hash_key := substr(b.bytes, right_offset + 1, 16);
 
+    -- First right block is at right_offset + nonce_size (ordinally indexed).
     target_block := substr(b.bytes, right_offset + 17 + (unequal_block * right_block_size), right_block_size);
 
-    data_block := substr(a.bytes, 9 + (left_block_size * unequal_block), left_block_size);
+    data_block := substr(a.bytes, left_offset + (left_block_size * unequal_block), left_block_size);
 
     encrypt_block := encrypt(data_block::bytea, hash_key::bytea, 'aes-ecb');
 
