@@ -222,6 +222,115 @@ where
         Ok(())
     }
 
+    /// Generate `tests/sqlx/fixtures/<name>.sql` from **caller-supplied
+    /// encrypted payloads** instead of encrypting `self.values()` in-driver.
+    ///
+    /// The split-payload seam: encryption input and the plaintext oracle column
+    /// are different value streams. `self.values()` drives the committed
+    /// `plaintext` column (the oracle) and the fixture-table schema; `payloads`
+    /// are the already-encrypted JSONB documents to store in `payload`. Used by
+    /// the `v3_doc_int4` fixture, whose committed payload is a SteVec document
+    /// encrypted from `{"field": <int>}` while the oracle column is the bare
+    /// `int4`.
+    ///
+    /// `payloads.len()` must equal `self.values().len()`. Otherwise this mirrors
+    /// `run()` exactly — same connection-from-env, schema → insert → render →
+    /// drop-on-error teardown → file-write pipeline — but inserts the supplied
+    /// payloads rather than calling `cipherstash::encrypt_store(self.values())`.
+    /// Narrow by design: it exists only for fixtures whose committed payload is
+    /// encrypted from one value stream while the plaintext oracle is another.
+    pub async fn run_with_payloads(&self, payloads: Vec<serde_json::Value>) -> Result<()> {
+        anyhow::ensure!(
+            payloads.len() == self.values().len(),
+            "run_with_payloads: {} payloads for {} plaintext values",
+            payloads.len(),
+            self.values().len(),
+        );
+
+        let config = DriverConfig::from_env()?;
+
+        let mut direct = config
+            .direct
+            .clone()
+            .connect()
+            .await
+            .context("connecting to Postgres (direct)")?;
+
+        self.check_complete().context("invalid FixtureSpec")?;
+
+        sqlx::raw_sql(&self.working_schema_sql())
+            .execute(&mut direct)
+            .await
+            .context("applying working-table schema")?;
+
+        let insert_result = self.insert_payloads(&mut direct, &payloads).await;
+        let render_result = if insert_result.is_ok() {
+            sqlx::query(&self.render_rows_sql())
+                .fetch_all(&mut direct)
+                .await
+                .context("rendering fixture rows")
+        } else {
+            Ok(Vec::new())
+        };
+
+        let working = self.working_table();
+        let drop_result = sqlx::raw_sql(&format!("DROP TABLE IF EXISTS public.{working};"))
+            .execute(&mut direct)
+            .await;
+
+        insert_result?;
+        let rows = render_result?;
+        drop_result.context("dropping the working table")?;
+
+        let lines: Vec<String> = rows
+            .iter()
+            .map(|r| r.try_get::<String, _>(0).context("reading rendered INSERT"))
+            .collect::<Result<_>>()?;
+
+        let _ = direct.close().await;
+
+        let mut script = self.fixture_script_preamble();
+        for line in &lines {
+            script.push_str(line);
+            script.push('\n');
+        }
+
+        let path = fixture_script_path(&self.script_filename());
+        std::fs::write(&path, script)
+            .with_context(|| format!("writing fixture script {}", path.display()))?;
+        println!("wrote {} ({} rows)", path.display(), self.values().len());
+        Ok(())
+    }
+
+    /// INSERT the caller-supplied encrypted payloads alongside `self.values()`
+    /// as the plaintext oracle. The plaintext/payload pairing is positional —
+    /// `payloads[i]` is the ciphertext for `self.values()[i]` — so the caller
+    /// MUST keep the two streams index-aligned (the `v3_doc_int4` generator
+    /// builds both from the same ordered `INT4_VALUES` walk). Unlike
+    /// `insert_direct`, no `cipherstash::encrypt_store` call happens here.
+    async fn insert_payloads(
+        &self,
+        direct: &mut PgConnection,
+        payloads: &[serde_json::Value],
+    ) -> Result<()> {
+        let working = self.working_table();
+        let insert = format!(
+            "INSERT INTO public.{working} (id, plaintext, {col}) VALUES ($1, $2, $3)",
+            col = cipherstash::PAYLOAD_COLUMN
+        );
+        for (i, (value, payload)) in self.values().iter().zip(payloads).enumerate() {
+            let id = (i as i64) + 1;
+            sqlx::query(&insert)
+                .bind(id)
+                .bind(value.clone())
+                .bind(sqlx::types::Json(payload.clone()))
+                .execute(&mut *direct)
+                .await
+                .with_context(|| format!("inserting value #{id}"))?;
+        }
+        Ok(())
+    }
+
     /// **Test seam** for the schema-apply / insert / render / teardown
     /// pipeline. Production code uses `run()`, which inlines the same
     /// pipeline on a single connection. This entry point exists so tests
