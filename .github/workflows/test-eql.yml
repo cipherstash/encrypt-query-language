@@ -67,6 +67,7 @@ jobs:
               - "crates/**"
               - "Cargo.toml"
               - "Cargo.lock"
+              - "mise.toml"
 
       # Explicit default (not `|| 'true'`, which trips GitHub's inconsistent
       # treatment of the string 'false'). merge_group/workflow_dispatch never
