@@ -11,6 +11,10 @@
 "rust" = { version = "latest", components = "rustc,rust-std,cargo,rustfmt,rust-docs,clippy" }
 "cargo:cargo-binstall" = "latest"
 "cargo:sqlx-cli" = "latest"
+# Installed via the already-present cargo-binstall (fast in CI). Drives the
+# sharded sqlx suite: `cargo nextest archive` builds the test binaries once and
+# `cargo nextest run --partition hash:K/N` runs a stable hash-partitioned shard.
+"cargo:cargo-nextest" = "latest"
 # Single source of truth for the cargo-expand version used by `test:matrix:expand`.
 # Pinned in lockstep with the nightly date in that task: cargo-expand drives the
 # rustfmt pass, so an unpinned version can drift the matrix snapshot even with a
@@ -94,6 +98,26 @@ dir = "{{config_root}}/tests/sqlx"
 run = """
 cargo watch -x test
 """
+
+[tasks."test:sqlx:archive"]
+description = "Build EQL + compile the sqlx test binaries once into a reusable nextest archive"
+# Depends on test:sqlx:prep (NOT just build): `#[sqlx::test(fixtures(scripts(…)))]`
+# embeds the per-type fixture SQL AND the 001_install_eql.sql migration into the
+# compiled test binaries via `include_str!` at COMPILE time. So the fixtures +
+# migration must exist on disk BEFORE `cargo nextest archive` compiles — prep
+# produces both (build → cp migration → sqlx migrate → fixture:generate:all).
+# Consequence: this task needs a live Postgres + CS_* creds (prep's
+# fixture:generate:all prerequisites), so the build-archive CI job runs
+# postgres:up and carries the CS_* env. The `#MISE depends` directive in the
+# script is inert under `bash tasks/...`, so the dependency MUST be declared here.
+depends = ["test:sqlx:prep"]
+dir = "{{config_root}}"
+run = "bash tasks/test/sqlx-archive.sh"
+
+[tasks."test:sqlx:partition"]
+description = "Run one hash partition of the sqlx suite from a prebuilt nextest archive (SHARD / SHARD_TOTAL env)"
+dir = "{{config_root}}"
+run = "bash tasks/test/sqlx-partition.sh"
 
 [tasks."test:schema"]
 description = "Validate sample payloads against the v2.2 / v2.3 JSON Schemas (no database required)"
