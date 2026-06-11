@@ -71,6 +71,9 @@ where
 
     let mut runner = TestRunner::new(Config {
         cases,
+        // No regression file: these cases sample committed fixtures, nothing to
+        // persist/replay, and it silences proptest's "no source file" warning.
+        failure_persistence: None,
         ..Config::default()
     });
     let n = all.len();
