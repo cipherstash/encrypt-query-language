@@ -58,7 +58,7 @@ Things you do **not** do:
   renderers are the source of truth. Change the catalog and rebuild — never
   hand-edit generated SQL.
 - **Don't add a `tests/codegen/reference/<T>/` baseline.** `int4` is the sole
-  golden master (§4).
+  reference (§4).
 - **Don't edit `mise.toml`, the CI workflow, `pin_search_path.sql`, or
   `splinter.sh`** for an ordinary type — they recognise the generated surface
   intrinsically (§5, §6). The exception is a brand-new *term* whose extractor
@@ -395,7 +395,7 @@ Run, in order:
 The CI codegen job is a prerequisite of the PostgreSQL test matrix, so
 generated-SQL drift is caught before database tests run.
 
-**Commit a per-type golden baseline.** Every catalog type **must** have a
+**Commit a per-type reference baseline.** Every catalog type **must** have a
 committed `tests/codegen/reference/<T>/` baseline, generated once and checked in
 (see `tests/codegen/reference/README.md` for the regenerate-and-commit recipe).
 The generator is type-generic, but per-type domain *shapes* differ — ordered
@@ -403,8 +403,8 @@ types carry `_ord`/`_ord_ore` + aggregates, equality-only types (`timestamptz`)
 omit them, and the Bloom `text_match` domain renders `@>`/`<@` as supported
 containment operators no ordered type emits — so anchoring every type catches a
 regression in any shape, not just the ordered one. `reference_dirs_match_catalog_tokens`
-(in `crates/eql-codegen/tests/parity.rs`) fails CI if a catalog row has no golden
-or a golden has no catalog row. Drift protection is further reinforced by the
+(in `crates/eql-codegen/tests/parity.rs`) fails CI if a catalog row has no reference
+or a reference has no catalog row. Drift protection is further reinforced by the
 catalog `values_tests` pinning the materialised `<T>_VALUES`, the
 catalog/generator `#[test]`s, and the `scalar_matrix!` SQLx suite (behaviour, not
 bytes).
@@ -733,16 +733,16 @@ clippy ... -D warnings`.
 - **The parity gate** — `mise run codegen:parity` (`tasks/codegen-parity.sh`).
   It runs the generator into the real tree, then for **every** committed
   reference token dir (1) compares that type's generated SQL **file set** against
-  the golden under `tests/codegen/reference/<token>/*.sql`, excluding committed
+  the reference under `tests/codegen/reference/<token>/*.sql`, excluding committed
   hand-written files (`comm -23` of `ls` against `git ls-files`), so an extra or
-  dropped generated file fails; and (2) diffs each golden file **byte-for-byte**
-  against its generated counterpart, after dropping the golden's single leading
+  dropped generated file fails; and (2) diffs each reference file **byte-for-byte**
+  against its generated counterpart, after dropping the reference's single leading
   `-- REFERENCE:` provenance line (`tail -n +2`). The same byte-for-byte
   assertion runs in-crate as `crates/eql-codegen/tests/parity.rs`
-  (`rust_generator_matches_golden_files`), alongside
+  (`rust_generator_matches_reference_files`), alongside
   `generate_all_is_deterministic_across_runs` (two runs are byte-identical) and
   `reference_dirs_match_catalog_tokens` (reference dirs == catalog tokens). The
-  golden reference — not any Python oracle — is the sole contract that survives
+  reference SQL files — not any Python oracle — are the sole contract that survives
   generator refactors.
 
 CI runs these in three jobs in `.github/workflows/test-eql.yml`: `rust-crates`
@@ -757,7 +757,7 @@ Adding a new **term** is a bigger move than adding a type: edit the `Term` enum'
 term introduces** — its extractor *and* its comparison wrappers, plus any new SEM
 constructor (adding `Bloom` required `match_term`, `contains`, `contained_by`,
 and the SEM `bloom_filter`) — and, because it changes the generated surface,
-regenerate and commit the affected golden references under
+regenerate and commit the affected reference files under
 `tests/codegen/reference/<token>/`.
 
 ---

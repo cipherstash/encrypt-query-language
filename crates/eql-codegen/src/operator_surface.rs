@@ -36,7 +36,7 @@ impl OperatorMetadata {
     /// present (e.g. the path-selector operators, which carry no metadata).
     ///
     /// The emission order (COMMUTATOR, NEGATOR, RESTRICT, JOIN) is **load-bearing
-    /// for the golden byte-match** — reordering these blocks changes generated
+    /// for the reference byte-match** — reordering these blocks changes generated
     /// SQL and breaks the parity gate. Keep it fixed regardless of struct field
     /// order.
     pub fn render(self) -> Option<String> {
