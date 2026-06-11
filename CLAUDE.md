@@ -103,6 +103,22 @@ Footguns the spec exists to prevent:
 - SQL test fixtures and helpers in `tests/test_helpers.sql`
 - Database connection: `localhost:7432` (cipherstash/password)
 
+#### Tests run against real encrypted data (hard requirement)
+
+EQL is searchable encryption; tests MUST use real ciphertexts/index terms from the actual crypto,
+never hand-curated or synthetic blobs. Fixtures are **generated** by encrypting plaintext through
+cipherstash-client: `mise run test:sqlx:prep` runs `fixture:generate:all` (the
+`generate_all_fixtures` test, `--features fixture-gen`, over `eql-scalars::CATALOG`) → gitignored
+`tests/sqlx/fixtures/eql_v2_*.sql`.
+
+- The SQLx suite **requires** CipherStash creds — ZeroKMS auth (`CS_CLIENT_ACCESS_KEY` +
+  `CS_WORKSPACE_CRN`) AND a client key (`CS_CLIENT_ID` + `CS_CLIENT_KEY`); see the
+  `test:sqlx:prep` comment in `mise.toml`. CI has them. This is expected, not a reason to avoid
+  generated fixtures.
+- Do NOT add static/committed fixtures to dodge the creds dependency. The one committed
+  exception, `tests/sqlx/fixtures/v3_ste_vec.sql`, is a gap pending a SteVec-document generator
+  (`docs/handoff/2026-06-10-v3-jsonb-fixture-alignment.md`), not a pattern to copy.
+
 ## Project Learning & Retrospectives
 
 Valuable lessons and insights from completed work:
