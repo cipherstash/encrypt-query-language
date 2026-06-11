@@ -109,10 +109,17 @@ jobs:
   build-archive:
     name: "Build test archive"
     needs: [changes]
+    # This repo is PUBLIC and accepts fork PRs (the approval policy only gates
+    # first-time contributors). build-archive is the sole holder of the CS_*
+    # credentials below, so it must never run on a fork PR. The trailing clause
+    # restricts it to push / workflow_dispatch / same-repo branch PRs; the
+    # downstream test/validate shards `needs:` it, so they skip on fork PRs too.
     if: >-
-      github.event_name == 'merge_group'
-      || github.event_name == 'workflow_dispatch'
-      || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true')
+      (github.event_name == 'merge_group'
+       || github.event_name == 'workflow_dispatch'
+       || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true'))
+      && (github.event_name != 'pull_request'
+          || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: blacksmith-16vcpu-ubuntu-2204
     env:
       # test:sqlx:archive depends on test:sqlx:prep, which copies the built EQL
@@ -120,8 +127,8 @@ jobs:
       # per-type fixtures — both are include_str!'d into the test binaries at
       # COMPILE time, so they must exist before `cargo nextest archive`. Fixture
       # generation needs a live PG with EQL installed (the postgres:up step
-      # below) plus CS_* creds. This repo does not accept fork PRs, so the
-      # secrets-on-pull_request constraint does not apply — block is unconditional.
+      # below) plus CS_* creds. The job-level `if:` above keeps those creds off
+      # fork-PR runs.
       POSTGRES_VERSION: "17"
       CS_CLIENT_ACCESS_KEY: ${{ secrets.CS_CLIENT_ACCESS_KEY }}
       CS_WORKSPACE_CRN: ${{ secrets.CS_WORKSPACE_CRN }}
