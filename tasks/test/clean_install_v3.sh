@@ -67,4 +67,43 @@ BEGIN
 END $$;
 SQL
 
+echo "==> smoke: v3 encrypted JSONB surface"
+"${RUN[@]}" <<'SQL'
+CREATE TABLE v3_json_smoke (id int PRIMARY KEY, e eql_v3.json);
+INSERT INTO v3_json_smoke VALUES
+  (1, '{"i":{"c":"v3_json_smoke","t":"encrypted"},"v":2,"sv":[{"s":"sel","c":"ciphertext","hm":"00"}]}'::eql_v3.json);
+
+-- Supported typed accessors and containment.
+SELECT (e -> 'sel'::text)::jsonb ->> 'hm' FROM v3_json_smoke WHERE id = 1;
+SELECT e ->> 'sel'::text FROM v3_json_smoke WHERE id = 1;
+SELECT count(*) FROM v3_json_smoke
+WHERE e @> '{"sv":[{"s":"sel","hm":"00"}]}'::eql_v3.ste_vec_query;
+SELECT count(*) FROM v3_json_smoke
+WHERE '{"sv":[{"s":"sel","hm":"00"}]}'::eql_v3.ste_vec_query <@ e;
+
+-- Documented GIN expression installs cleanly in a v3-only database.
+CREATE INDEX v3_json_smoke_gin
+  ON v3_json_smoke USING gin ((eql_v3.to_ste_vec_query(e)::jsonb) jsonb_path_ops);
+
+DO $$
+DECLARE
+  raised boolean := false;
+BEGIN
+  BEGIN
+    PERFORM e ? 'sel'::text FROM v3_json_smoke WHERE id = 1;
+  EXCEPTION WHEN OTHERS THEN
+    raised := true;
+    IF SQLERRM <> 'operator ? is not supported for eql_v3.json' THEN
+      RAISE EXCEPTION 'json blocker raised an unexpected message: %', SQLERRM;
+    END IF;
+  END;
+
+  IF NOT raised THEN
+    RAISE EXCEPTION 'v3 json blocker did not raise';
+  END IF;
+END $$;
+
+DROP TABLE v3_json_smoke;
+SQL
+
 echo "clean v3 install OK (D11 + D4 proven)"
