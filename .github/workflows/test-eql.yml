@@ -409,6 +409,8 @@ jobs:
           git add -N tests/sqlx/snapshots
           git diff --exit-code -- tests/sqlx/snapshots \
             || { echo "Coverage inventory stale — run the relevant inventory task and commit."; exit 1; }
+      - name: Verify catalog-surface coverage
+        run: mise run test:matrix:catalog-coverage
 
   splinter:
     name: "Supabase splinter"
