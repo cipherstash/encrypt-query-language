@@ -41,8 +41,14 @@ fn variant_derives_consistent_sql_domain_and_capabilities() {
     assert!(ord.supports_ord());
     assert_eq!(ord.primary_extractor().as_deref(), Some("eql_v3.ord_term"));
     // int4_ord is `[Ore]`-only: equality routes through ORE (lossless for ints).
-    assert_eq!(ord.extractor_for_op("=").as_deref(), Some("eql_v3.ord_term"));
-    assert_eq!(ord.extractor_for_op("<").as_deref(), Some("eql_v3.ord_term"));
+    assert_eq!(
+        ord.extractor_for_op("=").as_deref(),
+        Some("eql_v3.ord_term")
+    );
+    assert_eq!(
+        ord.extractor_for_op("<").as_deref(),
+        Some("eql_v3.ord_term")
+    );
     assert_eq!(
         Variant::Ord.payload_required_keys("int4"),
         vec!["v", "i", "c", "ob"]
