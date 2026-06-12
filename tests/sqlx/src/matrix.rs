@@ -1456,11 +1456,21 @@ macro_rules! __scalar_matrix_fixture_shape {
                 anyhow::ensure!(plaintexts == expected,
                     "plaintext column must match FIXTURE_VALUES in order");
 
-                for (label, predicate) in [
+                // The proxy emits `hm` + `ob` for every scalar's fixture, plus
+                // `bf` for scalars that declare a Bloom-bearing domain (only
+                // `text`, via `_match`/`_search`). `bf` is thus catalog-derived
+                // so a `text_search` fixture additionally asserts its bloom term.
+                let mut term_checks: Vec<(&str, &str)> = vec![
                     ("hm string", "payload->'hm' IS NULL OR jsonb_typeof(payload->'hm') <> 'string'"),
                     ("ob array",  "payload->'ob' IS NULL OR jsonb_typeof(payload->'ob') <> 'array'"),
                     ("c string",  "payload->'c'  IS NULL OR jsonb_typeof(payload->'c')  <> 'string'"),
-                ] {
+                ];
+                if $crate::scalar_domains::token_has_bloom_term(<$scalar as ScalarType>::PG_TYPE) {
+                    term_checks.push(
+                        ("bf array", "payload->'bf' IS NULL OR jsonb_typeof(payload->'bf') <> 'array'"),
+                    );
+                }
+                for (label, predicate) in term_checks {
                     let missing: i64 = sqlx::query_scalar(&format!(
                         "SELECT COUNT(*) FROM {table} WHERE {predicate}",
                     )).fetch_one(&pool).await?;
