@@ -316,43 +316,55 @@ async fn backing_functions_are_inlinable(pool: PgPool) -> Result<()> {
     // each function is `LANGUAGE sql`, `IMMUTABLE`, `STRICT`, `PARALLEL
     // SAFE`, and not pinned with a `SET search_path`. Any of those failing
     // would silently kill inlining and break functional-index match.
-    let rows = sqlx::query(
-        "SELECT p.proname,
-                l.lanname,
-                p.provolatile,
-                p.proparallel,
-                p.proisstrict,
-                (p.proconfig IS NOT NULL) AS pinned
-         FROM pg_proc p
-         JOIN pg_namespace n ON n.oid = p.pronamespace
-         JOIN pg_language l ON l.oid = p.prolang
-         WHERE n.nspname = 'eql_v2'
-           AND p.proname IN ('ore_cllw_eq', 'ore_cllw_neq',
-                             'ore_cllw_lt',  'ore_cllw_lte',
-                             'ore_cllw_gt',  'ore_cllw_gte')
-         ORDER BY p.proname",
-    )
-    .fetch_all(&pool)
-    .await?;
+    //
+    // Covers BOTH schemas: `eql_v2` and the self-contained `eql_v3` SEM fork.
+    // The eql_v3 operators take the composite `eql_v3.ore_cllw` arg, so they
+    // are not spared by the jsonb-domain structural skip in
+    // `tasks/pin_search_path.sql` — they need an explicit inline-critical
+    // entry there, and this asserts that entry keeps them unpinned.
+    for schema in ["eql_v2", "eql_v3"] {
+        let rows = sqlx::query(
+            "SELECT p.proname,
+                    l.lanname,
+                    p.provolatile,
+                    p.proparallel,
+                    p.proisstrict,
+                    (p.proconfig IS NOT NULL) AS pinned
+             FROM pg_proc p
+             JOIN pg_namespace n ON n.oid = p.pronamespace
+             JOIN pg_language l ON l.oid = p.prolang
+             WHERE n.nspname = $1
+               AND p.proname IN ('ore_cllw_eq', 'ore_cllw_neq',
+                                 'ore_cllw_lt',  'ore_cllw_lte',
+                                 'ore_cllw_gt',  'ore_cllw_gte')
+             ORDER BY p.proname",
+        )
+        .bind(schema)
+        .fetch_all(&pool)
+        .await?;
 
-    assert_eq!(rows.len(), 6, "expected 6 backing functions");
+        assert_eq!(rows.len(), 6, "expected 6 backing functions in {schema}");
 
-    for row in rows {
-        let name: String = row.get("proname");
-        let lang: String = row.get("lanname");
-        let volatile: i8 = row.get("provolatile");
-        let parallel: i8 = row.get("proparallel");
-        let strict: bool = row.get("proisstrict");
-        let pinned: bool = row.get("pinned");
+        for row in rows {
+            let name: String = row.get("proname");
+            let lang: String = row.get("lanname");
+            let volatile: i8 = row.get("provolatile");
+            let parallel: i8 = row.get("proparallel");
+            let strict: bool = row.get("proisstrict");
+            let pinned: bool = row.get("pinned");
 
-        assert_eq!(lang, "sql", "{name}: must be LANGUAGE sql");
-        assert_eq!(volatile as u8, b'i', "{name}: must be IMMUTABLE");
-        assert_eq!(parallel as u8, b's', "{name}: must be PARALLEL SAFE");
-        assert!(strict, "{name}: must be STRICT");
-        assert!(
-            !pinned,
-            "{name}: must NOT have SET search_path (kills inlining)"
-        );
+            assert_eq!(lang, "sql", "{schema}.{name}: must be LANGUAGE sql");
+            assert_eq!(volatile as u8, b'i', "{schema}.{name}: must be IMMUTABLE");
+            assert_eq!(
+                parallel as u8, b's',
+                "{schema}.{name}: must be PARALLEL SAFE"
+            );
+            assert!(strict, "{schema}.{name}: must be STRICT");
+            assert!(
+                !pinned,
+                "{schema}.{name}: must NOT have SET search_path (kills inlining)"
+            );
+        }
     }
     Ok(())
 }

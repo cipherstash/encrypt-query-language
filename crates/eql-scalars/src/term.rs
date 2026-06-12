@@ -33,7 +33,8 @@ impl Term {
         }
     }
 
-    /// Generated-file [`Role`] for a domain whose first term is this one.
+    /// Generated-file [`Role`] contributed by this single term. A domain's role
+    /// is the richest of its terms' roles — see [`Term::role_for_terms`].
     pub const fn role(self) -> Role {
         match self {
             Term::Hm => Role::Eq,
@@ -117,11 +118,18 @@ impl Term {
     }
 
     /// Generated-file [`Role`] for a domain with these terms. No terms =>
-    /// [`Role::Storage`]; otherwise the first term's role.
+    /// [`Role::Storage`]; otherwise the **richest** role across the terms by
+    /// [`Role::rank`] precedence (`Ord > Eq > Match > Storage`). For the current
+    /// single-term catalog this equals the lone term's role, so generated SQL is
+    /// unchanged; the precedence only disambiguates a future mixed-term domain
+    /// (e.g. `[Hm, Ore]` => `Ord`), keeping this consistent with
+    /// [`Term::operators_for_terms`], which unions across all terms rather than
+    /// reading only the first.
     pub fn role_for_terms(terms: &[Term]) -> Role {
-        match terms.first() {
-            None => Role::Storage,
-            Some(t) => t.role(),
-        }
+        terms
+            .iter()
+            .map(|t| t.role())
+            .max_by_key(|r| r.rank())
+            .unwrap_or(Role::Storage)
     }
 }

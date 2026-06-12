@@ -89,11 +89,12 @@ async fn no_encrypted_domain_inline_critical_function_is_pinned(pool: PgPool) ->
 
 /// Direct guard for the self-contained eql_v3 SEM index-term functions. Unlike
 /// the structural guard above (which covers jsonb-domain-arg functions), these
-/// take a composite (ore_block_u64_8_256) or raw jsonb (hmac_256/the two
+/// take a composite (the ore_block_u64_8_256 and ore_cllw comparators) or raw
+/// jsonb (hmac_256, bloom_filter, the ore_cllw/has_ore_cllw extractors, the two
 /// per-encrypted-value `jsonb_array_to_*` helpers) arg, so they are NOT caught
-/// by the structural pin-skip and need explicit inline_critical allowlisting.
-/// If pin_search_path.sql pins any of them, v3 functional-index inlining
-/// silently regresses to Seq Scan — this test fails instead.
+/// by the structural pin-skip and need explicit inline_critical allowlisting. If
+/// pin_search_path.sql pins any of them, v3 functional-index inlining silently
+/// regresses to Seq Scan — this test fails instead.
 ///
 /// `jsonb_array_to_bytea_array(jsonb)` and
 /// `jsonb_array_to_ore_block_u64_8_256(jsonb)` are included here: both take a
@@ -118,8 +119,15 @@ async fn eql_v3_sem_inline_critical_functions_are_unpinned(pool: PgPool) -> Resu
               'ore_block_u64_8_256_eq','ore_block_u64_8_256_neq',
               'ore_block_u64_8_256_lt','ore_block_u64_8_256_lte',
               'ore_block_u64_8_256_gt','ore_block_u64_8_256_gte'))
+            OR (p.pronargs = 2 AND p.proname IN (
+              'ore_cllw_eq','ore_cllw_neq',
+              'ore_cllw_lt','ore_cllw_lte',
+              'ore_cllw_gt','ore_cllw_gte'))
             OR (p.pronargs = 1 AND p.proname IN (
               'hmac_256',
+              'bloom_filter',
+              'ore_cllw',
+              'has_ore_cllw',
               'jsonb_array_to_bytea_array',
               'jsonb_array_to_ore_block_u64_8_256')
                 AND p.proargtypes[0] = 'jsonb'::regtype)
