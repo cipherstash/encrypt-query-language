@@ -12,30 +12,49 @@ use sqlx::PgPool;
 
 #[test]
 fn variant_derives_consistent_sql_domain_and_capabilities() {
+    // Capabilities are catalog-derived for the scalar's token (`int4`). int4's
+    // ordered domains are `[Ore]`-only — ORE is lossless for integers, so `=`
+    // routes through `ord_term`, unlike text where `=` routes through `eq_term`.
     let storage = ScalarDomainSpec::new::<i32>(Variant::Storage);
     assert_eq!(storage.sql_domain, "eql_v3.int4");
     assert!(!storage.supports_eq());
     assert!(!storage.supports_ord());
-    assert_eq!(storage.extractor_fn(), None);
-    assert_eq!(Variant::Storage.required_term(), None);
+    assert_eq!(storage.primary_extractor(), None);
+    assert_eq!(
+        Variant::Storage.payload_required_keys("int4"),
+        vec!["v", "i", "c"]
+    );
 
     let eq = ScalarDomainSpec::new::<i32>(Variant::Eq);
     assert_eq!(eq.sql_domain, "eql_v3.int4_eq");
     assert!(eq.supports_eq());
     assert!(!eq.supports_ord());
-    assert_eq!(eq.extractor_fn(), Some("eql_v3.eq_term"));
-    assert_eq!(Variant::Eq.required_term(), Some("hm"));
+    assert_eq!(eq.primary_extractor().as_deref(), Some("eql_v3.eq_term"));
+    assert_eq!(eq.extractor_for_op("=").as_deref(), Some("eql_v3.eq_term"));
+    assert_eq!(
+        Variant::Eq.payload_required_keys("int4"),
+        vec!["v", "i", "c", "hm"]
+    );
 
     let ord = ScalarDomainSpec::new::<i32>(Variant::Ord);
     assert_eq!(ord.sql_domain, "eql_v3.int4_ord");
     assert!(ord.supports_ord());
-    assert_eq!(ord.extractor_fn(), Some("eql_v3.ord_term"));
-    assert_eq!(Variant::Ord.required_term(), Some("ob"));
+    assert_eq!(ord.primary_extractor().as_deref(), Some("eql_v3.ord_term"));
+    // int4_ord is `[Ore]`-only: equality routes through ORE (lossless for ints).
+    assert_eq!(ord.extractor_for_op("=").as_deref(), Some("eql_v3.ord_term"));
+    assert_eq!(ord.extractor_for_op("<").as_deref(), Some("eql_v3.ord_term"));
+    assert_eq!(
+        Variant::Ord.payload_required_keys("int4"),
+        vec!["v", "i", "c", "ob"]
+    );
 
     let ord_ore = ScalarDomainSpec::new::<i32>(Variant::OrdOre);
     assert_eq!(ord_ore.sql_domain, "eql_v3.int4_ord_ore");
     assert!(ord_ore.supports_ord());
-    assert_eq!(ord_ore.extractor_fn(), Some("eql_v3.ord_term"));
+    assert_eq!(
+        ord_ore.primary_extractor().as_deref(),
+        Some("eql_v3.ord_term")
+    );
 }
 
 #[test]
@@ -120,6 +139,11 @@ async fn placeholder_payload_satisfies_every_variant_check(pool: PgPool) -> Resu
     // future scalar) lands, wrap this in a per-type loop so the
     // PLACEHOLDER_PAYLOAD cast is exercised against every scalar.
     for variant in Variant::ALL {
+        // int4 does not declare every variant (no `_search`); skip the ones it
+        // lacks so the cast targets a real domain.
+        if !variant.is_declared_for("int4") {
+            continue;
+        }
         let spec = ScalarDomainSpec::new::<i32>(*variant);
         let sql = format!("SELECT $1::jsonb::{}", spec.sql_domain);
         sqlx::query(&sql)

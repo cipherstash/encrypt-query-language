@@ -560,6 +560,16 @@ mod catalog_tests {
     }
 
     #[test]
+    fn domain_by_suffix_finds_declared_suffixes() {
+        let text = scalar("text");
+        assert_eq!(
+            text.domain_by_suffix("_search").map(|d| d.suffix),
+            Some("_search")
+        );
+        assert!(text.domain_by_suffix("_nope").is_none());
+    }
+
+    #[test]
     fn text_search_domain_carries_all_three_terms_and_is_ord_capable() {
         let text = scalar("text");
         let search = text
