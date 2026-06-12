@@ -63,6 +63,14 @@ impl Term {
             Term::Bloom => &["src/v3/sem/bloom_filter/functions.sql"],
         }
     }
+
+    /// True when this term provides ordering operators (`<` `<=` `>` `>=`).
+    /// A per-term *capability*, distinct from [`Role`] (the whole-domain file
+    /// role derived from the first term). New ordering terms opt in here, so
+    /// `is_ord_capable` never hardcodes a single ordering term.
+    pub const fn provides_ordering(self) -> bool {
+        matches!(self, Term::Ore)
+    }
 }
 
 impl Term {

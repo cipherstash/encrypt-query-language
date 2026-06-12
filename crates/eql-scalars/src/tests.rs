@@ -519,6 +519,15 @@ mod catalog_tests {
         assert_eq!(m.terms, &[Term::Bloom]);
     }
 
+    #[test]
+    fn provides_ordering_is_true_only_for_ore() {
+        // Per-term ordering capability — distinct from Role (the whole-domain
+        // file role derived from the first term). Only Ore provides `< <= > >=`.
+        assert!(Term::Ore.provides_ordering());
+        assert!(!Term::Hm.provides_ordering());
+        assert!(!Term::Bloom.provides_ordering());
+    }
+
     /// The three temporal matrix pivots must be present verbatim in DATE's
     /// fixture strings — `fetch_fixture_payload` fetches each one's ciphertext,
     /// failing loudly if absent. The integer `fixtures_include_min_max_and_zero`
