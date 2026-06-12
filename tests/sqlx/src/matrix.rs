@@ -1546,37 +1546,74 @@ macro_rules! __scalar_matrix_ord_routes_case {
             async fn [<matrix_ $suite _ $dom_name _ord_routes_through_ob>](
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
+                use $crate::scalar_domains::ScalarType;
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
+                let token = <$scalar as ScalarType>::PG_TYPE;
                 let table = concat!(
-                    "matrix_", stringify!($suite), "_", stringify!($dom_name), "_no_hm",
+                    "matrix_", stringify!($suite), "_", stringify!($dom_name), "_routing",
                 );
                 let index = concat!(
-                    "matrix_", stringify!($suite), "_", stringify!($dom_name), "_no_hm_idx",
+                    "matrix_", stringify!($suite), "_", stringify!($dom_name), "_routing_idx",
                 );
-                let fixture_table =
-                    <$scalar as $crate::scalar_domains::ScalarType>::fixture_table_name();
-                let pivot: $scalar =
-                    <$scalar as $crate::scalar_domains::ScalarType>::fixture_values()[0].clone();
-                let pivot_lit =
-                    <$scalar as $crate::scalar_domains::ScalarType>::to_sql_literal(&pivot);
+                let fixture_table = <$scalar as ScalarType>::fixture_table_name();
+                let pivot: $scalar = <$scalar as ScalarType>::fixture_values()[0].clone();
+                let pivot_lit = <$scalar as ScalarType>::to_sql_literal(&pivot);
+
+                // Equality routing is kind-dependent, and this arm proves it:
+                //  - hm-bearing ordered domain (text `[Hm, Ore]`): equality is
+                //    EXACT via `hm` and must NOT route through ORE. `hm` AND `ob`
+                //    are both CHECK-required, so neither can be stripped; instead
+                //    we build the `eq_term` functional btree over the intact
+                //    payload and prove `=` engages it. The planner only matches
+                //    that index if `=` resolves to `eq_term` — so a green scan is
+                //    positive proof equality is hm-exact, never ORE.
+                //  - non-hm ordered domain (int4/date `[Ore]`): ORE is lossless,
+                //    so `=` legitimately routes through `ord_term`/`ob`. `hm` is
+                //    NOT CHECK-required, so we strip it and prove `=` still works
+                //    via `ob` on an hm-free payload (the original invariant).
+                let carries_hm = spec
+                    .variant
+                    .terms_for(token)
+                    .iter()
+                    .any(|t| t.json_key() == "hm");
+                let (extractor, value_expr, caveat): (&str, &str, &str) = if carries_hm {
+                    (
+                        "eql_v3.eq_term",
+                        "payload",
+                        "= must engage the eql_v3.eq_term functional btree (exact hm), never ORE",
+                    )
+                } else {
+                    (
+                        "eql_v3.ord_term",
+                        "(payload - 'hm')",
+                        "= must engage the eql_v3.ord_term functional btree with no hm",
+                    )
+                };
 
                 let mut tx = pool.begin().await?;
                 sqlx::query(&format!(
                     "CREATE TEMP TABLE {table} (plaintext {pg}, value {d}) ON COMMIT DROP",
-                    pg = <$scalar as $crate::scalar_domains::ScalarType>::PG_TYPE,
+                    pg = <$scalar as ScalarType>::PG_TYPE,
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!(
                     "INSERT INTO {table}(plaintext, value) \
-                     SELECT plaintext, (payload - 'hm')::{d} FROM {fixture}", fixture = fixture_table,
+                     SELECT plaintext, {value_expr}::{d} FROM {fixture}", fixture = fixture_table,
                 )).execute(&mut *tx).await?;
-                let with_hm: i64 = sqlx::query_scalar(&format!(
-                    "SELECT count(*) FROM {table} WHERE jsonb_exists(value::jsonb, 'hm')",
-                )).fetch_one(&mut *tx).await?;
-                anyhow::ensure!(with_hm == 0, "test rows must not carry hm");
+
+                // For the non-hm kind the routing proof must be over an hm-free
+                // payload — assert the strip really removed it. (The hm-bearing
+                // kind keeps `hm`: it is required, and `=` engaging the `eq_term`
+                // index is itself the proof equality is hm-based.)
+                if !carries_hm {
+                    let with_hm: i64 = sqlx::query_scalar(&format!(
+                        "SELECT count(*) FROM {table} WHERE jsonb_exists(value::jsonb, 'hm')",
+                    )).fetch_one(&mut *tx).await?;
+                    anyhow::ensure!(with_hm == 0, "test rows must not carry hm");
+                }
 
                 sqlx::query(&format!(
-                    "CREATE INDEX {index} ON {table} USING btree (eql_v3.ord_term(value))",
+                    "CREATE INDEX {index} ON {table} USING btree ({extractor}(value))",
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!("ANALYZE {table}"))
                     .execute(&mut *tx).await?;
@@ -1584,23 +1621,22 @@ macro_rules! __scalar_matrix_ord_routes_case {
                     .execute(&mut *tx).await?;
 
                 let pivot_payload: String = sqlx::query_scalar(&format!(
-                    "SELECT (payload - 'hm')::text FROM {fixture} WHERE plaintext = {lit}",
+                    "SELECT {value_expr}::text FROM {fixture} WHERE plaintext = {lit}",
                     fixture = fixture_table, lit = pivot_lit,
                 )).fetch_one(&mut *tx).await?;
 
                 // The fixture plaintexts are distinct, so the pivot row is
-                // unique: `=` via ob must match EXACTLY one row, not "at
-                // least one". A weaker `>= 1` here is not independent of the
-                // `<>` check below — `expected_neq` is `len - eq_count`, so an
-                // `=` that over-matches inflates `eq_count` and deflates
-                // `expected_neq` in lockstep and both assertions still pass.
-                // Pinning `== 1` makes both this and the derived `<>` count
-                // load-bearing.
+                // unique: `=` must match EXACTLY one row, not "at least one". A
+                // weaker `>= 1` here is not independent of the `<>` check below —
+                // `expected_neq` is `len - eq_count`, so an `=` that over-matches
+                // inflates `eq_count` and deflates `expected_neq` in lockstep and
+                // both assertions still pass. Pinning `== 1` makes both this and
+                // the derived `<>` count load-bearing.
                 let eq_count: i64 = sqlx::query_scalar(&format!(
                     "SELECT count(*) FROM {table} WHERE value = $1::jsonb::{d}",
                 )).bind(&pivot_payload).fetch_one(&mut *tx).await?;
                 anyhow::ensure!(eq_count == 1,
-                    "= must match exactly the pivot row via ob with no hm present (want 1, got {eq_count})");
+                    "= must match exactly the pivot row (want 1, got {eq_count})");
 
                 // Derive from the pinned `eq_count == 1`: every other fixture
                 // row must be `<>`. Kept as `len - eq_count` (not a bare
@@ -1608,8 +1644,7 @@ macro_rules! __scalar_matrix_ord_routes_case {
                 // relaxed the two assertions cannot silently compensate for
                 // each other — the derivation stays honest regardless.
                 let expected_neq =
-                    <$scalar as $crate::scalar_domains::ScalarType>::fixture_values().len() as i64
-                    - eq_count;
+                    <$scalar as ScalarType>::fixture_values().len() as i64 - eq_count;
                 let neq_count: i64 = sqlx::query_scalar(&format!(
                     "SELECT count(*) FROM {table} WHERE value <> $1::jsonb::{d}",
                 )).bind(&pivot_payload).fetch_one(&mut *tx).await?;
@@ -1618,12 +1653,11 @@ macro_rules! __scalar_matrix_ord_routes_case {
                 );
 
                 // VALIDITY, NOT PREFERENCE: this runs with
-                // `enable_seqscan = off` (set above) on the ~17-row fixture,
-                // so the planner picks the only usable alternative. A green
-                // assertion proves the `eql_v3.ord_term` functional btree is
-                // *usable* for `=` with no hm present, NOT that the planner
-                // would *prefer* it at realistic scale. Cost-preference lives
-                // in the `*_scale_preference_*` tests
+                // `enable_seqscan = off` (set above) on the small fixture, so the
+                // planner picks the only usable alternative. A green assertion
+                // proves the chosen functional btree is *usable* for `=`, NOT
+                // that the planner would *prefer* it at realistic scale.
+                // Cost-preference lives in the `*_scale_preference_*` tests
                 // (`#[cfg(feature = "scale")]`, OFF in PR CI). See the module
                 // header on `assert_index_scan_uses` for the full caveat.
                 //
@@ -1636,7 +1670,7 @@ macro_rules! __scalar_matrix_ord_routes_case {
                     &mut *tx,
                     &format!("SELECT * FROM {table} WHERE value = '{lit}'::jsonb::{d}"),
                     index,
-                    "= must engage the eql_v3.ord_term functional btree with no hm",
+                    caveat,
                 ).await?;
 
                 tx.commit().await?;
