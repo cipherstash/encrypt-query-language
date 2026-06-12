@@ -101,6 +101,17 @@ fn is_eq_only_token(token: &str) -> bool {
     spec_for_token(token).is_eq_only()
 }
 
+/// True when `token`'s catalog row declares a combined `_search` domain
+/// (currently only `text`). Consumed by [`matrix_suite_for_entry`] to route the
+/// token to the `caps = [eq, ord, search]` arm, which additionally runs the
+/// `_search` domain (equality + ordering + bloom match) through the matrix.
+fn has_search_token(token: &str) -> bool {
+    spec_for_token(token)
+        .domains
+        .iter()
+        .any(|d| d.suffix == "_search")
+}
+
 /// The comma-separated list (optional trailing comma).
 struct ScalarList {
     entries: Vec<ScalarEntry>,
@@ -266,11 +277,20 @@ fn fixture_dispatch_tokens(list: &ScalarList) -> TokenStream2 {
 /// not support. `eq_only` is passed in so this stays a pure function of its
 /// inputs and both arms are unit-testable without an eq-only row in the live
 /// catalog.
-fn matrix_suite_for_entry(token: &Ident, rust_type: &Type, eq_only: bool) -> TokenStream2 {
+fn matrix_suite_for_entry(
+    token: &Ident,
+    rust_type: &Type,
+    eq_only: bool,
+    has_search: bool,
+) -> TokenStream2 {
     let token_str = token.to_string();
     let eql_type = format!("eql_v2_{}", token_str);
     let caps = if eq_only {
         quote! { caps = [eq] }
+    } else if has_search {
+        // A token declaring a combined `_search` domain (text) additionally runs
+        // that domain through the matrix (equality + ordering + bloom match).
+        quote! { caps = [eq, ord, search] }
     } else {
         quote! { caps = [eq, ord] }
     };
@@ -295,6 +315,7 @@ fn scalar_matrix_suites_tokens(list: &ScalarList) -> TokenStream2 {
             &e.token,
             &e.rust_type,
             is_eq_only_token(&e.token.to_string()),
+            has_search_token(&e.token.to_string()),
         )
     });
     quote! { #(#mods)* }
@@ -488,7 +509,7 @@ mod tests {
     fn ordered_entry_emits_scalar_matrix_with_eq_ord_caps() {
         let token: Ident = syn::parse_str("int4").unwrap();
         let rust_type: Type = syn::parse_str("i32").unwrap();
-        let out = norm(&matrix_suite_for_entry(&token, &rust_type, false));
+        let out = norm(&matrix_suite_for_entry(&token, &rust_type, false, false));
         assert!(out.contains(":: eql_tests :: scalar_matrix !"));
         assert!(out.contains("caps = [eq , ord]"));
         assert!(out.contains("suite = int4"));
@@ -501,11 +522,24 @@ mod tests {
         // ord_domains), never the ordered `caps = [eq, ord]` arm.
         let token: Ident = syn::parse_str("timestamptz").unwrap();
         let rust_type: Type = syn::parse_str("chrono::DateTime<chrono::Utc>").unwrap();
-        let out = norm(&matrix_suite_for_entry(&token, &rust_type, true));
+        let out = norm(&matrix_suite_for_entry(&token, &rust_type, true, false));
         assert!(out.contains(":: eql_tests :: scalar_matrix !"));
         assert!(out.contains("caps = [eq]"));
         assert!(!out.contains("caps = [eq , ord]"));
         assert!(!out.contains("compile_error"));
+    }
+
+    #[test]
+    fn search_entry_emits_scalar_matrix_with_eq_ord_search_caps() {
+        // A token declaring a `_search` domain (text) routes to the
+        // `caps = [eq, ord, search]` arm, which runs the combined `_search`
+        // domain through the matrix in addition to the ordered shape.
+        let token: Ident = syn::parse_str("text").unwrap();
+        let rust_type: Type = syn::parse_str("String").unwrap();
+        let out = norm(&matrix_suite_for_entry(&token, &rust_type, false, true));
+        assert!(out.contains(":: eql_tests :: scalar_matrix !"));
+        assert!(out.contains("caps = [eq , ord , search]"));
+        assert!(out.contains("suite = text"));
     }
 
     #[test]

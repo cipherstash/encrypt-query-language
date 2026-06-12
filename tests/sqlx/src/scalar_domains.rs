@@ -169,6 +169,29 @@ pub trait SignedScalar: OrderedScalar {
     fn origin() -> Self;
 }
 
+/// A scalar with a **bloom-filter match** capability (`@>`/`<@` containment) —
+/// currently only `text`, the one kind that declares a `Bloom`-bearing domain
+/// (`_match`/`_search`). Provides three fixture plaintexts with known
+/// containment relationships so the generated match arms can assert true hits
+/// and a deterministic miss. The bound gates the match arms: a non-match scalar
+/// never declares `_search`, so the `caps = [eq, ord, search]` matrix arm (the
+/// only one emitting match cases) is never instantiated for it.
+pub trait MatchScalar: ScalarType {
+    /// A "haystack" plaintext whose bloom filter contains [`needle`](Self::needle)
+    /// (they share n-grams). Present verbatim in `fixture_values()`.
+    fn haystack() -> Self;
+
+    /// A "needle" plaintext that is a sub-token of [`haystack`](Self::haystack).
+    /// Present verbatim in `fixture_values()`.
+    fn needle() -> Self;
+
+    /// A plaintext n-gram-**disjoint** from [`needle`](Self::needle), so
+    /// `needle @> disjoint` is a deterministic miss (a bloom filter only admits
+    /// false positives, never false negatives). Present verbatim in
+    /// `fixture_values()`.
+    fn disjoint() -> Self;
+}
+
 // The per-type `impl ScalarType` blocks for the **integer** scalars (each
 // carrying its `PG_TYPE` token, `fixture_values() = eql_scalars::<TOKEN>_VALUES`,
 // and `min_pivot()`/`max_pivot()` = `Self::MIN`/`Self::MAX`) are generated from
@@ -434,6 +457,27 @@ impl OrderedScalar for String {
     /// inherited default with a genuine middle value.
     fn mid_pivot() -> Self {
         "frank".to_string()
+    }
+}
+
+impl MatchScalar for String {
+    /// `"aardvark"` — its bloom filter contains `"aard"` (shared 3-grams
+    /// `aar`, `ard`). Matches the haystack used by the sibling `text_match`
+    /// behavioural suite. Present verbatim in `TEXT_FIXTURES`.
+    fn haystack() -> Self {
+        "aardvark".to_string()
+    }
+
+    /// `"aard"` — a sub-token of `"aardvark"`.
+    fn needle() -> Self {
+        "aard".to_string()
+    }
+
+    /// `"zzzz"` — 3-gram-disjoint from `"aard"` (`zzz` vs `aar`/`ard`), so
+    /// `aard @> zzzz` is a deterministic miss. Kept disjoint in `TEXT_FIXTURES`
+    /// precisely for this assertion.
+    fn disjoint() -> Self {
+        "zzzz".to_string()
     }
 }
 
