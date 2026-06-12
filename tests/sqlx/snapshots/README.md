@@ -1,10 +1,11 @@
 # Matrix coverage inventory snapshot
 
-This directory holds ONE committed snapshot, `matrix_tests.txt` — the canonical,
-token-normalized list of every `scalars::<T>::*` test name in the
-`encrypted_domain` SQLx binary, with each type token replaced by the literal
-`<T>`. It is a **committed test baseline**, not gitignored generated SQL — keep
-it in version control.
+This directory holds two committed snapshots. The canonical one is
+`matrix_tests.txt` — the token-normalized list of every `scalars::<T>::*` test
+name in the `encrypted_domain` SQLx binary, with each type token replaced by the
+literal `<T>`. The second, `matrix_tests_eq_only.txt`, is *derived* from it (see
+below) and pinned. Both are **committed test baselines**, not gitignored
+generated SQL — keep them in version control.
 
 The per-type `<T>_matrix_tests.txt` files are gone. They were byte-identical
 modulo the type token (the matrix tests are macro-generated from one
