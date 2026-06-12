@@ -222,6 +222,79 @@ macro_rules! scalar_matrix {
             scale_default_combos = [
                 (ord, Ord, "eql_v3.ord_term", "btree"),
             ],
+            // No bloom-match domain on a pure ordered scalar (int/date).
+            match_domains = [],
+        }
+    };
+    (
+        suite = $suite:ident,
+        scalar = $scalar:ty,
+        eql_type = $eql_type:literal,
+        caps = [eq, ord, search] $(,)?
+    ) => {
+        $crate::scalar_domain_matrix! {
+            suite = $suite,
+            scalar = $scalar,
+            eql_type = $eql_type,
+            // See the `caps = [eq, ord]` arm for the fixed-path rationale.
+            fixture_path = "../../../fixtures",
+            // `_search` (combined `[Hm, Ore, Bloom]`) rides the eq + ord arms
+            // like any ordered domain, plus the bloom-match arms below. `_match`
+            // is deliberately absent: it supports only `@>`/`<@`, so it cannot
+            // ride the eq/ord arms, and its behaviour is covered by the sibling
+            // `encrypted_domain/text/text_match` suite.
+            all_domains = [(storage, Storage), (eq, Eq), (ord, Ord), (ord_ore, OrdOre), (search, Search)],
+            eq_domains = [(eq, Eq), (ord, Ord), (ord_ore, OrdOre), (search, Search)],
+            ord_domains = [(ord, Ord), (ord_ore, OrdOre), (search, Search)],
+            ord_ore_domains = [(ord_ore, OrdOre)],
+            pivots = [
+                (min, <$scalar as $crate::scalar_domains::OrderedScalar>::min_pivot()),
+                (max, <$scalar as $crate::scalar_domains::OrderedScalar>::max_pivot()),
+                (mid, <$scalar as $crate::scalar_domains::OrderedScalar>::mid_pivot()),
+            ],
+            eq_ops = [(eq, "="), (neq, "<>")],
+            ord_ops = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
+            // Equality on every text domain routes through `eq_term` (exact hm),
+            // never ORE — so the `=` index proof targets `eql_v3.eq_term`, split
+            // into its own combo (distinct dom_name) from the ordering ops, which
+            // target `eql_v3.ord_term`. The `_search` domain gets both.
+            index_combos = [
+                (eq, Eq, "eql_v3.eq_term", "btree", [(eq, "=")]),
+                (eq, Eq, "eql_v3.eq_term", "hash", [(eq, "=")]),
+                (ord, Ord, "eql_v3.ord_term", "btree",
+                    [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")]),
+                (ord_eqidx, Ord, "eql_v3.eq_term", "btree", [(eq, "=")]),
+                (ord_ore, OrdOre, "eql_v3.ord_term", "btree",
+                    [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")]),
+                (ord_ore_eqidx, OrdOre, "eql_v3.eq_term", "btree", [(eq, "=")]),
+                (search, Search, "eql_v3.ord_term", "btree",
+                    [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")]),
+                (search_eqidx, Search, "eql_v3.eq_term", "btree", [(eq, "=")]),
+            ],
+            blocker_combos = [
+                (storage, Storage, [
+                    (eq, "="), (neq, "<>"),
+                    (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">="),
+                    (contains, "@>"), (contained_by, "<@"),
+                ]),
+                (eq, Eq, [
+                    (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">="),
+                    (contains, "@>"), (contained_by, "<@"),
+                ]),
+                // Ordered text domains block bloom containment (no Bloom term);
+                // `_search` is omitted — it SUPPORTS `@>`/`<@`, proven by the
+                // match arms below (they would raise if `@>` were blocked).
+                (ord, Ord, [(contains, "@>"), (contained_by, "<@")]),
+                (ord_ore, OrdOre, [(contains, "@>"), (contained_by, "<@")]),
+            ],
+            // Selective `=` on a text ordered domain prefers the `eq_term`
+            // functional index (equality is hm-exact), not ord_term.
+            scale_default_combos = [
+                (ord, Ord, "eql_v3.eq_term", "btree"),
+            ],
+            // `_search` carries the Bloom term: prove `@>`/`<@` containment
+            // behaviour + GIN index engagement through the matrix.
+            match_domains = [(search, Search)],
         }
     };
     (
@@ -269,6 +342,8 @@ macro_rules! scalar_matrix {
             ],
             // Equality-only scalars have no ordered functional index to prefer.
             scale_default_combos = [],
+            // No bloom-match domain on an equality-only scalar.
+            match_domains = [],
         }
     };
 }
@@ -378,7 +453,11 @@ macro_rules! scalar_domain_matrix {
         // Curated combo(s) that get an ALWAYS-ON cost-preference test (#239
         // thread 17). May be empty (e.g. equality-only scalars have no ordered
         // index to prefer).
-        scale_default_combos = [$($scale_default_combo:tt),* $(,)?] $(,)?
+        scale_default_combos = [$($scale_default_combo:tt),* $(,)?],
+        // Domains carrying the Bloom term (`@>`/`<@` containment). May be empty
+        // (only `text`'s `_search` declares one). Each gets bloom-match
+        // correctness + GIN index-engagement arms.
+        match_domains = [$($match_dom:tt),* $(,)?] $(,)?
     ) => {
         $crate::__scalar_matrix_sanity! {
             suite = $suite, scalar = $scalar,
@@ -466,6 +545,10 @@ macro_rules! scalar_domain_matrix {
         $crate::__scalar_matrix_ord_routes_outer! {
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($ord_dom),*],
+        }
+        $crate::__scalar_matrix_match_outer! {
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
+            domains = [$($match_dom),*],
         }
         $crate::__scalar_matrix_ore_injectivity_outer! {
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
@@ -1681,6 +1764,149 @@ macro_rules! __scalar_matrix_ord_routes_case {
 }
 
 // ============================================================================
+// Bloom-match category — for domains carrying the Bloom term (`_search`),
+// `@>`/`<@` containment is true for a value vs itself and vs a shared-ngram
+// sub-token, and a deterministic miss for ngram-disjoint inputs (a bloom
+// filter admits false positives, never false negatives). Plus a GIN
+// functional-index engagement proof on `match_term`. The three containment
+// plaintexts come from `MatchScalar` (only `text` implements it). Match is
+// asymmetric/probabilistic, so it lives in its own arm, not the ordered ops.
+// ============================================================================
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_match_outer {
+    (
+        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
+        domains = [$(($dom_name:ident, $variant:ident)),* $(,)?] $(,)?
+    ) => {
+        $(
+            $crate::__scalar_matrix_match_case! {
+                suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
+                dom_name = $dom_name, variant = $variant,
+            }
+        )*
+    };
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_match_case {
+    (
+        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
+        dom_name = $dom_name:ident, variant = $variant:ident $(,)?
+    ) => {
+        $crate::paste::paste! {
+            #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
+            async fn [<matrix_ $suite _ $dom_name _match_contains_self>](
+                pool: sqlx::PgPool,
+            ) -> anyhow::Result<()> {
+                use $crate::scalar_domains::MatchScalar;
+                let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
+                let d = &spec.sql_domain;
+                let hay = $crate::scalar_domains::fetch_fixture_payload::<$scalar>(
+                    &pool, <$scalar as MatchScalar>::haystack()).await?;
+                let hit: bool = sqlx::query_scalar(&format!(
+                    "SELECT ($1::jsonb::{d}) @> ($1::jsonb::{d})",
+                )).bind(&hay).fetch_one(&pool).await?;
+                anyhow::ensure!(hit, "{d}: a value's bloom filter must contain itself");
+                Ok(())
+            }
+
+            #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
+            async fn [<matrix_ $suite _ $dom_name _match_contains_needle>](
+                pool: sqlx::PgPool,
+            ) -> anyhow::Result<()> {
+                use $crate::scalar_domains::MatchScalar;
+                let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
+                let d = &spec.sql_domain;
+                let hay = $crate::scalar_domains::fetch_fixture_payload::<$scalar>(
+                    &pool, <$scalar as MatchScalar>::haystack()).await?;
+                let needle = $crate::scalar_domains::fetch_fixture_payload::<$scalar>(
+                    &pool, <$scalar as MatchScalar>::needle()).await?;
+                let hit: bool = sqlx::query_scalar(&format!(
+                    "SELECT ($1::jsonb::{d}) @> ($2::jsonb::{d})",
+                )).bind(&hay).bind(&needle).fetch_one(&pool).await?;
+                anyhow::ensure!(hit,
+                    "{d}: haystack bloom must contain its shared-ngram needle");
+                Ok(())
+            }
+
+            #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
+            async fn [<matrix_ $suite _ $dom_name _match_disjoint_miss>](
+                pool: sqlx::PgPool,
+            ) -> anyhow::Result<()> {
+                use $crate::scalar_domains::MatchScalar;
+                let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
+                let d = &spec.sql_domain;
+                let needle = $crate::scalar_domains::fetch_fixture_payload::<$scalar>(
+                    &pool, <$scalar as MatchScalar>::needle()).await?;
+                let disjoint = $crate::scalar_domains::fetch_fixture_payload::<$scalar>(
+                    &pool, <$scalar as MatchScalar>::disjoint()).await?;
+                let hit: bool = sqlx::query_scalar(&format!(
+                    "SELECT ($1::jsonb::{d}) @> ($2::jsonb::{d})",
+                )).bind(&needle).bind(&disjoint).fetch_one(&pool).await?;
+                anyhow::ensure!(!hit,
+                    "{d}: needle bloom must NOT contain an ngram-disjoint value");
+                Ok(())
+            }
+
+            // VALIDITY, NOT PREFERENCE: `enable_seqscan = off` on the small
+            // fixture forces the planner onto the only usable alternative. A
+            // green assertion proves the bare `@>` operator inlines through
+            // `match_term` to the native array containment the GIN index
+            // supports — NOT that the planner would prefer it at scale. The
+            // assertion is node-type-aware (a genuine Bitmap/Index Scan node
+            // referencing `index`), not a plan substring match.
+            #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
+            async fn [<matrix_ $suite _ $dom_name _match_index_engages_gin>](
+                pool: sqlx::PgPool,
+            ) -> anyhow::Result<()> {
+                use $crate::scalar_domains::{MatchScalar, ScalarType};
+                let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
+                let d = &spec.sql_domain;
+                let table = concat!(
+                    "matrix_", stringify!($suite), "_", stringify!($dom_name), "_match",
+                );
+                let index = concat!(
+                    "matrix_", stringify!($suite), "_", stringify!($dom_name), "_match_idx",
+                );
+                let fixture_table = <$scalar as ScalarType>::fixture_table_name();
+                let needle = $crate::scalar_domains::fetch_fixture_payload::<$scalar>(
+                    &pool, <$scalar as MatchScalar>::needle()).await?;
+
+                let mut tx = pool.begin().await?;
+                sqlx::query(&format!(
+                    "CREATE TEMP TABLE {table} (value {d}) ON COMMIT DROP",
+                )).execute(&mut *tx).await?;
+                sqlx::query(&format!(
+                    "INSERT INTO {table}(value) SELECT payload::{d} FROM {fixture}",
+                    fixture = fixture_table,
+                )).execute(&mut *tx).await?;
+                sqlx::query(&format!(
+                    "CREATE INDEX {index} ON {table} USING gin (eql_v3.match_term(value))",
+                )).execute(&mut *tx).await?;
+                sqlx::query(&format!("ANALYZE {table}"))
+                    .execute(&mut *tx).await?;
+                sqlx::query("SET LOCAL enable_seqscan = off")
+                    .execute(&mut *tx).await?;
+
+                let lit = needle.replace('\'', "''");
+                $crate::matrix::assert_index_scan_uses(
+                    &mut *tx,
+                    &format!("SELECT * FROM {table} WHERE value @> '{lit}'::jsonb::{d}"),
+                    index,
+                    "bare @> must engage the eql_v3.match_term functional GIN index",
+                ).await?;
+
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+    };
+}
+
+// ============================================================================
 // ORE-injectivity category — for OrdOre variants, distinct plaintexts in
 // the fixture must produce distinct ORE blocks. Pairwise self-join over
 // the fixture: zero collisions.
@@ -2639,14 +2865,14 @@ macro_rules! __scalar_matrix_aggregate_typecheck_outer {
     };
 }
 
-// Dispatch on variant ident: ord-capable variants (Ord, OrdOre) emit no
-// typecheck test — they DO declare min/max. Non-ord variants (Storage,
+// Dispatch on variant ident: ord-capable variants (Ord, OrdOre, Search) emit
+// no typecheck test — they DO declare min/max. Non-ord variants (Storage,
 // Eq) emit one test per aggregate op asserting the call fails with
 // SQLSTATE 42883.
 #[macro_export]
 #[doc(hidden)]
 macro_rules! __scalar_matrix_aggregate_typecheck_dispatch {
-    // Ord, OrdOre: no typecheck test — these variants declare min/max.
+    // Ord, OrdOre, Search: no typecheck test — these variants declare min/max.
     (
         suite = $suite:ident, scalar = $scalar:ty,
         dom_name = $dom_name:ident, variant = Ord $(,)?
@@ -2654,6 +2880,10 @@ macro_rules! __scalar_matrix_aggregate_typecheck_dispatch {
     (
         suite = $suite:ident, scalar = $scalar:ty,
         dom_name = $dom_name:ident, variant = OrdOre $(,)?
+    ) => {};
+    (
+        suite = $suite:ident, scalar = $scalar:ty,
+        dom_name = $dom_name:ident, variant = Search $(,)?
     ) => {};
     // Storage, Eq: emit min + max typecheck tests.
     (
