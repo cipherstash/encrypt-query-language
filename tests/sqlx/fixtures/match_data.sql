@@ -4,7 +4,7 @@
 -- Tests encrypted-to-encrypted matching using bloom filter indexes
 --
 -- Plaintext structure: {"hello": "world", "n": N}
--- where N is 10, 20, or 30 for records 1, 2, 3
+-- where N is 1, 2, or 3 for records 1, 2, 3
 
 -- Create table for LIKE operator tests
 DROP TABLE IF EXISTS encrypted CASCADE;

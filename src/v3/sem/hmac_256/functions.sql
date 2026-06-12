@@ -33,10 +33,8 @@ $$;
 --! @return boolean True if 'hm' field is present and non-null
 CREATE FUNCTION eql_v3.has_hmac_256(val jsonb)
   RETURNS boolean
+  LANGUAGE sql
   IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
 AS $$
-  BEGIN
-    RETURN val ->> 'hm' IS NOT NULL;
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT (val ->> 'hm') IS NOT NULL
+$$;

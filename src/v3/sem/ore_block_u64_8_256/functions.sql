@@ -132,7 +132,7 @@ AS $$
     FOR block IN 0..7 LOOP
       IF
         substr(a.bytes, 1 + block, 1) != substr(b.bytes, 1 + block, 1)
-        OR substr(a.bytes, 9 + left_block_size * block, left_block_size) != substr(b.bytes, 9 + left_block_size * BLOCK, left_block_size)
+        OR substr(a.bytes, 9 + left_block_size * block, left_block_size) != substr(b.bytes, 9 + left_block_size * block, left_block_size)
       THEN
         IF eq THEN
           unequal_block := block;
