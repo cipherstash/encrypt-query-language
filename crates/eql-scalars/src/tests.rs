@@ -509,7 +509,10 @@ mod catalog_tests {
         let text = scalar("text");
         assert_eq!(text.kind, ScalarKind::Text);
         let suffixes: Vec<_> = text.domains.iter().map(|d| d.suffix).collect();
-        assert_eq!(suffixes, vec!["", "_eq", "_match", "_ord_ore", "_ord"]);
+        assert_eq!(
+            suffixes,
+            vec!["", "_eq", "_match", "_ord_ore", "_ord", "_search"]
+        );
     }
 
     #[test]
@@ -526,6 +529,73 @@ mod catalog_tests {
         assert!(Term::Ore.provides_ordering());
         assert!(!Term::Hm.provides_ordering());
         assert!(!Term::Bloom.provides_ordering());
+    }
+
+    #[test]
+    fn every_eq_capable_text_domain_resolves_eq_through_hm() {
+        // ORE is not exact for text: `=`/`<>` must resolve to eq_term/hm on every
+        // text domain that advertises equality. `text_match` ([Bloom]) never
+        // advertises `=`, so it is excluded.
+        let text = scalar("text");
+        for d in text.domains {
+            let supports_eq = Term::operators_for_terms(d.terms).contains(&"=");
+            if !supports_eq {
+                continue;
+            }
+            for op in ["=", "<>"] {
+                assert_eq!(
+                    Term::extractor_for_operator(d.terms, op),
+                    Some("eq_term"),
+                    "text{} must resolve `{op}` to eq_term (exact hm), not ORE",
+                    d.suffix
+                );
+            }
+            // And the payload requires hm for these domains.
+            assert!(
+                Term::term_json_keys(d.terms).contains(&"hm"),
+                "text{} must require the `hm` payload key",
+                d.suffix
+            );
+        }
+    }
+
+    #[test]
+    fn text_search_domain_carries_all_three_terms_and_is_ord_capable() {
+        let text = scalar("text");
+        let search = text
+            .domains
+            .iter()
+            .find(|d| d.suffix == "_search")
+            .expect("text must declare a _search domain");
+        assert_eq!(
+            search.terms,
+            &[Term::Hm, Term::Ore, Term::Bloom],
+            "text_search must carry [Hm, Ore, Bloom]"
+        );
+        // ord-capable: some term provides ordering.
+        assert!(
+            search.terms.iter().any(|t| t.provides_ordering()),
+            "text_search must be ord-capable"
+        );
+        // Required JSON keys are hm + ob + bf, in term order.
+        assert_eq!(
+            Term::term_json_keys(search.terms),
+            vec!["hm", "ob", "bf"],
+            "text_search CHECK must require hm, ob, bf"
+        );
+        // Equality still routes through hm; ordering through ob; match through bf.
+        assert_eq!(
+            Term::extractor_for_operator(search.terms, "="),
+            Some("eq_term")
+        );
+        assert_eq!(
+            Term::extractor_for_operator(search.terms, "<"),
+            Some("ord_term")
+        );
+        assert_eq!(
+            Term::extractor_for_operator(search.terms, "@>"),
+            Some("match_term")
+        );
     }
 
     /// The three temporal matrix pivots must be present verbatim in DATE's
@@ -603,11 +673,25 @@ mod catalog_tests {
             ("_ord_ore", &[Term::Ore][..]),
             ("_ord", &[Term::Ore][..]),
         ];
+        // text's current shape: equality is exact on the ordered domains (they
+        // lead with `Hm`), plus a combined `_search` domain carrying all three
+        // terms. `=`/`<>` route through `hm` on every eq-capable text domain.
+        let text_search: Vec<(&str, &[Term])> = vec![
+            ("", &[] as &[Term]),
+            ("_eq", &[Term::Hm][..]),
+            ("_match", &[Term::Bloom][..]),
+            ("_ord_ore", &[Term::Hm, Term::Ore][..]),
+            ("_ord", &[Term::Hm, Term::Ore][..]),
+            ("_search", &[Term::Hm, Term::Ore, Term::Bloom][..]),
+        ];
         for s in CATALOG {
             let shape: Vec<(&str, &[Term])> =
                 s.domains.iter().map(|d| (d.suffix, d.terms)).collect();
             assert!(
-                shape == ordered || shape == eq_only || shape == ordered_match,
+                shape == ordered
+                    || shape == eq_only
+                    || shape == ordered_match
+                    || shape == text_search,
                 "{} has an unrecognised domain shape: {shape:?}",
                 s.token
             );
@@ -619,7 +703,8 @@ mod catalog_tests {
         // Pin which catalog tokens carry which shape, so a row silently flipping
         // ORDERED_INT_DOMAINS <-> EQ_ONLY_DOMAINS is caught. timestamptz is
         // equality-only (12-block ORE vs 8-block comparator); the rest ordered
-        // (text adds a `_match` domain on top, so it is not eq_only either).
+        // (text adds `_match` and `_search` domains on top, so it is not
+        // eq_only either).
         for s in CATALOG {
             let is_eq_only = s.domains.len() == 2;
             let expect_eq_only = s.token == "timestamptz";
