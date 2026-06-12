@@ -908,7 +908,7 @@ macro_rules! __scalar_matrix_payload_check_case {
                 let baseline = $crate::helpers::PLACEHOLDER_PAYLOAD;
 
                 // Each required key must trigger CHECK rejection when stripped.
-                for key in spec.variant.payload_required_keys() {
+                for key in spec.payload_required_keys() {
                     let sql = format!(
                         "SELECT ('{baseline}'::jsonb - '{key}')::{d}",
                     );

@@ -28,4 +28,11 @@ impl ScalarSpec {
     pub fn is_eq_only(&self) -> bool {
         !self.domains.iter().any(|d| d.suffix == "_ord")
     }
+
+    /// The domain on this scalar with the given `suffix`, or `None`. Centralizes
+    /// the `domains.iter().find(|d| d.suffix == s)` lookup duplicated across the
+    /// catalog tests and the SQLx harness.
+    pub fn domain_by_suffix(&self, suffix: &str) -> Option<&DomainSpec> {
+        self.domains.iter().find(|d| d.suffix == suffix)
+    }
 }
