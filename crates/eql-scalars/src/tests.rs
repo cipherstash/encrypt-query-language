@@ -293,6 +293,26 @@ mod term_helper_tests {
     }
 
     #[test]
+    fn role_for_terms_takes_richest_role_order_independently() {
+        // A mixed-term domain resolves to the richest role by Role::rank
+        // precedence (Ord > Eq > Match > Storage), regardless of term order —
+        // consistent with operators_for_terms' union, not the first term. No
+        // catalog domain is multi-term today; this pins the semantics so a future
+        // `[Hm, Ore]` domain generates the ord surface (and its aggregates).
+        assert_eq!(Term::role_for_terms(&[Term::Hm, Term::Ore]), Role::Ord);
+        assert_eq!(Term::role_for_terms(&[Term::Ore, Term::Hm]), Role::Ord);
+        assert_eq!(Term::role_for_terms(&[Term::Hm, Term::Bloom]), Role::Eq);
+        assert_eq!(Term::role_for_terms(&[Term::Bloom, Term::Hm]), Role::Eq);
+    }
+
+    #[test]
+    fn role_rank_orders_richest_comparison_highest() {
+        assert!(Role::Ord.rank() > Role::Eq.rank());
+        assert!(Role::Eq.rank() > Role::Match.rank());
+        assert!(Role::Match.rank() > Role::Storage.rank());
+    }
+
+    #[test]
     fn extractor_terms_dedupes_by_extractor_first_occurrence_wins() {
         // No catalog domain currently carries two terms sharing an extractor, so
         // this exercises the dedupe branch directly: Hm and Ore have distinct
