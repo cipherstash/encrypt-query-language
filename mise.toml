@@ -380,6 +380,116 @@ diff -u snapshots/v3_jsonb_tests.txt "$tmp"
 echo "v3 jsonb inventory OK"
 """
 
+[tasks."test:matrix:catalog-coverage"]
+description = "Assert every CATALOG (type, domain) has matrix tests, cross-checked against the encrypted_domain binary (no database required)"
+dir = "{{config_root}}/tests/sqlx"
+run = """
+#!/usr/bin/env bash
+# Forward catalog-coverage: for each scalar type in the catalog, every domain
+# the catalog declares for it must have at least one matrix test name. FINER
+# than test:matrix:inventory (which reconciles only TYPES against list-types):
+# a DomainSpec added to a catalog row without matrix wiring passes the type
+# inventory but fails here. Domain granularity only (Stage 1); per-operator
+# execution coverage is the Stage 4 matcher's job. No database needed.
+#
+# Compile precondition: encrypted_domain include_str!s its fixtures + the
+# 001 migration at compile time (mise.toml:104). Those are generated/gitignored,
+# so a bare worktree cannot compile it for --list. We never RUN tests here, so
+# empty stub files satisfy include_str!. We create only the missing files (rustc
+# reports them all in one pass) and remove them on exit. Bash 3.2 compatible
+# (macOS): no mapfile/arrays; created stubs are tracked in a temp file.
+set -euo pipefail
+root="{{config_root}}"
+
+# --- DB-free stub preamble so --list can compile on a bare worktree ----------
+created_list=$(mktemp)
+trap 'while IFS= read -r f; do [ -n "$f" ] && rm -f "$f"; done < "$created_list"; rm -f "$created_list"' EXIT
+
+err=$(mktemp)
+i=0
+while :; do
+  if listing=$(cargo test --no-default-features --test encrypted_domain -- --list 2>"$err"); then
+    break
+  fi
+  # Missing include_str! targets are the *.sql paths in the compile errors
+  # (repo-root-relative, may contain `..`). Match path chars only (no backticks
+  # or apostrophes to wrestle through TOML).
+  missing=$(grep -oE "[A-Za-z0-9_./-]+\\.sql" "$err" | LC_ALL=C sort -u || true)
+  if [ -z "$missing" ]; then
+    echo "encrypted_domain failed to list for a non-fixture reason:" >&2
+    cat "$err" >&2
+    rm -f "$err"; exit 1
+  fi
+  while IFS= read -r m; do
+    [ -n "$m" ] || continue
+    p="${root}/${m}"
+    if [ ! -e "$p" ]; then
+      mkdir -p "$(dirname "$p")"
+      : > "$p"
+      echo "$p" >> "$created_list"
+    fi
+  done <<< "$missing"
+  i=$((i + 1))
+  [ "$i" -lt 12 ] || { echo "stub loop exceeded 12 iterations" >&2; cat "$err" >&2; rm -f "$err"; exit 1; }
+done
+rm -f "$err"
+[ -n "$listing" ] || { echo "No tests listed from the encrypted_domain binary." >&2; exit 1; }
+listing=$(printf '%s\\n' "$listing" | sed -n 's/: test$//p')
+
+# --- Catalog surface (overridable for testing via EQL_CATALOG_DUMP_FILE) -----
+# The seam lets the fault-injection check (Step 3) run THIS exact loop against a
+# doctored dump without editing the task.
+if [ -n "${EQL_CATALOG_DUMP_FILE:-}" ]; then
+  dump=$(cat "$EQL_CATALOG_DUMP_FILE")
+else
+  dump=$(cd "$root" && cargo run -q -p eql-codegen -- dump-catalog)
+fi
+
+# --- Forward coverage check --------------------------------------------------
+failed=0
+while IFS= read -r t; do
+  [ -n "$t" ] || continue
+  # Segments the catalog declares for this type, longest-first so the prefix
+  # exclusion below (ord vs ord_ore) is well-defined.
+  segments=$(printf '%s' "$dump" \
+    | jq -r --arg t "$t" '.types[] | select(.token==$t) | .domains[].segment' \
+    | awk '{ print length, $0 }' | LC_ALL=C sort -rn | cut -d" " -f2-)
+
+  while IFS= read -r seg; do
+    [ -n "$seg" ] || continue
+    # Longer catalog segments having `seg` as a prefix (e.g. ord_ore when seg=ord).
+    longer=$(printf '%s\\n' "$segments" | grep -xvF "$seg" | grep -E "^${seg}_" || true)
+    # (a) Matrix-shape tests: scalars::<t>::matrix_<t>_<seg>_* . The macro emits
+    #     these for the ordered/eq shapes (storage, eq, ord, ord_ore). Strip
+    #     longer-prefix tests so seg=ord does not borrow ord_ore's names.
+    matches=$(printf '%s\\n' "$listing" | grep -E "^scalars::${t}::matrix_${t}_${seg}_" || true)
+    if [ -n "$longer" ]; then
+      while IFS= read -r l; do
+        [ -n "$l" ] || continue
+        matches=$(printf '%s\\n' "$matches" | grep -vE "^scalars::${t}::matrix_${t}_${l}_" || true)
+      done <<< "$longer"
+    fi
+    # (b) Dedicated-module tests: <t>_<seg>::* . Some domains are covered by a
+    #     hand-written suite rather than the matrix macro — text's Bloom `_match`
+    #     domain (`@>`/`<@` containment) lives in the `text_match` module, since
+    #     containment is not an eq/ord shape the matrix emits. The `::` separator
+    #     makes this exact per segment, so no longer-prefix exclusion is needed.
+    module_matches=$(printf '%s\\n' "$listing" | grep -E "^${t}_${seg}::" || true)
+    if [ -z "$(printf '%s' "${matches}${module_matches}" | tr -d '[:space:]')" ]; then
+      echo "MISSING: catalog declares domain '${seg}' for type '${t}', but no scalars::${t}::matrix_${t}_${seg}_* or ${t}_${seg}::* test exists." >&2
+      failed=1
+    fi
+  done <<< "$segments"
+done < <(printf '%s' "$dump" | jq -r '.types[].token')
+
+if [ "$failed" -ne 0 ]; then
+  echo "Catalog-coverage FAILED: a catalog domain has no matrix wiring (see MISSING lines above)." >&2
+  exit 1
+fi
+
+echo "Catalog-coverage OK: every CATALOG (type, domain) has matrix tests."
+"""
+
 [tasks."test:matrix:expand"]
 description = "Regenerate the int4 matrix cargo-expand snapshot (requires the pinned nightly + cargo-expand)"
 dir = "{{config_root}}/tests/sqlx"
