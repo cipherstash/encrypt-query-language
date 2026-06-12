@@ -683,6 +683,21 @@ impl ScalarDomainSpec {
     }
 }
 
+/// True when scalar `token` declares any domain carrying the `Bloom` term —
+/// i.e. its proxy-generated fixture payload includes a `bf` (bloom-filter) key.
+/// Catalog-derived: only `text` (via `_match`/`_search`) declares a Bloom
+/// domain, so only text fixtures carry `bf`. Note the proxy always emits `hm`
+/// and `ob` for every scalar's fixture regardless of the declared domains, so
+/// those two are asserted unconditionally; `bf` is the term that actually
+/// tracks the catalog.
+pub fn token_has_bloom_term(token: &str) -> bool {
+    CATALOG
+        .iter()
+        .find(|s| s.token == token)
+        .map(|s| s.domains.iter().any(|d| d.terms.contains(&Term::Bloom)))
+        .unwrap_or(false)
+}
+
 /// SQL string-literal escaping for direct interpolation.
 pub fn sql_string_literal(value: &str) -> String {
     format!("'{}'", value.replace('\'', "''"))
