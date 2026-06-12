@@ -9,6 +9,7 @@ use std::path::PathBuf;
 
 pub mod consts;
 pub mod context;
+pub mod dump;
 pub mod generate;
 pub mod operator_surface;
 pub mod writer;
