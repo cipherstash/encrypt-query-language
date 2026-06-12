@@ -102,10 +102,12 @@ fn rust_generator_matches_reference_files() {
         let ref_dir = root.join("tests/codegen/reference").join(&token);
         let gen_dir = out.path().join("src/v3/scalars").join(&token);
 
-        // Assert the generated .sql file SET matches the reference set first — the
+        // Assert the generated .sql file SET matches the reference set first. The
         // per-file byte comparison below only iterates reference files, so a
-        // missing generated file (or an extra one the reference never pins) would
-        // otherwise pass silently.
+        // missing generated file would surface only as an opaque `unwrap` panic on
+        // the `read_to_string` below, and an EXTRA generated file (one the
+        // reference never pins) would pass silently — it is never iterated. This
+        // set check turns both into a clear file-set diff.
         let ref_names = sql_names(&ref_dir);
         let gen_names = sql_names(&gen_dir);
         assert_eq!(
