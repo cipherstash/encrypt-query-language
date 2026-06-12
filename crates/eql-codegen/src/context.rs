@@ -268,10 +268,13 @@ pub const AGGREGATE_OPS: &[AggregateOp] = &[
     },
 ];
 
-/// True if the domain carries a comparator term (supports `<`).
-/// Port of `is_ord_capable`.
+/// True if the domain carries a comparator term (any term that supports `<`).
+/// Unions across the terms — consistent with `Term::operators_for_terms` —
+/// rather than reading only the first, so a future mixed-term domain that
+/// carries an ord term anywhere is correctly ord-capable. Port of
+/// `is_ord_capable`.
 pub fn is_ord_capable(terms: &[Term]) -> bool {
-    Term::role_for_terms(terms) == Role::Ord
+    terms.iter().any(|t| t.role() == Role::Ord)
 }
 
 #[cfg(test)]
@@ -288,6 +291,17 @@ mod tests {
         assert!(is_ord_capable(&[Term::Ore]));
         assert!(!is_ord_capable(&[Term::Hm]));
         assert!(!is_ord_capable(&[]));
+    }
+
+    #[test]
+    fn is_ord_capable_unions_across_terms() {
+        // An ord term anywhere in the list makes the domain ord-capable,
+        // regardless of position — consistent with operators_for_terms' union,
+        // not the first-term role. (No catalog domain is multi-term today; this
+        // pins the order-independent semantics for a future mixed-term domain.)
+        assert!(is_ord_capable(&[Term::Hm, Term::Ore]));
+        assert!(is_ord_capable(&[Term::Ore, Term::Hm]));
+        assert!(!is_ord_capable(&[Term::Hm, Term::Bloom]));
     }
 
     #[test]

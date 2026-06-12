@@ -164,23 +164,28 @@ description = "Verify the matrix test-name set against the single canonical snap
 dir = "{{config_root}}/tests/sqlx"
 run = """
 #!/usr/bin/env bash
-# ONE canonical, token-normalized snapshot (snapshots/matrix_tests.txt) pins the
-# set of macro-emitted matrix test names for the ORDERED scalar shape. There is
-# no second committed file for the equality-only shape: an eq-only type's name
-# set is exactly the ordered set MINUS the ord-only lines, so the inventory
-# DERIVES it from the one baseline (ordered minus `_ord`/`order_by`/
-# `routes_through_ob`). Each discovered type must match either the full baseline
-# (ordered) or that derived subset (eq-only). This keeps one committed snapshot
-# however many ordered/eq-only types exist.
+# Two committed, token-normalized snapshots. The canonical one
+# (snapshots/matrix_tests.txt) pins the set of macro-emitted matrix test names
+# for the ORDERED scalar shape. The second (snapshots/matrix_tests_eq_only.txt)
+# is the equality-only shape: an eq-only type's name set is exactly the ordered
+# set MINUS the ord-only lines (`_ord`/`order_by`/`routes_through_ob`), so it is
+# DERIVED from the one baseline — but it is also committed and PINNED: the gate
+# re-derives the subset at runtime and asserts it equals the committed file
+# (step 3 below), so a change to the baseline or the strip filter that alters the
+# eq-only set must be re-committed deliberately. Each discovered type must then
+# match either the full baseline (ordered) or that derived/pinned subset
+# (eq-only). One baseline drives both shapes however many types exist.
 #
 # Steps:
 #   1. List the encrypted_domain binary ONCE (deterministic; reused below).
 #   2. Discover the set of scalar types present FROM THE BINARY'S OWN OUTPUT
 #      (scalars::<X>:: prefixes) — never a directory glob.
-#   3. For each discovered type, normalize its token to <T> and assert its set
+#   3. Derive the eq-only subset from the ordered baseline and assert it equals
+#      the committed snapshots/matrix_tests_eq_only.txt (pins the derivation).
+#   4. For each discovered type, normalize its token to <T> and assert its set
 #      equals EITHER the canonical snapshot (ordered) OR the derived eq-only
 #      subset. Assert at least one type is present.
-#   4. Completeness cross-check: assert the discovered type set equals
+#   5. Completeness cross-check: assert the discovered type set equals
 #      `eql-codegen list-types`. A catalog type added without its matrix wiring
 #      (no scalars::<T>:: tests in the binary) fails here.
 #

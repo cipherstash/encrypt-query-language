@@ -17,6 +17,22 @@ cargo run -q -p eql-codegen -- > /dev/null
 tokens=$(find tests/codegen/reference -mindepth 1 -maxdepth 1 -type d \
   | sed 's#.*/##' | LC_ALL=C sort)
 
+# Completeness cross-check against the catalog (the single source of truth),
+# mirroring the matrix-inventory gate in mise.toml. The per-token loop below is
+# golden-DRIVEN, so a new catalog type with no committed reference dir is never
+# iterated and would slip through silently. Assert the committed reference dir
+# set equals `list-types` (the CATALOG tokens) first so a missing golden fails
+# HERE, not only in the Rust gate (crates/eql-codegen/tests/parity.rs,
+# reference_dirs_match_catalog_tokens), which remains the in-process
+# belt-and-suspenders. `list-types` prints one CATALOG token per line.
+catalog_tokens=$(cargo run -q -p eql-codegen -- list-types | LC_ALL=C sort -u)
+if [ "$tokens" != "$catalog_tokens" ]; then
+  echo "reference dirs != catalog tokens (< reference dirs, > catalog list-types):" >&2
+  diff <(echo "$tokens") <(echo "$catalog_tokens") >&2 || true
+  echo "A new catalog type needs a committed tests/codegen/reference/<token>/ golden." >&2
+  exit 1
+fi
+
 for token in $tokens; do
   ref_dir="tests/codegen/reference/$token"
   gen_dir="src/v3/scalars/$token"

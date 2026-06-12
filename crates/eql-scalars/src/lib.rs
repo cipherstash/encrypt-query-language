@@ -86,11 +86,12 @@ pub enum Term {
     Bloom,
 }
 
-/// The generated-file role of a domain, derived from its first term (or
-/// `Storage` for a term-less domain). Gates ord-only codegen (aggregates) via an
-/// exhaustive `==` against [`Role::Ord`] rather than a stringly-typed compare —
-/// a typo can no longer silently disable aggregate generation. `label` is the
-/// `&'static str` form for any future template/serde consumer.
+/// The generated-file role of a domain, resolved from its terms by the
+/// richest-comparison precedence in [`Role::rank`] (or `Storage` for a term-less
+/// domain). Gates ord-only codegen (aggregates) via an exhaustive `==` against
+/// [`Role::Ord`] rather than a stringly-typed compare — a typo can no longer
+/// silently disable aggregate generation. `label` is the `&'static str` form for
+/// any future template/serde consumer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Role {
     Storage,
@@ -107,6 +108,23 @@ impl Role {
             Role::Eq => "eq",
             Role::Ord => "ord",
             Role::Match => "match",
+        }
+    }
+
+    /// Precedence used by [`Term::role_for_terms`] to resolve a multi-term
+    /// domain to a single generated-file role: the richest comparison capability
+    /// wins (`Ord > Eq > Match > Storage`). Ordering subsumes equality, so an
+    /// `Ore` term anywhere makes the domain ord-shaped; `Match` (containment) is
+    /// a weaker standalone surface; `Storage` is the absence of any term. The
+    /// current catalog is single-term, so this only disambiguates a hypothetical
+    /// future mixed-term domain — and keeps `role_for_terms` consistent with
+    /// [`Term::operators_for_terms`], which already unions across all terms.
+    pub const fn rank(self) -> u8 {
+        match self {
+            Role::Storage => 0,
+            Role::Match => 1,
+            Role::Eq => 2,
+            Role::Ord => 3,
         }
     }
 }
