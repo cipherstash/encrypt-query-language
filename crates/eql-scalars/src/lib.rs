@@ -353,10 +353,16 @@ pub const TIMESTAMPTZ: ScalarSpec = ScalarSpec {
     fixtures: TIMESTAMPTZ_FIXTURES,
 };
 
-/// Domains for `text`: the ordered shape plus a `_match` domain backed by the
-/// `Bloom` term (`@>`/`<@` containment). The ordered subset (`""`, `_eq`,
-/// `_ord_ore`, `_ord`) is identical to `ORDERED_INT_DOMAINS`; `_match` is the
-/// only addition, so text still runs the standard ordered matrix.
+/// Domains for `text`: the ordered shape (with exact `hm` equality on the
+/// ordered domains), a `_match` domain (`Bloom` containment), and a combined
+/// `_search` domain carrying equality + ordering + match in one type.
+///
+/// **Equality always routes through `hm`.** Every eq-capable text domain leads
+/// with `Hm` so `=`/`<>` resolve to `eq_term`/`hm`, never the ORE (`ob`) term —
+/// ORE is not exact for `text`. `Term::Ore` keeps its kind-agnostic `=`/`<>`
+/// claim; it simply never wins because `Hm` precedes it (Option 1, catalog
+/// ordering). Integer kinds keep `[Ore]`-only `_ord` domains — ORE equality is
+/// lossless for them.
 const TEXT_DOMAINS: &[DomainSpec] = &[
     DomainSpec {
         suffix: "",
@@ -372,11 +378,15 @@ const TEXT_DOMAINS: &[DomainSpec] = &[
     },
     DomainSpec {
         suffix: "_ord_ore",
-        terms: &[Term::Ore],
+        terms: &[Term::Hm, Term::Ore],
     },
     DomainSpec {
         suffix: "_ord",
-        terms: &[Term::Ore],
+        terms: &[Term::Hm, Term::Ore],
+    },
+    DomainSpec {
+        suffix: "_search",
+        terms: &[Term::Hm, Term::Ore, Term::Bloom],
     },
 ];
 
