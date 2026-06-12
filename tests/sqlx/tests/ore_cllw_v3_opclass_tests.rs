@@ -145,6 +145,81 @@ async fn numeric_sorts_before_string_via_tag_byte(pool: PgPool) -> Result<()> {
 }
 
 // ===========================================================================
+// Different-length terms
+//
+// The equal-length operator tests above never exercise the length-handling
+// branches of `eql_v3.compare_ore_cllw_term` (src/v3/sem/ore_cllw/functions.sql):
+// it trims to the shared prefix, breaks an equal-prefix tie by length (shorter
+// sorts first), and short-circuits empty bytes ahead of any per-byte compare.
+// These are distinct code paths from the same-length comparator path.
+// ===========================================================================
+
+#[sqlx::test]
+async fn shorter_sorts_first_when_prefix_equal(pool: PgPool) -> Result<()> {
+    // `a` (2 bytes) is a prefix of `b` (3 bytes). The shared prefix (00 01) is
+    // equal, so the length tie-break decides: the shorter term sorts first
+    // (functions.sql len_a < len_b → -1).
+    let a = ore_cllw("0001");
+    let b = ore_cllw("000102");
+
+    let lt: bool = sqlx::query_scalar(&format!("SELECT {a} < {b}"))
+        .fetch_one(&pool)
+        .await?;
+    assert!(lt, "shorter term should sort before its longer prefix-extension");
+
+    let gt: bool = sqlx::query_scalar(&format!("SELECT {b} > {a}"))
+        .fetch_one(&pool)
+        .await?;
+    assert!(gt, "longer term should sort after its shorter prefix");
+
+    let neq: bool = sqlx::query_scalar(&format!("SELECT {a} <> {b}"))
+        .fetch_one(&pool)
+        .await?;
+    assert!(neq, "different-length terms with equal prefix are not equal");
+    Ok(())
+}
+
+#[sqlx::test]
+async fn empty_sorts_before_nonempty(pool: PgPool) -> Result<()> {
+    // `decode('', 'hex')` is a zero-length (non-NULL) bytea. The len = 0
+    // branches in functions.sql return -1 / 1 / 0 directly, ahead of any byte
+    // comparison.
+    let empty = ore_cllw("");
+    let nonempty = ore_cllw("0000");
+
+    let lt: bool = sqlx::query_scalar(&format!("SELECT {empty} < {nonempty}"))
+        .fetch_one(&pool)
+        .await?;
+    assert!(lt, "empty term should sort before a non-empty term");
+
+    let eq: bool = sqlx::query_scalar(&format!("SELECT {empty} = {empty}"))
+        .fetch_one(&pool)
+        .await?;
+    assert!(eq, "two empty terms compare equal");
+    Ok(())
+}
+
+#[sqlx::test]
+async fn differing_prefix_outranks_length(pool: PgPool) -> Result<()> {
+    // When the shared prefix already differs, the per-byte protocol decides the
+    // order regardless of length. `a` (2 bytes) is shorter than `b` (3 bytes),
+    // but they differ at byte 1: b=0x01, a=0x02, and (0x01 + 1) == 0x02 means
+    // a > b under the CLLW protocol — length does NOT override the prefix.
+    let a = ore_cllw("0002");
+    let b = ore_cllw("0001ff");
+
+    let gt: bool = sqlx::query_scalar(&format!("SELECT {a} > {b}"))
+        .fetch_one(&pool)
+        .await?;
+    assert!(
+        gt,
+        "a differing shared-prefix byte should decide order even when the \
+         shorter term would otherwise sort first"
+    );
+    Ok(())
+}
+
+// ===========================================================================
 // Opclass registration: DEFAULT FOR TYPE
 // ===========================================================================
 
