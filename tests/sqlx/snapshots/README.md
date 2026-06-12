@@ -1,11 +1,12 @@
 # Matrix coverage inventory snapshot
 
-This directory holds two committed snapshots. The canonical one is
-`matrix_tests.txt` — the token-normalized list of every `scalars::<T>::*` test
-name in the `encrypted_domain` SQLx binary, with each type token replaced by the
-literal `<T>`. The second, `matrix_tests_eq_only.txt`, is *derived* from it (see
-below) and pinned. Both are **committed test baselines**, not gitignored
-generated SQL — keep them in version control.
+This directory holds the canonical committed snapshot, `matrix_tests.txt` — the
+token-normalized list of every `scalars::<T>::*` test name in the
+`encrypted_domain` SQLx binary, with each type token replaced by the literal
+`<T>` — plus two shape variants derived from / committed alongside it
+(`matrix_tests_eq_only.txt`, `matrix_tests_text.txt`; see below). They are
+**committed test baselines**, not gitignored generated SQL — keep them in
+version control.
 
 The per-type `<T>_matrix_tests.txt` files are gone. They were byte-identical
 modulo the type token (the matrix tests are macro-generated from one
@@ -27,6 +28,25 @@ shape. Regenerate the eq-only snapshot with:
 
 ```bash
 grep -vE '_ord|order_by|routes_through_ob' snapshots/matrix_tests.txt | LC_ALL=C sort -u > snapshots/matrix_tests_eq_only.txt
+```
+
+For the **text** shape there is a third committed snapshot,
+`matrix_tests_text.txt`. A text scalar (`scalar_matrix! { caps = [eq, ord, search] }`)
+runs the combined `_search` domain (equality + ordering + bloom match) through
+the matrix in addition to the ordered shape, so its name set is a **superset**
+of the ordered baseline: every ordered arm PLUS the text-only `_search` /
+`_eqidx` (equality-via-`eq_term` index split) / `_match` (bloom `@>`/`<@`
+containment) arms. Unlike eq-only this superset is **not** derivable by a strip
+filter, so it is committed directly. The inventory gate pins it two ways: each
+discovered type must match it exactly (after `<T>` normalization), and the gate
+asserts it is a strict superset of the ordered baseline (no ordered arm may be
+missing for text). Regenerate the text snapshot with:
+
+```bash
+cd tests/sqlx
+cargo test --no-default-features --test encrypted_domain -- --list \
+  | sed -n 's/: test$//p' | grep '^scalars::text::' \
+  | sed -e 's/^scalars::text::/scalars::<T>::/' -e 's/_text_/_<T>_/g' | LC_ALL=C sort > snapshots/matrix_tests_text.txt
 ```
 
 The "no per-type variation" property is preserved by design: every ordered
@@ -59,11 +79,12 @@ The task (`mise.toml`, `[tasks."test:matrix:inventory"]`):
    `cargo test --no-default-features --test encrypted_domain -- --list`.
 2. Discovers the set of scalar types present **from the binary's own output**
    (the `scalars::<X>::` prefixes) — never a directory glob.
-3. Normalizes each type's token to `<T>` and asserts that type's set equals
-   **either** the canonical `matrix_tests.txt` (ordered shape) **or** the derived
-   eq-only subset (`matrix_tests.txt` minus `_ord`/`order_by`/`routes_through_ob`).
-   Prints each type's resolved shape (`ordered` / `eq_only`). Asserts at least
-   one type is present.
+3. Normalizes each type's token to `<T>` and asserts that type's set equals the
+   canonical `matrix_tests.txt` (ordered shape), the derived eq-only subset
+   (`matrix_tests.txt` minus `_ord`/`order_by`/`routes_through_ob`), or the
+   committed `matrix_tests_text.txt` superset (text shape). Prints each type's
+   resolved shape (`ordered` / `eq_only` / `text`). Asserts at least one type is
+   present.
 4. **Completeness cross-check:** asserts the discovered type set equals
    `cargo run -p eql-codegen -- list-types` (the catalog is the single source).
    A catalog type added without its matrix wiring — no `scalars::<T>::` tests in
