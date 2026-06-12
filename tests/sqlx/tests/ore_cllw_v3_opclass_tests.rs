@@ -165,7 +165,10 @@ async fn shorter_sorts_first_when_prefix_equal(pool: PgPool) -> Result<()> {
     let lt: bool = sqlx::query_scalar(&format!("SELECT {a} < {b}"))
         .fetch_one(&pool)
         .await?;
-    assert!(lt, "shorter term should sort before its longer prefix-extension");
+    assert!(
+        lt,
+        "shorter term should sort before its longer prefix-extension"
+    );
 
     let gt: bool = sqlx::query_scalar(&format!("SELECT {b} > {a}"))
         .fetch_one(&pool)
@@ -175,7 +178,10 @@ async fn shorter_sorts_first_when_prefix_equal(pool: PgPool) -> Result<()> {
     let neq: bool = sqlx::query_scalar(&format!("SELECT {a} <> {b}"))
         .fetch_one(&pool)
         .await?;
-    assert!(neq, "different-length terms with equal prefix are not equal");
+    assert!(
+        neq,
+        "different-length terms with equal prefix are not equal"
+    );
     Ok(())
 }
 
@@ -278,11 +284,10 @@ async fn ore_cllw_extractor_returns_composite_when_oc_present(pool: PgPool) -> R
 
 #[sqlx::test]
 async fn comparator_returns_null_on_null_composite(pool: PgPool) -> Result<()> {
-    // The comparator returns SQL NULL (not a raise) when handed a SQL-NULL
-    // composite — the shape the extractor produces for a missing-`oc` row, which
-    // btree's NULL handling then filters from range queries. (A non-NULL
-    // composite with a NULL `bytes` field would raise instead, but that shape is
-    // unreachable via the extractor.)
+    // SQL-NULL composite (the shape the extractor produces for a missing-`oc`
+    // row): the comparator returns SQL NULL, which btree's NULL handling then
+    // filters from range queries. `a::text IS NULL` catches this — a genuine
+    // SQL-NULL composite casts to NULL text. This path is shared with eql_v2.
     let cmp: Option<i32> = sqlx::query_scalar(
         "SELECT eql_v3.compare_ore_cllw_term(\
            eql_v3.ore_cllw('{\"s\":\"x\",\"c\":\"y\",\"hm\":\"abc\"}'::jsonb), \
@@ -294,6 +299,43 @@ async fn comparator_returns_null_on_null_composite(pool: PgPool) -> Result<()> {
     assert!(
         cmp.is_none(),
         "compare_ore_cllw_term with a NULL composite should return SQL NULL"
+    );
+    Ok(())
+}
+
+#[sqlx::test]
+async fn comparator_raises_on_row_null_composite(pool: PgPool) -> Result<()> {
+    // EXPLICIT, VALIDATED DIVERGENCE FROM eql_v2.
+    //
+    // A hand-crafted `ROW(NULL)::eql_v3.ore_cllw` is NOT a SQL-NULL composite —
+    // for a single-field composite, `ROW(NULL) IS NULL` is true (row-IS-NULL
+    // fires when every field is NULL), but `(ROW(NULL))::text` is the non-NULL
+    // text `()`, so `a::text IS NULL` is FALSE. The value therefore falls
+    // through v3's first guard to the `a.bytes IS NULL` check and RAISES the
+    // extractor-invariant violation.
+    //
+    // eql_v2's `compare_ore_cllw_term` guards with `a IS NULL` instead, which IS
+    // true for `ROW(NULL)`, so eql_v2 silently RETURNs NULL here and its RAISE
+    // branch is unreachable (see eql_v2's own `comparator_raises_on_null_bytes_
+    // in_non_null_composite`, which documents the branch as unreachable and
+    // asserts the NULL return). v3 deliberately uses `a::text IS NULL` so the
+    // "raise loudly rather than silently misorder" contract is reachable. This
+    // test pins that divergence — neither the SQL-NULL test above nor the v2
+    // suite exercises it.
+    let err = sqlx::query(
+        "SELECT eql_v3.compare_ore_cllw_term(\
+           ROW(NULL)::eql_v3.ore_cllw, \
+           ROW(decode('00ff', 'hex'))::eql_v3.ore_cllw\
+         )",
+    )
+    .execute(&pool)
+    .await
+    .expect_err("ROW(NULL) composite must RAISE in v3, not return NULL");
+
+    let msg = format!("{err:?}");
+    assert!(
+        msg.contains("composite has NULL bytes field"),
+        "expected the extractor-invariant RAISE, got: {msg}"
     );
     Ok(())
 }
