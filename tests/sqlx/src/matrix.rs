@@ -195,12 +195,17 @@ macro_rules! scalar_matrix {
             ],
             eq_ops = [(eq, "="), (neq, "<>")],
             ord_ops = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
+            // The extractor per combo is NOT restated here — it is derived at
+            // runtime from the combo's ops via `Variant::extractor_for_op`
+            // (the same `Term::extractor_for_operator` codegen uses). Every op
+            // in one combo must share a single extractor (one functional index
+            // serves them all); `combo_extractor` asserts that.
             index_combos = [
-                (eq, Eq, "eql_v3.eq_term", "btree", [(eq, "=")]),
-                (eq, Eq, "eql_v3.eq_term", "hash", [(eq, "=")]),
-                (ord, Ord, "eql_v3.ord_term", "btree",
+                (eq, Eq, "btree", [(eq, "=")]),
+                (eq, Eq, "hash", [(eq, "=")]),
+                (ord, Ord, "btree",
                     [(eq, "="), (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")]),
-                (ord_ore, OrdOre, "eql_v3.ord_term", "btree",
+                (ord_ore, OrdOre, "btree",
                     [(eq, "="), (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")]),
             ],
             blocker_combos = [
@@ -217,10 +222,10 @@ macro_rules! scalar_matrix {
                 (ord_ore, OrdOre, [(contains, "@>"), (contained_by, "<@")]),
             ],
             // Always-on cost-preference proof (#239 thread 17): the recommended
-            // converged ordered domain, ord_term btree. One curated combo keeps
-            // PR CI cost bounded.
+            // converged ordered domain, btree. One curated combo keeps PR CI
+            // cost bounded. The extractor (`=`-serving) is derived at runtime.
             scale_default_combos = [
-                (ord, Ord, "eql_v3.ord_term", "btree"),
+                (ord, Ord, "btree"),
             ],
             // No bloom-match domain on a pure ordered scalar (int/date).
             match_domains = [],
@@ -255,21 +260,25 @@ macro_rules! scalar_matrix {
             eq_ops = [(eq, "="), (neq, "<>")],
             ord_ops = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
             // Equality on every text domain routes through `eq_term` (exact hm),
-            // never ORE — so the `=` index proof targets `eql_v3.eq_term`, split
-            // into its own combo (distinct dom_name) from the ordering ops, which
-            // target `eql_v3.ord_term`. The `_search` domain gets both.
+            // never ORE, while the ordering ops route through `ord_term`. Because
+            // a single functional index serves one extractor, the `=` proof is
+            // SPLIT into its own combo (distinct `_eqidx` dom_name) from the
+            // ordering ops — they cannot share an index. The extractor itself is
+            // NOT restated; `combo_extractor` derives it from each combo's ops at
+            // runtime (and asserts the combo is single-extractor). The `_search`
+            // domain gets both an ordering combo and an `_eqidx` combo.
             index_combos = [
-                (eq, Eq, "eql_v3.eq_term", "btree", [(eq, "=")]),
-                (eq, Eq, "eql_v3.eq_term", "hash", [(eq, "=")]),
-                (ord, Ord, "eql_v3.ord_term", "btree",
+                (eq, Eq, "btree", [(eq, "=")]),
+                (eq, Eq, "hash", [(eq, "=")]),
+                (ord, Ord, "btree",
                     [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")]),
-                (ord_eqidx, Ord, "eql_v3.eq_term", "btree", [(eq, "=")]),
-                (ord_ore, OrdOre, "eql_v3.ord_term", "btree",
+                (ord_eqidx, Ord, "btree", [(eq, "=")]),
+                (ord_ore, OrdOre, "btree",
                     [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")]),
-                (ord_ore_eqidx, OrdOre, "eql_v3.eq_term", "btree", [(eq, "=")]),
-                (search, Search, "eql_v3.ord_term", "btree",
+                (ord_ore_eqidx, OrdOre, "btree", [(eq, "=")]),
+                (search, Search, "btree",
                     [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")]),
-                (search_eqidx, Search, "eql_v3.eq_term", "btree", [(eq, "=")]),
+                (search_eqidx, Search, "btree", [(eq, "=")]),
             ],
             blocker_combos = [
                 (storage, Storage, [
@@ -288,9 +297,10 @@ macro_rules! scalar_matrix {
                 (ord_ore, OrdOre, [(contains, "@>"), (contained_by, "<@")]),
             ],
             // Selective `=` on a text ordered domain prefers the `eq_term`
-            // functional index (equality is hm-exact), not ord_term.
+            // functional index (equality is hm-exact), not ord_term — derived at
+            // runtime from the `=`-serving extractor.
             scale_default_combos = [
-                (ord, Ord, "eql_v3.eq_term", "btree"),
+                (ord, Ord, "btree"),
             ],
             // `_search` carries the Bloom term: prove `@>`/`<@` containment
             // behaviour + GIN index engagement through the matrix.
@@ -325,9 +335,11 @@ macro_rules! scalar_matrix {
             ],
             eq_ops = [(eq, "="), (neq, "<>")],
             ord_ops = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
+            // Extractor derived at runtime from each combo's ops; see the
+            // `caps = [eq, ord]` arm.
             index_combos = [
-                (eq, Eq, "eql_v3.eq_term", "btree", [(eq, "=")]),
-                (eq, Eq, "eql_v3.eq_term", "hash",  [(eq, "=")]),
+                (eq, Eq, "btree", [(eq, "=")]),
+                (eq, Eq, "hash",  [(eq, "=")]),
             ],
             blocker_combos = [
                 (storage, Storage, [
@@ -1330,7 +1342,7 @@ macro_rules! __scalar_matrix_scale_case {
         suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
         combo = (
             $dom_name:ident, $variant:ident,
-            $extractor:literal, $using:literal,
+            $using:literal,
             [$(($op_name:ident, $op:literal)),+ $(,)?] $(,)?
         ) $(,)?
     ) => {
@@ -1343,6 +1355,11 @@ macro_rules! __scalar_matrix_scale_case {
                 use $crate::scalar_domains::ScalarType;
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
+                // Catalog-derived extractor for this combo's ops; see
+                // __scalar_matrix_index_case.
+                let extractor = $crate::scalar_domains::combo_extractor(
+                    &spec, &[$($op),+],
+                )?;
                 let table = concat!(
                     "matrix_", stringify!($suite), "_", stringify!($dom_name),
                     "_scale_", $using,
@@ -1374,7 +1391,7 @@ SELECT $1::jsonb::{d} FROM generate_series(1, 5000)",
                     "INSERT INTO {table}(value) VALUES ($1::jsonb::{d})",
                 )).bind(&pivot_payload).execute(&mut *tx).await?;
                 sqlx::query(&format!(
-                    "CREATE INDEX {index} ON {table} USING {using} ({extractor}(value))", using = $using, extractor = $extractor,
+                    "CREATE INDEX {index} ON {table} USING {using} ({extractor}(value))", using = $using, extractor = extractor,
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!("ANALYZE {table}"))
                     .execute(&mut *tx).await?;
@@ -1386,7 +1403,7 @@ SELECT $1::jsonb::{d} FROM generate_series(1, 5000)",
                     index,
                     &format!(
                         "with seqscan enabled the planner must prefer the {extractor} {using} index for a selective =",
-                        extractor = $extractor, using = $using,
+                        extractor = extractor, using = $using,
                     ),
                 ).await?;
 
@@ -1431,7 +1448,7 @@ macro_rules! __scalar_matrix_scale_default_outer {
 macro_rules! __scalar_matrix_scale_default_case {
     (
         suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
-        combo = ($dom_name:ident, $variant:ident, $extractor:literal, $using:literal) $(,)?
+        combo = ($dom_name:ident, $variant:ident, $using:literal) $(,)?
     ) => {
         $crate::paste::paste! {
             #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
@@ -1441,6 +1458,16 @@ macro_rules! __scalar_matrix_scale_default_case {
                 use $crate::scalar_domains::ScalarType;
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
+                // Catalog-derived: the scale-default proof exercises a selective
+                // `=`, so the preferred functional index is the one serving `=`
+                // (`eql_v3.ord_term` for an [Ore] _ord domain, `eql_v3.eq_term`
+                // for a [Hm, Ore] text _ord domain). Same source codegen uses.
+                let extractor = spec.extractor_for_op("=").ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "{} declares no extractor for `=` but is wired as a \
+scale-default combo", &spec.sql_domain,
+                    )
+                })?;
                 let table = concat!(
                     "matrix_", stringify!($suite), "_", stringify!($dom_name),
                     "_scaledef_", $using,
@@ -1472,7 +1499,7 @@ SELECT $1::jsonb::{d} FROM generate_series(1, 5000)",
                     "INSERT INTO {table}(value) VALUES ($1::jsonb::{d})",
                 )).bind(&pivot_payload).execute(&mut *tx).await?;
                 sqlx::query(&format!(
-                    "CREATE INDEX {index} ON {table} USING {using} ({extractor}(value))", using = $using, extractor = $extractor,
+                    "CREATE INDEX {index} ON {table} USING {using} ({extractor}(value))", using = $using, extractor = extractor,
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!("ANALYZE {table}"))
                     .execute(&mut *tx).await?;
@@ -1485,7 +1512,10 @@ SELECT $1::jsonb::{d} FROM generate_series(1, 5000)",
                     &mut *tx,
                     &format!("SELECT * FROM {table} WHERE value = '{lit}'::jsonb::{d}"),
                     index,
-                    "with seqscan ON the planner must PREFER the ord_term functional index for a selective =",
+                    &format!(
+                        "with seqscan ON the planner must PREFER the {extractor} \
+functional index for a selective =",
+                    ),
                 ).await?;
 
                 tx.commit().await?;
@@ -1994,7 +2024,7 @@ macro_rules! __scalar_matrix_index_case {
         suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
         combo = (
             $dom_name:ident, $variant:ident,
-            $extractor:literal, $using:literal,
+            $using:literal,
             [$(($op_name:ident, $op:literal)),+ $(,)?] $(,)?
         ) $(,)?
     ) => {
@@ -2004,6 +2034,16 @@ macro_rules! __scalar_matrix_index_case {
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
+                // Catalog-derived: the extractor serving this combo's operators
+                // (the SAME `Term::extractor_for_operator` codegen uses). Every
+                // op in a single combo shares one extractor (one functional
+                // index serves them all); assert that here so a future combo
+                // that mixes eq + ord ops in one tuple — which would need two
+                // indexes — fails loudly instead of silently indexing only the
+                // first op's extractor.
+                let extractor = $crate::scalar_domains::combo_extractor(
+                    &spec, &[$($op),+],
+                )?;
                 let table = concat!(
                     "matrix_", stringify!($suite), "_", stringify!($dom_name),
                     "_idx_", $using,
@@ -2026,7 +2066,7 @@ macro_rules! __scalar_matrix_index_case {
                      SELECT plaintext, ({col})::{d} FROM {fixture}", col = &spec.column_expr, d = &spec.sql_domain, fixture = fixture_table,
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!(
-                    "CREATE INDEX {index} ON {table} USING {using} ({extractor}(value))", using = $using, extractor = $extractor,
+                    "CREATE INDEX {index} ON {table} USING {using} ({extractor}(value))", using = $using, extractor = extractor,
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!("ANALYZE {table}"))
                     .execute(&mut *tx).await?;

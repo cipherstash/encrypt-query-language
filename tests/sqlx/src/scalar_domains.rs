@@ -727,6 +727,42 @@ impl ScalarDomainSpec {
     }
 }
 
+/// The single `eql_v3`-qualified extractor that serves EVERY operator in
+/// `ops` for `spec`'s domain — the value codegen would put in a functional
+/// index for this combo. Catalog-derived via [`ScalarDomainSpec::extractor_for_op`]
+/// (i.e. `Term::extractor_for_operator`), so the index-engagement matrix never
+/// restates the extractor as a literal.
+///
+/// A single functional index serves one extractor, so the matrix combos that
+/// drive these tests group only operators that share an extractor. This asserts
+/// that invariant: if `ops` mix extractors (e.g. text's `=` -> `eq_term` and
+/// `<` -> `ord_term` in one combo) it errors loudly rather than silently
+/// indexing only the first op's extractor. An op the domain does not support at
+/// all is likewise an error.
+pub fn combo_extractor(spec: &ScalarDomainSpec, ops: &[&str]) -> Result<String> {
+    let mut chosen: Option<String> = None;
+    for &op in ops {
+        let ex = spec.extractor_for_op(op).ok_or_else(|| {
+            anyhow::anyhow!(
+                "{} declares no extractor for `{}` but it is wired as an \
+index-engagement combo op",
+                spec.sql_domain, op,
+            )
+        })?;
+        match &chosen {
+            None => chosen = Some(ex),
+            Some(prev) if *prev != ex => bail!(
+                "combo for {} mixes extractors ({prev} for an earlier op, {ex} \
+for `{op}`) — one functional index cannot serve both; split into separate \
+combos with distinct dom_names",
+                spec.sql_domain,
+            ),
+            Some(_) => {}
+        }
+    }
+    chosen.ok_or_else(|| anyhow::anyhow!("combo for {} has no ops", spec.sql_domain))
+}
+
 /// True when scalar `token` declares any domain carrying the `Bloom` term —
 /// i.e. its proxy-generated fixture payload includes a `bf` (bloom-filter) key.
 /// Catalog-derived: only `text` (via `_match`/`_search`) declares a Bloom
@@ -974,5 +1010,46 @@ mod catalog_resolution_tests {
                 }
             }
         }
+    }
+
+    // `combo_extractor` replaced the hand-written extractor literals in the
+    // index-engagement matrix combos; these pin the catalog-derived results the
+    // matrix now relies on (no DB needed).
+
+    #[test]
+    fn combo_extractor_int4_ord_serves_all_ops_via_ord_term() {
+        // int4 `_ord` = [Ore]: every op (eq + the four ord ops) resolves to the
+        // single ord_term extractor, so the combo is single-extractor.
+        let spec = ScalarDomainSpec::new::<i32>(Variant::Ord);
+        assert_eq!(
+            combo_extractor(&spec, &["=", "<", "<=", ">", ">="]).unwrap(),
+            "eql_v3.ord_term",
+        );
+    }
+
+    #[test]
+    fn combo_extractor_text_ord_splits_eq_from_ord() {
+        // text `_ord` = [Hm, Ore]: `=` routes through eq_term, the ord ops
+        // through ord_term. A single index cannot serve both, so each must be
+        // its own combo — proven here by `=`-only and ord-only succeeding while
+        // a mixed combo errors.
+        let spec = ScalarDomainSpec::new::<String>(Variant::Ord);
+        assert_eq!(combo_extractor(&spec, &["="]).unwrap(), "eql_v3.eq_term");
+        assert_eq!(
+            combo_extractor(&spec, &["<", "<=", ">", ">="]).unwrap(),
+            "eql_v3.ord_term",
+        );
+        let mixed = combo_extractor(&spec, &["=", "<"]);
+        assert!(
+            mixed.is_err(),
+            "a combo mixing eq + ord ops on text _ord must error (two extractors)",
+        );
+    }
+
+    #[test]
+    fn combo_extractor_errors_on_unsupported_op() {
+        // `@>` is not served by any extractor on int4 `_eq` ([Hm]).
+        let spec = ScalarDomainSpec::new::<i32>(Variant::Eq);
+        assert!(combo_extractor(&spec, &["@>"]).is_err());
     }
 }
