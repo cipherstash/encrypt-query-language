@@ -2842,10 +2842,14 @@ want ({}, {:?}), got {:?}",
 }
 
 // ============================================================================
-// Aggregate type-safety category — for variants that do NOT support ord
-// (Storage, Eq), `eql_v3.min(<variant-column>)` / `eql_v3.max(...)` must
-// resolve to "function does not exist" (SQLSTATE 42883). Pins that
-// codegen correctly omits MIN/MAX wrappers for these variants — a
+// Aggregate type-safety category — one min + one max test per variant whose
+// body branches at RUNTIME on `spec.supports_ord()` (catalog-derived):
+//   * non-ord variant (Storage, Eq): `eql_v3.min/max(<variant-column>)` must
+//     resolve to "function does not exist" (SQLSTATE 42883 / 42725). Pins that
+//     codegen correctly omits MIN/MAX wrappers for these variants.
+//   * ord-capable variant (Ord, OrdOre, Search, …): `eql_v3.min/max(...)` must
+//     RESOLVE — these variants declare min/max.
+// Catalog-driven so a new ord-capable variant needs no macro change — a
 // SQL-level regression test complementing the codegen unit test.
 // ============================================================================
 
@@ -2865,27 +2869,21 @@ macro_rules! __scalar_matrix_aggregate_typecheck_outer {
     };
 }
 
-// Dispatch on variant ident: ord-capable variants (Ord, OrdOre, Search) emit
-// no typecheck test — they DO declare min/max. Non-ord variants (Storage,
-// Eq) emit one test per aggregate op asserting the call fails with
-// SQLSTATE 42883.
+// Emit one min + one max aggregate typecheck test for EVERY variant. The test
+// body branches at RUNTIME on `spec.supports_ord()` (catalog-derived):
+//
+//   * ord-capable variant  -> assert `eql_v3.min/max(value)` RESOLVES and
+//                             returns a value (these variants declare min/max).
+//   * non-ord variant      -> assert the call is rejected with SQLSTATE 42883
+//                             (undefined_function) / 42725 (ambiguous_function).
+//
+// Previously the dispatch branched on the variant IDENT at macro-expansion time
+// with empty arms for the ord-capable variants, so every new ord-capable
+// variant had to remember to add an empty arm or the test silently did the
+// wrong thing. Branching at runtime on the catalog removes that footgun.
 #[macro_export]
 #[doc(hidden)]
 macro_rules! __scalar_matrix_aggregate_typecheck_dispatch {
-    // Ord, OrdOre, Search: no typecheck test — these variants declare min/max.
-    (
-        suite = $suite:ident, scalar = $scalar:ty,
-        dom_name = $dom_name:ident, variant = Ord $(,)?
-    ) => {};
-    (
-        suite = $suite:ident, scalar = $scalar:ty,
-        dom_name = $dom_name:ident, variant = OrdOre $(,)?
-    ) => {};
-    (
-        suite = $suite:ident, scalar = $scalar:ty,
-        dom_name = $dom_name:ident, variant = Search $(,)?
-    ) => {};
-    // Storage, Eq: emit min + max typecheck tests.
     (
         suite = $suite:ident, scalar = $scalar:ty,
         dom_name = $dom_name:ident, variant = $variant:ident $(,)?
@@ -2928,38 +2926,53 @@ macro_rules! __scalar_matrix_aggregate_typecheck_case {
                     "INSERT INTO typecheck_table(value) VALUES ($1::jsonb::{d})",
                 )).bind(payload).execute(&mut *tx).await?;
 
-                // Savepoint-isolate the probe so the failed lookup
-                // doesn't abort the outer transaction and tx.commit()
-                // can succeed cleanly.
-                sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
                 let sql = format!(
                     "SELECT eql_v3.{agg}(value) FROM typecheck_table",
                     agg = $agg_fn,
                 );
-                let err = sqlx::query_scalar::<_, String>(&sql)
-                    .fetch_one(&mut *tx)
-                    .await
-                    .expect_err(&format!(
-                        "eql_v3.{} on non-ord variant {} must raise but succeeded",
-                        $agg_fn, d,
-                    ));
-                // 42883 = undefined_function (no overload defined at all);
-                // 42725 = ambiguous_function (multiple overloads resolve,
-                // none specific to this variant). Either confirms the
-                // variant carries no MIN/MAX of its own — the generic
-                // eql_v2_encrypted overload is reachable via cast but
-                // can't be resolved unambiguously from a domain-typed
-                // column. Both outcomes are acceptable "not supported".
-                let db_err = err.as_database_error()
-                    .expect("expected database error from typecheck probe");
-                let code = db_err.code();
-                anyhow::ensure!(
-                    code.as_deref() == Some("42883") || code.as_deref() == Some("42725"),
-                    "expected SQLSTATE 42883 (undefined_function) or 42725 \
+
+                // Catalog-derived runtime branch: ord-capable variants DECLARE
+                // min/max, non-ord variants must not.
+                if spec.supports_ord() {
+                    // Ord-capable: eql_v3.min/max(value) must RESOLVE.
+                    let res = sqlx::query_scalar::<_, serde_json::Value>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await;
+                    anyhow::ensure!(
+                        res.is_ok(),
+                        "eql_v3.{}({}) on ord-capable variant must resolve, got {:?}",
+                        $agg_fn, d, res.err(),
+                    );
+                } else {
+                    // Savepoint-isolate the probe so the failed lookup
+                    // doesn't abort the outer transaction and tx.commit()
+                    // can succeed cleanly.
+                    sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
+                    let err = sqlx::query_scalar::<_, String>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .expect_err(&format!(
+                            "eql_v3.{} on non-ord variant {} must raise but succeeded",
+                            $agg_fn, d,
+                        ));
+                    // 42883 = undefined_function (no overload defined at all);
+                    // 42725 = ambiguous_function (multiple overloads resolve,
+                    // none specific to this variant). Either confirms the
+                    // variant carries no MIN/MAX of its own — the generic
+                    // eql_v2_encrypted overload is reachable via cast but
+                    // can't be resolved unambiguously from a domain-typed
+                    // column. Both outcomes are acceptable "not supported".
+                    let db_err = err.as_database_error()
+                        .expect("expected database error from typecheck probe");
+                    let code = db_err.code();
+                    anyhow::ensure!(
+                        code.as_deref() == Some("42883") || code.as_deref() == Some("42725"),
+                        "expected SQLSTATE 42883 (undefined_function) or 42725 \
 (ambiguous_function) for eql_v3.{}({}), got {:?} (message: {})",
-                    $agg_fn, d, code, db_err.message(),
-                );
-                sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
+                        $agg_fn, d, code, db_err.message(),
+                    );
+                    sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
+                }
 
                 tx.commit().await?;
                 Ok(())

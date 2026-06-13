@@ -43,6 +43,8 @@ scalars::<T>::matrix_<T>_ord_aggregate_min_all_null
 scalars::<T>::matrix_<T>_ord_aggregate_min_empty
 scalars::<T>::matrix_<T>_ord_aggregate_min_mixed_null
 scalars::<T>::matrix_<T>_ord_aggregate_parallel_safe
+scalars::<T>::matrix_<T>_ord_aggregate_typecheck_max
+scalars::<T>::matrix_<T>_ord_aggregate_typecheck_min
 scalars::<T>::matrix_<T>_ord_contained_by_blocker
 scalars::<T>::matrix_<T>_ord_contains_blocker
 scalars::<T>::matrix_<T>_ord_count_distinct_extractor
@@ -117,6 +119,8 @@ scalars::<T>::matrix_<T>_ord_ore_aggregate_min_all_null
 scalars::<T>::matrix_<T>_ord_ore_aggregate_min_empty
 scalars::<T>::matrix_<T>_ord_ore_aggregate_min_mixed_null
 scalars::<T>::matrix_<T>_ord_ore_aggregate_parallel_safe
+scalars::<T>::matrix_<T>_ord_ore_aggregate_typecheck_max
+scalars::<T>::matrix_<T>_ord_ore_aggregate_typecheck_min
 scalars::<T>::matrix_<T>_ord_ore_contained_by_blocker
 scalars::<T>::matrix_<T>_ord_ore_contains_blocker
 scalars::<T>::matrix_<T>_ord_ore_count_distinct_extractor
@@ -205,6 +209,8 @@ scalars::<T>::matrix_<T>_search_aggregate_min_all_null
 scalars::<T>::matrix_<T>_search_aggregate_min_empty
 scalars::<T>::matrix_<T>_search_aggregate_min_mixed_null
 scalars::<T>::matrix_<T>_search_aggregate_parallel_safe
+scalars::<T>::matrix_<T>_search_aggregate_typecheck_max
+scalars::<T>::matrix_<T>_search_aggregate_typecheck_min
 scalars::<T>::matrix_<T>_search_count_distinct_extractor
 scalars::<T>::matrix_<T>_search_count_path_cast
 scalars::<T>::matrix_<T>_search_count_typed_column

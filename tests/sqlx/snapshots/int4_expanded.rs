@@ -23778,9 +23778,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2823usize,
+            start_line: 2821usize,
             start_col: 22usize,
-            end_line: 2823usize,
+            end_line: 2821usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -23828,7 +23828,6 @@ pub mod int4 {
                     .bind(payload)
                     .execute(&mut *tx)
                     .await?;
-                sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -23837,44 +23836,68 @@ pub mod int4 {
                         ),
                     )
                 });
-                let err = sqlx::query_scalar::<_, String>(&sql)
-                    .fetch_one(&mut *tx)
-                    .await
-                    .expect_err(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
-                                    "min",
-                                    d,
-                                ),
-                            )
-                        }),
-                    );
-                let db_err = err
-                    .as_database_error()
-                    .expect("expected database error from typecheck probe");
-                let code = db_err.code();
-                if ::anyhow::__private::not(
-                    code.as_deref() == Some("42883") || code.as_deref() == Some("42725"),
-                ) {
-                    return ::anyhow::__private::Err(
-                        ::anyhow::Error::msg(
-                            ::alloc::__export::must_use({
+                if spec.supports_ord() {
+                    let res = sqlx::query_scalar::<_, serde_json::Value>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await;
+                    if ::anyhow::__private::not(res.is_ok()) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "eql_v3.{0}({1}) on ord-capable variant must resolve, got {2:?}",
+                                            "min",
+                                            d,
+                                            res.err(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                } else {
+                    sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
+                    let err = sqlx::query_scalar::<_, String>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .expect_err(
+                            &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                        "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
                                         "min",
                                         d,
-                                        code,
-                                        db_err.message(),
                                     ),
                                 )
                             }),
-                        ),
-                    );
+                        );
+                    let db_err = err
+                        .as_database_error()
+                        .expect("expected database error from typecheck probe");
+                    let code = db_err.code();
+                    if ::anyhow::__private::not(
+                        code.as_deref() == Some("42883")
+                            || code.as_deref() == Some("42725"),
+                    ) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                            "min",
+                                            d,
+                                            code,
+                                            db_err.message(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                    sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
                 }
-                sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
                 tx.commit().await?;
                 Ok(())
             }
@@ -23923,9 +23946,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2823usize,
+            start_line: 2821usize,
             start_col: 22usize,
-            end_line: 2823usize,
+            end_line: 2821usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -23973,7 +23996,6 @@ pub mod int4 {
                     .bind(payload)
                     .execute(&mut *tx)
                     .await?;
-                sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -23982,44 +24004,68 @@ pub mod int4 {
                         ),
                     )
                 });
-                let err = sqlx::query_scalar::<_, String>(&sql)
-                    .fetch_one(&mut *tx)
-                    .await
-                    .expect_err(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
-                                    "max",
-                                    d,
-                                ),
-                            )
-                        }),
-                    );
-                let db_err = err
-                    .as_database_error()
-                    .expect("expected database error from typecheck probe");
-                let code = db_err.code();
-                if ::anyhow::__private::not(
-                    code.as_deref() == Some("42883") || code.as_deref() == Some("42725"),
-                ) {
-                    return ::anyhow::__private::Err(
-                        ::anyhow::Error::msg(
-                            ::alloc::__export::must_use({
+                if spec.supports_ord() {
+                    let res = sqlx::query_scalar::<_, serde_json::Value>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await;
+                    if ::anyhow::__private::not(res.is_ok()) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "eql_v3.{0}({1}) on ord-capable variant must resolve, got {2:?}",
+                                            "max",
+                                            d,
+                                            res.err(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                } else {
+                    sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
+                    let err = sqlx::query_scalar::<_, String>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .expect_err(
+                            &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                        "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
                                         "max",
                                         d,
-                                        code,
-                                        db_err.message(),
                                     ),
                                 )
                             }),
-                        ),
-                    );
+                        );
+                    let db_err = err
+                        .as_database_error()
+                        .expect("expected database error from typecheck probe");
+                    let code = db_err.code();
+                    if ::anyhow::__private::not(
+                        code.as_deref() == Some("42883")
+                            || code.as_deref() == Some("42725"),
+                    ) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                            "max",
+                                            d,
+                                            code,
+                                            db_err.message(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                    sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
                 }
-                sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
                 tx.commit().await?;
                 Ok(())
             }
@@ -24068,9 +24114,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2823usize,
+            start_line: 2821usize,
             start_col: 22usize,
-            end_line: 2823usize,
+            end_line: 2821usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -24118,7 +24164,6 @@ pub mod int4 {
                     .bind(payload)
                     .execute(&mut *tx)
                     .await?;
-                sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -24127,44 +24172,68 @@ pub mod int4 {
                         ),
                     )
                 });
-                let err = sqlx::query_scalar::<_, String>(&sql)
-                    .fetch_one(&mut *tx)
-                    .await
-                    .expect_err(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
-                                    "min",
-                                    d,
-                                ),
-                            )
-                        }),
-                    );
-                let db_err = err
-                    .as_database_error()
-                    .expect("expected database error from typecheck probe");
-                let code = db_err.code();
-                if ::anyhow::__private::not(
-                    code.as_deref() == Some("42883") || code.as_deref() == Some("42725"),
-                ) {
-                    return ::anyhow::__private::Err(
-                        ::anyhow::Error::msg(
-                            ::alloc::__export::must_use({
+                if spec.supports_ord() {
+                    let res = sqlx::query_scalar::<_, serde_json::Value>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await;
+                    if ::anyhow::__private::not(res.is_ok()) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "eql_v3.{0}({1}) on ord-capable variant must resolve, got {2:?}",
+                                            "min",
+                                            d,
+                                            res.err(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                } else {
+                    sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
+                    let err = sqlx::query_scalar::<_, String>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .expect_err(
+                            &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                        "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
                                         "min",
                                         d,
-                                        code,
-                                        db_err.message(),
                                     ),
                                 )
                             }),
-                        ),
-                    );
+                        );
+                    let db_err = err
+                        .as_database_error()
+                        .expect("expected database error from typecheck probe");
+                    let code = db_err.code();
+                    if ::anyhow::__private::not(
+                        code.as_deref() == Some("42883")
+                            || code.as_deref() == Some("42725"),
+                    ) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                            "min",
+                                            d,
+                                            code,
+                                            db_err.message(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                    sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
                 }
-                sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
                 tx.commit().await?;
                 Ok(())
             }
@@ -24213,9 +24282,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2823usize,
+            start_line: 2821usize,
             start_col: 22usize,
-            end_line: 2823usize,
+            end_line: 2821usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -24263,7 +24332,6 @@ pub mod int4 {
                     .bind(payload)
                     .execute(&mut *tx)
                     .await?;
-                sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -24272,44 +24340,68 @@ pub mod int4 {
                         ),
                     )
                 });
-                let err = sqlx::query_scalar::<_, String>(&sql)
-                    .fetch_one(&mut *tx)
-                    .await
-                    .expect_err(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
-                                    "max",
-                                    d,
-                                ),
-                            )
-                        }),
-                    );
-                let db_err = err
-                    .as_database_error()
-                    .expect("expected database error from typecheck probe");
-                let code = db_err.code();
-                if ::anyhow::__private::not(
-                    code.as_deref() == Some("42883") || code.as_deref() == Some("42725"),
-                ) {
-                    return ::anyhow::__private::Err(
-                        ::anyhow::Error::msg(
-                            ::alloc::__export::must_use({
+                if spec.supports_ord() {
+                    let res = sqlx::query_scalar::<_, serde_json::Value>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await;
+                    if ::anyhow::__private::not(res.is_ok()) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "eql_v3.{0}({1}) on ord-capable variant must resolve, got {2:?}",
+                                            "max",
+                                            d,
+                                            res.err(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                } else {
+                    sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
+                    let err = sqlx::query_scalar::<_, String>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .expect_err(
+                            &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                        "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
                                         "max",
                                         d,
-                                        code,
-                                        db_err.message(),
                                     ),
                                 )
                             }),
-                        ),
-                    );
+                        );
+                    let db_err = err
+                        .as_database_error()
+                        .expect("expected database error from typecheck probe");
+                    let code = db_err.code();
+                    if ::anyhow::__private::not(
+                        code.as_deref() == Some("42883")
+                            || code.as_deref() == Some("42725"),
+                    ) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                            "max",
+                                            d,
+                                            code,
+                                            db_err.message(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                    sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
                 }
-                sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
                 tx.commit().await?;
                 Ok(())
             }
@@ -24348,6 +24440,678 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_aggregate_typecheck_min"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_aggregate_typecheck_min: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_aggregate_typecheck_min",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2821usize,
+            start_col: 22usize,
+            end_line: 2821usize,
+            end_col: 83usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_aggregate_typecheck_min()),
+        ),
+    };
+    fn matrix_int4_ord_aggregate_typecheck_min() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_aggregate_typecheck_min(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::Ord);
+                let d = &spec.sql_domain;
+                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE typecheck_table (value {0}) ON COMMIT DROP",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO typecheck_table(value) VALUES ($1::jsonb::{0})",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .bind(payload)
+                    .execute(&mut *tx)
+                    .await?;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT eql_v3.{0}(value) FROM typecheck_table",
+                            "min",
+                        ),
+                    )
+                });
+                if spec.supports_ord() {
+                    let res = sqlx::query_scalar::<_, serde_json::Value>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await;
+                    if ::anyhow::__private::not(res.is_ok()) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "eql_v3.{0}({1}) on ord-capable variant must resolve, got {2:?}",
+                                            "min",
+                                            d,
+                                            res.err(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                } else {
+                    sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
+                    let err = sqlx::query_scalar::<_, String>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .expect_err(
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
+                                        "min",
+                                        d,
+                                    ),
+                                )
+                            }),
+                        );
+                    let db_err = err
+                        .as_database_error()
+                        .expect("expected database error from typecheck probe");
+                    let code = db_err.code();
+                    if ::anyhow::__private::not(
+                        code.as_deref() == Some("42883")
+                            || code.as_deref() == Some("42725"),
+                    ) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                            "min",
+                                            d,
+                                            code,
+                                            db_err.message(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                    sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_aggregate_typecheck_min",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_int4_ord_aggregate_typecheck_min;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_aggregate_typecheck_max"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_aggregate_typecheck_max: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_aggregate_typecheck_max",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2821usize,
+            start_col: 22usize,
+            end_line: 2821usize,
+            end_col: 83usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_aggregate_typecheck_max()),
+        ),
+    };
+    fn matrix_int4_ord_aggregate_typecheck_max() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_aggregate_typecheck_max(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::Ord);
+                let d = &spec.sql_domain;
+                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE typecheck_table (value {0}) ON COMMIT DROP",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO typecheck_table(value) VALUES ($1::jsonb::{0})",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .bind(payload)
+                    .execute(&mut *tx)
+                    .await?;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT eql_v3.{0}(value) FROM typecheck_table",
+                            "max",
+                        ),
+                    )
+                });
+                if spec.supports_ord() {
+                    let res = sqlx::query_scalar::<_, serde_json::Value>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await;
+                    if ::anyhow::__private::not(res.is_ok()) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "eql_v3.{0}({1}) on ord-capable variant must resolve, got {2:?}",
+                                            "max",
+                                            d,
+                                            res.err(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                } else {
+                    sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
+                    let err = sqlx::query_scalar::<_, String>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .expect_err(
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
+                                        "max",
+                                        d,
+                                    ),
+                                )
+                            }),
+                        );
+                    let db_err = err
+                        .as_database_error()
+                        .expect("expected database error from typecheck probe");
+                    let code = db_err.code();
+                    if ::anyhow::__private::not(
+                        code.as_deref() == Some("42883")
+                            || code.as_deref() == Some("42725"),
+                    ) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                            "max",
+                                            d,
+                                            code,
+                                            db_err.message(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                    sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_aggregate_typecheck_max",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_int4_ord_aggregate_typecheck_max;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_aggregate_typecheck_min"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_ore_aggregate_typecheck_min: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_ore_aggregate_typecheck_min",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2821usize,
+            start_col: 22usize,
+            end_line: 2821usize,
+            end_col: 83usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_ore_aggregate_typecheck_min()),
+        ),
+    };
+    fn matrix_int4_ord_ore_aggregate_typecheck_min() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_aggregate_typecheck_min(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::OrdOre);
+                let d = &spec.sql_domain;
+                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE typecheck_table (value {0}) ON COMMIT DROP",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO typecheck_table(value) VALUES ($1::jsonb::{0})",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .bind(payload)
+                    .execute(&mut *tx)
+                    .await?;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT eql_v3.{0}(value) FROM typecheck_table",
+                            "min",
+                        ),
+                    )
+                });
+                if spec.supports_ord() {
+                    let res = sqlx::query_scalar::<_, serde_json::Value>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await;
+                    if ::anyhow::__private::not(res.is_ok()) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "eql_v3.{0}({1}) on ord-capable variant must resolve, got {2:?}",
+                                            "min",
+                                            d,
+                                            res.err(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                } else {
+                    sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
+                    let err = sqlx::query_scalar::<_, String>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .expect_err(
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
+                                        "min",
+                                        d,
+                                    ),
+                                )
+                            }),
+                        );
+                    let db_err = err
+                        .as_database_error()
+                        .expect("expected database error from typecheck probe");
+                    let code = db_err.code();
+                    if ::anyhow::__private::not(
+                        code.as_deref() == Some("42883")
+                            || code.as_deref() == Some("42725"),
+                    ) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                            "min",
+                                            d,
+                                            code,
+                                            db_err.message(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                    sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_aggregate_typecheck_min",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_int4_ord_ore_aggregate_typecheck_min;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_aggregate_typecheck_max"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_ore_aggregate_typecheck_max: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_ore_aggregate_typecheck_max",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2821usize,
+            start_col: 22usize,
+            end_line: 2821usize,
+            end_col: 83usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_ore_aggregate_typecheck_max()),
+        ),
+    };
+    fn matrix_int4_ord_ore_aggregate_typecheck_max() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_aggregate_typecheck_max(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::OrdOre);
+                let d = &spec.sql_domain;
+                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE typecheck_table (value {0}) ON COMMIT DROP",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO typecheck_table(value) VALUES ($1::jsonb::{0})",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .bind(payload)
+                    .execute(&mut *tx)
+                    .await?;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT eql_v3.{0}(value) FROM typecheck_table",
+                            "max",
+                        ),
+                    )
+                });
+                if spec.supports_ord() {
+                    let res = sqlx::query_scalar::<_, serde_json::Value>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await;
+                    if ::anyhow::__private::not(res.is_ok()) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "eql_v3.{0}({1}) on ord-capable variant must resolve, got {2:?}",
+                                            "max",
+                                            d,
+                                            res.err(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                } else {
+                    sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
+                    let err = sqlx::query_scalar::<_, String>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .expect_err(
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
+                                        "max",
+                                        d,
+                                    ),
+                                )
+                            }),
+                        );
+                    let db_err = err
+                        .as_database_error()
+                        .expect("expected database error from typecheck probe");
+                    let code = db_err.code();
+                    if ::anyhow::__private::not(
+                        code.as_deref() == Some("42883")
+                            || code.as_deref() == Some("42725"),
+                    ) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                            "max",
+                                            d,
+                                            code,
+                                            db_err.message(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                    sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_aggregate_typecheck_max",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_int4_ord_ore_aggregate_typecheck_max;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::int4::matrix_int4_storage_count_typed_column"]
     #[doc(hidden)]
     pub const matrix_int4_storage_count_typed_column: test::TestDescAndFn = test::TestDescAndFn {
@@ -24358,9 +25122,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2924usize,
+            start_line: 2937usize,
             start_col: 22usize,
-            end_line: 2924usize,
+            end_line: 2937usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -24486,9 +25250,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2957usize,
+            start_line: 2970usize,
             start_col: 22usize,
-            end_line: 2957usize,
+            end_line: 2970usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -24590,9 +25354,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2924usize,
+            start_line: 2937usize,
             start_col: 22usize,
-            end_line: 2924usize,
+            end_line: 2937usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -24716,9 +25480,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2957usize,
+            start_line: 2970usize,
             start_col: 22usize,
-            end_line: 2957usize,
+            end_line: 2970usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -24820,9 +25584,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3001usize,
+            start_line: 3014usize,
             start_col: 22usize,
-            end_line: 3001usize,
+            end_line: 3014usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -24960,9 +25724,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2924usize,
+            start_line: 2937usize,
             start_col: 22usize,
-            end_line: 2924usize,
+            end_line: 2937usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -25086,9 +25850,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2957usize,
+            start_line: 2970usize,
             start_col: 22usize,
-            end_line: 2957usize,
+            end_line: 2970usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -25190,9 +25954,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3001usize,
+            start_line: 3014usize,
             start_col: 22usize,
-            end_line: 3001usize,
+            end_line: 3014usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -25330,9 +26094,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2924usize,
+            start_line: 2937usize,
             start_col: 22usize,
-            end_line: 2924usize,
+            end_line: 2937usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -25458,9 +26222,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2957usize,
+            start_line: 2970usize,
             start_col: 22usize,
-            end_line: 2957usize,
+            end_line: 2970usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -25562,9 +26326,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3001usize,
+            start_line: 3014usize,
             start_col: 22usize,
-            end_line: 3001usize,
+            end_line: 3014usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
