@@ -508,6 +508,31 @@ mod text_value_tests {
         );
     }
 
+    /// The `MatchScalar` haystack/needle/disjoint plaintexts must each be a
+    /// fixture row present verbatim, so `fetch_fixture_payload` can resolve each
+    /// one's ciphertext when the `_search`/`_match` arms run. The doc comments on
+    /// the trait promise this invariant; pin it so a fixture change that drops one
+    /// of the three fails here instead of at query time.
+    #[test]
+    fn text_match_pivots_are_in_fixture_values() {
+        let values = <String as ScalarType>::fixture_values();
+        let haystack = <String as MatchScalar>::haystack();
+        let needle = <String as MatchScalar>::needle();
+        let disjoint = <String as MatchScalar>::disjoint();
+        assert!(
+            values.contains(&haystack),
+            "haystack {haystack:?} must be a fixture"
+        );
+        assert!(
+            values.contains(&needle),
+            "needle {needle:?} must be a fixture"
+        );
+        assert!(
+            values.contains(&disjoint),
+            "disjoint {disjoint:?} must be a fixture"
+        );
+    }
+
     /// The harness value list matches the catalog `TEXT_VALUES` in order — the
     /// oracle cannot drift from the catalog the fixture generator encrypts.
     #[test]
