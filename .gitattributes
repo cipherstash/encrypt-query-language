@@ -15,3 +15,9 @@
 tests/codegen/reference/**/*.sql linguist-generated
 tests/sqlx/snapshots/*_expanded.rs linguist-generated
 tests/sqlx/snapshots/matrix_tests*.txt linguist-generated
+
+# Append-only changelog: every user-facing PR adds an entry under `[Unreleased]`,
+# so concurrent branches conflict on the same region constantly. `merge=union`
+# keeps BOTH sides' added lines instead of raising a conflict. Order/dedupe is
+# tidied by hand at release time, when `[Unreleased]` is cut into a version.
+CHANGELOG.md merge=union
