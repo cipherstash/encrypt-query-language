@@ -8,3 +8,6 @@ description = "Scalar/term catalog for EQL encrypted-domain codegen (std-only, n
 # generator (eql-codegen) compiles in ~1-2s and never drags serde/toml onto the
 # SQL build's critical path. Do not add deps here.
 [dependencies]
+
+[lints]
+workspace = true
