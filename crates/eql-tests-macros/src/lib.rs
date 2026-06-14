@@ -481,6 +481,17 @@ mod tests {
     }
 
     #[test]
+    fn has_search_is_read_from_catalog() {
+        // The `_search` capability is read from the catalog row's declared
+        // domains, never from a `[marker]` on the dispatch entry. Only `text`
+        // declares a combined `_search` domain today; ordered/eq-only scalars
+        // do not, so they must route to the non-search arm.
+        assert!(has_search_token("text"));
+        assert!(!has_search_token("int4"));
+        assert!(!has_search_token("date"));
+    }
+
+    #[test]
     fn text_entry_skips_impl_and_stamps_text_fixture() {
         // No marker: `text`'s shape is read from eql-scalars::CATALOG.
         let list = syn::parse_str::<ScalarList>("int4 => i32, text => String").unwrap();
