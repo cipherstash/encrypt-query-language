@@ -7,7 +7,6 @@ use sqlx::PgPool;
 pub mod assertions;
 pub mod fixtures;
 pub mod helpers;
-pub mod index_types;
 pub mod matrix;
 pub mod scalar_domains;
 #[macro_use]
@@ -37,7 +36,6 @@ pub use helpers::{
     read_pg_stat_statements, reset_pg_stat_statements, ExplainStats, PgStatEntry,
     PLACEHOLDER_PAYLOAD,
 };
-pub use index_types as IndexTypes;
 pub use scalar_domains::{
     assert_null, assert_raises, assert_scalar_plaintexts, blocker_msg, commute_op,
     fetch_fixture_payload, sql_string_literal, ScalarDomainSpec, ScalarType, Variant,
