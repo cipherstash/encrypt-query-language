@@ -178,7 +178,8 @@ async fn ore_terms_array_null_and_empty_base_cases(pool: PgPool) -> Result<()> {
 }
 
 /// T5 — SEM presence checks (`has_ore_block_256`, `has_hmac_256`), the
-/// extractor's missing-`ob` RAISE, and its NULL-jsonb short-circuit.
+/// extractor's missing-`ob` and non-array-`ob` RAISEs, and its NULL-jsonb
+/// short-circuit.
 #[sqlx::test]
 async fn sem_presence_checks_and_missing_ob_behaviour(pool: PgPool) -> Result<()> {
     let bool_cases = [
@@ -187,9 +188,18 @@ async fn sem_presence_checks_and_missing_ob_behaviour(pool: PgPool) -> Result<()
             true,
         ),
         (r#"SELECT eql_v3.has_ore_block_256('{}'::jsonb)"#, false),
-        // json-null `ob` → `->>` yields NULL → absent.
+        // json-null `ob` is typed `'null'`, not `'array'` → absent.
         (
             r#"SELECT eql_v3.has_ore_block_256('{"ob":null}'::jsonb)"#,
+            false,
+        ),
+        // Present-but-non-array `ob` is rejected as absent: a well-formed ORE
+        // term is always a JSON array of block terms, so a scalar and an object
+        // both → false. This is the boundary that makes `ore_block_256` RAISE on
+        // a malformed `ob` instead of degrading it to a NULL index term.
+        (r#"SELECT eql_v3.has_ore_block_256('{"ob":5}'::jsonb)"#, false),
+        (
+            r#"SELECT eql_v3.has_ore_block_256('{"ob":{}}'::jsonb)"#,
             false,
         ),
         (r#"SELECT eql_v3.has_hmac_256('{"hm":"abc"}'::jsonb)"#, true),
@@ -204,6 +214,16 @@ async fn sem_presence_checks_and_missing_ob_behaviour(pool: PgPool) -> Result<()
     assert_raises(
         &pool,
         r#"SELECT eql_v3.ore_block_256('{"foo":1}'::jsonb)"#,
+        &[],
+        "Expected an ore index (ob) value",
+    )
+    .await?;
+
+    // Present-but-non-array `ob` → RAISE at the extractor boundary, NOT a silent
+    // NULL index term (`has_ore_block_256` reports it absent).
+    assert_raises(
+        &pool,
+        r#"SELECT eql_v3.ore_block_256('{"ob":5}'::jsonb)"#,
         &[],
         "Expected an ore index (ob) value",
     )
