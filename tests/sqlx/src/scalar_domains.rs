@@ -319,11 +319,11 @@ temporal_values! {
 }
 
 // `timestamptz`'s `ScalarType` wiring, generated from its catalog row by the
-// same `temporal_values!` path as `date`. timestamptz is equality-only (its
-// catalog row uses the eq-only domain shape), but the *value* wiring is
+// same `temporal_values!` path as `date`. timestamptz is ordered (its catalog
+// row uses the ordered domain shape, 12-block ORE), and the *value* wiring is
 // identical to any temporal scalar: RFC3339 strings parsed once into
 // `DateTime<Utc>` behind `timestamptz_values()`. The pivots are retained as the
-// three equality anchors the matrix sweeps.
+// three min/mid/max anchors the matrix sweeps.
 temporal_values! {
     cell      = TIMESTAMPTZ_VALUES_CELL,
     accessor  = timestamptz_values,
