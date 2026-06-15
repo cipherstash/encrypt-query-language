@@ -197,7 +197,10 @@ async fn sem_presence_checks_and_missing_ob_behaviour(pool: PgPool) -> Result<()
         // term is always a JSON array of block terms, so a scalar and an object
         // both → false. This is the boundary that makes `ore_block_256` RAISE on
         // a malformed `ob` instead of degrading it to a NULL index term.
-        (r#"SELECT eql_v3.has_ore_block_256('{"ob":5}'::jsonb)"#, false),
+        (
+            r#"SELECT eql_v3.has_ore_block_256('{"ob":5}'::jsonb)"#,
+            false,
+        ),
         (
             r#"SELECT eql_v3.has_ore_block_256('{"ob":{}}'::jsonb)"#,
             false,
