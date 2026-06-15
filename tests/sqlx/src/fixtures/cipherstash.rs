@@ -29,7 +29,7 @@ use cipherstash_client::eql::{
     encrypt_eql, EqlCiphertext, EqlEncryptOpts, EqlOperation, EqlOutput, Identifier,
     PreparedPlaintext,
 };
-use cipherstash_client::schema::column::{Index, IndexType};
+use cipherstash_client::schema::column::{ArrayIndexMode, Index, IndexType, SteVecMode};
 use cipherstash_client::schema::{ColumnConfig, ColumnType};
 use cipherstash_client::zerokms::{EnvKeyProvider, ZeroKMSBuilder};
 use cipherstash_client::AutoStrategy;
@@ -56,6 +56,15 @@ async fn build_cipher() -> Result<Arc<ScopedCipher<AutoStrategy>>> {
 /// `ColumnConfig` built for encryption and the `INSERT` target column in the
 /// driver cannot drift apart.
 pub const PAYLOAD_COLUMN: &str = "payload";
+
+/// The SteVec index domain-separation prefix used for the `v3_ste_vec`
+/// document fixture. The value is not externally constrained: the v3 jsonb
+/// harness re-derives its selector constants from the *generated* fixture and
+/// forges its own ORE ladder, so the fixture only needs to be *internally
+/// consistent* — a single fixed prefix applied to all rows yields stable
+/// per-path selectors. Any well-formed prefix that produces extractor-
+/// compatible `hm`/`oc` leaves works.
+pub const STE_VEC_PREFIX: &str = "v3_ste_vec";
 
 /// Build a `ColumnConfig` from the fixture spec's index list + cast.
 ///
@@ -111,6 +120,17 @@ fn index_type_for(kind: IndexKind) -> IndexType {
         IndexKind::Unique => Index::new_unique().index_type,
         IndexKind::Ore => IndexType::Ore,
         IndexKind::Match => Index::new_match().index_type,
+        // No `Index::new_ste_vec()` constructor exists — SteVec is a struct
+        // variant. `mode: SteVecMode::Standard` (the default) yields the
+        // ORE-CLLW (`oc`) terms the `eql_v3.ore_cllw` extractor consumes;
+        // `ArrayIndexMode::default()` (NONE) + no term filters keep the
+        // document index minimal.
+        IndexKind::SteVec => IndexType::SteVec {
+            prefix: STE_VEC_PREFIX.to_string(),
+            term_filters: vec![],
+            array_index_mode: ArrayIndexMode::default(),
+            mode: SteVecMode::default(),
+        },
     }
 }
 

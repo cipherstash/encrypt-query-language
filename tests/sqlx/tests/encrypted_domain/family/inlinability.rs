@@ -110,9 +110,28 @@ async fn no_encrypted_domain_inline_critical_function_is_pinned(pool: PgPool) ->
 async fn eql_v3_sem_inline_critical_functions_are_unpinned(pool: PgPool) -> Result<()> {
     let rows: Vec<(String,)> = sqlx::query_as(
         r#"
+        WITH expected(proname, pronargs, arg0, arg1) AS (
+          VALUES
+            ('jsonb_array_to_bytea_array', 1, 'jsonb'::regtype, 0::oid),
+            ('jsonb_array_to_ore_block_u64_8_256', 1, 'jsonb'::regtype, 0::oid),
+            ('ore_cllw', 1, 'jsonb'::regtype, 0::oid),
+            ('has_ore_cllw', 1, 'jsonb'::regtype, 0::oid),
+            ('meta_data', 1, 'jsonb'::regtype, 0::oid),
+            ('jsonb_array', 1, 'jsonb'::regtype, 0::oid),
+            ('jsonb_contains', 2, 'jsonb'::regtype, 'jsonb'::regtype),
+            ('jsonb_contained_by', 2, 'jsonb'::regtype, 'jsonb'::regtype),
+            ('jsonb_path_query', 2, 'jsonb'::regtype, 'text'::regtype),
+            ('jsonb_path_exists', 2, 'jsonb'::regtype, 'text'::regtype),
+            ('jsonb_path_query_first', 2, 'jsonb'::regtype, 'text'::regtype)
+        )
         SELECT p.proname || '(' || pg_catalog.pg_get_function_arguments(p.oid) || ')'
         FROM pg_catalog.pg_proc p
         JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+        LEFT JOIN expected e
+          ON e.proname = p.proname
+         AND e.pronargs = p.pronargs
+         AND e.arg0 = p.proargtypes[0]
+         AND (e.pronargs = 1 OR e.arg1 = p.proargtypes[1])
         WHERE n.nspname = 'eql_v3'
           AND (
             (p.pronargs = 2 AND p.proname IN (
@@ -131,6 +150,7 @@ async fn eql_v3_sem_inline_critical_functions_are_unpinned(pool: PgPool) -> Resu
               'jsonb_array_to_bytea_array',
               'jsonb_array_to_ore_block_u64_8_256')
                 AND p.proargtypes[0] = 'jsonb'::regtype)
+            OR e.proname IS NOT NULL
           )
           AND (
             -- offender: pinned search_path, or not inlinable SQL/IMMUTABLE
@@ -170,9 +190,19 @@ async fn eql_v3_sem_inline_critical_helpers_carry_marker(pool: PgPool) -> Result
     // not inlinable SQL/IMMUTABLE is an offender.
     let offenders: Vec<(String, Option<String>, String, String)> = sqlx::query_as(
         r#"
-        WITH expected(proname) AS (
-          VALUES ('jsonb_array_to_bytea_array'),
-                 ('jsonb_array_to_ore_block_u64_8_256')
+        WITH expected(proname, pronargs, arg0, arg1) AS (
+          VALUES
+            ('jsonb_array_to_bytea_array', 1, 'jsonb'::regtype, 0::oid),
+            ('jsonb_array_to_ore_block_u64_8_256', 1, 'jsonb'::regtype, 0::oid),
+            ('ore_cllw', 1, 'jsonb'::regtype, 0::oid),
+            ('has_ore_cllw', 1, 'jsonb'::regtype, 0::oid),
+            ('meta_data', 1, 'jsonb'::regtype, 0::oid),
+            ('jsonb_array', 1, 'jsonb'::regtype, 0::oid),
+            ('jsonb_contains', 2, 'jsonb'::regtype, 'jsonb'::regtype),
+            ('jsonb_contained_by', 2, 'jsonb'::regtype, 'jsonb'::regtype),
+            ('jsonb_path_query', 2, 'jsonb'::regtype, 'text'::regtype),
+            ('jsonb_path_exists', 2, 'jsonb'::regtype, 'text'::regtype),
+            ('jsonb_path_query_first', 2, 'jsonb'::regtype, 'text'::regtype)
         )
         SELECT e.proname AS proname,
                d.description AS marker,
@@ -182,8 +212,9 @@ async fn eql_v3_sem_inline_critical_helpers_carry_marker(pool: PgPool) -> Result
         LEFT JOIN pg_catalog.pg_proc p
           ON p.proname = e.proname
          AND p.pronamespace = 'eql_v3'::regnamespace
-         AND p.pronargs = 1
-         AND p.proargtypes[0] = 'jsonb'::regtype
+         AND p.pronargs = e.pronargs
+         AND p.proargtypes[0] = e.arg0
+         AND (e.pronargs = 1 OR p.proargtypes[1] = e.arg1)
         LEFT JOIN pg_catalog.pg_language l ON l.oid = p.prolang
         LEFT JOIN pg_catalog.pg_description d
           ON d.objoid = p.oid AND d.classoid = 'pg_proc'::regclass

@@ -450,7 +450,7 @@ async fn ore_comparators_are_immutable(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-/// T7 — Bloom-filter SEM extractor (`eql_v3.bloom_filter(jsonb)`): reads the
+/// T9 — Bloom-filter SEM extractor (`eql_v3.bloom_filter(jsonb)`): reads the
 /// `bf` array out of a payload. Inlinable SQL mirroring `hmac_256` — NULL on a
 /// missing key, not a raise (the `match` capability is tied to the domain,
 /// whose CHECK guarantees `bf`).
@@ -515,7 +515,7 @@ async fn bloom_filter_extractor_empty_array_is_empty_not_null(pool: PgPool) -> R
     Ok(())
 }
 
-/// T8 — `eql_v3.has_bloom_filter(jsonb)` presence predicate. Mirrors the
+/// T10 — `eql_v3.has_bloom_filter(jsonb)` presence predicate. Mirrors the
 /// `has_hmac_256` / `has_ore_block_u64_8_256` coverage in T5: its two-part guard
 /// (`val ? 'bf'` AND `val ->> 'bf' IS NOT NULL`) is exercised across present,
 /// absent, and json-null cases. The `{"bf":null}` → false case pins the
@@ -544,5 +544,56 @@ async fn has_bloom_filter_detects_bf_presence(pool: PgPool) -> Result<()> {
         let got: bool = sqlx::query_scalar(sql).fetch_one(&pool).await?;
         assert_eq!(got, expected, "presence check: {sql}");
     }
+    Ok(())
+}
+
+/// T11 — Planner-selectivity metadata for the `eql_v3.ore_block_u64_8_256`
+/// `=` / `<>` operators. `<>` must use the inequality estimators
+/// (`neqsel` / `neqjoinsel`) and must NOT declare `HASHES` — an earlier revision
+/// copied `=`'s `eqsel` / `eqjoinsel` + `HASHES` onto `<>`, which is meaningless
+/// (you cannot hash-join on inequality) and mis-estimates selectivity (#267
+/// review / aa13065). `=` is the contrast: it keeps `eqsel` / `eqjoinsel` and
+/// `HASHES`. A catalog pin (deterministic, no plan dependence).
+#[sqlx::test]
+async fn ore_block_comparison_operators_declare_correct_selectivity(pool: PgPool) -> Result<()> {
+    let (eq_rest, eq_join, eq_hashes, eq_merges): (String, String, bool, bool) = sqlx::query_as(
+        r#"
+        SELECT o.oprrest::text, o.oprjoin::text, o.oprcanhash, o.oprcanmerge
+        FROM pg_operator o
+        WHERE o.oprname = '='
+          AND o.oprleft  = 'eql_v3.ore_block_u64_8_256'::regtype
+          AND o.oprright = 'eql_v3.ore_block_u64_8_256'::regtype
+        "#,
+    )
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(eq_rest, "eqsel", "= must use eqsel");
+    assert_eq!(eq_join, "eqjoinsel", "= must use eqjoinsel");
+    assert!(eq_hashes, "= must declare HASHES");
+    assert!(eq_merges, "= must declare MERGES");
+
+    let (neq_rest, neq_join, neq_hashes): (String, String, bool) = sqlx::query_as(
+        r#"
+        SELECT o.oprrest::text, o.oprjoin::text, o.oprcanhash
+        FROM pg_operator o
+        WHERE o.oprname = '<>'
+          AND o.oprleft  = 'eql_v3.ore_block_u64_8_256'::regtype
+          AND o.oprright = 'eql_v3.ore_block_u64_8_256'::regtype
+        "#,
+    )
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(
+        neq_rest, "neqsel",
+        "<> must use neqsel (not eqsel — it estimates the inequality fraction)"
+    );
+    assert_eq!(
+        neq_join, "neqjoinsel",
+        "<> must use neqjoinsel (not eqjoinsel)"
+    );
+    assert!(
+        !neq_hashes,
+        "<> must NOT declare HASHES — hash joins are meaningless for inequality"
+    );
     Ok(())
 }

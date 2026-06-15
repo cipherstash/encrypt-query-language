@@ -266,6 +266,51 @@ fi
 echo "Matrix inventory OK: ${checked} type(s) match the canonical snapshot or its derived eq-only subset; catalog reconciled."
 """
 
+[tasks."test:matrix:inventory:jsonb_entry"]
+description = "Verify jsonb-entry matrix test-name set against its own snapshot (no scalar catalog cross-check)"
+dir = "{{config_root}}/tests/sqlx"
+run = """
+#!/usr/bin/env bash
+# The jsonb-entry behaviour matrix (jsonb_entry_matrix!) is a SIBLING of the
+# scalar matrix inventory, NOT folded into it: JsonbEntryInt4 is deliberately
+# not a eql-scalars::CATALOG type, so it has no scalars::<T>:: tests and no
+# `eql-codegen list-types` row. Its names live under `jsonb_entry::…` and are
+# pinned by this isolated snapshot (no catalog cross-check). No database needed.
+set -euo pipefail
+test -f snapshots/matrix_jsonb_entry_tests.txt || { echo "snapshots/matrix_jsonb_entry_tests.txt missing — regenerate." >&2; exit 1; }
+listing=$(cargo test --no-default-features --test encrypted_domain -- --list | sed -n 's/: test$//p')
+printf '%s\\n' "$listing" \
+  | grep '^jsonb_entry::.*jsonb_entry_int4' \
+  | sed -E 's/_int4_/_<T>_/' \
+  | LC_ALL=C sort -u > /tmp/matrix-jsonb-entry-current.txt
+if ! cmp -s /tmp/matrix-jsonb-entry-current.txt snapshots/matrix_jsonb_entry_tests.txt; then
+  echo "JSONB-entry matrix test-name set differs from snapshots/matrix_jsonb_entry_tests.txt." >&2
+  diff snapshots/matrix_jsonb_entry_tests.txt /tmp/matrix-jsonb-entry-current.txt >&2 || true
+  exit 1
+fi
+echo "JSONB-entry matrix inventory OK."
+"""
+
+[tasks."test:v3-jsonb:inventory"]
+description = "Verify the v3 jsonb SQLx test-name inventory snapshot (no database required)"
+dir = "{{config_root}}/tests/sqlx"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+test -f snapshots/v3_jsonb_tests.txt || { echo "snapshots/v3_jsonb_tests.txt missing — regenerate and commit it." >&2; exit 1; }
+
+tmp=$(mktemp)
+trap 'rm -f "$tmp"' EXIT
+
+cargo test --test v3_jsonb_tests --test v3_jsonb_operator_surface_tests -- --list \
+  | sed -n 's/: test$//p' \
+  | LC_ALL=C sort > "$tmp"
+
+diff -u snapshots/v3_jsonb_tests.txt "$tmp"
+echo "v3 jsonb inventory OK"
+"""
+
 [tasks."test:matrix:expand"]
 description = "Regenerate the int4 matrix cargo-expand snapshot (requires the pinned nightly + cargo-expand)"
 dir = "{{config_root}}/tests/sqlx"
