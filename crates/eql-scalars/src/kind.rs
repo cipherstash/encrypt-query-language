@@ -97,11 +97,11 @@ impl ScalarKind {
     }
 
     /// A debug/identifier string for the kind: the canonical Rust plaintext type
-    /// name (`"i32"`, `"chrono::NaiveDate"`). `Numeric`/`Jsonb` have **no
-    /// generated SQL surface** and no catalog row, so calling this on them is a
-    /// programming error and panics loudly rather than returning a plausible SQL
-    /// token a premature caller might feed into codegen. Only call site today is
-    /// `crates/eql-scalars/src/tests.rs`.
+    /// name (`"i32"`, `"chrono::NaiveDate"`, `"rust_decimal::Decimal"`). `Jsonb`
+    /// has **no generated SQL surface** and no catalog row, so calling this on it
+    /// is a programming error and panics loudly rather than returning a plausible
+    /// SQL token a premature caller might feed into codegen. Only call site today
+    /// is `crates/eql-scalars/src/tests.rs`.
     pub const fn rust_type(self) -> &'static str {
         match self {
             ScalarKind::I16 => "i16",
@@ -110,8 +110,9 @@ impl ScalarKind {
             ScalarKind::Text => "text",
             ScalarKind::Date => "chrono::NaiveDate",
             ScalarKind::Timestamptz => "chrono::DateTime<Utc>",
-            ScalarKind::Numeric | ScalarKind::Jsonb => {
-                panic!("ScalarKind::rust_type: numeric/jsonb have no generated surface yet")
+            ScalarKind::Numeric => "rust_decimal::Decimal",
+            ScalarKind::Jsonb => {
+                panic!("ScalarKind::rust_type: jsonb has no generated surface yet")
             }
         }
     }
