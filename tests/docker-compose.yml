@@ -47,6 +47,41 @@ services:
     image: postgres:14
     container_name: postgres-14
 
+  # Net-new logging server for `mise run test:capture` (Stage 2 of the
+  # log-as-arbiter design). Gated behind the `capture` profile so a bare
+  # `docker compose up` never starts it — normal `mise run test` stays fast
+  # and unpolluted. The GUCs make the server log a complete, self-describing
+  # witness of every statement that reached the engine plus the executed plan
+  # of index/scale predicates:
+  #   log_statement=all              — every statement is logged verbatim
+  #                                    (echoes the inline /* eqlmatrix:... */ tag)
+  #   log_min_duration_statement=0   — durations on every statement
+  #   log_line_prefix='%m [%p] %x '  — timestamp, pid, xid: LOCAL adjacency only,
+  #                                    never the ledger join key (that is the tag)
+  #   session_preload_libraries=auto_explain — load auto_explain per session
+  #   auto_explain.log_min_duration=0 — explain every statement
+  #   auto_explain.log_format=json    — machine-readable plans
+  # (log_nested_statements is intentionally LEFT AT THE DEFAULT `off` — see the
+  #  note below; nested logging is not needed for Stage 2 and complicates the
+  #  ledger join.)
+  # Logs go to stderr (the default for a containerized postgres), which
+  # `test:capture` harvests via `docker logs`.
+  postgres-logging:
+    <<: *postgres
+    image: postgres:17
+    container_name: postgres-logging
+    profiles: ["capture"]
+    command: >
+      postgres
+      -c log_statement=all
+      -c log_min_duration_statement=0
+      -c log_line_prefix='%m [%p] %x '
+      -c session_preload_libraries=auto_explain
+      -c auto_explain.log_min_duration=0
+      -c auto_explain.log_format=json
+    ports:
+      - "7433:7432"
+
 networks:
   postgres:
     driver: bridge

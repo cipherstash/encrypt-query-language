@@ -255,6 +255,12 @@ src/deps-ordered-protect.txt
 # Cargo workspace root build artifacts
 /target/
 
+# Stage 2 log-capture artifacts (raw server log + normalized ledger). All
+# under target/, gitignored per the design's Artifacts policy table. The
+# <T>-collapsed manifest and golden audit report (committed) arrive in later
+# stages and live elsewhere (tests/sqlx/snapshots, docs/audits).
+target/log-capture/
+
 # Prebuilt nextest archive (transient build-once output for the sharded sqlx
 # suite; uploaded as a CI artifact, never committed — see tasks/test/sqlx-archive.sh)
 nextest.tar.zst
