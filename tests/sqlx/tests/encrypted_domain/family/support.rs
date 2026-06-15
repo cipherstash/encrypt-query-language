@@ -129,7 +129,7 @@ async fn fetch_fixture_payload_returns_keyed_row(pool: PgPool) -> Result<()> {
 async fn assert_scalar_plaintexts_reports_sql_context(pool: PgPool) -> Result<()> {
     let lit = sql_string_literal(&fetch_fixture_payload::<i32>(&pool, 42).await?);
     let predicate = format!("payload::eql_v3.int4_ord_ore = {lit}::jsonb::eql_v3.int4_ord_ore");
-    assert_scalar_plaintexts::<i32>(&pool, "eql_v3.int4_ord_ore", "=", &predicate, &[42]).await?;
+    assert_scalar_plaintexts::<i32>(&pool, None, "eql_v3.int4_ord_ore", "=", &predicate, &[42]).await?;
     Ok(())
 }
 
@@ -168,6 +168,7 @@ async fn assert_raises_two_bind_blocker(pool: PgPool) -> Result<()> {
     let msg = blocker_msg("eql_v3.int4", "=");
     assert_raises(
         &pool,
+        None,
         "SELECT $1::jsonb::eql_v3.int4 = $2::jsonb::eql_v3.int4",
         &[Some(PLACEHOLDER_PAYLOAD), Some(PLACEHOLDER_PAYLOAD)],
         &msg,
@@ -180,6 +181,7 @@ async fn assert_raises_one_bind_path_blocker(pool: PgPool) -> Result<()> {
     let msg = blocker_msg("eql_v3.int4", "->");
     assert_raises(
         &pool,
+        None,
         "SELECT $1::jsonb::eql_v3.int4 -> 'field'::text",
         &[Some(PLACEHOLDER_PAYLOAD)],
         &msg,
@@ -193,6 +195,7 @@ async fn assert_raises_native_operator_absent(pool: PgPool) -> Result<()> {
     // "operator does not exist", not an EQL blocker message.
     assert_raises(
         &pool,
+        None,
         "SELECT $1::jsonb::eql_v3.int4 ~~ $2::jsonb::eql_v3.int4",
         &[Some(PLACEHOLDER_PAYLOAD), Some(PLACEHOLDER_PAYLOAD)],
         "operator does not exist",
@@ -276,7 +279,7 @@ async fn omitted_native_jsonb_operators_raise_eql_blockers(pool: PgPool) -> Resu
     ];
 
     for (sql, binds, op) in cases {
-        assert_raises(&pool, sql, binds, &blocker_msg("eql_v3.int4", op)).await?;
+        assert_raises(&pool, None, sql, binds, &blocker_msg("eql_v3.int4", op)).await?;
     }
     Ok(())
 }
@@ -287,6 +290,7 @@ async fn assert_raises_engages_on_all_null(pool: PgPool) -> Result<()> {
     let msg = blocker_msg("eql_v3.int4", "=");
     assert_raises(
         &pool,
+        None,
         "SELECT $1::jsonb::eql_v3.int4 = $2::jsonb::eql_v3.int4",
         &[None, None],
         &msg,
@@ -299,6 +303,7 @@ async fn assert_null_propagates_through_supported_op(pool: PgPool) -> Result<()>
     // STRICT supported op with one NULL operand yields NULL.
     assert_null(
         &pool,
+        None,
         "SELECT $1::jsonb::eql_v3.int4_eq = $2::jsonb::eql_v3.int4_eq",
         &[Some(PLACEHOLDER_PAYLOAD), None],
     )
@@ -317,6 +322,7 @@ async fn neq_propagates_null_under_three_valued_logic(pool: PgPool) -> Result<()
     ] {
         assert_null(
             &pool,
+            None,
             "SELECT $1::jsonb::eql_v3.int4_eq <> $2::jsonb::eql_v3.int4_eq",
             binds,
         )

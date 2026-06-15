@@ -680,7 +680,7 @@ macro_rules! v3_jsonb_supported_null {
             async fn [<v3_jsonb_ $name _supported_null>](pool: PgPool) -> anyhow::Result<()> {
                 // Supported operators are STRICT: a NULL operand yields NULL, not
                 // an error and not a non-NULL result.
-                eql_tests::assert_null(&pool, $sql, &[]).await
+                eql_tests::assert_null(&pool, None, $sql, &[]).await
             }
         } )+
     };
@@ -761,21 +761,21 @@ macro_rules! v3_jsonb_blocker_cases {
 
                 // Domain on the left, real-typed RHS — must raise.
                 let sql = format!("SELECT {lhs} {} {}", $op, $rhs);
-                eql_tests::assert_raises(&pool, &sql, &[], msg).await?;
+                eql_tests::assert_raises(&pool, None, &sql, &[], msg).await?;
 
                 // Non-STRICT proof: NULL domain LHS must STILL raise (a STRICT
                 // blocker would short-circuit to NULL and bypass the exception).
                 let null_lhs = format!("SELECT NULL::eql_v3.json {} {}", $op, $rhs);
-                eql_tests::assert_raises(&pool, &null_lhs, &[], msg).await?;
+                eql_tests::assert_raises(&pool, None, &null_lhs, &[], msg).await?;
 
                 // Domain on the RIGHT, only where the surface defines that form.
                 let rhs_dom: Option<&str> = $rhs_domain;
                 if let Some(_) = rhs_dom {
                     let sql = format!("SELECT {} {} '{}'::eql_v3.json", $rhs, $op, NN_DOC);
-                    eql_tests::assert_raises(&pool, &sql, &[], msg).await?;
+                    eql_tests::assert_raises(&pool, None, &sql, &[], msg).await?;
                     // Non-STRICT proof for the right-domain form.
                     let null_rhs = format!("SELECT {} {} NULL::eql_v3.json", $rhs, $op);
-                    eql_tests::assert_raises(&pool, &null_rhs, &[], msg).await?;
+                    eql_tests::assert_raises(&pool, None, &null_rhs, &[], msg).await?;
                 }
                 Ok(())
             }
@@ -862,7 +862,7 @@ async fn v3_jsonb_root_doc_doc_comparison_blockers(pool: PgPool) -> anyhow::Resu
     let rhs = format!("'{}'::eql_v3.json", NN_DOC);
     for op in ["=", "<>", "<", "<=", ">", ">="] {
         let sql = format!("SELECT {lhs} {op} {rhs}");
-        eql_tests::assert_raises(&pool, &sql, &[], "is not supported").await?;
+        eql_tests::assert_raises(&pool, None, &sql, &[], "is not supported").await?;
     }
     Ok(())
 }
@@ -878,7 +878,7 @@ macro_rules! v3_jsonb_payload_reject {
         async fn $fn(pool: PgPool) -> anyhow::Result<()> {
             for payload in [ $( $payload ),+ ] {
                 let sql = format!("SELECT '{}'::{}", payload, $domain);
-                eql_tests::assert_raises(&pool, &sql, &[], "violates check constraint")
+                eql_tests::assert_raises(&pool, None, &sql, &[], "violates check constraint")
                     .await
                     .map_err(|e| anyhow::anyhow!("payload {:?} for {} should reject: {}", payload, $domain, e))?;
             }
@@ -1100,12 +1100,12 @@ async fn v3_jsonb_array_length_non_array_raises(pool: PgPool) -> anyhow::Result<
     // A document WITHOUT the `a:true` array flag is not an array.
     let not_array = r#"{"i":{},"v":2,"sv":[{"s":"aa","c":"x","hm":"00"}]}"#;
     let sql = format!("SELECT eql_v3.jsonb_array_length('{not_array}'::eql_v3.json::jsonb)");
-    eql_tests::assert_raises(&pool, &sql, &[], "non-array").await?;
+    eql_tests::assert_raises(&pool, None, &sql, &[], "non-array").await?;
 
     let sql2 = format!(
         "SELECT count(*) FROM eql_v3.jsonb_array_elements('{not_array}'::eql_v3.json::jsonb)"
     );
-    eql_tests::assert_raises(&pool, &sql2, &[], "non-array").await?;
+    eql_tests::assert_raises(&pool, None, &sql2, &[], "non-array").await?;
     Ok(())
 }
 
@@ -1234,6 +1234,7 @@ async fn v3_jsonb_arrow_integer_index_on_array(pool: PgPool) -> anyhow::Result<(
 async fn v3_jsonb_ore_cllw_null_bytes_composite_raises(pool: PgPool) -> anyhow::Result<()> {
     eql_tests::assert_raises(
         &pool,
+        None,
         "SELECT eql_v3.compare_ore_cllw_term(
            ROW(NULL)::eql_v3.ore_cllw,
            ROW(decode('00', 'hex'))::eql_v3.ore_cllw

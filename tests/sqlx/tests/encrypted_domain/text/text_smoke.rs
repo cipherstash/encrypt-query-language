@@ -81,8 +81,8 @@ async fn match_null_propagates(pool: PgPool) -> anyhow::Result<()> {
     for op in ["@>", "<@"] {
         let sql =
             format!("SELECT ($1::jsonb::eql_v3.text_match) {op} ($2::jsonb::eql_v3.text_match)");
-        eql_tests::assert_null(&pool, &sql, &[None, Some(BF)]).await?;
-        eql_tests::assert_null(&pool, &sql, &[Some(BF), None]).await?;
+        eql_tests::assert_null(&pool, None, &sql, &[None, Some(BF)]).await?;
+        eql_tests::assert_null(&pool, None, &sql, &[Some(BF), None]).await?;
     }
     Ok(())
 }
@@ -165,6 +165,7 @@ async fn text_match_like_ilike_absent(pool: PgPool) -> anyhow::Result<()> {
         let sql = format!("SELECT $1::jsonb::eql_v3.text_match {op} $2::jsonb::eql_v3.text_match");
         eql_tests::assert_raises(
             &pool,
+            None,
             &sql,
             &[Some(BF), Some(BF)],
             "operator does not exist",
@@ -183,6 +184,7 @@ async fn text_match_payload_check_rejects_missing_bf(pool: PgPool) -> anyhow::Re
     const NO_BF: &str = r#"{"v":"2","i":{},"c":"x"}"#;
     eql_tests::assert_raises(
         &pool,
+        None,
         "SELECT $1::jsonb::eql_v3.text_match",
         &[Some(NO_BF)],
         "violates check constraint",

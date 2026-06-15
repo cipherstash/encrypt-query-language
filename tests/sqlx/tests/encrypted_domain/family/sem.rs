@@ -101,7 +101,7 @@ async fn ore_term_comparator_rejects_different_length_ciphertexts(pool: PgPool) 
         term("aabbccdd"),   // 4 bytes
         term("aabbccddee"), // 5 bytes
     );
-    assert_raises(&pool, &sql, &[], "Ciphertexts are different lengths").await?;
+    assert_raises(&pool, None, &sql, &[], "Ciphertexts are different lengths").await?;
     Ok(())
 }
 
@@ -206,6 +206,7 @@ async fn sem_presence_checks_and_missing_ob_behaviour(pool: PgPool) -> Result<()
     // Missing `ob` → RAISE.
     assert_raises(
         &pool,
+        None,
         r#"SELECT eql_v3.ore_block_u64_8_256('{"foo":1}'::jsonb)"#,
         &[],
         "Expected an ore index (ob) value",

@@ -847,11 +847,15 @@ pub async fn fetch_fixture_payload<T: ScalarType>(pool: &PgPool, plaintext: T) -
 /// Sorted plaintexts matching `predicate` against `T`'s fixture table.
 async fn scalar_plaintexts_matching<T: ScalarType>(
     pool: &PgPool,
+    case_id: Option<&str>,
     predicate: &str,
 ) -> Result<Vec<T>> {
-    let sql = format!(
-        "SELECT plaintext FROM {table} WHERE {predicate} ORDER BY plaintext",
-        table = T::fixture_table_name(),
+    let sql = crate::eqlmatrix::tag(
+        case_id,
+        &format!(
+            "SELECT plaintext FROM {table} WHERE {predicate} ORDER BY plaintext",
+            table = T::fixture_table_name(),
+        ),
     );
     let mut rows: Vec<T> = sqlx::query_scalar(&sql)
         .fetch_all(pool)
@@ -864,12 +868,13 @@ async fn scalar_plaintexts_matching<T: ScalarType>(
 /// Run `predicate` against `T`'s fixture; assert plaintexts equal `expected`.
 pub async fn assert_scalar_plaintexts<T: ScalarType>(
     pool: &PgPool,
+    case_id: Option<&str>,
     domain: &str,
     op: &str,
     predicate: &str,
     expected: &[T],
 ) -> Result<()> {
-    let actual = scalar_plaintexts_matching::<T>(pool, predicate).await?;
+    let actual = scalar_plaintexts_matching::<T>(pool, case_id, predicate).await?;
     let mut want = expected.to_vec();
     want.sort();
     assert_eq!(
@@ -886,38 +891,46 @@ pub async fn assert_scalar_plaintexts<T: ScalarType>(
 /// = bind the payload, `None` = bind NULL.
 pub async fn assert_raises(
     pool: &PgPool,
+    case_id: Option<&str>,
     sql: &str,
     binds: &[Option<&str>],
     expected_msg: &str,
 ) -> Result<()> {
-    let mut q = sqlx::query(sql);
+    let tagged = crate::eqlmatrix::tag(case_id, sql);
+    let mut q = sqlx::query(&tagged);
     for b in binds {
         q = q.bind(*b);
     }
     let result = q.fetch_one(pool).await;
     let err = match result {
-        Ok(_) => bail!("SQL must raise: {sql}"),
+        Ok(_) => bail!("SQL must raise: {tagged}"),
         Err(e) => e.to_string(),
     };
     if !err.contains(expected_msg) {
-        bail!("SQL={sql} expected error containing {expected_msg:?}, got {err}");
+        bail!("SQL={tagged} expected error containing {expected_msg:?}, got {err}");
     }
     Ok(())
 }
 
 /// Unified NULL-result assertion: the query must succeed and return NULL.
 /// Used for supported operators where STRICT semantics propagate NULL.
-pub async fn assert_null(pool: &PgPool, sql: &str, binds: &[Option<&str>]) -> Result<()> {
-    let mut q = sqlx::query_scalar::<_, Option<bool>>(sql);
+pub async fn assert_null(
+    pool: &PgPool,
+    case_id: Option<&str>,
+    sql: &str,
+    binds: &[Option<&str>],
+) -> Result<()> {
+    let tagged = crate::eqlmatrix::tag(case_id, sql);
+    let mut q = sqlx::query_scalar::<_, Option<bool>>(&tagged);
     for b in binds {
         q = q.bind(*b);
     }
     let result: Option<bool> = q
         .fetch_one(pool)
         .await
-        .with_context(|| format!("running null-result assertion: {sql}"))?;
+        .with_context(|| format!("running null-result assertion: {tagged}"))?;
     if result.is_some() {
-        bail!("SQL={sql} with NULL operand must yield NULL, got {result:?}");
+        bail!("SQL={tagged} with NULL operand must yield NULL, got {result:?}");
     }
     Ok(())
 }

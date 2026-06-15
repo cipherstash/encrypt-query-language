@@ -41,6 +41,7 @@ async fn disabling_storage_eq_blocker_flips_blocker_arm(pool: PgPool) -> Result<
     // Baseline: the storage `=` blocker raises.
     assert_raises(
         &pool,
+        None,
         sql,
         &[Some(PLACEHOLDER_PAYLOAD), Some(PLACEHOLDER_PAYLOAD)],
         &blocker_msg("eql_v3.int4", "="),
@@ -174,7 +175,7 @@ async fn dropping_strict_on_eq_flips_supported_null_arm(pool: PgPool) -> Result<
     let sql = "SELECT $1::jsonb::eql_v3.int4_eq = $2::jsonb::eql_v3.int4_eq";
 
     // Baseline: STRICT `=` propagates NULL when one side is NULL.
-    assert_null(&pool, sql, &[Some(PLACEHOLDER_PAYLOAD), None]).await?;
+    assert_null(&pool, None, sql, &[Some(PLACEHOLDER_PAYLOAD), None]).await?;
 
     // Mutation: drop STRICT and return a constant non-NULL. CREATE OR REPLACE
     // keeps the oid; the operator now ignores NULL semantics.
@@ -241,6 +242,7 @@ async fn blocking_lt_flips_lt_arm_but_not_order_by(pool: PgPool) -> Result<()> {
     // Post: `<` now raises — the ord `<` arm has teeth.
     assert_raises(
         &pool,
+        None,
         lt_sql,
         &[Some(PLACEHOLDER_PAYLOAD), Some(PLACEHOLDER_PAYLOAD)],
         &blocker_msg("eql_v3.int4_ord", "<"),
