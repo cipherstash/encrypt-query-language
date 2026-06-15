@@ -5,6 +5,7 @@
 use sqlx::PgPool;
 
 pub mod assertions;
+pub mod eqlmatrix;
 pub mod fixtures;
 pub mod helpers;
 pub mod jsonb_entry;
