@@ -1180,6 +1180,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "eql-types"
+version = "0.1.0"
+dependencies = [
+ "eql-scalars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "eql_tests"
 version = "0.1.0"
 dependencies = [

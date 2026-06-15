@@ -184,9 +184,9 @@
 
         "bf": {
           "title": "Bloom filter (bf)",
-          "description": "Bloom filter representation as an array of set bit positions. Used by `LIKE` / `ILIKE` (`~~`, `~~*`) via `eql_v2.bloom_filter` and the corresponding GIN index.",
+          "description": "Bloom filter representation as an array of set bit positions. Used by `LIKE` / `ILIKE` (`~~`, `~~*`) via `eql_v2.bloom_filter` and the corresponding GIN index. Stored as `smallint[]` (signed `int2`): the filter size is a power of two up to 65536, so positions in the upper half of a filter larger than 32768 are emitted as negative signed values (two's-complement of the unsigned position). Consumers must use a signed 16-bit integer type.",
           "type": "array",
-          "items": { "type": "integer", "minimum": 0 }
+          "items": { "type": "integer", "minimum": -32768, "maximum": 32767 }
         },
 
         "ob": {
