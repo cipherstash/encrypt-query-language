@@ -1133,6 +1133,7 @@ async fn v3_jsonb_index_to_ste_vec_query_gin_engages(pool: PgPool) -> anyhow::Re
         format!("SELECT id FROM fixtures.v3_ste_vec WHERE payload @> '{n}'::eql_v3.ste_vec_query");
     assert_index_scan_uses(
         &mut *tx,
+        "v3_jsonb_gin_engages",
         &query,
         "v3_jsonb_gin_idx",
         "to_ste_vec_query GIN must engage for payload @> needle",
@@ -1166,6 +1167,7 @@ async fn v3_jsonb_index_ore_cllw_btree_engages(pool: PgPool) -> anyhow::Result<(
     );
     assert_index_scan_uses(
         &mut *tx,
+        "v3_jsonb_btree_engages",
         &query,
         "v3_jsonb_btree_idx",
         "ore_cllw default btree opclass must engage for ORDER BY on a per-leaf oc",

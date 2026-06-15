@@ -201,6 +201,7 @@ async fn jsonb_entry_int4_index_engages(pool: sqlx::PgPool) -> anyhow::Result<()
             format!("SELECT * FROM entry_idx WHERE value {op} '{lit}'::eql_v3.ste_vec_entry",);
         eql_tests::matrix::assert_index_scan_uses(
             &mut *tx,
+            &format!("jsonb_entry_index_engages_{op}"),
             &query,
             "entry_idx_ore",
             &format!("entry op {op} (domain-cast RHS) must engage the ore_cllw functional btree"),

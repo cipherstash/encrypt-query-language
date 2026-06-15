@@ -90,6 +90,7 @@ async fn match_uses_functional_index(pool: PgPool) -> anyhow::Result<()> {
     );
     eql_tests::matrix::assert_index_scan_uses(
         &mut *tx,
+        "match_uses_functional_index",
         &query,
         "text_match_idx",
         "explicit match_term(col) @> match_term(needle) must engage the functional GIN index",
@@ -126,6 +127,7 @@ async fn bare_operator_uses_functional_index(pool: PgPool) -> anyhow::Result<()>
     );
     eql_tests::matrix::assert_index_scan_uses(
         &mut *tx,
+        "bare_operator_uses_functional_index",
         &query,
         "text_match_idx",
         "bare `@>` operator on text_match must engage the functional GIN index",

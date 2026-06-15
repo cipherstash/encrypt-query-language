@@ -78,6 +78,7 @@
 /// found, so it composes with the `?` operator inside the generated arms.
 pub async fn assert_index_scan_uses<'e, E>(
     executor: E,
+    case_id: &str,
     query: &str,
     index_name: &str,
     context: &str,
@@ -85,7 +86,7 @@ pub async fn assert_index_scan_uses<'e, E>(
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
 {
-    let sql = format!("EXPLAIN (FORMAT JSON) {query}");
+    let sql = crate::eqlmatrix::tag(Some(case_id), &format!("EXPLAIN (FORMAT JSON) {query}"));
     let plan: serde_json::Value = sqlx::query_scalar(&sql)
         .fetch_one(executor)
         .await
@@ -1365,6 +1366,7 @@ macro_rules! __scalar_matrix_scale_case {
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
                 use $crate::scalar_domains::ScalarType;
+                let case_id: &str = stringify!([<matrix_ $suite _ $dom_name _scale_preference_ $using>]);
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
                 // Catalog-derived extractor for this combo's ops; see
@@ -1392,25 +1394,33 @@ macro_rules! __scalar_matrix_scale_case {
                     $crate::scalar_domains::fetch_fixture_payload::<$scalar>(&pool, pivot).await?;
 
                 let mut tx = pool.begin().await?;
-                sqlx::query(&format!(
+                sqlx::query(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "CREATE TEMP TABLE {table} (value {d}) ON COMMIT DROP",
-                )).execute(&mut *tx).await?;
-                sqlx::query(&format!(
+                ))).execute(&mut *tx).await?;
+                sqlx::query(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "INSERT INTO {table}(value) \
 SELECT $1::jsonb::{d} FROM generate_series(1, 5000)",
-                )).bind(&filler_payload).execute(&mut *tx).await?;
-                sqlx::query(&format!(
+                ))).bind(&filler_payload).execute(&mut *tx).await?;
+                sqlx::query(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "INSERT INTO {table}(value) VALUES ($1::jsonb::{d})",
-                )).bind(&pivot_payload).execute(&mut *tx).await?;
-                sqlx::query(&format!(
+                ))).bind(&pivot_payload).execute(&mut *tx).await?;
+                sqlx::query(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "CREATE INDEX {index} ON {table} USING {using} ({extractor}(value))", using = $using, extractor = extractor,
-                )).execute(&mut *tx).await?;
-                sqlx::query(&format!("ANALYZE {table}"))
+                ))).execute(&mut *tx).await?;
+                sqlx::query(&$crate::eqlmatrix::tag(Some(case_id), &format!("ANALYZE {table}")))
                     .execute(&mut *tx).await?;
 
                 let lit = pivot_payload.replace('\'', "''");
+                // Plan witness B: EXECUTE the selective predicate (seqscan left ON)
+                // so auto_explain logs the genuinely-preferred plan, tagged.
+                let exec_sql = $crate::eqlmatrix::tag(
+                    Some(case_id),
+                    &format!("SELECT count(*) FROM {table} WHERE value = '{lit}'::jsonb::{d}"),
+                );
+                let _: i64 = sqlx::query_scalar(&exec_sql).fetch_one(&mut *tx).await?;
                 $crate::matrix::assert_index_scan_uses(
                     &mut *tx,
+                    case_id,
                     &format!("SELECT * FROM {table} WHERE value = '{lit}'::jsonb::{d}"),
                     index,
                     &format!(
@@ -1468,6 +1478,7 @@ macro_rules! __scalar_matrix_scale_default_case {
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
                 use $crate::scalar_domains::ScalarType;
+                let case_id: &str = stringify!([<matrix_ $suite _ $dom_name _scale_preference_default_ $using>]);
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
                 // Catalog-derived: the scale-default proof exercises a selective
@@ -1500,28 +1511,36 @@ scale-default combo", &spec.sql_domain,
                     $crate::scalar_domains::fetch_fixture_payload::<$scalar>(&pool, pivot).await?;
 
                 let mut tx = pool.begin().await?;
-                sqlx::query(&format!(
+                sqlx::query(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "CREATE TEMP TABLE {table} (value {d}) ON COMMIT DROP",
-                )).execute(&mut *tx).await?;
-                sqlx::query(&format!(
+                ))).execute(&mut *tx).await?;
+                sqlx::query(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "INSERT INTO {table}(value) \
 SELECT $1::jsonb::{d} FROM generate_series(1, 5000)",
-                )).bind(&filler_payload).execute(&mut *tx).await?;
-                sqlx::query(&format!(
+                ))).bind(&filler_payload).execute(&mut *tx).await?;
+                sqlx::query(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "INSERT INTO {table}(value) VALUES ($1::jsonb::{d})",
-                )).bind(&pivot_payload).execute(&mut *tx).await?;
-                sqlx::query(&format!(
+                ))).bind(&pivot_payload).execute(&mut *tx).await?;
+                sqlx::query(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "CREATE INDEX {index} ON {table} USING {using} ({extractor}(value))", using = $using, extractor = extractor,
-                )).execute(&mut *tx).await?;
-                sqlx::query(&format!("ANALYZE {table}"))
+                ))).execute(&mut *tx).await?;
+                sqlx::query(&$crate::eqlmatrix::tag(Some(case_id), &format!("ANALYZE {table}")))
                     .execute(&mut *tx).await?;
                 // enable_seqscan left ON: this is a cost-preference proof, not a
                 // validity check. With ~5000 filler rows and a single selective
                 // pivot, a correctly-costed plan must choose the functional index.
 
                 let lit = pivot_payload.replace('\'', "''");
+                // Plan witness B: EXECUTE the selective predicate (seqscan left ON)
+                // so auto_explain logs the genuinely-preferred plan, tagged.
+                let exec_sql = $crate::eqlmatrix::tag(
+                    Some(case_id),
+                    &format!("SELECT count(*) FROM {table} WHERE value = '{lit}'::jsonb::{d}"),
+                );
+                let _: i64 = sqlx::query_scalar(&exec_sql).fetch_one(&mut *tx).await?;
                 $crate::matrix::assert_index_scan_uses(
                     &mut *tx,
+                    case_id,
                     &format!("SELECT * FROM {table} WHERE value = '{lit}'::jsonb::{d}"),
                     index,
                     &format!(
@@ -1673,6 +1692,7 @@ macro_rules! __scalar_matrix_ord_routes_case {
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
                 use $crate::scalar_domains::ScalarType;
+                let case_id: &str = stringify!([<matrix_ $suite _ $dom_name _ord_routes_through_ob>]);
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
                 let token = <$scalar as ScalarType>::PG_TYPE;
@@ -1718,38 +1738,38 @@ macro_rules! __scalar_matrix_ord_routes_case {
                 };
 
                 let mut tx = pool.begin().await?;
-                sqlx::query(&format!(
+                sqlx::query(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "CREATE TEMP TABLE {table} (plaintext {pg}, value {d}) ON COMMIT DROP",
                     pg = <$scalar as ScalarType>::PG_TYPE,
-                )).execute(&mut *tx).await?;
-                sqlx::query(&format!(
+                ))).execute(&mut *tx).await?;
+                sqlx::query(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "INSERT INTO {table}(plaintext, value) \
                      SELECT plaintext, {value_expr}::{d} FROM {fixture}", fixture = fixture_table,
-                )).execute(&mut *tx).await?;
+                ))).execute(&mut *tx).await?;
 
                 // For the non-hm kind the routing proof must be over an hm-free
                 // payload — assert the strip really removed it. (The hm-bearing
                 // kind keeps `hm`: it is required, and `=` engaging the `eq_term`
                 // index is itself the proof equality is hm-based.)
                 if !carries_hm {
-                    let with_hm: i64 = sqlx::query_scalar(&format!(
+                    let with_hm: i64 = sqlx::query_scalar(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                         "SELECT count(*) FROM {table} WHERE jsonb_exists(value::jsonb, 'hm')",
-                    )).fetch_one(&mut *tx).await?;
+                    ))).fetch_one(&mut *tx).await?;
                     anyhow::ensure!(with_hm == 0, "test rows must not carry hm");
                 }
 
-                sqlx::query(&format!(
+                sqlx::query(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "CREATE INDEX {index} ON {table} USING btree ({extractor}(value))",
-                )).execute(&mut *tx).await?;
-                sqlx::query(&format!("ANALYZE {table}"))
+                ))).execute(&mut *tx).await?;
+                sqlx::query(&$crate::eqlmatrix::tag(Some(case_id), &format!("ANALYZE {table}")))
                     .execute(&mut *tx).await?;
                 sqlx::query("SET LOCAL enable_seqscan = off")
                     .execute(&mut *tx).await?;
 
-                let pivot_payload: String = sqlx::query_scalar(&format!(
+                let pivot_payload: String = sqlx::query_scalar(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "SELECT {value_expr}::text FROM {fixture} WHERE plaintext = {lit}",
                     fixture = fixture_table, lit = pivot_lit,
-                )).fetch_one(&mut *tx).await?;
+                ))).fetch_one(&mut *tx).await?;
 
                 // The fixture plaintexts are distinct, so the pivot row is
                 // unique: `=` must match EXACTLY one row, not "at least one". A
@@ -1758,8 +1778,9 @@ macro_rules! __scalar_matrix_ord_routes_case {
                 // inflates `eq_count` and deflates `expected_neq` in lockstep and
                 // both assertions still pass. Pinning `== 1` makes both this and
                 // the derived `<>` count load-bearing.
-                let eq_count: i64 = sqlx::query_scalar(&format!(
-                    "SELECT count(*) FROM {table} WHERE value = $1::jsonb::{d}",
+                let eq_count: i64 = sqlx::query_scalar(&$crate::eqlmatrix::tag(
+                    Some(case_id),
+                    &format!("SELECT count(*) FROM {table} WHERE value = $1::jsonb::{d}"),
                 )).bind(&pivot_payload).fetch_one(&mut *tx).await?;
                 anyhow::ensure!(eq_count == 1,
                     "= must match exactly the pivot row (want 1, got {eq_count})");
@@ -1771,8 +1792,9 @@ macro_rules! __scalar_matrix_ord_routes_case {
                 // each other — the derivation stays honest regardless.
                 let expected_neq =
                     <$scalar as ScalarType>::fixture_values().len() as i64 - eq_count;
-                let neq_count: i64 = sqlx::query_scalar(&format!(
-                    "SELECT count(*) FROM {table} WHERE value <> $1::jsonb::{d}",
+                let neq_count: i64 = sqlx::query_scalar(&$crate::eqlmatrix::tag(
+                    Some(case_id),
+                    &format!("SELECT count(*) FROM {table} WHERE value <> $1::jsonb::{d}"),
                 )).bind(&pivot_payload).fetch_one(&mut *tx).await?;
                 anyhow::ensure!(neq_count == expected_neq,
                     "<> must match every non-pivot fixture row (want {expected_neq}, got {neq_count})",
@@ -1794,6 +1816,7 @@ macro_rules! __scalar_matrix_ord_routes_case {
                 let lit = pivot_payload.replace('\'', "''");
                 $crate::matrix::assert_index_scan_uses(
                     &mut *tx,
+                    case_id,
                     &format!("SELECT * FROM {table} WHERE value = '{lit}'::jsonb::{d}"),
                     index,
                     caveat,
@@ -1906,6 +1929,7 @@ macro_rules! __scalar_matrix_match_case {
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
                 use $crate::scalar_domains::{MatchScalar, ScalarType};
+                let case_id: &str = stringify!([<matrix_ $suite _ $dom_name _match_index_engages_gin>]);
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
                 let table = concat!(
@@ -1919,17 +1943,17 @@ macro_rules! __scalar_matrix_match_case {
                     &pool, <$scalar as MatchScalar>::needle()).await?;
 
                 let mut tx = pool.begin().await?;
-                sqlx::query(&format!(
+                sqlx::query(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "CREATE TEMP TABLE {table} (value {d}) ON COMMIT DROP",
-                )).execute(&mut *tx).await?;
-                sqlx::query(&format!(
+                ))).execute(&mut *tx).await?;
+                sqlx::query(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "INSERT INTO {table}(value) SELECT payload::{d} FROM {fixture}",
                     fixture = fixture_table,
-                )).execute(&mut *tx).await?;
-                sqlx::query(&format!(
+                ))).execute(&mut *tx).await?;
+                sqlx::query(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "CREATE INDEX {index} ON {table} USING gin (eql_v3.match_term(value))",
-                )).execute(&mut *tx).await?;
-                sqlx::query(&format!("ANALYZE {table}"))
+                ))).execute(&mut *tx).await?;
+                sqlx::query(&$crate::eqlmatrix::tag(Some(case_id), &format!("ANALYZE {table}")))
                     .execute(&mut *tx).await?;
                 sqlx::query("SET LOCAL enable_seqscan = off")
                     .execute(&mut *tx).await?;
@@ -1937,6 +1961,7 @@ macro_rules! __scalar_matrix_match_case {
                 let lit = needle.replace('\'', "''");
                 $crate::matrix::assert_index_scan_uses(
                     &mut *tx,
+                    case_id,
                     &format!("SELECT * FROM {table} WHERE value @> '{lit}'::jsonb::{d}"),
                     index,
                     "bare @> must engage the eql_v3.match_term functional GIN index",
@@ -2050,6 +2075,7 @@ macro_rules! __scalar_matrix_index_case {
             async fn [<matrix_ $suite _ $dom_name _index_engages_ $using>](
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
+                let case_id: &str = stringify!([<matrix_ $suite _ $dom_name _index_engages_ $using>]);
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 // Catalog-derived: the extractor serving this combo's operators
                 // (the SAME `Term::extractor_for_operator` codegen uses). Every
@@ -2115,8 +2141,21 @@ macro_rules! __scalar_matrix_index_case {
                         let query = format!(
                             "SELECT * FROM {table} WHERE value {op} {lit}::jsonb{cast}", op = $op, cast = rhs_cast,
                         );
+                        // Plan witness B: EXECUTE the predicate so auto_explain
+                        // logs the real executed plan (Index Scan + index name),
+                        // tagged with case_id. enable_seqscan is off on this tx,
+                        // so a usable index is the only option. The in-process
+                        // EXPLAIN assertion below stays as the fast local check.
+                        let exec_sql = $crate::eqlmatrix::tag(
+                            Some(case_id),
+                            &format!("SELECT count(*) FROM {table} WHERE value {op} {lit}::jsonb{cast}",
+                                     op = $op, cast = rhs_cast),
+                        );
+                        let _: i64 = sqlx::query_scalar(&exec_sql).fetch_one(&mut *tx).await?;
+
                         $crate::matrix::assert_index_scan_uses(
                             &mut *tx,
+                            case_id,
                             &query,
                             index,
                             &format!(
