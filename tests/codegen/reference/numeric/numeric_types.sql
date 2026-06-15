@@ -2,17 +2,17 @@
 -- AUTOMATICALLY GENERATED FILE.
 -- REQUIRE: src/v3/schema.sql
 
---! @file v3/scalars/timestamptz/timestamptz_types.sql
---! @brief Encrypted-domain types for timestamptz.
+--! @file v3/scalars/numeric/numeric_types.sql
+--! @brief Encrypted-domain types for numeric.
 
 DO $$
 BEGIN
-  --! @brief Encrypted domain eql_v3.timestamptz.
+  --! @brief Encrypted domain eql_v3.numeric.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'timestamptz' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'numeric' AND typnamespace = 'eql_v3'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.timestamptz AS jsonb
+    CREATE DOMAIN eql_v3.numeric AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -22,12 +22,12 @@ BEGIN
       );
   END IF;
 
-  --! @brief Encrypted domain eql_v3.timestamptz_eq.
+  --! @brief Encrypted domain eql_v3.numeric_eq.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'timestamptz_eq' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'numeric_eq' AND typnamespace = 'eql_v3'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.timestamptz_eq AS jsonb
+    CREATE DOMAIN eql_v3.numeric_eq AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -38,12 +38,12 @@ BEGIN
       );
   END IF;
 
-  --! @brief Encrypted domain eql_v3.timestamptz_ord_ore.
+  --! @brief Encrypted domain eql_v3.numeric_ord_ore.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'timestamptz_ord_ore' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'numeric_ord_ore' AND typnamespace = 'eql_v3'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.timestamptz_ord_ore AS jsonb
+    CREATE DOMAIN eql_v3.numeric_ord_ore AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -54,12 +54,12 @@ BEGIN
       );
   END IF;
 
-  --! @brief Encrypted domain eql_v3.timestamptz_ord.
+  --! @brief Encrypted domain eql_v3.numeric_ord.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'timestamptz_ord' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'numeric_ord' AND typnamespace = 'eql_v3'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.timestamptz_ord AS jsonb
+    CREATE DOMAIN eql_v3.numeric_ord AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'

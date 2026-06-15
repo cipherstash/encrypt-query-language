@@ -51,6 +51,28 @@ async fn comparator_rejects_sixteen_byte_term(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
+/// Cross-width footgun: now that N is derived per-term, comparing terms of two
+/// different (individually valid) widths must raise via the equal-length guard,
+/// not silently compare the shared prefix. Both lengths here are well-formed —
+/// 408 = 49*8 + 16 (the int4 width, N=8) and 702 = 49*14 + 16 (the numeric
+/// width, N=14) — so the only thing that fires is the different-lengths check,
+/// ahead of the malformed-length guard. Creds-free (hand-built bytea).
+#[sqlx::test]
+async fn comparator_rejects_mismatched_block_widths(pool: PgPool) -> Result<()> {
+    let sql = "SELECT eql_v3.compare_ore_block_256_term( \
+        ROW(repeat('a', 408)::bytea)::eql_v3.ore_block_256_term, \
+        ROW(repeat('b', 702)::bytea)::eql_v3.ore_block_256_term)";
+    let err = sqlx::query_scalar::<_, i32>(sql)
+        .fetch_one(&pool)
+        .await
+        .expect_err("an 8-block vs 14-block ORE term comparison must raise");
+    assert!(
+        err.to_string().to_lowercase().contains("different lengths"),
+        "expected different-lengths error, got: {err}"
+    );
+    Ok(())
+}
+
 /// Width: a numeric ORE term must be 14 blocks => 49*14 + 16 = 702 bytes.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v2_numeric")))]
 async fn numeric_term_is_14_blocks(pool: PgPool) -> Result<()> {
