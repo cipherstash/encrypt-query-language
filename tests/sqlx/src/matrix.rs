@@ -773,6 +773,7 @@ macro_rules! __scalar_matrix_correctness_case {
             async fn [<matrix_ $suite _ $dom_name _ $op_name _pivot_ $pivot_name _correctness>](
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
+                let case_id: &str = stringify!([<matrix_ $suite _ $dom_name _ $op_name _pivot_ $pivot_name _correctness>]);
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let pivot: $scalar = $pivot_val;
                 let payload =
@@ -785,7 +786,7 @@ macro_rules! __scalar_matrix_correctness_case {
                 let expected =
                     <$scalar as $crate::scalar_domains::ScalarType>::expected_forward($op, pivot);
                 $crate::scalar_domains::assert_scalar_plaintexts::<$scalar>(
-                    &pool, &spec.sql_domain, $op, &predicate, &expected,
+                    &pool, Some(case_id), &spec.sql_domain, $op, &predicate, &expected,
                 )
                 .await
             }
@@ -814,6 +815,7 @@ macro_rules! __scalar_matrix_cross_shape_case {
             async fn [<matrix_ $suite _ $dom_name _ $op_name _pivot_ $pivot_name _cross_shape>](
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
+                let case_id: &str = stringify!([<matrix_ $suite _ $dom_name _ $op_name _pivot_ $pivot_name _cross_shape>]);
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let pivot: $scalar = $pivot_val;
                 let payload =
@@ -834,7 +836,10 @@ macro_rules! __scalar_matrix_cross_shape_case {
                 ];
                 let table = <$scalar as $crate::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = format!("SELECT count(*) FROM {table} WHERE {predicate}");
+                    let count_sql = $crate::eqlmatrix::tag(
+                        Some(case_id),
+                        &format!("SELECT count(*) FROM {table} WHERE {predicate}"),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql).fetch_one(&pool).await?;
                     assert_eq!(
                         count, expected_count,
@@ -867,15 +872,16 @@ macro_rules! __scalar_matrix_supported_null_case {
             async fn [<matrix_ $suite _ $dom_name _ $op_name _supported_null>](
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
+                let case_id: &str = stringify!([<matrix_ $suite _ $dom_name _ $op_name _supported_null>]);
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let payload = spec.placeholder_payload;
                 let sql = format!(
                     "SELECT $1::jsonb::{d} {op} $2::jsonb::{d}",
                     d = &spec.sql_domain, op = $op,
                 );
-                $crate::scalar_domains::assert_null(&pool, &sql, &[Some(payload), None]).await?;
-                $crate::scalar_domains::assert_null(&pool, &sql, &[None, Some(payload)]).await?;
-                $crate::scalar_domains::assert_null(&pool, &sql, &[None, None]).await?;
+                $crate::scalar_domains::assert_null(&pool, Some(case_id), &sql, &[Some(payload), None]).await?;
+                $crate::scalar_domains::assert_null(&pool, Some(case_id), &sql, &[None, Some(payload)]).await?;
+                $crate::scalar_domains::assert_null(&pool, Some(case_id), &sql, &[None, None]).await?;
                 Ok(())
             }
         }
@@ -931,6 +937,7 @@ macro_rules! __scalar_matrix_blocker_case {
             async fn [<matrix_ $suite _ $dom_name _ $op_name _blocker>](
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
+                let case_id: &str = stringify!([<matrix_ $suite _ $dom_name _ $op_name _blocker>]);
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let payload = $crate::helpers::PLACEHOLDER_PAYLOAD;
                 let msg = $crate::scalar_domains::blocker_msg(&spec.sql_domain, $op);
@@ -945,7 +952,7 @@ macro_rules! __scalar_matrix_blocker_case {
                 for (lhs, rhs) in shapes {
                     let sql = format!("SELECT {lhs} {op} {rhs}", op = $op);
                     $crate::scalar_domains::assert_raises(
-                        &pool, &sql, &[Some(payload), Some(payload)], &msg,
+                        &pool, Some(case_id), &sql, &[Some(payload), Some(payload)], &msg,
                     ).await?;
                 }
 
@@ -954,9 +961,9 @@ macro_rules! __scalar_matrix_blocker_case {
                 let null_sql = format!(
                     "SELECT $1::jsonb::{d} {op} $2::jsonb::{d}", op = $op,
                 );
-                $crate::scalar_domains::assert_raises(&pool, &null_sql, &[None, Some(payload)], &msg).await?;
-                $crate::scalar_domains::assert_raises(&pool, &null_sql, &[Some(payload), None], &msg).await?;
-                $crate::scalar_domains::assert_raises(&pool, &null_sql, &[None, None], &msg).await?;
+                $crate::scalar_domains::assert_raises(&pool, Some(case_id), &null_sql, &[None, Some(payload)], &msg).await?;
+                $crate::scalar_domains::assert_raises(&pool, Some(case_id), &null_sql, &[Some(payload), None], &msg).await?;
+                $crate::scalar_domains::assert_raises(&pool, Some(case_id), &null_sql, &[None, None], &msg).await?;
                 Ok(())
             }
         }
@@ -998,15 +1005,16 @@ macro_rules! __scalar_matrix_payload_check_case {
             async fn [<matrix_ $suite _ $dom_name _payload_check>](
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
+                let case_id: &str = stringify!([<matrix_ $suite _ $dom_name _payload_check>]);
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
                 let baseline = $crate::helpers::PLACEHOLDER_PAYLOAD;
 
                 // Each required key must trigger CHECK rejection when stripped.
                 for key in spec.payload_required_keys() {
-                    let sql = format!(
+                    let sql = $crate::eqlmatrix::tag(Some(case_id), &format!(
                         "SELECT ('{baseline}'::jsonb - '{key}')::{d}",
-                    );
+                    ));
                     let err = sqlx::query(&sql)
                         .fetch_one(&pool)
                         .await
@@ -1021,7 +1029,7 @@ macro_rules! __scalar_matrix_payload_check_case {
                 }
 
                 // Non-object payloads are rejected for every variant.
-                let sql = format!(r#"SELECT '["v","i","c"]'::jsonb::{d}"#);
+                let sql = $crate::eqlmatrix::tag(Some(case_id), &format!(r#"SELECT '["v","i","c"]'::jsonb::{d}"#));
                 let err = sqlx::query(&sql)
                     .fetch_one(&pool)
                     .await
@@ -1071,6 +1079,7 @@ macro_rules! __scalar_matrix_path_op_case {
             async fn [<matrix_ $suite _ $dom_name _path_op_blockers>](
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
+                let case_id: &str = stringify!([<matrix_ $suite _ $dom_name _path_op_blockers>]);
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
                 let payload = $crate::helpers::PLACEHOLDER_PAYLOAD;
@@ -1083,7 +1092,7 @@ macro_rules! __scalar_matrix_path_op_case {
                         format!("SELECT $1::jsonb {op} $1::jsonb::{d}"),
                     ] {
                         $crate::scalar_domains::assert_raises(
-                            &pool, &sql, &[Some(payload)], &msg,
+                            &pool, Some(case_id), &sql, &[Some(payload)], &msg,
                         ).await?;
                     }
                 }
@@ -1128,6 +1137,7 @@ macro_rules! __scalar_matrix_native_absent_case {
             async fn [<matrix_ $suite _ $dom_name _native_absent_ops>](
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
+                let case_id: &str = stringify!([<matrix_ $suite _ $dom_name _native_absent_ops>]);
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
                 let payload = $crate::helpers::PLACEHOLDER_PAYLOAD;
@@ -1135,7 +1145,7 @@ macro_rules! __scalar_matrix_native_absent_case {
                 for op in ["~~", "~~*"] {
                     let sql = format!("SELECT $1::jsonb::{d} {op} $2::jsonb::{d}");
                     $crate::scalar_domains::assert_raises(
-                        &pool, &sql,
+                        &pool, Some(case_id), &sql,
                         &[Some(payload), Some(payload)],
                         "operator does not exist",
                     ).await?;
@@ -1181,26 +1191,27 @@ macro_rules! __scalar_matrix_typed_column_case {
             async fn [<matrix_ $suite _ $dom_name _typed_column_blocker>](
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
+                let case_id: &str = stringify!([<matrix_ $suite _ $dom_name _typed_column_blocker>]);
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
                 let payload = $crate::helpers::PLACEHOLDER_PAYLOAD;
 
                 let mut tx = pool.begin().await?;
-                let create_sql = format!(
+                let create_sql = $crate::eqlmatrix::tag(Some(case_id), &format!(
                     "CREATE TEMP TABLE typed_col (\
                          id integer GENERATED ALWAYS AS IDENTITY,\
                          value {d}\
                      ) ON COMMIT DROP"
-                );
+                ));
                 sqlx::query(&create_sql).execute(&mut *tx).await?;
-                let insert_sql = format!(
+                let insert_sql = $crate::eqlmatrix::tag(Some(case_id), &format!(
                     "INSERT INTO typed_col(value) VALUES ($1::jsonb::{d})"
-                );
+                ));
                 sqlx::query(&insert_sql).bind(payload).execute(&mut *tx).await?;
 
                 $(
                     sqlx::query("SAVEPOINT op_probe").execute(&mut *tx).await?;
-                    let sql = format!("SELECT * FROM typed_col WHERE value {op} value", op = $op);
+                    let sql = $crate::eqlmatrix::tag(Some(case_id), &format!("SELECT * FROM typed_col WHERE value {op} value", op = $op));
                     let err = sqlx::query(&sql)
                         .fetch_all(&mut *tx)
                         .await
@@ -1262,6 +1273,7 @@ macro_rules! __scalar_matrix_planner_metadata_case {
             async fn [<matrix_ $suite _ $dom_name _planner_metadata_ $group>](
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
+                let case_id: &str = stringify!([<matrix_ $suite _ $dom_name _planner_metadata_ $group>]);
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
                 let ops: &[&str] = &[$($op),+];
@@ -1269,7 +1281,7 @@ macro_rules! __scalar_matrix_planner_metadata_case {
                     .map(|o| format!("'{o}'"))
                     .collect::<Vec<_>>()
                     .join(", ");
-                let sql = format!(
+                let sql = $crate::eqlmatrix::tag(Some(case_id), &format!(
                     r#"
                     SELECT o.oprname,
                            lt.typname AS lhs,
@@ -1284,7 +1296,7 @@ macro_rules! __scalar_matrix_planner_metadata_case {
                     WHERE o.oprname IN ({op_list})
                       AND ('{d}'::regtype = o.oprleft OR '{d}'::regtype = o.oprright)
                     "#
-                );
+                ));
                 let rows: Vec<(String, String, String, bool, bool, bool, bool)> =
                     sqlx::query_as(&sql).fetch_all(&pool).await?;
 
@@ -1547,25 +1559,26 @@ macro_rules! __scalar_matrix_fixture_shape {
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
                 use $crate::scalar_domains::ScalarType;
+                let case_id: &str = stringify!([<matrix_ $suite _fixture_shape>]);
                 let table = <$scalar as ScalarType>::fixture_table_name();
                 let expected: &[$scalar] = <$scalar as ScalarType>::fixture_values();
                 let n = expected.len() as i64;
 
-                let count: i64 = sqlx::query_scalar(&format!(
+                let count: i64 = sqlx::query_scalar(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "SELECT COUNT(*) FROM {table}",
-                )).fetch_one(&pool).await?;
+                ))).fetch_one(&pool).await?;
                 anyhow::ensure!(count == n,
                     "row count must match FIXTURE_VALUES.len(): want {n}, got {count}");
 
-                let ids: Vec<i64> = sqlx::query_scalar(&format!(
+                let ids: Vec<i64> = sqlx::query_scalar(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "SELECT id FROM {table} ORDER BY id",
-                )).fetch_all(&pool).await?;
+                ))).fetch_all(&pool).await?;
                 anyhow::ensure!(ids == (1..=n).collect::<Vec<i64>>(),
                     "ids must be sequential from 1: got {ids:?}");
 
-                let plaintexts: Vec<$scalar> = sqlx::query_scalar(&format!(
+                let plaintexts: Vec<$scalar> = sqlx::query_scalar(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "SELECT plaintext FROM {table} ORDER BY id",
-                )).fetch_all(&pool).await?;
+                ))).fetch_all(&pool).await?;
                 anyhow::ensure!(plaintexts == expected,
                     "plaintext column must match FIXTURE_VALUES in order");
 
@@ -1584,23 +1597,23 @@ macro_rules! __scalar_matrix_fixture_shape {
                     );
                 }
                 for (label, predicate) in term_checks {
-                    let missing: i64 = sqlx::query_scalar(&format!(
+                    let missing: i64 = sqlx::query_scalar(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                         "SELECT COUNT(*) FROM {table} WHERE {predicate}",
-                    )).fetch_one(&pool).await?;
+                    ))).fetch_one(&pool).await?;
                     anyhow::ensure!(missing == 0,
                         "every payload must carry a `{label}` term; missing = {missing}");
                 }
 
-                let distinct_hm: i64 = sqlx::query_scalar(&format!(
+                let distinct_hm: i64 = sqlx::query_scalar(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "SELECT COUNT(DISTINCT payload->>'hm') FROM {table}",
-                )).fetch_one(&pool).await?;
+                ))).fetch_one(&pool).await?;
                 anyhow::ensure!(distinct_hm == n,
                     "{n} distinct values -> {n} distinct hm terms; got {distinct_hm}");
 
-                let mismatched_version: i64 = sqlx::query_scalar(&format!(
+                let mismatched_version: i64 = sqlx::query_scalar(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "SELECT COUNT(*) FROM {table} \
                      WHERE payload->'v' IS NULL OR payload->>'v' <> '2'",
-                )).fetch_one(&pool).await?;
+                ))).fetch_one(&pool).await?;
                 anyhow::ensure!(mismatched_version == 0,
                     "every payload must declare v = '2'");
 
@@ -1610,9 +1623,9 @@ macro_rules! __scalar_matrix_fixture_shape {
                     let probe = &expected[expected.len() / 2];
                     let probe_lit = <$scalar as ScalarType>::to_sql_literal(probe);
                     let expected_id = (expected.len() / 2 + 1) as i64;
-                    let ids: Vec<i64> = sqlx::query_scalar(&format!(
+                    let ids: Vec<i64> = sqlx::query_scalar(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                         "SELECT id FROM {table} WHERE plaintext = {lit} ORDER BY id", lit = probe_lit,
-                    )).fetch_all(&pool).await?;
+                    ))).fetch_all(&pool).await?;
                     anyhow::ensure!(ids == vec![expected_id],
                         "expected exactly one row with plaintext = {probe:?} at id {expected_id}, got {ids:?}");
                 }
@@ -1970,16 +1983,20 @@ macro_rules! __scalar_matrix_ore_injectivity_case {
             async fn [<matrix_ $suite _ $dom_name _ore_injectivity>](
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
+                let case_id: &str = stringify!([<matrix_ $suite _ $dom_name _ore_injectivity>]);
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
                 let fixture_table =
                     <$scalar as $crate::scalar_domains::ScalarType>::fixture_table_name();
-                let collisions: i64 = sqlx::query_scalar(&format!(
-                    "SELECT count(*) \
+                let collisions: i64 = sqlx::query_scalar(&$crate::eqlmatrix::tag(
+                    Some(case_id),
+                    &format!(
+                        "SELECT count(*) \
 FROM {fixture} a \
 JOIN {fixture} b ON a.id < b.id \
 WHERE a.payload::{d} = b.payload::{d}",
-                    fixture = fixture_table,
+                        fixture = fixture_table,
+                    ),
                 )).fetch_one(&pool).await?;
                 anyhow::ensure!(collisions == 0,
                     "no two distinct plaintexts may share an ORE term on {d}");
@@ -2182,6 +2199,7 @@ macro_rules! __scalar_matrix_order_by_case {
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
                 use $crate::scalar_domains::{OrderedScalar, ScalarType};
+                let case_id: &str = stringify!([<matrix_ $suite _ $dom_name _order_by_ $mode_name>]);
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let fixture_table = <$scalar as ScalarType>::fixture_table_name();
 
@@ -2200,11 +2218,14 @@ macro_rules! __scalar_matrix_order_by_case {
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
                 let ord = (spec.ord_extractor)(&format!("({col})::{d}"));
-                let sql = format!(
-                    "SELECT plaintext FROM {fixture}{where_clause} \
+                let sql = $crate::eqlmatrix::tag(
+                    Some(case_id),
+                    &format!(
+                        "SELECT plaintext FROM {fixture}{where_clause} \
 ORDER BY {ord} {dir}",
-                    fixture = fixture_table,
-                    dir = $direction,
+                        fixture = fixture_table,
+                        dir = $direction,
+                    ),
                 );
                 let actual: Vec<$scalar> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
 
@@ -2298,6 +2319,7 @@ macro_rules! __scalar_matrix_order_by_nulls_case {
                 // Number of NULL-valued rows mixed in; >1 proves they cluster.
                 const NULL_ROWS: usize = 3;
 
+                let case_id: &str = stringify!([<matrix_ $suite _ $dom_name _order_by_ $mode_name>]);
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
                 let table = concat!(
@@ -2309,27 +2331,27 @@ macro_rules! __scalar_matrix_order_by_nulls_case {
                 let pg = <$scalar as $crate::scalar_domains::ScalarType>::PG_TYPE;
 
                 let mut tx = pool.begin().await?;
-                sqlx::query(&format!(
+                sqlx::query(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "CREATE TEMP TABLE {table} (plaintext {pg}, value {d}) ON COMMIT DROP",
-                )).execute(&mut *tx).await?;
+                ))).execute(&mut *tx).await?;
                 // Non-NULL rows: every fixture row, carrying its plaintext.
-                sqlx::query(&format!(
+                sqlx::query(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "INSERT INTO {table}(plaintext, value) \
 SELECT plaintext, ({col})::{d} FROM {fixture}", col = &spec.column_expr, fixture = fixture_table,
-                )).execute(&mut *tx).await?;
+                ))).execute(&mut *tx).await?;
                 // NULL-valued rows: NULL plaintext too, so they surface as None
                 // and their position is what the assertion pins.
-                sqlx::query(&format!(
+                sqlx::query(&$crate::eqlmatrix::tag(Some(case_id), &format!(
                     "INSERT INTO {table}(plaintext, value) \
 SELECT NULL::{pg}, NULL::{d} FROM generate_series(1, {n})", n = NULL_ROWS,
-                )).execute(&mut *tx).await?;
+                ))).execute(&mut *tx).await?;
 
                 let ord = (spec.ord_extractor)("value");
-                let sql = format!(
+                let sql = $crate::eqlmatrix::tag(Some(case_id), &format!(
                     "SELECT plaintext FROM {table} \
 ORDER BY {ord} {dir} NULLS {nulls}",
                     dir = $direction, nulls = $nulls,
-                );
+                ));
                 let actual: Vec<Option<$scalar>> =
                     sqlx::query_scalar(&sql).fetch_all(&mut *tx).await?;
 

@@ -76,6 +76,21 @@ mod tests {
     }
 
     #[test]
+    fn paste_stringify_yields_the_byte_exact_joined_name() {
+        // Reproduce the matrix leaves' case_id capture in isolation: paste!'s
+        // [<…>] concatenation must produce the joined identifier BEFORE
+        // stringify! sees it. If paste! ever changed this, the whole join key
+        // breaks — so pin the exact byte string here.
+        let suite = "int4";
+        let _ = suite; // documents the token shape; the real test is the literal below
+        crate::paste::paste! {
+            let case_id: &str =
+                stringify!([<matrix_ int4 _ eq _ eq _pivot_ mid _correctness>]);
+            assert_eq!(case_id, "matrix_int4_eq_eq_pivot_mid_correctness");
+        }
+    }
+
+    #[test]
     fn generated_case_id_cannot_contain_the_close_delimiter() {
         // The close delimiter ` */` must never appear inside a case_id, or the
         // normalizer would truncate the tag early. Generated case_ids are
