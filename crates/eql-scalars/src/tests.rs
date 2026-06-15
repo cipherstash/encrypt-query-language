@@ -125,12 +125,22 @@ mod rust_tests {
 
     #[test]
     fn timestamptz_maps_to_datetime() {
-        // Temporal, non-integer, equality-only kind: it carries a rust type but
-        // no i128 range, so it is not `is_int()` and `as_bounded_int()` returns
+        // Temporal, non-integer, ordered kind: it carries a rust type but no
+        // i128 range, so it is not `is_int()` and `as_bounded_int()` returns
         // `None` — the bounded accessors are not reachable for it.
         assert_eq!(ScalarKind::Timestamptz.rust_type(), "chrono::DateTime<Utc>");
         assert!(!ScalarKind::Timestamptz.is_int());
         assert_eq!(ScalarKind::Timestamptz.as_bounded_int(), None);
+    }
+
+    #[test]
+    fn numeric_maps_to_decimal() {
+        // Ordered, non-integer, non-chrono kind (14-block ORE): carries a rust
+        // type but no i128 range, so it is not `is_int()` and `as_bounded_int()`
+        // returns `None`. Pins the now-real `rust_type` arm (it no longer panics).
+        assert_eq!(ScalarKind::Numeric.rust_type(), "rust_decimal::Decimal");
+        assert!(!ScalarKind::Numeric.is_int());
+        assert_eq!(ScalarKind::Numeric.as_bounded_int(), None);
     }
 
     /// The structural guarantee that replaces the old runtime panics: a
