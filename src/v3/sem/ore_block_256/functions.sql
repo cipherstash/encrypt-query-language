@@ -22,9 +22,10 @@
 --!   This deliberately diverges from the v2 plpgsql equivalent (intentionally
 --!   left unchanged): the `CASE WHEN jsonb_typeof(val) = 'array'` guard only
 --!   evaluates the array path for an array, so a non-array JSON scalar returns
---!   NULL here instead of raising. The sole caller passes `val->'ob'`, always an
---!   array or JSON null, so the divergence is unreachable in practice; JSON null
---!   and empty array still return NULL exactly as before.
+--!   NULL here instead of raising. The sole caller (`ore_block_256`) only reaches
+--!   this when `has_ore_block_256(val)` is true, which now requires `val->'ob'`
+--!   to be a JSON array, so the non-array branch is unreachable in practice;
+--!   empty array still returns NULL exactly as before (pinned by T7).
 CREATE FUNCTION eql_v3.jsonb_array_to_ore_block_256(val jsonb)
 RETURNS eql_v3.ore_block_256
   IMMUTABLE
@@ -67,16 +68,24 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
---! @brief Check if JSONB payload contains ORE block index term
+--! @brief Check if JSONB payload contains an ORE block index term
 --! @param val jsonb containing encrypted EQL payload
---! @return boolean True if 'ob' field is present and non-null
+--! @return boolean True only if the 'ob' field is present and is a JSON array
+--! @note A well-formed ORE index term is always a JSON array of block terms, so
+--!   this guard treats a present-but-non-array `ob` (a scalar or object) as
+--!   absent. That makes the extractor `ore_block_256(val)` RAISE on a
+--!   structurally invalid `ob` payload at the boundary instead of silently
+--!   degrading it to a NULL index term in `jsonb_array_to_ore_block_256`. The
+--!   previous `val ->> 'ob' IS NOT NULL` form stringified scalars/objects and so
+--!   reported them as present. `{}` (absent `ob`) and `{"ob": null}` (JSON null)
+--!   both remain `false`.
 CREATE FUNCTION eql_v3.has_ore_block_256(val jsonb)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
   SET search_path = pg_catalog, extensions, public
 AS $$
   BEGIN
-    RETURN val ->> 'ob' IS NOT NULL;
+    RETURN COALESCE(jsonb_typeof(val -> 'ob') = 'array', false);
   END;
 $$ LANGUAGE plpgsql;
 
