@@ -204,14 +204,16 @@ there is no `<T>_VALUES` const; the SQLx harness parses the catalog strings into
 A **temporal** scalar (`date` is the *ordered* temporal reference) is *ordered
 but non-integer*, so it diverges from the integer path in three places — all in
 the catalog/harness, never the SQL codegen (domains stay jsonb-backed and
-token-driven). **`timestamptz` is the exception: it is equality-only, not
-ordered** — its catalog row uses `EQ_ONLY_DOMAINS` (storage + `_eq`, no
-`_ord`/`_ord_ore`), the eq-only shape of §3, because cipherstash encrypts
-`Plaintext::Timestamp` at native 12-block ORE width while EQL's only comparator
-(`eql_v2.compare_ore_block_u64_8_256_term`) is hardcoded to 8 blocks, so an
-ordered `timestamptz` domain would silently mis-order (see the catalog comment on
-the `TIMESTAMPTZ` spec). Its value-wiring is still the temporal path below; only
-its domain set differs. The three divergences (for the ordered `date`):
+token-driven). **`timestamptz` follows the same *ordered* temporal path as
+`date`** — its catalog row carries the full ordered domain set (storage + `_eq` +
+`_ord`/`_ord_ore`). cipherstash encrypts `Plaintext::Timestamp` at native
+12-block ORE width, and the `eql_v3` comparator
+(`eql_v3.compare_ore_block_256_term`) now derives its block count `N` from the
+term length instead of assuming 8, so the 12-block ciphertexts order correctly
+(see the N-block ORE comparator entry in the `CHANGELOG.md` and the catalog
+comment on the `TIMESTAMPTZ` spec). Its value-wiring is the temporal path below;
+the only practical difference from `date` is that values are UTC-normalized. The
+three divergences (for the ordered `date`):
 
 - **String-backed fixtures.** `eql-scalars` stays zero-dependency, so the
   catalog stores ISO strings (`Fixture::Date("1970-01-01")`), not `chrono`
@@ -359,8 +361,8 @@ it also needs:
   `tests/sqlx/Cargo.toml` (in `[dependencies]`, not `[dev-dependencies]` — the
   `Decimal` impls live in the crate's library code).
 
-See `docs/plans/2026-06-11-ore-block-comparator-n-blocks-design.md` for the full
-worked example (and the N-block ORE comparator change the wide term relies on).
+See the N-block ORE comparator entry in the `CHANGELOG.md` for the comparator
+change the wide `numeric` / `timestamptz` terms rely on.
 
 ### New-capability domains (e.g. `_match` / `Bloom`)
 
