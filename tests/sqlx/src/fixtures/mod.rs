@@ -26,6 +26,19 @@ pub mod cipherstash;
 
 pub mod driver;
 
+// The v3 jsonb (SteVec document) fixture — a hand-written `FixtureSpec`
+// over `serde_json::Value`, generated through the same pipeline as the
+// scalar `eql_v2_<T>` fixtures. Not a CATALOG scalar, so it is registered
+// here directly rather than via `scalar_types!`.
+pub mod v3_ste_vec;
+
+// The scalar-shaped SteVec document fixture — a SteVec document carrying one
+// int4 scalar at `$.field` per `eql_scalars::INT4_VALUES`. A SPLIT fixture
+// (jsonb-document encryption input, int4 plaintext oracle), so it uses the
+// `run_with_payloads` seam rather than `FixtureSpec::run`. Drives the
+// jsonb-entry behaviour matrix (`JsonbEntryInt4`).
+pub mod v3_doc_int4;
+
 // The per-type scalar fixture modules (`eql_v2_int4`, `eql_v2_int2`, …) are
 // generated from the harness list in `scalar_types.rs`. Each expands to
 // `pub mod eql_v2_<T> { … scalar_fixture! … }`, reading its plaintext values

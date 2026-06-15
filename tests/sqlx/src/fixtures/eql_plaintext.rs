@@ -59,6 +59,7 @@ impl PlaintextSqlType {
     pub const DATE: PlaintextSqlType = PlaintextSqlType("date");
     pub const TIMESTAMPTZ: PlaintextSqlType = PlaintextSqlType("timestamp with time zone");
     pub const TEXT: PlaintextSqlType = PlaintextSqlType("text");
+    pub const JSONB: PlaintextSqlType = PlaintextSqlType("jsonb");
 
     pub fn as_str(&self) -> &'static str {
         self.0
@@ -116,6 +117,7 @@ mod sealed {
     impl Sealed for chrono::NaiveDate {}
     impl Sealed for chrono::DateTime<chrono::Utc> {}
     impl Sealed for String {}
+    impl Sealed for serde_json::Value {}
 }
 
 /// A Rust type usable as a fixture `plaintext` value, carrying its EQL cast
@@ -188,6 +190,26 @@ impl EqlPlaintext for String {
 
     fn to_plaintext(&self) -> Plaintext {
         Plaintext::Text(Some(self.clone()))
+    }
+}
+
+/// A JSON document plaintext — the encrypted-JSONB (SteVec) fixture value.
+///
+/// `serde_json::Value` is the document analogue of the scalar plaintexts:
+/// `to_plaintext` lifts it into `Plaintext::Json`, which cipherstash-client
+/// encrypts into a SteVec `eql_v3.json` payload under a JSON-indexed
+/// `ColumnConfig` (`IndexKind::SteVec`). The `cast_for_kind` /
+/// `plaintext_sql_type_for_kind` derivations panic on `ScalarKind::Jsonb`
+/// (the scalar matrix never wires jsonb), so this impl OVERRIDES `CAST` and
+/// `PLAINTEXT_SQL_TYPE` directly — the default const expressions are never
+/// instantiated for this type. `KIND` is still `Jsonb` for documentation.
+impl EqlPlaintext for serde_json::Value {
+    const KIND: ScalarKind = ScalarKind::Jsonb;
+    const CAST: Cast = Cast::JSONB;
+    const PLAINTEXT_SQL_TYPE: PlaintextSqlType = PlaintextSqlType::JSONB;
+
+    fn to_plaintext(&self) -> Plaintext {
+        Plaintext::Json(Some(self.clone()))
     }
 }
 
@@ -333,5 +355,29 @@ mod tests {
         // encrypts it under the `text` cast.
         let p = "hi".to_string().to_plaintext();
         assert!(matches!(p, Plaintext::Text(Some(ref s)) if s == "hi"));
+    }
+
+    #[test]
+    fn json_value_casts_to_jsonb_and_plaintext_type_is_jsonb() {
+        // The document impl OVERRIDES the kind-derived defaults (Jsonb would
+        // panic in cast_for_kind), so assert the overrides resolve.
+        assert_eq!(<serde_json::Value as EqlPlaintext>::CAST, Cast::JSONB);
+        assert_eq!(
+            <serde_json::Value as EqlPlaintext>::PLAINTEXT_SQL_TYPE,
+            PlaintextSqlType::JSONB
+        );
+    }
+
+    #[test]
+    fn json_value_to_plaintext_wraps_in_json_variant() {
+        // A document must lift into the Json variant so the fixture driver
+        // encrypts it through the SteVec document path.
+        let doc = serde_json::json!({ "hello": "world", "number": 1 });
+        match doc.to_plaintext() {
+            Plaintext::Json(Some(ref value)) => {
+                assert_eq!(*value, serde_json::json!({ "hello": "world", "number": 1 }))
+            }
+            other => panic!("expected Plaintext::Json(Some(_)), got {other:?}"),
+        }
     }
 }

@@ -106,3 +106,20 @@ catalog cross-check) fails the job.
   ```
 
 See `docs/reference/adding-a-scalar-encrypted-domain-type.md` §3 (matrix oracle + inventory snapshot).
+
+## v3_jsonb_tests.txt
+
+`v3_jsonb_tests.txt` pins the SQLx test-name set for the hand-written
+`eql_v3.json` harness and its signature-aware operator-surface guard. It catches
+silent coverage shrinkage in macro-generated blocker/NULL/path cases.
+
+Regenerate with:
+
+```bash
+cd tests/sqlx
+cargo test --test v3_jsonb_tests --test v3_jsonb_operator_surface_tests -- --list \
+  | sed -n 's/: test$//p' \
+  | LC_ALL=C sort > snapshots/v3_jsonb_tests.txt
+```
+
+CI verifies it with `mise run test:v3-jsonb:inventory`.
