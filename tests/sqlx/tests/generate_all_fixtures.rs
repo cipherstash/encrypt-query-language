@@ -49,5 +49,14 @@ async fn generate_all() -> anyhow::Result<()> {
     eprintln!("Generating fixture v3_doc_int4 (scalar-shaped SteVec document)...");
     eql_tests::fixtures::v3_doc_int4::generate().await?;
     eprintln!("Regenerated v3_doc_int4.");
+
+    // The numeric scale-equivalence collision fixture (`1`, `1.0`, `2`). Not a
+    // CATALOG scalar — the distinctness guard forbids `1`/`1.0` coexisting in
+    // `eql_v2_numeric` — so it rides the same pipeline as a hand-written
+    // `FixtureSpec<Decimal>`. Gives the always-on `1 == 1.0` ORE collision test
+    // its committed fixture.
+    eprintln!("Generating fixture v3_numeric_collision (1 == 1.0 ORE collision)...");
+    eql_tests::fixtures::v3_numeric_collision::generate().await?;
+    eprintln!("Regenerated v3_numeric_collision.");
     Ok(())
 }
