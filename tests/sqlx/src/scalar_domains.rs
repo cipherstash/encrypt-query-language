@@ -771,7 +771,8 @@ pub fn combo_extractor(spec: &ScalarDomainSpec, ops: &[&str]) -> Result<String> 
             anyhow::anyhow!(
                 "{} declares no extractor for `{}` but it is wired as an \
 index-engagement combo op",
-                spec.sql_domain, op,
+                spec.sql_domain,
+                op,
             )
         })?;
         match &chosen {
