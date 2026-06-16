@@ -76,6 +76,10 @@ impl schemars::JsonSchema for BloomFilter {
                 ..Default::default()
             })),
             metadata: Some(Box::new(Metadata {
+                // KEEP IN SYNC with the doc comment on `BloomFilter` above — it
+                // is the canonical text. A derived `JsonSchema` would copy the
+                // doc comment automatically; this manual impl can't, so this
+                // hand-written paraphrase must be updated alongside it.
                 description: Some(
                     "Bloom-filter match term — the `bf` wire key. Backs the `_match` \
                      domains (`@>`/`<@` containment). Signed i16: EQL stores the filter \

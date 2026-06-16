@@ -65,6 +65,45 @@ fn schema_required_keys_match_catalog_terms() {
     }
 }
 
+/// The published `$id` is the schema's identity URL — `tests/export.rs`
+/// injects [`v3::DomainType::schema_id`] into every written file. Pin its
+/// shape with independent literals (NOT the helper, which would only test
+/// itself): a regressed host, a dropped `v3/`, or a wrong domain segment must
+/// turn a test red, not merely shift the freshness diff.
+#[test]
+fn schema_id_is_canonical() {
+    let entries = v3::all();
+    let id_of = |domain: &str| {
+        entries
+            .iter()
+            .find(|e| e.domain() == domain)
+            .unwrap_or_else(|| panic!("no domain inventory entry for {domain}"))
+            .schema_id()
+    };
+
+    // Fully-literal anchors — no interpolation, so a typo in the helper's base
+    // URL or path cannot match.
+    assert_eq!(
+        id_of("int4_eq"),
+        "https://schemas.cipherstash.com/eql/v3/int4_eq.json"
+    );
+    assert_eq!(
+        id_of("text_search"),
+        "https://schemas.cipherstash.com/eql/v3/text_search.json"
+    );
+
+    // Every domain follows the same canonical pattern.
+    for entry in &entries {
+        let id = entry.schema_id();
+        let name = entry.domain();
+        assert_eq!(
+            id,
+            format!("https://schemas.cipherstash.com/eql/v3/{name}.json"),
+            "{name}: $id must be the canonical eql/v3 URL"
+        );
+    }
+}
+
 /// Every published schema must be *strict*, not just complete: unknown keys
 /// rejected at the root and inside the nested `Identifier`, and the `v`
 /// property pinned to the `SchemaVersion` definition whose `const` is the
