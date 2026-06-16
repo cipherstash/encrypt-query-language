@@ -2,7 +2,7 @@
 import type { Ciphertext } from "./Ciphertext";
 import type { Hmac256 } from "./Hmac256";
 import type { Identifier } from "./Identifier";
-import type { OreBlockU64_8_256 } from "./OreBlockU64_8_256";
+import type { OreBlock256 } from "./OreBlock256";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
@@ -31,4 +31,4 @@ hm: Hmac256,
 /**
  * Block-ORE order term.
  */
-ob: OreBlockU64_8_256, };
+ob: OreBlock256, };

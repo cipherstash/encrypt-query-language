@@ -468,7 +468,7 @@ mod tests {
         let sql = render_functions_file(s.token, domain(s, "_ord"));
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
         assert!(sql.contains("CREATE FUNCTION eql_v3.ord_term(a eql_v3.int4_ord)"));
-        assert!(sql.contains("RETURNS eql_v3.ore_block_u64_8_256"));
+        assert!(sql.contains("RETURNS eql_v3.ore_block_256"));
         assert_eq!(
             sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
                 .count(),
