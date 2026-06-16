@@ -3,9 +3,9 @@
 //! One Rust definition per EQL payload shape — the single source of truth
 //! for every tool that produces or consumes EQL payloads
 //! (`cipherstash-client`, `protect-ffi`, CipherStash Proxy). TypeScript
-//! bindings are generated from these definitions via `ts-rs` (run
-//! `cargo test`, see `bindings/v3/`); JSON Schemas follow in a stacked
-//! change. The Rust types are the contract.
+//! bindings (`ts-rs`) and JSON Schemas (`schemars`) are generated from
+//! these definitions — run `cargo test`, see `bindings/v3/` and
+//! `schema/v3/`. The Rust types are the contract.
 //!
 //! ts-rs rule (learned from the original spike): ts-rs silently drops a
 //! serde attribute it cannot parse, so keep field-level serde attributes
@@ -20,6 +20,7 @@
 //! Wire rule: **field names ARE wire names** — no `#[serde(rename)]`
 //! anywhere. The struct definition reads exactly like the JSON payload.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -72,10 +73,37 @@ impl<'de> Deserialize<'de> for SchemaVersion {
     }
 }
 
+/// Manual schema: pins `v` to the literal `2` (`const`), mirroring the
+/// domain CHECK — the derive would emit an unconstrained integer.
+impl schemars::JsonSchema for SchemaVersion {
+    fn schema_name() -> String {
+        "SchemaVersion".to_owned()
+    }
+
+    fn json_schema(_: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+        schemars::schema::SchemaObject {
+            instance_type: Some(schemars::schema::InstanceType::Integer.into()),
+            const_value: Some(serde_json::json!(EQL_SCHEMA_VERSION)),
+            metadata: Some(Box::new(schemars::schema::Metadata {
+                // KEEP IN SYNC with the `SchemaVersion` doc comment above — it
+                // is the canonical text. A derived `JsonSchema` would copy the
+                // doc comment automatically; this manual impl can't, so this
+                // hand-written copy must be updated alongside it.
+                description: Some(
+                    "The envelope version field (`v`) — always exactly `2` on the wire.".to_owned(),
+                ),
+                ..Default::default()
+            })),
+            ..Default::default()
+        }
+        .into()
+    }
+}
+
 /// Table + column identifier — wire shape `{"t": "...", "c": "..."}`.
 ///
 /// Shared by every payload.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct Identifier {

@@ -1,0 +1,85 @@
+{
+  "$id": "https://schemas.cipherstash.com/eql/v3/date_ord_ore.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "Ciphertext": {
+      "description": "mp_base85 source ciphertext — the `c` envelope key.\n\nRequired by every v3 domain CHECK; present on every payload.",
+      "type": "string"
+    },
+    "Identifier": {
+      "additionalProperties": false,
+      "description": "Table + column identifier — wire shape `{\"t\": \"...\", \"c\": \"...\"}`.\n\nShared by every payload.",
+      "properties": {
+        "c": {
+          "description": "Column name.",
+          "type": "string"
+        },
+        "t": {
+          "description": "Table name.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "c",
+        "t"
+      ],
+      "type": "object"
+    },
+    "OreBlockU64_8_256": {
+      "description": "Block-ORE (u64, 8 blocks, 256) order term — the `ob` wire key. Backs the `_ord` / `_ord_ore` domains (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's domain, so it serves equality too. SQL-side constructor: `eql_v3.ore_block_u64_8_256`.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "SchemaVersion": {
+      "const": 2,
+      "description": "The envelope version field (`v`) — always exactly `2` on the wire.",
+      "type": "integer"
+    }
+  },
+  "description": "`eql_v3.date_ord_ore` — full comparison, scheme-explicit name.",
+  "properties": {
+    "c": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Ciphertext"
+        }
+      ],
+      "description": "mp_base85 source ciphertext. Required by the domain CHECK."
+    },
+    "i": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Identifier"
+        }
+      ],
+      "description": "Table/column identifier. Required by the domain CHECK."
+    },
+    "ob": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/OreBlockU64_8_256"
+        }
+      ],
+      "description": "Block-ORE order term. Serves equality too."
+    },
+    "v": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/SchemaVersion"
+        }
+      ],
+      "description": "Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other value fails deserialization."
+    }
+  },
+  "required": [
+    "c",
+    "i",
+    "ob",
+    "v"
+  ],
+  "title": "DateOrdOre",
+  "type": "object"
+}

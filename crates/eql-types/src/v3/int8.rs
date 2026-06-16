@@ -1,14 +1,17 @@
 //! The `int8` encrypted-domain family. Same four-domain ordered shape as
 //! [`crate::v3::int4`] — see that module for the capability table.
 
+use schemars::{schema::RootSchema, schema_for};
+
 use crate::v3::terms::{Ciphertext, Hmac256, OreBlockU64_8_256};
 use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 /// `eql_v3.int8` — storage only; every operator is blocked.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct Int8 {
@@ -29,10 +32,14 @@ impl DomainType for Int8 {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+
+    fn schema(&self) -> RootSchema {
+        schema_for!(Int8)
+    }
 }
 
 /// `eql_v3.int8_eq` — HMAC equality (`=`, `<>`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct Int8Eq {
@@ -55,10 +62,14 @@ impl DomainType for Int8Eq {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+
+    fn schema(&self) -> RootSchema {
+        schema_for!(Int8Eq)
+    }
 }
 
 /// `eql_v3.int8_ord_ore` — full comparison, scheme-explicit name.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct Int8OrdOre {
@@ -81,10 +92,14 @@ impl DomainType for Int8OrdOre {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+
+    fn schema(&self) -> RootSchema {
+        schema_for!(Int8OrdOre)
+    }
 }
 
 /// `eql_v3.int8_ord` — full comparison (`=` `<>` `<` `<=` `>` `>=`).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct Int8Ord {
@@ -106,5 +121,9 @@ impl DomainType for Int8Ord {
 
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
+    }
+
+    fn schema(&self) -> RootSchema {
+        schema_for!(Int8Ord)
     }
 }
