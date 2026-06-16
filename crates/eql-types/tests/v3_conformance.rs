@@ -176,11 +176,8 @@ fn non_int4_tokens_round_trip_every_domain() {
     let ord = |t: &str| json!({ "v": 2, "i": { "t": t, "c": "x" }, "c": "ct", "ob": ["b0", "b1"] });
     // Text routes equality through `hm`, so its ordered domains carry both `hm`
     // and `ob` (`[Hm, Ore]`); `text_search` adds the Bloom-filter match term.
-    let text_ord =
-        |t: &str| json!({ "v": 2, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef", "ob": ["b0", "b1"] });
-    let text_search = |t: &str| {
-        json!({ "v": 2, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef", "ob": ["b0", "b1"], "bf": [1, 2, 3] })
-    };
+    let text_ord = |t: &str| json!({ "v": 2, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef", "ob": ["b0", "b1"] });
+    let text_search = |t: &str| json!({ "v": 2, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef", "ob": ["b0", "b1"], "bf": [1, 2, 3] });
 
     // Roundtrip a payload byte-for-byte, then confirm the catalog domain name.
     macro_rules! round_trip {
