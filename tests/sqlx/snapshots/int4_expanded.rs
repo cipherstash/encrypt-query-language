@@ -9,9 +9,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 454usize,
+            start_line: 553usize,
             start_col: 26usize,
-            end_line: 454usize,
+            end_line: 553usize,
             end_col: 60usize,
             compile_fail: false,
             no_run: false,
@@ -86,9 +86,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 454usize,
+            start_line: 553usize,
             start_col: 26usize,
-            end_line: 454usize,
+            end_line: 553usize,
             end_col: 60usize,
             compile_fail: false,
             no_run: false,
@@ -163,9 +163,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 454usize,
+            start_line: 553usize,
             start_col: 26usize,
-            end_line: 454usize,
+            end_line: 553usize,
             end_col: 60usize,
             compile_fail: false,
             no_run: false,
@@ -240,9 +240,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 454usize,
+            start_line: 553usize,
             start_col: 26usize,
-            end_line: 454usize,
+            end_line: 553usize,
             end_col: 60usize,
             compile_fail: false,
             no_run: false,
@@ -319,9 +319,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -341,10 +341,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -418,9 +418,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -440,10 +440,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -507,19 +507,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_eq_eq_pivot_zero_correctness"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_eq_eq_pivot_mid_correctness"]
     #[doc(hidden)]
-    pub const matrix_int4_eq_eq_pivot_zero_correctness: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_eq_eq_pivot_mid_correctness: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_eq_eq_pivot_zero_correctness",
+                "scalars::int4::matrix_int4_eq_eq_pivot_mid_correctness",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -528,21 +528,21 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_eq_eq_pivot_zero_correctness()),
+            || test::assert_test_result(matrix_int4_eq_eq_pivot_mid_correctness()),
         ),
     };
-    fn matrix_int4_eq_eq_pivot_zero_correctness() -> anyhow::Result<()> {
-        async fn matrix_int4_eq_eq_pivot_zero_correctness(
+    fn matrix_int4_eq_eq_pivot_mid_correctness() -> anyhow::Result<()> {
+        async fn matrix_int4_eq_eq_pivot_mid_correctness(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -566,7 +566,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_eq_eq_pivot_zero_correctness",
+            "encrypted_domain::scalars::int4::matrix_int4_eq_eq_pivot_mid_correctness",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -602,7 +602,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_eq_eq_pivot_zero_correctness;
+        let f: fn(_) -> _ = matrix_int4_eq_eq_pivot_mid_correctness;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -616,9 +616,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -638,10 +638,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -715,9 +715,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -737,10 +737,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -804,19 +804,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_eq_neq_pivot_zero_correctness"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_eq_neq_pivot_mid_correctness"]
     #[doc(hidden)]
-    pub const matrix_int4_eq_neq_pivot_zero_correctness: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_eq_neq_pivot_mid_correctness: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_eq_neq_pivot_zero_correctness",
+                "scalars::int4::matrix_int4_eq_neq_pivot_mid_correctness",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -825,21 +825,21 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_eq_neq_pivot_zero_correctness()),
+            || test::assert_test_result(matrix_int4_eq_neq_pivot_mid_correctness()),
         ),
     };
-    fn matrix_int4_eq_neq_pivot_zero_correctness() -> anyhow::Result<()> {
-        async fn matrix_int4_eq_neq_pivot_zero_correctness(
+    fn matrix_int4_eq_neq_pivot_mid_correctness() -> anyhow::Result<()> {
+        async fn matrix_int4_eq_neq_pivot_mid_correctness(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -863,7 +863,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_eq_neq_pivot_zero_correctness",
+            "encrypted_domain::scalars::int4::matrix_int4_eq_neq_pivot_mid_correctness",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -899,7 +899,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_eq_neq_pivot_zero_correctness;
+        let f: fn(_) -> _ = matrix_int4_eq_neq_pivot_mid_correctness;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -913,9 +913,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -935,10 +935,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -1012,9 +1012,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1034,10 +1034,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -1101,19 +1101,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_eq_pivot_zero_correctness"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_eq_pivot_mid_correctness"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_eq_pivot_zero_correctness: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_eq_pivot_mid_correctness: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_eq_pivot_zero_correctness",
+                "scalars::int4::matrix_int4_ord_eq_pivot_mid_correctness",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1122,21 +1122,21 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_eq_pivot_zero_correctness()),
+            || test::assert_test_result(matrix_int4_ord_eq_pivot_mid_correctness()),
         ),
     };
-    fn matrix_int4_ord_eq_pivot_zero_correctness() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_eq_pivot_zero_correctness(
+    fn matrix_int4_ord_eq_pivot_mid_correctness() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_eq_pivot_mid_correctness(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -1160,7 +1160,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_eq_pivot_zero_correctness",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_eq_pivot_mid_correctness",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -1196,7 +1196,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_eq_pivot_zero_correctness;
+        let f: fn(_) -> _ = matrix_int4_ord_eq_pivot_mid_correctness;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -1210,9 +1210,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1232,10 +1232,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -1309,9 +1309,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1331,10 +1331,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -1398,19 +1398,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_neq_pivot_zero_correctness"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_neq_pivot_mid_correctness"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_neq_pivot_zero_correctness: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_neq_pivot_mid_correctness: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_neq_pivot_zero_correctness",
+                "scalars::int4::matrix_int4_ord_neq_pivot_mid_correctness",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1419,21 +1419,21 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_neq_pivot_zero_correctness()),
+            || test::assert_test_result(matrix_int4_ord_neq_pivot_mid_correctness()),
         ),
     };
-    fn matrix_int4_ord_neq_pivot_zero_correctness() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_neq_pivot_zero_correctness(
+    fn matrix_int4_ord_neq_pivot_mid_correctness() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_neq_pivot_mid_correctness(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -1457,7 +1457,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_neq_pivot_zero_correctness",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_neq_pivot_mid_correctness",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -1493,7 +1493,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_neq_pivot_zero_correctness;
+        let f: fn(_) -> _ = matrix_int4_ord_neq_pivot_mid_correctness;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -1507,9 +1507,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1529,10 +1529,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -1606,9 +1606,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1628,10 +1628,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -1695,19 +1695,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_eq_pivot_zero_correctness"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_eq_pivot_mid_correctness"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_ore_eq_pivot_zero_correctness: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_ore_eq_pivot_mid_correctness: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_ore_eq_pivot_zero_correctness",
+                "scalars::int4::matrix_int4_ord_ore_eq_pivot_mid_correctness",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1716,21 +1716,21 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_ore_eq_pivot_zero_correctness()),
+            || test::assert_test_result(matrix_int4_ord_ore_eq_pivot_mid_correctness()),
         ),
     };
-    fn matrix_int4_ord_ore_eq_pivot_zero_correctness() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_ore_eq_pivot_zero_correctness(
+    fn matrix_int4_ord_ore_eq_pivot_mid_correctness() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_eq_pivot_mid_correctness(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -1754,7 +1754,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_eq_pivot_zero_correctness",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_eq_pivot_mid_correctness",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -1790,7 +1790,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_ore_eq_pivot_zero_correctness;
+        let f: fn(_) -> _ = matrix_int4_ord_ore_eq_pivot_mid_correctness;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -1804,9 +1804,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1826,10 +1826,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -1903,9 +1903,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1925,10 +1925,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -1992,19 +1992,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_neq_pivot_zero_correctness"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_neq_pivot_mid_correctness"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_ore_neq_pivot_zero_correctness: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_ore_neq_pivot_mid_correctness: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_ore_neq_pivot_zero_correctness",
+                "scalars::int4::matrix_int4_ord_ore_neq_pivot_mid_correctness",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2013,21 +2013,21 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_ore_neq_pivot_zero_correctness()),
+            || test::assert_test_result(matrix_int4_ord_ore_neq_pivot_mid_correctness()),
         ),
     };
-    fn matrix_int4_ord_ore_neq_pivot_zero_correctness() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_ore_neq_pivot_zero_correctness(
+    fn matrix_int4_ord_ore_neq_pivot_mid_correctness() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_neq_pivot_mid_correctness(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -2051,7 +2051,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_neq_pivot_zero_correctness",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_neq_pivot_mid_correctness",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -2087,7 +2087,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_ore_neq_pivot_zero_correctness;
+        let f: fn(_) -> _ = matrix_int4_ord_ore_neq_pivot_mid_correctness;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -2101,9 +2101,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2123,10 +2123,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -2200,9 +2200,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2222,10 +2222,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -2289,19 +2289,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_lt_pivot_zero_correctness"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_lt_pivot_mid_correctness"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_lt_pivot_zero_correctness: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_lt_pivot_mid_correctness: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_lt_pivot_zero_correctness",
+                "scalars::int4::matrix_int4_ord_lt_pivot_mid_correctness",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2310,21 +2310,21 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_lt_pivot_zero_correctness()),
+            || test::assert_test_result(matrix_int4_ord_lt_pivot_mid_correctness()),
         ),
     };
-    fn matrix_int4_ord_lt_pivot_zero_correctness() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_lt_pivot_zero_correctness(
+    fn matrix_int4_ord_lt_pivot_mid_correctness() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_lt_pivot_mid_correctness(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -2348,7 +2348,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_lt_pivot_zero_correctness",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_lt_pivot_mid_correctness",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -2384,7 +2384,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_lt_pivot_zero_correctness;
+        let f: fn(_) -> _ = matrix_int4_ord_lt_pivot_mid_correctness;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -2398,9 +2398,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2420,10 +2420,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -2497,9 +2497,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2519,10 +2519,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -2586,19 +2586,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_lte_pivot_zero_correctness"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_lte_pivot_mid_correctness"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_lte_pivot_zero_correctness: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_lte_pivot_mid_correctness: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_lte_pivot_zero_correctness",
+                "scalars::int4::matrix_int4_ord_lte_pivot_mid_correctness",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2607,21 +2607,21 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_lte_pivot_zero_correctness()),
+            || test::assert_test_result(matrix_int4_ord_lte_pivot_mid_correctness()),
         ),
     };
-    fn matrix_int4_ord_lte_pivot_zero_correctness() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_lte_pivot_zero_correctness(
+    fn matrix_int4_ord_lte_pivot_mid_correctness() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_lte_pivot_mid_correctness(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -2645,7 +2645,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_lte_pivot_zero_correctness",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_lte_pivot_mid_correctness",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -2681,7 +2681,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_lte_pivot_zero_correctness;
+        let f: fn(_) -> _ = matrix_int4_ord_lte_pivot_mid_correctness;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -2695,9 +2695,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2717,10 +2717,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -2794,9 +2794,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2816,10 +2816,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -2883,19 +2883,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_gt_pivot_zero_correctness"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_gt_pivot_mid_correctness"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_gt_pivot_zero_correctness: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_gt_pivot_mid_correctness: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_gt_pivot_zero_correctness",
+                "scalars::int4::matrix_int4_ord_gt_pivot_mid_correctness",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2904,21 +2904,21 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_gt_pivot_zero_correctness()),
+            || test::assert_test_result(matrix_int4_ord_gt_pivot_mid_correctness()),
         ),
     };
-    fn matrix_int4_ord_gt_pivot_zero_correctness() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_gt_pivot_zero_correctness(
+    fn matrix_int4_ord_gt_pivot_mid_correctness() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_gt_pivot_mid_correctness(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -2942,7 +2942,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_gt_pivot_zero_correctness",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_gt_pivot_mid_correctness",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -2978,7 +2978,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_gt_pivot_zero_correctness;
+        let f: fn(_) -> _ = matrix_int4_ord_gt_pivot_mid_correctness;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -2992,9 +2992,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3014,10 +3014,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -3091,9 +3091,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3113,10 +3113,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -3180,19 +3180,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_gte_pivot_zero_correctness"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_gte_pivot_mid_correctness"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_gte_pivot_zero_correctness: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_gte_pivot_mid_correctness: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_gte_pivot_zero_correctness",
+                "scalars::int4::matrix_int4_ord_gte_pivot_mid_correctness",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3201,21 +3201,21 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_gte_pivot_zero_correctness()),
+            || test::assert_test_result(matrix_int4_ord_gte_pivot_mid_correctness()),
         ),
     };
-    fn matrix_int4_ord_gte_pivot_zero_correctness() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_gte_pivot_zero_correctness(
+    fn matrix_int4_ord_gte_pivot_mid_correctness() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_gte_pivot_mid_correctness(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -3239,7 +3239,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_gte_pivot_zero_correctness",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_gte_pivot_mid_correctness",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -3275,7 +3275,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_gte_pivot_zero_correctness;
+        let f: fn(_) -> _ = matrix_int4_ord_gte_pivot_mid_correctness;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -3289,9 +3289,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3311,10 +3311,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -3388,9 +3388,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3410,10 +3410,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -3477,19 +3477,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_lt_pivot_zero_correctness"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_lt_pivot_mid_correctness"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_ore_lt_pivot_zero_correctness: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_ore_lt_pivot_mid_correctness: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_ore_lt_pivot_zero_correctness",
+                "scalars::int4::matrix_int4_ord_ore_lt_pivot_mid_correctness",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3498,21 +3498,21 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_ore_lt_pivot_zero_correctness()),
+            || test::assert_test_result(matrix_int4_ord_ore_lt_pivot_mid_correctness()),
         ),
     };
-    fn matrix_int4_ord_ore_lt_pivot_zero_correctness() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_ore_lt_pivot_zero_correctness(
+    fn matrix_int4_ord_ore_lt_pivot_mid_correctness() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_lt_pivot_mid_correctness(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -3536,7 +3536,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_lt_pivot_zero_correctness",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_lt_pivot_mid_correctness",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -3572,7 +3572,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_ore_lt_pivot_zero_correctness;
+        let f: fn(_) -> _ = matrix_int4_ord_ore_lt_pivot_mid_correctness;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -3586,9 +3586,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3608,10 +3608,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -3685,9 +3685,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3707,10 +3707,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -3774,19 +3774,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_lte_pivot_zero_correctness"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_lte_pivot_mid_correctness"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_ore_lte_pivot_zero_correctness: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_ore_lte_pivot_mid_correctness: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_ore_lte_pivot_zero_correctness",
+                "scalars::int4::matrix_int4_ord_ore_lte_pivot_mid_correctness",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3795,21 +3795,21 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_ore_lte_pivot_zero_correctness()),
+            || test::assert_test_result(matrix_int4_ord_ore_lte_pivot_mid_correctness()),
         ),
     };
-    fn matrix_int4_ord_ore_lte_pivot_zero_correctness() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_ore_lte_pivot_zero_correctness(
+    fn matrix_int4_ord_ore_lte_pivot_mid_correctness() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_lte_pivot_mid_correctness(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -3833,7 +3833,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_lte_pivot_zero_correctness",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_lte_pivot_mid_correctness",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -3869,7 +3869,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_ore_lte_pivot_zero_correctness;
+        let f: fn(_) -> _ = matrix_int4_ord_ore_lte_pivot_mid_correctness;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -3883,9 +3883,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3905,10 +3905,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -3982,9 +3982,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4004,10 +4004,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -4071,19 +4071,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_gt_pivot_zero_correctness"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_gt_pivot_mid_correctness"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_ore_gt_pivot_zero_correctness: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_ore_gt_pivot_mid_correctness: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_ore_gt_pivot_zero_correctness",
+                "scalars::int4::matrix_int4_ord_ore_gt_pivot_mid_correctness",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4092,21 +4092,21 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_ore_gt_pivot_zero_correctness()),
+            || test::assert_test_result(matrix_int4_ord_ore_gt_pivot_mid_correctness()),
         ),
     };
-    fn matrix_int4_ord_ore_gt_pivot_zero_correctness() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_ore_gt_pivot_zero_correctness(
+    fn matrix_int4_ord_ore_gt_pivot_mid_correctness() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_gt_pivot_mid_correctness(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -4130,7 +4130,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_gt_pivot_zero_correctness",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_gt_pivot_mid_correctness",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -4166,7 +4166,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_ore_gt_pivot_zero_correctness;
+        let f: fn(_) -> _ = matrix_int4_ord_ore_gt_pivot_mid_correctness;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -4180,9 +4180,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4202,10 +4202,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -4279,9 +4279,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4301,10 +4301,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -4368,19 +4368,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_gte_pivot_zero_correctness"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_gte_pivot_mid_correctness"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_ore_gte_pivot_zero_correctness: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_ore_gte_pivot_mid_correctness: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_ore_gte_pivot_zero_correctness",
+                "scalars::int4::matrix_int4_ord_ore_gte_pivot_mid_correctness",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 590usize,
+            start_line: 689usize,
             start_col: 22usize,
-            end_line: 590usize,
+            end_line: 689usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4389,21 +4389,21 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_ore_gte_pivot_zero_correctness()),
+            || test::assert_test_result(matrix_int4_ord_ore_gte_pivot_mid_correctness()),
         ),
     };
-    fn matrix_int4_ord_ore_gte_pivot_zero_correctness() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_ore_gte_pivot_zero_correctness(
+    fn matrix_int4_ord_ore_gte_pivot_mid_correctness() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_gte_pivot_mid_correctness(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let predicate = ::alloc::__export::must_use({
@@ -4427,7 +4427,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_gte_pivot_zero_correctness",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_gte_pivot_mid_correctness",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -4463,7 +4463,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_ore_gte_pivot_zero_correctness;
+        let f: fn(_) -> _ = matrix_int4_ord_ore_gte_pivot_mid_correctness;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -4477,9 +4477,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4499,20 +4499,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "=",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("="),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -4643,9 +4643,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4665,20 +4665,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "=",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("="),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -4799,19 +4799,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_eq_eq_pivot_zero_cross_shape"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_eq_eq_pivot_mid_cross_shape"]
     #[doc(hidden)]
-    pub const matrix_int4_eq_eq_pivot_zero_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_eq_eq_pivot_mid_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_eq_eq_pivot_zero_cross_shape",
+                "scalars::int4::matrix_int4_eq_eq_pivot_mid_cross_shape",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4820,31 +4820,31 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_eq_eq_pivot_zero_cross_shape()),
+            || test::assert_test_result(matrix_int4_eq_eq_pivot_mid_cross_shape()),
         ),
     };
-    fn matrix_int4_eq_eq_pivot_zero_cross_shape() -> anyhow::Result<()> {
-        async fn matrix_int4_eq_eq_pivot_zero_cross_shape(
+    fn matrix_int4_eq_eq_pivot_mid_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_int4_eq_eq_pivot_mid_cross_shape(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "=",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("="),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -4925,7 +4925,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_eq_eq_pivot_zero_cross_shape",
+            "encrypted_domain::scalars::int4::matrix_int4_eq_eq_pivot_mid_cross_shape",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -4961,7 +4961,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_eq_eq_pivot_zero_cross_shape;
+        let f: fn(_) -> _ = matrix_int4_eq_eq_pivot_mid_cross_shape;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -4975,9 +4975,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4997,20 +4997,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "<>",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("<>"),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -5141,9 +5141,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5163,20 +5163,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "<>",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("<>"),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -5297,19 +5297,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_eq_neq_pivot_zero_cross_shape"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_eq_neq_pivot_mid_cross_shape"]
     #[doc(hidden)]
-    pub const matrix_int4_eq_neq_pivot_zero_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_eq_neq_pivot_mid_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_eq_neq_pivot_zero_cross_shape",
+                "scalars::int4::matrix_int4_eq_neq_pivot_mid_cross_shape",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5318,31 +5318,31 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_eq_neq_pivot_zero_cross_shape()),
+            || test::assert_test_result(matrix_int4_eq_neq_pivot_mid_cross_shape()),
         ),
     };
-    fn matrix_int4_eq_neq_pivot_zero_cross_shape() -> anyhow::Result<()> {
-        async fn matrix_int4_eq_neq_pivot_zero_cross_shape(
+    fn matrix_int4_eq_neq_pivot_mid_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_int4_eq_neq_pivot_mid_cross_shape(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "<>",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("<>"),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -5423,7 +5423,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_eq_neq_pivot_zero_cross_shape",
+            "encrypted_domain::scalars::int4::matrix_int4_eq_neq_pivot_mid_cross_shape",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -5459,7 +5459,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_eq_neq_pivot_zero_cross_shape;
+        let f: fn(_) -> _ = matrix_int4_eq_neq_pivot_mid_cross_shape;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -5473,9 +5473,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5495,20 +5495,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "=",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("="),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -5639,9 +5639,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5661,20 +5661,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "=",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("="),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -5795,19 +5795,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_eq_pivot_zero_cross_shape"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_eq_pivot_mid_cross_shape"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_eq_pivot_zero_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_eq_pivot_mid_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_eq_pivot_zero_cross_shape",
+                "scalars::int4::matrix_int4_ord_eq_pivot_mid_cross_shape",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5816,31 +5816,31 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_eq_pivot_zero_cross_shape()),
+            || test::assert_test_result(matrix_int4_ord_eq_pivot_mid_cross_shape()),
         ),
     };
-    fn matrix_int4_ord_eq_pivot_zero_cross_shape() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_eq_pivot_zero_cross_shape(
+    fn matrix_int4_ord_eq_pivot_mid_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_eq_pivot_mid_cross_shape(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "=",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("="),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -5921,7 +5921,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_eq_pivot_zero_cross_shape",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_eq_pivot_mid_cross_shape",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -5957,7 +5957,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_eq_pivot_zero_cross_shape;
+        let f: fn(_) -> _ = matrix_int4_ord_eq_pivot_mid_cross_shape;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -5971,9 +5971,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5993,20 +5993,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "<>",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("<>"),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -6137,9 +6137,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6159,20 +6159,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "<>",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("<>"),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -6293,19 +6293,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_neq_pivot_zero_cross_shape"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_neq_pivot_mid_cross_shape"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_neq_pivot_zero_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_neq_pivot_mid_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_neq_pivot_zero_cross_shape",
+                "scalars::int4::matrix_int4_ord_neq_pivot_mid_cross_shape",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6314,31 +6314,31 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_neq_pivot_zero_cross_shape()),
+            || test::assert_test_result(matrix_int4_ord_neq_pivot_mid_cross_shape()),
         ),
     };
-    fn matrix_int4_ord_neq_pivot_zero_cross_shape() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_neq_pivot_zero_cross_shape(
+    fn matrix_int4_ord_neq_pivot_mid_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_neq_pivot_mid_cross_shape(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "<>",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("<>"),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -6419,7 +6419,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_neq_pivot_zero_cross_shape",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_neq_pivot_mid_cross_shape",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -6455,7 +6455,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_neq_pivot_zero_cross_shape;
+        let f: fn(_) -> _ = matrix_int4_ord_neq_pivot_mid_cross_shape;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -6469,9 +6469,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6491,20 +6491,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "=",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("="),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -6635,9 +6635,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6657,20 +6657,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "=",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("="),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -6791,19 +6791,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_eq_pivot_zero_cross_shape"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_eq_pivot_mid_cross_shape"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_ore_eq_pivot_zero_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_ore_eq_pivot_mid_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_ore_eq_pivot_zero_cross_shape",
+                "scalars::int4::matrix_int4_ord_ore_eq_pivot_mid_cross_shape",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6812,31 +6812,31 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_ore_eq_pivot_zero_cross_shape()),
+            || test::assert_test_result(matrix_int4_ord_ore_eq_pivot_mid_cross_shape()),
         ),
     };
-    fn matrix_int4_ord_ore_eq_pivot_zero_cross_shape() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_ore_eq_pivot_zero_cross_shape(
+    fn matrix_int4_ord_ore_eq_pivot_mid_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_eq_pivot_mid_cross_shape(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "=",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("="),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -6917,7 +6917,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_eq_pivot_zero_cross_shape",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_eq_pivot_mid_cross_shape",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -6953,7 +6953,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_ore_eq_pivot_zero_cross_shape;
+        let f: fn(_) -> _ = matrix_int4_ord_ore_eq_pivot_mid_cross_shape;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -6967,9 +6967,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6989,20 +6989,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "<>",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("<>"),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -7133,9 +7133,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7155,20 +7155,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "<>",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("<>"),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -7289,19 +7289,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_neq_pivot_zero_cross_shape"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_neq_pivot_mid_cross_shape"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_ore_neq_pivot_zero_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_ore_neq_pivot_mid_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_ore_neq_pivot_zero_cross_shape",
+                "scalars::int4::matrix_int4_ord_ore_neq_pivot_mid_cross_shape",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7310,31 +7310,31 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_ore_neq_pivot_zero_cross_shape()),
+            || test::assert_test_result(matrix_int4_ord_ore_neq_pivot_mid_cross_shape()),
         ),
     };
-    fn matrix_int4_ord_ore_neq_pivot_zero_cross_shape() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_ore_neq_pivot_zero_cross_shape(
+    fn matrix_int4_ord_ore_neq_pivot_mid_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_neq_pivot_mid_cross_shape(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "<>",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("<>"),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -7415,7 +7415,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_neq_pivot_zero_cross_shape",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_neq_pivot_mid_cross_shape",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -7451,7 +7451,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_ore_neq_pivot_zero_cross_shape;
+        let f: fn(_) -> _ = matrix_int4_ord_ore_neq_pivot_mid_cross_shape;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -7465,9 +7465,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7487,20 +7487,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "<",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("<"),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -7631,9 +7631,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7653,20 +7653,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "<",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("<"),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -7787,19 +7787,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_lt_pivot_zero_cross_shape"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_lt_pivot_mid_cross_shape"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_lt_pivot_zero_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_lt_pivot_mid_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_lt_pivot_zero_cross_shape",
+                "scalars::int4::matrix_int4_ord_lt_pivot_mid_cross_shape",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7808,31 +7808,31 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_lt_pivot_zero_cross_shape()),
+            || test::assert_test_result(matrix_int4_ord_lt_pivot_mid_cross_shape()),
         ),
     };
-    fn matrix_int4_ord_lt_pivot_zero_cross_shape() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_lt_pivot_zero_cross_shape(
+    fn matrix_int4_ord_lt_pivot_mid_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_lt_pivot_mid_cross_shape(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "<",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("<"),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -7913,7 +7913,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_lt_pivot_zero_cross_shape",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_lt_pivot_mid_cross_shape",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -7949,7 +7949,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_lt_pivot_zero_cross_shape;
+        let f: fn(_) -> _ = matrix_int4_ord_lt_pivot_mid_cross_shape;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -7963,9 +7963,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7985,20 +7985,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "<=",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("<="),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -8129,9 +8129,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8151,20 +8151,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "<=",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("<="),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -8285,19 +8285,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_lte_pivot_zero_cross_shape"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_lte_pivot_mid_cross_shape"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_lte_pivot_zero_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_lte_pivot_mid_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_lte_pivot_zero_cross_shape",
+                "scalars::int4::matrix_int4_ord_lte_pivot_mid_cross_shape",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8306,31 +8306,31 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_lte_pivot_zero_cross_shape()),
+            || test::assert_test_result(matrix_int4_ord_lte_pivot_mid_cross_shape()),
         ),
     };
-    fn matrix_int4_ord_lte_pivot_zero_cross_shape() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_lte_pivot_zero_cross_shape(
+    fn matrix_int4_ord_lte_pivot_mid_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_lte_pivot_mid_cross_shape(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "<=",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("<="),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -8411,7 +8411,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_lte_pivot_zero_cross_shape",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_lte_pivot_mid_cross_shape",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -8447,7 +8447,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_lte_pivot_zero_cross_shape;
+        let f: fn(_) -> _ = matrix_int4_ord_lte_pivot_mid_cross_shape;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -8461,9 +8461,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8483,20 +8483,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ">",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op(">"),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -8627,9 +8627,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8649,20 +8649,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ">",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op(">"),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -8783,19 +8783,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_gt_pivot_zero_cross_shape"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_gt_pivot_mid_cross_shape"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_gt_pivot_zero_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_gt_pivot_mid_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_gt_pivot_zero_cross_shape",
+                "scalars::int4::matrix_int4_ord_gt_pivot_mid_cross_shape",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8804,31 +8804,31 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_gt_pivot_zero_cross_shape()),
+            || test::assert_test_result(matrix_int4_ord_gt_pivot_mid_cross_shape()),
         ),
     };
-    fn matrix_int4_ord_gt_pivot_zero_cross_shape() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_gt_pivot_zero_cross_shape(
+    fn matrix_int4_ord_gt_pivot_mid_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_gt_pivot_mid_cross_shape(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ">",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op(">"),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -8909,7 +8909,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_gt_pivot_zero_cross_shape",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_gt_pivot_mid_cross_shape",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -8945,7 +8945,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_gt_pivot_zero_cross_shape;
+        let f: fn(_) -> _ = matrix_int4_ord_gt_pivot_mid_cross_shape;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -8959,9 +8959,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8981,20 +8981,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ">=",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op(">="),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -9125,9 +9125,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9147,20 +9147,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ">=",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op(">="),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -9281,19 +9281,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_gte_pivot_zero_cross_shape"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_gte_pivot_mid_cross_shape"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_gte_pivot_zero_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_gte_pivot_mid_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_gte_pivot_zero_cross_shape",
+                "scalars::int4::matrix_int4_ord_gte_pivot_mid_cross_shape",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9302,31 +9302,31 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_gte_pivot_zero_cross_shape()),
+            || test::assert_test_result(matrix_int4_ord_gte_pivot_mid_cross_shape()),
         ),
     };
-    fn matrix_int4_ord_gte_pivot_zero_cross_shape() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_gte_pivot_zero_cross_shape(
+    fn matrix_int4_ord_gte_pivot_mid_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_gte_pivot_mid_cross_shape(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ">=",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op(">="),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -9407,7 +9407,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_gte_pivot_zero_cross_shape",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_gte_pivot_mid_cross_shape",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -9443,7 +9443,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_gte_pivot_zero_cross_shape;
+        let f: fn(_) -> _ = matrix_int4_ord_gte_pivot_mid_cross_shape;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -9457,9 +9457,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9479,20 +9479,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "<",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("<"),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -9623,9 +9623,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9645,20 +9645,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "<",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("<"),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -9779,19 +9779,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_lt_pivot_zero_cross_shape"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_lt_pivot_mid_cross_shape"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_ore_lt_pivot_zero_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_ore_lt_pivot_mid_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_ore_lt_pivot_zero_cross_shape",
+                "scalars::int4::matrix_int4_ord_ore_lt_pivot_mid_cross_shape",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9800,31 +9800,31 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_ore_lt_pivot_zero_cross_shape()),
+            || test::assert_test_result(matrix_int4_ord_ore_lt_pivot_mid_cross_shape()),
         ),
     };
-    fn matrix_int4_ord_ore_lt_pivot_zero_cross_shape() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_ore_lt_pivot_zero_cross_shape(
+    fn matrix_int4_ord_ore_lt_pivot_mid_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_lt_pivot_mid_cross_shape(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "<",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("<"),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -9905,7 +9905,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_lt_pivot_zero_cross_shape",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_lt_pivot_mid_cross_shape",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -9941,7 +9941,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_ore_lt_pivot_zero_cross_shape;
+        let f: fn(_) -> _ = matrix_int4_ord_ore_lt_pivot_mid_cross_shape;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -9955,9 +9955,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9977,20 +9977,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "<=",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("<="),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -10121,9 +10121,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10143,20 +10143,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "<=",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("<="),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -10277,19 +10277,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_lte_pivot_zero_cross_shape"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_lte_pivot_mid_cross_shape"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_ore_lte_pivot_zero_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_ore_lte_pivot_mid_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_ore_lte_pivot_zero_cross_shape",
+                "scalars::int4::matrix_int4_ord_ore_lte_pivot_mid_cross_shape",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10298,31 +10298,31 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_ore_lte_pivot_zero_cross_shape()),
+            || test::assert_test_result(matrix_int4_ord_ore_lte_pivot_mid_cross_shape()),
         ),
     };
-    fn matrix_int4_ord_ore_lte_pivot_zero_cross_shape() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_ore_lte_pivot_zero_cross_shape(
+    fn matrix_int4_ord_ore_lte_pivot_mid_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_lte_pivot_mid_cross_shape(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         "<=",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op("<="),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -10403,7 +10403,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_lte_pivot_zero_cross_shape",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_lte_pivot_mid_cross_shape",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -10439,7 +10439,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_ore_lte_pivot_zero_cross_shape;
+        let f: fn(_) -> _ = matrix_int4_ord_ore_lte_pivot_mid_cross_shape;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -10453,9 +10453,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10475,20 +10475,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ">",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op(">"),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -10619,9 +10619,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10641,20 +10641,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ">",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op(">"),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -10775,19 +10775,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_gt_pivot_zero_cross_shape"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_gt_pivot_mid_cross_shape"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_ore_gt_pivot_zero_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_ore_gt_pivot_mid_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_ore_gt_pivot_zero_cross_shape",
+                "scalars::int4::matrix_int4_ord_ore_gt_pivot_mid_cross_shape",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10796,31 +10796,31 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_ore_gt_pivot_zero_cross_shape()),
+            || test::assert_test_result(matrix_int4_ord_ore_gt_pivot_mid_cross_shape()),
         ),
     };
-    fn matrix_int4_ord_ore_gt_pivot_zero_cross_shape() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_ore_gt_pivot_zero_cross_shape(
+    fn matrix_int4_ord_ore_gt_pivot_mid_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_gt_pivot_mid_cross_shape(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ">",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op(">"),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -10901,7 +10901,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_gt_pivot_zero_cross_shape",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_gt_pivot_mid_cross_shape",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -10937,7 +10937,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_ore_gt_pivot_zero_cross_shape;
+        let f: fn(_) -> _ = matrix_int4_ord_ore_gt_pivot_mid_cross_shape;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -10951,9 +10951,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10973,20 +10973,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::min_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ">=",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op(">="),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -11117,9 +11117,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -11139,20 +11139,20 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::max_pivot();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ">=",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op(">="),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -11273,19 +11273,19 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_gte_pivot_zero_cross_shape"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_gte_pivot_mid_cross_shape"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_ore_gte_pivot_zero_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_ore_gte_pivot_mid_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_ore_gte_pivot_zero_cross_shape",
+                "scalars::int4::matrix_int4_ord_ore_gte_pivot_mid_cross_shape",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 631usize,
+            start_line: 730usize,
             start_col: 22usize,
-            end_line: 631usize,
+            end_line: 730usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -11294,31 +11294,31 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_ore_gte_pivot_zero_cross_shape()),
+            || test::assert_test_result(matrix_int4_ord_ore_gte_pivot_mid_cross_shape()),
         ),
     };
-    fn matrix_int4_ord_ore_gte_pivot_zero_cross_shape() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_ore_gte_pivot_zero_cross_shape(
+    fn matrix_int4_ord_ore_gte_pivot_mid_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_gte_pivot_mid_cross_shape(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let pivot: i32 = <i32 as ::core::default::Default>::default();
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
-                >(&pool, pivot)
+                >(&pool, pivot.clone())
                     .await?;
                 let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
                 let forward_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ">=",
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let commuted_count = <i32 as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
                         ::eql_tests::scalar_domains::commute_op(">="),
-                        pivot,
+                        pivot.clone(),
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
@@ -11399,7 +11399,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_gte_pivot_zero_cross_shape",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_gte_pivot_mid_cross_shape",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -11435,7 +11435,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_ore_gte_pivot_zero_cross_shape;
+        let f: fn(_) -> _ = matrix_int4_ord_ore_gte_pivot_mid_cross_shape;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -11449,9 +11449,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 683usize,
+            start_line: 782usize,
             start_col: 22usize,
-            end_line: 683usize,
+            end_line: 782usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -11542,9 +11542,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 683usize,
+            start_line: 782usize,
             start_col: 22usize,
-            end_line: 683usize,
+            end_line: 782usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -11635,9 +11635,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 683usize,
+            start_line: 782usize,
             start_col: 22usize,
-            end_line: 683usize,
+            end_line: 782usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -11728,9 +11728,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 683usize,
+            start_line: 782usize,
             start_col: 22usize,
-            end_line: 683usize,
+            end_line: 782usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -11821,9 +11821,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 683usize,
+            start_line: 782usize,
             start_col: 22usize,
-            end_line: 683usize,
+            end_line: 782usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -11914,9 +11914,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 683usize,
+            start_line: 782usize,
             start_col: 22usize,
-            end_line: 683usize,
+            end_line: 782usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12007,9 +12007,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 683usize,
+            start_line: 782usize,
             start_col: 22usize,
-            end_line: 683usize,
+            end_line: 782usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12100,9 +12100,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 683usize,
+            start_line: 782usize,
             start_col: 22usize,
-            end_line: 683usize,
+            end_line: 782usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12193,9 +12193,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 683usize,
+            start_line: 782usize,
             start_col: 22usize,
-            end_line: 683usize,
+            end_line: 782usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12286,9 +12286,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 683usize,
+            start_line: 782usize,
             start_col: 22usize,
-            end_line: 683usize,
+            end_line: 782usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12379,9 +12379,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 683usize,
+            start_line: 782usize,
             start_col: 22usize,
-            end_line: 683usize,
+            end_line: 782usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12472,9 +12472,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 683usize,
+            start_line: 782usize,
             start_col: 22usize,
-            end_line: 683usize,
+            end_line: 782usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12565,9 +12565,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 683usize,
+            start_line: 782usize,
             start_col: 22usize,
-            end_line: 683usize,
+            end_line: 782usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12658,9 +12658,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 683usize,
+            start_line: 782usize,
             start_col: 22usize,
-            end_line: 683usize,
+            end_line: 782usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12749,9 +12749,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 747usize,
+            start_line: 846usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 846usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -12884,9 +12884,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 747usize,
+            start_line: 846usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 846usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13019,9 +13019,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 747usize,
+            start_line: 846usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 846usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13154,9 +13154,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 747usize,
+            start_line: 846usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 846usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13289,9 +13289,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 747usize,
+            start_line: 846usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 846usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13424,9 +13424,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 747usize,
+            start_line: 846usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 846usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13561,9 +13561,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 747usize,
+            start_line: 846usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 846usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13698,9 +13698,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 747usize,
+            start_line: 846usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 846usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13833,9 +13833,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 747usize,
+            start_line: 846usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 846usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13966,9 +13966,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 747usize,
+            start_line: 846usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 846usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -14099,9 +14099,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 747usize,
+            start_line: 846usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 846usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -14232,9 +14232,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 747usize,
+            start_line: 846usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 846usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -14365,9 +14365,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 747usize,
+            start_line: 846usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 846usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -14502,9 +14502,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 747usize,
+            start_line: 846usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 846usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -14639,9 +14639,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 747usize,
+            start_line: 846usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 846usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -14776,9 +14776,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 747usize,
+            start_line: 846usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 846usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -14913,9 +14913,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 747usize,
+            start_line: 846usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 846usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -15050,9 +15050,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 747usize,
+            start_line: 846usize,
             start_col: 22usize,
-            end_line: 747usize,
+            end_line: 846usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -15187,9 +15187,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 814usize,
+            start_line: 913usize,
             start_col: 22usize,
-            end_line: 814usize,
+            end_line: 913usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -15211,7 +15211,7 @@ pub mod int4 {
                 >(::eql_tests::scalar_domains::Variant::Storage);
                 let d = &spec.sql_domain;
                 let baseline = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
-                for key in spec.variant.payload_required_keys() {
+                for key in spec.payload_required_keys() {
                     let sql = ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
@@ -15327,9 +15327,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 814usize,
+            start_line: 913usize,
             start_col: 22usize,
-            end_line: 814usize,
+            end_line: 913usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -15349,7 +15349,7 @@ pub mod int4 {
                 >(::eql_tests::scalar_domains::Variant::Eq);
                 let d = &spec.sql_domain;
                 let baseline = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
-                for key in spec.variant.payload_required_keys() {
+                for key in spec.payload_required_keys() {
                     let sql = ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
@@ -15465,9 +15465,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 814usize,
+            start_line: 913usize,
             start_col: 22usize,
-            end_line: 814usize,
+            end_line: 913usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -15489,7 +15489,7 @@ pub mod int4 {
                 >(::eql_tests::scalar_domains::Variant::Ord);
                 let d = &spec.sql_domain;
                 let baseline = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
-                for key in spec.variant.payload_required_keys() {
+                for key in spec.payload_required_keys() {
                     let sql = ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
@@ -15607,9 +15607,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 814usize,
+            start_line: 913usize,
             start_col: 22usize,
-            end_line: 814usize,
+            end_line: 913usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -15631,7 +15631,7 @@ pub mod int4 {
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
                 let d = &spec.sql_domain;
                 let baseline = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
-                for key in spec.variant.payload_required_keys() {
+                for key in spec.payload_required_keys() {
                     let sql = ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
@@ -15749,9 +15749,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 887usize,
+            start_line: 986usize,
             start_col: 22usize,
-            end_line: 887usize,
+            end_line: 986usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -15850,9 +15850,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 887usize,
+            start_line: 986usize,
             start_col: 22usize,
-            end_line: 887usize,
+            end_line: 986usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -15953,9 +15953,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 887usize,
+            start_line: 986usize,
             start_col: 22usize,
-            end_line: 887usize,
+            end_line: 986usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -16056,9 +16056,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 887usize,
+            start_line: 986usize,
             start_col: 22usize,
-            end_line: 887usize,
+            end_line: 986usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -16159,9 +16159,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 944usize,
+            start_line: 1043usize,
             start_col: 22usize,
-            end_line: 944usize,
+            end_line: 1043usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -16248,9 +16248,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 944usize,
+            start_line: 1043usize,
             start_col: 22usize,
-            end_line: 944usize,
+            end_line: 1043usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -16337,9 +16337,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 944usize,
+            start_line: 1043usize,
             start_col: 22usize,
-            end_line: 944usize,
+            end_line: 1043usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -16426,9 +16426,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 944usize,
+            start_line: 1043usize,
             start_col: 22usize,
-            end_line: 944usize,
+            end_line: 1043usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -16515,9 +16515,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 997usize,
+            start_line: 1096usize,
             start_col: 22usize,
-            end_line: 997usize,
+            end_line: 1096usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -16886,9 +16886,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 997usize,
+            start_line: 1096usize,
             start_col: 22usize,
-            end_line: 997usize,
+            end_line: 1096usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -17187,9 +17187,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 997usize,
+            start_line: 1096usize,
             start_col: 22usize,
-            end_line: 997usize,
+            end_line: 1096usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -17348,9 +17348,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 997usize,
+            start_line: 1096usize,
             start_col: 22usize,
-            end_line: 997usize,
+            end_line: 1096usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -17509,9 +17509,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1078usize,
+            start_line: 1177usize,
             start_col: 22usize,
-            end_line: 1078usize,
+            end_line: 1177usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -17673,9 +17673,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1078usize,
+            start_line: 1177usize,
             start_col: 22usize,
-            end_line: 1078usize,
+            end_line: 1177usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -17837,9 +17837,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1078usize,
+            start_line: 1177usize,
             start_col: 22usize,
-            end_line: 1078usize,
+            end_line: 1177usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -18001,9 +18001,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1078usize,
+            start_line: 1177usize,
             start_col: 22usize,
-            end_line: 1078usize,
+            end_line: 1177usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -18165,9 +18165,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1078usize,
+            start_line: 1177usize,
             start_col: 22usize,
-            end_line: 1078usize,
+            end_line: 1177usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -18329,9 +18329,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1644usize,
+            start_line: 1948usize,
             start_col: 22usize,
-            end_line: 1644usize,
+            end_line: 1948usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -18351,6 +18351,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
+                let extractor = ::eql_tests::scalar_domains::combo_extractor(
+                    &spec,
+                    &["="],
+                )?;
                 let table = "matrix_int4_eq_idx_btree";
                 let index = "matrix_int4_eq_idx_btree_idx";
                 let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
@@ -18389,7 +18393,7 @@ pub mod int4 {
                                 format_args!(
                                     "CREATE INDEX {2} ON {3} USING {0} ({1}(value))",
                                     "btree",
-                                    "eql_v3.eq_term",
+                                    extractor,
                                     index,
                                     table,
                                 ),
@@ -18406,7 +18410,8 @@ pub mod int4 {
                     .execute(&mut *tx)
                     .await?;
                 sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_values()[0];
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_values()[0]
+                    .clone();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
                 >(&pool, pivot)
@@ -18503,9 +18508,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1644usize,
+            start_line: 1948usize,
             start_col: 22usize,
-            end_line: 1644usize,
+            end_line: 1948usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -18525,6 +18530,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
+                let extractor = ::eql_tests::scalar_domains::combo_extractor(
+                    &spec,
+                    &["="],
+                )?;
                 let table = "matrix_int4_eq_idx_hash";
                 let index = "matrix_int4_eq_idx_hash_idx";
                 let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
@@ -18563,7 +18572,7 @@ pub mod int4 {
                                 format_args!(
                                     "CREATE INDEX {2} ON {3} USING {0} ({1}(value))",
                                     "hash",
-                                    "eql_v3.eq_term",
+                                    extractor,
                                     index,
                                     table,
                                 ),
@@ -18580,7 +18589,8 @@ pub mod int4 {
                     .execute(&mut *tx)
                     .await?;
                 sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_values()[0];
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_values()[0]
+                    .clone();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
                 >(&pool, pivot)
@@ -18677,9 +18687,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1644usize,
+            start_line: 1948usize,
             start_col: 22usize,
-            end_line: 1644usize,
+            end_line: 1948usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -18699,6 +18709,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
+                let extractor = ::eql_tests::scalar_domains::combo_extractor(
+                    &spec,
+                    &["=", "<", "<=", ">", ">="],
+                )?;
                 let table = "matrix_int4_ord_idx_btree";
                 let index = "matrix_int4_ord_idx_btree_idx";
                 let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
@@ -18737,7 +18751,7 @@ pub mod int4 {
                                 format_args!(
                                     "CREATE INDEX {2} ON {3} USING {0} ({1}(value))",
                                     "btree",
-                                    "eql_v3.ord_term",
+                                    extractor,
                                     index,
                                     table,
                                 ),
@@ -18754,7 +18768,8 @@ pub mod int4 {
                     .execute(&mut *tx)
                     .await?;
                 sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_values()[0];
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_values()[0]
+                    .clone();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
                 >(&pool, pivot)
@@ -18971,9 +18986,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1644usize,
+            start_line: 1948usize,
             start_col: 22usize,
-            end_line: 1644usize,
+            end_line: 1948usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -18993,6 +19008,10 @@ pub mod int4 {
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
+                let extractor = ::eql_tests::scalar_domains::combo_extractor(
+                    &spec,
+                    &["=", "<", "<=", ">", ">="],
+                )?;
                 let table = "matrix_int4_ord_ore_idx_btree";
                 let index = "matrix_int4_ord_ore_idx_btree_idx";
                 let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
@@ -19031,7 +19050,7 @@ pub mod int4 {
                                 format_args!(
                                     "CREATE INDEX {2} ON {3} USING {0} ({1}(value))",
                                     "btree",
-                                    "eql_v3.ord_term",
+                                    extractor,
                                     index,
                                     table,
                                 ),
@@ -19048,7 +19067,8 @@ pub mod int4 {
                     .execute(&mut *tx)
                     .await?;
                 sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_values()[0];
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_values()[0]
+                    .clone();
                 let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
                 >(&pool, pivot)
@@ -19265,9 +19285,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1266usize,
+            start_line: 1370usize,
             start_col: 22usize,
-            end_line: 1266usize,
+            end_line: 1370usize,
             end_col: 86usize,
             compile_fail: false,
             no_run: false,
@@ -19289,6 +19309,20 @@ pub mod int4 {
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
                 let d = &spec.sql_domain;
+                let extractor = spec
+                    .extractor_for_op("=")
+                    .ok_or_else(|| {
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "{0} declares no extractor for `=` but is wired as a scale-default combo",
+                                        &spec.sql_domain,
+                                    ),
+                                )
+                            }),
+                        )
+                    })?;
                 let table = "matrix_int4_ord_scaledef_btree";
                 let index = "matrix_int4_ord_scaledef_btree_idx";
                 let values: &[i32] = <i32 as ScalarType>::fixture_values();
@@ -19302,8 +19336,8 @@ pub mod int4 {
                         error
                     });
                 }
-                let filler = values[0];
-                let pivot = values[values.len() / 2];
+                let filler = values[0].clone();
+                let pivot = values[values.len() / 2].clone();
                 let filler_payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
                     i32,
                 >(&pool, filler)
@@ -19360,7 +19394,7 @@ pub mod int4 {
                                 format_args!(
                                     "CREATE INDEX {2} ON {3} USING {0} ({1}(value))",
                                     "btree",
-                                    "eql_v3.ord_term",
+                                    extractor,
                                     index,
                                     table,
                                 ),
@@ -19390,7 +19424,14 @@ pub mod int4 {
                             )
                         }),
                         index,
-                        "with seqscan ON the planner must PREFER the ord_term functional index for a selective =",
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "with seqscan ON the planner must PREFER the {0} functional index for a selective =",
+                                    extractor,
+                                ),
+                            )
+                        }),
                     )
                     .await?;
                 tx.commit().await?;
@@ -19446,9 +19487,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1344usize,
+            start_line: 1461usize,
             start_col: 22usize,
-            end_line: 1344usize,
+            end_line: 1461usize,
             end_col: 55usize,
             compile_fail: false,
             no_run: false,
@@ -19524,20 +19565,35 @@ pub mod int4 {
                         error
                     });
                 }
-                for (label, predicate) in [
-                    (
-                        "hm string",
-                        "payload->'hm' IS NULL OR jsonb_typeof(payload->'hm') <> 'string'",
+                let mut term_checks: Vec<(&str, &str)> = ::alloc::boxed::box_assume_init_into_vec_unsafe(
+                    ::alloc::intrinsics::write_box_via_move(
+                        ::alloc::boxed::Box::new_uninit(),
+                        [
+                            (
+                                "hm string",
+                                "payload->'hm' IS NULL OR jsonb_typeof(payload->'hm') <> 'string'",
+                            ),
+                            (
+                                "ob array",
+                                "payload->'ob' IS NULL OR jsonb_typeof(payload->'ob') <> 'array'",
+                            ),
+                            (
+                                "c string",
+                                "payload->'c'  IS NULL OR jsonb_typeof(payload->'c')  <> 'string'",
+                            ),
+                        ],
                     ),
-                    (
-                        "ob array",
-                        "payload->'ob' IS NULL OR jsonb_typeof(payload->'ob') <> 'array'",
-                    ),
-                    (
-                        "c string",
-                        "payload->'c'  IS NULL OR jsonb_typeof(payload->'c')  <> 'string'",
-                    ),
-                ] {
+                );
+                if ::eql_tests::scalar_domains::token_has_bloom_term(
+                    <i32 as ScalarType>::PG_TYPE,
+                ) {
+                    term_checks
+                        .push((
+                            "bf array",
+                            "payload->'bf' IS NULL OR jsonb_typeof(payload->'bf') <> 'array'",
+                        ));
+                }
+                for (label, predicate) in term_checks {
                     let missing: i64 = sqlx::query_scalar(
                             &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
@@ -19609,7 +19665,7 @@ pub mod int4 {
                     });
                 }
                 if !expected.is_empty() {
-                    let probe = expected[expected.len() / 2];
+                    let probe = &expected[expected.len() / 2];
                     let probe_lit = <i32 as ScalarType>::to_sql_literal(probe);
                     let expected_id = (expected.len() / 2 + 1) as i64;
                     let ids: Vec<i64> = sqlx::query_scalar(
@@ -19701,9 +19757,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1447usize,
+            start_line: 1574usize,
             start_col: 22usize,
-            end_line: 1447usize,
+            end_line: 1574usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -19720,24 +19776,42 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                use ::eql_tests::scalar_domains::ScalarType;
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
                 let d = &spec.sql_domain;
-                let table = "matrix_int4_ord_no_hm";
-                let index = "matrix_int4_ord_no_hm_idx";
-                let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_values()[0];
-                let pivot_lit = <i32 as ::eql_tests::scalar_domains::ScalarType>::to_sql_literal(
-                    pivot,
-                );
+                let token = <i32 as ScalarType>::PG_TYPE;
+                let table = "matrix_int4_ord_routing";
+                let index = "matrix_int4_ord_routing_idx";
+                let fixture_table = <i32 as ScalarType>::fixture_table_name();
+                let pivot: i32 = <i32 as ScalarType>::fixture_values()[0].clone();
+                let pivot_lit = <i32 as ScalarType>::to_sql_literal(&pivot);
+                let carries_hm = spec
+                    .variant
+                    .terms_for(token)
+                    .iter()
+                    .any(|t| t.json_key() == "hm");
+                let (extractor, value_expr, caveat): (&str, &str, &str) = if carries_hm {
+                    (
+                        "eql_v3.eq_term",
+                        "payload",
+                        "= must engage the eql_v3.eq_term functional btree (exact hm), never ORE",
+                    )
+                } else {
+                    (
+                        "eql_v3.ord_term",
+                        "(payload - 'hm')",
+                        "= must engage the eql_v3.ord_term functional btree with no hm",
+                    )
+                };
                 let mut tx = pool.begin().await?;
                 sqlx::query(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
                                     "CREATE TEMP TABLE {1} (plaintext {0}, value {2}) ON COMMIT DROP",
-                                    <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE,
+                                    <i32 as ScalarType>::PG_TYPE,
                                     table,
                                     d,
                                 ),
@@ -19750,9 +19824,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, (payload - \'hm\')::{2} FROM {0}",
+                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, {2}::{3} FROM {0}",
                                     fixture_table,
                                     table,
+                                    value_expr,
                                     d,
                                 ),
                             )
@@ -19760,33 +19835,36 @@ pub mod int4 {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let with_hm: i64 = sqlx::query_scalar(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "SELECT count(*) FROM {0} WHERE jsonb_exists(value::jsonb, \'hm\')",
-                                    table,
-                                ),
-                            )
-                        }),
-                    )
-                    .fetch_one(&mut *tx)
-                    .await?;
-                if ::anyhow::__private::not(with_hm == 0) {
-                    return ::anyhow::__private::Err({
-                        let error = ::anyhow::__private::format_err(
-                            format_args!("test rows must not carry hm"),
-                        );
-                        error
-                    });
+                if !carries_hm {
+                    let with_hm: i64 = sqlx::query_scalar(
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "SELECT count(*) FROM {0} WHERE jsonb_exists(value::jsonb, \'hm\')",
+                                        table,
+                                    ),
+                                )
+                            }),
+                        )
+                        .fetch_one(&mut *tx)
+                        .await?;
+                    if ::anyhow::__private::not(with_hm == 0) {
+                        return ::anyhow::__private::Err({
+                            let error = ::anyhow::__private::format_err(
+                                format_args!("test rows must not carry hm"),
+                            );
+                            error
+                        });
+                    }
                 }
                 sqlx::query(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "CREATE INDEX {0} ON {1} USING btree (eql_v3.ord_term(value))",
+                                    "CREATE INDEX {0} ON {1} USING btree ({2}(value))",
                                     index,
                                     table,
+                                    extractor,
                                 ),
                             )
                         }),
@@ -19805,9 +19883,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT (payload - \'hm\')::text FROM {0} WHERE plaintext = {1}",
+                                    "SELECT {2}::text FROM {0} WHERE plaintext = {1}",
                                     fixture_table,
                                     pivot_lit,
+                                    value_expr,
                                 ),
                             )
                         }),
@@ -19832,15 +19911,15 @@ pub mod int4 {
                     return ::anyhow::__private::Err({
                         let error = ::anyhow::__private::format_err(
                             format_args!(
-                                "= must match exactly the pivot row via ob with no hm present (want 1, got {0})",
+                                "= must match exactly the pivot row (want 1, got {0})",
                                 eq_count,
                             ),
                         );
                         error
                     });
                 }
-                let expected_neq = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_values()
-                    .len() as i64 - eq_count;
+                let expected_neq = <i32 as ScalarType>::fixture_values().len() as i64
+                    - eq_count;
                 let neq_count: i64 = sqlx::query_scalar(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
@@ -19881,7 +19960,7 @@ pub mod int4 {
                             )
                         }),
                         index,
-                        "= must engage the eql_v3.ord_term functional btree with no hm",
+                        caveat,
                     )
                     .await?;
                 tx.commit().await?;
@@ -19939,9 +20018,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1447usize,
+            start_line: 1574usize,
             start_col: 22usize,
-            end_line: 1447usize,
+            end_line: 1574usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -19958,24 +20037,42 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                use ::eql_tests::scalar_domains::ScalarType;
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
                 let d = &spec.sql_domain;
-                let table = "matrix_int4_ord_ore_no_hm";
-                let index = "matrix_int4_ord_ore_no_hm_idx";
-                let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
-                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_values()[0];
-                let pivot_lit = <i32 as ::eql_tests::scalar_domains::ScalarType>::to_sql_literal(
-                    pivot,
-                );
+                let token = <i32 as ScalarType>::PG_TYPE;
+                let table = "matrix_int4_ord_ore_routing";
+                let index = "matrix_int4_ord_ore_routing_idx";
+                let fixture_table = <i32 as ScalarType>::fixture_table_name();
+                let pivot: i32 = <i32 as ScalarType>::fixture_values()[0].clone();
+                let pivot_lit = <i32 as ScalarType>::to_sql_literal(&pivot);
+                let carries_hm = spec
+                    .variant
+                    .terms_for(token)
+                    .iter()
+                    .any(|t| t.json_key() == "hm");
+                let (extractor, value_expr, caveat): (&str, &str, &str) = if carries_hm {
+                    (
+                        "eql_v3.eq_term",
+                        "payload",
+                        "= must engage the eql_v3.eq_term functional btree (exact hm), never ORE",
+                    )
+                } else {
+                    (
+                        "eql_v3.ord_term",
+                        "(payload - 'hm')",
+                        "= must engage the eql_v3.ord_term functional btree with no hm",
+                    )
+                };
                 let mut tx = pool.begin().await?;
                 sqlx::query(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
                                     "CREATE TEMP TABLE {1} (plaintext {0}, value {2}) ON COMMIT DROP",
-                                    <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE,
+                                    <i32 as ScalarType>::PG_TYPE,
                                     table,
                                     d,
                                 ),
@@ -19988,9 +20085,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, (payload - \'hm\')::{2} FROM {0}",
+                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, {2}::{3} FROM {0}",
                                     fixture_table,
                                     table,
+                                    value_expr,
                                     d,
                                 ),
                             )
@@ -19998,33 +20096,36 @@ pub mod int4 {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let with_hm: i64 = sqlx::query_scalar(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "SELECT count(*) FROM {0} WHERE jsonb_exists(value::jsonb, \'hm\')",
-                                    table,
-                                ),
-                            )
-                        }),
-                    )
-                    .fetch_one(&mut *tx)
-                    .await?;
-                if ::anyhow::__private::not(with_hm == 0) {
-                    return ::anyhow::__private::Err({
-                        let error = ::anyhow::__private::format_err(
-                            format_args!("test rows must not carry hm"),
-                        );
-                        error
-                    });
+                if !carries_hm {
+                    let with_hm: i64 = sqlx::query_scalar(
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "SELECT count(*) FROM {0} WHERE jsonb_exists(value::jsonb, \'hm\')",
+                                        table,
+                                    ),
+                                )
+                            }),
+                        )
+                        .fetch_one(&mut *tx)
+                        .await?;
+                    if ::anyhow::__private::not(with_hm == 0) {
+                        return ::anyhow::__private::Err({
+                            let error = ::anyhow::__private::format_err(
+                                format_args!("test rows must not carry hm"),
+                            );
+                            error
+                        });
+                    }
                 }
                 sqlx::query(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "CREATE INDEX {0} ON {1} USING btree (eql_v3.ord_term(value))",
+                                    "CREATE INDEX {0} ON {1} USING btree ({2}(value))",
                                     index,
                                     table,
+                                    extractor,
                                 ),
                             )
                         }),
@@ -20043,9 +20144,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT (payload - \'hm\')::text FROM {0} WHERE plaintext = {1}",
+                                    "SELECT {2}::text FROM {0} WHERE plaintext = {1}",
                                     fixture_table,
                                     pivot_lit,
+                                    value_expr,
                                 ),
                             )
                         }),
@@ -20070,15 +20172,15 @@ pub mod int4 {
                     return ::anyhow::__private::Err({
                         let error = ::anyhow::__private::format_err(
                             format_args!(
-                                "= must match exactly the pivot row via ob with no hm present (want 1, got {0})",
+                                "= must match exactly the pivot row (want 1, got {0})",
                                 eq_count,
                             ),
                         );
                         error
                     });
                 }
-                let expected_neq = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_values()
-                    .len() as i64 - eq_count;
+                let expected_neq = <i32 as ScalarType>::fixture_values().len() as i64
+                    - eq_count;
                 let neq_count: i64 = sqlx::query_scalar(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
@@ -20119,7 +20221,7 @@ pub mod int4 {
                             )
                         }),
                         index,
-                        "= must engage the eql_v3.ord_term functional btree with no hm",
+                        caveat,
                     )
                     .await?;
                 tx.commit().await?;
@@ -20177,9 +20279,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1581usize,
+            start_line: 1885usize,
             start_col: 22usize,
-            end_line: 1581usize,
+            end_line: 1885usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -20277,9 +20379,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2099usize,
+            start_line: 2414usize,
             start_col: 22usize,
-            end_line: 2099usize,
+            end_line: 2414usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -20304,10 +20406,10 @@ pub mod int4 {
                 let fixture = <i32 as ScalarType>::fixture_table_name();
                 let extremum: i32 = <i32 as ScalarType>::fixture_values()
                     .iter()
-                    .copied()
+                    .cloned()
                     .min()
                     .expect("FIXTURE_VALUES must be non-empty");
-                let extremum_lit = <i32 as ScalarType>::to_sql_literal(extremum);
+                let extremum_lit = <i32 as ScalarType>::to_sql_literal(&extremum);
                 let expected: String = sqlx::query_scalar(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
@@ -20441,9 +20543,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2157usize,
+            start_line: 2472usize,
             start_col: 22usize,
-            end_line: 2157usize,
+            end_line: 2472usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -20553,9 +20655,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2182usize,
+            start_line: 2497usize,
             start_col: 22usize,
-            end_line: 2182usize,
+            end_line: 2497usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -20652,9 +20754,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2208usize,
+            start_line: 2523usize,
             start_col: 22usize,
-            end_line: 2208usize,
+            end_line: 2523usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -20694,13 +20796,19 @@ pub mod int4 {
                 }
                 let mut sorted: Vec<i32> = values.to_vec();
                 sorted.sort();
-                let low: i32 = *sorted.first().expect("non-empty after len check");
-                let high: i32 = *sorted.last().expect("non-empty after len check");
-                let expected_plaintext: i32 = low.min(high);
-                let low_lit = <i32 as ScalarType>::to_sql_literal(low);
-                let high_lit = <i32 as ScalarType>::to_sql_literal(high);
+                let low: i32 = sorted
+                    .first()
+                    .expect("non-empty after len check")
+                    .clone();
+                let high: i32 = sorted
+                    .last()
+                    .expect("non-empty after len check")
+                    .clone();
+                let expected_plaintext: i32 = low.clone().min(high.clone());
+                let low_lit = <i32 as ScalarType>::to_sql_literal(&low);
+                let high_lit = <i32 as ScalarType>::to_sql_literal(&high);
                 let expected_lit = <i32 as ScalarType>::to_sql_literal(
-                    expected_plaintext,
+                    &expected_plaintext,
                 );
                 let mut tx = pool.begin().await?;
                 sqlx::query(
@@ -20828,9 +20936,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2099usize,
+            start_line: 2414usize,
             start_col: 22usize,
-            end_line: 2099usize,
+            end_line: 2414usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -20855,10 +20963,10 @@ pub mod int4 {
                 let fixture = <i32 as ScalarType>::fixture_table_name();
                 let extremum: i32 = <i32 as ScalarType>::fixture_values()
                     .iter()
-                    .copied()
+                    .cloned()
                     .max()
                     .expect("FIXTURE_VALUES must be non-empty");
-                let extremum_lit = <i32 as ScalarType>::to_sql_literal(extremum);
+                let extremum_lit = <i32 as ScalarType>::to_sql_literal(&extremum);
                 let expected: String = sqlx::query_scalar(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
@@ -20992,9 +21100,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2157usize,
+            start_line: 2472usize,
             start_col: 22usize,
-            end_line: 2157usize,
+            end_line: 2472usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -21104,9 +21212,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2182usize,
+            start_line: 2497usize,
             start_col: 22usize,
-            end_line: 2182usize,
+            end_line: 2497usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -21203,9 +21311,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2208usize,
+            start_line: 2523usize,
             start_col: 22usize,
-            end_line: 2208usize,
+            end_line: 2523usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -21245,13 +21353,19 @@ pub mod int4 {
                 }
                 let mut sorted: Vec<i32> = values.to_vec();
                 sorted.sort();
-                let low: i32 = *sorted.first().expect("non-empty after len check");
-                let high: i32 = *sorted.last().expect("non-empty after len check");
-                let expected_plaintext: i32 = low.max(high);
-                let low_lit = <i32 as ScalarType>::to_sql_literal(low);
-                let high_lit = <i32 as ScalarType>::to_sql_literal(high);
+                let low: i32 = sorted
+                    .first()
+                    .expect("non-empty after len check")
+                    .clone();
+                let high: i32 = sorted
+                    .last()
+                    .expect("non-empty after len check")
+                    .clone();
+                let expected_plaintext: i32 = low.clone().max(high.clone());
+                let low_lit = <i32 as ScalarType>::to_sql_literal(&low);
+                let high_lit = <i32 as ScalarType>::to_sql_literal(&high);
                 let expected_lit = <i32 as ScalarType>::to_sql_literal(
-                    expected_plaintext,
+                    &expected_plaintext,
                 );
                 let mut tx = pool.begin().await?;
                 sqlx::query(
@@ -21381,9 +21495,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2099usize,
+            start_line: 2414usize,
             start_col: 22usize,
-            end_line: 2099usize,
+            end_line: 2414usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -21408,10 +21522,10 @@ pub mod int4 {
                 let fixture = <i32 as ScalarType>::fixture_table_name();
                 let extremum: i32 = <i32 as ScalarType>::fixture_values()
                     .iter()
-                    .copied()
+                    .cloned()
                     .min()
                     .expect("FIXTURE_VALUES must be non-empty");
-                let extremum_lit = <i32 as ScalarType>::to_sql_literal(extremum);
+                let extremum_lit = <i32 as ScalarType>::to_sql_literal(&extremum);
                 let expected: String = sqlx::query_scalar(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
@@ -21545,9 +21659,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2157usize,
+            start_line: 2472usize,
             start_col: 22usize,
-            end_line: 2157usize,
+            end_line: 2472usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -21657,9 +21771,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2182usize,
+            start_line: 2497usize,
             start_col: 22usize,
-            end_line: 2182usize,
+            end_line: 2497usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -21756,9 +21870,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2208usize,
+            start_line: 2523usize,
             start_col: 22usize,
-            end_line: 2208usize,
+            end_line: 2523usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -21798,13 +21912,19 @@ pub mod int4 {
                 }
                 let mut sorted: Vec<i32> = values.to_vec();
                 sorted.sort();
-                let low: i32 = *sorted.first().expect("non-empty after len check");
-                let high: i32 = *sorted.last().expect("non-empty after len check");
-                let expected_plaintext: i32 = low.min(high);
-                let low_lit = <i32 as ScalarType>::to_sql_literal(low);
-                let high_lit = <i32 as ScalarType>::to_sql_literal(high);
+                let low: i32 = sorted
+                    .first()
+                    .expect("non-empty after len check")
+                    .clone();
+                let high: i32 = sorted
+                    .last()
+                    .expect("non-empty after len check")
+                    .clone();
+                let expected_plaintext: i32 = low.clone().min(high.clone());
+                let low_lit = <i32 as ScalarType>::to_sql_literal(&low);
+                let high_lit = <i32 as ScalarType>::to_sql_literal(&high);
                 let expected_lit = <i32 as ScalarType>::to_sql_literal(
-                    expected_plaintext,
+                    &expected_plaintext,
                 );
                 let mut tx = pool.begin().await?;
                 sqlx::query(
@@ -21934,9 +22054,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2099usize,
+            start_line: 2414usize,
             start_col: 22usize,
-            end_line: 2099usize,
+            end_line: 2414usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -21961,10 +22081,10 @@ pub mod int4 {
                 let fixture = <i32 as ScalarType>::fixture_table_name();
                 let extremum: i32 = <i32 as ScalarType>::fixture_values()
                     .iter()
-                    .copied()
+                    .cloned()
                     .max()
                     .expect("FIXTURE_VALUES must be non-empty");
-                let extremum_lit = <i32 as ScalarType>::to_sql_literal(extremum);
+                let extremum_lit = <i32 as ScalarType>::to_sql_literal(&extremum);
                 let expected: String = sqlx::query_scalar(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
@@ -22098,9 +22218,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2157usize,
+            start_line: 2472usize,
             start_col: 22usize,
-            end_line: 2157usize,
+            end_line: 2472usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -22210,9 +22330,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2182usize,
+            start_line: 2497usize,
             start_col: 22usize,
-            end_line: 2182usize,
+            end_line: 2497usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -22309,9 +22429,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2208usize,
+            start_line: 2523usize,
             start_col: 22usize,
-            end_line: 2208usize,
+            end_line: 2523usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -22351,13 +22471,19 @@ pub mod int4 {
                 }
                 let mut sorted: Vec<i32> = values.to_vec();
                 sorted.sort();
-                let low: i32 = *sorted.first().expect("non-empty after len check");
-                let high: i32 = *sorted.last().expect("non-empty after len check");
-                let expected_plaintext: i32 = low.max(high);
-                let low_lit = <i32 as ScalarType>::to_sql_literal(low);
-                let high_lit = <i32 as ScalarType>::to_sql_literal(high);
+                let low: i32 = sorted
+                    .first()
+                    .expect("non-empty after len check")
+                    .clone();
+                let high: i32 = sorted
+                    .last()
+                    .expect("non-empty after len check")
+                    .clone();
+                let expected_plaintext: i32 = low.clone().max(high.clone());
+                let low_lit = <i32 as ScalarType>::to_sql_literal(&low);
+                let high_lit = <i32 as ScalarType>::to_sql_literal(&high);
                 let expected_lit = <i32 as ScalarType>::to_sql_literal(
-                    expected_plaintext,
+                    &expected_plaintext,
                 );
                 let mut tx = pool.begin().await?;
                 sqlx::query(
@@ -22487,9 +22613,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2387usize,
+            start_line: 2703usize,
             start_col: 22usize,
-            end_line: 2387usize,
+            end_line: 2703usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -22531,16 +22657,16 @@ pub mod int4 {
                 let group2: &[i32] = &values[3..5];
                 let group1_extremum: i32 = group1
                     .iter()
-                    .copied()
+                    .cloned()
                     .min()
                     .expect("group 1 is non-empty");
                 let group2_extremum: i32 = group2
                     .iter()
-                    .copied()
+                    .cloned()
                     .min()
                     .expect("group 2 is non-empty");
-                let g1_lit = <i32 as ScalarType>::to_sql_literal(group1_extremum);
-                let g2_lit = <i32 as ScalarType>::to_sql_literal(group2_extremum);
+                let g1_lit = <i32 as ScalarType>::to_sql_literal(&group1_extremum);
+                let g2_lit = <i32 as ScalarType>::to_sql_literal(&group2_extremum);
                 let mut tx = pool.begin().await?;
                 sqlx::query(
                         &::alloc::__export::must_use({
@@ -22555,7 +22681,7 @@ pub mod int4 {
                     .execute(&mut *tx)
                     .await?;
                 for v in group1 {
-                    let lit = <i32 as ScalarType>::to_sql_literal(*v);
+                    let lit = <i32 as ScalarType>::to_sql_literal(v);
                     sqlx::query(
                             &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
@@ -22572,7 +22698,7 @@ pub mod int4 {
                         .await?;
                 }
                 for v in group2 {
-                    let lit = <i32 as ScalarType>::to_sql_literal(*v);
+                    let lit = <i32 as ScalarType>::to_sql_literal(v);
                     sqlx::query(
                             &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
@@ -22733,9 +22859,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2387usize,
+            start_line: 2703usize,
             start_col: 22usize,
-            end_line: 2387usize,
+            end_line: 2703usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -22777,16 +22903,16 @@ pub mod int4 {
                 let group2: &[i32] = &values[3..5];
                 let group1_extremum: i32 = group1
                     .iter()
-                    .copied()
+                    .cloned()
                     .max()
                     .expect("group 1 is non-empty");
                 let group2_extremum: i32 = group2
                     .iter()
-                    .copied()
+                    .cloned()
                     .max()
                     .expect("group 2 is non-empty");
-                let g1_lit = <i32 as ScalarType>::to_sql_literal(group1_extremum);
-                let g2_lit = <i32 as ScalarType>::to_sql_literal(group2_extremum);
+                let g1_lit = <i32 as ScalarType>::to_sql_literal(&group1_extremum);
+                let g2_lit = <i32 as ScalarType>::to_sql_literal(&group2_extremum);
                 let mut tx = pool.begin().await?;
                 sqlx::query(
                         &::alloc::__export::must_use({
@@ -22801,7 +22927,7 @@ pub mod int4 {
                     .execute(&mut *tx)
                     .await?;
                 for v in group1 {
-                    let lit = <i32 as ScalarType>::to_sql_literal(*v);
+                    let lit = <i32 as ScalarType>::to_sql_literal(v);
                     sqlx::query(
                             &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
@@ -22818,7 +22944,7 @@ pub mod int4 {
                         .await?;
                 }
                 for v in group2 {
-                    let lit = <i32 as ScalarType>::to_sql_literal(*v);
+                    let lit = <i32 as ScalarType>::to_sql_literal(v);
                     sqlx::query(
                             &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
@@ -22979,9 +23105,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2387usize,
+            start_line: 2703usize,
             start_col: 22usize,
-            end_line: 2387usize,
+            end_line: 2703usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -23023,16 +23149,16 @@ pub mod int4 {
                 let group2: &[i32] = &values[3..5];
                 let group1_extremum: i32 = group1
                     .iter()
-                    .copied()
+                    .cloned()
                     .min()
                     .expect("group 1 is non-empty");
                 let group2_extremum: i32 = group2
                     .iter()
-                    .copied()
+                    .cloned()
                     .min()
                     .expect("group 2 is non-empty");
-                let g1_lit = <i32 as ScalarType>::to_sql_literal(group1_extremum);
-                let g2_lit = <i32 as ScalarType>::to_sql_literal(group2_extremum);
+                let g1_lit = <i32 as ScalarType>::to_sql_literal(&group1_extremum);
+                let g2_lit = <i32 as ScalarType>::to_sql_literal(&group2_extremum);
                 let mut tx = pool.begin().await?;
                 sqlx::query(
                         &::alloc::__export::must_use({
@@ -23047,7 +23173,7 @@ pub mod int4 {
                     .execute(&mut *tx)
                     .await?;
                 for v in group1 {
-                    let lit = <i32 as ScalarType>::to_sql_literal(*v);
+                    let lit = <i32 as ScalarType>::to_sql_literal(v);
                     sqlx::query(
                             &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
@@ -23064,7 +23190,7 @@ pub mod int4 {
                         .await?;
                 }
                 for v in group2 {
-                    let lit = <i32 as ScalarType>::to_sql_literal(*v);
+                    let lit = <i32 as ScalarType>::to_sql_literal(v);
                     sqlx::query(
                             &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
@@ -23225,9 +23351,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2387usize,
+            start_line: 2703usize,
             start_col: 22usize,
-            end_line: 2387usize,
+            end_line: 2703usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -23269,16 +23395,16 @@ pub mod int4 {
                 let group2: &[i32] = &values[3..5];
                 let group1_extremum: i32 = group1
                     .iter()
-                    .copied()
+                    .cloned()
                     .max()
                     .expect("group 1 is non-empty");
                 let group2_extremum: i32 = group2
                     .iter()
-                    .copied()
+                    .cloned()
                     .max()
                     .expect("group 2 is non-empty");
-                let g1_lit = <i32 as ScalarType>::to_sql_literal(group1_extremum);
-                let g2_lit = <i32 as ScalarType>::to_sql_literal(group2_extremum);
+                let g1_lit = <i32 as ScalarType>::to_sql_literal(&group1_extremum);
+                let g2_lit = <i32 as ScalarType>::to_sql_literal(&group2_extremum);
                 let mut tx = pool.begin().await?;
                 sqlx::query(
                         &::alloc::__export::must_use({
@@ -23293,7 +23419,7 @@ pub mod int4 {
                     .execute(&mut *tx)
                     .await?;
                 for v in group1 {
-                    let lit = <i32 as ScalarType>::to_sql_literal(*v);
+                    let lit = <i32 as ScalarType>::to_sql_literal(v);
                     sqlx::query(
                             &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
@@ -23310,7 +23436,7 @@ pub mod int4 {
                         .await?;
                 }
                 for v in group2 {
-                    let lit = <i32 as ScalarType>::to_sql_literal(*v);
+                    let lit = <i32 as ScalarType>::to_sql_literal(v);
                     sqlx::query(
                             &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
@@ -23471,9 +23597,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2302usize,
+            start_line: 2618usize,
             start_col: 22usize,
-            end_line: 2302usize,
+            end_line: 2618usize,
             end_col: 77usize,
             compile_fail: false,
             no_run: false,
@@ -23580,9 +23706,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2302usize,
+            start_line: 2618usize,
             start_col: 22usize,
-            end_line: 2302usize,
+            end_line: 2618usize,
             end_col: 77usize,
             compile_fail: false,
             no_run: false,
@@ -23689,9 +23815,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2543usize,
+            start_line: 2861usize,
             start_col: 22usize,
-            end_line: 2543usize,
+            end_line: 2861usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -23739,7 +23865,6 @@ pub mod int4 {
                     .bind(payload)
                     .execute(&mut *tx)
                     .await?;
-                sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -23748,44 +23873,68 @@ pub mod int4 {
                         ),
                     )
                 });
-                let err = sqlx::query_scalar::<_, String>(&sql)
-                    .fetch_one(&mut *tx)
-                    .await
-                    .expect_err(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
-                                    "min",
-                                    d,
-                                ),
-                            )
-                        }),
-                    );
-                let db_err = err
-                    .as_database_error()
-                    .expect("expected database error from typecheck probe");
-                let code = db_err.code();
-                if ::anyhow::__private::not(
-                    code.as_deref() == Some("42883") || code.as_deref() == Some("42725"),
-                ) {
-                    return ::anyhow::__private::Err(
-                        ::anyhow::Error::msg(
-                            ::alloc::__export::must_use({
+                if spec.supports_ord() {
+                    let res = sqlx::query_scalar::<_, serde_json::Value>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await;
+                    if ::anyhow::__private::not(res.is_ok()) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "eql_v3.{0}({1}) on ord-capable variant must resolve, got {2:?}",
+                                            "min",
+                                            d,
+                                            res.err(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                } else {
+                    sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
+                    let err = sqlx::query_scalar::<_, String>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .expect_err(
+                            &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                        "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
                                         "min",
                                         d,
-                                        code,
-                                        db_err.message(),
                                     ),
                                 )
                             }),
-                        ),
-                    );
+                        );
+                    let db_err = err
+                        .as_database_error()
+                        .expect("expected database error from typecheck probe");
+                    let code = db_err.code();
+                    if ::anyhow::__private::not(
+                        code.as_deref() == Some("42883")
+                            || code.as_deref() == Some("42725"),
+                    ) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                            "min",
+                                            d,
+                                            code,
+                                            db_err.message(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                    sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
                 }
-                sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
                 tx.commit().await?;
                 Ok(())
             }
@@ -23834,9 +23983,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2543usize,
+            start_line: 2861usize,
             start_col: 22usize,
-            end_line: 2543usize,
+            end_line: 2861usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -23884,7 +24033,6 @@ pub mod int4 {
                     .bind(payload)
                     .execute(&mut *tx)
                     .await?;
-                sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -23893,44 +24041,68 @@ pub mod int4 {
                         ),
                     )
                 });
-                let err = sqlx::query_scalar::<_, String>(&sql)
-                    .fetch_one(&mut *tx)
-                    .await
-                    .expect_err(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
-                                    "max",
-                                    d,
-                                ),
-                            )
-                        }),
-                    );
-                let db_err = err
-                    .as_database_error()
-                    .expect("expected database error from typecheck probe");
-                let code = db_err.code();
-                if ::anyhow::__private::not(
-                    code.as_deref() == Some("42883") || code.as_deref() == Some("42725"),
-                ) {
-                    return ::anyhow::__private::Err(
-                        ::anyhow::Error::msg(
-                            ::alloc::__export::must_use({
+                if spec.supports_ord() {
+                    let res = sqlx::query_scalar::<_, serde_json::Value>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await;
+                    if ::anyhow::__private::not(res.is_ok()) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "eql_v3.{0}({1}) on ord-capable variant must resolve, got {2:?}",
+                                            "max",
+                                            d,
+                                            res.err(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                } else {
+                    sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
+                    let err = sqlx::query_scalar::<_, String>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .expect_err(
+                            &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                        "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
                                         "max",
                                         d,
-                                        code,
-                                        db_err.message(),
                                     ),
                                 )
                             }),
-                        ),
-                    );
+                        );
+                    let db_err = err
+                        .as_database_error()
+                        .expect("expected database error from typecheck probe");
+                    let code = db_err.code();
+                    if ::anyhow::__private::not(
+                        code.as_deref() == Some("42883")
+                            || code.as_deref() == Some("42725"),
+                    ) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                            "max",
+                                            d,
+                                            code,
+                                            db_err.message(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                    sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
                 }
-                sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
                 tx.commit().await?;
                 Ok(())
             }
@@ -23979,9 +24151,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2543usize,
+            start_line: 2861usize,
             start_col: 22usize,
-            end_line: 2543usize,
+            end_line: 2861usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -24029,7 +24201,6 @@ pub mod int4 {
                     .bind(payload)
                     .execute(&mut *tx)
                     .await?;
-                sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -24038,44 +24209,68 @@ pub mod int4 {
                         ),
                     )
                 });
-                let err = sqlx::query_scalar::<_, String>(&sql)
-                    .fetch_one(&mut *tx)
-                    .await
-                    .expect_err(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
-                                    "min",
-                                    d,
-                                ),
-                            )
-                        }),
-                    );
-                let db_err = err
-                    .as_database_error()
-                    .expect("expected database error from typecheck probe");
-                let code = db_err.code();
-                if ::anyhow::__private::not(
-                    code.as_deref() == Some("42883") || code.as_deref() == Some("42725"),
-                ) {
-                    return ::anyhow::__private::Err(
-                        ::anyhow::Error::msg(
-                            ::alloc::__export::must_use({
+                if spec.supports_ord() {
+                    let res = sqlx::query_scalar::<_, serde_json::Value>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await;
+                    if ::anyhow::__private::not(res.is_ok()) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "eql_v3.{0}({1}) on ord-capable variant must resolve, got {2:?}",
+                                            "min",
+                                            d,
+                                            res.err(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                } else {
+                    sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
+                    let err = sqlx::query_scalar::<_, String>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .expect_err(
+                            &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                        "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
                                         "min",
                                         d,
-                                        code,
-                                        db_err.message(),
                                     ),
                                 )
                             }),
-                        ),
-                    );
+                        );
+                    let db_err = err
+                        .as_database_error()
+                        .expect("expected database error from typecheck probe");
+                    let code = db_err.code();
+                    if ::anyhow::__private::not(
+                        code.as_deref() == Some("42883")
+                            || code.as_deref() == Some("42725"),
+                    ) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                            "min",
+                                            d,
+                                            code,
+                                            db_err.message(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                    sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
                 }
-                sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
                 tx.commit().await?;
                 Ok(())
             }
@@ -24124,9 +24319,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2543usize,
+            start_line: 2861usize,
             start_col: 22usize,
-            end_line: 2543usize,
+            end_line: 2861usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -24174,7 +24369,6 @@ pub mod int4 {
                     .bind(payload)
                     .execute(&mut *tx)
                     .await?;
-                sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -24183,44 +24377,68 @@ pub mod int4 {
                         ),
                     )
                 });
-                let err = sqlx::query_scalar::<_, String>(&sql)
-                    .fetch_one(&mut *tx)
-                    .await
-                    .expect_err(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
-                                    "max",
-                                    d,
-                                ),
-                            )
-                        }),
-                    );
-                let db_err = err
-                    .as_database_error()
-                    .expect("expected database error from typecheck probe");
-                let code = db_err.code();
-                if ::anyhow::__private::not(
-                    code.as_deref() == Some("42883") || code.as_deref() == Some("42725"),
-                ) {
-                    return ::anyhow::__private::Err(
-                        ::anyhow::Error::msg(
-                            ::alloc::__export::must_use({
+                if spec.supports_ord() {
+                    let res = sqlx::query_scalar::<_, serde_json::Value>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await;
+                    if ::anyhow::__private::not(res.is_ok()) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "eql_v3.{0}({1}) on ord-capable variant must resolve, got {2:?}",
+                                            "max",
+                                            d,
+                                            res.err(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                } else {
+                    sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
+                    let err = sqlx::query_scalar::<_, String>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .expect_err(
+                            &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                        "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
                                         "max",
                                         d,
-                                        code,
-                                        db_err.message(),
                                     ),
                                 )
                             }),
-                        ),
-                    );
+                        );
+                    let db_err = err
+                        .as_database_error()
+                        .expect("expected database error from typecheck probe");
+                    let code = db_err.code();
+                    if ::anyhow::__private::not(
+                        code.as_deref() == Some("42883")
+                            || code.as_deref() == Some("42725"),
+                    ) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                            "max",
+                                            d,
+                                            code,
+                                            db_err.message(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                    sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
                 }
-                sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
                 tx.commit().await?;
                 Ok(())
             }
@@ -24259,6 +24477,678 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_aggregate_typecheck_min"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_aggregate_typecheck_min: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_aggregate_typecheck_min",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2861usize,
+            start_col: 22usize,
+            end_line: 2861usize,
+            end_col: 83usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_aggregate_typecheck_min()),
+        ),
+    };
+    fn matrix_int4_ord_aggregate_typecheck_min() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_aggregate_typecheck_min(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::Ord);
+                let d = &spec.sql_domain;
+                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE typecheck_table (value {0}) ON COMMIT DROP",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO typecheck_table(value) VALUES ($1::jsonb::{0})",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .bind(payload)
+                    .execute(&mut *tx)
+                    .await?;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT eql_v3.{0}(value) FROM typecheck_table",
+                            "min",
+                        ),
+                    )
+                });
+                if spec.supports_ord() {
+                    let res = sqlx::query_scalar::<_, serde_json::Value>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await;
+                    if ::anyhow::__private::not(res.is_ok()) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "eql_v3.{0}({1}) on ord-capable variant must resolve, got {2:?}",
+                                            "min",
+                                            d,
+                                            res.err(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                } else {
+                    sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
+                    let err = sqlx::query_scalar::<_, String>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .expect_err(
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
+                                        "min",
+                                        d,
+                                    ),
+                                )
+                            }),
+                        );
+                    let db_err = err
+                        .as_database_error()
+                        .expect("expected database error from typecheck probe");
+                    let code = db_err.code();
+                    if ::anyhow::__private::not(
+                        code.as_deref() == Some("42883")
+                            || code.as_deref() == Some("42725"),
+                    ) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                            "min",
+                                            d,
+                                            code,
+                                            db_err.message(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                    sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_aggregate_typecheck_min",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_int4_ord_aggregate_typecheck_min;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_aggregate_typecheck_max"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_aggregate_typecheck_max: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_aggregate_typecheck_max",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2861usize,
+            start_col: 22usize,
+            end_line: 2861usize,
+            end_col: 83usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_aggregate_typecheck_max()),
+        ),
+    };
+    fn matrix_int4_ord_aggregate_typecheck_max() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_aggregate_typecheck_max(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::Ord);
+                let d = &spec.sql_domain;
+                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE typecheck_table (value {0}) ON COMMIT DROP",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO typecheck_table(value) VALUES ($1::jsonb::{0})",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .bind(payload)
+                    .execute(&mut *tx)
+                    .await?;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT eql_v3.{0}(value) FROM typecheck_table",
+                            "max",
+                        ),
+                    )
+                });
+                if spec.supports_ord() {
+                    let res = sqlx::query_scalar::<_, serde_json::Value>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await;
+                    if ::anyhow::__private::not(res.is_ok()) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "eql_v3.{0}({1}) on ord-capable variant must resolve, got {2:?}",
+                                            "max",
+                                            d,
+                                            res.err(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                } else {
+                    sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
+                    let err = sqlx::query_scalar::<_, String>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .expect_err(
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
+                                        "max",
+                                        d,
+                                    ),
+                                )
+                            }),
+                        );
+                    let db_err = err
+                        .as_database_error()
+                        .expect("expected database error from typecheck probe");
+                    let code = db_err.code();
+                    if ::anyhow::__private::not(
+                        code.as_deref() == Some("42883")
+                            || code.as_deref() == Some("42725"),
+                    ) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                            "max",
+                                            d,
+                                            code,
+                                            db_err.message(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                    sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_aggregate_typecheck_max",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_int4_ord_aggregate_typecheck_max;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_aggregate_typecheck_min"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_ore_aggregate_typecheck_min: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_ore_aggregate_typecheck_min",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2861usize,
+            start_col: 22usize,
+            end_line: 2861usize,
+            end_col: 83usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_ore_aggregate_typecheck_min()),
+        ),
+    };
+    fn matrix_int4_ord_ore_aggregate_typecheck_min() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_aggregate_typecheck_min(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::OrdOre);
+                let d = &spec.sql_domain;
+                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE typecheck_table (value {0}) ON COMMIT DROP",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO typecheck_table(value) VALUES ($1::jsonb::{0})",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .bind(payload)
+                    .execute(&mut *tx)
+                    .await?;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT eql_v3.{0}(value) FROM typecheck_table",
+                            "min",
+                        ),
+                    )
+                });
+                if spec.supports_ord() {
+                    let res = sqlx::query_scalar::<_, serde_json::Value>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await;
+                    if ::anyhow::__private::not(res.is_ok()) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "eql_v3.{0}({1}) on ord-capable variant must resolve, got {2:?}",
+                                            "min",
+                                            d,
+                                            res.err(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                } else {
+                    sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
+                    let err = sqlx::query_scalar::<_, String>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .expect_err(
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
+                                        "min",
+                                        d,
+                                    ),
+                                )
+                            }),
+                        );
+                    let db_err = err
+                        .as_database_error()
+                        .expect("expected database error from typecheck probe");
+                    let code = db_err.code();
+                    if ::anyhow::__private::not(
+                        code.as_deref() == Some("42883")
+                            || code.as_deref() == Some("42725"),
+                    ) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                            "min",
+                                            d,
+                                            code,
+                                            db_err.message(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                    sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_aggregate_typecheck_min",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_int4_ord_ore_aggregate_typecheck_min;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_aggregate_typecheck_max"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_ore_aggregate_typecheck_max: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_ore_aggregate_typecheck_max",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2861usize,
+            start_col: 22usize,
+            end_line: 2861usize,
+            end_col: 83usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_ore_aggregate_typecheck_max()),
+        ),
+    };
+    fn matrix_int4_ord_ore_aggregate_typecheck_max() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_aggregate_typecheck_max(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::OrdOre);
+                let d = &spec.sql_domain;
+                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE typecheck_table (value {0}) ON COMMIT DROP",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO typecheck_table(value) VALUES ($1::jsonb::{0})",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .bind(payload)
+                    .execute(&mut *tx)
+                    .await?;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT eql_v3.{0}(value) FROM typecheck_table",
+                            "max",
+                        ),
+                    )
+                });
+                if spec.supports_ord() {
+                    let res = sqlx::query_scalar::<_, serde_json::Value>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await;
+                    if ::anyhow::__private::not(res.is_ok()) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "eql_v3.{0}({1}) on ord-capable variant must resolve, got {2:?}",
+                                            "max",
+                                            d,
+                                            res.err(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                } else {
+                    sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
+                    let err = sqlx::query_scalar::<_, String>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .expect_err(
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
+                                        "max",
+                                        d,
+                                    ),
+                                )
+                            }),
+                        );
+                    let db_err = err
+                        .as_database_error()
+                        .expect("expected database error from typecheck probe");
+                    let code = db_err.code();
+                    if ::anyhow::__private::not(
+                        code.as_deref() == Some("42883")
+                            || code.as_deref() == Some("42725"),
+                    ) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                            "max",
+                                            d,
+                                            code,
+                                            db_err.message(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                    sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_aggregate_typecheck_max",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_int4_ord_ore_aggregate_typecheck_max;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::int4::matrix_int4_storage_count_typed_column"]
     #[doc(hidden)]
     pub const matrix_int4_storage_count_typed_column: test::TestDescAndFn = test::TestDescAndFn {
@@ -24269,9 +25159,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2644usize,
+            start_line: 2977usize,
             start_col: 22usize,
-            end_line: 2644usize,
+            end_line: 2977usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -24397,9 +25287,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2677usize,
+            start_line: 3010usize,
             start_col: 22usize,
-            end_line: 2677usize,
+            end_line: 3010usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -24501,9 +25391,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2644usize,
+            start_line: 2977usize,
             start_col: 22usize,
-            end_line: 2644usize,
+            end_line: 2977usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -24627,9 +25517,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2677usize,
+            start_line: 3010usize,
             start_col: 22usize,
-            end_line: 2677usize,
+            end_line: 3010usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -24731,9 +25621,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2721usize,
+            start_line: 3054usize,
             start_col: 22usize,
-            end_line: 2721usize,
+            end_line: 3054usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -24756,7 +25646,7 @@ pub mod int4 {
                 >(::eql_tests::scalar_domains::Variant::Eq);
                 let d = &spec.sql_domain;
                 let extractor_fn = spec
-                    .extractor_fn()
+                    .primary_extractor()
                     .expect("non-Storage variant must expose an extractor");
                 let extractor = ::alloc::__export::must_use({
                     ::alloc::fmt::format(format_args!("{0}(value)", extractor_fn))
@@ -24871,9 +25761,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2644usize,
+            start_line: 2977usize,
             start_col: 22usize,
-            end_line: 2644usize,
+            end_line: 2977usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -24997,9 +25887,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2677usize,
+            start_line: 3010usize,
             start_col: 22usize,
-            end_line: 2677usize,
+            end_line: 3010usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -25101,9 +25991,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2721usize,
+            start_line: 3054usize,
             start_col: 22usize,
-            end_line: 2721usize,
+            end_line: 3054usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -25126,7 +26016,7 @@ pub mod int4 {
                 >(::eql_tests::scalar_domains::Variant::Ord);
                 let d = &spec.sql_domain;
                 let extractor_fn = spec
-                    .extractor_fn()
+                    .primary_extractor()
                     .expect("non-Storage variant must expose an extractor");
                 let extractor = ::alloc::__export::must_use({
                     ::alloc::fmt::format(format_args!("{0}(value)", extractor_fn))
@@ -25241,9 +26131,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2644usize,
+            start_line: 2977usize,
             start_col: 22usize,
-            end_line: 2644usize,
+            end_line: 2977usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -25369,9 +26259,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2677usize,
+            start_line: 3010usize,
             start_col: 22usize,
-            end_line: 2677usize,
+            end_line: 3010usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -25473,9 +26363,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2721usize,
+            start_line: 3054usize,
             start_col: 22usize,
-            end_line: 2721usize,
+            end_line: 3054usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -25498,7 +26388,7 @@ pub mod int4 {
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
                 let d = &spec.sql_domain;
                 let extractor_fn = spec
-                    .extractor_fn()
+                    .primary_extractor()
                     .expect("non-Storage variant must expose an extractor");
                 let extractor = ::alloc::__export::must_use({
                     ::alloc::fmt::format(format_args!("{0}(value)", extractor_fn))
@@ -25613,9 +26503,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1782usize,
+            start_line: 2096usize,
             start_col: 22usize,
-            end_line: 1782usize,
+            end_line: 2096usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -25632,19 +26522,19 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
-                use ::eql_tests::scalar_domains::ScalarType;
+                use ::eql_tests::scalar_domains::{OrderedScalar, ScalarType};
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
                 let fixture_table = <i32 as ScalarType>::fixture_table_name();
-                let zero: i32 = Default::default();
-                let gt_zero = "all" == "gt_zero";
-                let where_clause = if gt_zero {
+                let mid: i32 = <i32 as OrderedScalar>::mid_pivot();
+                let gt_mid = "all" == "gt_mid";
+                let where_clause = if gt_mid {
                     ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
                                 " WHERE plaintext > {0}",
-                                <i32 as ScalarType>::to_sql_literal(zero),
+                                <i32 as ScalarType>::to_sql_literal(&mid),
                             ),
                         )
                     })
@@ -25666,8 +26556,8 @@ pub mod int4 {
                 let mut expected: Vec<i32> = <i32 as ScalarType>::fixture_values()
                     .to_vec();
                 expected.sort();
-                if gt_zero {
-                    expected.retain(|v| *v > zero);
+                if gt_mid {
+                    expected.retain(|v| *v > mid);
                 }
                 if "ASC" == "DESC" {
                     expected.reverse();
@@ -25748,9 +26638,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1782usize,
+            start_line: 2096usize,
             start_col: 22usize,
-            end_line: 1782usize,
+            end_line: 2096usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -25767,19 +26657,19 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
-                use ::eql_tests::scalar_domains::ScalarType;
+                use ::eql_tests::scalar_domains::{OrderedScalar, ScalarType};
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
                 let fixture_table = <i32 as ScalarType>::fixture_table_name();
-                let zero: i32 = Default::default();
-                let gt_zero = "all" == "gt_zero";
-                let where_clause = if gt_zero {
+                let mid: i32 = <i32 as OrderedScalar>::mid_pivot();
+                let gt_mid = "all" == "gt_mid";
+                let where_clause = if gt_mid {
                     ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
                                 " WHERE plaintext > {0}",
-                                <i32 as ScalarType>::to_sql_literal(zero),
+                                <i32 as ScalarType>::to_sql_literal(&mid),
                             ),
                         )
                     })
@@ -25801,8 +26691,8 @@ pub mod int4 {
                 let mut expected: Vec<i32> = <i32 as ScalarType>::fixture_values()
                     .to_vec();
                 expected.sort();
-                if gt_zero {
-                    expected.retain(|v| *v > zero);
+                if gt_mid {
+                    expected.retain(|v| *v > mid);
                 }
                 if "DESC" == "DESC" {
                     expected.reverse();
@@ -25883,9 +26773,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1782usize,
+            start_line: 2096usize,
             start_col: 22usize,
-            end_line: 1782usize,
+            end_line: 2096usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -25902,19 +26792,19 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
-                use ::eql_tests::scalar_domains::ScalarType;
+                use ::eql_tests::scalar_domains::{OrderedScalar, ScalarType};
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
                 let fixture_table = <i32 as ScalarType>::fixture_table_name();
-                let zero: i32 = Default::default();
-                let gt_zero = "gt_zero" == "gt_zero";
-                let where_clause = if gt_zero {
+                let mid: i32 = <i32 as OrderedScalar>::mid_pivot();
+                let gt_mid = "gt_mid" == "gt_mid";
+                let where_clause = if gt_mid {
                     ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
                                 " WHERE plaintext > {0}",
-                                <i32 as ScalarType>::to_sql_literal(zero),
+                                <i32 as ScalarType>::to_sql_literal(&mid),
                             ),
                         )
                     })
@@ -25936,8 +26826,8 @@ pub mod int4 {
                 let mut expected: Vec<i32> = <i32 as ScalarType>::fixture_values()
                     .to_vec();
                 expected.sort();
-                if gt_zero {
-                    expected.retain(|v| *v > zero);
+                if gt_mid {
+                    expected.retain(|v| *v > mid);
                 }
                 if "ASC" == "DESC" {
                     expected.reverse();
@@ -26018,9 +26908,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1782usize,
+            start_line: 2096usize,
             start_col: 22usize,
-            end_line: 1782usize,
+            end_line: 2096usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -26037,19 +26927,19 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
-                use ::eql_tests::scalar_domains::ScalarType;
+                use ::eql_tests::scalar_domains::{OrderedScalar, ScalarType};
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
                 let fixture_table = <i32 as ScalarType>::fixture_table_name();
-                let zero: i32 = Default::default();
-                let gt_zero = "gt_zero" == "gt_zero";
-                let where_clause = if gt_zero {
+                let mid: i32 = <i32 as OrderedScalar>::mid_pivot();
+                let gt_mid = "gt_mid" == "gt_mid";
+                let where_clause = if gt_mid {
                     ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
                                 " WHERE plaintext > {0}",
-                                <i32 as ScalarType>::to_sql_literal(zero),
+                                <i32 as ScalarType>::to_sql_literal(&mid),
                             ),
                         )
                     })
@@ -26071,8 +26961,8 @@ pub mod int4 {
                 let mut expected: Vec<i32> = <i32 as ScalarType>::fixture_values()
                     .to_vec();
                 expected.sort();
-                if gt_zero {
-                    expected.retain(|v| *v > zero);
+                if gt_mid {
+                    expected.retain(|v| *v > mid);
                 }
                 if "DESC" == "DESC" {
                     expected.reverse();
@@ -26153,9 +27043,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1782usize,
+            start_line: 2096usize,
             start_col: 22usize,
-            end_line: 1782usize,
+            end_line: 2096usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -26172,19 +27062,19 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
-                use ::eql_tests::scalar_domains::ScalarType;
+                use ::eql_tests::scalar_domains::{OrderedScalar, ScalarType};
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
                 let fixture_table = <i32 as ScalarType>::fixture_table_name();
-                let zero: i32 = Default::default();
-                let gt_zero = "all" == "gt_zero";
-                let where_clause = if gt_zero {
+                let mid: i32 = <i32 as OrderedScalar>::mid_pivot();
+                let gt_mid = "all" == "gt_mid";
+                let where_clause = if gt_mid {
                     ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
                                 " WHERE plaintext > {0}",
-                                <i32 as ScalarType>::to_sql_literal(zero),
+                                <i32 as ScalarType>::to_sql_literal(&mid),
                             ),
                         )
                     })
@@ -26206,8 +27096,8 @@ pub mod int4 {
                 let mut expected: Vec<i32> = <i32 as ScalarType>::fixture_values()
                     .to_vec();
                 expected.sort();
-                if gt_zero {
-                    expected.retain(|v| *v > zero);
+                if gt_mid {
+                    expected.retain(|v| *v > mid);
                 }
                 if "ASC" == "DESC" {
                     expected.reverse();
@@ -26288,9 +27178,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1782usize,
+            start_line: 2096usize,
             start_col: 22usize,
-            end_line: 1782usize,
+            end_line: 2096usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -26307,19 +27197,19 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
-                use ::eql_tests::scalar_domains::ScalarType;
+                use ::eql_tests::scalar_domains::{OrderedScalar, ScalarType};
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
                 let fixture_table = <i32 as ScalarType>::fixture_table_name();
-                let zero: i32 = Default::default();
-                let gt_zero = "all" == "gt_zero";
-                let where_clause = if gt_zero {
+                let mid: i32 = <i32 as OrderedScalar>::mid_pivot();
+                let gt_mid = "all" == "gt_mid";
+                let where_clause = if gt_mid {
                     ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
                                 " WHERE plaintext > {0}",
-                                <i32 as ScalarType>::to_sql_literal(zero),
+                                <i32 as ScalarType>::to_sql_literal(&mid),
                             ),
                         )
                     })
@@ -26341,8 +27231,8 @@ pub mod int4 {
                 let mut expected: Vec<i32> = <i32 as ScalarType>::fixture_values()
                     .to_vec();
                 expected.sort();
-                if gt_zero {
-                    expected.retain(|v| *v > zero);
+                if gt_mid {
+                    expected.retain(|v| *v > mid);
                 }
                 if "DESC" == "DESC" {
                     expected.reverse();
@@ -26423,9 +27313,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1782usize,
+            start_line: 2096usize,
             start_col: 22usize,
-            end_line: 1782usize,
+            end_line: 2096usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -26442,19 +27332,19 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
-                use ::eql_tests::scalar_domains::ScalarType;
+                use ::eql_tests::scalar_domains::{OrderedScalar, ScalarType};
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
                 let fixture_table = <i32 as ScalarType>::fixture_table_name();
-                let zero: i32 = Default::default();
-                let gt_zero = "gt_zero" == "gt_zero";
-                let where_clause = if gt_zero {
+                let mid: i32 = <i32 as OrderedScalar>::mid_pivot();
+                let gt_mid = "gt_mid" == "gt_mid";
+                let where_clause = if gt_mid {
                     ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
                                 " WHERE plaintext > {0}",
-                                <i32 as ScalarType>::to_sql_literal(zero),
+                                <i32 as ScalarType>::to_sql_literal(&mid),
                             ),
                         )
                     })
@@ -26476,8 +27366,8 @@ pub mod int4 {
                 let mut expected: Vec<i32> = <i32 as ScalarType>::fixture_values()
                     .to_vec();
                 expected.sort();
-                if gt_zero {
-                    expected.retain(|v| *v > zero);
+                if gt_mid {
+                    expected.retain(|v| *v > mid);
                 }
                 if "ASC" == "DESC" {
                     expected.reverse();
@@ -26558,9 +27448,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1782usize,
+            start_line: 2096usize,
             start_col: 22usize,
-            end_line: 1782usize,
+            end_line: 2096usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -26577,19 +27467,19 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
-                use ::eql_tests::scalar_domains::ScalarType;
+                use ::eql_tests::scalar_domains::{OrderedScalar, ScalarType};
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
                 let fixture_table = <i32 as ScalarType>::fixture_table_name();
-                let zero: i32 = Default::default();
-                let gt_zero = "gt_zero" == "gt_zero";
-                let where_clause = if gt_zero {
+                let mid: i32 = <i32 as OrderedScalar>::mid_pivot();
+                let gt_mid = "gt_mid" == "gt_mid";
+                let where_clause = if gt_mid {
                     ::alloc::__export::must_use({
                         ::alloc::fmt::format(
                             format_args!(
                                 " WHERE plaintext > {0}",
-                                <i32 as ScalarType>::to_sql_literal(zero),
+                                <i32 as ScalarType>::to_sql_literal(&mid),
                             ),
                         )
                     })
@@ -26611,8 +27501,8 @@ pub mod int4 {
                 let mut expected: Vec<i32> = <i32 as ScalarType>::fixture_values()
                     .to_vec();
                 expected.sort();
-                if gt_zero {
-                    expected.retain(|v| *v > zero);
+                if gt_mid {
+                    expected.retain(|v| *v > mid);
                 }
                 if "DESC" == "DESC" {
                     expected.reverse();
@@ -26693,9 +27583,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1892usize,
+            start_line: 2207usize,
             start_col: 22usize,
-            end_line: 1892usize,
+            end_line: 2207usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -26869,9 +27759,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1892usize,
+            start_line: 2207usize,
             start_col: 22usize,
-            end_line: 1892usize,
+            end_line: 2207usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -27045,9 +27935,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1892usize,
+            start_line: 2207usize,
             start_col: 22usize,
-            end_line: 1892usize,
+            end_line: 2207usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -27221,9 +28111,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1892usize,
+            start_line: 2207usize,
             start_col: 22usize,
-            end_line: 1892usize,
+            end_line: 2207usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -27397,9 +28287,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1892usize,
+            start_line: 2207usize,
             start_col: 22usize,
-            end_line: 1892usize,
+            end_line: 2207usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -27573,9 +28463,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1892usize,
+            start_line: 2207usize,
             start_col: 22usize,
-            end_line: 1892usize,
+            end_line: 2207usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -27749,9 +28639,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1892usize,
+            start_line: 2207usize,
             start_col: 22usize,
-            end_line: 1892usize,
+            end_line: 2207usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -27925,9 +28815,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1892usize,
+            start_line: 2207usize,
             start_col: 22usize,
-            end_line: 1892usize,
+            end_line: 2207usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -28101,9 +28991,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2009usize,
+            start_line: 2324usize,
             start_col: 22usize,
-            end_line: 2009usize,
+            end_line: 2324usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -28204,9 +29094,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2009usize,
+            start_line: 2324usize,
             start_col: 22usize,
-            end_line: 2009usize,
+            end_line: 2324usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -28307,9 +29197,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2009usize,
+            start_line: 2324usize,
             start_col: 22usize,
-            end_line: 2009usize,
+            end_line: 2324usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -28410,9 +29300,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2009usize,
+            start_line: 2324usize,
             start_col: 22usize,
-            end_line: 2009usize,
+            end_line: 2324usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -28513,9 +29403,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2009usize,
+            start_line: 2324usize,
             start_col: 22usize,
-            end_line: 2009usize,
+            end_line: 2324usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -28616,9 +29506,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2009usize,
+            start_line: 2324usize,
             start_col: 22usize,
-            end_line: 2009usize,
+            end_line: 2324usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -28719,9 +29609,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2009usize,
+            start_line: 2324usize,
             start_col: 22usize,
-            end_line: 2009usize,
+            end_line: 2324usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -28822,9 +29712,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2009usize,
+            start_line: 2324usize,
             start_col: 22usize,
-            end_line: 2009usize,
+            end_line: 2324usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,

@@ -2,7 +2,7 @@
 
 use crate::consts::*;
 use crate::operator_surface::Operator;
-use eql_scalars::{DomainSpec, Role, Term};
+use eql_scalars::{DomainSpec, Term};
 
 /// Build the minijinja environment with the embedded templates: one whole-file
 /// template per output file (`types`/`functions`/`operators`/`aggregates`) plus
@@ -268,13 +268,12 @@ pub const AGGREGATE_OPS: &[AggregateOp] = &[
     },
 ];
 
-/// True if the domain carries a comparator term (any term that supports `<`).
-/// Unions across the terms — consistent with `Term::operators_for_terms` —
-/// rather than reading only the first, so a future mixed-term domain that
-/// carries an ord term anywhere is correctly ord-capable. Port of
-/// `is_ord_capable`.
+/// True if any of the domain's terms provides ordering (`<` `<=` `>` `>=`),
+/// gating `min`/`max` aggregate emission. Asks a per-term *capability* (not the
+/// whole-domain first-term `Role`), so a `[Hm, Ore]` domain — first term `Hm`,
+/// `Role::Eq` — is still correctly ord-capable and emits aggregates.
 pub fn is_ord_capable(terms: &[Term]) -> bool {
-    terms.iter().any(|t| t.role() == Role::Ord)
+    terms.iter().any(|t| t.provides_ordering())
 }
 
 #[cfg(test)]
@@ -287,9 +286,12 @@ mod tests {
     }
 
     #[test]
-    fn is_ord_capable_matches_role() {
+    fn is_ord_capable_is_true_when_any_term_provides_ordering() {
         assert!(is_ord_capable(&[Term::Ore]));
+        assert!(is_ord_capable(&[Term::Hm, Term::Ore]));
+        assert!(is_ord_capable(&[Term::Hm, Term::Ore, Term::Bloom]));
         assert!(!is_ord_capable(&[Term::Hm]));
+        assert!(!is_ord_capable(&[Term::Bloom]));
         assert!(!is_ord_capable(&[]));
     }
 

@@ -161,11 +161,11 @@ cargo test -p eql-scalars -p eql-codegen -p eql-tests-macros -p eql-types
 """
 
 [tasks."test:matrix:inventory"]
-description = "Verify the matrix test-name set against the single canonical snapshot (or its derived eq-only subset), catalog-cross-checked (no database required)"
+description = "Verify the matrix test-name set against the canonical snapshot (its derived eq-only subset, or the committed text superset), catalog-cross-checked (no database required)"
 dir = "{{config_root}}/tests/sqlx"
 run = """
 #!/usr/bin/env bash
-# Two committed, token-normalized snapshots. The canonical one
+# Three committed, token-normalized snapshots. The canonical one
 # (snapshots/matrix_tests.txt) pins the set of macro-emitted matrix test names
 # for the ORDERED scalar shape. The second (snapshots/matrix_tests_eq_only.txt)
 # is the equality-only shape: an eq-only type's name set is exactly the ordered
@@ -173,9 +173,14 @@ run = """
 # DERIVED from the one baseline — but it is also committed and PINNED: the gate
 # re-derives the subset at runtime and asserts it equals the committed file
 # (step 3 below), so a change to the baseline or the strip filter that alters the
-# eq-only set must be re-committed deliberately. Each discovered type must then
-# match either the full baseline (ordered) or that derived/pinned subset
-# (eq-only). One baseline drives both shapes however many types exist.
+# eq-only set must be re-committed deliberately. The third
+# (snapshots/matrix_tests_text.txt) is the TEXT shape: a SUPERSET of the ordered
+# baseline (every ordered arm PLUS the text-only `_search` / `_eqidx` / `_match`
+# arms). It is not derivable by a strip filter, so it is committed directly and
+# pinned as a strict superset of the baseline. Each discovered type must then
+# match the full baseline (ordered), that derived/pinned subset (eq-only), or the
+# committed text superset. One baseline drives the ordered/eq-only shapes however
+# many types exist.
 #
 # Steps:
 #   1. List the encrypted_domain binary ONCE (deterministic; reused below).
@@ -184,8 +189,8 @@ run = """
 #   3. Derive the eq-only subset from the ordered baseline and assert it equals
 #      the committed snapshots/matrix_tests_eq_only.txt (pins the derivation).
 #   4. For each discovered type, normalize its token to <T> and assert its set
-#      equals EITHER the canonical snapshot (ordered) OR the derived eq-only
-#      subset. Assert at least one type is present.
+#      equals the canonical snapshot (ordered), the derived eq-only subset, OR
+#      the committed text superset. Assert at least one type is present.
 #   5. Completeness cross-check: assert the discovered type set equals
 #      `eql-codegen list-types`. A catalog type added without its matrix wiring
 #      (no scalars::<T>:: tests in the binary) fails here.
@@ -197,6 +202,7 @@ set -euo pipefail
 
 test -f snapshots/matrix_tests.txt || { echo "snapshots/matrix_tests.txt missing — regenerate (see snapshots/README.md)." >&2; exit 1; }
 test -f snapshots/matrix_tests_eq_only.txt || { echo "snapshots/matrix_tests_eq_only.txt missing — regenerate (see snapshots/README.md)." >&2; exit 1; }
+test -f snapshots/matrix_tests_text.txt || { echo "snapshots/matrix_tests_text.txt missing — regenerate (see snapshots/README.md)." >&2; exit 1; }
 
 listing=$(cargo test --no-default-features --test encrypted_domain -- --list | sed -n 's/: test$//p')
 
@@ -230,8 +236,22 @@ if ! cmp -s "$eq_only_expected" snapshots/matrix_tests_eq_only.txt; then
   exit 1
 fi
 
-# Per-type normalize + compare: each type must match EITHER the full canonical
-# snapshot (ordered shape) OR the derived eq-only subset (equality-only shape).
+# The text shape is the THIRD committed snapshot: a SUPERSET of the ordered
+# baseline (every ordered arm PLUS the text-only `_search` / `_eqidx` / `_match`
+# arms). Unlike eq-only it is not derivable by a strip filter, so it is committed
+# directly. Pin the superset invariant: every ordered-baseline arm must be
+# present in the text shape, so an edit that silently drops a baseline arm for
+# text (regressing coverage) is caught here, not just at the per-type compare.
+missing_from_text=$(comm -23 <(LC_ALL=C sort snapshots/matrix_tests.txt) <(LC_ALL=C sort snapshots/matrix_tests_text.txt))
+if [ -n "$missing_from_text" ]; then
+  echo "snapshots/matrix_tests_text.txt is missing ordered-baseline arms (text must be a superset):" >&2
+  printf '%s\\n' "$missing_from_text" >&2
+  exit 1
+fi
+
+# Per-type normalize + compare: each type must match the full canonical snapshot
+# (ordered shape), the derived eq-only subset (equality-only shape), or the
+# committed text superset (text shape).
 checked=0
 while IFS= read -r t; do
   [ -n "$t" ] || continue
@@ -241,18 +261,22 @@ while IFS= read -r t; do
     shape="ordered"
   elif cmp -s "/tmp/matrix-norm-${t}.txt" "$eq_only_expected"; then
     shape="eq_only"
+  elif cmp -s "/tmp/matrix-norm-${t}.txt" snapshots/matrix_tests_text.txt; then
+    shape="text"
   else
-    echo "Matrix test-name set for '${t}' matches NEITHER the canonical snapshot nor its derived eq-only subset." >&2
+    echo "Matrix test-name set for '${t}' matches NEITHER the canonical snapshot, its derived eq-only subset, nor the text shape." >&2
     echo "  vs ordered (snapshots/matrix_tests.txt):" >&2
     diff snapshots/matrix_tests.txt "/tmp/matrix-norm-${t}.txt" >&2 || true
     echo "  vs derived eq-only (ordered minus _ord/order_by/routes_through_ob):" >&2
     diff "$eq_only_expected" "/tmp/matrix-norm-${t}.txt" >&2 || true
+    echo "  vs text superset (snapshots/matrix_tests_text.txt):" >&2
+    diff snapshots/matrix_tests_text.txt "/tmp/matrix-norm-${t}.txt" >&2 || true
     exit 1
   fi
   echo "  ${t}: ${shape}"
   checked=$((checked + 1))
 done <<< "$discovered"
-[ "$checked" -gt 0 ] || { echo "No scalar type matched the canonical snapshot or its derived eq-only subset." >&2; exit 1; }
+[ "$checked" -gt 0 ] || { echo "No scalar type matched the canonical snapshot, its derived eq-only subset, or the text superset." >&2; exit 1; }
 
 # Completeness cross-check against the catalog (the single source of truth).
 catalog=$(cd "{{config_root}}" && cargo run -p eql-codegen -- list-types | LC_ALL=C sort -u)
@@ -264,7 +288,7 @@ if [ "$discovered" != "$catalog" ]; then
   exit 1
 fi
 
-echo "Matrix inventory OK: ${checked} type(s) match the canonical snapshot or its derived eq-only subset; catalog reconciled."
+echo "Matrix inventory OK: ${checked} type(s) match the canonical snapshot, its derived eq-only subset, or the committed text superset; catalog reconciled."
 """
 
 [tasks."test:matrix:inventory:jsonb_entry"]
