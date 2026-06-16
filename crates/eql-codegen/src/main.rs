@@ -20,7 +20,10 @@ fn main() -> ExitCode {
     // (Stage 1) and the log-verification matcher (Stage 4).
     if args.len() == 2 && args[1] == "dump-catalog" {
         let dump = eql_codegen::dump::dump_catalog();
-        println!("{}", serde_json::to_string_pretty(&dump).expect("serialize catalog dump"));
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&dump).expect("serialize catalog dump")
+        );
         return ExitCode::SUCCESS;
     }
 
