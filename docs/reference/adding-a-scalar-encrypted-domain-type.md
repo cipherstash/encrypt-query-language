@@ -490,11 +490,17 @@ onto inlinable wrappers; everything else carries minimal metadata backing onto
 blockers. Path operators always back onto blockers — neither current term
 enables them — and the native `jsonb` operators are blocker-only **except
 `@>`/`<@`**, which back onto inlinable containment wrappers (`eql_v3.contains` /
-`eql_v3.contained_by`) on a `Bloom` `_match` domain (e.g. `eql_v3.text_match`)
-and elsewhere stay blockers — matching the per-domain table just below, where the
-`&[Term::Bloom]` row carries six containment wrappers.
+`eql_v3.contained_by`) on any domain carrying the `Bloom` term — the
+single-capability `_match` domain (e.g. `eql_v3.text_match`) **and** the combined
+`_search` domain (`eql_v3.text_search`, `[Hm, Ore, Bloom]`) — and elsewhere stay
+blockers — matching the per-domain table just below, where every `Bloom`-bearing
+row carries six containment wrappers.
 
-The wrapper/blocker split per domain (the 44-operator total never moves):
+The wrapper/blocker split per domain (the 44-operator total never moves). A
+domain's wrappers are the **union** of its terms' operators
+(`Term::operators_for_terms`), so a multi-term domain advertises every operator
+any of its terms provides; the rest stay blockers. `Functions` =
+`44 + <extractor count>` (one extractor function per distinct extractor):
 
 | Domain terms      | Extractors | Wrappers | Blockers | Functions | Operators |
 | ----------------- | ---------: | -------: | -------: | --------: | --------: |
@@ -502,9 +508,17 @@ The wrapper/blocker split per domain (the 44-operator total never moves):
 | `&[Term::Hm]`     |          1 (`eq_term`)    |  6 | 38 | 45 | 44 |
 | `&[Term::Bloom]`  |          1 (`match_term`) |  6 | 38 | 45 | 44 |
 | `&[Term::Ore]`    |          1 (`ord_term`)   | 18 | 26 | 45 | 44 |
+| `&[Term::Hm, Term::Ore]` | 2 (`eq_term`, `ord_term`) | 18 | 26 | 46 | 44 |
+| `&[Term::Hm, Term::Ore, Term::Bloom]` | 3 (`eq_term`, `ord_term`, `match_term`) | 24 | 20 | 47 | 44 |
 
 Six wrappers for `Hm` = `=` and `<>` × three shapes; six for `Bloom` = `@>` and
-`<@` × three shapes; eighteen for `Ore` = six operators × three shapes.
+`<@` × three shapes; eighteen for `Ore` = six operators × three shapes. For the
+multi-term rows the wrapper set is the **deduplicated union**: `[Hm, Ore]` is
+`{=, <>, <, <=, >, >=}` (Ore's `=`/`<>` collapse onto Hm's — only the *extractor*
+differs, so the count stays 18, but `=`/`<>` now resolve through `eq_term`, exact
+HMAC, not ORE); `[Hm, Ore, Bloom]` adds `@>`/`<@` for 24. The extra extractor
+functions are the only thing that grows `Functions` past 45 — the operator total
+is always 44.
 
 **Untyped-literal resolver edge.** PostgreSQL's operator resolver still prefers
 the built-in `jsonb` operator for untyped string literals in forms such as

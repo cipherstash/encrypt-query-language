@@ -65,6 +65,7 @@ BEGIN
         AND VALUE ? 'v'
         AND VALUE ? 'i'
         AND VALUE ? 'c'
+        AND VALUE ? 'hm'
         AND VALUE ? 'ob'
         AND VALUE->>'v' = '2'
       );
@@ -81,7 +82,26 @@ BEGIN
         AND VALUE ? 'v'
         AND VALUE ? 'i'
         AND VALUE ? 'c'
+        AND VALUE ? 'hm'
         AND VALUE ? 'ob'
+        AND VALUE->>'v' = '2'
+      );
+  END IF;
+
+  --! @brief Encrypted domain eql_v3.text_search.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = 'text_search' AND typnamespace = 'eql_v3'::regnamespace
+  ) THEN
+    CREATE DOMAIN eql_v3.text_search AS jsonb
+      CHECK (
+        jsonb_typeof(VALUE) = 'object'
+        AND VALUE ? 'v'
+        AND VALUE ? 'i'
+        AND VALUE ? 'c'
+        AND VALUE ? 'hm'
+        AND VALUE ? 'ob'
+        AND VALUE ? 'bf'
         AND VALUE->>'v' = '2'
       );
   END IF;

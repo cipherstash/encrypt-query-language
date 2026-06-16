@@ -10,6 +10,7 @@
 //! `T::fixture_values()`, and the `Variant` enum.
 
 use anyhow::{bail, Context, Result};
+use eql_scalars::{Term, CATALOG};
 use sqlx::PgPool;
 use std::fmt::{Debug, Display};
 
@@ -166,6 +167,29 @@ pub trait SignedScalar: OrderedScalar {
     /// The numeric origin (the sign boundary): `0` for integers, the epoch for
     /// dates. Fixtures straddle it (negatives below, positives above).
     fn origin() -> Self;
+}
+
+/// A scalar with a **bloom-filter match** capability (`@>`/`<@` containment) —
+/// currently only `text`, the one kind that declares a `Bloom`-bearing domain
+/// (`_match`/`_search`). Provides three fixture plaintexts with known
+/// containment relationships so the generated match arms can assert true hits
+/// and a deterministic miss. The bound gates the match arms: a non-match scalar
+/// never declares `_search`, so the `caps = [eq, ord, search]` matrix arm (the
+/// only one emitting match cases) is never instantiated for it.
+pub trait MatchScalar: ScalarType {
+    /// A "haystack" plaintext whose bloom filter contains [`needle`](Self::needle)
+    /// (they share n-grams). Present verbatim in `fixture_values()`.
+    fn haystack() -> Self;
+
+    /// A "needle" plaintext that is a sub-token of [`haystack`](Self::haystack).
+    /// Present verbatim in `fixture_values()`.
+    fn needle() -> Self;
+
+    /// A plaintext n-gram-**disjoint** from [`needle`](Self::needle), so
+    /// `needle @> disjoint` is a deterministic miss (a bloom filter only admits
+    /// false positives, never false negatives). Present verbatim in
+    /// `fixture_values()`.
+    fn disjoint() -> Self;
 }
 
 // The per-type `impl ScalarType` blocks for the **integer** scalars (each
@@ -436,6 +460,27 @@ impl OrderedScalar for String {
     }
 }
 
+impl MatchScalar for String {
+    /// `"aardvark"` — its bloom filter contains `"aard"` (shared 3-grams
+    /// `aar`, `ard`). Matches the haystack used by the sibling `text_match`
+    /// behavioural suite. Present verbatim in `TEXT_FIXTURES`.
+    fn haystack() -> Self {
+        "aardvark".to_string()
+    }
+
+    /// `"aard"` — a sub-token of `"aardvark"`.
+    fn needle() -> Self {
+        "aard".to_string()
+    }
+
+    /// `"zzzz"` — 3-gram-disjoint from `"aard"` (`zzz` vs `aar`/`ard`), so
+    /// `aard @> zzzz` is a deterministic miss. Kept disjoint in `TEXT_FIXTURES`
+    /// precisely for this assertion.
+    fn disjoint() -> Self {
+        "zzzz".to_string()
+    }
+}
+
 // `String` is deliberately NOT `SignedScalar`: lexicographic text has no
 // numeric origin / sign boundary. The signed-only sign-boundary test bounds on
 // `SignedScalar`, so a `String` instantiation of it would not compile.
@@ -460,6 +505,31 @@ mod text_value_tests {
         assert!(
             !values.iter().any(|v| v.is_empty()),
             "the empty string must not be a text fixture"
+        );
+    }
+
+    /// The `MatchScalar` haystack/needle/disjoint plaintexts must each be a
+    /// fixture row present verbatim, so `fetch_fixture_payload` can resolve each
+    /// one's ciphertext when the `_search`/`_match` arms run. The doc comments on
+    /// the trait promise this invariant; pin it so a fixture change that drops one
+    /// of the three fails here instead of at query time.
+    #[test]
+    fn text_match_pivots_are_in_fixture_values() {
+        let values = <String as ScalarType>::fixture_values();
+        let haystack = <String as MatchScalar>::haystack();
+        let needle = <String as MatchScalar>::needle();
+        let disjoint = <String as MatchScalar>::disjoint();
+        assert!(
+            values.contains(&haystack),
+            "haystack {haystack:?} must be a fixture"
+        );
+        assert!(
+            values.contains(&needle),
+            "needle {needle:?} must be a fixture"
+        );
+        assert!(
+            values.contains(&disjoint),
+            "disjoint {disjoint:?} must be a fixture"
         );
     }
 
@@ -494,24 +564,36 @@ mod text_value_tests {
     }
 }
 
-/// Per-domain capability + payload shape. Storage carries no terms, `Eq`
-/// adds `hm`, `Ord`/`OrdOre` add `ob`. `Ord` and `OrdOre` are deliberate
-/// twins — same operator surface, different SQL domain names — for the
-/// scheme-explicit vs converged-name migration story.
+/// Per-domain capability + payload shape, resolved from `CATALOG`. Each
+/// variant maps to a domain suffix (`Eq` => `_eq`, `Search` => `_search`,
+/// …); its terms, required payload keys, supported operators, and
+/// per-operator extractors are derived from the catalog row for a given
+/// scalar `token`, never hardcoded. This is the SAME single source codegen
+/// renders from, so the harness routing cannot drift from the generated SQL.
+/// `Ord` and `OrdOre` are deliberate twins — same operator surface,
+/// different SQL domain names — for the scheme-explicit vs converged-name
+/// migration story.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Variant {
     Storage,
     Eq,
     Ord,
     OrdOre,
+    Search,
 }
 
 impl Variant {
-    /// Every variant the family currently materialises, in declaration
-    /// order. Tests iterate over this rather than hand-listing variants
-    /// so adding a future variant requires no test edit.
-    pub const ALL: &'static [Variant] =
-        &[Variant::Storage, Variant::Eq, Variant::Ord, Variant::OrdOre];
+    /// Every variant the family can materialise, in declaration order. Not
+    /// every scalar declares every variant (only `text` declares `_search`),
+    /// so iteration sites that span scalars must filter with
+    /// [`Variant::is_declared_for`].
+    pub const ALL: &'static [Variant] = &[
+        Variant::Storage,
+        Variant::Eq,
+        Variant::Ord,
+        Variant::OrdOre,
+        Variant::Search,
+    ];
 
     pub const fn suffix(self) -> &'static str {
         match self {
@@ -519,54 +601,80 @@ impl Variant {
             Variant::Eq => "_eq",
             Variant::Ord => "_ord",
             Variant::OrdOre => "_ord_ore",
+            Variant::Search => "_search",
         }
     }
 
-    /// Term key the variant requires on its CHECK constraint. `Storage`
-    /// requires nothing beyond the envelope; `Eq` requires `hm`;
-    /// `Ord` / `OrdOre` require `ob`. Read by tests that need to know
-    /// "what term does this variant carry?" — not by payload builders;
-    /// see `PLACEHOLDER_PAYLOAD`.
-    pub const fn required_term(self) -> Option<&'static str> {
-        match self {
-            Variant::Storage => None,
-            Variant::Eq => Some("hm"),
-            Variant::Ord | Variant::OrdOre => Some("ob"),
-        }
-    }
-
-    /// Top-level JSONB keys the variant's domain CHECK requires.
-    /// Storage requires the EQL envelope (`v`, `i`, `c`); ord-capable
-    /// variants additionally require their term key (`hm` / `ob`). The
-    /// matrix `payload_check` arm iterates this to assert each key's
-    /// absence is rejected at the cast.
-    pub fn payload_required_keys(self) -> impl Iterator<Item = &'static str> {
-        eql_scalars::ENVELOPE_KEYS
+    /// The fixed index terms this variant's domain carries for scalar `token`,
+    /// from `CATALOG`. Panics if the `(token, suffix())` pair is not declared —
+    /// the resolution backstop test guarantees every instantiated pair
+    /// resolves, so a panic here means the matrix and catalog drifted. Guard
+    /// cross-scalar iteration with [`Variant::is_declared_for`].
+    pub fn terms_for(self, token: &str) -> &'static [Term] {
+        CATALOG
             .iter()
-            .copied()
-            .chain(self.required_term())
+            .find(|s| s.token == token)
+            .and_then(|s| s.domain_by_suffix(self.suffix()))
+            .map(|d| d.terms)
+            .unwrap_or_else(|| {
+                panic!(
+                    "no catalog domain for ({token}, {self:?}) suffix `{}`",
+                    self.suffix()
+                )
+            })
     }
 
-    pub const fn supports_eq(self) -> bool {
-        !matches!(self, Variant::Storage)
+    /// True when scalar `token` declares this variant's domain in `CATALOG`.
+    /// Use to filter `Variant::ALL` when iterating across scalars that do not
+    /// all declare the same variants (e.g. only `text` declares `_search`).
+    pub fn is_declared_for(self, token: &str) -> bool {
+        CATALOG
+            .iter()
+            .find(|s| s.token == token)
+            .and_then(|s| s.domain_by_suffix(self.suffix()))
+            .is_some()
     }
 
-    pub const fn supports_ord(self) -> bool {
-        matches!(self, Variant::Ord | Variant::OrdOre)
+    /// Top-level JSONB keys the variant's domain CHECK requires for `token`:
+    /// the EQL envelope (`v`, `i`, `c`) plus each term's payload key
+    /// (`hm`/`ob`/`bf`), in term order. Catalog-derived — `text_ord` yields
+    /// `[v, i, c, hm, ob]`; `text_search` yields `[v, i, c, hm, ob, bf]`. The
+    /// matrix `payload_check` arm iterates this to assert each key's absence is
+    /// rejected at the cast.
+    pub fn payload_required_keys(self, token: &str) -> Vec<&'static str> {
+        let mut keys = vec!["v", "i", "c"];
+        keys.extend(Term::term_json_keys(self.terms_for(token)));
+        keys
     }
 
-    /// Function name of the discriminating extractor for this variant,
-    /// or `None` if the variant carries no extractor (`Storage`). Returns
-    /// just the function name — call sites append `(column)` themselves so
-    /// the accessor is decoupled from any specific column-naming
-    /// convention. `Eq` resolves to `eql_v3.eq_term`; `Ord` and `OrdOre`
-    /// both resolve to `eql_v3.ord_term`.
-    pub const fn extractor_fn(self) -> Option<&'static str> {
-        match self {
-            Variant::Storage => None,
-            Variant::Eq => Some("eql_v3.eq_term"),
-            Variant::Ord | Variant::OrdOre => Some("eql_v3.ord_term"),
-        }
+    /// True when the variant's domain supports `=`/`<>` for `token`.
+    pub fn supports_eq(self, token: &str) -> bool {
+        Term::operators_for_terms(self.terms_for(token)).contains(&"=")
+    }
+
+    /// True when the variant's domain supports the four ordering operators.
+    pub fn supports_ord(self, token: &str) -> bool {
+        self.terms_for(token).iter().any(|t| t.provides_ordering())
+    }
+
+    /// The `eql_v3`-qualified extractor that serves `op` on this variant's
+    /// domain for `token`, or `None` if unsupported (or `Storage`). Derived via
+    /// `Term::extractor_for_operator` — the SAME single source codegen uses, so
+    /// the harness routing cannot diverge from the generated SQL. For
+    /// `text_ord` `[Hm, Ore]`, `=` => `eql_v3.eq_term`, `<` => `eql_v3.ord_term`.
+    pub fn extractor_for_op(self, token: &str, op: &str) -> Option<String> {
+        Term::extractor_for_operator(self.terms_for(token), op).map(|f| format!("eql_v3.{f}"))
+    }
+
+    /// The `eql_v3`-qualified extractor of this variant's first
+    /// extractor-bearing term for `token`, or `None` for `Storage`. Used where
+    /// a single representative extractor is needed independent of any operator
+    /// (e.g. the `COUNT(DISTINCT)` deduplication arm). For a multi-term domain
+    /// this is the first term's extractor (`text_ord` `[Hm, Ore]` => `eq_term`).
+    pub fn primary_extractor(self, token: &str) -> Option<String> {
+        Term::extractor_terms(self.terms_for(token))
+            .first()
+            .map(|t| format!("eql_v3.{}", t.extractor()))
     }
 }
 
@@ -583,6 +691,10 @@ pub struct ScalarDomainSpec {
     pub placeholder_payload: &'static str,
     pub eq_extractor: fn(&str) -> String,
     pub ord_extractor: fn(&str) -> String,
+    /// The scalar's catalog token (`T::PG_TYPE`, e.g. `"int4"`, `"text"`).
+    /// Carried so the delegating capability methods can resolve the variant's
+    /// terms from `CATALOG` without the call site re-supplying the token.
+    pub token: &'static str,
 }
 
 impl ScalarDomainSpec {
@@ -594,33 +706,102 @@ impl ScalarDomainSpec {
             placeholder_payload: T::placeholder_payload(),
             eq_extractor: T::eq_extractor_expr,
             ord_extractor: T::ord_extractor_expr,
+            token: T::PG_TYPE,
         }
     }
 
     pub fn supports_eq(&self) -> bool {
-        self.variant.supports_eq()
+        self.variant.supports_eq(self.token)
     }
 
     pub fn supports_ord(&self) -> bool {
-        self.variant.supports_ord()
+        self.variant.supports_ord(self.token)
     }
 
-    pub fn extractor_fn(&self) -> Option<&'static str> {
-        self.variant.extractor_fn()
+    /// Top-level JSONB keys the domain CHECK requires (envelope + term keys).
+    pub fn payload_required_keys(&self) -> Vec<&'static str> {
+        self.variant.payload_required_keys(self.token)
+    }
+
+    /// The `eql_v3`-qualified extractor serving `op`, or `None` if unsupported.
+    pub fn extractor_for_op(&self, op: &str) -> Option<String> {
+        self.variant.extractor_for_op(self.token, op)
+    }
+
+    /// A single representative extractor (first term's), independent of any
+    /// operator. `None` for `Storage`.
+    pub fn primary_extractor(&self) -> Option<String> {
+        self.variant.primary_extractor(self.token)
     }
 
     /// Extractor expression for the variant's discriminating term applied to
     /// `value_expr`. Routes through the per-type `eq_extractor` / `ord_extractor`
     /// seams, so scalars produce `eql_v3.eq_term(...)` / `eql_v3.ord_term(...)`
     /// and a SteVec-entry view produces `eql_v3.eq_term(...)` / `eql_v3.ore_cllw(...)`.
-    /// `Storage` has no discriminating term and returns `None`.
+    /// `Storage` has no discriminating term and returns `None`. `Search` (the
+    /// combined `_search` domain, which provides ordering) routes through the
+    /// ordered extractor like `Ord`/`OrdOre`.
     pub fn extractor_expr(&self, value_expr: &str) -> Option<String> {
         match self.variant {
             Variant::Storage => None,
             Variant::Eq => Some((self.eq_extractor)(value_expr)),
-            Variant::Ord | Variant::OrdOre => Some((self.ord_extractor)(value_expr)),
+            Variant::Ord | Variant::OrdOre | Variant::Search => {
+                Some((self.ord_extractor)(value_expr))
+            }
         }
     }
+}
+
+/// The single `eql_v3`-qualified extractor that serves EVERY operator in
+/// `ops` for `spec`'s domain — the value codegen would put in a functional
+/// index for this combo. Catalog-derived via [`ScalarDomainSpec::extractor_for_op`]
+/// (i.e. `Term::extractor_for_operator`), so the index-engagement matrix never
+/// restates the extractor as a literal.
+///
+/// A single functional index serves one extractor, so the matrix combos that
+/// drive these tests group only operators that share an extractor. This asserts
+/// that invariant: if `ops` mix extractors (e.g. text's `=` -> `eq_term` and
+/// `<` -> `ord_term` in one combo) it errors loudly rather than silently
+/// indexing only the first op's extractor. An op the domain does not support at
+/// all is likewise an error.
+pub fn combo_extractor(spec: &ScalarDomainSpec, ops: &[&str]) -> Result<String> {
+    let mut chosen: Option<String> = None;
+    for &op in ops {
+        let ex = spec.extractor_for_op(op).ok_or_else(|| {
+            anyhow::anyhow!(
+                "{} declares no extractor for `{}` but it is wired as an \
+index-engagement combo op",
+                spec.sql_domain,
+                op,
+            )
+        })?;
+        match &chosen {
+            None => chosen = Some(ex),
+            Some(prev) if *prev != ex => bail!(
+                "combo for {} mixes extractors ({prev} for an earlier op, {ex} \
+for `{op}`) — one functional index cannot serve both; split into separate \
+combos with distinct dom_names",
+                spec.sql_domain,
+            ),
+            Some(_) => {}
+        }
+    }
+    chosen.ok_or_else(|| anyhow::anyhow!("combo for {} has no ops", spec.sql_domain))
+}
+
+/// True when scalar `token` declares any domain carrying the `Bloom` term —
+/// i.e. its proxy-generated fixture payload includes a `bf` (bloom-filter) key.
+/// Catalog-derived: only `text` (via `_match`/`_search`) declares a Bloom
+/// domain, so only text fixtures carry `bf`. Note the proxy always emits `hm`
+/// and `ob` for every scalar's fixture regardless of the declared domains, so
+/// those two are asserted unconditionally; `bf` is the term that actually
+/// tracks the catalog.
+pub fn token_has_bloom_term(token: &str) -> bool {
+    CATALOG
+        .iter()
+        .find(|s| s.token == token)
+        .map(|s| s.domains.iter().any(|d| d.terms.contains(&Term::Bloom)))
+        .unwrap_or(false)
 }
 
 /// SQL string-literal escaping for direct interpolation.
@@ -819,5 +1000,82 @@ mod seam_tests {
         let storage = ScalarDomainSpec::new::<i32>(Variant::Storage);
         assert_eq!(storage.sql_domain, "eql_v3.int4");
         assert_eq!(storage.extractor_expr("value"), None);
+    }
+}
+
+#[cfg(test)]
+mod catalog_resolution_tests {
+    use super::*;
+
+    /// The runtime `(token, suffix)` lookup behind `Variant::terms_for` fails as
+    /// a panic. Backstop it: every `(scalar, Variant::suffix())` pair the matrix
+    /// could instantiate must resolve in `CATALOG`, and the resolved term set
+    /// must agree with the catalog row — a drift between the `Variant` model and
+    /// the catalog would otherwise only surface when that specific DB test runs.
+    #[test]
+    fn every_matrix_variant_pair_resolves_in_catalog() {
+        for spec in CATALOG {
+            for variant in Variant::ALL {
+                let suffix = variant.suffix();
+                // A variant is instantiated for a token iff that token declares
+                // the suffix; only assert those pairs.
+                if let Some(d) = spec.domain_by_suffix(suffix) {
+                    assert!(
+                        variant.is_declared_for(spec.token),
+                        "{}{} declared in CATALOG but is_declared_for is false",
+                        spec.token,
+                        suffix
+                    );
+                    assert_eq!(
+                        variant.terms_for(spec.token),
+                        d.terms,
+                        "{}{} term set drift between Variant and CATALOG",
+                        spec.token,
+                        suffix
+                    );
+                }
+            }
+        }
+    }
+
+    // `combo_extractor` replaced the hand-written extractor literals in the
+    // index-engagement matrix combos; these pin the catalog-derived results the
+    // matrix now relies on (no DB needed).
+
+    #[test]
+    fn combo_extractor_int4_ord_serves_all_ops_via_ord_term() {
+        // int4 `_ord` = [Ore]: every op (eq + the four ord ops) resolves to the
+        // single ord_term extractor, so the combo is single-extractor.
+        let spec = ScalarDomainSpec::new::<i32>(Variant::Ord);
+        assert_eq!(
+            combo_extractor(&spec, &["=", "<", "<=", ">", ">="]).unwrap(),
+            "eql_v3.ord_term",
+        );
+    }
+
+    #[test]
+    fn combo_extractor_text_ord_splits_eq_from_ord() {
+        // text `_ord` = [Hm, Ore]: `=` routes through eq_term, the ord ops
+        // through ord_term. A single index cannot serve both, so each must be
+        // its own combo — proven here by `=`-only and ord-only succeeding while
+        // a mixed combo errors.
+        let spec = ScalarDomainSpec::new::<String>(Variant::Ord);
+        assert_eq!(combo_extractor(&spec, &["="]).unwrap(), "eql_v3.eq_term");
+        assert_eq!(
+            combo_extractor(&spec, &["<", "<=", ">", ">="]).unwrap(),
+            "eql_v3.ord_term",
+        );
+        let mixed = combo_extractor(&spec, &["=", "<"]);
+        assert!(
+            mixed.is_err(),
+            "a combo mixing eq + ord ops on text _ord must error (two extractors)",
+        );
+    }
+
+    #[test]
+    fn combo_extractor_errors_on_unsupported_op() {
+        // `@>` is not served by any extractor on int4 `_eq` ([Hm]).
+        let spec = ScalarDomainSpec::new::<i32>(Variant::Eq);
+        assert!(combo_extractor(&spec, &["@>"]).is_err());
     }
 }

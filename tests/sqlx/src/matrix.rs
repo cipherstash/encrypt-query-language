@@ -195,12 +195,17 @@ macro_rules! scalar_matrix {
             ],
             eq_ops = [(eq, "="), (neq, "<>")],
             ord_ops = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
+            // The extractor per combo is NOT restated here — it is derived at
+            // runtime from the combo's ops via `Variant::extractor_for_op`
+            // (the same `Term::extractor_for_operator` codegen uses). Every op
+            // in one combo must share a single extractor (one functional index
+            // serves them all); `combo_extractor` asserts that.
             index_combos = [
-                (eq, Eq, "eql_v3.eq_term", "btree", [(eq, "=")]),
-                (eq, Eq, "eql_v3.eq_term", "hash", [(eq, "=")]),
-                (ord, Ord, "eql_v3.ord_term", "btree",
+                (eq, Eq, "btree", [(eq, "=")]),
+                (eq, Eq, "hash", [(eq, "=")]),
+                (ord, Ord, "btree",
                     [(eq, "="), (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")]),
-                (ord_ore, OrdOre, "eql_v3.ord_term", "btree",
+                (ord_ore, OrdOre, "btree",
                     [(eq, "="), (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")]),
             ],
             blocker_combos = [
@@ -217,11 +222,89 @@ macro_rules! scalar_matrix {
                 (ord_ore, OrdOre, [(contains, "@>"), (contained_by, "<@")]),
             ],
             // Always-on cost-preference proof (#239 thread 17): the recommended
-            // converged ordered domain, ord_term btree. One curated combo keeps
-            // PR CI cost bounded.
+            // converged ordered domain, btree. One curated combo keeps PR CI
+            // cost bounded. The extractor (`=`-serving) is derived at runtime.
             scale_default_combos = [
-                (ord, Ord, "eql_v3.ord_term", "btree"),
+                (ord, Ord, "btree"),
             ],
+            // No bloom-match domain on a pure ordered scalar (int/date).
+            match_domains = [],
+        }
+    };
+    (
+        suite = $suite:ident,
+        scalar = $scalar:ty,
+        eql_type = $eql_type:literal,
+        caps = [eq, ord, search] $(,)?
+    ) => {
+        $crate::scalar_domain_matrix! {
+            suite = $suite,
+            scalar = $scalar,
+            eql_type = $eql_type,
+            // See the `caps = [eq, ord]` arm for the fixed-path rationale.
+            fixture_path = "../../../fixtures",
+            // `_search` (combined `[Hm, Ore, Bloom]`) rides the eq + ord arms
+            // like any ordered domain, plus the bloom-match arms below. `_match`
+            // is deliberately absent: it supports only `@>`/`<@`, so it cannot
+            // ride the eq/ord arms, and its behaviour is covered by the sibling
+            // `encrypted_domain/text/text_match` suite.
+            all_domains = [(storage, Storage), (eq, Eq), (ord, Ord), (ord_ore, OrdOre), (search, Search)],
+            eq_domains = [(eq, Eq), (ord, Ord), (ord_ore, OrdOre), (search, Search)],
+            ord_domains = [(ord, Ord), (ord_ore, OrdOre), (search, Search)],
+            ord_ore_domains = [(ord_ore, OrdOre)],
+            pivots = [
+                (min, <$scalar as $crate::scalar_domains::OrderedScalar>::min_pivot()),
+                (max, <$scalar as $crate::scalar_domains::OrderedScalar>::max_pivot()),
+                (mid, <$scalar as $crate::scalar_domains::OrderedScalar>::mid_pivot()),
+            ],
+            eq_ops = [(eq, "="), (neq, "<>")],
+            ord_ops = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
+            // Equality on every text domain routes through `eq_term` (exact hm),
+            // never ORE, while the ordering ops route through `ord_term`. Because
+            // a single functional index serves one extractor, the `=` proof is
+            // SPLIT into its own combo (distinct `_eqidx` dom_name) from the
+            // ordering ops — they cannot share an index. The extractor itself is
+            // NOT restated; `combo_extractor` derives it from each combo's ops at
+            // runtime (and asserts the combo is single-extractor). The `_search`
+            // domain gets both an ordering combo and an `_eqidx` combo.
+            index_combos = [
+                (eq, Eq, "btree", [(eq, "=")]),
+                (eq, Eq, "hash", [(eq, "=")]),
+                (ord, Ord, "btree",
+                    [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")]),
+                (ord_eqidx, Ord, "btree", [(eq, "=")]),
+                (ord_ore, OrdOre, "btree",
+                    [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")]),
+                (ord_ore_eqidx, OrdOre, "btree", [(eq, "=")]),
+                (search, Search, "btree",
+                    [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")]),
+                (search_eqidx, Search, "btree", [(eq, "=")]),
+            ],
+            blocker_combos = [
+                (storage, Storage, [
+                    (eq, "="), (neq, "<>"),
+                    (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">="),
+                    (contains, "@>"), (contained_by, "<@"),
+                ]),
+                (eq, Eq, [
+                    (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">="),
+                    (contains, "@>"), (contained_by, "<@"),
+                ]),
+                // Ordered text domains block bloom containment (no Bloom term);
+                // `_search` is omitted — it SUPPORTS `@>`/`<@`, proven by the
+                // match arms below (they would raise if `@>` were blocked).
+                (ord, Ord, [(contains, "@>"), (contained_by, "<@")]),
+                (ord_ore, OrdOre, [(contains, "@>"), (contained_by, "<@")]),
+            ],
+            // Selective `=` on a text ordered domain prefers the `eq_term`
+            // functional index (equality is hm-exact), not ord_term — derived at
+            // runtime from the `=`-serving extractor.
+            scale_default_combos = [
+                (ord, Ord, "btree"),
+            ],
+            // `_search` carries the Bloom term: prove `@>`/`<@` containment
+            // behaviour + GIN index engagement through the matrix.
+            match_domains = [(search, Search)],
         }
     };
     (
@@ -252,9 +335,11 @@ macro_rules! scalar_matrix {
             ],
             eq_ops = [(eq, "="), (neq, "<>")],
             ord_ops = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
+            // Extractor derived at runtime from each combo's ops; see the
+            // `caps = [eq, ord]` arm.
             index_combos = [
-                (eq, Eq, "eql_v3.eq_term", "btree", [(eq, "=")]),
-                (eq, Eq, "eql_v3.eq_term", "hash",  [(eq, "=")]),
+                (eq, Eq, "btree", [(eq, "=")]),
+                (eq, Eq, "hash",  [(eq, "=")]),
             ],
             blocker_combos = [
                 (storage, Storage, [
@@ -269,6 +354,8 @@ macro_rules! scalar_matrix {
             ],
             // Equality-only scalars have no ordered functional index to prefer.
             scale_default_combos = [],
+            // No bloom-match domain on an equality-only scalar.
+            match_domains = [],
         }
     };
 }
@@ -378,7 +465,11 @@ macro_rules! scalar_domain_matrix {
         // Curated combo(s) that get an ALWAYS-ON cost-preference test (#239
         // thread 17). May be empty (e.g. equality-only scalars have no ordered
         // index to prefer).
-        scale_default_combos = [$($scale_default_combo:tt),* $(,)?] $(,)?
+        scale_default_combos = [$($scale_default_combo:tt),* $(,)?],
+        // Domains carrying the Bloom term (`@>`/`<@` containment). May be empty
+        // (only `text`'s `_search` declares one). Each gets bloom-match
+        // correctness + GIN index-engagement arms.
+        match_domains = [$($match_dom:tt),* $(,)?] $(,)?
     ) => {
         $crate::__scalar_matrix_sanity! {
             suite = $suite, scalar = $scalar,
@@ -466,6 +557,10 @@ macro_rules! scalar_domain_matrix {
         $crate::__scalar_matrix_ord_routes_outer! {
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
             domains = [$($ord_dom),*],
+        }
+        $crate::__scalar_matrix_match_outer! {
+            suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
+            domains = [$($match_dom),*],
         }
         $crate::__scalar_matrix_ore_injectivity_outer! {
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = $fixture_path,
@@ -870,9 +965,9 @@ macro_rules! __scalar_matrix_blocker_case {
 
 // ============================================================================
 // Payload-check category — per variant, the domain CHECK rejects payloads
-// missing required keys (envelope `v`/`i`/`c` plus `Variant::required_term()`)
-// and rejects non-object payloads. Required keys are derived from
-// `Variant::payload_required_keys()` so future variants pick up coverage.
+// missing required keys (envelope `v`/`i`/`c` plus each term's key) and
+// rejects non-object payloads. Required keys are derived from
+// `Variant::payload_required_keys(token)` so future variants pick up coverage.
 // ============================================================================
 
 #[macro_export]
@@ -908,7 +1003,7 @@ macro_rules! __scalar_matrix_payload_check_case {
                 let baseline = $crate::helpers::PLACEHOLDER_PAYLOAD;
 
                 // Each required key must trigger CHECK rejection when stripped.
-                for key in spec.variant.payload_required_keys() {
+                for key in spec.payload_required_keys() {
                     let sql = format!(
                         "SELECT ('{baseline}'::jsonb - '{key}')::{d}",
                     );
@@ -1247,7 +1342,7 @@ macro_rules! __scalar_matrix_scale_case {
         suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
         combo = (
             $dom_name:ident, $variant:ident,
-            $extractor:literal, $using:literal,
+            $using:literal,
             [$(($op_name:ident, $op:literal)),+ $(,)?] $(,)?
         ) $(,)?
     ) => {
@@ -1260,6 +1355,11 @@ macro_rules! __scalar_matrix_scale_case {
                 use $crate::scalar_domains::ScalarType;
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
+                // Catalog-derived extractor for this combo's ops; see
+                // __scalar_matrix_index_case.
+                let extractor = $crate::scalar_domains::combo_extractor(
+                    &spec, &[$($op),+],
+                )?;
                 let table = concat!(
                     "matrix_", stringify!($suite), "_", stringify!($dom_name),
                     "_scale_", $using,
@@ -1291,7 +1391,7 @@ SELECT $1::jsonb::{d} FROM generate_series(1, 5000)",
                     "INSERT INTO {table}(value) VALUES ($1::jsonb::{d})",
                 )).bind(&pivot_payload).execute(&mut *tx).await?;
                 sqlx::query(&format!(
-                    "CREATE INDEX {index} ON {table} USING {using} ({extractor}(value))", using = $using, extractor = $extractor,
+                    "CREATE INDEX {index} ON {table} USING {using} ({extractor}(value))", using = $using, extractor = extractor,
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!("ANALYZE {table}"))
                     .execute(&mut *tx).await?;
@@ -1303,7 +1403,7 @@ SELECT $1::jsonb::{d} FROM generate_series(1, 5000)",
                     index,
                     &format!(
                         "with seqscan enabled the planner must prefer the {extractor} {using} index for a selective =",
-                        extractor = $extractor, using = $using,
+                        extractor = extractor, using = $using,
                     ),
                 ).await?;
 
@@ -1348,7 +1448,7 @@ macro_rules! __scalar_matrix_scale_default_outer {
 macro_rules! __scalar_matrix_scale_default_case {
     (
         suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
-        combo = ($dom_name:ident, $variant:ident, $extractor:literal, $using:literal) $(,)?
+        combo = ($dom_name:ident, $variant:ident, $using:literal) $(,)?
     ) => {
         $crate::paste::paste! {
             #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
@@ -1358,6 +1458,16 @@ macro_rules! __scalar_matrix_scale_default_case {
                 use $crate::scalar_domains::ScalarType;
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
+                // Catalog-derived: the scale-default proof exercises a selective
+                // `=`, so the preferred functional index is the one serving `=`
+                // (`eql_v3.ord_term` for an [Ore] _ord domain, `eql_v3.eq_term`
+                // for a [Hm, Ore] text _ord domain). Same source codegen uses.
+                let extractor = spec.extractor_for_op("=").ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "{} declares no extractor for `=` but is wired as a \
+scale-default combo", &spec.sql_domain,
+                    )
+                })?;
                 let table = concat!(
                     "matrix_", stringify!($suite), "_", stringify!($dom_name),
                     "_scaledef_", $using,
@@ -1389,7 +1499,7 @@ SELECT $1::jsonb::{d} FROM generate_series(1, 5000)",
                     "INSERT INTO {table}(value) VALUES ($1::jsonb::{d})",
                 )).bind(&pivot_payload).execute(&mut *tx).await?;
                 sqlx::query(&format!(
-                    "CREATE INDEX {index} ON {table} USING {using} ({extractor}(value))", using = $using, extractor = $extractor,
+                    "CREATE INDEX {index} ON {table} USING {using} ({extractor}(value))", using = $using, extractor = extractor,
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!("ANALYZE {table}"))
                     .execute(&mut *tx).await?;
@@ -1402,7 +1512,10 @@ SELECT $1::jsonb::{d} FROM generate_series(1, 5000)",
                     &mut *tx,
                     &format!("SELECT * FROM {table} WHERE value = '{lit}'::jsonb::{d}"),
                     index,
-                    "with seqscan ON the planner must PREFER the ord_term functional index for a selective =",
+                    &format!(
+                        "with seqscan ON the planner must PREFER the {extractor} \
+functional index for a selective =",
+                    ),
                 ).await?;
 
                 tx.commit().await?;
@@ -1456,11 +1569,21 @@ macro_rules! __scalar_matrix_fixture_shape {
                 anyhow::ensure!(plaintexts == expected,
                     "plaintext column must match FIXTURE_VALUES in order");
 
-                for (label, predicate) in [
+                // The proxy emits `hm` + `ob` for every scalar's fixture, plus
+                // `bf` for scalars that declare a Bloom-bearing domain (only
+                // `text`, via `_match`/`_search`). `bf` is thus catalog-derived
+                // so a `text_search` fixture additionally asserts its bloom term.
+                let mut term_checks: Vec<(&str, &str)> = vec![
                     ("hm string", "payload->'hm' IS NULL OR jsonb_typeof(payload->'hm') <> 'string'"),
                     ("ob array",  "payload->'ob' IS NULL OR jsonb_typeof(payload->'ob') <> 'array'"),
                     ("c string",  "payload->'c'  IS NULL OR jsonb_typeof(payload->'c')  <> 'string'"),
-                ] {
+                ];
+                if $crate::scalar_domains::token_has_bloom_term(<$scalar as ScalarType>::PG_TYPE) {
+                    term_checks.push(
+                        ("bf array", "payload->'bf' IS NULL OR jsonb_typeof(payload->'bf') <> 'array'"),
+                    );
+                }
+                for (label, predicate) in term_checks {
                     let missing: i64 = sqlx::query_scalar(&format!(
                         "SELECT COUNT(*) FROM {table} WHERE {predicate}",
                     )).fetch_one(&pool).await?;
@@ -1536,37 +1659,74 @@ macro_rules! __scalar_matrix_ord_routes_case {
             async fn [<matrix_ $suite _ $dom_name _ord_routes_through_ob>](
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
+                use $crate::scalar_domains::ScalarType;
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
+                let token = <$scalar as ScalarType>::PG_TYPE;
                 let table = concat!(
-                    "matrix_", stringify!($suite), "_", stringify!($dom_name), "_no_hm",
+                    "matrix_", stringify!($suite), "_", stringify!($dom_name), "_routing",
                 );
                 let index = concat!(
-                    "matrix_", stringify!($suite), "_", stringify!($dom_name), "_no_hm_idx",
+                    "matrix_", stringify!($suite), "_", stringify!($dom_name), "_routing_idx",
                 );
-                let fixture_table =
-                    <$scalar as $crate::scalar_domains::ScalarType>::fixture_table_name();
-                let pivot: $scalar =
-                    <$scalar as $crate::scalar_domains::ScalarType>::fixture_values()[0].clone();
-                let pivot_lit =
-                    <$scalar as $crate::scalar_domains::ScalarType>::to_sql_literal(&pivot);
+                let fixture_table = <$scalar as ScalarType>::fixture_table_name();
+                let pivot: $scalar = <$scalar as ScalarType>::fixture_values()[0].clone();
+                let pivot_lit = <$scalar as ScalarType>::to_sql_literal(&pivot);
+
+                // Equality routing is kind-dependent, and this arm proves it:
+                //  - hm-bearing ordered domain (text `[Hm, Ore]`): equality is
+                //    EXACT via `hm` and must NOT route through ORE. `hm` AND `ob`
+                //    are both CHECK-required, so neither can be stripped; instead
+                //    we build the `eq_term` functional btree over the intact
+                //    payload and prove `=` engages it. The planner only matches
+                //    that index if `=` resolves to `eq_term` — so a green scan is
+                //    positive proof equality is hm-exact, never ORE.
+                //  - non-hm ordered domain (int4/date `[Ore]`): ORE is lossless,
+                //    so `=` legitimately routes through `ord_term`/`ob`. `hm` is
+                //    NOT CHECK-required, so we strip it and prove `=` still works
+                //    via `ob` on an hm-free payload (the original invariant).
+                let carries_hm = spec
+                    .variant
+                    .terms_for(token)
+                    .iter()
+                    .any(|t| t.json_key() == "hm");
+                let (extractor, value_expr, caveat): (&str, &str, &str) = if carries_hm {
+                    (
+                        "eql_v3.eq_term",
+                        "payload",
+                        "= must engage the eql_v3.eq_term functional btree (exact hm), never ORE",
+                    )
+                } else {
+                    (
+                        "eql_v3.ord_term",
+                        "(payload - 'hm')",
+                        "= must engage the eql_v3.ord_term functional btree with no hm",
+                    )
+                };
 
                 let mut tx = pool.begin().await?;
                 sqlx::query(&format!(
                     "CREATE TEMP TABLE {table} (plaintext {pg}, value {d}) ON COMMIT DROP",
-                    pg = <$scalar as $crate::scalar_domains::ScalarType>::PG_TYPE,
+                    pg = <$scalar as ScalarType>::PG_TYPE,
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!(
                     "INSERT INTO {table}(plaintext, value) \
-                     SELECT plaintext, (payload - 'hm')::{d} FROM {fixture}", fixture = fixture_table,
+                     SELECT plaintext, {value_expr}::{d} FROM {fixture}", fixture = fixture_table,
                 )).execute(&mut *tx).await?;
-                let with_hm: i64 = sqlx::query_scalar(&format!(
-                    "SELECT count(*) FROM {table} WHERE jsonb_exists(value::jsonb, 'hm')",
-                )).fetch_one(&mut *tx).await?;
-                anyhow::ensure!(with_hm == 0, "test rows must not carry hm");
+
+                // For the non-hm kind the routing proof must be over an hm-free
+                // payload — assert the strip really removed it. (The hm-bearing
+                // kind keeps `hm`: it is required, and `=` engaging the `eq_term`
+                // index is itself the proof equality is hm-based.)
+                if !carries_hm {
+                    let with_hm: i64 = sqlx::query_scalar(&format!(
+                        "SELECT count(*) FROM {table} WHERE jsonb_exists(value::jsonb, 'hm')",
+                    )).fetch_one(&mut *tx).await?;
+                    anyhow::ensure!(with_hm == 0, "test rows must not carry hm");
+                }
 
                 sqlx::query(&format!(
-                    "CREATE INDEX {index} ON {table} USING btree (eql_v3.ord_term(value))",
+                    "CREATE INDEX {index} ON {table} USING btree ({extractor}(value))",
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!("ANALYZE {table}"))
                     .execute(&mut *tx).await?;
@@ -1574,23 +1734,22 @@ macro_rules! __scalar_matrix_ord_routes_case {
                     .execute(&mut *tx).await?;
 
                 let pivot_payload: String = sqlx::query_scalar(&format!(
-                    "SELECT (payload - 'hm')::text FROM {fixture} WHERE plaintext = {lit}",
+                    "SELECT {value_expr}::text FROM {fixture} WHERE plaintext = {lit}",
                     fixture = fixture_table, lit = pivot_lit,
                 )).fetch_one(&mut *tx).await?;
 
                 // The fixture plaintexts are distinct, so the pivot row is
-                // unique: `=` via ob must match EXACTLY one row, not "at
-                // least one". A weaker `>= 1` here is not independent of the
-                // `<>` check below — `expected_neq` is `len - eq_count`, so an
-                // `=` that over-matches inflates `eq_count` and deflates
-                // `expected_neq` in lockstep and both assertions still pass.
-                // Pinning `== 1` makes both this and the derived `<>` count
-                // load-bearing.
+                // unique: `=` must match EXACTLY one row, not "at least one". A
+                // weaker `>= 1` here is not independent of the `<>` check below —
+                // `expected_neq` is `len - eq_count`, so an `=` that over-matches
+                // inflates `eq_count` and deflates `expected_neq` in lockstep and
+                // both assertions still pass. Pinning `== 1` makes both this and
+                // the derived `<>` count load-bearing.
                 let eq_count: i64 = sqlx::query_scalar(&format!(
                     "SELECT count(*) FROM {table} WHERE value = $1::jsonb::{d}",
                 )).bind(&pivot_payload).fetch_one(&mut *tx).await?;
                 anyhow::ensure!(eq_count == 1,
-                    "= must match exactly the pivot row via ob with no hm present (want 1, got {eq_count})");
+                    "= must match exactly the pivot row (want 1, got {eq_count})");
 
                 // Derive from the pinned `eq_count == 1`: every other fixture
                 // row must be `<>`. Kept as `len - eq_count` (not a bare
@@ -1598,8 +1757,7 @@ macro_rules! __scalar_matrix_ord_routes_case {
                 // relaxed the two assertions cannot silently compensate for
                 // each other — the derivation stays honest regardless.
                 let expected_neq =
-                    <$scalar as $crate::scalar_domains::ScalarType>::fixture_values().len() as i64
-                    - eq_count;
+                    <$scalar as ScalarType>::fixture_values().len() as i64 - eq_count;
                 let neq_count: i64 = sqlx::query_scalar(&format!(
                     "SELECT count(*) FROM {table} WHERE value <> $1::jsonb::{d}",
                 )).bind(&pivot_payload).fetch_one(&mut *tx).await?;
@@ -1608,12 +1766,11 @@ macro_rules! __scalar_matrix_ord_routes_case {
                 );
 
                 // VALIDITY, NOT PREFERENCE: this runs with
-                // `enable_seqscan = off` (set above) on the ~17-row fixture,
-                // so the planner picks the only usable alternative. A green
-                // assertion proves the `eql_v3.ord_term` functional btree is
-                // *usable* for `=` with no hm present, NOT that the planner
-                // would *prefer* it at realistic scale. Cost-preference lives
-                // in the `*_scale_preference_*` tests
+                // `enable_seqscan = off` (set above) on the small fixture, so the
+                // planner picks the only usable alternative. A green assertion
+                // proves the chosen functional btree is *usable* for `=`, NOT
+                // that the planner would *prefer* it at realistic scale.
+                // Cost-preference lives in the `*_scale_preference_*` tests
                 // (`#[cfg(feature = "scale")]`, OFF in PR CI). See the module
                 // header on `assert_index_scan_uses` for the full caveat.
                 //
@@ -1626,7 +1783,150 @@ macro_rules! __scalar_matrix_ord_routes_case {
                     &mut *tx,
                     &format!("SELECT * FROM {table} WHERE value = '{lit}'::jsonb::{d}"),
                     index,
-                    "= must engage the eql_v3.ord_term functional btree with no hm",
+                    caveat,
+                ).await?;
+
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+    };
+}
+
+// ============================================================================
+// Bloom-match category — for domains carrying the Bloom term (`_search`),
+// `@>`/`<@` containment is true for a value vs itself and vs a shared-ngram
+// sub-token, and a deterministic miss for ngram-disjoint inputs (a bloom
+// filter admits false positives, never false negatives). Plus a GIN
+// functional-index engagement proof on `match_term`. The three containment
+// plaintexts come from `MatchScalar` (only `text` implements it). Match is
+// asymmetric/probabilistic, so it lives in its own arm, not the ordered ops.
+// ============================================================================
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_match_outer {
+    (
+        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
+        domains = [$(($dom_name:ident, $variant:ident)),* $(,)?] $(,)?
+    ) => {
+        $(
+            $crate::__scalar_matrix_match_case! {
+                suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
+                dom_name = $dom_name, variant = $variant,
+            }
+        )*
+    };
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_match_case {
+    (
+        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
+        dom_name = $dom_name:ident, variant = $variant:ident $(,)?
+    ) => {
+        $crate::paste::paste! {
+            #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
+            async fn [<matrix_ $suite _ $dom_name _match_contains_self>](
+                pool: sqlx::PgPool,
+            ) -> anyhow::Result<()> {
+                use $crate::scalar_domains::MatchScalar;
+                let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
+                let d = &spec.sql_domain;
+                let hay = $crate::scalar_domains::fetch_fixture_payload::<$scalar>(
+                    &pool, <$scalar as MatchScalar>::haystack()).await?;
+                let hit: bool = sqlx::query_scalar(&format!(
+                    "SELECT ($1::jsonb::{d}) @> ($1::jsonb::{d})",
+                )).bind(&hay).fetch_one(&pool).await?;
+                anyhow::ensure!(hit, "{d}: a value's bloom filter must contain itself");
+                Ok(())
+            }
+
+            #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
+            async fn [<matrix_ $suite _ $dom_name _match_contains_needle>](
+                pool: sqlx::PgPool,
+            ) -> anyhow::Result<()> {
+                use $crate::scalar_domains::MatchScalar;
+                let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
+                let d = &spec.sql_domain;
+                let hay = $crate::scalar_domains::fetch_fixture_payload::<$scalar>(
+                    &pool, <$scalar as MatchScalar>::haystack()).await?;
+                let needle = $crate::scalar_domains::fetch_fixture_payload::<$scalar>(
+                    &pool, <$scalar as MatchScalar>::needle()).await?;
+                let hit: bool = sqlx::query_scalar(&format!(
+                    "SELECT ($1::jsonb::{d}) @> ($2::jsonb::{d})",
+                )).bind(&hay).bind(&needle).fetch_one(&pool).await?;
+                anyhow::ensure!(hit,
+                    "{d}: haystack bloom must contain its shared-ngram needle");
+                Ok(())
+            }
+
+            #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
+            async fn [<matrix_ $suite _ $dom_name _match_disjoint_miss>](
+                pool: sqlx::PgPool,
+            ) -> anyhow::Result<()> {
+                use $crate::scalar_domains::MatchScalar;
+                let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
+                let d = &spec.sql_domain;
+                let needle = $crate::scalar_domains::fetch_fixture_payload::<$scalar>(
+                    &pool, <$scalar as MatchScalar>::needle()).await?;
+                let disjoint = $crate::scalar_domains::fetch_fixture_payload::<$scalar>(
+                    &pool, <$scalar as MatchScalar>::disjoint()).await?;
+                let hit: bool = sqlx::query_scalar(&format!(
+                    "SELECT ($1::jsonb::{d}) @> ($2::jsonb::{d})",
+                )).bind(&needle).bind(&disjoint).fetch_one(&pool).await?;
+                anyhow::ensure!(!hit,
+                    "{d}: needle bloom must NOT contain an ngram-disjoint value");
+                Ok(())
+            }
+
+            // VALIDITY, NOT PREFERENCE: `enable_seqscan = off` on the small
+            // fixture forces the planner onto the only usable alternative. A
+            // green assertion proves the bare `@>` operator inlines through
+            // `match_term` to the native array containment the GIN index
+            // supports — NOT that the planner would prefer it at scale. The
+            // assertion is node-type-aware (a genuine Bitmap/Index Scan node
+            // referencing `index`), not a plan substring match.
+            #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
+            async fn [<matrix_ $suite _ $dom_name _match_index_engages_gin>](
+                pool: sqlx::PgPool,
+            ) -> anyhow::Result<()> {
+                use $crate::scalar_domains::{MatchScalar, ScalarType};
+                let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
+                let d = &spec.sql_domain;
+                let table = concat!(
+                    "matrix_", stringify!($suite), "_", stringify!($dom_name), "_match",
+                );
+                let index = concat!(
+                    "matrix_", stringify!($suite), "_", stringify!($dom_name), "_match_idx",
+                );
+                let fixture_table = <$scalar as ScalarType>::fixture_table_name();
+                let needle = $crate::scalar_domains::fetch_fixture_payload::<$scalar>(
+                    &pool, <$scalar as MatchScalar>::needle()).await?;
+
+                let mut tx = pool.begin().await?;
+                sqlx::query(&format!(
+                    "CREATE TEMP TABLE {table} (value {d}) ON COMMIT DROP",
+                )).execute(&mut *tx).await?;
+                sqlx::query(&format!(
+                    "INSERT INTO {table}(value) SELECT payload::{d} FROM {fixture}",
+                    fixture = fixture_table,
+                )).execute(&mut *tx).await?;
+                sqlx::query(&format!(
+                    "CREATE INDEX {index} ON {table} USING gin (eql_v3.match_term(value))",
+                )).execute(&mut *tx).await?;
+                sqlx::query(&format!("ANALYZE {table}"))
+                    .execute(&mut *tx).await?;
+                sqlx::query("SET LOCAL enable_seqscan = off")
+                    .execute(&mut *tx).await?;
+
+                let lit = needle.replace('\'', "''");
+                $crate::matrix::assert_index_scan_uses(
+                    &mut *tx,
+                    &format!("SELECT * FROM {table} WHERE value @> '{lit}'::jsonb::{d}"),
+                    index,
+                    "bare @> must engage the eql_v3.match_term functional GIN index",
                 ).await?;
 
                 tx.commit().await?;
@@ -1724,7 +2024,7 @@ macro_rules! __scalar_matrix_index_case {
         suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
         combo = (
             $dom_name:ident, $variant:ident,
-            $extractor:literal, $using:literal,
+            $using:literal,
             [$(($op_name:ident, $op:literal)),+ $(,)?] $(,)?
         ) $(,)?
     ) => {
@@ -1734,6 +2034,16 @@ macro_rules! __scalar_matrix_index_case {
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
+                // Catalog-derived: the extractor serving this combo's operators
+                // (the SAME `Term::extractor_for_operator` codegen uses). Every
+                // op in a single combo shares one extractor (one functional
+                // index serves them all); assert that here so a future combo
+                // that mixes eq + ord ops in one tuple — which would need two
+                // indexes — fails loudly instead of silently indexing only the
+                // first op's extractor.
+                let extractor = $crate::scalar_domains::combo_extractor(
+                    &spec, &[$($op),+],
+                )?;
                 let table = concat!(
                     "matrix_", stringify!($suite), "_", stringify!($dom_name),
                     "_idx_", $using,
@@ -1756,7 +2066,7 @@ macro_rules! __scalar_matrix_index_case {
                      SELECT plaintext, ({col})::{d} FROM {fixture}", col = &spec.column_expr, d = &spec.sql_domain, fixture = fixture_table,
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!(
-                    "CREATE INDEX {index} ON {table} USING {using} ({extractor}(value))", using = $using, extractor = $extractor,
+                    "CREATE INDEX {index} ON {table} USING {using} ({extractor}(value))", using = $using, extractor = extractor,
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!("ANALYZE {table}"))
                     .execute(&mut *tx).await?;
@@ -2572,10 +2882,14 @@ want ({}, {:?}), got {:?}",
 }
 
 // ============================================================================
-// Aggregate type-safety category — for variants that do NOT support ord
-// (Storage, Eq), `eql_v3.min(<variant-column>)` / `eql_v3.max(...)` must
-// resolve to "function does not exist" (SQLSTATE 42883). Pins that
-// codegen correctly omits MIN/MAX wrappers for these variants — a
+// Aggregate type-safety category — one min + one max test per variant whose
+// body branches at RUNTIME on `spec.supports_ord()` (catalog-derived):
+//   * non-ord variant (Storage, Eq): `eql_v3.min/max(<variant-column>)` must
+//     resolve to "function does not exist" (SQLSTATE 42883 / 42725). Pins that
+//     codegen correctly omits MIN/MAX wrappers for these variants.
+//   * ord-capable variant (Ord, OrdOre, Search, …): `eql_v3.min/max(...)` must
+//     RESOLVE — these variants declare min/max.
+// Catalog-driven so a new ord-capable variant needs no macro change — a
 // SQL-level regression test complementing the codegen unit test.
 // ============================================================================
 
@@ -2595,23 +2909,21 @@ macro_rules! __scalar_matrix_aggregate_typecheck_outer {
     };
 }
 
-// Dispatch on variant ident: ord-capable variants (Ord, OrdOre) emit no
-// typecheck test — they DO declare min/max. Non-ord variants (Storage,
-// Eq) emit one test per aggregate op asserting the call fails with
-// SQLSTATE 42883.
+// Emit one min + one max aggregate typecheck test for EVERY variant. The test
+// body branches at RUNTIME on `spec.supports_ord()` (catalog-derived):
+//
+//   * ord-capable variant  -> assert `eql_v3.min/max(value)` RESOLVES and
+//                             returns a value (these variants declare min/max).
+//   * non-ord variant      -> assert the call is rejected with SQLSTATE 42883
+//                             (undefined_function) / 42725 (ambiguous_function).
+//
+// Previously the dispatch branched on the variant IDENT at macro-expansion time
+// with empty arms for the ord-capable variants, so every new ord-capable
+// variant had to remember to add an empty arm or the test silently did the
+// wrong thing. Branching at runtime on the catalog removes that footgun.
 #[macro_export]
 #[doc(hidden)]
 macro_rules! __scalar_matrix_aggregate_typecheck_dispatch {
-    // Ord, OrdOre: no typecheck test — these variants declare min/max.
-    (
-        suite = $suite:ident, scalar = $scalar:ty,
-        dom_name = $dom_name:ident, variant = Ord $(,)?
-    ) => {};
-    (
-        suite = $suite:ident, scalar = $scalar:ty,
-        dom_name = $dom_name:ident, variant = OrdOre $(,)?
-    ) => {};
-    // Storage, Eq: emit min + max typecheck tests.
     (
         suite = $suite:ident, scalar = $scalar:ty,
         dom_name = $dom_name:ident, variant = $variant:ident $(,)?
@@ -2654,38 +2966,53 @@ macro_rules! __scalar_matrix_aggregate_typecheck_case {
                     "INSERT INTO typecheck_table(value) VALUES ($1::jsonb::{d})",
                 )).bind(payload).execute(&mut *tx).await?;
 
-                // Savepoint-isolate the probe so the failed lookup
-                // doesn't abort the outer transaction and tx.commit()
-                // can succeed cleanly.
-                sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
                 let sql = format!(
                     "SELECT eql_v3.{agg}(value) FROM typecheck_table",
                     agg = $agg_fn,
                 );
-                let err = sqlx::query_scalar::<_, String>(&sql)
-                    .fetch_one(&mut *tx)
-                    .await
-                    .expect_err(&format!(
-                        "eql_v3.{} on non-ord variant {} must raise but succeeded",
-                        $agg_fn, d,
-                    ));
-                // 42883 = undefined_function (no overload defined at all);
-                // 42725 = ambiguous_function (multiple overloads resolve,
-                // none specific to this variant). Either confirms the
-                // variant carries no MIN/MAX of its own — the generic
-                // eql_v2_encrypted overload is reachable via cast but
-                // can't be resolved unambiguously from a domain-typed
-                // column. Both outcomes are acceptable "not supported".
-                let db_err = err.as_database_error()
-                    .expect("expected database error from typecheck probe");
-                let code = db_err.code();
-                anyhow::ensure!(
-                    code.as_deref() == Some("42883") || code.as_deref() == Some("42725"),
-                    "expected SQLSTATE 42883 (undefined_function) or 42725 \
+
+                // Catalog-derived runtime branch: ord-capable variants DECLARE
+                // min/max, non-ord variants must not.
+                if spec.supports_ord() {
+                    // Ord-capable: eql_v3.min/max(value) must RESOLVE.
+                    let res = sqlx::query_scalar::<_, serde_json::Value>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await;
+                    anyhow::ensure!(
+                        res.is_ok(),
+                        "eql_v3.{}({}) on ord-capable variant must resolve, got {:?}",
+                        $agg_fn, d, res.err(),
+                    );
+                } else {
+                    // Savepoint-isolate the probe so the failed lookup
+                    // doesn't abort the outer transaction and tx.commit()
+                    // can succeed cleanly.
+                    sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
+                    let err = sqlx::query_scalar::<_, String>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .expect_err(&format!(
+                            "eql_v3.{} on non-ord variant {} must raise but succeeded",
+                            $agg_fn, d,
+                        ));
+                    // 42883 = undefined_function (no overload defined at all);
+                    // 42725 = ambiguous_function (multiple overloads resolve,
+                    // none specific to this variant). Either confirms the
+                    // variant carries no MIN/MAX of its own — the generic
+                    // eql_v2_encrypted overload is reachable via cast but
+                    // can't be resolved unambiguously from a domain-typed
+                    // column. Both outcomes are acceptable "not supported".
+                    let db_err = err.as_database_error()
+                        .expect("expected database error from typecheck probe");
+                    let code = db_err.code();
+                    anyhow::ensure!(
+                        code.as_deref() == Some("42883") || code.as_deref() == Some("42725"),
+                        "expected SQLSTATE 42883 (undefined_function) or 42725 \
 (ambiguous_function) for eql_v3.{}({}), got {:?} (message: {})",
-                    $agg_fn, d, code, db_err.message(),
-                );
-                sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
+                        $agg_fn, d, code, db_err.message(),
+                    );
+                    sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
+                }
 
                 tx.commit().await?;
                 Ok(())

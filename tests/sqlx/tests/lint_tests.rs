@@ -330,8 +330,13 @@ async fn scalar_family_inlinable_operators_are_clean(pool: PgPool) -> Result<()>
             if matches!(variant, Variant::Storage) {
                 continue;
             }
+            // Not every scalar declares every variant (only `text` declares
+            // `_search`); skip variants this scalar does not carry.
+            if !variant.is_declared_for(pg_type) {
+                continue;
+            }
             let domain = format!("eql_v3.{pg_type}{}", variant.suffix());
-            let supported_ops: &[&str] = if variant.supports_ord() {
+            let supported_ops: &[&str] = if variant.supports_ord(pg_type) {
                 &["=", "<>", "<", "<=", ">", ">="]
             } else {
                 // Eq variants support equality only; ordering ops on `_eq`
