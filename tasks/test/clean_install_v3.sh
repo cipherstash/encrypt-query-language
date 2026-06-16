@@ -36,7 +36,7 @@ echo "==> smoke: domains, SEM types, extractors, opclass functional index (D4)"
 -- Domains and SEM types exist in eql_v3.
 SELECT 'eql_v3.int4_ord'::regtype;
 SELECT 'eql_v3.hmac_256'::regtype;
-SELECT 'eql_v3.ore_block_u64_8_256'::regtype;
+SELECT 'eql_v3.ore_block_256'::regtype;
 
 -- A real ordered-domain column + the documented functional index. This is the
 -- D4 proof: it fails outright if the ported operator_class is absent.

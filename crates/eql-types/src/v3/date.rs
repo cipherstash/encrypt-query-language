@@ -3,7 +3,7 @@
 //! ciphertext, so dates order like integers); see that module for the
 //! capability table.
 
-use crate::v3::terms::{Ciphertext, Hmac256, OreBlockU64_8_256};
+use crate::v3::terms::{Ciphertext, Hmac256, OreBlock256};
 use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
 use serde::{Deserialize, Serialize};
@@ -68,7 +68,7 @@ pub struct DateOrdOre {
     /// mp_base85 source ciphertext. Required by the domain CHECK.
     pub c: Ciphertext,
     /// Block-ORE order term. Serves equality too.
-    pub ob: OreBlockU64_8_256,
+    pub ob: OreBlock256,
 }
 
 impl DomainType for DateOrdOre {
@@ -93,7 +93,7 @@ pub struct DateOrd {
     /// mp_base85 source ciphertext. Required by the domain CHECK.
     pub c: Ciphertext,
     /// Block-ORE order term. Serves equality too.
-    pub ob: OreBlockU64_8_256,
+    pub ob: OreBlock256,
 }
 
 impl DomainType for DateOrd {

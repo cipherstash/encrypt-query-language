@@ -125,7 +125,7 @@ Source of truth: `crates/eql-scalars/src` (`CATALOG`). Adding a type is one `Sca
 | Term | Key | Extractor → type | Provides | Operators |
 |---|---|---|---|---|
 | `Hm` | `hm` | `eq_term` → `eql_v3.hmac_256` | equality | `=` `<>` |
-| `Ore` | `ob` | `ord_term` → `eql_v3.ore_block_u64_8_256` | equality + ordering | `=` `<>` `<` `<=` `>` `>=` |
+| `Ore` | `ob` | `ord_term` → `eql_v3.ore_block_256` | equality + ordering | `=` `<>` `<` `<=` `>` `>=` |
 | `Bloom` | `bf` | `match_term` → `eql_v3.bloom_filter` | containment | `@>` `<@` |
 
 Domain → role: empty ⇒ Storage, first term `Hm` ⇒ Eq, `Ore` ⇒ Ord, `Bloom` ⇒ Match.

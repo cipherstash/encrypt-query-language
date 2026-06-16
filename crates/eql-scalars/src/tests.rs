@@ -193,14 +193,14 @@ mod term_tests {
         let ore = Term::Ore;
         assert_eq!(ore.json_key(), "ob");
         assert_eq!(ore.extractor(), "ord_term");
-        assert_eq!(ore.ctor(), "ore_block_u64_8_256");
+        assert_eq!(ore.ctor(), "ore_block_256");
         assert_eq!(ore.role(), Role::Ord);
         assert_eq!(ore.operators(), &["=", "<>", "<", "<=", ">", ">="]);
         assert_eq!(
             ore.requires(),
             &[
-                "src/v3/sem/ore_block_u64_8_256/functions.sql",
-                "src/v3/sem/ore_block_u64_8_256/operators.sql",
+                "src/v3/sem/ore_block_256/functions.sql",
+                "src/v3/sem/ore_block_256/operators.sql",
             ]
         );
     }
@@ -277,8 +277,8 @@ mod term_helper_tests {
         assert_eq!(
             Term::term_requires(&[Term::Ore, Term::Ore, Term::Hm]),
             vec![
-                "src/v3/sem/ore_block_u64_8_256/functions.sql",
-                "src/v3/sem/ore_block_u64_8_256/operators.sql",
+                "src/v3/sem/ore_block_256/functions.sql",
+                "src/v3/sem/ore_block_256/operators.sql",
                 "src/v3/sem/hmac_256/functions.sql",
             ]
         );

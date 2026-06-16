@@ -26,9 +26,9 @@ pub struct Hmac256(pub String);
 /// Block-ORE (u64, 8 blocks, 256) order term — the `ob` wire key. Backs the
 /// `_ord` / `_ord_ore` domains (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless
 /// over the scalar's domain, so it serves equality too. SQL-side constructor:
-/// `eql_v3.ore_block_u64_8_256`.
+/// `eql_v3.ore_block_256`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct OreBlockU64_8_256(pub Vec<String>);
+pub struct OreBlock256(pub Vec<String>);
 
 /// Bloom-filter match term — the `bf` wire key. Backs the `_match` domains
 /// (`~~` containment via `@>`/`<@`).
@@ -51,7 +51,7 @@ impl From<String> for Hmac256 {
     }
 }
 
-impl From<Vec<String>> for OreBlockU64_8_256 {
+impl From<Vec<String>> for OreBlock256 {
     fn from(value: Vec<String>) -> Self {
         Self(value)
     }

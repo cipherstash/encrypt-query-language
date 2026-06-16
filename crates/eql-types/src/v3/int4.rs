@@ -7,7 +7,7 @@
 //! | [`Int4OrdOre`] | `eql_v3.int4_ord_ore`  | `v` `i` `c` `ob`   | `=` `<>` `<` `<=` `>` `>=` |
 //! | [`Int4Ord`]    | `eql_v3.int4_ord`      | `v` `i` `c` `ob`   | `=` `<>` `<` `<=` `>` `>=` |
 
-use crate::v3::terms::{Ciphertext, Hmac256, OreBlockU64_8_256};
+use crate::v3::terms::{Ciphertext, Hmac256, OreBlock256};
 use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
 use serde::{Deserialize, Serialize};
@@ -74,7 +74,7 @@ pub struct Int4OrdOre {
     pub c: Ciphertext,
     /// Block-ORE order term. Serves equality too — ORE over a
     /// full-domain `int4` is lossless, so no separate `hm` is carried.
-    pub ob: OreBlockU64_8_256,
+    pub ob: OreBlock256,
 }
 
 impl DomainType for Int4OrdOre {
@@ -99,7 +99,7 @@ pub struct Int4Ord {
     /// mp_base85 source ciphertext. Required by the domain CHECK.
     pub c: Ciphertext,
     /// Block-ORE order term. Serves equality too.
-    pub ob: OreBlockU64_8_256,
+    pub ob: OreBlock256,
 }
 
 impl DomainType for Int4Ord {

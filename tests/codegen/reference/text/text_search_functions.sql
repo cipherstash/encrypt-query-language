@@ -4,8 +4,8 @@
 -- REQUIRE: src/v3/scalars/text/text_types.sql
 -- REQUIRE: src/v3/scalars/functions.sql
 -- REQUIRE: src/v3/sem/hmac_256/functions.sql
--- REQUIRE: src/v3/sem/ore_block_u64_8_256/functions.sql
--- REQUIRE: src/v3/sem/ore_block_u64_8_256/operators.sql
+-- REQUIRE: src/v3/sem/ore_block_256/functions.sql
+-- REQUIRE: src/v3/sem/ore_block_256/operators.sql
 -- REQUIRE: src/v3/sem/bloom_filter/functions.sql
 
 --! @file encrypted_domain/text/text_search_functions.sql
@@ -21,11 +21,11 @@ AS $$ SELECT eql_v3.hmac_256(a::jsonb) $$;
 
 --! @brief Index extractor for eql_v3.text_search.
 --! @param a eql_v3.text_search
---! @return eql_v3.ore_block_u64_8_256
+--! @return eql_v3.ore_block_256
 CREATE FUNCTION eql_v3.ord_term(a eql_v3.text_search)
-RETURNS eql_v3.ore_block_u64_8_256
+RETURNS eql_v3.ore_block_256
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ore_block_u64_8_256(a::jsonb) $$;
+AS $$ SELECT eql_v3.ore_block_256(a::jsonb) $$;
 
 --! @brief Index extractor for eql_v3.text_search.
 --! @param a eql_v3.text_search
