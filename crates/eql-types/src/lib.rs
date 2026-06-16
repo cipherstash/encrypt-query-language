@@ -85,6 +85,10 @@ impl schemars::JsonSchema for SchemaVersion {
             instance_type: Some(schemars::schema::InstanceType::Integer.into()),
             const_value: Some(serde_json::json!(EQL_SCHEMA_VERSION)),
             metadata: Some(Box::new(schemars::schema::Metadata {
+                // KEEP IN SYNC with the `SchemaVersion` doc comment above — it
+                // is the canonical text. A derived `JsonSchema` would copy the
+                // doc comment automatically; this manual impl can't, so this
+                // hand-written copy must be updated alongside it.
                 description: Some(
                     "The envelope version field (`v`) — always exactly `2` on the wire.".to_owned(),
                 ),

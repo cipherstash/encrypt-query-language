@@ -59,6 +59,11 @@ pub mod timestamptz;
 /// The PostgreSQL schema every domain in this module inhabits.
 pub const SQL_SCHEMA: &str = "eql_v3";
 
+/// Base URL for the canonical `$id` of every published v3 JSON Schema.
+/// The per-domain `$id` is `{SCHEMA_ID_BASE}{domain}.json` (see
+/// [`DomainType::schema_id`]); `tests/export.rs` injects it at write time.
+pub const SCHEMA_ID_BASE: &str = "https://schemas.cipherstash.com/eql/v3/";
+
 /// One v3 domain type — implemented by every payload type, so any payload
 /// value can report the SQL domain it inhabits (`payload.sql_domain()`).
 ///
@@ -89,6 +94,13 @@ pub trait DomainType {
         self.sql_domain()
             .strip_prefix("eql_v3.")
             .expect("sql_domain must be qualified with the eql_v3 schema")
+    }
+
+    /// Canonical `$id` for this domain's published JSON Schema —
+    /// `{SCHEMA_ID_BASE}{domain}.json`. The single source of truth for the
+    /// identity `tests/export.rs` injects; pinned by `tests/catalog_parity.rs`.
+    fn schema_id(&self) -> String {
+        format!("{SCHEMA_ID_BASE}{}.json", self.domain())
     }
 
     /// The type's JSON Schema.

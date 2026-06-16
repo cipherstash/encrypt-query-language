@@ -18,15 +18,12 @@ fn dump_v3_json_schemas() {
     std::fs::create_dir_all(&dir).unwrap();
     for entry in v3::all() {
         let mut schema = serde_json::to_value(entry.schema()).unwrap();
-        // schemars 0.8 emits no $id; inject the canonical one.
-        schema.as_object_mut().unwrap().insert(
-            "$id".into(),
-            format!(
-                "https://schemas.cipherstash.com/eql/v3/{}.json",
-                entry.domain()
-            )
-            .into(),
-        );
+        // schemars 0.8 emits no $id; inject the canonical one (the URL format
+        // lives on DomainType::schema_id, pinned by tests/catalog_parity.rs).
+        schema
+            .as_object_mut()
+            .unwrap()
+            .insert("$id".into(), entry.schema_id().into());
         std::fs::write(
             format!("{dir}/{}.json", entry.domain()),
             serde_json::to_string_pretty(&schema).unwrap(),
