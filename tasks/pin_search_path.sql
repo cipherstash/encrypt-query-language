@@ -259,13 +259,13 @@ BEGIN
     n.nspname = 'eql_v3'
     AND (
       (p.pronargs = 2
-        AND p.proname IN ('ore_block_u64_8_256_eq', 'ore_block_u64_8_256_neq',
-                          'ore_block_u64_8_256_lt', 'ore_block_u64_8_256_lte',
-                          'ore_block_u64_8_256_gt', 'ore_block_u64_8_256_gte'))
+        AND p.proname IN ('ore_block_256_eq', 'ore_block_256_neq',
+                          'ore_block_256_lt', 'ore_block_256_lte',
+                          'ore_block_256_gt', 'ore_block_256_gte'))
       -- Inner ORE-CLLW comparison helpers backing the `<`, `<=`, `=`, `>=`,
       -- `>`, `<>` operators on the eql_v3.ore_cllw composite type (registered
       -- via the DEFAULT eql_v3.ore_cllw_ops btree opclass). Same precedent as
-      -- the ore_block_u64_8_256_* helpers above and the eql_v2.ore_cllw_*
+      -- the ore_block_256_* helpers above and the eql_v2.ore_cllw_*
       -- helpers: PG only carries the inlined operator wrapper through to
       -- functional-index match if the inner backing function is also
       -- inlinable. They take the composite arg (not a jsonb-backed domain),

@@ -4,6 +4,6 @@
  * Block-ORE (u64, 8 blocks, 256) order term — the `ob` wire key. Backs the
  * `_ord` / `_ord_ore` domains (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless
  * over the scalar's domain, so it serves equality too. SQL-side constructor:
- * `eql_v3.ore_block_u64_8_256`.
+ * `eql_v3.ore_block_256`.
  */
-export type OreBlockU64_8_256 = Array<string>;
+export type OreBlock256 = Array<string>;
