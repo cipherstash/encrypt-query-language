@@ -81,7 +81,9 @@ impl DomainType for TextMatch {
 }
 
 /// `eql_v3.text_ord_ore` — full lexicographic comparison,
-/// scheme-explicit name.
+/// scheme-explicit name. Unlike the integer ordered domains (`[Ore]` only),
+/// text routes equality through `hm` rather than the ORE term, so the domain
+/// carries both `hm` and `ob` (`[Hm, Ore]`).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TextOrdOre {
@@ -92,7 +94,9 @@ pub struct TextOrdOre {
     pub i: Identifier,
     /// mp_base85 source ciphertext. Required by the domain CHECK.
     pub c: Ciphertext,
-    /// Block-ORE order term. Serves equality too.
+    /// HMAC-SHA-256 equality term. Text routes `=`/`<>` through `hm`.
+    pub hm: Hmac256,
+    /// Block-ORE order term.
     pub ob: OreBlockU64_8_256,
 }
 
@@ -107,7 +111,8 @@ impl DomainType for TextOrdOre {
 }
 
 /// `eql_v3.text_ord` — full lexicographic comparison
-/// (`=` `<>` `<` `<=` `>` `>=`).
+/// (`=` `<>` `<` `<=` `>` `>=`). Carries both `hm` (equality) and `ob`
+/// (ordering) — text routes equality through `hm` (`[Hm, Ore]`).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TextOrd {
@@ -118,13 +123,46 @@ pub struct TextOrd {
     pub i: Identifier,
     /// mp_base85 source ciphertext. Required by the domain CHECK.
     pub c: Ciphertext,
-    /// Block-ORE order term. Serves equality too.
+    /// HMAC-SHA-256 equality term. Text routes `=`/`<>` through `hm`.
+    pub hm: Hmac256,
+    /// Block-ORE order term.
     pub ob: OreBlockU64_8_256,
 }
 
 impl DomainType for TextOrd {
     fn sql_domain_static() -> &'static str {
         "eql_v3.text_ord"
+    }
+
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
+    }
+}
+
+/// `eql_v3.text_search` — the full text search surface: HMAC equality, ORE
+/// ordering, and Bloom-filter containment match (`[Hm, Ore, Bloom]`). The
+/// superset domain combining `_eq`, `_ord`, and `_match`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TextSearch {
+    /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
+    /// value fails deserialization.
+    pub v: SchemaVersion,
+    /// Table/column identifier. Required by the domain CHECK.
+    pub i: Identifier,
+    /// mp_base85 source ciphertext. Required by the domain CHECK.
+    pub c: Ciphertext,
+    /// HMAC-SHA-256 equality term.
+    pub hm: Hmac256,
+    /// Block-ORE order term.
+    pub ob: OreBlockU64_8_256,
+    /// Bloom-filter match term (signed smallint bit positions).
+    pub bf: BloomFilter,
+}
+
+impl DomainType for TextSearch {
+    fn sql_domain_static() -> &'static str {
+        "eql_v3.text_search"
     }
 
     fn sql_domain(&self) -> &'static str {
