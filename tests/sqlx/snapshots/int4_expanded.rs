@@ -19003,20 +19003,20 @@ pub mod int4 {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_eq_index_engages_btree"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_eq_index_engages_eq_btree"]
     #[doc(hidden)]
-    pub const matrix_int4_eq_index_engages_btree: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_eq_index_engages_eq_btree: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_eq_index_engages_btree",
+                "scalars::int4::matrix_int4_eq_index_engages_eq_btree",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2075usize,
+            start_line: 2107usize,
             start_col: 22usize,
-            end_line: 2075usize,
-            end_col: 75usize,
+            end_line: 2107usize,
+            end_col: 86usize,
             compile_fail: false,
             no_run: false,
             should_panic: test::ShouldPanic::No,
@@ -19024,15 +19024,15 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_eq_index_engages_btree()),
+            || test::assert_test_result(matrix_int4_eq_index_engages_eq_btree()),
         ),
     };
-    fn matrix_int4_eq_index_engages_btree() -> anyhow::Result<()> {
-        async fn matrix_int4_eq_index_engages_btree(
+    fn matrix_int4_eq_index_engages_eq_btree() -> anyhow::Result<()> {
+        async fn matrix_int4_eq_index_engages_eq_btree(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
-                let case_id: &str = "matrix_int4_eq_index_engages_btree";
+                let case_id: &str = "matrix_int4_eq_index_engages_eq_btree";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -19040,8 +19040,8 @@ pub mod int4 {
                     &spec,
                     &["="],
                 )?;
-                let table = "matrix_int4_eq_idx_btree";
-                let index = "matrix_int4_eq_idx_btree_idx";
+                let table = "matrix_int4_eq_idx_eq_btree";
+                let index = "matrix_int4_eq_idx_eq_btree_idx";
                 let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 let mut tx = pool.begin().await?;
                 sqlx::query(
@@ -19162,7 +19162,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_eq_index_engages_btree",
+            "encrypted_domain::scalars::int4::matrix_int4_eq_index_engages_eq_btree",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -19198,24 +19198,24 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_eq_index_engages_btree;
+        let f: fn(_) -> _ = matrix_int4_eq_index_engages_eq_btree;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_eq_index_engages_hash"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_eq_index_engages_eq_hash"]
     #[doc(hidden)]
-    pub const matrix_int4_eq_index_engages_hash: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_eq_index_engages_eq_hash: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_eq_index_engages_hash",
+                "scalars::int4::matrix_int4_eq_index_engages_eq_hash",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2075usize,
+            start_line: 2107usize,
             start_col: 22usize,
-            end_line: 2075usize,
-            end_col: 75usize,
+            end_line: 2107usize,
+            end_col: 86usize,
             compile_fail: false,
             no_run: false,
             should_panic: test::ShouldPanic::No,
@@ -19223,15 +19223,15 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_eq_index_engages_hash()),
+            || test::assert_test_result(matrix_int4_eq_index_engages_eq_hash()),
         ),
     };
-    fn matrix_int4_eq_index_engages_hash() -> anyhow::Result<()> {
-        async fn matrix_int4_eq_index_engages_hash(
+    fn matrix_int4_eq_index_engages_eq_hash() -> anyhow::Result<()> {
+        async fn matrix_int4_eq_index_engages_eq_hash(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
-                let case_id: &str = "matrix_int4_eq_index_engages_hash";
+                let case_id: &str = "matrix_int4_eq_index_engages_eq_hash";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -19239,8 +19239,8 @@ pub mod int4 {
                     &spec,
                     &["="],
                 )?;
-                let table = "matrix_int4_eq_idx_hash";
-                let index = "matrix_int4_eq_idx_hash_idx";
+                let table = "matrix_int4_eq_idx_eq_hash";
+                let index = "matrix_int4_eq_idx_eq_hash_idx";
                 let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 let mut tx = pool.begin().await?;
                 sqlx::query(
@@ -19361,7 +19361,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_eq_index_engages_hash",
+            "encrypted_domain::scalars::int4::matrix_int4_eq_index_engages_eq_hash",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -19397,24 +19397,24 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_eq_index_engages_hash;
+        let f: fn(_) -> _ = matrix_int4_eq_index_engages_eq_hash;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_index_engages_btree"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_index_engages_eq_btree"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_index_engages_btree: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_index_engages_eq_btree: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_index_engages_btree",
+                "scalars::int4::matrix_int4_ord_index_engages_eq_btree",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2075usize,
+            start_line: 2107usize,
             start_col: 22usize,
-            end_line: 2075usize,
-            end_col: 75usize,
+            end_line: 2107usize,
+            end_col: 86usize,
             compile_fail: false,
             no_run: false,
             should_panic: test::ShouldPanic::No,
@@ -19422,24 +19422,24 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_index_engages_btree()),
+            || test::assert_test_result(matrix_int4_ord_index_engages_eq_btree()),
         ),
     };
-    fn matrix_int4_ord_index_engages_btree() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_index_engages_btree(
+    fn matrix_int4_ord_index_engages_eq_btree() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_index_engages_eq_btree(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
-                let case_id: &str = "matrix_int4_ord_index_engages_btree";
+                let case_id: &str = "matrix_int4_ord_index_engages_eq_btree";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
                 let extractor = ::eql_tests::scalar_domains::combo_extractor(
                     &spec,
-                    &["=", "<", "<=", ">", ">="],
+                    &["="],
                 )?;
-                let table = "matrix_int4_ord_idx_btree";
-                let index = "matrix_int4_ord_idx_btree_idx";
+                let table = "matrix_int4_ord_idx_eq_btree";
+                let index = "matrix_int4_ord_idx_eq_btree_idx";
                 let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 let mut tx = pool.begin().await?;
                 sqlx::query(
@@ -19555,204 +19555,12 @@ pub mod int4 {
                         )
                         .await?;
                 }
-                for rhs_cast in &rhs_casts {
-                    let query = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
-                                "<",
-                                rhs_cast,
-                                table,
-                                lit,
-                            ),
-                        )
-                    });
-                    let exec_sql = ::eql_tests::eqlmatrix::tag(
-                        Some(case_id),
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "SELECT count(*) FROM {2} WHERE value {0} {3}::jsonb{1}",
-                                    "<",
-                                    rhs_cast,
-                                    table,
-                                    lit,
-                                ),
-                            )
-                        }),
-                    );
-                    let _: i64 = sqlx::query_scalar(&exec_sql)
-                        .fetch_one(&mut *tx)
-                        .await?;
-                    ::eql_tests::matrix::assert_index_scan_uses(
-                            &mut *tx,
-                            case_id,
-                            &query,
-                            index,
-                            &::alloc::__export::must_use({
-                                ::alloc::fmt::format(
-                                    format_args!(
-                                        "domain={0} op={1} rhs_cast={2:?} must use index={3}",
-                                        &spec.sql_domain,
-                                        "<",
-                                        rhs_cast,
-                                        index,
-                                    ),
-                                )
-                            }),
-                        )
-                        .await?;
-                }
-                for rhs_cast in &rhs_casts {
-                    let query = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
-                                "<=",
-                                rhs_cast,
-                                table,
-                                lit,
-                            ),
-                        )
-                    });
-                    let exec_sql = ::eql_tests::eqlmatrix::tag(
-                        Some(case_id),
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "SELECT count(*) FROM {2} WHERE value {0} {3}::jsonb{1}",
-                                    "<=",
-                                    rhs_cast,
-                                    table,
-                                    lit,
-                                ),
-                            )
-                        }),
-                    );
-                    let _: i64 = sqlx::query_scalar(&exec_sql)
-                        .fetch_one(&mut *tx)
-                        .await?;
-                    ::eql_tests::matrix::assert_index_scan_uses(
-                            &mut *tx,
-                            case_id,
-                            &query,
-                            index,
-                            &::alloc::__export::must_use({
-                                ::alloc::fmt::format(
-                                    format_args!(
-                                        "domain={0} op={1} rhs_cast={2:?} must use index={3}",
-                                        &spec.sql_domain,
-                                        "<=",
-                                        rhs_cast,
-                                        index,
-                                    ),
-                                )
-                            }),
-                        )
-                        .await?;
-                }
-                for rhs_cast in &rhs_casts {
-                    let query = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
-                                ">",
-                                rhs_cast,
-                                table,
-                                lit,
-                            ),
-                        )
-                    });
-                    let exec_sql = ::eql_tests::eqlmatrix::tag(
-                        Some(case_id),
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "SELECT count(*) FROM {2} WHERE value {0} {3}::jsonb{1}",
-                                    ">",
-                                    rhs_cast,
-                                    table,
-                                    lit,
-                                ),
-                            )
-                        }),
-                    );
-                    let _: i64 = sqlx::query_scalar(&exec_sql)
-                        .fetch_one(&mut *tx)
-                        .await?;
-                    ::eql_tests::matrix::assert_index_scan_uses(
-                            &mut *tx,
-                            case_id,
-                            &query,
-                            index,
-                            &::alloc::__export::must_use({
-                                ::alloc::fmt::format(
-                                    format_args!(
-                                        "domain={0} op={1} rhs_cast={2:?} must use index={3}",
-                                        &spec.sql_domain,
-                                        ">",
-                                        rhs_cast,
-                                        index,
-                                    ),
-                                )
-                            }),
-                        )
-                        .await?;
-                }
-                for rhs_cast in &rhs_casts {
-                    let query = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
-                                ">=",
-                                rhs_cast,
-                                table,
-                                lit,
-                            ),
-                        )
-                    });
-                    let exec_sql = ::eql_tests::eqlmatrix::tag(
-                        Some(case_id),
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "SELECT count(*) FROM {2} WHERE value {0} {3}::jsonb{1}",
-                                    ">=",
-                                    rhs_cast,
-                                    table,
-                                    lit,
-                                ),
-                            )
-                        }),
-                    );
-                    let _: i64 = sqlx::query_scalar(&exec_sql)
-                        .fetch_one(&mut *tx)
-                        .await?;
-                    ::eql_tests::matrix::assert_index_scan_uses(
-                            &mut *tx,
-                            case_id,
-                            &query,
-                            index,
-                            &::alloc::__export::must_use({
-                                ::alloc::fmt::format(
-                                    format_args!(
-                                        "domain={0} op={1} rhs_cast={2:?} must use index={3}",
-                                        &spec.sql_domain,
-                                        ">=",
-                                        rhs_cast,
-                                        index,
-                                    ),
-                                )
-                            }),
-                        )
-                        .await?;
-                }
                 tx.commit().await?;
                 Ok(())
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_index_engages_btree",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_index_engages_eq_btree",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -19788,24 +19596,24 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_index_engages_btree;
+        let f: fn(_) -> _ = matrix_int4_ord_index_engages_eq_btree;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_index_engages_btree"]
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_index_engages_lt_btree"]
     #[doc(hidden)]
-    pub const matrix_int4_ord_ore_index_engages_btree: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_int4_ord_index_engages_lt_btree: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::int4::matrix_int4_ord_ore_index_engages_btree",
+                "scalars::int4::matrix_int4_ord_index_engages_lt_btree",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2075usize,
+            start_line: 2107usize,
             start_col: 22usize,
-            end_line: 2075usize,
-            end_col: 75usize,
+            end_line: 2107usize,
+            end_col: 86usize,
             compile_fail: false,
             no_run: false,
             should_panic: test::ShouldPanic::No,
@@ -19813,24 +19621,820 @@ pub mod int4 {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_int4_ord_ore_index_engages_btree()),
+            || test::assert_test_result(matrix_int4_ord_index_engages_lt_btree()),
         ),
     };
-    fn matrix_int4_ord_ore_index_engages_btree() -> anyhow::Result<()> {
-        async fn matrix_int4_ord_ore_index_engages_btree(
+    fn matrix_int4_ord_index_engages_lt_btree() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_index_engages_lt_btree(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
-                let case_id: &str = "matrix_int4_ord_ore_index_engages_btree";
+                let case_id: &str = "matrix_int4_ord_index_engages_lt_btree";
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::Ord);
+                let extractor = ::eql_tests::scalar_domains::combo_extractor(
+                    &spec,
+                    &["<"],
+                )?;
+                let table = "matrix_int4_ord_idx_lt_btree";
+                let index = "matrix_int4_ord_idx_lt_btree_idx";
+                let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {2} (plaintext {0}, value {1}) ON COMMIT DROP",
+                                    <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE,
+                                    &spec.sql_domain,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {3}(plaintext, value) SELECT plaintext, ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
+                                    &spec.sql_domain,
+                                    fixture_table,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE INDEX {2} ON {3} USING {0} ({1}(value))",
+                                    "btree",
+                                    extractor,
+                                    index,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("ANALYZE {0}", table))
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_values()[0]
+                    .clone();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    i32,
+                >(&pool, pivot)
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let rhs_casts = [
+                    ::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("::{0}", &spec.sql_domain))
+                    }),
+                    String::new(),
+                ];
+                for rhs_cast in &rhs_casts {
+                    let query = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                "<",
+                                rhs_cast,
+                                table,
+                                lit,
+                            ),
+                        )
+                    });
+                    let exec_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                    "<",
+                                    rhs_cast,
+                                    table,
+                                    lit,
+                                ),
+                            )
+                        }),
+                    );
+                    let _: i64 = sqlx::query_scalar(&exec_sql)
+                        .fetch_one(&mut *tx)
+                        .await?;
+                    ::eql_tests::matrix::assert_index_scan_uses(
+                            &mut *tx,
+                            case_id,
+                            &query,
+                            index,
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "domain={0} op={1} rhs_cast={2:?} must use index={3}",
+                                        &spec.sql_domain,
+                                        "<",
+                                        rhs_cast,
+                                        index,
+                                    ),
+                                )
+                            }),
+                        )
+                        .await?;
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_index_engages_lt_btree",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v2_int4.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_int4_ord_index_engages_lt_btree;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_index_engages_lte_btree"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_index_engages_lte_btree: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_index_engages_lte_btree",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2107usize,
+            start_col: 22usize,
+            end_line: 2107usize,
+            end_col: 86usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_index_engages_lte_btree()),
+        ),
+    };
+    fn matrix_int4_ord_index_engages_lte_btree() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_index_engages_lte_btree(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let case_id: &str = "matrix_int4_ord_index_engages_lte_btree";
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::Ord);
+                let extractor = ::eql_tests::scalar_domains::combo_extractor(
+                    &spec,
+                    &["<="],
+                )?;
+                let table = "matrix_int4_ord_idx_lte_btree";
+                let index = "matrix_int4_ord_idx_lte_btree_idx";
+                let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {2} (plaintext {0}, value {1}) ON COMMIT DROP",
+                                    <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE,
+                                    &spec.sql_domain,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {3}(plaintext, value) SELECT plaintext, ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
+                                    &spec.sql_domain,
+                                    fixture_table,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE INDEX {2} ON {3} USING {0} ({1}(value))",
+                                    "btree",
+                                    extractor,
+                                    index,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("ANALYZE {0}", table))
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_values()[0]
+                    .clone();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    i32,
+                >(&pool, pivot)
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let rhs_casts = [
+                    ::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("::{0}", &spec.sql_domain))
+                    }),
+                    String::new(),
+                ];
+                for rhs_cast in &rhs_casts {
+                    let query = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                "<=",
+                                rhs_cast,
+                                table,
+                                lit,
+                            ),
+                        )
+                    });
+                    let exec_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                    "<=",
+                                    rhs_cast,
+                                    table,
+                                    lit,
+                                ),
+                            )
+                        }),
+                    );
+                    let _: i64 = sqlx::query_scalar(&exec_sql)
+                        .fetch_one(&mut *tx)
+                        .await?;
+                    ::eql_tests::matrix::assert_index_scan_uses(
+                            &mut *tx,
+                            case_id,
+                            &query,
+                            index,
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "domain={0} op={1} rhs_cast={2:?} must use index={3}",
+                                        &spec.sql_domain,
+                                        "<=",
+                                        rhs_cast,
+                                        index,
+                                    ),
+                                )
+                            }),
+                        )
+                        .await?;
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_index_engages_lte_btree",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v2_int4.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_int4_ord_index_engages_lte_btree;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_index_engages_gt_btree"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_index_engages_gt_btree: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_index_engages_gt_btree",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2107usize,
+            start_col: 22usize,
+            end_line: 2107usize,
+            end_col: 86usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_index_engages_gt_btree()),
+        ),
+    };
+    fn matrix_int4_ord_index_engages_gt_btree() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_index_engages_gt_btree(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let case_id: &str = "matrix_int4_ord_index_engages_gt_btree";
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::Ord);
+                let extractor = ::eql_tests::scalar_domains::combo_extractor(
+                    &spec,
+                    &[">"],
+                )?;
+                let table = "matrix_int4_ord_idx_gt_btree";
+                let index = "matrix_int4_ord_idx_gt_btree_idx";
+                let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {2} (plaintext {0}, value {1}) ON COMMIT DROP",
+                                    <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE,
+                                    &spec.sql_domain,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {3}(plaintext, value) SELECT plaintext, ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
+                                    &spec.sql_domain,
+                                    fixture_table,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE INDEX {2} ON {3} USING {0} ({1}(value))",
+                                    "btree",
+                                    extractor,
+                                    index,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("ANALYZE {0}", table))
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_values()[0]
+                    .clone();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    i32,
+                >(&pool, pivot)
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let rhs_casts = [
+                    ::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("::{0}", &spec.sql_domain))
+                    }),
+                    String::new(),
+                ];
+                for rhs_cast in &rhs_casts {
+                    let query = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                ">",
+                                rhs_cast,
+                                table,
+                                lit,
+                            ),
+                        )
+                    });
+                    let exec_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                    ">",
+                                    rhs_cast,
+                                    table,
+                                    lit,
+                                ),
+                            )
+                        }),
+                    );
+                    let _: i64 = sqlx::query_scalar(&exec_sql)
+                        .fetch_one(&mut *tx)
+                        .await?;
+                    ::eql_tests::matrix::assert_index_scan_uses(
+                            &mut *tx,
+                            case_id,
+                            &query,
+                            index,
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "domain={0} op={1} rhs_cast={2:?} must use index={3}",
+                                        &spec.sql_domain,
+                                        ">",
+                                        rhs_cast,
+                                        index,
+                                    ),
+                                )
+                            }),
+                        )
+                        .await?;
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_index_engages_gt_btree",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v2_int4.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_int4_ord_index_engages_gt_btree;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_index_engages_gte_btree"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_index_engages_gte_btree: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_index_engages_gte_btree",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2107usize,
+            start_col: 22usize,
+            end_line: 2107usize,
+            end_col: 86usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_index_engages_gte_btree()),
+        ),
+    };
+    fn matrix_int4_ord_index_engages_gte_btree() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_index_engages_gte_btree(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let case_id: &str = "matrix_int4_ord_index_engages_gte_btree";
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::Ord);
+                let extractor = ::eql_tests::scalar_domains::combo_extractor(
+                    &spec,
+                    &[">="],
+                )?;
+                let table = "matrix_int4_ord_idx_gte_btree";
+                let index = "matrix_int4_ord_idx_gte_btree_idx";
+                let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {2} (plaintext {0}, value {1}) ON COMMIT DROP",
+                                    <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE,
+                                    &spec.sql_domain,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {3}(plaintext, value) SELECT plaintext, ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
+                                    &spec.sql_domain,
+                                    fixture_table,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE INDEX {2} ON {3} USING {0} ({1}(value))",
+                                    "btree",
+                                    extractor,
+                                    index,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("ANALYZE {0}", table))
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_values()[0]
+                    .clone();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    i32,
+                >(&pool, pivot)
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let rhs_casts = [
+                    ::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("::{0}", &spec.sql_domain))
+                    }),
+                    String::new(),
+                ];
+                for rhs_cast in &rhs_casts {
+                    let query = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                ">=",
+                                rhs_cast,
+                                table,
+                                lit,
+                            ),
+                        )
+                    });
+                    let exec_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                    ">=",
+                                    rhs_cast,
+                                    table,
+                                    lit,
+                                ),
+                            )
+                        }),
+                    );
+                    let _: i64 = sqlx::query_scalar(&exec_sql)
+                        .fetch_one(&mut *tx)
+                        .await?;
+                    ::eql_tests::matrix::assert_index_scan_uses(
+                            &mut *tx,
+                            case_id,
+                            &query,
+                            index,
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "domain={0} op={1} rhs_cast={2:?} must use index={3}",
+                                        &spec.sql_domain,
+                                        ">=",
+                                        rhs_cast,
+                                        index,
+                                    ),
+                                )
+                            }),
+                        )
+                        .await?;
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_index_engages_gte_btree",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v2_int4.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_int4_ord_index_engages_gte_btree;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_index_engages_eq_btree"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_ore_index_engages_eq_btree: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_ore_index_engages_eq_btree",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2107usize,
+            start_col: 22usize,
+            end_line: 2107usize,
+            end_col: 86usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_ore_index_engages_eq_btree()),
+        ),
+    };
+    fn matrix_int4_ord_ore_index_engages_eq_btree() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_index_engages_eq_btree(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let case_id: &str = "matrix_int4_ord_ore_index_engages_eq_btree";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
                 let extractor = ::eql_tests::scalar_domains::combo_extractor(
                     &spec,
-                    &["=", "<", "<=", ">", ">="],
+                    &["="],
                 )?;
-                let table = "matrix_int4_ord_ore_idx_btree";
-                let index = "matrix_int4_ord_ore_idx_btree_idx";
+                let table = "matrix_int4_ord_ore_idx_eq_btree";
+                let index = "matrix_int4_ord_ore_idx_eq_btree_idx";
                 let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 let mut tx = pool.begin().await?;
                 sqlx::query(
@@ -19946,6 +20550,157 @@ pub mod int4 {
                         )
                         .await?;
                 }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_index_engages_eq_btree",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v2_int4.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_int4_ord_ore_index_engages_eq_btree;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_index_engages_lt_btree"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_ore_index_engages_lt_btree: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_ore_index_engages_lt_btree",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2107usize,
+            start_col: 22usize,
+            end_line: 2107usize,
+            end_col: 86usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_ore_index_engages_lt_btree()),
+        ),
+    };
+    fn matrix_int4_ord_ore_index_engages_lt_btree() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_index_engages_lt_btree(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let case_id: &str = "matrix_int4_ord_ore_index_engages_lt_btree";
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::OrdOre);
+                let extractor = ::eql_tests::scalar_domains::combo_extractor(
+                    &spec,
+                    &["<"],
+                )?;
+                let table = "matrix_int4_ord_ore_idx_lt_btree";
+                let index = "matrix_int4_ord_ore_idx_lt_btree_idx";
+                let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {2} (plaintext {0}, value {1}) ON COMMIT DROP",
+                                    <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE,
+                                    &spec.sql_domain,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {3}(plaintext, value) SELECT plaintext, ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
+                                    &spec.sql_domain,
+                                    fixture_table,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE INDEX {2} ON {3} USING {0} ({1}(value))",
+                                    "btree",
+                                    extractor,
+                                    index,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("ANALYZE {0}", table))
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_values()[0]
+                    .clone();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    i32,
+                >(&pool, pivot)
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let rhs_casts = [
+                    ::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("::{0}", &spec.sql_domain))
+                    }),
+                    String::new(),
+                ];
                 for rhs_cast in &rhs_casts {
                     let query = ::alloc::__export::must_use({
                         ::alloc::fmt::format(
@@ -19994,6 +20749,157 @@ pub mod int4 {
                         )
                         .await?;
                 }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_index_engages_lt_btree",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v2_int4.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_int4_ord_ore_index_engages_lt_btree;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_index_engages_lte_btree"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_ore_index_engages_lte_btree: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_ore_index_engages_lte_btree",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2107usize,
+            start_col: 22usize,
+            end_line: 2107usize,
+            end_col: 86usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_ore_index_engages_lte_btree()),
+        ),
+    };
+    fn matrix_int4_ord_ore_index_engages_lte_btree() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_index_engages_lte_btree(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let case_id: &str = "matrix_int4_ord_ore_index_engages_lte_btree";
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::OrdOre);
+                let extractor = ::eql_tests::scalar_domains::combo_extractor(
+                    &spec,
+                    &["<="],
+                )?;
+                let table = "matrix_int4_ord_ore_idx_lte_btree";
+                let index = "matrix_int4_ord_ore_idx_lte_btree_idx";
+                let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {2} (plaintext {0}, value {1}) ON COMMIT DROP",
+                                    <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE,
+                                    &spec.sql_domain,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {3}(plaintext, value) SELECT plaintext, ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
+                                    &spec.sql_domain,
+                                    fixture_table,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE INDEX {2} ON {3} USING {0} ({1}(value))",
+                                    "btree",
+                                    extractor,
+                                    index,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("ANALYZE {0}", table))
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_values()[0]
+                    .clone();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    i32,
+                >(&pool, pivot)
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let rhs_casts = [
+                    ::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("::{0}", &spec.sql_domain))
+                    }),
+                    String::new(),
+                ];
                 for rhs_cast in &rhs_casts {
                     let query = ::alloc::__export::must_use({
                         ::alloc::fmt::format(
@@ -20042,6 +20948,157 @@ pub mod int4 {
                         )
                         .await?;
                 }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_index_engages_lte_btree",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v2_int4.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_int4_ord_ore_index_engages_lte_btree;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_index_engages_gt_btree"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_ore_index_engages_gt_btree: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_ore_index_engages_gt_btree",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2107usize,
+            start_col: 22usize,
+            end_line: 2107usize,
+            end_col: 86usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_ore_index_engages_gt_btree()),
+        ),
+    };
+    fn matrix_int4_ord_ore_index_engages_gt_btree() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_index_engages_gt_btree(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let case_id: &str = "matrix_int4_ord_ore_index_engages_gt_btree";
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::OrdOre);
+                let extractor = ::eql_tests::scalar_domains::combo_extractor(
+                    &spec,
+                    &[">"],
+                )?;
+                let table = "matrix_int4_ord_ore_idx_gt_btree";
+                let index = "matrix_int4_ord_ore_idx_gt_btree_idx";
+                let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {2} (plaintext {0}, value {1}) ON COMMIT DROP",
+                                    <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE,
+                                    &spec.sql_domain,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {3}(plaintext, value) SELECT plaintext, ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
+                                    &spec.sql_domain,
+                                    fixture_table,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE INDEX {2} ON {3} USING {0} ({1}(value))",
+                                    "btree",
+                                    extractor,
+                                    index,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("ANALYZE {0}", table))
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_values()[0]
+                    .clone();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    i32,
+                >(&pool, pivot)
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let rhs_casts = [
+                    ::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("::{0}", &spec.sql_domain))
+                    }),
+                    String::new(),
+                ];
                 for rhs_cast in &rhs_casts {
                     let query = ::alloc::__export::must_use({
                         ::alloc::fmt::format(
@@ -20090,6 +21147,157 @@ pub mod int4 {
                         )
                         .await?;
                 }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_index_engages_gt_btree",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v2_int4.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_int4_ord_ore_index_engages_gt_btree;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::int4::matrix_int4_ord_ore_index_engages_gte_btree"]
+    #[doc(hidden)]
+    pub const matrix_int4_ord_ore_index_engages_gte_btree: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::int4::matrix_int4_ord_ore_index_engages_gte_btree",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2107usize,
+            start_col: 22usize,
+            end_line: 2107usize,
+            end_col: 86usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_int4_ord_ore_index_engages_gte_btree()),
+        ),
+    };
+    fn matrix_int4_ord_ore_index_engages_gte_btree() -> anyhow::Result<()> {
+        async fn matrix_int4_ord_ore_index_engages_gte_btree(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let case_id: &str = "matrix_int4_ord_ore_index_engages_gte_btree";
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    i32,
+                >(::eql_tests::scalar_domains::Variant::OrdOre);
+                let extractor = ::eql_tests::scalar_domains::combo_extractor(
+                    &spec,
+                    &[">="],
+                )?;
+                let table = "matrix_int4_ord_ore_idx_gte_btree";
+                let index = "matrix_int4_ord_ore_idx_gte_btree_idx";
+                let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {2} (plaintext {0}, value {1}) ON COMMIT DROP",
+                                    <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE,
+                                    &spec.sql_domain,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {3}(plaintext, value) SELECT plaintext, ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
+                                    &spec.sql_domain,
+                                    fixture_table,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE INDEX {2} ON {3} USING {0} ({1}(value))",
+                                    "btree",
+                                    extractor,
+                                    index,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("ANALYZE {0}", table))
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
+                let pivot: i32 = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_values()[0]
+                    .clone();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    i32,
+                >(&pool, pivot)
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let rhs_casts = [
+                    ::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("::{0}", &spec.sql_domain))
+                    }),
+                    String::new(),
+                ];
                 for rhs_cast in &rhs_casts {
                     let query = ::alloc::__export::must_use({
                         ::alloc::fmt::format(
@@ -20143,7 +21351,7 @@ pub mod int4 {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_index_engages_btree",
+            "encrypted_domain::scalars::int4::matrix_int4_ord_ore_index_engages_gte_btree",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -20179,7 +21387,7 @@ pub mod int4 {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_int4_ord_ore_index_engages_btree;
+        let f: fn(_) -> _ = matrix_int4_ord_ore_index_engages_gte_btree;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -21396,9 +22604,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2564usize,
+            start_line: 2587usize,
             start_col: 22usize,
-            end_line: 2564usize,
+            end_line: 2587usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -21578,9 +22786,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2624usize,
+            start_line: 2647usize,
             start_col: 22usize,
-            end_line: 2624usize,
+            end_line: 2647usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -21690,9 +22898,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2649usize,
+            start_line: 2672usize,
             start_col: 22usize,
-            end_line: 2649usize,
+            end_line: 2672usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -21789,9 +22997,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2675usize,
+            start_line: 2698usize,
             start_col: 22usize,
-            end_line: 2675usize,
+            end_line: 2698usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -21975,9 +23183,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2564usize,
+            start_line: 2587usize,
             start_col: 22usize,
-            end_line: 2564usize,
+            end_line: 2587usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -22157,9 +23365,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2624usize,
+            start_line: 2647usize,
             start_col: 22usize,
-            end_line: 2624usize,
+            end_line: 2647usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -22269,9 +23477,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2649usize,
+            start_line: 2672usize,
             start_col: 22usize,
-            end_line: 2649usize,
+            end_line: 2672usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -22368,9 +23576,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2675usize,
+            start_line: 2698usize,
             start_col: 22usize,
-            end_line: 2675usize,
+            end_line: 2698usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -22556,9 +23764,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2564usize,
+            start_line: 2587usize,
             start_col: 22usize,
-            end_line: 2564usize,
+            end_line: 2587usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -22738,9 +23946,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2624usize,
+            start_line: 2647usize,
             start_col: 22usize,
-            end_line: 2624usize,
+            end_line: 2647usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -22850,9 +24058,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2649usize,
+            start_line: 2672usize,
             start_col: 22usize,
-            end_line: 2649usize,
+            end_line: 2672usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -22949,9 +24157,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2675usize,
+            start_line: 2698usize,
             start_col: 22usize,
-            end_line: 2675usize,
+            end_line: 2698usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -23137,9 +24345,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2564usize,
+            start_line: 2587usize,
             start_col: 22usize,
-            end_line: 2564usize,
+            end_line: 2587usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -23319,9 +24527,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2624usize,
+            start_line: 2647usize,
             start_col: 22usize,
-            end_line: 2624usize,
+            end_line: 2647usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -23431,9 +24639,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2649usize,
+            start_line: 2672usize,
             start_col: 22usize,
-            end_line: 2649usize,
+            end_line: 2672usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -23530,9 +24738,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2675usize,
+            start_line: 2698usize,
             start_col: 22usize,
-            end_line: 2675usize,
+            end_line: 2698usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -23718,9 +24926,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2856usize,
+            start_line: 2879usize,
             start_col: 22usize,
-            end_line: 2856usize,
+            end_line: 2879usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -23971,9 +25179,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2856usize,
+            start_line: 2879usize,
             start_col: 22usize,
-            end_line: 2856usize,
+            end_line: 2879usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -24224,9 +25432,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2856usize,
+            start_line: 2879usize,
             start_col: 22usize,
-            end_line: 2856usize,
+            end_line: 2879usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -24477,9 +25685,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2856usize,
+            start_line: 2879usize,
             start_col: 22usize,
-            end_line: 2856usize,
+            end_line: 2879usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -24730,9 +25938,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2771usize,
+            start_line: 2794usize,
             start_col: 22usize,
-            end_line: 2771usize,
+            end_line: 2794usize,
             end_col: 77usize,
             compile_fail: false,
             no_run: false,
@@ -24839,9 +26047,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2771usize,
+            start_line: 2794usize,
             start_col: 22usize,
-            end_line: 2771usize,
+            end_line: 2794usize,
             end_col: 77usize,
             compile_fail: false,
             no_run: false,
@@ -24948,9 +26156,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3015usize,
+            start_line: 3038usize,
             start_col: 22usize,
-            end_line: 3015usize,
+            end_line: 3038usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -25116,9 +26324,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3015usize,
+            start_line: 3038usize,
             start_col: 22usize,
-            end_line: 3015usize,
+            end_line: 3038usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -25284,9 +26492,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3015usize,
+            start_line: 3038usize,
             start_col: 22usize,
-            end_line: 3015usize,
+            end_line: 3038usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -25452,9 +26660,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3015usize,
+            start_line: 3038usize,
             start_col: 22usize,
-            end_line: 3015usize,
+            end_line: 3038usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -25620,9 +26828,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3015usize,
+            start_line: 3038usize,
             start_col: 22usize,
-            end_line: 3015usize,
+            end_line: 3038usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -25788,9 +26996,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3015usize,
+            start_line: 3038usize,
             start_col: 22usize,
-            end_line: 3015usize,
+            end_line: 3038usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -25956,9 +27164,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3015usize,
+            start_line: 3038usize,
             start_col: 22usize,
-            end_line: 3015usize,
+            end_line: 3038usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -26124,9 +27332,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3015usize,
+            start_line: 3038usize,
             start_col: 22usize,
-            end_line: 3015usize,
+            end_line: 3038usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -26292,9 +27500,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3131usize,
+            start_line: 3154usize,
             start_col: 22usize,
-            end_line: 3131usize,
+            end_line: 3154usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -26421,9 +27629,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3165usize,
+            start_line: 3188usize,
             start_col: 22usize,
-            end_line: 3165usize,
+            end_line: 3188usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -26531,9 +27739,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3131usize,
+            start_line: 3154usize,
             start_col: 22usize,
-            end_line: 3131usize,
+            end_line: 3154usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -26658,9 +27866,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3165usize,
+            start_line: 3188usize,
             start_col: 22usize,
-            end_line: 3165usize,
+            end_line: 3188usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -26768,9 +27976,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3210usize,
+            start_line: 3233usize,
             start_col: 22usize,
-            end_line: 3210usize,
+            end_line: 3233usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -26906,9 +28114,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3131usize,
+            start_line: 3154usize,
             start_col: 22usize,
-            end_line: 3131usize,
+            end_line: 3154usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -27033,9 +28241,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3165usize,
+            start_line: 3188usize,
             start_col: 22usize,
-            end_line: 3165usize,
+            end_line: 3188usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -27143,9 +28351,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3210usize,
+            start_line: 3233usize,
             start_col: 22usize,
-            end_line: 3210usize,
+            end_line: 3233usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -27281,9 +28489,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3131usize,
+            start_line: 3154usize,
             start_col: 22usize,
-            end_line: 3131usize,
+            end_line: 3154usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -27410,9 +28618,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3165usize,
+            start_line: 3188usize,
             start_col: 22usize,
-            end_line: 3165usize,
+            end_line: 3188usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -27520,9 +28728,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3210usize,
+            start_line: 3233usize,
             start_col: 22usize,
-            end_line: 3210usize,
+            end_line: 3233usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -27658,9 +28866,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2237usize,
+            start_line: 2260usize,
             start_col: 22usize,
-            end_line: 2237usize,
+            end_line: 2260usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -27805,9 +29013,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2237usize,
+            start_line: 2260usize,
             start_col: 22usize,
-            end_line: 2237usize,
+            end_line: 2260usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -27952,9 +29160,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2237usize,
+            start_line: 2260usize,
             start_col: 22usize,
-            end_line: 2237usize,
+            end_line: 2260usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -28099,9 +29307,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2237usize,
+            start_line: 2260usize,
             start_col: 22usize,
-            end_line: 2237usize,
+            end_line: 2260usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -28246,9 +29454,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2237usize,
+            start_line: 2260usize,
             start_col: 22usize,
-            end_line: 2237usize,
+            end_line: 2260usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -28393,9 +29601,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2237usize,
+            start_line: 2260usize,
             start_col: 22usize,
-            end_line: 2237usize,
+            end_line: 2260usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -28540,9 +29748,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2237usize,
+            start_line: 2260usize,
             start_col: 22usize,
-            end_line: 2237usize,
+            end_line: 2260usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -28687,9 +29895,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2237usize,
+            start_line: 2260usize,
             start_col: 22usize,
-            end_line: 2237usize,
+            end_line: 2260usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -28834,9 +30042,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2355usize,
+            start_line: 2378usize,
             start_col: 22usize,
-            end_line: 2355usize,
+            end_line: 2378usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -29026,9 +30234,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2355usize,
+            start_line: 2378usize,
             start_col: 22usize,
-            end_line: 2355usize,
+            end_line: 2378usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -29218,9 +30426,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2355usize,
+            start_line: 2378usize,
             start_col: 22usize,
-            end_line: 2355usize,
+            end_line: 2378usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -29410,9 +30618,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2355usize,
+            start_line: 2378usize,
             start_col: 22usize,
-            end_line: 2355usize,
+            end_line: 2378usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -29602,9 +30810,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2355usize,
+            start_line: 2378usize,
             start_col: 22usize,
-            end_line: 2355usize,
+            end_line: 2378usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -29794,9 +31002,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2355usize,
+            start_line: 2378usize,
             start_col: 22usize,
-            end_line: 2355usize,
+            end_line: 2378usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -29986,9 +31194,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2355usize,
+            start_line: 2378usize,
             start_col: 22usize,
-            end_line: 2355usize,
+            end_line: 2378usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -30178,9 +31386,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2355usize,
+            start_line: 2378usize,
             start_col: 22usize,
-            end_line: 2355usize,
+            end_line: 2378usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -30370,9 +31578,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2474usize,
+            start_line: 2497usize,
             start_col: 22usize,
-            end_line: 2474usize,
+            end_line: 2497usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -30474,9 +31682,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2474usize,
+            start_line: 2497usize,
             start_col: 22usize,
-            end_line: 2474usize,
+            end_line: 2497usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -30578,9 +31786,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2474usize,
+            start_line: 2497usize,
             start_col: 22usize,
-            end_line: 2474usize,
+            end_line: 2497usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -30682,9 +31890,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2474usize,
+            start_line: 2497usize,
             start_col: 22usize,
-            end_line: 2474usize,
+            end_line: 2497usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -30786,9 +31994,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2474usize,
+            start_line: 2497usize,
             start_col: 22usize,
-            end_line: 2474usize,
+            end_line: 2497usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -30890,9 +32098,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2474usize,
+            start_line: 2497usize,
             start_col: 22usize,
-            end_line: 2474usize,
+            end_line: 2497usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -30994,9 +32202,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2474usize,
+            start_line: 2497usize,
             start_col: 22usize,
-            end_line: 2474usize,
+            end_line: 2497usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -31098,9 +32306,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2474usize,
+            start_line: 2497usize,
             start_col: 22usize,
-            end_line: 2474usize,
+            end_line: 2497usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
