@@ -1,23 +1,22 @@
-//! The `timestamptz` encrypted-domain family — an ordered, non-integer scalar.
-//! Same four-domain ordered shape as [`crate::v3::int4`] (ORE compares
-//! ciphertext, so timestamps order like integers); see that module for the
-//! capability table.
+//! The `numeric` encrypted-domain family — an ordered, non-integer scalar
+//! backed by `rust_decimal::Decimal`. Same four-domain ordered shape as
+//! [`crate::v3::int4`] (ORE compares ciphertext, so decimals order like
+//! integers); see that module for the capability table.
 //!
-//! cipherstash encrypts timestamps at native 12-block ORE width. The family
-//! was equality-only while EQL's ORE comparator was hardcoded to 8 blocks;
-//! now that `eql_v3.ore_block_256` derives the block count from the term
-//! length, the 12-block `ob` term orders correctly and the ordered domains
-//! ship. The wire shape is unchanged — the `ob` array just carries 12 blocks.
+//! `numeric` is the first scalar whose native ORE term is wider than 8 blocks
+//! (14 blocks): the wire shape is unchanged — the `ob` array simply carries
+//! more block strings — and the generalized `eql_v3.ore_block_256` comparator
+//! orders any block count, so no new type is needed here.
 
 use crate::v3::terms::{Ciphertext, Hmac256, OreBlock256};
 use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
 use serde::{Deserialize, Serialize};
 
-/// `eql_v3.timestamptz` — storage only; every operator is blocked.
+/// `eql_v3.numeric` — storage only; every operator is blocked.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Timestamptz {
+pub struct Numeric {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
     /// value fails deserialization.
     pub v: SchemaVersion,
@@ -27,9 +26,9 @@ pub struct Timestamptz {
     pub c: Ciphertext,
 }
 
-impl DomainType for Timestamptz {
+impl DomainType for Numeric {
     fn sql_domain_static() -> &'static str {
-        "eql_v3.timestamptz"
+        "eql_v3.numeric"
     }
 
     fn sql_domain(&self) -> &'static str {
@@ -37,10 +36,10 @@ impl DomainType for Timestamptz {
     }
 }
 
-/// `eql_v3.timestamptz_eq` — HMAC equality (`=`, `<>`).
+/// `eql_v3.numeric_eq` — HMAC equality (`=`, `<>`).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct TimestamptzEq {
+pub struct NumericEq {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
     /// value fails deserialization.
     pub v: SchemaVersion,
@@ -52,9 +51,9 @@ pub struct TimestamptzEq {
     pub hm: Hmac256,
 }
 
-impl DomainType for TimestamptzEq {
+impl DomainType for NumericEq {
     fn sql_domain_static() -> &'static str {
-        "eql_v3.timestamptz_eq"
+        "eql_v3.numeric_eq"
     }
 
     fn sql_domain(&self) -> &'static str {
@@ -62,10 +61,10 @@ impl DomainType for TimestamptzEq {
     }
 }
 
-/// `eql_v3.timestamptz_ord_ore` — full comparison, scheme-explicit name.
+/// `eql_v3.numeric_ord_ore` — full comparison, scheme-explicit name.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct TimestamptzOrdOre {
+pub struct NumericOrdOre {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
     /// value fails deserialization.
     pub v: SchemaVersion,
@@ -73,13 +72,13 @@ pub struct TimestamptzOrdOre {
     pub i: Identifier,
     /// mp_base85 source ciphertext. Required by the domain CHECK.
     pub c: Ciphertext,
-    /// Block-ORE order term (12 blocks for timestamptz). Serves equality too.
+    /// Block-ORE order term (14 blocks for numeric). Serves equality too.
     pub ob: OreBlock256,
 }
 
-impl DomainType for TimestamptzOrdOre {
+impl DomainType for NumericOrdOre {
     fn sql_domain_static() -> &'static str {
-        "eql_v3.timestamptz_ord_ore"
+        "eql_v3.numeric_ord_ore"
     }
 
     fn sql_domain(&self) -> &'static str {
@@ -87,10 +86,10 @@ impl DomainType for TimestamptzOrdOre {
     }
 }
 
-/// `eql_v3.timestamptz_ord` — full comparison (`=` `<>` `<` `<=` `>` `>=`).
+/// `eql_v3.numeric_ord` — full comparison (`=` `<>` `<` `<=` `>` `>=`).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct TimestamptzOrd {
+pub struct NumericOrd {
     /// Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
     /// value fails deserialization.
     pub v: SchemaVersion,
@@ -98,13 +97,13 @@ pub struct TimestamptzOrd {
     pub i: Identifier,
     /// mp_base85 source ciphertext. Required by the domain CHECK.
     pub c: Ciphertext,
-    /// Block-ORE order term (12 blocks for timestamptz). Serves equality too.
+    /// Block-ORE order term (14 blocks for numeric). Serves equality too.
     pub ob: OreBlock256,
 }
 
-impl DomainType for TimestamptzOrd {
+impl DomainType for NumericOrd {
     fn sql_domain_static() -> &'static str {
-        "eql_v3.timestamptz_ord"
+        "eql_v3.numeric_ord"
     }
 
     fn sql_domain(&self) -> &'static str {

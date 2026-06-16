@@ -23,9 +23,11 @@ pub struct Ciphertext(pub String);
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Hmac256(pub String);
 
-/// Block-ORE (u64, 8 blocks, 256) order term — the `ob` wire key. Backs the
-/// `_ord` / `_ord_ore` domains (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless
-/// over the scalar's domain, so it serves equality too. SQL-side constructor:
+/// Block-ORE order term — the `ob` wire key. Backs the `_ord` / `_ord_ore`
+/// domains (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's
+/// domain, so it serves equality too. The block count is width-agnostic on the
+/// wire (8 for the int scalars, 12 for timestamptz, 14 for numeric) — the
+/// array just carries more block strings. SQL-side constructor:
 /// `eql_v3.ore_block_256`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct OreBlock256(pub Vec<String>);

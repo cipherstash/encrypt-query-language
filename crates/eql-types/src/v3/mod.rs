@@ -50,6 +50,7 @@ pub mod date;
 pub mod int2;
 pub mod int4;
 pub mod int8;
+pub mod numeric;
 pub mod terms;
 pub mod text;
 pub mod timestamptz;
@@ -130,6 +131,12 @@ pub fn all() -> Vec<Box<dyn DomainType>> {
         Box::new(PhantomData::<date::DateOrd>),
         Box::new(PhantomData::<timestamptz::Timestamptz>),
         Box::new(PhantomData::<timestamptz::TimestamptzEq>),
+        Box::new(PhantomData::<timestamptz::TimestamptzOrdOre>),
+        Box::new(PhantomData::<timestamptz::TimestamptzOrd>),
+        Box::new(PhantomData::<numeric::Numeric>),
+        Box::new(PhantomData::<numeric::NumericEq>),
+        Box::new(PhantomData::<numeric::NumericOrdOre>),
+        Box::new(PhantomData::<numeric::NumericOrd>),
         Box::new(PhantomData::<text::Text>),
         Box::new(PhantomData::<text::TextEq>),
         Box::new(PhantomData::<text::TextMatch>),
