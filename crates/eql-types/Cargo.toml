@@ -6,7 +6,7 @@ description = "Canonical wire types for EQL payloads — the single Rust source 
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-ts-rs = { version = "10", features = ["serde-json-impl"] }
+ts-rs = "10"
 
 [dev-dependencies]
 # Parity oracle: tests/catalog_parity.rs asserts the v3 domain inventory
