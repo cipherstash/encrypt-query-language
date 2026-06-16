@@ -965,9 +965,9 @@ macro_rules! __scalar_matrix_blocker_case {
 
 // ============================================================================
 // Payload-check category — per variant, the domain CHECK rejects payloads
-// missing required keys (envelope `v`/`i`/`c` plus `Variant::required_term()`)
-// and rejects non-object payloads. Required keys are derived from
-// `Variant::payload_required_keys()` so future variants pick up coverage.
+// missing required keys (envelope `v`/`i`/`c` plus each term's key) and
+// rejects non-object payloads. Required keys are derived from
+// `Variant::payload_required_keys(token)` so future variants pick up coverage.
 // ============================================================================
 
 #[macro_export]

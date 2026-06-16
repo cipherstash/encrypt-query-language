@@ -135,5 +135,6 @@ pub fn all() -> Vec<Box<dyn DomainType>> {
         Box::new(PhantomData::<text::TextMatch>),
         Box::new(PhantomData::<text::TextOrdOre>),
         Box::new(PhantomData::<text::TextOrd>),
+        Box::new(PhantomData::<text::TextSearch>),
     ]
 }

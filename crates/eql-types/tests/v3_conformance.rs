@@ -174,6 +174,13 @@ fn non_int4_tokens_round_trip_every_domain() {
     let storage = |t: &str| json!({ "v": 2, "i": { "t": t, "c": "x" }, "c": "ct" });
     let eq = |t: &str| json!({ "v": 2, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef" });
     let ord = |t: &str| json!({ "v": 2, "i": { "t": t, "c": "x" }, "c": "ct", "ob": ["b0", "b1"] });
+    // Text routes equality through `hm`, so its ordered domains carry both `hm`
+    // and `ob` (`[Hm, Ore]`); `text_search` adds the Bloom-filter match term.
+    let text_ord =
+        |t: &str| json!({ "v": 2, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef", "ob": ["b0", "b1"] });
+    let text_search = |t: &str| {
+        json!({ "v": 2, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef", "ob": ["b0", "b1"], "bf": [1, 2, 3] })
+    };
 
     // Roundtrip a payload byte-for-byte, then confirm the catalog domain name.
     macro_rules! round_trip {
@@ -203,8 +210,9 @@ fn non_int4_tokens_round_trip_every_domain() {
     // text_match is covered by `text_match_round_trips_signed_bloom_filter`.
     round_trip!(Text, storage("a"), "eql_v3.text");
     round_trip!(TextEq, eq("a"), "eql_v3.text_eq");
-    round_trip!(TextOrd, ord("a"), "eql_v3.text_ord");
-    round_trip!(TextOrdOre, ord("a"), "eql_v3.text_ord_ore");
+    round_trip!(TextOrd, text_ord("a"), "eql_v3.text_ord");
+    round_trip!(TextOrdOre, text_ord("a"), "eql_v3.text_ord_ore");
+    round_trip!(TextSearch, text_search("a"), "eql_v3.text_search");
 }
 
 #[test]
