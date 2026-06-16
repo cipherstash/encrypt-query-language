@@ -507,6 +507,30 @@ description = "Run the eql_v3 scalar matrix against the dedicated logging Postgr
 dir = "{{config_root}}"
 run = "bash tasks/test/capture.sh"
 
+[tasks."test:capture:ledger"]
+description = "Normalize the most recent captured raw log into target/log-capture/ledger/<run-id>.json"
+dir = "{{config_root}}"
+run = """
+#!/usr/bin/env bash
+# Normalize the latest (or RUN_ID-selected) raw capture log into a ledger.
+# bash 3.2 compatible.
+set -euo pipefail
+root="{{config_root}}"
+run_id="${RUN_ID:-$(cat "$root/target/log-capture/last-run-id" 2>/dev/null || true)}"
+if [ -z "$run_id" ]; then
+  # Fall back to the newest raw log.
+  newest=$(ls -t "$root"/target/log-capture/raw/*.log 2>/dev/null | head -1 || true)
+  [ -n "$newest" ] || { echo "no raw capture log found — run 'mise run test:capture' first" >&2; exit 1; }
+  run_id=$(basename "$newest" .log)
+fi
+raw="$root/target/log-capture/raw/${run_id}.log"
+[ -f "$raw" ] || { echo "raw log $raw not found" >&2; exit 1; }
+mkdir -p "$root/target/log-capture/ledger"
+ledger="$root/target/log-capture/ledger/${run_id}.json"
+cargo run -q -p eql-codegen -- ledger "$raw" "$ledger"
+echo "ledger: $ledger"
+"""
+
 [tasks."test:matrix:expand"]
 description = "Regenerate the int4 matrix cargo-expand snapshot (requires the pinned nightly + cargo-expand)"
 dir = "{{config_root}}/tests/sqlx"
