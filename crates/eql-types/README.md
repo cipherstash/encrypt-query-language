@@ -21,7 +21,7 @@ hand-copying.
 
 The [`src/v3/`](src/v3/) module has one type per **SQL domain** in the
 `eql_v3` schema — `Int4` / `Int4Eq` / `Int4Ord` / `Int4OrdOre`, and likewise
-for `int2`, `int8`, `date`, `timestamptz` (eq-only), and `text` (which adds
+for `int2`, `int8`, `date`, `timestamptz`, `numeric`, and `text` (which adds
 `TextMatch`) — each carrying its index terms as **required** fields. The
 capability is the type identity; `Option` never appears. A payload missing
 its term key fails to deserialize: the Rust analogue of the SQL domain's

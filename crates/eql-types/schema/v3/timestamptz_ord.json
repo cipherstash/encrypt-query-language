@@ -1,14 +1,10 @@
 {
-  "$id": "https://schemas.cipherstash.com/eql/v3/text_ord_ore.json",
+  "$id": "https://schemas.cipherstash.com/eql/v3/timestamptz_ord.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "additionalProperties": false,
   "definitions": {
     "Ciphertext": {
       "description": "mp_base85 source ciphertext — the `c` envelope key.\n\nRequired by every v3 domain CHECK; present on every payload.",
-      "type": "string"
-    },
-    "Hmac256": {
-      "description": "HMAC-SHA-256 equality term — the `hm` wire key. Backs the `_eq` domains (`=`, `<>`). SQL-side constructor: `eql_v3.hmac_256`.",
       "type": "string"
     },
     "Identifier": {
@@ -43,7 +39,7 @@
       "type": "integer"
     }
   },
-  "description": "`eql_v3.text_ord_ore` — full lexicographic comparison, scheme-explicit name. Unlike the integer ordered domains (`[Ore]` only), text routes equality through `hm` rather than the ORE term, so the domain carries both `hm` and `ob` (`[Hm, Ore]`).",
+  "description": "`eql_v3.timestamptz_ord` — full comparison (`=` `<>` `<` `<=` `>` `>=`).",
   "properties": {
     "c": {
       "allOf": [
@@ -52,14 +48,6 @@
         }
       ],
       "description": "mp_base85 source ciphertext. Required by the domain CHECK."
-    },
-    "hm": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/Hmac256"
-        }
-      ],
-      "description": "HMAC-SHA-256 equality term. Text routes `=`/`<>` through `hm`."
     },
     "i": {
       "allOf": [
@@ -75,7 +63,7 @@
           "$ref": "#/definitions/OreBlock256"
         }
       ],
-      "description": "Block-ORE order term."
+      "description": "Block-ORE order term (12 blocks for timestamptz). Serves equality too."
     },
     "v": {
       "allOf": [
@@ -88,11 +76,10 @@
   },
   "required": [
     "c",
-    "hm",
     "i",
     "ob",
     "v"
   ],
-  "title": "TextOrdOre",
+  "title": "TimestamptzOrd",
   "type": "object"
 }

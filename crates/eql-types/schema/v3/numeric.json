@@ -1,14 +1,10 @@
 {
-  "$id": "https://schemas.cipherstash.com/eql/v3/text_ord_ore.json",
+  "$id": "https://schemas.cipherstash.com/eql/v3/numeric.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "additionalProperties": false,
   "definitions": {
     "Ciphertext": {
       "description": "mp_base85 source ciphertext — the `c` envelope key.\n\nRequired by every v3 domain CHECK; present on every payload.",
-      "type": "string"
-    },
-    "Hmac256": {
-      "description": "HMAC-SHA-256 equality term — the `hm` wire key. Backs the `_eq` domains (`=`, `<>`). SQL-side constructor: `eql_v3.hmac_256`.",
       "type": "string"
     },
     "Identifier": {
@@ -30,20 +26,13 @@
       ],
       "type": "object"
     },
-    "OreBlock256": {
-      "description": "Block-ORE order term — the `ob` wire key. Backs the `_ord` / `_ord_ore` domains (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's domain, so it serves equality too. The block count is width-agnostic on the wire (8 for the int scalars, 12 for timestamptz, 14 for numeric) — the array just carries more block strings. SQL-side constructor: `eql_v3.ore_block_256`.",
-      "items": {
-        "type": "string"
-      },
-      "type": "array"
-    },
     "SchemaVersion": {
       "const": 2,
       "description": "The envelope version field (`v`) — always exactly `2` on the wire.",
       "type": "integer"
     }
   },
-  "description": "`eql_v3.text_ord_ore` — full lexicographic comparison, scheme-explicit name. Unlike the integer ordered domains (`[Ore]` only), text routes equality through `hm` rather than the ORE term, so the domain carries both `hm` and `ob` (`[Hm, Ore]`).",
+  "description": "`eql_v3.numeric` — storage only; every operator is blocked.",
   "properties": {
     "c": {
       "allOf": [
@@ -53,14 +42,6 @@
       ],
       "description": "mp_base85 source ciphertext. Required by the domain CHECK."
     },
-    "hm": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/Hmac256"
-        }
-      ],
-      "description": "HMAC-SHA-256 equality term. Text routes `=`/`<>` through `hm`."
-    },
     "i": {
       "allOf": [
         {
@@ -68,14 +49,6 @@
         }
       ],
       "description": "Table/column identifier. Required by the domain CHECK."
-    },
-    "ob": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/OreBlock256"
-        }
-      ],
-      "description": "Block-ORE order term."
     },
     "v": {
       "allOf": [
@@ -88,11 +61,9 @@
   },
   "required": [
     "c",
-    "hm",
     "i",
-    "ob",
     "v"
   ],
-  "title": "TextOrdOre",
+  "title": "Numeric",
   "type": "object"
 }
