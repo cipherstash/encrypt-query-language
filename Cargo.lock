@@ -1166,6 +1166,7 @@ name = "eql-codegen"
 version = "0.1.0"
 dependencies = [
  "eql-scalars",
+ "flate2",
  "minijinja",
  "serde",
  "serde_json",

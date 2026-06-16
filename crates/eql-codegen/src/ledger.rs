@@ -8,6 +8,11 @@
 //! are frozen here so the Stage 4 manifest can be normalized identically and
 //! compared by exact string equality.
 
+use std::fs::File;
+use std::io::{self, BufRead, BufReader};
+use std::path::Path;
+
+use flate2::read::GzDecoder;
 use serde::Serialize;
 
 /// The outcome of a logged statement — a typed enum, not a stringly `outcome` +
@@ -345,32 +350,65 @@ fn attach_error(records: &mut Vec<LedgerRecord>, seq: &mut usize, case_id: &str,
 /// tagged blocker statement with NO following `ERROR:` line stays
 /// `Outcome::Success` — that is intentional, so the Stage 4 matcher can flag the
 /// STRICT-NULL regression (a blocker that should have raised but did not).
+///
+/// In-memory entry point: splits the whole log and runs the state machine over
+/// it. Routes through `parse_ledger_reader` so the in-crate tests (which feed a
+/// `&str` via `include_str!`) exercise the exact streaming path the CLI uses.
 pub fn parse_ledger(raw_log: &str) -> Ledger {
+    parse_ledger_reader(io::Cursor::new(raw_log.as_bytes()))
+}
+
+/// Streaming entry point: parse the log from any `BufRead` WITHOUT materializing
+/// the whole (possibly multi-GB, possibly gzip-decoded) text in memory. Lines are
+/// read into a small rolling buffer that holds at most one **region** — a single
+/// primary log entry plus its continuation / JSON-plan / error-annotation /
+/// `STATEMENT:`-echo tail, terminated at the next primary entry. A region is
+/// bounded by the largest single auto_explain plan, never the whole file.
+///
+/// Each region is handed to `run_lines`, so the record semantics are identical to
+/// processing the whole split at once: the only forward look-aheads the state
+/// machine performs (a JSON plan block, and an `ERROR:` → `STATEMENT:` echo scan)
+/// never cross a region boundary — a plan block contains no primary log line, and
+/// an error's annotation/echo tail precedes the next primary entry. Cross-region
+/// state (the `records` accumulator that `attach_plan`/`attach_error` scan
+/// backward over) is threaded through explicitly.
+pub fn parse_ledger_reader<R: BufRead>(reader: R) -> Ledger {
     let mut records: Vec<LedgerRecord> = Vec::new();
     let mut seq = 0usize;
+    let mut cursor = RegionCursor::new(reader);
+    while let Some(region) = cursor.next_region() {
+        let view: Vec<&str> = region.iter().map(String::as_str).collect();
+        run_lines(&view, &mut records, &mut seq);
+    }
+    Ledger { records }
+}
 
-    let lines: Vec<&str> = raw_log.lines().collect();
+/// The core state machine over a contiguous slice of already-split log lines.
+/// Extracted from the old `parse_ledger` body verbatim so both the in-memory and
+/// streaming entry points share one implementation. Appends to `records` and
+/// advances `seq`.
+fn run_lines(lines: &[&str], records: &mut Vec<LedgerRecord>, seq: &mut usize) {
     let mut i = 0;
     while i < lines.len() {
         match classify_line(lines[i]) {
             LineKind::Statement(stmt) => {
-                let (text, consumed) = gather_continuation(&lines, i, stmt);
+                let (text, consumed) = gather_continuation(lines, i, stmt);
                 i += consumed;
-                records.push(build_statement_record(&text, seq));
-                seq += 1;
+                records.push(build_statement_record(&text, *seq));
+                *seq += 1;
             }
             LineKind::PlanIntro => {
-                let (json_text, consumed) = gather_json_block(&lines, i + 1);
+                let (json_text, consumed) = gather_json_block(lines, i + 1);
                 i += 1 + consumed;
                 if let Ok(plan) = serde_json::from_str::<serde_json::Value>(&json_text) {
-                    attach_plan(&mut records, &mut seq, plan);
+                    attach_plan(records, seq, plan);
                 }
             }
             LineKind::Error(msg) => {
-                let (err_text, _consumed) = gather_continuation(&lines, i, msg);
+                let (err_text, _consumed) = gather_continuation(lines, i, msg);
                 // The STATEMENT: echo that follows carries the tag.
-                let case_id = find_following_statement_case_id(&lines, i);
-                attach_error(&mut records, &mut seq, &case_id, err_text.trim().to_string());
+                let case_id = find_following_statement_case_id(lines, i);
+                attach_error(records, seq, &case_id, err_text.trim().to_string());
                 i += 1;
             }
             LineKind::StatementEcho(_) | LineKind::Other => {
@@ -378,8 +416,98 @@ pub fn parse_ledger(raw_log: &str) -> Ledger {
             }
         }
     }
+}
 
-    Ledger { records }
+/// True if `line` starts a new primary log entry — a region boundary. A primary
+/// entry is log-prefixed (`is_log_prefixed`) AND is neither an error-annotation
+/// line (`CONTEXT:`/`DETAIL:`/… belong to the preceding `ERROR:`) nor a
+/// `STATEMENT:` echo (which belongs to the preceding `ERROR:`'s region). Anything
+/// else — indented continuations, JSON-plan body lines, blanks — is NOT a
+/// boundary, so it stays in the current region.
+fn is_region_boundary(line: &str) -> bool {
+    is_log_prefixed(line)
+        && !is_error_annotation(line)
+        && !matches!(classify_line(line), LineKind::StatementEcho(_))
+}
+
+/// Reads a `BufRead` line-by-line and yields one bounded region per
+/// `next_region()` call. The carried-over `front` line (the boundary that ended
+/// the previous region) becomes the first line of the next region, so no line is
+/// dropped or duplicated across regions.
+struct RegionCursor<R: BufRead> {
+    reader: R,
+    front: Option<String>,
+    eof: bool,
+}
+
+impl<R: BufRead> RegionCursor<R> {
+    fn new(reader: R) -> Self {
+        RegionCursor { reader, front: None, eof: false }
+    }
+
+    /// Read one line, stripping the trailing newline (matching `str::lines()`).
+    /// Returns `None` at EOF or on a read error (treated as EOF).
+    fn read_line(&mut self) -> Option<String> {
+        if self.eof {
+            return None;
+        }
+        let mut s = String::new();
+        match self.reader.read_line(&mut s) {
+            Ok(0) => {
+                self.eof = true;
+                None
+            }
+            Ok(_) => {
+                while s.ends_with('\n') || s.ends_with('\r') {
+                    s.pop();
+                }
+                Some(s)
+            }
+            Err(_) => {
+                self.eof = true;
+                None
+            }
+        }
+    }
+
+    /// Yield the next region: its first line (a carried-over boundary, or the
+    /// very first line of the log), then every following non-boundary line. The
+    /// next boundary is held back in `front` for the following call. Returns
+    /// `None` once the log is exhausted.
+    fn next_region(&mut self) -> Option<Vec<String>> {
+        let first = match self.front.take() {
+            Some(l) => l,
+            None => self.read_line()?,
+        };
+        let mut region = vec![first];
+        loop {
+            match self.read_line() {
+                None => break,
+                Some(l) => {
+                    if is_region_boundary(&l) {
+                        self.front = Some(l);
+                        break;
+                    }
+                    region.push(l);
+                }
+            }
+        }
+        Some(region)
+    }
+}
+
+/// Open a captured raw log for streaming, transparently gunzipping when the path
+/// ends in `.gz` (the compressed shape `tasks/test/capture.sh` writes) and
+/// reading plain text otherwise (the committed fixture, and any pre-existing
+/// uncompressed capture). Returns a `BufRead` so the file is never read whole
+/// into memory — pair with `parse_ledger_reader`.
+pub fn open_log_reader(path: &Path) -> io::Result<Box<dyn BufRead>> {
+    let file = File::open(path)?;
+    if path.extension().and_then(|e| e.to_str()) == Some("gz") {
+        Ok(Box::new(BufReader::new(GzDecoder::new(file))))
+    } else {
+        Ok(Box::new(BufReader::new(file)))
+    }
 }
 
 /// True if `line` is one of PostgreSQL's secondary error-annotation lines
@@ -764,5 +892,59 @@ mod tests {
             .find(|r| r.case_id == "matrix_int4_storage_eq_blocker")
             .expect("blocker record present");
         assert_eq!(rec.outcome, Outcome::Success, "no ERROR line ⇒ Success, so Stage 4 can flag the missing raise");
+    }
+
+    #[test]
+    fn streaming_reader_matches_whole_string_parse() {
+        // The region-streaming driver must produce byte-identical records to
+        // feeding the parser the whole split at once. `parse_ledger` already
+        // routes through `parse_ledger_reader`, so we compare a plain `BufReader`
+        // over the bytes against an explicit line-split run of the SAME state
+        // machine to prove the region boundaries don't change the output.
+        let raw = include_str!("../tests/fixtures/sample-capture.log");
+        let streamed = parse_ledger(raw);
+
+        // Reference: run the state machine over the whole split in one shot.
+        let mut records = Vec::new();
+        let mut seq = 0usize;
+        let lines: Vec<&str> = raw.lines().collect();
+        run_lines(&lines, &mut records, &mut seq);
+
+        assert_eq!(
+            streamed.records, records,
+            "region-streamed records diverge from whole-log processing"
+        );
+    }
+
+    #[test]
+    fn gzip_roundtrip_matches_plain_parse() {
+        // The CLI gunzips `.log.gz` captures transparently. Compress the real
+        // fixture, decode it through `GzDecoder` + `parse_ledger_reader`, and
+        // assert the resulting ledger is identical to parsing the plain text —
+        // so a gzipped capture and a plain one yield the same ledger.
+        use flate2::write::GzEncoder;
+        use flate2::Compression;
+        use std::io::Write;
+
+        let raw = include_str!("../tests/fixtures/sample-capture.log");
+        let plain = parse_ledger(raw);
+
+        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(raw.as_bytes()).unwrap();
+        let gz = encoder.finish().unwrap();
+
+        let decoder = GzDecoder::new(io::Cursor::new(gz));
+        let from_gz = parse_ledger_reader(BufReader::new(decoder));
+
+        assert_eq!(
+            plain.records, from_gz.records,
+            "gzip round-trip ledger diverges from plain-text ledger"
+        );
+        // Spot-check the load-bearing records survived the round-trip.
+        assert!(from_gz.records.iter().any(|r| r.plan.is_some()));
+        assert!(from_gz.records.iter().any(|r| matches!(
+            &r.outcome,
+            Outcome::Error { error_message } if error_message.contains("is not supported for")
+        )));
     }
 }

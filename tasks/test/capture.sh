@@ -15,7 +15,10 @@ cd "$REPO_ROOT"
 
 RUN_ID="${RUN_ID:-$(date +%Y%m%dT%H%M%S)}"
 RAW_DIR="${REPO_ROOT}/target/log-capture/raw"
-RAW_LOG="${RAW_DIR}/${RUN_ID}.log"
+# Compress the harvest: a full scalars:: capture is multi-GB of auto_explain
+# JSON plans, which gzip ~10-20x. The ledger CLI gunzips `.log.gz` transparently
+# (see eql_codegen::ledger::open_log_reader).
+RAW_LOG="${RAW_DIR}/${RUN_ID}.log.gz"
 mkdir -p "$RAW_DIR"
 
 # The logging server is published on host port 7433 (the container itself
@@ -74,10 +77,12 @@ echo "==> matrix run exit code: ${TEST_RC}"
 echo "==> harvesting container log to ${RAW_LOG}"
 # The container was recreated above, so its entire log stream belongs to this
 # run — capture all of it (no --since slicing). docker logs writes stdout+stderr;
-# Postgres logs to stderr, so 2>&1 captures the log lines.
-docker logs postgres-logging > "${RAW_LOG}" 2>&1
+# Postgres logs to stderr, so 2>&1 captures the log lines. Pipe through gzip so
+# the on-disk artifact is the compressed `.log.gz`.
+docker logs postgres-logging 2>&1 | gzip > "${RAW_LOG}"
 
-echo "==> captured $(wc -l < "${RAW_LOG}") log lines"
+# `wc -l` can't read the gzip directly; decompress on the fly for the count.
+echo "==> captured $(gzip -dc "${RAW_LOG}" | wc -l) log lines ($(ls -lh "${RAW_LOG}" | awk '{print $5}') compressed)"
 echo "==> raw log: ${RAW_LOG}"
 
 # Leave the server up for inspection unless KEEP_LOGGING_DB=0.

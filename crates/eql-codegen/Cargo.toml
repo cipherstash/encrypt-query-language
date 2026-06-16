@@ -6,6 +6,7 @@ publish = false
 
 [dependencies]
 eql-scalars = { path = "../eql-scalars" }
+flate2 = "1"
 minijinja = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

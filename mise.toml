@@ -517,16 +517,26 @@ run = """
 set -euo pipefail
 root="{{config_root}}"
 run_id="${RUN_ID:-$(cat "$root/target/log-capture/last-run-id" 2>/dev/null || true)}"
-if [ -z "$run_id" ]; then
-  # Fall back to the newest raw log.
-  newest=$(ls -t "$root"/target/log-capture/raw/*.log 2>/dev/null | head -1 || true)
-  [ -n "$newest" ] || { echo "no raw capture log found — run 'mise run test:capture' first" >&2; exit 1; }
-  run_id=$(basename "$newest" .log)
+raw=""
+if [ -n "$run_id" ]; then
+  # Prefer the compressed capture (what test:capture now writes); fall back to a
+  # plain .log for back-compat / a hand-staged uncompressed log.
+  if [ -f "$root/target/log-capture/raw/${run_id}.log.gz" ]; then
+    raw="$root/target/log-capture/raw/${run_id}.log.gz"
+  elif [ -f "$root/target/log-capture/raw/${run_id}.log" ]; then
+    raw="$root/target/log-capture/raw/${run_id}.log"
+  fi
 fi
-raw="$root/target/log-capture/raw/${run_id}.log"
+if [ -z "$raw" ]; then
+  # Fall back to the newest raw log, compressed or plain.
+  raw=$(ls -t "$root"/target/log-capture/raw/*.log.gz "$root"/target/log-capture/raw/*.log 2>/dev/null | head -1 || true)
+  [ -n "$raw" ] || { echo "no raw capture log found — run 'mise run test:capture' first" >&2; exit 1; }
+  run_id=$(basename "$raw" | sed -e 's/\\.log\\.gz$//' -e 's/\\.log$//')
+fi
 [ -f "$raw" ] || { echo "raw log $raw not found" >&2; exit 1; }
 mkdir -p "$root/target/log-capture/ledger"
 ledger="$root/target/log-capture/ledger/${run_id}.json"
+# The CLI gunzips a .log.gz path transparently; a plain .log is read as-is.
 cargo run -q -p eql-codegen -- ledger "$raw" "$ledger"
 echo "ledger: $ledger"
 """
