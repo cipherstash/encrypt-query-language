@@ -66,6 +66,12 @@ so reviewers can see the codegen output without running anything; CI runs
 `types:check` to keep it fresh. The crate is also part of the lean
 `mise run test:crates` set (fmt, clippy, test — no database).
 
+Note that ts-rs writes to `./bindings` by default, so a plain
+`cargo test -p eql-types` (and therefore `mise run test:crates`) regenerates
+`bindings/` **in place** as a side effect — it can leave your working tree
+dirty if the checked-in copies were stale. Only `types:generate` isolates the
+write (it exports into a temp dir and swaps it in after the build succeeds).
+
 ## Future direction: self-describing payloads
 
 On the wire, a v3 payload is discriminated only by *which key is present*
