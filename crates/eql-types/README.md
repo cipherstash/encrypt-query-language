@@ -5,8 +5,8 @@ shape**, the single source of truth for every tool that produces or consumes
 EQL payloads (`cipherstash-client`, `protect-ffi`, CipherStash Proxy).
 
 TypeScript bindings are generated from these definitions via [`ts-rs`] into
-[`bindings/`](bindings/); JSON Schemas (via [`schemars`]) follow in a
-stacked change.
+[`bindings/`](bindings/), and JSON Schemas via [`schemars`] into
+[`schema/`](schema/).
 
 ## Why
 
@@ -56,21 +56,24 @@ the catalog by the JSON Schema parity test in the stacked schemars change.
 ## Develop
 
 ```sh
-mise run types:generate   # clean-regenerate bindings/
-mise run types:check      # regenerate + fail if checked-in bindings are stale
+mise run types:generate   # clean-regenerate bindings/ and schema/
+mise run types:check      # regenerate + fail if checked-in outputs are stale
 ```
 
 Both wrap `cargo test -p eql-types`, which runs the conformance tests and
-regenerates `bindings/` (TypeScript, via ts-rs). The directory is checked in
-so reviewers can see the codegen output without running anything; CI runs
-`types:check` to keep it fresh. The crate is also part of the lean
+regenerates `bindings/` (TypeScript, via ts-rs) and `schema/` (JSON Schema,
+via `tests/export.rs`, with canonical `$id`s injected). Both directories are
+checked in so reviewers can see the codegen output without running anything;
+CI runs `types:check` to keep them fresh. The crate is also part of the lean
 `mise run test:crates` set (fmt, clippy, test — no database).
 
-Note that ts-rs writes to `./bindings` by default, so a plain
+Note that both exporters default to writing under the crate dir (ts-rs to
+`./bindings`, `tests/export.rs` to `./schema`), so a plain
 `cargo test -p eql-types` (and therefore `mise run test:crates`) regenerates
-`bindings/` **in place** as a side effect — it can leave your working tree
-dirty if the checked-in copies were stale. Only `types:generate` isolates the
-write (it exports into a temp dir and swaps it in after the build succeeds).
+`bindings/` and `schema/` **in place** as a side effect — it can leave your
+working tree dirty if the checked-in copies were stale. Only `types:generate`
+isolates the writes (it exports into a temp dir and swaps them in after the
+build succeeds).
 
 ## Future direction: self-describing payloads
 

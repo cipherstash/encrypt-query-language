@@ -328,9 +328,9 @@ jobs:
           mise run test:crates
 
       # Freshness gate for the eql-types codegen output: regenerate the
-      # TypeScript bindings and fail if the checked-in copies differ.
-      # Reuses the toolchain from the step above.
-      - name: Verify eql-types bindings are fresh
+      # TypeScript bindings and JSON Schemas and fail if the checked-in
+      # copies differ. Reuses the toolchain from the step above.
+      - name: Verify eql-types bindings and schemas are fresh
         run: |
           mise run types:check
 
