@@ -32,10 +32,14 @@ Consequences that shape the whole pipeline:
   - `CS_CLIENT_ID` + `CS_CLIENT_KEY` — client key material, via `EnvKeyProvider`.
   (`tasks/fixtures.toml:12-17`; built in `tests/sqlx/src/fixtures/cipherstash.rs:44-53`.)
 - Generated fixture SQL is **gitignored** and regenerated on every test run
-  (`.gitignore:225-230`), so a stale fixture cannot rot in the tree.
+  (`.gitignore:227-230`), so a stale fixture cannot rot in the tree.
 - Static/committed fixtures are forbidden as a way to dodge the creds dependency.
-  There is exactly **one** committed exception, `tests/sqlx/fixtures/v3_ste_vec.sql`,
-  pending a SteVec-document generator — a gap, not a pattern to copy.
+  Every fixture is generated — including the SteVec document
+  `tests/sqlx/fixtures/v3_ste_vec.sql`, which is gitignored (`.gitignore:228`) and
+  rebuilt each run by its own generator (`fixtures::v3_ste_vec::generate()`).
+  (`CLAUDE.md` still calls `v3_ste_vec.sql` "the one committed exception … pending a
+  SteVec-document generator", but that note is stale: the generator exists and the file
+  is gitignored like the rest.)
 
 The plaintext **values** are single-sourced in the Rust catalog
 `crates/eql-scalars` so the test oracle (the expected-result computation) and the
@@ -49,16 +53,16 @@ row.
 ```mermaid
 flowchart TD
     subgraph catalog["crates/eql-scalars (zero-dep catalog)"]
-        SPEC["ScalarSpec rows in CATALOG<br/>token + kind + domains + fixtures<br/>lib.rs:301-427"]
-        FIX["Fixture value lists<br/>INT4_FIXTURES, NUMERIC_FIXTURES, …<br/>lib.rs:242-299"]
-        MAC["int_values! / text_values! macros<br/>materialise typed const slices<br/>lib.rs:439-510"]
-        VALS["INT4_VALUES: &[i32]<br/>INT2_VALUES, INT8_VALUES, TEXT_VALUES<br/>lib.rs:476-510"]
+        SPEC["ScalarSpec rows in CATALOG<br/>token + kind + domains + fixtures<br/>lib.rs:312-438"]
+        FIX["Fixture value lists<br/>INT4_FIXTURES, NUMERIC_FIXTURES, …<br/>lib.rs:253-310"]
+        MAC["int_values! / text_values! macros<br/>materialise typed const slices<br/>lib.rs:450-521"]
+        VALS["INT4_VALUES: &[i32]<br/>INT2_VALUES, INT8_VALUES, TEXT_VALUES<br/>lib.rs:487-521"]
         SPEC --> FIX --> MAC --> VALS
     end
 
     subgraph harness["tests/sqlx (harness)"]
         ST["ScalarType::fixture_values()<br/>scalar_domains.rs:53"]
-        TEMP["temporal_values! / hand impls<br/>date/timestamptz/numeric → LazyLock<Vec<T>><br/>scalar_domains.rs:192-468"]
+        TEMP["temporal_values! / hand impls<br/>date/timestamptz/numeric → LazyLock<Vec<T>><br/>scalar_domains.rs:192-495"]
         MOD["scalar_fixture! → spec()<br/>FixtureSpec builder per type<br/>scalar_fixture.rs:174-194"]
         VALS --> ST
         SPEC --> TEMP --> ST
@@ -110,9 +114,9 @@ Step by step:
 
 ```mermaid
 flowchart LR
-    ROW["INT4 ScalarSpec<br/>token=int4, kind=I32<br/>fixtures=INT4_FIXTURES<br/>lib.rs:301-306"]
-    LIST["INT4_FIXTURES: &[Fixture]<br/>Min, N(-100), …, Max<br/>lib.rs:244-246"]
-    IV["int_values!(INT4_VALUES, i32, INT4)<br/>const-eval resolve + range check<br/>lib.rs:476"]
+    ROW["INT4 ScalarSpec<br/>token=int4, kind=I32<br/>fixtures=INT4_FIXTURES<br/>lib.rs:312-317"]
+    LIST["INT4_FIXTURES: &[Fixture]<br/>Min, N(-100), …, Max<br/>lib.rs:255-257"]
+    IV["int_values!(INT4_VALUES, i32, INT4)<br/>const-eval resolve + range check<br/>lib.rs:487"]
     CONST["INT4_VALUES: &[i32]<br/>(committed source of truth,<br/>NOT a generated .rs)"]
 
     ROW --> LIST
@@ -129,7 +133,7 @@ flowchart LR
 
 The key invariant: the **oracle** (`expected_forward` filtering `fixture_values()`)
 and the **encryption input** (`spec().values()` fed to `encrypt_store`) are the same
-`&[i32]` const. The catalog comment makes this explicit (`lib.rs:429-435`):
+`&[i32]` const. The catalog comment makes this explicit (`lib.rs:440-446`):
 
 > This is the **single-sourced** plaintext list the SQLx test matrix reads via
 > `ScalarType::fixture_values()` and the fixture generator encrypts — derived from
@@ -140,8 +144,8 @@ and the **encryption input** (`spec().values()` fed to `encrypt_store`) are the 
 
 | Kind | Catalog literal | Materialized via | Result type |
 |------|-----------------|------------------|-------------|
-| integers (`int4`/`int2`/`int8`) | `Fixture::Int` / `Min`/`Max`/`Zero` | `int_values!` macro, **`const`** (`lib.rs:439-478`) | `&'static [iN]` |
-| `text` | `Fixture::Text(&str)` | `text_values!` macro, **`const`** (`lib.rs:486-510`) | `&'static [&str]` |
+| integers (`int4`/`int2`/`int8`) | `Fixture::Int` / `Min`/`Max`/`Zero` | `int_values!` macro, **`const`** (`lib.rs:450-485`) | `&'static [iN]` |
+| `text` | `Fixture::Text(&str)` | `text_values!` macro, **`const`** (`lib.rs:497-519`) | `&'static [&str]` |
 | `date` / `timestamptz` | `Fixture::Date`/`Timestamptz(&str)` | `temporal_values!` → `LazyLock<Vec<T>>` (`scalar_domains.rs:192-320`) | `&'static [chrono::…]` |
 | `numeric` | `Fixture::Numeric(&str)` | hand-written `LazyLock<Vec<Decimal>>` (`scalar_domains.rs:449-468`) | `&'static [Decimal]` |
 
@@ -150,7 +154,7 @@ are not `const`, so those parse the catalog strings once into a `LazyLock<Vec<T>
 The catalog itself stays **zero-dep** (no chrono, no rust_decimal) — parsing happens
 in the harness, not in `eql-scalars`. The `int_values!` macro does a compile-time
 range check so an out-of-range literal is a build error, not a silent `as` truncation
-(`lib.rs:456-462`).
+(`lib.rs:467-473`).
 
 ---
 
@@ -158,7 +162,7 @@ range check so an out-of-range literal is a build error, not a silent `as` trunc
 
 ### 4a. The catalog row and value list
 
-`crates/eql-scalars/src/lib.rs:244-246`:
+`crates/eql-scalars/src/lib.rs:255-257`:
 
 ```rust
 const INT4_FIXTURES: &[Fixture] = fixtures!(int i32;
@@ -166,7 +170,7 @@ const INT4_FIXTURES: &[Fixture] = fixtures!(int i32;
     N(42), N(50), N(100), N(250), N(1000), N(9999), Max);
 ```
 
-`lib.rs:301-306`:
+`lib.rs:312-317`:
 
 ```rust
 const INT4: ScalarSpec = ScalarSpec {
@@ -178,18 +182,18 @@ const INT4: ScalarSpec = ScalarSpec {
 ```
 
 The `fixtures!` macro range-checks every `N(..)` literal against `i32` at its
-definition site (`lib.rs:191-193`), and `Min`/`Max`/`Zero` are resolved to the
+definition site (`lib.rs:202-204`), and `Min`/`Max`/`Zero` are resolved to the
 kind's bounds.
 
 ### 4b. Materialized into a typed const
 
-`lib.rs:476`:
+`lib.rs:487`:
 
 ```rust
 int_values!(INT4_VALUES, i32, INT4);
 ```
 
-The macro (`lib.rs:439-474`) walks `INT4.fixtures`, calls `numeric_value(kind)` to
+The macro (`lib.rs:450-485`) walks `INT4.fixtures`, calls `numeric_value(kind)` to
 resolve each `Fixture` (`Min` → `i32::MIN`, `N(-100)` → `-100`, `Zero` → `0`, …), and
 const-evaluates the whole thing into `pub const INT4_VALUES: &[i32]`. So
 `INT4_VALUES == [-2147483648, -100, -1, 0, 1, 2, 5, 10, 17, 25, 42, 50, 100, 250, 1000, 9999, 2147483647]`.
@@ -237,7 +241,7 @@ let outputs = encrypt_eql(cipher, prepared, &opts).await?;   // ONE ZeroKMS roun
 ```
 
 `value.to_plaintext()` is the `EqlPlaintext` lift — for `i32` it is
-`Plaintext::Int(Some(*self))` (`eql_plaintext.rs:152-158`). The `Cast::INT` maps to
+`Plaintext::Int(Some(*self))` (`eql_plaintext.rs:153-159`). The `Cast::INT` maps to
 `ColumnType::Int` (`cipherstash.rs:92-110`), and the `Unique`+`Ore` indexes map to
 the unique + ORE `IndexType`s (`cipherstash.rs:118-135`). `EqlOperation::Store`
 yields a full storage payload `{"k":"ct","v":2,"i":…,"c":…,"hm":…,"ob":…}`.
@@ -267,8 +271,8 @@ INSERT INTO fixtures.eql_v2_int4 (id, plaintext, payload) VALUES ('1', '-2147483
 ```
 
 The `plaintext` column (`-2147483648`) is the committed oracle; the `payload` is the
-real encrypted document. At test time `fetch_fixture_payload` (`scalar_domains.rs:726-743`)
-looks up a payload by plaintext, and `assert_scalar_plaintexts` (`scalar_domains.rs:763-778`)
+real encrypted document. At test time `fetch_fixture_payload` (`scalar_domains.rs:729-746`)
+looks up a payload by plaintext, and `assert_scalar_plaintexts` (`scalar_domains.rs:766-781`)
 compares the DB query result against `expected_forward` over `INT4_VALUES`.
 
 ---
@@ -278,10 +282,11 @@ compares the DB query result against `expected_forward` over `INT4_VALUES`.
 `generate_all` also runs three hand-written fixtures that aren't `CATALOG` scalars
 (`generate_all_fixtures.rs:37-61`):
 
-- **`v3_ste_vec`** — a SteVec JSONB document fixture. **The one committed
-  exception** (`.gitignore` re-lists it but `CLAUDE.md` documents it as a gap pending
-  a SteVec-document generator). A hand-written `FixtureSpec<serde_json::Value>` riding
-  the same `run()` pipeline.
+- **`v3_ste_vec`** — a SteVec JSONB document fixture. A hand-written
+  `FixtureSpec<serde_json::Value>` riding the same `run()` pipeline
+  (`fixtures::v3_ste_vec::generate()`), gitignored and regenerated like every other
+  fixture. (`CLAUDE.md` still calls it "the one committed exception"; that wording is
+  stale — see §6.)
 - **`v3_doc_int4`** — a scalar-shaped SteVec document, one `{"field": <int4>}` per
   `INT4_VALUES`. A **split** fixture: the encryption input is the jsonb document but
   the plaintext oracle column is the bare `int4`, so it uses the
@@ -289,7 +294,7 @@ compares the DB query result against `expected_forward` over `INT4_VALUES`.
 - **`v3_numeric_collision`** — the `[1, 1.0, 2]` scale-equivalence collision
   (`tests/sqlx/src/fixtures/v3_numeric_collision.rs`). It cannot live in the
   catalog `eql_v2_numeric` fixture because the catalog distinctness guard
-  (`numeric_value_guards::fixtures_are_distinct_by_value`, `scalar_domains.rs:508-523`)
+  (`numeric_value_guards::fixtures_are_distinct_by_value`, `scalar_domains.rs:509-523`)
   forbids the value-equal pair `1`/`1.0`. Encrypted at numeric ORE width via the
   standard `.run()` driver, addressed by `id` rather than `plaintext` (since
   `WHERE plaintext = 1` would match both).
@@ -316,14 +321,16 @@ through the prep flow, which requires:
 Why not just commit the SQL and skip the creds? Because the ciphertexts must be the
 *actual* output of the crypto. `CLAUDE.md`:
 
-> Do NOT add static/committed fixtures to dodge the creds dependency. The one
-> committed exception, `tests/sqlx/fixtures/v3_ste_vec.sql`, is a gap pending a
-> SteVec-document generator … not a pattern to copy.
+> Do NOT add static/committed fixtures to dodge the creds dependency.
 
-The gitignore enforces it mechanically (`.gitignore:225-230`): every
-`eql_v2*` fixture plus `v3_doc_int4.sql` and `v3_numeric_collision.sql` are ignored
-and regenerated on every `mise run test:sqlx`. A stale or hand-edited fixture can't
-survive a run. The live round-trip is additionally smoke-tested by the
+(`CLAUDE.md` goes on to name `tests/sqlx/fixtures/v3_ste_vec.sql` as "the one committed
+exception … pending a SteVec-document generator", but that clause is stale: the SteVec
+generator now exists and the file is gitignored and regenerated like the rest.)
+
+The gitignore enforces it mechanically (`.gitignore:227-230`): every
+`eql_v2*` fixture plus `v3_ste_vec.sql`, `v3_doc_int4.sql`, and `v3_numeric_collision.sql`
+are ignored and regenerated on every `mise run test:sqlx`. A stale or hand-edited fixture
+can't survive a run. The live round-trip is additionally smoke-tested by the
 `#[ignore]` `live_tests` in `cipherstash.rs:309-412`, which assert the real Store
 payload shape (`v=2`, non-null `hm`/`ob`/`c`/`i`) and that distinct plaintexts yield
 distinct `hm` terms — so an SDK API drift surfaces there before the whole pipeline
@@ -335,12 +342,12 @@ breaks.
 
 | Concern | Path |
 |---------|------|
-| Catalog rows, fixture lists, `int_values!`/`text_values!` | `crates/eql-scalars/src/lib.rs:184-510` |
+| Catalog rows, fixture lists, `int_values!`/`text_values!` | `crates/eql-scalars/src/lib.rs:195-521` |
 | `generate_all` entry point | `tests/sqlx/tests/generate_all_fixtures.rs:25-62` |
 | `fixture:generate:all` mise task | `tasks/fixtures.toml:1-29` |
 | `test:sqlx:prep` flow | `mise.toml:49-80` |
 | `ScalarType` trait + `fixture_values()` + oracle | `tests/sqlx/src/scalar_domains.rs:17-128` |
-| `temporal_values!` (date/timestamptz), numeric/text impls | `tests/sqlx/src/scalar_domains.rs:192-468` |
+| `temporal_values!` (date/timestamptz), numeric/text impls | `tests/sqlx/src/scalar_domains.rs:192-495` |
 | `scalar_types!` harness token list | `tests/sqlx/src/scalar_types.rs:39-63` |
 | `scalar_fixture!` (spec builder + generator test) | `tests/sqlx/src/fixtures/scalar_fixture.rs` |
 | `FixtureSpec` builder + SQL renderers | `tests/sqlx/src/fixtures/spec.rs` |

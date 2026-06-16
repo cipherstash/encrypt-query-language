@@ -44,7 +44,7 @@ reviewed baseline fails CI.
 ```mermaid
 flowchart TD
     subgraph catalog["crates/eql-scalars (catalog = source of truth)"]
-        SPEC["CATALOG: &[ScalarSpec]<br/>lib.rs:427<br/>(INT4, INT2, INT8, DATE,<br/>TIMESTAMPTZ, NUMERIC, TEXT)"]
+        SPEC["CATALOG: &[ScalarSpec]<br/>lib.rs:438<br/>(INT4, INT2, INT8, DATE,<br/>TIMESTAMPTZ, NUMERIC, TEXT)"]
         TERM["Term enum + impls<br/>term.rs<br/>(json_key, extractor, ctor,<br/>role, operators, requires)"]
     end
 
@@ -73,7 +73,7 @@ flowchart TD
     REF -.->|"parity gate"| PARITY["tests/parity.rs"]
 ```
 
-The build calls `cargo run -p eql-codegen` with **no args**, which runs `generate_all(repo_root())`
+The build calls `cargo run -p eql-codegen` with **no args**, which runs `generate_all(&repo_root())`
 (`main.rs:18-28`, `generate.rs:249`). `generate_all` iterates `eql_scalars::CATALOG` and calls
 `generate_type` per row, writing into `src/v3/scalars/<token>/`. The `list-types` subcommand
 (`main.rs:11-16`) prints the catalog tokens one per line — consumed by the fixtures/matrix
@@ -130,25 +130,25 @@ classDiagram
 
 Key facts, with the impl locations:
 
-- **`ScalarSpec`** (`eql-scalars/src/lib.rs:170`) is "one row" = one scalar type. `domain_name`
+- **`ScalarSpec`** (`eql-scalars/src/lib.rs:181`) is "one row" = one scalar type. `domain_name`
   / `is_eq_only` are in `spec.rs:20,28`.
-- **`DomainSpec`** (`lib.rs:161`) is one generated public domain: a `suffix` appended to the
+- **`DomainSpec`** (`lib.rs:172`) is one generated public domain: a `suffix` appended to the
   token plus the fixed index `terms` it carries. `name_with_token` (`spec.rs:12`) is the *single*
   place token+suffix concatenation happens, making "domain name starts with token" structural.
-- **`Term`** (`lib.rs:82`) is the index-term vocabulary. Its capability methods
+- **`Term`** (`lib.rs:93`) is the index-term vocabulary. Its capability methods
   (`term.rs:8-66`) are the **cross-schema SQL contract**: `Hm` → key `hm`, extractor `eq_term`,
   ctor `hmac_256`, operators `= <>`; `Ore` → key `ob`, extractor `ord_term`, ctor
   `ore_block_256`, operators `= <> < <= > >=`; `Bloom` → key `bf`, extractor `match_term`,
   operators `@> <@`. Term capabilities are fixed in code (with unit tests), not free-form data —
   an undefined term is a compile error.
-- **`Role`** (`lib.rs:96`) is resolved from a domain's terms by `Term::role_for_terms`
+- **`Role`** (`lib.rs:107`) is resolved from a domain's terms by `Term::role_for_terms`
   (`term.rs:128`) using `Role::rank` precedence. `Ore` ⇒ `Ord`, which is what gates aggregate
   generation.
 
-The four ordered-integer domains are shared via one const (`lib.rs:203` `ORDERED_INT_DOMAINS`):
+The four ordered-integer domains are shared via one const (`lib.rs:214` `ORDERED_INT_DOMAINS`):
 `""` (storage, no terms), `_eq` (`[Hm]`), `_ord_ore` (`[Ore]`), `_ord` (`[Ore]`). `int4`/`int2`/
-`int8`/`date`/`timestamptz`/`numeric` all reuse it; `text` (`lib.rs:377` `TEXT_DOMAINS`) adds a
-`_match` domain carrying `[Bloom]`. The catalog itself is `lib.rs:427`.
+`int8`/`date`/`timestamptz`/`numeric` all reuse it; `text` (`lib.rs:388` `TEXT_DOMAINS`) adds a
+`_match` domain carrying `[Bloom]`. The catalog itself is `lib.rs:438`.
 
 ---
 
@@ -157,7 +157,7 @@ The four ordered-integer domains are shared via one const (`lib.rs:203` `ORDERED
 ### 4.1 The catalog row
 
 ```rust
-// crates/eql-scalars/src/lib.rs:301
+// crates/eql-scalars/src/lib.rs:312
 const INT4: ScalarSpec = ScalarSpec {
     token: "int4",
     kind: ScalarKind::I32,
@@ -175,7 +175,7 @@ two ordered domains (`_ord`, `_ord_ore`) get aggregates; storage and `_eq` do no
 ### 4.2 `int4_types.sql` — one DO block, all four domains
 
 `render_types_file` (`generate.rs:42`) maps each domain through `domain_block` (`context.rs:72`),
-which prepends the always-present `ENVELOPE_KEYS` (`v`, `i`, `c` — `consts.rs:19`) and then the
+which prepends the always-present `ENVELOPE_KEYS` (`v`, `i`, `c` — `consts.rs:20`) and then the
 domain's term keys (`Term::term_json_keys`, e.g. `hm` for `_eq`, `ob` for `_ord`). The
 `types.sql.j2` template emits an idempotent `IF NOT EXISTS` guard per domain. Rendered
 (`tests/codegen/reference/int4/int4_types.sql:30`):
@@ -217,9 +217,11 @@ Note `CREATE DOMAIN ... AS jsonb` — the base type is always `jsonb`, never ano
 
 2. **Wrapper** — for each operator in `OPERATORS` (`operator_surface.rs:230`) that the domain's
    terms support (`Term::operators_for_terms`), and only when an extractor backs it
-   (`Term::extractor_for_operator`). `_eq` supports `=` (`eq`) and `<>` (`neq`). The body casts a
-   bare `jsonb` operand to the domain before extracting (`extract_arg`, `context.rs:242`).
-   Rendered via `functions/wrapper.sql.j2` (`int4_eq_functions.sql:23,31`):
+   (`Term::extractor_for_operator`). `_eq` supports `=` (`eq`) and `<>` (`neq`). Each supported
+   operator is emitted in **three signatures** — `(domain, domain)`, `(domain, jsonb)`, and
+   `(jsonb, domain)` — so a bare `jsonb` operand on either side resolves to the wrapper; the body
+   casts that `jsonb` operand to the domain before extracting (`extract_arg`, `context.rs:242`).
+   Rendered via `functions/wrapper.sql.j2` (`int4_eq_functions.sql:23,31,39`):
 
    ```sql
    CREATE FUNCTION eql_v3.eq(a eql_v3.int4_eq, b eql_v3.int4_eq)
@@ -229,6 +231,10 @@ Note `CREATE DOMAIN ... AS jsonb` — the base type is always `jsonb`, never ano
    CREATE FUNCTION eql_v3.eq(a eql_v3.int4_eq, b jsonb)
    RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
    AS $$ SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b::eql_v3.int4_eq) $$;
+
+   CREATE FUNCTION eql_v3.eq(a jsonb, b eql_v3.int4_eq)
+   RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+   AS $$ SELECT eql_v3.eq_term(a::eql_v3.int4_eq) = eql_v3.eq_term(b) $$;
    ```
 
 3. **Unsupported (blocker)** — every operator/signature the domain does *not* support
@@ -242,9 +248,10 @@ Note `CREATE DOMAIN ... AS jsonb` — the base type is always `jsonb`, never ano
    LANGUAGE plpgsql;
    ```
 
-   The `_eq` file has 45 `CREATE FUNCTION` (1 extractor + 4 supported wrappers + 40 blockers);
-   the storage `""` file is **all 44 blockers** (no extractor, no supported operator). These
-   counts are pinned by tests at `generate.rs:439,453`.
+   The `_eq` file has 45 `CREATE FUNCTION` (1 extractor + 6 supported wrappers — `eq`/`neq` in
+   three signatures each — + 38 blockers); the storage `""` file is **all 44 blockers** (no
+   extractor, no supported operator). These counts are pinned by tests at `generate.rs:439,453`
+   (and the `LANGUAGE sql` == 7 / `LANGUAGE plpgsql` == 38 split at `generate.rs:457-461`).
 
 For an **ordered** domain (`int4_ord`), the same machinery produces `ord_term`
 (`RETURNS eql_v3.ore_block_256`, `int4_ord_functions.sql:15`) and the six comparison wrappers
@@ -368,7 +375,7 @@ ordered `&[...]` slices everywhere (`CATALOG`, `domains`, `OPERATORS`, `AGGREGAT
 (`term.rs:69` `dedupe_preserving_order`, first occurrence wins). The
 `generate_all_is_deterministic_across_runs` test (`parity.rs:136`) runs the generator twice into
 separate temp dirs and byte-compares every file. minijinja keeps each template's trailing
-newline (`context.rs:14` `set_keep_trailing_newline(true)`) so the output ends in exactly one.
+newline (`context.rs:16` `set_keep_trailing_newline(true)`) so the output ends in exactly one.
 
 **The AUTO-GENERATED marker.** Every generated file's first line is
 `-- AUTOMATICALLY GENERATED FILE.` (`consts.rs:7` `AUTO_GENERATED_MARKER`, emitted by each
@@ -381,7 +388,7 @@ template as line 1). It serves three roles:
    `write_generated_file` (`writer.rs:80`) *re-validates* the marker on the rendered body before
    writing, so a renderer bug that dropped the marker can't produce an unowned file.
 2. **Doc-validation skip.** `tasks/docs/validate/*.sh` grep this marker to skip generated SQL
-   (`consts.rs:32` test pins the marker to the grep).
+   (`consts.rs:33` test pins the marker to the grep).
 3. **Parity baseline.** The committed reference files under `tests/codegen/reference/<token>/`
    carry one extra `-- REFERENCE:` provenance line *above* the marker; the parity gate strips it
    and byte-compares the rest (`parity.rs:71` `reference_body`). `reference_dirs_match_catalog_tokens`
@@ -394,10 +401,10 @@ template as line 1). It serves three roles:
 
 | Concern | File |
 | --- | --- |
-| Catalog rows / `CATALOG` | `crates/eql-scalars/src/lib.rs:301-427` |
-| `ScalarSpec` / `DomainSpec` defs + impls | `crates/eql-scalars/src/lib.rs:160-176`, `spec.rs` |
+| Catalog rows / `CATALOG` | `crates/eql-scalars/src/lib.rs:312-438` |
+| `ScalarSpec` / `DomainSpec` defs + impls | `crates/eql-scalars/src/lib.rs:171-187`, `spec.rs` |
 | `Term` capability contract | `crates/eql-scalars/src/term.rs` |
-| `ScalarKind` / `Role` | `crates/eql-scalars/src/kind.rs`, `lib.rs:96-130` |
+| `ScalarKind` (def `lib.rs:53`, impls `kind.rs`) / `Role` (`lib.rs:107-141`) | `crates/eql-scalars/src/lib.rs`, `kind.rs` |
 | Entry point / `list-types` | `crates/eql-codegen/src/main.rs` |
 | Orchestrator + render functions | `crates/eql-codegen/src/generate.rs` |
 | minijinja env + serde context | `crates/eql-codegen/src/context.rs` |
