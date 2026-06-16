@@ -168,7 +168,7 @@ fn non_int4_tokens_round_trip_every_domain() {
     // `catalog_parity.rs` checks domain *names* only, never the wire shape.
     // This sweep roundtrips every non-int4 domain and pins its catalog name,
     // failing the instant a token drifts from the shared envelope/term contract.
-    use eql_types::v3::{date::*, int2::*, int8::*, text::*};
+    use eql_types::v3::{date::*, int2::*, int8::*, numeric::*, text::*};
 
     // Wire builders for the three shapes the ordered tokens share.
     let storage = |t: &str| json!({ "v": 2, "i": { "t": t, "c": "x" }, "c": "ct" });
@@ -204,6 +204,13 @@ fn non_int4_tokens_round_trip_every_domain() {
     round_trip!(DateOrd, ord("a"), "eql_v3.date_ord");
     round_trip!(DateOrdOre, ord("a"), "eql_v3.date_ord_ore");
 
+    // numeric is the first scalar whose native ORE term exceeds 8 blocks (14);
+    // the wire shape is identical, so the same `ord` builder applies.
+    round_trip!(Numeric, storage("a"), "eql_v3.numeric");
+    round_trip!(NumericEq, eq("a"), "eql_v3.numeric_eq");
+    round_trip!(NumericOrd, ord("a"), "eql_v3.numeric_ord");
+    round_trip!(NumericOrdOre, ord("a"), "eql_v3.numeric_ord_ore");
+
     // text_match is covered by `text_match_round_trips_signed_bloom_filter`.
     round_trip!(Text, storage("a"), "eql_v3.text");
     round_trip!(TextEq, eq("a"), "eql_v3.text_eq");
@@ -213,12 +220,16 @@ fn non_int4_tokens_round_trip_every_domain() {
 }
 
 #[test]
-fn timestamptz_round_trips_and_enforces_equality_term() {
-    // The one structurally-distinct token: equality-only, no `_ord`/`_ord_ore`
-    // (the 8-block-ORE limitation). The int4 template was copy-pasted to
-    // produce it, so an accidental extra `ob` field or a dropped `hm` would
-    // pass `catalog_parity` (domain names only) but is caught here.
-    use eql_types::v3::timestamptz::{Timestamptz, TimestamptzEq};
+fn timestamptz_round_trips_and_enforces_term_capabilities() {
+    // timestamptz is an ordered token (12-block ORE) — it carries the full
+    // storage/`_eq`/`_ord`/`_ord_ore` shape, the same as the int scalars. The
+    // int4 template was copy-pasted to produce it, so a dropped `hm`/`ob` or a
+    // field typo would pass `catalog_parity` (domain names only) but is caught
+    // here. (Was equality-only while the ORE comparator was hardcoded to 8
+    // blocks; promoted once `eql_v3.ore_block_256` generalized to any width.)
+    use eql_types::v3::timestamptz::{
+        Timestamptz, TimestamptzEq, TimestamptzOrd, TimestamptzOrdOre,
+    };
 
     // Storage-only: envelope, no term.
     let storage = json!({
@@ -241,16 +252,40 @@ fn timestamptz_round_trips_and_enforces_equality_term() {
     assert_eq!(serde_json::to_value(&parsed).unwrap(), with_hm);
     assert_eq!(TimestamptzEq::sql_domain_static(), "eql_v3.timestamptz_eq");
 
-    // `_eq` is the only searchable shape this token has, so its equality term
-    // cannot silently become optional.
+    // Ordered: envelope + ob (a 12-block array on the wire; shape is the same).
+    let with_ob = json!({
+        "v": 2,
+        "i": { "t": "events", "c": "occurred_at" },
+        "c": "mp_base85_ciphertext",
+        "ob": ["b0", "b1"]
+    });
+    let parsed: TimestamptzOrd = serde_json::from_value(with_ob.clone()).unwrap();
+    assert_eq!(serde_json::to_value(&parsed).unwrap(), with_ob);
+    assert_eq!(
+        TimestamptzOrd::sql_domain_static(),
+        "eql_v3.timestamptz_ord"
+    );
+    let parsed: TimestamptzOrdOre = serde_json::from_value(with_ob.clone()).unwrap();
+    assert_eq!(serde_json::to_value(&parsed).unwrap(), with_ob);
+    assert_eq!(
+        TimestamptzOrdOre::sql_domain_static(),
+        "eql_v3.timestamptz_ord_ore"
+    );
+
+    // The searchable domains cannot let their term silently become optional.
     let no_hm = json!({
         "v": 2,
         "i": { "t": "events", "c": "occurred_at" },
         "c": "mp_base85_ciphertext"
     });
-    let result: Result<TimestamptzEq, _> = serde_json::from_value(no_hm);
+    let result: Result<TimestamptzEq, _> = serde_json::from_value(no_hm.clone());
     assert!(
         result.is_err(),
         "TimestamptzEq must reject a payload with no hm"
+    );
+    let result: Result<TimestamptzOrd, _> = serde_json::from_value(no_hm);
+    assert!(
+        result.is_err(),
+        "TimestamptzOrd must reject a payload with no ob"
     );
 }
