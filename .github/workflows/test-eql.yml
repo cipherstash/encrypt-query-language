@@ -360,6 +360,47 @@ jobs:
         run: |
           mise run codegen:parity
 
+  proptest:
+    name: "eql-types property tests"
+    needs: [changes]
+    if: >-
+      github.event_name == 'merge_group'
+      || github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true')
+    runs-on: ubuntu-latest
+    env:
+      # The SQL-backed property tests encrypt via cipherstash-client, which needs
+      # a ZeroKMS auth credential (CS_CLIENT_ACCESS_KEY + CS_WORKSPACE_CRN) AND a
+      # client key (CS_CLIENT_ID + CS_CLIENT_KEY) — the two pairs are separate
+      # roles, not alternatives. Without them the tests skip green; this job
+      # supplies them so they actually run. This repo does not accept fork PRs,
+      # so the secrets-on-pull_request constraint does not apply.
+      POSTGRES_VERSION: "17"
+      CS_CLIENT_ACCESS_KEY: ${{ secrets.CS_CLIENT_ACCESS_KEY }}
+      CS_WORKSPACE_CRN: ${{ secrets.CS_WORKSPACE_CRN }}
+      CS_CLIENT_ID: ${{ secrets.CS_CLIENT_ID }}
+      CS_CLIENT_KEY: ${{ secrets.CS_CLIENT_KEY }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: .
+          shared-key: sqlx-tests
+          save-if: false
+      - name: Setup database (Postgres 17)
+        run: |
+          mise run postgres:up postgres-${POSTGRES_VERSION} --extra-args "--detach --wait"
+      - name: Run eql-types property tests
+        run: |
+          mise run test:proptest
+
   self-contained-v3:
     name: "eql_v3 self-containment"
     needs: [changes]
@@ -460,7 +501,7 @@ jobs:
   ci-required:
     name: "CI required"
     needs: [changes, setup, build-archive, test, validate, schema, rust-crates,
-            codegen, self-contained-v3, matrix-coverage, splinter]
+            codegen, proptest, self-contained-v3, matrix-coverage, splinter]
     if: always()
     runs-on: ubuntu-latest
     steps:

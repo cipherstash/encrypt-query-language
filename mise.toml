@@ -147,10 +147,11 @@ run = """
 # workspace members. Scope explicitly to them (NOT --workspace): a
 # workspace-wide test would drag in tests/sqlx, whose suite needs Postgres +
 # CS_* secrets and is already covered by the `test` job. eql-tests-macros only
-# pulls syn/quote/proc-macro2 and eql-types only serde/serde_json/ts-rs, so
-# they stay in the lean set. clippy is likewise scoped — a workspace clippy
-# recompiles the heavy sqlx/tokio/cipherstash-client tree for no added coverage
-# of these crates.
+# pulls syn/quote/proc-macro2 and eql-types only serde/serde_json/ts-rs in its
+# default build (its sqlx/tokio/cipherstash-client deps are gated behind the
+# `proptest` feature, exercised separately by `test:proptest`), so they stay in
+# the lean set. clippy is likewise scoped — a workspace clippy recompiles the
+# heavy sqlx/tokio/cipherstash-client tree for no added coverage of these crates.
 # bash is pinned via the `#!/usr/bin/env bash` shebang above (mise honors a
 # `#!` first line), so `set -o pipefail` is available regardless of the runner's
 # /bin/sh (dash on the CI images).
@@ -158,6 +159,42 @@ set -euo pipefail
 cargo fmt --check
 cargo clippy -p eql-scalars -p eql-codegen -p eql-tests-macros -p eql-types --all-targets -- -D warnings
 cargo test -p eql-scalars -p eql-codegen -p eql-tests-macros -p eql-types
+"""
+
+[tasks."test:proptest:prep"]
+description = "Build + install the standalone eql_v3 SQL into a scratch DB for the eql-types property tests (no CS_* creds needed)"
+dir = "{{config_root}}"
+run = """
+#!/usr/bin/env bash
+# The SQL-backed property tests (cargo test -p eql-types --features proptest)
+# call the real eql_v3.* functions, so the target DB must have the v3 surface
+# installed. Install the self-contained v3 artifact into a dedicated scratch DB
+# (cipherstash_proptest) so we never mutate the shared sqlx test DB, and so a
+# re-run is idempotent (drop + recreate). The test task points DATABASE_URL at
+# this DB. Building (not creds) is all this step needs.
+set -euo pipefail
+mise run build
+export PGPASSWORD="${POSTGRES_PASSWORD:-password}"
+PSQL=(psql -U "${POSTGRES_USER:-cipherstash}" -h "${POSTGRES_HOST:-localhost}" -p "${POSTGRES_PORT:-7432}" -v ON_ERROR_STOP=1 -q)
+"${PSQL[@]}" -d postgres -c "DROP DATABASE IF EXISTS cipherstash_proptest WITH (FORCE);"
+"${PSQL[@]}" -d postgres -c "CREATE DATABASE cipherstash_proptest;"
+"${PSQL[@]}" -d cipherstash_proptest -f release/cipherstash-encrypt-v3.sql
+"""
+
+[tasks."test:proptest"]
+description = "Run the eql-types SQL-backed property tests (needs Postgres + ZeroKMS auth; panics without it — never skips)"
+dir = "{{config_root}}"
+depends = ["test:proptest:prep"]
+# Point at the scratch DB prep installs the v3 surface into. ZeroKMS auth is
+# resolved in auto mode (CS_* env in CI, or a `stash auth login` profile
+# locally); the client key comes from a FallbackKeyProvider (env, then the
+# profile). Without auth the cipher build panics and the tests fail (they do not
+# skip). QUICKCHECK_TESTS pins the case count modestly — each case is a DB round trip.
+env = { DATABASE_URL = "postgresql://cipherstash:password@localhost:7432/cipherstash_proptest", QUICKCHECK_TESTS = "32" }
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+cargo test -p eql-types --features proptest
 """
 
 [tasks."types:generate"]

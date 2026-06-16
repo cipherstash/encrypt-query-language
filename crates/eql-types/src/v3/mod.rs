@@ -56,6 +56,17 @@ pub mod terms;
 pub mod text;
 pub mod timestamptz;
 
+/// Shared sqlx `Type`/`Encode`/`Decode` macro for the jsonb-backed domain
+/// types. Gated behind the `sqlx` feature.
+#[cfg(feature = "sqlx")]
+pub(crate) mod sqlx_support;
+
+/// SQL-backed property-test harness (function doubles + `Arbitrary` +
+/// lazily-built sqlx pool / cipher). Gated behind the `proptest` feature; the
+/// per-type property tests live co-located in each domain file.
+#[cfg(feature = "proptest")]
+pub mod proptest_support;
+
 /// The PostgreSQL schema every domain in this module inhabits.
 pub const SQL_SCHEMA: &str = "eql_v3";
 

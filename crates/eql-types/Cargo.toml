@@ -12,6 +12,51 @@ serde_json = "1"
 ts-rs = "10"
 schemars = "0.8"
 
+# --- Optional: the SQL-backed property-test layer (see the `proptest` feature) ---
+# All gated behind features so the default build stays lean (no DB, no async, no
+# crypto): `mise run test:crates` and downstream consumers never pull these.
+sqlx = { version = "0.8", default-features = false, features = [
+    "runtime-tokio",
+    "postgres",
+    "json",
+], optional = true }
+tokio = { version = "1", default-features = false, features = [
+    "rt-multi-thread",
+    "sync",
+], optional = true }
+quickcheck = { version = "1", optional = true }
+# Compile-time ident concat (`[< eq _ dom _ json >]`) so each generated
+# per-overload property test gets a unique, spec-like name.
+paste = { version = "1", optional = true }
+cipherstash-client = { version = "0.35", features = ["tokio"], optional = true }
+# `ProfileStore` for the client key from a `stash auth login` profile
+# (`~/.cipherstash`); combined with `EnvKeyProvider` (CI) via a
+# `FallbackKeyProvider`. `ZeroKMSBuilder::auto` resolves the ZeroKMS *auth* from
+# env-or-profile, but the dataset *key* still needs a key provider.
+stack-profile = { version = "0.35", optional = true }
+
+[features]
+default = []
+# `sqlx`: jsonb-backed `Type`/`Encode`/`Decode<Postgres>` for the domain types,
+# so a domain payload can be bound directly as a function-double argument and
+# cast to its `eql_v3.*` domain in SQL.
+sqlx = ["dep:sqlx"]
+# `proptest`: the full SQL-backed property-test harness — a lazily-built sqlx
+# pool + cipherstash-client cipher, quickcheck `Arbitrary` generators that
+# encrypt real terms, and the function doubles. Compiles the property tests
+# co-located in each domain file. Running them needs a live Postgres with the
+# v3 SQL installed AND ZeroKMS auth (`CS_*` env or a `stash auth login`
+# profile); the tests panic (fail) without it — they do not skip. See
+# `mise run test:proptest`.
+proptest = [
+    "sqlx",
+    "dep:tokio",
+    "dep:quickcheck",
+    "dep:paste",
+    "dep:cipherstash-client",
+    "dep:stack-profile",
+]
+
 [dev-dependencies]
 # Parity oracle: tests/catalog_parity.rs asserts the v3 domain inventory
 # exactly covers eql_scalars::CATALOG, so the types here cannot drift from
