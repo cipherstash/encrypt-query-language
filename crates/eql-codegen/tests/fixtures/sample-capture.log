@@ -1,0 +1,36 @@
+2026-06-15 07:17:35.041 UTC [206] 764 LOG:  duration: 0.247 ms
+2026-06-15 07:17:35.041 UTC [206] 764 LOG:  duration: 0.242 ms  plan:
+	{
+	  "Query Text": "/* eqlmatrix:matrix_int4_ord_index_engages_btree */ SELECT count(*) FROM matrix_int4_ord_idx_btree WHERE value = '{\"c\": \"mBbLD@`sV|I6gweT_IJSNuS%q7Q-DDkbIo4qcj_dX#lUy3#J*Lu{`a>ARwW=8K0qzx!w|FK9F^r#6K1P&C=xK@I6AO1#cbz(x-4?d2DZCWW*3bL($n}7(gJab+nz3ncUR\", \"i\": {\"c\": \"payload\", \"t\": \"_fixture_eql_v2_int4\"}, \"k\": \"ct\", \"v\": 2, \"hm\": \"f87e361e4ac3502898add25074bec82a66aa4ad563c9bb21aa89fd7b23e2a649\", \"ob\": [\"a1a1a1a1a1a1a1a165cecfeb3421313bec09225b7928c0122f3a5d81152b1289903ac6485ca9843c2de97fa9663be406a80b7d54a06ab01a16abf5fdcab6b6f5a2a48ba6fd34c0fe073e22142523afe9b70a767208f401d14ccbdaaa53c214b9daa4e24301494dbe9768d73382aa2dead9386828459abf320a33470c9abe740fa3c0f52902ef097483776af8b09d1e2a0e9a7b5175dd167e0995b94c82d7961035fed374e379f636a7a3e0c61a78b7d4135e262c058bbc6c0ef61071b1fb07d078d6246c801003454e1ea26eaae410f886406414fea7eec06f416b908acac7d58bf3f2a535382160cd0024836491d7b532b45e33d2a1e6bb613a291123fa7e3840c19aceb4286e51e9f4f942b883292d504f3d02741e2b70f4242f0ee1a1e0bde091c95e34a4f850acff554b20a1269a427874c92de042da0fef764af53b3c518e2c261c4fcd7139095ee12d0d51ba6737b28d0f93dfc6166324cadc89f85f6790371d3b06ed94e391e78514653d38547cd82ba69c124dae0039ab4a7e3c1ffd73bab50723b555aaccf6f8221f27310f8e0e6c77040069b5\"]}'::jsonb::eql_v3.int4_ord",
+	  "Plan": {
+	    "Node Type": "Aggregate",
+	    "Strategy": "Plain",
+	    "Partial Mode": "Simple",
+	    "Parallel Aware": false,
+	    "Async Capable": false,
+	    "Startup Cost": 8.54,
+	    "Total Cost": 8.54,
+	    "Plan Rows": 1,
+	    "Plan Width": 8,
+	    "Plans": [
+	      {
+	        "Node Type": "Index Scan",
+	        "Parent Relationship": "Outer",
+	        "Parallel Aware": false,
+	        "Async Capable": false,
+	        "Scan Direction": "Forward",
+	        "Index Name": "matrix_int4_ord_idx_btree_idx",
+	        "Relation Name": "matrix_int4_ord_idx_btree",
+	        "Alias": "matrix_int4_ord_idx_btree",
+	        "Startup Cost": 0.52,
+	        "Total Cost": 8.53,
+	        "Plan Rows": 1,
+	        "Plan Width": 0,
+	        "Index Cond": "(eql_v3.ore_block_u64_8_256((value)::jsonb) = eql_v3.ore_block_u64_8_256((('{\"c\": \"mBbLD@`sV|I6gweT_IJSNuS%q7Q-DDkbIo4qcj_dX#lUy3#J*Lu{`a>ARwW=8K0qzx!w|FK9F^r#6K1P&C=xK@I6AO1#cbz(x-4?d2DZCWW*3bL($n}7(gJab+nz3ncUR\", \"i\": {\"c\": \"payload\", \"t\": \"_fixture_eql_v2_int4\"}, \"k\": \"ct\", \"v\": 2, \"hm\": \"f87e361e4ac3502898add25074bec82a66aa4ad563c9bb21aa89fd7b23e2a649\", \"ob\": [\"a1a1a1a1a1a1a1a165cecfeb3421313bec09225b7928c0122f3a5d81152b1289903ac6485ca9843c2de97fa9663be406a80b7d54a06ab01a16abf5fdcab6b6f5a2a48ba6fd34c0fe073e22142523afe9b70a767208f401d14ccbdaaa53c214b9daa4e24301494dbe9768d73382aa2dead9386828459abf320a33470c9abe740fa3c0f52902ef097483776af8b09d1e2a0e9a7b5175dd167e0995b94c82d7961035fed374e379f636a7a3e0c61a78b7d4135e262c058bbc6c0ef61071b1fb07d078d6246c801003454e1ea26eaae410f886406414fea7eec06f416b908acac7d58bf3f2a535382160cd0024836491d7b532b45e33d2a1e6bb613a291123fa7e3840c19aceb4286e51e9f4f942b883292d504f3d02741e2b70f4242f0ee1a1e0bde091c95e34a4f850acff554b20a1269a427874c92de042da0fef764af53b3c518e2c261c4fcd7139095ee12d0d51ba6737b28d0f93dfc6166324cadc89f85f6790371d3b06ed94e391e78514653d38547cd82ba69c124dae0039ab4a7e3c1ffd73bab50723b555aaccf6f8221f27310f8e0e6c77040069b5\"]}'::jsonb)::eql_v3.int4_ord)::jsonb))"
+	      }
+	    ]
+	  }
+	}
+2026-06-15 07:17:41.329 UTC [258] 0 ERROR:  operator = is not supported for eql_v3.int4
+2026-06-15 07:17:41.329 UTC [258] 0 CONTEXT:  PL/pgSQL function eql_v3.eq(eql_v3.int4,eql_v3.int4) line 1 at RAISE
+2026-06-15 07:17:41.329 UTC [258] 0 STATEMENT:  /* eqlmatrix:matrix_int4_storage_eq_blocker */ SELECT $1::jsonb::eql_v3.int4 = $2::jsonb::eql_v3.int4

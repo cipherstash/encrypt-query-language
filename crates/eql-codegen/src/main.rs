@@ -27,6 +27,27 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
 
+    // `ledger <raw-log> <out-json>`: normalize a captured logging-Postgres raw
+    // log into the per-statement ledger keyed on the inline /* eqlmatrix:… */
+    // tag. Consumed by the Stage 4 matcher. No judgement happens here.
+    if args.len() == 4 && args[1] == "ledger" {
+        let raw = match std::fs::read_to_string(&args[2]) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("error: reading raw log {}: {e}", args[2]);
+                return ExitCode::FAILURE;
+            }
+        };
+        let ledger = eql_codegen::ledger::parse_ledger(&raw);
+        let json = serde_json::to_string_pretty(&ledger).expect("serialize ledger");
+        if let Err(e) = std::fs::write(&args[3], json) {
+            eprintln!("error: writing ledger {}: {e}", args[3]);
+            return ExitCode::FAILURE;
+        }
+        eprintln!("wrote ledger with {} records to {}", ledger.records.len(), args[3]);
+        return ExitCode::SUCCESS;
+    }
+
     if args.len() == 1 {
         // No args: generate every type's gitignored SQL surface.
         match generate_all(&repo_root()) {
@@ -42,5 +63,6 @@ fn main() -> ExitCode {
     eprintln!("Usage: eql-codegen            (generate all types)");
     eprintln!("       eql-codegen list-types (print catalog tokens)");
     eprintln!("       eql-codegen dump-catalog (print catalog surface as JSON)");
+    eprintln!("       eql-codegen ledger <raw-log> <out-json> (normalize a capture log to a ledger)");
     ExitCode::from(2)
 }
