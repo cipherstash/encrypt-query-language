@@ -6,7 +6,7 @@
 --! @file v3/sem/ore_block_256/functions.sql
 --! @brief ORE block construction, extraction, and comparison (eql_v3 SEM).
 --!
---! jsonb-only subset of src/ore_block_256/functions.sql. The
+--! jsonb-only subset of src/ore_block_u64_8_256/functions.sql. The
 --! encrypted-column overloads are omitted; the helper jsonb_array_to_bytea_array
 --! and pgcrypto encrypt() are reached via the forked src/v3/common.sql and
 --! src/v3/crypto.sql so the whole closure stays under src/v3. (Doc comments
