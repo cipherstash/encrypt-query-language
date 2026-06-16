@@ -35,8 +35,20 @@ POSTGRES_DB = "cipherstash"
 POSTGRES_USER = "cipherstash"
 POSTGRES_PASSWORD = "password"
 POSTGRES_HOST = "localhost"
-POSTGRES_PORT = "7432"
-DATABASE_URL = "postgresql://cipherstash:password@localhost:7432/cipherstash"
+# EQL_POSTGRES_PORT is the port-override knob. POSTGRES_PORT and DATABASE_URL
+# both template off `env.EQL_POSTGRES_PORT` (read from the parent process,
+# defaulting to 7432). It is deliberately the knob — and NOT POSTGRES_PORT /
+# DATABASE_URL directly — because mise's own [env] keys overwrite a same-named
+# parent export, so an outer `export DATABASE_URL=…7433` would be silently reset
+# to 7432 here; EQL_POSTGRES_PORT is not an [env] key, so its parent value
+# survives into the template. The capture run (tasks/test/capture.sh) sets
+# EQL_POSTGRES_PORT=7433 so `mise run test:sqlx:prep` and the matrix run target
+# the logging server; the default `mise run test` path leaves it unset, so both
+# keys render 7432 byte-for-byte. Both template DIRECTLY off env.EQL_POSTGRES_PORT
+# rather than chaining DATABASE_URL through POSTGRES_PORT, so the value does not
+# depend on [env] key render ordering.
+POSTGRES_PORT = "{{ env.EQL_POSTGRES_PORT | default(value='7432') }}"
+DATABASE_URL = "postgresql://cipherstash:password@localhost:{{ env.EQL_POSTGRES_PORT | default(value='7432') }}/cipherstash"
 
 [tasks."clean"]
 alias = 'k'
@@ -489,6 +501,11 @@ fi
 
 echo "Catalog-coverage OK: every CATALOG (type, domain) has matrix tests."
 """
+
+[tasks."test:capture"]
+description = "Run the eql_v3 scalar matrix against the dedicated logging Postgres and harvest the raw server log to target/log-capture/raw/<run-id>.log"
+dir = "{{config_root}}"
+run = "bash tasks/test/capture.sh"
 
 [tasks."test:matrix:expand"]
 description = "Regenerate the int4 matrix cargo-expand snapshot (requires the pinned nightly + cargo-expand)"
