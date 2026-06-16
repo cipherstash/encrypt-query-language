@@ -81,7 +81,11 @@ mod tests {
         let segments: Vec<&str> = int4.domains.iter().map(|d| d.segment.as_str()).collect();
         assert_eq!(segments, ["storage", "eq", "ord_ore", "ord"]);
 
-        let storage = int4.domains.iter().find(|d| d.segment == "storage").unwrap();
+        let storage = int4
+            .domains
+            .iter()
+            .find(|d| d.segment == "storage")
+            .unwrap();
         assert!(storage.supported_ops.is_empty(), "storage has no operators");
 
         let eq = int4.domains.iter().find(|d| d.segment == "eq").unwrap();
