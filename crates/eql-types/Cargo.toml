@@ -2,10 +2,11 @@
 name = "eql-types"
 version = "0.1.0"
 edition = "2021"
-description = "Canonical wire types for EQL payloads — the single Rust source of truth (TypeScript bindings and JSON Schemas are generated from these types in stacked changes)."
+description = "Canonical wire types for EQL payloads — the single Rust source of truth, with generated TypeScript bindings (JSON Schemas are generated from these types in a stacked change)."
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
+ts-rs = "10"
 
 [dev-dependencies]
 # Parity oracle: tests/catalog_parity.rs asserts the v3 domain inventory
