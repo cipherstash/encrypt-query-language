@@ -89,7 +89,7 @@ async fn no_encrypted_domain_inline_critical_function_is_pinned(pool: PgPool) ->
 
 /// Direct guard for the self-contained eql_v3 SEM index-term functions. Unlike
 /// the structural guard above (which covers jsonb-domain-arg functions), these
-/// take a composite (the ore_block_u64_8_256 and ore_cllw comparators) or raw
+/// take a composite (the ore_block_256 and ore_cllw comparators) or raw
 /// jsonb (hmac_256, bloom_filter, the ore_cllw/has_ore_cllw extractors, the two
 /// per-encrypted-value `jsonb_array_to_*` helpers) arg, so they are NOT caught
 /// by the structural pin-skip and need explicit inline_critical allowlisting. If
@@ -97,7 +97,7 @@ async fn no_encrypted_domain_inline_critical_function_is_pinned(pool: PgPool) ->
 /// regresses to Seq Scan — this test fails instead.
 ///
 /// `jsonb_array_to_bytea_array(jsonb)` and
-/// `jsonb_array_to_ore_block_u64_8_256(jsonb)` are included here: both take a
+/// `jsonb_array_to_ore_block_256(jsonb)` are included here: both take a
 /// bare `jsonb` arg (not a jsonb-backed encrypted DOMAIN), so the structural
 /// skip in tasks/pin_search_path.sql does not recognise them — they are kept
 /// unpinned by the `eql-inline-critical` COMMENT marker instead. This test
@@ -113,7 +113,7 @@ async fn eql_v3_sem_inline_critical_functions_are_unpinned(pool: PgPool) -> Resu
         WITH expected(proname, pronargs, arg0, arg1) AS (
           VALUES
             ('jsonb_array_to_bytea_array', 1, 'jsonb'::regtype, 0::oid),
-            ('jsonb_array_to_ore_block_u64_8_256', 1, 'jsonb'::regtype, 0::oid),
+            ('jsonb_array_to_ore_block_256', 1, 'jsonb'::regtype, 0::oid),
             ('ore_cllw', 1, 'jsonb'::regtype, 0::oid),
             ('has_ore_cllw', 1, 'jsonb'::regtype, 0::oid),
             ('meta_data', 1, 'jsonb'::regtype, 0::oid),
@@ -135,9 +135,9 @@ async fn eql_v3_sem_inline_critical_functions_are_unpinned(pool: PgPool) -> Resu
         WHERE n.nspname = 'eql_v3'
           AND (
             (p.pronargs = 2 AND p.proname IN (
-              'ore_block_u64_8_256_eq','ore_block_u64_8_256_neq',
-              'ore_block_u64_8_256_lt','ore_block_u64_8_256_lte',
-              'ore_block_u64_8_256_gt','ore_block_u64_8_256_gte'))
+              'ore_block_256_eq','ore_block_256_neq',
+              'ore_block_256_lt','ore_block_256_lte',
+              'ore_block_256_gt','ore_block_256_gte'))
             OR (p.pronargs = 2 AND p.proname IN (
               'ore_cllw_eq','ore_cllw_neq',
               'ore_cllw_lt','ore_cllw_lte',
@@ -148,7 +148,7 @@ async fn eql_v3_sem_inline_critical_functions_are_unpinned(pool: PgPool) -> Resu
               'ore_cllw',
               'has_ore_cllw',
               'jsonb_array_to_bytea_array',
-              'jsonb_array_to_ore_block_u64_8_256')
+              'jsonb_array_to_ore_block_256')
                 AND p.proargtypes[0] = 'jsonb'::regtype)
             OR e.proname IS NOT NULL
           )
@@ -173,7 +173,7 @@ async fn eql_v3_sem_inline_critical_functions_are_unpinned(pool: PgPool) -> Resu
 }
 
 /// Companion guard for the two bare-`jsonb` per-encrypted-value helpers
-/// (`jsonb_array_to_bytea_array`, `jsonb_array_to_ore_block_u64_8_256`). The
+/// (`jsonb_array_to_bytea_array`, `jsonb_array_to_ore_block_256`). The
 /// unpinned state asserted above is only DURABLE because each helper carries an
 /// `eql-inline-critical` COMMENT marker that `tasks/pin_search_path.sql` honours
 /// (it skips pinning functions whose `pg_description` matches
@@ -193,7 +193,7 @@ async fn eql_v3_sem_inline_critical_helpers_carry_marker(pool: PgPool) -> Result
         WITH expected(proname, pronargs, arg0, arg1) AS (
           VALUES
             ('jsonb_array_to_bytea_array', 1, 'jsonb'::regtype, 0::oid),
-            ('jsonb_array_to_ore_block_u64_8_256', 1, 'jsonb'::regtype, 0::oid),
+            ('jsonb_array_to_ore_block_256', 1, 'jsonb'::regtype, 0::oid),
             ('ore_cllw', 1, 'jsonb'::regtype, 0::oid),
             ('has_ore_cllw', 1, 'jsonb'::regtype, 0::oid),
             ('meta_data', 1, 'jsonb'::regtype, 0::oid),

@@ -133,7 +133,7 @@ pub struct FunctionsContext {
 /// Build the inlinable index-extractor entry for a domain term.
 ///
 /// The `RETURNS` type name equals the constructor name (`hmac_256`,
-/// `ore_block_u64_8_256`); qualify it with `SCHEMA` — the same schema as the
+/// `ore_block_256`); qualify it with `SCHEMA` — the same schema as the
 /// body's constructor call — so the declared return type and the call stay in
 /// lockstep. `Term::returns()` is intentionally not used.
 pub fn extractor_entry(term: Term) -> FnEntry {

@@ -28,7 +28,7 @@ impl Term {
     pub const fn ctor(self) -> &'static str {
         match self {
             Term::Hm => "hmac_256",
-            Term::Ore => "ore_block_u64_8_256",
+            Term::Ore => "ore_block_256",
             Term::Bloom => "bloom_filter",
         }
     }
@@ -57,8 +57,8 @@ impl Term {
         match self {
             Term::Hm => &["src/v3/sem/hmac_256/functions.sql"],
             Term::Ore => &[
-                "src/v3/sem/ore_block_u64_8_256/functions.sql",
-                "src/v3/sem/ore_block_u64_8_256/operators.sql",
+                "src/v3/sem/ore_block_256/functions.sql",
+                "src/v3/sem/ore_block_256/operators.sql",
             ],
             Term::Bloom => &["src/v3/sem/bloom_filter/functions.sql"],
         }

@@ -13,7 +13,7 @@ A scalar encrypted-domain type is a family of concrete `jsonb` domains in the
 an `eql_v2` uninstall. Their extractors, comparison wrappers, and MIN/MAX
 aggregates also live in `eql_v3`; the searchable-encrypted-metadata (SEM)
 index-term types they return (`eql_v3.hmac_256`,
-`eql_v3.ore_block_u64_8_256`) are **also `eql_v3`** — hand-written under
+`eql_v3.ore_block_256`) are **also `eql_v3`** — hand-written under
 `src/v3/sem/`. The whole v3 surface is self-contained: it owns every type it
 needs and has no runtime dependency on `eql_v2` (CI gates this — see §6).
 
@@ -124,7 +124,7 @@ behaviour change, not a refactor:
 | Term    | JSON key | Extractor    | Returns                          | Operators                  |
 | ------- | -------- | ------------ | -------------------------------- | -------------------------- |
 | `Hm`    | `hm`     | `eq_term`    | `eql_v3.hmac_256`                | `=` `<>`                   |
-| `Ore`   | `ob`     | `ord_term`   | `eql_v3.ore_block_u64_8_256`     | `=` `<>` `<` `<=` `>` `>=` |
+| `Ore`   | `ob`     | `ord_term`   | `eql_v3.ore_block_256`     | `=` `<>` `<` `<=` `>` `>=` |
 | `Bloom` | `bf`     | `match_term` | `eql_v3.bloom_filter`            | `@>` `<@`                  |
 
 A type that needs a non-ORE equality term on an ordered domain needs a **new
@@ -558,8 +558,8 @@ CREATE INDEX ... ON table_name USING btree (eql_v3.ord_term(col));
 CREATE INDEX ... ON table_name USING hash  (eql_v3.eq_term(col));
 ```
 
-`ore` depends on `src/v3/sem/ore_block_u64_8_256/functions.sql` and
-`src/v3/sem/ore_block_u64_8_256/operators.sql`; `hm` depends on
+`ore` depends on `src/v3/sem/ore_block_256/functions.sql` and
+`src/v3/sem/ore_block_256/operators.sql`; `hm` depends on
 `src/v3/sem/hmac_256/functions.sql`.
 
 ### Extension files
@@ -623,7 +623,7 @@ edits:
   extractor names (`eq`, `neq`, `lt`, `lte`, `gt`, `gte`, `eq_term`, `ord_term`,
   the `Bloom` term's `match_term` extractor and its `contains` / `contained_by`
   containment wrappers) plus the generated `min` / `max` aggregates and the SEM
-  `hmac_256` / `ore_block_u64_8_256` / `bloom_filter` constructors are already
+  `hmac_256` / `ore_block_256` / `bloom_filter` constructors are already
   covered by `eql_v3`-schema entries. A new scalar type inherits coverage; **a
   new term needs splinter entries for each new name it introduces — both its
   extractor and its comparison wrappers** (adding `Bloom` required `match_term`,
@@ -665,7 +665,7 @@ recognises exactly these two forms; any other argument is a usage error.
 The generator targets the `eql_v3` schema throughout: `SCHEMA = "eql_v3"`
 (`crates/eql-codegen/src/consts.rs`) qualifies both the domain families and the
 SEM index-term types the extractors return (`eql_v3.hmac_256`,
-`eql_v3.ore_block_u64_8_256`), so no generated SQL references `eql_v2`.
+`eql_v3.ore_block_256`), so no generated SQL references `eql_v2`.
 
 `tasks/build.sh` runs `cargo run -p eql-codegen` at the start of every `mise run
 build`, so the generated SQL is never checked in. (The build first sweeps every
