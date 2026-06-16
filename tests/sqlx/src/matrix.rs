@@ -2052,8 +2052,42 @@ macro_rules! __scalar_matrix_index_outer {
         combos = [$($combo:tt),+ $(,)?] $(,)?
     ) => {
         $(
-            $crate::__scalar_matrix_index_case! {
+            $crate::__scalar_matrix_index_op_outer! {
                 suite = $suite, scalar = $scalar, script = $script, script_path = $script_path, combo = $combo,
+            }
+        )+
+    };
+}
+
+// ============================================================================
+// Index-engagement op fan-out (Stage 3, finding-1). The index category's op
+// list was previously swept INSIDE one test body named per (domain, using),
+// collapsing every operator onto one case_id. This middle driver fans the op
+// list out so each (domain, op, using) is its own #[sqlx::test] named
+// `matrix_<T>_<domain>_index_engages_<op>_<using>` — op-qualified and joinable
+// to per-operator log evidence (design §3 "Naming fix", §"Canonical case_id
+// grammar"). The leaf body below is the Stage 2 leaf with the inner op
+// repetition removed and the name op-qualified — the test name, case_id, and
+// table/index names all gain `$op_name`; the op is now a single binding, not a
+// swept list. The assertion logic itself is unchanged.
+// ============================================================================
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_index_op_outer {
+    (
+        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
+        combo = (
+            $dom_name:ident, $variant:ident,
+            $using:literal,
+            [$(($op_name:ident, $op:literal)),+ $(,)?] $(,)?
+        ) $(,)?
+    ) => {
+        $(
+            $crate::__scalar_matrix_index_case! {
+                suite = $suite, scalar = $scalar, script = $script, script_path = $script_path,
+                dom_name = $dom_name, variant = $variant,
+                using = $using,
+                op_name = $op_name, op = $op,
             }
         )+
     };
@@ -2064,18 +2098,16 @@ macro_rules! __scalar_matrix_index_outer {
 macro_rules! __scalar_matrix_index_case {
     (
         suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
-        combo = (
-            $dom_name:ident, $variant:ident,
-            $using:literal,
-            [$(($op_name:ident, $op:literal)),+ $(,)?] $(,)?
-        ) $(,)?
+        dom_name = $dom_name:ident, variant = $variant:ident,
+        using = $using:literal,
+        op_name = $op_name:ident, op = $op:literal $(,)?
     ) => {
         $crate::paste::paste! {
             #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
-            async fn [<matrix_ $suite _ $dom_name _index_engages_ $using>](
+            async fn [<matrix_ $suite _ $dom_name _index_engages_ $op_name _ $using>](
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
-                let case_id: &str = stringify!([<matrix_ $suite _ $dom_name _index_engages_ $using>]);
+                let case_id: &str = stringify!([<matrix_ $suite _ $dom_name _index_engages_ $op_name _ $using>]);
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 // Catalog-derived: the extractor serving this combo's operators
                 // (the SAME `Term::extractor_for_operator` codegen uses). Every
@@ -2085,15 +2117,15 @@ macro_rules! __scalar_matrix_index_case {
                 // indexes — fails loudly instead of silently indexing only the
                 // first op's extractor.
                 let extractor = $crate::scalar_domains::combo_extractor(
-                    &spec, &[$($op),+],
+                    &spec, &[$op],
                 )?;
                 let table = concat!(
                     "matrix_", stringify!($suite), "_", stringify!($dom_name),
-                    "_idx_", $using,
+                    "_idx_", stringify!($op_name), "_", $using,
                 );
                 let index = concat!(
                     "matrix_", stringify!($suite), "_", stringify!($dom_name),
-                    "_idx_", $using, "_idx",
+                    "_idx_", stringify!($op_name), "_", $using, "_idx",
                 );
                 let fixture_table =
                     <$scalar as $crate::scalar_domains::ScalarType>::fixture_table_name();
@@ -2120,51 +2152,42 @@ macro_rules! __scalar_matrix_index_case {
                     $crate::scalar_domains::fetch_fixture_payload::<$scalar>(&pool, pivot).await?;
                 let lit = $crate::scalar_domains::sql_string_literal(&payload);
 
-                // VALIDITY, NOT PREFERENCE: `enable_seqscan = off` is set
-                // above and the table holds only the ~17 fixture rows, so the
-                // planner has no cheaper option than the functional index.
-                // These arms therefore prove the index is *usable* for each
-                // (op, rhs-cast) shape — that the operator resolves through
-                // `{extractor}` and produces a real index-scan node — NOT that
-                // the planner would *prefer* the index under realistic costs.
-                // Cost-preference is proven ONLY by the `*_scale_preference_*`
-                // tests (`#[cfg(feature = "scale")]`), which are OFF in default
-                // PR CI. See the module header on `assert_index_scan_uses`.
-                //
-                // The assertion is node-type-aware (Index / Index Only /
-                // Bitmap Index Scan referencing `index`), not a bare substring
-                // match on the text plan, so an index name that merely appears
-                // in an Index Cond / Recheck Cond / filter cannot pass it.
+                // VALIDITY, NOT PREFERENCE: with `enable_seqscan = off` (set
+                // above) this arm proves the index is *usable* for this single
+                // (op, rhs-cast) shape — not that the planner would *prefer* it
+                // (cost-preference is proven only by `*_scale_preference_*`). See
+                // the module header on `assert_index_scan_uses` for the full
+                // caveat. (This comment expands into each per-op arm; keep it a
+                // one-line pointer, not the full paragraph, to avoid N-fold bloat
+                // in the regenerated int4_expanded.rs snapshot.)
                 let rhs_casts = [format!("::{d}", d = &spec.sql_domain), String::new()];
-                $(
-                    for rhs_cast in &rhs_casts {
-                        let query = format!(
-                            "SELECT * FROM {table} WHERE value {op} {lit}::jsonb{cast}", op = $op, cast = rhs_cast,
-                        );
-                        // Plan witness B: EXECUTE the predicate so auto_explain
-                        // logs the real executed plan (Index Scan + index name),
-                        // tagged with case_id. enable_seqscan is off on this tx,
-                        // so a usable index is the only option. The in-process
-                        // EXPLAIN assertion below stays as the fast local check.
-                        let exec_sql = $crate::eqlmatrix::tag(
-                            Some(case_id),
-                            &format!("SELECT count(*) FROM {table} WHERE value {op} {lit}::jsonb{cast}",
-                                     op = $op, cast = rhs_cast),
-                        );
-                        let _: i64 = sqlx::query_scalar(&exec_sql).fetch_one(&mut *tx).await?;
+                for rhs_cast in &rhs_casts {
+                    let query = format!(
+                        "SELECT * FROM {table} WHERE value {op} {lit}::jsonb{cast}", op = $op, cast = rhs_cast,
+                    );
+                    // Plan witness B: EXECUTE the predicate so auto_explain logs
+                    // the real executed plan (Index Scan + index name), tagged with
+                    // case_id. enable_seqscan is off on this tx, so a usable index
+                    // is the only option. The in-process EXPLAIN assertion below
+                    // stays as the fast local check.
+                    let exec_sql = $crate::eqlmatrix::tag(
+                        Some(case_id),
+                        &format!("SELECT count(*) FROM {table} WHERE value {op} {lit}::jsonb{cast}",
+                                 op = $op, cast = rhs_cast),
+                    );
+                    let _: i64 = sqlx::query_scalar(&exec_sql).fetch_one(&mut *tx).await?;
 
-                        $crate::matrix::assert_index_scan_uses(
-                            &mut *tx,
-                            case_id,
-                            &query,
-                            index,
-                            &format!(
-                                "domain={} op={} rhs_cast={:?} must use index={}",
-                                &spec.sql_domain, $op, rhs_cast, index,
-                            ),
-                        ).await?;
-                    }
-                )+
+                    $crate::matrix::assert_index_scan_uses(
+                        &mut *tx,
+                        case_id,
+                        &query,
+                        index,
+                        &format!(
+                            "domain={} op={} rhs_cast={:?} must use index={}",
+                            &spec.sql_domain, $op, rhs_cast, index,
+                        ),
+                    ).await?;
+                }
 
                 tx.commit().await?;
                 Ok(())
