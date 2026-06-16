@@ -14,8 +14,8 @@ scalars::<T>::matrix_<T>_eq_eq_pivot_min_cross_shape
 scalars::<T>::matrix_<T>_eq_eq_supported_null
 scalars::<T>::matrix_<T>_eq_gt_blocker
 scalars::<T>::matrix_<T>_eq_gte_blocker
-scalars::<T>::matrix_<T>_eq_index_engages_btree
-scalars::<T>::matrix_<T>_eq_index_engages_hash
+scalars::<T>::matrix_<T>_eq_index_engages_eq_btree
+scalars::<T>::matrix_<T>_eq_index_engages_eq_hash
 scalars::<T>::matrix_<T>_eq_lt_blocker
 scalars::<T>::matrix_<T>_eq_lte_blocker
 scalars::<T>::matrix_<T>_eq_native_absent_ops
@@ -71,7 +71,11 @@ scalars::<T>::matrix_<T>_ord_gte_pivot_mid_cross_shape
 scalars::<T>::matrix_<T>_ord_gte_pivot_min_correctness
 scalars::<T>::matrix_<T>_ord_gte_pivot_min_cross_shape
 scalars::<T>::matrix_<T>_ord_gte_supported_null
-scalars::<T>::matrix_<T>_ord_index_engages_btree
+scalars::<T>::matrix_<T>_ord_index_engages_eq_btree
+scalars::<T>::matrix_<T>_ord_index_engages_gt_btree
+scalars::<T>::matrix_<T>_ord_index_engages_gte_btree
+scalars::<T>::matrix_<T>_ord_index_engages_lt_btree
+scalars::<T>::matrix_<T>_ord_index_engages_lte_btree
 scalars::<T>::matrix_<T>_ord_lt_pivot_max_correctness
 scalars::<T>::matrix_<T>_ord_lt_pivot_max_cross_shape
 scalars::<T>::matrix_<T>_ord_lt_pivot_mid_correctness
@@ -146,7 +150,11 @@ scalars::<T>::matrix_<T>_ord_ore_gte_pivot_mid_cross_shape
 scalars::<T>::matrix_<T>_ord_ore_gte_pivot_min_correctness
 scalars::<T>::matrix_<T>_ord_ore_gte_pivot_min_cross_shape
 scalars::<T>::matrix_<T>_ord_ore_gte_supported_null
-scalars::<T>::matrix_<T>_ord_ore_index_engages_btree
+scalars::<T>::matrix_<T>_ord_ore_index_engages_eq_btree
+scalars::<T>::matrix_<T>_ord_ore_index_engages_gt_btree
+scalars::<T>::matrix_<T>_ord_ore_index_engages_gte_btree
+scalars::<T>::matrix_<T>_ord_ore_index_engages_lt_btree
+scalars::<T>::matrix_<T>_ord_ore_index_engages_lte_btree
 scalars::<T>::matrix_<T>_ord_ore_lt_pivot_max_correctness
 scalars::<T>::matrix_<T>_ord_ore_lt_pivot_max_cross_shape
 scalars::<T>::matrix_<T>_ord_ore_lt_pivot_mid_correctness
