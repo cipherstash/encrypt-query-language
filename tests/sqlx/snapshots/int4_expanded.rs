@@ -9,9 +9,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 553usize,
+            start_line: 638usize,
             start_col: 26usize,
-            end_line: 553usize,
+            end_line: 638usize,
             end_col: 60usize,
             compile_fail: false,
             no_run: false,
@@ -86,9 +86,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 553usize,
+            start_line: 638usize,
             start_col: 26usize,
-            end_line: 553usize,
+            end_line: 638usize,
             end_col: 60usize,
             compile_fail: false,
             no_run: false,
@@ -163,9 +163,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 553usize,
+            start_line: 638usize,
             start_col: 26usize,
-            end_line: 553usize,
+            end_line: 638usize,
             end_col: 60usize,
             compile_fail: false,
             no_run: false,
@@ -240,9 +240,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 553usize,
+            start_line: 638usize,
             start_col: 26usize,
-            end_line: 553usize,
+            end_line: 638usize,
             end_col: 60usize,
             compile_fail: false,
             no_run: false,
@@ -319,9 +319,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -338,6 +338,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_eq_pivot_min_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -350,7 +351,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "=",
                             lit,
@@ -363,7 +365,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "=", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "=", &predicate, &expected)
                     .await
             }
         }
@@ -418,9 +420,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -437,6 +439,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_eq_pivot_max_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -449,7 +452,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "=",
                             lit,
@@ -462,7 +466,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "=", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "=", &predicate, &expected)
                     .await
             }
         }
@@ -517,9 +521,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -536,6 +540,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_eq_pivot_mid_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -548,7 +553,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "=",
                             lit,
@@ -561,7 +567,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "=", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "=", &predicate, &expected)
                     .await
             }
         }
@@ -616,9 +622,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -635,6 +641,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_neq_pivot_min_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -647,7 +654,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<>",
                             lit,
@@ -660,7 +668,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "<>", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "<>", &predicate, &expected)
                     .await
             }
         }
@@ -715,9 +723,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -734,6 +742,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_neq_pivot_max_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -746,7 +755,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<>",
                             lit,
@@ -759,7 +769,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "<>", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "<>", &predicate, &expected)
                     .await
             }
         }
@@ -814,9 +824,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -833,6 +843,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_neq_pivot_mid_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -845,7 +856,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<>",
                             lit,
@@ -858,7 +870,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "<>", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "<>", &predicate, &expected)
                     .await
             }
         }
@@ -913,9 +925,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -932,6 +944,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_eq_pivot_min_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -944,7 +957,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "=",
                             lit,
@@ -957,7 +971,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "=", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "=", &predicate, &expected)
                     .await
             }
         }
@@ -1012,9 +1026,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1031,6 +1045,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_eq_pivot_max_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -1043,7 +1058,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "=",
                             lit,
@@ -1056,7 +1072,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "=", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "=", &predicate, &expected)
                     .await
             }
         }
@@ -1111,9 +1127,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1130,6 +1146,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_eq_pivot_mid_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -1142,7 +1159,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "=",
                             lit,
@@ -1155,7 +1173,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "=", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "=", &predicate, &expected)
                     .await
             }
         }
@@ -1210,9 +1228,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1229,6 +1247,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_neq_pivot_min_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -1241,7 +1260,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<>",
                             lit,
@@ -1254,7 +1274,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "<>", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "<>", &predicate, &expected)
                     .await
             }
         }
@@ -1309,9 +1329,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1328,6 +1348,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_neq_pivot_max_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -1340,7 +1361,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<>",
                             lit,
@@ -1353,7 +1375,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "<>", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "<>", &predicate, &expected)
                     .await
             }
         }
@@ -1408,9 +1430,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1427,6 +1449,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_neq_pivot_mid_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -1439,7 +1462,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<>",
                             lit,
@@ -1452,7 +1476,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "<>", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "<>", &predicate, &expected)
                     .await
             }
         }
@@ -1507,9 +1531,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1526,6 +1550,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_eq_pivot_min_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -1538,7 +1563,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "=",
                             lit,
@@ -1551,7 +1577,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "=", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "=", &predicate, &expected)
                     .await
             }
         }
@@ -1606,9 +1632,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1625,6 +1651,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_eq_pivot_max_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -1637,7 +1664,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "=",
                             lit,
@@ -1650,7 +1678,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "=", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "=", &predicate, &expected)
                     .await
             }
         }
@@ -1705,9 +1733,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1724,6 +1752,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_eq_pivot_mid_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -1736,7 +1765,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "=",
                             lit,
@@ -1749,7 +1779,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "=", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "=", &predicate, &expected)
                     .await
             }
         }
@@ -1804,9 +1834,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1823,6 +1853,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_neq_pivot_min_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -1835,7 +1866,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<>",
                             lit,
@@ -1848,7 +1880,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "<>", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "<>", &predicate, &expected)
                     .await
             }
         }
@@ -1903,9 +1935,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1922,6 +1954,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_neq_pivot_max_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -1934,7 +1967,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<>",
                             lit,
@@ -1947,7 +1981,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "<>", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "<>", &predicate, &expected)
                     .await
             }
         }
@@ -2002,9 +2036,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2021,6 +2055,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_neq_pivot_mid_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -2033,7 +2068,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<>",
                             lit,
@@ -2046,7 +2082,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "<>", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "<>", &predicate, &expected)
                     .await
             }
         }
@@ -2101,9 +2137,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2120,6 +2156,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_lt_pivot_min_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -2132,7 +2169,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<",
                             lit,
@@ -2145,7 +2183,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "<", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "<", &predicate, &expected)
                     .await
             }
         }
@@ -2200,9 +2238,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2219,6 +2257,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_lt_pivot_max_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -2231,7 +2270,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<",
                             lit,
@@ -2244,7 +2284,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "<", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "<", &predicate, &expected)
                     .await
             }
         }
@@ -2299,9 +2339,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2318,6 +2358,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_lt_pivot_mid_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -2330,7 +2371,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<",
                             lit,
@@ -2343,7 +2385,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "<", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "<", &predicate, &expected)
                     .await
             }
         }
@@ -2398,9 +2440,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2417,6 +2459,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_lte_pivot_min_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -2429,7 +2472,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<=",
                             lit,
@@ -2442,7 +2486,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "<=", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "<=", &predicate, &expected)
                     .await
             }
         }
@@ -2497,9 +2541,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2516,6 +2560,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_lte_pivot_max_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -2528,7 +2573,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<=",
                             lit,
@@ -2541,7 +2587,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "<=", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "<=", &predicate, &expected)
                     .await
             }
         }
@@ -2596,9 +2642,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2615,6 +2661,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_lte_pivot_mid_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -2627,7 +2674,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<=",
                             lit,
@@ -2640,7 +2688,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "<=", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "<=", &predicate, &expected)
                     .await
             }
         }
@@ -2695,9 +2743,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2714,6 +2762,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_gt_pivot_min_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -2726,7 +2775,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             ">",
                             lit,
@@ -2739,7 +2789,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, ">", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, ">", &predicate, &expected)
                     .await
             }
         }
@@ -2794,9 +2844,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2813,6 +2863,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_gt_pivot_max_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -2825,7 +2876,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             ">",
                             lit,
@@ -2838,7 +2890,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, ">", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, ">", &predicate, &expected)
                     .await
             }
         }
@@ -2893,9 +2945,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2912,6 +2964,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_gt_pivot_mid_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -2924,7 +2977,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             ">",
                             lit,
@@ -2937,7 +2991,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, ">", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, ">", &predicate, &expected)
                     .await
             }
         }
@@ -2992,9 +3046,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3011,6 +3065,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_gte_pivot_min_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -3023,7 +3078,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             ">=",
                             lit,
@@ -3036,7 +3092,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, ">=", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, ">=", &predicate, &expected)
                     .await
             }
         }
@@ -3091,9 +3147,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3110,6 +3166,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_gte_pivot_max_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -3122,7 +3179,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             ">=",
                             lit,
@@ -3135,7 +3193,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, ">=", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, ">=", &predicate, &expected)
                     .await
             }
         }
@@ -3190,9 +3248,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3209,6 +3267,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_gte_pivot_mid_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -3221,7 +3280,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             ">=",
                             lit,
@@ -3234,7 +3294,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, ">=", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, ">=", &predicate, &expected)
                     .await
             }
         }
@@ -3289,9 +3349,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3308,6 +3368,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_lt_pivot_min_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -3320,7 +3381,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<",
                             lit,
@@ -3333,7 +3395,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "<", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "<", &predicate, &expected)
                     .await
             }
         }
@@ -3388,9 +3450,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3407,6 +3469,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_lt_pivot_max_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -3419,7 +3482,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<",
                             lit,
@@ -3432,7 +3496,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "<", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "<", &predicate, &expected)
                     .await
             }
         }
@@ -3487,9 +3551,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3506,6 +3570,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_lt_pivot_mid_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -3518,7 +3583,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<",
                             lit,
@@ -3531,7 +3597,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "<", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "<", &predicate, &expected)
                     .await
             }
         }
@@ -3586,9 +3652,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3605,6 +3671,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_lte_pivot_min_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -3617,7 +3684,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<=",
                             lit,
@@ -3630,7 +3698,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "<=", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "<=", &predicate, &expected)
                     .await
             }
         }
@@ -3685,9 +3753,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3704,6 +3772,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_lte_pivot_max_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -3716,7 +3785,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<=",
                             lit,
@@ -3729,7 +3799,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "<=", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "<=", &predicate, &expected)
                     .await
             }
         }
@@ -3784,9 +3854,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3803,6 +3873,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_lte_pivot_mid_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -3815,7 +3886,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<=",
                             lit,
@@ -3828,7 +3900,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, "<=", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, "<=", &predicate, &expected)
                     .await
             }
         }
@@ -3883,9 +3955,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3902,6 +3974,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_gt_pivot_min_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -3914,7 +3987,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             ">",
                             lit,
@@ -3927,7 +4001,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, ">", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, ">", &predicate, &expected)
                     .await
             }
         }
@@ -3982,9 +4056,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4001,6 +4075,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_gt_pivot_max_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -4013,7 +4088,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             ">",
                             lit,
@@ -4026,7 +4102,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, ">", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, ">", &predicate, &expected)
                     .await
             }
         }
@@ -4081,9 +4157,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4100,6 +4176,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_gt_pivot_mid_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -4112,7 +4189,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             ">",
                             lit,
@@ -4125,7 +4203,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, ">", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, ">", &predicate, &expected)
                     .await
             }
         }
@@ -4180,9 +4258,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4199,6 +4277,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_gte_pivot_min_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -4211,7 +4290,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             ">=",
                             lit,
@@ -4224,7 +4304,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, ">=", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, ">=", &predicate, &expected)
                     .await
             }
         }
@@ -4279,9 +4359,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4298,6 +4378,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_gte_pivot_max_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -4310,7 +4391,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             ">=",
                             lit,
@@ -4323,7 +4405,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, ">=", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, ">=", &predicate, &expected)
                     .await
             }
         }
@@ -4378,9 +4460,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 689usize,
+            start_line: 774usize,
             start_col: 22usize,
-            end_line: 689usize,
+            end_line: 774usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4397,6 +4479,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_gte_pivot_mid_correctness";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -4409,7 +4492,8 @@ pub mod int4 {
                 let predicate = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "payload::{0} {1} {2}::jsonb::{0}",
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
                             &spec.sql_domain,
                             ">=",
                             lit,
@@ -4422,7 +4506,7 @@ pub mod int4 {
                 );
                 ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
                     i32,
-                >(&pool, &spec.sql_domain, ">=", &predicate, &expected)
+                >(&pool, Some(case_id), &spec.sql_domain, ">=", &predicate, &expected)
                     .await
             }
         }
@@ -4477,9 +4561,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4496,6 +4580,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_eq_pivot_min_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -4516,14 +4601,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "=",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -4535,7 +4622,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "=", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "=", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -4544,7 +4631,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "=", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "=", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -4552,15 +4639,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -4643,9 +4733,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4662,6 +4752,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_eq_pivot_max_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -4682,14 +4773,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "=",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -4701,7 +4794,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "=", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "=", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -4710,7 +4803,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "=", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "=", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -4718,15 +4811,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -4809,9 +4905,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4828,6 +4924,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_eq_pivot_mid_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -4848,14 +4945,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "=",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -4867,7 +4966,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "=", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "=", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -4876,7 +4975,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "=", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "=", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -4884,15 +4983,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -4975,9 +5077,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4994,6 +5096,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_neq_pivot_min_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -5014,14 +5117,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "<>",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -5033,7 +5138,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "<>", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<>", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -5042,7 +5147,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "<>", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<>", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -5050,15 +5155,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -5141,9 +5249,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5160,6 +5268,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_neq_pivot_max_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -5180,14 +5289,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "<>",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -5199,7 +5310,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "<>", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<>", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -5208,7 +5319,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "<>", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<>", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -5216,15 +5327,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -5307,9 +5421,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5326,6 +5440,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_neq_pivot_mid_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -5346,14 +5461,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "<>",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -5365,7 +5482,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "<>", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<>", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -5374,7 +5491,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "<>", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<>", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -5382,15 +5499,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -5473,9 +5593,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5492,6 +5612,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_eq_pivot_min_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -5512,14 +5633,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "=",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -5531,7 +5654,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "=", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "=", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -5540,7 +5663,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "=", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "=", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -5548,15 +5671,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -5639,9 +5765,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5658,6 +5784,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_eq_pivot_max_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -5678,14 +5805,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "=",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -5697,7 +5826,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "=", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "=", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -5706,7 +5835,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "=", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "=", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -5714,15 +5843,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -5805,9 +5937,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5824,6 +5956,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_eq_pivot_mid_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -5844,14 +5977,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "=",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -5863,7 +5998,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "=", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "=", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -5872,7 +6007,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "=", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "=", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -5880,15 +6015,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -5971,9 +6109,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5990,6 +6128,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_neq_pivot_min_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -6010,14 +6149,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "<>",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -6029,7 +6170,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "<>", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<>", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -6038,7 +6179,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "<>", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<>", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -6046,15 +6187,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -6137,9 +6281,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6156,6 +6300,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_neq_pivot_max_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -6176,14 +6321,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "<>",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -6195,7 +6342,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "<>", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<>", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -6204,7 +6351,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "<>", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<>", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -6212,15 +6359,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -6303,9 +6453,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6322,6 +6472,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_neq_pivot_mid_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -6342,14 +6493,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "<>",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -6361,7 +6514,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "<>", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<>", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -6370,7 +6523,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "<>", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<>", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -6378,15 +6531,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -6469,9 +6625,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6488,6 +6644,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_eq_pivot_min_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -6508,14 +6665,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "=",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -6527,7 +6686,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "=", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "=", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -6536,7 +6695,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "=", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "=", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -6544,15 +6703,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -6635,9 +6797,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6654,6 +6816,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_eq_pivot_max_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -6674,14 +6837,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "=",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -6693,7 +6858,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "=", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "=", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -6702,7 +6867,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "=", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "=", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -6710,15 +6875,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -6801,9 +6969,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6820,6 +6988,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_eq_pivot_mid_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -6840,14 +7009,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "=",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -6859,7 +7030,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "=", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "=", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -6868,7 +7039,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "=", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "=", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -6876,15 +7047,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -6967,9 +7141,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6986,6 +7160,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_neq_pivot_min_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -7006,14 +7181,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "<>",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -7025,7 +7202,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "<>", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<>", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -7034,7 +7211,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "<>", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<>", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -7042,15 +7219,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -7133,9 +7313,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7152,6 +7332,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_neq_pivot_max_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -7172,14 +7353,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "<>",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -7191,7 +7374,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "<>", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<>", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -7200,7 +7383,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "<>", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<>", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -7208,15 +7391,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -7299,9 +7485,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7318,6 +7504,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_neq_pivot_mid_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -7338,14 +7525,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "<>",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -7357,7 +7546,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "<>", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<>", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -7366,7 +7555,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "<>", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<>", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -7374,15 +7563,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -7465,9 +7657,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7484,6 +7676,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_lt_pivot_min_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -7504,14 +7697,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "<",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -7523,7 +7718,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "<", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -7532,7 +7727,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "<", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -7540,15 +7735,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -7631,9 +7829,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7650,6 +7848,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_lt_pivot_max_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -7670,14 +7869,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "<",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -7689,7 +7890,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "<", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -7698,7 +7899,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "<", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -7706,15 +7907,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -7797,9 +8001,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7816,6 +8020,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_lt_pivot_mid_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -7836,14 +8041,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "<",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -7855,7 +8062,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "<", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -7864,7 +8071,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "<", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -7872,15 +8079,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -7963,9 +8173,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7982,6 +8192,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_lte_pivot_min_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -8002,14 +8213,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "<=",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -8021,7 +8234,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "<=", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<=", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -8030,7 +8243,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "<=", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<=", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -8038,15 +8251,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -8129,9 +8345,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8148,6 +8364,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_lte_pivot_max_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -8168,14 +8385,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "<=",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -8187,7 +8406,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "<=", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<=", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -8196,7 +8415,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "<=", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<=", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -8204,15 +8423,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -8295,9 +8517,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8314,6 +8536,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_lte_pivot_mid_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -8334,14 +8557,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "<=",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -8353,7 +8578,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "<=", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<=", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -8362,7 +8587,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "<=", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<=", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -8370,15 +8595,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -8461,9 +8689,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8480,6 +8708,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_gt_pivot_min_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -8500,14 +8729,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     ">",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -8519,7 +8750,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", ">", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", ">", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -8528,7 +8759,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", ">", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", ">", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -8536,15 +8767,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -8627,9 +8861,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8646,6 +8880,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_gt_pivot_max_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -8666,14 +8901,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     ">",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -8685,7 +8922,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", ">", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", ">", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -8694,7 +8931,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", ">", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", ">", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -8702,15 +8939,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -8793,9 +9033,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8812,6 +9052,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_gt_pivot_mid_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -8832,14 +9073,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     ">",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -8851,7 +9094,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", ">", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", ">", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -8860,7 +9103,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", ">", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", ">", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -8868,15 +9111,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -8959,9 +9205,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8978,6 +9224,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_gte_pivot_min_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -8998,14 +9245,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     ">=",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -9017,7 +9266,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", ">=", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", ">=", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -9026,7 +9275,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", ">=", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", ">=", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -9034,15 +9283,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -9125,9 +9377,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9144,6 +9396,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_gte_pivot_max_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -9164,14 +9417,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     ">=",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -9183,7 +9438,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", ">=", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", ">=", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -9192,7 +9447,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", ">=", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", ">=", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -9200,15 +9455,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -9291,9 +9549,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9310,6 +9568,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_gte_pivot_mid_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -9330,14 +9589,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     ">=",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -9349,7 +9610,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", ">=", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", ">=", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -9358,7 +9619,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", ">=", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", ">=", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -9366,15 +9627,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -9457,9 +9721,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9476,6 +9740,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_lt_pivot_min_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -9496,14 +9761,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "<",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -9515,7 +9782,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "<", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -9524,7 +9791,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "<", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -9532,15 +9799,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -9623,9 +9893,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9642,6 +9912,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_lt_pivot_max_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -9662,14 +9933,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "<",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -9681,7 +9954,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "<", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -9690,7 +9963,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "<", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -9698,15 +9971,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -9789,9 +10065,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9808,6 +10084,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_lt_pivot_mid_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -9828,14 +10105,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "<",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -9847,7 +10126,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "<", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -9856,7 +10135,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "<", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -9864,15 +10143,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -9955,9 +10237,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9974,6 +10256,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_lte_pivot_min_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -9994,14 +10277,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "<=",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -10013,7 +10298,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "<=", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<=", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -10022,7 +10307,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "<=", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<=", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -10030,15 +10315,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -10121,9 +10409,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10140,6 +10428,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_lte_pivot_max_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -10160,14 +10449,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "<=",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -10179,7 +10470,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "<=", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<=", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -10188,7 +10479,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "<=", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<=", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -10196,15 +10487,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -10287,9 +10581,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10306,6 +10600,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_lte_pivot_mid_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -10326,14 +10621,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     "<=",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -10345,7 +10642,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", "<=", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<=", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -10354,7 +10651,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", "<=", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<=", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -10362,15 +10659,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -10453,9 +10753,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10472,6 +10772,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_gt_pivot_min_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -10492,14 +10793,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     ">",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -10511,7 +10814,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", ">", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", ">", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -10520,7 +10823,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", ">", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", ">", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -10528,15 +10831,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -10619,9 +10925,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10638,6 +10944,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_gt_pivot_max_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -10658,14 +10965,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     ">",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -10677,7 +10986,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", ">", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", ">", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -10686,7 +10995,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", ">", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", ">", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -10694,15 +11003,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -10785,9 +11097,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10804,6 +11116,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_gt_pivot_mid_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -10824,14 +11137,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     ">",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -10843,7 +11158,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", ">", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", ">", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -10852,7 +11167,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", ">", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", ">", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -10860,15 +11175,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -10951,9 +11269,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10970,6 +11288,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_gte_pivot_min_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -10990,14 +11309,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     ">=",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -11009,7 +11330,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", ">=", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", ">=", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -11018,7 +11339,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", ">=", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", ">=", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -11026,15 +11347,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -11117,9 +11441,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -11136,6 +11460,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_gte_pivot_max_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -11156,14 +11481,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     ">=",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -11175,7 +11502,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", ">=", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", ">=", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -11184,7 +11511,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", ">=", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", ">=", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -11192,15 +11519,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -11283,9 +11613,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 730usize,
+            start_line: 816usize,
             start_col: 22usize,
-            end_line: 730usize,
+            end_line: 816usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -11302,6 +11632,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_gte_pivot_mid_cross_shape";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -11322,14 +11653,16 @@ pub mod int4 {
                     )
                     .len() as i64;
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let shapes = [
                     (
                         "d_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "payload::{1} {0} {2}::jsonb::{1}",
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
                                     ">=",
+                                    col,
                                     d,
                                     lit,
                                 ),
@@ -11341,7 +11674,7 @@ pub mod int4 {
                         "d_j",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("payload::{1} {0} {2}::jsonb", ">=", d, lit),
+                                format_args!("({1})::{2} {0} {3}::jsonb", ">=", col, d, lit),
                             )
                         }),
                         forward_count,
@@ -11350,7 +11683,7 @@ pub mod int4 {
                         "j_d",
                         ::alloc::__export::must_use({
                             ::alloc::fmt::format(
-                                format_args!("{1}::jsonb {0} payload::{2}", ">=", lit, d),
+                                format_args!("{1}::jsonb {0} ({2})::{3}", ">=", lit, col, d),
                             )
                         }),
                         commuted_count,
@@ -11358,15 +11691,18 @@ pub mod int4 {
                 ];
                 let table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 for (shape_label, predicate, expected_count) in shapes {
-                    let count_sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT count(*) FROM {0} WHERE {1}",
-                                table,
-                                predicate,
-                            ),
-                        )
-                    });
+                    let count_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE {1}",
+                                    table,
+                                    predicate,
+                                ),
+                            )
+                        }),
+                    );
                     let count: i64 = sqlx::query_scalar(&count_sql)
                         .fetch_one(&pool)
                         .await?;
@@ -11449,9 +11785,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 782usize,
+            start_line: 873usize,
             start_col: 22usize,
-            end_line: 782usize,
+            end_line: 873usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -11468,10 +11804,11 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_eq_supported_null";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
-                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let payload = spec.placeholder_payload;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -11483,17 +11820,24 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[Some(payload), None],
                     )
                     .await?;
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[None, Some(payload)],
                     )
                     .await?;
-                ::eql_tests::scalar_domains::assert_null(&pool, &sql, &[None, None])
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        Some(case_id),
+                        &sql,
+                        &[None, None],
+                    )
                     .await?;
                 Ok(())
             }
@@ -11542,9 +11886,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 782usize,
+            start_line: 873usize,
             start_col: 22usize,
-            end_line: 782usize,
+            end_line: 873usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -11561,10 +11905,11 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_neq_supported_null";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
-                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let payload = spec.placeholder_payload;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -11576,17 +11921,24 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[Some(payload), None],
                     )
                     .await?;
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[None, Some(payload)],
                     )
                     .await?;
-                ::eql_tests::scalar_domains::assert_null(&pool, &sql, &[None, None])
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        Some(case_id),
+                        &sql,
+                        &[None, None],
+                    )
                     .await?;
                 Ok(())
             }
@@ -11635,9 +11987,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 782usize,
+            start_line: 873usize,
             start_col: 22usize,
-            end_line: 782usize,
+            end_line: 873usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -11654,10 +12006,11 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_eq_supported_null";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let payload = spec.placeholder_payload;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -11669,17 +12022,24 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[Some(payload), None],
                     )
                     .await?;
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[None, Some(payload)],
                     )
                     .await?;
-                ::eql_tests::scalar_domains::assert_null(&pool, &sql, &[None, None])
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        Some(case_id),
+                        &sql,
+                        &[None, None],
+                    )
                     .await?;
                 Ok(())
             }
@@ -11728,9 +12088,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 782usize,
+            start_line: 873usize,
             start_col: 22usize,
-            end_line: 782usize,
+            end_line: 873usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -11747,10 +12107,11 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_neq_supported_null";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let payload = spec.placeholder_payload;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -11762,17 +12123,24 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[Some(payload), None],
                     )
                     .await?;
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[None, Some(payload)],
                     )
                     .await?;
-                ::eql_tests::scalar_domains::assert_null(&pool, &sql, &[None, None])
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        Some(case_id),
+                        &sql,
+                        &[None, None],
+                    )
                     .await?;
                 Ok(())
             }
@@ -11821,9 +12189,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 782usize,
+            start_line: 873usize,
             start_col: 22usize,
-            end_line: 782usize,
+            end_line: 873usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -11840,10 +12208,11 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_eq_supported_null";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let payload = spec.placeholder_payload;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -11855,17 +12224,24 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[Some(payload), None],
                     )
                     .await?;
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[None, Some(payload)],
                     )
                     .await?;
-                ::eql_tests::scalar_domains::assert_null(&pool, &sql, &[None, None])
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        Some(case_id),
+                        &sql,
+                        &[None, None],
+                    )
                     .await?;
                 Ok(())
             }
@@ -11914,9 +12290,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 782usize,
+            start_line: 873usize,
             start_col: 22usize,
-            end_line: 782usize,
+            end_line: 873usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -11933,10 +12309,11 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_neq_supported_null";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let payload = spec.placeholder_payload;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -11948,17 +12325,24 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[Some(payload), None],
                     )
                     .await?;
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[None, Some(payload)],
                     )
                     .await?;
-                ::eql_tests::scalar_domains::assert_null(&pool, &sql, &[None, None])
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        Some(case_id),
+                        &sql,
+                        &[None, None],
+                    )
                     .await?;
                 Ok(())
             }
@@ -12007,9 +12391,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 782usize,
+            start_line: 873usize,
             start_col: 22usize,
-            end_line: 782usize,
+            end_line: 873usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12026,10 +12410,11 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_lt_supported_null";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let payload = spec.placeholder_payload;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -12041,17 +12426,24 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[Some(payload), None],
                     )
                     .await?;
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[None, Some(payload)],
                     )
                     .await?;
-                ::eql_tests::scalar_domains::assert_null(&pool, &sql, &[None, None])
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        Some(case_id),
+                        &sql,
+                        &[None, None],
+                    )
                     .await?;
                 Ok(())
             }
@@ -12100,9 +12492,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 782usize,
+            start_line: 873usize,
             start_col: 22usize,
-            end_line: 782usize,
+            end_line: 873usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12119,10 +12511,11 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_lte_supported_null";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let payload = spec.placeholder_payload;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -12134,17 +12527,24 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[Some(payload), None],
                     )
                     .await?;
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[None, Some(payload)],
                     )
                     .await?;
-                ::eql_tests::scalar_domains::assert_null(&pool, &sql, &[None, None])
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        Some(case_id),
+                        &sql,
+                        &[None, None],
+                    )
                     .await?;
                 Ok(())
             }
@@ -12193,9 +12593,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 782usize,
+            start_line: 873usize,
             start_col: 22usize,
-            end_line: 782usize,
+            end_line: 873usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12212,10 +12612,11 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_gt_supported_null";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let payload = spec.placeholder_payload;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -12227,17 +12628,24 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[Some(payload), None],
                     )
                     .await?;
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[None, Some(payload)],
                     )
                     .await?;
-                ::eql_tests::scalar_domains::assert_null(&pool, &sql, &[None, None])
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        Some(case_id),
+                        &sql,
+                        &[None, None],
+                    )
                     .await?;
                 Ok(())
             }
@@ -12286,9 +12694,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 782usize,
+            start_line: 873usize,
             start_col: 22usize,
-            end_line: 782usize,
+            end_line: 873usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12305,10 +12713,11 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_gte_supported_null";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
-                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let payload = spec.placeholder_payload;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -12320,17 +12729,24 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[Some(payload), None],
                     )
                     .await?;
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[None, Some(payload)],
                     )
                     .await?;
-                ::eql_tests::scalar_domains::assert_null(&pool, &sql, &[None, None])
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        Some(case_id),
+                        &sql,
+                        &[None, None],
+                    )
                     .await?;
                 Ok(())
             }
@@ -12379,9 +12795,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 782usize,
+            start_line: 873usize,
             start_col: 22usize,
-            end_line: 782usize,
+            end_line: 873usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12398,10 +12814,11 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_lt_supported_null";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let payload = spec.placeholder_payload;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -12413,17 +12830,24 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[Some(payload), None],
                     )
                     .await?;
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[None, Some(payload)],
                     )
                     .await?;
-                ::eql_tests::scalar_domains::assert_null(&pool, &sql, &[None, None])
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        Some(case_id),
+                        &sql,
+                        &[None, None],
+                    )
                     .await?;
                 Ok(())
             }
@@ -12472,9 +12896,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 782usize,
+            start_line: 873usize,
             start_col: 22usize,
-            end_line: 782usize,
+            end_line: 873usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12491,10 +12915,11 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_lte_supported_null";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let payload = spec.placeholder_payload;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -12506,17 +12931,24 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[Some(payload), None],
                     )
                     .await?;
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[None, Some(payload)],
                     )
                     .await?;
-                ::eql_tests::scalar_domains::assert_null(&pool, &sql, &[None, None])
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        Some(case_id),
+                        &sql,
+                        &[None, None],
+                    )
                     .await?;
                 Ok(())
             }
@@ -12565,9 +12997,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 782usize,
+            start_line: 873usize,
             start_col: 22usize,
-            end_line: 782usize,
+            end_line: 873usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12584,10 +13016,11 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_gt_supported_null";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let payload = spec.placeholder_payload;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -12599,17 +13032,24 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[Some(payload), None],
                     )
                     .await?;
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[None, Some(payload)],
                     )
                     .await?;
-                ::eql_tests::scalar_domains::assert_null(&pool, &sql, &[None, None])
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        Some(case_id),
+                        &sql,
+                        &[None, None],
+                    )
                     .await?;
                 Ok(())
             }
@@ -12658,9 +13098,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 782usize,
+            start_line: 873usize,
             start_col: 22usize,
-            end_line: 782usize,
+            end_line: 873usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12677,10 +13117,11 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_gte_supported_null";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
-                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let payload = spec.placeholder_payload;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -12692,17 +13133,24 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[Some(payload), None],
                     )
                     .await?;
                 ::eql_tests::scalar_domains::assert_null(
                         &pool,
+                        Some(case_id),
                         &sql,
                         &[None, Some(payload)],
                     )
                     .await?;
-                ::eql_tests::scalar_domains::assert_null(&pool, &sql, &[None, None])
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        Some(case_id),
+                        &sql,
+                        &[None, None],
+                    )
                     .await?;
                 Ok(())
             }
@@ -12749,9 +13197,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 846usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 846usize,
+            end_line: 938usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -12768,6 +13216,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_storage_eq_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Storage);
@@ -12807,6 +13256,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             &msg,
@@ -12820,6 +13270,7 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, Some(payload)],
                         &msg,
@@ -12827,6 +13278,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[Some(payload), None],
                         &msg,
@@ -12834,6 +13286,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, None],
                         &msg,
@@ -12884,9 +13337,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 846usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 846usize,
+            end_line: 938usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -12903,6 +13356,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_storage_neq_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Storage);
@@ -12942,6 +13396,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             &msg,
@@ -12955,6 +13410,7 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, Some(payload)],
                         &msg,
@@ -12962,6 +13418,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[Some(payload), None],
                         &msg,
@@ -12969,6 +13426,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, None],
                         &msg,
@@ -13019,9 +13477,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 846usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 846usize,
+            end_line: 938usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13038,6 +13496,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_storage_lt_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Storage);
@@ -13077,6 +13536,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             &msg,
@@ -13090,6 +13550,7 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, Some(payload)],
                         &msg,
@@ -13097,6 +13558,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[Some(payload), None],
                         &msg,
@@ -13104,6 +13566,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, None],
                         &msg,
@@ -13154,9 +13617,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 846usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 846usize,
+            end_line: 938usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13173,6 +13636,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_storage_lte_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Storage);
@@ -13212,6 +13676,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             &msg,
@@ -13225,6 +13690,7 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, Some(payload)],
                         &msg,
@@ -13232,6 +13698,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[Some(payload), None],
                         &msg,
@@ -13239,6 +13706,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, None],
                         &msg,
@@ -13289,9 +13757,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 846usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 846usize,
+            end_line: 938usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13308,6 +13776,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_storage_gt_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Storage);
@@ -13347,6 +13816,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             &msg,
@@ -13360,6 +13830,7 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, Some(payload)],
                         &msg,
@@ -13367,6 +13838,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[Some(payload), None],
                         &msg,
@@ -13374,6 +13846,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, None],
                         &msg,
@@ -13424,9 +13897,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 846usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 846usize,
+            end_line: 938usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13443,6 +13916,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_storage_gte_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Storage);
@@ -13482,6 +13956,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             &msg,
@@ -13495,6 +13970,7 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, Some(payload)],
                         &msg,
@@ -13502,6 +13978,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[Some(payload), None],
                         &msg,
@@ -13509,6 +13986,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, None],
                         &msg,
@@ -13561,9 +14039,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 846usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 846usize,
+            end_line: 938usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13580,6 +14058,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_storage_contains_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Storage);
@@ -13619,6 +14098,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             &msg,
@@ -13632,6 +14112,7 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, Some(payload)],
                         &msg,
@@ -13639,6 +14120,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[Some(payload), None],
                         &msg,
@@ -13646,6 +14128,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, None],
                         &msg,
@@ -13698,9 +14181,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 846usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 846usize,
+            end_line: 938usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13717,6 +14200,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_storage_contained_by_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Storage);
@@ -13756,6 +14240,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             &msg,
@@ -13769,6 +14254,7 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, Some(payload)],
                         &msg,
@@ -13776,6 +14262,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[Some(payload), None],
                         &msg,
@@ -13783,6 +14270,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, None],
                         &msg,
@@ -13833,9 +14321,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 846usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 846usize,
+            end_line: 938usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13850,6 +14338,7 @@ pub mod int4 {
     fn matrix_int4_eq_lt_blocker() -> anyhow::Result<()> {
         async fn matrix_int4_eq_lt_blocker(pool: sqlx::PgPool) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_lt_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -13889,6 +14378,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             &msg,
@@ -13902,6 +14392,7 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, Some(payload)],
                         &msg,
@@ -13909,6 +14400,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[Some(payload), None],
                         &msg,
@@ -13916,6 +14408,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, None],
                         &msg,
@@ -13966,9 +14459,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 846usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 846usize,
+            end_line: 938usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13983,6 +14476,7 @@ pub mod int4 {
     fn matrix_int4_eq_lte_blocker() -> anyhow::Result<()> {
         async fn matrix_int4_eq_lte_blocker(pool: sqlx::PgPool) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_lte_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -14022,6 +14516,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             &msg,
@@ -14035,6 +14530,7 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, Some(payload)],
                         &msg,
@@ -14042,6 +14538,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[Some(payload), None],
                         &msg,
@@ -14049,6 +14546,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, None],
                         &msg,
@@ -14099,9 +14597,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 846usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 846usize,
+            end_line: 938usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -14116,6 +14614,7 @@ pub mod int4 {
     fn matrix_int4_eq_gt_blocker() -> anyhow::Result<()> {
         async fn matrix_int4_eq_gt_blocker(pool: sqlx::PgPool) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_gt_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -14155,6 +14654,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             &msg,
@@ -14168,6 +14668,7 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, Some(payload)],
                         &msg,
@@ -14175,6 +14676,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[Some(payload), None],
                         &msg,
@@ -14182,6 +14684,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, None],
                         &msg,
@@ -14232,9 +14735,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 846usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 846usize,
+            end_line: 938usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -14249,6 +14752,7 @@ pub mod int4 {
     fn matrix_int4_eq_gte_blocker() -> anyhow::Result<()> {
         async fn matrix_int4_eq_gte_blocker(pool: sqlx::PgPool) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_gte_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -14288,6 +14792,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             &msg,
@@ -14301,6 +14806,7 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, Some(payload)],
                         &msg,
@@ -14308,6 +14814,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[Some(payload), None],
                         &msg,
@@ -14315,6 +14822,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, None],
                         &msg,
@@ -14365,9 +14873,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 846usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 846usize,
+            end_line: 938usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -14384,6 +14892,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_contains_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -14423,6 +14932,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             &msg,
@@ -14436,6 +14946,7 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, Some(payload)],
                         &msg,
@@ -14443,6 +14954,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[Some(payload), None],
                         &msg,
@@ -14450,6 +14962,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, None],
                         &msg,
@@ -14502,9 +15015,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 846usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 846usize,
+            end_line: 938usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -14521,6 +15034,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_contained_by_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -14560,6 +15074,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             &msg,
@@ -14573,6 +15088,7 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, Some(payload)],
                         &msg,
@@ -14580,6 +15096,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[Some(payload), None],
                         &msg,
@@ -14587,6 +15104,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, None],
                         &msg,
@@ -14639,9 +15157,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 846usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 846usize,
+            end_line: 938usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -14658,6 +15176,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_contains_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -14697,6 +15216,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             &msg,
@@ -14710,6 +15230,7 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, Some(payload)],
                         &msg,
@@ -14717,6 +15238,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[Some(payload), None],
                         &msg,
@@ -14724,6 +15246,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, None],
                         &msg,
@@ -14776,9 +15299,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 846usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 846usize,
+            end_line: 938usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -14795,6 +15318,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_contained_by_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -14834,6 +15358,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             &msg,
@@ -14847,6 +15372,7 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, Some(payload)],
                         &msg,
@@ -14854,6 +15380,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[Some(payload), None],
                         &msg,
@@ -14861,6 +15388,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, None],
                         &msg,
@@ -14913,9 +15441,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 846usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 846usize,
+            end_line: 938usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -14932,6 +15460,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_contains_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -14971,6 +15500,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             &msg,
@@ -14984,6 +15514,7 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, Some(payload)],
                         &msg,
@@ -14991,6 +15522,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[Some(payload), None],
                         &msg,
@@ -14998,6 +15530,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, None],
                         &msg,
@@ -15050,9 +15583,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 846usize,
+            start_line: 938usize,
             start_col: 22usize,
-            end_line: 846usize,
+            end_line: 938usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -15069,6 +15602,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_contained_by_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -15108,6 +15642,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             &msg,
@@ -15121,6 +15656,7 @@ pub mod int4 {
                 });
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, Some(payload)],
                         &msg,
@@ -15128,6 +15664,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[Some(payload), None],
                         &msg,
@@ -15135,6 +15672,7 @@ pub mod int4 {
                     .await?;
                 ::eql_tests::scalar_domains::assert_raises(
                         &pool,
+                        Some(case_id),
                         &null_sql,
                         &[None, None],
                         &msg,
@@ -15187,9 +15725,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 913usize,
+            start_line: 1006usize,
             start_col: 22usize,
-            end_line: 913usize,
+            end_line: 1006usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -15206,22 +15744,26 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_storage_payload_check";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Storage);
                 let d = &spec.sql_domain;
                 let baseline = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
                 for key in spec.payload_required_keys() {
-                    let sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT (\'{0}\'::jsonb - \'{1}\')::{2}",
-                                baseline,
-                                key,
-                                d,
-                            ),
-                        )
-                    });
+                    let sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT (\'{0}\'::jsonb - \'{1}\')::{2}",
+                                    baseline,
+                                    key,
+                                    d,
+                                ),
+                            )
+                        }),
+                    );
                     let err = sqlx::query(&sql)
                         .fetch_one(&pool)
                         .await
@@ -15254,11 +15796,14 @@ pub mod int4 {
                         });
                     }
                 }
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!("SELECT \'[\"v\",\"i\",\"c\"]\'::jsonb::{0}", d),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!("SELECT \'[\"v\",\"i\",\"c\"]\'::jsonb::{0}", d),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_one(&pool)
                     .await
@@ -15327,9 +15872,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 913usize,
+            start_line: 1006usize,
             start_col: 22usize,
-            end_line: 913usize,
+            end_line: 1006usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -15344,22 +15889,26 @@ pub mod int4 {
     fn matrix_int4_eq_payload_check() -> anyhow::Result<()> {
         async fn matrix_int4_eq_payload_check(pool: sqlx::PgPool) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_payload_check";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
                 let d = &spec.sql_domain;
                 let baseline = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
                 for key in spec.payload_required_keys() {
-                    let sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT (\'{0}\'::jsonb - \'{1}\')::{2}",
-                                baseline,
-                                key,
-                                d,
-                            ),
-                        )
-                    });
+                    let sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT (\'{0}\'::jsonb - \'{1}\')::{2}",
+                                    baseline,
+                                    key,
+                                    d,
+                                ),
+                            )
+                        }),
+                    );
                     let err = sqlx::query(&sql)
                         .fetch_one(&pool)
                         .await
@@ -15392,11 +15941,14 @@ pub mod int4 {
                         });
                     }
                 }
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!("SELECT \'[\"v\",\"i\",\"c\"]\'::jsonb::{0}", d),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!("SELECT \'[\"v\",\"i\",\"c\"]\'::jsonb::{0}", d),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_one(&pool)
                     .await
@@ -15465,9 +16017,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 913usize,
+            start_line: 1006usize,
             start_col: 22usize,
-            end_line: 913usize,
+            end_line: 1006usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -15484,22 +16036,26 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_payload_check";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
                 let d = &spec.sql_domain;
                 let baseline = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
                 for key in spec.payload_required_keys() {
-                    let sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT (\'{0}\'::jsonb - \'{1}\')::{2}",
-                                baseline,
-                                key,
-                                d,
-                            ),
-                        )
-                    });
+                    let sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT (\'{0}\'::jsonb - \'{1}\')::{2}",
+                                    baseline,
+                                    key,
+                                    d,
+                                ),
+                            )
+                        }),
+                    );
                     let err = sqlx::query(&sql)
                         .fetch_one(&pool)
                         .await
@@ -15532,11 +16088,14 @@ pub mod int4 {
                         });
                     }
                 }
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!("SELECT \'[\"v\",\"i\",\"c\"]\'::jsonb::{0}", d),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!("SELECT \'[\"v\",\"i\",\"c\"]\'::jsonb::{0}", d),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_one(&pool)
                     .await
@@ -15607,9 +16166,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 913usize,
+            start_line: 1006usize,
             start_col: 22usize,
-            end_line: 913usize,
+            end_line: 1006usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -15626,22 +16185,26 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_payload_check";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
                 let d = &spec.sql_domain;
                 let baseline = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
                 for key in spec.payload_required_keys() {
-                    let sql = ::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!(
-                                "SELECT (\'{0}\'::jsonb - \'{1}\')::{2}",
-                                baseline,
-                                key,
-                                d,
-                            ),
-                        )
-                    });
+                    let sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT (\'{0}\'::jsonb - \'{1}\')::{2}",
+                                    baseline,
+                                    key,
+                                    d,
+                                ),
+                            )
+                        }),
+                    );
                     let err = sqlx::query(&sql)
                         .fetch_one(&pool)
                         .await
@@ -15674,11 +16237,14 @@ pub mod int4 {
                         });
                     }
                 }
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!("SELECT \'[\"v\",\"i\",\"c\"]\'::jsonb::{0}", d),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!("SELECT \'[\"v\",\"i\",\"c\"]\'::jsonb::{0}", d),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_one(&pool)
                     .await
@@ -15749,9 +16315,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 986usize,
+            start_line: 1080usize,
             start_col: 22usize,
-            end_line: 986usize,
+            end_line: 1080usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -15768,6 +16334,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_storage_path_op_blockers";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Storage);
@@ -15798,6 +16365,7 @@ pub mod int4 {
                     ] {
                         ::eql_tests::scalar_domains::assert_raises(
                                 &pool,
+                                Some(case_id),
                                 &sql,
                                 &[Some(payload)],
                                 &msg,
@@ -15850,9 +16418,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 986usize,
+            start_line: 1080usize,
             start_col: 22usize,
-            end_line: 986usize,
+            end_line: 1080usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -15869,6 +16437,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_path_op_blockers";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -15899,6 +16468,7 @@ pub mod int4 {
                     ] {
                         ::eql_tests::scalar_domains::assert_raises(
                                 &pool,
+                                Some(case_id),
                                 &sql,
                                 &[Some(payload)],
                                 &msg,
@@ -15953,9 +16523,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 986usize,
+            start_line: 1080usize,
             start_col: 22usize,
-            end_line: 986usize,
+            end_line: 1080usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -15972,6 +16542,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_path_op_blockers";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -16002,6 +16573,7 @@ pub mod int4 {
                     ] {
                         ::eql_tests::scalar_domains::assert_raises(
                                 &pool,
+                                Some(case_id),
                                 &sql,
                                 &[Some(payload)],
                                 &msg,
@@ -16056,9 +16628,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 986usize,
+            start_line: 1080usize,
             start_col: 22usize,
-            end_line: 986usize,
+            end_line: 1080usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -16075,6 +16647,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_path_op_blockers";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -16105,6 +16678,7 @@ pub mod int4 {
                     ] {
                         ::eql_tests::scalar_domains::assert_raises(
                                 &pool,
+                                Some(case_id),
                                 &sql,
                                 &[Some(payload)],
                                 &msg,
@@ -16159,9 +16733,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1043usize,
+            start_line: 1138usize,
             start_col: 22usize,
-            end_line: 1043usize,
+            end_line: 1138usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -16178,6 +16752,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_storage_native_absent_ops";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Storage);
@@ -16195,6 +16770,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             "operator does not exist",
@@ -16248,9 +16824,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1043usize,
+            start_line: 1138usize,
             start_col: 22usize,
-            end_line: 1043usize,
+            end_line: 1138usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -16267,6 +16843,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_native_absent_ops";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -16284,6 +16861,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             "operator does not exist",
@@ -16337,9 +16915,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1043usize,
+            start_line: 1138usize,
             start_col: 22usize,
-            end_line: 1043usize,
+            end_line: 1138usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -16356,6 +16934,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_native_absent_ops";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -16373,6 +16952,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             "operator does not exist",
@@ -16426,9 +17006,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1043usize,
+            start_line: 1138usize,
             start_col: 22usize,
-            end_line: 1043usize,
+            end_line: 1138usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -16445,6 +17025,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_native_absent_ops";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -16462,6 +17043,7 @@ pub mod int4 {
                     });
                     ::eql_tests::scalar_domains::assert_raises(
                             &pool,
+                            Some(case_id),
                             &sql,
                             &[Some(payload), Some(payload)],
                             "operator does not exist",
@@ -16515,9 +17097,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1096usize,
+            start_line: 1192usize,
             start_col: 22usize,
-            end_line: 1096usize,
+            end_line: 1192usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -16534,39 +17116,49 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_storage_typed_column_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Storage);
                 let d = &spec.sql_domain;
                 let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
                 let mut tx = pool.begin().await?;
-                let create_sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "CREATE TEMP TABLE typed_col (id integer GENERATED ALWAYS AS IDENTITY,value {0}) ON COMMIT DROP",
-                            d,
-                        ),
-                    )
-                });
+                let create_sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "CREATE TEMP TABLE typed_col (id integer GENERATED ALWAYS AS IDENTITY,value {0}) ON COMMIT DROP",
+                                d,
+                            ),
+                        )
+                    }),
+                );
                 sqlx::query(&create_sql).execute(&mut *tx).await?;
-                let insert_sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "INSERT INTO typed_col(value) VALUES ($1::jsonb::{0})",
-                            d,
-                        ),
-                    )
-                });
+                let insert_sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "INSERT INTO typed_col(value) VALUES ($1::jsonb::{0})",
+                                d,
+                            ),
+                        )
+                    }),
+                );
                 sqlx::query(&insert_sql).bind(payload).execute(&mut *tx).await?;
                 sqlx::query("SAVEPOINT op_probe").execute(&mut *tx).await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT * FROM typed_col WHERE value {0} value",
-                            "=",
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM typed_col WHERE value {0} value",
+                                "=",
+                            ),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_all(&mut *tx)
                     .await
@@ -16594,14 +17186,17 @@ pub mod int4 {
                 }
                 sqlx::query("ROLLBACK TO SAVEPOINT op_probe").execute(&mut *tx).await?;
                 sqlx::query("SAVEPOINT op_probe").execute(&mut *tx).await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT * FROM typed_col WHERE value {0} value",
-                            "<>",
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM typed_col WHERE value {0} value",
+                                "<>",
+                            ),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_all(&mut *tx)
                     .await
@@ -16629,14 +17224,17 @@ pub mod int4 {
                 }
                 sqlx::query("ROLLBACK TO SAVEPOINT op_probe").execute(&mut *tx).await?;
                 sqlx::query("SAVEPOINT op_probe").execute(&mut *tx).await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT * FROM typed_col WHERE value {0} value",
-                            "<",
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM typed_col WHERE value {0} value",
+                                "<",
+                            ),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_all(&mut *tx)
                     .await
@@ -16664,14 +17262,17 @@ pub mod int4 {
                 }
                 sqlx::query("ROLLBACK TO SAVEPOINT op_probe").execute(&mut *tx).await?;
                 sqlx::query("SAVEPOINT op_probe").execute(&mut *tx).await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT * FROM typed_col WHERE value {0} value",
-                            "<=",
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM typed_col WHERE value {0} value",
+                                "<=",
+                            ),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_all(&mut *tx)
                     .await
@@ -16699,14 +17300,17 @@ pub mod int4 {
                 }
                 sqlx::query("ROLLBACK TO SAVEPOINT op_probe").execute(&mut *tx).await?;
                 sqlx::query("SAVEPOINT op_probe").execute(&mut *tx).await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT * FROM typed_col WHERE value {0} value",
-                            ">",
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM typed_col WHERE value {0} value",
+                                ">",
+                            ),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_all(&mut *tx)
                     .await
@@ -16734,14 +17338,17 @@ pub mod int4 {
                 }
                 sqlx::query("ROLLBACK TO SAVEPOINT op_probe").execute(&mut *tx).await?;
                 sqlx::query("SAVEPOINT op_probe").execute(&mut *tx).await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT * FROM typed_col WHERE value {0} value",
-                            ">=",
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM typed_col WHERE value {0} value",
+                                ">=",
+                            ),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_all(&mut *tx)
                     .await
@@ -16769,14 +17376,17 @@ pub mod int4 {
                 }
                 sqlx::query("ROLLBACK TO SAVEPOINT op_probe").execute(&mut *tx).await?;
                 sqlx::query("SAVEPOINT op_probe").execute(&mut *tx).await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT * FROM typed_col WHERE value {0} value",
-                            "@>",
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM typed_col WHERE value {0} value",
+                                "@>",
+                            ),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_all(&mut *tx)
                     .await
@@ -16804,14 +17414,17 @@ pub mod int4 {
                 }
                 sqlx::query("ROLLBACK TO SAVEPOINT op_probe").execute(&mut *tx).await?;
                 sqlx::query("SAVEPOINT op_probe").execute(&mut *tx).await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT * FROM typed_col WHERE value {0} value",
-                            "<@",
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM typed_col WHERE value {0} value",
+                                "<@",
+                            ),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_all(&mut *tx)
                     .await
@@ -16886,9 +17499,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1096usize,
+            start_line: 1192usize,
             start_col: 22usize,
-            end_line: 1096usize,
+            end_line: 1192usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -16905,39 +17518,49 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_typed_column_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
                 let d = &spec.sql_domain;
                 let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
                 let mut tx = pool.begin().await?;
-                let create_sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "CREATE TEMP TABLE typed_col (id integer GENERATED ALWAYS AS IDENTITY,value {0}) ON COMMIT DROP",
-                            d,
-                        ),
-                    )
-                });
+                let create_sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "CREATE TEMP TABLE typed_col (id integer GENERATED ALWAYS AS IDENTITY,value {0}) ON COMMIT DROP",
+                                d,
+                            ),
+                        )
+                    }),
+                );
                 sqlx::query(&create_sql).execute(&mut *tx).await?;
-                let insert_sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "INSERT INTO typed_col(value) VALUES ($1::jsonb::{0})",
-                            d,
-                        ),
-                    )
-                });
+                let insert_sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "INSERT INTO typed_col(value) VALUES ($1::jsonb::{0})",
+                                d,
+                            ),
+                        )
+                    }),
+                );
                 sqlx::query(&insert_sql).bind(payload).execute(&mut *tx).await?;
                 sqlx::query("SAVEPOINT op_probe").execute(&mut *tx).await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT * FROM typed_col WHERE value {0} value",
-                            "<",
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM typed_col WHERE value {0} value",
+                                "<",
+                            ),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_all(&mut *tx)
                     .await
@@ -16965,14 +17588,17 @@ pub mod int4 {
                 }
                 sqlx::query("ROLLBACK TO SAVEPOINT op_probe").execute(&mut *tx).await?;
                 sqlx::query("SAVEPOINT op_probe").execute(&mut *tx).await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT * FROM typed_col WHERE value {0} value",
-                            "<=",
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM typed_col WHERE value {0} value",
+                                "<=",
+                            ),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_all(&mut *tx)
                     .await
@@ -17000,14 +17626,17 @@ pub mod int4 {
                 }
                 sqlx::query("ROLLBACK TO SAVEPOINT op_probe").execute(&mut *tx).await?;
                 sqlx::query("SAVEPOINT op_probe").execute(&mut *tx).await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT * FROM typed_col WHERE value {0} value",
-                            ">",
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM typed_col WHERE value {0} value",
+                                ">",
+                            ),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_all(&mut *tx)
                     .await
@@ -17035,14 +17664,17 @@ pub mod int4 {
                 }
                 sqlx::query("ROLLBACK TO SAVEPOINT op_probe").execute(&mut *tx).await?;
                 sqlx::query("SAVEPOINT op_probe").execute(&mut *tx).await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT * FROM typed_col WHERE value {0} value",
-                            ">=",
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM typed_col WHERE value {0} value",
+                                ">=",
+                            ),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_all(&mut *tx)
                     .await
@@ -17070,14 +17702,17 @@ pub mod int4 {
                 }
                 sqlx::query("ROLLBACK TO SAVEPOINT op_probe").execute(&mut *tx).await?;
                 sqlx::query("SAVEPOINT op_probe").execute(&mut *tx).await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT * FROM typed_col WHERE value {0} value",
-                            "@>",
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM typed_col WHERE value {0} value",
+                                "@>",
+                            ),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_all(&mut *tx)
                     .await
@@ -17105,14 +17740,17 @@ pub mod int4 {
                 }
                 sqlx::query("ROLLBACK TO SAVEPOINT op_probe").execute(&mut *tx).await?;
                 sqlx::query("SAVEPOINT op_probe").execute(&mut *tx).await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT * FROM typed_col WHERE value {0} value",
-                            "<@",
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM typed_col WHERE value {0} value",
+                                "<@",
+                            ),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_all(&mut *tx)
                     .await
@@ -17187,9 +17825,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1096usize,
+            start_line: 1192usize,
             start_col: 22usize,
-            end_line: 1096usize,
+            end_line: 1192usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -17206,39 +17844,49 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_typed_column_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
                 let d = &spec.sql_domain;
                 let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
                 let mut tx = pool.begin().await?;
-                let create_sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "CREATE TEMP TABLE typed_col (id integer GENERATED ALWAYS AS IDENTITY,value {0}) ON COMMIT DROP",
-                            d,
-                        ),
-                    )
-                });
+                let create_sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "CREATE TEMP TABLE typed_col (id integer GENERATED ALWAYS AS IDENTITY,value {0}) ON COMMIT DROP",
+                                d,
+                            ),
+                        )
+                    }),
+                );
                 sqlx::query(&create_sql).execute(&mut *tx).await?;
-                let insert_sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "INSERT INTO typed_col(value) VALUES ($1::jsonb::{0})",
-                            d,
-                        ),
-                    )
-                });
+                let insert_sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "INSERT INTO typed_col(value) VALUES ($1::jsonb::{0})",
+                                d,
+                            ),
+                        )
+                    }),
+                );
                 sqlx::query(&insert_sql).bind(payload).execute(&mut *tx).await?;
                 sqlx::query("SAVEPOINT op_probe").execute(&mut *tx).await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT * FROM typed_col WHERE value {0} value",
-                            "@>",
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM typed_col WHERE value {0} value",
+                                "@>",
+                            ),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_all(&mut *tx)
                     .await
@@ -17266,14 +17914,17 @@ pub mod int4 {
                 }
                 sqlx::query("ROLLBACK TO SAVEPOINT op_probe").execute(&mut *tx).await?;
                 sqlx::query("SAVEPOINT op_probe").execute(&mut *tx).await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT * FROM typed_col WHERE value {0} value",
-                            "<@",
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM typed_col WHERE value {0} value",
+                                "<@",
+                            ),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_all(&mut *tx)
                     .await
@@ -17348,9 +17999,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1096usize,
+            start_line: 1192usize,
             start_col: 22usize,
-            end_line: 1096usize,
+            end_line: 1192usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -17367,39 +18018,49 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_typed_column_blocker";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
                 let d = &spec.sql_domain;
                 let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
                 let mut tx = pool.begin().await?;
-                let create_sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "CREATE TEMP TABLE typed_col (id integer GENERATED ALWAYS AS IDENTITY,value {0}) ON COMMIT DROP",
-                            d,
-                        ),
-                    )
-                });
+                let create_sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "CREATE TEMP TABLE typed_col (id integer GENERATED ALWAYS AS IDENTITY,value {0}) ON COMMIT DROP",
+                                d,
+                            ),
+                        )
+                    }),
+                );
                 sqlx::query(&create_sql).execute(&mut *tx).await?;
-                let insert_sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "INSERT INTO typed_col(value) VALUES ($1::jsonb::{0})",
-                            d,
-                        ),
-                    )
-                });
+                let insert_sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "INSERT INTO typed_col(value) VALUES ($1::jsonb::{0})",
+                                d,
+                            ),
+                        )
+                    }),
+                );
                 sqlx::query(&insert_sql).bind(payload).execute(&mut *tx).await?;
                 sqlx::query("SAVEPOINT op_probe").execute(&mut *tx).await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT * FROM typed_col WHERE value {0} value",
-                            "@>",
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM typed_col WHERE value {0} value",
+                                "@>",
+                            ),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_all(&mut *tx)
                     .await
@@ -17427,14 +18088,17 @@ pub mod int4 {
                 }
                 sqlx::query("ROLLBACK TO SAVEPOINT op_probe").execute(&mut *tx).await?;
                 sqlx::query("SAVEPOINT op_probe").execute(&mut *tx).await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT * FROM typed_col WHERE value {0} value",
-                            "<@",
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM typed_col WHERE value {0} value",
+                                "<@",
+                            ),
+                        )
+                    }),
+                );
                 let err = sqlx::query(&sql)
                     .fetch_all(&mut *tx)
                     .await
@@ -17509,9 +18173,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1177usize,
+            start_line: 1274usize,
             start_col: 22usize,
-            end_line: 1177usize,
+            end_line: 1274usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -17528,6 +18192,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_planner_metadata_eq";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -17540,15 +18205,18 @@ pub mod int4 {
                     }))
                     .collect::<Vec<_>>()
                     .join(", ");
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "\n                    SELECT o.oprname,\n                           lt.typname AS lhs,\n                           rt.typname AS rhs,\n                           o.oprcom <> 0       AS has_commutator,\n                           o.oprnegate <> 0    AS has_negator,\n                           o.oprrest::oid <> 0 AS has_restrict,\n                           o.oprjoin::oid <> 0 AS has_join\n                    FROM pg_catalog.pg_operator o\n                    JOIN pg_catalog.pg_type lt ON lt.oid = o.oprleft\n                    JOIN pg_catalog.pg_type rt ON rt.oid = o.oprright\n                    WHERE o.oprname IN ({0})\n                      AND (\'{1}\'::regtype = o.oprleft OR \'{1}\'::regtype = o.oprright)\n                    ",
-                            op_list,
-                            d,
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "\n                    SELECT o.oprname,\n                           lt.typname AS lhs,\n                           rt.typname AS rhs,\n                           o.oprcom <> 0       AS has_commutator,\n                           o.oprnegate <> 0    AS has_negator,\n                           o.oprrest::oid <> 0 AS has_restrict,\n                           o.oprjoin::oid <> 0 AS has_join\n                    FROM pg_catalog.pg_operator o\n                    JOIN pg_catalog.pg_type lt ON lt.oid = o.oprleft\n                    JOIN pg_catalog.pg_type rt ON rt.oid = o.oprright\n                    WHERE o.oprname IN ({0})\n                      AND (\'{1}\'::regtype = o.oprleft OR \'{1}\'::regtype = o.oprright)\n                    ",
+                                op_list,
+                                d,
+                            ),
+                        )
+                    }),
+                );
                 let rows: Vec<(String, String, String, bool, bool, bool, bool)> = sqlx::query_as(
                         &sql,
                     )
@@ -17673,9 +18341,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1177usize,
+            start_line: 1274usize,
             start_col: 22usize,
-            end_line: 1177usize,
+            end_line: 1274usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -17692,6 +18360,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_planner_metadata_eq";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -17704,15 +18373,18 @@ pub mod int4 {
                     }))
                     .collect::<Vec<_>>()
                     .join(", ");
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "\n                    SELECT o.oprname,\n                           lt.typname AS lhs,\n                           rt.typname AS rhs,\n                           o.oprcom <> 0       AS has_commutator,\n                           o.oprnegate <> 0    AS has_negator,\n                           o.oprrest::oid <> 0 AS has_restrict,\n                           o.oprjoin::oid <> 0 AS has_join\n                    FROM pg_catalog.pg_operator o\n                    JOIN pg_catalog.pg_type lt ON lt.oid = o.oprleft\n                    JOIN pg_catalog.pg_type rt ON rt.oid = o.oprright\n                    WHERE o.oprname IN ({0})\n                      AND (\'{1}\'::regtype = o.oprleft OR \'{1}\'::regtype = o.oprright)\n                    ",
-                            op_list,
-                            d,
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "\n                    SELECT o.oprname,\n                           lt.typname AS lhs,\n                           rt.typname AS rhs,\n                           o.oprcom <> 0       AS has_commutator,\n                           o.oprnegate <> 0    AS has_negator,\n                           o.oprrest::oid <> 0 AS has_restrict,\n                           o.oprjoin::oid <> 0 AS has_join\n                    FROM pg_catalog.pg_operator o\n                    JOIN pg_catalog.pg_type lt ON lt.oid = o.oprleft\n                    JOIN pg_catalog.pg_type rt ON rt.oid = o.oprright\n                    WHERE o.oprname IN ({0})\n                      AND (\'{1}\'::regtype = o.oprleft OR \'{1}\'::regtype = o.oprright)\n                    ",
+                                op_list,
+                                d,
+                            ),
+                        )
+                    }),
+                );
                 let rows: Vec<(String, String, String, bool, bool, bool, bool)> = sqlx::query_as(
                         &sql,
                     )
@@ -17837,9 +18509,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1177usize,
+            start_line: 1274usize,
             start_col: 22usize,
-            end_line: 1177usize,
+            end_line: 1274usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -17856,6 +18528,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_planner_metadata_eq";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -17868,15 +18541,18 @@ pub mod int4 {
                     }))
                     .collect::<Vec<_>>()
                     .join(", ");
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "\n                    SELECT o.oprname,\n                           lt.typname AS lhs,\n                           rt.typname AS rhs,\n                           o.oprcom <> 0       AS has_commutator,\n                           o.oprnegate <> 0    AS has_negator,\n                           o.oprrest::oid <> 0 AS has_restrict,\n                           o.oprjoin::oid <> 0 AS has_join\n                    FROM pg_catalog.pg_operator o\n                    JOIN pg_catalog.pg_type lt ON lt.oid = o.oprleft\n                    JOIN pg_catalog.pg_type rt ON rt.oid = o.oprright\n                    WHERE o.oprname IN ({0})\n                      AND (\'{1}\'::regtype = o.oprleft OR \'{1}\'::regtype = o.oprright)\n                    ",
-                            op_list,
-                            d,
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "\n                    SELECT o.oprname,\n                           lt.typname AS lhs,\n                           rt.typname AS rhs,\n                           o.oprcom <> 0       AS has_commutator,\n                           o.oprnegate <> 0    AS has_negator,\n                           o.oprrest::oid <> 0 AS has_restrict,\n                           o.oprjoin::oid <> 0 AS has_join\n                    FROM pg_catalog.pg_operator o\n                    JOIN pg_catalog.pg_type lt ON lt.oid = o.oprleft\n                    JOIN pg_catalog.pg_type rt ON rt.oid = o.oprright\n                    WHERE o.oprname IN ({0})\n                      AND (\'{1}\'::regtype = o.oprleft OR \'{1}\'::regtype = o.oprright)\n                    ",
+                                op_list,
+                                d,
+                            ),
+                        )
+                    }),
+                );
                 let rows: Vec<(String, String, String, bool, bool, bool, bool)> = sqlx::query_as(
                         &sql,
                     )
@@ -18001,9 +18677,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1177usize,
+            start_line: 1274usize,
             start_col: 22usize,
-            end_line: 1177usize,
+            end_line: 1274usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -18020,6 +18696,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_planner_metadata_ord";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -18032,15 +18709,18 @@ pub mod int4 {
                     }))
                     .collect::<Vec<_>>()
                     .join(", ");
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "\n                    SELECT o.oprname,\n                           lt.typname AS lhs,\n                           rt.typname AS rhs,\n                           o.oprcom <> 0       AS has_commutator,\n                           o.oprnegate <> 0    AS has_negator,\n                           o.oprrest::oid <> 0 AS has_restrict,\n                           o.oprjoin::oid <> 0 AS has_join\n                    FROM pg_catalog.pg_operator o\n                    JOIN pg_catalog.pg_type lt ON lt.oid = o.oprleft\n                    JOIN pg_catalog.pg_type rt ON rt.oid = o.oprright\n                    WHERE o.oprname IN ({0})\n                      AND (\'{1}\'::regtype = o.oprleft OR \'{1}\'::regtype = o.oprright)\n                    ",
-                            op_list,
-                            d,
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "\n                    SELECT o.oprname,\n                           lt.typname AS lhs,\n                           rt.typname AS rhs,\n                           o.oprcom <> 0       AS has_commutator,\n                           o.oprnegate <> 0    AS has_negator,\n                           o.oprrest::oid <> 0 AS has_restrict,\n                           o.oprjoin::oid <> 0 AS has_join\n                    FROM pg_catalog.pg_operator o\n                    JOIN pg_catalog.pg_type lt ON lt.oid = o.oprleft\n                    JOIN pg_catalog.pg_type rt ON rt.oid = o.oprright\n                    WHERE o.oprname IN ({0})\n                      AND (\'{1}\'::regtype = o.oprleft OR \'{1}\'::regtype = o.oprright)\n                    ",
+                                op_list,
+                                d,
+                            ),
+                        )
+                    }),
+                );
                 let rows: Vec<(String, String, String, bool, bool, bool, bool)> = sqlx::query_as(
                         &sql,
                     )
@@ -18165,9 +18845,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1177usize,
+            start_line: 1274usize,
             start_col: 22usize,
-            end_line: 1177usize,
+            end_line: 1274usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -18184,6 +18864,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_planner_metadata_ord";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -18196,15 +18877,18 @@ pub mod int4 {
                     }))
                     .collect::<Vec<_>>()
                     .join(", ");
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "\n                    SELECT o.oprname,\n                           lt.typname AS lhs,\n                           rt.typname AS rhs,\n                           o.oprcom <> 0       AS has_commutator,\n                           o.oprnegate <> 0    AS has_negator,\n                           o.oprrest::oid <> 0 AS has_restrict,\n                           o.oprjoin::oid <> 0 AS has_join\n                    FROM pg_catalog.pg_operator o\n                    JOIN pg_catalog.pg_type lt ON lt.oid = o.oprleft\n                    JOIN pg_catalog.pg_type rt ON rt.oid = o.oprright\n                    WHERE o.oprname IN ({0})\n                      AND (\'{1}\'::regtype = o.oprleft OR \'{1}\'::regtype = o.oprright)\n                    ",
-                            op_list,
-                            d,
-                        ),
-                    )
-                });
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "\n                    SELECT o.oprname,\n                           lt.typname AS lhs,\n                           rt.typname AS rhs,\n                           o.oprcom <> 0       AS has_commutator,\n                           o.oprnegate <> 0    AS has_negator,\n                           o.oprrest::oid <> 0 AS has_restrict,\n                           o.oprjoin::oid <> 0 AS has_join\n                    FROM pg_catalog.pg_operator o\n                    JOIN pg_catalog.pg_type lt ON lt.oid = o.oprleft\n                    JOIN pg_catalog.pg_type rt ON rt.oid = o.oprright\n                    WHERE o.oprname IN ({0})\n                      AND (\'{1}\'::regtype = o.oprleft OR \'{1}\'::regtype = o.oprright)\n                    ",
+                                op_list,
+                                d,
+                            ),
+                        )
+                    }),
+                );
                 let rows: Vec<(String, String, String, bool, bool, bool, bool)> = sqlx::query_as(
                         &sql,
                     )
@@ -18329,9 +19013,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1948usize,
+            start_line: 2075usize,
             start_col: 22usize,
-            end_line: 1948usize,
+            end_line: 2075usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -18348,6 +19032,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_index_engages_btree";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -18377,7 +19062,8 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO {2}(plaintext, value) SELECT plaintext, payload::{0} FROM {1}",
+                                    "INSERT INTO {3}(plaintext, value) SELECT plaintext, ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
                                     &spec.sql_domain,
                                     fixture_table,
                                     table,
@@ -18435,8 +19121,26 @@ pub mod int4 {
                             ),
                         )
                     });
+                    let exec_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                    "=",
+                                    rhs_cast,
+                                    table,
+                                    lit,
+                                ),
+                            )
+                        }),
+                    );
+                    let _: i64 = sqlx::query_scalar(&exec_sql)
+                        .fetch_one(&mut *tx)
+                        .await?;
                     ::eql_tests::matrix::assert_index_scan_uses(
                             &mut *tx,
+                            case_id,
                             &query,
                             index,
                             &::alloc::__export::must_use({
@@ -18508,9 +19212,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1948usize,
+            start_line: 2075usize,
             start_col: 22usize,
-            end_line: 1948usize,
+            end_line: 2075usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -18527,6 +19231,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_eq_index_engages_hash";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
@@ -18556,7 +19261,8 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO {2}(plaintext, value) SELECT plaintext, payload::{0} FROM {1}",
+                                    "INSERT INTO {3}(plaintext, value) SELECT plaintext, ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
                                     &spec.sql_domain,
                                     fixture_table,
                                     table,
@@ -18614,8 +19320,26 @@ pub mod int4 {
                             ),
                         )
                     });
+                    let exec_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                    "=",
+                                    rhs_cast,
+                                    table,
+                                    lit,
+                                ),
+                            )
+                        }),
+                    );
+                    let _: i64 = sqlx::query_scalar(&exec_sql)
+                        .fetch_one(&mut *tx)
+                        .await?;
                     ::eql_tests::matrix::assert_index_scan_uses(
                             &mut *tx,
+                            case_id,
                             &query,
                             index,
                             &::alloc::__export::must_use({
@@ -18687,9 +19411,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1948usize,
+            start_line: 2075usize,
             start_col: 22usize,
-            end_line: 1948usize,
+            end_line: 2075usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -18706,6 +19430,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_index_engages_btree";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -18735,7 +19460,8 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO {2}(plaintext, value) SELECT plaintext, payload::{0} FROM {1}",
+                                    "INSERT INTO {3}(plaintext, value) SELECT plaintext, ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
                                     &spec.sql_domain,
                                     fixture_table,
                                     table,
@@ -18793,8 +19519,26 @@ pub mod int4 {
                             ),
                         )
                     });
+                    let exec_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                    "=",
+                                    rhs_cast,
+                                    table,
+                                    lit,
+                                ),
+                            )
+                        }),
+                    );
+                    let _: i64 = sqlx::query_scalar(&exec_sql)
+                        .fetch_one(&mut *tx)
+                        .await?;
                     ::eql_tests::matrix::assert_index_scan_uses(
                             &mut *tx,
+                            case_id,
                             &query,
                             index,
                             &::alloc::__export::must_use({
@@ -18823,8 +19567,26 @@ pub mod int4 {
                             ),
                         )
                     });
+                    let exec_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                    "<",
+                                    rhs_cast,
+                                    table,
+                                    lit,
+                                ),
+                            )
+                        }),
+                    );
+                    let _: i64 = sqlx::query_scalar(&exec_sql)
+                        .fetch_one(&mut *tx)
+                        .await?;
                     ::eql_tests::matrix::assert_index_scan_uses(
                             &mut *tx,
+                            case_id,
                             &query,
                             index,
                             &::alloc::__export::must_use({
@@ -18853,8 +19615,26 @@ pub mod int4 {
                             ),
                         )
                     });
+                    let exec_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                    "<=",
+                                    rhs_cast,
+                                    table,
+                                    lit,
+                                ),
+                            )
+                        }),
+                    );
+                    let _: i64 = sqlx::query_scalar(&exec_sql)
+                        .fetch_one(&mut *tx)
+                        .await?;
                     ::eql_tests::matrix::assert_index_scan_uses(
                             &mut *tx,
+                            case_id,
                             &query,
                             index,
                             &::alloc::__export::must_use({
@@ -18883,8 +19663,26 @@ pub mod int4 {
                             ),
                         )
                     });
+                    let exec_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                    ">",
+                                    rhs_cast,
+                                    table,
+                                    lit,
+                                ),
+                            )
+                        }),
+                    );
+                    let _: i64 = sqlx::query_scalar(&exec_sql)
+                        .fetch_one(&mut *tx)
+                        .await?;
                     ::eql_tests::matrix::assert_index_scan_uses(
                             &mut *tx,
+                            case_id,
                             &query,
                             index,
                             &::alloc::__export::must_use({
@@ -18913,8 +19711,26 @@ pub mod int4 {
                             ),
                         )
                     });
+                    let exec_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                    ">=",
+                                    rhs_cast,
+                                    table,
+                                    lit,
+                                ),
+                            )
+                        }),
+                    );
+                    let _: i64 = sqlx::query_scalar(&exec_sql)
+                        .fetch_one(&mut *tx)
+                        .await?;
                     ::eql_tests::matrix::assert_index_scan_uses(
                             &mut *tx,
+                            case_id,
                             &query,
                             index,
                             &::alloc::__export::must_use({
@@ -18986,9 +19802,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1948usize,
+            start_line: 2075usize,
             start_col: 22usize,
-            end_line: 1948usize,
+            end_line: 2075usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -19005,6 +19821,7 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_index_engages_btree";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -19034,7 +19851,8 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO {2}(plaintext, value) SELECT plaintext, payload::{0} FROM {1}",
+                                    "INSERT INTO {3}(plaintext, value) SELECT plaintext, ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
                                     &spec.sql_domain,
                                     fixture_table,
                                     table,
@@ -19092,8 +19910,26 @@ pub mod int4 {
                             ),
                         )
                     });
+                    let exec_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                    "=",
+                                    rhs_cast,
+                                    table,
+                                    lit,
+                                ),
+                            )
+                        }),
+                    );
+                    let _: i64 = sqlx::query_scalar(&exec_sql)
+                        .fetch_one(&mut *tx)
+                        .await?;
                     ::eql_tests::matrix::assert_index_scan_uses(
                             &mut *tx,
+                            case_id,
                             &query,
                             index,
                             &::alloc::__export::must_use({
@@ -19122,8 +19958,26 @@ pub mod int4 {
                             ),
                         )
                     });
+                    let exec_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                    "<",
+                                    rhs_cast,
+                                    table,
+                                    lit,
+                                ),
+                            )
+                        }),
+                    );
+                    let _: i64 = sqlx::query_scalar(&exec_sql)
+                        .fetch_one(&mut *tx)
+                        .await?;
                     ::eql_tests::matrix::assert_index_scan_uses(
                             &mut *tx,
+                            case_id,
                             &query,
                             index,
                             &::alloc::__export::must_use({
@@ -19152,8 +20006,26 @@ pub mod int4 {
                             ),
                         )
                     });
+                    let exec_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                    "<=",
+                                    rhs_cast,
+                                    table,
+                                    lit,
+                                ),
+                            )
+                        }),
+                    );
+                    let _: i64 = sqlx::query_scalar(&exec_sql)
+                        .fetch_one(&mut *tx)
+                        .await?;
                     ::eql_tests::matrix::assert_index_scan_uses(
                             &mut *tx,
+                            case_id,
                             &query,
                             index,
                             &::alloc::__export::must_use({
@@ -19182,8 +20054,26 @@ pub mod int4 {
                             ),
                         )
                     });
+                    let exec_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                    ">",
+                                    rhs_cast,
+                                    table,
+                                    lit,
+                                ),
+                            )
+                        }),
+                    );
+                    let _: i64 = sqlx::query_scalar(&exec_sql)
+                        .fetch_one(&mut *tx)
+                        .await?;
                     ::eql_tests::matrix::assert_index_scan_uses(
                             &mut *tx,
+                            case_id,
                             &query,
                             index,
                             &::alloc::__export::must_use({
@@ -19212,8 +20102,26 @@ pub mod int4 {
                             ),
                         )
                     });
+                    let exec_sql = ::eql_tests::eqlmatrix::tag(
+                        Some(case_id),
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                    ">=",
+                                    rhs_cast,
+                                    table,
+                                    lit,
+                                ),
+                            )
+                        }),
+                    );
+                    let _: i64 = sqlx::query_scalar(&exec_sql)
+                        .fetch_one(&mut *tx)
+                        .await?;
                     ::eql_tests::matrix::assert_index_scan_uses(
                             &mut *tx,
+                            case_id,
                             &query,
                             index,
                             &::alloc::__export::must_use({
@@ -19285,9 +20193,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1370usize,
+            start_line: 1477usize,
             start_col: 22usize,
-            end_line: 1370usize,
+            end_line: 1477usize,
             end_col: 86usize,
             compile_fail: false,
             no_run: false,
@@ -19305,6 +20213,7 @@ pub mod int4 {
         ) -> anyhow::Result<()> {
             {
                 use ::eql_tests::scalar_domains::ScalarType;
+                let case_id: &str = "matrix_int4_ord_scale_preference_default_btree";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -19348,71 +20257,101 @@ pub mod int4 {
                     .await?;
                 let mut tx = pool.begin().await?;
                 sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "CREATE TEMP TABLE {0} (value {1}) ON COMMIT DROP",
-                                    table,
-                                    d,
-                                ),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "CREATE TEMP TABLE {0} (value {1}) ON COMMIT DROP",
+                                        table,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
                     )
                     .execute(&mut *tx)
                     .await?;
                 sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "INSERT INTO {0}(value) SELECT $1::jsonb::{1} FROM generate_series(1, 5000)",
-                                    table,
-                                    d,
-                                ),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO {0}(value) SELECT $1::jsonb::{1} FROM generate_series(1, 5000)",
+                                        table,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
                     )
                     .bind(&filler_payload)
                     .execute(&mut *tx)
                     .await?;
                 sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "INSERT INTO {0}(value) VALUES ($1::jsonb::{1})",
-                                    table,
-                                    d,
-                                ),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO {0}(value) VALUES ($1::jsonb::{1})",
+                                        table,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
                     )
                     .bind(&pivot_payload)
                     .execute(&mut *tx)
                     .await?;
                 sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "CREATE INDEX {2} ON {3} USING {0} ({1}(value))",
-                                    "btree",
-                                    extractor,
-                                    index,
-                                    table,
-                                ),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "CREATE INDEX {2} ON {3} USING {0} ({1}(value))",
+                                        "btree",
+                                        extractor,
+                                        index,
+                                        table,
+                                    ),
+                                )
+                            }),
+                        ),
                     )
                     .execute(&mut *tx)
                     .await?;
                 sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(format_args!("ANALYZE {0}", table))
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(format_args!("ANALYZE {0}", table))
+                            }),
+                        ),
                     )
                     .execute(&mut *tx)
                     .await?;
                 let lit = pivot_payload.replace('\'', "''");
+                let exec_sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT count(*) FROM {0} WHERE value = \'{1}\'::jsonb::{2}",
+                                table,
+                                lit,
+                                d,
+                            ),
+                        )
+                    }),
+                );
+                let _: i64 = sqlx::query_scalar(&exec_sql).fetch_one(&mut *tx).await?;
                 ::eql_tests::matrix::assert_index_scan_uses(
                         &mut *tx,
+                        case_id,
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
@@ -19487,9 +20426,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1461usize,
+            start_line: 1577usize,
             start_col: 22usize,
-            end_line: 1461usize,
+            end_line: 1577usize,
             end_col: 55usize,
             compile_fail: false,
             no_run: false,
@@ -19505,15 +20444,19 @@ pub mod int4 {
         async fn matrix_int4_fixture_shape(pool: sqlx::PgPool) -> anyhow::Result<()> {
             {
                 use ::eql_tests::scalar_domains::ScalarType;
+                let case_id: &str = "matrix_int4_fixture_shape";
                 let table = <i32 as ScalarType>::fixture_table_name();
                 let expected: &[i32] = <i32 as ScalarType>::fixture_values();
                 let n = expected.len() as i64;
                 let count: i64 = sqlx::query_scalar(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!("SELECT COUNT(*) FROM {0}", table),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!("SELECT COUNT(*) FROM {0}", table),
+                                )
+                            }),
+                        ),
                     )
                     .fetch_one(&pool)
                     .await?;
@@ -19530,11 +20473,14 @@ pub mod int4 {
                     });
                 }
                 let ids: Vec<i64> = sqlx::query_scalar(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!("SELECT id FROM {0} ORDER BY id", table),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!("SELECT id FROM {0} ORDER BY id", table),
+                                )
+                            }),
+                        ),
                     )
                     .fetch_all(&pool)
                     .await?;
@@ -19547,11 +20493,14 @@ pub mod int4 {
                     });
                 }
                 let plaintexts: Vec<i32> = sqlx::query_scalar(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!("SELECT plaintext FROM {0} ORDER BY id", table),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!("SELECT plaintext FROM {0} ORDER BY id", table),
+                                )
+                            }),
+                        ),
                     )
                     .fetch_all(&pool)
                     .await?;
@@ -19595,15 +20544,18 @@ pub mod int4 {
                 }
                 for (label, predicate) in term_checks {
                     let missing: i64 = sqlx::query_scalar(
-                            &::alloc::__export::must_use({
-                                ::alloc::fmt::format(
-                                    format_args!(
-                                        "SELECT COUNT(*) FROM {0} WHERE {1}",
-                                        table,
-                                        predicate,
-                                    ),
-                                )
-                            }),
+                            &::eql_tests::eqlmatrix::tag(
+                                Some(case_id),
+                                &::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "SELECT COUNT(*) FROM {0} WHERE {1}",
+                                            table,
+                                            predicate,
+                                        ),
+                                    )
+                                }),
+                            ),
                         )
                         .fetch_one(&pool)
                         .await?;
@@ -19621,14 +20573,17 @@ pub mod int4 {
                     }
                 }
                 let distinct_hm: i64 = sqlx::query_scalar(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "SELECT COUNT(DISTINCT payload->>\'hm\') FROM {0}",
-                                    table,
-                                ),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "SELECT COUNT(DISTINCT payload->>\'hm\') FROM {0}",
+                                        table,
+                                    ),
+                                )
+                            }),
+                        ),
                     )
                     .fetch_one(&pool)
                     .await?;
@@ -19645,14 +20600,17 @@ pub mod int4 {
                     });
                 }
                 let mismatched_version: i64 = sqlx::query_scalar(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "SELECT COUNT(*) FROM {0} WHERE payload->\'v\' IS NULL OR payload->>\'v\' <> \'2\'",
-                                    table,
-                                ),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "SELECT COUNT(*) FROM {0} WHERE payload->\'v\' IS NULL OR payload->>\'v\' <> \'2\'",
+                                        table,
+                                    ),
+                                )
+                            }),
+                        ),
                     )
                     .fetch_one(&pool)
                     .await?;
@@ -19669,15 +20627,18 @@ pub mod int4 {
                     let probe_lit = <i32 as ScalarType>::to_sql_literal(probe);
                     let expected_id = (expected.len() / 2 + 1) as i64;
                     let ids: Vec<i64> = sqlx::query_scalar(
-                            &::alloc::__export::must_use({
-                                ::alloc::fmt::format(
-                                    format_args!(
-                                        "SELECT id FROM {1} WHERE plaintext = {0} ORDER BY id",
-                                        probe_lit,
-                                        table,
-                                    ),
-                                )
-                            }),
+                            &::eql_tests::eqlmatrix::tag(
+                                Some(case_id),
+                                &::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "SELECT id FROM {1} WHERE plaintext = {0} ORDER BY id",
+                                            probe_lit,
+                                            table,
+                                        ),
+                                    )
+                                }),
+                            ),
                         )
                         .fetch_all(&pool)
                         .await?;
@@ -19757,9 +20718,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1574usize,
+            start_line: 1691usize,
             start_col: 22usize,
-            end_line: 1574usize,
+            end_line: 1691usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -19777,6 +20738,7 @@ pub mod int4 {
         ) -> anyhow::Result<()> {
             {
                 use ::eql_tests::scalar_domains::ScalarType;
+                let case_id: &str = "matrix_int4_ord_ord_routes_through_ob";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -19807,44 +20769,53 @@ pub mod int4 {
                 };
                 let mut tx = pool.begin().await?;
                 sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "CREATE TEMP TABLE {1} (plaintext {0}, value {2}) ON COMMIT DROP",
-                                    <i32 as ScalarType>::PG_TYPE,
-                                    table,
-                                    d,
-                                ),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "CREATE TEMP TABLE {1} (plaintext {0}, value {2}) ON COMMIT DROP",
+                                        <i32 as ScalarType>::PG_TYPE,
+                                        table,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
                     )
                     .execute(&mut *tx)
                     .await?;
                 sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, {2}::{3} FROM {0}",
-                                    fixture_table,
-                                    table,
-                                    value_expr,
-                                    d,
-                                ),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO {1}(plaintext, value) SELECT plaintext, {2}::{3} FROM {0}",
+                                        fixture_table,
+                                        table,
+                                        value_expr,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
                     )
                     .execute(&mut *tx)
                     .await?;
                 if !carries_hm {
                     let with_hm: i64 = sqlx::query_scalar(
-                            &::alloc::__export::must_use({
-                                ::alloc::fmt::format(
-                                    format_args!(
-                                        "SELECT count(*) FROM {0} WHERE jsonb_exists(value::jsonb, \'hm\')",
-                                        table,
-                                    ),
-                                )
-                            }),
+                            &::eql_tests::eqlmatrix::tag(
+                                Some(case_id),
+                                &::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "SELECT count(*) FROM {0} WHERE jsonb_exists(value::jsonb, \'hm\')",
+                                            table,
+                                        ),
+                                    )
+                                }),
+                            ),
                         )
                         .fetch_one(&mut *tx)
                         .await?;
@@ -19858,51 +20829,63 @@ pub mod int4 {
                     }
                 }
                 sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "CREATE INDEX {0} ON {1} USING btree ({2}(value))",
-                                    index,
-                                    table,
-                                    extractor,
-                                ),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "CREATE INDEX {0} ON {1} USING btree ({2}(value))",
+                                        index,
+                                        table,
+                                        extractor,
+                                    ),
+                                )
+                            }),
+                        ),
                     )
                     .execute(&mut *tx)
                     .await?;
                 sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(format_args!("ANALYZE {0}", table))
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(format_args!("ANALYZE {0}", table))
+                            }),
+                        ),
                     )
                     .execute(&mut *tx)
                     .await?;
                 sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
                 let pivot_payload: String = sqlx::query_scalar(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "SELECT {2}::text FROM {0} WHERE plaintext = {1}",
-                                    fixture_table,
-                                    pivot_lit,
-                                    value_expr,
-                                ),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "SELECT {2}::text FROM {0} WHERE plaintext = {1}",
+                                        fixture_table,
+                                        pivot_lit,
+                                        value_expr,
+                                    ),
+                                )
+                            }),
+                        ),
                     )
                     .fetch_one(&mut *tx)
                     .await?;
                 let eq_count: i64 = sqlx::query_scalar(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "SELECT count(*) FROM {0} WHERE value = $1::jsonb::{1}",
-                                    table,
-                                    d,
-                                ),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "SELECT count(*) FROM {0} WHERE value = $1::jsonb::{1}",
+                                        table,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
                     )
                     .bind(&pivot_payload)
                     .fetch_one(&mut *tx)
@@ -19921,15 +20904,18 @@ pub mod int4 {
                 let expected_neq = <i32 as ScalarType>::fixture_values().len() as i64
                     - eq_count;
                 let neq_count: i64 = sqlx::query_scalar(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "SELECT count(*) FROM {0} WHERE value <> $1::jsonb::{1}",
-                                    table,
-                                    d,
-                                ),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "SELECT count(*) FROM {0} WHERE value <> $1::jsonb::{1}",
+                                        table,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
                     )
                     .bind(&pivot_payload)
                     .fetch_one(&mut *tx)
@@ -19949,6 +20935,7 @@ pub mod int4 {
                 let lit = pivot_payload.replace('\'', "''");
                 ::eql_tests::matrix::assert_index_scan_uses(
                         &mut *tx,
+                        case_id,
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
@@ -20018,9 +21005,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1574usize,
+            start_line: 1691usize,
             start_col: 22usize,
-            end_line: 1574usize,
+            end_line: 1691usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -20038,6 +21025,7 @@ pub mod int4 {
         ) -> anyhow::Result<()> {
             {
                 use ::eql_tests::scalar_domains::ScalarType;
+                let case_id: &str = "matrix_int4_ord_ore_ord_routes_through_ob";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -20068,44 +21056,53 @@ pub mod int4 {
                 };
                 let mut tx = pool.begin().await?;
                 sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "CREATE TEMP TABLE {1} (plaintext {0}, value {2}) ON COMMIT DROP",
-                                    <i32 as ScalarType>::PG_TYPE,
-                                    table,
-                                    d,
-                                ),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "CREATE TEMP TABLE {1} (plaintext {0}, value {2}) ON COMMIT DROP",
+                                        <i32 as ScalarType>::PG_TYPE,
+                                        table,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
                     )
                     .execute(&mut *tx)
                     .await?;
                 sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, {2}::{3} FROM {0}",
-                                    fixture_table,
-                                    table,
-                                    value_expr,
-                                    d,
-                                ),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO {1}(plaintext, value) SELECT plaintext, {2}::{3} FROM {0}",
+                                        fixture_table,
+                                        table,
+                                        value_expr,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
                     )
                     .execute(&mut *tx)
                     .await?;
                 if !carries_hm {
                     let with_hm: i64 = sqlx::query_scalar(
-                            &::alloc::__export::must_use({
-                                ::alloc::fmt::format(
-                                    format_args!(
-                                        "SELECT count(*) FROM {0} WHERE jsonb_exists(value::jsonb, \'hm\')",
-                                        table,
-                                    ),
-                                )
-                            }),
+                            &::eql_tests::eqlmatrix::tag(
+                                Some(case_id),
+                                &::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "SELECT count(*) FROM {0} WHERE jsonb_exists(value::jsonb, \'hm\')",
+                                            table,
+                                        ),
+                                    )
+                                }),
+                            ),
                         )
                         .fetch_one(&mut *tx)
                         .await?;
@@ -20119,51 +21116,63 @@ pub mod int4 {
                     }
                 }
                 sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "CREATE INDEX {0} ON {1} USING btree ({2}(value))",
-                                    index,
-                                    table,
-                                    extractor,
-                                ),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "CREATE INDEX {0} ON {1} USING btree ({2}(value))",
+                                        index,
+                                        table,
+                                        extractor,
+                                    ),
+                                )
+                            }),
+                        ),
                     )
                     .execute(&mut *tx)
                     .await?;
                 sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(format_args!("ANALYZE {0}", table))
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(format_args!("ANALYZE {0}", table))
+                            }),
+                        ),
                     )
                     .execute(&mut *tx)
                     .await?;
                 sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
                 let pivot_payload: String = sqlx::query_scalar(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "SELECT {2}::text FROM {0} WHERE plaintext = {1}",
-                                    fixture_table,
-                                    pivot_lit,
-                                    value_expr,
-                                ),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "SELECT {2}::text FROM {0} WHERE plaintext = {1}",
+                                        fixture_table,
+                                        pivot_lit,
+                                        value_expr,
+                                    ),
+                                )
+                            }),
+                        ),
                     )
                     .fetch_one(&mut *tx)
                     .await?;
                 let eq_count: i64 = sqlx::query_scalar(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "SELECT count(*) FROM {0} WHERE value = $1::jsonb::{1}",
-                                    table,
-                                    d,
-                                ),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "SELECT count(*) FROM {0} WHERE value = $1::jsonb::{1}",
+                                        table,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
                     )
                     .bind(&pivot_payload)
                     .fetch_one(&mut *tx)
@@ -20182,15 +21191,18 @@ pub mod int4 {
                 let expected_neq = <i32 as ScalarType>::fixture_values().len() as i64
                     - eq_count;
                 let neq_count: i64 = sqlx::query_scalar(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "SELECT count(*) FROM {0} WHERE value <> $1::jsonb::{1}",
-                                    table,
-                                    d,
-                                ),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "SELECT count(*) FROM {0} WHERE value <> $1::jsonb::{1}",
+                                        table,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
                     )
                     .bind(&pivot_payload)
                     .fetch_one(&mut *tx)
@@ -20210,6 +21222,7 @@ pub mod int4 {
                 let lit = pivot_payload.replace('\'', "''");
                 ::eql_tests::matrix::assert_index_scan_uses(
                         &mut *tx,
+                        case_id,
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
@@ -20279,9 +21292,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1885usize,
+            start_line: 2008usize,
             start_col: 22usize,
-            end_line: 1885usize,
+            end_line: 2008usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -20298,21 +21311,25 @@ pub mod int4 {
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
+                let case_id: &str = "matrix_int4_ord_ore_ore_injectivity";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
                 let d = &spec.sql_domain;
                 let fixture_table = <i32 as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
                 let collisions: i64 = sqlx::query_scalar(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "SELECT count(*) FROM {0} a JOIN {0} b ON a.id < b.id WHERE a.payload::{1} = b.payload::{1}",
-                                    fixture_table,
-                                    d,
-                                ),
-                            )
-                        }),
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "SELECT count(*) FROM {0} a JOIN {0} b ON a.id < b.id WHERE a.payload::{1} = b.payload::{1}",
+                                        fixture_table,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
                     )
                     .fetch_one(&pool)
                     .await?;
@@ -20379,9 +21396,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2414usize,
+            start_line: 2564usize,
             start_col: 22usize,
-            end_line: 2414usize,
+            end_line: 2564usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -20403,6 +21420,7 @@ pub mod int4 {
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let fixture = <i32 as ScalarType>::fixture_table_name();
                 let extremum: i32 = <i32 as ScalarType>::fixture_values()
                     .iter()
@@ -20414,8 +21432,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
                                     extremum_lit,
+                                    col,
+                                    d,
                                     fixture,
                                 ),
                             )
@@ -20427,8 +21447,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT eql_v3.{0}(payload::{1})::text FROM {2}",
+                                    "SELECT eql_v3.{0}(({1})::{2})::text FROM {3}",
                                     "min",
+                                    col,
                                     d,
                                     fixture,
                                 ),
@@ -20458,13 +21479,27 @@ pub mod int4 {
                         }
                     }
                 };
+                let lhs_ord = (spec
+                    .ord_extractor)(
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!("eql_v3.{0}(({1})::{2})", "min", col, d),
+                        )
+                    }),
+                );
+                let rhs_ord = (spec
+                    .ord_extractor)(
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
+                    }),
+                );
                 let ord_terms_match: bool = sqlx::query_scalar(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT eql_v3.ord_term(eql_v3.{0}(payload::{1})) = eql_v3.ord_term($1::jsonb::{1}) FROM {2}",
-                                    "min",
-                                    d,
+                                    "SELECT {0} = {1} FROM {2}",
+                                    lhs_ord,
+                                    rhs_ord,
                                     fixture,
                                 ),
                             )
@@ -20543,9 +21578,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2472usize,
+            start_line: 2624usize,
             start_col: 22usize,
-            end_line: 2472usize,
+            end_line: 2624usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -20655,9 +21690,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2497usize,
+            start_line: 2649usize,
             start_col: 22usize,
-            end_line: 2497usize,
+            end_line: 2649usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -20754,9 +21789,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2523usize,
+            start_line: 2675usize,
             start_col: 22usize,
-            end_line: 2523usize,
+            end_line: 2675usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -20778,6 +21813,7 @@ pub mod int4 {
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let fixture = <i32 as ScalarType>::fixture_table_name();
                 let values: &[i32] = <i32 as ScalarType>::fixture_values();
                 if ::anyhow::__private::not(values.len() >= 2) {
@@ -20827,10 +21863,11 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO mixed_null(value) SELECT NULL::{2} UNION ALL SELECT payload::{2} FROM {3} WHERE plaintext = {0} UNION ALL SELECT NULL::{2} UNION ALL SELECT payload::{2} FROM {3} WHERE plaintext = {1} UNION ALL SELECT NULL::{2}",
+                                    "INSERT INTO mixed_null(value) SELECT NULL::{2} UNION ALL SELECT ({3})::{2} FROM {4} WHERE plaintext = {0} UNION ALL SELECT NULL::{2} UNION ALL SELECT ({3})::{2} FROM {4} WHERE plaintext = {1} UNION ALL SELECT NULL::{2}",
                                     low_lit,
                                     high_lit,
                                     d,
+                                    col,
                                     fixture,
                                 ),
                             )
@@ -20842,8 +21879,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
                                     expected_lit,
+                                    col,
+                                    d,
                                     fixture,
                                 ),
                             )
@@ -20936,9 +21975,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2414usize,
+            start_line: 2564usize,
             start_col: 22usize,
-            end_line: 2414usize,
+            end_line: 2564usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -20960,6 +21999,7 @@ pub mod int4 {
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let fixture = <i32 as ScalarType>::fixture_table_name();
                 let extremum: i32 = <i32 as ScalarType>::fixture_values()
                     .iter()
@@ -20971,8 +22011,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
                                     extremum_lit,
+                                    col,
+                                    d,
                                     fixture,
                                 ),
                             )
@@ -20984,8 +22026,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT eql_v3.{0}(payload::{1})::text FROM {2}",
+                                    "SELECT eql_v3.{0}(({1})::{2})::text FROM {3}",
                                     "max",
+                                    col,
                                     d,
                                     fixture,
                                 ),
@@ -21015,13 +22058,27 @@ pub mod int4 {
                         }
                     }
                 };
+                let lhs_ord = (spec
+                    .ord_extractor)(
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!("eql_v3.{0}(({1})::{2})", "max", col, d),
+                        )
+                    }),
+                );
+                let rhs_ord = (spec
+                    .ord_extractor)(
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
+                    }),
+                );
                 let ord_terms_match: bool = sqlx::query_scalar(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT eql_v3.ord_term(eql_v3.{0}(payload::{1})) = eql_v3.ord_term($1::jsonb::{1}) FROM {2}",
-                                    "max",
-                                    d,
+                                    "SELECT {0} = {1} FROM {2}",
+                                    lhs_ord,
+                                    rhs_ord,
                                     fixture,
                                 ),
                             )
@@ -21100,9 +22157,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2472usize,
+            start_line: 2624usize,
             start_col: 22usize,
-            end_line: 2472usize,
+            end_line: 2624usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -21212,9 +22269,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2497usize,
+            start_line: 2649usize,
             start_col: 22usize,
-            end_line: 2497usize,
+            end_line: 2649usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -21311,9 +22368,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2523usize,
+            start_line: 2675usize,
             start_col: 22usize,
-            end_line: 2523usize,
+            end_line: 2675usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -21335,6 +22392,7 @@ pub mod int4 {
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let fixture = <i32 as ScalarType>::fixture_table_name();
                 let values: &[i32] = <i32 as ScalarType>::fixture_values();
                 if ::anyhow::__private::not(values.len() >= 2) {
@@ -21384,10 +22442,11 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO mixed_null(value) SELECT NULL::{2} UNION ALL SELECT payload::{2} FROM {3} WHERE plaintext = {0} UNION ALL SELECT NULL::{2} UNION ALL SELECT payload::{2} FROM {3} WHERE plaintext = {1} UNION ALL SELECT NULL::{2}",
+                                    "INSERT INTO mixed_null(value) SELECT NULL::{2} UNION ALL SELECT ({3})::{2} FROM {4} WHERE plaintext = {0} UNION ALL SELECT NULL::{2} UNION ALL SELECT ({3})::{2} FROM {4} WHERE plaintext = {1} UNION ALL SELECT NULL::{2}",
                                     low_lit,
                                     high_lit,
                                     d,
+                                    col,
                                     fixture,
                                 ),
                             )
@@ -21399,8 +22458,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
                                     expected_lit,
+                                    col,
+                                    d,
                                     fixture,
                                 ),
                             )
@@ -21495,9 +22556,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2414usize,
+            start_line: 2564usize,
             start_col: 22usize,
-            end_line: 2414usize,
+            end_line: 2564usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -21519,6 +22580,7 @@ pub mod int4 {
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let fixture = <i32 as ScalarType>::fixture_table_name();
                 let extremum: i32 = <i32 as ScalarType>::fixture_values()
                     .iter()
@@ -21530,8 +22592,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
                                     extremum_lit,
+                                    col,
+                                    d,
                                     fixture,
                                 ),
                             )
@@ -21543,8 +22607,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT eql_v3.{0}(payload::{1})::text FROM {2}",
+                                    "SELECT eql_v3.{0}(({1})::{2})::text FROM {3}",
                                     "min",
+                                    col,
                                     d,
                                     fixture,
                                 ),
@@ -21574,13 +22639,27 @@ pub mod int4 {
                         }
                     }
                 };
+                let lhs_ord = (spec
+                    .ord_extractor)(
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!("eql_v3.{0}(({1})::{2})", "min", col, d),
+                        )
+                    }),
+                );
+                let rhs_ord = (spec
+                    .ord_extractor)(
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
+                    }),
+                );
                 let ord_terms_match: bool = sqlx::query_scalar(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT eql_v3.ord_term(eql_v3.{0}(payload::{1})) = eql_v3.ord_term($1::jsonb::{1}) FROM {2}",
-                                    "min",
-                                    d,
+                                    "SELECT {0} = {1} FROM {2}",
+                                    lhs_ord,
+                                    rhs_ord,
                                     fixture,
                                 ),
                             )
@@ -21659,9 +22738,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2472usize,
+            start_line: 2624usize,
             start_col: 22usize,
-            end_line: 2472usize,
+            end_line: 2624usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -21771,9 +22850,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2497usize,
+            start_line: 2649usize,
             start_col: 22usize,
-            end_line: 2497usize,
+            end_line: 2649usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -21870,9 +22949,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2523usize,
+            start_line: 2675usize,
             start_col: 22usize,
-            end_line: 2523usize,
+            end_line: 2675usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -21894,6 +22973,7 @@ pub mod int4 {
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let fixture = <i32 as ScalarType>::fixture_table_name();
                 let values: &[i32] = <i32 as ScalarType>::fixture_values();
                 if ::anyhow::__private::not(values.len() >= 2) {
@@ -21943,10 +23023,11 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO mixed_null(value) SELECT NULL::{2} UNION ALL SELECT payload::{2} FROM {3} WHERE plaintext = {0} UNION ALL SELECT NULL::{2} UNION ALL SELECT payload::{2} FROM {3} WHERE plaintext = {1} UNION ALL SELECT NULL::{2}",
+                                    "INSERT INTO mixed_null(value) SELECT NULL::{2} UNION ALL SELECT ({3})::{2} FROM {4} WHERE plaintext = {0} UNION ALL SELECT NULL::{2} UNION ALL SELECT ({3})::{2} FROM {4} WHERE plaintext = {1} UNION ALL SELECT NULL::{2}",
                                     low_lit,
                                     high_lit,
                                     d,
+                                    col,
                                     fixture,
                                 ),
                             )
@@ -21958,8 +23039,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
                                     expected_lit,
+                                    col,
+                                    d,
                                     fixture,
                                 ),
                             )
@@ -22054,9 +23137,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2414usize,
+            start_line: 2564usize,
             start_col: 22usize,
-            end_line: 2414usize,
+            end_line: 2564usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -22078,6 +23161,7 @@ pub mod int4 {
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let fixture = <i32 as ScalarType>::fixture_table_name();
                 let extremum: i32 = <i32 as ScalarType>::fixture_values()
                     .iter()
@@ -22089,8 +23173,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
                                     extremum_lit,
+                                    col,
+                                    d,
                                     fixture,
                                 ),
                             )
@@ -22102,8 +23188,9 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT eql_v3.{0}(payload::{1})::text FROM {2}",
+                                    "SELECT eql_v3.{0}(({1})::{2})::text FROM {3}",
                                     "max",
+                                    col,
                                     d,
                                     fixture,
                                 ),
@@ -22133,13 +23220,27 @@ pub mod int4 {
                         }
                     }
                 };
+                let lhs_ord = (spec
+                    .ord_extractor)(
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!("eql_v3.{0}(({1})::{2})", "max", col, d),
+                        )
+                    }),
+                );
+                let rhs_ord = (spec
+                    .ord_extractor)(
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
+                    }),
+                );
                 let ord_terms_match: bool = sqlx::query_scalar(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT eql_v3.ord_term(eql_v3.{0}(payload::{1})) = eql_v3.ord_term($1::jsonb::{1}) FROM {2}",
-                                    "max",
-                                    d,
+                                    "SELECT {0} = {1} FROM {2}",
+                                    lhs_ord,
+                                    rhs_ord,
                                     fixture,
                                 ),
                             )
@@ -22218,9 +23319,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2472usize,
+            start_line: 2624usize,
             start_col: 22usize,
-            end_line: 2472usize,
+            end_line: 2624usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -22330,9 +23431,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2497usize,
+            start_line: 2649usize,
             start_col: 22usize,
-            end_line: 2497usize,
+            end_line: 2649usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -22429,9 +23530,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2523usize,
+            start_line: 2675usize,
             start_col: 22usize,
-            end_line: 2523usize,
+            end_line: 2675usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -22453,6 +23554,7 @@ pub mod int4 {
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let fixture = <i32 as ScalarType>::fixture_table_name();
                 let values: &[i32] = <i32 as ScalarType>::fixture_values();
                 if ::anyhow::__private::not(values.len() >= 2) {
@@ -22502,10 +23604,11 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO mixed_null(value) SELECT NULL::{2} UNION ALL SELECT payload::{2} FROM {3} WHERE plaintext = {0} UNION ALL SELECT NULL::{2} UNION ALL SELECT payload::{2} FROM {3} WHERE plaintext = {1} UNION ALL SELECT NULL::{2}",
+                                    "INSERT INTO mixed_null(value) SELECT NULL::{2} UNION ALL SELECT ({3})::{2} FROM {4} WHERE plaintext = {0} UNION ALL SELECT NULL::{2} UNION ALL SELECT ({3})::{2} FROM {4} WHERE plaintext = {1} UNION ALL SELECT NULL::{2}",
                                     low_lit,
                                     high_lit,
                                     d,
+                                    col,
                                     fixture,
                                 ),
                             )
@@ -22517,8 +23620,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
                                     expected_lit,
+                                    col,
+                                    d,
                                     fixture,
                                 ),
                             )
@@ -22613,9 +23718,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2703usize,
+            start_line: 2856usize,
             start_col: 22usize,
-            end_line: 2703usize,
+            end_line: 2856usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -22637,6 +23742,7 @@ pub mod int4 {
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let fixture = <i32 as ScalarType>::fixture_table_name();
                 let values: &[i32] = <i32 as ScalarType>::fixture_values();
                 if ::anyhow::__private::not(values.len() >= 5) {
@@ -22686,7 +23792,8 @@ pub mod int4 {
                             &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "INSERT INTO group_test(group_key, value) SELECT 1, payload::{0} FROM {1} WHERE plaintext = {2}",
+                                        "INSERT INTO group_test(group_key, value) SELECT 1, ({0})::{1} FROM {2} WHERE plaintext = {3}",
+                                        col,
                                         d,
                                         fixture,
                                         lit,
@@ -22703,7 +23810,8 @@ pub mod int4 {
                             &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "INSERT INTO group_test(group_key, value) SELECT 2, payload::{0} FROM {1} WHERE plaintext = {2}",
+                                        "INSERT INTO group_test(group_key, value) SELECT 2, ({0})::{1} FROM {2} WHERE plaintext = {3}",
+                                        col,
                                         d,
                                         fixture,
                                         lit,
@@ -22718,8 +23826,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
                                     g1_lit,
+                                    col,
+                                    d,
                                     fixture,
                                 ),
                             )
@@ -22731,8 +23841,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
                                     g2_lit,
+                                    col,
+                                    d,
                                     fixture,
                                 ),
                             )
@@ -22859,9 +23971,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2703usize,
+            start_line: 2856usize,
             start_col: 22usize,
-            end_line: 2703usize,
+            end_line: 2856usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -22883,6 +23995,7 @@ pub mod int4 {
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let fixture = <i32 as ScalarType>::fixture_table_name();
                 let values: &[i32] = <i32 as ScalarType>::fixture_values();
                 if ::anyhow::__private::not(values.len() >= 5) {
@@ -22932,7 +24045,8 @@ pub mod int4 {
                             &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "INSERT INTO group_test(group_key, value) SELECT 1, payload::{0} FROM {1} WHERE plaintext = {2}",
+                                        "INSERT INTO group_test(group_key, value) SELECT 1, ({0})::{1} FROM {2} WHERE plaintext = {3}",
+                                        col,
                                         d,
                                         fixture,
                                         lit,
@@ -22949,7 +24063,8 @@ pub mod int4 {
                             &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "INSERT INTO group_test(group_key, value) SELECT 2, payload::{0} FROM {1} WHERE plaintext = {2}",
+                                        "INSERT INTO group_test(group_key, value) SELECT 2, ({0})::{1} FROM {2} WHERE plaintext = {3}",
+                                        col,
                                         d,
                                         fixture,
                                         lit,
@@ -22964,8 +24079,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
                                     g1_lit,
+                                    col,
+                                    d,
                                     fixture,
                                 ),
                             )
@@ -22977,8 +24094,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
                                     g2_lit,
+                                    col,
+                                    d,
                                     fixture,
                                 ),
                             )
@@ -23105,9 +24224,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2703usize,
+            start_line: 2856usize,
             start_col: 22usize,
-            end_line: 2703usize,
+            end_line: 2856usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -23129,6 +24248,7 @@ pub mod int4 {
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let fixture = <i32 as ScalarType>::fixture_table_name();
                 let values: &[i32] = <i32 as ScalarType>::fixture_values();
                 if ::anyhow::__private::not(values.len() >= 5) {
@@ -23178,7 +24298,8 @@ pub mod int4 {
                             &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "INSERT INTO group_test(group_key, value) SELECT 1, payload::{0} FROM {1} WHERE plaintext = {2}",
+                                        "INSERT INTO group_test(group_key, value) SELECT 1, ({0})::{1} FROM {2} WHERE plaintext = {3}",
+                                        col,
                                         d,
                                         fixture,
                                         lit,
@@ -23195,7 +24316,8 @@ pub mod int4 {
                             &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "INSERT INTO group_test(group_key, value) SELECT 2, payload::{0} FROM {1} WHERE plaintext = {2}",
+                                        "INSERT INTO group_test(group_key, value) SELECT 2, ({0})::{1} FROM {2} WHERE plaintext = {3}",
+                                        col,
                                         d,
                                         fixture,
                                         lit,
@@ -23210,8 +24332,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
                                     g1_lit,
+                                    col,
+                                    d,
                                     fixture,
                                 ),
                             )
@@ -23223,8 +24347,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
                                     g2_lit,
+                                    col,
+                                    d,
                                     fixture,
                                 ),
                             )
@@ -23351,9 +24477,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2703usize,
+            start_line: 2856usize,
             start_col: 22usize,
-            end_line: 2703usize,
+            end_line: 2856usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -23375,6 +24501,7 @@ pub mod int4 {
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
                 let d = &spec.sql_domain;
+                let col = &spec.column_expr;
                 let fixture = <i32 as ScalarType>::fixture_table_name();
                 let values: &[i32] = <i32 as ScalarType>::fixture_values();
                 if ::anyhow::__private::not(values.len() >= 5) {
@@ -23424,7 +24551,8 @@ pub mod int4 {
                             &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "INSERT INTO group_test(group_key, value) SELECT 1, payload::{0} FROM {1} WHERE plaintext = {2}",
+                                        "INSERT INTO group_test(group_key, value) SELECT 1, ({0})::{1} FROM {2} WHERE plaintext = {3}",
+                                        col,
                                         d,
                                         fixture,
                                         lit,
@@ -23441,7 +24569,8 @@ pub mod int4 {
                             &::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "INSERT INTO group_test(group_key, value) SELECT 2, payload::{0} FROM {1} WHERE plaintext = {2}",
+                                        "INSERT INTO group_test(group_key, value) SELECT 2, ({0})::{1} FROM {2} WHERE plaintext = {3}",
+                                        col,
                                         d,
                                         fixture,
                                         lit,
@@ -23456,8 +24585,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
                                     g1_lit,
+                                    col,
+                                    d,
                                     fixture,
                                 ),
                             )
@@ -23469,8 +24600,10 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT payload::text FROM {1} WHERE plaintext = {0}",
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
                                     g2_lit,
+                                    col,
+                                    d,
                                     fixture,
                                 ),
                             )
@@ -23597,9 +24730,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2618usize,
+            start_line: 2771usize,
             start_col: 22usize,
-            end_line: 2618usize,
+            end_line: 2771usize,
             end_col: 77usize,
             compile_fail: false,
             no_run: false,
@@ -23706,9 +24839,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2618usize,
+            start_line: 2771usize,
             start_col: 22usize,
-            end_line: 2618usize,
+            end_line: 2771usize,
             end_col: 77usize,
             compile_fail: false,
             no_run: false,
@@ -23815,9 +24948,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2861usize,
+            start_line: 3015usize,
             start_col: 22usize,
-            end_line: 2861usize,
+            end_line: 3015usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -23983,9 +25116,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2861usize,
+            start_line: 3015usize,
             start_col: 22usize,
-            end_line: 2861usize,
+            end_line: 3015usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -24151,9 +25284,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2861usize,
+            start_line: 3015usize,
             start_col: 22usize,
-            end_line: 2861usize,
+            end_line: 3015usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -24319,9 +25452,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2861usize,
+            start_line: 3015usize,
             start_col: 22usize,
-            end_line: 2861usize,
+            end_line: 3015usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -24487,9 +25620,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2861usize,
+            start_line: 3015usize,
             start_col: 22usize,
-            end_line: 2861usize,
+            end_line: 3015usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -24655,9 +25788,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2861usize,
+            start_line: 3015usize,
             start_col: 22usize,
-            end_line: 2861usize,
+            end_line: 3015usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -24823,9 +25956,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2861usize,
+            start_line: 3015usize,
             start_col: 22usize,
-            end_line: 2861usize,
+            end_line: 3015usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -24991,9 +26124,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2861usize,
+            start_line: 3015usize,
             start_col: 22usize,
-            end_line: 2861usize,
+            end_line: 3015usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -25159,9 +26292,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2977usize,
+            start_line: 3131usize,
             start_col: 22usize,
-            end_line: 2977usize,
+            end_line: 3131usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -25202,7 +26335,8 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO typed_count(value) SELECT payload::{0} FROM {1}",
+                                    "INSERT INTO typed_count(value) SELECT ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
                                     d,
                                     fixture,
                                 ),
@@ -25287,9 +26421,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3010usize,
+            start_line: 3165usize,
             start_col: 22usize,
-            end_line: 3010usize,
+            end_line: 3165usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -25315,7 +26449,12 @@ pub mod int4 {
                 let expected = <i32 as ScalarType>::fixture_values().len() as i64;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT COUNT(payload::{0}) FROM {1}", d, fixture),
+                        format_args!(
+                            "SELECT COUNT(({0})::{1}) FROM {2}",
+                            &spec.column_expr,
+                            d,
+                            fixture,
+                        ),
                     )
                 });
                 let actual: i64 = sqlx::query_scalar(&sql).fetch_one(&pool).await?;
@@ -25325,7 +26464,8 @@ pub mod int4 {
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "COUNT(payload::{0}) on {1}: want {2}, got {3}; SQL={4}",
+                                        "COUNT(({0})::{1}) on {2}: want {3}, got {4}; SQL={5}",
+                                        &spec.column_expr,
                                         d,
                                         fixture,
                                         expected,
@@ -25391,9 +26531,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2977usize,
+            start_line: 3131usize,
             start_col: 22usize,
-            end_line: 2977usize,
+            end_line: 3131usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -25434,7 +26574,8 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO typed_count(value) SELECT payload::{0} FROM {1}",
+                                    "INSERT INTO typed_count(value) SELECT ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
                                     d,
                                     fixture,
                                 ),
@@ -25517,9 +26658,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3010usize,
+            start_line: 3165usize,
             start_col: 22usize,
-            end_line: 3010usize,
+            end_line: 3165usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -25545,7 +26686,12 @@ pub mod int4 {
                 let expected = <i32 as ScalarType>::fixture_values().len() as i64;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT COUNT(payload::{0}) FROM {1}", d, fixture),
+                        format_args!(
+                            "SELECT COUNT(({0})::{1}) FROM {2}",
+                            &spec.column_expr,
+                            d,
+                            fixture,
+                        ),
                     )
                 });
                 let actual: i64 = sqlx::query_scalar(&sql).fetch_one(&pool).await?;
@@ -25555,7 +26701,8 @@ pub mod int4 {
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "COUNT(payload::{0}) on {1}: want {2}, got {3}; SQL={4}",
+                                        "COUNT(({0})::{1}) on {2}: want {3}, got {4}; SQL={5}",
+                                        &spec.column_expr,
                                         d,
                                         fixture,
                                         expected,
@@ -25621,9 +26768,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3054usize,
+            start_line: 3210usize,
             start_col: 22usize,
-            end_line: 3054usize,
+            end_line: 3210usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -25645,12 +26792,9 @@ pub mod int4 {
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Eq);
                 let d = &spec.sql_domain;
-                let extractor_fn = spec
-                    .primary_extractor()
+                let extractor = spec
+                    .extractor_expr("value")
                     .expect("non-Storage variant must expose an extractor");
-                let extractor = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(format_args!("{0}(value)", extractor_fn))
-                });
                 let fixture = <i32 as ScalarType>::fixture_table_name();
                 let expected = <i32 as ScalarType>::fixture_values().len() as i64;
                 let mut tx = pool.begin().await?;
@@ -25670,7 +26814,8 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO distinct_count(value) SELECT payload::{0} FROM {1}",
+                                    "INSERT INTO distinct_count(value) SELECT ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
                                     d,
                                     fixture,
                                 ),
@@ -25761,9 +26906,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2977usize,
+            start_line: 3131usize,
             start_col: 22usize,
-            end_line: 2977usize,
+            end_line: 3131usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -25804,7 +26949,8 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO typed_count(value) SELECT payload::{0} FROM {1}",
+                                    "INSERT INTO typed_count(value) SELECT ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
                                     d,
                                     fixture,
                                 ),
@@ -25887,9 +27033,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3010usize,
+            start_line: 3165usize,
             start_col: 22usize,
-            end_line: 3010usize,
+            end_line: 3165usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -25915,7 +27061,12 @@ pub mod int4 {
                 let expected = <i32 as ScalarType>::fixture_values().len() as i64;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT COUNT(payload::{0}) FROM {1}", d, fixture),
+                        format_args!(
+                            "SELECT COUNT(({0})::{1}) FROM {2}",
+                            &spec.column_expr,
+                            d,
+                            fixture,
+                        ),
                     )
                 });
                 let actual: i64 = sqlx::query_scalar(&sql).fetch_one(&pool).await?;
@@ -25925,7 +27076,8 @@ pub mod int4 {
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "COUNT(payload::{0}) on {1}: want {2}, got {3}; SQL={4}",
+                                        "COUNT(({0})::{1}) on {2}: want {3}, got {4}; SQL={5}",
+                                        &spec.column_expr,
                                         d,
                                         fixture,
                                         expected,
@@ -25991,9 +27143,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3054usize,
+            start_line: 3210usize,
             start_col: 22usize,
-            end_line: 3054usize,
+            end_line: 3210usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -26015,12 +27167,9 @@ pub mod int4 {
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
                 let d = &spec.sql_domain;
-                let extractor_fn = spec
-                    .primary_extractor()
+                let extractor = spec
+                    .extractor_expr("value")
                     .expect("non-Storage variant must expose an extractor");
-                let extractor = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(format_args!("{0}(value)", extractor_fn))
-                });
                 let fixture = <i32 as ScalarType>::fixture_table_name();
                 let expected = <i32 as ScalarType>::fixture_values().len() as i64;
                 let mut tx = pool.begin().await?;
@@ -26040,7 +27189,8 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO distinct_count(value) SELECT payload::{0} FROM {1}",
+                                    "INSERT INTO distinct_count(value) SELECT ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
                                     d,
                                     fixture,
                                 ),
@@ -26131,9 +27281,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2977usize,
+            start_line: 3131usize,
             start_col: 22usize,
-            end_line: 2977usize,
+            end_line: 3131usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -26174,7 +27324,8 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO typed_count(value) SELECT payload::{0} FROM {1}",
+                                    "INSERT INTO typed_count(value) SELECT ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
                                     d,
                                     fixture,
                                 ),
@@ -26259,9 +27410,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3010usize,
+            start_line: 3165usize,
             start_col: 22usize,
-            end_line: 3010usize,
+            end_line: 3165usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -26287,7 +27438,12 @@ pub mod int4 {
                 let expected = <i32 as ScalarType>::fixture_values().len() as i64;
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
-                        format_args!("SELECT COUNT(payload::{0}) FROM {1}", d, fixture),
+                        format_args!(
+                            "SELECT COUNT(({0})::{1}) FROM {2}",
+                            &spec.column_expr,
+                            d,
+                            fixture,
+                        ),
                     )
                 });
                 let actual: i64 = sqlx::query_scalar(&sql).fetch_one(&pool).await?;
@@ -26297,7 +27453,8 @@ pub mod int4 {
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "COUNT(payload::{0}) on {1}: want {2}, got {3}; SQL={4}",
+                                        "COUNT(({0})::{1}) on {2}: want {3}, got {4}; SQL={5}",
+                                        &spec.column_expr,
                                         d,
                                         fixture,
                                         expected,
@@ -26363,9 +27520,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3054usize,
+            start_line: 3210usize,
             start_col: 22usize,
-            end_line: 3054usize,
+            end_line: 3210usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -26387,12 +27544,9 @@ pub mod int4 {
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
                 let d = &spec.sql_domain;
-                let extractor_fn = spec
-                    .primary_extractor()
+                let extractor = spec
+                    .extractor_expr("value")
                     .expect("non-Storage variant must expose an extractor");
-                let extractor = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(format_args!("{0}(value)", extractor_fn))
-                });
                 let fixture = <i32 as ScalarType>::fixture_table_name();
                 let expected = <i32 as ScalarType>::fixture_values().len() as i64;
                 let mut tx = pool.begin().await?;
@@ -26412,7 +27566,8 @@ pub mod int4 {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "INSERT INTO distinct_count(value) SELECT payload::{0} FROM {1}",
+                                    "INSERT INTO distinct_count(value) SELECT ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
                                     d,
                                     fixture,
                                 ),
@@ -26503,9 +27658,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2096usize,
+            start_line: 2237usize,
             start_col: 22usize,
-            end_line: 2096usize,
+            end_line: 2237usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -26523,6 +27678,7 @@ pub mod int4 {
         ) -> anyhow::Result<()> {
             {
                 use ::eql_tests::scalar_domains::{OrderedScalar, ScalarType};
+                let case_id: &str = "matrix_int4_ord_order_by_asc_no_where";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -26541,17 +27697,28 @@ pub mod int4 {
                 } else {
                     String::new()
                 };
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT plaintext FROM {0}{3} ORDER BY eql_v3.ord_term(payload::{1}) {2}",
-                            fixture_table,
-                            &spec.sql_domain,
-                            "ASC",
-                            where_clause,
-                        ),
-                    )
-                });
+                let col = &spec.column_expr;
+                let d = &spec.sql_domain;
+                let ord = (spec
+                    .ord_extractor)(
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                    }),
+                );
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT plaintext FROM {0}{2} ORDER BY {3} {1}",
+                                fixture_table,
+                                "ASC",
+                                where_clause,
+                                ord,
+                            ),
+                        )
+                    }),
+                );
                 let actual: Vec<i32> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
                 let mut expected: Vec<i32> = <i32 as ScalarType>::fixture_values()
                     .to_vec();
@@ -26638,9 +27805,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2096usize,
+            start_line: 2237usize,
             start_col: 22usize,
-            end_line: 2096usize,
+            end_line: 2237usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -26658,6 +27825,7 @@ pub mod int4 {
         ) -> anyhow::Result<()> {
             {
                 use ::eql_tests::scalar_domains::{OrderedScalar, ScalarType};
+                let case_id: &str = "matrix_int4_ord_order_by_desc_no_where";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -26676,17 +27844,28 @@ pub mod int4 {
                 } else {
                     String::new()
                 };
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT plaintext FROM {0}{3} ORDER BY eql_v3.ord_term(payload::{1}) {2}",
-                            fixture_table,
-                            &spec.sql_domain,
-                            "DESC",
-                            where_clause,
-                        ),
-                    )
-                });
+                let col = &spec.column_expr;
+                let d = &spec.sql_domain;
+                let ord = (spec
+                    .ord_extractor)(
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                    }),
+                );
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT plaintext FROM {0}{2} ORDER BY {3} {1}",
+                                fixture_table,
+                                "DESC",
+                                where_clause,
+                                ord,
+                            ),
+                        )
+                    }),
+                );
                 let actual: Vec<i32> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
                 let mut expected: Vec<i32> = <i32 as ScalarType>::fixture_values()
                     .to_vec();
@@ -26773,9 +27952,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2096usize,
+            start_line: 2237usize,
             start_col: 22usize,
-            end_line: 2096usize,
+            end_line: 2237usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -26793,6 +27972,7 @@ pub mod int4 {
         ) -> anyhow::Result<()> {
             {
                 use ::eql_tests::scalar_domains::{OrderedScalar, ScalarType};
+                let case_id: &str = "matrix_int4_ord_order_by_asc_with_where";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -26811,17 +27991,28 @@ pub mod int4 {
                 } else {
                     String::new()
                 };
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT plaintext FROM {0}{3} ORDER BY eql_v3.ord_term(payload::{1}) {2}",
-                            fixture_table,
-                            &spec.sql_domain,
-                            "ASC",
-                            where_clause,
-                        ),
-                    )
-                });
+                let col = &spec.column_expr;
+                let d = &spec.sql_domain;
+                let ord = (spec
+                    .ord_extractor)(
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                    }),
+                );
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT plaintext FROM {0}{2} ORDER BY {3} {1}",
+                                fixture_table,
+                                "ASC",
+                                where_clause,
+                                ord,
+                            ),
+                        )
+                    }),
+                );
                 let actual: Vec<i32> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
                 let mut expected: Vec<i32> = <i32 as ScalarType>::fixture_values()
                     .to_vec();
@@ -26908,9 +28099,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2096usize,
+            start_line: 2237usize,
             start_col: 22usize,
-            end_line: 2096usize,
+            end_line: 2237usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -26928,6 +28119,7 @@ pub mod int4 {
         ) -> anyhow::Result<()> {
             {
                 use ::eql_tests::scalar_domains::{OrderedScalar, ScalarType};
+                let case_id: &str = "matrix_int4_ord_order_by_desc_with_where";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -26946,17 +28138,28 @@ pub mod int4 {
                 } else {
                     String::new()
                 };
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT plaintext FROM {0}{3} ORDER BY eql_v3.ord_term(payload::{1}) {2}",
-                            fixture_table,
-                            &spec.sql_domain,
-                            "DESC",
-                            where_clause,
-                        ),
-                    )
-                });
+                let col = &spec.column_expr;
+                let d = &spec.sql_domain;
+                let ord = (spec
+                    .ord_extractor)(
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                    }),
+                );
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT plaintext FROM {0}{2} ORDER BY {3} {1}",
+                                fixture_table,
+                                "DESC",
+                                where_clause,
+                                ord,
+                            ),
+                        )
+                    }),
+                );
                 let actual: Vec<i32> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
                 let mut expected: Vec<i32> = <i32 as ScalarType>::fixture_values()
                     .to_vec();
@@ -27043,9 +28246,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2096usize,
+            start_line: 2237usize,
             start_col: 22usize,
-            end_line: 2096usize,
+            end_line: 2237usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -27063,6 +28266,7 @@ pub mod int4 {
         ) -> anyhow::Result<()> {
             {
                 use ::eql_tests::scalar_domains::{OrderedScalar, ScalarType};
+                let case_id: &str = "matrix_int4_ord_ore_order_by_asc_no_where";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -27081,17 +28285,28 @@ pub mod int4 {
                 } else {
                     String::new()
                 };
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT plaintext FROM {0}{3} ORDER BY eql_v3.ord_term(payload::{1}) {2}",
-                            fixture_table,
-                            &spec.sql_domain,
-                            "ASC",
-                            where_clause,
-                        ),
-                    )
-                });
+                let col = &spec.column_expr;
+                let d = &spec.sql_domain;
+                let ord = (spec
+                    .ord_extractor)(
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                    }),
+                );
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT plaintext FROM {0}{2} ORDER BY {3} {1}",
+                                fixture_table,
+                                "ASC",
+                                where_clause,
+                                ord,
+                            ),
+                        )
+                    }),
+                );
                 let actual: Vec<i32> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
                 let mut expected: Vec<i32> = <i32 as ScalarType>::fixture_values()
                     .to_vec();
@@ -27178,9 +28393,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2096usize,
+            start_line: 2237usize,
             start_col: 22usize,
-            end_line: 2096usize,
+            end_line: 2237usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -27198,6 +28413,7 @@ pub mod int4 {
         ) -> anyhow::Result<()> {
             {
                 use ::eql_tests::scalar_domains::{OrderedScalar, ScalarType};
+                let case_id: &str = "matrix_int4_ord_ore_order_by_desc_no_where";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -27216,17 +28432,28 @@ pub mod int4 {
                 } else {
                     String::new()
                 };
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT plaintext FROM {0}{3} ORDER BY eql_v3.ord_term(payload::{1}) {2}",
-                            fixture_table,
-                            &spec.sql_domain,
-                            "DESC",
-                            where_clause,
-                        ),
-                    )
-                });
+                let col = &spec.column_expr;
+                let d = &spec.sql_domain;
+                let ord = (spec
+                    .ord_extractor)(
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                    }),
+                );
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT plaintext FROM {0}{2} ORDER BY {3} {1}",
+                                fixture_table,
+                                "DESC",
+                                where_clause,
+                                ord,
+                            ),
+                        )
+                    }),
+                );
                 let actual: Vec<i32> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
                 let mut expected: Vec<i32> = <i32 as ScalarType>::fixture_values()
                     .to_vec();
@@ -27313,9 +28540,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2096usize,
+            start_line: 2237usize,
             start_col: 22usize,
-            end_line: 2096usize,
+            end_line: 2237usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -27333,6 +28560,7 @@ pub mod int4 {
         ) -> anyhow::Result<()> {
             {
                 use ::eql_tests::scalar_domains::{OrderedScalar, ScalarType};
+                let case_id: &str = "matrix_int4_ord_ore_order_by_asc_with_where";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -27351,17 +28579,28 @@ pub mod int4 {
                 } else {
                     String::new()
                 };
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT plaintext FROM {0}{3} ORDER BY eql_v3.ord_term(payload::{1}) {2}",
-                            fixture_table,
-                            &spec.sql_domain,
-                            "ASC",
-                            where_clause,
-                        ),
-                    )
-                });
+                let col = &spec.column_expr;
+                let d = &spec.sql_domain;
+                let ord = (spec
+                    .ord_extractor)(
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                    }),
+                );
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT plaintext FROM {0}{2} ORDER BY {3} {1}",
+                                fixture_table,
+                                "ASC",
+                                where_clause,
+                                ord,
+                            ),
+                        )
+                    }),
+                );
                 let actual: Vec<i32> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
                 let mut expected: Vec<i32> = <i32 as ScalarType>::fixture_values()
                     .to_vec();
@@ -27448,9 +28687,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2096usize,
+            start_line: 2237usize,
             start_col: 22usize,
-            end_line: 2096usize,
+            end_line: 2237usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -27468,6 +28707,7 @@ pub mod int4 {
         ) -> anyhow::Result<()> {
             {
                 use ::eql_tests::scalar_domains::{OrderedScalar, ScalarType};
+                let case_id: &str = "matrix_int4_ord_ore_order_by_desc_with_where";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -27486,17 +28726,28 @@ pub mod int4 {
                 } else {
                     String::new()
                 };
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT plaintext FROM {0}{3} ORDER BY eql_v3.ord_term(payload::{1}) {2}",
-                            fixture_table,
-                            &spec.sql_domain,
-                            "DESC",
-                            where_clause,
-                        ),
-                    )
-                });
+                let col = &spec.column_expr;
+                let d = &spec.sql_domain;
+                let ord = (spec
+                    .ord_extractor)(
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                    }),
+                );
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT plaintext FROM {0}{2} ORDER BY {3} {1}",
+                                fixture_table,
+                                "DESC",
+                                where_clause,
+                                ord,
+                            ),
+                        )
+                    }),
+                );
                 let actual: Vec<i32> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
                 let mut expected: Vec<i32> = <i32 as ScalarType>::fixture_values()
                     .to_vec();
@@ -27583,9 +28834,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2207usize,
+            start_line: 2355usize,
             start_col: 22usize,
-            end_line: 2207usize,
+            end_line: 2355usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -27603,6 +28854,7 @@ pub mod int4 {
         ) -> anyhow::Result<()> {
             {
                 const NULL_ROWS: usize = 3;
+                let case_id: &str = "matrix_int4_ord_order_by_asc_nulls_first";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -27612,58 +28864,73 @@ pub mod int4 {
                 let pg = <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE;
                 let mut tx = pool.begin().await?;
                 sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
-                                    table,
-                                    pg,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, payload::{2} FROM {0}",
-                                    fixture_table,
-                                    table,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
-                                    NULL_ROWS,
-                                    table,
-                                    pg,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT plaintext FROM {2} ORDER BY eql_v3.ord_term(value) {0} NULLS {1}",
-                            "ASC",
-                            "FIRST",
-                            table,
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
+                                        table,
+                                        pg,
+                                        d,
+                                    ),
+                                )
+                            }),
                         ),
                     )
-                });
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO {2}(plaintext, value) SELECT plaintext, ({0})::{3} FROM {1}",
+                                        &spec.column_expr,
+                                        fixture_table,
+                                        table,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
+                                        NULL_ROWS,
+                                        table,
+                                        pg,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let ord = (spec.ord_extractor)("value");
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT plaintext FROM {2} ORDER BY {3} {0} NULLS {1}",
+                                "ASC",
+                                "FIRST",
+                                table,
+                                ord,
+                            ),
+                        )
+                    }),
+                );
                 let actual: Vec<Option<i32>> = sqlx::query_scalar(&sql)
                     .fetch_all(&mut *tx)
                     .await?;
@@ -27759,9 +29026,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2207usize,
+            start_line: 2355usize,
             start_col: 22usize,
-            end_line: 2207usize,
+            end_line: 2355usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -27779,6 +29046,7 @@ pub mod int4 {
         ) -> anyhow::Result<()> {
             {
                 const NULL_ROWS: usize = 3;
+                let case_id: &str = "matrix_int4_ord_order_by_asc_nulls_last";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -27788,58 +29056,73 @@ pub mod int4 {
                 let pg = <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE;
                 let mut tx = pool.begin().await?;
                 sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
-                                    table,
-                                    pg,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, payload::{2} FROM {0}",
-                                    fixture_table,
-                                    table,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
-                                    NULL_ROWS,
-                                    table,
-                                    pg,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT plaintext FROM {2} ORDER BY eql_v3.ord_term(value) {0} NULLS {1}",
-                            "ASC",
-                            "LAST",
-                            table,
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
+                                        table,
+                                        pg,
+                                        d,
+                                    ),
+                                )
+                            }),
                         ),
                     )
-                });
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO {2}(plaintext, value) SELECT plaintext, ({0})::{3} FROM {1}",
+                                        &spec.column_expr,
+                                        fixture_table,
+                                        table,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
+                                        NULL_ROWS,
+                                        table,
+                                        pg,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let ord = (spec.ord_extractor)("value");
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT plaintext FROM {2} ORDER BY {3} {0} NULLS {1}",
+                                "ASC",
+                                "LAST",
+                                table,
+                                ord,
+                            ),
+                        )
+                    }),
+                );
                 let actual: Vec<Option<i32>> = sqlx::query_scalar(&sql)
                     .fetch_all(&mut *tx)
                     .await?;
@@ -27935,9 +29218,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2207usize,
+            start_line: 2355usize,
             start_col: 22usize,
-            end_line: 2207usize,
+            end_line: 2355usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -27955,6 +29238,7 @@ pub mod int4 {
         ) -> anyhow::Result<()> {
             {
                 const NULL_ROWS: usize = 3;
+                let case_id: &str = "matrix_int4_ord_order_by_desc_nulls_first";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -27964,58 +29248,73 @@ pub mod int4 {
                 let pg = <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE;
                 let mut tx = pool.begin().await?;
                 sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
-                                    table,
-                                    pg,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, payload::{2} FROM {0}",
-                                    fixture_table,
-                                    table,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
-                                    NULL_ROWS,
-                                    table,
-                                    pg,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT plaintext FROM {2} ORDER BY eql_v3.ord_term(value) {0} NULLS {1}",
-                            "DESC",
-                            "FIRST",
-                            table,
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
+                                        table,
+                                        pg,
+                                        d,
+                                    ),
+                                )
+                            }),
                         ),
                     )
-                });
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO {2}(plaintext, value) SELECT plaintext, ({0})::{3} FROM {1}",
+                                        &spec.column_expr,
+                                        fixture_table,
+                                        table,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
+                                        NULL_ROWS,
+                                        table,
+                                        pg,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let ord = (spec.ord_extractor)("value");
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT plaintext FROM {2} ORDER BY {3} {0} NULLS {1}",
+                                "DESC",
+                                "FIRST",
+                                table,
+                                ord,
+                            ),
+                        )
+                    }),
+                );
                 let actual: Vec<Option<i32>> = sqlx::query_scalar(&sql)
                     .fetch_all(&mut *tx)
                     .await?;
@@ -28111,9 +29410,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2207usize,
+            start_line: 2355usize,
             start_col: 22usize,
-            end_line: 2207usize,
+            end_line: 2355usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -28131,6 +29430,7 @@ pub mod int4 {
         ) -> anyhow::Result<()> {
             {
                 const NULL_ROWS: usize = 3;
+                let case_id: &str = "matrix_int4_ord_order_by_desc_nulls_last";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::Ord);
@@ -28140,58 +29440,73 @@ pub mod int4 {
                 let pg = <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE;
                 let mut tx = pool.begin().await?;
                 sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
-                                    table,
-                                    pg,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, payload::{2} FROM {0}",
-                                    fixture_table,
-                                    table,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
-                                    NULL_ROWS,
-                                    table,
-                                    pg,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT plaintext FROM {2} ORDER BY eql_v3.ord_term(value) {0} NULLS {1}",
-                            "DESC",
-                            "LAST",
-                            table,
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
+                                        table,
+                                        pg,
+                                        d,
+                                    ),
+                                )
+                            }),
                         ),
                     )
-                });
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO {2}(plaintext, value) SELECT plaintext, ({0})::{3} FROM {1}",
+                                        &spec.column_expr,
+                                        fixture_table,
+                                        table,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
+                                        NULL_ROWS,
+                                        table,
+                                        pg,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let ord = (spec.ord_extractor)("value");
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT plaintext FROM {2} ORDER BY {3} {0} NULLS {1}",
+                                "DESC",
+                                "LAST",
+                                table,
+                                ord,
+                            ),
+                        )
+                    }),
+                );
                 let actual: Vec<Option<i32>> = sqlx::query_scalar(&sql)
                     .fetch_all(&mut *tx)
                     .await?;
@@ -28287,9 +29602,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2207usize,
+            start_line: 2355usize,
             start_col: 22usize,
-            end_line: 2207usize,
+            end_line: 2355usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -28307,6 +29622,7 @@ pub mod int4 {
         ) -> anyhow::Result<()> {
             {
                 const NULL_ROWS: usize = 3;
+                let case_id: &str = "matrix_int4_ord_ore_order_by_asc_nulls_first";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -28316,58 +29632,73 @@ pub mod int4 {
                 let pg = <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE;
                 let mut tx = pool.begin().await?;
                 sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
-                                    table,
-                                    pg,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, payload::{2} FROM {0}",
-                                    fixture_table,
-                                    table,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
-                                    NULL_ROWS,
-                                    table,
-                                    pg,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT plaintext FROM {2} ORDER BY eql_v3.ord_term(value) {0} NULLS {1}",
-                            "ASC",
-                            "FIRST",
-                            table,
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
+                                        table,
+                                        pg,
+                                        d,
+                                    ),
+                                )
+                            }),
                         ),
                     )
-                });
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO {2}(plaintext, value) SELECT plaintext, ({0})::{3} FROM {1}",
+                                        &spec.column_expr,
+                                        fixture_table,
+                                        table,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
+                                        NULL_ROWS,
+                                        table,
+                                        pg,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let ord = (spec.ord_extractor)("value");
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT plaintext FROM {2} ORDER BY {3} {0} NULLS {1}",
+                                "ASC",
+                                "FIRST",
+                                table,
+                                ord,
+                            ),
+                        )
+                    }),
+                );
                 let actual: Vec<Option<i32>> = sqlx::query_scalar(&sql)
                     .fetch_all(&mut *tx)
                     .await?;
@@ -28463,9 +29794,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2207usize,
+            start_line: 2355usize,
             start_col: 22usize,
-            end_line: 2207usize,
+            end_line: 2355usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -28483,6 +29814,7 @@ pub mod int4 {
         ) -> anyhow::Result<()> {
             {
                 const NULL_ROWS: usize = 3;
+                let case_id: &str = "matrix_int4_ord_ore_order_by_asc_nulls_last";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -28492,58 +29824,73 @@ pub mod int4 {
                 let pg = <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE;
                 let mut tx = pool.begin().await?;
                 sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
-                                    table,
-                                    pg,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, payload::{2} FROM {0}",
-                                    fixture_table,
-                                    table,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
-                                    NULL_ROWS,
-                                    table,
-                                    pg,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT plaintext FROM {2} ORDER BY eql_v3.ord_term(value) {0} NULLS {1}",
-                            "ASC",
-                            "LAST",
-                            table,
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
+                                        table,
+                                        pg,
+                                        d,
+                                    ),
+                                )
+                            }),
                         ),
                     )
-                });
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO {2}(plaintext, value) SELECT plaintext, ({0})::{3} FROM {1}",
+                                        &spec.column_expr,
+                                        fixture_table,
+                                        table,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
+                                        NULL_ROWS,
+                                        table,
+                                        pg,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let ord = (spec.ord_extractor)("value");
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT plaintext FROM {2} ORDER BY {3} {0} NULLS {1}",
+                                "ASC",
+                                "LAST",
+                                table,
+                                ord,
+                            ),
+                        )
+                    }),
+                );
                 let actual: Vec<Option<i32>> = sqlx::query_scalar(&sql)
                     .fetch_all(&mut *tx)
                     .await?;
@@ -28639,9 +29986,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2207usize,
+            start_line: 2355usize,
             start_col: 22usize,
-            end_line: 2207usize,
+            end_line: 2355usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -28659,6 +30006,7 @@ pub mod int4 {
         ) -> anyhow::Result<()> {
             {
                 const NULL_ROWS: usize = 3;
+                let case_id: &str = "matrix_int4_ord_ore_order_by_desc_nulls_first";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -28668,58 +30016,73 @@ pub mod int4 {
                 let pg = <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE;
                 let mut tx = pool.begin().await?;
                 sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
-                                    table,
-                                    pg,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, payload::{2} FROM {0}",
-                                    fixture_table,
-                                    table,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
-                                    NULL_ROWS,
-                                    table,
-                                    pg,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT plaintext FROM {2} ORDER BY eql_v3.ord_term(value) {0} NULLS {1}",
-                            "DESC",
-                            "FIRST",
-                            table,
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
+                                        table,
+                                        pg,
+                                        d,
+                                    ),
+                                )
+                            }),
                         ),
                     )
-                });
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO {2}(plaintext, value) SELECT plaintext, ({0})::{3} FROM {1}",
+                                        &spec.column_expr,
+                                        fixture_table,
+                                        table,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
+                                        NULL_ROWS,
+                                        table,
+                                        pg,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let ord = (spec.ord_extractor)("value");
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT plaintext FROM {2} ORDER BY {3} {0} NULLS {1}",
+                                "DESC",
+                                "FIRST",
+                                table,
+                                ord,
+                            ),
+                        )
+                    }),
+                );
                 let actual: Vec<Option<i32>> = sqlx::query_scalar(&sql)
                     .fetch_all(&mut *tx)
                     .await?;
@@ -28815,9 +30178,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2207usize,
+            start_line: 2355usize,
             start_col: 22usize,
-            end_line: 2207usize,
+            end_line: 2355usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -28835,6 +30198,7 @@ pub mod int4 {
         ) -> anyhow::Result<()> {
             {
                 const NULL_ROWS: usize = 3;
+                let case_id: &str = "matrix_int4_ord_ore_order_by_desc_nulls_last";
                 let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
                     i32,
                 >(::eql_tests::scalar_domains::Variant::OrdOre);
@@ -28844,58 +30208,73 @@ pub mod int4 {
                 let pg = <i32 as ::eql_tests::scalar_domains::ScalarType>::PG_TYPE;
                 let mut tx = pool.begin().await?;
                 sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
-                                    table,
-                                    pg,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, payload::{2} FROM {0}",
-                                    fixture_table,
-                                    table,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                sqlx::query(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
-                                    NULL_ROWS,
-                                    table,
-                                    pg,
-                                    d,
-                                ),
-                            )
-                        }),
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-                let sql = ::alloc::__export::must_use({
-                    ::alloc::fmt::format(
-                        format_args!(
-                            "SELECT plaintext FROM {2} ORDER BY eql_v3.ord_term(value) {0} NULLS {1}",
-                            "DESC",
-                            "LAST",
-                            table,
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
+                                        table,
+                                        pg,
+                                        d,
+                                    ),
+                                )
+                            }),
                         ),
                     )
-                });
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO {2}(plaintext, value) SELECT plaintext, ({0})::{3} FROM {1}",
+                                        &spec.column_expr,
+                                        fixture_table,
+                                        table,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::eql_tests::eqlmatrix::tag(
+                            Some(case_id),
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
+                                        NULL_ROWS,
+                                        table,
+                                        pg,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let ord = (spec.ord_extractor)("value");
+                let sql = ::eql_tests::eqlmatrix::tag(
+                    Some(case_id),
+                    &::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT plaintext FROM {2} ORDER BY {3} {0} NULLS {1}",
+                                "DESC",
+                                "LAST",
+                                table,
+                                ord,
+                            ),
+                        )
+                    }),
+                );
                 let actual: Vec<Option<i32>> = sqlx::query_scalar(&sql)
                     .fetch_all(&mut *tx)
                     .await?;
@@ -28991,9 +30370,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2324usize,
+            start_line: 2474usize,
             start_col: 22usize,
-            end_line: 2324usize,
+            end_line: 2474usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -29017,8 +30396,9 @@ pub mod int4 {
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "SELECT plaintext FROM {0} ORDER BY payload::{1} USING {2}",
+                            "SELECT plaintext FROM {0} ORDER BY ({1})::{2} USING {3}",
                             fixture_table,
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<",
                         ),
@@ -29094,9 +30474,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2324usize,
+            start_line: 2474usize,
             start_col: 22usize,
-            end_line: 2324usize,
+            end_line: 2474usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -29120,8 +30500,9 @@ pub mod int4 {
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "SELECT plaintext FROM {0} ORDER BY payload::{1} USING {2}",
+                            "SELECT plaintext FROM {0} ORDER BY ({1})::{2} USING {3}",
                             fixture_table,
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<=",
                         ),
@@ -29197,9 +30578,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2324usize,
+            start_line: 2474usize,
             start_col: 22usize,
-            end_line: 2324usize,
+            end_line: 2474usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -29223,8 +30604,9 @@ pub mod int4 {
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "SELECT plaintext FROM {0} ORDER BY payload::{1} USING {2}",
+                            "SELECT plaintext FROM {0} ORDER BY ({1})::{2} USING {3}",
                             fixture_table,
+                            &spec.column_expr,
                             &spec.sql_domain,
                             ">",
                         ),
@@ -29300,9 +30682,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2324usize,
+            start_line: 2474usize,
             start_col: 22usize,
-            end_line: 2324usize,
+            end_line: 2474usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -29326,8 +30708,9 @@ pub mod int4 {
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "SELECT plaintext FROM {0} ORDER BY payload::{1} USING {2}",
+                            "SELECT plaintext FROM {0} ORDER BY ({1})::{2} USING {3}",
                             fixture_table,
+                            &spec.column_expr,
                             &spec.sql_domain,
                             ">=",
                         ),
@@ -29403,9 +30786,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2324usize,
+            start_line: 2474usize,
             start_col: 22usize,
-            end_line: 2324usize,
+            end_line: 2474usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -29429,8 +30812,9 @@ pub mod int4 {
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "SELECT plaintext FROM {0} ORDER BY payload::{1} USING {2}",
+                            "SELECT plaintext FROM {0} ORDER BY ({1})::{2} USING {3}",
                             fixture_table,
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<",
                         ),
@@ -29506,9 +30890,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2324usize,
+            start_line: 2474usize,
             start_col: 22usize,
-            end_line: 2324usize,
+            end_line: 2474usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -29532,8 +30916,9 @@ pub mod int4 {
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "SELECT plaintext FROM {0} ORDER BY payload::{1} USING {2}",
+                            "SELECT plaintext FROM {0} ORDER BY ({1})::{2} USING {3}",
                             fixture_table,
+                            &spec.column_expr,
                             &spec.sql_domain,
                             "<=",
                         ),
@@ -29609,9 +30994,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2324usize,
+            start_line: 2474usize,
             start_col: 22usize,
-            end_line: 2324usize,
+            end_line: 2474usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -29635,8 +31020,9 @@ pub mod int4 {
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "SELECT plaintext FROM {0} ORDER BY payload::{1} USING {2}",
+                            "SELECT plaintext FROM {0} ORDER BY ({1})::{2} USING {3}",
                             fixture_table,
+                            &spec.column_expr,
                             &spec.sql_domain,
                             ">",
                         ),
@@ -29712,9 +31098,9 @@ pub mod int4 {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2324usize,
+            start_line: 2474usize,
             start_col: 22usize,
-            end_line: 2324usize,
+            end_line: 2474usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -29738,8 +31124,9 @@ pub mod int4 {
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
-                            "SELECT plaintext FROM {0} ORDER BY payload::{1} USING {2}",
+                            "SELECT plaintext FROM {0} ORDER BY ({1})::{2} USING {3}",
                             fixture_table,
+                            &spec.column_expr,
                             &spec.sql_domain,
                             ">=",
                         ),
