@@ -37,9 +37,6 @@ Consequences that shape the whole pipeline:
   Every fixture is generated — including the SteVec document
   `tests/sqlx/fixtures/v3_ste_vec.sql`, which is gitignored (`.gitignore:228`) and
   rebuilt each run by its own generator (`fixtures::v3_ste_vec::generate()`).
-  (`CLAUDE.md` still calls `v3_ste_vec.sql` "the one committed exception … pending a
-  SteVec-document generator", but that note is stale: the generator exists and the file
-  is gitignored like the rest.)
 
 The plaintext **values** are single-sourced in the Rust catalog
 `crates/eql-scalars` so the test oracle (the expected-result computation) and the
@@ -285,8 +282,7 @@ compares the DB query result against `expected_forward` over `INT4_VALUES`.
 - **`v3_ste_vec`** — a SteVec JSONB document fixture. A hand-written
   `FixtureSpec<serde_json::Value>` riding the same `run()` pipeline
   (`fixtures::v3_ste_vec::generate()`), gitignored and regenerated like every other
-  fixture. (`CLAUDE.md` still calls it "the one committed exception"; that wording is
-  stale — see §6.)
+  fixture.
 - **`v3_doc_int4`** — a scalar-shaped SteVec document, one `{"field": <int4>}` per
   `INT4_VALUES`. A **split** fixture: the encryption input is the jsonb document but
   the plaintext oracle column is the bare `int4`, so it uses the
@@ -323,11 +319,8 @@ Why not just commit the SQL and skip the creds? Because the ciphertexts must be 
 
 > Do NOT add static/committed fixtures to dodge the creds dependency.
 
-(`CLAUDE.md` goes on to name `tests/sqlx/fixtures/v3_ste_vec.sql` as "the one committed
-exception … pending a SteVec-document generator", but that clause is stale: the SteVec
-generator now exists and the file is gitignored and regenerated like the rest.)
-
-The gitignore enforces it mechanically (`.gitignore:227-230`): every
+Every fixture — including `v3_ste_vec.sql` — is generated and gitignored; there is no
+committed-fixture exception. The gitignore enforces it mechanically (`.gitignore:227-230`): every
 `eql_v2*` fixture plus `v3_ste_vec.sql`, `v3_doc_int4.sql`, and `v3_numeric_collision.sql`
 are ignored and regenerated on every `mise run test:sqlx`. A stale or hand-edited fixture
 can't survive a run. The live round-trip is additionally smoke-tested by the

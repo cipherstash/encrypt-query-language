@@ -115,9 +115,10 @@ cipherstash-client: `mise run test:sqlx:prep` runs `fixture:generate:all` (the
   `CS_WORKSPACE_CRN`) AND a client key (`CS_CLIENT_ID` + `CS_CLIENT_KEY`); see the
   `test:sqlx:prep` comment in `mise.toml`. CI has them. This is expected, not a reason to avoid
   generated fixtures.
-- Do NOT add static/committed fixtures to dodge the creds dependency. The one committed
-  exception, `tests/sqlx/fixtures/v3_ste_vec.sql`, is a gap pending a SteVec-document generator
-  (`docs/handoff/2026-06-10-v3-jsonb-fixture-alignment.md`), not a pattern to copy.
+- Do NOT add static/committed fixtures to dodge the creds dependency. Every fixture is
+  generated and gitignored — including the SteVec document `tests/sqlx/fixtures/v3_ste_vec.sql`,
+  which has its own generator (`fixtures::v3_ste_vec::generate()`, run by `generate_all`) and is
+  gitignored (`.gitignore`) like the rest. There is no committed-fixture exception.
 
 ## Project Learning & Retrospectives
 
