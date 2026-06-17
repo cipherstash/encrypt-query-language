@@ -23,33 +23,36 @@ static FIXTURE_LOADED: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
 
 /// Materialise the live-encrypted fixture corpus for `T` into the connected DB.
 ///
-/// The fixture `.sql` files (`tests/sqlx/fixtures/eql_v2_<T>.sql`, regenerated
-/// each `test:sqlx:prep`) are normally loaded only into `#[sqlx::test]`'s
-/// ephemeral per-test databases. The property tiers connect to the shared test
-/// DB directly (they cannot use `#[sqlx::test]`'s injected pool from a sync
-/// `proptest!` body), so the corpus is not present there. This loads it on
-/// demand: the script is self-contained and idempotent
-/// (`CREATE SCHEMA IF NOT EXISTS` / `DROP TABLE IF EXISTS` / `CREATE` /
-/// `INSERT`), and a process-wide async mutex guarantees exactly-once execution
-/// per type across the parallel test threads (each driving its own runtime).
-/// `CARGO_MANIFEST_DIR` resolves the path independent of the test's CWD.
-pub async fn ensure_fixture_loaded<T: ScalarType>(pool: &PgPool) -> Result<()> {
+/// The fixture `.sql` files (`tests/sqlx/fixtures/eql_v2_<T>.sql`) are normally
+/// loaded only into `#[sqlx::test]`'s ephemeral per-test databases. The property
+/// tiers connect to the shared test DB directly (they cannot use
+/// `#[sqlx::test]`'s injected pool from a sync `proptest!` body), so the corpus
+/// is not present there. This loads it on demand: the script is self-contained
+/// and idempotent (`CREATE SCHEMA IF NOT EXISTS` / `DROP TABLE IF EXISTS` /
+/// `CREATE` / `INSERT`), and a process-wide async mutex guarantees exactly-once
+/// execution per type across the parallel test threads (each driving its own
+/// runtime).
+///
+/// `script` is the fixture SQL, passed in by the caller. It is `include_str!`-
+/// embedded into the test binary at compile time (see `fixture_oracle.rs`) so it
+/// travels inside the prebuilt nextest archive that CI shards run from — those
+/// shards do a fresh checkout where the gitignored `.sql` files are absent, so a
+/// runtime `std::fs` read would fail there.
+pub async fn ensure_fixture_loaded<T: ScalarType>(pool: &PgPool, script: &str) -> Result<()> {
     let guard = FIXTURE_LOADED.get_or_init(|| Mutex::new(HashSet::new()));
     let mut loaded = guard.lock().await;
     if loaded.contains(T::PG_TYPE) {
         return Ok(());
     }
-    let path = format!(
-        "{}/fixtures/eql_v2_{}.sql",
-        env!("CARGO_MANIFEST_DIR"),
-        T::PG_TYPE
-    );
-    let script = std::fs::read_to_string(&path)
-        .with_context(|| format!("reading fixture script {path} (run test:sqlx:prep first)"))?;
-    sqlx::raw_sql(&script)
+    sqlx::raw_sql(script)
         .execute(pool)
         .await
-        .with_context(|| format!("loading fixture corpus into shared DB from {path}"))?;
+        .with_context(|| {
+            format!(
+                "loading fixture corpus for {} into shared DB",
+                T::PG_TYPE
+            )
+        })?;
     loaded.insert(T::PG_TYPE);
     Ok(())
 }
