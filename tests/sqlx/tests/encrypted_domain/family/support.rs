@@ -129,7 +129,8 @@ async fn fetch_fixture_payload_returns_keyed_row(pool: PgPool) -> Result<()> {
 async fn assert_scalar_plaintexts_reports_sql_context(pool: PgPool) -> Result<()> {
     let lit = sql_string_literal(&fetch_fixture_payload::<i32>(&pool, 42).await?);
     let predicate = format!("payload::eql_v3.int4_ord_ore = {lit}::jsonb::eql_v3.int4_ord_ore");
-    assert_scalar_plaintexts::<i32>(&pool, None, "eql_v3.int4_ord_ore", "=", &predicate, &[42]).await?;
+    assert_scalar_plaintexts::<i32>(&pool, None, "eql_v3.int4_ord_ore", "=", &predicate, &[42])
+        .await?;
     Ok(())
 }
 

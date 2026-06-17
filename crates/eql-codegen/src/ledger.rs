@@ -311,14 +311,18 @@ fn attach_plan(records: &mut Vec<LedgerRecord>, seq: &mut usize, plan: serde_jso
 /// under interleaving.
 fn attach_error(records: &mut Vec<LedgerRecord>, seq: &mut usize, case_id: &str, message: String) {
     if let Some(rec) = records.iter_mut().rev().find(|r| r.case_id == case_id) {
-        rec.outcome = Outcome::Error { error_message: message };
+        rec.outcome = Outcome::Error {
+            error_message: message,
+        };
     } else {
         records.push(LedgerRecord {
             case_id: case_id.to_string(),
             seq: *seq,
             normalized_statement: String::new(),
             plan: None,
-            outcome: Outcome::Error { error_message: message },
+            outcome: Outcome::Error {
+                error_message: message,
+            },
         });
         *seq += 1;
     }
@@ -442,7 +446,11 @@ struct RegionCursor<R: BufRead> {
 
 impl<R: BufRead> RegionCursor<R> {
     fn new(reader: R) -> Self {
-        RegionCursor { reader, front: None, eof: false }
+        RegionCursor {
+            reader,
+            front: None,
+            eof: false,
+        }
     }
 
     /// Read one line, stripping the trailing newline (matching `str::lines()`).
@@ -551,7 +559,8 @@ fn find_following_statement_case_id(lines: &[&str], err_idx: usize) -> String {
 /// Return the text after a `LOG:`/`ERROR:`/`STATEMENT:` marker on a log line,
 /// or None if the marker is absent.
 fn after_marker<'a>(line: &'a str, marker: &str) -> Option<&'a str> {
-    line.find(marker).map(|idx| line[idx + marker.len()..].trim_start())
+    line.find(marker)
+        .map(|idx| line[idx + marker.len()..].trim_start())
 }
 
 /// True if a line begins with the `log_line_prefix` timestamp (`%m` →
@@ -620,7 +629,8 @@ mod tests {
 
     #[test]
     fn normalize_strips_tag_lowercases_and_replaces_literals() {
-        let raw = "/* eqlmatrix:c */ SELECT count(*) FROM t WHERE value = '{\"v\":2}'::jsonb::int4_eq";
+        let raw =
+            "/* eqlmatrix:c */ SELECT count(*) FROM t WHERE value = '{\"v\":2}'::jsonb::int4_eq";
         let norm = normalize_statement(raw);
         assert_eq!(
             norm,
@@ -807,7 +817,11 @@ mod tests {
 2026-06-15 10:00:00.000 UTC [100] 0  LOG:  statement: /* eqlmatrix:matrix_int4_ord_lt_pivot_max_cross_shape */ SELECT count(*) FROM t WHERE value <
 42::jsonb::int4_ord";
         let ledger = parse_ledger(raw);
-        assert_eq!(ledger.records.len(), 1, "digit-leading continuation wrongly split the record");
+        assert_eq!(
+            ledger.records.len(),
+            1,
+            "digit-leading continuation wrongly split the record"
+        );
         let rec = &ledger.records[0];
         assert_eq!(rec.case_id, "matrix_int4_ord_lt_pivot_max_cross_shape");
         // The `42` literal (now on the continuation line) is folded into `$`.
@@ -831,8 +845,16 @@ mod tests {
 2026-06-15 10:00:00.003 UTC [100] 0  LOG:  duration: 0.3 ms  plan:
 \t{ \"Query Text\": \"/* eqlmatrix:caseA */ SELECT count(*) FROM a WHERE value = '{}'::jsonb::int4_eq\", \"Plan\": { \"Node Type\": \"Index Scan\", \"Index Name\": \"a_idx\" } }";
         let ledger = parse_ledger(raw);
-        let a = ledger.records.iter().find(|r| r.case_id == "caseA").expect("caseA");
-        let b = ledger.records.iter().find(|r| r.case_id == "caseB").expect("caseB");
+        let a = ledger
+            .records
+            .iter()
+            .find(|r| r.case_id == "caseA")
+            .expect("caseA");
+        let b = ledger
+            .records
+            .iter()
+            .find(|r| r.case_id == "caseB")
+            .expect("caseB");
         // Each plan binds to its own case despite the interleaved order.
         assert_eq!(a.plan.as_ref().unwrap()["Plan"]["Index Name"], "a_idx");
         assert_eq!(b.plan.as_ref().unwrap()["Plan"]["Index Name"], "b_idx");
@@ -846,7 +868,8 @@ mod tests {
         // unwrapped to its inner object so `.get("Query Text")` works on either.
         let obj = serde_json::json!({ "Query Text": "x", "Plan": { "Node Type": "Index Scan" } });
         assert_eq!(plan_object(obj.clone()), obj);
-        let arr = serde_json::json!([ { "Query Text": "x", "Plan": { "Node Type": "Index Scan" } } ]);
+        let arr =
+            serde_json::json!([ { "Query Text": "x", "Plan": { "Node Type": "Index Scan" } } ]);
         assert_eq!(plan_object(arr), obj);
     }
 
@@ -869,7 +892,10 @@ mod tests {
             .iter()
             .find(|r| r.case_id == "matrix_int4_eq_index_engages_eq_btree")
             .expect("index record present");
-        let plan = rec.plan.as_ref().expect("array-wrapped plan attached to its record");
+        let plan = rec
+            .plan
+            .as_ref()
+            .expect("array-wrapped plan attached to its record");
         // Stored plan is the unwrapped inner OBJECT, not the wrapper array.
         assert!(plan.is_object(), "stored plan must be the unwrapped object");
         assert_eq!(plan["Plan"]["Index Name"], "t_idx");
@@ -891,7 +917,11 @@ mod tests {
             .iter()
             .find(|r| r.case_id == "matrix_int4_storage_eq_blocker")
             .expect("blocker record present");
-        assert_eq!(rec.outcome, Outcome::Success, "no ERROR line ⇒ Success, so Stage 4 can flag the missing raise");
+        assert_eq!(
+            rec.outcome,
+            Outcome::Success,
+            "no ERROR line ⇒ Success, so Stage 4 can flag the missing raise"
+        );
     }
 
     #[test]

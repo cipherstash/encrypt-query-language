@@ -47,7 +47,11 @@ fn main() -> ExitCode {
             eprintln!("error: writing ledger {}: {e}", args[3]);
             return ExitCode::FAILURE;
         }
-        eprintln!("wrote ledger with {} records to {}", ledger.records.len(), args[3]);
+        eprintln!(
+            "wrote ledger with {} records to {}",
+            ledger.records.len(),
+            args[3]
+        );
         return ExitCode::SUCCESS;
     }
 
@@ -66,6 +70,8 @@ fn main() -> ExitCode {
     eprintln!("Usage: eql-codegen            (generate all types)");
     eprintln!("       eql-codegen list-types (print catalog tokens)");
     eprintln!("       eql-codegen dump-catalog (print catalog surface as JSON)");
-    eprintln!("       eql-codegen ledger <raw-log> <out-json> (normalize a capture log to a ledger)");
+    eprintln!(
+        "       eql-codegen ledger <raw-log> <out-json> (normalize a capture log to a ledger)"
+    );
     ExitCode::from(2)
 }

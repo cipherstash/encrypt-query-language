@@ -99,6 +99,8 @@ mod tests {
         // chars fails here.
         let case_id = "matrix_int4_eq_eq_pivot_mid_correctness";
         assert!(!case_id.contains(" */"));
-        assert!(case_id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_'));
+        assert!(case_id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_'));
     }
 }
