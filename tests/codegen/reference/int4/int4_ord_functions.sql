@@ -3,19 +3,19 @@
 -- REQUIRE: src/v3/schema.sql
 -- REQUIRE: src/v3/scalars/int4/int4_types.sql
 -- REQUIRE: src/v3/scalars/functions.sql
--- REQUIRE: src/v3/sem/ore_block_u64_8_256/functions.sql
--- REQUIRE: src/v3/sem/ore_block_u64_8_256/operators.sql
+-- REQUIRE: src/v3/sem/ore_block_256/functions.sql
+-- REQUIRE: src/v3/sem/ore_block_256/operators.sql
 
 --! @file encrypted_domain/int4/int4_ord_functions.sql
 --! @brief Functions for eql_v3.int4_ord.
 
 --! @brief Index extractor for eql_v3.int4_ord.
 --! @param a eql_v3.int4_ord
---! @return eql_v3.ore_block_u64_8_256
+--! @return eql_v3.ore_block_256
 CREATE FUNCTION eql_v3.ord_term(a eql_v3.int4_ord)
-RETURNS eql_v3.ore_block_u64_8_256
+RETURNS eql_v3.ore_block_256
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ore_block_u64_8_256(a::jsonb) $$;
+AS $$ SELECT eql_v3.ore_block_256(a::jsonb) $$;
 
 --! @brief Operator wrapper for eql_v3.int4_ord.
 --! @param a eql_v3.int4_ord
