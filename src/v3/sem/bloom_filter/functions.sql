@@ -16,7 +16,7 @@
 --! @return boolean True when the `bf` key is present and non-null.
 --!
 --! @internal Defined for parity with the eql_v3 SEM index-term predicates
---! (`has_hmac_256` / `has_ore_block_u64_8_256`); it is not currently called by
+--! (`has_hmac_256` / `has_ore_block_256`); it is not currently called by
 --! the extractor below, which gates on value-shape inline, nor by the generated
 --! domain CHECK, which tests `bf` presence via the envelope-key skeleton. Kept
 --! as the canonical presence test for callers that need one.

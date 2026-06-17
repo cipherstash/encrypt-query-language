@@ -4,7 +4,7 @@
 
 use schemars::{schema::RootSchema, schema_for};
 
-use crate::v3::terms::{BloomFilter, Ciphertext, Hmac256, OreBlockU64_8_256};
+use crate::v3::terms::{BloomFilter, Ciphertext, Hmac256, OreBlock256};
 use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
 use schemars::JsonSchema;
@@ -117,7 +117,7 @@ pub struct TextOrdOre {
     /// HMAC-SHA-256 equality term. Text routes `=`/`<>` through `hm`.
     pub hm: Hmac256,
     /// Block-ORE order term.
-    pub ob: OreBlockU64_8_256,
+    pub ob: OreBlock256,
 }
 
 impl DomainType for TextOrdOre {
@@ -151,7 +151,7 @@ pub struct TextOrd {
     /// HMAC-SHA-256 equality term. Text routes `=`/`<>` through `hm`.
     pub hm: Hmac256,
     /// Block-ORE order term.
-    pub ob: OreBlockU64_8_256,
+    pub ob: OreBlock256,
 }
 
 impl DomainType for TextOrd {
@@ -185,7 +185,7 @@ pub struct TextSearch {
     /// HMAC-SHA-256 equality term.
     pub hm: Hmac256,
     /// Block-ORE order term.
-    pub ob: OreBlockU64_8_256,
+    pub ob: OreBlock256,
     /// Bloom-filter match term (signed smallint bit positions).
     pub bf: BloomFilter,
 }

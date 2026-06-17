@@ -61,7 +61,7 @@ Use the equivalent [`jsonb_path_query`](#jsonb-functions-and-selectors-enabled-b
 
 ## Encrypted-domain scalar types (`eql_v3.<T>`)
 
-Scalar encrypted-domain types (e.g. `eql_v3.int4`; see [Adding a Scalar Encrypted-Domain Type](./adding-a-scalar-encrypted-domain-type.md)) are a different access model from the matrix above. Instead of configuring a search index on an `eql_v2_encrypted` column, you type the column as a specific domain *variant* whose operator surface is fixed at generation time. The index terms travel in the payload; there is no `add_search_config` step. The domains and their operator surface live in the `eql_v3` schema (dropped by `DROP SCHEMA eql_v3 CASCADE`, and they survive an `eql_v2` uninstall); their extracted index-term types are the self-contained `eql_v3` SEM types (`eql_v3.hmac_256`, `eql_v3.ore_block_u64_8_256`).
+Scalar encrypted-domain types (e.g. `eql_v3.int4`; see [Adding a Scalar Encrypted-Domain Type](./adding-a-scalar-encrypted-domain-type.md)) are a different access model from the matrix above. Instead of configuring a search index on an `eql_v2_encrypted` column, you type the column as a specific domain *variant* whose operator surface is fixed at generation time. The index terms travel in the payload; there is no `add_search_config` step. The domains and their operator surface live in the `eql_v3` schema (dropped by `DROP SCHEMA eql_v3 CASCADE`, and they survive an `eql_v2` uninstall); their extracted index-term types are the self-contained `eql_v3` SEM types (`eql_v3.hmac_256`, `eql_v3.ore_block_256`).
 
 Each scalar type `<T>` generates one storage-only variant plus eq/ord query variants:
 

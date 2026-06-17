@@ -1,6 +1,6 @@
 -- REQUIRE: src/v3/schema.sql
 
---! @file v3/sem/ore_block_u64_8_256/types.sql
+--! @file v3/sem/ore_block_256/types.sql
 --! @brief ORE block index-term types (eql_v3 SEM).
 --!
 --! Self-contained eql_v3 copies of the Order-Revealing Encryption block types
@@ -10,7 +10,7 @@
 --!
 --! Composite type representing a single ORE block term. Stores encrypted data
 --! as bytea that enables range comparisons without decryption.
-CREATE TYPE eql_v3.ore_block_u64_8_256_term AS (
+CREATE TYPE eql_v3.ore_block_256_term AS (
   bytes bytea
 );
 
@@ -21,6 +21,6 @@ CREATE TYPE eql_v3.ore_block_u64_8_256_term AS (
 --! in the 'ob' field of encrypted data payloads.
 --!
 --! @note Transient type used only during query execution.
-CREATE TYPE eql_v3.ore_block_u64_8_256 AS (
-  terms eql_v3.ore_block_u64_8_256_term[]
+CREATE TYPE eql_v3.ore_block_256 AS (
+  terms eql_v3.ore_block_256_term[]
 );

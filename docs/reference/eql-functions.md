@@ -435,8 +435,8 @@ SEM index-term types.
 ```sql
 -- int4 — generated for every scalar type's eq / ord variants.
 eql_v3.eq_term(a eql_v3.int4_eq)       RETURNS eql_v3.hmac_256
-eql_v3.ord_term(a eql_v3.int4_ord)     RETURNS eql_v3.ore_block_u64_8_256
-eql_v3.ord_term(a eql_v3.int4_ord_ore) RETURNS eql_v3.ore_block_u64_8_256
+eql_v3.ord_term(a eql_v3.int4_ord)     RETURNS eql_v3.ore_block_256
+eql_v3.ord_term(a eql_v3.int4_ord_ore) RETURNS eql_v3.ore_block_256
 ```
 
 **Example:**
