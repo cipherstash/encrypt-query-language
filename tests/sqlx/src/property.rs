@@ -122,7 +122,7 @@ pub async fn assert_ord_oracle<T: ScalarType>(
     rows: &[Row<T>],
 ) -> Result<()> {
     assert!(
-        variant.supports_ord(),
+        variant.supports_ord(T::PG_TYPE),
         "assert_ord_oracle needs an ordered variant"
     );
     let domain = ScalarDomainSpec::new::<T>(variant).sql_domain;
