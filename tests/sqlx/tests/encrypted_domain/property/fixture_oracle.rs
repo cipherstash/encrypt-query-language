@@ -17,11 +17,35 @@ use proptest::prelude::*;
 use proptest::test_runner::{Config, TestCaseError, TestRunner};
 use sqlx::PgPool;
 
+/// The fixture corpus SQL for `T`, `include_str!`-embedded into this test binary
+/// at compile time (one arm per catalog token). Embedding rather than reading
+/// from disk at runtime is what lets the prebuilt nextest archive carry the
+/// corpus into CI shards, which do a fresh checkout where the gitignored
+/// `tests/sqlx/fixtures/eql_v2_<T>.sql` files are absent. The path resolves
+/// against the `eql_tests` crate root (`tests/sqlx`). Mirrors the loud catch-all
+/// of the `generate_for_token` fixture dispatch.
+fn embedded_fixture_sql<T: ScalarType>() -> &'static str {
+    match T::PG_TYPE {
+        "int4" => include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/eql_v2_int4.sql")),
+        "int2" => include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/eql_v2_int2.sql")),
+        "int8" => include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/eql_v2_int8.sql")),
+        "date" => include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/eql_v2_date.sql")),
+        "text" => include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/eql_v2_text.sql")),
+        "timestamptz" => {
+            include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/eql_v2_timestamptz.sql"))
+        }
+        other => panic!(
+            "no embedded fixture for catalog token '{other}'; \
+             add an include_str! arm in fixture_oracle.rs"
+        ),
+    }
+}
+
 /// Read every `(plaintext, payload::text)` fixture row for `T`, in id order.
 /// Ensures the corpus is present in the shared DB first (it lives in
 /// `#[sqlx::test]`'s ephemeral DBs by default, not the pool we connect to).
 async fn load_fixture_rows<T: ScalarType>(pool: &PgPool) -> Result<Vec<Row<T>>> {
-    ensure_fixture_loaded::<T>(pool).await?;
+    ensure_fixture_loaded::<T>(pool, embedded_fixture_sql::<T>()).await?;
     let sql = format!(
         "SELECT plaintext, payload::text FROM {} ORDER BY id",
         T::fixture_table_name()
