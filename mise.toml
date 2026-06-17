@@ -298,9 +298,21 @@ fi
 # directly. Pin the superset invariant: every ordered-baseline arm must be
 # present in the text shape, so an edit that silently drops a baseline arm for
 # text (regressing coverage) is caught here, not just at the per-type compare.
-missing_from_text=$(comm -23 <(LC_ALL=C sort snapshots/matrix_tests.txt) <(LC_ALL=C sort snapshots/matrix_tests_text.txt))
+#
+# Routing-agnostic compare: the invariant is over (domain, op, index) COVERAGE,
+# not the physical index that serves it. Once index-engagement arms are
+# op-qualified (`..._index_engages_<op>_<using>`), equality on an ordered domain
+# diverges by NAME: an ordered scalar whose ord index also serves `eq` names it
+# `<domain>_index_engages_eq_<using>`, while text serves eq from a dedicated eq
+# index and names it `<domain>_eqidx_index_engages_eq_<using>`. That is a
+# refinement of the routing, NOT a coverage regression, so fold the `_eqidx`
+# segment away on the text side before the superset `comm`. A genuinely dropped
+# eq arm (NEITHER name present in text) still surfaces as missing and fails —
+# and the strict per-type compare below keeps text's real `_eqidx` names pinned.
+text_superset_canon=$(sed 's/_eqidx_index_engages_/_index_engages_/' snapshots/matrix_tests_text.txt | LC_ALL=C sort -u)
+missing_from_text=$(comm -23 <(LC_ALL=C sort -u snapshots/matrix_tests.txt) <(printf '%s\\n' "$text_superset_canon"))
 if [ -n "$missing_from_text" ]; then
-  echo "snapshots/matrix_tests_text.txt is missing ordered-baseline arms (text must be a superset):" >&2
+  echo "snapshots/matrix_tests_text.txt is missing ordered-baseline arms (text must be a superset, modulo eq index routing):" >&2
   printf '%s\\n' "$missing_from_text" >&2
   exit 1
 fi
