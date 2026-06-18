@@ -554,7 +554,10 @@ mod numeric_value_guards {
     fn mid_pivot_is_a_fixture() {
         let values = numeric_values();
         let mid = <rust_decimal::Decimal as OrderedScalar>::mid_pivot();
-        assert!(values.contains(&mid), "numeric mid_pivot {mid:?} must be a fixture");
+        assert!(
+            values.contains(&mid),
+            "numeric mid_pivot {mid:?} must be a fixture"
+        );
     }
 }
 
@@ -1244,8 +1247,16 @@ mod pivot_derivation_tests {
         let values = T::fixture_values();
         let want_min = values.iter().min().expect("≥1 fixture").clone();
         let want_max = values.iter().max().expect("≥1 fixture").clone();
-        assert_eq!(T::min_pivot(), want_min, "min_pivot must be the smallest fixture");
-        assert_eq!(T::max_pivot(), want_max, "max_pivot must be the largest fixture");
+        assert_eq!(
+            T::min_pivot(),
+            want_min,
+            "min_pivot must be the smallest fixture"
+        );
+        assert_eq!(
+            T::max_pivot(),
+            want_max,
+            "max_pivot must be the largest fixture"
+        );
     }
 
     #[test]
