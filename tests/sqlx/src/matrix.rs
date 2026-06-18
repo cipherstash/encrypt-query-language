@@ -358,6 +358,86 @@ macro_rules! scalar_matrix {
             match_domains = [],
         }
     };
+    (
+        suite = $suite:ident,
+        scalar = $scalar:ty,
+        eql_type = $eql_type:literal,
+        caps = [storage] $(,)?
+    ) => {
+        // Storage-only / encryption-only (`bool`): a single term-less
+        // `eql_v3.<T>` domain, no `_eq`/`_ord`. The value is encrypted at rest
+        // and decrypted by the proxy, but NOTHING is searchable server-side.
+        //
+        // Rather than thread empty `eq_domains`/`ord_domains`/`pivots`/
+        // `index_combos` through `scalar_domain_matrix!` (whose `+`-arity
+        // transcribers reject empty lists, and which would require relaxing the
+        // shared macro the other seven scalar types depend on), this arm invokes
+        // ONLY the leaf drivers that are meaningful without any comparison
+        // capability. The comparison/index/order/aggregate categories are
+        // deliberately NOT emitted — they have no storage-only analogue — so a
+        // storage-only type needs neither `OrderedScalar` nor comparison pivots.
+        //
+        // Emitted categories (all over the single storage domain): sanity,
+        // blocker-raises (every comparison + containment op raises),
+        // payload-check (envelope CHECK), path-op blockers, native-absent
+        // (`~~`/`~~*`), typed-column blockers, count, and fixture-shape.
+        $crate::__scalar_matrix_sanity! {
+            suite = $suite, scalar = $scalar,
+            domains = [(storage, Storage)],
+        }
+        $crate::__scalar_matrix_blocker_outer! {
+            suite = $suite, scalar = $scalar,
+            // The storage domain carries no term, so every comparison and
+            // containment operator routes to a blocker. This is the substantive
+            // proof for a storage-only type.
+            combos = [
+                (storage, Storage, [
+                    (eq, "="), (neq, "<>"),
+                    (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">="),
+                    (contains, "@>"), (contained_by, "<@"),
+                ]),
+            ],
+        }
+        $crate::__scalar_matrix_payload_check_outer! {
+            suite = $suite, scalar = $scalar,
+            domains = [(storage, Storage)],
+        }
+        $crate::__scalar_matrix_path_op_outer! {
+            suite = $suite, scalar = $scalar,
+            domains = [(storage, Storage)],
+        }
+        $crate::__scalar_matrix_native_absent_outer! {
+            suite = $suite, scalar = $scalar,
+            domains = [(storage, Storage)],
+        }
+        $crate::__scalar_matrix_typed_column_outer! {
+            suite = $suite, scalar = $scalar,
+            combos = [
+                (storage, Storage, [
+                    (eq, "="), (neq, "<>"),
+                    (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">="),
+                    (contains, "@>"), (contained_by, "<@"),
+                ]),
+            ],
+        }
+        $crate::__scalar_matrix_count_outer! {
+            suite = $suite, scalar = $scalar,
+            script = $eql_type, script_path = "../../../fixtures",
+            domains = [(storage, Storage)],
+        }
+        // Asserts `eql_v3.min/max(storage_domain)` is REJECTED (no aggregate on a
+        // term-less domain). The case branches at runtime on `supports_ord()`,
+        // which is false for storage — same coverage the other shapes emit for
+        // their own storage variant.
+        $crate::__scalar_matrix_aggregate_typecheck_outer! {
+            suite = $suite, scalar = $scalar,
+            domains = [(storage, Storage)],
+        }
+        $crate::__scalar_matrix_fixture_shape! {
+            suite = $suite, scalar = $scalar,
+            script = $eql_type, script_path = "../../../fixtures",
+        }
+    };
 }
 
 /// Reduced behaviour matrix for a SteVec **entry** view type (e.g.
@@ -1569,33 +1649,53 @@ macro_rules! __scalar_matrix_fixture_shape {
                 anyhow::ensure!(plaintexts == expected,
                     "plaintext column must match FIXTURE_VALUES in order");
 
-                // The proxy emits `hm` + `ob` for every scalar's fixture, plus
-                // `bf` for scalars that declare a Bloom-bearing domain (only
-                // `text`, via `_match`/`_search`). `bf` is thus catalog-derived
-                // so a `text_search` fixture additionally asserts its bloom term.
-                let mut term_checks: Vec<(&str, &str)> = vec![
-                    ("hm string", "payload->'hm' IS NULL OR jsonb_typeof(payload->'hm') <> 'string'"),
-                    ("ob array",  "payload->'ob' IS NULL OR jsonb_typeof(payload->'ob') <> 'array'"),
-                    ("c string",  "payload->'c'  IS NULL OR jsonb_typeof(payload->'c')  <> 'string'"),
-                ];
-                if $crate::scalar_domains::token_has_bloom_term(<$scalar as ScalarType>::PG_TYPE) {
-                    term_checks.push(
-                        ("bf array", "payload->'bf' IS NULL OR jsonb_typeof(payload->'bf') <> 'array'"),
-                    );
-                }
-                for (label, predicate) in term_checks {
-                    let missing: i64 = sqlx::query_scalar(&format!(
-                        "SELECT COUNT(*) FROM {table} WHERE {predicate}",
+                // A storage-only / encryption-only scalar (`bool`) is encrypted
+                // with NO search index, so its payload carries only `{v,i,c}` —
+                // no `hm`/`ob`/`bf` term. Every other scalar's proxy fixture
+                // carries `hm` + `ob`, plus `bf` for a Bloom-bearing domain
+                // (`text`, via `_match`/`_search`; catalog-derived).
+                if $crate::scalar_domains::token_is_storage_only(<$scalar as ScalarType>::PG_TYPE) {
+                    // The ciphertext (`c`) must still be present.
+                    let missing_c: i64 = sqlx::query_scalar(&format!(
+                        "SELECT COUNT(*) FROM {table} \
+                         WHERE payload->'c' IS NULL OR jsonb_typeof(payload->'c') <> 'string'",
                     )).fetch_one(&pool).await?;
-                    anyhow::ensure!(missing == 0,
-                        "every payload must carry a `{label}` term; missing = {missing}");
-                }
+                    anyhow::ensure!(missing_c == 0,
+                        "every storage-only payload must carry a `c string` term; missing = {missing_c}");
+                    // And NO index term may be present — that is the storage-only
+                    // contract (a term would be a searchable leak on a 2-value column).
+                    for term in ["hm", "ob", "bf"] {
+                        let present: i64 = sqlx::query_scalar(&format!(
+                            "SELECT COUNT(*) FROM {table} WHERE payload ? '{term}'",
+                        )).fetch_one(&pool).await?;
+                        anyhow::ensure!(present == 0,
+                            "storage-only payload must NOT carry a `{term}` term; present = {present}");
+                    }
+                } else {
+                    let mut term_checks: Vec<(&str, &str)> = vec![
+                        ("hm string", "payload->'hm' IS NULL OR jsonb_typeof(payload->'hm') <> 'string'"),
+                        ("ob array",  "payload->'ob' IS NULL OR jsonb_typeof(payload->'ob') <> 'array'"),
+                        ("c string",  "payload->'c'  IS NULL OR jsonb_typeof(payload->'c')  <> 'string'"),
+                    ];
+                    if $crate::scalar_domains::token_has_bloom_term(<$scalar as ScalarType>::PG_TYPE) {
+                        term_checks.push(
+                            ("bf array", "payload->'bf' IS NULL OR jsonb_typeof(payload->'bf') <> 'array'"),
+                        );
+                    }
+                    for (label, predicate) in term_checks {
+                        let missing: i64 = sqlx::query_scalar(&format!(
+                            "SELECT COUNT(*) FROM {table} WHERE {predicate}",
+                        )).fetch_one(&pool).await?;
+                        anyhow::ensure!(missing == 0,
+                            "every payload must carry a `{label}` term; missing = {missing}");
+                    }
 
-                let distinct_hm: i64 = sqlx::query_scalar(&format!(
-                    "SELECT COUNT(DISTINCT payload->>'hm') FROM {table}",
-                )).fetch_one(&pool).await?;
-                anyhow::ensure!(distinct_hm == n,
-                    "{n} distinct values -> {n} distinct hm terms; got {distinct_hm}");
+                    let distinct_hm: i64 = sqlx::query_scalar(&format!(
+                        "SELECT COUNT(DISTINCT payload->>'hm') FROM {table}",
+                    )).fetch_one(&pool).await?;
+                    anyhow::ensure!(distinct_hm == n,
+                        "{n} distinct values -> {n} distinct hm terms; got {distinct_hm}");
+                }
 
                 let mismatched_version: i64 = sqlx::query_scalar(&format!(
                     "SELECT COUNT(*) FROM {table} \

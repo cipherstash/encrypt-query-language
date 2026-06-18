@@ -523,7 +523,7 @@ mod catalog_tests {
     }
 
     #[test]
-    fn catalog_has_int4_int2_int8_date_timestamptz_numeric_text_in_order() {
+    fn catalog_has_int4_int2_int8_date_timestamptz_numeric_text_bool_in_order() {
         let tokens: Vec<&str> = CATALOG.iter().map(|s| s.token).collect();
         assert_eq!(
             tokens,
@@ -534,9 +534,48 @@ mod catalog_tests {
                 "date",
                 "timestamptz",
                 "numeric",
-                "text"
+                "text",
+                "bool"
             ]
         );
+    }
+
+    #[test]
+    fn bool_spec_is_storage_only_encryption_only() {
+        let b = scalar("bool");
+        assert_eq!(b.kind, ScalarKind::Bool);
+        assert_eq!(b.kind.rust_type(), "bool");
+        // Storage-only: exactly one term-less domain, no `_eq`/`_ord` — no SEM
+        // index term, no comparison surface.
+        let shape: Vec<(&str, &[Term])> = b.domains.iter().map(|d| (d.suffix, d.terms)).collect();
+        assert_eq!(shape, vec![("", &[] as &[Term])]);
+        // bool is none of the comparison-capable kinds.
+        assert!(!b.kind.is_int());
+        assert!(!b.kind.is_temporal());
+        assert!(!b.kind.is_text());
+        assert_eq!(b.kind.as_bounded_int(), None);
+        // is_eq_only() is true (no `_ord` domain), but the shape is strictly
+        // smaller than eq-only — there is no `_eq` domain either, so it is
+        // storage-only.
+        assert!(b.is_eq_only());
+        assert!(b.is_storage_only());
+        assert!(b.domain_by_suffix("_eq").is_none());
+        // Both boolean plaintexts are present as fixtures.
+        assert_eq!(b.fixtures, &[Fixture::Bool(false), Fixture::Bool(true)]);
+    }
+
+    #[test]
+    fn storage_only_is_exclusive_to_bool() {
+        // Only `bool` is storage-only today; every comparison-capable type has at
+        // least an `_eq` domain and must NOT report storage-only.
+        for s in CATALOG {
+            assert_eq!(
+                s.is_storage_only(),
+                s.token == "bool",
+                "{} storage-only classification is wrong",
+                s.token
+            );
+        }
     }
 
     #[test]
@@ -697,13 +736,14 @@ mod catalog_tests {
     fn every_type_uses_a_known_domain_shape() {
         // Each scalar's domain shape must be one of the known-valid shapes:
         // the four-domain ORDERED shape (storage + `_eq` + `_ord_ore` + `_ord`),
-        // the two-domain EQ-ONLY shape (storage + `_eq`), or the ORDERED shape
-        // plus a `_match` domain (text's Bloom containment). This catches
-        // accidental drift — a typo'd suffix, a wrong term, a dropped domain —
-        // without hardcoding which token gets which shape (that is the catalog's
-        // job; the matrix dispatch and the inventory snapshots are shape-aware).
-        // Subsumes the old per-type `<T>_maps_to_*_with_four_domains` /
-        // `<T>_domain_terms_match_manifest` tests.
+        // the two-domain EQ-ONLY shape (storage + `_eq`), the one-domain
+        // STORAGE-ONLY shape (storage only — encryption-only scalars like
+        // `bool`), or the ORDERED shape plus a `_match` domain (text's Bloom
+        // containment). This catches accidental drift — a typo'd suffix, a wrong
+        // term, a dropped domain — without hardcoding which token gets which
+        // shape (that is the catalog's job; the matrix dispatch and the inventory
+        // snapshots are shape-aware). Subsumes the old per-type
+        // `<T>_maps_to_*_with_four_domains` / `<T>_domain_terms_match_manifest` tests.
         let ordered: Vec<(&str, &[Term])> = vec![
             ("", &[] as &[Term]),
             ("_eq", &[Term::Hm][..]),
@@ -711,6 +751,7 @@ mod catalog_tests {
             ("_ord", &[Term::Ore][..]),
         ];
         let eq_only: Vec<(&str, &[Term])> = vec![("", &[] as &[Term]), ("_eq", &[Term::Hm][..])];
+        let storage_only: Vec<(&str, &[Term])> = vec![("", &[] as &[Term])];
         let ordered_match: Vec<(&str, &[Term])> = vec![
             ("", &[] as &[Term]),
             ("_eq", &[Term::Hm][..]),
@@ -735,6 +776,7 @@ mod catalog_tests {
             assert!(
                 shape == ordered
                     || shape == eq_only
+                    || shape == storage_only
                     || shape == ordered_match
                     || shape == text_search,
                 "{} has an unrecognised domain shape: {shape:?}",
@@ -745,9 +787,11 @@ mod catalog_tests {
 
     #[test]
     fn ordered_and_eq_only_shapes_are_used_as_declared() {
-        // All current catalog types use the four-domain ordered shape; none is
-        // equality-only. (timestamptz was promoted to ordered once the ORE
-        // comparator generalized to N blocks — see the numeric/ORE work.)
+        // No catalog type is the two-domain equality-only shape: the ordered
+        // types use the four-domain shape (timestamptz was promoted to ordered
+        // once the ORE comparator generalized to N blocks — see the numeric/ORE
+        // work), and `bool` is the one-domain storage-only shape (strictly
+        // smaller than eq-only). So `domains.len() == 2` should appear nowhere.
         for s in CATALOG {
             let is_eq_only = s.domains.len() == 2;
             assert!(
@@ -893,6 +937,9 @@ mod invariant_tests {
             | Fixture::Jsonb(s)
             | Fixture::Date(s)
             | Fixture::Timestamptz(s) => DistinctKey::Str(s),
+            // `bool` is storage-only and string-backed for distinctness: the two
+            // values dedupe by their literal, like the other non-numeric kinds.
+            Fixture::Bool(b) => DistinctKey::Str(if b { "true" } else { "false" }),
             _ => DistinctKey::Num(
                 f.numeric_value(kind)
                     .expect("sentinel/Int fixtures resolve to a number"),
