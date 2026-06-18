@@ -142,13 +142,27 @@ pub trait ScalarType:
 /// (e.g. `String`, whose `Default` is the degenerate empty string) override it
 /// with a real median fixture.
 pub trait OrderedScalar: ScalarType {
-    /// The low boundary pivot. Integer scalars return `Self::MIN`; others an
-    /// explicit sentinel. Present verbatim in `fixture_values()`.
-    fn min_pivot() -> Self;
+    /// The low boundary pivot — the smallest `fixture_values()` entry. Derived
+    /// (the `ScalarType` supertrait bounds `Ord + Clone`), so it is a fixture
+    /// row by construction and cannot drift out of the fixture table. No impl
+    /// overrides this.
+    fn min_pivot() -> Self {
+        Self::fixture_values()
+            .iter()
+            .min()
+            .expect("an ordered scalar must have at least one fixture value")
+            .clone()
+    }
 
-    /// The high boundary pivot. Integer scalars return `Self::MAX`; others an
-    /// explicit sentinel. Present verbatim in `fixture_values()`.
-    fn max_pivot() -> Self;
+    /// The high boundary pivot — the largest `fixture_values()` entry. Derived,
+    /// like `min_pivot()`. No impl overrides this.
+    fn max_pivot() -> Self {
+        Self::fixture_values()
+            .iter()
+            .max()
+            .expect("an ordered scalar must have at least one fixture value")
+            .clone()
+    }
 
     /// The interior pivot. Defaults to `Self::default()` (the numeric origin for
     /// signed scalars); override where `Default` is not a usable fixture anchor.
@@ -222,8 +236,6 @@ macro_rules! temporal_values {
         variant   = $variant:ident,
         pg_type   = $pg:literal,
         parse     = $parse:expr,
-        min_pivot = $min:expr,
-        max_pivot = $max:expr,
         sql_lit   = $sql_lit:expr $(,)?
     ) => {
         static $cell: std::sync::LazyLock<Vec<$ty>> = std::sync::LazyLock::new(|| {
@@ -253,11 +265,9 @@ macro_rules! temporal_values {
         }
 
         impl OrderedScalar for $ty {
-            fn min_pivot() -> $ty { $min }
-            fn max_pivot() -> $ty { $max }
-            // `mid_pivot` inherits the default `Self::default()`. Every chrono
-            // temporal type's `Default` is the epoch (`1970-01-01` for a date),
-            // which is also `origin()` — a real fixture and the sign boundary.
+            // Boundary pivots derive from `fixture_values()`; `mid_pivot`
+            // inherits `Self::default()` (the epoch), which is `origin()` and a
+            // real fixture. Nothing to override.
         }
 
         impl SignedScalar for $ty {
@@ -313,8 +323,6 @@ temporal_values! {
     pg_type   = "date",
     parse     = |s| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
         .expect("catalog date fixture must be YYYY-MM-DD"),
-    min_pivot = chrono::NaiveDate::from_ymd_opt(1900, 1, 1).expect("1900-01-01 valid"),
-    max_pivot = chrono::NaiveDate::from_ymd_opt(2099, 12, 31).expect("2099-12-31 valid"),
     sql_lit   = |v| format!("'{v}'"),
 }
 
@@ -334,12 +342,6 @@ temporal_values! {
     parse     = |s| chrono::DateTime::parse_from_rfc3339(s)
         .expect("catalog timestamptz fixture must be RFC3339")
         .with_timezone(&chrono::Utc),
-    min_pivot = "1900-01-01T00:00:00Z"
-        .parse()
-        .expect("1900-01-01T00:00:00Z is a valid timestamp"),
-    max_pivot = "2099-12-31T23:59:59Z"
-        .parse()
-        .expect("2099-12-31T23:59:59Z is a valid timestamp"),
     sql_lit   = |v| format!("'{}'", v.to_rfc3339()),
 }
 
@@ -439,22 +441,10 @@ impl ScalarType for String {
 }
 
 impl OrderedScalar for String {
-    /// Lexicographic min pivot — the lexicographically-smallest fixture
-    /// (`"aard"`). Present verbatim in `fixture_values()`; keep in sync with
-    /// `TEXT_FIXTURES`.
-    fn min_pivot() -> Self {
-        "aard".to_string()
-    }
-
-    /// Lexicographic max pivot — the lexicographically-largest fixture
-    /// (`"zzzz"`).
-    fn max_pivot() -> Self {
-        "zzzz".to_string()
-    }
-
     /// Interior pivot — a real median fixture. `String::default()` is `""`,
     /// which is degenerate for ORE (issue #262), so `text` overrides the
-    /// inherited default with a genuine middle value.
+    /// inherited default with a genuine middle value. The boundary pivots are
+    /// inherited (derived from `fixture_values()` = `"aard"`/`"zzzz"`).
     fn mid_pivot() -> Self {
         "frank".to_string()
     }
@@ -524,19 +514,9 @@ impl ScalarType for rust_decimal::Decimal {
 }
 
 impl OrderedScalar for rust_decimal::Decimal {
-    /// The smallest fixture decimal. Present verbatim in `fixture_values()`.
-    fn min_pivot() -> Self {
-        use std::str::FromStr;
-        rust_decimal::Decimal::from_str("-1000000000000").unwrap()
-    }
-
-    /// The largest fixture decimal. Present verbatim in `fixture_values()`.
-    fn max_pivot() -> Self {
-        use std::str::FromStr;
-        rust_decimal::Decimal::from_str("1000000000000").unwrap()
-    }
-    // `mid_pivot` inherits the default `Self::default()` = `Decimal::ZERO` = 0,
-    // which is a real fixture and the numeric origin.
+    // Boundary pivots derive from `fixture_values()` (= ±1_000_000_000_000);
+    // `mid_pivot` inherits `Decimal::ZERO` (`Default`), a real fixture and the
+    // numeric origin. Nothing to override.
 }
 
 // `Decimal` is deliberately NOT `SignedScalar`: like `text`, it is an
@@ -564,6 +544,16 @@ mod numeric_value_guards {
             vals.len(),
             "two numeric fixtures alias to the same Decimal value",
         );
+    }
+
+    /// `mid_pivot` is the only pivot `numeric` does not derive (it inherits
+    /// `Decimal::ZERO`). The matrix fetches its ciphertext via
+    /// `fetch_fixture_payload`, so `0` must be a fixture row present verbatim.
+    #[test]
+    fn mid_pivot_is_a_fixture() {
+        let values = numeric_values();
+        let mid = <rust_decimal::Decimal as OrderedScalar>::mid_pivot();
+        assert!(values.contains(&mid), "numeric mid_pivot {mid:?} must be a fixture");
     }
 }
 
@@ -1236,5 +1226,35 @@ mod catalog_resolution_tests {
         // `@>` is not served by any extractor on int4 `_eq` ([Hm]).
         let spec = ScalarDomainSpec::new::<i32>(Variant::Eq);
         assert!(combo_extractor(&spec, &["@>"]).is_err());
+    }
+}
+
+#[cfg(test)]
+mod pivot_derivation_tests {
+    use super::*;
+
+    /// The invariant that lets `min_pivot`/`max_pivot` be DERIVED from
+    /// `fixture_values()` instead of hand-written: for every ordered scalar the
+    /// boundary pivots equal the extremes of its own fixture list. Passes with
+    /// the current hand-written pivots (they already equal the extremes) and
+    /// keeps passing once the trait derives them — so it guards the refactor in
+    /// both directions.
+    fn boundary_pivots_are_fixture_extremes<T: OrderedScalar>() {
+        let values = T::fixture_values();
+        let want_min = values.iter().min().expect("≥1 fixture").clone();
+        let want_max = values.iter().max().expect("≥1 fixture").clone();
+        assert_eq!(T::min_pivot(), want_min, "min_pivot must be the smallest fixture");
+        assert_eq!(T::max_pivot(), want_max, "max_pivot must be the largest fixture");
+    }
+
+    #[test]
+    fn every_ordered_scalar_pivots_on_its_fixture_extremes() {
+        boundary_pivots_are_fixture_extremes::<i16>();
+        boundary_pivots_are_fixture_extremes::<i32>();
+        boundary_pivots_are_fixture_extremes::<i64>();
+        boundary_pivots_are_fixture_extremes::<chrono::NaiveDate>();
+        boundary_pivots_are_fixture_extremes::<chrono::DateTime<chrono::Utc>>();
+        boundary_pivots_are_fixture_extremes::<rust_decimal::Decimal>();
+        boundary_pivots_are_fixture_extremes::<String>();
     }
 }
