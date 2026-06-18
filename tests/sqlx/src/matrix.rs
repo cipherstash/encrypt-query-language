@@ -4,11 +4,13 @@
 //!
 //! - **`scalar_matrix!`** — the recommended wrapper. One invocation per type
 //!   (~5 lines), with a `caps` capability marker selecting the shape:
-//!   `caps = [eq, ord]` for an ordered scalar (i32, i64, date, ...) where all
-//!   four variants are present and the full `=`/`<>`/`<`/`>`/`min`/`max`
-//!   surface applies; `caps = [eq]` for an equality-only scalar (timestamptz,
-//!   bool, ...) where only storage + `_eq` materialise and the ord operators
-//!   are blockers. The only other inputs that change per type are the scalar
+//!   `caps = [eq, ord]` for an ordered scalar (i32, i64, date, timestamptz,
+//!   ...) where all four variants are present and the full
+//!   `=`/`<>`/`<`/`>`/`min`/`max` surface applies; `caps = [eq]` for a
+//!   hypothetical equality-only scalar (e.g. a future hash-only type) where
+//!   only storage + `_eq` materialise and the ord operators are blockers — no
+//!   current type uses this shape. The only other inputs that change per type
+//!   are the scalar
 //!   itself, the suite token (used to derive domain + test names), and the EQL
 //!   type name (the fixture `scripts(...)` ref); pivots are derived from the
 //!   `ScalarType` impl.
@@ -146,11 +148,13 @@ fn collect_index_scan_nodes(value: &serde_json::Value, found: &mut Vec<(String, 
 ///
 /// - `caps = [eq, ord]` — the ordered-numeric shape (all four variants;
 ///   `=`/`<>`/`<`/`<=`/`>`/`>=`; ORDER BY / ORDER BY USING; ORE injectivity;
-///   the ordered functional index). Consumers: `int2`/`int4`/`int8`/`date`.
+///   the ordered functional index). Consumers:
+///   `int2`/`int4`/`int8`/`date`/`timestamptz`/`numeric`.
 /// - `caps = [eq]` — equality-only (storage + `_eq` only; `=`/`<>` meaningful,
 ///   the four ord operators are deliberate blockers). The empty `ord_domains`
-///   make the order-by / ORE arms emit zero tests. First consumer:
-///   `timestamptz`.
+///   make the order-by / ORE arms emit zero tests. No current consumer —
+///   `timestamptz` was promoted to the ordered shape once the N-block ORE
+///   comparator could order its native 12-block width.
 ///
 /// Both arms take the identical `(suite, scalar, eql_type)` signature, so the
 /// invocation shape is the same regardless of capability — only the `caps`
