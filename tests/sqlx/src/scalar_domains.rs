@@ -624,7 +624,10 @@ mod bool_value_tests {
         assert!(bool_values().contains(&false));
         assert!(bool_values().contains(&true));
         assert_eq!(<bool as ScalarType>::PG_TYPE, "bool");
-        assert_eq!(<bool as ScalarType>::fixture_table_name(), "fixtures.eql_v2_bool");
+        assert_eq!(
+            <bool as ScalarType>::fixture_table_name(),
+            "fixtures.eql_v2_bool"
+        );
     }
 }
 

@@ -554,7 +554,9 @@ mod tests {
     fn ordered_entry_emits_scalar_matrix_with_eq_ord_caps() {
         let token: Ident = syn::parse_str("int4").unwrap();
         let rust_type: Type = syn::parse_str("i32").unwrap();
-        let out = norm(&matrix_suite_for_entry(&token, &rust_type, false, false, false));
+        let out = norm(&matrix_suite_for_entry(
+            &token, &rust_type, false, false, false,
+        ));
         assert!(out.contains(":: eql_tests :: scalar_matrix !"));
         assert!(out.contains("caps = [eq , ord]"));
         assert!(out.contains("suite = int4"));
@@ -567,7 +569,9 @@ mod tests {
         // ord_domains), never the ordered `caps = [eq, ord]` arm.
         let token: Ident = syn::parse_str("timestamptz").unwrap();
         let rust_type: Type = syn::parse_str("chrono::DateTime<chrono::Utc>").unwrap();
-        let out = norm(&matrix_suite_for_entry(&token, &rust_type, false, true, false));
+        let out = norm(&matrix_suite_for_entry(
+            &token, &rust_type, false, true, false,
+        ));
         assert!(out.contains(":: eql_tests :: scalar_matrix !"));
         assert!(out.contains("caps = [eq]"));
         assert!(!out.contains("caps = [eq , ord]"));
@@ -581,7 +585,9 @@ mod tests {
         // domain through the matrix in addition to the ordered shape.
         let token: Ident = syn::parse_str("text").unwrap();
         let rust_type: Type = syn::parse_str("String").unwrap();
-        let out = norm(&matrix_suite_for_entry(&token, &rust_type, false, false, true));
+        let out = norm(&matrix_suite_for_entry(
+            &token, &rust_type, false, false, true,
+        ));
         assert!(out.contains(":: eql_tests :: scalar_matrix !"));
         assert!(out.contains("caps = [eq , ord , search]"));
         assert!(out.contains("suite = text"));
@@ -609,7 +615,9 @@ mod tests {
         let token: Ident = syn::parse_str("bool").unwrap();
         let rust_type: Type = syn::parse_str("bool").unwrap();
         // (storage_only = true, eq_only = true) — true catalog state for bool.
-        let out = norm(&matrix_suite_for_entry(&token, &rust_type, true, true, false));
+        let out = norm(&matrix_suite_for_entry(
+            &token, &rust_type, true, true, false,
+        ));
         assert!(out.contains(":: eql_tests :: scalar_matrix !"));
         assert!(out.contains("caps = [storage]"));
         assert!(!out.contains("caps = [eq]"));
