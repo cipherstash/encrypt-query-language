@@ -4,9 +4,7 @@
 //! depends on.
 
 use anyhow::Result;
-use eql_tests::{
-    sql_string_literal, ScalarDomainSpec, ScalarType, Variant, PLACEHOLDER_PAYLOAD,
-};
+use eql_tests::{sql_string_literal, ScalarDomainSpec, ScalarType, Variant, PLACEHOLDER_PAYLOAD};
 use sqlx::PgPool;
 
 #[test]
