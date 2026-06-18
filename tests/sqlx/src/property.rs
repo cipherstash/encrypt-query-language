@@ -22,49 +22,30 @@ use tokio::sync::Mutex;
 /// `fixtures.eql_v2_<T>` table exactly once.
 static FIXTURE_LOADED: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
 
-/// Per-process guard ensuring the EQL surface (the `eql_v3` schema the oracle
-/// queries cast to) is installed into the connected DB exactly once.
-static EQL_INSTALLED: OnceLock<Mutex<bool>> = OnceLock::new();
-
-/// Ensure the EQL surface (the `eql_v3` schema + scalar domains/operators the
-/// oracle queries cast to) is present in the DB behind `pool`.
+/// Apply the SQLx migrations (the EQL install in `001_install_eql.sql`, plus the
+/// regression-data migrations) to the DB behind `pool`.
 ///
 /// The property suites connect via `connect_pool()` to the base test database
-/// (`DATABASE_URL`), NOT through `#[sqlx::test]`'s migrated per-test scratch
-/// DBs. In a CI shard that base DB is a stock Postgres with no EQL installed —
-/// only the `build-archive` job ran `sqlx migrate run`, and against a different
-/// Postgres — so every `::eql_v3.<T>_eq` cast would raise
-/// `schema "eql_v3" does not exist`. This installs the surface on demand so the
-/// suites are self-sufficient regardless of where they run (CI shard, local,
-/// fork), instead of silently depending on a pre-installed base DB.
+/// (`DATABASE_URL`) rather than through `#[sqlx::test]`'s migrated per-test
+/// scratch DBs, because their proptest case loop is synchronous and cannot take
+/// `#[sqlx::test]`'s injected pool. In a CI shard that base DB is a stock
+/// Postgres with no EQL installed, so every `::eql_v3.<T>_eq` cast would raise
+/// `schema "eql_v3" does not exist`. This brings the base DB up to the same
+/// migrated state the rest of the suite gets for free.
 ///
-/// `install_sql` is the EQL installer (`migrations/001_install_eql.sql`),
-/// `include_str!`-embedded into the test binary at compile time (see
-/// `property/mod.rs`) so it travels inside the prebuilt nextest archive — the
-/// same mechanism the fixture corpus uses. A process-wide async mutex
-/// guarantees exactly-once execution across the parallel proptest threads, and
-/// a presence check (`eql_v3.int4_eq`) skips the install when the DB already
-/// has the surface (a developer's pre-installed local DB), where re-running the
-/// non-idempotent installer would error on duplicate objects.
-pub async fn ensure_eql_installed(pool: &PgPool, install_sql: &str) -> Result<()> {
-    let guard = EQL_INSTALLED.get_or_init(|| Mutex::new(false));
-    let mut installed = guard.lock().await;
-    if *installed {
-        return Ok(());
-    }
-    // Presence check: skip the installer if the surface is already there. int4
-    // is the reference scalar type and is always part of the surface.
-    let present: bool = sqlx::query_scalar("SELECT to_regtype('eql_v3.int4_eq') IS NOT NULL")
-        .fetch_one(pool)
+/// `migrator` is `sqlx::migrate!("./migrations")` — the SAME embedded migration
+/// set `#[sqlx::test]` runs, passed in from the test binary so the lib does not
+/// embed the (gitignored, generated) migration files. `Migrator::run` is
+/// idempotent (it records applied versions in `_sqlx_migrations` and skips
+/// them) and process-safe (it takes a database-level advisory lock for the
+/// duration), so the separate OS processes nextest runs each test in serialise
+/// correctly — exactly one applies each migration, the rest observe it already
+/// applied. A developer's already-migrated local DB is a no-op.
+pub async fn ensure_eql_installed(pool: &PgPool, migrator: &sqlx::migrate::Migrator) -> Result<()> {
+    migrator
+        .run(pool)
         .await
-        .context("probing for an existing eql_v3 install")?;
-    if !present {
-        sqlx::raw_sql(install_sql)
-            .execute(pool)
-            .await
-            .context("installing the EQL surface into the property-test DB")?;
-    }
-    *installed = true;
+        .context("applying EQL migrations to the property-test DB")?;
     Ok(())
 }
 

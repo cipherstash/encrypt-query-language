@@ -67,8 +67,9 @@ where
         .build()?;
     let pool: PgPool = rt.block_on(connect_pool())?;
     // The base DB this pool connects to is not migrated by `#[sqlx::test]`; in a
-    // CI shard it has no `eql_v3` surface, so install it before any cast/query.
-    rt.block_on(ensure_eql_installed(&pool, super::EQL_INSTALL_SQL))?;
+    // CI shard it has no `eql_v3` surface, so apply the migrations (idempotent +
+    // process-safe via the migrator's advisory lock) before any cast/query.
+    rt.block_on(ensure_eql_installed(&pool, &super::migrator()))?;
 
     // Shrinking is disabled for the e2e suite: every failed shrink attempt would
     // trigger another ZeroKMS batch, and ciphertext cannot be meaningfully
