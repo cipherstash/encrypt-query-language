@@ -225,8 +225,9 @@ crate::scalar_types!(scalar_type_impls);
 /// a `#[cfg(test)]` module asserting the parsed values track the catalog and
 /// include the pivots. The chrono analogue of `eql_scalars::int_values!`
 /// (integers materialise a `const` slice; temporals can't, so values live in a
-/// `LazyLock`). `parse`/`min_pivot`/`max_pivot`/`sql_lit` are expressions so each
-/// type supplies its own chrono parsing, sentinel pivots, and SQL literal form.
+/// `LazyLock`). `parse`/`sql_lit` are expressions so each type supplies its own
+/// chrono parsing and SQL literal form. Boundary pivots are not parameters: they
+/// derive from `fixture_values()` via the `OrderedScalar` defaults.
 macro_rules! temporal_values {
     (
         cell      = $cell:ident,

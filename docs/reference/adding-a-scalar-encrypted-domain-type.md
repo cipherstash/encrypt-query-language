@@ -314,7 +314,7 @@ no live catalog type today) vs `ORDERED_INT_DOMAINS` (→ `[eq, ord]`). (`EQ_ONL
 is currently unused — `timestamptz` was promoted to the ordered shape once the ORE
 comparator generalized to N blocks.) The pivot *sweep* is uniform
 across every ordered type (one canonical snapshot); the signed-only sign-boundary
-test (`SignedScalar`, `int`/`date`) lives outside `scalars::` in
+test (`SignedScalar`, `int2`/`int4`/`int8`/`date`/`timestamptz`) lives outside `scalars::` in
 `encrypted_domain/signed.rs`, so a `text` instantiation of it is a compile error
 and it never enters the inventory snapshot. The `matrix.rs` module header is the
 canonical,

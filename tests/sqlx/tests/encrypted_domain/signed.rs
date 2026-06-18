@@ -3,7 +3,7 @@
 //! matrix.
 //!
 //! ORE encrypts signed values as an offset from a numeric origin (`0` for
-//! integers, the epoch for dates). This suite asserts the ORE block ordering is
+//! integers, the epoch for `date`/`timestamptz`). This suite asserts the ORE block ordering is
 //! **monotonic across that origin**: a fixture below the origin orders before
 //! the origin, which orders before a fixture above it — through the encrypted
 //! `_ord` domain, with no decryption.
