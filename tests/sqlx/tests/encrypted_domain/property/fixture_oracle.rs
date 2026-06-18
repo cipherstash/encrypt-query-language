@@ -26,13 +26,31 @@ use sqlx::PgPool;
 /// of the `generate_for_token` fixture dispatch.
 fn embedded_fixture_sql<T: ScalarType>() -> &'static str {
     match T::PG_TYPE {
-        "int4" => include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/eql_v2_int4.sql")),
-        "int2" => include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/eql_v2_int2.sql")),
-        "int8" => include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/eql_v2_int8.sql")),
-        "date" => include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/eql_v2_date.sql")),
-        "text" => include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/eql_v2_text.sql")),
+        "int4" => include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/fixtures/eql_v2_int4.sql"
+        )),
+        "int2" => include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/fixtures/eql_v2_int2.sql"
+        )),
+        "int8" => include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/fixtures/eql_v2_int8.sql"
+        )),
+        "date" => include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/fixtures/eql_v2_date.sql"
+        )),
+        "text" => include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/fixtures/eql_v2_text.sql"
+        )),
         "timestamptz" => {
-            include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/eql_v2_timestamptz.sql"))
+            include_str!(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/fixtures/eql_v2_timestamptz.sql"
+            ))
         }
         other => panic!(
             "no embedded fixture for catalog token '{other}'; \
