@@ -1267,33 +1267,6 @@ macro_rules! __scalar_matrix_native_absent_case {
 pub const NATIVE_JSONB_BLOCKER_ARM_SYMBOLS: &[&str] =
     &["?", "?|", "?&", "@?", "@@", "#>", "#>>", "-", "#-", "||"];
 
-#[cfg(test)]
-mod native_jsonb_blocker_arm_tests {
-    use super::*;
-
-    #[test]
-    fn native_jsonb_blocker_arm_covers_every_derived_symbol() {
-        // The arm's hand-written RHS-shape map keys (operator SYMBOLS) must equal
-        // the codegen residual. `eql-codegen` is not a dependency of this crate,
-        // so we pin against the same literal 10-symbol vector that
-        // `native_jsonb_blocker_symbols_are_the_residual_ten`
-        // (operator_surface.rs) pins against the live `OPERATORS` table. The two
-        // pins together fail if either side drifts: a 21st native-jsonb operator
-        // makes the codegen test fail, and updating that test without updating
-        // this const makes them disagree on review. The RHS operand shapes stay
-        // hand-written; only the symbol SET is asserted.
-        let mut arm: Vec<&str> = NATIVE_JSONB_BLOCKER_ARM_SYMBOLS.to_vec();
-        let mut want = vec!["?", "?|", "?&", "@?", "@@", "#>", "#>>", "-", "#-", "||"];
-        arm.sort_unstable();
-        want.sort_unstable();
-        assert_eq!(
-            arm, want,
-            "native-jsonb-blocker arm symbol set must equal the codegen residual; \
-             arm={NATIVE_JSONB_BLOCKER_ARM_SYMBOLS:?}",
-        );
-    }
-}
-
 #[macro_export]
 #[doc(hidden)]
 macro_rules! __scalar_matrix_native_jsonb_blocker_outer {
@@ -3449,4 +3422,31 @@ macro_rules! __scalar_matrix_count_distinct_dispatch {
             }
         }
     };
+}
+
+#[cfg(test)]
+mod native_jsonb_blocker_arm_tests {
+    use super::*;
+
+    #[test]
+    fn native_jsonb_blocker_arm_covers_every_derived_symbol() {
+        // The arm's hand-written RHS-shape map keys (operator SYMBOLS) must equal
+        // the codegen residual. `eql-codegen` is not a dependency of this crate,
+        // so we pin against the same literal 10-symbol vector that
+        // `native_jsonb_blocker_symbols_are_the_residual_ten`
+        // (operator_surface.rs) pins against the live `OPERATORS` table. The two
+        // pins together fail if either side drifts: a 21st native-jsonb operator
+        // makes the codegen test fail, and updating that test without updating
+        // this const makes them disagree on review. The RHS operand shapes stay
+        // hand-written; only the symbol SET is asserted.
+        let mut arm: Vec<&str> = NATIVE_JSONB_BLOCKER_ARM_SYMBOLS.to_vec();
+        let mut want = vec!["?", "?|", "?&", "@?", "@@", "#>", "#>>", "-", "#-", "||"];
+        arm.sort_unstable();
+        want.sort_unstable();
+        assert_eq!(
+            arm, want,
+            "native-jsonb-blocker arm symbol set must equal the codegen residual; \
+             arm={NATIVE_JSONB_BLOCKER_ARM_SYMBOLS:?}",
+        );
+    }
 }
