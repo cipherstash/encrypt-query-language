@@ -47,12 +47,7 @@ pub async fn ensure_fixture_loaded<T: ScalarType>(pool: &PgPool, script: &str) -
     sqlx::raw_sql(script)
         .execute(pool)
         .await
-        .with_context(|| {
-            format!(
-                "loading fixture corpus for {} into shared DB",
-                T::PG_TYPE
-            )
-        })?;
+        .with_context(|| format!("loading fixture corpus for {} into shared DB", T::PG_TYPE))?;
     loaded.insert(T::PG_TYPE);
     Ok(())
 }
