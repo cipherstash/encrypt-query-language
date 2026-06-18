@@ -48,6 +48,7 @@ use std::marker::PhantomData;
 
 use schemars::{schema::RootSchema, schema_for, JsonSchema};
 
+pub mod bool;
 pub mod date;
 pub mod int2;
 pub mod int4;
@@ -164,5 +165,6 @@ pub fn all() -> Vec<Box<dyn DomainType>> {
         Box::new(PhantomData::<text::TextOrdOre>),
         Box::new(PhantomData::<text::TextOrd>),
         Box::new(PhantomData::<text::TextSearch>),
+        Box::new(PhantomData::<bool::Bool>),
     ]
 }
