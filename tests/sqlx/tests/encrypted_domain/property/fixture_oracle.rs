@@ -60,6 +60,10 @@ fn embedded_fixture_sql<T: ScalarType>() -> &'static str {
                 "/fixtures/eql_v2_timestamptz.sql"
             ))
         }
+        "numeric" => include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/fixtures/eql_v2_numeric.sql"
+        )),
         other => panic!(
             "no embedded fixture for catalog token '{other}'; \
              add an include_str! arm in fixture_oracle.rs"
