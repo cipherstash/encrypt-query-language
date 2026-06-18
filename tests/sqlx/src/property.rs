@@ -7,76 +7,37 @@
 //! them rows it batch-encrypts from freshly generated plaintexts. The engine is
 //! identical for both.
 //!
-//! Operator evaluation is read-only (`SELECT <a> op <b>`), so these helpers take
-//! a `&PgPool` and need no per-test schema isolation.
+//! Operator evaluation is read-only (`SELECT <a> op <b>`); the fixture suite
+//! runs each property under `#[sqlx::test]` (its own migrated scratch DB), while
+//! the e2e suite (single-process, feature-gated) uses a shared pool brought up
+//! to the migrated state by `ensure_eql_installed`.
 
 use crate::scalar_domains::{ScalarDomainSpec, ScalarType, Variant};
 use anyhow::{Context, Result};
 use sqlx::PgPool;
-use std::collections::HashSet;
-use std::sync::OnceLock;
-use tokio::sync::Mutex;
-
-/// Per-process record of which fixture corpora have been materialised into the
-/// shared connection's DB, so concurrent property-test threads load each
-/// `fixtures.eql_v2_<T>` table exactly once.
-static FIXTURE_LOADED: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
 
 /// Apply the SQLx migrations (the EQL install in `001_install_eql.sql`, plus the
 /// regression-data migrations) to the DB behind `pool`.
 ///
-/// The property suites connect via `connect_pool()` to the base test database
-/// (`DATABASE_URL`) rather than through `#[sqlx::test]`'s migrated per-test
-/// scratch DBs, because their proptest case loop is synchronous and cannot take
-/// `#[sqlx::test]`'s injected pool. In a CI shard that base DB is a stock
-/// Postgres with no EQL installed, so every `::eql_v3.<T>_eq` cast would raise
-/// `schema "eql_v3" does not exist`. This brings the base DB up to the same
-/// migrated state the rest of the suite gets for free.
+/// Used by the e2e suite, which connects via `connect_pool()` to the base test
+/// database (`DATABASE_URL`) rather than through `#[sqlx::test]`'s migrated
+/// scratch DBs — its proptest case loop is synchronous and it batch-encrypts via
+/// ZeroKMS, so it owns a long-lived pool. It runs single-process (gated behind
+/// `proptest-e2e`, not in the nextest shards), so the shared DB is fine. The
+/// fixture suite does NOT use this — it is a `#[sqlx::test]` and gets a migrated
+/// DB for free.
 ///
 /// `migrator` is `sqlx::migrate!("./migrations")` — the SAME embedded migration
 /// set `#[sqlx::test]` runs, passed in from the test binary so the lib does not
 /// embed the (gitignored, generated) migration files. `Migrator::run` is
-/// idempotent (it records applied versions in `_sqlx_migrations` and skips
-/// them) and process-safe (it takes a database-level advisory lock for the
-/// duration), so the separate OS processes nextest runs each test in serialise
-/// correctly — exactly one applies each migration, the rest observe it already
-/// applied. A developer's already-migrated local DB is a no-op.
+/// idempotent (records applied versions in `_sqlx_migrations` and skips them)
+/// and holds a database-level advisory lock for the duration, so concurrent
+/// callers serialise; a developer's already-migrated local DB is a no-op.
 pub async fn ensure_eql_installed(pool: &PgPool, migrator: &sqlx::migrate::Migrator) -> Result<()> {
     migrator
         .run(pool)
         .await
         .context("applying EQL migrations to the property-test DB")?;
-    Ok(())
-}
-
-/// Materialise the committed fixture corpus (real ciphertext) for `T` into the connected DB.
-///
-/// The fixture `.sql` files (`tests/sqlx/fixtures/eql_v2_<T>.sql`) are normally
-/// loaded only into `#[sqlx::test]`'s ephemeral per-test databases. The property
-/// suites connect to the shared test DB directly (they cannot use
-/// `#[sqlx::test]`'s injected pool from a sync `proptest!` body), so the corpus
-/// is not present there. This loads it on demand: the script is self-contained
-/// and idempotent (`CREATE SCHEMA IF NOT EXISTS` / `DROP TABLE IF EXISTS` /
-/// `CREATE` / `INSERT`), and a process-wide async mutex guarantees exactly-once
-/// execution per type across the parallel test threads (each driving its own
-/// runtime).
-///
-/// `script` is the fixture SQL, passed in by the caller. It is `include_str!`-
-/// embedded into the test binary at compile time (see `fixture_oracle.rs`) so it
-/// travels inside the prebuilt nextest archive that CI shards run from — those
-/// shards do a fresh checkout where the gitignored `.sql` files are absent, so a
-/// runtime `std::fs` read would fail there.
-pub async fn ensure_fixture_loaded<T: ScalarType>(pool: &PgPool, script: &str) -> Result<()> {
-    let guard = FIXTURE_LOADED.get_or_init(|| Mutex::new(HashSet::new()));
-    let mut loaded = guard.lock().await;
-    if loaded.contains(T::PG_TYPE) {
-        return Ok(());
-    }
-    sqlx::raw_sql(script)
-        .execute(pool)
-        .await
-        .with_context(|| format!("loading fixture corpus for {} into shared DB", T::PG_TYPE))?;
-    loaded.insert(T::PG_TYPE);
     Ok(())
 }
 

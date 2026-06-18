@@ -5,14 +5,17 @@
 //! mis-read as a scalar type and break the catalog cross-check.
 
 /// The embedded SQLx migration set (`tests/sqlx/migrations`) — the SAME one
-/// `#[sqlx::test]` applies to its scratch DBs. The property suites connect to
-/// the base DB directly (their proptest case loop is sync and can't take
-/// `#[sqlx::test]`'s injected pool), so they apply this themselves to reach the
+/// `#[sqlx::test]` applies to its scratch DBs. Only the e2e suite needs it: it
+/// connects to the base DB directly (its proptest case loop is sync and it
+/// batch-encrypts via ZeroKMS), so it applies the migrations itself to reach the
 /// migrated state the rest of the suite gets for free (see
-/// `property::ensure_eql_installed`). The macro embeds the files at compile
-/// time and resolves `./migrations` against the `eql_tests` crate root
-/// (`tests/sqlx`); kept in the test target, not the lib, so the lib never
-/// embeds the gitignored generated `001_install_eql.sql`.
+/// `property::ensure_eql_installed`). The fixture suite is a `#[sqlx::test]` and
+/// needs none of this. The macro embeds the files at compile time and resolves
+/// `./migrations` against the `eql_tests` crate root (`tests/sqlx`); kept in the
+/// test target, not the lib, so the lib never embeds the gitignored generated
+/// `001_install_eql.sql`. Gated to the e2e feature so it is not dead code in the
+/// default (shard) build.
+#[cfg(feature = "proptest-e2e")]
 pub(crate) fn migrator() -> sqlx::migrate::Migrator {
     sqlx::migrate!("./migrations")
 }
