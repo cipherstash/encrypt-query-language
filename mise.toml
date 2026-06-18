@@ -86,7 +86,7 @@ depends = ["test:sqlx:prep"]
 dir = "{{config_root}}/tests/sqlx"
 run = """
 echo "Running Rust tests..."
-cargo test
+cargo test --features proptest-e2e
 """
 
 [tasks."test:sqlx:watch"]
