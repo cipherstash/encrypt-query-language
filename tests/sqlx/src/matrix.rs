@@ -1242,12 +1242,13 @@ macro_rules! __scalar_matrix_native_absent_case {
 // Native-jsonb-blocker category — the native jsonb operators that the codegen
 // surface generates as BLOCKERS on every encrypted domain (neither comparison,
 // containment, nor path-selector). They must RAISE the EQL "operator X is not
-// supported" blocker on every variant, with PLACEHOLDER_PAYLOAD (no fixture
-// row needed — see the "blocker raises before decryption" note in the
-// Critical-context section). Per-op RHS shapes mirror the native jsonb operator
-// signatures (see crates/eql-codegen/src/operator_surface.rs OPERATORS):
-// `?`/`-` take text, `?|`/`?&`/`#>`/`#>>`/`#-` take text[], `@?`/`@@` take
-// jsonpath, `||` takes jsonb. Replaces the int4-only
+// supported" blocker on every variant, with PLACEHOLDER_PAYLOAD. No fixture row
+// is needed: the blocker resolves on the operator and raises before any payload
+// is read, so any castable sentinel suffices. Per-op RHS shapes mirror the
+// native jsonb operator signatures (see
+// crates/eql-codegen/src/operator_surface.rs OPERATORS): `?` takes text, `-`
+// takes text / integer / text[] (three overloads), `?|`/`?&`/`#>`/`#>>`/`#-`
+// take text[], `@?`/`@@` take jsonpath, `||` takes jsonb. Replaces the int4-only
 // `omitted_native_jsonb_operators_raise_eql_blockers` hand-written test,
 // extending the guarantee to all storage scalars.
 //
@@ -1365,6 +1366,24 @@ macro_rules! __scalar_matrix_native_jsonb_blocker_case {
                         &pool, &sql, &[Some(payload), Some(payload)], &concat_msg,
                     ).await?;
                 }
+
+                // Guard: the symbols this arm actually sweeps (the `single` op
+                // keys plus `||`) must equal NATIVE_JSONB_BLOCKER_ARM_SYMBOLS,
+                // itself pinned to the codegen residual by a sibling #[test]. This
+                // ties the SQL the arm runs to the pinned set, so a symbol added
+                // to the const without a matching `single`/`concat` case (or vice
+                // versa) fails here instead of silently going unexercised.
+                let mut swept: Vec<&str> = single.iter().map(|(op, _)| *op).collect();
+                swept.push("||");
+                swept.sort_unstable();
+                swept.dedup();
+                let mut pinned: Vec<&str> =
+                    $crate::matrix::NATIVE_JSONB_BLOCKER_ARM_SYMBOLS.to_vec();
+                pinned.sort_unstable();
+                anyhow::ensure!(
+                    swept == pinned,
+                    "native-jsonb-blocker arm swept {swept:?} but pinned set is {pinned:?}",
+                );
                 Ok(())
             }
         }
