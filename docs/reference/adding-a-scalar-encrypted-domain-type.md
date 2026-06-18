@@ -445,8 +445,9 @@ generated-SQL drift is caught before database tests run.
 committed `tests/codegen/reference/<T>/` baseline, generated once and checked in
 (see `tests/codegen/reference/README.md` for the regenerate-and-commit recipe).
 The generator is type-generic, but per-type domain *shapes* differ — ordered
-types carry `_ord`/`_ord_ore` + aggregates, equality-only types (`timestamptz`)
-omit them, and the Bloom `text_match` domain renders `@>`/`<@` as supported
+types (including `timestamptz`) carry `_ord`/`_ord_ore` + aggregates, a
+hypothetical equality-only type (`EQ_ONLY_DOMAINS`) would omit them, and the
+Bloom `text_match` domain renders `@>`/`<@` as supported
 containment operators no ordered type emits — so anchoring every type catches a
 regression in any shape, not just the ordered one. `reference_dirs_match_catalog_tokens`
 (in `crates/eql-codegen/tests/parity.rs`) fails CI if a catalog row has no reference
