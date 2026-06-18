@@ -29,6 +29,7 @@ This project uses `mise` for task management. Common commands:
 - Run SQLx tests directly: `mise run test:sqlx`
 - Run SQLx tests in watch mode: `mise run test:sqlx:watch`
 - Tests are located in `tests/sqlx/` using Rust and SQLx framework
+- Property-based tests for the `eql_v3` encrypted scalar domains live in three suites — **catalog** (pure-Rust catalog invariants, no DB), **fixture** (oracle over committed ciphertext), and **e2e** (oracle over fresh end-to-end encryption, gated behind the `proptest-e2e` cargo feature). The structure, the shared all-pairs oracle engine, and the conventions/footguns (e.g. why they must not live under `scalars::`) are documented in `tests/sqlx/tests/encrypted_domain/property/README.md`.
 - Verify the scalar matrix coverage snapshot: `mise run test:matrix:inventory` (no database required). ONE committed `tests/sqlx/snapshots/matrix_tests.txt` baseline pins the token-normalized set of `scalars::<T>::*` test names so a silently dropped/renamed/`#[cfg]`-gated test fails CI's `matrix-coverage` job. The task discovers the present scalar types from the test binary's `--list` and cross-checks them against `cargo run -p eql-codegen -- list-types`, so a catalog type missing its matrix wiring also fails. When you change which matrix tests the macro emits, regenerate and commit the single snapshot in the same change. See `tests/sqlx/snapshots/README.md`.
 
 ### Build System
