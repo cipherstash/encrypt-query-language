@@ -255,7 +255,13 @@ test -f snapshots/matrix_tests_eq_only.txt || { echo "snapshots/matrix_tests_eq_
 test -f snapshots/matrix_tests_text.txt || { echo "snapshots/matrix_tests_text.txt missing — regenerate (see snapshots/README.md)." >&2; exit 1; }
 test -f snapshots/matrix_tests_storage_only.txt || { echo "snapshots/matrix_tests_storage_only.txt missing — regenerate (see snapshots/README.md)." >&2; exit 1; }
 
-listing=$(cargo test --no-default-features --test encrypted_domain -- --list | sed -n 's/: test$//p')
+# Compile the encrypted_domain binary and capture its `--list` output. On a
+# bare / no-creds worktree (the matrix-coverage CI job, or a checkout that has
+# not run test:sqlx:prep) the generated fixtures `include_str!`'d at compile
+# time are absent, so the shared stub preamble creates empty stand-ins, lists,
+# then removes them on exit. Sets `listing` (stripped of the `: test` suffix).
+EQL_ROOT="{{config_root}}"
+source "${EQL_ROOT}/tasks/test/stub-fixtures.sh"
 
 # Types present in the binary, from scalars::<X>:: prefixes.
 discovered=$(printf '%s\\n' "$listing" \
@@ -360,7 +366,10 @@ run = """
 # pinned by this isolated snapshot (no catalog cross-check). No database needed.
 set -euo pipefail
 test -f snapshots/matrix_jsonb_entry_tests.txt || { echo "snapshots/matrix_jsonb_entry_tests.txt missing — regenerate." >&2; exit 1; }
-listing=$(cargo test --no-default-features --test encrypted_domain -- --list | sed -n 's/: test$//p')
+# Stub-compile on a bare / no-creds worktree (see test:matrix:inventory). Sets
+# `listing` (stripped). Harmless when real fixtures already exist.
+EQL_ROOT="{{config_root}}"
+source "${EQL_ROOT}/tasks/test/stub-fixtures.sh"
 printf '%s\\n' "$listing" \
   | grep '^jsonb_entry::.*jsonb_entry_int4' \
   | sed -E 's/_int4_/_<T>_/' \
@@ -415,39 +424,12 @@ set -euo pipefail
 root="{{config_root}}"
 
 # --- DB-free stub preamble so --list can compile on a bare worktree ----------
-created_list=$(mktemp)
-trap 'while IFS= read -r f; do [ -n "$f" ] && rm -f "$f"; done < "$created_list"; rm -f "$created_list"' EXIT
-
-err=$(mktemp)
-i=0
-while :; do
-  if listing=$(cargo test --no-default-features --test encrypted_domain -- --list 2>"$err"); then
-    break
-  fi
-  # Missing include_str! targets are the *.sql paths in the compile errors
-  # (repo-root-relative, may contain `..`). Match path chars only (no backticks
-  # or apostrophes to wrestle through TOML).
-  missing=$(grep -oE "[A-Za-z0-9_./-]+\\.sql" "$err" | LC_ALL=C sort -u || true)
-  if [ -z "$missing" ]; then
-    echo "encrypted_domain failed to list for a non-fixture reason:" >&2
-    cat "$err" >&2
-    rm -f "$err"; exit 1
-  fi
-  while IFS= read -r m; do
-    [ -n "$m" ] || continue
-    p="${root}/${m}"
-    if [ ! -e "$p" ]; then
-      mkdir -p "$(dirname "$p")"
-      : > "$p"
-      echo "$p" >> "$created_list"
-    fi
-  done <<< "$missing"
-  i=$((i + 1))
-  [ "$i" -lt 12 ] || { echo "stub loop exceeded 12 iterations" >&2; cat "$err" >&2; rm -f "$err"; exit 1; }
-done
-rm -f "$err"
-[ -n "$listing" ] || { echo "No tests listed from the encrypted_domain binary." >&2; exit 1; }
-listing=$(printf '%s\\n' "$listing" | sed -n 's/: test$//p')
+# Shared with test:matrix:inventory so the two siblings can never drift (a gap
+# between them is exactly what broke CI: inventory compiled without stubs and
+# failed the no-creds matrix-coverage job). Sets `listing` (stripped) and a
+# cleanup trap that removes only the stubs it created.
+EQL_ROOT="$root"
+source "${root}/tasks/test/stub-fixtures.sh"
 
 # --- Catalog surface (overridable for testing via EQL_CATALOG_DUMP_FILE) -----
 # The seam lets the fault-injection check (Step 3) run THIS exact loop against a
