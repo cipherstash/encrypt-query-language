@@ -43,7 +43,7 @@ jobs:
   # would either skip the merge-queue matrix or deadlock `ci-required`.
   changes:
     name: "Detect relevant changes"
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-16vcpu-ubuntu-2204
     outputs:
       relevant: ${{ steps.r.outputs.relevant }}
     steps:
@@ -85,7 +85,7 @@ jobs:
   # from the event: PR -> PG17 x 4 shards; merge queue -> PG 14-17 x 2 shards.
   setup:
     name: "Compute matrix"
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-16vcpu-ubuntu-2204
     outputs:
       pg-versions: ${{ steps.cfg.outputs.pg }}
       shard-total: ${{ steps.cfg.outputs.shard_total }}
@@ -113,7 +113,7 @@ jobs:
       github.event_name == 'merge_group'
       || github.event_name == 'workflow_dispatch'
       || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true')
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-16vcpu-ubuntu-2204
     env:
       # test:sqlx:archive depends on test:sqlx:prep, which copies the built EQL
       # into migrations/, applies it to a live Postgres, and regenerates the
@@ -178,7 +178,7 @@ jobs:
       github.event_name == 'merge_group'
       || github.event_name == 'workflow_dispatch'
       || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true')
-    runs-on: ubuntu-latest-m
+    runs-on: blacksmith-16vcpu-ubuntu-2204
     strategy:
       fail-fast: false
       matrix:
@@ -233,7 +233,7 @@ jobs:
       github.event_name == 'merge_group'
       || github.event_name == 'workflow_dispatch'
       || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true')
-    runs-on: ubuntu-latest-m
+    runs-on: blacksmith-16vcpu-ubuntu-2204
     strategy:
       fail-fast: false
       matrix:
@@ -277,7 +277,7 @@ jobs:
       github.event_name == 'merge_group'
       || github.event_name == 'workflow_dispatch'
       || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true')
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-16vcpu-ubuntu-2204
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -303,7 +303,7 @@ jobs:
       github.event_name == 'merge_group'
       || github.event_name == 'workflow_dispatch'
       || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true')
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-16vcpu-ubuntu-2204
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -341,7 +341,7 @@ jobs:
       github.event_name == 'merge_group'
       || github.event_name == 'workflow_dispatch'
       || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true')
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-16vcpu-ubuntu-2204
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -367,7 +367,7 @@ jobs:
       github.event_name == 'merge_group'
       || github.event_name == 'workflow_dispatch'
       || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true')
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-16vcpu-ubuntu-2204
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -394,7 +394,7 @@ jobs:
       github.event_name == 'merge_group'
       || github.event_name == 'workflow_dispatch'
       || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true')
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-16vcpu-ubuntu-2204
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -427,7 +427,7 @@ jobs:
       github.event_name == 'merge_group'
       || github.event_name == 'workflow_dispatch'
       || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true')
-    runs-on: ubuntu-latest-m
+    runs-on: blacksmith-16vcpu-ubuntu-2204
     env:
       POSTGRES_VERSION: "17"
     steps:
@@ -464,7 +464,7 @@ jobs:
     needs: [changes, setup, build-archive, test, validate, schema, rust-crates,
             codegen, self-contained-v3, matrix-coverage, splinter]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-16vcpu-ubuntu-2204
     steps:
       - name: Assert all required jobs passed or were skipped
         run: |
