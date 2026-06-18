@@ -65,8 +65,9 @@ fn embedded_fixture_sql<T: ScalarType>() -> &'static str {
 /// `#[sqlx::test]`'s ephemeral DBs by default, not the pool we connect to).
 async fn load_fixture_rows<T: ScalarType>(pool: &PgPool) -> Result<Vec<Row<T>>> {
     // The base DB this pool connects to is not migrated by `#[sqlx::test]`; in a
-    // CI shard it has no `eql_v3` surface, so install it before any cast/query.
-    ensure_eql_installed(pool, super::EQL_INSTALL_SQL).await?;
+    // CI shard it has no `eql_v3` surface, so apply the migrations (idempotent +
+    // process-safe via the migrator's advisory lock) before any cast/query.
+    ensure_eql_installed(pool, &super::migrator()).await?;
     ensure_fixture_loaded::<T>(pool, embedded_fixture_sql::<T>()).await?;
     let sql = format!(
         "SELECT plaintext, payload::text FROM {} ORDER BY id",
