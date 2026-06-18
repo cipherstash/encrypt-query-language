@@ -116,6 +116,11 @@ jobs:
 
       - name: Generate documentation
         run: |
+          # Fail fast: the workflow default shell is `bash {0}` (no -e), so
+          # without this a failure in docs:generate would be masked by the
+          # trailing docs:generate:markdown command and only surface later as a
+          # misleading "html not found" in docs:package.
+          set -euo pipefail
           mise run docs:generate
           mise run docs:generate:markdown -- ${{ github.event.release.tag_name }}
 
