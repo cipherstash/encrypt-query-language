@@ -125,12 +125,22 @@ mod rust_tests {
 
     #[test]
     fn timestamptz_maps_to_datetime() {
-        // Temporal, non-integer, equality-only kind: it carries a rust type but
-        // no i128 range, so it is not `is_int()` and `as_bounded_int()` returns
+        // Temporal, non-integer, ordered kind: it carries a rust type but no
+        // i128 range, so it is not `is_int()` and `as_bounded_int()` returns
         // `None` — the bounded accessors are not reachable for it.
         assert_eq!(ScalarKind::Timestamptz.rust_type(), "chrono::DateTime<Utc>");
         assert!(!ScalarKind::Timestamptz.is_int());
         assert_eq!(ScalarKind::Timestamptz.as_bounded_int(), None);
+    }
+
+    #[test]
+    fn numeric_maps_to_decimal() {
+        // Ordered, non-integer, non-chrono kind (14-block ORE): carries a rust
+        // type but no i128 range, so it is not `is_int()` and `as_bounded_int()`
+        // returns `None`. Pins the now-real `rust_type` arm (it no longer panics).
+        assert_eq!(ScalarKind::Numeric.rust_type(), "rust_decimal::Decimal");
+        assert!(!ScalarKind::Numeric.is_int());
+        assert_eq!(ScalarKind::Numeric.as_bounded_int(), None);
     }
 
     /// The structural guarantee that replaces the old runtime panics: a
@@ -170,7 +180,24 @@ mod rust_tests {
         let date = CATALOG.iter().find(|s| s.token == "date").unwrap();
         assert!(!date.is_eq_only(), "date is ordered");
         let ts = CATALOG.iter().find(|s| s.token == "timestamptz").unwrap();
-        assert!(ts.is_eq_only(), "timestamptz is equality-only");
+        assert!(
+            !ts.is_eq_only(),
+            "timestamptz is now ordered (native 12-block ORE, comparator generalized to N blocks)"
+        );
+
+        // No catalog type is currently eq-only, so exercise `is_eq_only()`'s
+        // positive path with a synthetic spec built on the retained
+        // `EQ_ONLY_DOMAINS` shape (storage + `_eq`, no `_ord`).
+        let eq_only = ScalarSpec {
+            token: "synthetic_eq_only",
+            kind: ScalarKind::Timestamptz,
+            domains: EQ_ONLY_DOMAINS,
+            fixtures: &[],
+        };
+        assert!(
+            eq_only.is_eq_only(),
+            "a storage+_eq spec (no _ord) must be detected as eq-only"
+        );
     }
 }
 
@@ -496,11 +523,19 @@ mod catalog_tests {
     }
 
     #[test]
-    fn catalog_has_int4_int2_int8_date_timestamptz_text_in_order() {
+    fn catalog_has_int4_int2_int8_date_timestamptz_numeric_text_in_order() {
         let tokens: Vec<&str> = CATALOG.iter().map(|s| s.token).collect();
         assert_eq!(
             tokens,
-            vec!["int4", "int2", "int8", "date", "timestamptz", "text"]
+            vec![
+                "int4",
+                "int2",
+                "int8",
+                "date",
+                "timestamptz",
+                "numeric",
+                "text"
+            ]
         );
     }
 
@@ -710,17 +745,14 @@ mod catalog_tests {
 
     #[test]
     fn ordered_and_eq_only_shapes_are_used_as_declared() {
-        // Pin which catalog tokens carry which shape, so a row silently flipping
-        // ORDERED_INT_DOMAINS <-> EQ_ONLY_DOMAINS is caught. timestamptz is
-        // equality-only (12-block ORE vs 8-block comparator); the rest ordered
-        // (text adds `_match` and `_search` domains on top, so it is not
-        // eq_only either).
+        // All current catalog types use the four-domain ordered shape; none is
+        // equality-only. (timestamptz was promoted to ordered once the ORE
+        // comparator generalized to N blocks — see the numeric/ORE work.)
         for s in CATALOG {
             let is_eq_only = s.domains.len() == 2;
-            let expect_eq_only = s.token == "timestamptz";
-            assert_eq!(
-                is_eq_only, expect_eq_only,
-                "{} domain shape (eq_only={is_eq_only}) does not match expectation",
+            assert!(
+                !is_eq_only,
+                "{} is unexpectedly eq-only; no catalog type is eq-only currently",
                 s.token
             );
         }

@@ -37,5 +37,37 @@ BEGIN
         AND VALUE->>'v' = '2'
       );
   END IF;
+
+  --! @brief Encrypted domain eql_v3.timestamptz_ord_ore.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = 'timestamptz_ord_ore' AND typnamespace = 'eql_v3'::regnamespace
+  ) THEN
+    CREATE DOMAIN eql_v3.timestamptz_ord_ore AS jsonb
+      CHECK (
+        jsonb_typeof(VALUE) = 'object'
+        AND VALUE ? 'v'
+        AND VALUE ? 'i'
+        AND VALUE ? 'c'
+        AND VALUE ? 'ob'
+        AND VALUE->>'v' = '2'
+      );
+  END IF;
+
+  --! @brief Encrypted domain eql_v3.timestamptz_ord.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = 'timestamptz_ord' AND typnamespace = 'eql_v3'::regnamespace
+  ) THEN
+    CREATE DOMAIN eql_v3.timestamptz_ord AS jsonb
+      CHECK (
+        jsonb_typeof(VALUE) = 'object'
+        AND VALUE ? 'v'
+        AND VALUE ? 'i'
+        AND VALUE ? 'c'
+        AND VALUE ? 'ob'
+        AND VALUE->>'v' = '2'
+      );
+  END IF;
 END
 $$;

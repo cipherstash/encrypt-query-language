@@ -39,6 +39,13 @@ pub mod v3_ste_vec;
 // jsonb-entry behaviour matrix (`JsonbEntryInt4`).
 pub mod v3_doc_int4;
 
+// The numeric scale-equivalence collision fixture (`1`, `1.0`, `2`). Not a
+// CATALOG scalar — the catalog distinctness guard forbids the value-equal pair
+// `1`/`1.0` — so it is hand-written and registered here directly (like the
+// other `v3_` fixtures). Gives the `1 == 1.0` ORE collision an always-on
+// (committed-fixture) home instead of a creds-gated runtime encryption.
+pub mod v3_numeric_collision;
+
 // The per-type scalar fixture modules (`eql_v2_int4`, `eql_v2_int2`, …) are
 // generated from the harness list in `scalar_types.rs`. Each expands to
 // `pub mod eql_v2_<T> { … scalar_fixture! … }`, reading its plaintext values
