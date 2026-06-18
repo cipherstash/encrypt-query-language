@@ -31,7 +31,7 @@ permissions:
 
 jobs:
   build-sql:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-16vcpu-ubuntu-2204
     name: Build EQL SQL
     if: ${{ github.event_name != 'release' || contains(github.event.release.tag_name, 'eql') }}
     timeout-minutes: 5
@@ -83,7 +83,7 @@ jobs:
           path: release/cipherstash-encrypt.sql
 
   build-images:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-16vcpu-ubuntu-2204
     needs: build-sql
     name: Build postgres-eql image (PG ${{ matrix.pg_version }})
     timeout-minutes: 30
@@ -145,7 +145,7 @@ jobs:
           tags: ${{ steps.tags.outputs.tags }}
 
   promote-latest:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-16vcpu-ubuntu-2204
     needs: [build-sql, build-images]
     name: Promote PG17 image to :latest and :<eql_version>
     if: ${{ needs.build-sql.outputs.update_floating_tags == 'true' }}

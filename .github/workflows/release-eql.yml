@@ -25,7 +25,7 @@ permissions:
 
 jobs:
   verify-changelog:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-16vcpu-ubuntu-2204
     name: Verify CHANGELOG entry
     # Only real (non-prerelease) eql-* releases. Pre-releases keep their
     # entries under [Unreleased] until the final release is cut.
@@ -48,7 +48,7 @@ jobs:
           echo "Found '## [${version}]' section in CHANGELOG.md."
 
   build-and-publish:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-16vcpu-ubuntu-2204
     name: Build EQL
     if: ${{ github.event_name != 'release' || contains(github.event.release.tag_name, 'eql') }}
     timeout-minutes: 5
@@ -95,7 +95,7 @@ jobs:
             --data '{"commitSha": "${{ github.sha }}", "environmentName":"production"}'
 
   publish-docs:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-16vcpu-ubuntu-2204
     name: Build and Publish Documentation
     if: ${{ github.event_name != 'release' || contains(github.event.release.tag_name, 'eql') }}
     timeout-minutes: 10
