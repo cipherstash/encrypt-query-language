@@ -11,7 +11,9 @@ use anyhow::Result;
 use eql_tests::fixtures::cipherstash::{column_config_for, encrypt_store};
 use eql_tests::fixtures::eql_plaintext::{Cast, EqlPlaintext};
 use eql_tests::fixtures::index_kind::IndexKind;
-use eql_tests::property::{assert_eq_oracle, assert_ord_oracle, connect_pool, Row};
+use eql_tests::property::{
+    assert_eq_oracle, assert_ord_oracle, connect_pool, ensure_eql_installed, Row,
+};
 use eql_tests::scalar_domains::ScalarType;
 use eql_tests::scalar_domains::Variant;
 use proptest::prelude::*;
@@ -64,6 +66,9 @@ where
         .enable_all()
         .build()?;
     let pool: PgPool = rt.block_on(connect_pool())?;
+    // The base DB this pool connects to is not migrated by `#[sqlx::test]`; in a
+    // CI shard it has no `eql_v3` surface, so install it before any cast/query.
+    rt.block_on(ensure_eql_installed(&pool, super::EQL_INSTALL_SQL))?;
 
     // Shrinking is disabled for the e2e suite: every failed shrink attempt would
     // trigger another ZeroKMS batch, and ciphertext cannot be meaningfully
@@ -91,7 +96,9 @@ where
             values.push(dup1);
             let rows = rt
                 .block_on(encrypt_rows::<T>(table, cast, &values))
-                .map_err(|e| TestCaseError::fail(format!("encrypt: {e}")))?;
+                // `{e:#}` keeps anyhow's full cause chain (the underlying error),
+                // which a plain `{e}` would drop.
+                .map_err(|e| TestCaseError::fail(format!("encrypt: {e:#}")))?;
             rt.block_on(async {
                 assert_eq_oracle::<T>(&pool, &rows).await?;
                 if ordered {
@@ -100,7 +107,7 @@ where
                 }
                 Ok::<_, anyhow::Error>(())
             })
-            .map_err(|e| TestCaseError::fail(format!("oracle: {e}")))?;
+            .map_err(|e| TestCaseError::fail(format!("oracle: {e:#}")))?;
             Ok(())
         })
         .map_err(|e| anyhow::anyhow!("e2e property failed: {e}"))
