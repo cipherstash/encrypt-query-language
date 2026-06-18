@@ -31,12 +31,12 @@ env:
 
 defaults:
   run:
-    shell: bash -l {0}
+    shell: bash {0}
 
 jobs:
   bench:
     name: "Bench EQL (Postgres 17)"
-    runs-on: ubuntu-latest-m
+    runs-on: blacksmith-16vcpu-ubuntu-2204
     timeout-minutes: 60
 
     env:
