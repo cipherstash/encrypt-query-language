@@ -467,7 +467,7 @@ jobs:
   # docs-only PRs, and a genuine failure is still caught because the FAILING
   # source job is itself in `needs` and reports failure.
   ci-required:
-    name: "CI required"
+    name: "ci-required"
     needs: [changes, setup, build-archive, test, validate, schema, rust-crates,
             codegen, self-contained-v3, matrix-coverage, splinter]
     if: always()
