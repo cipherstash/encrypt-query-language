@@ -71,6 +71,7 @@ impl ScalarKind {
             ScalarKind::Numeric
             | ScalarKind::Text
             | ScalarKind::Jsonb
+            | ScalarKind::Bool
             | ScalarKind::Date
             | ScalarKind::Timestamptz => None,
         }
@@ -111,6 +112,7 @@ impl ScalarKind {
             ScalarKind::Date => "chrono::NaiveDate",
             ScalarKind::Timestamptz => "chrono::DateTime<Utc>",
             ScalarKind::Numeric => "rust_decimal::Decimal",
+            ScalarKind::Bool => "bool",
             ScalarKind::Jsonb => {
                 panic!("ScalarKind::rust_type: jsonb has no generated surface yet")
             }

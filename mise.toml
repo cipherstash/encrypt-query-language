@@ -205,11 +205,11 @@ fi
 """
 
 [tasks."test:matrix:inventory"]
-description = "Verify the matrix test-name set against the canonical snapshot (its derived eq-only subset, or the committed text superset), catalog-cross-checked (no database required)"
+description = "Verify the matrix test-name set against the canonical snapshot (its derived eq-only subset, the committed text superset, or the storage-only set), catalog-cross-checked (no database required)"
 dir = "{{config_root}}/tests/sqlx"
 run = """
 #!/usr/bin/env bash
-# Three committed, token-normalized snapshots. The canonical one
+# Four committed, token-normalized snapshots. The canonical one
 # (snapshots/matrix_tests.txt) pins the set of macro-emitted matrix test names
 # for the ORDERED scalar shape. The second (snapshots/matrix_tests_eq_only.txt)
 # is the equality-only shape: an eq-only type's name set is exactly the ordered
@@ -221,10 +221,15 @@ run = """
 # (snapshots/matrix_tests_text.txt) is the TEXT shape: a SUPERSET of the ordered
 # baseline (every ordered arm PLUS the text-only `_search` / `_eqidx` / `_match`
 # arms). It is not derivable by a strip filter, so it is committed directly and
-# pinned as a strict superset of the baseline. Each discovered type must then
-# match the full baseline (ordered), that derived/pinned subset (eq-only), or the
-# committed text superset. One baseline drives the ordered/eq-only shapes however
-# many types exist.
+# pinned as a strict superset of the baseline. The fourth
+# (snapshots/matrix_tests_storage_only.txt) is the STORAGE-ONLY / encryption-only
+# shape (e.g. `bool`): a single term-less domain with NO comparison/index/order
+# tests — only the surface arms (sanity, blocker, payload-check, path-op,
+# native-absent, typed-column, count, aggregate-typecheck, fixture-shape). It is
+# neither a subset derivable by a strip filter nor a superset, so it is committed
+# directly. Each discovered type must then match the full baseline (ordered), that
+# derived/pinned subset (eq-only), the committed text superset, or the storage-only
+# set. One baseline drives the ordered/eq-only shapes however many types exist.
 #
 # Steps:
 #   1. List the encrypted_domain binary ONCE (deterministic; reused below).
@@ -233,8 +238,9 @@ run = """
 #   3. Derive the eq-only subset from the ordered baseline and assert it equals
 #      the committed snapshots/matrix_tests_eq_only.txt (pins the derivation).
 #   4. For each discovered type, normalize its token to <T> and assert its set
-#      equals the canonical snapshot (ordered), the derived eq-only subset, OR
-#      the committed text superset. Assert at least one type is present.
+#      equals the canonical snapshot (ordered), the derived eq-only subset, the
+#      committed text superset, OR the storage-only set. Assert at least one type
+#      is present.
 #   5. Completeness cross-check: assert the discovered type set equals
 #      `eql-codegen list-types`. A catalog type added without its matrix wiring
 #      (no scalars::<T>:: tests in the binary) fails here.
@@ -247,6 +253,7 @@ set -euo pipefail
 test -f snapshots/matrix_tests.txt || { echo "snapshots/matrix_tests.txt missing — regenerate (see snapshots/README.md)." >&2; exit 1; }
 test -f snapshots/matrix_tests_eq_only.txt || { echo "snapshots/matrix_tests_eq_only.txt missing — regenerate (see snapshots/README.md)." >&2; exit 1; }
 test -f snapshots/matrix_tests_text.txt || { echo "snapshots/matrix_tests_text.txt missing — regenerate (see snapshots/README.md)." >&2; exit 1; }
+test -f snapshots/matrix_tests_storage_only.txt || { echo "snapshots/matrix_tests_storage_only.txt missing — regenerate (see snapshots/README.md)." >&2; exit 1; }
 
 listing=$(cargo test --no-default-features --test encrypted_domain -- --list | sed -n 's/: test$//p')
 
@@ -295,7 +302,9 @@ fi
 
 # Per-type normalize + compare: each type must match the full canonical snapshot
 # (ordered shape), the derived eq-only subset (equality-only shape), or the
-# committed text superset (text shape).
+# committed text superset (text shape), or the committed storage-only set
+# (storage-only / encryption-only shape, e.g. `bool` — a single term-less
+# domain with no comparison/index/order tests, only the surface arms).
 checked=0
 while IFS= read -r t; do
   [ -n "$t" ] || continue
@@ -307,14 +316,18 @@ while IFS= read -r t; do
     shape="eq_only"
   elif cmp -s "/tmp/matrix-norm-${t}.txt" snapshots/matrix_tests_text.txt; then
     shape="text"
+  elif cmp -s "/tmp/matrix-norm-${t}.txt" snapshots/matrix_tests_storage_only.txt; then
+    shape="storage_only"
   else
-    echo "Matrix test-name set for '${t}' matches NEITHER the canonical snapshot, its derived eq-only subset, nor the text shape." >&2
+    echo "Matrix test-name set for '${t}' matches NONE of the known shapes (ordered, eq-only, text, storage-only)." >&2
     echo "  vs ordered (snapshots/matrix_tests.txt):" >&2
     diff snapshots/matrix_tests.txt "/tmp/matrix-norm-${t}.txt" >&2 || true
     echo "  vs derived eq-only (ordered minus _ord/order_by/routes_through_ob):" >&2
     diff "$eq_only_expected" "/tmp/matrix-norm-${t}.txt" >&2 || true
     echo "  vs text superset (snapshots/matrix_tests_text.txt):" >&2
     diff snapshots/matrix_tests_text.txt "/tmp/matrix-norm-${t}.txt" >&2 || true
+    echo "  vs storage-only (snapshots/matrix_tests_storage_only.txt):" >&2
+    diff snapshots/matrix_tests_storage_only.txt "/tmp/matrix-norm-${t}.txt" >&2 || true
     exit 1
   fi
   echo "  ${t}: ${shape}"
@@ -332,7 +345,7 @@ if [ "$discovered" != "$catalog" ]; then
   exit 1
 fi
 
-echo "Matrix inventory OK: ${checked} type(s) match the canonical snapshot, its derived eq-only subset, or the committed text superset; catalog reconciled."
+echo "Matrix inventory OK: ${checked} type(s) match the canonical snapshot, its derived eq-only subset, the committed text superset, or the storage-only set; catalog reconciled."
 """
 
 [tasks."test:matrix:inventory:jsonb_entry"]

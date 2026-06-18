@@ -61,6 +61,7 @@ impl PlaintextSqlType {
     pub const TEXT: PlaintextSqlType = PlaintextSqlType("text");
     pub const JSONB: PlaintextSqlType = PlaintextSqlType("jsonb");
     pub const NUMERIC: PlaintextSqlType = PlaintextSqlType("numeric");
+    pub const BOOLEAN: PlaintextSqlType = PlaintextSqlType("boolean");
 
     pub fn as_str(&self) -> &'static str {
         self.0
@@ -88,6 +89,7 @@ const fn cast_for_kind(kind: ScalarKind) -> Cast {
         ScalarKind::Timestamptz => Cast::TIMESTAMP,
         ScalarKind::Text => Cast::TEXT,
         ScalarKind::Numeric => Cast::DECIMAL,
+        ScalarKind::Bool => Cast::BOOLEAN,
         ScalarKind::Jsonb => {
             panic!("EqlPlaintext is only implemented for the wired scalar kinds")
         }
@@ -106,6 +108,7 @@ const fn plaintext_sql_type_for_kind(kind: ScalarKind) -> PlaintextSqlType {
         ScalarKind::Timestamptz => PlaintextSqlType::TIMESTAMPTZ,
         ScalarKind::Text => PlaintextSqlType::TEXT,
         ScalarKind::Numeric => PlaintextSqlType::NUMERIC,
+        ScalarKind::Bool => PlaintextSqlType::BOOLEAN,
         ScalarKind::Jsonb => {
             panic!("EqlPlaintext is only implemented for the wired scalar kinds")
         }
@@ -122,6 +125,7 @@ mod sealed {
     impl Sealed for String {}
     impl Sealed for serde_json::Value {}
     impl Sealed for rust_decimal::Decimal {}
+    impl Sealed for bool {}
 }
 
 /// A Rust type usable as a fixture `plaintext` value, carrying its EQL cast
@@ -222,6 +226,14 @@ impl EqlPlaintext for rust_decimal::Decimal {
 
     fn to_plaintext(&self) -> Plaintext {
         Plaintext::Decimal(Some(*self))
+    }
+}
+
+impl EqlPlaintext for bool {
+    const KIND: ScalarKind = ScalarKind::Bool;
+
+    fn to_plaintext(&self) -> Plaintext {
+        Plaintext::Boolean(Some(*self))
     }
 }
 
@@ -390,6 +402,33 @@ mod tests {
                 assert_eq!(*value, serde_json::json!({ "hello": "world", "number": 1 }))
             }
             other => panic!("expected Plaintext::Json(Some(_)), got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn bool_casts_to_boolean() {
+        assert_eq!(<bool as EqlPlaintext>::CAST, Cast::BOOLEAN);
+    }
+
+    #[test]
+    fn bool_plaintext_sql_type_is_boolean() {
+        assert_eq!(
+            <bool as EqlPlaintext>::PLAINTEXT_SQL_TYPE,
+            PlaintextSqlType::BOOLEAN
+        );
+    }
+
+    #[test]
+    fn bool_to_plaintext_wraps_in_boolean_variant() {
+        // A bool must lift into the Boolean variant so the fixture driver
+        // encrypts it under the `boolean` cast (storage-only — no index term).
+        match true.to_plaintext() {
+            Plaintext::Boolean(Some(value)) => assert!(value),
+            other => panic!("expected Plaintext::Boolean(Some(true)), got {other:?}"),
+        }
+        match false.to_plaintext() {
+            Plaintext::Boolean(Some(value)) => assert!(!value),
+            other => panic!("expected Plaintext::Boolean(Some(false)), got {other:?}"),
         }
     }
 }
