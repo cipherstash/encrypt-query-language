@@ -15,7 +15,7 @@ workspace = true
 # Dev-only. proptest is NOT a runtime dependency: it never compiles on the SQL
 # build path (eql-codegen depends on eql-scalars' lib, not its tests), so the
 # "INTENTIONALLY no dependencies" rule above — which is about build-path deps —
-# is preserved. Used by src/proptest_invariants.rs (Tier C catalog property
-# tests, no DB, runs in the lean `mise run test:crates` / fork CI path).
+# is preserved. Used by src/proptest_invariants.rs (the catalog suite of
+# property tests, no DB, runs in the lean `mise run test:crates` / fork CI path).
 [dev-dependencies]
 proptest = "1"

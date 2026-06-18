@@ -2,9 +2,10 @@
 //!
 //! `assert_eq_oracle` / `assert_ord_oracle` take a corpus of
 //! `(plaintext, payload_json)` rows and check SQL operator results against the
-//! plaintext oracle over every ordered pair. Tier A feeds them rows read from
-//! the live-encrypted fixture; Tier B feeds them rows it batch-encrypts from
-//! freshly generated plaintexts. The engine is identical for both.
+//! plaintext oracle over every ordered pair. The fixture suite feeds them rows
+//! read from the committed fixture corpus (real ciphertext); the e2e suite feeds
+//! them rows it batch-encrypts from freshly generated plaintexts. The engine is
+//! identical for both.
 //!
 //! Operator evaluation is read-only (`SELECT <a> op <b>`), so these helpers take
 //! a `&PgPool` and need no per-test schema isolation.
@@ -21,11 +22,11 @@ use tokio::sync::Mutex;
 /// `fixtures.eql_v2_<T>` table exactly once.
 static FIXTURE_LOADED: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
 
-/// Materialise the live-encrypted fixture corpus for `T` into the connected DB.
+/// Materialise the committed fixture corpus (real ciphertext) for `T` into the connected DB.
 ///
 /// The fixture `.sql` files (`tests/sqlx/fixtures/eql_v2_<T>.sql`) are normally
 /// loaded only into `#[sqlx::test]`'s ephemeral per-test databases. The property
-/// tiers connect to the shared test DB directly (they cannot use
+/// suites connect to the shared test DB directly (they cannot use
 /// `#[sqlx::test]`'s injected pool from a sync `proptest!` body), so the corpus
 /// is not present there. This loads it on demand: the script is self-contained
 /// and idempotent (`CREATE SCHEMA IF NOT EXISTS` / `DROP TABLE IF EXISTS` /
@@ -174,7 +175,7 @@ fn redact_url(url: &str) -> String {
 
 /// Connect to the shared SQLx test database. Reads `DATABASE_URL`, falling back
 /// to the documented local default (`localhost:7432`, cipherstash/password).
-/// Used by the proptest tiers, which cannot use `#[sqlx::test]`'s injected pool
+/// Used by the proptest suites, which cannot use `#[sqlx::test]`'s injected pool
 /// from a (sync) `proptest!` body.
 pub async fn connect_pool() -> Result<PgPool> {
     let url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {

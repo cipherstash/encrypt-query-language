@@ -45,14 +45,14 @@ bench = []
 # *usable*. Off by default to keep `mise run test` fast; CI runs with
 # `--features scale`.
 scale = []
-# Opt-in to the live-encryption property tests (Tier B, CIP-3141). They
-# generate fresh random plaintexts each run and encrypt them via
-# cipherstash-client, so they need the same CS_* creds as fixture generation.
+# Opt-in to the e2e property suite (CIP-3141). It generates fresh random
+# plaintexts each run and encrypts them end-to-end through ZeroKMS via
+# cipherstash-client, so it needs the same CS_* creds as fixture generation.
 # `mise run test:sqlx` enables this (CI has the secrets). A bare `cargo test`
-# without it compiles the live tier out, so credential-less quick runs and the
-# lean crate path are unaffected. Tier A (fixture-corpus) and Tier C (catalog)
-# are NOT gated — they need no fresh encryption.
-proptest-live = []
+# without it compiles the e2e suite out, so credential-less quick runs and the
+# lean crate path are unaffected. The fixture suite and the catalog suite are
+# NOT gated — they need no fresh encryption.
+proptest-e2e = []
 # Opt-in to compiling the fixture generators. Without this feature the
 # `#[cfg(feature = "fixture-gen")]` generator tests do not exist, so
 # `cargo test` and CI never see them. Generators need a live Postgres and,
