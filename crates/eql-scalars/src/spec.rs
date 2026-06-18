@@ -29,6 +29,19 @@ impl ScalarSpec {
         !self.domains.iter().any(|d| d.suffix == "_ord")
     }
 
+    /// True when this type is **storage-only / encryption-only**: it declares a
+    /// single term-less domain (the bare-token storage domain) and no comparison
+    /// domain (`_eq`/`_ord`/`_match`/…). The shape for a scalar encrypted at rest
+    /// but never searched server-side (e.g. `bool`, whose two-value cardinality
+    /// makes any searchable index a plaintext leak). Stricter than
+    /// `is_eq_only()` — a storage-only type is also `is_eq_only()` (no `_ord`),
+    /// but has no `_eq` either.
+    pub fn is_storage_only(&self) -> bool {
+        self.domains.len() == 1
+            && self.domains[0].suffix.is_empty()
+            && self.domains[0].terms.is_empty()
+    }
+
     /// The domain on this scalar with the given `suffix`, or `None`. Centralizes
     /// the `domains.iter().find(|d| d.suffix == s)` lookup duplicated across the
     /// catalog tests and the SQLx harness.

@@ -13,9 +13,14 @@
 /// Stamp out the `spec()` builder, the `fixture-gen` generator test, and the
 /// property-test module for a scalar fixture.
 ///
-/// The leading **kind** discriminator (`int` / `temporal` / `text`) selects
-/// which property asserts are stamped and which index set the fixture declares
-/// — the rest of the expansion is identical:
+/// The leading **kind** discriminator (`int` / `temporal` / `text` / `numeric`
+/// / `storage`) selects which property asserts are stamped and which index set
+/// the fixture declares — the rest of the expansion is identical:
+///
+/// - `storage` — storage-only / encryption-only (`bool`): NO index, so the
+///   payload is `{v,i,c}` with no term key. Asserts both values are present and
+///   no index is declared (the type is not `OrderedScalar`, so there are no
+///   comparison pivots to check).
 ///
 /// - `int` — signed-extreme asserts (`<$ty>::MIN`/`MAX`, `contains(&0)`,
 ///   `any(|v| v < 0)`). These typecheck only for integer plaintexts. Indexes
@@ -165,6 +170,58 @@ macro_rules! scalar_fixture {
                 assert!(values.contains(&min), "spec must include min_pivot {min:?}");
                 assert!(values.contains(&mid), "spec must include mid_pivot {mid:?}");
                 assert!(values.contains(&max), "spec must include max_pivot {max:?}");
+            }
+        }
+    };
+
+    // Storage-only (encryption-only) scalars (`bool`): the value is encrypted
+    // with NO search index, so the payload is `{v,i,c}` with no term key. The
+    // fixture declares zero indexes (`.storage_only()`), and the property test
+    // asserts only that both values are present and no index is declared — there
+    // are no comparison pivots (the type is not `OrderedScalar`).
+    (storage, $name:literal, $ty:ty, $values:expr $(,)?) => {
+        /// The complete storage-only fixture definition. No `IndexKind` — the
+        /// encrypted payload carries only `{v,i,c}` (no `hm`/`ob`/`bf`).
+        pub fn spec() -> $crate::fixtures::FixtureSpec<'static, $ty> {
+            $crate::fixtures::FixtureSpec::new($name)
+                .storage_only()
+                .with_column_type("jsonb")
+                .with_values($values)
+        }
+
+        /// The generator. Gated by `fixture-gen` so `cargo test` never compiles
+        /// it; `#[ignore]` is a second guard. Run via `mise run fixture:generate`.
+        #[cfg(feature = "fixture-gen")]
+        #[tokio::test]
+        #[ignore = "generator — run via `mise run fixture:generate`"]
+        async fn generate() -> anyhow::Result<()> {
+            spec().run().await
+        }
+
+        #[cfg(test)]
+        mod tests {
+            use super::*;
+
+            #[test]
+            fn spec_is_complete() {
+                assert!(spec().check_complete().is_ok());
+            }
+
+            #[test]
+            fn spec_declares_no_index() {
+                // Storage-only / encryption-only: the payload carries no search
+                // term, so the fixture must declare zero indexes.
+                assert!(spec().indexes().is_empty());
+            }
+
+            #[test]
+            fn spec_includes_both_boolean_values() {
+                // Low-cardinality but still both values, so the storage matrix
+                // can prove the domain accepts a real ciphertext for each.
+                let spec = spec();
+                let values = spec.values();
+                assert!(values.contains(&false), "spec must include false");
+                assert!(values.contains(&true), "spec must include true");
             }
         }
     };

@@ -205,11 +205,11 @@ fi
 """
 
 [tasks."test:matrix:inventory"]
-description = "Verify the matrix test-name set against the canonical snapshot (its derived eq-only subset, or the committed text superset), catalog-cross-checked (no database required)"
+description = "Verify the matrix test-name set against the canonical snapshot (its derived eq-only subset, the committed text superset, or the storage-only set), catalog-cross-checked (no database required)"
 dir = "{{config_root}}/tests/sqlx"
 run = """
 #!/usr/bin/env bash
-# Three committed, token-normalized snapshots. The canonical one
+# Four committed, token-normalized snapshots. The canonical one
 # (snapshots/matrix_tests.txt) pins the set of macro-emitted matrix test names
 # for the ORDERED scalar shape. The second (snapshots/matrix_tests_eq_only.txt)
 # is the equality-only shape: an eq-only type's name set is exactly the ordered
@@ -221,10 +221,15 @@ run = """
 # (snapshots/matrix_tests_text.txt) is the TEXT shape: a SUPERSET of the ordered
 # baseline (every ordered arm PLUS the text-only `_search` / `_eqidx` / `_match`
 # arms). It is not derivable by a strip filter, so it is committed directly and
-# pinned as a strict superset of the baseline. Each discovered type must then
-# match the full baseline (ordered), that derived/pinned subset (eq-only), or the
-# committed text superset. One baseline drives the ordered/eq-only shapes however
-# many types exist.
+# pinned as a strict superset of the baseline. The fourth
+# (snapshots/matrix_tests_storage_only.txt) is the STORAGE-ONLY / encryption-only
+# shape (e.g. `bool`): a single term-less domain with NO comparison/index/order
+# tests — only the surface arms (sanity, blocker, payload-check, path-op,
+# native-absent, typed-column, count, aggregate-typecheck, fixture-shape). It is
+# neither a subset derivable by a strip filter nor a superset, so it is committed
+# directly. Each discovered type must then match the full baseline (ordered), that
+# derived/pinned subset (eq-only), the committed text superset, or the storage-only
+# set. One baseline drives the ordered/eq-only shapes however many types exist.
 #
 # Steps:
 #   1. List the encrypted_domain binary ONCE (deterministic; reused below).
@@ -233,8 +238,9 @@ run = """
 #   3. Derive the eq-only subset from the ordered baseline and assert it equals
 #      the committed snapshots/matrix_tests_eq_only.txt (pins the derivation).
 #   4. For each discovered type, normalize its token to <T> and assert its set
-#      equals the canonical snapshot (ordered), the derived eq-only subset, OR
-#      the committed text superset. Assert at least one type is present.
+#      equals the canonical snapshot (ordered), the derived eq-only subset, the
+#      committed text superset, OR the storage-only set. Assert at least one type
+#      is present.
 #   5. Completeness cross-check: assert the discovered type set equals
 #      `eql-codegen list-types`. A catalog type added without its matrix wiring
 #      (no scalars::<T>:: tests in the binary) fails here.
@@ -247,7 +253,14 @@ set -euo pipefail
 test -f snapshots/matrix_tests.txt || { echo "snapshots/matrix_tests.txt missing — regenerate (see snapshots/README.md)." >&2; exit 1; }
 test -f snapshots/matrix_tests_eq_only.txt || { echo "snapshots/matrix_tests_eq_only.txt missing — regenerate (see snapshots/README.md)." >&2; exit 1; }
 test -f snapshots/matrix_tests_text.txt || { echo "snapshots/matrix_tests_text.txt missing — regenerate (see snapshots/README.md)." >&2; exit 1; }
+test -f snapshots/matrix_tests_storage_only.txt || { echo "snapshots/matrix_tests_storage_only.txt missing — regenerate (see snapshots/README.md)." >&2; exit 1; }
 
+# On a bare / no-creds worktree (the matrix-coverage CI job, or a checkout that
+# has not run test:sqlx:prep) the generated fixtures `include_str!`'d at compile
+# time are absent. The shared stub preamble creates empty stand-ins for the whole
+# generated set and removes them on exit; we then compile + list the binary.
+EQL_ROOT="{{config_root}}"
+source "${EQL_ROOT}/tasks/test/stub-fixtures.sh"
 listing=$(cargo test --no-default-features --test encrypted_domain -- --list | sed -n 's/: test$//p')
 
 # Types present in the binary, from scalars::<X>:: prefixes.
@@ -295,7 +308,9 @@ fi
 
 # Per-type normalize + compare: each type must match the full canonical snapshot
 # (ordered shape), the derived eq-only subset (equality-only shape), or the
-# committed text superset (text shape).
+# committed text superset (text shape), or the committed storage-only set
+# (storage-only / encryption-only shape, e.g. `bool` — a single term-less
+# domain with no comparison/index/order tests, only the surface arms).
 checked=0
 while IFS= read -r t; do
   [ -n "$t" ] || continue
@@ -307,14 +322,18 @@ while IFS= read -r t; do
     shape="eq_only"
   elif cmp -s "/tmp/matrix-norm-${t}.txt" snapshots/matrix_tests_text.txt; then
     shape="text"
+  elif cmp -s "/tmp/matrix-norm-${t}.txt" snapshots/matrix_tests_storage_only.txt; then
+    shape="storage_only"
   else
-    echo "Matrix test-name set for '${t}' matches NEITHER the canonical snapshot, its derived eq-only subset, nor the text shape." >&2
+    echo "Matrix test-name set for '${t}' matches NONE of the known shapes (ordered, eq-only, text, storage-only)." >&2
     echo "  vs ordered (snapshots/matrix_tests.txt):" >&2
     diff snapshots/matrix_tests.txt "/tmp/matrix-norm-${t}.txt" >&2 || true
     echo "  vs derived eq-only (ordered minus _ord/order_by/routes_through_ob):" >&2
     diff "$eq_only_expected" "/tmp/matrix-norm-${t}.txt" >&2 || true
     echo "  vs text superset (snapshots/matrix_tests_text.txt):" >&2
     diff snapshots/matrix_tests_text.txt "/tmp/matrix-norm-${t}.txt" >&2 || true
+    echo "  vs storage-only (snapshots/matrix_tests_storage_only.txt):" >&2
+    diff snapshots/matrix_tests_storage_only.txt "/tmp/matrix-norm-${t}.txt" >&2 || true
     exit 1
   fi
   echo "  ${t}: ${shape}"
@@ -332,7 +351,7 @@ if [ "$discovered" != "$catalog" ]; then
   exit 1
 fi
 
-echo "Matrix inventory OK: ${checked} type(s) match the canonical snapshot, its derived eq-only subset, or the committed text superset; catalog reconciled."
+echo "Matrix inventory OK: ${checked} type(s) match the canonical snapshot, its derived eq-only subset, the committed text superset, or the storage-only set; catalog reconciled."
 """
 
 [tasks."test:matrix:inventory:jsonb_entry"]
@@ -347,6 +366,10 @@ run = """
 # pinned by this isolated snapshot (no catalog cross-check). No database needed.
 set -euo pipefail
 test -f snapshots/matrix_jsonb_entry_tests.txt || { echo "snapshots/matrix_jsonb_entry_tests.txt missing — regenerate." >&2; exit 1; }
+# Stub the generated fixtures on a bare / no-creds worktree (see
+# test:matrix:inventory), then compile + list. Harmless when real fixtures exist.
+EQL_ROOT="{{config_root}}"
+source "${EQL_ROOT}/tasks/test/stub-fixtures.sh"
 listing=$(cargo test --no-default-features --test encrypted_domain -- --list | sed -n 's/: test$//p')
 printf '%s\\n' "$listing" \
   | grep '^jsonb_entry::.*jsonb_entry_int4' \
@@ -369,14 +392,20 @@ set -euo pipefail
 
 test -f snapshots/v3_jsonb_tests.txt || { echo "snapshots/v3_jsonb_tests.txt missing — regenerate and commit it." >&2; exit 1; }
 
-tmp=$(mktemp)
-trap 'rm -f "$tmp"' EXIT
+# The v3_jsonb_* binaries `include_str!` generated fixtures (e.g. v3_ste_vec.sql)
+# at compile time, so on a bare / no-creds worktree they cannot compile to
+# --list. The shared stub preamble creates empty stand-ins for the whole
+# generated set and removes them on exit (its EXIT trap is the only one here).
+EQL_ROOT="{{config_root}}"
+source "${EQL_ROOT}/tasks/test/stub-fixtures.sh"
 
+tmp=$(mktemp)
 cargo test --test v3_jsonb_tests --test v3_jsonb_operator_surface_tests -- --list \
   | sed -n 's/: test$//p' \
   | LC_ALL=C sort > "$tmp"
 
 diff -u snapshots/v3_jsonb_tests.txt "$tmp"
+rm -f "$tmp"
 echo "v3 jsonb inventory OK"
 """
 
@@ -402,39 +431,13 @@ set -euo pipefail
 root="{{config_root}}"
 
 # --- DB-free stub preamble so --list can compile on a bare worktree ----------
-created_list=$(mktemp)
-trap 'while IFS= read -r f; do [ -n "$f" ] && rm -f "$f"; done < "$created_list"; rm -f "$created_list"' EXIT
-
-err=$(mktemp)
-i=0
-while :; do
-  if listing=$(cargo test --no-default-features --test encrypted_domain -- --list 2>"$err"); then
-    break
-  fi
-  # Missing include_str! targets are the *.sql paths in the compile errors
-  # (repo-root-relative, may contain `..`). Match path chars only (no backticks
-  # or apostrophes to wrestle through TOML).
-  missing=$(grep -oE "[A-Za-z0-9_./-]+\\.sql" "$err" | LC_ALL=C sort -u || true)
-  if [ -z "$missing" ]; then
-    echo "encrypted_domain failed to list for a non-fixture reason:" >&2
-    cat "$err" >&2
-    rm -f "$err"; exit 1
-  fi
-  while IFS= read -r m; do
-    [ -n "$m" ] || continue
-    p="${root}/${m}"
-    if [ ! -e "$p" ]; then
-      mkdir -p "$(dirname "$p")"
-      : > "$p"
-      echo "$p" >> "$created_list"
-    fi
-  done <<< "$missing"
-  i=$((i + 1))
-  [ "$i" -lt 12 ] || { echo "stub loop exceeded 12 iterations" >&2; cat "$err" >&2; rm -f "$err"; exit 1; }
-done
-rm -f "$err"
+# Shared with test:matrix:inventory so the no-creds tasks can never drift (a gap
+# between them is exactly what broke CI). The helper stubs the whole generated
+# fixture set + sets a cleanup trap; we then compile + list (stripped).
+EQL_ROOT="$root"
+source "${root}/tasks/test/stub-fixtures.sh"
+listing=$(cargo test --no-default-features --test encrypted_domain -- --list | sed -n 's/: test$//p')
 [ -n "$listing" ] || { echo "No tests listed from the encrypted_domain binary." >&2; exit 1; }
-listing=$(printf '%s\\n' "$listing" | sed -n 's/: test$//p')
 
 # --- Catalog surface (overridable for testing via EQL_CATALOG_DUMP_FILE) -----
 # The seam lets the fault-injection check (Step 3) run THIS exact loop against a

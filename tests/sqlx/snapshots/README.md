@@ -3,8 +3,9 @@
 This directory holds the canonical committed snapshot, `matrix_tests.txt` — the
 token-normalized list of every `scalars::<T>::*` test name in the
 `encrypted_domain` SQLx binary, with each type token replaced by the literal
-`<T>` — plus two shape variants derived from / committed alongside it
-(`matrix_tests_eq_only.txt`, `matrix_tests_text.txt`; see below). They are
+`<T>` — plus three shape variants derived from / committed alongside it
+(`matrix_tests_eq_only.txt`, `matrix_tests_text.txt`,
+`matrix_tests_storage_only.txt`; see below). They are
 **committed test baselines**, not gitignored generated SQL — keep them in
 version control.
 
@@ -49,6 +50,24 @@ cargo test --no-default-features --test encrypted_domain -- --list \
   | sed -e 's/^scalars::text::/scalars::<T>::/' -e 's/_text_/_<T>_/g' | LC_ALL=C sort > snapshots/matrix_tests_text.txt
 ```
 
+For the **storage-only / encryption-only** shape there is a fourth committed
+snapshot, `matrix_tests_storage_only.txt`. A storage-only scalar
+(`scalar_matrix! { caps = [storage] }`, e.g. `bool`) has a single term-less
+domain and **no** comparison/index/order capability, so its name set is neither
+a strip-filter subset of the ordered baseline nor a superset — it is the
+storage-domain surface arms only (sanity, blocker-raises for every comparison +
+containment op, payload-check, path-op, native-absent, typed-column, count,
+aggregate-typecheck, fixture-shape). It is committed directly and each
+storage-only type must match it exactly (after `<T>` normalization). Regenerate
+with:
+
+```bash
+cd tests/sqlx
+cargo test --no-default-features --test encrypted_domain -- --list \
+  | sed -n 's/: test$//p' | grep '^scalars::bool::' \
+  | sed -e 's/^scalars::bool::/scalars::<T>::/' -e 's/_bool_/_<T>_/g' | LC_ALL=C sort > snapshots/matrix_tests_storage_only.txt
+```
+
 The "no per-type variation" property is preserved by design: every ordered
 scalar sweeps the same three `OrderedScalar` pivots (`min`/`mid`/`max`), so the
 `_pivot_mid_*` arms are identical modulo token across `int`/`date`/`text`. The
@@ -81,10 +100,11 @@ The task (`mise.toml`, `[tasks."test:matrix:inventory"]`):
    (the `scalars::<X>::` prefixes) — never a directory glob.
 3. Normalizes each type's token to `<T>` and asserts that type's set equals the
    canonical `matrix_tests.txt` (ordered shape), the derived eq-only subset
-   (`matrix_tests.txt` minus `_ord`/`order_by`/`routes_through_ob`), or the
-   committed `matrix_tests_text.txt` superset (text shape). Prints each type's
-   resolved shape (`ordered` / `eq_only` / `text`). Asserts at least one type is
-   present.
+   (`matrix_tests.txt` minus `_ord`/`order_by`/`routes_through_ob`), the
+   committed `matrix_tests_text.txt` superset (text shape), or the committed
+   `matrix_tests_storage_only.txt` set (storage-only shape). Prints each type's
+   resolved shape (`ordered` / `eq_only` / `text` / `storage_only`). Asserts at
+   least one type is present.
 4. **Completeness cross-check:** asserts the discovered type set equals
    `cargo run -p eql-codegen -- list-types` (the catalog is the single source).
    A catalog type added without its matrix wiring — no `scalars::<T>::` tests in
@@ -111,10 +131,11 @@ catalog cross-check) fails the job.
 - **Adding a new scalar type** → add the catalog row in
   `eql-scalars::CATALOG`, wire the SQLx matrix oracle (see
   `docs/reference/adding-a-scalar-encrypted-domain-type.md` §3), then run
-  `mise run test:matrix:inventory`. No snapshot edit is needed: an ordered
-  (`caps = [eq, ord]`) type matches the canonical baseline, and an equality-only
-  (`caps = [eq]`) type matches the derived eq-only subset — both are checked
-  against this one file. The cross-check just confirms the type is wired.
+  `mise run test:matrix:inventory`. No snapshot edit is needed for an ordered
+  (`caps = [eq, ord]`) type (matches the canonical baseline) or an equality-only
+  (`caps = [eq]`) type (matches the derived eq-only subset). A **storage-only**
+  (`caps = [storage]`) type matches `matrix_tests_storage_only.txt`; if it is the
+  first such type, commit that snapshot. The cross-check confirms the type is wired.
 - **Removing a scalar type** → remove the catalog row and its matrix wiring; the
   cross-check then sees the type gone from both sides.
 - **Changing which matrix tests the macro emits** → regenerate and commit

@@ -567,6 +567,70 @@ mod numeric_value_guards {
     }
 }
 
+// `bool` is hand-written (the proc-macro emits `impl ScalarType` only for the
+// integer kinds). It is the **storage-only / encryption-only** scalar: a single
+// term-less `eql_v3.bool` domain, no `_eq`/`_ord`, so it is deliberately NOT
+// `OrderedScalar`/`SignedScalar`/`MatchScalar` — it has no comparison or match
+// capability. The `caps = [storage]` matrix arm never references a pivot, so the
+// absence of `OrderedScalar` is fine (and intentional). Values come from the
+// catalog's two `Fixture::Bool` rows.
+
+/// Typed `bool` fixture values, built once from `bool`'s catalog row, in catalog
+/// order (`[false, true]`). Public so the `eql_v2_bool` fixture module (emitted
+/// by `scalar_types!(fixture_modules)`) can hand the slice to `scalar_fixture!`.
+static BOOL_VALUES_CELL: std::sync::LazyLock<Vec<bool>> = std::sync::LazyLock::new(|| {
+    eql_scalars::BOOL
+        .fixtures
+        .iter()
+        .map(|f| match f {
+            eql_scalars::Fixture::Bool(b) => *b,
+            other => panic!("non-bool fixture in bool catalog row: {other:?}"),
+        })
+        .collect()
+});
+
+/// The `bool` fixture values, in catalog order. Public so the `eql_v2_bool`
+/// fixture module can hand the slice to `scalar_fixture!`.
+pub fn bool_values() -> &'static [bool] {
+    &BOOL_VALUES_CELL
+}
+
+impl ScalarType for bool {
+    const PG_TYPE: &'static str = "bool";
+
+    fn fixture_values() -> &'static [Self] {
+        bool_values()
+    }
+    // `to_sql_literal` inherits the default (`value.to_string()` => `true`/`false`),
+    // which is a valid SQL boolean literal, so no override is needed.
+}
+
+// `bool` is deliberately NOT `OrderedScalar` / `SignedScalar` / `MatchScalar`:
+// it is encryption-only (no `_eq`/`_ord`/`_match` domain), so it has no
+// comparison pivots, no sign boundary, and no bloom-match capability. Any
+// instantiation of an ordered/signed/match-bounded test for `bool` is a compile
+// error — exactly the guarantee we want for a storage-only scalar.
+
+#[cfg(test)]
+mod bool_value_tests {
+    use super::*;
+
+    /// The harness value list matches the catalog `BOOL.fixtures` and carries
+    /// both boolean values — the oracle cannot drift from the catalog the fixture
+    /// generator encrypts.
+    #[test]
+    fn bool_values_match_catalog_and_cover_both() {
+        assert_eq!(bool_values(), &[false, true]);
+        assert!(bool_values().contains(&false));
+        assert!(bool_values().contains(&true));
+        assert_eq!(<bool as ScalarType>::PG_TYPE, "bool");
+        assert_eq!(
+            <bool as ScalarType>::fixture_table_name(),
+            "fixtures.eql_v2_bool"
+        );
+    }
+}
+
 #[cfg(test)]
 mod text_value_tests {
     use super::*;
@@ -883,6 +947,19 @@ pub fn token_has_bloom_term(token: &str) -> bool {
         .iter()
         .find(|s| s.token == token)
         .map(|s| s.domains.iter().any(|d| d.terms.contains(&Term::Bloom)))
+        .unwrap_or(false)
+}
+
+/// True when scalar `token` is **storage-only / encryption-only** (a single
+/// term-less domain, no `_eq`/`_ord`/`_match`) — e.g. `bool`. Catalog-derived
+/// via `ScalarSpec::is_storage_only`. Such a type's fixture is encrypted with no
+/// search index, so its payload carries only `{v,i,c}` (no `hm`/`ob`/`bf`); the
+/// fixture-shape assertions branch on this.
+pub fn token_is_storage_only(token: &str) -> bool {
+    CATALOG
+        .iter()
+        .find(|s| s.token == token)
+        .map(|s| s.is_storage_only())
         .unwrap_or(false)
 }
 

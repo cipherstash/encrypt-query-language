@@ -109,6 +109,18 @@ fn is_eq_only_token(token: &str) -> bool {
     spec_for_token(token).is_eq_only()
 }
 
+/// True when `token`'s catalog row is **storage-only / encryption-only** — a
+/// single term-less domain, no `_eq`/`_ord` (currently only `bool`). Consumed by
+/// [`matrix_suite_for_entry`] to route the token to the `caps = [storage]` arm
+/// (which runs only the storage-domain subset: blockers, payload-check,
+/// path-ops, native-absent — no comparison or index arms). Checked **before**
+/// [`is_eq_only_token`], which is also true for a storage-only type (it has no
+/// `_ord` domain) but would wrongly select the `caps = [eq]` arm. Stamps the
+/// `bool` fixture discriminator (storage-only fixtures carry no index term).
+fn is_storage_only_token(token: &str) -> bool {
+    spec_for_token(token).is_storage_only()
+}
+
 /// True when `token`'s catalog row declares a combined `_search` domain
 /// (currently only `text`). Consumed by [`matrix_suite_for_entry`] to route the
 /// token to the `caps = [eq, ord, search]` arm, which additionally runs the
@@ -234,10 +246,15 @@ fn scalar_fixture_modules_tokens(list: &ScalarList) -> TokenStream2 {
                 format_ident!("text")
             } else if is_numeric_token(&token_str) {
                 format_ident!("numeric")
+            } else if is_storage_only_token(&token_str) {
+                // Storage-only (encryption-only) scalars (`bool`): the fixture
+                // carries no index term (no `hm`/`ob`/`bf`), just the encrypted
+                // value, and asserts the storage-domain shape only.
+                format_ident!("storage")
             } else {
                 panic!(
                     "scalar token `{token_str}` is neither integer, temporal, text, \
-                     nor numeric — no fixture discriminator is wired for its kind"
+                     numeric, nor storage-only — no fixture discriminator is wired for its kind"
                 )
             };
             quote! {
@@ -290,12 +307,18 @@ fn fixture_dispatch_tokens(list: &ScalarList) -> TokenStream2 {
 fn matrix_suite_for_entry(
     token: &Ident,
     rust_type: &Type,
+    storage_only: bool,
     eq_only: bool,
     has_search: bool,
 ) -> TokenStream2 {
     let token_str = token.to_string();
     let eql_type = format!("eql_v2_{}", token_str);
-    let caps = if eq_only {
+    // `storage_only` is checked FIRST: a storage-only type is also `eq_only`
+    // (no `_ord` domain), so the eq-only arm would otherwise wrongly select
+    // `caps = [eq]` and emit equality tests against a domain that has no `_eq`.
+    let caps = if storage_only {
+        quote! { caps = [storage] }
+    } else if eq_only {
         quote! { caps = [eq] }
     } else if has_search {
         // A token declaring a combined `_search` domain (text) additionally runs
@@ -324,6 +347,7 @@ fn scalar_matrix_suites_tokens(list: &ScalarList) -> TokenStream2 {
         matrix_suite_for_entry(
             &e.token,
             &e.rust_type,
+            is_storage_only_token(&e.token.to_string()),
             is_eq_only_token(&e.token.to_string()),
             has_search_token(&e.token.to_string()),
         )
@@ -530,7 +554,9 @@ mod tests {
     fn ordered_entry_emits_scalar_matrix_with_eq_ord_caps() {
         let token: Ident = syn::parse_str("int4").unwrap();
         let rust_type: Type = syn::parse_str("i32").unwrap();
-        let out = norm(&matrix_suite_for_entry(&token, &rust_type, false, false));
+        let out = norm(&matrix_suite_for_entry(
+            &token, &rust_type, false, false, false,
+        ));
         assert!(out.contains(":: eql_tests :: scalar_matrix !"));
         assert!(out.contains("caps = [eq , ord]"));
         assert!(out.contains("suite = int4"));
@@ -543,7 +569,9 @@ mod tests {
         // ord_domains), never the ordered `caps = [eq, ord]` arm.
         let token: Ident = syn::parse_str("timestamptz").unwrap();
         let rust_type: Type = syn::parse_str("chrono::DateTime<chrono::Utc>").unwrap();
-        let out = norm(&matrix_suite_for_entry(&token, &rust_type, true, false));
+        let out = norm(&matrix_suite_for_entry(
+            &token, &rust_type, false, true, false,
+        ));
         assert!(out.contains(":: eql_tests :: scalar_matrix !"));
         assert!(out.contains("caps = [eq]"));
         assert!(!out.contains("caps = [eq , ord]"));
@@ -557,10 +585,67 @@ mod tests {
         // domain through the matrix in addition to the ordered shape.
         let token: Ident = syn::parse_str("text").unwrap();
         let rust_type: Type = syn::parse_str("String").unwrap();
-        let out = norm(&matrix_suite_for_entry(&token, &rust_type, false, true));
+        let out = norm(&matrix_suite_for_entry(
+            &token, &rust_type, false, false, true,
+        ));
         assert!(out.contains(":: eql_tests :: scalar_matrix !"));
         assert!(out.contains("caps = [eq , ord , search]"));
         assert!(out.contains("suite = text"));
+    }
+
+    #[test]
+    fn storage_only_is_read_from_catalog() {
+        // The storage-only (encryption-only) shape is read from the catalog row,
+        // never a marker. Only `bool` is storage-only today; comparison-capable
+        // types are not. Note bool is ALSO eq-only (no `_ord`), so the router
+        // must check storage-only first.
+        assert!(is_storage_only_token("bool"));
+        assert!(is_eq_only_token("bool"));
+        assert!(!is_storage_only_token("int4"));
+        assert!(!is_storage_only_token("text"));
+        assert!(!is_storage_only_token("timestamptz"));
+    }
+
+    #[test]
+    fn storage_only_entry_emits_scalar_matrix_with_storage_caps_only() {
+        // A storage-only token routes to the `caps = [storage]` arm even though
+        // it is also eq-only — storage-only is checked first, so it never selects
+        // the `caps = [eq]` arm (which would emit equality tests for a domain
+        // that has no `_eq`).
+        let token: Ident = syn::parse_str("bool").unwrap();
+        let rust_type: Type = syn::parse_str("bool").unwrap();
+        // (storage_only = true, eq_only = true) — true catalog state for bool.
+        let out = norm(&matrix_suite_for_entry(
+            &token, &rust_type, true, true, false,
+        ));
+        assert!(out.contains(":: eql_tests :: scalar_matrix !"));
+        assert!(out.contains("caps = [storage]"));
+        assert!(!out.contains("caps = [eq]"));
+        assert!(!out.contains("caps = [eq , ord]"));
+        assert!(out.contains("suite = bool"));
+    }
+
+    #[test]
+    fn bool_entry_skips_impl_and_stamps_storage_fixture() {
+        // `bool` is storage-only: the impl emitter skips it (hand-written in
+        // scalar_domains.rs), and the fixture module stamps the `storage`
+        // discriminator drawing from the `bool_values()` accessor.
+        let list = syn::parse_str::<ScalarList>("int4 => i32, bool => bool").unwrap();
+        let impls = norm(&scalar_type_impls_tokens(&list));
+        assert!(impls.contains("impl ScalarType for i32"));
+        assert!(
+            !impls.contains("impl ScalarType for bool"),
+            "bool must skip the generated impl (hand-written instead)"
+        );
+        let mods = norm(&scalar_fixture_modules_tokens(&list));
+        assert!(mods.contains("pub mod eql_v2_bool"));
+        assert!(mods.contains("storage ,"), "got: {mods}");
+        assert!(mods.contains("bool_values"), "got: {mods}");
+        let suites = norm(&scalar_matrix_suites_tokens(&list));
+        assert!(suites.contains("pub mod bool"));
+        assert!(suites.contains("caps = [storage]"));
+        let dispatch = norm(&fixture_dispatch_tokens(&list));
+        assert!(dispatch.contains(r#""bool" =>"#));
     }
 
     #[test]

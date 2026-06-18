@@ -30,6 +30,11 @@ pub struct FixtureSpec<'a, T> {
     indexes: Vec<IndexKind>,
     column_type: ColumnType,
     values: &'a [T],
+    /// True for a **storage-only / encryption-only** fixture (e.g. `bool`): the
+    /// value is encrypted with no search index, so the payload is `{v,i,c}` with
+    /// no `hm`/`ob`/`bf` term. Flips the `check_complete` index requirement —
+    /// such a fixture MUST declare zero indexes rather than at least one.
+    storage_only: bool,
 }
 
 impl<'a, T> FixtureSpec<'a, T> {
@@ -49,6 +54,7 @@ impl<'a, T> FixtureSpec<'a, T> {
             indexes: Vec::new(),
             column_type,
             values: &[],
+            storage_only: false,
         }
     }
 
@@ -56,6 +62,15 @@ impl<'a, T> FixtureSpec<'a, T> {
     /// call site is a compile error rather than a runtime panic.
     pub fn with_index(mut self, kind: IndexKind) -> Self {
         self.indexes.push(kind);
+        self
+    }
+
+    /// Mark this as a **storage-only / encryption-only** fixture: the value is
+    /// encrypted with no search index (the payload is `{v,i,c}`, no term keys).
+    /// Such a fixture MUST declare no indexes; `check_complete` enforces that
+    /// (and skips the usual "at least one index" requirement). Used by `bool`.
+    pub fn storage_only(mut self) -> Self {
+        self.storage_only = true;
         self
     }
 
@@ -196,7 +211,18 @@ impl<'a, T> FixtureSpec<'a, T> {
     /// `FixtureIdentifier`/`ColumnType` newtypes; this method covers only what
     /// construction cannot.
     pub fn check_complete(&self) -> anyhow::Result<()> {
-        if self.indexes.is_empty() {
+        if self.storage_only {
+            // A storage-only (encryption-only) fixture intentionally has no
+            // search index; it MUST NOT declare one (that would put a term key
+            // in the payload, contradicting the storage-only contract).
+            if !self.indexes.is_empty() {
+                anyhow::bail!(
+                    "storage-only fixture {:?} must declare no indexes, got {:?}",
+                    self.name.as_str(),
+                    self.indexes,
+                );
+            }
+        } else if self.indexes.is_empty() {
             anyhow::bail!("fixture {:?} declares no indexes", self.name.as_str());
         }
         if self.values.is_empty() {
@@ -276,6 +302,30 @@ mod tests {
     fn completeness_rejects_a_spec_with_no_values() {
         const V: &[i32] = &[];
         let s = FixtureSpec::new("x")
+            .with_index(IndexKind::Unique)
+            .with_values(V);
+        assert!(s.check_complete().is_err());
+    }
+
+    #[test]
+    fn storage_only_spec_passes_with_no_indexes() {
+        // A storage-only (encryption-only) fixture legitimately declares zero
+        // indexes — the value is encrypted with no search term.
+        const V: &[bool] = &[false, true];
+        let s = FixtureSpec::new("eql_v2_bool")
+            .storage_only()
+            .with_values(V);
+        assert!(s.indexes().is_empty());
+        assert!(s.check_complete().is_ok());
+    }
+
+    #[test]
+    fn storage_only_spec_rejects_a_declared_index() {
+        // A storage-only fixture must NOT declare an index (that would add a
+        // term key to the payload, contradicting the storage-only contract).
+        const V: &[bool] = &[false, true];
+        let s = FixtureSpec::new("eql_v2_bool")
+            .storage_only()
             .with_index(IndexKind::Unique)
             .with_values(V);
         assert!(s.check_complete().is_err());
