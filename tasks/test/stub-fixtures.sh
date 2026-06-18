@@ -1,19 +1,26 @@
 # shellcheck shell=bash
-# DB-free stub preamble for the `encrypted_domain` test binary.
+# Catalog-driven stub preamble for the `encrypted_domain` test binary.
 #
 # `encrypted_domain` `include_str!`s its per-type fixtures (the gitignored,
 # generated `tests/sqlx/fixtures/eql_v2_<T>.sql`) at COMPILE time, so a bare
-# worktree without CipherStash creds (the no-creds `matrix-coverage` /
-# `macro-coverage` CI jobs, or any local checkout that hasn't run
-# `mise run test:sqlx:prep`) cannot even compile it for `--list`. These
-# inventory/coverage gates never RUN tests — they only need the binary to
-# compile and emit its test-name list — so empty stub files satisfy
+# worktree without CipherStash creds (the no-creds matrix-coverage CI job, or a
+# checkout that has not run `mise run test:sqlx:prep`) cannot compile it for
+# `--list`. These inventory/coverage gates never RUN tests — they only need the
+# binary to compile and emit its test-name list — so empty stub files satisfy
 # `include_str!` perfectly.
 #
 # SOURCE this (don't execute it): it must set its cleanup trap and export the
-# `listing` variable into the caller's shell. It creates only the files rustc
-# reports missing (one error pass lists them all) and removes exactly those on
-# exit, leaving any real generated fixtures untouched.
+# `listing` variable into the caller's shell.
+#
+# The fixture set is derived from the CATALOG (`eql-codegen list-types`) — the
+# single source of truth — one stub per scalar token, `eql_v2_<token>.sql`. This
+# deliberately replaces an earlier preamble that discovered the set by parsing
+# missing `.sql` paths out of rustc's compile errors and retried in a loop: that
+# was brittle (coupled to rustc's error wording, capped at 12 iterations, silent
+# if the format changed). A new scalar in the catalog is stubbed automatically;
+# if some NEW compile-time `include_str!` target ever appears that is *not*
+# `eql_v2_<token>.sql`, the `--list` below fails with rustc's own clear
+# "couldn't read <path>" error — add that file's stub here.
 #
 # Inputs (set before sourcing):
 #   EQL_ROOT  - repo root (mise `{{config_root}}`). Falls back to two levels up
@@ -21,41 +28,35 @@
 # Output:
 #   listing   - the binary's `--list` output, stripped of the `: test` suffix.
 #
-# Bash 3.2 compatible (macOS): no mapfile/arrays; created stubs are tracked in a
-# temp file. Keep this in lockstep with `tasks/test/sqlx-archive.sh` /
-# `test:sqlx:prep`, which produce the REAL fixtures for the jobs that run tests.
+# Bash 3.2 compatible (macOS): created stubs are tracked in a temp file. Keep in
+# step with `tasks/test/sqlx-archive.sh` / `test:sqlx:prep`, which produce the
+# REAL fixtures for the jobs that actually run tests.
 
 __eql_stub_root="${EQL_ROOT:-$(cd ../.. && pwd)}"
+__eql_stub_dir="${__eql_stub_root}/tests/sqlx/fixtures"
 
 __eql_stub_created=$(mktemp)
 trap 'while IFS= read -r f; do [ -n "$f" ] && rm -f "$f"; done < "$__eql_stub_created"; rm -f "$__eql_stub_created"' EXIT
 
-__eql_stub_err=$(mktemp)
-__eql_stub_i=0
-while :; do
-  if listing=$(cargo test --no-default-features --test encrypted_domain -- --list 2>"$__eql_stub_err"); then
-    break
+# Catalog scalar tokens (the source of truth). A failure here aborts under the
+# caller's `set -e` with cargo's own error — no silent fallback.
+__eql_stub_tokens=$(cd "$__eql_stub_root" && cargo run -q -p eql-codegen -- list-types)
+
+# One empty stub per token, created only when absent — real generated fixtures
+# are never in the created list, so the trap leaves them untouched.
+mkdir -p "$__eql_stub_dir"
+while IFS= read -r __eql_stub_t; do
+  [ -n "$__eql_stub_t" ] || continue
+  __eql_stub_f="${__eql_stub_dir}/eql_v2_${__eql_stub_t}.sql"
+  if [ ! -e "$__eql_stub_f" ]; then
+    : > "$__eql_stub_f"
+    echo "$__eql_stub_f" >> "$__eql_stub_created"
   fi
-  # Missing include_str! targets are the *.sql paths in the compile errors
-  # (repo-root-relative, may contain `..`). Match path chars only.
-  __eql_stub_missing=$(grep -oE "[A-Za-z0-9_./-]+\.sql" "$__eql_stub_err" | LC_ALL=C sort -u || true)
-  if [ -z "$__eql_stub_missing" ]; then
-    echo "encrypted_domain failed to list for a non-fixture reason:" >&2
-    cat "$__eql_stub_err" >&2
-    rm -f "$__eql_stub_err"; exit 1
-  fi
-  while IFS= read -r __eql_stub_m; do
-    [ -n "$__eql_stub_m" ] || continue
-    __eql_stub_p="${__eql_stub_root}/${__eql_stub_m}"
-    if [ ! -e "$__eql_stub_p" ]; then
-      mkdir -p "$(dirname "$__eql_stub_p")"
-      : > "$__eql_stub_p"
-      echo "$__eql_stub_p" >> "$__eql_stub_created"
-    fi
-  done <<< "$__eql_stub_missing"
-  __eql_stub_i=$((__eql_stub_i + 1))
-  [ "$__eql_stub_i" -lt 12 ] || { echo "stub loop exceeded 12 iterations" >&2; cat "$__eql_stub_err" >&2; rm -f "$__eql_stub_err"; exit 1; }
-done
-rm -f "$__eql_stub_err"
+done <<EOF
+$__eql_stub_tokens
+EOF
+
+# Compile + list. On a missing non-token fixture this fails with rustc's own
+# "couldn't read <path>" error (see header). Sets `listing` (stripped).
+listing=$(cargo test --no-default-features --test encrypted_domain -- --list | sed -n 's/: test$//p')
 [ -n "$listing" ] || { echo "No tests listed from the encrypted_domain binary." >&2; exit 1; }
-listing=$(printf '%s\n' "$listing" | sed -n 's/: test$//p')
