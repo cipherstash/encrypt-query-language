@@ -1270,3 +1270,31 @@ mod pivot_derivation_tests {
         boundary_pivots_are_fixture_extremes::<String>();
     }
 }
+
+#[cfg(test)]
+mod oracle_inventory_tests {
+    use super::*;
+    use eql_scalars::CATALOG;
+
+    /// The set of catalog tokens that should get an `eq` + `ord` fixture/e2e
+    /// oracle suite is exactly the ordered (non-storage-only) scalars. Pin it so
+    /// the catalog-driven suite macros (fixture_oracle / e2e_oracle) cannot drift
+    /// from the catalog. `bool` is storage-only and must be excluded.
+    #[test]
+    fn ordered_scalar_tokens_match_catalog() {
+        // `supports_ord` calls `terms_for`, which PANICS on an undeclared
+        // (token, suffix) pair, so guard with `is_declared_for` first — bool has
+        // no `_ord` domain and must short-circuit to false, not panic.
+        let ordered: Vec<&str> = CATALOG
+            .iter()
+            .filter(|s| Variant::Ord.is_declared_for(s.token) && Variant::Ord.supports_ord(s.token))
+            .map(|s| s.token)
+            .collect();
+        assert_eq!(
+            ordered,
+            vec!["int4", "int2", "int8", "date", "timestamptz", "numeric", "text"],
+        );
+        // bool is storage-only: no ordered domain, so it is excluded.
+        assert!(!ordered.contains(&"bool"));
+    }
+}
