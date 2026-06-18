@@ -37,7 +37,9 @@ impl ScalarSpec {
     /// `is_eq_only()` — a storage-only type is also `is_eq_only()` (no `_ord`),
     /// but has no `_eq` either.
     pub fn is_storage_only(&self) -> bool {
-        self.domains.len() == 1 && self.domains[0].suffix.is_empty() && self.domains[0].terms.is_empty()
+        self.domains.len() == 1
+            && self.domains[0].suffix.is_empty()
+            && self.domains[0].terms.is_empty()
     }
 
     /// The domain on this scalar with the given `suffix`, or `None`. Centralizes
