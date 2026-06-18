@@ -71,6 +71,15 @@ pub enum ScalarKind {
     /// cipherstash has no tz-preserving type, so it maps to the `timestamp`
     /// cast and the SQL `timestamp with time zone` plaintext type.
     Timestamptz,
+    /// Boolean (`bool`). **Encryption-only / storage-only**: it carries no index
+    /// term and is *not* `is_int()`/`is_temporal()`/`is_text()`. A two-value
+    /// column has such low cardinality that any searchable index (even HMAC
+    /// equality) would trivially leak the plaintext distribution, so the catalog
+    /// gives `bool` a single term-less storage domain and no `_eq`/`_ord` — the
+    /// value is encrypted at rest and decrypted by the proxy, never searched
+    /// server-side. Like the other non-integer kinds, the bounded-numeric
+    /// accessors are unreachable for it by construction.
+    Bool,
 }
 
 /// Always-present payload keys required by every generated domain CHECK,
@@ -165,6 +174,10 @@ pub enum Fixture {
     /// stays zero-dep, so the string is parsed into a `chrono::DateTime<Utc>` in
     /// the SQLx harness, not here. Distinct by literal, like `Date`.
     Timestamptz(&'static str),
+    /// A boolean plaintext (`true` / `false`). The `bool` scalar is
+    /// storage-only, so this fixture is encrypted (ciphertext only, no index
+    /// term) and never participates in a comparison pivot. Distinct by value.
+    Bool(bool),
 }
 
 /// One generated public domain: a suffix appended to the type token and the
@@ -207,6 +220,7 @@ macro_rules! fixtures {
     (jsonb;   $($s:literal),* $(,)?) => { &[$(Fixture::Jsonb($s)),*] };
     (date;    $($s:literal),* $(,)?) => { &[$(Fixture::Date($s)),*] };
     (timestamptz; $($s:literal),* $(,)?) => { &[$(Fixture::Timestamptz($s)),*] };
+    (bool;    $($b:literal),* $(,)?) => { &[$(Fixture::Bool($b)),*] };
 }
 
 /// Domains shared by every ordered-integer scalar, in manifest file order:
@@ -418,6 +432,37 @@ const TEXT_DOMAINS: &[DomainSpec] = &[
     },
 ];
 
+/// Storage-only domains: a single term-less domain (suffix `""`). The canonical
+/// shape for an **encryption-only** scalar — encrypted at rest, decrypted by the
+/// proxy, never searched server-side. No `_eq`/`_ord`, so no SEM index term and
+/// no comparison surface (every operator on the domain is a blocker). Used by
+/// `bool`, whose two-value cardinality makes any searchable index a plaintext
+/// leak. Validated as a known-valid shape by `every_type_uses_a_known_domain_shape`.
+const STORAGE_ONLY_DOMAINS: &[DomainSpec] = &[DomainSpec {
+    suffix: "",
+    terms: &[],
+}];
+
+/// `bool` fixture plaintexts — both values. `bool` is storage-only, so these are
+/// encrypted (ciphertext only) and never used as comparison pivots; they exist
+/// so the SQLx matrix can prove the storage domain accepts a real bool ciphertext
+/// and rejects every operator. Distinct by value.
+const BOOL_FIXTURES: &[Fixture] = fixtures!(bool; false, true);
+
+/// `bool` — an **encryption-only / storage-only** scalar (`ScalarKind::Bool`).
+/// One term-less storage domain (`eql_v3.bool`), no `_eq`/`_ord`: a two-value
+/// column has too little cardinality for any searchable index without leaking the
+/// plaintext, so the value is encrypted at rest and decrypted by the proxy,
+/// never searched server-side. Public so the SQLx harness reads `BOOL.fixtures`
+/// directly (there is no `BOOL_VALUES` materializer — the two values are read
+/// straight from the catalog).
+pub const BOOL: ScalarSpec = ScalarSpec {
+    token: "bool",
+    kind: ScalarKind::Bool,
+    domains: STORAGE_ONLY_DOMAINS,
+    fixtures: BOOL_FIXTURES,
+};
+
 /// `text` fixture plaintexts — curated so eq/ord give a lexicographic spread
 /// and the match suite has a known substring pair (`"aardvark"`/`"aard"`,
 /// sharing 3-grams) and a disjoint value (`"zzzz"`, no shared 3-grams).
@@ -445,7 +490,7 @@ pub const TEXT: ScalarSpec = ScalarSpec {
 
 /// The scalar catalog — the single source of truth. Order is significant (it
 /// drives generation order). New types are appended as their SQL surface lands.
-pub const CATALOG: &[ScalarSpec] = &[INT4, INT2, INT8, DATE, TIMESTAMPTZ, NUMERIC, TEXT];
+pub const CATALOG: &[ScalarSpec] = &[INT4, INT2, INT8, DATE, TIMESTAMPTZ, NUMERIC, TEXT, BOOL];
 
 /// Materialise an integer scalar's fixtures into a typed `&'static` slice at
 /// compile time. This is the **single-sourced** plaintext list the SQLx test

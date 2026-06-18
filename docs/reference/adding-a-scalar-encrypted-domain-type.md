@@ -23,8 +23,10 @@ rendered by the [`eql-codegen`](../../crates/eql-codegen/) crate. There is no
 TOML manifest and no Python — adding a type is adding one `ScalarSpec` row,
 validated by the compiler plus catalog `#[test]`s. The reference type is
 `eql_v3.int4`; `eql_v3.text` is the worked non-integer example (ordered +
-equality + a `match` capability via the `Bloom` term). **`jsonb` remains out of
-scope** for this materializer (see §7).
+equality + a `match` capability via the `Bloom` term); `eql_v3.bool` is the
+worked **storage-only / encryption-only** example (a single term-less domain, no
+searchable surface — see §8). **`jsonb` remains out of scope** for this
+materializer (see §7).
 
 ---
 
@@ -292,14 +294,20 @@ the interior `mid_pivot()` — from `OrderedScalar` rather than a hand-written
 list, so the invocation carries no pivot argument. `caps = [eq, ord]` selects the
 ordered-numeric shape (all four variants; `=`/`<>`/`<`/`<=`/`>`/`>=`; ORDER BY /
 ORDER BY USING; ORE injectivity); `caps = [eq]` selects the equality-only shape
-(storage + `_eq` only; the four ord operators are deliberate blockers). Both
-expand to the lower-level `scalar_domain_matrix!`. **You never write `caps`**:
-the `scalar_matrix!` proc-macro derives it from the catalog row via
-`ScalarSpec::is_eq_only()` (`is_eq_only_token` in `eql-tests-macros`), so the
-ordered-vs-eq-only selection is a pure function of which domain-suffix slice the
-catalog row uses — `EQ_ONLY_DOMAINS` (→ `[eq]`) vs `ORDERED_INT_DOMAINS` (→ `[eq,
-ord]`). `timestamptz` is the worked eq-only example: its `EQ_ONLY_DOMAINS` row
-auto-emits `caps = [eq]`, no harness flag. The pivot *sweep* is uniform
+(storage + `_eq` only; the four ord operators are deliberate blockers);
+`caps = [storage]` selects the storage-only / encryption-only shape (storage
+domain only; *every* comparison/containment operator is a blocker — see §8).
+All expand to the lower-level `scalar_domain_matrix!` **except `[storage]`**,
+which has no comparison/index/order categories to thread, so it invokes only the
+surface leaf drivers directly (§8). **You never write `caps`**: the
+`scalar_matrix!` proc-macro derives it from the catalog row — `is_storage_only`
+(no `_eq`/`_ord`) → `[storage]`, checked first; then `is_eq_only` (no `_ord`) →
+`[eq]`; then `has_search` → `[eq, ord, search]`; else `[eq, ord]`. So the shape
+is a pure function of which domain-suffix slice the catalog row uses —
+`STORAGE_ONLY_DOMAINS` (→ `[storage]`, e.g. `bool`), `EQ_ONLY_DOMAINS` (→ `[eq]`,
+no live catalog type today) vs `ORDERED_INT_DOMAINS` (→ `[eq, ord]`). (`EQ_ONLY_DOMAINS`
+is currently unused — `timestamptz` was promoted to the ordered shape once the ORE
+comparator generalized to N blocks.) The pivot *sweep* is uniform
 across every ordered type (one canonical snapshot); the signed-only sign-boundary
 test (`SignedScalar`, `int`/`date`) lives outside `scalars::` in
 `encrypted_domain/signed.rs`, so a `text` instantiation of it is a compile error
@@ -837,3 +845,62 @@ generated — it needs a separate SQL design beyond this ordered-scalar
 materializer. JSONB encrypted behaviour today lives on the composite
 `eql_v2_encrypted` type and its hand-written operator surface in `src/encrypted/`
 and `src/operators/`, not the scalar materializer.
+
+---
+
+## 8. `bool` — the storage-only / encryption-only shape
+
+`bool` is the worked example of a **storage-only** (encryption-only) scalar: the
+value is encrypted at rest and decrypted by the proxy, but is **never searchable
+server-side**. It is the smallest shape — strictly below eq-only — because a
+two-value column has so little cardinality that *any* searchable index (even
+HMAC equality) would trivially leak the plaintext distribution. So `bool`
+deliberately offers no search surface at all.
+
+What makes it storage-only:
+
+- **One term-less domain.** Its catalog row uses `STORAGE_ONLY_DOMAINS` — a
+  single `DomainSpec { suffix: "", terms: &[] }`. No `_eq`, no `_ord`, no SEM
+  index term. `ScalarSpec::is_storage_only()` recognises this shape (a single
+  term-less storage domain); it is *also* `is_eq_only()` (no `_ord`), so the
+  harness checks storage-only **first**.
+- **Generator: no changes needed.** The SQL generator already handles a
+  zero-term, single-domain type — it emits exactly three files (`bool_types.sql`,
+  `bool_functions.sql`, `bool_operators.sql`; no `_aggregates.sql`, since no
+  ordered domain). All 44 functions are `plpgsql` blockers, all 44 operators back
+  onto them: every comparison/containment/path operator reachable through domain
+  fallback raises. The domain `CHECK` still pins `{v,i,c}` + `VALUE->>'v' = '2'`.
+- **Kind, not term.** Add a `ScalarKind` variant (`Bool`) with
+  `rust_type() = "bool"`, `as_bounded_int() = None`,
+  `is_int`/`is_temporal`/`is_text` all false. Add a `Fixture::Bool(bool)` variant
+  and a `fixtures!(bool; …)` arm. No new `Term` — storage-only carries none.
+- **Fixtures carry no index term.** The `Fixture` list is both boolean values;
+  the fixture is generated with **zero** indexes (`FixtureSpec::storage_only()`),
+  so the encrypted payload is `{v,i,c}` only — no `hm`/`ob`/`bf`. The
+  `scalar_fixture!(storage, …)` arm stamps this and asserts both values are
+  present and no index is declared.
+- **Harness: hand-written `impl ScalarType`, NOT `OrderedScalar`.** The
+  proc-macro emits `impl ScalarType` only for integer kinds, so `bool` is
+  hand-written in `scalar_domains.rs` (`PG_TYPE = "bool"`, `fixture_values()` =
+  `[false, true]` from the catalog). It is deliberately **not** `OrderedScalar`,
+  `SignedScalar`, or `MatchScalar` — it has no comparison pivots, sign boundary,
+  or match capability, so any ordered/signed/match-bounded test instantiated for
+  `bool` is a compile error.
+- **Matrix: `caps = [storage]`.** Because there are no comparison/index/order
+  categories to run, the `[storage]` arm does **not** expand
+  `scalar_domain_matrix!` (whose `+`-arity transcribers reject the empty
+  `eq_domains`/`pivots`/`index_combos`, and which the other seven types depend
+  on). Instead it invokes only the surface-agnostic leaf drivers directly:
+  sanity, blocker-raises (every comparison + containment op), payload-check,
+  path-op blockers, native-absent (`~~`/`~~*`), typed-column blockers, count,
+  aggregate-typecheck (asserts `min`/`max` are *rejected*), and fixture-shape.
+- **Inventory: a fourth snapshot.** The storage-only test-name set is neither a
+  strip-filter subset of the ordered baseline nor a superset, so it is committed
+  directly as `tests/sqlx/snapshots/matrix_tests_storage_only.txt`, and the
+  `test:matrix:inventory` gate gains a fourth `cmp` branch
+  (`shape="storage_only"`).
+
+Everything else is the standard path: one catalog row, regenerate, commit the
+`tests/codegen/reference/bool/` baseline (3 files), no edits to
+`pin_search_path.sql` or `splinter.sh` (a storage-only type emits only blockers
+— no extractors/wrappers/aggregates, so no new inline-critical names).

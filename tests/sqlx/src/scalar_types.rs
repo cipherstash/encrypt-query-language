@@ -58,6 +58,7 @@ macro_rules! scalar_types {
             timestamptz => chrono::DateTime<chrono::Utc>,
             numeric => rust_decimal::Decimal,
             text => String,
+            bool => bool,
         }
     };
 }

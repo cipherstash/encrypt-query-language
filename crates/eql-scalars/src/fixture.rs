@@ -33,7 +33,8 @@ impl Fixture {
             | Fixture::Text(_)
             | Fixture::Jsonb(_)
             | Fixture::Date(_)
-            | Fixture::Timestamptz(_) => None,
+            | Fixture::Timestamptz(_)
+            | Fixture::Bool(_) => None,
         }
     }
 }
