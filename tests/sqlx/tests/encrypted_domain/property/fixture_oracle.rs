@@ -203,15 +203,10 @@ async fn run_ord_oracle<T: ScalarType>(pool: PgPool, cases: u32) -> Result<()> {
     .await
 }
 
-#[sqlx::test]
-async fn prop_int4_eq_oracle_over_fixture(pool: PgPool) -> Result<()> {
-    run_eq_oracle::<i32>(pool, 48).await
-}
-
-#[sqlx::test]
-async fn prop_int4_ord_oracle_over_fixture(pool: PgPool) -> Result<()> {
-    run_ord_oracle::<i32>(pool, 48).await
-}
+/// All fixtured scalars run the same number of proptest cases — the fixture
+/// suite does no new encryption, so there is no reason for int4 to be
+/// privileged. Raise here (one place) if a regression ever needs more cases.
+const FIXTURE_ORACLE_CASES: u32 = 32;
 
 macro_rules! fixture_oracle_suite {
     ($modname:ident, $ty:ty, ordered) => {
@@ -219,11 +214,11 @@ macro_rules! fixture_oracle_suite {
             use super::*;
             #[sqlx::test]
             async fn eq_oracle(pool: PgPool) -> Result<()> {
-                run_eq_oracle::<$ty>(pool, 32).await
+                run_eq_oracle::<$ty>(pool, FIXTURE_ORACLE_CASES).await
             }
             #[sqlx::test]
             async fn ord_oracle(pool: PgPool) -> Result<()> {
-                run_ord_oracle::<$ty>(pool, 32).await
+                run_ord_oracle::<$ty>(pool, FIXTURE_ORACLE_CASES).await
             }
         }
     };
@@ -232,14 +227,16 @@ macro_rules! fixture_oracle_suite {
             use super::*;
             #[sqlx::test]
             async fn eq_oracle(pool: PgPool) -> Result<()> {
-                run_eq_oracle::<$ty>(pool, 32).await
+                run_eq_oracle::<$ty>(pool, FIXTURE_ORACLE_CASES).await
             }
         }
     };
 }
 
+fixture_oracle_suite!(int4, i32, ordered);
 fixture_oracle_suite!(int2, i16, ordered);
 fixture_oracle_suite!(int8, i64, ordered);
 fixture_oracle_suite!(date, chrono::NaiveDate, ordered);
+fixture_oracle_suite!(timestamptz, chrono::DateTime<chrono::Utc>, ordered);
+fixture_oracle_suite!(numeric, rust_decimal::Decimal, ordered);
 fixture_oracle_suite!(text, String, ordered);
-fixture_oracle_suite!(timestamptz, chrono::DateTime<chrono::Utc>, eq_only);
