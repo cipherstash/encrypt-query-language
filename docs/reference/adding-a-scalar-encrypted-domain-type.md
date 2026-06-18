@@ -233,12 +233,17 @@ three divergences (for the ordered `date`):
   over `ScalarType` (`scalar_domains.rs`): **`OrderedScalar`** carries the
   `min_pivot()` / `max_pivot()` boundaries and the interior `mid_pivot()` (default
   `Self::default()`); **`SignedScalar: OrderedScalar`** adds `origin()` (the
-  numeric zero / sign boundary). Integer impls (`min=MIN`, `max=MAX`, `mid`
-  inherits `0`, `origin=0`) are emitted by the proc-macro; the temporal `date`
-  impl returns explicit sentinel dates (`mid` inherits the epoch = `origin()`) and
-  is emitted by the `temporal_values!` declarative macro in `scalar_domains.rs`,
-  which emits the `ScalarType` + `OrderedScalar` + `SignedScalar` impls together
-  (the proc-macro emits only integer impls). `date` is both `OrderedScalar` and
+  numeric zero / sign boundary). `min_pivot()`/`max_pivot()` are **derived** for
+  every kind — the trait default returns the smallest/largest `fixture_values()`
+  entry (`ScalarType` already bounds `Ord + Clone`), so a boundary pivot is a
+  fixture row by construction and cannot drift. **No impl overrides them.** Only
+  `mid_pivot()` is ever overridden: it defaults to `Self::default()` (the numeric
+  origin / epoch — a real fixture for the integer kinds, `date`, `timestamptz`,
+  and `numeric`), and `text` overrides it with a real median fixture because
+  `String::default()` is the degenerate empty string (issue #262). The proc-macro
+  and the `temporal_values!` macro therefore emit an empty `impl OrderedScalar`
+  (defaults inherited) alongside the `SignedScalar { origin }` impl where the kind
+  is signed. `date` is both `OrderedScalar` and
   `SignedScalar`; `text` is `OrderedScalar` only and **hand-written** in
   `scalar_domains.rs` (lexicographic order has no origin, so it overrides
   `mid_pivot()` with a real median fixture rather than the degenerate
