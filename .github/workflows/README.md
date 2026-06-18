@@ -46,9 +46,9 @@ together — which PR-only checks never test.
 Per-event matrices make leaf job names unstable (a `test` job is displayed as
 `Shard PG17 1/4`, but the queue produces `Shard PG14 1/2` … `Shard PG17 2/2`),
 so leaf names can't be named as required checks. Instead, one aggregator job
-(id `ci-required`, **display name `CI required`**) `needs:` every job, runs with
+(id and display name `ci-required`) `needs:` every job, runs with
 `if: always()`, and passes only if each needed result is `success` **or**
-`skipped`. Mark **only `CI required`** as the required status check.
+`skipped`. Mark **only `ci-required`** as the required status check.
 
 - `if: always()` — runs even when dependencies fail/skip, so the check always
   reports (a never-reported required check leaves the queue stuck *Pending*).
@@ -63,17 +63,17 @@ merge-queue workflows.
 Settings → Branches → rule for `main`:
 
 1. **Require merge queue.**
-2. **Require status checks to pass** → add **`CI required` only** (the display
-   name; not the per-shard leaf names).
+2. **Require status checks to pass** → add **`ci-required` only** (not the
+   per-shard leaf names).
 
 Then verify (see `docs/plans/2026-06-09-ci-pr-feedback-sharding-rollout.md`):
 
 - **Queue a relevant PR** → `merge_group` runs the full gate — 8 `Shard …` jobs
   + 4 `Validate …` jobs + `build-archive`, `schema`, `rust-crates`, `codegen`,
-  `self-contained-v3`, `matrix-coverage`, `splinter` — all green → `CI required`
+  `self-contained-v3`, `matrix-coverage`, `splinter` — all green → `ci-required`
   green → PR merges.
 - **Open a docs-only PR** → on its `pull_request` run the heavy jobs skip and
-  `CI required` reports **Success** (not stuck *Pending*), so the PR can be
+  `ci-required` reports **Success** (not stuck *Pending*), so the PR can be
   queued.
 
 ## References
