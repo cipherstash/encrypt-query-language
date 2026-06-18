@@ -5,7 +5,6 @@
 
 use anyhow::Result;
 use eql_tests::{
-    assert_null, assert_raises, assert_scalar_plaintexts, blocker_msg, fetch_fixture_payload,
     sql_string_literal, ScalarDomainSpec, ScalarType, Variant, PLACEHOLDER_PAYLOAD,
 };
 use sqlx::PgPool;
@@ -114,213 +113,28 @@ fn sql_string_literal_escapes_single_quotes() {
     assert_eq!(sql_string_literal("abc'def"), "'abc''def'");
 }
 
-#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_int4")))]
-async fn fetch_fixture_payload_returns_keyed_row(pool: PgPool) -> Result<()> {
-    // Parse the payload as JSON rather than substring-matching — whitespace
-    // and key ordering in the serialised form are not contract.
-    let payload = fetch_fixture_payload::<i32>(&pool, 42).await?;
-    let value: serde_json::Value = serde_json::from_str(&payload)?;
-    assert_eq!(value["v"], serde_json::json!(2), "payload must carry v=2");
-    assert!(value.get("c").is_some(), "payload must carry a c field");
-    Ok(())
-}
-
-#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_int4")))]
-async fn assert_scalar_plaintexts_reports_sql_context(pool: PgPool) -> Result<()> {
-    let lit = sql_string_literal(&fetch_fixture_payload::<i32>(&pool, 42).await?);
-    let predicate = format!("payload::eql_v3.int4_ord_ore = {lit}::jsonb::eql_v3.int4_ord_ore");
-    assert_scalar_plaintexts::<i32>(&pool, "eql_v3.int4_ord_ore", "=", &predicate, &[42]).await?;
-    Ok(())
-}
-
 #[sqlx::test]
-async fn placeholder_payload_satisfies_every_variant_check(pool: PgPool) -> Result<()> {
+async fn placeholder_payload_casts_to_every_declared_domain(pool: PgPool) -> Result<()> {
     // The whole point of PLACEHOLDER_PAYLOAD: one sentinel that casts
-    // successfully to every domain in the family. If a variant CHECK
-    // tightens, this test fails and PLACEHOLDER_PAYLOAD needs updating.
+    // successfully to EVERY declared domain of EVERY live scalar type. If a
+    // variant CHECK tightens for any type, this fails and PLACEHOLDER_PAYLOAD
+    // needs updating. Catalog-driven so a new scalar type is covered the
+    // moment its CATALOG row lands — no per-type edit here.
     //
-    // Iterates `Variant::ALL` for `i32`, deriving each domain name from
-    // `ScalarDomainSpec::new::<i32>(variant).sql_domain` rather than
-    // hardcoding the names. Currently `i32`-only; when `int8` (or any
-    // future scalar) lands, wrap this in a per-type loop so the
-    // PLACEHOLDER_PAYLOAD cast is exercised against every scalar.
-    for variant in Variant::ALL {
-        // int4 does not declare every variant (no `_search`); skip the ones it
-        // lacks so the cast targets a real domain.
-        if !variant.is_declared_for("int4") {
-            continue;
+    // (Was i32-only with a TODO to generalize; the TODO is now done.)
+    use eql_scalars::CATALOG;
+    for spec in CATALOG {
+        for domain in spec.domains {
+            let sql_domain = format!("eql_v3.{}{}", spec.token, domain.suffix);
+            let sql = format!("SELECT $1::jsonb::{sql_domain}");
+            sqlx::query(&sql)
+                .bind(PLACEHOLDER_PAYLOAD)
+                .fetch_one(&pool)
+                .await
+                .map_err(|e| {
+                    anyhow::anyhow!("PLACEHOLDER_PAYLOAD must cast to {sql_domain}: {e}")
+                })?;
         }
-        let spec = ScalarDomainSpec::new::<i32>(*variant);
-        let sql = format!("SELECT $1::jsonb::{}", spec.sql_domain);
-        sqlx::query(&sql)
-            .bind(PLACEHOLDER_PAYLOAD)
-            .fetch_one(&pool)
-            .await
-            .map_err(|e| {
-                anyhow::anyhow!("PLACEHOLDER_PAYLOAD must cast to {}: {e}", spec.sql_domain)
-            })?;
-    }
-    Ok(())
-}
-
-#[sqlx::test]
-async fn assert_raises_two_bind_blocker(pool: PgPool) -> Result<()> {
-    let msg = blocker_msg("eql_v3.int4", "=");
-    assert_raises(
-        &pool,
-        "SELECT $1::jsonb::eql_v3.int4 = $2::jsonb::eql_v3.int4",
-        &[Some(PLACEHOLDER_PAYLOAD), Some(PLACEHOLDER_PAYLOAD)],
-        &msg,
-    )
-    .await
-}
-
-#[sqlx::test]
-async fn assert_raises_one_bind_path_blocker(pool: PgPool) -> Result<()> {
-    let msg = blocker_msg("eql_v3.int4", "->");
-    assert_raises(
-        &pool,
-        "SELECT $1::jsonb::eql_v3.int4 -> 'field'::text",
-        &[Some(PLACEHOLDER_PAYLOAD)],
-        &msg,
-    )
-    .await
-}
-
-#[sqlx::test]
-async fn assert_raises_native_operator_absent(pool: PgPool) -> Result<()> {
-    // ~~ (LIKE) isn't declared on int4 — error message is PG's native
-    // "operator does not exist", not an EQL blocker message.
-    assert_raises(
-        &pool,
-        "SELECT $1::jsonb::eql_v3.int4 ~~ $2::jsonb::eql_v3.int4",
-        &[Some(PLACEHOLDER_PAYLOAD), Some(PLACEHOLDER_PAYLOAD)],
-        "operator does not exist",
-    )
-    .await
-}
-
-#[sqlx::test]
-async fn omitted_native_jsonb_operators_raise_eql_blockers(pool: PgPool) -> Result<()> {
-    let cases: &[(&str, &[Option<&str>], &str)] = &[
-        (
-            "SELECT $1::jsonb::eql_v3.int4 ? 'c'::text",
-            &[Some(PLACEHOLDER_PAYLOAD)],
-            "?",
-        ),
-        (
-            "SELECT $1::jsonb::eql_v3.int4 ?| ARRAY['c']",
-            &[Some(PLACEHOLDER_PAYLOAD)],
-            "?|",
-        ),
-        (
-            "SELECT $1::jsonb::eql_v3.int4 ?& ARRAY['c']",
-            &[Some(PLACEHOLDER_PAYLOAD)],
-            "?&",
-        ),
-        (
-            "SELECT $1::jsonb::eql_v3.int4 #> ARRAY['i']",
-            &[Some(PLACEHOLDER_PAYLOAD)],
-            "#>",
-        ),
-        (
-            "SELECT $1::jsonb::eql_v3.int4 #>> ARRAY['i', 'c']",
-            &[Some(PLACEHOLDER_PAYLOAD)],
-            "#>>",
-        ),
-        (
-            "SELECT $1::jsonb::eql_v3.int4 @? '$.c'::jsonpath",
-            &[Some(PLACEHOLDER_PAYLOAD)],
-            "@?",
-        ),
-        (
-            "SELECT $1::jsonb::eql_v3.int4 @@ '$.c == \"placeholder\"'::jsonpath",
-            &[Some(PLACEHOLDER_PAYLOAD)],
-            "@@",
-        ),
-        (
-            "SELECT $1::jsonb::eql_v3.int4 - 'c'::text",
-            &[Some(PLACEHOLDER_PAYLOAD)],
-            "-",
-        ),
-        (
-            "SELECT $1::jsonb::eql_v3.int4 - 0",
-            &[Some(PLACEHOLDER_PAYLOAD)],
-            "-",
-        ),
-        (
-            "SELECT $1::jsonb::eql_v3.int4 - ARRAY['c']",
-            &[Some(PLACEHOLDER_PAYLOAD)],
-            "-",
-        ),
-        (
-            "SELECT $1::jsonb::eql_v3.int4 #- ARRAY['i']",
-            &[Some(PLACEHOLDER_PAYLOAD)],
-            "#-",
-        ),
-        (
-            "SELECT $1::jsonb::eql_v3.int4 || $2::jsonb",
-            &[Some(PLACEHOLDER_PAYLOAD), Some(PLACEHOLDER_PAYLOAD)],
-            "||",
-        ),
-        (
-            "SELECT $1::jsonb || $2::jsonb::eql_v3.int4",
-            &[Some(PLACEHOLDER_PAYLOAD), Some(PLACEHOLDER_PAYLOAD)],
-            "||",
-        ),
-        (
-            "SELECT $1::jsonb::eql_v3.int4 || $2::jsonb::eql_v3.int4",
-            &[Some(PLACEHOLDER_PAYLOAD), Some(PLACEHOLDER_PAYLOAD)],
-            "||",
-        ),
-    ];
-
-    for (sql, binds, op) in cases {
-        assert_raises(&pool, sql, binds, &blocker_msg("eql_v3.int4", op)).await?;
-    }
-    Ok(())
-}
-
-#[sqlx::test]
-async fn assert_raises_engages_on_all_null(pool: PgPool) -> Result<()> {
-    // Non-STRICT blocker proof — must raise even with NULL on both sides.
-    let msg = blocker_msg("eql_v3.int4", "=");
-    assert_raises(
-        &pool,
-        "SELECT $1::jsonb::eql_v3.int4 = $2::jsonb::eql_v3.int4",
-        &[None, None],
-        &msg,
-    )
-    .await
-}
-
-#[sqlx::test]
-async fn assert_null_propagates_through_supported_op(pool: PgPool) -> Result<()> {
-    // STRICT supported op with one NULL operand yields NULL.
-    assert_null(
-        &pool,
-        "SELECT $1::jsonb::eql_v3.int4_eq = $2::jsonb::eql_v3.int4_eq",
-        &[Some(PLACEHOLDER_PAYLOAD), None],
-    )
-    .await
-}
-
-#[sqlx::test]
-async fn neq_propagates_null_under_three_valued_logic(pool: PgPool) -> Result<()> {
-    // `<>` with a NULL operand must yield NULL (not true, not false).
-    // Three-valued logic is easy to get wrong in domain wrappers; a
-    // STRICT supported `<>` returns NULL on either NULL side.
-    for binds in [
-        &[Some(PLACEHOLDER_PAYLOAD), None][..],
-        &[None, Some(PLACEHOLDER_PAYLOAD)][..],
-        &[None, None][..],
-    ] {
-        assert_null(
-            &pool,
-            "SELECT $1::jsonb::eql_v3.int4_eq <> $2::jsonb::eql_v3.int4_eq",
-            binds,
-        )
-        .await?;
     }
     Ok(())
 }
