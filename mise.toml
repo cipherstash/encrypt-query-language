@@ -255,13 +255,13 @@ test -f snapshots/matrix_tests_eq_only.txt || { echo "snapshots/matrix_tests_eq_
 test -f snapshots/matrix_tests_text.txt || { echo "snapshots/matrix_tests_text.txt missing — regenerate (see snapshots/README.md)." >&2; exit 1; }
 test -f snapshots/matrix_tests_storage_only.txt || { echo "snapshots/matrix_tests_storage_only.txt missing — regenerate (see snapshots/README.md)." >&2; exit 1; }
 
-# Compile the encrypted_domain binary and capture its `--list` output. On a
-# bare / no-creds worktree (the matrix-coverage CI job, or a checkout that has
-# not run test:sqlx:prep) the generated fixtures `include_str!`'d at compile
-# time are absent, so the shared stub preamble creates empty stand-ins, lists,
-# then removes them on exit. Sets `listing` (stripped of the `: test` suffix).
+# On a bare / no-creds worktree (the matrix-coverage CI job, or a checkout that
+# has not run test:sqlx:prep) the generated fixtures `include_str!`'d at compile
+# time are absent. The shared stub preamble creates empty stand-ins for the whole
+# generated set and removes them on exit; we then compile + list the binary.
 EQL_ROOT="{{config_root}}"
 source "${EQL_ROOT}/tasks/test/stub-fixtures.sh"
+listing=$(cargo test --no-default-features --test encrypted_domain -- --list | sed -n 's/: test$//p')
 
 # Types present in the binary, from scalars::<X>:: prefixes.
 discovered=$(printf '%s\\n' "$listing" \
@@ -366,10 +366,11 @@ run = """
 # pinned by this isolated snapshot (no catalog cross-check). No database needed.
 set -euo pipefail
 test -f snapshots/matrix_jsonb_entry_tests.txt || { echo "snapshots/matrix_jsonb_entry_tests.txt missing — regenerate." >&2; exit 1; }
-# Stub-compile on a bare / no-creds worktree (see test:matrix:inventory). Sets
-# `listing` (stripped). Harmless when real fixtures already exist.
+# Stub the generated fixtures on a bare / no-creds worktree (see
+# test:matrix:inventory), then compile + list. Harmless when real fixtures exist.
 EQL_ROOT="{{config_root}}"
 source "${EQL_ROOT}/tasks/test/stub-fixtures.sh"
+listing=$(cargo test --no-default-features --test encrypted_domain -- --list | sed -n 's/: test$//p')
 printf '%s\\n' "$listing" \
   | grep '^jsonb_entry::.*jsonb_entry_int4' \
   | sed -E 's/_int4_/_<T>_/' \
@@ -391,14 +392,20 @@ set -euo pipefail
 
 test -f snapshots/v3_jsonb_tests.txt || { echo "snapshots/v3_jsonb_tests.txt missing — regenerate and commit it." >&2; exit 1; }
 
-tmp=$(mktemp)
-trap 'rm -f "$tmp"' EXIT
+# The v3_jsonb_* binaries `include_str!` generated fixtures (e.g. v3_ste_vec.sql)
+# at compile time, so on a bare / no-creds worktree they cannot compile to
+# --list. The shared stub preamble creates empty stand-ins for the whole
+# generated set and removes them on exit (its EXIT trap is the only one here).
+EQL_ROOT="{{config_root}}"
+source "${EQL_ROOT}/tasks/test/stub-fixtures.sh"
 
+tmp=$(mktemp)
 cargo test --test v3_jsonb_tests --test v3_jsonb_operator_surface_tests -- --list \
   | sed -n 's/: test$//p' \
   | LC_ALL=C sort > "$tmp"
 
 diff -u snapshots/v3_jsonb_tests.txt "$tmp"
+rm -f "$tmp"
 echo "v3 jsonb inventory OK"
 """
 
@@ -424,12 +431,13 @@ set -euo pipefail
 root="{{config_root}}"
 
 # --- DB-free stub preamble so --list can compile on a bare worktree ----------
-# Shared with test:matrix:inventory so the two siblings can never drift (a gap
-# between them is exactly what broke CI: inventory compiled without stubs and
-# failed the no-creds matrix-coverage job). Sets `listing` (stripped) and a
-# cleanup trap that removes only the stubs it created.
+# Shared with test:matrix:inventory so the no-creds tasks can never drift (a gap
+# between them is exactly what broke CI). The helper stubs the whole generated
+# fixture set + sets a cleanup trap; we then compile + list (stripped).
 EQL_ROOT="$root"
 source "${root}/tasks/test/stub-fixtures.sh"
+listing=$(cargo test --no-default-features --test encrypted_domain -- --list | sed -n 's/: test$//p')
+[ -n "$listing" ] || { echo "No tests listed from the encrypted_domain binary." >&2; exit 1; }
 
 # --- Catalog surface (overridable for testing via EQL_CATALOG_DUMP_FILE) -----
 # The seam lets the fault-injection check (Step 3) run THIS exact loop against a
