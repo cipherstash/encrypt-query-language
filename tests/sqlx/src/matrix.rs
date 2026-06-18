@@ -3379,12 +3379,11 @@ macro_rules! __scalar_matrix_count_case {
 #[macro_export]
 #[doc(hidden)]
 macro_rules! __scalar_matrix_count_distinct_dispatch {
-    // Storage: no DISTINCT case — no extractor to deduplicate by.
-    (
-        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
-        dom_name = $dom_name:ident, variant = Storage $(,)?
-    ) => {};
-    // Eq, Ord, OrdOre — emit the DISTINCT test.
+    // One arm for EVERY variant — the Storage-vs-rest decision is a RUNTIME
+    // `extractor_expr().is_none()` early-return inside the body, NOT a
+    // macro-expansion ident-match on `Storage`. (A `macro_rules!` cannot suppress
+    // a test item at runtime, so Storage emits a trivially-passing test rather
+    // than emitting nothing — see Task 6C.)
     (
         suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
         dom_name = $dom_name:ident, variant = $variant:ident $(,)?
@@ -3397,8 +3396,12 @@ macro_rules! __scalar_matrix_count_distinct_dispatch {
                 use $crate::scalar_domains::ScalarType;
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
-                let extractor = spec.extractor_expr("value")
-                    .expect("non-Storage variant must expose an extractor");
+                let Some(extractor) = spec.extractor_expr("value") else {
+                    // Storage has no extractor to deduplicate by — the count-distinct
+                    // case is meaningless here, so this emitted test is a trivial pass.
+                    // (Runtime guard, NOT a macro ident-match: that is the point of 6C.)
+                    return Ok(());
+                };
                 let fixture = <$scalar as ScalarType>::fixture_table_name();
                 let expected = <$scalar as ScalarType>::fixture_values().len() as i64;
 
