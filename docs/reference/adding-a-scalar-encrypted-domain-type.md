@@ -204,14 +204,16 @@ there is no `<T>_VALUES` const; the SQLx harness parses the catalog strings into
 A **temporal** scalar (`date` is the *ordered* temporal reference) is *ordered
 but non-integer*, so it diverges from the integer path in three places — all in
 the catalog/harness, never the SQL codegen (domains stay jsonb-backed and
-token-driven). **`timestamptz` is the exception: it is equality-only, not
-ordered** — its catalog row uses `EQ_ONLY_DOMAINS` (storage + `_eq`, no
-`_ord`/`_ord_ore`), the eq-only shape of §3, because cipherstash encrypts
-`Plaintext::Timestamp` at native 12-block ORE width while EQL's only comparator
-(`eql_v2.compare_ore_block_u64_8_256_term`) is hardcoded to 8 blocks, so an
-ordered `timestamptz` domain would silently mis-order (see the catalog comment on
-the `TIMESTAMPTZ` spec). Its value-wiring is still the temporal path below; only
-its domain set differs. The three divergences (for the ordered `date`):
+token-driven). **`timestamptz` follows the same *ordered* temporal path as
+`date`** — its catalog row carries the full ordered domain set (storage + `_eq` +
+`_ord`/`_ord_ore`). cipherstash encrypts `Plaintext::Timestamp` at native
+12-block ORE width, and the `eql_v3` comparator
+(`eql_v3.compare_ore_block_256_term`) now derives its block count `N` from the
+term length instead of assuming 8, so the 12-block ciphertexts order correctly
+(see the N-block ORE comparator entry in the `CHANGELOG.md` and the catalog
+comment on the `TIMESTAMPTZ` spec). Its value-wiring is the temporal path below;
+the only practical difference from `date` is that values are UTC-normalized. The
+three divergences (for the ordered `date`):
 
 - **String-backed fixtures.** `eql-scalars` stays zero-dependency, so the
   catalog stores ISO strings (`Fixture::Date("1970-01-01")`), not `chrono`
@@ -325,6 +327,42 @@ first added) also needs, in `tests/sqlx/src/fixtures/eql_plaintext.rs`:
 - an `impl EqlPlaintext` whose `to_plaintext` maps onto the correct
   `Plaintext::*` variant (`Plaintext::NaiveDate` / `Plaintext::Timestamp` /
   `Plaintext::Text`), plus the three mirrored `#[test]`s.
+
+#### A fourth fixture shape: non-integer, non-chrono, non-text (`numeric` / `Decimal`)
+
+`numeric` (backed by `rust_decimal::Decimal`, 14-block ORE — the first scalar
+whose ORE term is wider than 8 blocks) is ordered but is **neither** the integer
+materialiser, **nor** chrono (`temporal`), **nor** `text` (it owns a `Decimal`,
+not a `String`, and has no `Match` index). It therefore introduces a **fourth
+fixture discriminator**, which means touching the proc-macro routing, not just
+the type list. Beyond the §3.1 `eql_plaintext.rs` wiring above (`Cast::DECIMAL`,
+`PlaintextSqlType::NUMERIC`, the `cast_for_kind` / `plaintext_sql_type_for_kind`
+arms, `Sealed for Decimal`, `EqlPlaintext for Decimal` → `Plaintext::Decimal`),
+it also needs:
+
+- an **`is_numeric_token`** arm in `crates/eql-tests-macros/src/lib.rs`'s
+  fixture-module router — without it `scalar_types!(fixture_modules)` panics at
+  compile time on the unrecognised kind (the router handled only `temporal` /
+  `text` before);
+- a **`numeric` arm** in the `scalar_fixture!` macro
+  (`tests/sqlx/src/fixtures/scalar_fixture.rs`) — the temporal arm's twin
+  (`[Unique, Ore]`, pivot-presence asserts via `OrderedScalar`), but no `Match`
+  and no chrono;
+- a hand-written **`numeric_values()`** accessor plus `impl ScalarType` /
+  `OrderedScalar for Decimal` in `tests/sqlx/src/scalar_domains.rs` — parsing the
+  catalog's `Fixture::Numeric` strings into a `LazyLock<Vec<Decimal>>` (the
+  catalog stays zero-dep; the parse lives in the harness). `Decimal: Ord` supplies
+  the expected sort order — `ore-rs` guarantees the ciphertext order agrees, and
+  equivalent scales (`1` ≡ `1.0`) collide like `Decimal`'s own `Ord`. Add a
+  **`fixtures_are_distinct_by_value`** guard (parse → `HashSet`): the zero-dep
+  catalog only dedupes by literal string, so `"1"` / `"1.0"` would slip past it
+  but collide in both the ORE ciphertext and the fixture table;
+- the **`rust_decimal` dependency** + the sqlx **`rust_decimal` feature** in
+  `tests/sqlx/Cargo.toml` (in `[dependencies]`, not `[dev-dependencies]` — the
+  `Decimal` impls live in the crate's library code).
+
+See the N-block ORE comparator entry in the `CHANGELOG.md` for the comparator
+change the wide `numeric` / `timestamptz` terms rely on.
 
 ### New-capability domains (e.g. `_match` / `Bloom`)
 

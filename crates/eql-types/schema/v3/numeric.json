@@ -1,0 +1,69 @@
+{
+  "$id": "https://schemas.cipherstash.com/eql/v3/numeric.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "Ciphertext": {
+      "description": "mp_base85 source ciphertext — the `c` envelope key.\n\nRequired by every v3 domain CHECK; present on every payload.",
+      "type": "string"
+    },
+    "Identifier": {
+      "additionalProperties": false,
+      "description": "Table + column identifier — wire shape `{\"t\": \"...\", \"c\": \"...\"}`.\n\nShared by every payload.",
+      "properties": {
+        "c": {
+          "description": "Column name.",
+          "type": "string"
+        },
+        "t": {
+          "description": "Table name.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "c",
+        "t"
+      ],
+      "type": "object"
+    },
+    "SchemaVersion": {
+      "const": 2,
+      "description": "The envelope version field (`v`) — always exactly `2` on the wire.",
+      "type": "integer"
+    }
+  },
+  "description": "`eql_v3.numeric` — storage only; every operator is blocked.",
+  "properties": {
+    "c": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Ciphertext"
+        }
+      ],
+      "description": "mp_base85 source ciphertext. Required by the domain CHECK."
+    },
+    "i": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Identifier"
+        }
+      ],
+      "description": "Table/column identifier. Required by the domain CHECK."
+    },
+    "v": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/SchemaVersion"
+        }
+      ],
+      "description": "Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other value fails deserialization."
+    }
+  },
+  "required": [
+    "c",
+    "i",
+    "v"
+  ],
+  "title": "Numeric",
+  "type": "object"
+}

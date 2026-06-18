@@ -212,15 +212,23 @@ async fn blocking_lt_flips_lt_arm_but_not_order_by(pool: PgPool) -> Result<()> {
     let mut ascending: Vec<i32> = <i32 as ScalarType>::fixture_values().to_vec();
     ascending.sort();
 
-    // Baseline: `<` works (no raise) and ORDER BY is plaintext-sorted.
-    let lt_baseline: Option<bool> = sqlx::query_scalar(lt_sql)
-        .bind(PLACEHOLDER_PAYLOAD)
-        .bind(PLACEHOLDER_PAYLOAD)
-        .fetch_one(&pool)
-        .await?;
+    // Baseline: `<` works (no raise) and ORDER BY is plaintext-sorted. Uses two
+    // REAL fixture ORE payloads (smallest two plaintexts), not PLACEHOLDER_PAYLOAD
+    // — the latter carries a 1-byte `ob` stub that the N-block comparator's
+    // well-formedness guard now (correctly) rejects. PLACEHOLDER stays in the
+    // post-mutation `assert_raises` below, where the `lt` blocker raises before
+    // the comparator ever inspects the term.
+    let lt_baseline: Option<bool> = sqlx::query_scalar(
+        "SELECT (SELECT payload FROM fixtures.eql_v2_int4 WHERE plaintext = $1)::eql_v3.int4_ord \
+              < (SELECT payload FROM fixtures.eql_v2_int4 WHERE plaintext = $2)::eql_v3.int4_ord",
+    )
+    .bind(ascending[0])
+    .bind(ascending[1])
+    .fetch_one(&pool)
+    .await?;
     ensure!(
-        lt_baseline.is_some(),
-        "baseline: `_ord` `<` must return a boolean (got {lt_baseline:?})"
+        lt_baseline == Some(true),
+        "baseline: smaller `_ord` `<` larger must be true (got {lt_baseline:?})"
     );
     let order_baseline: Vec<i32> = sqlx::query_scalar(order_by_sql).fetch_all(&pool).await?;
     ensure!(

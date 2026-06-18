@@ -230,13 +230,15 @@ const ORDERED_INT_DOMAINS: &[DomainSpec] = &[
     },
 ];
 
-/// Equality-only domains: storage (no terms) + `_eq` (hm). Used by scalar types
-/// that can hash for equality but cannot (yet) be ordered. `timestamptz` is the
-/// first such type: cipherstash encrypts `Plaintext::Timestamp` at native
-/// 12-block ORE width, but EQL's only ORE comparator
-/// (`eql_v2.compare_ore_block_u64_8_256_term`) is hardcoded to 8 blocks, so an
-/// ordered domain would silently mis-order. Ordering is deferred until a
-/// wide-ORE (12-block) term exists.
+/// Equality-only domains: storage (no terms) + `_eq` (hm). The canonical shape
+/// for a scalar type that can hash for equality but is not ORE-orderable.
+/// **Currently unused:** `timestamptz` (the previous sole user) was promoted to
+/// the ordered shape once `eql_v3.compare_ore_block_256_term` generalized to N
+/// blocks and could order its native 12-block ORE width. Retained — and still
+/// validated as a known-valid shape by `every_type_uses_a_known_domain_shape` —
+/// so a future non-orderable scalar (e.g. a hash-only type) can reuse it without
+/// reconstructing the shape.
+#[allow(dead_code)]
 const EQ_ONLY_DOMAINS: &[DomainSpec] = &[
     DomainSpec {
         suffix: "",
@@ -296,6 +298,17 @@ const TIMESTAMPTZ_FIXTURES: &[Fixture] = fixtures!(timestamptz;
     "2012-06-30T11:59:59Z", "2016-03-15T08:15:30Z", "2020-10-21T14:45:00Z",
     "2024-02-29T17:30:45Z", "2038-01-19T03:14:07Z", "2099-12-31T23:59:59Z");
 
+/// `numeric` fixture plaintexts — distinct by `Decimal` value, spanning sign,
+/// magnitude, and scale, and including `0` plus the min/max pivots
+/// (`-1000000000000` / `1000000000000`). They mirror `ore-rs`'s own
+/// order-pinning vectors so the 14-block ORE edges (sign + high/low blocks) are
+/// exercised. Each literal is distinct by parsed value (no `"1"`/`"1.0"`
+/// aliasing) — the harness `numeric_fixtures_distinct_by_value` guard enforces
+/// this, since the zero-dep catalog only dedupes by literal string.
+const NUMERIC_FIXTURES: &[Fixture] = fixtures!(numeric;
+    "-1000000000000", "-1000000", "-1.001", "-1", "-0.5", "-0.001",
+    "0", "0.001", "0.5", "0.999999999", "1", "1.001", "1000000", "1000000000000");
+
 const INT4: ScalarSpec = ScalarSpec {
     token: "int4",
     kind: ScalarKind::I32,
@@ -332,25 +345,40 @@ pub const DATE: ScalarSpec = ScalarSpec {
     fixtures: DATE_FIXTURES,
 };
 
-/// `timestamptz` — an **equality-only** (UTC-normalized) non-integer scalar.
-/// Uses `EQ_ONLY_DOMAINS` (storage + `_eq`) rather than the four-domain ordered
-/// shape: cipherstash encrypts `Plaintext::Timestamp` at native 12-block ORE
-/// width, but EQL's only ORE comparator
-/// (`eql_v2.compare_ore_block_u64_8_256_term`) is hardcoded to 8 blocks, so an
-/// ordered timestamptz domain would silently mis-order. Ordering is deferred to
-/// a future PR that adds a wide-ORE (12-block) term. The three "pivot" fixture
-/// values are retained as equality pivots; the kind stays ordered-shaped
-/// (carries a rust type, no i128 range) so the harness can parse them.
+/// `timestamptz` — an **ordered**, UTC-normalized non-integer scalar. Uses the
+/// four-domain ordered shape (storage, `_eq`, `_ord`, `_ord_ore`): cipherstash
+/// encrypts `Plaintext::Timestamp` at native 12-block ORE width, which the
+/// generalized `eql_v3.compare_ore_block_256_term` comparator orders correctly.
+/// Values are UTC-normalized (cipherstash has no tz-preserving type) and encrypt
+/// under the `timestamp` cast.
 ///
 /// Public (like `DATE`) because the SQLx harness reads `TIMESTAMPTZ.fixtures`
-/// directly to parse the RFC3339 strings into `chrono::DateTime<Utc>` at
-/// runtime — there is no `TIMESTAMPTZ_VALUES` const (chrono is not
-/// `const`-friendly and `eql-scalars` stays zero-dep).
+/// directly to parse the RFC3339 strings into `chrono::DateTime<Utc>` at runtime
+/// (no `TIMESTAMPTZ_VALUES` const; `eql-scalars` stays zero-dep).
 pub const TIMESTAMPTZ: ScalarSpec = ScalarSpec {
     token: "timestamptz",
     kind: ScalarKind::Timestamptz,
-    domains: EQ_ONLY_DOMAINS,
+    domains: ORDERED_INT_DOMAINS,
     fixtures: TIMESTAMPTZ_FIXTURES,
+};
+
+/// `numeric` — an **ordered** non-integer scalar backed by
+/// `rust_decimal::Decimal`. Uses the four-domain ordered shape: cipherstash
+/// encrypts `Plaintext::Decimal` at native 14-block ORE width, which the
+/// generalized `eql_v3.compare_ore_block_256_term` comparator orders correctly.
+/// `numeric_value` returns `None` (no i128 range); ordering is supplied by the
+/// harness `Decimal: Ord`, which `ore-rs` guarantees agrees with the ciphertext
+/// order (equivalent scales collide, like `Decimal`'s own `Ord`).
+///
+/// Public (like `DATE` / `TIMESTAMPTZ`) so the SQLx harness reads
+/// `NUMERIC.fixtures` directly to parse the decimal strings into
+/// `rust_decimal::Decimal` at runtime (the catalog stays zero-dep: no
+/// `rust_decimal`).
+pub const NUMERIC: ScalarSpec = ScalarSpec {
+    token: "numeric",
+    kind: ScalarKind::Numeric,
+    domains: ORDERED_INT_DOMAINS,
+    fixtures: NUMERIC_FIXTURES,
 };
 
 /// Domains for `text`: the ordered shape (with exact `hm` equality on the
@@ -417,7 +445,7 @@ pub const TEXT: ScalarSpec = ScalarSpec {
 
 /// The scalar catalog — the single source of truth. Order is significant (it
 /// drives generation order). New types are appended as their SQL surface lands.
-pub const CATALOG: &[ScalarSpec] = &[INT4, INT2, INT8, DATE, TIMESTAMPTZ, TEXT];
+pub const CATALOG: &[ScalarSpec] = &[INT4, INT2, INT8, DATE, TIMESTAMPTZ, NUMERIC, TEXT];
 
 /// Materialise an integer scalar's fixtures into a typed `&'static` slice at
 /// compile time. This is the **single-sourced** plaintext list the SQLx test

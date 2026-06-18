@@ -319,11 +319,11 @@ temporal_values! {
 }
 
 // `timestamptz`'s `ScalarType` wiring, generated from its catalog row by the
-// same `temporal_values!` path as `date`. timestamptz is equality-only (its
-// catalog row uses the eq-only domain shape), but the *value* wiring is
+// same `temporal_values!` path as `date`. timestamptz is ordered (its catalog
+// row uses the ordered domain shape, 12-block ORE), and the *value* wiring is
 // identical to any temporal scalar: RFC3339 strings parsed once into
 // `DateTime<Utc>` behind `timestamptz_values()`. The pivots are retained as the
-// three equality anchors the matrix sweeps.
+// three min/mid/max anchors the matrix sweeps.
 temporal_values! {
     cell      = TIMESTAMPTZ_VALUES_CELL,
     accessor  = timestamptz_values,
@@ -484,6 +484,88 @@ impl MatchScalar for String {
 // `String` is deliberately NOT `SignedScalar`: lexicographic text has no
 // numeric origin / sign boundary. The signed-only sign-boundary test bounds on
 // `SignedScalar`, so a `String` instantiation of it would not compile.
+
+// `numeric` is hand-written (like `text`): an owned `rust_decimal::Decimal`,
+// not chrono-backed, so it parses the catalog's `Fixture::Numeric` strings into
+// a `LazyLock<Vec<Decimal>>` rather than going through `temporal_values!`. The
+// catalog stays zero-dep, so the parse happens here, not in `eql-scalars`.
+
+/// Typed `Decimal` fixture values, parsed once from `numeric`'s catalog row.
+static NUMERIC_VALUES_CELL: std::sync::LazyLock<Vec<rust_decimal::Decimal>> =
+    std::sync::LazyLock::new(|| {
+        use std::str::FromStr;
+        eql_scalars::NUMERIC
+            .fixtures
+            .iter()
+            .map(|f| match f {
+                eql_scalars::Fixture::Numeric(s) => rust_decimal::Decimal::from_str(s)
+                    .unwrap_or_else(|e| panic!("invalid numeric catalog fixture {s:?}: {e}")),
+                other => panic!("non-numeric fixture in numeric catalog row: {other:?}"),
+            })
+            .collect()
+    });
+
+/// The `Decimal` fixture values, in catalog order. Public so the `eql_v2_numeric`
+/// fixture module (emitted by `scalar_types!(fixture_modules)`) can hand the
+/// slice to `scalar_fixture!`.
+pub fn numeric_values() -> &'static [rust_decimal::Decimal] {
+    &NUMERIC_VALUES_CELL
+}
+
+impl ScalarType for rust_decimal::Decimal {
+    const PG_TYPE: &'static str = "numeric";
+
+    fn fixture_values() -> &'static [Self] {
+        numeric_values()
+    }
+    // `to_sql_literal` inherits the default (`value.to_string()`): a `Decimal`'s
+    // `Display` form (e.g. `-1000000000000`, `0.001`) is a valid SQL numeric
+    // literal, so no quoting/override is needed (unlike `text` / `date`).
+}
+
+impl OrderedScalar for rust_decimal::Decimal {
+    /// The smallest fixture decimal. Present verbatim in `fixture_values()`.
+    fn min_pivot() -> Self {
+        use std::str::FromStr;
+        rust_decimal::Decimal::from_str("-1000000000000").unwrap()
+    }
+
+    /// The largest fixture decimal. Present verbatim in `fixture_values()`.
+    fn max_pivot() -> Self {
+        use std::str::FromStr;
+        rust_decimal::Decimal::from_str("1000000000000").unwrap()
+    }
+    // `mid_pivot` inherits the default `Self::default()` = `Decimal::ZERO` = 0,
+    // which is a real fixture and the numeric origin.
+}
+
+// `Decimal` is deliberately NOT `SignedScalar`: like `text`, it is an
+// ordered non-integer kind. The signed-only sign-boundary test bounds on
+// `SignedScalar`, so it is not instantiated for numeric.
+
+/// `eql-scalars`' distinctness invariant keys `Fixture::Numeric` by its literal
+/// string, so `"1"` and `"1.0"` would pass there as "distinct". But they denote
+/// the same `Decimal` value (and collide in the ORE ciphertext, per ore-rs's
+/// `equivalent_forms_collide_in_ciphertext`), so an aliasing pair would insert
+/// duplicate `plaintext` rows and break `fetch_fixture_payload`'s `fetch_one`.
+/// This guards distinctness by parsed value, which is the property the fixture
+/// table relies on.
+#[cfg(test)]
+mod numeric_value_guards {
+    use super::*;
+
+    #[test]
+    fn fixtures_are_distinct_by_value() {
+        use std::collections::HashSet;
+        let vals = numeric_values(); // &[Decimal], parsed from the catalog
+        let unique: HashSet<_> = vals.iter().collect();
+        assert_eq!(
+            unique.len(),
+            vals.len(),
+            "two numeric fixtures alias to the same Decimal value",
+        );
+    }
+}
 
 #[cfg(test)]
 mod text_value_tests {

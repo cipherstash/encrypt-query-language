@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "macros", "chrono"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "macros", "chrono", "rust_decimal"] }
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -16,6 +16,11 @@ cipherstash-client = { version = "0.35", features = ["tokio"] }
 # it as a direct dependency so the harness can name `chrono::NaiveDate` for the
 # `date` scalar (Encode/Decode/Type come from the sqlx `chrono` feature above).
 chrono = { version = "0.4", default-features = false }
+# rust_decimal backs the `numeric` scalar. The sqlx `rust_decimal` feature above
+# provides Encode/Decode/Type<Postgres>; this names the type directly for the
+# harness impls (scalar_domains.rs, eql_plaintext.rs). Already in the tree
+# transitively (cipherstash-client / ore-rs).
+rust_decimal = "1"
 paste = "1"
 eql-scalars = { path = "../../crates/eql-scalars" }
 eql-tests-macros = { path = "../../crates/eql-tests-macros" }
