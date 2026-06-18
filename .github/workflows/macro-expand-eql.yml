@@ -34,7 +34,7 @@ env:
 
 defaults:
   run:
-    shell: bash -l {0}
+    shell: bash {0}
 
 permissions:
   contents: read
