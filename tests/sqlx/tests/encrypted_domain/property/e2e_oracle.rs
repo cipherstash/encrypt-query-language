@@ -1,6 +1,7 @@
-//! Tier B (CIP-3141): property tests over freshly generated, live-encrypted
-//! values. Gated behind `proptest-live` (declared in property/mod.rs) — needs
-//! CS_* creds, which `mise run test:sqlx` enables for CI/local full SQLx runs.
+//! e2e suite (CIP-3141): property tests over freshly generated values encrypted
+//! end-to-end through ZeroKMS each run. Gated behind `proptest-e2e` (declared in
+//! property/mod.rs) — needs CS_* creds, which `mise run test:sqlx` enables for
+//! CI/local full SQLx runs.
 //! Each proptest case generates one corpus of random integers — seeded with
 //! type-specific extremes, zero, and deliberate duplicates so the equality-true
 //! branch fires across distinct ciphertexts of the same plaintext — encrypts it
@@ -47,7 +48,7 @@ where
 
 /// Drive proptest: each case is a corpus of integers. Generation is in-process;
 /// encryption + oracle is async on a current-thread runtime.
-fn run_live_property<T>(
+fn run_e2e_property<T>(
     table: &str,
     cast: Cast,
     cases: u32,
@@ -64,9 +65,9 @@ where
         .build()?;
     let pool: PgPool = rt.block_on(connect_pool())?;
 
-    // Shrinking is disabled for the live tier: every failed shrink attempt would
+    // Shrinking is disabled for the e2e suite: every failed shrink attempt would
     // trigger another ZeroKMS batch, and ciphertext cannot be meaningfully
-    // shrunk anyway. Tier C keeps normal shrinking.
+    // shrunk anyway. The catalog suite keeps normal shrinking.
     let mut runner = TestRunner::new(Config {
         cases,
         max_shrink_iters: 0,
@@ -102,14 +103,14 @@ where
             .map_err(|e| TestCaseError::fail(format!("oracle: {e}")))?;
             Ok(())
         })
-        .map_err(|e| anyhow::anyhow!("live property failed: {e}"))
+        .map_err(|e| anyhow::anyhow!("e2e property failed: {e}"))
 }
 
 #[test]
-fn prop_int4_eq_and_ord_oracle_live() -> Result<()> {
+fn prop_int4_eq_and_ord_oracle_e2e() -> Result<()> {
     // Low case count: each case is a ZeroKMS round trip. 8 keeps CI bounded.
-    run_live_property::<i32>(
-        "proptest_live_int4",
+    run_e2e_property::<i32>(
+        "proptest_e2e_int4",
         Cast::INT,
         8,
         true,
@@ -118,9 +119,9 @@ fn prop_int4_eq_and_ord_oracle_live() -> Result<()> {
 }
 
 #[test]
-fn prop_int2_eq_and_ord_oracle_live() -> Result<()> {
-    run_live_property::<i16>(
-        "proptest_live_int2",
+fn prop_int2_eq_and_ord_oracle_e2e() -> Result<()> {
+    run_e2e_property::<i16>(
+        "proptest_e2e_int2",
         Cast::SMALL_INT,
         8,
         true,
@@ -129,9 +130,9 @@ fn prop_int2_eq_and_ord_oracle_live() -> Result<()> {
 }
 
 #[test]
-fn prop_int8_eq_and_ord_oracle_live() -> Result<()> {
-    run_live_property::<i64>(
-        "proptest_live_int8",
+fn prop_int8_eq_and_ord_oracle_e2e() -> Result<()> {
+    run_e2e_property::<i64>(
+        "proptest_e2e_int8",
         Cast::BIG_INT,
         8,
         true,

@@ -1,9 +1,9 @@
-//! Property-based invariants over the scalar/term catalog (CIP-3141, Tier C).
+//! Catalog suite (CIP-3141): property-based invariants over the scalar/term catalog.
 //!
 //! Pure Rust — no database, no encryption, no creds. These run in the lean
 //! `cargo test -p eql-scalars` path (fork CI). They assert the *catalog* is
-//! internally consistent for any generated input; the DB-backed oracle tiers
-//! (A/B) live in `tests/sqlx`.
+//! internally consistent for any generated input; the DB-backed oracle suites
+//! (fixture/e2e) live in `tests/sqlx`.
 
 use crate::{ScalarKind, Term, CATALOG};
 use proptest::prelude::*;

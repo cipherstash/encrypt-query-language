@@ -6,8 +6,8 @@
 
 // NULL / blocker / CHECK-constraint unit tests.
 mod edge_cases;
-// Tier A: oracle over the live-encrypted fixture corpus.
+// fixture suite: oracle over the committed fixture corpus (real ciphertext).
 mod fixture_oracle;
-// Tier B: oracle over freshly generated + batch-encrypted values.
-#[cfg(feature = "proptest-live")]
-mod live_oracle;
+// e2e suite: oracle over freshly generated + batch-encrypted values.
+#[cfg(feature = "proptest-e2e")]
+mod e2e_oracle;
