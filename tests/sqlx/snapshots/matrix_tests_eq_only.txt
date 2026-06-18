@@ -19,6 +19,7 @@ scalars::<T>::matrix_<T>_eq_index_engages_hash
 scalars::<T>::matrix_<T>_eq_lt_blocker
 scalars::<T>::matrix_<T>_eq_lte_blocker
 scalars::<T>::matrix_<T>_eq_native_absent_ops
+scalars::<T>::matrix_<T>_eq_native_jsonb_blockers
 scalars::<T>::matrix_<T>_eq_neq_pivot_max_correctness
 scalars::<T>::matrix_<T>_eq_neq_pivot_max_cross_shape
 scalars::<T>::matrix_<T>_eq_neq_pivot_mid_correctness
@@ -44,6 +45,7 @@ scalars::<T>::matrix_<T>_storage_gte_blocker
 scalars::<T>::matrix_<T>_storage_lt_blocker
 scalars::<T>::matrix_<T>_storage_lte_blocker
 scalars::<T>::matrix_<T>_storage_native_absent_ops
+scalars::<T>::matrix_<T>_storage_native_jsonb_blockers
 scalars::<T>::matrix_<T>_storage_neq_blocker
 scalars::<T>::matrix_<T>_storage_path_op_blockers
 scalars::<T>::matrix_<T>_storage_payload_check
