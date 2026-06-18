@@ -1,4 +1,4 @@
-//! Tier A (CIP-3141): property tests over the real, committed fixture corpus.
+//! fixture suite (CIP-3141): property tests over the real, committed fixture corpus.
 //!
 //! The fixture table `fixtures.eql_v2_<T>` carries `(plaintext, payload)` rows
 //! encrypted by cipherstash-client during `test:sqlx:prep`. proptest selects a

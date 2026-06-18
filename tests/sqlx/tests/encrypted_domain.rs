@@ -34,8 +34,8 @@ mod signed;
 #[path = "encrypted_domain/jsonb_entry.rs"]
 mod jsonb_entry;
 
-// Property-based + edge-case tests (CIP-3141). Three tiers under `property::`,
-// kept outside `scalars::` so the matrix-inventory gate does not mis-read them
-// as scalar types. See `encrypted_domain/property/mod.rs`.
+// Property-based + edge-case tests (CIP-3141). Three suites under `property::`
+// (catalog, fixture, e2e), kept outside `scalars::` so the matrix-inventory gate
+// does not mis-read them as scalar types. See `encrypted_domain/property/mod.rs`.
 #[path = "encrypted_domain/property/mod.rs"]
 mod property;
