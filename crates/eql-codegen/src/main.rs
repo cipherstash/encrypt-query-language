@@ -15,6 +15,18 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
 
+    // `dump-catalog`: print the catalog surface (types → domains →
+    // supported operators) as JSON. Consumed by test:matrix:catalog-coverage
+    // (Stage 1) and the log-verification matcher (Stage 4).
+    if args.len() == 2 && args[1] == "dump-catalog" {
+        let dump = eql_codegen::dump::dump_catalog();
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&dump).expect("serialize catalog dump")
+        );
+        return ExitCode::SUCCESS;
+    }
+
     if args.len() == 1 {
         // No args: generate every type's gitignored SQL surface.
         match generate_all(&repo_root()) {
@@ -29,5 +41,6 @@ fn main() -> ExitCode {
 
     eprintln!("Usage: eql-codegen            (generate all types)");
     eprintln!("       eql-codegen list-types (print catalog tokens)");
+    eprintln!("       eql-codegen dump-catalog (print catalog surface as JSON)");
     ExitCode::from(2)
 }
