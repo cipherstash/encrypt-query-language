@@ -10,7 +10,8 @@
 
 use anyhow::Result;
 use eql_tests::property::{
-    assert_eq_oracle, assert_ord_oracle, connect_pool, ensure_fixture_loaded, Row,
+    assert_eq_oracle, assert_ord_oracle, connect_pool, ensure_eql_installed, ensure_fixture_loaded,
+    Row,
 };
 use eql_tests::scalar_domains::{ScalarType, Variant};
 use proptest::prelude::*;
@@ -63,6 +64,9 @@ fn embedded_fixture_sql<T: ScalarType>() -> &'static str {
 /// Ensures the corpus is present in the shared DB first (it lives in
 /// `#[sqlx::test]`'s ephemeral DBs by default, not the pool we connect to).
 async fn load_fixture_rows<T: ScalarType>(pool: &PgPool) -> Result<Vec<Row<T>>> {
+    // The base DB this pool connects to is not migrated by `#[sqlx::test]`; in a
+    // CI shard it has no `eql_v3` surface, so install it before any cast/query.
+    ensure_eql_installed(pool, super::EQL_INSTALL_SQL).await?;
     ensure_fixture_loaded::<T>(pool, embedded_fixture_sql::<T>()).await?;
     let sql = format!(
         "SELECT plaintext, payload::text FROM {} ORDER BY id",
@@ -118,7 +122,10 @@ where
         .run(&strategy, |idxs| {
             let corpus = pick(&all, &idxs);
             rt.block_on(oracle(pool.clone(), corpus))
-                .map_err(|e| TestCaseError::fail(e.to_string()))?;
+                // `{e:#}` renders anyhow's full cause chain inline; plain
+                // `to_string()` drops it, hiding the real Postgres error (e.g.
+                // `schema "eql_v3" does not exist`) behind only the context line.
+                .map_err(|e| TestCaseError::fail(format!("{e:#}")))?;
             Ok(())
         })
         .map_err(|e| anyhow::anyhow!("fixture property failed: {e}"))
