@@ -309,6 +309,40 @@ macro_rules! temporal_values {
     };
 }
 
+/// Materialise a scalar's catalog fixtures into a `LazyLock<Vec<$ty>>` plus a
+/// public accessor, parsing each `Fixture` via the supplied closure. The
+/// kind-agnostic core shared by every non-integer scalar: `temporal_values!`
+/// adds the chrono-specific `ScalarType`/`OrderedScalar`/`SignedScalar` wiring on
+/// top, while `text`/`numeric` supply their own (they are not signed). Integer
+/// scalars do not use this — they materialise a `const` slice in `eql-scalars`
+/// (`int_values!`) and impl `ScalarType` via the proc-macro.
+///
+/// `$variant` is the `eql_scalars::Fixture` variant this scalar's rows use
+/// (`Text`/`Numeric`/`Date`/`Timestamptz`); `$parse` maps each `&Fixture` to
+/// `$ty` (and owns its own loud "wrong variant" panic). The accessor is `pub` so
+/// the `eql_v2_<T>` fixture module can hand the slice to `scalar_fixture!`.
+macro_rules! lazy_values {
+    (
+        cell      = $cell:ident,
+        accessor  = $accessor:ident,
+        rust_type = $ty:ty,
+        spec      = $spec:path,
+        variant   = $variant:ident,
+        pg_type   = $pg:literal,
+        parse     = $parse:expr $(,)?
+    ) => {
+        static $cell: std::sync::LazyLock<Vec<$ty>> = std::sync::LazyLock::new(|| {
+            let parse: fn(&::eql_scalars::Fixture) -> $ty = $parse;
+            $spec.fixtures.iter().map(parse).collect()
+        });
+
+        #[doc = concat!("Typed `", stringify!($ty), "` fixtures for `", $pg, "`, materialised once from the catalog.")]
+        pub fn $accessor() -> &'static [$ty] {
+            &$cell
+        }
+    };
+}
+
 // `date`'s `ScalarType` wiring is generated from its catalog row by
 // `temporal_values!` — the chrono analogue of the integer `int_values!` path.
 // Values can't be a `const` slice (`from_ymd_opt` is not `const`), so they live
