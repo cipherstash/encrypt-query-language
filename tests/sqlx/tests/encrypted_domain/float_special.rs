@@ -130,3 +130,56 @@ async fn infinities_order_correctly() -> Result<()> {
     assert!(ord_cmp(&pool, &p[0], "<", &p[2]).await?, "-Inf < +Inf");
     Ok(())
 }
+
+#[tokio::test]
+async fn nan_order_position_is_deterministic_and_total() -> Result<()> {
+    // TRIPWIRE for encoder drift — NOT a direction guarantee.
+    //
+    // NaN is "unordered and unspecified" by design, so we deliberately do NOT
+    // pin WHERE NaN sorts relative to finite / ±Inf values (that position is an
+    // encoder artifact and may change). But the Block-ORE index the `_ord`
+    // domain rides on requires a *total, deterministic* order: the same
+    // plaintext must always land at the same position, and every pair must
+    // resolve to exactly one of `<` / `=` / `>`. If a future encoder change
+    // makes NaN's position non-deterministic (same bits, different sort slot ->
+    // btree corruption) or non-total (a comparison that follows IEEE and returns
+    // false both ways), this fails loudly. The NaN==NaN equality artifact is
+    // locked separately in `two_encryptions_of_same_nan_bits_compare_equal`;
+    // this guards the ORDER side of the same deterministic-terms property.
+    let pool = setup().await?;
+    // Two independent encryptions of canonical NaN, plus a spread of references.
+    let p = encrypt_specials(&[
+        F8(f64::NAN),          // 0: NaN (encryption A)
+        F8(f64::NAN),          // 1: NaN (encryption B)
+        F8(f64::NEG_INFINITY), // 2
+        F8(0.0),               // 3
+        F8(f64::INFINITY),     // 4
+    ])
+    .await?;
+    let (nan_a, nan_b) = (&p[0], &p[1]);
+
+    for (label, r) in [("-Inf", &p[2]), ("0", &p[3]), ("+Inf", &p[4])] {
+        let lt = ord_cmp(&pool, nan_a, "<", r).await?;
+        let eq = ord_cmp(&pool, nan_a, "=", r).await?;
+        let gt = ord_cmp(&pool, nan_a, ">", r).await?;
+        // Totality: exactly one of < = > holds (NaN is NOT IEEE-incomparable here).
+        assert_eq!(
+            [lt, eq, gt].iter().filter(|b| **b).count(),
+            1,
+            "NaN vs {label} is not a total order: (<, =, >) = ({lt}, {eq}, {gt})"
+        );
+        // Determinism: a second independent NaN encryption lands identically.
+        let (lt_b, eq_b, gt_b) = (
+            ord_cmp(&pool, nan_b, "<", r).await?,
+            ord_cmp(&pool, nan_b, "=", r).await?,
+            ord_cmp(&pool, nan_b, ">", r).await?,
+        );
+        assert_eq!(
+            (lt, eq, gt),
+            (lt_b, eq_b, gt_b),
+            "NaN's order position vs {label} is not stable across re-encryption \
+             (deterministic index terms broken)"
+        );
+    }
+    Ok(())
+}
