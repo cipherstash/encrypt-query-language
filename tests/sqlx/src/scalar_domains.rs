@@ -514,26 +514,27 @@ impl MatchScalar for String {
 // a `LazyLock<Vec<Decimal>>` rather than going through `temporal_values!`. The
 // catalog stays zero-dep, so the parse happens here, not in `eql-scalars`.
 
-/// Typed `Decimal` fixture values, parsed once from `numeric`'s catalog row.
-static NUMERIC_VALUES_CELL: std::sync::LazyLock<Vec<rust_decimal::Decimal>> =
-    std::sync::LazyLock::new(|| {
-        use std::str::FromStr;
-        eql_scalars::NUMERIC
-            .fixtures
-            .iter()
-            .map(|f| match f {
-                eql_scalars::Fixture::Numeric(s) => rust_decimal::Decimal::from_str(s)
-                    .unwrap_or_else(|e| panic!("invalid numeric catalog fixture {s:?}: {e}")),
-                other => panic!("non-numeric fixture in numeric catalog row: {other:?}"),
-            })
-            .collect()
-    });
-
-/// The `Decimal` fixture values, in catalog order. Public so the `eql_v2_numeric`
-/// fixture module (emitted by `scalar_types!(fixture_modules)`) can hand the
-/// slice to `scalar_fixture!`.
-pub fn numeric_values() -> &'static [rust_decimal::Decimal] {
-    &NUMERIC_VALUES_CELL
+// `numeric`'s value wiring goes through the shared `lazy_values!` materializer
+// (same as `text`), parsing the catalog's `Fixture::Numeric` strings into
+// `Decimal`. `numeric_values()` stays public so the `eql_v2_numeric` fixture
+// module (emitted by `scalar_types!(fixture_modules)`) can hand the slice to
+// `scalar_fixture!`. `numeric` has no `to_sql_literal`/`mid_pivot` overrides —
+// only the value materialization is shared.
+lazy_values! {
+    cell      = NUMERIC_VALUES_CELL,
+    accessor  = numeric_values,
+    rust_type = rust_decimal::Decimal,
+    spec      = eql_scalars::NUMERIC,
+    variant   = Numeric,
+    pg_type   = "numeric",
+    parse     = |f| match f {
+        eql_scalars::Fixture::Numeric(s) => {
+            use std::str::FromStr;
+            rust_decimal::Decimal::from_str(s)
+                .unwrap_or_else(|e| panic!("invalid numeric catalog fixture {s:?}: {e}"))
+        }
+        other => panic!("non-numeric fixture in numeric catalog row: {other:?}"),
+    },
 }
 
 impl ScalarType for rust_decimal::Decimal {
