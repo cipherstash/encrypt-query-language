@@ -25,8 +25,15 @@ use crate::scalar_domains::ScalarType;
 
 /// The comparison-capable scalar tokens that get a doubles fixture. `bool` is
 /// storage-only (no equality domain) and is excluded.
-pub const DOUBLES_TOKENS: &[&str] =
-    &["int2", "int4", "int8", "date", "timestamptz", "numeric", "text"];
+pub const DOUBLES_TOKENS: &[&str] = &[
+    "int2",
+    "int4",
+    "int8",
+    "date",
+    "timestamptz",
+    "numeric",
+    "text",
+];
 
 /// How many distinct plaintexts to double. Small on purpose — the test only
 /// needs a handful of equal-plaintext pairs.
