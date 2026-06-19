@@ -241,25 +241,33 @@ fn float4_and_float8_share_index_terms_for_the_same_value() -> Result<()> {
         encrypt_store("xwidth_f8", "payload", &[F8(x as f64)], &cfg).await
     })?;
 
-    // Pull a string index term from the EQL payload JSON (`hm` / `ob`).
-    let term = |p: &serde_json::Value, key: &str| -> Result<String> {
-        p.get(key)
+    // Pull the scalar `hm` index term (a JSON string) from the EQL payload.
+    let hm = |p: &serde_json::Value| -> Result<String> {
+        p.get("hm")
             .and_then(serde_json::Value::as_str)
             .map(str::to_string)
-            .ok_or_else(|| anyhow::anyhow!("payload missing string `{key}`: {p}"))
+            .ok_or_else(|| anyhow::anyhow!("payload missing string `hm`: {p}"))
+    };
+    // Pull the `ob` ORE term. Unlike `hm`, `ob` is a JSON array of block
+    // strings, so compare the arrays directly rather than coercing to a string.
+    let ob = |p: &serde_json::Value| -> Result<serde_json::Value> {
+        p.get("ob")
+            .filter(|v| v.is_array())
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("payload missing array `ob`: {p}"))
     };
 
     // HMAC equality term: identical plaintext + key => identical hm, so the two
     // widths are equality-interchangeable at the term level.
     assert_eq!(
-        term(&f4_payloads[0], "hm")?,
-        term(&f8_payloads[0], "hm")?,
+        hm(&f4_payloads[0])?,
+        hm(&f8_payloads[0])?,
         "float4 and float8 of the same value must share the hm equality term"
     );
     // ORE term: same f64 input => same ORE ciphertext, so ordering is identical.
     assert_eq!(
-        term(&f4_payloads[0], "ob")?,
-        term(&f8_payloads[0], "ob")?,
+        ob(&f4_payloads[0])?,
+        ob(&f8_payloads[0])?,
         "float4 and float8 of the same value must share the ob ORE term"
     );
     Ok(())
