@@ -799,10 +799,18 @@ mod text_value_tests {
 /// `#[derive(sqlx::Type)]` + `#[sqlx(transparent)]` already generates the
 /// delegating `Type` AND `Decode` (and `Encode`) impls for the newtype, so we do
 /// NOT also `#[derive(sqlx::Decode)]` — that would be a conflicting impl.
-#[derive(Debug, Clone, Copy, PartialEq, sqlx::Type)]
+#[derive(Debug, Clone, Copy, sqlx::Type)]
 #[sqlx(transparent)]
 pub struct F4(pub f32);
 
+// `PartialEq` is hand-written via `total_cmp` (not derived) so it stays
+// consistent with the `Ord`/`Eq` impls below: derived IEEE equality breaks
+// `Eq`'s reflexivity for NaN and disagrees with `total_cmp` on signed zero.
+impl PartialEq for F4 {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.total_cmp(&other.0) == std::cmp::Ordering::Equal
+    }
+}
 impl Eq for F4 {}
 impl Ord for F4 {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
@@ -830,10 +838,16 @@ impl std::fmt::Display for F4 {
 /// `double precision`, `Default = F8(0.0)`. Like `F4`, the transparent
 /// `sqlx::Type` derive also supplies `Decode`/`Encode`, so they are not derived
 /// separately.
-#[derive(Debug, Clone, Copy, PartialEq, sqlx::Type)]
+#[derive(Debug, Clone, Copy, sqlx::Type)]
 #[sqlx(transparent)]
 pub struct F8(pub f64);
 
+// `PartialEq` is hand-written via `total_cmp` (not derived); see `F4` above.
+impl PartialEq for F8 {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.total_cmp(&other.0) == std::cmp::Ordering::Equal
+    }
+}
 impl Eq for F8 {}
 impl Ord for F8 {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
