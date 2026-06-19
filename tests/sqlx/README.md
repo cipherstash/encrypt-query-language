@@ -277,8 +277,10 @@ Tests connect to PostgreSQL database configured by SQLx:
 - ✅ ~~Convert remaining SQL tests~~ **COMPLETE!**
 - Property-based tests: implemented in `tests/encrypted_domain/property/` and
   `crates/eql-scalars/src/proptest_invariants.rs` (CIP-3141). One unit-level
-  **catalog** suite (no DB) plus two integration suites — **fixture** (oracle
-  over the committed fixture corpus) and **e2e** (oracle over fresh end-to-end
-  encryption, `--features proptest-e2e`).
+  **catalog** suite (no DB) plus two integration suites — **fixture** (operator +
+  function-double oracles, term-extractor identity, and bloom match smoke over the
+  committed real-ciphertext fixtures) and **e2e** (oracle over fresh end-to-end
+  encryption each run, `--features proptest-e2e`). See
+  `tests/encrypted_domain/property/README.md` for the full structure.
 - Performance benchmarks: Measure query performance with encrypted data
 - Integration tests: Test with CipherStash Proxy
