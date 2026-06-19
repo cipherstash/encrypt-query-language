@@ -1670,9 +1670,12 @@ SELECT $1::jsonb::{d} FROM generate_series(1, 5000)",
                             // Natural bare-operator form: `value {op} <lit>`. This
                             // is the inlinability tripwire — a broken inline flips
                             // it to Seq Scan.
-                            let natural = format!(
-                                "SELECT * FROM {table} WHERE value {op} '{lit}'::jsonb{cast}",
+                            let natural_predicate = format!(
+                                "value {op} '{lit}'::jsonb{cast}",
                                 op = $op, cast = rhs_cast,
+                            );
+                            let natural = format!(
+                                "SELECT * FROM {table} WHERE {natural_predicate}",
                             );
                             $crate::matrix::assert_index_scan_uses(
                                 &mut *tx, &natural, index,
@@ -1683,6 +1686,17 @@ SELECT $1::jsonb::{d} FROM generate_series(1, 5000)",
                                     extractor = extractor, using = $using,
                                 ),
                             ).await?;
+                            let matched: i64 = sqlx::query_scalar(&format!(
+                                "SELECT count(*) FROM {table} WHERE {natural_predicate}",
+                            ))
+                            .fetch_one(&mut *tx)
+                            .await?;
+                            assert_eq!(
+                                matched, 1,
+                                "scale: natural-form `{op}` (rhs {cast:?}) must match exactly \
+one row",
+                                op = $op, cast = rhs_cast,
+                            );
 
                             // Explicit extractor form: `{extractor}(value) {op}
                             // {extractor}(<lit>)`. Complements the natural form;
@@ -1700,10 +1714,12 @@ SELECT $1::jsonb::{d} FROM generate_series(1, 5000)",
                             // signature pins the domain), so skipping it here loses
                             // no coverage.
                             if !rhs_cast.is_empty() {
-                                let extracted = format!(
-                                    "SELECT * FROM {table} \
-WHERE {extractor}(value) {op} {extractor}('{lit}'::jsonb{cast})",
+                                let extracted_predicate = format!(
+                                    "{extractor}(value) {op} {extractor}('{lit}'::jsonb{cast})",
                                     extractor = extractor, op = $op, cast = rhs_cast,
+                                );
+                                let extracted = format!(
+                                    "SELECT * FROM {table} WHERE {extracted_predicate}",
                                 );
                                 $crate::matrix::assert_index_scan_uses(
                                     &mut *tx, &extracted, index,
@@ -1714,6 +1730,17 @@ WHERE {extractor}(value) {op} {extractor}('{lit}'::jsonb{cast})",
                                         extractor = extractor, using = $using,
                                     ),
                                 ).await?;
+                                let matched: i64 = sqlx::query_scalar(&format!(
+                                    "SELECT count(*) FROM {table} WHERE {extracted_predicate}",
+                                ))
+                                .fetch_one(&mut *tx)
+                                .await?;
+                                assert_eq!(
+                                    matched, 1,
+                                    "scale: extractor-form `{op}` (rhs {cast:?}) must match \
+exactly one row",
+                                    op = $op, cast = rhs_cast,
+                                );
                             }
                         }
                     }
