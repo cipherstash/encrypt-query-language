@@ -15,14 +15,15 @@ echo "=========================================="
 
 "$(dirname "$0")/../postgres/check_container.sh" "${POSTGRES_VERSION}"
 
-echo "Building EQL..."
-mise run --output prefix --force build
-
-echo "Updating SQLx migrations with built EQL..."
-cp release/cipherstash-encrypt.sql tests/sqlx/migrations/001_install_eql.sql
-
-echo "Running SQLx migrations..."
-(cd tests/sqlx && sqlx migrate run)
+# Prep the SQLx test DB exactly like the standard suite (test:sqlx): build EQL,
+# copy it into migrations, migrate, AND regenerate the gitignored per-type
+# fixtures. The fixtures are include_str!'d into the test binary at COMPILE time
+# by #[sqlx::test(fixtures(...))], so they MUST exist on disk before `cargo test`
+# compiles. This script previously hand-rolled build+cp+migrate but omitted
+# fixture generation; once fixtures became generated/gitignored the bench binary
+# stopped compiling (couldn't read tests/sqlx/fixtures/eql_v2_*.sql). Reusing
+# prep keeps bench in lockstep with test:sqlx and prevents that drift recurring.
+mise run --output prefix test:sqlx:prep
 
 echo "Running bench tests (cargo test --features bench)..."
 (cd tests/sqlx && cargo test --features bench)
