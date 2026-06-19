@@ -1587,42 +1587,137 @@ macro_rules! __scalar_matrix_scale_case {
                 );
 
                 let values: &[$scalar] = <$scalar as ScalarType>::fixture_values();
-                anyhow::ensure!(values.len() >= 2,
-                    "scale test requires >= 2 fixture rows for distinct filler/pivot");
-                let filler = values[0].clone();
-                let pivot = values[values.len() / 2].clone();
-                let filler_payload =
-                    $crate::scalar_domains::fetch_fixture_payload::<$scalar>(&pool, filler).await?;
-                let pivot_payload =
-                    $crate::scalar_domains::fetch_fixture_payload::<$scalar>(&pool, pivot).await?;
+                // Distinct, sorted fixture values so MIN / MID / MAX are well
+                // defined regardless of fixture order. ONE data shape serves
+                // every op-class a combo can carry — equality combos hold `=`;
+                // the ordered combos hold `=` plus `<`/`<=`/`>`/`>=`, all sharing
+                // a single extractor (so one functional index serves them):
+                //
+                //   5000 identical MID rows (the bulk) + ONE MIN row + ONE MAX
+                //   row = 5002 rows.
+                //
+                // Each op then anchors its predicate so EXACTLY ONE row matches,
+                // making the predicate ~1/5002 selective and the functional index
+                // the cheap plan with `enable_seqscan` left ON (Fact 4). A single
+                // MIN-bulk table cannot do this for both range directions at once
+                // (`value > MIN` would match every non-MIN row); a MID bulk with
+                // one MIN and one MAX pivot makes every op single-row-selective:
+                //   `=`  anchor MIN -> the single MIN row (bulk is MID)
+                //   `<`  anchor MID -> the single MIN row (MID < MID is false)
+                //   `<=` anchor MIN -> the single MIN row
+                //   `>`  anchor MID -> the single MAX row
+                //   `>=` anchor MAX -> the single MAX row
+                let mut sorted: Vec<$scalar> = values.to_vec();
+                sorted.sort();
+                sorted.dedup();
+                anyhow::ensure!(sorted.len() >= 3,
+                    "scale test requires >= 3 distinct fixture values for \
+min/mid/max single-row selectivity");
+                let min_v = sorted[0].clone();
+                let max_v = sorted[sorted.len() - 1].clone();
+                let mid_v = sorted[sorted.len() / 2].clone();
+
+                let min_payload =
+                    $crate::scalar_domains::fetch_fixture_payload::<$scalar>(&pool, min_v).await?;
+                let mid_payload =
+                    $crate::scalar_domains::fetch_fixture_payload::<$scalar>(&pool, mid_v).await?;
+                let max_payload =
+                    $crate::scalar_domains::fetch_fixture_payload::<$scalar>(&pool, max_v).await?;
 
                 let mut tx = pool.begin().await?;
                 sqlx::query(&format!(
                     "CREATE TEMP TABLE {table} (value {d}) ON COMMIT DROP",
                 )).execute(&mut *tx).await?;
+                // The bulk: 5000 identical MID rows.
                 sqlx::query(&format!(
                     "INSERT INTO {table}(value) \
 SELECT $1::jsonb::{d} FROM generate_series(1, 5000)",
-                )).bind(&filler_payload).execute(&mut *tx).await?;
+                )).bind(&mid_payload).execute(&mut *tx).await?;
+                // The two selective pivots: exactly one MIN row and one MAX row.
                 sqlx::query(&format!(
-                    "INSERT INTO {table}(value) VALUES ($1::jsonb::{d})",
-                )).bind(&pivot_payload).execute(&mut *tx).await?;
+                    "INSERT INTO {table}(value) VALUES ($1::jsonb::{d}), ($2::jsonb::{d})",
+                )).bind(&min_payload).bind(&max_payload).execute(&mut *tx).await?;
                 sqlx::query(&format!(
                     "CREATE INDEX {index} ON {table} USING {using} ({extractor}(value))", using = $using, extractor = extractor,
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!("ANALYZE {table}"))
                     .execute(&mut *tx).await?;
+                // enable_seqscan LEFT ON — this is the cost-PREFERENCE proof, not
+                // the usability proof (the sibling `*_index_engages_*` arm forces
+                // seqscan off over the ~17-row fixture). See Fact 1 / Fact 4.
 
-                let lit = pivot_payload.replace('\'', "''");
-                $crate::matrix::assert_index_scan_uses(
-                    &mut *tx,
-                    &format!("SELECT * FROM {table} WHERE value = '{lit}'::jsonb::{d}"),
-                    index,
-                    &format!(
-                        "with seqscan enabled the planner must prefer the {extractor} {using} index for a selective =",
-                        extractor = extractor, using = $using,
-                    ),
-                ).await?;
+                // Both RHS forms (`::{domain}` and bare `::jsonb`) and BOTH the
+                // natural operator form and the explicit extractor form are
+                // asserted per op, mirroring the validity arm
+                // (`__scalar_matrix_index_case!`) minus the forced seqscan-off.
+                let rhs_casts = [format!("::{d}", d = d), String::new()];
+                $(
+                    // `<>` is never index-selective over 5000 rows and is not a
+                    // member of any index combo; guard it out defensively.
+                    if $op != "<>" {
+                        // Per-op anchor giving a single-row match against the
+                        // bulk-MID / one-MIN / one-MAX table (see the header).
+                        let anchor: &str = match $op {
+                            "=" => &min_payload,
+                            "<" => &mid_payload,
+                            "<=" => &min_payload,
+                            ">" => &mid_payload,
+                            ">=" => &max_payload,
+                            _ => &min_payload,
+                        };
+                        let lit = anchor.replace('\'', "''");
+                        for rhs_cast in &rhs_casts {
+                            // Natural bare-operator form: `value {op} <lit>`. This
+                            // is the inlinability tripwire — a broken inline flips
+                            // it to Seq Scan.
+                            let natural = format!(
+                                "SELECT * FROM {table} WHERE value {op} '{lit}'::jsonb{cast}",
+                                op = $op, cast = rhs_cast,
+                            );
+                            $crate::matrix::assert_index_scan_uses(
+                                &mut *tx, &natural, index,
+                                &format!(
+                                    "scale: natural-form `{op}` (rhs {cast:?}) must PREFER the \
+{extractor} {using} index for a single-row predicate (seqscan ON)",
+                                    op = $op, cast = rhs_cast,
+                                    extractor = extractor, using = $using,
+                                ),
+                            ).await?;
+
+                            // Explicit extractor form: `{extractor}(value) {op}
+                            // {extractor}(<lit>)`. Complements the natural form;
+                            // a divergence between the two surfaces an inlining
+                            // break.
+                            //
+                            // ONLY the domain-cast RHS (`::{d}`) — never bare
+                            // `::jsonb`. A standalone `eq_term`/`ord_term` call on
+                            // a bare-jsonb argument is ambiguous: the extractor is
+                            // overloaded across the domain family, and bare jsonb
+                            // implicitly casts to several of them, so Postgres
+                            // raises `function eql_v3.<extractor>(jsonb) is not
+                            // unique`. The natural operator form above already
+                            // exercises the bare-jsonb RHS path (the operator
+                            // signature pins the domain), so skipping it here loses
+                            // no coverage.
+                            if !rhs_cast.is_empty() {
+                                let extracted = format!(
+                                    "SELECT * FROM {table} \
+WHERE {extractor}(value) {op} {extractor}('{lit}'::jsonb{cast})",
+                                    extractor = extractor, op = $op, cast = rhs_cast,
+                                );
+                                $crate::matrix::assert_index_scan_uses(
+                                    &mut *tx, &extracted, index,
+                                    &format!(
+                                        "scale: extractor-form `{op}` (rhs {cast:?}) must PREFER the \
+{extractor} {using} index for a single-row predicate (seqscan ON)",
+                                        op = $op, cast = rhs_cast,
+                                        extractor = extractor, using = $using,
+                                    ),
+                                ).await?;
+                            }
+                        }
+                    }
+                )+
 
                 tx.commit().await?;
                 Ok(())
