@@ -36,16 +36,19 @@ workspace = true
 [features]
 default = []
 # Opt-in to slow benchmark / regression / scale tests. Without this feature
-# they're #[ignore]'d so PR CI stays fast. The `bench-eql` workflow enables
-# it on push to main and on a nightly schedule. Run locally with:
-#   mise run test:bench
-bench = []
-# Opt-in to the matrix's per-(variant, index) scale tests. Each builds
-# ~5000 rows of filler plus a single selective pivot and asserts the
-# planner *prefers* the functional index with `enable_seqscan` left on.
-# The default index tests force seqscan off and only prove the index is
-# *usable*. Off by default to keep `mise run test` fast; CI runs with
-# `--features scale`.
+# they're #[ignore]'d or #[cfg]'d out so PR CI stays fast. Enabling `bench`
+# transitively enables `scale` (below), so the `bench-eql` workflow — push to
+# main + nightly, via `tasks/test/bench.sh` (`cargo test --features bench`) —
+# is the runner that exercises the per-combo scale-preference matrix tests.
+# Run locally with: mise run test:bench
+bench = ["scale"]
+# The matrix's per-(variant, index) scale-preference tests
+# (`#[cfg(feature = "scale")]`). Each replicates ONE real fixture payload to
+# ~5000 rows plus a selective pivot and asserts the planner *prefers* the
+# functional index with `enable_seqscan` left ON. The `*_index_engages_*` arms
+# force seqscan off and only prove the index is *usable*. Off in fast PR CI
+# (`mise run test`); activated transitively by `bench` (above), so the
+# `bench-eql` workflow runs them. Not enabled directly anywhere else.
 scale = []
 # Opt-in to the e2e property suite (CIP-3141). It generates fresh random
 # plaintexts each run and encrypts them end-to-end through ZeroKMS via
