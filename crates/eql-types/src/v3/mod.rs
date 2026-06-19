@@ -50,6 +50,8 @@ use schemars::{schema::RootSchema, schema_for, JsonSchema};
 
 pub mod bool;
 pub mod date;
+pub mod float4;
+pub mod float8;
 pub mod int2;
 pub mod int4;
 pub mod int8;
@@ -166,5 +168,13 @@ pub fn all() -> Vec<Box<dyn DomainType>> {
         Box::new(PhantomData::<text::TextOrd>),
         Box::new(PhantomData::<text::TextSearch>),
         Box::new(PhantomData::<bool::Bool>),
+        Box::new(PhantomData::<float4::Float4>),
+        Box::new(PhantomData::<float4::Float4Eq>),
+        Box::new(PhantomData::<float4::Float4OrdOre>),
+        Box::new(PhantomData::<float4::Float4Ord>),
+        Box::new(PhantomData::<float8::Float8>),
+        Box::new(PhantomData::<float8::Float8Eq>),
+        Box::new(PhantomData::<float8::Float8OrdOre>),
+        Box::new(PhantomData::<float8::Float8Ord>),
     ]
 }
