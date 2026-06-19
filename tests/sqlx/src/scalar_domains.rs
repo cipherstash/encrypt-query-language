@@ -127,6 +127,22 @@ pub trait ScalarType:
         values.sort();
         values
     }
+
+    /// A proptest strategy producing fresh plaintexts for the e2e oracle.
+    ///
+    /// The e2e suite encrypts each generated value end-to-end through ZeroKMS,
+    /// so the strategy MUST only produce values the type's EQL cast accepts.
+    ///
+    /// Required (not defaulted on purpose): a `where Self: Arbitrary` bound on a
+    /// provided default leaks into the method's contract for EVERY caller —
+    /// including the generic `T: ScalarType` oracle drivers — so `String` /
+    /// `Decimal` / `NaiveDate` (not `Arbitrary`) could never satisfy it, even
+    /// though they override the body. Making it required keeps the bound off the
+    /// signature. Integers supply the full `any::<Self>()` range (proc-macro
+    /// generated, in `eql-tests-macros`); non-integer scalars sample their
+    /// cast-valid fixture set — the only bounded strategy `Arbitrary` can't give
+    /// them, and always cast-valid because every fixture already round-trips.
+    fn arbitrary_value() -> proptest::strategy::BoxedStrategy<Self>;
 }
 
 /// An **ordered** scalar — one whose `_ord` domains support `<`/`<=`/`>`/`>=`.
@@ -142,13 +158,27 @@ pub trait ScalarType:
 /// (e.g. `String`, whose `Default` is the degenerate empty string) override it
 /// with a real median fixture.
 pub trait OrderedScalar: ScalarType {
-    /// The low boundary pivot. Integer scalars return `Self::MIN`; others an
-    /// explicit sentinel. Present verbatim in `fixture_values()`.
-    fn min_pivot() -> Self;
+    /// The low boundary pivot — the smallest `fixture_values()` entry. Derived
+    /// (the `ScalarType` supertrait bounds `Ord + Clone`), so it is a fixture
+    /// row by construction and cannot drift out of the fixture table. No impl
+    /// overrides this.
+    fn min_pivot() -> Self {
+        Self::fixture_values()
+            .iter()
+            .min()
+            .expect("an ordered scalar must have at least one fixture value")
+            .clone()
+    }
 
-    /// The high boundary pivot. Integer scalars return `Self::MAX`; others an
-    /// explicit sentinel. Present verbatim in `fixture_values()`.
-    fn max_pivot() -> Self;
+    /// The high boundary pivot — the largest `fixture_values()` entry. Derived,
+    /// like `min_pivot()`. No impl overrides this.
+    fn max_pivot() -> Self {
+        Self::fixture_values()
+            .iter()
+            .max()
+            .expect("an ordered scalar must have at least one fixture value")
+            .clone()
+    }
 
     /// The interior pivot. Defaults to `Self::default()` (the numeric origin for
     /// signed scalars); override where `Default` is not a usable fixture anchor.
@@ -211,8 +241,9 @@ crate::scalar_types!(scalar_type_impls);
 /// a `#[cfg(test)]` module asserting the parsed values track the catalog and
 /// include the pivots. The chrono analogue of `eql_scalars::int_values!`
 /// (integers materialise a `const` slice; temporals can't, so values live in a
-/// `LazyLock`). `parse`/`min_pivot`/`max_pivot`/`sql_lit` are expressions so each
-/// type supplies its own chrono parsing, sentinel pivots, and SQL literal form.
+/// `LazyLock`). `parse`/`sql_lit` are expressions so each type supplies its own
+/// chrono parsing and SQL literal form. Boundary pivots are not parameters: they
+/// derive from `fixture_values()` via the `OrderedScalar` defaults.
 macro_rules! temporal_values {
     (
         cell      = $cell:ident,
@@ -222,8 +253,6 @@ macro_rules! temporal_values {
         variant   = $variant:ident,
         pg_type   = $pg:literal,
         parse     = $parse:expr,
-        min_pivot = $min:expr,
-        max_pivot = $max:expr,
         sql_lit   = $sql_lit:expr $(,)?
     ) => {
         static $cell: std::sync::LazyLock<Vec<$ty>> = std::sync::LazyLock::new(|| {
@@ -250,14 +279,20 @@ macro_rules! temporal_values {
                 let f: fn(&$ty) -> String = $sql_lit;
                 f(value)
             }
+            fn arbitrary_value() -> proptest::strategy::BoxedStrategy<$ty> {
+                use proptest::strategy::Strategy;
+                // Sample the catalog fixture values — every one is cast-valid and
+                // already exercised by the fixture suite; the e2e novelty is that
+                // the SAME plaintext is independently re-encrypted, which the
+                // duplicate-injection in run_e2e_property guarantees.
+                proptest::sample::select($accessor().to_vec()).boxed()
+            }
         }
 
         impl OrderedScalar for $ty {
-            fn min_pivot() -> $ty { $min }
-            fn max_pivot() -> $ty { $max }
-            // `mid_pivot` inherits the default `Self::default()`. Every chrono
-            // temporal type's `Default` is the epoch (`1970-01-01` for a date),
-            // which is also `origin()` — a real fixture and the sign boundary.
+            // Boundary pivots derive from `fixture_values()`; `mid_pivot`
+            // inherits `Self::default()` (the epoch), which is `origin()` and a
+            // real fixture. Nothing to override.
         }
 
         impl SignedScalar for $ty {
@@ -298,6 +333,40 @@ macro_rules! temporal_values {
     };
 }
 
+/// Materialise a scalar's catalog fixtures into a `LazyLock<Vec<$ty>>` plus a
+/// public accessor, parsing each `Fixture` via the supplied closure. The
+/// kind-agnostic core shared by every non-integer scalar: `temporal_values!`
+/// adds the chrono-specific `ScalarType`/`OrderedScalar`/`SignedScalar` wiring on
+/// top, while `text`/`numeric` supply their own (they are not signed). Integer
+/// scalars do not use this — they materialise a `const` slice in `eql-scalars`
+/// (`int_values!`) and impl `ScalarType` via the proc-macro.
+///
+/// `$variant` is the `eql_scalars::Fixture` variant this scalar's rows use
+/// (`Text`/`Numeric`/`Date`/`Timestamptz`); `$parse` maps each `&Fixture` to
+/// `$ty` (and owns its own loud "wrong variant" panic). The accessor is `pub` so
+/// the `eql_v2_<T>` fixture module can hand the slice to `scalar_fixture!`.
+macro_rules! lazy_values {
+    (
+        cell      = $cell:ident,
+        accessor  = $accessor:ident,
+        rust_type = $ty:ty,
+        spec      = $spec:path,
+        variant   = $variant:ident,
+        pg_type   = $pg:literal,
+        parse     = $parse:expr $(,)?
+    ) => {
+        static $cell: std::sync::LazyLock<Vec<$ty>> = std::sync::LazyLock::new(|| {
+            let parse: fn(&::eql_scalars::Fixture) -> $ty = $parse;
+            $spec.fixtures.iter().map(parse).collect()
+        });
+
+        #[doc = concat!("Typed `", stringify!($ty), "` fixtures for `", $pg, "`, materialised once from the catalog.")]
+        pub fn $accessor() -> &'static [$ty] {
+            &$cell
+        }
+    };
+}
+
 // `date`'s `ScalarType` wiring is generated from its catalog row by
 // `temporal_values!` — the chrono analogue of the integer `int_values!` path.
 // Values can't be a `const` slice (`from_ymd_opt` is not `const`), so they live
@@ -313,8 +382,6 @@ temporal_values! {
     pg_type   = "date",
     parse     = |s| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
         .expect("catalog date fixture must be YYYY-MM-DD"),
-    min_pivot = chrono::NaiveDate::from_ymd_opt(1900, 1, 1).expect("1900-01-01 valid"),
-    max_pivot = chrono::NaiveDate::from_ymd_opt(2099, 12, 31).expect("2099-12-31 valid"),
     sql_lit   = |v| format!("'{v}'"),
 }
 
@@ -334,12 +401,6 @@ temporal_values! {
     parse     = |s| chrono::DateTime::parse_from_rfc3339(s)
         .expect("catalog timestamptz fixture must be RFC3339")
         .with_timezone(&chrono::Utc),
-    min_pivot = "1900-01-01T00:00:00Z"
-        .parse()
-        .expect("1900-01-01T00:00:00Z is a valid timestamp"),
-    max_pivot = "2099-12-31T23:59:59Z"
-        .parse()
-        .expect("2099-12-31T23:59:59Z is a valid timestamp"),
     sql_lit   = |v| format!("'{}'", v.to_rfc3339()),
 }
 
@@ -404,24 +465,23 @@ mod timestamptz_value_guards {
 // `text_values()` is public so the `eql_v2_text` fixture module (emitted by
 // `scalar_types!(fixture_modules)`) can hand the slice to `scalar_fixture!`.
 
-/// Typed `String` fixture values, built once from `text`'s catalog row.
-/// `eql_scalars::TEXT_VALUES` is a `&[&'static str]` const, but the `ScalarType`
-/// contract returns `&[Self]` = `&[String]` (owned), so we materialise them into
-/// a `LazyLock<Vec<String>>` and return a borrow — the same shape as
-/// `date_values`. (Unlike `date`, no parsing is needed; the values are the
-/// strings verbatim.)
-static TEXT_VALUES_CELL: std::sync::LazyLock<Vec<String>> = std::sync::LazyLock::new(|| {
-    eql_scalars::TEXT_VALUES
-        .iter()
-        .map(|s| s.to_string())
-        .collect()
-});
-
-/// The `String` fixture values, in catalog order. Public so the `eql_v2_text`
-/// fixture module (emitted by `scalar_types!(fixture_modules)`) can hand the
-/// slice to `scalar_fixture!`.
-pub fn text_values() -> &'static [String] {
-    &TEXT_VALUES_CELL
+// `text`'s value wiring now goes through the shared `lazy_values!` materializer
+// (the same macro `numeric` uses), parsing the catalog's `Fixture::Text` rows
+// directly. `text_values()` stays public so the `eql_v2_text` fixture module
+// (emitted by `scalar_types!(fixture_modules)`) can hand the slice to
+// `scalar_fixture!`. The `to_sql_literal` / `mid_pivot` / `MatchScalar` methods
+// below are `text`'s genuinely-differing bits and remain hand-written.
+lazy_values! {
+    cell      = TEXT_VALUES_CELL,
+    accessor  = text_values,
+    rust_type = String,
+    spec      = eql_scalars::TEXT,
+    variant   = Text,
+    pg_type   = "text",
+    parse     = |f| match f {
+        eql_scalars::Fixture::Text(s) => s.to_string(),
+        other => panic!("non-text fixture in text catalog row: {other:?}"),
+    },
 }
 
 impl ScalarType for String {
@@ -436,25 +496,18 @@ impl ScalarType for String {
     fn to_sql_literal(value: &Self) -> String {
         format!("'{}'", value.replace('\'', "''"))
     }
+
+    fn arbitrary_value() -> proptest::strategy::BoxedStrategy<Self> {
+        use proptest::strategy::Strategy;
+        proptest::sample::select(text_values().to_vec()).boxed()
+    }
 }
 
 impl OrderedScalar for String {
-    /// Lexicographic min pivot — the lexicographically-smallest fixture
-    /// (`"aard"`). Present verbatim in `fixture_values()`; keep in sync with
-    /// `TEXT_FIXTURES`.
-    fn min_pivot() -> Self {
-        "aard".to_string()
-    }
-
-    /// Lexicographic max pivot — the lexicographically-largest fixture
-    /// (`"zzzz"`).
-    fn max_pivot() -> Self {
-        "zzzz".to_string()
-    }
-
     /// Interior pivot — a real median fixture. `String::default()` is `""`,
     /// which is degenerate for ORE (issue #262), so `text` overrides the
-    /// inherited default with a genuine middle value.
+    /// inherited default with a genuine middle value. The boundary pivots are
+    /// inherited (derived from `fixture_values()` = `"aard"`/`"zzzz"`).
     fn mid_pivot() -> Self {
         "frank".to_string()
     }
@@ -490,26 +543,27 @@ impl MatchScalar for String {
 // a `LazyLock<Vec<Decimal>>` rather than going through `temporal_values!`. The
 // catalog stays zero-dep, so the parse happens here, not in `eql-scalars`.
 
-/// Typed `Decimal` fixture values, parsed once from `numeric`'s catalog row.
-static NUMERIC_VALUES_CELL: std::sync::LazyLock<Vec<rust_decimal::Decimal>> =
-    std::sync::LazyLock::new(|| {
-        use std::str::FromStr;
-        eql_scalars::NUMERIC
-            .fixtures
-            .iter()
-            .map(|f| match f {
-                eql_scalars::Fixture::Numeric(s) => rust_decimal::Decimal::from_str(s)
-                    .unwrap_or_else(|e| panic!("invalid numeric catalog fixture {s:?}: {e}")),
-                other => panic!("non-numeric fixture in numeric catalog row: {other:?}"),
-            })
-            .collect()
-    });
-
-/// The `Decimal` fixture values, in catalog order. Public so the `eql_v2_numeric`
-/// fixture module (emitted by `scalar_types!(fixture_modules)`) can hand the
-/// slice to `scalar_fixture!`.
-pub fn numeric_values() -> &'static [rust_decimal::Decimal] {
-    &NUMERIC_VALUES_CELL
+// `numeric`'s value wiring goes through the shared `lazy_values!` materializer
+// (same as `text`), parsing the catalog's `Fixture::Numeric` strings into
+// `Decimal`. `numeric_values()` stays public so the `eql_v2_numeric` fixture
+// module (emitted by `scalar_types!(fixture_modules)`) can hand the slice to
+// `scalar_fixture!`. `numeric` has no `to_sql_literal`/`mid_pivot` overrides —
+// only the value materialization is shared.
+lazy_values! {
+    cell      = NUMERIC_VALUES_CELL,
+    accessor  = numeric_values,
+    rust_type = rust_decimal::Decimal,
+    spec      = eql_scalars::NUMERIC,
+    variant   = Numeric,
+    pg_type   = "numeric",
+    parse     = |f| match f {
+        eql_scalars::Fixture::Numeric(s) => {
+            use std::str::FromStr;
+            rust_decimal::Decimal::from_str(s)
+                .unwrap_or_else(|e| panic!("invalid numeric catalog fixture {s:?}: {e}"))
+        }
+        other => panic!("non-numeric fixture in numeric catalog row: {other:?}"),
+    },
 }
 
 impl ScalarType for rust_decimal::Decimal {
@@ -521,22 +575,17 @@ impl ScalarType for rust_decimal::Decimal {
     // `to_sql_literal` inherits the default (`value.to_string()`): a `Decimal`'s
     // `Display` form (e.g. `-1000000000000`, `0.001`) is a valid SQL numeric
     // literal, so no quoting/override is needed (unlike `text` / `date`).
+
+    fn arbitrary_value() -> proptest::strategy::BoxedStrategy<Self> {
+        use proptest::strategy::Strategy;
+        proptest::sample::select(numeric_values().to_vec()).boxed()
+    }
 }
 
 impl OrderedScalar for rust_decimal::Decimal {
-    /// The smallest fixture decimal. Present verbatim in `fixture_values()`.
-    fn min_pivot() -> Self {
-        use std::str::FromStr;
-        rust_decimal::Decimal::from_str("-1000000000000").unwrap()
-    }
-
-    /// The largest fixture decimal. Present verbatim in `fixture_values()`.
-    fn max_pivot() -> Self {
-        use std::str::FromStr;
-        rust_decimal::Decimal::from_str("1000000000000").unwrap()
-    }
-    // `mid_pivot` inherits the default `Self::default()` = `Decimal::ZERO` = 0,
-    // which is a real fixture and the numeric origin.
+    // Boundary pivots derive from `fixture_values()` (= ±1_000_000_000_000);
+    // `mid_pivot` inherits `Decimal::ZERO` (`Default`), a real fixture and the
+    // numeric origin. Nothing to override.
 }
 
 // `Decimal` is deliberately NOT `SignedScalar`: like `text`, it is an
@@ -563,6 +612,19 @@ mod numeric_value_guards {
             unique.len(),
             vals.len(),
             "two numeric fixtures alias to the same Decimal value",
+        );
+    }
+
+    /// `mid_pivot` is the only pivot `numeric` does not derive (it inherits
+    /// `Decimal::ZERO`). The matrix fetches its ciphertext via
+    /// `fetch_fixture_payload`, so `0` must be a fixture row present verbatim.
+    #[test]
+    fn mid_pivot_is_a_fixture() {
+        let values = numeric_values();
+        let mid = <rust_decimal::Decimal as OrderedScalar>::mid_pivot();
+        assert!(
+            values.contains(&mid),
+            "numeric mid_pivot {mid:?} must be a fixture"
         );
     }
 }
@@ -603,6 +665,14 @@ impl ScalarType for bool {
     }
     // `to_sql_literal` inherits the default (`value.to_string()` => `true`/`false`),
     // which is a valid SQL boolean literal, so no override is needed.
+
+    // `bool` is storage-only and never feeds an oracle suite, but `arbitrary_value`
+    // is a required `ScalarType` method, so sample its two fixtures like every
+    // other non-integer scalar.
+    fn arbitrary_value() -> proptest::strategy::BoxedStrategy<Self> {
+        use proptest::strategy::Strategy;
+        proptest::sample::select(bool_values().to_vec()).boxed()
+    }
 }
 
 // `bool` is deliberately NOT `OrderedScalar` / `SignedScalar` / `MatchScalar`:
@@ -1236,5 +1306,141 @@ mod catalog_resolution_tests {
         // `@>` is not served by any extractor on int4 `_eq` ([Hm]).
         let spec = ScalarDomainSpec::new::<i32>(Variant::Eq);
         assert!(combo_extractor(&spec, &["@>"]).is_err());
+    }
+}
+
+#[cfg(test)]
+mod pivot_derivation_tests {
+    use super::*;
+
+    /// The invariant that lets `min_pivot`/`max_pivot` be DERIVED from
+    /// `fixture_values()` instead of hand-written: for every ordered scalar the
+    /// boundary pivots equal the extremes of its own fixture list. Passes with
+    /// the current hand-written pivots (they already equal the extremes) and
+    /// keeps passing once the trait derives them — so it guards the refactor in
+    /// both directions.
+    fn boundary_pivots_are_fixture_extremes<T: OrderedScalar>() {
+        let values = T::fixture_values();
+        let want_min = values.iter().min().expect("≥1 fixture").clone();
+        let want_max = values.iter().max().expect("≥1 fixture").clone();
+        assert_eq!(
+            T::min_pivot(),
+            want_min,
+            "min_pivot must be the smallest fixture"
+        );
+        assert_eq!(
+            T::max_pivot(),
+            want_max,
+            "max_pivot must be the largest fixture"
+        );
+    }
+
+    #[test]
+    fn every_ordered_scalar_pivots_on_its_fixture_extremes() {
+        boundary_pivots_are_fixture_extremes::<i16>();
+        boundary_pivots_are_fixture_extremes::<i32>();
+        boundary_pivots_are_fixture_extremes::<i64>();
+        boundary_pivots_are_fixture_extremes::<chrono::NaiveDate>();
+        boundary_pivots_are_fixture_extremes::<chrono::DateTime<chrono::Utc>>();
+        boundary_pivots_are_fixture_extremes::<rust_decimal::Decimal>();
+        boundary_pivots_are_fixture_extremes::<String>();
+    }
+}
+
+#[cfg(test)]
+mod arbitrary_value_tests {
+    use super::*;
+    use proptest::strategy::Strategy;
+    use proptest::test_runner::TestRunner;
+
+    fn draws_a_value<T: ScalarType>() {
+        let strat = T::arbitrary_value();
+        let mut runner = TestRunner::default();
+        // A single successful draw proves the strategy is wired and non-empty.
+        let tree = strat
+            .new_tree(&mut runner)
+            .expect("arbitrary_value strategy must produce a value");
+        let _v: T = proptest::strategy::ValueTree::current(&tree);
+    }
+
+    #[test]
+    fn every_ordered_scalar_has_a_working_value_strategy() {
+        draws_a_value::<i16>();
+        draws_a_value::<i32>();
+        draws_a_value::<i64>();
+        draws_a_value::<chrono::NaiveDate>();
+        draws_a_value::<chrono::DateTime<chrono::Utc>>();
+        draws_a_value::<rust_decimal::Decimal>();
+        draws_a_value::<String>();
+    }
+}
+
+#[cfg(test)]
+mod oracle_inventory_tests {
+    use super::*;
+    use eql_scalars::CATALOG;
+
+    /// The set of catalog tokens that should get an `eq` + `ord` fixture/e2e
+    /// oracle suite is exactly the ordered (non-storage-only) scalars. Pin it so
+    /// the catalog-driven suite macros (fixture_oracle / e2e_oracle) cannot drift
+    /// from the catalog. `bool` is storage-only and must be excluded.
+    #[test]
+    fn ordered_scalar_tokens_match_catalog() {
+        // `supports_ord` calls `terms_for`, which PANICS on an undeclared
+        // (token, suffix) pair, so guard with `is_declared_for` first — bool has
+        // no `_ord` domain and must short-circuit to false, not panic.
+        let ordered: Vec<&str> = CATALOG
+            .iter()
+            .filter(|s| Variant::Ord.is_declared_for(s.token) && Variant::Ord.supports_ord(s.token))
+            .map(|s| s.token)
+            .collect();
+        assert_eq!(
+            ordered,
+            vec![
+                "int4",
+                "int2",
+                "int8",
+                "date",
+                "timestamptz",
+                "numeric",
+                "text"
+            ],
+        );
+        // bool is storage-only: no ordered domain, so it is excluded.
+        assert!(!ordered.contains(&"bool"));
+    }
+
+    /// Drift guard: the ordered-scalar set below is the EXACT list that must
+    /// appear as `fixture_oracle_suite!(…, ordered)` in `fixture_oracle.rs` AND
+    /// `e2e_oracle_suite!(…)` in `e2e_oracle.rs`. Those macro lists live in the
+    /// test binary and cannot be introspected from here, so this test pins the
+    /// expected set; a new ordered scalar added to CATALOG fails here until both
+    /// suite lists are updated. (The matrix tier has its own gate:
+    /// `mise run test:matrix:inventory`.)
+    #[test]
+    fn ordered_scalars_requiring_oracle_wiring() {
+        // Same `is_declared_for` guard as above: `supports_ord` panics on a
+        // scalar with no `_ord` domain (bool), so short-circuit first.
+        let ordered: Vec<&str> = CATALOG
+            .iter()
+            .filter(|s| Variant::Ord.is_declared_for(s.token) && Variant::Ord.supports_ord(s.token))
+            .map(|s| s.token)
+            .collect();
+        // Keep in lockstep with the fixture_oracle_suite! / e2e_oracle_suite!
+        // instantiation lists.
+        assert_eq!(
+            ordered,
+            vec![
+                "int4",
+                "int2",
+                "int8",
+                "date",
+                "timestamptz",
+                "numeric",
+                "text"
+            ],
+            "a new ordered scalar must be wired into BOTH oracle suites \
+             (fixture_oracle.rs and e2e_oracle.rs)"
+        );
     }
 }

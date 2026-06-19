@@ -19,6 +19,7 @@ scalars::<T>::matrix_<T>_eq_index_engages_hash
 scalars::<T>::matrix_<T>_eq_lt_blocker
 scalars::<T>::matrix_<T>_eq_lte_blocker
 scalars::<T>::matrix_<T>_eq_native_absent_ops
+scalars::<T>::matrix_<T>_eq_native_jsonb_blockers
 scalars::<T>::matrix_<T>_eq_neq_pivot_max_correctness
 scalars::<T>::matrix_<T>_eq_neq_pivot_max_cross_shape
 scalars::<T>::matrix_<T>_eq_neq_pivot_mid_correctness
@@ -88,6 +89,7 @@ scalars::<T>::matrix_<T>_ord_lte_pivot_min_correctness
 scalars::<T>::matrix_<T>_ord_lte_pivot_min_cross_shape
 scalars::<T>::matrix_<T>_ord_lte_supported_null
 scalars::<T>::matrix_<T>_ord_native_absent_ops
+scalars::<T>::matrix_<T>_ord_native_jsonb_blockers
 scalars::<T>::matrix_<T>_ord_neq_pivot_max_correctness
 scalars::<T>::matrix_<T>_ord_neq_pivot_max_cross_shape
 scalars::<T>::matrix_<T>_ord_neq_pivot_mid_correctness
@@ -164,6 +166,7 @@ scalars::<T>::matrix_<T>_ord_ore_lte_pivot_min_correctness
 scalars::<T>::matrix_<T>_ord_ore_lte_pivot_min_cross_shape
 scalars::<T>::matrix_<T>_ord_ore_lte_supported_null
 scalars::<T>::matrix_<T>_ord_ore_native_absent_ops
+scalars::<T>::matrix_<T>_ord_ore_native_jsonb_blockers
 scalars::<T>::matrix_<T>_ord_ore_neq_pivot_max_correctness
 scalars::<T>::matrix_<T>_ord_ore_neq_pivot_max_cross_shape
 scalars::<T>::matrix_<T>_ord_ore_neq_pivot_mid_correctness
@@ -256,6 +259,7 @@ scalars::<T>::matrix_<T>_search_match_contains_self
 scalars::<T>::matrix_<T>_search_match_disjoint_miss
 scalars::<T>::matrix_<T>_search_match_index_engages_gin
 scalars::<T>::matrix_<T>_search_native_absent_ops
+scalars::<T>::matrix_<T>_search_native_jsonb_blockers
 scalars::<T>::matrix_<T>_search_neq_pivot_max_correctness
 scalars::<T>::matrix_<T>_search_neq_pivot_max_cross_shape
 scalars::<T>::matrix_<T>_search_neq_pivot_mid_correctness
@@ -285,6 +289,7 @@ scalars::<T>::matrix_<T>_storage_aggregate_typecheck_max
 scalars::<T>::matrix_<T>_storage_aggregate_typecheck_min
 scalars::<T>::matrix_<T>_storage_contained_by_blocker
 scalars::<T>::matrix_<T>_storage_contains_blocker
+scalars::<T>::matrix_<T>_storage_count_distinct_extractor
 scalars::<T>::matrix_<T>_storage_count_path_cast
 scalars::<T>::matrix_<T>_storage_count_typed_column
 scalars::<T>::matrix_<T>_storage_eq_blocker
@@ -293,6 +298,7 @@ scalars::<T>::matrix_<T>_storage_gte_blocker
 scalars::<T>::matrix_<T>_storage_lt_blocker
 scalars::<T>::matrix_<T>_storage_lte_blocker
 scalars::<T>::matrix_<T>_storage_native_absent_ops
+scalars::<T>::matrix_<T>_storage_native_jsonb_blockers
 scalars::<T>::matrix_<T>_storage_neq_blocker
 scalars::<T>::matrix_<T>_storage_path_op_blockers
 scalars::<T>::matrix_<T>_storage_payload_check
