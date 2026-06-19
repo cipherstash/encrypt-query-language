@@ -34,6 +34,7 @@ impl Fixture {
             | Fixture::Jsonb(_)
             | Fixture::Date(_)
             | Fixture::Timestamptz(_)
+            | Fixture::Float(_)
             | Fixture::Bool(_) => None,
         }
     }

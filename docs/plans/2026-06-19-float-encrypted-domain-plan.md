@@ -6,6 +6,8 @@
 
 **Architecture:** `float4`/`float8` are **ordered scalars** reusing the existing four-domain shape `ORDERED_INT_DOMAINS` (storage `""`, `_eq` `[Hm]`, `_ord_ore` `[Ore]`, `_ord` `[Ore]`) — the same shape `int4`/`numeric` use. They are duplicated across two Postgres widths but **both encrypt through a single f64 crypto path** (`Plaintext::Float(Some(x as f64))`); `float4` vs `float8` is purely a Postgres-surface distinction (column type, domain name, decrypt type). Float is a brand-new `ScalarKind` (two variants `F32`/`F64`), so — like `numeric` — it touches the proc-macro fixture-router, not just the type list. No new comparator, no new domain shape, no new operators: the kind-agnostic codegen renderers (confirmed below to switch on nothing) generate the SQL, and the N-block ORE comparator already orders f64 (`f64::ENCODED_LEN == 8`, same as `i64`).
 
+**Cross-width comparison is out of scope (by design).** `eql_v3.float4` and `eql_v3.float8` are **separate domains**, exactly as `eql_v3.int4` and `eql_v3.int8` are. The codegen operator renderer emits each operator overload per-domain with operands `(Domain, Domain)`, `(Domain, jsonb)`, or `(jsonb, Domain)` — both operand slots resolve to the *same* domain or raw `jsonb` (verified in `crates/eql-codegen/src/operator_surface.rs` / `generate.rs::render_operators_file`). There is **no cross-type operator** anywhere in the generated surface (no `int4`-vs-`int8`, hence no `float4`-vs-`float8`). So comparing an `eql_v3.float4` payload against an `eql_v3.float8` payload is **not a supported operation** — a caller wanting to compare across widths casts both sides to the same domain at the plaintext layer before encryption. This mirrors the integer families and needs no new test: the all-pairs oracle is per-type, and int-width cross-comparison is not tested either (there is nothing to assert — the operator does not exist).
+
 **Tech Stack:** Rust (`eql-scalars` catalog crate, `eql-codegen` renderer crate, `eql-tests-macros` proc-macros, `eql_tests` SQLx harness), minijinja SQL templates, PostgreSQL 14–17, `cargo`/`mise` task runner, proptest, cipherstash-client.
 
 ## Global Constraints
@@ -20,6 +22,7 @@ These apply to **every** task. Copied from the design spec and `docs/reference/a
 - **Both floats are `SignedScalar`**, origin `0.0` (diverging from `numeric`, which opted out), so the signed-zero boundary runs through `encrypted_domain/signed.rs`.
 - **Verification command order** (per the design's Verification plan §, mirroring the procedure doc §4): `cargo run -p eql-codegen` → `mise run test:codegen` → `mise run test:matrix:inventory` → `mise run clean && mise run build` → the float SQLx suites + `float_special` → `mise run test` → `mise run test:self_contained_v3` → commit the reference baselines.
 - **Run `mise run clean && mise run build`**, never a bare build — a bare build can leave stale `release/*.sql`.
+- **Inter-task compile coupling (Task 1 ↔ Task 3).** `cast_for_kind` and `plaintext_sql_type_for_kind` in `tests/sqlx/src/fixtures/eql_plaintext.rs` are **exhaustive, non-wildcard `match`es over `ScalarKind`** (only `Jsonb` panics; no `_ =>` arm — verified). Adding `ScalarKind::F32`/`F64` in Task 1 therefore makes `eql_tests` (and anything that depends on it) **fail to compile** with non-exhaustive-match errors until Task 3 adds the four arms. This is expected. Verify Task 1 in isolation with `cargo test -p eql-scalars` (the catalog crate is zero-dep and does not see those matches); do not run a whole-workspace `cargo test` between Task 1 and Task 3 and mistake the match errors for a Task 1 mistake.
 - **Changelog discipline.** This is a user-facing addition: a `[Unreleased]` `Added` entry plus an upgrade note are required (Task 9). Do **not** stage or commit the pre-existing uncommitted changes in the worktree.
 
 ---
@@ -49,7 +52,7 @@ Files created or modified, grouped by responsibility (maps to the design's group
 
 **D. Artefacts & docs**
 - `tests/codegen/reference/float4/`, `tests/codegen/reference/float8/` — committed reference baselines.
-- `CHANGELOG.md` + `docs/upgrading/v2.4.md` upgrade note.
+- `CHANGELOG.md` entry (IEEE-754 caveats folded inline; no separate upgrade doc — this is additive `eql_v3`, not an `eql_v2` release).
 
 > **Note for the implementer — spec path corrections.** The design's File-by-file list says the oracle suites live at `tests/sqlx/tests/encrypted_domain/{fixture_oracle.rs, e2e_oracle.rs}`. They actually live under `property/` (`tests/sqlx/tests/encrypted_domain/property/fixture_oracle.rs` and `.../property/e2e_oracle.rs`). The `#[path]` mod for `float_special` goes in `tests/sqlx/tests/encrypted_domain.rs` (which registers `text_smoke`/`text_match`/`signed` outside `scalars::`). Use the paths in this plan.
 
@@ -189,9 +192,8 @@ In `crates/eql-scalars/src/lib.rs`, add two variants to `enum ScalarKind` (after
     /// (`Plaintext::Float`) — the f32→f64 widening is exact and monotonic.
     F32,
     /// 64-bit IEEE-754 binary float (`f64`, Postgres `double precision`/
-    /// `float8`). The native width of the float crypto path. Ordered like the
-    /// integer kinds via ORE (`f64::ENCODED_LEN == 8`, same as `i64`); no i128
-    /// range.
+    /// `float8`). The native width of the float crypto path (`F32` widens into
+    /// it); otherwise classified exactly like [`ScalarKind::F32`].
     F64,
 ```
 
@@ -224,8 +226,8 @@ In `crates/eql-scalars/src/lib.rs`, after the `BOOL` spec, add the fixture lists
 /// f32 (powers of two and halves), so the `real` round-trip is lossless and the
 /// f32→f64 widening before encryption is exact. The three pivots MUST be present
 /// verbatim: `"-inf"` (min_pivot), `"0"` (origin/mid), `"inf"` (max_pivot).
-/// NaN and `-0.0` are deliberately excluded (see the `float_special` suite). All
-/// distinct by value.
+/// NaN and `-0.0` are deliberately excluded (see the `float_special` suite).
+/// Distinctness is enforced by `Fixture::Float` (above) and its guard test.
 const FLOAT4_FIXTURES: &[Fixture] = fixtures!(float;
     "-inf", "-1024", "-2.25", "-1", "-0.5", "-0.25",
     "0", "0.25", "0.5", "1", "2.25", "1024", "inf");
@@ -234,7 +236,7 @@ const FLOAT4_FIXTURES: &[Fixture] = fixtures!(float;
 /// harness. The native width of the float crypto path; values span sign and
 /// magnitude including subnormal-free interior points. The three pivots MUST be
 /// present verbatim: `"-inf"` (min_pivot), `"0"` (origin/mid), `"inf"`
-/// (max_pivot). NaN and `-0.0` are deliberately excluded. All distinct by value.
+/// (max_pivot). NaN and `-0.0` are deliberately excluded.
 const FLOAT8_FIXTURES: &[Fixture] = fixtures!(float;
     "-inf", "-1e300", "-1000000", "-1.5", "-1", "-0.001",
     "0", "0.001", "1", "1.5", "1000000", "1e300", "inf");
@@ -336,12 +338,22 @@ In `crates/eql-scalars/src/tests.rs`, update `catalog_has_int4_int2_int8_date_ti
     }
 ```
 
-Also check `storage_only_is_exclusive_to_bool`, `every_type_uses_a_known_domain_shape`, and `as_bounded_int_maps_integer_kinds_only` — they iterate `CATALOG` and already handle non-integer/non-storage kinds generically (float is ordered + non-storage + non-integer, identical to `numeric`), so no change is expected. If `as_bounded_int_maps_integer_kinds_only` enumerates kinds explicitly, add `F32`/`F64` to its non-integer list.
+Three existing tests in `rust_tests` **enumerate `ScalarKind::` variants explicitly** (not generically over `CATALOG`) and must learn the two new kinds, or their coverage silently lapses — verified against `crates/eql-scalars/src/tests.rs`:
+
+- `as_bounded_int_maps_integer_kinds_only` (line 36) — a flat list of `assert_eq!(ScalarKind::X.as_bounded_int(), None)` calls; add `assert_eq!(ScalarKind::F32.as_bounded_int(), None);` and the `F64` twin.
+- `is_int_classifies_kinds` (line 74) — a flat list of `assert!(!ScalarKind::X.is_int())`; add `assert!(!ScalarKind::F32.is_int());` and the `F64` twin.
+- `is_text_classifies_only_text` (line 86) — a `for k in [ … ]` array of non-text kinds; add `ScalarKind::F32, ScalarKind::F64` to that array.
+
+(Optionally also add the two kinds to `is_temporal_classifies_chrono_kinds` (line 168), whose non-temporal list currently stops at the integer kinds.) The new `float_tests::float_kinds_are_not_bounded_int_temporal_or_text` (Step 1) already asserts these properties for `F32`/`F64` directly, but the existing per-classifier tests should still enumerate them so a future regression in one classifier fails its own test, not only the float bundle.
+
+The genuinely generic catalog tests — `storage_only_is_exclusive_to_bool`, `every_type_uses_a_known_domain_shape`, `every_int_kind_matches_its_rust_type` (iterates `CATALOG.filter(is_int)`, so float is skipped) — iterate `CATALOG` and need no change (float is ordered + non-storage + non-integer, identical to `numeric`).
 
 - [ ] **Step 9: Run the eql-scalars tests to verify they pass**
 
 Run: `cargo test -p eql-scalars`
 Expected: PASS — including the new `float_tests` and the updated catalog-order test. If `mod proptest_invariants` or any other catalog test enumerates kinds/tokens, fix it here.
+
+> **Scope this to `-p eql-scalars`.** Do NOT run a workspace-wide `cargo test` here: adding `F32`/`F64` to `ScalarKind` breaks the exhaustive `match`es in `eql_plaintext.rs` (see Global Constraints — "Inter-task compile coupling"), so `eql_tests` will not compile until Task 3. That is expected, not a Task 1 regression. The catalog crate is zero-dep and compiles/tests cleanly on its own.
 
 - [ ] **Step 10: Generate the float SQL and confirm the renderers are kind-agnostic (THE RISK CHECK)**
 
@@ -372,6 +384,8 @@ git commit -m "feat(v3): add float4/float8 catalog rows + Float kind/fixture"
 ## Task 2: Harness newtypes, value accessors, and `ScalarType` impls
 
 Float owns `f32`/`f64`, which are not `Ord` and not directly `ScalarType`-able, so — like `numeric` (`Decimal`) and `text` (`String`) — the `impl ScalarType` is hand-written in `scalar_domains.rs`. The newtypes `F4`/`F8` carry `Ord` via `total_cmp`, `Display`, `Default = 0.0`, and `#[sqlx(transparent)]` for `Type`/`Decode` against `real`/`double precision`.
+
+> **On the F4/F8 duplication (hand-written is the house style here).** The newtype trait impls (`Eq`/`Ord`/`PartialOrd`/`Default`/`Display`) plus `ScalarType`/`OrderedScalar`/`SignedScalar` are ~near-identical per width, and the temptation is a `float_values!`-style twin macro (cf. the existing `temporal_values!` / `lazy_values!` macros in `scalar_domains.rs`). Resist it: those two macros exist to share a *kind-agnostic* core across genuinely different kinds (`date`/`timestamptz` are both chrono; `text`/`numeric` both owned-string-parsed). `text`, `numeric`, and `bool` each **hand-write their own `impl ScalarType`** per kind precisely because each kind's `to_sql_literal` / pivots / signedness differ — that is the established pattern for distinct kinds. `F4`/`F8` differ in inner primitive (`f32` vs `f64`), `PG_TYPE`, `min/max_pivot` (`f32::INFINITY` vs `f64::INFINITY`), and the `as f64` widening, so a macro would be parameterised on nearly everything anyway. **Do reuse the existing `lazy_values!` macro for the value accessors** (as `numeric` does — see Step 4), since that part *is* kind-agnostic; keep the newtype + trait impls hand-written. One macro reuse for the materialiser, no new macro for the impls.
 
 **Files:**
 - Modify: `tests/sqlx/src/scalar_domains.rs` (newtypes, accessors, impls, guards, test-list additions)
@@ -449,8 +463,43 @@ mod float_value_guards {
         assert_eq!(<F8 as OrderedScalar>::min_pivot(), F8(f64::NEG_INFINITY));
         assert_eq!(<F8 as OrderedScalar>::max_pivot(), F8(f64::INFINITY));
     }
+
+    /// The whole single-crypto-path design rests on "f32→f64 widening is exact
+    /// and monotonic". Every catalog fixture is exact-in-f32 (powers of two /
+    /// halves) and `arbitrary_value()` only samples those, so the property is
+    /// otherwise untested for f32 values that have NO exact f64-of-an-f32 quirk.
+    /// Exercise a deliberately NON-representable-in-decimal f32 (`0.1f32`, whose
+    /// nearest f32 differs from `0.1f64`) and confirm the f32 ordering survives
+    /// the widening to f64 — i.e. `a < b` as f32 iff `(a as f64) < (b as f64)`
+    /// for the EXACT bits the crypto path encrypts (`to_plaintext` does
+    /// `self.0 as f64`). This is a pure-Rust guard; it does not touch the DB.
+    #[test]
+    fn f32_to_f64_widening_is_order_preserving_for_non_representable_values() {
+        // Spread of f32 values that are not "nice" in decimal, straddling 0.
+        let xs: [f32; 7] = [-0.3, -0.1, -0.0625, 0.0, 0.1, 0.2, 0.3];
+        for w in xs.windows(2) {
+            let (a, b) = (w[0], w[1]);
+            // f32 strict order matches the widened f64 strict order, bit-for-bit
+            // on the value the f64 crypto path actually sees.
+            assert_eq!(
+                a < b,
+                (a as f64) < (b as f64),
+                "widening {a} -> {} reordered relative to {b} -> {}",
+                a as f64,
+                b as f64
+            );
+            // total_cmp (the newtype's Ord source) agrees with the widened cmp.
+            assert_eq!(
+                a.total_cmp(&b),
+                (a as f64).total_cmp(&(b as f64)),
+                "F4 Ord (total_cmp) disagrees with widened F8 Ord for {a} vs {b}"
+            );
+        }
+    }
 }
 ```
+
+> **Why this guard, not a DB/oracle test.** The fixture corpus is all exact-in-f32, so neither the fixture-oracle (Task 5) nor the e2e-oracle (Task 6) ever encrypts an f32 whose value is perturbed by widening. The widening contract is a pure arithmetic property of `f32 as f64`, so a `#[cfg(test)]` `#[test]` is the lighter-weight, deterministic place to pin it — no creds, no ZeroKMS round trip.
 
 - [ ] **Step 2: Run to confirm failure**
 
@@ -489,7 +538,6 @@ impl Default for F4 {
 }
 impl std::fmt::Display for F4 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // SQL literal form handled by `to_sql_literal`; Display is the raw value.
         write!(f, "{}", self.0)
     }
 }
@@ -530,44 +578,43 @@ impl std::fmt::Display for F8 {
 
 Add the `LazyLock` cells, accessors, and impls. `to_sql_literal` must render non-finite values as the Postgres float literal `'Infinity'`/`'-Infinity'` (a bare `inf` is not valid SQL); finite values render via the inner primitive's `Display`, which is a valid SQL float literal.
 
-```rust
-/// Typed `F4` fixtures, parsed once from `float4`'s catalog row (the catalog
-/// stays zero-dep; the parse lives here). Public so the `eql_v2_float4` fixture
-/// module can hand the slice to `scalar_fixture!`.
-static FLOAT4_VALUES_CELL: std::sync::LazyLock<Vec<F4>> = std::sync::LazyLock::new(|| {
-    eql_scalars::FLOAT4
-        .fixtures
-        .iter()
-        .map(|f| match f {
-            eql_scalars::Fixture::Float(s) => F4(s
-                .parse()
-                .unwrap_or_else(|e| panic!("invalid float4 catalog fixture {s:?}: {e}"))),
-            other => panic!("non-float fixture in float4 catalog row: {other:?}"),
-        })
-        .collect()
-});
+The value accessors reuse the existing `lazy_values!` materialiser (the same path `numeric` uses — the catalog stays zero-dep, so the parse lives here), each wrapping the parsed primitive in its newtype. This is the only shared-macro reuse; the trait impls below stay hand-written (see the duplication note at the top of this task):
 
-/// The `float4` fixture values, in catalog order.
-pub fn float4_values() -> &'static [F4] {
-    &FLOAT4_VALUES_CELL
+```rust
+// `float4`'s value wiring goes through the shared `lazy_values!` materialiser
+// (same as `numeric`/`text`), parsing the catalog's `Fixture::Float` strings into
+// the `F4` newtype. `float4_values()` is public so the `eql_v2_float4` fixture
+// module (emitted by `scalar_types!(fixture_modules)`) can hand the slice to
+// `scalar_fixture!`. Rust's `str::parse::<f32>` accepts `"inf"`/`"-inf"`/`"nan"`,
+// so the ±Inf pivots parse natively (NaN is excluded by the catalog guards).
+lazy_values! {
+    cell      = FLOAT4_VALUES_CELL,
+    accessor  = float4_values,
+    rust_type = F4,
+    spec      = eql_scalars::FLOAT4,
+    variant   = Float,
+    pg_type   = "float4",
+    parse     = |f| match f {
+        eql_scalars::Fixture::Float(s) => F4(s
+            .parse()
+            .unwrap_or_else(|e| panic!("invalid float4 catalog fixture {s:?}: {e}"))),
+        other => panic!("non-float fixture in float4 catalog row: {other:?}"),
+    },
 }
 
-static FLOAT8_VALUES_CELL: std::sync::LazyLock<Vec<F8>> = std::sync::LazyLock::new(|| {
-    eql_scalars::FLOAT8
-        .fixtures
-        .iter()
-        .map(|f| match f {
-            eql_scalars::Fixture::Float(s) => F8(s
-                .parse()
-                .unwrap_or_else(|e| panic!("invalid float8 catalog fixture {s:?}: {e}"))),
-            other => panic!("non-float fixture in float8 catalog row: {other:?}"),
-        })
-        .collect()
-});
-
-/// The `float8` fixture values, in catalog order.
-pub fn float8_values() -> &'static [F8] {
-    &FLOAT8_VALUES_CELL
+lazy_values! {
+    cell      = FLOAT8_VALUES_CELL,
+    accessor  = float8_values,
+    rust_type = F8,
+    spec      = eql_scalars::FLOAT8,
+    variant   = Float,
+    pg_type   = "float8",
+    parse     = |f| match f {
+        eql_scalars::Fixture::Float(s) => F8(s
+            .parse()
+            .unwrap_or_else(|e| panic!("invalid float8 catalog fixture {s:?}: {e}"))),
+        other => panic!("non-float fixture in float8 catalog row: {other:?}"),
+    },
 }
 
 /// Render an f64 as a Postgres float SQL literal. Finite values use the numeric
@@ -1103,6 +1150,74 @@ async fn float8_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
 
 (`min_pivot()` = `-Inf`, `origin()` = `0.0`, `max_pivot()` = `+Inf` — the monotonic span `-Inf < 0 < +Inf` is exactly the signed-zero boundary this suite exists to cover.)
 
+- [ ] **Step 2b: Add the cross-width byte-identity test (proves the CHANGELOG claim)**
+
+The CHANGELOG entry (Task 9 Step 1) asserts that, because both widths share the single f64 crypto path, "the ciphertext / ORE term are byte-identical" — but nothing else in the plan exercises it. Add one creds/e2e-gated test that encrypts the SAME value as `F4(x)` and `F8(x as f64)` and asserts the index terms (`hm` equality term, `ob` ORE term) match. `encrypt_store` returns `Vec<serde_json::Value>` whose payload objects carry string `hm`/`ob` fields (verified in `cipherstash.rs` — the `assert_store_shape` helper checks `v`/`c`/`hm`/`ob`/`i`), so the comparison reads those keys directly. Place it in `e2e_oracle.rs` (it already imports `column_config_for`, `encrypt_store`, `EqlPlaintext`, `IndexKind`, `connect_pool`, `ensure_eql_installed`, `super::migrator()`):
+
+```rust
+/// Both float widths encrypt through the SINGLE f64 crypto path
+/// (`F4::to_plaintext` widens `self.0 as f64`; `F8::to_plaintext` is the
+/// identity), so an f32 value and its exact f64 widening MUST produce identical
+/// index terms — this is the byte-identity the CHANGELOG claims. Encrypt the
+/// same value both ways (an f32-exact value, so `x as f64` is lossless) and
+/// assert the `hm` (HMAC equality) and `ob` (ORE) terms match across widths.
+/// Creds/e2e-gated like the rest of this file.
+#[test]
+fn float4_and_float8_share_index_terms_for_the_same_value() -> Result<()> {
+    use eql_tests::scalar_domains::{F4, F8};
+
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+    let pool: PgPool = rt.block_on(connect_pool())?;
+    rt.block_on(ensure_eql_installed(&pool, &super::migrator()))?;
+
+    // f32-exact value: `x as f64` is the same real number, so any term
+    // difference would be a width artifact, which is exactly what we forbid.
+    let x: f32 = 2.25;
+
+    let f4_payloads = rt.block_on(async {
+        let cfg = column_config_for(
+            &[IndexKind::Unique, IndexKind::Ore],
+            <F4 as EqlPlaintext>::CAST,
+        )?;
+        encrypt_store("xwidth_f4", "payload", &[F4(x)], &cfg).await
+    })?;
+    let f8_payloads = rt.block_on(async {
+        let cfg = column_config_for(
+            &[IndexKind::Unique, IndexKind::Ore],
+            <F8 as EqlPlaintext>::CAST,
+        )?;
+        encrypt_store("xwidth_f8", "payload", &[F8(x as f64)], &cfg).await
+    })?;
+
+    // Pull a string index term from the EQL payload JSON (`hm` / `ob`).
+    let term = |p: &serde_json::Value, key: &str| -> Result<String> {
+        p.get(key)
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_string)
+            .ok_or_else(|| anyhow::anyhow!("payload missing string `{key}`: {p}"))
+    };
+
+    // HMAC equality term: identical plaintext + key => identical hm, so the two
+    // widths are equality-interchangeable at the term level.
+    assert_eq!(
+        term(&f4_payloads[0], "hm")?,
+        term(&f8_payloads[0], "hm")?,
+        "float4 and float8 of the same value must share the hm equality term"
+    );
+    // ORE term: same f64 input => same ORE ciphertext, so ordering is identical.
+    assert_eq!(
+        term(&f4_payloads[0], "ob")?,
+        term(&f8_payloads[0], "ob")?,
+        "float4 and float8 of the same value must share the ob ORE term"
+    );
+    Ok(())
+}
+```
+
+> **Implementer note:** confirm the `hm`/`ob` terms are deterministic across two independent `encrypt_store` calls (same plaintext + same keyset). They are — `hm` is a keyed HMAC of the plaintext and `ob` is the ORE encoding, both pure functions of plaintext+key (the `cipherstash.rs` `encrypt_store_batch_distinct_plaintexts_yield_distinct_hm` live test relies on the same determinism). If the SDK ever salts these per-call, downgrade the assertion to "decrypt-equal / order-equal through the `eql_v3.float8`/`float4` domains" instead of raw term-string equality, and note it in the CHANGELOG. The value is encrypted fresh (not fetched from the fixture table), so it need not be a catalog fixture; `2.25` is chosen only because it is exactly representable in f32, making `x as f64` lossless so any term mismatch is unambiguously a width artifact.
+
 - [ ] **Step 3: Compile both binaries**
 
 Run: `cargo test -p eql_tests --test encrypted_domain --features proptest-e2e --no-run`
@@ -1111,7 +1226,7 @@ Expected: compiles. The `e2e_oracle.rs` suite is `#[cfg(feature = "proptest-e2e"
 - [ ] **Step 4: Run the sign-boundary tests (fixtures present)**
 
 Run: `cargo test -p eql_tests --test encrypted_domain -- signed::float`
-Expected: PASS — `float4_sign_boundary`, `float8_sign_boundary` (requires the `eql_v2_float4`/`eql_v2_float8` fixtures from Task 5 Step 4). e2e runs under `--features proptest-e2e` with creds (CI); locally, the compile in Step 3 is the gate.
+Expected: PASS — `float4_sign_boundary`, `float8_sign_boundary` (requires the `eql_v2_float4`/`eql_v2_float8` fixtures from Task 5 Step 4). e2e runs under `--features proptest-e2e` with creds (CI); locally, the compile in Step 3 is the gate. The cross-width byte-identity test (Step 2b) is part of the e2e binary — run it under creds with `cargo test -p eql_tests --test encrypted_domain --features proptest-e2e -- float4_and_float8_share_index_terms`; it asserts the CHANGELOG's byte-identity claim.
 
 - [ ] **Step 5: Commit**
 
@@ -1126,6 +1241,8 @@ git commit -m "test(v3): wire float4/float8 into e2e oracle + sign-boundary suit
 ## Task 7: `float_special` edge-case regression suite (NaN / ±0 / ±Inf)
 
 A hand-written behavioural suite that encrypts the special values **fresh** at test time so NaN never enters the shared fixture table. Registered via `#[path]` mod **outside** `scalars::` (like `text_match`/`signed`) so it does not pollute the matrix-inventory snapshot. Exact NaN eq/order outcomes are **discovered-and-locked on first run** — the test asserts the deterministic outcome observed, with comments that it is an artifact of the canonical bit pattern, not a guarantee.
+
+> **Hardening note — the `-0.0 → +0.0` assertion pins the `orderable-bytes` ORE path.** The `negative_zero_and_positive_zero_compare_equal_and_share_ore` test only holds because the float ORE encoder in use canonicalises `-0.0` to `+0.0` before encoding — confirmed in `orderable-bytes` `primitive.rs` (`ToOrderableBytes for f32`/`f64`: `let value = if *self == -0.0 { 0.0 } else { *self };`). A **dormant** alternative encoder, `cllw-ore` `impls/primitives.rs`, explicitly **distinguishes** them ("`−0.0` ciphertext is strictly less than `+0.0`") — if a future change routes float ORE through that path, this test flips from "equal" to "`-0.0 < +0.0`". The test is the canary: keep its comment pointing at the orderable-bytes canonicalisation so a failure is read as "the ORE path changed", not "the test is wrong". (`-0.0`/`+0.0` are also excluded as a duplicate fixture pair precisely because of this canonicalisation — see Global Constraints.)
 
 **Files:**
 - Create: `tests/sqlx/tests/encrypted_domain/float_special.rs`
@@ -1375,13 +1492,12 @@ git commit -m "test(v3): commit float4/float8 codegen reference baselines"
 
 ---
 
-## Task 9: Changelog + upgrade note + full test pass
+## Task 9: Changelog + full test pass
 
 Document the user-facing addition and run the full PostgreSQL test matrix.
 
 **Files:**
 - Modify: `CHANGELOG.md` (`[Unreleased]` → `Added`)
-- Modify: `docs/upgrading/v2.4.md` (numbered upgrade note)
 
 **Interfaces:** none (docs + verification).
 
@@ -1390,21 +1506,17 @@ Document the user-facing addition and run the full PostgreSQL test matrix.
 In `CHANGELOG.md`, under `## [Unreleased]` → `### Added`, add an entry matching the tone/density of the existing `eql_v3.numeric` / `eql_v3.timestamptz` entries (one dense paragraph, lead with the user-visible fact, then "Why.", then a PR link placeholder):
 
 ```markdown
-- **`eql_v3.float4` / `eql_v3.float8` encrypted-domain type families (ordered).** Four jsonb-backed domains each for encrypted `real` / `double precision` columns — `eql_v3.float4` / `eql_v3.float8` (storage-only), `eql_v3.<T>_eq` (`=` / `<>` via HMAC), and `eql_v3.<T>_ord` / `eql_v3.<T>_ord_ore` (also `<` `<=` `>` `>=`, `MIN` / `MAX` via 8-block ORE) — generated from the `float4` / `float8` rows in `eql-scalars::CATALOG` by the same materializer as the `eql_v3.int4` reference. Both widths encrypt through a single f64 crypto path (`Plaintext::Float`): a `real` is widened to f64 before encryption (exact and monotonic), so `float4` vs `float8` is purely a Postgres-surface distinction and the ciphertext / ORE term are byte-identical. Ordering is correct for all non-NaN values via the standard monotonic IEEE-754 byte mapping (`f64::ENCODED_LEN == 8`, same as `int8`); `-0.0` canonicalizes to `+0.0` and `±Inf` order correctly. NaN is unordered and unspecified in the encoder — it can be encrypted and stored but is not given a meaningful comparison guarantee (any NaN rejection is client-side). Index via a functional index on the `eql_v3.eq_term` / `eql_v3.ord_term` extractors, not an operator class on the domain. Why: a type-safe, per-capability encrypted IEEE-754 float column, closing the gap for `real` / `double` columns that had no v3 equivalent (the v3 `numeric` family is arbitrary-precision decimal, not binary float). See the U-NNN upgrade note. ([#NNN](https://github.com/cipherstash/encrypt-query-language/pull/NNN))
+- **`eql_v3.float4` / `eql_v3.float8` encrypted-domain type families (ordered).** Four jsonb-backed domains each for encrypted `real` / `double precision` columns — `eql_v3.float4` / `eql_v3.float8` (storage-only), `eql_v3.<T>_eq` (`=` / `<>` via HMAC), and `eql_v3.<T>_ord` / `eql_v3.<T>_ord_ore` (also `<` `<=` `>` `>=`, `MIN` / `MAX` via 8-block ORE) — generated from the `float4` / `float8` rows in `eql-scalars::CATALOG` by the same materializer as the `eql_v3.int4` reference. Both widths encrypt through a single f64 crypto path (`Plaintext::Float`): a `real` is widened to f64 before encryption (exact and monotonic), so `float4` vs `float8` is purely a Postgres-surface distinction and the ciphertext / ORE term are byte-identical. Ordering is correct for all non-NaN values via the standard monotonic IEEE-754 byte mapping (`f64::ENCODED_LEN == 8`, same as `int8`); `-0.0` canonicalizes to `+0.0` and `±Inf` order correctly. NaN is unordered and unspecified in the encoder — it can be encrypted and stored but is not given a meaningful comparison guarantee (any NaN rejection is client-side). Index via a functional index on the `eql_v3.eq_term` / `eql_v3.ord_term` extractors, not an operator class on the domain. Why: a type-safe, per-capability encrypted IEEE-754 float column, closing the gap for `real` / `double` columns that had no v3 equivalent (the v3 `numeric` family is arbitrary-precision decimal, not binary float). ([#NNN](https://github.com/cipherstash/encrypt-query-language/pull/NNN))
 ```
 
-(Replace `#NNN`/`U-NNN` with the real PR number and the note id assigned in Step 2.)
+(Replace `#NNN` with the real PR number. The IEEE-754 caveats — NaN has no comparison guarantee; `-0.0` and `+0.0` are equal; `float4` round-trips through f64 — are folded inline into this entry. No separate `docs/upgrading/` note is created: this is an additive `eql_v3` change, not an `eql_v2` release with its own upgrade guide.)
 
-- [ ] **Step 2: Add the upgrade note**
-
-In `docs/upgrading/v2.4.md`, add a numbered note (next free `U-NNN`) capturing the float-specific caveats callers should know: NaN has no comparison guarantee (encrypts/stores but is not searchable-ordered meaningfully; reject client-side if undesired); `-0.0` and `+0.0` are equal (IEEE-consistent); `float4` columns round-trip through f64 (use values representable in f32 or accept widening). Cross-link the `Added` entry to it. Match the existing note format in that file (TL;DR, applies-to, action).
-
-- [ ] **Step 3: Run the full SQLx + PostgreSQL matrix**
+- [ ] **Step 2: Run the full SQLx + PostgreSQL matrix**
 
 Run: `mise run test`
 Expected: PASS — the full suite (build, reset, SQLx) including all float matrix tests (`scalars::float4::*`, `scalars::float8::*`), the fixture/e2e oracles, sign-boundary, and `float_special` (where creds allow). Optionally repeat against a specific version: `mise run test --postgres 17`.
 
-- [ ] **Step 4: Final verification sweep**
+- [ ] **Step 3: Final verification sweep**
 
 Run the canonical order once more to confirm nothing regressed:
 ```bash
@@ -1415,11 +1527,11 @@ mise run test:self_contained_v3
 ```
 Expected: all PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add CHANGELOG.md docs/upgrading/v2.4.md
-git commit -m "docs(v3): changelog + upgrade note for float4/float8 encrypted domains"
+git add CHANGELOG.md
+git commit -m "docs(v3): changelog entry for float4/float8 encrypted domains"
 ```
 
 ---
@@ -1429,7 +1541,7 @@ git commit -m "docs(v3): changelog + upgrade note for float4/float8 encrypted do
 **Spec coverage (design groups A–D):**
 - A. Catalog/declarative — Task 1 (kind/fixture/specs/CATALOG, kind.rs/fixture.rs arms, catalog tests) + Task 2 (`scalar_types.rs` line is in Task 4; `scalar_domains.rs` newtypes/accessors/impls/guards/test-lists in Task 2). ✓
 - B. New-kind plumbing — Task 4 (`is_float_token` + router arm), Task 3 (`eql_plaintext.rs`), Task 4 (`scalar_fixture.rs` float arm), Task 4 (`scalar_types.rs`), Task 2 (`scalar_domains.rs` newtypes, accessors, impls, guards, oracle/pivot/arbitrary lists). ✓
-- C. Tests — Task 5 (fixture oracle), Task 6 (e2e oracle), Task 7 (`float_special` + mod registration), Task 6 (signed). Matrix inventory snapshot unchanged (token-normalized) — verified in Tasks 4/7. ✓
+- C. Tests — Task 5 (fixture oracle), Task 6 (e2e oracle + cross-width byte-identity, Step 2b), Task 7 (`float_special` + mod registration), Task 6 (signed). The f32→f64 widening property is pinned by a pure-Rust guard in Task 2 Step 1 (`f32_to_f64_widening_is_order_preserving_for_non_representable_values`). Matrix inventory snapshot unchanged (token-normalized) — verified in Tasks 4/7. ✓
 - D. Artefacts & docs — Task 8 (reference baselines, build, self-contained gate), Task 9 (CHANGELOG + upgrade note). ✓
 
 **Flagged risks folded in as checkpoints:**
@@ -1447,4 +1559,7 @@ git commit -m "docs(v3): changelog + upgrade note for float4/float8 encrypted do
 3. **`scalar_types.rs` newtype path resolution.** The proc-macro expands the type list into three different crate targets; `crate::scalar_domains::F4` may not resolve at every call site. Plan Task 4 Step 6 carries a fallback (`use eql_tests::scalar_domains::{F4, F8};` at call sites). Verify at first compile.
 4. **`float4` cast.** The design's crypto facts note `real`/`double`/`float` all map to `ColumnType::Float`. This plan uses `Cast::REAL` for `float4` and `Cast::DOUBLE` for `float8` (both yield identical f64 ciphertext) with the matching plaintext-column SQL types `real` / `double precision`. If the float8 column should instead use the bare `float` cast literally, it is interchangeable; flagged for confirmation.
 5. **No per-type fixture files.** The design lists `eql_v2_float*` modules; in this codebase those are macro-emitted (not standalone `.rs` files) — Task 4 Step 7 is a checkpoint to confirm `fixtures/mod.rs` uses `scalar_types!(fixture_modules)` and skip file creation accordingly.
+6. **Cross-width comparison is unsupported (decided, not under-specified).** `eql_v3.float4` and `eql_v3.float8` are separate domains with no cross-type operator — exactly as `int4`/`int8` relate. Verified against the codegen operator renderer (`operator_surface.rs` / `generate.rs`): every overload is `(Domain, Domain)` / `(Domain, jsonb)` / `(jsonb, Domain)` on a single per-domain type. Stated in the architecture preamble; no test added (int-width cross-comparison is not tested either — the operator does not exist).
+7. **`float_special` `-0.0` assertion pins the `orderable-bytes` ORE path.** Verified that `orderable-bytes` canonicalises `-0.0 → +0.0` while the dormant `cllw-ore` encoder distinguishes them; the Task 7 hardening note keeps the test as the canary if the encoder path ever changes.
+8. **Inter-task compile coupling (Task 1 ↔ Task 3).** Adding `F32`/`F64` to `ScalarKind` breaks the exhaustive `match`es in `eql_plaintext.rs` until Task 3 lands the arms — so `eql_tests` does not compile between the two tasks. Documented in Global Constraints + a Task 1 Step 9 note; Task 1 is verified with `cargo test -p eql-scalars` in isolation.
 ```

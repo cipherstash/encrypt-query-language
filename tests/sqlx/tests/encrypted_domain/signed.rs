@@ -1,9 +1,9 @@
 //! Sign-boundary coverage for **signed** scalars (`int2`/`int4`/`int8`, `date`,
-//! `timestamptz`) — the `SignedScalar` delta on top of the uniform ordered
-//! matrix.
+//! `timestamptz`, `float4`/`float8`) — the `SignedScalar` delta on top of the
+//! uniform ordered matrix.
 //!
 //! ORE encrypts signed values as an offset from a numeric origin (`0` for
-//! integers, the epoch for `date`/`timestamptz`). This suite asserts the ORE block ordering is
+//! integers and floats, the epoch for `date`/`timestamptz`). This suite asserts the ORE block ordering is
 //! **monotonic across that origin**: a fixture below the origin orders before
 //! the origin, which orders before a fixture above it — through the encrypted
 //! `_ord` domain, with no decryption.
@@ -66,4 +66,14 @@ async fn int8_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
 #[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v2_timestamptz")))]
 async fn timestamptz_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
     sign_boundary_is_monotonic::<chrono::DateTime<chrono::Utc>>(&pool).await
+}
+
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v2_float4")))]
+async fn float4_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
+    sign_boundary_is_monotonic::<eql_tests::scalar_domains::F4>(&pool).await
+}
+
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v2_float8")))]
+async fn float8_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
+    sign_boundary_is_monotonic::<eql_tests::scalar_domains::F8>(&pool).await
 }
