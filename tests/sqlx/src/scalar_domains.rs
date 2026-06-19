@@ -127,6 +127,22 @@ pub trait ScalarType:
         values.sort();
         values
     }
+
+    /// A proptest strategy producing fresh plaintexts for the e2e oracle.
+    ///
+    /// The e2e suite encrypts each generated value end-to-end through ZeroKMS,
+    /// so the strategy MUST only produce values the type's EQL cast accepts.
+    ///
+    /// Required (not defaulted on purpose): a `where Self: Arbitrary` bound on a
+    /// provided default leaks into the method's contract for EVERY caller —
+    /// including the generic `T: ScalarType` oracle drivers — so `String` /
+    /// `Decimal` / `NaiveDate` (not `Arbitrary`) could never satisfy it, even
+    /// though they override the body. Making it required keeps the bound off the
+    /// signature. Integers supply the full `any::<Self>()` range (proc-macro
+    /// generated, in `eql-tests-macros`); non-integer scalars sample their
+    /// cast-valid fixture set — the only bounded strategy `Arbitrary` can't give
+    /// them, and always cast-valid because every fixture already round-trips.
+    fn arbitrary_value() -> proptest::strategy::BoxedStrategy<Self>;
 }
 
 /// An **ordered** scalar — one whose `_ord` domains support `<`/`<=`/`>`/`>=`.
@@ -262,6 +278,14 @@ macro_rules! temporal_values {
             fn to_sql_literal(value: &$ty) -> String {
                 let f: fn(&$ty) -> String = $sql_lit;
                 f(value)
+            }
+            fn arbitrary_value() -> proptest::strategy::BoxedStrategy<$ty> {
+                use proptest::strategy::Strategy;
+                // Sample the catalog fixture values — every one is cast-valid and
+                // already exercised by the fixture suite; the e2e novelty is that
+                // the SAME plaintext is independently re-encrypted, which the
+                // duplicate-injection in run_e2e_property guarantees.
+                proptest::sample::select($accessor().to_vec()).boxed()
             }
         }
 
@@ -472,6 +496,11 @@ impl ScalarType for String {
     fn to_sql_literal(value: &Self) -> String {
         format!("'{}'", value.replace('\'', "''"))
     }
+
+    fn arbitrary_value() -> proptest::strategy::BoxedStrategy<Self> {
+        use proptest::strategy::Strategy;
+        proptest::sample::select(text_values().to_vec()).boxed()
+    }
 }
 
 impl OrderedScalar for String {
@@ -546,6 +575,11 @@ impl ScalarType for rust_decimal::Decimal {
     // `to_sql_literal` inherits the default (`value.to_string()`): a `Decimal`'s
     // `Display` form (e.g. `-1000000000000`, `0.001`) is a valid SQL numeric
     // literal, so no quoting/override is needed (unlike `text` / `date`).
+
+    fn arbitrary_value() -> proptest::strategy::BoxedStrategy<Self> {
+        use proptest::strategy::Strategy;
+        proptest::sample::select(numeric_values().to_vec()).boxed()
+    }
 }
 
 impl OrderedScalar for rust_decimal::Decimal {
@@ -631,6 +665,14 @@ impl ScalarType for bool {
     }
     // `to_sql_literal` inherits the default (`value.to_string()` => `true`/`false`),
     // which is a valid SQL boolean literal, so no override is needed.
+
+    // `bool` is storage-only and never feeds an oracle suite, but `arbitrary_value`
+    // is a required `ScalarType` method, so sample its two fixtures like every
+    // other non-integer scalar.
+    fn arbitrary_value() -> proptest::strategy::BoxedStrategy<Self> {
+        use proptest::strategy::Strategy;
+        proptest::sample::select(bool_values().to_vec()).boxed()
+    }
 }
 
 // `bool` is deliberately NOT `OrderedScalar` / `SignedScalar` / `MatchScalar`:
@@ -1302,6 +1344,34 @@ mod pivot_derivation_tests {
         boundary_pivots_are_fixture_extremes::<chrono::DateTime<chrono::Utc>>();
         boundary_pivots_are_fixture_extremes::<rust_decimal::Decimal>();
         boundary_pivots_are_fixture_extremes::<String>();
+    }
+}
+
+#[cfg(test)]
+mod arbitrary_value_tests {
+    use super::*;
+    use proptest::strategy::Strategy;
+    use proptest::test_runner::TestRunner;
+
+    fn draws_a_value<T: ScalarType>() {
+        let strat = T::arbitrary_value();
+        let mut runner = TestRunner::default();
+        // A single successful draw proves the strategy is wired and non-empty.
+        let tree = strat
+            .new_tree(&mut runner)
+            .expect("arbitrary_value strategy must produce a value");
+        let _v: T = proptest::strategy::ValueTree::current(&tree);
+    }
+
+    #[test]
+    fn every_ordered_scalar_has_a_working_value_strategy() {
+        draws_a_value::<i16>();
+        draws_a_value::<i32>();
+        draws_a_value::<i64>();
+        draws_a_value::<chrono::NaiveDate>();
+        draws_a_value::<chrono::DateTime<chrono::Utc>>();
+        draws_a_value::<rust_decimal::Decimal>();
+        draws_a_value::<String>();
     }
 }
 

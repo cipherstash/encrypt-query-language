@@ -181,6 +181,14 @@ fn scalar_type_impls_tokens(list: &ScalarList) -> TokenStream2 {
                     fn fixture_values() -> &'static [#rust_type] {
                         ::eql_scalars::#values
                     }
+
+                    /// Integers draw the full `any::<Self>()` range — the e2e
+                    /// suite's value over the fixture suite is fresh, arbitrary
+                    /// plaintexts, not a re-encryption of the fixed fixture set.
+                    fn arbitrary_value() -> ::proptest::strategy::BoxedStrategy<#rust_type> {
+                        use ::proptest::strategy::Strategy;
+                        ::proptest::prelude::any::<#rust_type>().boxed()
+                    }
                 }
 
                 impl OrderedScalar for #rust_type {
