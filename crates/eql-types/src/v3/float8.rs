@@ -7,6 +7,20 @@
 //! (`Plaintext::Float`), so the wire shape is identical to
 //! [`crate::v3::float4`] — an 8-block `ob` term (`f64::ENCODED_LEN == 8`, same
 //! as `int8`).
+//!
+//! ## Special values (caller-facing)
+//!
+//! `-0.0` canonicalizes to `+0.0` (equal under `=`, IEEE-consistent) and
+//! `±Inf` order correctly (`-Inf < finite < +Inf`). **NaN is unordered and
+//! unspecified in the encoder**: it can be encrypted, stored, and pass the
+//! domain CHECK, but it carries **no comparison guarantee** and does NOT follow
+//! IEEE semantics (where NaN compares false against everything). The domain
+//! CHECK validates only the envelope — it cannot inspect the ciphertext — so a
+//! NaN payload is never rejected server-side. **Reject NaN client-side before
+//! encryption** if your column must not contain it; otherwise a NaN row sorts
+//! at an arbitrary (but deterministic) position in an encrypted range scan
+//! rather than being excluded the way native Postgres `double precision` would.
+//! See the `float_special` regression suite for the locked behaviour.
 
 use schemars::{schema::RootSchema, schema_for};
 
