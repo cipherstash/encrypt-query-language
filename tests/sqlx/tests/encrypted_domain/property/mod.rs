@@ -27,6 +27,11 @@ mod edge_cases;
 mod fixture_oracle;
 // fixture suite: example-based bloom match smoke over the text `_match` fixtures.
 mod match_smoke;
+// fixture suite: cross-ciphertext equality over the per-type doubles fixtures
+// (each plaintext encrypted twice) — proves two independent encryptions of one
+// value compare equal through both the hm (`_eq`) and ORE (`_ord`/`_ord_ore`)
+// paths.
+mod cross_ciphertext;
 // e2e suite: oracle over freshly generated + batch-encrypted values.
 #[cfg(feature = "proptest-e2e")]
 mod e2e_oracle;
