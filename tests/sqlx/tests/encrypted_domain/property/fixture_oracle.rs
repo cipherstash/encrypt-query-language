@@ -64,6 +64,14 @@ fn embedded_fixture_sql<T: ScalarType>() -> &'static str {
             env!("CARGO_MANIFEST_DIR"),
             "/fixtures/eql_v2_numeric.sql"
         )),
+        "float4" => include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/fixtures/eql_v2_float4.sql"
+        )),
+        "float8" => include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/fixtures/eql_v2_float8.sql"
+        )),
         other => panic!(
             "no embedded fixture for catalog token '{other}'; \
              add an include_str! arm in fixture_oracle.rs"
@@ -240,3 +248,5 @@ fixture_oracle_suite!(date, chrono::NaiveDate, ordered);
 fixture_oracle_suite!(timestamptz, chrono::DateTime<chrono::Utc>, ordered);
 fixture_oracle_suite!(numeric, rust_decimal::Decimal, ordered);
 fixture_oracle_suite!(text, String, ordered);
+fixture_oracle_suite!(float4, eql_tests::scalar_domains::F4, ordered);
+fixture_oracle_suite!(float8, eql_tests::scalar_domains::F8, ordered);

@@ -101,6 +101,17 @@ fn is_numeric_token(token: &str) -> bool {
     matches!(spec_for_token(token).kind, eql_scalars::ScalarKind::Numeric)
 }
 
+/// True when `token`'s catalog row is an IEEE-754 float kind (`F32`/`F64`).
+/// Like `numeric` it is ordered but non-integer and non-chrono, so it stamps the
+/// `float` fixture discriminator and draws its values from the harness accessor
+/// (`float4_values()` / `float8_values()`).
+fn is_float_token(token: &str) -> bool {
+    matches!(
+        spec_for_token(token).kind,
+        eql_scalars::ScalarKind::F32 | eql_scalars::ScalarKind::F64
+    )
+}
+
 /// True when `token`'s catalog row declares no ordered domain — equality-only.
 /// Replaces the `[eq_only]` marker. Consumed by [`matrix_suite_for_entry`] to
 /// keep an eq-only type out of the ordered matrix (which exercises ordering
@@ -247,6 +258,8 @@ fn scalar_fixture_modules_tokens(list: &ScalarList) -> TokenStream2 {
                 format_ident!("text")
             } else if is_numeric_token(&token_str) {
                 format_ident!("numeric")
+            } else if is_float_token(&token_str) {
+                format_ident!("float")
             } else if is_storage_only_token(&token_str) {
                 // Storage-only (encryption-only) scalars (`bool`): the fixture
                 // carries no index term (no `hm`/`ob`/`bf`), just the encrypted
@@ -255,7 +268,7 @@ fn scalar_fixture_modules_tokens(list: &ScalarList) -> TokenStream2 {
             } else {
                 panic!(
                     "scalar token `{token_str}` is neither integer, temporal, text, \
-                     numeric, nor storage-only — no fixture discriminator is wired for its kind"
+                     numeric, float, nor storage-only — no fixture discriminator is wired for its kind"
                 )
             };
             quote! {
@@ -550,6 +563,35 @@ mod tests {
         assert!(suites.contains("scalar = String"));
         let dispatch = norm(&fixture_dispatch_tokens(&list));
         assert!(dispatch.contains(r#""text" =>"#));
+    }
+
+    #[test]
+    fn float_entry_skips_impl_and_stamps_float_fixture() {
+        // `float4`/`float8` are ordered, non-integer, non-chrono: the impl emitter
+        // skips them (hand-written in scalar_domains.rs), and the fixture module
+        // stamps the `float` discriminator drawing from `float4_values()`.
+        let list = syn::parse_str::<ScalarList>("int4 => i32, float4 => F4").unwrap();
+        let impls = norm(&scalar_type_impls_tokens(&list));
+        assert!(impls.contains("impl ScalarType for i32"));
+        assert!(
+            !impls.contains("impl ScalarType for F4"),
+            "float must skip the generated impl (hand-written instead)"
+        );
+        let mods = norm(&scalar_fixture_modules_tokens(&list));
+        assert!(mods.contains("pub mod eql_v2_float4"));
+        assert!(mods.contains("float ,"), "got: {mods}");
+        assert!(mods.contains("float4_values"), "got: {mods}");
+        let suites = norm(&scalar_matrix_suites_tokens(&list));
+        assert!(suites.contains("pub mod float4"));
+        assert!(suites.contains("caps = [eq , ord]"));
+    }
+
+    #[test]
+    fn float_classification_is_read_from_catalog() {
+        assert!(is_float_token("float4"));
+        assert!(is_float_token("float8"));
+        assert!(!is_float_token("int4"));
+        assert!(!is_float_token("numeric"));
     }
 
     #[test]

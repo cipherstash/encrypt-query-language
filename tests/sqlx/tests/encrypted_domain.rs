@@ -27,6 +27,15 @@ mod text_match;
 #[path = "encrypted_domain/signed.rs"]
 mod signed;
 
+// Float edge-case behavioural suite (NaN / ±0 / ±Inf). Creds/e2e-gated: it
+// encrypts the special values FRESH at test time, so NaN never enters the shared
+// float8 fixture table (where it would corrupt the all-pairs oracle). Deliberately
+// NOT under `scalars::` so the matrix-inventory snapshot does not mis-read it as a
+// scalar type (same rationale as `signed` / `text_match`).
+#[cfg(feature = "proptest-e2e")]
+#[path = "encrypted_domain/float_special.rs"]
+mod float_special;
+
 // SteVec jsonb-entry behaviour matrix (the reduced `jsonb_entry_matrix!`).
 // Deliberately NOT under `scalars::` — `JsonbEntryInt4` is not a catalog scalar,
 // so its names live under `jsonb_entry::…` and are pinned by the separate
