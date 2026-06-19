@@ -2,7 +2,7 @@
 //! end-to-end through ZeroKMS each run. Gated behind `proptest-e2e` (declared in
 //! property/mod.rs) — needs CS_* creds, which `mise run test:sqlx` enables for
 //! CI/local full SQLx runs.
-//! Each proptest case generates one corpus of random integers — seeded with
+//! Each proptest case generates one batch of random integers — seeded with
 //! type-specific extremes, zero, and deliberate duplicates so the equality-true
 //! branch fires across distinct ciphertexts of the same plaintext — encrypts it
 //! in one batched ZeroKMS call, then runs the all-pairs oracle.
@@ -53,7 +53,7 @@ where
         .collect())
 }
 
-/// Drive proptest: each case is a corpus of integers. Generation is in-process;
+/// Drive proptest: each case is a batch of integers. Generation is in-process;
 /// encryption + oracle is async on a current-thread runtime.
 fn run_e2e_property<T>(table: &str, cases: u32, ordered: bool, seeds: &[T]) -> Result<()>
 where

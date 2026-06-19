@@ -1,8 +1,8 @@
 //! Unit edge cases for the eql_v3 scalar domains (CIP-3141): NULL propagation on
 //! supported operators, blocker functions raising on unsupported operators
 //! (equality, ordering, path, and containment families — the documented
-//! domain-fallback footgun), the timestamptz ordering deferral, and domain
-//! CHECK-constraint rejection of malformed payloads. No encryption.
+//! domain-fallback footgun), ordering blocked on the equality-only `_eq` domain,
+//! and domain CHECK-constraint rejection of malformed payloads. No encryption.
 
 use anyhow::Result;
 use eql_tests::scalar_domains::{
@@ -67,11 +67,12 @@ async fn containment_blocker_raises_on_eq_domain(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
-async fn ordering_is_deferred_on_timestamptz_eq(pool: PgPool) -> Result<()> {
-    // timestamptz is equality-only: ordering is deferred until a wide-ORE
-    // comparator lands (CHANGELOG / #241). Lock that in at the SQL boundary — an
-    // ordering operator on `timestamptz_eq` must RAISE (and be non-STRICT), not
-    // silently mis-order. There are no `timestamptz_ord` / `_ord_ore` domains.
+async fn ordering_blocked_on_timestamptz_eq_domain(pool: PgPool) -> Result<()> {
+    // timestamptz is an ordered scalar on the `eql_v3` base (its `_ord`/`_ord_ore`
+    // domains order via the wide-ORE comparator). But the equality-only `_eq`
+    // domain still must NOT answer ordering: an ordering operator on
+    // `timestamptz_eq` must RAISE (and be non-STRICT), not silently mis-order —
+    // exactly as `int4_eq` does. Callers order via the `_ord` twins, not `_eq`.
     let d = ScalarDomainSpec::new::<chrono::DateTime<chrono::Utc>>(Variant::Eq).sql_domain;
     let sql = format!("SELECT (NULL::{d}) < (NULL::{d})");
     assert_raises(&pool, &sql, &[], &blocker_msg(&d, "<")).await
