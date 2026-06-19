@@ -1148,6 +1148,122 @@ async fn v3_jsonb_index_to_ste_vec_query_gin_engages(pool: PgPool) -> anyhow::Re
     Ok(())
 }
 
+// ============================================================================
+// D11-scale — jsonb containment GIN is COST-CHOSEN at scale (seqscan ON).
+//
+// The sibling `v3_jsonb_index_to_ste_vec_query_gin_engages` (above) forces
+// `enable_seqscan = off` over the 10-row fixture: it proves the GIN index is
+// USABLE, not that the planner PREFERS it. This test replicates ONE real
+// fixture document to 5000 rows (the bulk) plus a single DISTINCT pivot
+// document and, leaving `enable_seqscan` ON, asserts the planner CHOOSES the
+// GIN index for a single-row-selective containment needle. Same pattern as the
+// scalar `*_scale_preference_*` arms, and `#[cfg(feature = "scale")]` so it
+// rides the bench workflow, not fast PR CI (matches the scalar scale arms).
+//
+// Real ciphertext only: both documents come from the generated `v3_ste_vec`
+// fixture, replicated via generate_series — no new fixture, no static blob.
+// Selectivity comes from the distinct-per-row `$.hello` oc leaf
+// (`SEL_HELLO_OC`, whose load-bearing distinctness is asserted by
+// `v3_jsonb_containment_oc_only` / `v3_jsonb_fixture_structural_invariants`):
+// the pivot's own oc term matches ONLY the pivot row, never the 5000 bulk rows
+// (whose oc term is the filler document's, a different value). A precondition
+// check below fails loudly if the two leaves ever collide.
+// ============================================================================
+
+#[cfg(feature = "scale")]
+#[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
+async fn v3_jsonb_to_ste_vec_query_gin_is_cost_chosen(pool: PgPool) -> anyhow::Result<()> {
+    // Two DISTINCT real fixture rows: the filler (bulk) and the pivot. Their
+    // `$.hello` oc leaves differ (distinct per row), so a needle for the
+    // pivot's oc isolates exactly the single pivot row.
+    let filler_payload: String = sqlx::query_scalar(
+        "SELECT payload::jsonb::text FROM fixtures.v3_ste_vec ORDER BY id ASC LIMIT 1",
+    )
+    .fetch_one(&pool)
+    .await?;
+    let pivot_payload: String = sqlx::query_scalar(
+        "SELECT payload::jsonb::text FROM fixtures.v3_ste_vec ORDER BY id DESC LIMIT 1",
+    )
+    .fetch_one(&pool)
+    .await?;
+
+    // The pivot's own `$.hello` oc term — the same extraction the oc-containment
+    // oracle (`v3_jsonb_containment_oc_only`) uses — which the needle searches
+    // for. The filler's oc term is extracted only to assert the two differ.
+    let pivot_oc: String = sqlx::query_scalar(&format!(
+        "SELECT (payload ->> '{SEL_HELLO_OC}'::text)::jsonb ->> 'oc' \
+         FROM fixtures.v3_ste_vec ORDER BY id DESC LIMIT 1"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    let filler_oc: String = sqlx::query_scalar(&format!(
+        "SELECT (payload ->> '{SEL_HELLO_OC}'::text)::jsonb ->> 'oc' \
+         FROM fixtures.v3_ste_vec ORDER BY id ASC LIMIT 1"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    anyhow::ensure!(
+        filler_oc != pivot_oc,
+        "fixture precondition: filler and pivot rows must have distinct $.hello oc \
+         leaves for single-row selectivity (distinct-per-row oc is the load-bearing \
+         W1 invariant); got identical terms"
+    );
+
+    let mut tx = pool.begin().await?;
+    sqlx::query("CREATE TEMP TABLE v3_jsonb_scale (payload eql_v3.json) ON COMMIT DROP")
+        .execute(&mut *tx)
+        .await?;
+    // The bulk: 5000 copies of the filler document.
+    sqlx::query(
+        "INSERT INTO v3_jsonb_scale(payload) \
+         SELECT $1::jsonb::eql_v3.json FROM generate_series(1, 5000)",
+    )
+    .bind(&filler_payload)
+    .execute(&mut *tx)
+    .await?;
+    // The single selective pivot document.
+    sqlx::query("INSERT INTO v3_jsonb_scale(payload) VALUES ($1::jsonb::eql_v3.json)")
+        .bind(&pivot_payload)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query(
+        "CREATE INDEX v3_jsonb_scale_gin_idx ON v3_jsonb_scale \
+         USING gin ((eql_v3.to_ste_vec_query(payload)::jsonb) jsonb_path_ops)",
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query("ANALYZE v3_jsonb_scale")
+        .execute(&mut *tx)
+        .await?;
+    // enable_seqscan LEFT ON — this is the cost-PREFERENCE proof, not the
+    // usability proof (the sibling `*_gin_engages` arm forces seqscan off).
+
+    // Selective needle: the pivot's own `$.hello` oc leaf. With distinct-per-row
+    // oc, exactly the single pivot row contains it.
+    let n = needle(&[(SEL_HELLO_OC, "oc", &pivot_oc)]);
+    let query =
+        format!("SELECT count(*) FROM v3_jsonb_scale WHERE payload @> '{n}'::eql_v3.ste_vec_query");
+    assert_index_scan_uses(
+        &mut *tx,
+        &query,
+        "v3_jsonb_scale_gin_idx",
+        "jsonb containment `@>` must PREFER the to_ste_vec_query GIN index at scale (seqscan ON)",
+    )
+    .await?;
+
+    // Row floor + selectivity: exactly the single pivot row matches (not zero —
+    // which would make the index-scan-over-nothing pass vacuously — and not the
+    // bulk, which would mean the needle was not selective).
+    let matched: i64 = sqlx::query_scalar(&query).fetch_one(&mut *tx).await?;
+    assert_eq!(
+        matched, 1,
+        "the GIN-engaged containment needle must match exactly the single pivot row"
+    );
+
+    tx.rollback().await?;
+    Ok(())
+}
+
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
 async fn v3_jsonb_index_ore_cllw_btree_engages(pool: PgPool) -> anyhow::Result<()> {
     let mut tx = pool.begin().await?;
