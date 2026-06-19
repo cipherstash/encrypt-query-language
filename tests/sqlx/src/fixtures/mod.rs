@@ -46,6 +46,10 @@ pub mod v3_doc_int4;
 // (committed-fixture) home instead of a creds-gated runtime encryption.
 pub mod v3_numeric_collision;
 
+// Per-type "doubles" fixtures (each plaintext encrypted twice) for the
+// cross-ciphertext-equality test. Non-catalog, like `v3_numeric_collision`.
+pub mod eql_doubles;
+
 // The per-type scalar fixture modules (`eql_v2_int4`, `eql_v2_int2`, …) are
 // generated from the harness list in `scalar_types.rs`. Each expands to
 // `pub mod eql_v2_<T> { … scalar_fixture! … }`, reading its plaintext values
