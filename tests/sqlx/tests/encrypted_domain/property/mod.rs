@@ -22,8 +22,11 @@ pub(crate) fn migrator() -> sqlx::migrate::Migrator {
 
 // NULL / blocker / CHECK-constraint unit tests.
 mod edge_cases;
-// fixture suite: oracle over the committed fixture corpus (real ciphertext).
+// fixture suite: operator + function-double oracles over the committed fixture
+// rows (real ciphertext), plus term-extractor identity.
 mod fixture_oracle;
+// fixture suite: example-based bloom match smoke over the text `_match` fixtures.
+mod match_smoke;
 // e2e suite: oracle over freshly generated + batch-encrypted values.
 #[cfg(feature = "proptest-e2e")]
 mod e2e_oracle;
