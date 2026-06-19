@@ -13,7 +13,7 @@
 /// Stamp out the `spec()` builder, the `fixture-gen` generator test, and the
 /// property-test module for a scalar fixture.
 ///
-/// The leading **kind** discriminator (`int` / `temporal` / `text` / `numeric`
+/// The leading **kind** discriminator (`int` / `temporal` / `text` / `numeric` / `float`
 /// / `storage`) selects which property asserts are stamped and which index set
 /// the fixture declares — the rest of the expansion is identical:
 ///
@@ -148,6 +148,36 @@ macro_rules! scalar_fixture {
     // `OrderedScalar` — but materialised from owned `Decimal` values (no `Match`
     // index, no chrono).
     (numeric, $name:literal, $ty:ty, $values:expr $(,)?) => {
+        $crate::scalar_fixture!(@common $name, $ty, $values, [Unique, Ore]);
+
+        #[cfg(test)]
+        mod tests {
+            use super::*;
+            use $crate::scalar_domains::OrderedScalar;
+
+            #[test]
+            fn spec_is_complete() {
+                assert!(spec().check_complete().is_ok());
+            }
+
+            #[test]
+            fn spec_includes_pivots() {
+                let spec = spec();
+                let values = spec.values();
+                let min = <$ty as OrderedScalar>::min_pivot();
+                let mid = <$ty as OrderedScalar>::mid_pivot();
+                let max = <$ty as OrderedScalar>::max_pivot();
+                assert!(values.contains(&min), "spec must include min_pivot {min:?}");
+                assert!(values.contains(&mid), "spec must include mid_pivot {mid:?}");
+                assert!(values.contains(&max), "spec must include max_pivot {max:?}");
+            }
+        }
+    };
+
+    // Float scalars (`F4`/`F8`): ordered, non-chrono. Same shape as `numeric` —
+    // `[Unique, Ore]` indexes, pivot-presence asserts via `OrderedScalar` —
+    // materialised from the harness float newtypes (no `Match`, no chrono).
+    (float, $name:literal, $ty:ty, $values:expr $(,)?) => {
         $crate::scalar_fixture!(@common $name, $ty, $values, [Unique, Ore]);
 
         #[cfg(test)]

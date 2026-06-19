@@ -2,6 +2,15 @@
 //!
 //! Provides assertion builders and test helpers for EQL functionality tests.
 
+// Self-alias so this crate can be named `eql_tests::…` in paths that must resolve
+// identically whether they expand inside the lib (e.g. `scalar_types!(fixture_modules)`)
+// or inside an integration-test binary (e.g. `scalar_types!(matrix_suites)` in
+// `tests/encrypted_domain/scalars/mod.rs`). Local harness types like
+// `scalar_domains::F4`/`F8` are referenced from the `scalar_types.rs` dispatch list
+// via the absolute `eql_tests::scalar_domains::F4` path — `crate::…` would resolve to
+// the test binary's own crate root in the matrix-suite expansion, not to this lib.
+extern crate self as eql_tests;
+
 use sqlx::PgPool;
 
 pub mod assertions;

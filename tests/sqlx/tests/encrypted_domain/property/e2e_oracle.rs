@@ -186,3 +186,81 @@ e2e_oracle_suite!(
     "proptest_e2e_text",
     seeds = ["aard".to_string(), "frank".to_string(), "zzzz".to_string()]
 );
+e2e_oracle_suite!(
+    float4,
+    eql_tests::scalar_domains::F4,
+    "proptest_e2e_float4",
+    seeds = [
+        eql_tests::scalar_domains::F4(f32::NEG_INFINITY),
+        eql_tests::scalar_domains::F4(0.0),
+        eql_tests::scalar_domains::F4(f32::INFINITY),
+    ]
+);
+e2e_oracle_suite!(
+    float8,
+    eql_tests::scalar_domains::F8,
+    "proptest_e2e_float8",
+    seeds = [
+        eql_tests::scalar_domains::F8(f64::NEG_INFINITY),
+        eql_tests::scalar_domains::F8(0.0),
+        eql_tests::scalar_domains::F8(f64::INFINITY),
+    ]
+);
+
+/// Both float widths encrypt through the SINGLE f64 crypto path
+/// (`F4::to_plaintext` widens `self.0 as f64`; `F8::to_plaintext` is the
+/// identity), so an f32 value and its exact f64 widening MUST produce identical
+/// index terms — this is the byte-identity the CHANGELOG claims. Encrypt the
+/// same value both ways (an f32-exact value, so `x as f64` is lossless) and
+/// assert the `hm` (HMAC equality) and `ob` (ORE) terms match across widths.
+/// Creds/e2e-gated like the rest of this file.
+#[test]
+fn float4_and_float8_share_index_terms_for_the_same_value() -> Result<()> {
+    use eql_tests::scalar_domains::{F4, F8};
+
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+
+    // f32-exact value: `x as f64` is the same real number, so any term
+    // difference would be a width artifact, which is exactly what we forbid.
+    let x: f32 = 2.25;
+
+    let f4_payloads = rt.block_on(async {
+        let cfg = column_config_for(
+            &[IndexKind::Unique, IndexKind::Ore],
+            <F4 as EqlPlaintext>::CAST,
+        )?;
+        encrypt_store("xwidth_f4", "payload", &[F4(x)], &cfg).await
+    })?;
+    let f8_payloads = rt.block_on(async {
+        let cfg = column_config_for(
+            &[IndexKind::Unique, IndexKind::Ore],
+            <F8 as EqlPlaintext>::CAST,
+        )?;
+        encrypt_store("xwidth_f8", "payload", &[F8(x as f64)], &cfg).await
+    })?;
+
+    // Pull a string index term from the EQL payload JSON (`hm` / `ob`).
+    let term = |p: &serde_json::Value, key: &str| -> Result<String> {
+        p.get(key)
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_string)
+            .ok_or_else(|| anyhow::anyhow!("payload missing string `{key}`: {p}"))
+    };
+
+    // HMAC equality term: identical plaintext + key => identical hm, so the two
+    // widths are equality-interchangeable at the term level.
+    assert_eq!(
+        term(&f4_payloads[0], "hm")?,
+        term(&f8_payloads[0], "hm")?,
+        "float4 and float8 of the same value must share the hm equality term"
+    );
+    // ORE term: same f64 input => same ORE ciphertext, so ordering is identical.
+    assert_eq!(
+        term(&f4_payloads[0], "ob")?,
+        term(&f8_payloads[0], "ob")?,
+        "float4 and float8 of the same value must share the ob ORE term"
+    );
+    Ok(())
+}
