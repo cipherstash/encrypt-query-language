@@ -307,3 +307,64 @@ async fn direct_functions_propagate_null(pool: PgPool) -> anyhow::Result<()> {
     }
     Ok(())
 }
+
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_text")))]
+async fn bloom_matches_where_like_would_not(pool: PgPool) -> anyhow::Result<()> {
+    // Locks in WHY v3 dropped `LIKE` for bloom containment: the two are not the same
+    // relation. The needle's ngrams are all present in the haystack, so bloom `@>`
+    // matches — but the needle is NOT a contiguous substring, so `LIKE '%needle%'`
+    // would NOT match. This false-positive / order-independence is the deterministic
+    // divergence from LIKE (bloom has no false negatives, so the reverse can't happen).
+    // The pair is engineered for exactly this property in TEXT_FIXTURES; see the plan.
+    let hay = payload_for(&pool, "qabcqbcaqcabqabd").await?;
+    let needle = payload_for(&pool, "abcabd").await?;
+
+    // 1. bloom DOES match.
+    let bloom_hit: bool = sqlx::query_scalar(
+        "SELECT ($1::jsonb::eql_v3.text_match) @> ($2::jsonb::eql_v3.text_match)",
+    )
+    .bind(&hay)
+    .bind(&needle)
+    .fetch_one(&pool)
+    .await?;
+    assert!(
+        bloom_hit,
+        "bloom @> must match: needle ngrams are a subset of the haystack's"
+    );
+
+    // 2. Pin the *structural* reason `@>` matched, independently of the domain
+    //    operator. The domain `@>` is `match_term(a) @> match_term(b)`, i.e.
+    //    smallint[] array containment on the extracted bloom terms — so asserting it
+    //    again would just re-run the operator under test (circular). Instead assert
+    //    needle-bf ⊆ haystack-bf directly on the raw stored `bf` arrays via NATIVE
+    //    jsonb containment, which routes through neither `eql_v3.match_term` nor the
+    //    domain operator. This localizes a future tokenizer change (e.g. honoring
+    //    `include_original`, a different ngram width) to a precise "bf arrays no
+    //    longer a subset" failure instead of an opaque `@>`-returned-false.
+    let bf_subset: bool =
+        sqlx::query_scalar("SELECT ($1::jsonb -> 'bf') @> ($2::jsonb -> 'bf')")
+            .bind(&hay)
+            .bind(&needle)
+            .fetch_one(&pool)
+            .await?;
+    assert!(
+        bf_subset,
+        "needle's raw bf terms must be a subset of the haystack's (native jsonb containment)"
+    );
+
+    // 3. LIKE would NOT match the same plaintext pair — pin the divergence directly on
+    //    the cleartext so the assertion documents the contract independently of any
+    //    encrypted representation.
+    let like_hit: bool =
+        sqlx::query_scalar("SELECT $1 LIKE '%' || $2 || '%'")
+            .bind("qabcqbcaqcabqabd")
+            .bind("abcabd")
+            .fetch_one(&pool)
+            .await?;
+    assert!(
+        !like_hit,
+        "LIKE must NOT match: the needle is not a contiguous substring of the haystack"
+    );
+
+    Ok(())
+}
