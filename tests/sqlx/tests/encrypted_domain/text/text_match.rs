@@ -203,3 +203,107 @@ async fn contains_and_contained_by_are_commutative(pool: PgPool) -> anyhow::Resu
     );
     Ok(())
 }
+
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_text")))]
+async fn direct_contains_function_matches_operator(pool: PgPool) -> anyhow::Result<()> {
+    // Exercises `eql_v3.contains(a, b)` by NAME (not the `@>` operator), and pins
+    // that the function and the operator it backs agree. `aardvark` contains the
+    // substring needle `aard` (shared ngrams); the disjoint `zzzz` does not.
+    let hay = payload_for(&pool, "aardvark").await?;
+    let aard = payload_for(&pool, "aard").await?;
+    let zzzz = payload_for(&pool, "zzzz").await?;
+
+    let (fn_hit, op_hit, fn_miss): (bool, bool, bool) = sqlx::query_as(
+        "SELECT eql_v3.contains($1::jsonb::eql_v3.text_match, $2::jsonb::eql_v3.text_match),
+                ($1::jsonb::eql_v3.text_match) @> ($2::jsonb::eql_v3.text_match),
+                eql_v3.contains($1::jsonb::eql_v3.text_match, $3::jsonb::eql_v3.text_match)",
+    )
+    .bind(&hay)
+    .bind(&aard)
+    .bind(&zzzz)
+    .fetch_one(&pool)
+    .await?;
+
+    assert!(fn_hit, "eql_v3.contains('aardvark','aard') must be true");
+    assert_eq!(fn_hit, op_hit, "eql_v3.contains must agree with the @> operator");
+    assert!(!fn_miss, "eql_v3.contains('aardvark','zzzz') must be false (disjoint ngrams)");
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_text")))]
+async fn direct_contained_by_function_matches_operator(pool: PgPool) -> anyhow::Result<()> {
+    // Exercises `eql_v3.contained_by(a, b)` by NAME (not the `<@` operator). `aard`
+    // is contained by `aardvark`; `zzzz` is not contained by `aard` (disjoint ngrams).
+    let aard = payload_for(&pool, "aard").await?;
+    let hay = payload_for(&pool, "aardvark").await?;
+    let zzzz = payload_for(&pool, "zzzz").await?;
+
+    let (fn_hit, op_hit, fn_miss): (bool, bool, bool) = sqlx::query_as(
+        "SELECT eql_v3.contained_by($1::jsonb::eql_v3.text_match, $2::jsonb::eql_v3.text_match),
+                ($1::jsonb::eql_v3.text_match) <@ ($2::jsonb::eql_v3.text_match),
+                eql_v3.contained_by($3::jsonb::eql_v3.text_match, $1::jsonb::eql_v3.text_match)",
+    )
+    .bind(&aard)
+    .bind(&hay)
+    .bind(&zzzz)
+    .fetch_one(&pool)
+    .await?;
+
+    assert!(fn_hit, "eql_v3.contained_by('aard','aardvark') must be true");
+    assert_eq!(fn_hit, op_hit, "eql_v3.contained_by must agree with the <@ operator");
+    assert!(!fn_miss, "eql_v3.contained_by('zzzz','aard') must be false (disjoint ngrams)");
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_text")))]
+async fn mixed_jsonb_domain_overloads_agree(pool: PgPool) -> anyhow::Result<()> {
+    // The (text_match, jsonb), (jsonb, text_match) overloads cast the jsonb side
+    // internally; they must agree with the fully-cast (text_match, text_match) form.
+    // `aardvark` contains needle `aard` (shared ngrams).
+    let hay = payload_for(&pool, "aardvark").await?;
+    let aard = payload_for(&pool, "aard").await?;
+
+    // $1 = haystack, $2 = needle. Each column leaves one operand as bare jsonb so a
+    // DIFFERENT overload resolves; all must equal the all-domain baseline.
+    let row: (bool, bool, bool, bool, bool) = sqlx::query_as(
+        "SELECT
+           eql_v3.contains($1::jsonb::eql_v3.text_match, $2::jsonb::eql_v3.text_match), -- baseline (domain,domain)
+           eql_v3.contains($1::jsonb::eql_v3.text_match, $2::jsonb),                    -- (domain, jsonb)
+           eql_v3.contains($1::jsonb, $2::jsonb::eql_v3.text_match),                    -- (jsonb, domain)
+           eql_v3.contained_by($2::jsonb::eql_v3.text_match, $1::jsonb),                -- (domain, jsonb)
+           eql_v3.contained_by($2::jsonb, $1::jsonb::eql_v3.text_match)                 -- (jsonb, domain)
+        ",
+    )
+    .bind(&hay)
+    .bind(&aard)
+    .fetch_one(&pool)
+    .await?;
+
+    let (baseline, contains_dom_json, contains_json_dom, cby_dom_json, cby_json_dom) = row;
+    assert!(baseline, "baseline eql_v3.contains('aardvark','aard') must be true");
+    assert_eq!(contains_dom_json, baseline, "contains(domain, jsonb) must agree");
+    assert_eq!(contains_json_dom, baseline, "contains(jsonb, domain) must agree");
+    assert_eq!(cby_dom_json, baseline, "contained_by(domain, jsonb) must agree (commutator of contains)");
+    assert_eq!(cby_json_dom, baseline, "contained_by(jsonb, domain) must agree");
+    Ok(())
+}
+
+#[sqlx::test]
+async fn direct_functions_propagate_null(pool: PgPool) -> anyhow::Result<()> {
+    // STRICT: a NULL operand short-circuits the body and returns NULL, not false
+    // and not an error. Covers the by-name functions (the operator path is covered
+    // by text_smoke::match_null_propagates) including a mixed (domain, jsonb) form.
+    const BF: &str = r#"{"v":"2","i":{},"c":"x","bf":[1,2,3]}"#;
+
+    // $1 NULL, $2 a real payload — and the reverse — across both functions, both
+    // operand positions, and a mixed jsonb overload.
+    for sql in [
+        "SELECT eql_v3.contains($1::jsonb::eql_v3.text_match, $2::jsonb::eql_v3.text_match)",
+        "SELECT eql_v3.contained_by($1::jsonb::eql_v3.text_match, $2::jsonb::eql_v3.text_match)",
+        "SELECT eql_v3.contains($1::jsonb::eql_v3.text_match, $2::jsonb)", // mixed (domain, jsonb)
+    ] {
+        eql_tests::assert_null(&pool, sql, &[None, Some(BF)]).await?;
+        eql_tests::assert_null(&pool, sql, &[Some(BF), None]).await?;
+    }
+    Ok(())
+}
