@@ -441,24 +441,23 @@ mod timestamptz_value_guards {
 // `text_values()` is public so the `eql_v2_text` fixture module (emitted by
 // `scalar_types!(fixture_modules)`) can hand the slice to `scalar_fixture!`.
 
-/// Typed `String` fixture values, built once from `text`'s catalog row.
-/// `eql_scalars::TEXT_VALUES` is a `&[&'static str]` const, but the `ScalarType`
-/// contract returns `&[Self]` = `&[String]` (owned), so we materialise them into
-/// a `LazyLock<Vec<String>>` and return a borrow — the same shape as
-/// `date_values`. (Unlike `date`, no parsing is needed; the values are the
-/// strings verbatim.)
-static TEXT_VALUES_CELL: std::sync::LazyLock<Vec<String>> = std::sync::LazyLock::new(|| {
-    eql_scalars::TEXT_VALUES
-        .iter()
-        .map(|s| s.to_string())
-        .collect()
-});
-
-/// The `String` fixture values, in catalog order. Public so the `eql_v2_text`
-/// fixture module (emitted by `scalar_types!(fixture_modules)`) can hand the
-/// slice to `scalar_fixture!`.
-pub fn text_values() -> &'static [String] {
-    &TEXT_VALUES_CELL
+// `text`'s value wiring now goes through the shared `lazy_values!` materializer
+// (the same macro `numeric` uses), parsing the catalog's `Fixture::Text` rows
+// directly. `text_values()` stays public so the `eql_v2_text` fixture module
+// (emitted by `scalar_types!(fixture_modules)`) can hand the slice to
+// `scalar_fixture!`. The `to_sql_literal` / `mid_pivot` / `MatchScalar` methods
+// below are `text`'s genuinely-differing bits and remain hand-written.
+lazy_values! {
+    cell      = TEXT_VALUES_CELL,
+    accessor  = text_values,
+    rust_type = String,
+    spec      = eql_scalars::TEXT,
+    variant   = Text,
+    pg_type   = "text",
+    parse     = |f| match f {
+        eql_scalars::Fixture::Text(s) => s.to_string(),
+        other => panic!("non-text fixture in text catalog row: {other:?}"),
+    },
 }
 
 impl ScalarType for String {
