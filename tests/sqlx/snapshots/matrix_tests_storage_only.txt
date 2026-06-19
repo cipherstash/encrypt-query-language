@@ -3,6 +3,7 @@ scalars::<T>::matrix_<T>_storage_aggregate_typecheck_max
 scalars::<T>::matrix_<T>_storage_aggregate_typecheck_min
 scalars::<T>::matrix_<T>_storage_contained_by_blocker
 scalars::<T>::matrix_<T>_storage_contains_blocker
+scalars::<T>::matrix_<T>_storage_count_distinct_extractor
 scalars::<T>::matrix_<T>_storage_count_path_cast
 scalars::<T>::matrix_<T>_storage_count_typed_column
 scalars::<T>::matrix_<T>_storage_eq_blocker

@@ -80,6 +80,16 @@ pub enum ScalarKind {
     /// server-side. Like the other non-integer kinds, the bounded-numeric
     /// accessors are unreachable for it by construction.
     Bool,
+    /// 32-bit IEEE-754 binary float (`f32`, Postgres `real`/`float4`).
+    /// Ordered like the integer kinds via ORE, but with no i128 range
+    /// (`as_bounded_int()` returns `None`) and string-backed at the catalog
+    /// layer. Encrypts through the single f64 float crypto path
+    /// (`Plaintext::Float`) — the f32→f64 widening is exact and monotonic.
+    F32,
+    /// 64-bit IEEE-754 binary float (`f64`, Postgres `double precision`/
+    /// `float8`). The native width of the float crypto path (`F32` widens into
+    /// it); otherwise classified exactly like [`ScalarKind::F32`].
+    F64,
 }
 
 /// Always-present payload keys required by every generated domain CHECK,
@@ -178,6 +188,12 @@ pub enum Fixture {
     /// storage-only, so this fixture is encrypted (ciphertext only, no index
     /// term) and never participates in a comparison pivot. Distinct by value.
     Bool(bool),
+    /// An IEEE-754 float plaintext rendered as a string (`"0.5"`, `"-inf"`).
+    /// The catalog stays zero-dep, so the string is parsed into `f32`/`f64` in
+    /// the SQLx harness, not here. Distinct by parsed value (the harness
+    /// `float_fixtures_are_distinct_by_value` guard enforces this). NaN and
+    /// `-0.0` are deliberately excluded; `±Inf` (`"inf"`/`"-inf"`) ARE fixtures.
+    Float(&'static str),
 }
 
 /// One generated public domain: a suffix appended to the type token and the
@@ -221,6 +237,7 @@ macro_rules! fixtures {
     (date;    $($s:literal),* $(,)?) => { &[$(Fixture::Date($s)),*] };
     (timestamptz; $($s:literal),* $(,)?) => { &[$(Fixture::Timestamptz($s)),*] };
     (bool;    $($b:literal),* $(,)?) => { &[$(Fixture::Bool($b)),*] };
+    (float;   $($s:literal),* $(,)?) => { &[$(Fixture::Float($s)),*] };
 }
 
 /// Domains shared by every ordered-integer scalar, in manifest file order:
@@ -488,9 +505,67 @@ pub const TEXT: ScalarSpec = ScalarSpec {
     fixtures: TEXT_FIXTURES,
 };
 
+/// `float4` fixture plaintexts — IEEE-754 strings parsed into `f32` in the SQLx
+/// harness (the catalog stays zero-dep). EVERY value is exactly representable in
+/// f32 — each is a dyadic rational `n/2^k` (e.g. `2.25 = 9/4`, `0.25 = 1/4`,
+/// `1024 = 2^10`), the value class `real` stores losslessly — so the `real`
+/// round-trip is lossless and the f32→f64 widening before encryption is exact.
+/// Keep new fixtures dyadic: a value like `0.1` is NOT f32-exact, and the
+/// oracle's expected order (parsed `f32`) would then disagree with the value the
+/// `real` column actually rounds to. The three pivots MUST be present
+/// verbatim: `"-inf"` (min_pivot), `"0"` (origin/mid), `"inf"` (max_pivot).
+/// NaN and `-0.0` are deliberately excluded (see the `float_special` suite).
+/// Distinctness is enforced by `Fixture::Float` (above) and its guard test.
+const FLOAT4_FIXTURES: &[Fixture] = fixtures!(float;
+    "-inf", "-1024", "-2.25", "-1", "-0.5", "-0.25",
+    "0", "0.25", "0.5", "1", "2.25", "1024", "inf");
+
+/// `float8` fixture plaintexts — IEEE-754 strings parsed into `f64` in the SQLx
+/// harness. The native width of the float crypto path; values span sign and
+/// magnitude including subnormal-free interior points. The three pivots MUST be
+/// present verbatim: `"-inf"` (min_pivot), `"0"` (origin/mid), `"inf"`
+/// (max_pivot). NaN and `-0.0` are deliberately excluded.
+const FLOAT8_FIXTURES: &[Fixture] = fixtures!(float;
+    "-inf", "-1e300", "-1000000", "-1.5", "-1", "-0.001",
+    "0", "0.001", "1", "1.5", "1000000", "1e300", "inf");
+
+/// `float4` — an **ordered**, non-integer scalar (Postgres `real`). Reuses the
+/// four-domain ordered shape (`ORDERED_INT_DOMAINS`); only kind and fixtures
+/// differ. Both float widths encrypt through the SAME f64 crypto path
+/// (`Plaintext::Float`), so `float4` vs `float8` is purely a Postgres-surface
+/// distinction. Public (like `DATE`/`NUMERIC`) so the SQLx harness reads
+/// `FLOAT4.fixtures` directly to parse the strings into `f32`.
+pub const FLOAT4: ScalarSpec = ScalarSpec {
+    token: "float4",
+    kind: ScalarKind::F32,
+    domains: ORDERED_INT_DOMAINS,
+    fixtures: FLOAT4_FIXTURES,
+};
+
+/// `float8` — an **ordered**, non-integer scalar (Postgres `double precision`),
+/// the native width of the float crypto path. Reuses the ordered shape. Public
+/// so the SQLx harness reads `FLOAT8.fixtures` directly to parse into `f64`.
+pub const FLOAT8: ScalarSpec = ScalarSpec {
+    token: "float8",
+    kind: ScalarKind::F64,
+    domains: ORDERED_INT_DOMAINS,
+    fixtures: FLOAT8_FIXTURES,
+};
+
 /// The scalar catalog — the single source of truth. Order is significant (it
 /// drives generation order). New types are appended as their SQL surface lands.
-pub const CATALOG: &[ScalarSpec] = &[INT4, INT2, INT8, DATE, TIMESTAMPTZ, NUMERIC, TEXT, BOOL];
+pub const CATALOG: &[ScalarSpec] = &[
+    INT4,
+    INT2,
+    INT8,
+    DATE,
+    TIMESTAMPTZ,
+    NUMERIC,
+    TEXT,
+    BOOL,
+    FLOAT4,
+    FLOAT8,
+];
 
 /// Materialise an integer scalar's fixtures into a typed `&'static` slice at
 /// compile time. This is the **single-sourced** plaintext list the SQLx test

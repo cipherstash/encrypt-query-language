@@ -62,6 +62,8 @@ impl PlaintextSqlType {
     pub const JSONB: PlaintextSqlType = PlaintextSqlType("jsonb");
     pub const NUMERIC: PlaintextSqlType = PlaintextSqlType("numeric");
     pub const BOOLEAN: PlaintextSqlType = PlaintextSqlType("boolean");
+    pub const REAL: PlaintextSqlType = PlaintextSqlType("real");
+    pub const DOUBLE_PRECISION: PlaintextSqlType = PlaintextSqlType("double precision");
 
     pub fn as_str(&self) -> &'static str {
         self.0
@@ -90,6 +92,8 @@ const fn cast_for_kind(kind: ScalarKind) -> Cast {
         ScalarKind::Text => Cast::TEXT,
         ScalarKind::Numeric => Cast::DECIMAL,
         ScalarKind::Bool => Cast::BOOLEAN,
+        ScalarKind::F32 => Cast::REAL,
+        ScalarKind::F64 => Cast::DOUBLE,
         ScalarKind::Jsonb => {
             panic!("EqlPlaintext is only implemented for the wired scalar kinds")
         }
@@ -109,6 +113,8 @@ const fn plaintext_sql_type_for_kind(kind: ScalarKind) -> PlaintextSqlType {
         ScalarKind::Text => PlaintextSqlType::TEXT,
         ScalarKind::Numeric => PlaintextSqlType::NUMERIC,
         ScalarKind::Bool => PlaintextSqlType::BOOLEAN,
+        ScalarKind::F32 => PlaintextSqlType::REAL,
+        ScalarKind::F64 => PlaintextSqlType::DOUBLE_PRECISION,
         ScalarKind::Jsonb => {
             panic!("EqlPlaintext is only implemented for the wired scalar kinds")
         }
@@ -126,6 +132,8 @@ mod sealed {
     impl Sealed for serde_json::Value {}
     impl Sealed for rust_decimal::Decimal {}
     impl Sealed for bool {}
+    impl Sealed for crate::scalar_domains::F4 {}
+    impl Sealed for crate::scalar_domains::F8 {}
 }
 
 /// A Rust type usable as a fixture `plaintext` value, carrying its EQL cast
@@ -234,6 +242,24 @@ impl EqlPlaintext for bool {
 
     fn to_plaintext(&self) -> Plaintext {
         Plaintext::Boolean(Some(*self))
+    }
+}
+
+impl EqlPlaintext for crate::scalar_domains::F4 {
+    const KIND: ScalarKind = ScalarKind::F32;
+
+    /// A `real` (f32) is widened to f64 before encryption — there is no f32
+    /// crypto path. The widening is exact and monotonic, so the oracle holds.
+    fn to_plaintext(&self) -> Plaintext {
+        Plaintext::Float(Some(self.0 as f64))
+    }
+}
+
+impl EqlPlaintext for crate::scalar_domains::F8 {
+    const KIND: ScalarKind = ScalarKind::F64;
+
+    fn to_plaintext(&self) -> Plaintext {
+        Plaintext::Float(Some(self.0))
     }
 }
 
@@ -429,6 +455,54 @@ mod tests {
         match false.to_plaintext() {
             Plaintext::Boolean(Some(value)) => assert!(!value),
             other => panic!("expected Plaintext::Boolean(Some(false)), got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn f4_casts_to_real() {
+        use crate::scalar_domains::F4;
+        assert_eq!(<F4 as EqlPlaintext>::CAST, Cast::REAL);
+    }
+
+    #[test]
+    fn f4_plaintext_sql_type_is_real() {
+        use crate::scalar_domains::F4;
+        assert_eq!(
+            <F4 as EqlPlaintext>::PLAINTEXT_SQL_TYPE,
+            PlaintextSqlType::REAL
+        );
+    }
+
+    #[test]
+    fn f4_to_plaintext_widens_to_float_f64() {
+        use crate::scalar_domains::F4;
+        match F4(0.5).to_plaintext() {
+            Plaintext::Float(Some(v)) => assert_eq!(v, 0.5_f64),
+            other => panic!("expected Plaintext::Float(Some(0.5)), got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn f8_casts_to_double() {
+        use crate::scalar_domains::F8;
+        assert_eq!(<F8 as EqlPlaintext>::CAST, Cast::DOUBLE);
+    }
+
+    #[test]
+    fn f8_plaintext_sql_type_is_double_precision() {
+        use crate::scalar_domains::F8;
+        assert_eq!(
+            <F8 as EqlPlaintext>::PLAINTEXT_SQL_TYPE,
+            PlaintextSqlType::DOUBLE_PRECISION
+        );
+    }
+
+    #[test]
+    fn f8_to_plaintext_wraps_in_float_variant() {
+        use crate::scalar_domains::F8;
+        match F8(1.5).to_plaintext() {
+            Plaintext::Float(Some(v)) => assert_eq!(v, 1.5_f64),
+            other => panic!("expected Plaintext::Float(Some(1.5)), got {other:?}"),
         }
     }
 }

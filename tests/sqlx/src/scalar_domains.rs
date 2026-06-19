@@ -780,6 +780,306 @@ mod text_value_tests {
     }
 }
 
+// `float4`/`float8` are hand-written (like `text`/`numeric`): the proc-macro
+// emits `impl ScalarType` only for the integer kinds, and `f32`/`f64` are not
+// `Ord` (which `ScalarType` requires), so the newtypes `F4`/`F8` carry `Ord` via
+// `total_cmp`. Both widths encrypt through the SINGLE f64 crypto path
+// (`Plaintext::Float`), so `float4` vs `float8` is purely a Postgres-surface
+// distinction. The newtype + trait impls are necessarily per-width (different
+// inner primitive, `PG_TYPE`, pivots, and `as f64` widening), so they are
+// hand-written, but the value materialiser is the kind-agnostic part and reuses
+// the shared `lazy_values!` macro (as `text`/`numeric` do).
+
+/// Harness newtype over `f32` for the `float4` scalar. `f32` is not `Ord`, which
+/// `ScalarType` requires, so `Ord` is derived from `total_cmp` — safe because NaN
+/// is never a fixture (guarded in `float_value_guards`). `#[sqlx(transparent)]`
+/// delegates `Type`/`Decode` to the inner `f32` against Postgres `real`.
+/// `Default` is `F4(0.0)` (the numeric origin / mid pivot).
+///
+/// `#[derive(sqlx::Type)]` + `#[sqlx(transparent)]` already generates the
+/// delegating `Type` AND `Decode` (and `Encode`) impls for the newtype, so we do
+/// NOT also `#[derive(sqlx::Decode)]` — that would be a conflicting impl.
+#[derive(Debug, Clone, Copy, sqlx::Type)]
+#[sqlx(transparent)]
+pub struct F4(pub f32);
+
+// `PartialEq` is hand-written via `total_cmp` (not derived) so it stays
+// consistent with the `Ord`/`Eq` impls below: derived IEEE equality breaks
+// `Eq`'s reflexivity for NaN and disagrees with `total_cmp` on signed zero.
+impl PartialEq for F4 {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.total_cmp(&other.0) == std::cmp::Ordering::Equal
+    }
+}
+impl Eq for F4 {}
+impl Ord for F4 {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.0.total_cmp(&other.0)
+    }
+}
+impl PartialOrd for F4 {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Default for F4 {
+    fn default() -> Self {
+        F4(0.0)
+    }
+}
+impl std::fmt::Display for F4 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+/// Harness newtype over `f64` for the `float8` scalar. Same design as `F4`:
+/// `Ord` via `total_cmp`, `#[sqlx(transparent)]` against Postgres
+/// `double precision`, `Default = F8(0.0)`. Like `F4`, the transparent
+/// `sqlx::Type` derive also supplies `Decode`/`Encode`, so they are not derived
+/// separately.
+#[derive(Debug, Clone, Copy, sqlx::Type)]
+#[sqlx(transparent)]
+pub struct F8(pub f64);
+
+// `PartialEq` is hand-written via `total_cmp` (not derived); see `F4` above.
+impl PartialEq for F8 {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.total_cmp(&other.0) == std::cmp::Ordering::Equal
+    }
+}
+impl Eq for F8 {}
+impl Ord for F8 {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.0.total_cmp(&other.0)
+    }
+}
+impl PartialOrd for F8 {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Default for F8 {
+    fn default() -> Self {
+        F8(0.0)
+    }
+}
+impl std::fmt::Display for F8 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+// `float4`/`float8` value wiring goes through the shared `lazy_values!`
+// materialiser (the same macro `text`/`numeric` use), parsing the catalog's
+// `Fixture::Float` strings into the newtype. Rust's `str::parse::<f32>` accepts
+// `"inf"`/`"-inf"`/`"nan"`, so the ±Inf pivots parse natively (NaN is excluded by
+// the catalog guards). `float4_values()`/`float8_values()` are public so the
+// `eql_v2_float4`/`eql_v2_float8` fixture modules (emitted by
+// `scalar_types!(fixture_modules)`) can hand the slice to `scalar_fixture!`.
+lazy_values! {
+    cell      = FLOAT4_VALUES_CELL,
+    accessor  = float4_values,
+    rust_type = F4,
+    spec      = eql_scalars::FLOAT4,
+    variant   = Float,
+    pg_type   = "float4",
+    parse     = |f| match f {
+        eql_scalars::Fixture::Float(s) => F4(s
+            .parse()
+            .unwrap_or_else(|e| panic!("invalid float4 catalog fixture {s:?}: {e}"))),
+        other => panic!("non-float fixture in float4 catalog row: {other:?}"),
+    },
+}
+
+lazy_values! {
+    cell      = FLOAT8_VALUES_CELL,
+    accessor  = float8_values,
+    rust_type = F8,
+    spec      = eql_scalars::FLOAT8,
+    variant   = Float,
+    pg_type   = "float8",
+    parse     = |f| match f {
+        eql_scalars::Fixture::Float(s) => F8(s
+            .parse()
+            .unwrap_or_else(|e| panic!("invalid float8 catalog fixture {s:?}: {e}"))),
+        other => panic!("non-float fixture in float8 catalog row: {other:?}"),
+    },
+}
+
+/// Render an f64 as a Postgres float SQL literal. Finite values use the numeric
+/// Display form; non-finite values use the quoted `'Infinity'` / `'-Infinity'`
+/// special-input form (`'inf'` from Rust's Display is NOT a valid SQL float).
+fn float_sql_literal(x: f64) -> String {
+    if x.is_infinite() {
+        if x.is_sign_positive() {
+            "'Infinity'".to_string()
+        } else {
+            "'-Infinity'".to_string()
+        }
+    } else {
+        format!("{x}")
+    }
+}
+
+impl ScalarType for F4 {
+    const PG_TYPE: &'static str = "float4";
+
+    fn fixture_values() -> &'static [Self] {
+        float4_values()
+    }
+
+    fn to_sql_literal(value: &Self) -> String {
+        float_sql_literal(value.0 as f64)
+    }
+
+    fn arbitrary_value() -> proptest::strategy::BoxedStrategy<Self> {
+        use proptest::strategy::Strategy;
+        // Sample the cast-valid fixture set (no NaN/-0.0/non-finite novelty
+        // beyond the fixtures). Every value already round-trips through `real`.
+        proptest::sample::select(float4_values().to_vec()).boxed()
+    }
+}
+
+impl OrderedScalar for F4 {
+    // Boundary pivots derive from `fixture_values()` (= ±Inf); `mid_pivot`
+    // inherits `Self::default()` = `F4(0.0)`, a real fixture and the origin.
+}
+
+impl SignedScalar for F4 {
+    /// Floats are signed about `0.0`; fixtures straddle it.
+    fn origin() -> Self {
+        F4(0.0)
+    }
+}
+
+impl ScalarType for F8 {
+    const PG_TYPE: &'static str = "float8";
+
+    fn fixture_values() -> &'static [Self] {
+        float8_values()
+    }
+
+    fn to_sql_literal(value: &Self) -> String {
+        float_sql_literal(value.0)
+    }
+
+    fn arbitrary_value() -> proptest::strategy::BoxedStrategy<Self> {
+        use proptest::strategy::Strategy;
+        proptest::sample::select(float8_values().to_vec()).boxed()
+    }
+}
+
+impl OrderedScalar for F8 {}
+
+impl SignedScalar for F8 {
+    fn origin() -> Self {
+        F8(0.0)
+    }
+}
+
+/// Guards for the float value wiring: the runtime properties the fixture table
+/// relies on (catalog parity, no NaN/`-0.0`, pivots present), plus the f32→f64
+/// widening contract the single-crypto-path design rests on.
+#[cfg(test)]
+mod float_value_guards {
+    use super::*;
+
+    #[test]
+    fn float4_values_match_catalog_and_are_finite_non_negative_zero() {
+        let vals = float4_values();
+        // Parsed from the catalog, in order.
+        let want: Vec<F4> = eql_scalars::FLOAT4
+            .fixtures
+            .iter()
+            .map(|f| match f {
+                eql_scalars::Fixture::Float(s) => F4(s.parse().unwrap()),
+                other => panic!("non-float fixture: {other:?}"),
+            })
+            .collect();
+        assert_eq!(vals, want.as_slice());
+        // No NaN, no -0.0 (the encoder canonicalizes -0.0 -> +0.0; a duplicate
+        // would break fetch_fixture_payload's fetch_one).
+        for v in vals {
+            assert!(!v.0.is_nan(), "{v:?} is NaN");
+            assert!(!(v.0 == 0.0 && v.0.is_sign_negative()), "{v:?} is -0.0");
+        }
+    }
+
+    #[test]
+    fn float8_values_match_catalog_and_are_finite_non_negative_zero() {
+        let vals = float8_values();
+        let want: Vec<F8> = eql_scalars::FLOAT8
+            .fixtures
+            .iter()
+            .map(|f| match f {
+                eql_scalars::Fixture::Float(s) => F8(s.parse().unwrap()),
+                other => panic!("non-float fixture: {other:?}"),
+            })
+            .collect();
+        assert_eq!(vals, want.as_slice());
+        for v in vals {
+            assert!(!v.0.is_nan(), "{v:?} is NaN");
+            assert!(!(v.0 == 0.0 && v.0.is_sign_negative()), "{v:?} is -0.0");
+        }
+    }
+
+    #[test]
+    fn float_pivots_and_origin_are_fixtures() {
+        // min/max/origin must be present verbatim (fetch_fixture_payload fetches
+        // each pivot's ciphertext at test time).
+        assert!(float4_values().contains(&<F4 as OrderedScalar>::min_pivot()));
+        assert!(float4_values().contains(&<F4 as OrderedScalar>::max_pivot()));
+        assert!(float4_values().contains(&<F4 as SignedScalar>::origin()));
+        assert_eq!(<F4 as SignedScalar>::origin(), F4(0.0));
+        assert!(float8_values().contains(&<F8 as OrderedScalar>::min_pivot()));
+        assert!(float8_values().contains(&<F8 as OrderedScalar>::max_pivot()));
+        assert!(float8_values().contains(&<F8 as SignedScalar>::origin()));
+        assert_eq!(<F8 as SignedScalar>::origin(), F8(0.0));
+    }
+
+    #[test]
+    fn float_min_max_pivots_are_the_infinities() {
+        assert_eq!(<F4 as OrderedScalar>::min_pivot(), F4(f32::NEG_INFINITY));
+        assert_eq!(<F4 as OrderedScalar>::max_pivot(), F4(f32::INFINITY));
+        assert_eq!(<F8 as OrderedScalar>::min_pivot(), F8(f64::NEG_INFINITY));
+        assert_eq!(<F8 as OrderedScalar>::max_pivot(), F8(f64::INFINITY));
+    }
+
+    /// The whole single-crypto-path design rests on "f32→f64 widening is exact
+    /// and monotonic". Every catalog fixture is exact-in-f32 (powers of two /
+    /// halves) and `arbitrary_value()` only samples those, so the property is
+    /// otherwise untested for f32 values that have NO exact f64-of-an-f32 quirk.
+    /// Exercise a deliberately NON-representable-in-decimal f32 (`0.1f32`, whose
+    /// nearest f32 differs from `0.1f64`) and confirm the f32 ordering survives
+    /// the widening to f64 — i.e. `a < b` as f32 iff `(a as f64) < (b as f64)`
+    /// for the EXACT bits the crypto path encrypts (`to_plaintext` does
+    /// `self.0 as f64`). This is a pure-Rust guard; it does not touch the DB.
+    #[test]
+    fn f32_to_f64_widening_is_order_preserving_for_non_representable_values() {
+        // Spread of f32 values that are not "nice" in decimal, straddling 0.
+        let xs: [f32; 7] = [-0.3, -0.1, -0.0625, 0.0, 0.1, 0.2, 0.3];
+        for w in xs.windows(2) {
+            let (a, b) = (w[0], w[1]);
+            // f32 strict order matches the widened f64 strict order, bit-for-bit
+            // on the value the f64 crypto path actually sees.
+            assert_eq!(
+                a < b,
+                (a as f64) < (b as f64),
+                "widening {a} -> {} reordered relative to {b} -> {}",
+                a as f64,
+                b as f64
+            );
+            // total_cmp (the newtype's Ord source) agrees with the widened cmp.
+            assert_eq!(
+                a.total_cmp(&b),
+                (a as f64).total_cmp(&(b as f64)),
+                "F4 Ord (total_cmp) disagrees with widened F8 Ord for {a} vs {b}"
+            );
+        }
+    }
+}
+
 /// Per-domain capability + payload shape, resolved from `CATALOG`. Each
 /// variant maps to a domain suffix (`Eq` => `_eq`, `Search` => `_search`,
 /// …); its terms, required payload keys, supported operators, and
@@ -1344,6 +1644,8 @@ mod pivot_derivation_tests {
         boundary_pivots_are_fixture_extremes::<chrono::DateTime<chrono::Utc>>();
         boundary_pivots_are_fixture_extremes::<rust_decimal::Decimal>();
         boundary_pivots_are_fixture_extremes::<String>();
+        boundary_pivots_are_fixture_extremes::<F4>();
+        boundary_pivots_are_fixture_extremes::<F8>();
     }
 }
 
@@ -1372,6 +1674,8 @@ mod arbitrary_value_tests {
         draws_a_value::<chrono::DateTime<chrono::Utc>>();
         draws_a_value::<rust_decimal::Decimal>();
         draws_a_value::<String>();
+        draws_a_value::<F4>();
+        draws_a_value::<F8>();
     }
 }
 
@@ -1403,7 +1707,9 @@ mod oracle_inventory_tests {
                 "date",
                 "timestamptz",
                 "numeric",
-                "text"
+                "text",
+                "float4",
+                "float8"
             ],
         );
         // bool is storage-only: no ordered domain, so it is excluded.
@@ -1437,7 +1743,9 @@ mod oracle_inventory_tests {
                 "date",
                 "timestamptz",
                 "numeric",
-                "text"
+                "text",
+                "float4",
+                "float8"
             ],
             "a new ordered scalar must be wired into BOTH oracle suites \
              (fixture_oracle.rs and e2e_oracle.rs)"

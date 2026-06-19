@@ -13,7 +13,7 @@ fn any_term() -> impl Strategy<Value = Term> {
     prop_oneof![Just(Term::Hm), Just(Term::Ore), Just(Term::Bloom)]
 }
 
-/// Strategy over the eight scalar kinds.
+/// Strategy over the ten scalar kinds.
 fn any_kind() -> impl Strategy<Value = ScalarKind> {
     prop_oneof![
         Just(ScalarKind::I16),
@@ -24,6 +24,8 @@ fn any_kind() -> impl Strategy<Value = ScalarKind> {
         Just(ScalarKind::Jsonb),
         Just(ScalarKind::Date),
         Just(ScalarKind::Timestamptz),
+        Just(ScalarKind::F32),
+        Just(ScalarKind::F64),
     ]
 }
 

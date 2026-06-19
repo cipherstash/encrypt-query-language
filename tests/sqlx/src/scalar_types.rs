@@ -59,6 +59,8 @@ macro_rules! scalar_types {
             numeric => rust_decimal::Decimal,
             text => String,
             bool => bool,
+            float4 => eql_tests::scalar_domains::F4,
+            float8 => eql_tests::scalar_domains::F8,
         }
     };
 }
