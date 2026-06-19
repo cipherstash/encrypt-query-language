@@ -48,8 +48,12 @@ querying. Gated behind the `proptest-e2e` cargo feature — `mise run test:sqlx`
 enables it (CI has the secrets); a bare `cargo test` compiles it out. It is the
 **only** suite that can exercise "same plaintext, *different* ciphertext"
 (equality across independently-encrypted values), because the committed fixture
-corpus has no duplicate plaintexts. Integer scalars only for now (random `T`
-generation is trivial for integers).
+corpus has no duplicate plaintexts. Covers every ordered scalar
+(int2/int4/int8/date/timestamptz/numeric/text) via the
+`ScalarType::arbitrary_value()` strategy seam — integers draw the full
+`any::<T>()` range, non-integer scalars sample their cast-valid fixture set
+(their plaintexts have no usable bounded `Arbitrary`). `bool` is storage-only
+(no ordered domain) and is the only scalar excluded.
 
 ## The shared oracle engine
 

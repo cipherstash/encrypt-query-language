@@ -181,20 +181,21 @@ fn scalar_type_impls_tokens(list: &ScalarList) -> TokenStream2 {
                     fn fixture_values() -> &'static [#rust_type] {
                         ::eql_scalars::#values
                     }
+
+                    /// Integers draw the full `any::<Self>()` range — the e2e
+                    /// suite's value over the fixture suite is fresh, arbitrary
+                    /// plaintexts, not a re-encryption of the fixed fixture set.
+                    fn arbitrary_value() -> ::proptest::strategy::BoxedStrategy<#rust_type> {
+                        use ::proptest::strategy::Strategy;
+                        ::proptest::prelude::any::<#rust_type>().boxed()
+                    }
                 }
 
                 impl OrderedScalar for #rust_type {
-                    /// Integer scalars pivot on their inherent `MIN`/`MAX` consts;
-                    /// the fixture lists include both (`fixtures!(int …; Min, …, Max)`).
-                    fn min_pivot() -> #rust_type {
-                        <#rust_type>::MIN
-                    }
-
-                    fn max_pivot() -> #rust_type {
-                        <#rust_type>::MAX
-                    }
-                    // `mid_pivot` inherits the default `Self::default()` = `0`,
-                    // which is the numeric origin and a `Zero` fixture row.
+                    // Boundary pivots derive from `fixture_values()` (the integer
+                    // fixture lists include `Min`/`Max` = the inherent bounds);
+                    // `mid_pivot` inherits `Self::default()` = `0`. Nothing to
+                    // override.
                 }
 
                 impl SignedScalar for #rust_type {
@@ -439,15 +440,16 @@ mod tests {
         assert!(out.contains(r#"const PG_TYPE : & 'static str = "int8""#));
         assert!(out.contains(":: eql_scalars :: INT4_VALUES"));
         assert!(out.contains(":: eql_scalars :: INT8_VALUES"));
-        // const→fn: fixture values is a method now, plus the integer pivots.
+        // const→fn: fixture values is a method now.
         assert!(out.contains("fn fixture_values"));
-        // Assert the emitted pivot bodies, not bare `MIN`/`MAX` substrings:
-        // the latter also appear in the doc comment, so a loose check would
-        // pass even if the bodies stopped returning the inherent bounds.
-        assert!(out.contains("fn min_pivot () -> i32 { < i32 > :: MIN }"));
-        assert!(out.contains("fn max_pivot () -> i32 { < i32 > :: MAX }"));
-        assert!(out.contains("fn min_pivot () -> i64 { < i64 > :: MIN }"));
-        assert!(out.contains("fn max_pivot () -> i64 { < i64 > :: MAX }"));
+        // Pivots are now derived trait defaults — the emitter writes an empty
+        // `impl OrderedScalar` and no longer spells out the boundary bodies.
+        assert!(out.contains("impl OrderedScalar for i32 { }"));
+        assert!(out.contains("impl OrderedScalar for i64 { }"));
+        assert!(!out.contains("fn min_pivot"));
+        assert!(!out.contains("fn max_pivot"));
+        // `SignedScalar::origin` is still emitted.
+        assert!(out.contains("fn origin () -> i32 { 0 }"));
     }
 
     #[test]

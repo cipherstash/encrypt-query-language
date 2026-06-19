@@ -198,6 +198,34 @@ pub fn operator_function_name(symbol: &str) -> &'static str {
     operator(symbol).function_name
 }
 
+impl Operator {
+    /// True for the native-jsonb operators that every encrypted domain
+    /// generates as BLOCKERS: those that are neither comparison
+    /// (`=`/`<>`/`<`/`<=`/`>`/`>=`), nor containment (`@>`/`<@`), nor
+    /// path-selectors (`->`/`->>`). Derived by exclusion so a 21st operator
+    /// added to `OPERATORS` is automatically classified — no literal list to
+    /// drift out of sync.
+    pub fn is_native_jsonb_blocker(&self) -> bool {
+        const COMPARISON: &[&str] = &["=", "<>", "<", "<=", ">", ">="];
+        const CONTAINMENT: &[&str] = &["@>", "<@"];
+        const PATH_SELECTOR: &[&str] = &["->", "->>"];
+        !COMPARISON.contains(&self.symbol)
+            && !CONTAINMENT.contains(&self.symbol)
+            && !PATH_SELECTOR.contains(&self.symbol)
+    }
+}
+
+/// The native-jsonb operator symbols that every encrypted domain blocks, in
+/// `OPERATORS` order. Source of truth for the matrix's native-jsonb-blocker
+/// arm — the arm asserts its hand-written RHS map's keys equal this set.
+pub fn native_jsonb_blocker_symbols() -> Vec<&'static str> {
+    OPERATORS
+        .iter()
+        .filter(|o| o.is_native_jsonb_blocker())
+        .map(|o| o.symbol)
+        .collect()
+}
+
 /// Comparison-operator metadata (commutator/negator/selectivity estimators).
 const fn cmp_metadata(
     restrict: &'static str,
@@ -574,6 +602,18 @@ mod tests {
                 "=", "<>", "<", "<=", ">", ">=", "@>", "<@", "->", "->>", "?", "?|", "?&", "@?",
                 "@@", "#>", "#>>", "-", "#-", "||"
             ]
+        );
+    }
+
+    #[test]
+    fn native_jsonb_blocker_symbols_are_the_residual_ten() {
+        // The residual after removing the 6 comparison + 2 containment + 2
+        // path-selector ops from the 20-operator catalog. If a 21st operator is
+        // added, classify it (comparison/containment/path-selector/native) and
+        // update this list and the matrix arm's RHS map together.
+        assert_eq!(
+            native_jsonb_blocker_symbols(),
+            vec!["?", "?|", "?&", "@?", "@@", "#>", "#>>", "-", "#-", "||"],
         );
     }
 }

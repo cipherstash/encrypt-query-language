@@ -94,18 +94,21 @@ impl ScalarType for JsonbEntryInt4 {
     fn ord_extractor_expr(value_expr: &str) -> String {
         format!("eql_v3.ore_cllw({value_expr})")
     }
+
+    // Not an e2e/property-oracle type (the entry suite runs the jsonb_entry
+    // matrix, not the value oracle), but `arbitrary_value` is a required
+    // `ScalarType` method — sample the wrapped int4 fixtures.
+    fn arbitrary_value() -> proptest::strategy::BoxedStrategy<Self> {
+        use proptest::strategy::Strategy;
+        proptest::sample::select(Self::fixture_values().to_vec()).boxed()
+    }
 }
 
 impl OrderedScalar for JsonbEntryInt4 {
-    fn min_pivot() -> Self {
-        JsonbEntryInt4(<i32 as OrderedScalar>::min_pivot())
-    }
-    fn max_pivot() -> Self {
-        JsonbEntryInt4(<i32 as OrderedScalar>::max_pivot())
-    }
-    fn mid_pivot() -> Self {
-        JsonbEntryInt4(<i32 as OrderedScalar>::mid_pivot())
-    }
+    // All three pivots inherit the `OrderedScalar` defaults: the boundaries
+    // derive from `fixture_values()` (wrapped `INT4_VALUES`) and `mid_pivot`
+    // inherits `JsonbEntryInt4::default()` = `JsonbEntryInt4(0)`. This is exactly
+    // the int4 delegation that used to be spelled out here.
 }
 
 // `JsonbEntryInt4` is deliberately NOT `SignedScalar` — the entry suite does

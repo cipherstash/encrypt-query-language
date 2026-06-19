@@ -4,11 +4,13 @@
 //!
 //! - **`scalar_matrix!`** — the recommended wrapper. One invocation per type
 //!   (~5 lines), with a `caps` capability marker selecting the shape:
-//!   `caps = [eq, ord]` for an ordered scalar (i32, i64, date, ...) where all
-//!   four variants are present and the full `=`/`<>`/`<`/`>`/`min`/`max`
-//!   surface applies; `caps = [eq]` for an equality-only scalar (timestamptz,
-//!   bool, ...) where only storage + `_eq` materialise and the ord operators
-//!   are blockers. The only other inputs that change per type are the scalar
+//!   `caps = [eq, ord]` for an ordered scalar (i32, i64, date, timestamptz,
+//!   ...) where all four variants are present and the full
+//!   `=`/`<>`/`<`/`>`/`min`/`max` surface applies; `caps = [eq]` for a
+//!   hypothetical equality-only scalar (e.g. a future hash-only type) where
+//!   only storage + `_eq` materialise and the ord operators are blockers — no
+//!   current type uses this shape. The only other inputs that change per type
+//!   are the scalar
 //!   itself, the suite token (used to derive domain + test names), and the EQL
 //!   type name (the fixture `scripts(...)` ref); pivots are derived from the
 //!   `ScalarType` impl.
@@ -146,11 +148,13 @@ fn collect_index_scan_nodes(value: &serde_json::Value, found: &mut Vec<(String, 
 ///
 /// - `caps = [eq, ord]` — the ordered-numeric shape (all four variants;
 ///   `=`/`<>`/`<`/`<=`/`>`/`>=`; ORDER BY / ORDER BY USING; ORE injectivity;
-///   the ordered functional index). Consumers: `int2`/`int4`/`int8`/`date`.
+///   the ordered functional index). Consumers:
+///   `int2`/`int4`/`int8`/`date`/`timestamptz`/`numeric`.
 /// - `caps = [eq]` — equality-only (storage + `_eq` only; `=`/`<>` meaningful,
 ///   the four ord operators are deliberate blockers). The empty `ord_domains`
-///   make the order-by / ORE arms emit zero tests. First consumer:
-///   `timestamptz`.
+///   make the order-by / ORE arms emit zero tests. No current consumer —
+///   `timestamptz` was promoted to the ordered shape once the N-block ORE
+///   comparator could order its native 12-block width.
 ///
 /// Both arms take the identical `(suite, scalar, eql_type)` signature, so the
 /// invocation shape is the same regardless of capability — only the `caps`
@@ -605,6 +609,10 @@ macro_rules! scalar_domain_matrix {
             suite = $suite, scalar = $scalar,
             domains = [$(($all_name, $all_variant)),+],
         }
+        $crate::__scalar_matrix_native_jsonb_blocker_outer! {
+            suite = $suite, scalar = $scalar,
+            domains = [$(($all_name, $all_variant)),+],
+        }
         $crate::__scalar_matrix_typed_column_outer! {
             suite = $suite, scalar = $scalar,
             combos = [$($blocker_combo),+],
@@ -931,7 +939,11 @@ macro_rules! __scalar_matrix_cross_shape_case {
 
 // ============================================================================
 // Supported-NULL category — leaf for the domain × op driver: STRICT wrappers
-// must propagate NULL on all three NULL positions (left, right, both).
+// must propagate NULL on all three NULL positions (left, right, both). This is
+// three-valued logic — a supported op (e.g. `<>`) with a NULL operand must
+// yield NULL, not true and not false; easy to get wrong in domain wrappers,
+// which is why every (domain, op) pair is swept here. (Subsumes the deleted
+// `neq_propagates_null_under_three_valued_logic` int4 hand-test.)
 // ============================================================================
 
 #[macro_export]
@@ -1220,6 +1232,131 @@ macro_rules! __scalar_matrix_native_absent_case {
                         "operator does not exist",
                     ).await?;
                 }
+                Ok(())
+            }
+        }
+    };
+}
+
+// ============================================================================
+// Native-jsonb-blocker category — the native jsonb operators that the codegen
+// surface generates as BLOCKERS on every encrypted domain (neither comparison,
+// containment, nor path-selector). They must RAISE the EQL "operator X is not
+// supported" blocker on every variant, with PLACEHOLDER_PAYLOAD. No fixture row
+// is needed: the blocker resolves on the operator and raises before any payload
+// is read, so any castable sentinel suffices. Per-op RHS shapes mirror the
+// native jsonb operator signatures (see
+// crates/eql-codegen/src/operator_surface.rs OPERATORS): `?` takes text, `-`
+// takes text / integer / text[] (three overloads), `?|`/`?&`/`#>`/`#>>`/`#-`
+// take text[], `@?`/`@@` take jsonpath, `||` takes jsonb. Replaces the int4-only
+// `omitted_native_jsonb_operators_raise_eql_blockers` hand-written test,
+// extending the guarantee to all storage scalars.
+//
+// The SYMBOL SET this arm sweeps is pinned to the codegen-derived residual by
+// `native_jsonb_blocker_arm_covers_every_derived_symbol` (below) via
+// `NATIVE_JSONB_BLOCKER_ARM_SYMBOLS` — the RHS operand shapes stay hand-written.
+// ============================================================================
+
+/// The operator symbols the `__scalar_matrix_native_jsonb_blocker_*` arm
+/// sweeps, in `OPERATORS` order. The RHS operand *shapes* are hand-written in
+/// the macro body (they cannot be derived from the symbol), but this symbol
+/// SET must stay equal to the codegen-derived residual
+/// (`eql_codegen::operator_surface::native_jsonb_blocker_symbols()`, pinned by
+/// `native_jsonb_blocker_symbols_are_the_residual_ten` in that crate) — pinned
+/// here by `native_jsonb_blocker_arm_covers_every_derived_symbol`.
+pub const NATIVE_JSONB_BLOCKER_ARM_SYMBOLS: &[&str] =
+    &["?", "?|", "?&", "@?", "@@", "#>", "#>>", "-", "#-", "||"];
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_native_jsonb_blocker_outer {
+    (
+        suite = $suite:ident, scalar = $scalar:ty,
+        domains = [$(($dom_name:ident, $variant:ident)),+ $(,)?] $(,)?
+    ) => {
+        $(
+            $crate::__scalar_matrix_native_jsonb_blocker_case! {
+                suite = $suite, scalar = $scalar,
+                dom_name = $dom_name, variant = $variant,
+            }
+        )+
+    };
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __scalar_matrix_native_jsonb_blocker_case {
+    (
+        suite = $suite:ident, scalar = $scalar:ty,
+        dom_name = $dom_name:ident, variant = $variant:ident $(,)?
+    ) => {
+        $crate::paste::paste! {
+            #[sqlx::test]
+            async fn [<matrix_ $suite _ $dom_name _native_jsonb_blockers>](
+                pool: sqlx::PgPool,
+            ) -> anyhow::Result<()> {
+                let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
+                let d = &spec.sql_domain;
+                let payload = $crate::helpers::PLACEHOLDER_PAYLOAD;
+
+                // (op symbol, full SELECT-able expr). The LHS is always
+                // `$1::jsonb::{d}`. `-` carries three arg shapes (text / integer /
+                // text[]) and `||` three overloads — covering every generated
+                // overload exactly as the int4 hand-test did. Each binds one
+                // PLACEHOLDER_PAYLOAD. The swept symbol set is pinned to the
+                // codegen residual by NATIVE_JSONB_BLOCKER_ARM_SYMBOLS.
+                let single: &[(&str, String)] = &[
+                    ("?",   format!("$1::jsonb::{d} ? 'c'::text")),
+                    ("?|",  format!("$1::jsonb::{d} ?| ARRAY['c']")),
+                    ("?&",  format!("$1::jsonb::{d} ?& ARRAY['c']")),
+                    ("#>",  format!("$1::jsonb::{d} #> ARRAY['i']")),
+                    ("#>>", format!("$1::jsonb::{d} #>> ARRAY['i', 'c']")),
+                    ("@?",  format!("$1::jsonb::{d} @? '$.c'::jsonpath")),
+                    ("@@",  format!("$1::jsonb::{d} @@ '$.c == \"placeholder\"'::jsonpath")),
+                    ("-",   format!("$1::jsonb::{d} - 'c'::text")),
+                    ("-",   format!("$1::jsonb::{d} - 0")),
+                    ("-",   format!("$1::jsonb::{d} - ARRAY['c']")),
+                    ("#-",  format!("$1::jsonb::{d} #- ARRAY['i']")),
+                ];
+                for (op, expr) in single {
+                    let sql = format!("SELECT {expr}");
+                    let msg = $crate::scalar_domains::blocker_msg(d, op);
+                    $crate::scalar_domains::assert_raises(
+                        &pool, &sql, &[Some(payload)], &msg,
+                    ).await?;
+                }
+
+                // `||` overloads: (domain, jsonb), (jsonb, domain), (domain, domain).
+                let concat: &[String] = &[
+                    format!("$1::jsonb::{d} || $2::jsonb"),
+                    format!("$1::jsonb || $2::jsonb::{d}"),
+                    format!("$1::jsonb::{d} || $2::jsonb::{d}"),
+                ];
+                let concat_msg = $crate::scalar_domains::blocker_msg(d, "||");
+                for expr in concat {
+                    let sql = format!("SELECT {expr}");
+                    $crate::scalar_domains::assert_raises(
+                        &pool, &sql, &[Some(payload), Some(payload)], &concat_msg,
+                    ).await?;
+                }
+
+                // Guard: the symbols this arm actually sweeps (the `single` op
+                // keys plus `||`) must equal NATIVE_JSONB_BLOCKER_ARM_SYMBOLS,
+                // itself pinned to the codegen residual by a sibling #[test]. This
+                // ties the SQL the arm runs to the pinned set, so a symbol added
+                // to the const without a matching `single`/`concat` case (or vice
+                // versa) fails here instead of silently going unexercised.
+                let mut swept: Vec<&str> = single.iter().map(|(op, _)| *op).collect();
+                swept.push("||");
+                swept.sort_unstable();
+                swept.dedup();
+                let mut pinned: Vec<&str> =
+                    $crate::matrix::NATIVE_JSONB_BLOCKER_ARM_SYMBOLS.to_vec();
+                pinned.sort_unstable();
+                anyhow::ensure!(
+                    swept == pinned,
+                    "native-jsonb-blocker arm swept {swept:?} but pinned set is {pinned:?}",
+                );
                 Ok(())
             }
         }
@@ -3234,12 +3371,11 @@ macro_rules! __scalar_matrix_count_case {
 #[macro_export]
 #[doc(hidden)]
 macro_rules! __scalar_matrix_count_distinct_dispatch {
-    // Storage: no DISTINCT case — no extractor to deduplicate by.
-    (
-        suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
-        dom_name = $dom_name:ident, variant = Storage $(,)?
-    ) => {};
-    // Eq, Ord, OrdOre — emit the DISTINCT test.
+    // One arm for EVERY variant — the Storage-vs-rest decision is a RUNTIME
+    // `extractor_expr().is_none()` early-return inside the body, NOT a
+    // macro-expansion ident-match on `Storage`. (A `macro_rules!` cannot suppress
+    // a test item at runtime, so Storage emits a trivially-passing test rather
+    // than emitting nothing — see Task 6C.)
     (
         suite = $suite:ident, scalar = $scalar:ty, script = $script:literal, script_path = $script_path:literal,
         dom_name = $dom_name:ident, variant = $variant:ident $(,)?
@@ -3252,8 +3388,12 @@ macro_rules! __scalar_matrix_count_distinct_dispatch {
                 use $crate::scalar_domains::ScalarType;
                 let spec = $crate::__scalar_matrix_spec!($scalar, $variant);
                 let d = &spec.sql_domain;
-                let extractor = spec.extractor_expr("value")
-                    .expect("non-Storage variant must expose an extractor");
+                let Some(extractor) = spec.extractor_expr("value") else {
+                    // Storage has no extractor to deduplicate by — the count-distinct
+                    // case is meaningless here, so this emitted test is a trivial pass.
+                    // (Runtime guard, NOT a macro ident-match: that is the point of 6C.)
+                    return Ok(());
+                };
                 let fixture = <$scalar as ScalarType>::fixture_table_name();
                 let expected = <$scalar as ScalarType>::fixture_values().len() as i64;
 
@@ -3282,4 +3422,31 @@ macro_rules! __scalar_matrix_count_distinct_dispatch {
             }
         }
     };
+}
+
+#[cfg(test)]
+mod native_jsonb_blocker_arm_tests {
+    use super::*;
+
+    #[test]
+    fn native_jsonb_blocker_arm_covers_every_derived_symbol() {
+        // The arm's hand-written RHS-shape map keys (operator SYMBOLS) must equal
+        // the codegen residual. `eql-codegen` is not a dependency of this crate,
+        // so we pin against the same literal 10-symbol vector that
+        // `native_jsonb_blocker_symbols_are_the_residual_ten`
+        // (operator_surface.rs) pins against the live `OPERATORS` table. The two
+        // pins together fail if either side drifts: a 21st native-jsonb operator
+        // makes the codegen test fail, and updating that test without updating
+        // this const makes them disagree on review. The RHS operand shapes stay
+        // hand-written; only the symbol SET is asserted.
+        let mut arm: Vec<&str> = NATIVE_JSONB_BLOCKER_ARM_SYMBOLS.to_vec();
+        let mut want = vec!["?", "?|", "?&", "@?", "@@", "#>", "#>>", "-", "#-", "||"];
+        arm.sort_unstable();
+        want.sort_unstable();
+        assert_eq!(
+            arm, want,
+            "native-jsonb-blocker arm symbol set must equal the codegen residual; \
+             arm={NATIVE_JSONB_BLOCKER_ARM_SYMBOLS:?}",
+        );
+    }
 }
