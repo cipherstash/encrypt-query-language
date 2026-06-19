@@ -72,6 +72,8 @@ impl ScalarKind {
             | ScalarKind::Text
             | ScalarKind::Jsonb
             | ScalarKind::Bool
+            | ScalarKind::F32
+            | ScalarKind::F64
             | ScalarKind::Date
             | ScalarKind::Timestamptz => None,
         }
@@ -97,6 +99,14 @@ impl ScalarKind {
         matches!(self, ScalarKind::Text)
     }
 
+    /// True for the IEEE-754 float kinds (`F32`, `F64`) — ordered, non-integer,
+    /// string-backed-fixture scalars whose `impl ScalarType` is hand-written in
+    /// `scalar_domains.rs` (like `text`/`numeric`). Keeps float classification in
+    /// the catalog crate alongside `is_int`/`is_temporal`/`is_text`.
+    pub const fn is_float(self) -> bool {
+        matches!(self, ScalarKind::F32 | ScalarKind::F64)
+    }
+
     /// A debug/identifier string for the kind: the canonical Rust plaintext type
     /// name (`"i32"`, `"chrono::NaiveDate"`, `"rust_decimal::Decimal"`). `Jsonb`
     /// has **no generated SQL surface** and no catalog row, so calling this on it
@@ -113,6 +123,8 @@ impl ScalarKind {
             ScalarKind::Timestamptz => "chrono::DateTime<Utc>",
             ScalarKind::Numeric => "rust_decimal::Decimal",
             ScalarKind::Bool => "bool",
+            ScalarKind::F32 => "f32",
+            ScalarKind::F64 => "f64",
             ScalarKind::Jsonb => {
                 panic!("ScalarKind::rust_type: jsonb has no generated surface yet")
             }
