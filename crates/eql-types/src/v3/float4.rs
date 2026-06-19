@@ -8,6 +8,10 @@
 //! wire shape here is identical to [`crate::v3::float8`] — an 8-block `ob` term
 //! (`f64::ENCODED_LEN == 8`, same as `int8`). `float4` vs `float8` is purely a
 //! Postgres-surface distinction (column type, domain name).
+//!
+//! Special-value behaviour (`-0.0`, `±Inf`, and the **NaN is not rejected
+//! server-side — reject it client-side** caveat) is identical to `float8`; see
+//! [`crate::v3::float8`] for the full note.
 
 use schemars::{schema::RootSchema, schema_for};
 

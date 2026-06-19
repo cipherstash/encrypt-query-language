@@ -507,8 +507,12 @@ pub const TEXT: ScalarSpec = ScalarSpec {
 
 /// `float4` fixture plaintexts — IEEE-754 strings parsed into `f32` in the SQLx
 /// harness (the catalog stays zero-dep). EVERY value is exactly representable in
-/// f32 (powers of two and halves), so the `real` round-trip is lossless and the
-/// f32→f64 widening before encryption is exact. The three pivots MUST be present
+/// f32 — each is a dyadic rational `n/2^k` (e.g. `2.25 = 9/4`, `0.25 = 1/4`,
+/// `1024 = 2^10`), the value class `real` stores losslessly — so the `real`
+/// round-trip is lossless and the f32→f64 widening before encryption is exact.
+/// Keep new fixtures dyadic: a value like `0.1` is NOT f32-exact, and the
+/// oracle's expected order (parsed `f32`) would then disagree with the value the
+/// `real` column actually rounds to. The three pivots MUST be present
 /// verbatim: `"-inf"` (min_pivot), `"0"` (origin/mid), `"inf"` (max_pivot).
 /// NaN and `-0.0` are deliberately excluded (see the `float_special` suite).
 /// Distinctness is enforced by `Fixture::Float` (above) and its guard test.
