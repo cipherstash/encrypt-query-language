@@ -1396,7 +1396,15 @@ mod oracle_inventory_tests {
             .collect();
         assert_eq!(
             ordered,
-            vec!["int4", "int2", "int8", "date", "timestamptz", "numeric", "text"],
+            vec![
+                "int4",
+                "int2",
+                "int8",
+                "date",
+                "timestamptz",
+                "numeric",
+                "text"
+            ],
         );
         // bool is storage-only: no ordered domain, so it is excluded.
         assert!(!ordered.contains(&"bool"));
@@ -1422,7 +1430,15 @@ mod oracle_inventory_tests {
         // instantiation lists.
         assert_eq!(
             ordered,
-            vec!["int4", "int2", "int8", "date", "timestamptz", "numeric", "text"],
+            vec![
+                "int4",
+                "int2",
+                "int8",
+                "date",
+                "timestamptz",
+                "numeric",
+                "text"
+            ],
             "a new ordered scalar must be wired into BOTH oracle suites \
              (fixture_oracle.rs and e2e_oracle.rs)"
         );
