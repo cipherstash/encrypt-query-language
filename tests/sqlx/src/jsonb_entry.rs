@@ -94,6 +94,14 @@ impl ScalarType for JsonbEntryInt4 {
     fn ord_extractor_expr(value_expr: &str) -> String {
         format!("eql_v3.ore_cllw({value_expr})")
     }
+
+    // Not an e2e/property-oracle type (the entry suite runs the jsonb_entry
+    // matrix, not the value oracle), but `arbitrary_value` is a required
+    // `ScalarType` method — sample the wrapped int4 fixtures.
+    fn arbitrary_value() -> proptest::strategy::BoxedStrategy<Self> {
+        use proptest::strategy::Strategy;
+        proptest::sample::select(Self::fixture_values().to_vec()).boxed()
+    }
 }
 
 impl OrderedScalar for JsonbEntryInt4 {
