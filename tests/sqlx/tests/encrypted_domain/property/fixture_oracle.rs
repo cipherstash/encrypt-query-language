@@ -85,6 +85,52 @@ pub(crate) fn embedded_fixture_sql<T: ScalarType>() -> &'static str {
     }
 }
 
+/// The `_doubles` fixture SQL for `T`, `include_str!`-embedded at compile time
+/// (one arm per comparison-capable token). Same embed rationale as
+/// `embedded_fixture_sql` — the prebuilt nextest archive carries the gitignored
+/// fixtures into CI shards. The table is `fixtures.eql_v2_<T>_doubles`; the file
+/// is `fixtures/eql_v2_<T>_doubles.sql`. `bool` is storage-only and has no
+/// doubles fixture; the cross-ciphertext test never instantiates it, so its
+/// absence (caught by the loud catch-all) is correct.
+pub(crate) fn embedded_doubles_sql<T: ScalarType>() -> &'static str {
+    match T::PG_TYPE {
+        "int2" => include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/fixtures/eql_v2_int2_doubles.sql"
+        )),
+        "int4" => include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/fixtures/eql_v2_int4_doubles.sql"
+        )),
+        "int8" => include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/fixtures/eql_v2_int8_doubles.sql"
+        )),
+        "date" => include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/fixtures/eql_v2_date_doubles.sql"
+        )),
+        "timestamptz" => {
+            include_str!(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/fixtures/eql_v2_timestamptz_doubles.sql"
+            ))
+        }
+        "numeric" => include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/fixtures/eql_v2_numeric_doubles.sql"
+        )),
+        "text" => include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/fixtures/eql_v2_text_doubles.sql"
+        )),
+        other => panic!(
+            "no embedded doubles fixture for catalog token '{other}'; \
+             add an include_str! arm in embedded_doubles_sql"
+        ),
+    }
+}
+
 /// Load `T`'s committed fixtures into `pool`'s isolated scratch DB via the
 /// `include_str!`-embedded SQL. The fixture SQL is self-contained (`CREATE SCHEMA
 /// IF NOT EXISTS fixtures` / `CREATE` / `INSERT`); since each `#[sqlx::test]` DB
@@ -120,6 +166,30 @@ pub(crate) async fn load_rows<T: ScalarType>(pool: &PgPool) -> Result<Arc<Vec<Ro
         "fixture {} is empty",
         T::fixture_table_name()
     );
+    Ok(Arc::new(rows))
+}
+
+/// Load `T`'s `_doubles` fixture into this test's isolated scratch DB and read
+/// every `(plaintext, payload::text)` row in id order. The table is
+/// `fixtures.eql_v2_<T>_doubles` (NOT the matrix's `fixtures.eql_v2_<T>`), so it
+/// carries the equal-plaintext / distinct-ciphertext rows the cross-ciphertext
+/// test needs.
+pub(crate) async fn load_doubles_rows<T: ScalarType>(pool: &PgPool) -> Result<Arc<Vec<Row<T>>>> {
+    sqlx::raw_sql(embedded_doubles_sql::<T>())
+        .execute(pool)
+        .await
+        .with_context(|| format!("loading doubles fixtures for {}", T::PG_TYPE))?;
+    let table = format!("fixtures.eql_v2_{}_doubles", T::PG_TYPE);
+    let sql = format!("SELECT plaintext, payload::text FROM {table} ORDER BY id");
+    let raw: Vec<(T, String)> = sqlx::query_as(&sql).fetch_all(pool).await?;
+    let rows: Vec<Row<T>> = raw
+        .into_iter()
+        .map(|(plaintext, payload_json)| Row {
+            plaintext,
+            payload_json,
+        })
+        .collect();
+    anyhow::ensure!(!rows.is_empty(), "doubles fixture {table} is empty");
     Ok(Arc::new(rows))
 }
 
