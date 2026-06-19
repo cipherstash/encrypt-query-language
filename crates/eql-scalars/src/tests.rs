@@ -42,6 +42,8 @@ mod rust_tests {
         assert_eq!(ScalarKind::Jsonb.as_bounded_int(), None);
         assert_eq!(ScalarKind::Date.as_bounded_int(), None);
         assert_eq!(ScalarKind::Timestamptz.as_bounded_int(), None);
+        assert_eq!(ScalarKind::F32.as_bounded_int(), None);
+        assert_eq!(ScalarKind::F64.as_bounded_int(), None);
     }
 
     #[test]
@@ -80,6 +82,8 @@ mod rust_tests {
         assert!(!ScalarKind::Jsonb.is_int());
         assert!(!ScalarKind::Date.is_int());
         assert!(!ScalarKind::Timestamptz.is_int());
+        assert!(!ScalarKind::F32.is_int());
+        assert!(!ScalarKind::F64.is_int());
     }
 
     #[test]
@@ -93,6 +97,8 @@ mod rust_tests {
             ScalarKind::Jsonb,
             ScalarKind::Date,
             ScalarKind::Timestamptz,
+            ScalarKind::F32,
+            ScalarKind::F64,
         ] {
             assert!(!k.is_text());
         }
@@ -171,6 +177,8 @@ mod rust_tests {
         assert!(!ScalarKind::I16.is_temporal());
         assert!(!ScalarKind::I32.is_temporal());
         assert!(!ScalarKind::I64.is_temporal());
+        assert!(!ScalarKind::F32.is_temporal());
+        assert!(!ScalarKind::F64.is_temporal());
     }
 
     #[test]
@@ -523,7 +531,7 @@ mod catalog_tests {
     }
 
     #[test]
-    fn catalog_has_int4_int2_int8_date_timestamptz_numeric_text_bool_in_order() {
+    fn catalog_has_all_tokens_in_order() {
         let tokens: Vec<&str> = CATALOG.iter().map(|s| s.token).collect();
         assert_eq!(
             tokens,
@@ -535,7 +543,9 @@ mod catalog_tests {
                 "timestamptz",
                 "numeric",
                 "text",
-                "bool"
+                "bool",
+                "float4",
+                "float8"
             ]
         );
     }
@@ -896,6 +906,102 @@ mod values_tests {
     }
 }
 
+mod float_tests {
+    use crate::*;
+
+    fn scalar(token: &str) -> &'static ScalarSpec {
+        CATALOG
+            .iter()
+            .find(|s| s.token == token)
+            .unwrap_or_else(|| panic!("{token} missing from CATALOG"))
+    }
+
+    #[test]
+    fn float_specs_are_in_catalog_with_ordered_shape() {
+        for token in ["float4", "float8"] {
+            let s = scalar(token);
+            let suffixes: Vec<_> = s.domains.iter().map(|d| d.suffix).collect();
+            assert_eq!(suffixes, vec!["", "_eq", "_ord_ore", "_ord"]);
+        }
+        assert_eq!(scalar("float4").kind, ScalarKind::F32);
+        assert_eq!(scalar("float8").kind, ScalarKind::F64);
+    }
+
+    #[test]
+    fn float_kinds_are_not_bounded_int_temporal_or_text() {
+        for k in [ScalarKind::F32, ScalarKind::F64] {
+            assert_eq!(k.as_bounded_int(), None);
+            assert!(!k.is_int());
+            assert!(!k.is_temporal());
+            assert!(!k.is_text());
+            assert!(k.is_float());
+        }
+    }
+
+    #[test]
+    fn float_rust_types_are_f32_and_f64() {
+        assert_eq!(ScalarKind::F32.rust_type(), "f32");
+        assert_eq!(ScalarKind::F64.rust_type(), "f64");
+    }
+
+    /// NaN and -0.0 must never be fixtures: NaN is unordered/unspecified in the
+    /// encoder; -0.0 canonicalizes to +0.0 and would duplicate the +0.0 row.
+    /// ±Inf MUST be present (the boundary pivots).
+    #[test]
+    fn float_fixtures_exclude_nan_and_negative_zero_and_include_infinities() {
+        for token in ["float4", "float8"] {
+            let s = scalar(token);
+            let strings: Vec<&str> = s
+                .fixtures
+                .iter()
+                .map(|f| match f {
+                    Fixture::Float(v) => *v,
+                    other => panic!("{token} fixture must be Fixture::Float, got {other:?}"),
+                })
+                .collect();
+            for v in &strings {
+                let parsed: f64 = v
+                    .parse()
+                    .unwrap_or_else(|_| panic!("{token} fixture {v:?} must parse as f64"));
+                assert!(!parsed.is_nan(), "{token} fixture {v:?} is NaN");
+                assert!(
+                    !(parsed == 0.0 && parsed.is_sign_negative()),
+                    "{token} fixture {v:?} is -0.0"
+                );
+            }
+            assert!(strings.contains(&"inf"), "{token} must include +inf pivot");
+            assert!(strings.contains(&"-inf"), "{token} must include -inf pivot");
+            assert!(strings.contains(&"0"), "{token} must include 0 (origin)");
+        }
+    }
+
+    /// Distinct by parsed f64 value (the catalog dedupes only by literal string;
+    /// the fixture table keys on the value, so an aliasing pair would break
+    /// fetch_fixture_payload's fetch_one).
+    #[test]
+    fn float_fixtures_are_distinct_by_value() {
+        for token in ["float4", "float8"] {
+            let s = scalar(token);
+            let parsed: Vec<u64> = s
+                .fixtures
+                .iter()
+                .map(|f| match f {
+                    Fixture::Float(v) => {
+                        let x: f64 = v.parse().unwrap();
+                        // total_cmp bit key; -0.0 already excluded so +0.0 is unique.
+                        x.to_bits()
+                    }
+                    other => panic!("non-float fixture: {other:?}"),
+                })
+                .collect();
+            let mut sorted = parsed.clone();
+            sorted.sort_unstable();
+            sorted.dedup();
+            assert_eq!(sorted.len(), parsed.len(), "{token} has duplicate fixtures");
+        }
+    }
+}
+
 mod invariant_tests {
     use crate::*;
     use std::collections::HashMap;
@@ -936,7 +1042,11 @@ mod invariant_tests {
             | Fixture::Text(s)
             | Fixture::Jsonb(s)
             | Fixture::Date(s)
-            | Fixture::Timestamptz(s) => DistinctKey::Str(s),
+            | Fixture::Timestamptz(s)
+            // Float fixtures dedupe by their literal here, like the other
+            // string-backed kinds (every float literal is distinct; the harness
+            // `float_fixtures_are_distinct_by_value` guard pins value-distinctness).
+            | Fixture::Float(s) => DistinctKey::Str(s),
             // `bool` is storage-only and string-backed for distinctness: the two
             // values dedupe by their literal, like the other non-numeric kinds.
             Fixture::Bool(b) => DistinctKey::Str(if b { "true" } else { "false" }),
