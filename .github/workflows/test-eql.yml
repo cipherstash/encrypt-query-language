@@ -268,9 +268,13 @@ jobs:
         run: |
           mise run postgres:up postgres-${POSTGRES_VERSION} --extra-args "--detach --wait"
 
-      - name: Validate SQL documentation (Postgres ${{ matrix.postgres-version }})
+      # Source-only doc checks (coverage + required-tags) moved to the
+      # unconditional `docs-static` job so they run on every PR (incl. docs-only)
+      # and exactly once, not per-Postgres. This step keeps only the DB-backed
+      # SQL-syntax validation, which genuinely needs the per-version Postgres.
+      - name: Validate documented SQL syntax (Postgres ${{ matrix.postgres-version }})
         run: |
-          mise run docs:validate
+          mise run docs:validate:documented-sql
 
       - name: Clean-DB v3 install smoke (Postgres ${{ matrix.postgres-version }})
         run: |
@@ -460,6 +464,75 @@ jobs:
         run: |
           mise run --output prefix test:splinter --postgres ${POSTGRES_VERSION}
 
+  # Source-only SQL documentation validation (coverage + required Doxygen tags).
+  # Deliberately NOT relevance-gated: it runs on EVERY pull_request — including
+  # docs-only PRs that skip the heavy jobs — so documentation is always
+  # validated. DB-free and creds-free (the psql-backed syntax check stays in the
+  # per-version `validate` job).
+  docs-static:
+    name: "SQL doc validation"
+    runs-on: blacksmith-16vcpu-ubuntu-2204
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: .
+          shared-key: sqlx-tests
+          save-if: false
+      - name: Validate SQL doc coverage + required tags
+        run: |
+          mise run docs:validate:source
+
+  # The e2e (fresh-encryption) property suite. Encrypts random values through
+  # ZeroKMS at run time, so it needs CS_* creds and is PG-version-independent —
+  # one PG17 run, never the matrix. Compiles the `proptest-e2e`-gated binaries
+  # (which the default-feature sharded archive excludes) and runs only the
+  # e2e oracle. Like build-archive, it holds CS_* and so carries the same
+  # fork-PR guard to keep the secrets off fork runs.
+  e2e:
+    name: "e2e property suite (fresh encryption)"
+    needs: [changes, setup]
+    if: >-
+      (github.event_name == 'merge_group'
+       || github.event_name == 'workflow_dispatch'
+       || (github.event_name == 'pull_request' && needs.changes.outputs.relevant == 'true'))
+      && (github.event_name != 'pull_request'
+          || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: blacksmith-16vcpu-ubuntu-2204
+    env:
+      POSTGRES_VERSION: "17"
+      CS_CLIENT_ACCESS_KEY: ${{ secrets.CS_CLIENT_ACCESS_KEY }}
+      CS_WORKSPACE_CRN: ${{ secrets.CS_WORKSPACE_CRN }}
+      CS_CLIENT_ID: ${{ secrets.CS_CLIENT_ID }}
+      CS_CLIENT_KEY: ${{ secrets.CS_CLIENT_KEY }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: .
+          shared-key: sqlx-tests
+          save-if: false
+      - name: Setup database (Postgres 17)
+        run: |
+          mise run postgres:up postgres-${POSTGRES_VERSION} --extra-args "--detach --wait"
+      - name: Run e2e property suite
+        run: |
+          mise run test:sqlx:e2e
+
   # The ONE required status check. Stable name on every event, so branch
   # protection never references an event-dependent leaf name (which would
   # deadlock). Passes iff every needed job is success or skipped. Treating
@@ -469,7 +542,7 @@ jobs:
   ci-required:
     name: "ci-required"
     needs: [changes, setup, build-archive, test, validate, schema, rust-crates,
-            codegen, self-contained-v3, matrix-coverage, splinter]
+            codegen, self-contained-v3, matrix-coverage, splinter, docs-static, e2e]
     if: always()
     runs-on: blacksmith-16vcpu-ubuntu-2204
     steps:
