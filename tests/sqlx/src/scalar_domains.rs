@@ -1401,4 +1401,30 @@ mod oracle_inventory_tests {
         // bool is storage-only: no ordered domain, so it is excluded.
         assert!(!ordered.contains(&"bool"));
     }
+
+    /// Drift guard: the ordered-scalar set below is the EXACT list that must
+    /// appear as `fixture_oracle_suite!(…, ordered)` in `fixture_oracle.rs` AND
+    /// `e2e_oracle_suite!(…)` in `e2e_oracle.rs`. Those macro lists live in the
+    /// test binary and cannot be introspected from here, so this test pins the
+    /// expected set; a new ordered scalar added to CATALOG fails here until both
+    /// suite lists are updated. (The matrix tier has its own gate:
+    /// `mise run test:matrix:inventory`.)
+    #[test]
+    fn ordered_scalars_requiring_oracle_wiring() {
+        // Same `is_declared_for` guard as above: `supports_ord` panics on a
+        // scalar with no `_ord` domain (bool), so short-circuit first.
+        let ordered: Vec<&str> = CATALOG
+            .iter()
+            .filter(|s| Variant::Ord.is_declared_for(s.token) && Variant::Ord.supports_ord(s.token))
+            .map(|s| s.token)
+            .collect();
+        // Keep in lockstep with the fixture_oracle_suite! / e2e_oracle_suite!
+        // instantiation lists.
+        assert_eq!(
+            ordered,
+            vec!["int4", "int2", "int8", "date", "timestamptz", "numeric", "text"],
+            "a new ordered scalar must be wired into BOTH oracle suites \
+             (fixture_oracle.rs and e2e_oracle.rs)"
+        );
+    }
 }
