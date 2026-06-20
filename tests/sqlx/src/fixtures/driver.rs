@@ -120,31 +120,49 @@ where
     /// working table unconditionally once it has been created, and
     /// propagate failures in causal order (insert error first).
     pub async fn run(&self) -> Result<()> {
-        let config = DriverConfig::from_env()?;
+        let mut direct = self.connect().await?;
+        // Encrypt exactly the spec's curated values.
+        let result = self.render_values(&mut direct, self.values()).await;
+        let _ = direct.close().await;
+        let lines = result?;
+        self.write_script(None, &lines, self.values().len())
+    }
 
-        let mut direct = config
+    /// Open the single direct Postgres connection the pipeline uses for
+    /// schema / insert / render / drop. Encryption happens in Rust
+    /// (cipherstash-client), so there is no second connection.
+    async fn connect(&self) -> Result<PgConnection> {
+        let config = DriverConfig::from_env()?;
+        config
             .direct
             .clone()
             .connect()
             .await
-            .context("connecting to Postgres (direct)")?;
+            .context("connecting to Postgres (direct)")
+    }
 
+    /// The shared generation pipeline: apply the working schema, encrypt + insert
+    /// `values`, render the committed INSERT lines, then drop the working table.
+    ///
+    /// Honours the teardown contract: once the working table exists it is dropped
+    /// unconditionally (success *or* error), and failures propagate in causal
+    /// order — insert error first (root cause), then render, then drop. Returns
+    /// the rendered INSERT lines in `id` order.
+    async fn render_values(&self, direct: &mut PgConnection, values: &[T]) -> Result<Vec<String>> {
         self.check_complete().context("invalid FixtureSpec")?;
 
         sqlx::raw_sql(&self.working_schema_sql())
-            .execute(&mut direct)
+            .execute(&mut *direct)
             .await
             .context("applying working-table schema")?;
 
-        // Insert directly on the same connection used for schema/render/drop.
-        // The earlier two-connection design existed because `run_with` borrows
-        // `direct` mutably across the closure call; production has no such
-        // need — `insert_direct` is the only caller of cipherstash-client and
-        // can hold the same `&mut direct` for its duration.
-        let insert_result = self.insert_direct(&mut direct).await;
+        // Insert on the same connection used for schema/render/drop. `run_with`'s
+        // two-connection shape exists only for the test seam; production holds a
+        // single `&mut direct` for the whole pipeline.
+        let insert_result = self.insert_values(&mut *direct, values).await;
         let render_result = if insert_result.is_ok() {
             sqlx::query(&self.render_rows_sql())
-                .fetch_all(&mut direct)
+                .fetch_all(&mut *direct)
                 .await
                 .context("rendering fixture rows")
         } else {
@@ -153,22 +171,31 @@ where
 
         let working = self.working_table();
         let drop_result = sqlx::raw_sql(&format!("DROP TABLE IF EXISTS public.{working};"))
-            .execute(&mut direct)
+            .execute(&mut *direct)
             .await;
 
         insert_result?;
         let rows = render_result?;
         drop_result.context("dropping the working table")?;
 
-        let lines: Vec<String> = rows
-            .iter()
+        rows.iter()
             .map(|r| r.try_get::<String, _>(0).context("reading rendered INSERT"))
-            .collect::<Result<_>>()?;
+            .collect()
+    }
 
-        let _ = direct.close().await;
-
+    /// Compose the committed script (preamble + optional extra header + the
+    /// rendered INSERT lines) and write it to `tests/sqlx/fixtures/<name>.sql`.
+    fn write_script(
+        &self,
+        extra_header: Option<&str>,
+        lines: &[String],
+        row_count: usize,
+    ) -> Result<()> {
         let mut script = self.fixture_script_preamble();
-        for line in &lines {
+        if let Some(header) = extra_header {
+            script.push_str(header);
+        }
+        for line in lines {
             script.push_str(line);
             script.push('\n');
         }
@@ -176,40 +203,37 @@ where
         let path = fixture_script_path(&self.script_filename());
         std::fs::write(&path, script)
             .with_context(|| format!("writing fixture script {}", path.display()))?;
-        println!("wrote {} ({} rows)", path.display(), self.values().len());
+        println!("wrote {} ({} rows)", path.display(), row_count);
         Ok(())
     }
 
-    /// Encrypt every plaintext value via cipherstash-client in **one
-    /// batched call**, then INSERT each ciphertext into the working
-    /// table as plain JSONB. The committed `ColumnConfig` is built once
-    /// from the spec's indexes + cast — the fixture name is fed as the
-    /// table identifier so the resulting payload's `i.t` field matches
-    /// the working table, preserving the shape Proxy used to emit.
+    /// Encrypt every value in `values` via cipherstash-client in **one batched
+    /// call**, then INSERT each ciphertext into the working table as plain JSONB.
+    /// The committed `ColumnConfig` is built once from the spec's indexes + cast
+    /// — the fixture name is fed as the table identifier so the resulting
+    /// payload's `i.t` field matches the working table, preserving the shape
+    /// Proxy used to emit.
     ///
-    /// Batching means one ZeroKMS round trip per fixture run regardless
-    /// of value count; the INSERT loop is per-row because the working
-    /// table is local Postgres and the per-row execute cost is in
-    /// microseconds.
-    async fn insert_direct(&self, direct: &mut PgConnection) -> Result<()> {
+    /// Batching means one ZeroKMS round trip per run regardless of value count;
+    /// the INSERT loop is per-row because the working table is local Postgres and
+    /// the per-row execute cost is in microseconds. A repeated plaintext in
+    /// `values` is encrypted independently here, so a repeated plaintext lands as
+    /// a distinct ciphertext row sharing that plaintext.
+    async fn insert_values(&self, direct: &mut PgConnection, values: &[T]) -> Result<()> {
         let config = cipherstash::column_config_for(self.indexes(), T::CAST)
             .context("building ColumnConfig from FixtureSpec indexes")?;
 
         let working = self.working_table();
-        let payloads = cipherstash::encrypt_store(
-            &working,
-            cipherstash::PAYLOAD_COLUMN,
-            self.values(),
-            &config,
-        )
-        .await
-        .context("encrypting fixture values")?;
+        let payloads =
+            cipherstash::encrypt_store(&working, cipherstash::PAYLOAD_COLUMN, values, &config)
+                .await
+                .context("encrypting fixture values")?;
 
         let insert = format!(
             "INSERT INTO public.{working} (id, plaintext, {col}) VALUES ($1, $2, $3)",
             col = cipherstash::PAYLOAD_COLUMN
         );
-        for (i, (value, payload)) in self.values().iter().zip(payloads).enumerate() {
+        for (i, (value, payload)) in values.iter().zip(payloads).enumerate() {
             let id = (i as i64) + 1;
             sqlx::query(&insert)
                 .bind(id)

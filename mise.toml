@@ -89,6 +89,22 @@ echo "Running Rust tests..."
 cargo test --features proptest-e2e
 """
 
+[tasks."test:sqlx:e2e"]
+description = "Run ONLY the e2e (fresh-encryption) property suite — needs ZeroKMS creds"
+# Prep builds + migrates + regenerates fixtures (the latter needs CS_* creds,
+# which the dedicated CI `e2e` job supplies). The e2e suite is the only one that
+# encrypts fresh values through ZeroKMS at run time, so it cannot run from the
+# credential-free sharded archive; it gets its own job. The fixture suite (which
+# DOES run in the shards) is intentionally excluded here via the `e2e_oracle`
+# filter so this job does not duplicate sharded work — it only compiles the
+# `proptest-e2e`-gated binaries and runs the fresh-encryption oracle.
+depends = ["test:sqlx:prep"]
+dir = "{{config_root}}/tests/sqlx"
+run = """
+echo "Running e2e property suite (fresh ZeroKMS encryption)..."
+cargo test --features proptest-e2e e2e_oracle
+"""
+
 [tasks."test:sqlx:watch"]
 description = "Run SQLx tests in watch mode (rebuild EQL on changes)"
 # Same prep as test:sqlx so watch mode starts from a migrated DB + fresh

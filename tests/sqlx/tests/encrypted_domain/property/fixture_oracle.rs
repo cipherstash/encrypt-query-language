@@ -1,4 +1,4 @@
-//! fixture suite (CIP-3141): property tests over the real, committed fixture corpus.
+//! fixture suite (CIP-3141): property tests over the real, committed fixture rows.
 //!
 //! The fixture table `fixtures.eql_v2_<T>` carries `(plaintext, payload)` rows
 //! encrypted by cipherstash-client during `test:sqlx:prep`. proptest selects a
@@ -8,7 +8,7 @@
 //!
 //! Each test uses `#[sqlx::test]`, so it gets its OWN migrated scratch database
 //! (the `eql_v3` surface is already installed by the embedded migrations) and
-//! loads the fixture corpus into that isolated DB. This is what every other test
+//! loads the fixture rows into that isolated DB. This is what every other test
 //! in the suite does; it avoids the shared-base-DB races that bite under
 //! nextest's process-per-test parallelism (concurrent `CREATE SCHEMA`, and a
 //! later test re-`DROP`/`CREATE`-ing a fixture table out from under an earlier
@@ -18,21 +18,27 @@
 //! Generic over `ScalarType`; instantiated per type at the bottom.
 
 use anyhow::{Context, Result};
-use eql_tests::property::{assert_eq_oracle, assert_ord_oracle, Row};
+use eql_tests::property::{
+    assert_eq_fn_oracle, assert_eq_oracle, assert_extractor_oracle, assert_ord_fn_oracle,
+    assert_ord_oracle, Row,
+};
 use eql_tests::scalar_domains::{ScalarType, Variant};
 use proptest::prelude::*;
 use proptest::test_runner::{Config, TestCaseError, TestRunner};
 use sqlx::PgPool;
 use std::sync::Arc;
 
-/// The fixture corpus SQL for `T`, `include_str!`-embedded into this test binary
+/// The fixture SQL for `T`, `include_str!`-embedded into this test binary
 /// at compile time (one arm per catalog token). Embedding rather than reading
 /// from disk at runtime is what lets the prebuilt nextest archive carry the
-/// corpus into CI shards, which do a fresh checkout where the gitignored
+/// fixtures into CI shards, which do a fresh checkout where the gitignored
 /// `tests/sqlx/fixtures/eql_v2_<T>.sql` files are absent. The path resolves
 /// against the `eql_tests` crate root (`tests/sqlx`). Mirrors the loud catch-all
 /// of the `generate_for_token` fixture dispatch.
-fn embedded_fixture_sql<T: ScalarType>() -> &'static str {
+///
+/// `pub(crate)` so the sibling `match_smoke` module shares the one source of
+/// truth for which fixture SQL is embedded.
+pub(crate) fn embedded_fixture_sql<T: ScalarType>() -> &'static str {
     match T::PG_TYPE {
         "int4" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -79,15 +85,24 @@ fn embedded_fixture_sql<T: ScalarType>() -> &'static str {
     }
 }
 
-/// Load the committed fixture corpus for `T` into this test's isolated scratch
-/// DB and read every `(plaintext, payload::text)` row, in id order. The corpus
-/// SQL is self-contained (`CREATE SCHEMA IF NOT EXISTS fixtures` / `CREATE` /
-/// `INSERT`); since the DB is private to this test there is no concurrency on it.
-async fn load_rows<T: ScalarType>(pool: &PgPool) -> Result<Arc<Vec<Row<T>>>> {
+/// Load `T`'s committed fixtures into `pool`'s isolated scratch DB via the
+/// `include_str!`-embedded SQL. The fixture SQL is self-contained (`CREATE SCHEMA
+/// IF NOT EXISTS fixtures` / `CREATE` / `INSERT`); since each `#[sqlx::test]` DB
+/// is private to its test there is no concurrency on it. `pub(crate)` so
+/// `match_smoke` (which then fetches specific rows via `fetch_fixture_payload`)
+/// shares the one embedded source.
+pub(crate) async fn load_fixtures<T: ScalarType>(pool: &PgPool) -> Result<()> {
     sqlx::raw_sql(embedded_fixture_sql::<T>())
         .execute(pool)
         .await
-        .with_context(|| format!("loading fixture corpus for {}", T::PG_TYPE))?;
+        .with_context(|| format!("loading fixtures for {}", T::PG_TYPE))?;
+    Ok(())
+}
+
+/// Load the committed fixtures for `T` into this test's isolated scratch
+/// DB and read every `(plaintext, payload::text)` row, in id order.
+pub(crate) async fn load_rows<T: ScalarType>(pool: &PgPool) -> Result<Arc<Vec<Row<T>>>> {
+    load_fixtures::<T>(pool).await?;
     let sql = format!(
         "SELECT plaintext, payload::text FROM {} ORDER BY id",
         T::fixture_table_name()
@@ -108,7 +123,7 @@ async fn load_rows<T: ScalarType>(pool: &PgPool) -> Result<Arc<Vec<Row<T>>>> {
     Ok(Arc::new(rows))
 }
 
-/// Build a corpus by sampling indices (with repeats) into the loaded fixtures.
+/// Build a sample by selecting indices (with repeats) into the loaded fixtures.
 /// `idxs` are already bounded to `0..all.len()` by the proptest strategy.
 fn pick<T: Clone>(all: &[Row<T>], idxs: &[usize]) -> Vec<Row<T>> {
     idxs.iter().map(|&i| all[i].clone()).collect()
@@ -183,7 +198,7 @@ fn config_and_strategy(cases: u32, n: usize) -> (Config, impl Strategy<Value = V
     (config, prop::collection::vec(0..n, 2..13))
 }
 
-/// Equality-oracle property over `T`'s fixture corpus.
+/// Equality-oracle property over `T`'s fixture rows.
 async fn run_eq_oracle<T: ScalarType>(pool: PgPool, cases: u32) -> Result<()> {
     let rows = load_rows::<T>(&pool).await?;
     let (config, strategy) = config_and_strategy(cases, rows.len());
@@ -195,7 +210,7 @@ async fn run_eq_oracle<T: ScalarType>(pool: PgPool, cases: u32) -> Result<()> {
     .await
 }
 
-/// Ordering-oracle property over `T`'s fixture corpus (both ordered twins).
+/// Ordering-oracle property over `T`'s fixture rows (both ordered twins).
 async fn run_ord_oracle<T: ScalarType>(pool: PgPool, cases: u32) -> Result<()> {
     let rows = load_rows::<T>(&pool).await?;
     let (config, strategy) = config_and_strategy(cases, rows.len());
@@ -203,9 +218,9 @@ async fn run_ord_oracle<T: ScalarType>(pool: PgPool, cases: u32) -> Result<()> {
         let pool = pool.clone();
         let rows = rows.clone();
         async move {
-            let corpus = pick(&rows, &idxs);
-            assert_ord_oracle::<T>(&pool, Variant::Ord, &corpus).await?;
-            assert_ord_oracle::<T>(&pool, Variant::OrdOre, &corpus).await
+            let sample = pick(&rows, &idxs);
+            assert_ord_oracle::<T>(&pool, Variant::Ord, &sample).await?;
+            assert_ord_oracle::<T>(&pool, Variant::OrdOre, &sample).await
         }
     })
     .await
@@ -250,3 +265,159 @@ fixture_oracle_suite!(numeric, rust_decimal::Decimal, ordered);
 fixture_oracle_suite!(text, String, ordered);
 fixture_oracle_suite!(float4, eql_tests::scalar_domains::F4, ordered);
 fixture_oracle_suite!(float8, eql_tests::scalar_domains::F8, ordered);
+
+// --- function-double oracles (CIP-3141) -------------------------------------
+//
+// The same fixture rows, but calling the generated `eql_v3.*` comparison
+// functions by name across all three overloads and asserting term-extractor
+// identity (eq_term==hm / ord_term==ob). Free of fresh encryption — read-only
+// SQL over the already-encrypted fixtures. int4 is the reference family with
+// explicit tests; the other types go through `fixture_fn_oracle_suite!`.
+
+/// Function-double property driver: like `run_eq_oracle` / `run_ord_oracle`, but
+/// the per-case `body` runs the caller's named-function / extractor oracles
+/// against the per-case sample. Shares `load_rows` + `config_and_strategy` +
+/// `drive_proptest`, so each fn-oracle test gets the same isolated `#[sqlx::test]`
+/// DB and the same synchronous-proptest → async bridge as the operator oracles.
+async fn run_fn_property<T, F, Fut>(pool: PgPool, cases: u32, body: F) -> Result<()>
+where
+    T: ScalarType,
+    F: Fn(PgPool, Vec<Row<T>>) -> Fut,
+    Fut: std::future::Future<Output = Result<()>>,
+{
+    let rows = load_rows::<T>(&pool).await?;
+    let (config, strategy) = config_and_strategy(cases, rows.len());
+    drive_proptest(config, strategy, move |idxs| {
+        let pool = pool.clone();
+        let sample = pick(&rows, &idxs);
+        body(pool, sample)
+    })
+    .await
+}
+
+#[sqlx::test]
+async fn prop_int4_eq_fn_oracle_over_fixture(pool: PgPool) -> Result<()> {
+    run_fn_property::<i32, _, _>(pool, 32, |pool, sample| async move {
+        assert_eq_fn_oracle::<i32>(&pool, Variant::Eq, &sample).await?;
+        assert_extractor_oracle::<i32>(&pool, Variant::Eq, &sample).await
+    })
+    .await
+}
+
+#[sqlx::test]
+async fn prop_int4_ord_fn_oracle_over_fixture(pool: PgPool) -> Result<()> {
+    run_fn_property::<i32, _, _>(pool, 32, |pool, sample| async move {
+        assert_ord_fn_oracle::<i32>(&pool, Variant::Ord, &sample).await?;
+        assert_extractor_oracle::<i32>(&pool, Variant::Ord, &sample).await?;
+        assert_ord_fn_oracle::<i32>(&pool, Variant::OrdOre, &sample).await?;
+        assert_extractor_oracle::<i32>(&pool, Variant::OrdOre, &sample).await
+    })
+    .await
+}
+
+/// Function-double counterpart of `fixture_oracle_suite!`: per-family
+/// named-function + extractor-identity oracles over the same fixture rows.
+/// Parallel (distinct `<modname>` from the operator suite) so each family can be
+/// added without disturbing the operator arms. `ordered` runs eq on `_eq` plus
+/// the four ord functions on both ordered twins; `eq_only` runs eq alone. Each
+/// arm is a `#[sqlx::test]` (its own migrated scratch DB), matching the operator
+/// suite.
+macro_rules! fixture_fn_oracle_suite {
+    ($modname:ident, $ty:ty, ordered) => {
+        mod $modname {
+            use super::*;
+            #[sqlx::test]
+            async fn eq_fn_oracle(pool: PgPool) -> Result<()> {
+                run_fn_property::<$ty, _, _>(pool, 32, |pool, c| async move {
+                    assert_eq_fn_oracle::<$ty>(&pool, Variant::Eq, &c).await?;
+                    assert_extractor_oracle::<$ty>(&pool, Variant::Eq, &c).await
+                })
+                .await
+            }
+            #[sqlx::test]
+            async fn ord_fn_oracle(pool: PgPool) -> Result<()> {
+                run_fn_property::<$ty, _, _>(pool, 32, |pool, c| async move {
+                    assert_ord_fn_oracle::<$ty>(&pool, Variant::Ord, &c).await?;
+                    assert_extractor_oracle::<$ty>(&pool, Variant::Ord, &c).await?;
+                    assert_ord_fn_oracle::<$ty>(&pool, Variant::OrdOre, &c).await?;
+                    assert_extractor_oracle::<$ty>(&pool, Variant::OrdOre, &c).await
+                })
+                .await
+            }
+        }
+    };
+    ($modname:ident, $ty:ty, eq_only) => {
+        mod $modname {
+            use super::*;
+            #[sqlx::test]
+            async fn eq_fn_oracle(pool: PgPool) -> Result<()> {
+                run_fn_property::<$ty, _, _>(pool, 32, |pool, c| async move {
+                    assert_eq_fn_oracle::<$ty>(&pool, Variant::Eq, &c).await?;
+                    assert_extractor_oracle::<$ty>(&pool, Variant::Eq, &c).await
+                })
+                .await
+            }
+        }
+    };
+}
+
+fixture_fn_oracle_suite!(int2_fn, i16, ordered);
+fixture_fn_oracle_suite!(int8_fn, i64, ordered);
+// date, timestamptz, and numeric are all ordered scalars on the `eql_v3` base,
+// so each gets eq/neq functions + eq_term identity plus the four ord functions
+// on both ordered twins. The committed fixtures already encrypt the whole
+// catalog, so this is full function-level coverage at zero marginal ZeroKMS cost.
+fixture_fn_oracle_suite!(date_fn, chrono::NaiveDate, ordered);
+fixture_fn_oracle_suite!(timestamptz_fn, chrono::DateTime<chrono::Utc>, ordered);
+fixture_fn_oracle_suite!(numeric_fn, rust_decimal::Decimal, ordered);
+
+// text is bespoke rather than `fixture_fn_oracle_suite!`: its ordered domains
+// carry both [Hm, Ore], so they support the FULL six comparisons (eq/neq route
+// through `hm`, the four ord ops through ORE) — the generic `ordered` arm only
+// runs the four ord ops on the ordered twins. text also declares `_search`
+// ([Hm, Ore, Bloom]), which `Variant::Search` reaches but the generic macro
+// never instantiates. The committed text fixture is encrypted with
+// [Unique, Ore, Match], so its payload carries hm+ob+bf and casts cleanly to
+// every text domain. The fixture rows excludes the empty string (issue #262),
+// so no generator filtering is needed here.
+mod text_fn {
+    use super::*;
+
+    /// `text_eq` — eq/neq functions + eq_term identity.
+    #[sqlx::test]
+    async fn eq_fn_oracle(pool: PgPool) -> Result<()> {
+        run_fn_property::<String, _, _>(pool, 32, |pool, c| async move {
+            assert_eq_fn_oracle::<String>(&pool, Variant::Eq, &c).await?;
+            assert_extractor_oracle::<String>(&pool, Variant::Eq, &c).await
+        })
+        .await
+    }
+
+    /// `text_ord` / `text_ord_ore` — full six comparisons (eq/neq + the four ord
+    /// ops) plus eq_term(`hm`) + ord_term(`ob`) identity on each ordered twin.
+    #[sqlx::test]
+    async fn ord_fn_oracle(pool: PgPool) -> Result<()> {
+        run_fn_property::<String, _, _>(pool, 32, |pool, c| async move {
+            for variant in [Variant::Ord, Variant::OrdOre] {
+                assert_eq_fn_oracle::<String>(&pool, variant, &c).await?;
+                assert_ord_fn_oracle::<String>(&pool, variant, &c).await?;
+                assert_extractor_oracle::<String>(&pool, variant, &c).await?;
+            }
+            Ok(())
+        })
+        .await
+    }
+
+    /// `text_search` ([Hm, Ore, Bloom]) — the eq/ord function facets plus
+    /// eq_term + ord_term identity (the bloom `@>`/`<@` facet is covered by the
+    /// example-based `match_smoke`, not a random oracle).
+    #[sqlx::test]
+    async fn search_fn_oracle(pool: PgPool) -> Result<()> {
+        run_fn_property::<String, _, _>(pool, 32, |pool, c| async move {
+            assert_eq_fn_oracle::<String>(&pool, Variant::Search, &c).await?;
+            assert_ord_fn_oracle::<String>(&pool, Variant::Search, &c).await?;
+            assert_extractor_oracle::<String>(&pool, Variant::Search, &c).await
+        })
+        .await
+    }
+}
