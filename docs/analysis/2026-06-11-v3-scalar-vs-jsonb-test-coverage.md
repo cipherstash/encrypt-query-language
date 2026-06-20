@@ -130,6 +130,15 @@ Source of truth: `crates/eql-scalars/src` (`CATALOG`). Adding a type is one `Sca
 
 Domain → role: empty ⇒ Storage, first term `Hm` ⇒ Eq, `Ore` ⇒ Ord, `Bloom` ⇒ Match.
 
+**Cross-ciphertext equality** ("two independent encryptions of one value compare
+equal") is now covered credential-free for every comparison scalar by the fixture
+suite, via committed per-type *doubles* tables (`fixtures.eql_v2_<T>_doubles` — each
+plaintext encrypted twice) read by `property::cross_ciphertext`. It exercises both
+equality mechanisms: the `hm` path (`_eq`) and the ORE `ob` path (`_ord` /
+`_ord_ore`, where `=` routes through `compare_ore_block_256_terms(...) = 0`). The
+matrix's curated fixtures have unique plaintexts, so the doubles tables are what
+make the equality-across-distinct-ciphertext branch fire without fresh encryption.
+
 **Generated surface per domain:** domain definition + CHECK, extractors (inlinable `LANGUAGE sql`), supported-op wrappers (inlinable), **blockers** (`LANGUAGE plpgsql`, NOT STRICT — opaque to planner so the `RAISE` always survives), 44 `CREATE OPERATOR`s, and `min`/`max` aggregates for ord-capable domains. Blocker count per domain: Storage 44, Eq 38, Ord 26, Match 38.
 
 **Behavioural blocker coverage caveat:** the scalar matrix does not execute every generated operator signature per domain. It covers the important caller-visible blocker classes: unsupported comparison/containment operators, typed-column `col op col` blockers, scalar path blockers (`->`, `->>`), and native-absent LIKE/ILIKE resolution. It does not sweep every generated JSON-style signature such as `?`, `?|`, `?&`, `@?`, `@@`, `#>`, `#>>`, `-`, `#-`, and `||` for every scalar domain.
