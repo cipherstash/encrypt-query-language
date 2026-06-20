@@ -268,10 +268,10 @@ jobs:
         run: |
           mise run postgres:up postgres-${POSTGRES_VERSION} --extra-args "--detach --wait"
 
-      # Source-only doc checks (coverage + required-tags) moved to the
-      # unconditional `docs-static` job so they run on every PR (incl. docs-only)
-      # and exactly once, not per-Postgres. This step keeps only the DB-backed
-      # SQL-syntax validation, which genuinely needs the per-version Postgres.
+      # Source-only doc checks (coverage + required-tags) moved to the dedicated
+      # `docs-static` job so they run exactly once, not per-Postgres. This step
+      # keeps only the DB-backed SQL-syntax validation, which genuinely needs the
+      # per-version Postgres.
       - name: Validate documented SQL syntax (Postgres ${{ matrix.postgres-version }})
         run: |
           mise run docs:validate:documented-sql

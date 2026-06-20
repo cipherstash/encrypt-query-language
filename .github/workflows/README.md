@@ -107,7 +107,7 @@ All jobs run on `blacksmith-16vcpu-ubuntu-2204`. "PG set" follows the event
 | **test** (sharded) | `test:sqlx:partition` | Run the archived sqlx binaries (default features), hash-partitioned across shards | yes (per PG) | no (replays archive) |
 | **e2e** | `test:sqlx:e2e` | The `proptest-e2e` fresh-encryption property suite (`e2e_oracle`) — PG17 only, version-independent | yes (PG17) | **yes** |
 | **validate** (per PG) | `docs:validate:documented-sql` + `test:clean_install_v3` | DB-backed SQL doc-syntax check; clean-DB `eql_v3` install smoke | yes | no |
-| **docs-static** | `docs:validate:source` | SQL doxygen coverage + required-tags (DB-free); **unconditional — runs on every PR incl. docs-only** | no | no |
+| **docs-static** | `docs:validate:source` | SQL doxygen coverage + required-tags (DB-free); relevance-gated like the other heavy jobs (its inputs — `src/**`, the `crates/**` codegen build, `tasks/docs/**` — are a subset of the `relevant` filter) | no | no |
 | **schema** | `test:schema` | v2.2 / v2.3 payload JSON-schema validation | no | no |
 | **rust-crates** | `test:crates` + `types:check` | `cargo fmt --check`, clippy + `cargo test` for `eql-scalars` / `eql-codegen` / `eql-tests-macros` / `eql-types`; verify TS bindings + JSON schemas are fresh | no | no |
 | **codegen** | `codegen:parity` | Generated encrypted-domain SQL matches the golden output | no | no |
@@ -145,19 +145,26 @@ non-default feature and needs `CS_*` at run time).
    stale `cargo expand` snapshot surfaces on the daily schedule, not on the PR
    that introduced it. Accepted trade-off.
 
-2. **`docs/**` markdown is not content-validated.** The `docs-static` job
-   guarantees the SQL `--!` doxygen comments under `src/**` are always checked,
-   but nothing lints the prose/links in `docs/**` itself. A docs-only PR now runs
-   `docs-static` (so it is no longer un-gated), but that job validates *source*
-   documentation, not the markdown the PR changed. Adding a markdown
-   linter/link-checker is a separate, unfilled capability.
+2. **`docs/**` markdown is not content-validated.** The `docs-static` job checks
+   the SQL `--!` doxygen comments under `src/**`, not the prose/links in `docs/**`
+   itself. A markdown-only PR leaves `relevant` false, so `docs-static` is skipped
+   along with the other heavy jobs — and that loses no coverage, because the job's
+   inputs (`src/**` `.sql`/`.template`, the `crates/**` codegen build, the
+   `tasks/docs/**` scripts) are all in the `relevant` filter, so a PR that doesn't
+   trip `relevant` cannot change its outcome. Linting the markdown the PR actually
+   changed (prose/links) is a separate, unfilled capability.
 
 ### Recently closed
 
 - *The e2e (fresh-encryption) suite never ran in CI.* Now covered by the **e2e**
   job (`test:sqlx:e2e`), PG17, on relevant PRs + the queue.
-- *Docs-only PRs ran no doc validation.* The **docs-static** job now runs the
-  source-only doc checks unconditionally on every PR.
+- *`docs-static` ran unconditionally on every PR.* It is now relevance-gated like
+  every other heavy job. Because its inputs are a strict subset of the `relevant`
+  filter, gating it both makes the workflow consistent (one uniform `if:`) and
+  drops a redundant codegen build on markdown-only PRs without losing any
+  coverage. A narrower bespoke `src/**`-only filter was rejected: it would risk a
+  silent false-green (`ci-required` counts `skipped` as pass) by skipping on a
+  real input change in `crates/**` or `tasks/docs/**`.
 
 ---
 
@@ -175,9 +182,9 @@ Then verify (see `docs/plans/2026-06-09-ci-pr-feedback-sharding-rollout.md`):
   4 `Validate …` jobs + `build-archive`, `e2e`, `docs-static`, `schema`,
   `rust-crates`, `codegen`, `self-contained-v3`, `matrix-coverage`, `splinter`) →
   `ci-required` green → PR merges.
-- **Open a docs-only PR** → on its `pull_request` run the relevance-gated heavy
-  jobs skip, but `docs-static` still runs; `ci-required` reports **Success** (not
-  stuck *Pending*), so the PR can be queued.
+- **Open a docs-only PR** → on its `pull_request` run every relevance-gated heavy
+  job skips (`docs-static` included); `ci-required` reports **Success** (not stuck
+  *Pending*) because it counts `skipped` as pass, so the PR can be queued.
 
 ## References
 
