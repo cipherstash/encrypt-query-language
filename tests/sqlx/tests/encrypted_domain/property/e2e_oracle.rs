@@ -2,7 +2,7 @@
 //! end-to-end through ZeroKMS each run. Gated behind `proptest-e2e` (declared in
 //! property/mod.rs) — needs CS_* creds, which `mise run test:sqlx` enables for
 //! CI/local full SQLx runs.
-//! Each proptest case generates one corpus of random integers — seeded with
+//! Each proptest case generates one batch of random integers — seeded with
 //! type-specific extremes, zero, and deliberate duplicates so the equality-true
 //! branch fires across distinct ciphertexts of the same plaintext — encrypts it
 //! in one batched ZeroKMS call, then runs the all-pairs oracle.
@@ -53,7 +53,7 @@ where
         .collect())
 }
 
-/// Drive proptest: each case is a corpus of integers. Generation is in-process;
+/// Drive proptest: each case is a batch of integers. Generation is in-process;
 /// encryption + oracle is async on a current-thread runtime.
 fn run_e2e_property<T>(table: &str, cases: u32, ordered: bool, seeds: &[T]) -> Result<()>
 where
@@ -209,10 +209,19 @@ e2e_oracle_suite!(
 
 /// Both float widths encrypt through the SINGLE f64 crypto path
 /// (`F4::to_plaintext` widens `self.0 as f64`; `F8::to_plaintext` is the
-/// identity), so an f32 value and its exact f64 widening MUST produce identical
-/// index terms — this is the byte-identity the CHANGELOG claims. Encrypt the
-/// same value both ways (an f32-exact value, so `x as f64` is lossless) and
-/// assert the `hm` (HMAC equality) and `ob` (ORE) terms match across widths.
+/// identity), so an f32 value and its exact f64 widening are the SAME real
+/// number and are equality- and order-interchangeable across widths. The two
+/// index terms behave differently and so are checked differently:
+///
+/// - `hm` (HMAC equality) is a **deterministic** keyed hash of the value, so the
+///   two widths produce a **byte-identical** `hm` — assert that directly.
+/// - `ob` (ORE ordering) is **probabilistic**: each encryption draws a fresh
+///   per-ciphertext nonce (the random Right half of the BlockORE term), so two
+///   encodings of one value are byte-UNEQUAL *by construction* — even same-width,
+///   same-value. Ordering is decided by the ORE compare function, never by raw
+///   bytes, so the ONLY correct cross-width ORE check is the SQL
+///   `eql_v3.ore_block_256` `=` operator over the extracted `ord_term`s.
+///
 /// Creds/e2e-gated like the rest of this file.
 #[test]
 fn float4_and_float8_share_index_terms_for_the_same_value() -> Result<()> {
@@ -222,8 +231,8 @@ fn float4_and_float8_share_index_terms_for_the_same_value() -> Result<()> {
         .enable_all()
         .build()?;
 
-    // f32-exact value: `x as f64` is the same real number, so any term
-    // difference would be a width artifact, which is exactly what we forbid.
+    // f32-exact value: `x as f64` is the same real number, so both widths encode
+    // the identical f64 — any *value* difference would be a width artifact.
     let x: f32 = 2.25;
 
     let f4_payloads = rt.block_on(async {
@@ -241,26 +250,42 @@ fn float4_and_float8_share_index_terms_for_the_same_value() -> Result<()> {
         encrypt_store("xwidth_f8", "payload", &[F8(x as f64)], &cfg).await
     })?;
 
-    // Pull a string index term from the EQL payload JSON (`hm` / `ob`).
-    let term = |p: &serde_json::Value, key: &str| -> Result<String> {
-        p.get(key)
+    // `hm` (deterministic HMAC) is byte-identical across widths — compare directly.
+    let hm = |p: &serde_json::Value| -> Result<String> {
+        p.get("hm")
             .and_then(serde_json::Value::as_str)
             .map(str::to_string)
-            .ok_or_else(|| anyhow::anyhow!("payload missing string `{key}`: {p}"))
+            .ok_or_else(|| anyhow::anyhow!("payload missing string `hm`: {p}"))
     };
-
-    // HMAC equality term: identical plaintext + key => identical hm, so the two
-    // widths are equality-interchangeable at the term level.
     assert_eq!(
-        term(&f4_payloads[0], "hm")?,
-        term(&f8_payloads[0], "hm")?,
+        hm(&f4_payloads[0])?,
+        hm(&f8_payloads[0])?,
         "float4 and float8 of the same value must share the hm equality term"
     );
-    // ORE term: same f64 input => same ORE ciphertext, so ordering is identical.
-    assert_eq!(
-        term(&f4_payloads[0], "ob")?,
-        term(&f8_payloads[0], "ob")?,
-        "float4 and float8 of the same value must share the ob ORE term"
+
+    // `ob` (probabilistic ORE) is NOT byte-comparable — the only correct check is
+    // the SQL ORE operator over the extracted `ord_term`s. Cast each payload to
+    // its width's `_ord_ore` domain, extract the `eql_v3.ore_block_256` term, and
+    // compare with `=` (eql_v3.ore_block_256_eq => compare_ore_block_256_terms = 0).
+    let pool: PgPool = rt.block_on(connect_pool())?;
+    rt.block_on(ensure_eql_installed(&pool, &super::migrator()))?;
+
+    let ord_term = |p: &serde_json::Value, domain: &str| -> String {
+        let lit = p.to_string().replace('\'', "''");
+        format!("eql_v3.ord_term('{lit}'::jsonb::{domain})")
+    };
+    let sql = format!(
+        "SELECT {} = {}",
+        ord_term(&f4_payloads[0], "eql_v3.float4_ord_ore"),
+        ord_term(&f8_payloads[0], "eql_v3.float8_ord_ore"),
+    );
+    let ore_equal: Option<bool> = rt
+        .block_on(sqlx::query_scalar(&sql).fetch_one(&pool))
+        .map_err(|e| anyhow::anyhow!("cross-width ORE compare query ({sql}): {e}"))?;
+    anyhow::ensure!(
+        ore_equal == Some(true),
+        "float4 and float8 of the same value must compare equal under the SQL ORE \
+         operator (eql_v3.ore_block_256 `=`); got {ore_equal:?}"
     );
     Ok(())
 }

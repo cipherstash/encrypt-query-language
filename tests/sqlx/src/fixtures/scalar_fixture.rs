@@ -271,7 +271,8 @@ macro_rules! scalar_fixture {
 
         /// The generator. Gated by `fixture-gen` so `cargo test` never compiles
         /// it; `#[ignore]` is a second guard. Run via
-        /// `mise run fixture:generate`.
+        /// `mise run fixture:generate`. Generates the fixed curated catalog
+        /// values via `run()`.
         #[cfg(feature = "fixture-gen")]
         #[tokio::test]
         #[ignore = "generator — run via `mise run fixture:generate`"]

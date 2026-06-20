@@ -288,6 +288,8 @@ fn fixture_dispatch_tokens(list: &ScalarList) -> TokenStream2 {
     let arms = list.entries.iter().map(|e| {
         let token_str = e.token.to_string();
         let mod_ident = format_ident!("eql_v2_{}", e.token);
+        // Every scalar fixture is generated from its fixed curated catalog
+        // values via `run()`.
         quote! {
             #token_str => ::eql_tests::fixtures::#mod_ident::spec().run().await,
         }
@@ -690,6 +692,20 @@ mod tests {
         assert!(suites.contains("caps = [storage]"));
         let dispatch = norm(&fixture_dispatch_tokens(&list));
         assert!(dispatch.contains(r#""bool" =>"#));
+        // Every scalar fixture is generated from its fixed curated catalog
+        // values via `run()`.
+        assert!(
+            dispatch.contains(
+                r#""bool" => :: eql_tests :: fixtures :: eql_v2_bool :: spec () . run () . await"#
+            ),
+            "bool must dispatch to run(), got: {dispatch}"
+        );
+        assert!(
+            dispatch.contains(
+                r#""int4" => :: eql_tests :: fixtures :: eql_v2_int4 :: spec () . run () . await"#
+            ),
+            "int4 must dispatch to run(), got: {dispatch}"
+        );
     }
 
     #[test]
