@@ -493,7 +493,18 @@ pub const BOOL: ScalarSpec = ScalarSpec {
 /// median value, not `String::default()`.
 const TEXT_FIXTURES: &[Fixture] = fixtures!(text;
     "aard", "aardvark", "alice", "bob", "carol",
-    "dave", "erin", "frank", "mallory", "trent", "zzzz");
+    "dave", "erin", "frank", "mallory", "trent", "zzzz",
+    // Divergence pair (G3 4b): every contiguous 3-gram of NEEDLE (`abcabd` →
+    // {abc, bca, cab, abd}) is present in HAY (`qabcqbcaqcabqabd`), yet NEEDLE is
+    // NOT a contiguous substring of HAY (the `q` separators break the run). So
+    // bloom `@>` is true while `HAY LIKE '%NEEDLE%'` is false — the deterministic
+    // bloom-vs-LIKE divergence locked in by `bloom_matches_where_like_would_not`.
+    // Verified against the real cipherstash bf term sets (contiguous 3-grams,
+    // k=6 hashing): bf(NEEDLE) ⊆ bf(HAY). Both are 3-gram-disjoint from the
+    // `aard`/`zzzz` disjoint pair and sort interior to the min/mid/max pivots, so
+    // they perturb no eq/ord oracle. Keep them diverging if edited (the pure-Rust
+    // guard `divergence_pair_is_contiguity_diverging` in src/tests.rs enforces it).
+    "qabcqbcaqcabqabd", "abcabd");
 
 /// `text` — an ordered, non-integer, unbounded scalar. Adds a `_match` domain
 /// (the `Bloom` term) on top of the ordered shape. Public because the SQLx
