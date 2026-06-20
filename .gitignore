@@ -204,8 +204,8 @@ cipherstash-proxy.toml
 # turbo repo
 .turbo
 
-# build artifacts
-release/
+# build artifacts (top-level dir only; not tasks/release/)
+/release/
 
 # Generated documentation
 docs/api/
