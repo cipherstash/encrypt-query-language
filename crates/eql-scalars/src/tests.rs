@@ -904,6 +904,53 @@ mod values_tests {
             .collect();
         assert_eq!(TEXT_VALUES.to_vec(), from_fixtures);
     }
+
+    #[test]
+    // The divergence pair (`HAY`/`NEEDLE`) added to TEXT_FIXTURES for G3 4b must
+    // stay diverging at the plaintext level: NEEDLE's contiguous 3-grams are all
+    // present in HAY's 3-gram set, yet NEEDLE is NOT a contiguous substring of HAY.
+    // That is exactly the bloom-`@>`-true / `LIKE`-false condition the SQLx test
+    // `bloom_matches_where_like_would_not` relies on. This guard is creds-free and
+    // fails fast if anyone edits the fixture words so they stop diverging.
+    fn divergence_pair_is_contiguity_diverging() {
+        const HAY: &str = "qabcqbcaqcabqabd";
+        const NEEDLE: &str = "abcabd";
+
+        // Both must actually be present in the fixture corpus.
+        assert!(
+            TEXT_VALUES.contains(&HAY),
+            "TEXT_VALUES must contain HAY {HAY:?}"
+        );
+        assert!(
+            TEXT_VALUES.contains(&NEEDLE),
+            "TEXT_VALUES must contain NEEDLE {NEEDLE:?}"
+        );
+
+        // Contiguous 3-grams of a string (the documented bloom tokenization:
+        // contiguous 3-grams, no padding).
+        fn trigrams(s: &str) -> std::collections::HashSet<&str> {
+            let b = s.as_bytes();
+            if b.len() < 3 {
+                // Sub-3 strings tokenize to the whole string; not used here but keep total.
+                return std::iter::once(s).collect();
+            }
+            (0..=b.len() - 3).map(|i| &s[i..i + 3]).collect()
+        }
+
+        let hay_grams = trigrams(HAY);
+        let needle_grams = trigrams(NEEDLE);
+
+        // (1) needle 3-grams ⊆ haystack 3-grams  → bloom `@>` would match.
+        assert!(
+            needle_grams.is_subset(&hay_grams),
+            "NEEDLE 3-grams {needle_grams:?} must be a subset of HAY 3-grams {hay_grams:?}"
+        );
+        // (2) needle is NOT a contiguous substring → `LIKE '%NEEDLE%'` would NOT match.
+        assert!(
+            !HAY.contains(NEEDLE),
+            "NEEDLE {NEEDLE:?} must NOT be a contiguous substring of HAY {HAY:?}"
+        );
+    }
 }
 
 mod float_tests {
