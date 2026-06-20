@@ -58,5 +58,17 @@ async fn generate_all() -> anyhow::Result<()> {
     eprintln!("Generating fixture v3_numeric_collision (1 == 1.0 ORE collision)...");
     eql_tests::fixtures::v3_numeric_collision::generate().await?;
     eprintln!("Regenerated v3_numeric_collision.");
+
+    // Per-type "doubles" fixtures (each plaintext encrypted twice) for the
+    // credential-free cross-ciphertext-equality test. Non-catalog (the catalog
+    // fixture is the curated set exactly), generated through the same pipeline.
+    for token in eql_tests::fixtures::eql_doubles::DOUBLES_TOKENS {
+        eprintln!("Generating fixture eql_v2_{token}_doubles...");
+        eql_tests::fixtures::eql_doubles::generate(token).await?;
+    }
+    eprintln!(
+        "Regenerated {} doubles fixture(s).",
+        eql_tests::fixtures::eql_doubles::DOUBLES_TOKENS.len()
+    );
     Ok(())
 }
