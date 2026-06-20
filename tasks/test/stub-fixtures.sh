@@ -16,9 +16,13 @@
 # The set is derived from the two sources of truth, not from parsing rustc
 # errors (an earlier preamble looped over compile-error text — brittle, coupled
 # to rustc's wording, capped at 12 retries):
-#   1. Catalog scalar tokens (`eql-codegen list-types`) -> `eql_v2_<token>.sql`,
-#      covering the `tests/sqlx/fixtures/eql_v2*` .gitignore glob. A new scalar
-#      is stubbed automatically.
+#   1. Catalog scalar tokens (`eql-codegen list-types`) -> `eql_v2_<token>.sql`
+#      AND `eql_v2_<token>_doubles.sql` (the per-type doubles fixture the
+#      cross-ciphertext oracle `include_str!`s), both covered by the
+#      `tests/sqlx/fixtures/eql_v2*` .gitignore glob. A new scalar is stubbed
+#      automatically. The doubles variant is stubbed for every token, not only
+#      the comparison-capable ones that have a real doubles fixture — a harmless
+#      extra under this helper's stub-the-complete-set policy.
 #   2. The literal `tests/sqlx/fixtures/*.sql` entries in `.gitignore` (the
 #      non-catalog generated fixtures: `v3_ste_vec`, `v3_doc_int4`,
 #      `v3_numeric_collision`). A newly-generated fixture is stubbed
@@ -42,13 +46,15 @@ __eql_stub_dir="${__eql_stub_root}/tests/sqlx/fixtures"
 __eql_stub_created=$(mktemp)
 trap 'while IFS= read -r f; do [ -n "$f" ] && rm -f "$f"; done < "$__eql_stub_created"; rm -f "$__eql_stub_created"' EXIT
 
-# (1) Catalog scalar tokens -> eql_v2_<token>.sql. A failure here aborts under
-# the caller's `set -e` with cargo's own error — no silent fallback.
+# (1) Catalog scalar tokens -> eql_v2_<token>.sql + eql_v2_<token>_doubles.sql.
+# A failure here aborts under the caller's `set -e` with cargo's own error — no
+# silent fallback.
 __eql_stub_paths=""
 __eql_stub_tokens=$(cd "$__eql_stub_root" && cargo run -q -p eql-codegen -- list-types)
 while IFS= read -r __eql_stub_t; do
   [ -n "$__eql_stub_t" ] || continue
   __eql_stub_paths="${__eql_stub_paths}${__eql_stub_dir}/eql_v2_${__eql_stub_t}.sql
+${__eql_stub_dir}/eql_v2_${__eql_stub_t}_doubles.sql
 "
 done <<EOF
 $__eql_stub_tokens
