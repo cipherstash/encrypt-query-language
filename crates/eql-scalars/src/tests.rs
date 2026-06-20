@@ -907,7 +907,10 @@ mod values_tests {
         const NEEDLE: &str = "abcabd";
 
         // Both must actually be present in the fixture corpus.
-        assert!(TEXT_VALUES.contains(&HAY), "TEXT_VALUES must contain HAY {HAY:?}");
+        assert!(
+            TEXT_VALUES.contains(&HAY),
+            "TEXT_VALUES must contain HAY {HAY:?}"
+        );
         assert!(
             TEXT_VALUES.contains(&NEEDLE),
             "TEXT_VALUES must contain NEEDLE {NEEDLE:?}"
