@@ -225,8 +225,14 @@ async fn direct_contains_function_matches_operator(pool: PgPool) -> anyhow::Resu
     .await?;
 
     assert!(fn_hit, "eql_v3.contains('aardvark','aard') must be true");
-    assert_eq!(fn_hit, op_hit, "eql_v3.contains must agree with the @> operator");
-    assert!(!fn_miss, "eql_v3.contains('aardvark','zzzz') must be false (disjoint ngrams)");
+    assert_eq!(
+        fn_hit, op_hit,
+        "eql_v3.contains must agree with the @> operator"
+    );
+    assert!(
+        !fn_miss,
+        "eql_v3.contains('aardvark','zzzz') must be false (disjoint ngrams)"
+    );
     Ok(())
 }
 
@@ -249,9 +255,18 @@ async fn direct_contained_by_function_matches_operator(pool: PgPool) -> anyhow::
     .fetch_one(&pool)
     .await?;
 
-    assert!(fn_hit, "eql_v3.contained_by('aard','aardvark') must be true");
-    assert_eq!(fn_hit, op_hit, "eql_v3.contained_by must agree with the <@ operator");
-    assert!(!fn_miss, "eql_v3.contained_by('zzzz','aard') must be false (disjoint ngrams)");
+    assert!(
+        fn_hit,
+        "eql_v3.contained_by('aard','aardvark') must be true"
+    );
+    assert_eq!(
+        fn_hit, op_hit,
+        "eql_v3.contained_by must agree with the <@ operator"
+    );
+    assert!(
+        !fn_miss,
+        "eql_v3.contained_by('zzzz','aard') must be false (disjoint ngrams)"
+    );
     Ok(())
 }
 
@@ -280,11 +295,26 @@ async fn mixed_jsonb_domain_overloads_agree(pool: PgPool) -> anyhow::Result<()> 
     .await?;
 
     let (baseline, contains_dom_json, contains_json_dom, cby_dom_json, cby_json_dom) = row;
-    assert!(baseline, "baseline eql_v3.contains('aardvark','aard') must be true");
-    assert_eq!(contains_dom_json, baseline, "contains(domain, jsonb) must agree");
-    assert_eq!(contains_json_dom, baseline, "contains(jsonb, domain) must agree");
-    assert_eq!(cby_dom_json, baseline, "contained_by(domain, jsonb) must agree (commutator of contains)");
-    assert_eq!(cby_json_dom, baseline, "contained_by(jsonb, domain) must agree");
+    assert!(
+        baseline,
+        "baseline eql_v3.contains('aardvark','aard') must be true"
+    );
+    assert_eq!(
+        contains_dom_json, baseline,
+        "contains(domain, jsonb) must agree"
+    );
+    assert_eq!(
+        contains_json_dom, baseline,
+        "contains(jsonb, domain) must agree"
+    );
+    assert_eq!(
+        cby_dom_json, baseline,
+        "contained_by(domain, jsonb) must agree (commutator of contains)"
+    );
+    assert_eq!(
+        cby_json_dom, baseline,
+        "contained_by(jsonb, domain) must agree"
+    );
     Ok(())
 }
 
@@ -315,7 +345,7 @@ async fn bloom_matches_where_like_would_not(pool: PgPool) -> anyhow::Result<()> 
     // matches — but the needle is NOT a contiguous substring, so `LIKE '%needle%'`
     // would NOT match. This false-positive / order-independence is the deterministic
     // divergence from LIKE (bloom has no false negatives, so the reverse can't happen).
-    // The pair is engineered for exactly this property in TEXT_FIXTURES; see the plan.
+    // The pair is engineered for exactly this property in TEXT_FIXTURES.
     let hay = payload_for(&pool, "qabcqbcaqcabqabd").await?;
     let needle = payload_for(&pool, "abcabd").await?;
 
@@ -341,12 +371,11 @@ async fn bloom_matches_where_like_would_not(pool: PgPool) -> anyhow::Result<()> 
     //    domain operator. This localizes a future tokenizer change (e.g. honoring
     //    `include_original`, a different ngram width) to a precise "bf arrays no
     //    longer a subset" failure instead of an opaque `@>`-returned-false.
-    let bf_subset: bool =
-        sqlx::query_scalar("SELECT ($1::jsonb -> 'bf') @> ($2::jsonb -> 'bf')")
-            .bind(&hay)
-            .bind(&needle)
-            .fetch_one(&pool)
-            .await?;
+    let bf_subset: bool = sqlx::query_scalar("SELECT ($1::jsonb -> 'bf') @> ($2::jsonb -> 'bf')")
+        .bind(&hay)
+        .bind(&needle)
+        .fetch_one(&pool)
+        .await?;
     assert!(
         bf_subset,
         "needle's raw bf terms must be a subset of the haystack's (native jsonb containment)"
@@ -355,12 +384,11 @@ async fn bloom_matches_where_like_would_not(pool: PgPool) -> anyhow::Result<()> 
     // 3. LIKE would NOT match the same plaintext pair — pin the divergence directly on
     //    the cleartext so the assertion documents the contract independently of any
     //    encrypted representation.
-    let like_hit: bool =
-        sqlx::query_scalar("SELECT $1 LIKE '%' || $2 || '%'")
-            .bind("qabcqbcaqcabqabd")
-            .bind("abcabd")
-            .fetch_one(&pool)
-            .await?;
+    let like_hit: bool = sqlx::query_scalar("SELECT $1 LIKE '%' || $2 || '%'")
+        .bind("qabcqbcaqcabqabd")
+        .bind("abcabd")
+        .fetch_one(&pool)
+        .await?;
     assert!(
         !like_hit,
         "LIKE must NOT match: the needle is not a contiguous substring of the haystack"
