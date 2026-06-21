@@ -4,7 +4,7 @@
 //! float8) is one `<T> => <R>` line in the `scalar_types!` list
 //! (`scalar_types.rs`) plus an `EqlPlaintext` impl and a catalog row.
 //! The `impl ScalarType` below is generated from that list. Everything
-//! else — the four `eql_v2_<T>{,_eq,_ord,_ord_ore}` domains, per-domain
+//! else — the four `eql_v3_<T>{,_eq,_ord,_ord_ore}` domains, per-domain
 //! payload shapes, supported operators, index extractor expressions,
 //! ground-truth result sets — is derived from `T::PG_TYPE`,
 //! `T::fixture_values()`, and the `Variant` enum.
@@ -53,9 +53,9 @@ pub trait ScalarType:
     /// the row is absent.
     fn fixture_values() -> &'static [Self];
 
-    /// `fixtures.eql_v2_<pg_type>`.
+    /// `fixtures.eql_v3_<pg_type>`.
     fn fixture_table_name() -> String {
-        format!("fixtures.eql_v2_{}", Self::PG_TYPE)
+        format!("fixtures.eql_v3_{}", Self::PG_TYPE)
     }
 
     /// SQL domain the comparable value is cast to. Default: the generated
@@ -344,7 +344,7 @@ macro_rules! temporal_values {
 /// `$variant` is the `eql_scalars::Fixture` variant this scalar's rows use
 /// (`Text`/`Numeric`/`Date`/`Timestamptz`); `$parse` maps each `&Fixture` to
 /// `$ty` (and owns its own loud "wrong variant" panic). The accessor is `pub` so
-/// the `eql_v2_<T>` fixture module can hand the slice to `scalar_fixture!`.
+/// the `eql_v3_<T>` fixture module can hand the slice to `scalar_fixture!`.
 macro_rules! lazy_values {
     (
         cell      = $cell:ident,
@@ -371,7 +371,7 @@ macro_rules! lazy_values {
 // `temporal_values!` — the chrono analogue of the integer `int_values!` path.
 // Values can't be a `const` slice (`from_ymd_opt` is not `const`), so they live
 // in a `LazyLock<Vec<_>>` behind `date_values()`. `date_values()` is public so
-// the `eql_v2_date` fixture module (emitted by `scalar_types!(fixture_modules)`)
+// the `eql_v3_date` fixture module (emitted by `scalar_types!(fixture_modules)`)
 // can hand the slice to `scalar_fixture!`.
 temporal_values! {
     cell      = DATE_VALUES_CELL,
@@ -462,12 +462,12 @@ mod timestamptz_value_guards {
 // `text` is hand-written rather than driven by `temporal_values!`: it is an
 // owned `String` (not chrono-backed), so it materialises its values from the
 // `eql_scalars::TEXT_VALUES` const slice rather than parsing catalog strings.
-// `text_values()` is public so the `eql_v2_text` fixture module (emitted by
+// `text_values()` is public so the `eql_v3_text` fixture module (emitted by
 // `scalar_types!(fixture_modules)`) can hand the slice to `scalar_fixture!`.
 
 // `text`'s value wiring now goes through the shared `lazy_values!` materializer
 // (the same macro `numeric` uses), parsing the catalog's `Fixture::Text` rows
-// directly. `text_values()` stays public so the `eql_v2_text` fixture module
+// directly. `text_values()` stays public so the `eql_v3_text` fixture module
 // (emitted by `scalar_types!(fixture_modules)`) can hand the slice to
 // `scalar_fixture!`. The `to_sql_literal` / `mid_pivot` / `MatchScalar` methods
 // below are `text`'s genuinely-differing bits and remain hand-written.
@@ -545,7 +545,7 @@ impl MatchScalar for String {
 
 // `numeric`'s value wiring goes through the shared `lazy_values!` materializer
 // (same as `text`), parsing the catalog's `Fixture::Numeric` strings into
-// `Decimal`. `numeric_values()` stays public so the `eql_v2_numeric` fixture
+// `Decimal`. `numeric_values()` stays public so the `eql_v3_numeric` fixture
 // module (emitted by `scalar_types!(fixture_modules)`) can hand the slice to
 // `scalar_fixture!`. `numeric` has no `to_sql_literal`/`mid_pivot` overrides —
 // only the value materialization is shared.
@@ -638,7 +638,7 @@ mod numeric_value_guards {
 // catalog's two `Fixture::Bool` rows.
 
 /// Typed `bool` fixture values, built once from `bool`'s catalog row, in catalog
-/// order (`[false, true]`). Public so the `eql_v2_bool` fixture module (emitted
+/// order (`[false, true]`). Public so the `eql_v3_bool` fixture module (emitted
 /// by `scalar_types!(fixture_modules)`) can hand the slice to `scalar_fixture!`.
 static BOOL_VALUES_CELL: std::sync::LazyLock<Vec<bool>> = std::sync::LazyLock::new(|| {
     eql_scalars::BOOL
@@ -651,7 +651,7 @@ static BOOL_VALUES_CELL: std::sync::LazyLock<Vec<bool>> = std::sync::LazyLock::n
         .collect()
 });
 
-/// The `bool` fixture values, in catalog order. Public so the `eql_v2_bool`
+/// The `bool` fixture values, in catalog order. Public so the `eql_v3_bool`
 /// fixture module can hand the slice to `scalar_fixture!`.
 pub fn bool_values() -> &'static [bool] {
     &BOOL_VALUES_CELL
@@ -696,7 +696,7 @@ mod bool_value_tests {
         assert_eq!(<bool as ScalarType>::PG_TYPE, "bool");
         assert_eq!(
             <bool as ScalarType>::fixture_table_name(),
-            "fixtures.eql_v2_bool"
+            "fixtures.eql_v3_bool"
         );
     }
 }
@@ -875,7 +875,7 @@ impl std::fmt::Display for F8 {
 // `Fixture::Float` strings into the newtype. Rust's `str::parse::<f32>` accepts
 // `"inf"`/`"-inf"`/`"nan"`, so the ±Inf pivots parse natively (NaN is excluded by
 // the catalog guards). `float4_values()`/`float8_values()` are public so the
-// `eql_v2_float4`/`eql_v2_float8` fixture modules (emitted by
+// `eql_v3_float4`/`eql_v3_float8` fixture modules (emitted by
 // `scalar_types!(fixture_modules)`) can hand the slice to `scalar_fixture!`.
 lazy_values! {
     cell      = FLOAT4_VALUES_CELL,
