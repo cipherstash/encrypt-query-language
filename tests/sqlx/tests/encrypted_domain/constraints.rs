@@ -33,7 +33,7 @@ use eql_tests::{assert_db_error, fetch_fixture_payload, sql_string_literal};
 use sqlx::PgPool;
 
 /// Fetch the real fixture ciphertext for an `int4` plaintext as an
-/// escaped SQL string literal ready to interpolate as `'{lit}'::jsonb::<domain>`.
+/// escaped SQL string literal ready to interpolate as `{lit}::jsonb::<domain>`.
 async fn int4_payload_literal(pool: &PgPool, plaintext: i32) -> anyhow::Result<String> {
     let payload = fetch_fixture_payload::<i32>(pool, plaintext).await?;
     Ok(sql_string_literal(&payload))
