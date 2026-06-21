@@ -69,7 +69,7 @@ to **"Confirm the workflow attached the artifacts"** and the smoke test below.
 
 1. **Pick a tag.** It must contain `eql` so the build/docs jobs run, and use a SemVer
    prerelease suffix:
-   ```
+   ```text
    eql-3.0.0-alpha.1
    ```
 
