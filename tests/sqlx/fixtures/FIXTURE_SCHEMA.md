@@ -17,10 +17,10 @@ EQL Extension (via migrations)
   ├── ore table (migration 002 — not a fixture)
   └── bench_data.sql + bench_setup.sql (depend on migration 007)
 
-eql_v2_int4.sql (no EQL dependency — generated, plain jsonb, not committed)
+eql_v3_int4.sql (no EQL dependency — generated, plain jsonb, not committed)
 ```
 
-All fixtures except the generated `eql_v2_int4.sql` depend on the EQL extension being installed via SQLx migrations.
+All fixtures except the generated `eql_v3_int4.sql` depend on the EQL extension being installed via SQLx migrations.
 
 ---
 
@@ -189,7 +189,7 @@ CREATE TABLE bench (
 
 ---
 
-## eql_v2_int4.sql
+## eql_v3_int4.sql
 
 **Purpose:** 17 encrypted integers for verifying encrypted-integer fixture
 structure. The set MUST include the signed extremes (`i32::MIN`/`i32::MAX`) and
@@ -210,11 +210,11 @@ environment (they are not alternatives): `CS_CLIENT_ACCESS_KEY` +
 generated file; it is overwritten in place on every run.
 
 **Schema:** Table lives in the dedicated `fixtures` SQL schema (kept out of the
-`public` type/domain namespace so a downstream `public.eql_v2_int4` domain can
+`public` type/domain namespace so a downstream `public.eql_v3_int4` domain can
 coexist):
 ```sql
 CREATE SCHEMA IF NOT EXISTS fixtures;
-CREATE TABLE fixtures.eql_v2_int4 (
+CREATE TABLE fixtures.eql_v3_int4 (
   id BIGINT PRIMARY KEY,
   plaintext integer NOT NULL,
   payload jsonb NOT NULL
@@ -235,12 +235,12 @@ CREATE TABLE fixtures.eql_v2_int4 (
 
 **Used By:**
 - `__scalar_matrix_fixture_shape!` arm in `tests/sqlx/src/matrix.rs` (structural verification, generated per type)
-- (#225) the `eql_v2_int4` domain operator tests, via per-query `payload` casts
+- (#225) the `eql_v3_int4` domain operator tests, via per-query `payload` casts
 
 **Opt-in:** Not a migration — a SQLx fixture script. Each consuming test opts
 in explicitly:
 ```rust
-#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v2_int4")))]
+#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_int4")))]
 ```
 
 ---
