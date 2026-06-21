@@ -27,7 +27,7 @@ eql_tests::scalar_types!(fixture_dispatch);
 async fn generate_all() -> anyhow::Result<()> {
     let mut generated = 0usize;
     for spec in CATALOG {
-        eprintln!("Generating fixture eql_v2_{}...", spec.token);
+        eprintln!("Generating fixture eql_v3_{}...", spec.token);
         generate_for_token(spec.token).await?;
         generated += 1;
     }
@@ -63,7 +63,7 @@ async fn generate_all() -> anyhow::Result<()> {
     // credential-free cross-ciphertext-equality test. Non-catalog (the catalog
     // fixture is the curated set exactly), generated through the same pipeline.
     for token in eql_tests::fixtures::eql_doubles::DOUBLES_TOKENS {
-        eprintln!("Generating fixture eql_v2_{token}_doubles...");
+        eprintln!("Generating fixture eql_v3_{token}_doubles...");
         eql_tests::fixtures::eql_doubles::generate(token).await?;
     }
     eprintln!(
