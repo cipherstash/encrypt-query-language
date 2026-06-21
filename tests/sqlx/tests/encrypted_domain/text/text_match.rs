@@ -1,9 +1,9 @@
 //! Match-containment coverage for `eql_v3.text_match` — separate from the
 //! ordered matrix because `@>` is asymmetric/probabilistic, not a total order.
-//! Asserts against the generated `eql_v2_text` fixtures (which carry `bf`).
+//! Asserts against the generated `eql_v3_text` fixtures (which carry `bf`).
 use sqlx::PgPool;
 
-const TABLE: &str = "fixtures.eql_v2_text";
+const TABLE: &str = "fixtures.eql_v3_text";
 
 async fn payload_for(pool: &PgPool, plaintext: &str) -> anyhow::Result<serde_json::Value> {
     Ok(sqlx::query_scalar::<_, serde_json::Value>(&format!(
@@ -14,7 +14,7 @@ async fn payload_for(pool: &PgPool, plaintext: &str) -> anyhow::Result<serde_jso
     .await?)
 }
 
-#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_text")))]
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_text")))]
 async fn value_matches_itself(pool: PgPool) -> anyhow::Result<()> {
     let p = payload_for(&pool, "aardvark").await?;
     let hit: bool = sqlx::query_scalar(
@@ -27,7 +27,7 @@ async fn value_matches_itself(pool: PgPool) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_text")))]
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_text")))]
 async fn haystack_contains_substring_needle(pool: PgPool) -> anyhow::Result<()> {
     let hay = payload_for(&pool, "aardvark").await?;
     let needle = payload_for(&pool, "aard").await?;
@@ -42,7 +42,7 @@ async fn haystack_contains_substring_needle(pool: PgPool) -> anyhow::Result<()> 
     Ok(())
 }
 
-#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_text")))]
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_text")))]
 async fn disjoint_value_does_not_match(pool: PgPool) -> anyhow::Result<()> {
     // A bloom filter is probabilistic and admits false positives, so a true
     // negative is only deterministic for inputs that share no n-grams. "aard"
@@ -65,7 +65,7 @@ async fn disjoint_value_does_not_match(pool: PgPool) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_text")))]
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_text")))]
 async fn match_uses_functional_index(pool: PgPool) -> anyhow::Result<()> {
     // Explicit extractor form `match_term(col) @> match_term(needle)`. Forces
     // `enable_seqscan = off` so this is an index-VALIDITY proof on the small
@@ -105,7 +105,7 @@ async fn match_uses_functional_index(pool: PgPool) -> anyhow::Result<()> {
 /// `enable_seqscan = off` so this is an index-**validity** proof on the small
 /// fixture, not a cost-preference one, and uses the node-type-aware
 /// `assert_index_scan_uses` rather than a plan substring match.
-#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_text")))]
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_text")))]
 async fn bare_operator_uses_functional_index(pool: PgPool) -> anyhow::Result<()> {
     let mut tx = pool.begin().await?;
     sqlx::query("SET LOCAL enable_seqscan = off")
@@ -134,7 +134,7 @@ async fn bare_operator_uses_functional_index(pool: PgPool) -> anyhow::Result<()>
     Ok(())
 }
 
-#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_text")))]
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_text")))]
 async fn needle_contained_by_haystack(pool: PgPool) -> anyhow::Result<()> {
     // `<@` (contained-by) is the COMMUTATOR of `@>`; the implemented
     // `eql_v3.contained_by` is otherwise untested. `aard <@ aardvark` holds for
@@ -155,7 +155,7 @@ async fn needle_contained_by_haystack(pool: PgPool) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_text")))]
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_text")))]
 async fn disjoint_value_not_contained_by(pool: PgPool) -> anyhow::Result<()> {
     // `<@` negative, mirroring `disjoint_value_does_not_match`. "zzzz" (3-gram
     // `zzz`) and "aard" (`aar`, `ard`) are ngram-disjoint in TEXT_FIXTURES, so
@@ -178,7 +178,7 @@ async fn disjoint_value_not_contained_by(pool: PgPool) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_text")))]
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_text")))]
 async fn contains_and_contained_by_are_commutative(pool: PgPool) -> anyhow::Result<()> {
     // Pin the `COMMUTATOR = @>/<@` declaration behaviorally: `a @> b` must equal
     // `b <@ a` for the same operand pair, and both hold for the superset/subset
@@ -204,7 +204,7 @@ async fn contains_and_contained_by_are_commutative(pool: PgPool) -> anyhow::Resu
     Ok(())
 }
 
-#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_text")))]
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_text")))]
 async fn direct_contains_function_matches_operator(pool: PgPool) -> anyhow::Result<()> {
     // Exercises `eql_v3.contains(a, b)` by NAME (not the `@>` operator), and pins
     // that the function and the operator it backs agree. `aardvark` contains the
@@ -236,7 +236,7 @@ async fn direct_contains_function_matches_operator(pool: PgPool) -> anyhow::Resu
     Ok(())
 }
 
-#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_text")))]
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_text")))]
 async fn direct_contained_by_function_matches_operator(pool: PgPool) -> anyhow::Result<()> {
     // Exercises `eql_v3.contained_by(a, b)` by NAME (not the `<@` operator). `aard`
     // is contained by `aardvark`; `zzzz` is not contained by `aard` (disjoint ngrams).
@@ -270,7 +270,7 @@ async fn direct_contained_by_function_matches_operator(pool: PgPool) -> anyhow::
     Ok(())
 }
 
-#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_text")))]
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_text")))]
 async fn mixed_jsonb_domain_overloads_agree(pool: PgPool) -> anyhow::Result<()> {
     // The (text_match, jsonb), (jsonb, text_match) overloads cast the jsonb side
     // internally; they must agree with the fully-cast (text_match, text_match) form.
@@ -338,7 +338,7 @@ async fn direct_functions_propagate_null(pool: PgPool) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_text")))]
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_text")))]
 async fn bloom_matches_where_like_would_not(pool: PgPool) -> anyhow::Result<()> {
     // Locks in WHY v3 dropped `LIKE` for bloom containment: the two are not the same
     // relation. The needle's ngrams are all present in the haystack, so bloom `@>`

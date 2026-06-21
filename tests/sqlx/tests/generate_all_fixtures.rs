@@ -6,8 +6,8 @@
 //! `eql_scalars::CATALOG` for the authoritative token set.
 //!
 //! The encrypted-fixture logic itself is unchanged — each type's
-//! `fixtures::eql_v2_<T>::spec().run()` still produces
-//! `tests/sqlx/fixtures/eql_v2_<T>.sql` exactly as before.
+//! `fixtures::eql_v3_<T>::spec().run()` still produces
+//! `tests/sqlx/fixtures/eql_v3_<T>.sql` exactly as before.
 //!
 //! Gated behind `fixture-gen` (needs a live Postgres + CS_* creds). Run via:
 //!   mise run fixture:generate:all
@@ -17,7 +17,7 @@ use eql_scalars::CATALOG;
 
 // `generate_for_token(token: &str) -> anyhow::Result<()>` is generated from the
 // single harness list in `tests/sqlx/src/scalar_types.rs`: one match arm per
-// token (`"int4" => fixtures::eql_v2_int4::spec().run().await`) plus a loud
+// token (`"int4" => fixtures::eql_v3_int4::spec().run().await`) plus a loud
 // catch-all. A catalog token absent from that list hits the catch-all and fails
 // the generator loudly, so a new scalar type cannot silently skip generation.
 eql_tests::scalar_types!(fixture_dispatch);
@@ -52,7 +52,7 @@ async fn generate_all() -> anyhow::Result<()> {
 
     // The numeric scale-equivalence collision fixture (`1`, `1.0`, `2`). Not a
     // CATALOG scalar — the distinctness guard forbids `1`/`1.0` coexisting in
-    // `eql_v2_numeric` — so it rides the same pipeline as a hand-written
+    // `eql_v3_numeric` — so it rides the same pipeline as a hand-written
     // `FixtureSpec<Decimal>`. Gives the always-on `1 == 1.0` ORE collision test
     // its committed fixture.
     eprintln!("Generating fixture v3_numeric_collision (1 == 1.0 ORE collision)...");

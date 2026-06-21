@@ -118,18 +118,18 @@ async fn unsetting_restrict_flips_planner_metadata_arm(pool: PgPool) -> Result<(
 // 3. `_ord` equality must route through `ord_term` (`ob`), never HMAC.
 //    Rerouting it through `hmac_256` (`hm`) over hm-stripped rows makes `=`
 //    stop matching. Proves the `ord_routes_through_ob` arm has teeth.
-#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_int4")))]
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_int4")))]
 async fn rerouting_ord_eq_through_hm_flips_ord_routes_arm(pool: PgPool) -> Result<()> {
     // Strip `hm` per-row inline; the `_ord` CHECK only requires `ob`, so the
     // cast still succeeds. The pivot is likewise hm-stripped.
     let pivot: i32 = 42;
     let pivot_payload: String = sqlx::query_scalar(&format!(
-        "SELECT (payload - 'hm')::text FROM fixtures.eql_v2_int4 WHERE plaintext = {pivot}",
+        "SELECT (payload - 'hm')::text FROM fixtures.eql_v3_int4 WHERE plaintext = {pivot}",
     ))
     .fetch_one(&pool)
     .await?;
 
-    let count_sql = "SELECT count(*) FROM fixtures.eql_v2_int4 \
+    let count_sql = "SELECT count(*) FROM fixtures.eql_v3_int4 \
                      WHERE (payload - 'hm')::eql_v3.int4_ord = $1::jsonb::eql_v3.int4_ord";
 
     // Baseline: with `hm` stripped, `=` still matches the pivot via `ord_term`
@@ -203,10 +203,10 @@ async fn dropping_strict_on_eq_flips_supported_null_arm(pool: PgPool) -> Result<
 //    Crucially, ORDER BY routes through `ord_term`, NOT `<`, so it must stay
 //    green here. This is the #5-vs-#7 split: #5 attacks `<`, #7 attacks the
 //    sort key. Blocking `<` alone must not disturb ORDER BY.
-#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_int4")))]
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_int4")))]
 async fn blocking_lt_flips_lt_arm_but_not_order_by(pool: PgPool) -> Result<()> {
     let lt_sql = "SELECT $1::jsonb::eql_v3.int4_ord < $2::jsonb::eql_v3.int4_ord";
-    let order_by_sql = "SELECT plaintext FROM fixtures.eql_v2_int4 \
+    let order_by_sql = "SELECT plaintext FROM fixtures.eql_v3_int4 \
                         ORDER BY eql_v3.ord_term(payload::eql_v3.int4_ord) ASC";
 
     let mut ascending: Vec<i32> = <i32 as ScalarType>::fixture_values().to_vec();
@@ -219,8 +219,8 @@ async fn blocking_lt_flips_lt_arm_but_not_order_by(pool: PgPool) -> Result<()> {
     // post-mutation `assert_raises` below, where the `lt` blocker raises before
     // the comparator ever inspects the term.
     let lt_baseline: Option<bool> = sqlx::query_scalar(
-        "SELECT (SELECT payload FROM fixtures.eql_v2_int4 WHERE plaintext = $1)::eql_v3.int4_ord \
-              < (SELECT payload FROM fixtures.eql_v2_int4 WHERE plaintext = $2)::eql_v3.int4_ord",
+        "SELECT (SELECT payload FROM fixtures.eql_v3_int4 WHERE plaintext = $1)::eql_v3.int4_ord \
+              < (SELECT payload FROM fixtures.eql_v3_int4 WHERE plaintext = $2)::eql_v3.int4_ord",
     )
     .bind(ascending[0])
     .bind(ascending[1])
@@ -279,18 +279,18 @@ async fn blocking_lt_flips_lt_arm_but_not_order_by(pool: PgPool) -> Result<()> {
 //      ore index (ob)"), whereas `hmac_256(jsonb)` returns NULL on an absent
 //      `hm`. So the eq path breaks via a raise, not a 0-count. Either way the
 //      correct hm-routed equality matches and the rerouted one does not.
-#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_int4")))]
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_int4")))]
 async fn rerouting_eq_eq_through_ob_flips_eq_arm(pool: PgPool) -> Result<()> {
     // Strip `ob` per-row inline; the `_eq` CHECK only requires `hm`, so the
     // cast still succeeds. The pivot is likewise ob-stripped.
     let pivot: i32 = 42;
     let pivot_payload: String = sqlx::query_scalar(&format!(
-        "SELECT (payload - 'ob')::text FROM fixtures.eql_v2_int4 WHERE plaintext = {pivot}",
+        "SELECT (payload - 'ob')::text FROM fixtures.eql_v3_int4 WHERE plaintext = {pivot}",
     ))
     .fetch_one(&pool)
     .await?;
 
-    let count_sql = "SELECT count(*) FROM fixtures.eql_v2_int4 \
+    let count_sql = "SELECT count(*) FROM fixtures.eql_v3_int4 \
                      WHERE (payload - 'ob')::eql_v3.int4_eq = $1::jsonb::eql_v3.int4_eq";
 
     // Baseline: with `ob` stripped, `=` still matches the pivot via `eq_term`
@@ -339,9 +339,9 @@ async fn rerouting_eq_eq_through_ob_flips_eq_arm(pool: PgPool) -> Result<()> {
 //    returns ascending order — which can never equal the descending
 //    expectation. Asserting against DESC therefore detects the collapse
 //    regardless of heap order (the ascending-fixture caveat from the plan).
-#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_int4")))]
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_int4")))]
 async fn collapsing_ord_term_flips_order_by_arm(pool: PgPool) -> Result<()> {
-    let order_by_desc = "SELECT plaintext FROM fixtures.eql_v2_int4 \
+    let order_by_desc = "SELECT plaintext FROM fixtures.eql_v3_int4 \
                          ORDER BY eql_v3.ord_term(payload::eql_v3.int4_ord) DESC";
 
     let mut descending: Vec<i32> = <i32 as ScalarType>::fixture_values().to_vec();
@@ -387,12 +387,12 @@ async fn collapsing_ord_term_flips_order_by_arm(pool: PgPool) -> Result<()> {
 //    `lt`) and #7 (collapse `ord_term`) do not exercise, since both run on the
 //    NULL-free fixture. A UNION ALL subquery supplies the NULL rows inline, so no
 //    session-local temp table is needed and the global `mutate()` stays valid.
-#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v2_int4")))]
+#[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_int4")))]
 async fn making_ord_term_non_strict_flips_order_by_nulls_arm(pool: PgPool) -> Result<()> {
     const NULL_ROWS: usize = 3;
     let order_by = format!(
         "SELECT plaintext FROM ( \
-           SELECT plaintext, payload::eql_v3.int4_ord AS value FROM fixtures.eql_v2_int4 \
+           SELECT plaintext, payload::eql_v3.int4_ord AS value FROM fixtures.eql_v3_int4 \
            UNION ALL \
            SELECT NULL::int4, NULL::eql_v3.int4_ord FROM generate_series(1, {NULL_ROWS}) \
          ) s \

@@ -253,7 +253,7 @@ async fn every_inline_critical_eligible_domain_has_inline_critical_functions(
     // appears as an argument type of at least one inline-critical
     // function.
     //
-    // Storage-only variants (the bare `eql_v3.<T>` / `eql_v2_<T>` domain,
+    // Storage-only variants (the bare `eql_v3.<T>` / `eql_v3_<T>` domain,
     // with no capability suffix) intentionally have NO inline-critical
     // surface and are excluded from the eligibility set.
     let unbound: Vec<String> = sqlx::query_scalar(

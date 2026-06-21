@@ -44,7 +44,7 @@ async fn every_native_jsonb_operator_is_known_to_the_generator(pool: PgPool) -> 
     // Exclude EQL's own cross-type operators on the legacy `eql_v2_encrypted`
     // composite (e.g. `eql_v2_encrypted ~~ jsonb`, `jsonb ~~ eql_v2_encrypted`).
     // They take a jsonb operand but are NOT native plaintext-jsonb operators and
-    // are unreachable from a storage scalar domain: a `eql_v2_int4` operand
+    // are unreachable from a storage scalar domain: a `eql_v3_int4` operand
     // resolves to the domain / its jsonb base, never to `eql_v2_encrypted`, so
     // `col ~~ x` finds no operator (asserted by the matrix `native_absent_ops`
     // arm). Matching on `typname` is search_path-independent and a harmless
