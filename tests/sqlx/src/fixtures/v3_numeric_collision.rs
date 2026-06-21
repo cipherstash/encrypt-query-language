@@ -2,7 +2,7 @@
 //! (`1`, `1.0`) plus a `2` discriminator, encrypted at numeric ORE width.
 //!
 //! Hand-written, non-catalog (like `v3_ste_vec` / `v3_doc_int4`, hence the
-//! `v3_` prefix), because the catalog-driven `eql_v2_numeric` fixture CANNOT
+//! `v3_` prefix), because the catalog-driven `eql_v3_numeric` fixture CANNOT
 //! carry it: `numeric_value_guards::fixtures_are_distinct_by_value` forbids two
 //! fixtures that alias to the same `Decimal`, and `1` / `1.0` are value-equal.
 //! So the `1 == 1.0` ORE collision — that scale-equivalent decimals encrypt to

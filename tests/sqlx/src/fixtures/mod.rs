@@ -28,7 +28,7 @@ pub mod driver;
 
 // The v3 jsonb (SteVec document) fixture — a hand-written `FixtureSpec`
 // over `serde_json::Value`, generated through the same pipeline as the
-// scalar `eql_v2_<T>` fixtures. Not a CATALOG scalar, so it is registered
+// scalar `eql_v3_<T>` fixtures. Not a CATALOG scalar, so it is registered
 // here directly rather than via `scalar_types!`.
 pub mod v3_ste_vec;
 
@@ -50,8 +50,8 @@ pub mod v3_numeric_collision;
 // cross-ciphertext-equality test. Non-catalog, like `v3_numeric_collision`.
 pub mod eql_doubles;
 
-// The per-type scalar fixture modules (`eql_v2_int4`, `eql_v2_int2`, …) are
+// The per-type scalar fixture modules (`eql_v3_int4`, `eql_v3_int2`, …) are
 // generated from the harness list in `scalar_types.rs`. Each expands to
-// `pub mod eql_v2_<T> { … scalar_fixture! … }`, reading its plaintext values
+// `pub mod eql_v3_<T> { … scalar_fixture! … }`, reading its plaintext values
 // directly from the catalog (`eql_scalars::<TOKEN>_VALUES`).
 crate::scalar_types!(fixture_modules);
