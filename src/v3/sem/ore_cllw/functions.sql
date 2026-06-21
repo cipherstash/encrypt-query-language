@@ -124,6 +124,12 @@ DECLARE
     common_len INT;
     cmp_result INT;
 BEGIN
+    -- The `::text` cast is load-bearing, not a stylistic choice. For the
+    -- single-field `ore_cllw` composite, `ROW(NULL)::ore_cllw IS NULL` is TRUE
+    -- but `(ROW(NULL)::ore_cllw)::text IS NULL` is FALSE. Casting to text first
+    -- means a NULL-component composite falls THROUGH to the RAISE below (the
+    -- extractor-invariant violation) instead of silently returning NULL and
+    -- masking it. A plain `a IS NULL` would reintroduce that masking bug.
     IF a::text IS NULL OR b::text IS NULL THEN
       RETURN NULL;
     END IF;

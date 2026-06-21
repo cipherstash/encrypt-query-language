@@ -45,6 +45,8 @@ Each entry that ships in a published release links to the PR that introduced it.
 
 ### Fixed
 
+- **`=` / `<>` on `eql_v2.ore_block_u64_8_256` now declare a `COMMUTATOR`, so equality joins over the ORE term no longer raise.** Both operators set `COMMUTATOR` to themselves (equality and inequality are symmetric, so each is its own commutator). Why: without it the planner raised `could not find commutator for operator` the first time an `ore_block_u64_8_256` equality was used as a join / mergejoin qualifier (e.g. via the inlined `eql_v2_int4_ord_ore` equality wrappers, since the operators carry `MERGES`). This only enables previously-erroring join plans — it cannot change which rows match or their ordering. ([#239](https://github.com/cipherstash/encrypt-query-language/pull/239))
+
 - **The `eql_v3` ORE block comparator now orders ciphertexts of any block count, not just 8.** `eql_v3.compare_ore_block_256_term` derives the block count `N` from the term length (`octet_length = 49·N + 16`) instead of hardcoding 8, so encrypted types whose native ORE width exceeds 8 blocks — `numeric` (14) and `timestamptz` (12) — order, range-query, `ORDER BY`, and `MIN`/`MAX` correctly instead of silently mis-ordering. Malformed terms (length not `49·N + 16` for `N ≥ 1`) now raise instead of returning a bogus comparison. The self-contained `eql_v3` SEM type was renamed `eql_v3.ore_block_u64_8_256 → eql_v3.ore_block_256` to reflect that it is width-agnostic (the `eql_v2` type is unchanged). No effect on existing 8-block types (a no-op for `N = 8`). ([#241](https://github.com/cipherstash/encrypt-query-language/issues/241), [#276](https://github.com/cipherstash/encrypt-query-language/pull/276))
 
 ## [2.3.1] — 2026-05-21

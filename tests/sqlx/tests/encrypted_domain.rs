@@ -36,6 +36,13 @@ mod signed;
 #[path = "encrypted_domain/float_special.rs"]
 mod float_special;
 
+// Table-level SQL constraint coverage (UNIQUE / NOT NULL / FOREIGN KEY) on
+// `eql_v3` encrypted-domain columns — the v3 analogue of v2's
+// `constraint_tests.rs`. Outside `scalars::` so the matrix-inventory snapshot
+// does not mis-read it as a scalar type (same rationale as `signed`).
+#[path = "encrypted_domain/constraints.rs"]
+mod constraints;
+
 // SteVec jsonb-entry behaviour matrix (the reduced `jsonb_entry_matrix!`).
 // Deliberately NOT under `scalars::` — `JsonbEntryInt4` is not a catalog scalar,
 // so its names live under `jsonb_entry::…` and are pinned by the separate
