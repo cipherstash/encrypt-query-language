@@ -179,7 +179,7 @@ pub(crate) async fn load_doubles_rows<T: ScalarType>(pool: &PgPool) -> Result<Ar
         .execute(pool)
         .await
         .with_context(|| format!("loading doubles fixtures for {}", T::PG_TYPE))?;
-    let table = format!("fixtures.eql_v2_{}_doubles", T::PG_TYPE);
+    let table = format!("fixtures.eql_v3_{}_doubles", T::PG_TYPE);
     let sql = format!("SELECT plaintext, payload::text FROM {table} ORDER BY id");
     let raw: Vec<(T, String)> = sqlx::query_as(&sql).fetch_all(pool).await?;
     let rows: Vec<Row<T>> = raw
