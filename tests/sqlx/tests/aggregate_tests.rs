@@ -3,7 +3,7 @@
 //! Covers native `COUNT` / `GROUP BY` on `eql_v2_encrypted` and the
 //! `eql_v2.min(eql_v2_encrypted)` / `eql_v2.max(eql_v2_encrypted)` aggregates
 //! on the composite type. Per-domain aggregates
-//! (`eql_v2.min(eql_v2_<T>_ord)` etc.) are additionally covered by the
+//! (`eql_v2.min(eql_v3_<T>_ord)` etc.) are additionally covered by the
 //! encrypted-domain test matrix (`tests/sqlx/src/matrix.rs`, instantiated per
 //! scalar type from `tests/sqlx/tests/encrypted_domain/scalars/<T>.rs`).
 
