@@ -248,7 +248,10 @@ async fn foreign_key_on_int4_domain_columns(pool: PgPool) -> anyhow::Result<()> 
     let child_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM v3_child")
         .fetch_one(&pool)
         .await?;
-    assert_eq!(child_count, 1, "count unchanged after the rejected FK insert");
+    assert_eq!(
+        child_count, 1,
+        "count unchanged after the rejected FK insert"
+    );
 
     Ok(())
 }
