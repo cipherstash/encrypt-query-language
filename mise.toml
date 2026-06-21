@@ -9,7 +9,14 @@
 
 [tools]
 "rust" = { version = "latest", components = "rustc,rust-std,cargo,rustfmt,rust-docs,clippy" }
-"cargo:cargo-binstall" = "latest"
+# Use the registry (aqua) backend to download a prebuilt cargo-binstall binary
+# rather than `cargo:cargo-binstall`, which compiles it from source. A source
+# build now fails in CI: the latest cargo-binstall pulls vergen@10.0.0 (MSRV
+# rustc 1.95), but the toolchain bootstrapping mise's cargo backend is older,
+# so every job that runs mise-action dies before any tools install. The
+# prebuilt binary has no compiler/MSRV dependency. Downstream cargo: tools
+# below are then fetched as prebuilt binaries via this cargo-binstall.
+"cargo-binstall" = "latest"
 "cargo:sqlx-cli" = "latest"
 # Installed via the already-present cargo-binstall (fast in CI). Drives the
 # sharded sqlx suite: `cargo nextest archive` builds the test binaries once and
