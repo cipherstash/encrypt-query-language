@@ -28,6 +28,12 @@ dry_run="${usage_dry_run:-false}"
 
 err() { echo "error: $*" >&2; exit 1; }
 
+# Validate the channel against the allowlist before it flows into tag/notes.
+case "$channel" in
+  alpha|beta|rc) ;;
+  *) err "invalid --channel '${channel}' (expected: alpha | beta | rc)" ;;
+esac
+
 command -v gh >/dev/null 2>&1 || err "gh CLI not found (https://cli.github.com)"
 gh auth status >/dev/null 2>&1 || err "gh is not authenticated; run 'gh auth login'"
 
