@@ -110,7 +110,7 @@ EQL is searchable encryption; tests MUST use real ciphertexts/index terms from t
 never hand-curated or synthetic blobs. Fixtures are **generated** by encrypting plaintext through
 cipherstash-client: `mise run test:sqlx:prep` runs `fixture:generate:all` (the
 `generate_all_fixtures` test, `--features fixture-gen`, over `eql-scalars::CATALOG`) → gitignored
-`tests/sqlx/fixtures/eql_v2_*.sql`.
+`tests/sqlx/fixtures/eql_v3_*.sql`.
 
 - The SQLx suite **requires** CipherStash creds — ZeroKMS auth (`CS_CLIENT_ACCESS_KEY` +
   `CS_WORKSPACE_CRN`) AND a client key (`CS_CLIENT_ID` + `CS_CLIENT_KEY`); see the

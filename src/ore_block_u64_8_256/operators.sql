@@ -128,7 +128,7 @@ $$;
 --! is required for a MERGES (mergejoinable) operator — without it the
 --! planner raises "could not find commutator" the first time an
 --! ore_block equality is used as a join qual (e.g. via the inlined
---! eql_v2_int4_ord_ore equality wrappers).
+--! eql_v3.int4_ord_ore equality wrappers).
 CREATE OPERATOR = (
   FUNCTION=eql_v2.ore_block_u64_8_256_eq,
   LEFTARG=eql_v2.ore_block_u64_8_256,

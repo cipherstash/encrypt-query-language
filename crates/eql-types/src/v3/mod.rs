@@ -1,7 +1,7 @@
 //! # `eql_v3` domain payload types
 //!
 //! One Rust struct per **SQL domain** in the `eql_v3` schema — the
-//! capability-encoded design from the original `eql_v2_int4` prototype
+//! capability-encoded design from the original int4 scalar prototype
 //! (PR #236's first cut), formalized:
 //! the SQL surface is generated from `eql-scalars::CATALOG`, and these types
 //! mirror it 1:1 (enforced by `tests/catalog_parity.rs`, which fails if the

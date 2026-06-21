@@ -1,5 +1,5 @@
 //! The `v3_ste_vec` jsonb (SteVec document) fixture — the document analogue
-//! of the scalar `eql_v2_<T>` fixtures, generated through the SAME
+//! of the scalar `eql_v3_<T>` fixtures, generated through the SAME
 //! `FixtureSpec` machinery.
 //!
 //! A `serde_json::Value` is a first-class `EqlPlaintext` (see
