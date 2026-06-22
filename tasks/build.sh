@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Build SQL into single release file"
 #MISE alias="b"
-#MISE sources=["src/**/*.sql", "tasks/pin_search_path.sql", "tasks/uninstall.sql", "tasks/uninstall-protect.sql", "crates/eql-scalars/src/**/*.rs", "crates/eql-codegen/src/**/*.rs"]
+#MISE sources=["src/**/*.sql", "tasks/pin_search_path.sql", "tasks/pin_search_path_v3.sql", "tasks/uninstall.sql", "tasks/uninstall-protect.sql", "crates/eql-scalars/src/**/*.rs", "crates/eql-codegen/src/**/*.rs"]
 #MISE outputs=["release/cipherstash-encrypt.sql","release/cipherstash-encrypt-uninstall.sql","release/cipherstash-encrypt-protect.sql","release/cipherstash-encrypt-protect-uninstall.sql","release/cipherstash-encrypt-v3.sql","release/cipherstash-encrypt-v3-uninstall.sql"]
 #USAGE flag "--version <version>" help="Specify release version of EQL" default="DEV"
 
@@ -222,6 +222,7 @@ cat src/deps-v3.txt | tsort | tac > src/deps-ordered-v3.txt
 verify_deps_exist src/deps-ordered-v3.txt
 
 cat src/deps-ordered-v3.txt | xargs cat | grep -v REQUIRE >> release/cipherstash-encrypt-v3.sql
+cat tasks/pin_search_path_v3.sql >> release/cipherstash-encrypt-v3.sql
 
 cat tasks/uninstall-v3.sql >> release/cipherstash-encrypt-v3-uninstall.sql
 
