@@ -24,16 +24,25 @@
 --!   evaluates the array path for an array, so a non-array JSON scalar returns
 --!   NULL here instead of raising. The sole caller (`ore_block_256`) only reaches
 --!   this when `has_ore_block_256(val)` is true, which now requires `val->'ob'`
---!   to be a JSON array, so the non-array branch is unreachable in practice;
---!   empty array still returns NULL exactly as before (pinned by T7).
+--!   to be a JSON array, so the non-array branch is unreachable in practice.
+--!   An empty array (`ob: []`, what encrypting the empty string `""` produces)
+--!   yields a non-NULL composite with an EMPTY `terms` array — NOT NULL terms.
+--!   The `COALESCE` is load-bearing: `array_agg` over zero rows returns NULL, and
+--!   NULL terms make the comparator return NULL (so an empty-text row silently
+--!   drops out of ordered queries). An empty array instead engages the
+--!   comparator's `cardinality = 0` guard, which sorts empty BEFORE every
+--!   non-empty term. See issue #262 (pinned by T7).
 CREATE FUNCTION eql_v3.jsonb_array_to_ore_block_256(val jsonb)
 RETURNS eql_v3.ore_block_256
   IMMUTABLE
 AS $$
   SELECT CASE WHEN jsonb_typeof(val) = 'array'
-    THEN ROW((
-      SELECT array_agg(ROW(b)::eql_v3.ore_block_256_term)
-      FROM unnest(eql_v3.jsonb_array_to_bytea_array(val)) AS b
+    THEN ROW(COALESCE(
+      (
+        SELECT array_agg(ROW(b)::eql_v3.ore_block_256_term)
+        FROM unnest(eql_v3.jsonb_array_to_bytea_array(val)) AS b
+      ),
+      ARRAY[]::eql_v3.ore_block_256_term[]
     ))::eql_v3.ore_block_256
     ELSE NULL
   END;

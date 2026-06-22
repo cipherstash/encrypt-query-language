@@ -187,6 +187,48 @@ async fn comparator_rejects_mismatched_block_widths(pool: PgPool) -> Result<()> 
     Ok(())
 }
 
+/// An empty ORE term — what encrypting the empty string `""` produces (`ob: []`,
+/// verified against cipherstash-client) — sorts BEFORE any non-empty term and
+/// equals itself. The extractor must yield an empty-terms composite (cardinality
+/// 0), which the comparator's empty-array guard orders first; previously the
+/// inner `array_agg` collapsed to NULL terms, so the comparator returned NULL
+/// and the row silently dropped out of ordered queries. See issue #262.
+///
+/// Creds-free: the empty side carries no ciphertext, and the non-empty
+/// comparand's bytes are never inspected — the cardinality short-circuit fires
+/// ahead of any term-level comparison, so a synthetic one-term composite is
+/// sufficient.
+#[sqlx::test]
+async fn empty_ore_term_sorts_before_non_empty(pool: PgPool) -> Result<()> {
+    // Empty `ob` taken through the real extractor path (the buggy site).
+    let empty = "eql_v3.ore_block_256('{\"ob\": []}'::jsonb)";
+    // A non-empty composite: one synthetic valid-width term; content irrelevant.
+    let non_empty = format!("ROW(ARRAY[{}])::eql_v3.ore_block_256", term_sql('a', 408));
+
+    let lt: Option<i32> = sqlx::query_scalar(&format!(
+        "SELECT eql_v3.compare_ore_block_256_terms({empty}, {non_empty})"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(lt, Some(-1), "empty ORE term must sort before a non-empty term");
+
+    let gt: Option<i32> = sqlx::query_scalar(&format!(
+        "SELECT eql_v3.compare_ore_block_256_terms({non_empty}, {empty})"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(gt, Some(1), "a non-empty term must sort after an empty ORE term");
+
+    let eq: Option<i32> = sqlx::query_scalar(&format!(
+        "SELECT eql_v3.compare_ore_block_256_terms({empty}, {empty})"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(eq, Some(0), "two empty ORE terms must compare equal");
+
+    Ok(())
+}
+
 /// Sweep the `49*N + 16` length guard across boundary/off-by lengths the
 /// point-example tests above don't reach. Both operands are kept the SAME length
 /// so only the malformed-length guard can fire (the different-lengths guard at

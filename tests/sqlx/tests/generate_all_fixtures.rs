@@ -59,6 +59,15 @@ async fn generate_all() -> anyhow::Result<()> {
     eql_tests::fixtures::v3_numeric_collision::generate().await?;
     eprintln!("Regenerated v3_numeric_collision.");
 
+    // The empty-string ordered-text fixture (`""`, `"frank"`, `"zebra"`). Not a
+    // CATALOG scalar — `eql-scalars::TEXT_FIXTURES` excludes `""` (issue #262) —
+    // so it rides the same pipeline as a hand-written `FixtureSpec<String>`.
+    // Gives the "empty sorts first" contract (ORDER BY / min / max) a committed
+    // real-ciphertext home.
+    eprintln!("Generating fixture v3_text_empty (empty-string ordered text)...");
+    eql_tests::fixtures::v3_text_empty::generate().await?;
+    eprintln!("Regenerated v3_text_empty.");
+
     // Per-type "doubles" fixtures (each plaintext encrypted twice) for the
     // credential-free cross-ciphertext-equality test. Non-catalog (the catalog
     // fixture is the curated set exactly), generated through the same pipeline.
