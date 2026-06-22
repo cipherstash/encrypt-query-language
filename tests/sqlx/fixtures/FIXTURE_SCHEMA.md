@@ -13,7 +13,7 @@ by the Rust fixture framework in `tests/sqlx/src/fixtures/` and is gitignored.
 `mise run fixture:generate:all` (the `generate_all_fixtures` test, run over
 `eql-scalars::CATALOG`) materialises the fixtures into this directory:
 
-```
+```text
 Generated eql_v3 fixtures (gitignored)
   ├── eql_v3_<T>.sql           (jsonb payload — no EQL dependency)
   ├── eql_v3_<T>_doubles.sql   (jsonb payload — duplicate-value variant the
