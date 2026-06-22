@@ -21,11 +21,11 @@ use serde_json::{json, Value};
 use super::index_kind::IndexKind;
 use super::spec::FixtureSpec;
 
-/// The committed fixture name → table `fixtures.v3_ste_vec`, script
+/// The canonical fixture name → table `fixtures.v3_ste_vec`, script
 /// `v3_ste_vec.sql`, SQLx ref `scripts("v3_ste_vec")`.
 const NAME: &str = "v3_ste_vec";
 
-/// The committed `payload` column type — the `eql_v3.json` DOMAIN, so the
+/// The canonical `payload` column type — the `eql_v3.json` DOMAIN, so the
 /// domain CHECK runs when the fixture loads.
 const PAYLOAD_TYPE: &str = "eql_v3.json";
 
