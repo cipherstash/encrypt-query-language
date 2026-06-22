@@ -16,8 +16,8 @@
 //! `->`/`->>` selector operand and every blocker RHS operand below is
 //! explicitly typed (`-> 'sel'::text`, `? 'x'::text`, `@? '$.sv'::jsonpath`,
 //! `|| '{}'::jsonb`, …). A BARE literal would resolve to native jsonb and never
-//! reach our operator/blocker, giving false results. See
-//! `docs/decisions/2026-06-10-eql-v3-json-type-kind.md`.
+//! reach our operator/blocker, giving false results. See the "Typed operands"
+//! caveat in `docs/reference/json-support.md`.
 
 use eql_tests::matrix::assert_index_scan_uses;
 use sqlx::PgPool;

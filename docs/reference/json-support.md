@@ -333,6 +333,27 @@ The actual encryption and selector generation is handled by CipherStash Proxy or
 
 ---
 
+## `eql_v3` encrypted JSONB — typed operands (important)
+
+The `eql_v3` schema provides an encrypted-JSONB document type (`eql_v3.json`, built on SteVec) alongside its scalar encrypted domains. It supports the same searchable operations without decryption — document containment (`@>`, `<@`), field/array access (`->`, `->>`, `jsonb_path_query` / `_exists` / `_query_first`, `jsonb_array_*`), and entry-level equality/range on extracted leaves. Every other native `jsonb` operator (`?`, `?|`, `?&`, `@?`, `@@`, `#>`, `#>>`, `-`, `#-`, `||`, and root-document comparisons) is **blocked** — it raises rather than silently running plaintext-jsonb semantics on the encrypted payload.
+
+> **Caveat — operands must be typed.** `eql_v3.json` is a PostgreSQL **domain over `jsonb`**. PostgreSQL resolves `domain OP untyped_literal` to the **native** `jsonb` operator, because it flattens the domain to its base type when the right-hand side is an unknown-typed literal. A bare literal therefore **bypasses the encrypted operator (and the blockers) and silently returns native jsonb semantics** — typically a root-key lookup that yields `NULL` — instead of querying the encrypted document or raising.
+>
+> Always give the operand a known type:
+>
+> ```sql
+> -- ✅ correct — typed operand resolves to the eql_v3 operator
+> WHERE doc -> 'email'::text = '<encrypted_query_payload>'
+> WHERE doc -> $1            -- a text parameter (the CipherStash Proxy interface)
+>
+> -- ⚠ wrong — bare untyped literal resolves to native jsonb -> text, returns NULL
+> WHERE doc -> 'email'
+> ```
+>
+> This is **intrinsic to the domain type-kind**, not a bug: the only way to remove it entirely would be to make `eql_v3.json` a base type (losing free `jsonb` interop). The CipherStash Proxy always passes typed parameters, so applications routing through the Proxy are unaffected; the caveat only matters for hand-written ad-hoc SQL.
+
+---
+
 ### Didn't find what you wanted?
 
 [Click here to let us know what was missing from our docs.](https://github.com/cipherstash/encrypt-query-language/issues/new?template=docs-feedback.yml&title=[Docs:]%20Feedback%20on%20json-support.md)
