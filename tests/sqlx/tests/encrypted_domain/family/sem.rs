@@ -376,7 +376,10 @@ async fn jsonb_array_to_ore_block_input_shapes(pool: PgPool) -> Result<()> {
     )
     .fetch_one(&pool)
     .await?;
-    assert_eq!(term_count, 0, "empty JSON array must yield a zero-term composite");
+    assert_eq!(
+        term_count, 0,
+        "empty JSON array must yield a zero-term composite"
+    );
 
     // Single-element array → non-NULL composite with exactly 1 term.
     let term_count: i32 = sqlx::query_scalar(

@@ -58,7 +58,10 @@ mod tests {
         let v = values();
         assert_eq!(v.len(), 3, "fixture is [\"\", \"frank\", \"zebra\"]");
         assert!(v[0].is_empty(), "id 1 must be the empty string");
-        assert!(!v[1].is_empty() && !v[2].is_empty(), "controls are non-empty");
+        assert!(
+            !v[1].is_empty() && !v[2].is_empty(),
+            "controls are non-empty"
+        );
         // The controls are strictly ordered so max is unambiguous.
         assert!(v[1] < v[2], "\"frank\" must order before \"zebra\"");
     }

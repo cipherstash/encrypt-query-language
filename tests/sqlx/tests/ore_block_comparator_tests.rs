@@ -210,14 +210,22 @@ async fn empty_ore_term_sorts_before_non_empty(pool: PgPool) -> Result<()> {
     ))
     .fetch_one(&pool)
     .await?;
-    assert_eq!(lt, Some(-1), "empty ORE term must sort before a non-empty term");
+    assert_eq!(
+        lt,
+        Some(-1),
+        "empty ORE term must sort before a non-empty term"
+    );
 
     let gt: Option<i32> = sqlx::query_scalar(&format!(
         "SELECT eql_v3.compare_ore_block_256_terms({non_empty}, {empty})"
     ))
     .fetch_one(&pool)
     .await?;
-    assert_eq!(gt, Some(1), "a non-empty term must sort after an empty ORE term");
+    assert_eq!(
+        gt,
+        Some(1),
+        "a non-empty term must sort after an empty ORE term"
+    );
 
     let eq: Option<i32> = sqlx::query_scalar(&format!(
         "SELECT eql_v3.compare_ore_block_256_terms({empty}, {empty})"
