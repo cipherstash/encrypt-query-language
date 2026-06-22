@@ -66,48 +66,23 @@ Execute the install SQL file directly:
 
 ## EQL Components
 
-EQL installs and manages the following components
+EQL installs the following components into the `eql_v3` schema:
 
-| Name                               | Entity Type
-| ---------------------------------- | --------------- |
-| eql_v2.*                           | Schema          |
-| public.eql_v2_encrypted            | Type            |
-| public.eql_v2_configuration_state  | Type            |
-| public.eql_v2_configuration        | Table           |
-
-
-### `eql_v2` Schema
-
-The `eql_v2` schema holds all of the functions, types and operators required to query and interact with encrypted data.
-The schema is stateless and the schema can be dropped without risk of data loss.
-
-Updating EQL will drop and re-create the schema.
-Unless otherwise documented this is a safe operation that requires no data migration or changes.
+| Name                                                | Entity Type   | Purpose                                                              |
+| --------------------------------------------------- | ------------- | ------------------------------------------------------------------- |
+| `eql_v3`                                            | Schema        | Holds all EQL types, operators, functions, and aggregates           |
+| `eql_v3.<T>`, `eql_v3.<T>_eq`, `eql_v3.<T>_ord`     | Domain types  | Per-scalar encrypted columns (one family per scalar: `int4`, `text`, `timestamptz`, …) |
+| `eql_v3.json`                                       | Domain type   | Encrypted JSON (structured-encryption) documents                    |
+| `eql_v3.eq_term` / `ord_term` / `match_term`        | Functions     | Index-term extractors for functional indexes                        |
 
 
-### Configuration Table & Type
+### `eql_v3` Schema
 
-The `public.eql_v2_configuration` table holds the searchable encryption configuration.
-The `public.eql_v2_configuration_state` type is used by the configuration table.
+The `eql_v3` schema holds the encrypted-domain types, their operators and term extractors, and the `MIN` / `MAX` aggregates.
 
-The table and associated type are created in the `public` schema to avoid any risk of data loss when updating or uninstalling EQL.
+Encrypted columns are typed as `eql_v3` domains (e.g. `eql_v3.text_eq`, `eql_v3.json`), and the searchable surface available on a column is fixed by its domain **variant** — there is no database-side configuration state. Which index terms a value carries is decided by the encryption client (Protect.js / CipherStash Proxy).
 
-EQL updates will automatically migrate the configuration if the internal structure changes.
-
-On uninstall the configuration table is renamed with a timestamp suffix
-The table is not automatically dropped to avoid any potential risk of data loss.
-
-Renaming avoids potential conflicts in CI pipelines that may repeatedly install and uninstall EQL.
-
-
-### `public.eql_v2_encrypted` Type
-
-The `public.eql_v2_encrypted` is the type used to define encrypted columns, and is used in customer table definitions.
-The type is created in the `public` schema to avoid any risk of data loss when updating or uninstalling EQL.
-
-Dropping the `public.eql_v2_encrypted` type will remove any associated columns from the database.
-
-Uninstalling EQL will not drop the `public.eql_v2_encrypted` type to avoid risk of data loss.
+Because the domain types live in the `eql_v3` schema, columns depend on them; `DROP SCHEMA eql_v3 CASCADE` removes the surface (and would drop columns typed as those domains). Re-running the install script is idempotent.
 
 
 ## Database Permissions
@@ -122,12 +97,9 @@ For most use cases, grant the following permissions to the database user that wi
 -- Database-level permissions
 GRANT CREATE ON DATABASE your_database TO your_eql_user;
 
--- Schema permissions  
+-- Schema permissions
 GRANT USAGE ON SCHEMA public TO your_eql_user;
 GRANT CREATE ON SCHEMA public TO your_eql_user;
-
--- Configuration table permissions
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.eql_v2_configuration TO your_eql_user;
 
 -- User table permissions (for encrypted column constraints)
 GRANT ALTER ON ALL TABLES IN SCHEMA public TO your_eql_user;
@@ -137,10 +109,9 @@ GRANT ALTER ON ALL TABLES IN SCHEMA public TO your_eql_user;
 
 **Why these permissions are needed:**
 
-- **CREATE ON DATABASE**: Required to create the `eql_v2` schema, types, and functions during installation
-- **CREATE ON SCHEMA public**: Required to create types and tables in the public schema
-- **Configuration table access**: EQL manages searchable encryption configuration in `public.eql_v2_configuration`
-- **ALTER on user tables**: EQL adds check constraints to encrypted columns for data validation
+- **CREATE ON DATABASE**: Required to create the `eql_v3` schema, domain types, and functions during installation
+- **CREATE ON SCHEMA public**: Required to add encrypted columns (typed as `eql_v3` domains) to tables in the public schema
+- **ALTER on user tables**: encrypted-domain `CHECK` constraints are validated on the user tables
 
 ### Splitting Read and Write Access
 
@@ -154,7 +125,6 @@ Use during database migrations and EQL installation:
 -- All default permissions above, plus:
 GRANT CREATE ON DATABASE your_database TO your_migration_user;
 GRANT CREATE ON SCHEMA public TO your_migration_user;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.eql_v2_configuration TO your_migration_user;
 GRANT ALTER ON ALL TABLES IN SCHEMA public TO your_migration_user;
 ```
 
@@ -163,21 +133,18 @@ GRANT ALTER ON ALL TABLES IN SCHEMA public TO your_migration_user;
 Use for application queries in production:
 
 ```sql
--- Configuration read access
-GRANT SELECT ON TABLE public.eql_v2_configuration TO your_app_user;
-
--- EQL schema usage
-GRANT USAGE ON SCHEMA eql_v2 TO your_app_user;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA eql_v2 TO your_app_user;
+-- EQL schema usage (resolves the encrypted operators / extractors)
+GRANT USAGE ON SCHEMA eql_v3 TO your_app_user;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA eql_v3 TO your_app_user;
 
 -- User table access (normal application permissions)
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE your_tables TO your_app_user;
 ```
 
 **Migration Workflow:**
-1. Use the migration user to install EQL and configure encrypted columns
+1. Use the migration user to install EQL and add encrypted columns
 2. Use the runtime user for normal application operations
-3. Configuration changes (adding/removing encrypted columns) require the migration user
+3. Schema changes (adding/removing encrypted columns) require the migration user
 
 
 ### dbdev
@@ -193,23 +160,22 @@ Once EQL is installed in your PostgreSQL database, you can start using encrypted
 
 ### Enable encrypted columns
 
-Define encrypted columns using the `eql_v2_encrypted` type, which stores encrypted data as `jsonb` with additional constraints to ensure data integrity.
+Define encrypted columns using an `eql_v3` domain type. Type the column as the **variant** for the capability you need — `eql_v3.text_eq` for equality, `eql_v3.<T>_ord` for range/ordering, `eql_v3.text_match` for full-text, `eql_v3.json` for encrypted JSON. Each is stored as `jsonb` with a `CHECK` constraint that validates the encrypted payload.
 
 **Example:**
 
 ```sql
--- Step 1: Create a table with an encrypted column
+-- Step 1: Create a table with an equality-searchable encrypted column
 CREATE TABLE users (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    encrypted_email eql_v2_encrypted
+    encrypted_email eql_v3.text_eq
 );
 
--- Step 2: Configure the column for encryption/decryption
-SELECT eql_v2.add_column('users', 'encrypted_email', 'text');
-
--- Step 3: (Optional) Add search indexes
-SELECT eql_v2.add_search_config('users', 'encrypted_email', 'unique', 'text');
+-- Step 2: Add a functional index on the term extractor (engages bare-form queries)
+CREATE INDEX users_email_eq ON users USING hash (eql_v3.eq_term(encrypted_email));
 ```
+
+See the [SQL support matrix](docs/reference/sql-support.md) for every variant and [Database Indexes](docs/reference/database-indexes.md) for the index recipes.
 
 > [!NOTE]
 > You must use [CipherStash Proxy](https://github.com/cipherstash/proxy) or [Protect.js](https://github.com/cipherstash/protectjs) to encrypt and decrypt data. EQL provides the database functions and types, while these tools handle the actual cryptographic operations.
@@ -310,11 +276,7 @@ These frameworks use EQL to enable searchable encryption functionality in Postgr
 
 ## Versioning
 
-You can find the version of EQL installed in your database by running the following query:
-
-```sql
-SELECT eql_v2.version();
-```
+EQL is distributed as a versioned install script (`cipherstash-encrypt.sql`) published with each [GitHub release](https://github.com/cipherstash/encrypt-query-language/releases). Track the release tag you installed; re-running the install script is idempotent and upgrades the `eql_v3` surface in place.
 
 ### Upgrading
 
@@ -343,17 +305,17 @@ Follow the instructions in the [dbdev documentation](https://database.dev/cipher
 
 ### Common Errors
 
-**Error: "Some pending columns do not have an encrypted target"**
-- **Cause**: Trying to configure a column that doesn't exist as `eql_v2_encrypted` type
-- **Solution**: First create the column: `ALTER TABLE table_name ADD COLUMN column_name eql_v2_encrypted;`
+**A query returns no rows / silently runs native `jsonb` semantics**
+- **Cause**: the query operand was an untyped literal, so PostgreSQL flattened the `eql_v3` domain to its `jsonb` base type and resolved the native operator
+- **Solution**: type the operand — `WHERE col = $1::eql_v3.text_eq` (CipherStash Proxy supplies typed parameters automatically)
 
-**Error: "Config exists for column: table_name column_name"**
-- **Cause**: Attempting to add a column configuration that already exists
-- **Solution**: Use `eql_v2.add_search_config()` to add indexes, or `eql_v2.remove_column()` first to reconfigure
+**Error: "operator not supported" (raised)**
+- **Cause**: the operator is blocked for the column's domain variant (e.g. `<` on an `_eq` column, or `LIKE` on any encrypted column)
+- **Solution**: type the column as a variant that carries the required term (see the [SQL support matrix](docs/reference/sql-support.md)); use `@>` rather than `LIKE` for text match
 
-**Error: "No configuration exists for column: table_name column_name"**
-- **Cause**: Trying to add search configuration before configuring the column
-- **Solution**: Run `eql_v2.add_column()` first, then add search indexes
+**`=` returns no rows on a populated column**
+- **Cause**: the column's values do not carry an `hm` equality term
+- **Solution**: confirm the encryption client is configured to emit the equality term for the column's variant, and that data was written after configuring it
 
 ### Getting Help
 
