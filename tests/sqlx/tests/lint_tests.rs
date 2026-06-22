@@ -216,9 +216,7 @@ async fn lint_flags_domain_over_domain(pool: PgPool) -> Result<()> {
     let rows = fetch_lints(&pool).await?;
     let violations: Vec<&LintRow> = rows
         .iter()
-        .filter(|r| {
-            r.category == "domain_over_domain" && r.object_name.contains("test_baddom")
-        })
+        .filter(|r| r.category == "domain_over_domain" && r.object_name.contains("test_baddom"))
         .collect();
 
     assert!(
