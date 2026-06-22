@@ -25,7 +25,7 @@
 --!   domain to its base type `jsonb` when resolving an unknown-typed RHS, and the
 --!   native base-type operator wins the exact-match tiebreak. This is intrinsic to
 --!   the domain type-kind and applies to the native-jsonb blockers too. See
---!   docs/decisions/2026-06-10-eql-v3-json-type-kind.md.
+--!   the "Typed operands" caveat in docs/reference/json-support.md.
 --!
 --! @param e eql_v3.json Root encrypted payload.
 --! @param selector text Selector hash.
