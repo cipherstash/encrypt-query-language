@@ -64,7 +64,7 @@ dir = "{{config_root}}"
 run = """
 # Copy built SQL to SQLx migrations (EQL install is generated, not static)
 echo "Updating SQLx migrations with built EQL..."
-cp release/cipherstash-encrypt.sql tests/sqlx/migrations/001_install_eql.sql
+cp release/cipherstash-encrypt-v3.sql tests/sqlx/migrations/001_install_eql.sql
 
 # Run SQLx migrations and tests
 echo "Running SQLx migrations..."
