@@ -13,12 +13,9 @@ This test crate provides:
 ## Architecture
 
 - **SQLx `#[sqlx::test]`**: Automatic test isolation (each test gets fresh database)
-- **Fixtures**: SQL files in `fixtures/` seed test data
-- **Migrations**: SQL files in `migrations/` install EQL extension and test infrastructure
-  - `001_install_eql.sql` - Installs EQL extension
-  - `002_install_ore_data.sql` - Loads ORE encryption data
-  - `003_install_ste_vec_data.sql` - Loads STE vector encryption data
-  - `004_install_test_helpers.sql` - Creates test helper functions
+- **Fixtures**: generated SQL files in `fixtures/` seed per-test data (see `fixtures/FIXTURE_SCHEMA.md`)
+- **Migrations**: a single generated migration in `migrations/`
+  - `001_install_eql.sql` - installs the EQL (`eql_v3`) extension (generated, gitignored)
 - **Assertions**: Builder pattern for common test assertions
 - **Helpers**: Centralized helper functions in `src/helpers.rs`
 

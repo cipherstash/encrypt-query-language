@@ -19,22 +19,22 @@ fn read_release_sql(filename: &str) -> String {
 #[test]
 fn v3_variant_file_exists() {
     assert!(
-        Path::new("../../release/cipherstash-encrypt-v3.sql").exists(),
-        "v3-only variant installer should exist"
+        Path::new("../../release/cipherstash-encrypt.sql").exists(),
+        "the v3 installer should exist"
     );
 }
 
 #[test]
 fn v3_uninstaller_exists() {
     assert!(
-        Path::new("../../release/cipherstash-encrypt-v3-uninstall.sql").exists(),
-        "v3-only variant uninstaller should exist"
+        Path::new("../../release/cipherstash-encrypt-uninstall.sql").exists(),
+        "the v3 uninstaller should exist"
     );
 }
 
 #[test]
 fn v3_variant_creates_eql_v3_schema() {
-    let sql = read_release_sql("cipherstash-encrypt-v3.sql");
+    let sql = read_release_sql("cipherstash-encrypt.sql");
     assert!(
         sql.contains("CREATE SCHEMA eql_v3"),
         "v3 variant must create the eql_v3 schema"
@@ -43,7 +43,7 @@ fn v3_variant_creates_eql_v3_schema() {
 
 #[test]
 fn v3_variant_has_no_eql_v2_symbol() {
-    let sql = read_release_sql("cipherstash-encrypt-v3.sql");
+    let sql = read_release_sql("cipherstash-encrypt.sql");
     // Reject both schema-qualified refs (`eql_v2.<fn>`) and bare v2 entity names
     // (`eql_v2_encrypted`, `eql_v2_configuration`, …). Prose mentions like
     // "the eql_v2 original is unchanged" in doc comments are still allowed.
@@ -55,12 +55,13 @@ fn v3_variant_has_no_eql_v2_symbol() {
 
 #[test]
 fn v3_variant_omits_v2_coupled_pin_search_path() {
-    // D11: the v3 artifact must NOT append tasks/pin_search_path.sql, which is
-    // eql_v2-coupled (it references public.eql_v2_encrypted / eql_v2.ste_vec_entry
-    // and only pins eql_v2 functions). Match the eql_v2-QUALIFIED markers: a bare
-    // `ste_vec_entry` substring would false-positive on the legitimate
-    // `eql_v3.ste_vec_entry` DOMAIN that the v3 jsonb document surface defines.
-    let sql = read_release_sql("cipherstash-encrypt-v3.sql");
+    // The artifact appends tasks/pin_search_path_v3.sql (eql_v3-only), NOT the
+    // removed eql_v2-coupled tasks/pin_search_path.sql (which referenced
+    // public.eql_v2_encrypted / eql_v2.ste_vec_entry and only pinned eql_v2
+    // functions). Match the eql_v2-QUALIFIED markers: a bare `ste_vec_entry`
+    // substring would false-positive on the legitimate `eql_v3.ste_vec_entry`
+    // DOMAIN that the v3 jsonb document surface defines.
+    let sql = read_release_sql("cipherstash-encrypt.sql");
     assert!(
         !sql.contains("eql_v2.ste_vec_entry") && !sql.contains("eql_v2_encrypted"),
         "v3 variant must not carry the eql_v2-coupled pin_search_path script"
