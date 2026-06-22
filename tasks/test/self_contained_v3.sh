@@ -33,12 +33,12 @@ if grep -v '^src/v3/' src/deps-ordered-v3.txt; then
 fi
 
 # Belt-and-braces: the assembled artifact carries no eql_v2 symbol.
-echo "==> Artifact gate: release/cipherstash-encrypt-v3.sql has no 'eql_v2.' / 'eql_v2_'"
-if [[ ! -f release/cipherstash-encrypt-v3.sql ]]; then
-  echo "ERROR: release/cipherstash-encrypt-v3.sql missing — run 'mise run build' first" >&2
+echo "==> Artifact gate: release/cipherstash-encrypt.sql has no 'eql_v2.' / 'eql_v2_'"
+if [[ ! -f release/cipherstash-encrypt.sql ]]; then
+  echo "ERROR: release/cipherstash-encrypt.sql missing — run 'mise run build' first" >&2
   exit 2
 fi
-if grep -nE 'eql_v2[._]' release/cipherstash-encrypt-v3.sql; then
+if grep -nE 'eql_v2[._]' release/cipherstash-encrypt.sql; then
   echo "ERROR: assembled v3 artifact contains an eql_v2 symbol/entity reference" >&2
   fail=1
 fi

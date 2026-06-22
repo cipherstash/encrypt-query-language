@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Install release/cipherstash-encrypt-v3.sql into a scratch DB with NO eql_v2 and smoke-test it (D11, D4)"
+#MISE description="Install release/cipherstash-encrypt.sql into a scratch DB with NO eql_v2 and smoke-test it (D11, D4)"
 #USAGE flag "--port <port>" help="Postgres port" default="7432"
 #USAGE flag "--user <user>" help="Postgres user" default="cipherstash"
 
@@ -16,7 +16,7 @@ SCRATCH_DB="cipherstash_v3_clean"
 ADMIN=(psql -U "$PG_USER" -h localhost -p "$PG_PORT" -d postgres -v ON_ERROR_STOP=1 -q)
 RUN=(psql -U "$PG_USER" -h localhost -p "$PG_PORT" -d "$SCRATCH_DB" -v ON_ERROR_STOP=1 -q)
 
-test -f release/cipherstash-encrypt-v3.sql || { echo "Build first: release/cipherstash-encrypt-v3.sql missing" >&2; exit 2; }
+test -f release/cipherstash-encrypt.sql || { echo "Build first: release/cipherstash-encrypt.sql missing" >&2; exit 2; }
 
 echo "==> (re)creating scratch database $SCRATCH_DB (no eql_v2 installed)"
 "${ADMIN[@]}" -c "DROP DATABASE IF EXISTS ${SCRATCH_DB} WITH (FORCE);"
@@ -26,7 +26,7 @@ cleanup() { "${ADMIN[@]}" -c "DROP DATABASE IF EXISTS ${SCRATCH_DB} WITH (FORCE)
 trap cleanup EXIT
 
 echo "==> installing the standalone eql_v3 surface"
-"${RUN[@]}" -f release/cipherstash-encrypt-v3.sql
+"${RUN[@]}" -f release/cipherstash-encrypt.sql
 
 echo "==> asserting NO eql_v2 schema exists (proves no v2 dependency)"
 "${RUN[@]}" -c "DO \$\$ BEGIN IF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'eql_v2') THEN RAISE EXCEPTION 'eql_v2 schema unexpectedly present'; END IF; END \$\$;"
