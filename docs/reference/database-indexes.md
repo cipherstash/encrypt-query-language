@@ -1,116 +1,98 @@
 # Database Indexes for Encrypted Columns
 
-EQL supports PostgreSQL B-tree indexes on `eql_v2_encrypted` columns to improve query performance. This guide explains how to create and use indexes effectively.
+EQL supports PostgreSQL indexes on encrypted columns to make queries competitive with plain-PostgreSQL workloads. This guide covers how to create them, how they engage, and how to keep both queries *and* index builds fast at scale.
+
+The model is simple and uniform across every encrypted-domain type: **index a functional expression over the term extractor**, never an operator class on the column. The extractor returns a small per-row term whose return type already carries a default operator class, and the extractors are inlinable — so bare-form queries (`WHERE col = $1`, `ORDER BY col`) engage the index without any query rewriting.
 
 ## Table of Contents
 
 - [Creating Indexes](#creating-indexes)
+- [How Index Engagement Works](#how-index-engagement-works)
 - [Index Usage Requirements](#index-usage-requirements)
 - [Query Patterns That Use Indexes](#query-patterns-that-use-indexes)
-- [Query Patterns That Don't Use Indexes](#query-patterns-that-dont-use-indexes)
-- [Index Limitations](#index-limitations)
-- [Best Practices](#best-practices)
 - [GIN Indexes for JSONB Containment](#gin-indexes-for-jsonb-containment)
+- [Best Practices](#best-practices)
+- [Performance: Building Indexes on Large Tables](#performance-building-indexes-on-large-tables)
+- [Diagnosing Queries with EXPLAIN](#diagnosing-queries-with-explain)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
 ## Creating Indexes
 
-### Basic Index Creation
-
-Create a B-tree index on an encrypted column using the `eql_v2.encrypted_operator_class`:
+Each capability has one canonical functional-index recipe. Type the column as the domain variant that carries the term (see [SQL support matrix](./sql-support.md)), then index the matching extractor:
 
 ```sql
-CREATE INDEX ON table_name (encrypted_column eql_v2.encrypted_operator_class);
+-- Equality (hash index on the eq_term extractor) — eql_v3.<T>_eq / _ord / text_search
+CREATE INDEX users_email_eq
+  ON users USING hash (eql_v3.eq_term(encrypted_email));
+
+-- Ordering / range (btree index on the ord_term extractor) — eql_v3.<T>_ord / _ord_ore
+CREATE INDEX events_at_ord
+  ON events USING btree (eql_v3.ord_term(encrypted_at));
+
+-- Text match (bloom-filter containment — GIN on the match_term extractor) — eql_v3.text_match / text_search
+CREATE INDEX users_name_match
+  ON users USING gin (eql_v3.match_term(encrypted_name));
+
+ANALYZE users;
 ```
 
-**Named index:**
-
-```sql
-CREATE INDEX idx_users_email ON users (encrypted_email eql_v2.encrypted_operator_class);
-```
+> **No operator class on a column or domain.** `eql_v3` deliberately does **not** ship an `encrypted_operator_class`. Operators resolve against the domain's `jsonb` base type, so an opclass on the column would bypass the encrypted surface. Always index through the extractor. (This also means no superuser is required — functional indexes work on Supabase and managed PostgreSQL.)
 
 ### When to Create Indexes
 
 Create indexes on encrypted columns when:
-- The table has a significant number of rows (typically > 1000)
-- You frequently query by equality on that column
-- Query performance is important
-- The column contains searchable index terms (hmac_256, blake3, ore, or ope)
+
+- The table has a significant number of rows (typically > 1000).
+- You frequently query the column by the matching operator.
+- The column is typed as a variant that carries the required term (`_eq` for equality, `_ord` for range/ordering, `text_match` for containment).
+
+---
+
+## How Index Engagement Works
+
+The extractors (`eql_v3.eq_term`, `eql_v3.ord_term`, `eql_v3.match_term`) are inlinable `LANGUAGE sql` functions — a single `SELECT`, `IMMUTABLE`, no pinned `search_path`. PostgreSQL inlines them at planning time, so a bare-form predicate is rewritten into the same expression as the index and matches it structurally:
+
+```sql
+SELECT * FROM users WHERE encrypted_email = $1;
+-- planner inlines `=` to: eql_v3.eq_term(encrypted_email) = eql_v3.eq_term($1)
+-- Index Cond on USING hash (eql_v3.eq_term(encrypted_email))
+```
+
+The match is **syntactic on the expression tree**: the predicate's extractor call must be the same function and argument shape as the index's defining expression. The planner does not reason about semantic equivalence, which is why `ORDER BY` needs special care (see [Range and ORDER BY](#range-queries-and-order-by) below) and why pinning `search_path` on an extractor would silently disable inlining and revert queries to sequential scans.
 
 ---
 
 ## Index Usage Requirements
 
-For PostgreSQL to use an index on encrypted columns, **all** of these conditions must be met:
+For PostgreSQL to use a functional index on an encrypted column, **all** of these must hold:
 
-### 1. Column Must Have Appropriate Search Terms
+### 1. The value must carry the required term
 
-The encrypted data must contain the index term types that support the operation:
+Capability travels in the payload, chosen by the encryption client and reflected in the column's domain variant:
 
-- **Equality queries** - Require `unique` index config (adds `hm` hmac_256 terms)
-- **Range queries** - Require `ore` index config on root scalars (adds `ob` ore_block_u64_8_256 terms), or `ste_vec` on encrypted JSON columns (adds `oc` ORE CLLW on sv elements — see [U-006](../upgrading/v2.3.md#u-006-ste_vec-ore-field-consolidation))
-- **Pattern matching** - Typically scans (bloom filters don't use B-tree indexes)
+- **Equality** needs an `hm` (hmac_256) term — `eql_v3.<T>_eq`, `eql_v3.<T>_ord`, or `eql_v3.text_search`.
+- **Range / ordering** needs an `ob` (ore_block_256) term — `eql_v3.<T>_ord` / `_ord_ore` or `eql_v3.text_search`.
+- **Text containment** needs a `bf` (bloom_filter) term — `eql_v3.text_match` or `eql_v3.text_search`.
 
-**Example:**
+A value with only a bloom term will not drive an equality index, and vice versa.
+
+### 2. The index must be created after the data carries the term
+
+If you populate a column, then later change which terms its values carry, recreate the index — a functional index built before the term is present will not match.
+
+### 3. The query operand must be typed
+
+The comparison value must resolve to the encrypted operator, not the native `jsonb` one. A typed parameter (`$1`, which CipherStash Proxy supplies) or an explicit cast works:
+
 ```sql
--- This data HAS hmac_256 term - index will be used
-'{"i":{"t":"users","c":"email"},"v":2,"hm":"abc123..."}'
+-- ✓ resolves the encrypted operator → uses the index
+WHERE encrypted_email = $1;
+WHERE encrypted_email = $1::eql_v3.text_eq;
 
--- This data has ONLY bloom filter - index WON'T be used for equality
-'{"i":{"t":"users","c":"email"},"v":2,"bf":[1,2,3]}'
-```
-
-### 2. Index Must Be Created AFTER Data Contains Required Terms
-
-If you:
-1. Insert data without a search term (e.g., only `bf`)
-2. Add the search term later (e.g., add `hm`)
-3. Create an index
-
-**The index will NOT work** until you:
-- Recreate the index, OR
-- Truncate and repopulate the table
-
-**Correct order:**
-```sql
--- 1. Configure the index type FIRST
-SELECT eql_v2.add_search_config('users', 'encrypted_email', 'unique', 'text');
-
--- 2. Insert/update data through CipherStash Proxy (adds index terms)
-INSERT INTO users (encrypted_email) VALUES (...);
-
--- 3. Create the PostgreSQL index
-CREATE INDEX ON users (encrypted_email eql_v2.encrypted_operator_class);
-ANALYZE users;
-```
-
-### 3. Query Must Use Correct Type Casting
-
-The query value must be cast to `eql_v2_encrypted`:
-
-**✓ Index will be used:**
-```sql
--- Literal row type
-WHERE e = '("{\"hm\": \"abc\"}")';
-
--- Cast to eql_v2_encrypted
-WHERE e = '{"hm": "abc"}'::eql_v2_encrypted;
-WHERE e = '{"hm": "abc"}'::text::eql_v2_encrypted;
-WHERE e = '{"hm": "abc"}'::jsonb::eql_v2_encrypted;
-
--- Using helper function
-WHERE e = eql_v2.to_encrypted('{"hm": "abc"}'::jsonb);
-WHERE e = eql_v2.to_encrypted('{"hm": "abc"}');
-
--- Using parameterized query with encrypted value
-WHERE e = $1::eql_v2_encrypted;
-```
-
-**✗ Index will NOT be used:**
-```sql
--- Missing type cast
-WHERE e = '{"hm": "abc"}'::jsonb;
+-- ✗ a bare jsonb literal falls through to native jsonb semantics
+WHERE encrypted_email = '{"hm":"abc"}'::jsonb;
 ```
 
 ---
@@ -119,419 +101,212 @@ WHERE e = '{"hm": "abc"}'::jsonb;
 
 ### Equality Queries
 
-When encrypted column has `hm` (hmac_256) or `b3` (blake3) index terms:
+A column typed `eql_v3.<T>_eq` (or `_ord`, or `text_search`) with a hash index on `eql_v3.eq_term(col)`:
 
 ```sql
--- These will use the index
-SELECT * FROM users
-WHERE encrypted_email = $1::eql_v2_encrypted;
+CREATE INDEX users_email_eq ON users USING hash (eql_v3.eq_term(encrypted_email));
+ANALYZE users;
 
-SELECT * FROM users
-WHERE encrypted_email = '{"hm": "abc123..."}'::eql_v2_encrypted;
-
-SELECT * FROM users
-WHERE encrypted_email = eql_v2.to_encrypted('{"hm": "abc123..."}'::jsonb);
+SELECT * FROM users WHERE encrypted_email = $1;
+-- Index Scan using users_email_eq
+--   Index Cond: (eql_v3.eq_term(encrypted_email) = eql_v3.eq_term($1))
 ```
 
-**Expected EXPLAIN output:**
-```
-Index Only Scan using idx_users_email on users
-  Index Cond: (encrypted_email = '...'::eql_v2_encrypted)
-```
+### Range Queries and ORDER BY
 
-Or:
-```
-Bitmap Heap Scan on users
-  Recheck Cond: (encrypted_email = '...'::eql_v2_encrypted)
-  -> Bitmap Index Scan on idx_users_email
-       Index Cond: (encrypted_email = '...'::eql_v2_encrypted)
-```
-
-### Range Queries
-
-The canonical 2.3 recipe is a functional B-tree index over the `ob` (Block ORE) term:
+Type the column as an `_ord` / `_ord_ore` variant and build a btree on `eql_v3.ord_term(col)`:
 
 ```sql
-CREATE INDEX events_encrypted_date_ore_idx
-  ON events (eql_v2.ore_block_u64_8_256(encrypted_date));
+CREATE INDEX events_at_ord ON events USING btree (eql_v3.ord_term(encrypted_at));
 ANALYZE events;
 ```
 
-The `eql_v2.ore_block_u64_8_256_operator_class` is `DEFAULT FOR TYPE`, so it's selected automatically — no explicit opclass annotation needed. The `<`, `<=`, `>`, `>=` operators on `eql_v2_encrypted` inline to `eql_v2.ore_block_u64_8_256(a) <op> eql_v2.ore_block_u64_8_256(b)`, which means natural-form range queries match the index without any rewriting:
+The `<`, `<=`, `>`, `>=` operators inline to comparisons on `eql_v3.ord_term`, so natural-form range predicates match the index:
+
+```sql
+SELECT * FROM events WHERE encrypted_at < $1 ORDER BY encrypted_at DESC LIMIT 10;
+```
+
+**The sort-key trap.** The planner inlines operators in *predicates*, but it does **not** rewrite *sort keys*. `ORDER BY col` and `ORDER BY eql_v3.ord_term(col)` are not interchangeable to the planner, even though ORE is order-preserving. So the query above uses the index for the `WHERE` clause but still adds a `Sort` node for the `ORDER BY` (a Top-N sort because of the `LIMIT`). To stream rows out of the index already ordered — no `Sort` node — write the sort key in extractor form:
 
 ```sql
 SELECT * FROM events
-  WHERE encrypted_date < $1::eql_v2_encrypted
-  ORDER BY encrypted_date DESC
+  WHERE encrypted_at < $1
+  ORDER BY eql_v3.ord_term(encrypted_at) DESC
   LIMIT 10;
 ```
 
-**Index Scan vs. Top-N sort.** PostgreSQL uses the functional ORE index for the `WHERE` clause via structural match on the inlined predicate. The `ORDER BY` step, however, still needs a Sort node when the sort key is `encrypted_date` (the natural form) — Postgres only uses an index for `ORDER BY` when the sort key syntactically matches the index expression. With the operator inlining, each comparison in that Sort step now reduces to an inlined ORE-term comparison, so a `LIMIT n` Top-N sort is fast even without an index-ordered scan.
+The natural-form Top-N sort scales linearly with the number of rows passing `WHERE`; at large row counts and moderate selectivity that is the difference between seconds and milliseconds. **For ordered range queries, write `ORDER BY` against `eql_v3.ord_term(col)`.**
 
-To skip the Sort step entirely, write the `ORDER BY` in extractor form:
+> **The `value::jsonb` projection trap.** If you `SELECT col::jsonb … ORDER BY col`, PostgreSQL folds the cast into the scan output and uses `(col)::jsonb` as the sort key — which matches no index. Either project the column raw, or wrap the ordered query in a subquery so the cast applies outside the `LIMIT`. (Writing `ORDER BY eql_v3.ord_term(col)` sidesteps this entirely — it is structurally distinct from `(col)::jsonb`.)
 
-```sql
-SELECT * FROM events
-  WHERE encrypted_date < $1::eql_v2_encrypted
-  ORDER BY eql_v2.ore_block_u64_8_256(encrypted_date) DESC
-  LIMIT 10;
-```
+### GROUP BY / DISTINCT
 
-The sort key now matches the functional index expression, so the planner streams rows out of the index in order — a plain Index Scan, no separate Sort node.
-
-**Non-Block-ORE term types.** For columns carrying only `oc` (sv-element ORE CLLW), the bare-form `<` / `>` operators no longer dispatch through `eql_v2.compare()` — they go straight to the Block ORE extractor, which raises on a missing `ob`. Either migrate the column configuration to `ore` (Block ORE), or rewrite range queries to the extractor form: `WHERE eql_v2.ore_cllw(e->'<selector>'::text) < eql_v2.ore_cllw($1::jsonb)`. See [U-005](../upgrading/v2.3.md#u-005-range-operators-are-block-ore-only) and [U-006](../upgrading/v2.3.md#u-006-ste_vec-ore-field-consolidation) for the migration notes.
-
-### GROUP BY
-
-Encrypted columns can be used in GROUP BY with indexes:
+**Group and deduplicate on the extractor, not the raw column.** The extractor form is the only recipe that scales:
 
 ```sql
-SELECT encrypted_status, COUNT(*)
-FROM orders
-GROUP BY encrypted_status;
+SELECT eql_v3.eq_term(encrypted_email), count(*)
+  FROM users
+  GROUP BY eql_v3.eq_term(encrypted_email);
 ```
+
+Why the raw column does not scale: `GROUP BY col` uses the entire encrypted payload (1–2 KB per row) as the hash key. PostgreSQL estimates a hash table far larger than the default `work_mem` (4 MB), refuses `HashAggregate`, and falls back to `GroupAggregate` — sorting kilobyte-sized rows and spilling to disk. The `eql_v3.eq_term(col)` key is a small deterministic term, so the hash table fits in `work_mem` and the planner picks `HashAggregate` reliably — without any deployment-wide tuning. If you cannot rewrite the query (an ORM grouping the raw column), bumping `work_mem` to fit the estimated hash table is the rescue knob, but the extractor form is the design.
 
 ### Field-level equality index (ste_vec elements)
 
-For `GROUP BY` / `DISTINCT` / equality on a value extracted from an encrypted JSON document — e.g. `data->'email'` — there are two complementary recipes. Pick by use case:
-
-**Per-selector hash index.** Use when a single JSONB path is queried hot and you want a small, narrow index. The canonical extractor is `eql_v2.eq_term(col -> '<selector>')` — XOR-aware (covers both hm-bearing and oc-bearing selectors with one expression):
+For `GROUP BY` / `DISTINCT` / equality on a value extracted from an `eql_v3.json` document — e.g. `doc -> 'email'` — index the extractor applied to the selector. The extracted entry is an `eql_v3.ste_vec_entry`, and `=` on it inlines to `eql_v3.eq_term(a) = eql_v3.eq_term(b)`:
 
 ```sql
-CREATE INDEX users_data_email_eq_term_idx
-  ON users USING hash (eql_v2.eq_term(data_encrypted -> '<selector-for-email>'));
-```
+CREATE INDEX users_data_email_eq
+  ON users USING hash (eql_v3.eq_term(data_encrypted -> '<selector-for-email>'::text));
+ANALYZE users;
 
-The bare-form predicate uses `=` on `eql_v2.ste_vec_entry`, which inlines to `eql_v2.eq_term(a) = eql_v2.eq_term(b)` — matching the functional hash index above:
-
-```sql
 SELECT count(*) FROM users
-  GROUP BY eql_v2.eq_term(data_encrypted -> '<selector-for-email>');
+  GROUP BY eql_v3.eq_term(data_encrypted -> '<selector-for-email>'::text);
 
 SELECT * FROM users
-  WHERE data_encrypted -> '<selector-for-email>' = $1::eql_v2.ste_vec_entry;
+  WHERE data_encrypted -> '<selector-for-email>'::text = $1::eql_v3.ste_vec_entry;
 ```
 
-**GIN index over the entire sv shape (recommended).** Use when many selectors are queried on the same column and you want one index covering them all — typical for proxy-rewritten `col @> needle` containment where the needle can target any field. The recipe is XOR-aware: both `hm`-bearing (bool leaves / array / object roots) and `oc`-bearing (string / number leaves) sv elements are indexed.
-
-```sql
-CREATE INDEX users_data_stevec_query_idx
-  ON users USING gin (eql_v2.to_stevec_query(data_encrypted)::jsonb jsonb_path_ops);
-```
-
-Query shape — uses the typed `@>` overload, which inlines to a native `jsonb @>` over the same expression so the planner engages Bitmap Index Scan:
-
-```sql
-SELECT * FROM users
-  WHERE data_encrypted @> '{"sv":[{"s":"<selector-hash>","hm":"<term>"}]}'::eql_v2.stevec_query;
--- or, for an oc-bearing selector:
-SELECT * FROM users
-  WHERE data_encrypted @> '{"sv":[{"s":"<selector-hash>","oc":"<term>"}]}'::eql_v2.stevec_query;
-```
-
-The two recipes can coexist on the same column. The `<selector>` value is the deterministic selector hash that the crypto layer emits in the `s` field of each `sv` element — not a plaintext JSONPath.
-
----
-
-## Query Patterns That Don't Use Indexes
-
-### 1. Missing Type Cast
-
-```sql
--- ✗ No index usage - missing ::eql_v2_encrypted cast
-SELECT * FROM users WHERE encrypted_email = '{"hm": "abc"}'::jsonb;
-```
-
-### 2. Data Without Required Index Terms
-
-```sql
--- ✗ Data only has bloom filter, not hmac_256
--- Index won't be used even if query is correct
-SELECT * FROM users
-WHERE encrypted_email = $1::eql_v2_encrypted;
--- If column only has: '{"bf":[1,2,3]}'
-```
-
-### 3. Pattern Matching (LIKE)
-
-```sql
--- ✗ Bloom filter queries typically don't use B-tree indexes
-SELECT * FROM users
-WHERE encrypted_name ~~ $1::eql_v2_encrypted;
-```
-
-### 4. Index Created Before Data Population
-
-```sql
--- ✗ Wrong order
-CREATE INDEX ON users (encrypted_email eql_v2.encrypted_operator_class);
--- Then add data with hm terms
--- Index won't work until recreated
-```
-
----
-
-## Index Limitations
-
-### 1. Index Term Requirement
-
-B-tree indexes **only work** with:
-- `hm` (hmac_256) - for equality
-- `ob` (ore_block_u64_8_256) - for range queries on root scalars
-- `oc` (ore_cllw) - for range queries on `ste_vec` elements (functional btree on `eql_v2.ore_cllw(col)` engages via the `eql_v2.ore_cllw_ops` opclass; excluded from the Supabase variant because operator classes require superuser)
-
-They **do not work** with:
-- `bf` (bloom_filter) - pattern matching
-- Data with `sv` field (ste_vec) - JSONB containment uses GIN indexes instead (see [GIN Indexes](#gin-indexes-for-jsonb-containment))
-- Data without any index terms
-
-### 2. Index Creation Timing
-
-The index must be created **after** the data contains the required index terms. If you:
-
-1. Add `unique` config to existing column
-2. Re-encrypt data to add `hm` terms
-3. Create index
-
-You must create the index **after step 2**, not before.
-
-### 3. Index Doesn't Auto-Update
-
-If you modify the search configuration (e.g., change from `unique` to different config), you should:
-
-```sql
--- Drop and recreate the index
-DROP INDEX idx_users_email;
-CREATE INDEX idx_users_email ON users (encrypted_email eql_v2.encrypted_operator_class);
-ANALYZE users;
-```
-
----
-
-## Best Practices
-
-### 1. Configure Search Indexes First
-
-Always configure EQL search indexes before creating PostgreSQL indexes:
-
-```sql
--- Step 1: Configure searchable encryption
-SELECT eql_v2.add_column('users', 'encrypted_email', 'text');
-SELECT eql_v2.add_search_config('users', 'encrypted_email', 'unique', 'text');
-
--- Step 2: Populate data (through CipherStash Proxy)
-INSERT INTO users (encrypted_email) VALUES (...);
-
--- Step 3: Create PostgreSQL index
-CREATE INDEX ON users (encrypted_email eql_v2.encrypted_operator_class);
-ANALYZE users;
-```
-
-### 2. Run ANALYZE After Index Creation
-
-Always run `ANALYZE` after creating an index to update query planner statistics:
-
-```sql
-CREATE INDEX idx_users_email ON users (encrypted_email eql_v2.encrypted_operator_class);
-ANALYZE users;
-```
-
-### 3. Verify Index Usage
-
-Use `EXPLAIN ANALYZE` to verify the index is being used:
-
-```sql
-EXPLAIN ANALYZE
-SELECT * FROM users
-WHERE encrypted_email = $1::eql_v2_encrypted;
-```
-
-Look for:
-- `Index Only Scan using idx_name`
-- `Bitmap Index Scan on idx_name`
-- `Bitmap Heap Scan` with `Bitmap Index Scan`
-
-If you see `Seq Scan`, the index is not being used.
-
-### 4. Name Your Indexes
-
-Use descriptive names for easier management:
-
-```sql
-CREATE INDEX idx_users_encrypted_email
-ON users (encrypted_email eql_v2.encrypted_operator_class);
-
-CREATE INDEX idx_events_encrypted_date
-ON events (encrypted_date eql_v2.encrypted_operator_class);
-```
-
-### 5. Consider Index Size
-
-Indexes on encrypted columns can be large. Monitor index size:
-
-```sql
-SELECT
-  indexname,
-  pg_size_pretty(pg_relation_size(schemaname||'.'||indexname)) AS index_size
-FROM pg_indexes
-WHERE tablename = 'users';
-```
-
-### 6. Drop Unused Indexes
-
-If you remove a search configuration, drop the corresponding PostgreSQL index:
-
-```sql
--- After removing search config
-SELECT eql_v2.remove_search_config('users', 'encrypted_email', 'unique');
-
--- Drop the PostgreSQL index
-DROP INDEX IF EXISTS idx_users_encrypted_email;
-```
+For ordered field-level access, index `eql_v3.ore_cllw(doc -> '<selector>'::text)` (a btree) and write `ORDER BY eql_v3.ore_cllw(doc -> '<selector>'::text)` — the same sort-key rule as above. The `<selector>` value is the deterministic selector hash the crypto layer emits in each `sv` element's `s` field, not a plaintext JSONPath. The operand on `->` must be typed (`-> '<sel>'::text`); a bare untyped literal falls through to native `jsonb ->`.
 
 ---
 
 ## GIN Indexes for JSONB Containment
 
-While B-tree indexes don't support `ste_vec` (JSONB containment), you can use PostgreSQL GIN indexes for efficient containment queries on encrypted JSONB columns.
-
-### When to Use GIN Indexes
-
-Use GIN indexes when:
-- You need to perform JSONB containment queries (`@>`, `<@`)
-- The table has a significant number of rows (500+ recommended)
-- Query performance on containment operations is important
-
-### Creating a GIN Index
-
-Create a GIN index using the `jsonb_array()` function, which extracts the encrypted JSONB as a native `jsonb[]` array:
+For document-level containment (`@>` / `<@`) on `eql_v3.json` columns, use a GIN index over the ste_vec query shape. The typed `@>` overload inlines to a native `jsonb @>` over `eql_v3.to_ste_vec_query(col)::jsonb`, so a GIN index on the same expression engages:
 
 ```sql
-CREATE INDEX idx_encrypted_jsonb_gin
-ON table_name USING GIN (eql_v2.jsonb_array(encrypted_column));
+CREATE INDEX orders_data_gin
+  ON orders USING gin (eql_v3.to_ste_vec_query(data_encrypted)::jsonb jsonb_path_ops);
+ANALYZE orders;
 
-ANALYZE table_name;
+SELECT * FROM orders WHERE data_encrypted @> $1::eql_v3.ste_vec_query;
+-- Bitmap Index Scan on orders_data_gin
 ```
 
-**Important:** Always run `ANALYZE` after creating the index so PostgreSQL's query planner has accurate statistics.
+The needle must be typed — `$1::eql_v3.ste_vec_query`, another `eql_v3.json`, or an `eql_v3.ste_vec_entry`. A bare untyped literal falls through to native `jsonb @>`.
 
-### Query Patterns for GIN Indexes
+EQL also ships convenience helpers for building containment queries: `eql_v3.jsonb_array(col)` (extracts the encrypted document as a native `jsonb[]`), and `eql_v3.jsonb_contains(a, b)` / `eql_v3.jsonb_contained_by(a, b)`.
 
-There are two approaches to write containment queries that use GIN indexes:
+### GIN vs B-tree / hash
 
-#### Approach 1: Using jsonb_array() Function
+| Feature        | hash / btree on extractor      | GIN on `to_ste_vec_query` |
+| -------------- | ------------------------------ | ------------------------- |
+| **Use case**   | equality, range, ordering      | JSONB document containment |
+| **Operators**  | `=`, `<>`, `<`, `>`, `<=`, `>=` | `@>`, `<@`                |
+| **Expression** | `eql_v3.eq_term` / `ord_term`  | `eql_v3.to_ste_vec_query(col)::jsonb` |
 
-Convert both sides to `jsonb[]` and use the native containment operator:
+---
+
+## Best Practices
+
+1. **Type the column as the right variant first.** The variant (`_eq` / `_ord` / `text_match`) is what makes the operator — and therefore the index — resolve. There is no separate database-side config step.
+2. **Run `ANALYZE` after every index build.** `CREATE INDEX` on an *expression* gathers no statistics on that expression; without `ANALYZE` the planner has no histogram for `eql_v3.eq_term(col)` and can misjudge the index it just built.
+3. **Verify with `EXPLAIN`** — see [Diagnosing Queries with EXPLAIN](#diagnosing-queries-with-explain).
+4. **Name indexes descriptively** (`users_email_eq`, `events_at_ord`) for easier management.
+5. **Drop unused indexes.** If a column no longer needs a capability, drop the corresponding functional index — duplicate indexes compete for cache and slow writes.
+
+---
+
+## Performance: Building Indexes on Large Tables
+
+Everything above is about query time. Index *build* time is a separate axis, and on large encrypted tables it is the one that bites: a functional index that queries in a millisecond can still take hours — or fail to finish — to `CREATE`. Three things govern it.
+
+### `maintenance_work_mem`, not `work_mem`
+
+`CREATE INDEX` draws on `maintenance_work_mem` (default 64 MB — far too small for a multi-million-row build; the sort or bucket fill spills to disk early and the build goes I/O-bound). Raise it for the session before a large build:
 
 ```sql
-SELECT * FROM table_name
-WHERE eql_v2.jsonb_array(encrypted_column) @>
-      eql_v2.jsonb_array($1::eql_v2_encrypted);
+SET maintenance_work_mem = '2GB';   -- per-build; only one build runs at a time
+CREATE INDEX … ;
 ```
 
-#### Approach 2: Using Helper Function
+It is the single highest-leverage knob for build time. On a managed deployment where you cannot set it per session, raise it for the maintenance window.
 
-Use the convenience function which handles the conversion internally:
+### Index type decides whether the build scales
+
+For *query* performance the access method is settled by capability (`hash` for equality, `btree` for ORE, `GIN` for bloom / ste_vec). For *build* performance at scale they are not equivalent:
+
+| Access method | Build algorithm                                   | Scales past cache? | Parallel build? |
+| ------------- | ------------------------------------------------- | ------------------ | --------------- |
+| **btree**     | sort, then bulk-load bottom-up — sequential writes | yes               | yes (`max_parallel_maintenance_workers`) |
+| **GIN**       | batched buffer build                              | yes                | no              |
+| **hash**      | fill buckets keyed by hash value                  | **no**             | no              |
+
+A hash build scatters consecutive heap rows to random buckets; once the index outgrows `shared_buffers` + OS cache it becomes random-I/O-bound and cannot be parallelised. A btree build sorts first, then writes sequentially across parallel workers.
+
+**For equality functional indexes on large tables, prefer `btree` over `hash`.** `eql_v3.eq_term(col)` — and the field-level `eql_v3.eq_term(col -> '<selector>'::text)` — return small deterministic terms; a btree on them serves `=` exactly as well as a hash index, with no query-side cost, and the build goes from pathological to routine:
 
 ```sql
-SELECT * FROM table_name
-WHERE eql_v2.jsonb_contains(encrypted_column, $1::eql_v2_encrypted);
+CREATE INDEX … USING btree (eql_v3.eq_term(col));   -- large tables
+CREATE INDEX … USING hash  (eql_v3.eq_term(col));   -- small / medium tables
 ```
 
-Both approaches produce the same result and use the GIN index.
+A `hash` functional index on a 10M-row encrypted-JSONB column has been observed to run 17 hours to 73% and stall; the `btree` equivalent with `maintenance_work_mem` raised builds without drama. Hash is fine up to mid-six-figure row counts — but its *build* does not scale.
 
-### Verifying Index Usage
+### The de-TOAST floor
 
-Use `EXPLAIN` to verify the GIN index is being used:
+A functional index over a large encrypted column [de-TOASTs](https://www.postgresql.org/docs/current/storage-toast.html) the whole stored value once per row to evaluate the extractor — and an `eql_v3.json` document is large. This cost is unavoidable and identical across access methods; it sets the build's *floor* rate. (There is no partial de-TOAST — `doc -> 'selector'::text` materialises the entire document.)
+
+### Storage matters more than it does for queries
+
+Index builds are I/O-heavy in a way steady-state queries are not. Containerised PostgreSQL on a virtualised filesystem — notably Docker Desktop on macOS — pays a steep penalty: the random TOAST reads a functional-index build performs are the worst case for a VM I/O layer. For large builds, run PostgreSQL on native storage / fast NVMe.
+
+### Diagnosing a slow build
+
+`pg_stat_progress_create_index` is the build-time analogue of `EXPLAIN`. From a second session while `CREATE INDEX` runs:
 
 ```sql
-EXPLAIN SELECT * FROM table_name
-WHERE eql_v2.jsonb_array(encrypted_column) @>
-      eql_v2.jsonb_array($1::eql_v2_encrypted);
+SELECT phase, tuples_done, tuples_total,
+       round(100.0 * tuples_done / nullif(tuples_total, 0), 1) AS pct
+FROM pg_stat_progress_create_index;
 ```
 
-**Expected output:**
-```
-Bitmap Heap Scan on table_name
-  Recheck Cond: (jsonb_array(encrypted_column) @> jsonb_array(...))
-  ->  Bitmap Index Scan on idx_encrypted_jsonb_gin
-        Index Cond: (jsonb_array(encrypted_column) @> jsonb_array(...))
-```
+A steady `tuples_done` rate means the build is healthy. A rate that **decays over time** is the cache/memory wall — raise `maintenance_work_mem`, and if it is a hash index, rebuild it as a btree.
 
-If you see `Seq Scan`, ensure:
-1. The index exists
-2. `ANALYZE` has been run
-3. The table has enough rows (PostgreSQL may choose sequential scan for very small tables)
+---
 
-### GIN vs B-tree Index Comparison
+## Diagnosing Queries with EXPLAIN
 
-| Feature | B-tree Index | GIN Index |
-|---------|-------------|-----------|
-| **Use case** | Equality, range queries | JSONB containment |
-| **Index terms** | `hm`, `b3`, `ob`, `opf`, `opv` | `sv` (via jsonb_array) |
-| **Operators** | `=`, `<`, `>`, `<=`, `>=` | `@>`, `<@` |
-| **Function** | Direct column reference | `eql_v2.jsonb_array()` |
+The first move on a slow EQL query is `EXPLAIN (COSTS OFF)`. Look for:
+
+- **`Index Scan using <your-index>`** — the planner is using the functional index. ✓
+- **`Bitmap Index Scan on <your-index>`** — same, for set-style predicates (`@>`). ✓
+- **`Index Cond:`** referencing the extractor (`eql_v3.eq_term(…)`, `eql_v3.ord_term(…)`) — the inlined predicate matched the index. ✓
+- **`Seq Scan`** — no index used. Investigate.
+- **`Filter:` showing the raw operator** (`col < '…'`) — inlining did not happen. Usual causes: a pinned `search_path` on a customised function (`\df+` shows `proconfig`), a `plpgsql` body where a `sql` one is expected, or the planner judging another plan cheaper.
+- **`Sort` node above an Index Scan** — natural-form `ORDER BY`; expected for that shape. Switch the sort key to `eql_v3.ord_term(col)` to eliminate it.
+
+Once a plan looks right, repeat with `EXPLAIN ANALYZE` to measure actual timings.
 
 ---
 
 ## Troubleshooting
 
-### Index Not Being Used
+**Index not being used:**
 
-**Check 1: Verify data has index terms**
+1. **Verify the value carries the term.** Equality needs `hm`, range needs `ob`, containment needs `bf`:
+   ```sql
+   SELECT encrypted_email::jsonb ? 'hm' AS has_hmac,
+          encrypted_email::jsonb ? 'ob' AS has_ore_block,
+          encrypted_email::jsonb ? 'bf' AS has_bloom
+   FROM users LIMIT 1;
+   ```
+2. **Verify the operand is typed** (`$1::eql_v3.text_eq`, not `$1::jsonb`).
+3. **Recreate the index** if the column's terms changed after the index was built.
+4. **Run `ANALYZE`** — very small tables may still choose a sequential scan, which is correct.
 
-```sql
--- Check if data contains hm (hmac) for equality, ob (Block ORE)
--- for range queries on root scalars, or oc for range queries on
--- ste_vec elements.
-SELECT encrypted_email::jsonb ? 'hm' AS has_hmac,
-       encrypted_email::jsonb ? 'ob' AS has_ore_block,
-       encrypted_email::jsonb ? 'oc' AS has_ore_cllw
-FROM users LIMIT 1;
-```
-
-**Check 2: Verify query uses correct cast**
-
-```sql
--- ✓ Correct - will use index
-WHERE encrypted_email = $1::eql_v2_encrypted
-
--- ✗ Wrong - won't use index
-WHERE encrypted_email = $1::jsonb
-```
-
-**Check 3: Recreate index if needed**
-
-```sql
-DROP INDEX IF EXISTS idx_users_encrypted_email;
-CREATE INDEX idx_users_encrypted_email
-ON users (encrypted_email eql_v2.encrypted_operator_class);
-ANALYZE users;
-```
-
-**Check 4: Verify index exists**
-
-```sql
-SELECT indexname, indexdef
-FROM pg_indexes
-WHERE tablename = 'users'
-  AND indexname LIKE '%encrypted%';
-```
-
-### Poor Query Performance
-
-1. **Ensure index exists and is being used** - Use `EXPLAIN ANALYZE`
-2. **Check table has been ANALYZEd** - Run `ANALYZE table_name`
-3. **Consider index selectivity** - Very small tables might not use indexes
-4. **Check for appropriate search config** - Equality needs `unique`, ranges need `ore` or `ope`
+**`=` returns zero rows on a column without `hm`:** equality requires the value to carry an `hm` term — type the column as `_eq` / `_ord` / `text_search` and confirm the client is emitting the term.
 
 ---
 
 ## See Also
 
-- [EQL Functions Reference](./eql-functions.md) - Complete function API
-- [Index Configuration](./index-config.md) - Searchable encryption index types
-- [Configuration Tutorial](../tutorials/proxy-configuration.md) - Setting up encrypted columns
+- [SQL support matrix](./sql-support.md) — which operators work against which domain variant.
+- [EQL Functions Reference](./eql-functions.md) — complete function API.
+- [EQL with JSON and JSONB](./json-support.md) — `eql_v3.json` worked examples.
+- [Configuration Tutorial](../tutorials/proxy-configuration.md) — setting up encrypted columns end to end.
 
 ---
 
