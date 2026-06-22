@@ -80,3 +80,6 @@ provided by the `eql_v3` surface.
 
 - `CHANGELOG.md` `[Unreleased]` → `Removed` entry.
 - Self-containment invariant and gate: `mise run test:self_contained_v3`.
+- Deferred follow-up: the Tier-1 reference-doc rewrites (README, `docs/reference/*`)
+  that still describe the removed `eql_v2` surface are tracked in
+  `docs/superpowers/plans/2026-06-22-migrate-docs-to-eql-v3.md`, not in this PR.

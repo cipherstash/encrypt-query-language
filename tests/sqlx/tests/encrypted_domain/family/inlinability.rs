@@ -316,7 +316,15 @@ async fn encrypted_domain_blockers_are_plpgsql_and_non_strict(pool: PgPool) -> R
         JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
         JOIN pg_catalog.pg_language  l ON l.oid = p.prolang
         WHERE n.nspname = 'eql_v3'
-          AND (p.prosrc LIKE '%encrypted_domain_unsupported_bool%'
+          -- Match every blocker helper the codegen emits — `_bool` (comparison
+          -- ops), `_jsonb` (`#>`, `||`, `-`), and `_text` (`#>>`, `->>`) — via
+          -- the broad `encrypted_domain_unsupported` prefix, kept verbatim in
+          -- sync with the `encrypted_domain_blockers` CTE in src/v3/lint/lints.sql
+          -- so the structural guard cannot be narrower than the lint it backstops.
+          -- The shared `encrypted_domain_unsupported_*(text, text)` helpers carry
+          -- the marker too but take text args, so the jsonb-domain-arg EXISTS
+          -- below excludes them.
+          AND (p.prosrc LIKE '%encrypted_domain_unsupported%'
             OR p.prosrc LIKE '%is not supported for%')
           AND EXISTS (
             SELECT 1
