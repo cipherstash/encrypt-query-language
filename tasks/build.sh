@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #MISE description="Build SQL into single release file"
 #MISE alias="b"
-#MISE sources=["src/**/*.sql", "tasks/pin_search_path.sql", "tasks/pin_search_path_v3.sql", "tasks/uninstall.sql", "tasks/uninstall-protect.sql", "crates/eql-scalars/src/**/*.rs", "crates/eql-codegen/src/**/*.rs"]
-#MISE outputs=["release/cipherstash-encrypt.sql","release/cipherstash-encrypt-uninstall.sql","release/cipherstash-encrypt-protect.sql","release/cipherstash-encrypt-protect-uninstall.sql","release/cipherstash-encrypt-v3.sql","release/cipherstash-encrypt-v3-uninstall.sql"]
+#MISE sources=["src/v3/**/*.sql", "tasks/pin_search_path_v3.sql", "tasks/uninstall-v3.sql", "crates/eql-scalars/src/**/*.rs", "crates/eql-codegen/src/**/*.rs"]
+#MISE outputs=["release/cipherstash-encrypt.sql","release/cipherstash-encrypt-uninstall.sql"]
 #USAGE flag "--version <version>" help="Specify release version of EQL" default="DEV"
 
 #!/bin/bash
@@ -75,132 +75,18 @@ verify_v3_self_contained() {
 
 mkdir -p release
 
-rm -f release/cipherstash-encrypt-uninstall.sql
 rm -f release/cipherstash-encrypt.sql
+rm -f release/cipherstash-encrypt-uninstall.sql
 
-rm -f release/cipherstash-encrypt-uninstall-supabase.sql
-rm -f release/cipherstash-encrypt-supabase.sql
-
-rm -f release/cipherstash-encrypt-protect.sql
-rm -f release/cipherstash-encrypt-protect-uninstall.sql
-
-rm -f release/cipherstash-encrypt-v3.sql
-rm -f release/cipherstash-encrypt-v3-uninstall.sql
-
-rm -f dbdev/eql--0.0.0.sql
-
-rm -f src/version.sql
-rm -f src/deps.txt
-rm -f src/deps-ordered.txt
-rm -f src/deps-supabase.txt
-rm -f src/deps-ordered-supabase.txt
-rm -f src/deps-protect.txt
-rm -f src/deps-ordered-protect.txt
 rm -f src/deps-v3.txt
 rm -f src/deps-ordered-v3.txt
 
 
-RELEASE_VERSION=${usage_version:-DEV}
-sed "s/\$RELEASE_VERSION/$RELEASE_VERSION/g" src/version.template > src/version.sql
-
-
-find src -type f -path "*.sql" ! -path "*_test.sql" | while IFS= read -r sql_file; do
-    echo $sql_file
-
-    echo "$sql_file $sql_file" >> src/deps.txt
-
-    while IFS= read -r line; do
-        # echo $line
-        # Check if the line contains "-- REQUIRE:"
-        if [[ "$line" == *"-- REQUIRE:"* ]]; then
-            # Extract the required file(s) after "-- REQUIRE:"
-            deps=${line#*-- REQUIRE: }
-
-            # Split multiple REQUIRE declarations if present
-            for dep in $deps; do
-                echo "$sql_file $dep" >> src/deps.txt
-            done
-        fi
-    done < "$sql_file"
-done
-
-
-cat src/deps.txt | tsort | tac > src/deps-ordered.txt
-verify_deps_exist src/deps-ordered.txt
-
-cat src/deps-ordered.txt | xargs cat | grep -v REQUIRE >> release/cipherstash-encrypt.sql
-cat tasks/pin_search_path.sql >> release/cipherstash-encrypt.sql
-
-cat tasks/uninstall.sql >> release/cipherstash-encrypt-uninstall.sql
-
-
-# Supabase specific build which excludes operator classes as they are not supported
-find src -type f -path "*.sql" ! -path "*_test.sql" ! -path "**/*operator_class.sql" | while IFS= read -r sql_file; do
-    echo $sql_file
-
-    echo "$sql_file $sql_file" >> src/deps-supabase.txt
-
-    while IFS= read -r line; do
-        # echo $line
-        # Check if the line contains "-- REQUIRE:"
-        if [[ "$line" == *"-- REQUIRE:"* ]]; then
-            # Extract the required file(s) after "-- REQUIRE:"
-            deps=${line#*-- REQUIRE: }
-
-            # Split multiple REQUIRE declarations if present
-            for dep in $deps; do
-                echo "$sql_file $dep" >> src/deps-supabase.txt
-            done
-        fi
-    done < "$sql_file"
-done
-
-
-cat src/deps-supabase.txt | tsort | tac > src/deps-ordered-supabase.txt
-verify_deps_exist src/deps-ordered-supabase.txt
-
-cat src/deps-ordered-supabase.txt | xargs cat | grep -v REQUIRE >> release/cipherstash-encrypt-supabase.sql
-cat tasks/pin_search_path.sql >> release/cipherstash-encrypt-supabase.sql
-
-cat src/deps-ordered-supabase.txt | xargs cat | grep -v REQUIRE >> dbdev/eql--0.0.0.sql
-cat tasks/pin_search_path.sql >> dbdev/eql--0.0.0.sql
-
-cat tasks/uninstall.sql >> release/cipherstash-encrypt-uninstall-supabase.sql
-
-
-# Protect variant build - excludes config management and encryptindex
-find src -type f -path "*.sql" ! -path "*_test.sql" ! -path "**/config/*" ! -path "**/encryptindex/*" | while IFS= read -r sql_file; do
-    echo $sql_file
-
-    echo "$sql_file $sql_file" >> src/deps-protect.txt
-
-    while IFS= read -r line; do
-        if [[ "$line" == *"-- REQUIRE:"* ]]; then
-            deps=${line#*-- REQUIRE: }
-            for dep in $deps; do
-                echo "$sql_file $dep" >> src/deps-protect.txt
-            done
-        fi
-    done < "$sql_file"
-done
-
-cat src/deps-protect.txt | tsort | tac > src/deps-ordered-protect.txt
-verify_deps_exist src/deps-ordered-protect.txt
-
-cat src/deps-ordered-protect.txt | xargs cat | grep -v REQUIRE >> release/cipherstash-encrypt-protect.sql
-cat tasks/pin_search_path.sql >> release/cipherstash-encrypt-protect.sql
-
-cat tasks/uninstall-protect.sql >> release/cipherstash-encrypt-protect-uninstall.sql
-
-
-# v3-only build (design D9): the self-contained eql_v3 surface — schema, SEM
-# types, scalar domains — globbed from src/v3 ONLY. This is the unit the
-# self-containment gate greps; it is the only artifact that can be "free of
-# eql_v2", because the combined variants glob all of src/. It deliberately does
-# NOT append tasks/pin_search_path.sql (D11): that script is eql_v2-coupled
-# (raises if public.eql_v2_encrypted / eql_v2.ste_vec_entry are absent and only
-# ever pins eql_v2 functions), so appending it would both fail a clean v3
-# install and break the self-containment grep.
+# The self-contained eql_v3 surface — schema, SEM types, scalar domains —
+# globbed from src/v3 ONLY. This is the sole EQL artifact: it owns no eql_v2
+# dependency (CI-gated by verify_v3_self_contained below + test:self_contained_v3),
+# and it is written under the canonical release name now that the combined v2
+# build that previously produced that name is gone.
 find src/v3 -type f -path "*.sql" ! -path "*_test.sql" | while IFS= read -r sql_file; do
     echo "$sql_file"
 
@@ -221,10 +107,10 @@ verify_v3_self_contained src/deps-v3.txt
 cat src/deps-v3.txt | tsort | tac > src/deps-ordered-v3.txt
 verify_deps_exist src/deps-ordered-v3.txt
 
-cat src/deps-ordered-v3.txt | xargs cat | grep -v REQUIRE >> release/cipherstash-encrypt-v3.sql
-cat tasks/pin_search_path_v3.sql >> release/cipherstash-encrypt-v3.sql
+cat src/deps-ordered-v3.txt | xargs cat | grep -v REQUIRE >> release/cipherstash-encrypt.sql
+cat tasks/pin_search_path_v3.sql >> release/cipherstash-encrypt.sql
 
-cat tasks/uninstall-v3.sql >> release/cipherstash-encrypt-v3-uninstall.sql
+cat tasks/uninstall-v3.sql >> release/cipherstash-encrypt-uninstall.sql
 
 
 echo
@@ -234,12 +120,6 @@ echo '###############################################'
 echo
 echo 'Installer:'
 echo '    release/cipherstash-encrypt.sql'
-echo '    release/cipherstash-encrypt-supabase.sql'
-echo '    release/cipherstash-encrypt-protect.sql'
-echo '    release/cipherstash-encrypt-v3.sql'
 echo
 echo 'Uninstaller:'
 echo '    release/cipherstash-encrypt-uninstall.sql'
-echo '    release/cipherstash-encrypt-uninstall-supabase.sql'
-echo '    release/cipherstash-encrypt-protect-uninstall.sql'
-echo '    release/cipherstash-encrypt-v3-uninstall.sql'
