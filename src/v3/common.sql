@@ -43,7 +43,7 @@ $$ LANGUAGE sql;
 --! @internal Mark this hand-written helper inline-critical so the post-install
 --! pin_search_path pass leaves it unpinned (no `SET search_path`), preserving
 --! SQL-function inlining. It takes a bare `jsonb` arg (not a jsonb-backed
---! encrypted DOMAIN), so the structural skip in tasks/pin_search_path.sql does
+--! encrypted DOMAIN), so the structural skip in tasks/pin_search_path_v3.sql does
 --! not recognise it; this marker is the documented manual opt-in.
 COMMENT ON FUNCTION eql_v3.jsonb_array_to_bytea_array(jsonb) IS
   'eql-inline-critical: per-encrypted-value ORE helper; must stay inlinable (unpinned search_path)';

@@ -73,7 +73,7 @@ async fn no_encrypted_domain_inline_critical_function_is_pinned(pool: PgPool) ->
 
     assert!(
         offenders.is_empty(),
-        "pin_search_path.sql pinned {} inline-critical encrypted-domain \
+        "pin_search_path_v3.sql pinned {} inline-critical encrypted-domain \
          SQL function(s) — index engagement is silently broken. \
          Offenders (signature → proconfig):\n{}",
         offenders.len(),
@@ -92,17 +92,17 @@ async fn no_encrypted_domain_inline_critical_function_is_pinned(pool: PgPool) ->
 /// jsonb (hmac_256, bloom_filter, the ore_cllw/has_ore_cllw extractors, the two
 /// per-encrypted-value `jsonb_array_to_*` helpers) arg, so they are NOT caught
 /// by the structural pin-skip and need explicit inline_critical allowlisting. If
-/// pin_search_path.sql pins any of them, v3 functional-index inlining silently
+/// pin_search_path_v3.sql pins any of them, v3 functional-index inlining silently
 /// regresses to Seq Scan — this test fails instead.
 ///
 /// `jsonb_array_to_bytea_array(jsonb)` and
 /// `jsonb_array_to_ore_block_256(jsonb)` are included here: both take a
 /// bare `jsonb` arg (not a jsonb-backed encrypted DOMAIN), so the structural
-/// skip in tasks/pin_search_path.sql does not recognise them — they are kept
+/// skip in tasks/pin_search_path_v3.sql does not recognise them — they are kept
 /// unpinned by the `eql-inline-critical` COMMENT marker instead. This test
 /// asserts the unpinned + inlinable-SQL state directly; the companion
 /// `eql_v3_sem_inline_critical_functions_carry_marker` test below asserts the
-/// marker itself, so an edit that drops the marker (or a pin_search_path.sql
+/// marker itself, so an edit that drops the marker (or a pin_search_path_v3.sql
 /// refactor that stops honouring it) fails CI even though both checks live in
 /// separate tests.
 #[sqlx::test]
@@ -174,11 +174,11 @@ async fn eql_v3_sem_inline_critical_functions_are_unpinned(pool: PgPool) -> Resu
 /// Companion guard for the two bare-`jsonb` per-encrypted-value helpers
 /// (`jsonb_array_to_bytea_array`, `jsonb_array_to_ore_block_256`). The
 /// unpinned state asserted above is only DURABLE because each helper carries an
-/// `eql-inline-critical` COMMENT marker that `tasks/pin_search_path.sql` honours
+/// `eql-inline-critical` COMMENT marker that `tasks/pin_search_path_v3.sql` honours
 /// (it skips pinning functions whose `pg_description` matches
 /// `'eql-inline-critical%'`). Neither helper is caught by the structural
 /// jsonb-domain skip, so the marker is the ONLY thing keeping them unpinned —
-/// an edit that removes the marker, or a pin_search_path.sql refactor that drops
+/// an edit that removes the marker, or a pin_search_path_v3.sql refactor that drops
 /// the marker handling, would silently re-pin them and break inlining. This test
 /// asserts the marker is present (and the helpers are SQL/IMMUTABLE) so that
 /// failure surfaces here.
@@ -232,7 +232,7 @@ async fn eql_v3_sem_inline_critical_helpers_carry_marker(pool: PgPool) -> Result
         offenders.is_empty(),
         "eql_v3 SEM bare-jsonb helpers must carry an `eql-inline-critical` COMMENT \
          marker and be inlinable SQL/IMMUTABLE — the marker is what keeps \
-         pin_search_path.sql from pinning them. Offenders \
+         pin_search_path_v3.sql from pinning them. Offenders \
          (proname, marker, prolang, provolatile): {offenders:#?}"
     );
     Ok(())
