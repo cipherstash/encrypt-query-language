@@ -1,681 +1,126 @@
 # EQL Functions Reference
 
-This document provides a comprehensive reference for all EQL (Encrypt Query Language) functions available for querying encrypted data in PostgreSQL.
+A reference for the functions and operators EQL exposes for querying encrypted data in PostgreSQL. The surface lives in the **`eql_v3`** schema and is organised around the per-scalar encrypted-domain types (`eql_v3.<T>` and variants) and the encrypted-JSON document type (`eql_v3.json`).
+
+> **There is no database-side configuration API.** Which index terms a value carries is chosen by the encryption client ([CipherStash Proxy](https://github.com/cipherstash/proxy) / [Protect.js](https://github.com/cipherstash/protectjs)); a column's capability is fixed by the **domain variant** you type it as. See [SQL support matrix](./sql-support.md) for the variant/operator table.
 
 ## Table of Contents
 
-- [Configuration Functions](#configuration-functions)
-- [Query Functions](#query-functions)
-  - [Operators (Recommended)](#operators-recommended)
-  - [Function Equivalents](#function-equivalents)
-- [Index Term Extraction Functions](#index-term-extraction-functions)
-- [JSONB Path Functions](#jsonb-path-functions)
-- [Array Functions](#array-functions)
-- [Helper Functions](#helper-functions)
+- [Operators](#operators)
+- [Function Equivalents](#function-equivalents)
+- [Index Term Extraction](#index-term-extraction)
+- [Encrypted JSON (`eql_v3.json`)](#encrypted-json-eql_v3json)
 - [Aggregate Functions](#aggregate-functions)
-- [Utility Functions](#utility-functions)
 
 ---
 
-## Configuration Functions
+## Operators
 
-These functions manage encrypted column configurations. See [Configuration Tutorial](../tutorials/proxy-configuration.md) for detailed usage.
+EQL overloads standard PostgreSQL operators on the encrypted-domain types. Type the column as the variant that carries the term, and the operator resolves (and engages a matching [functional index](./database-indexes.md)). Operands must be typed — a typed parameter (`$1`, supplied by the Proxy) or an explicit cast — or they fall through to native `jsonb`.
 
-### `eql_v2.add_column()`
+### Equality — `=` `<>`
 
-Initialize a column for encryption/decryption.
-
-```sql
-eql_v2.add_column(
-  table_name text,
-  column_name text,
-  cast_as text DEFAULT 'text',
-  migrating boolean DEFAULT false
-) RETURNS jsonb
-```
-
-**Example:**
-```sql
-SELECT eql_v2.add_column('users', 'encrypted_email', 'text');
-```
-
-### `eql_v2.add_search_config()`
-
-Add a searchable index to an encrypted column.
+On `eql_v3.<T>_eq`, `eql_v3.<T>_ord` / `_ord_ore`, and `eql_v3.text_search` (carry an `hm` term):
 
 ```sql
-eql_v2.add_search_config(
-  table_name text,
-  column_name text,
-  index_name text,              -- 'unique', 'match', 'ore', 'ste_vec'
-  cast_as text DEFAULT 'text',
-  opts jsonb DEFAULT '{}',
-  migrating boolean DEFAULT false
-) RETURNS jsonb
+SELECT * FROM users WHERE encrypted_email = $1;
+SELECT * FROM users WHERE encrypted_email = $1::eql_v3.text_eq;
+SELECT * FROM users WHERE encrypted_email <> $1;
 ```
 
-**Supported index types:**
-- `unique` - Exact equality (uses hmac_256)
-- `match` - Full-text search (uses bloom_filter)
-- `ore` - Range queries and ordering (uses ore_block_u64_8_256)
-- `ste_vec` - JSONB containment queries (uses structured encryption)
+### Range — `<` `<=` `>` `>=`
 
-**Example:**
-```sql
-SELECT eql_v2.add_search_config('users', 'encrypted_email', 'unique', 'text');
-SELECT eql_v2.add_search_config('docs', 'encrypted_content', 'match', 'text');
-SELECT eql_v2.add_search_config('events', 'encrypted_data', 'ste_vec', 'jsonb', '{"prefix": "events/encrypted_data"}');
-```
-
-### `eql_v2.remove_column()`
-
-Remove column configuration completely.
+On `eql_v3.<T>_ord` / `_ord_ore` and `eql_v3.text_search` (carry an `ob` ORE term):
 
 ```sql
-eql_v2.remove_column(
-  table_name text,
-  column_name text,
-  migrating boolean DEFAULT false
-) RETURNS jsonb
+SELECT * FROM events WHERE encrypted_at <  $1::eql_v3.timestamptz_ord;
+SELECT * FROM events WHERE encrypted_at >= $1::eql_v3.timestamptz_ord;
+
+-- Ordering (write the sort key as the extractor to engage the index — see Database Indexes)
+SELECT * FROM events ORDER BY eql_v3.ord_term(encrypted_at) DESC;
 ```
 
-### `eql_v2.remove_search_config()`
+### Text match — `@>` `<@`
 
-Remove a specific search index (preserves column configuration).
+On `eql_v3.text_match` / `eql_v3.text_search` (carry a `bf` bloom term). This is **probabilistic ngram-bloom containment**, not SQL `LIKE` and not JSONB containment:
 
 ```sql
-eql_v2.remove_search_config(
-  table_name text,
-  column_name text,
-  index_name text,
-  migrating boolean DEFAULT false
-) RETURNS jsonb
+SELECT * FROM docs WHERE encrypted_content @> $1::eql_v3.text_match;
 ```
 
-### `eql_v2.modify_search_config()`
+`LIKE` / `ILIKE` (`~~` / `~~*`) are **not** part of the `eql_v3` surface — use `@>`.
 
-Modify an existing search index configuration.
+### JSON containment / path — `eql_v3.json`
 
-```sql
-eql_v2.modify_search_config(
-  table_name text,
-  column_name text,
-  index_name text,
-  cast_as text DEFAULT 'text',
-  opts jsonb DEFAULT '{}',
-  migrating boolean DEFAULT false
-) RETURNS jsonb
-```
-
-### `eql_v2.config()`
-
-View current configuration in tabular format.
-
-```sql
-eql_v2.config() RETURNS TABLE (
-  state eql_v2_configuration_state,
-  relation text,
-  col_name text,
-  decrypts_as text,
-  indexes jsonb
-)
-```
-
-**Example:**
-```sql
-SELECT * FROM eql_v2.config();
-```
-
-### `eql_v2.migrate_config()`
-
-Transition pending configuration to encrypting state.
-
-```sql
-eql_v2.migrate_config() RETURNS boolean
-```
-
-**Description:**
-- Validates that all configured columns exist with `eql_v2_encrypted` type
-- Marks the pending configuration as 'encrypting'
-- Required before activating a new configuration
-
-**Raises exception if:**
-- An encryption is already in progress
-- No pending configuration exists
-- Some pending columns don't have encrypted targets
-
-**Example:**
-```sql
--- Add configuration changes
-SELECT eql_v2.add_search_config('users', 'email', 'unique', 'text', migrating => true);
-
--- Validate and migrate
-SELECT eql_v2.migrate_config();
-
--- After re-encrypting data, activate
-SELECT eql_v2.activate_config();
-```
-
-### `eql_v2.activate_config()`
-
-Activate an encrypting configuration.
-
-```sql
-eql_v2.activate_config() RETURNS boolean
-```
-
-**Description:**
-- Moves 'encrypting' configuration to 'active' state
-- Marks previous 'active' configuration as 'inactive'
-- Should be called after data has been re-encrypted with new index terms
-
-**Raises exception if:**
-- No encrypting configuration exists
-
-**Example:**
-```sql
-SELECT eql_v2.activate_config();
-```
-
-### `eql_v2.discard()`
-
-Discard pending configuration without activating.
-
-```sql
-eql_v2.discard() RETURNS boolean
-```
-
-**Description:**
-- Deletes the pending configuration
-- Use when you want to abandon configuration changes
-
-**Raises exception if:**
-- No pending configuration exists
-
-**Example:**
-```sql
-SELECT eql_v2.discard();
-```
-
-### `eql_v2.reload_config()`
-
-Reload active configuration (no-op for compatibility).
-
-```sql
-eql_v2.reload_config() RETURNS void
-```
-
-**Description:**
-- Placeholder function for configuration reload
-- Currently has no effect (configuration is loaded automatically)
+`@>` / `<@`, `->` / `->>`, and the path functions on `eql_v3.json` are documented in [EQL with JSON and JSONB](./json-support.md).
 
 ---
 
-## Query Functions
+## Function Equivalents
 
-### Operators (Recommended)
-
-EQL overloads standard PostgreSQL operators to work directly on `eql_v2_encrypted` columns. **Use these whenever possible.**
-
-#### Equality
+For environments that cannot use custom operators (e.g. some managed platforms), each operator has a function form, generated per domain variant. They take the same domain types as the operators above:
 
 ```sql
--- Exact match (uses 'unique' index: hmac_256)
-SELECT * FROM users WHERE encrypted_email = $1::eql_v2_encrypted;
-SELECT * FROM users WHERE encrypted_email = $1::jsonb;
-
--- Not equal
-SELECT * FROM users WHERE encrypted_email <> $1::eql_v2_encrypted;
-```
-
-#### Full-Text Match
-
-```sql
--- Case-sensitive LIKE (uses 'match' index: bloom_filter)
-SELECT * FROM docs WHERE encrypted_content ~~ $1::eql_v2_encrypted;
-SELECT * FROM docs WHERE encrypted_content LIKE $1::eql_v2_encrypted;
-
--- Case-insensitive ILIKE
-SELECT * FROM docs WHERE encrypted_content ~~* $1::eql_v2_encrypted;
-SELECT * FROM docs WHERE encrypted_content ILIKE $1::eql_v2_encrypted;
-```
-
-#### Range Comparisons
-
-```sql
--- Uses 'ore' index: ore_block_u64_8_256
-SELECT * FROM events WHERE encrypted_date < $1::eql_v2_encrypted;
-SELECT * FROM events WHERE encrypted_date <= $1::eql_v2_encrypted;
-SELECT * FROM events WHERE encrypted_date > $1::eql_v2_encrypted;
-SELECT * FROM events WHERE encrypted_date >= $1::eql_v2_encrypted;
-
--- Ordering
-SELECT * FROM events ORDER BY encrypted_date DESC;
-SELECT * FROM events ORDER BY encrypted_date ASC;
-```
-
-#### JSONB Containment
-
-```sql
--- Uses 'ste_vec' index
-SELECT * FROM users WHERE encrypted_data @> $1::eql_v2_encrypted;
-SELECT * FROM users WHERE encrypted_data <@ $1::eql_v2_encrypted;
-```
-
-#### JSON Path Access
-
-```sql
--- Extract field by selector hash (returns eql_v2_encrypted)
-SELECT encrypted_json->'abc123...' FROM users;
-SELECT encrypted_json->encrypted_selector FROM users;
-
--- Extract field by array index (returns eql_v2_encrypted)
-SELECT encrypted_json->0 FROM users;
-
--- Extract field as ciphertext (returns text)
-SELECT encrypted_json->>'abc123...' FROM users;
-SELECT encrypted_json->>encrypted_selector FROM users;
-```
-
-### Function Equivalents
-
-For environments that don't support custom operators (like Supabase), use these function versions:
-
-#### `eql_v2.eq()`
-
-Equality comparison.
-
-```sql
-eql_v2.eq(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean
+eql_v3.eq(a, b)   -- =        (on _eq / _ord / text_search)
+eql_v3.neq(a, b)  -- <>
+eql_v3.lt(a, b)   -- <        (on _ord / _ord_ore / text_search)
+eql_v3.lte(a, b)  -- <=
+eql_v3.gt(a, b)   -- >
+eql_v3.gte(a, b)  -- >=
+eql_v3.contains(a, b)       -- @>  (on text_match / text_search / eql_v3.json)
+eql_v3.contained_by(a, b)   -- <@
 ```
 
 **Example:**
-```sql
-SELECT * FROM users WHERE eql_v2.eq(encrypted_email, $1::eql_v2_encrypted);
-```
-
-#### `eql_v2.neq()`
-
-Not-equal comparison.
 
 ```sql
-eql_v2.neq(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean
+SELECT * FROM users WHERE eql_v3.eq(encrypted_email, $1::eql_v3.text_eq);
+SELECT * FROM events WHERE eql_v3.lt(encrypted_at, $1::eql_v3.timestamptz_ord);
 ```
 
-#### `eql_v2.like()`
-
-Pattern matching (case-sensitive).
-
-```sql
-eql_v2.like(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean
-```
-
-**Example:**
-```sql
-SELECT * FROM docs WHERE eql_v2.like(encrypted_content, $1::eql_v2_encrypted);
-```
-
-#### `eql_v2.ilike()`
-
-Pattern matching (case-insensitive).
-
-```sql
-eql_v2.ilike(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean
-```
-
-**Example:**
-```sql
-SELECT * FROM docs WHERE eql_v2.ilike(encrypted_content, $1::eql_v2_encrypted);
-```
-
-#### `eql_v2.lt()`
-
-Less than comparison.
-
-```sql
-eql_v2.lt(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean
-```
-
-**Example:**
-```sql
-SELECT * FROM events WHERE eql_v2.lt(encrypted_date, $1::eql_v2_encrypted);
-```
-
-#### `eql_v2.lte()`
-
-Less than or equal comparison.
-
-```sql
-eql_v2.lte(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean
-```
-
-**Example:**
-```sql
-SELECT * FROM events WHERE eql_v2.lte(encrypted_date, $1::eql_v2_encrypted);
-```
-
-#### `eql_v2.gt()`
-
-Greater than comparison.
-
-```sql
-eql_v2.gt(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean
-```
-
-**Example:**
-```sql
-SELECT * FROM events WHERE eql_v2.gt(encrypted_date, $1::eql_v2_encrypted);
-```
-
-#### `eql_v2.gte()`
-
-Greater than or equal comparison.
-
-```sql
-eql_v2.gte(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean
-```
-
-**Example:**
-```sql
-SELECT * FROM events WHERE eql_v2.gte(encrypted_date, $1::eql_v2_encrypted);
-```
+There are no `like` / `ilike` function forms — text matching is `eql_v3.contains` (`@>`) on a `text_match` value.
 
 ---
 
-## Index Term Extraction Functions
+## Index Term Extraction
 
-These functions extract specific index terms from encrypted values. Typically used internally by operators, but available for advanced use cases.
-
-### `eql_v2.hmac_256()`
-
-Extract HMAC-256 unique index term.
+These extract the index term from an encrypted-domain value. They are generated per eq/ord/match-capable variant of every scalar type, are inlinable (so a functional index on the extractor engages), and return the self-contained `eql_v3` SEM index-term types. See [Adding a Scalar Encrypted-Domain Type](./adding-a-scalar-encrypted-domain-type.md).
 
 ```sql
-eql_v2.hmac_256(val eql_v2_encrypted) RETURNS eql_v2.hmac_256
-eql_v2.hmac_256(val jsonb) RETURNS eql_v2.hmac_256
+-- Equality term (hm)
+eql_v3.eq_term(a eql_v3.int4_eq)        RETURNS eql_v3.hmac_256
+-- Ordering term (ob)
+eql_v3.ord_term(a eql_v3.int4_ord)      RETURNS eql_v3.ore_block_256
+eql_v3.ord_term(a eql_v3.int4_ord_ore)  RETURNS eql_v3.ore_block_256
+-- Text-match term (bf)
+eql_v3.match_term(a eql_v3.text_match)  RETURNS eql_v3.bloom_filter
 ```
 
-### `eql_v2.bloom_filter()`
-
-Extract bloom filter match index term.
+**Example — functional indexes on the extracted terms** (see [Database Indexes](./database-indexes.md)):
 
 ```sql
-eql_v2.bloom_filter(val eql_v2_encrypted) RETURNS eql_v2.bloom_filter
-eql_v2.bloom_filter(val jsonb) RETURNS eql_v2.bloom_filter
-```
-
-### `eql_v2.ore_block_u64_8_256()`
-
-Extract ORE (Order-Revealing Encryption) index term.
-
-```sql
-eql_v2.ore_block_u64_8_256(val eql_v2_encrypted) RETURNS eql_v2.ore_block_u64_8_256
-eql_v2.ore_block_u64_8_256(val jsonb) RETURNS eql_v2.ore_block_u64_8_256
-```
-
-### `eql_v2.ste_vec()`
-
-Extract structured encryption vector array.
-
-```sql
-eql_v2.ste_vec(val eql_v2_encrypted) RETURNS eql_v2_encrypted[]
-eql_v2.ste_vec(val jsonb) RETURNS eql_v2_encrypted[]
-```
-
-### `eql_v3.eq_term()` / `eql_v3.ord_term()` (encrypted-domain)
-
-Extract the equality (`hm`) or ordering (`ob`) index term from a scalar
-encrypted-domain value. Generated per eq/ord-capable variant of every
-scalar type — see [Adding a Scalar Encrypted-Domain Type](./adding-a-scalar-encrypted-domain-type.md).
-The argument type selects the overload, and both are inlinable so a
-functional index built on the extractor engages. The extractors live in
-the `eql_v3` schema; their return types are the self-contained `eql_v3`
-SEM index-term types.
-
-```sql
--- int4 — generated for every scalar type's eq / ord variants.
-eql_v3.eq_term(a eql_v3.int4_eq)       RETURNS eql_v3.hmac_256
-eql_v3.ord_term(a eql_v3.int4_ord)     RETURNS eql_v3.ore_block_256
-eql_v3.ord_term(a eql_v3.int4_ord_ore) RETURNS eql_v3.ore_block_256
-```
-
-**Example:**
-```sql
--- Functional indexes on the extracted terms (see Database Indexes).
--- A column carries a single domain type, so `eq_term` and `ord_term`
--- apply to different columns (an `_eq` column vs an `_ord`/`_ord_ore` one).
 CREATE INDEX ON users USING hash  (eql_v3.eq_term(salary_eq));
 CREATE INDEX ON users USING btree (eql_v3.ord_term(salary_ord));
+CREATE INDEX ON users USING gin   (eql_v3.match_term(name_match));
 ```
 
-> The full per-domain operator/wrapper/blocker surface (and the
-> `eql_v3.<T>` / `_eq` / `_ord` / `_ord_ore` domain types themselves) is
-> documented in [SQL support](./sql-support.md#encrypted-domain-scalar-types-eql_v3t)
-> and the [scalar encrypted-domain type reference](./adding-a-scalar-encrypted-domain-type.md).
+> The full per-domain operator / wrapper / blocker surface (and the `eql_v3.<T>` / `_eq` / `_ord` / `_ord_ore` domain types themselves) is documented in [SQL support](./sql-support.md#encrypted-domain-scalar-types-eql_v3t) and the [scalar encrypted-domain type reference](./adding-a-scalar-encrypted-domain-type.md).
+
+The `eql_v3.json` document type extracts entry-level terms with `eql_v3.eq_term(eql_v3.ste_vec_entry)` and `eql_v3.ore_cllw(eql_v3.ste_vec_entry)` — see [json-support.md](./json-support.md).
 
 ---
 
-## JSONB Path Functions
+## Encrypted JSON (`eql_v3.json`)
 
-Functions for querying encrypted JSONB data using selector hashes.
-
-### `eql_v2.jsonb_path_query()`
-
-Returns all encrypted elements matching a selector.
-
-```sql
-eql_v2.jsonb_path_query(val eql_v2_encrypted, selector text) RETURNS SETOF eql_v2_encrypted
-eql_v2.jsonb_path_query(val eql_v2_encrypted, selector eql_v2_encrypted) RETURNS SETOF eql_v2_encrypted
-eql_v2.jsonb_path_query(val jsonb, selector text) RETURNS SETOF eql_v2_encrypted
-```
-
-**Example:**
-```sql
-SELECT eql_v2.jsonb_path_query(encrypted_json, 'abc123...') FROM users;
-```
-
-### `eql_v2.jsonb_path_query_first()`
-
-Returns the first encrypted element matching a selector.
-
-```sql
-eql_v2.jsonb_path_query_first(val eql_v2_encrypted, selector text) RETURNS eql_v2_encrypted
-eql_v2.jsonb_path_query_first(val eql_v2_encrypted, selector eql_v2_encrypted) RETURNS eql_v2_encrypted
-eql_v2.jsonb_path_query_first(val jsonb, selector text) RETURNS eql_v2_encrypted
-```
-
-### `eql_v2.jsonb_path_exists()`
-
-Checks if any element matches a selector.
-
-```sql
-eql_v2.jsonb_path_exists(val eql_v2_encrypted, selector text) RETURNS boolean
-eql_v2.jsonb_path_exists(val eql_v2_encrypted, selector eql_v2_encrypted) RETURNS boolean
-eql_v2.jsonb_path_exists(val jsonb, selector text) RETURNS boolean
-```
-
-**Example:**
-```sql
-SELECT * FROM users
-WHERE eql_v2.jsonb_path_exists(encrypted_json, 'email_selector');
-```
-
----
-
-## Array Functions
-
-Functions for working with encrypted arrays.
-
-### `eql_v2.jsonb_array_length()`
-
-Returns the length of an encrypted array.
-
-```sql
-eql_v2.jsonb_array_length(val eql_v2_encrypted) RETURNS integer
-eql_v2.jsonb_array_length(val jsonb) RETURNS integer
-```
-
-**Example:**
-```sql
-SELECT eql_v2.jsonb_array_length(encrypted_array) FROM users;
-```
-
-### `eql_v2.jsonb_array_elements()`
-
-Returns each array element as an encrypted value.
-
-```sql
-eql_v2.jsonb_array_elements(val eql_v2_encrypted) RETURNS SETOF eql_v2_encrypted
-eql_v2.jsonb_array_elements(val jsonb) RETURNS SETOF eql_v2_encrypted
-```
-
-**Example:**
-```sql
-SELECT eql_v2.jsonb_array_elements(
-  eql_v2.jsonb_path_query(encrypted_json, 'array_selector')
-) FROM users;
-```
-
-### `eql_v2.jsonb_array_elements_text()`
-
-Returns each array element's ciphertext as text.
-
-```sql
-eql_v2.jsonb_array_elements_text(val eql_v2_encrypted) RETURNS SETOF text
-eql_v2.jsonb_array_elements_text(val jsonb) RETURNS SETOF text
-```
-
----
-
-## Helper Functions
-
-Utility functions for working with encrypted data.
-
-### `eql_v2.ciphertext()`
-
-Extract ciphertext from encrypted value.
-
-```sql
-eql_v2.ciphertext(val eql_v2_encrypted) RETURNS text
-eql_v2.ciphertext(val jsonb) RETURNS text
-```
-
-### `eql_v2.meta_data()`
-
-Extract metadata (table/column identifiers and version).
-
-```sql
-eql_v2.meta_data(val eql_v2_encrypted) RETURNS jsonb
-eql_v2.meta_data(val jsonb) RETURNS jsonb
-```
-
-### `eql_v2.selector()`
-
-Extract selector hash from an encrypted payload (`jsonb`) or a ste_vec entry.
-
-```sql
-eql_v2.selector(val jsonb) RETURNS text
-eql_v2.selector(entry eql_v2.ste_vec_entry) RETURNS text
-```
-
-### `eql_v2.is_ste_vec_array()`
-
-Check if value represents an encrypted array.
-
-```sql
-eql_v2.is_ste_vec_array(val eql_v2_encrypted) RETURNS boolean
-```
-
-### `eql_v2.is_ste_vec_value()`
-
-Check if value is a single ste_vec element.
-
-```sql
-eql_v2.is_ste_vec_value(val eql_v2_encrypted) RETURNS boolean
-```
-
-### `eql_v2.to_ste_vec_value()`
-
-Convert ste_vec array with single element to regular encrypted value.
-
-```sql
-eql_v2.to_ste_vec_value(val eql_v2_encrypted) RETURNS eql_v2_encrypted
-```
-
-### `eql_v2.ste_vec_contains()`
-
-Check if all ste_vec terms in b exist in a (backs the `@>` operator).
-
-```sql
-eql_v2.ste_vec_contains(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean
-```
-
-### `eql_v2.has_hmac_256()`
-
-Check if value contains hmac_256 index term.
-
-```sql
-eql_v2.has_hmac_256(val eql_v2_encrypted) RETURNS boolean
-```
-
-### `eql_v2.has_bloom_filter()`
-
-Check if value contains bloom_filter index term.
-
-```sql
-eql_v2.has_bloom_filter(val eql_v2_encrypted) RETURNS boolean
-```
-
-### `eql_v2.has_ore_block_u64_8_256()`
-
-Check if value contains ore index term.
-
-```sql
-eql_v2.has_ore_block_u64_8_256(val eql_v2_encrypted) RETURNS boolean
-```
+The full encrypted-JSONB function surface — containment, `->` / `->>`, `eql_v3.jsonb_path_query` / `_first` / `_exists`, `eql_v3.jsonb_array_length` / `_elements` / `_elements_text`, `eql_v3.to_ste_vec_query`, `eql_v3.ste_vec_contains`, and the GIN helpers — is documented in **[EQL with JSON and JSONB](./json-support.md)**.
 
 ---
 
 ## Aggregate Functions
 
-### `eql_v2.grouped_value()`
-
-Aggregate function for grouping encrypted values (returns first non-null value in group).
-
-```sql
-eql_v2.grouped_value(jsonb) RETURNS jsonb
-```
-
-**Example:**
-```sql
-SELECT eql_v2.grouped_value(
-  eql_v2.jsonb_path_query_first(encrypted_json, 'color_selector')::jsonb
-) AS color,
-COUNT(*)
-FROM products
-GROUP BY eql_v2.jsonb_path_query_first(encrypted_json, 'color_selector');
-```
-
-### `eql_v2.min()` / `eql_v2.max()` (composite type)
-
-Returns the minimum or maximum encrypted value in a set on an `eql_v2_encrypted` column (requires `ore` index terms for ordering).
-
-```sql
-eql_v2.min(eql_v2_encrypted) RETURNS eql_v2_encrypted
-eql_v2.max(eql_v2_encrypted) RETURNS eql_v2_encrypted
-```
-
-Comparison routes through the `<` / `>` operator on `eql_v2_encrypted`, which uses the ORE block term — no decryption.
-
-**Example:**
-```sql
-SELECT eql_v2.min(encrypted_date) FROM events;
-SELECT eql_v2.max(encrypted_price) FROM products WHERE category = 'electronics';
-```
-
 ### `eql_v3.min()` / `eql_v3.max()` (per-domain)
 
-Returns the minimum or maximum encrypted value in a set on an ordered encrypted-domain column. Defined per ord-capable variant of every scalar type (`eql_v3.<T>_ord`, `eql_v3.<T>_ord_ore`); the input type selects the aggregate via PostgreSQL's overload resolution. These are type-safe alternatives to the composite-type aggregates above and coexist with them.
+Returns the minimum or maximum encrypted value on an ordered encrypted-domain column. Defined per ord-capable variant of every scalar type (`eql_v3.<T>_ord`, `eql_v3.<T>_ord_ore`); the input type selects the aggregate via PostgreSQL's overload resolution.
 
 ```sql
 -- int4 — generated for every ordered variant of every scalar type.
@@ -688,101 +133,32 @@ eql_v3.max(eql_v3.int4_ord_ore)  RETURNS eql_v3.int4_ord_ore
 Comparison routes through the variant's `<` / `>` operator, which uses the ORE block term — no decryption. The state function is `STRICT`, so `NULL` inputs are skipped and an all-`NULL` input set returns `NULL`.
 
 **Example:**
+
 ```sql
 -- ord-capable column (e.g. price_encrypted typed as eql_v3.int4_ord)
 SELECT eql_v3.min(price_encrypted) FROM products;
 SELECT eql_v3.max(price_encrypted) FROM products WHERE category = 'electronics';
 
--- Equivalent on a generic jsonb column (cast to the right domain)
+-- On a generic jsonb column, cast to the right domain
 SELECT eql_v3.min(price_jsonb::eql_v3.int4_ord) FROM products;
 ```
 
-`SUM` / `AVG` and other numeric aggregates are not supported on encrypted columns — decrypt at the application boundary. `MIN` / `MAX` only require comparator-revealing terms; arithmetic aggregates would require homomorphic encryption.
+`MIN` / `MAX` over a value extracted from an `eql_v3.json` document use `eql_v3.min(eql_v3.ste_vec_entry)` / `max` — see [json-support.md](./json-support.md).
 
-**See also:** [`docs/reference/sql-support.md`](./sql-support.md) for the per-variant capability table.
+`SUM` / `AVG` and other arithmetic aggregates are **not** supported on encrypted columns (they would require homomorphic encryption) — decrypt at the application boundary. `MIN` / `MAX` only need comparator-revealing terms.
 
----
-
-## Utility Functions
-
-### `eql_v2.version()`
-
-Get the installed EQL version.
-
-```sql
-eql_v2.version() RETURNS text
-```
-
-**Example:**
-```sql
-SELECT eql_v2.version();
--- Returns version string (e.g., '2.1.8')
-```
-
-### `eql_v2.to_encrypted()`
-
-Convert jsonb or text to eql_v2_encrypted type.
-
-```sql
-eql_v2.to_encrypted(data jsonb) RETURNS eql_v2_encrypted
-eql_v2.to_encrypted(data text) RETURNS eql_v2_encrypted
-```
-
-**Example:**
-```sql
--- Convert jsonb payload to encrypted type
-SELECT eql_v2.to_encrypted('{"v":2,"k":"pt","p":"plaintext"}'::jsonb);
-
--- Convert text payload to encrypted type
-SELECT eql_v2.to_encrypted('{"v":2,"k":"pt","p":"plaintext"}');
-```
-
-### `eql_v2.to_jsonb()`
-
-Convert eql_v2_encrypted to jsonb.
-
-```sql
-eql_v2.to_jsonb(e eql_v2_encrypted) RETURNS jsonb
-```
-
-**Example:**
-```sql
-SELECT eql_v2.to_jsonb(encrypted_column) FROM users;
-```
-
-### `eql_v2.check_encrypted()`
-
-Validate encrypted payload structure (used in constraints).
-
-```sql
-eql_v2.check_encrypted(val jsonb) RETURNS boolean
-eql_v2.check_encrypted(val eql_v2_encrypted) RETURNS boolean
-```
-
-**Description:**
-- Validates that encrypted value has required fields (`v`, `c`, `i`)
-- Checks that version is `2` and identifier contains table (`t`) and column (`c`) fields
-- Returns true if valid, raises exception if invalid
-- Automatically added as constraint when using `eql_v2.add_column()`
-
-**Example:**
-```sql
-SELECT eql_v2.check_encrypted('{"v":2,"c":"ciphertext","i":{"t":"users","c":"email"}}'::jsonb);
--- Returns: true
-
-SELECT eql_v2.check_encrypted('{"invalid":"structure"}'::jsonb);
--- Raises exception: 'Encrypted column missing version (v) field'
-```
+**See also:** [SQL support matrix](./sql-support.md) for the per-variant capability table.
 
 ---
 
 ## See Also
 
-- [EQL Configuration Guide](../tutorials/proxy-configuration.md) - How to set up encrypted columns
-- [Database Indexes](./database-indexes.md) - PostgreSQL B-tree index creation and usage
-- [JSON/JSONB Support](./json-support.md) - Working with encrypted JSON data
-- [Index Configuration](./index-config.md) - Index types and configuration options
-- [Payload Format](./PAYLOAD.md) - EQL data format specification
+- [EQL Configuration Tutorial](../tutorials/proxy-configuration.md) — setting up encrypted columns end to end.
+- [Database Indexes](./database-indexes.md) — functional-index recipes and performance.
+- [JSON/JSONB Support](./json-support.md) — `eql_v3.json` worked examples.
+- [SQL support matrix](./sql-support.md) — operators by domain variant.
+- [Payload Format](./PAYLOAD.md) — EQL data format specification.
+- Client-side index configuration — [Protect.js schema reference](https://github.com/cipherstash/protectjs/blob/main/docs/reference/schema.md).
 
 ---
 
