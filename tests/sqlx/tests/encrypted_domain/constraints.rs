@@ -1,9 +1,7 @@
 //! Table-level SQL constraint coverage for `eql_v3` encrypted-domain columns.
 //!
-//! The v2 surface covers UNIQUE / NOT NULL / FOREIGN KEY on `eql_v2_encrypted`
-//! columns in `tests/sqlx/tests/constraint_tests.rs`. This is the equivalent
-//! coverage for the jsonb-backed `eql_v3.<T>` domains (the reference scalar
-//! `int4`). The domains are jsonb under the hood, so a table-level constraint
+//! Covers UNIQUE / NOT NULL / FOREIGN KEY on the jsonb-backed `eql_v3.<T>`
+//! domains (the reference scalar `int4`). The domains are jsonb under the hood, so a table-level constraint
 //! constrains the *raw jsonb payload value*, NOT the semantic plaintext or the
 //! `eq_term` / `ord_term` index term — see the documented findings on each test.
 //!

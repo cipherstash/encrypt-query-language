@@ -3,7 +3,7 @@
 //! A green matrix proves the SUT behaves correctly *today*, but it cannot
 //! prove the matrix arms would catch a regression — an arm could be
 //! vacuous and still pass. Each test here applies one surgical mutation to
-//! the installed `eql_v2` schema and asserts that the property a specific
+//! the installed `eql_v3` schema and asserts that the property a specific
 //! matrix arm guards now flips. If a mutation does NOT flip the property,
 //! that arm has no teeth.
 //!
