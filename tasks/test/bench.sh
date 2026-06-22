@@ -21,7 +21,7 @@ echo "=========================================="
 # by #[sqlx::test(fixtures(...))], so they MUST exist on disk before `cargo test`
 # compiles. This script previously hand-rolled build+cp+migrate but omitted
 # fixture generation; once fixtures became generated/gitignored the bench binary
-# stopped compiling (couldn't read tests/sqlx/fixtures/eql_v2_*.sql). Reusing
+# stopped compiling (couldn't read tests/sqlx/fixtures/eql_v3_*.sql). Reusing
 # prep keeps bench in lockstep with test:sqlx and prevents that drift recurring.
 mise run --output prefix test:sqlx:prep
 
