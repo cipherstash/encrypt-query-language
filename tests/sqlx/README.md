@@ -50,8 +50,8 @@ cargo test -- --nocapture
 
 ### Generator credentials
 
-`mise run test:sqlx` regenerates the `eql_v2_int4` fixture before running the
-suite via `mise run fixture:generate eql_v2_int4`. The generator encrypts
+`mise run test:sqlx` regenerates the `eql_v3_int4` fixture before running the
+suite via `mise run fixture:generate eql_v3_int4`. The generator encrypts
 plaintexts in-process using `cipherstash-client` (no Proxy / no Docker
 sidecar), so the following CipherStash workspace credentials must be
 present in the shell environment when you run it locally or in CI:

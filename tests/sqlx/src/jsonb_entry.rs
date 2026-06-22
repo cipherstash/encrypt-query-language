@@ -57,7 +57,7 @@ impl ScalarType for JsonbEntryInt4 {
         &VALUES
     }
 
-    /// The scalar-shaped document fixture, not `fixtures.eql_v2_int4`.
+    /// The scalar-shaped document fixture, not `fixtures.eql_v3_int4`.
     fn fixture_table_name() -> String {
         "fixtures.v3_doc_int4".to_string()
     }

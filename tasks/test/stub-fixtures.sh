@@ -16,10 +16,10 @@
 # The set is derived from the two sources of truth, not from parsing rustc
 # errors (an earlier preamble looped over compile-error text — brittle, coupled
 # to rustc's wording, capped at 12 retries):
-#   1. Catalog scalar tokens (`eql-codegen list-types`) -> `eql_v2_<token>.sql`
-#      AND `eql_v2_<token>_doubles.sql` (the per-type doubles fixture the
+#   1. Catalog scalar tokens (`eql-codegen list-types`) -> `eql_v3_<token>.sql`
+#      AND `eql_v3_<token>_doubles.sql` (the per-type doubles fixture the
 #      cross-ciphertext oracle `include_str!`s), both covered by the
-#      `tests/sqlx/fixtures/eql_v2*` .gitignore glob. A new scalar is stubbed
+#      `tests/sqlx/fixtures/eql_v3*` .gitignore glob. A new scalar is stubbed
 #      automatically. The doubles variant is stubbed for every token, not only
 #      the comparison-capable ones that have a real doubles fixture — a harmless
 #      extra under this helper's stub-the-complete-set policy.
@@ -46,23 +46,23 @@ __eql_stub_dir="${__eql_stub_root}/tests/sqlx/fixtures"
 __eql_stub_created=$(mktemp)
 trap 'while IFS= read -r f; do [ -n "$f" ] && rm -f "$f"; done < "$__eql_stub_created"; rm -f "$__eql_stub_created"' EXIT
 
-# (1) Catalog scalar tokens -> eql_v2_<token>.sql + eql_v2_<token>_doubles.sql.
+# (1) Catalog scalar tokens -> eql_v3_<token>.sql + eql_v3_<token>_doubles.sql.
 # A failure here aborts under the caller's `set -e` with cargo's own error — no
 # silent fallback.
 __eql_stub_paths=""
 __eql_stub_tokens=$(cd "$__eql_stub_root" && cargo run -q -p eql-codegen -- list-types)
 while IFS= read -r __eql_stub_t; do
   [ -n "$__eql_stub_t" ] || continue
-  __eql_stub_paths="${__eql_stub_paths}${__eql_stub_dir}/eql_v2_${__eql_stub_t}.sql
-${__eql_stub_dir}/eql_v2_${__eql_stub_t}_doubles.sql
+  __eql_stub_paths="${__eql_stub_paths}${__eql_stub_dir}/eql_v3_${__eql_stub_t}.sql
+${__eql_stub_dir}/eql_v3_${__eql_stub_t}_doubles.sql
 "
 done <<EOF
 $__eql_stub_tokens
 EOF
 
 # (2) Literal generated fixtures declared (gitignored) in .gitignore. The
-# `eql_v2*` glob line has no `.sql` suffix, so this matches only the explicit
-# v3_*.sql entries — the eql_v2 set is covered by (1).
+# `eql_v3*` glob line has no `.sql` suffix, so this matches only the explicit
+# v3_*.sql entries — the eql_v3 set is covered by (1).
 __eql_stub_extra=$(grep -oE 'tests/sqlx/fixtures/[A-Za-z0-9_]+\.sql' "$__eql_stub_root/.gitignore" 2>/dev/null || true)
 while IFS= read -r __eql_stub_rel; do
   [ -n "$__eql_stub_rel" ] || continue

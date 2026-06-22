@@ -12,7 +12,7 @@
 //! test set) does not mis-read it as a scalar type.
 //!
 //! All ciphertext is REAL: every payload comes from the committed/generated
-//! `fixtures.eql_v2_int4` table (Proxy-encrypted, HMAC + ORE block terms) via
+//! `fixtures.eql_v3_int4` table (Proxy-encrypted, HMAC + ORE block terms) via
 //! `fetch_fixture_payload::<i32>`. No synthetic / hand-written encrypted blobs.
 //!
 //! ## What a constraint on a jsonb-backed domain actually constrains
@@ -45,7 +45,7 @@ async fn int4_payload_literal(pool: &PgPool, plaintext: i32) -> anyhow::Result<S
 
 /// A `NOT NULL` column attribute on an `eql_v3.int4` (storage) column rejects a
 /// NULL insert (SQLSTATE 23502) and accepts a real encrypted value.
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v2_int4")))]
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_int4")))]
 async fn not_null_on_int4_storage_column(pool: PgPool) -> anyhow::Result<()> {
     sqlx::query("CREATE TABLE v3_not_null (id bigint PRIMARY KEY, val eql_v3.int4 NOT NULL)")
         .execute(&pool)
@@ -104,7 +104,7 @@ async fn not_null_on_int4_storage_column(pool: PgPool) -> anyhow::Result<()> {
 /// collide on this constraint despite being semantically equal — UNIQUE on a
 /// bare encrypted-domain column is byte-identity uniqueness, not
 /// plaintext-uniqueness.
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v2_int4")))]
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_int4")))]
 async fn unique_on_int4_eq_column_constrains_raw_payload(pool: PgPool) -> anyhow::Result<()> {
     sqlx::query(
         "CREATE TABLE v3_unique (id bigint PRIMARY KEY, val eql_v3.int4_eq UNIQUE NOT NULL)",
@@ -184,7 +184,7 @@ async fn unique_on_int4_eq_column_constrains_raw_payload(pool: PgPool) -> anyhow
 /// plaintext would be a different jsonb and would NOT satisfy the FK — so FK on
 /// a bare encrypted-domain column does not provide plaintext-level referential
 /// integrity.
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v2_int4")))]
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_int4")))]
 async fn foreign_key_on_int4_domain_columns(pool: PgPool) -> anyhow::Result<()> {
     // Parent with a PRIMARY KEY on an eql_v3.int4 (jsonb-backed domain) column.
     sqlx::query("CREATE TABLE v3_parent (ref eql_v3.int4 PRIMARY KEY)")

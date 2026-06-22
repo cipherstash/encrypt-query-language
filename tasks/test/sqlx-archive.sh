@@ -31,8 +31,8 @@ test -f release/cipherstash-encrypt.sql \
   || { echo "release/cipherstash-encrypt.sql missing — run via 'mise run test:sqlx:archive' (it depends on test:sqlx:prep)" >&2; exit 2; }
 test -f tests/sqlx/migrations/001_install_eql.sql \
   || { echo "tests/sqlx/migrations/001_install_eql.sql missing — prep did not run (needs a live Postgres)" >&2; exit 2; }
-ls tests/sqlx/fixtures/eql_v2_*.sql >/dev/null 2>&1 \
-  || { echo "tests/sqlx/fixtures/eql_v2_*.sql missing — fixture:generate:all did not run (needs Postgres + CS_* creds)" >&2; exit 2; }
+ls tests/sqlx/fixtures/eql_v3_*.sql >/dev/null 2>&1 \
+  || { echo "tests/sqlx/fixtures/eql_v3_*.sql missing — fixture:generate:all did not run (needs Postgres + CS_* creds)" >&2; exit 2; }
 
 # Compile every tests/sqlx test binary with DEFAULT features and pack them. The
 # migration + fixtures (embedded via include_str at compile time) are baked into

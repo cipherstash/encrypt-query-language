@@ -1,6 +1,6 @@
 //! fixture suite (CIP-3141): property tests over the real, committed fixture rows.
 //!
-//! The fixture table `fixtures.eql_v2_<T>` carries `(plaintext, payload)` rows
+//! The fixture table `fixtures.eql_v3_<T>` carries `(plaintext, payload)` rows
 //! encrypted by cipherstash-client during `test:sqlx:prep`. proptest selects a
 //! sub-multiset of those rows (with repeats, so the equality diagonal includes
 //! identical-ciphertext self-pairs) and the shared oracle engine checks every
@@ -32,7 +32,7 @@ use std::sync::Arc;
 /// at compile time (one arm per catalog token). Embedding rather than reading
 /// from disk at runtime is what lets the prebuilt nextest archive carry the
 /// fixtures into CI shards, which do a fresh checkout where the gitignored
-/// `tests/sqlx/fixtures/eql_v2_<T>.sql` files are absent. The path resolves
+/// `tests/sqlx/fixtures/eql_v3_<T>.sql` files are absent. The path resolves
 /// against the `eql_tests` crate root (`tests/sqlx`). Mirrors the loud catch-all
 /// of the `generate_for_token` fixture dispatch.
 ///
@@ -42,41 +42,41 @@ pub(crate) fn embedded_fixture_sql<T: ScalarType>() -> &'static str {
     match T::PG_TYPE {
         "int4" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v2_int4.sql"
+            "/fixtures/eql_v3_int4.sql"
         )),
         "int2" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v2_int2.sql"
+            "/fixtures/eql_v3_int2.sql"
         )),
         "int8" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v2_int8.sql"
+            "/fixtures/eql_v3_int8.sql"
         )),
         "date" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v2_date.sql"
+            "/fixtures/eql_v3_date.sql"
         )),
         "text" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v2_text.sql"
+            "/fixtures/eql_v3_text.sql"
         )),
         "timestamptz" => {
             include_str!(concat!(
                 env!("CARGO_MANIFEST_DIR"),
-                "/fixtures/eql_v2_timestamptz.sql"
+                "/fixtures/eql_v3_timestamptz.sql"
             ))
         }
         "numeric" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v2_numeric.sql"
+            "/fixtures/eql_v3_numeric.sql"
         )),
         "float4" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v2_float4.sql"
+            "/fixtures/eql_v3_float4.sql"
         )),
         "float8" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v2_float8.sql"
+            "/fixtures/eql_v3_float8.sql"
         )),
         other => panic!(
             "no embedded fixture for catalog token '{other}'; \
@@ -88,41 +88,41 @@ pub(crate) fn embedded_fixture_sql<T: ScalarType>() -> &'static str {
 /// The `_doubles` fixture SQL for `T`, `include_str!`-embedded at compile time
 /// (one arm per comparison-capable token). Same embed rationale as
 /// `embedded_fixture_sql` — the prebuilt nextest archive carries the gitignored
-/// fixtures into CI shards. The table is `fixtures.eql_v2_<T>_doubles`; the file
-/// is `fixtures/eql_v2_<T>_doubles.sql`. `bool` is storage-only and has no
+/// fixtures into CI shards. The table is `fixtures.eql_v3_<T>_doubles`; the file
+/// is `fixtures/eql_v3_<T>_doubles.sql`. `bool` is storage-only and has no
 /// doubles fixture; the cross-ciphertext test never instantiates it, so its
 /// absence (caught by the loud catch-all) is correct.
 pub(crate) fn embedded_doubles_sql<T: ScalarType>() -> &'static str {
     match T::PG_TYPE {
         "int2" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v2_int2_doubles.sql"
+            "/fixtures/eql_v3_int2_doubles.sql"
         )),
         "int4" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v2_int4_doubles.sql"
+            "/fixtures/eql_v3_int4_doubles.sql"
         )),
         "int8" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v2_int8_doubles.sql"
+            "/fixtures/eql_v3_int8_doubles.sql"
         )),
         "date" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v2_date_doubles.sql"
+            "/fixtures/eql_v3_date_doubles.sql"
         )),
         "timestamptz" => {
             include_str!(concat!(
                 env!("CARGO_MANIFEST_DIR"),
-                "/fixtures/eql_v2_timestamptz_doubles.sql"
+                "/fixtures/eql_v3_timestamptz_doubles.sql"
             ))
         }
         "numeric" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v2_numeric_doubles.sql"
+            "/fixtures/eql_v3_numeric_doubles.sql"
         )),
         "text" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v2_text_doubles.sql"
+            "/fixtures/eql_v3_text_doubles.sql"
         )),
         other => panic!(
             "no embedded doubles fixture for catalog token '{other}'; \
@@ -171,7 +171,7 @@ pub(crate) async fn load_rows<T: ScalarType>(pool: &PgPool) -> Result<Arc<Vec<Ro
 
 /// Load `T`'s `_doubles` fixture into this test's isolated scratch DB and read
 /// every `(plaintext, payload::text)` row in id order. The table is
-/// `fixtures.eql_v2_<T>_doubles` (NOT the matrix's `fixtures.eql_v2_<T>`), so it
+/// `fixtures.eql_v3_<T>_doubles` (NOT the matrix's `fixtures.eql_v3_<T>`), so it
 /// carries the equal-plaintext / distinct-ciphertext rows the cross-ciphertext
 /// test needs.
 pub(crate) async fn load_doubles_rows<T: ScalarType>(pool: &PgPool) -> Result<Arc<Vec<Row<T>>>> {
@@ -179,7 +179,7 @@ pub(crate) async fn load_doubles_rows<T: ScalarType>(pool: &PgPool) -> Result<Ar
         .execute(pool)
         .await
         .with_context(|| format!("loading doubles fixtures for {}", T::PG_TYPE))?;
-    let table = format!("fixtures.eql_v2_{}_doubles", T::PG_TYPE);
+    let table = format!("fixtures.eql_v3_{}_doubles", T::PG_TYPE);
     let sql = format!("SELECT plaintext, payload::text FROM {table} ORDER BY id");
     let raw: Vec<(T, String)> = sqlx::query_as(&sql).fetch_all(pool).await?;
     let rows: Vec<Row<T>> = raw

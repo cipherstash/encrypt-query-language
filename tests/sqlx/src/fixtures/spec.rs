@@ -238,7 +238,7 @@ mod tests {
 
     fn int4_spec() -> FixtureSpec<'static, i32> {
         const VALUES: &[i32] = &[-1, 1, 42];
-        FixtureSpec::new("eql_v2_int4")
+        FixtureSpec::new("eql_v3_int4")
             .with_index(IndexKind::Unique)
             .with_index(IndexKind::Ore)
             .with_column_type("jsonb")
@@ -248,9 +248,9 @@ mod tests {
     #[test]
     fn derives_paths_from_the_name() {
         let s = int4_spec();
-        assert_eq!(s.fixture_table(), "fixtures.eql_v2_int4");
-        assert_eq!(s.working_table(), "_fixture_eql_v2_int4");
-        assert_eq!(s.script_filename(), "eql_v2_int4.sql");
+        assert_eq!(s.fixture_table(), "fixtures.eql_v3_int4");
+        assert_eq!(s.working_table(), "_fixture_eql_v3_int4");
+        assert_eq!(s.script_filename(), "eql_v3_int4.sql");
     }
 
     #[test]
@@ -312,7 +312,7 @@ mod tests {
         // A storage-only (encryption-only) fixture legitimately declares zero
         // indexes — the value is encrypted with no search term.
         const V: &[bool] = &[false, true];
-        let s = FixtureSpec::new("eql_v2_bool")
+        let s = FixtureSpec::new("eql_v3_bool")
             .storage_only()
             .with_values(V);
         assert!(s.indexes().is_empty());
@@ -324,7 +324,7 @@ mod tests {
         // A storage-only fixture must NOT declare an index (that would add a
         // term key to the payload, contradicting the storage-only contract).
         const V: &[bool] = &[false, true];
-        let s = FixtureSpec::new("eql_v2_bool")
+        let s = FixtureSpec::new("eql_v3_bool")
             .storage_only()
             .with_index(IndexKind::Unique)
             .with_values(V);
@@ -334,8 +334,8 @@ mod tests {
     #[test]
     fn working_schema_sql_drops_and_creates_the_working_table() {
         let sql = int4_spec().working_schema_sql();
-        assert!(sql.contains("DROP TABLE IF EXISTS public._fixture_eql_v2_int4;"));
-        assert!(sql.contains("CREATE TABLE public._fixture_eql_v2_int4 ("));
+        assert!(sql.contains("DROP TABLE IF EXISTS public._fixture_eql_v3_int4;"));
+        assert!(sql.contains("CREATE TABLE public._fixture_eql_v3_int4 ("));
         assert!(sql.contains("id BIGINT PRIMARY KEY"));
         assert!(sql.contains("plaintext integer NOT NULL"));
         // The working table's payload is plain jsonb — encryption happens in
@@ -365,12 +365,12 @@ mod tests {
         // header
         assert!(preamble.contains("AUTO-GENERATED"));
         assert!(preamble.contains("DO NOT EDIT BY HAND"));
-        assert!(preamble.contains("mise run fixture:generate eql_v2_int4"));
+        assert!(preamble.contains("mise run fixture:generate eql_v3_int4"));
         assert!(preamble.contains("HMAC + ORE block terms"));
         // schema + table in the fixtures schema, jsonb payload
         assert!(preamble.contains("CREATE SCHEMA IF NOT EXISTS fixtures;"));
-        assert!(preamble.contains("DROP TABLE IF EXISTS fixtures.eql_v2_int4;"));
-        assert!(preamble.contains("CREATE TABLE fixtures.eql_v2_int4 ("));
+        assert!(preamble.contains("DROP TABLE IF EXISTS fixtures.eql_v3_int4;"));
+        assert!(preamble.contains("CREATE TABLE fixtures.eql_v3_int4 ("));
         assert!(preamble.contains("id BIGINT PRIMARY KEY"));
         assert!(preamble.contains("plaintext integer NOT NULL"));
         assert!(preamble.contains("payload jsonb NOT NULL"));
@@ -398,9 +398,9 @@ mod tests {
     #[test]
     fn render_rows_sql_projects_format_l_over_the_working_table() {
         let sql = int4_spec().render_rows_sql();
-        assert!(sql.contains("INSERT INTO fixtures.eql_v2_int4 (id, plaintext, payload) VALUES"));
+        assert!(sql.contains("INSERT INTO fixtures.eql_v3_int4 (id, plaintext, payload) VALUES"));
         assert!(sql.contains("%L, %L, %L::jsonb"));
-        assert!(sql.contains("FROM public._fixture_eql_v2_int4"));
+        assert!(sql.contains("FROM public._fixture_eql_v3_int4"));
         // payload is already encrypted JSONB in the working table; no
         // composite to unwrap.
         assert!(sql.contains("payload::text"));

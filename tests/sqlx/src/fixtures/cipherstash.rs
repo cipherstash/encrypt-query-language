@@ -299,7 +299,7 @@ mod tests {
 /// `CS_CLIENT_ACCESS_KEY` / `CS_WORKSPACE_CRN`. Each test is
 /// `#[ignore]` so it only runs under
 /// `cargo test --features fixture-gen -- --ignored`, mirroring the
-/// `generate` test in `eql_v2_int4.rs`.
+/// `generate` test in `eql_v3_int4.rs`.
 ///
 /// These complement the structural fixture-tests in
 /// the `__scalar_matrix_fixture_shape!` arm in `tests/sqlx/src/matrix.rs`: those assert over the

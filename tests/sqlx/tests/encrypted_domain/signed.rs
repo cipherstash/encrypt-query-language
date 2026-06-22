@@ -43,37 +43,37 @@ async fn sign_boundary_is_monotonic<T: SignedScalar>(pool: &PgPool) -> anyhow::R
     Ok(())
 }
 
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v2_int4")))]
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_int4")))]
 async fn int4_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
     sign_boundary_is_monotonic::<i32>(&pool).await
 }
 
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v2_date")))]
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_date")))]
 async fn date_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
     sign_boundary_is_monotonic::<chrono::NaiveDate>(&pool).await
 }
 
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v2_int2")))]
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_int2")))]
 async fn int2_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
     sign_boundary_is_monotonic::<i16>(&pool).await
 }
 
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v2_int8")))]
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_int8")))]
 async fn int8_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
     sign_boundary_is_monotonic::<i64>(&pool).await
 }
 
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v2_timestamptz")))]
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_timestamptz")))]
 async fn timestamptz_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
     sign_boundary_is_monotonic::<chrono::DateTime<chrono::Utc>>(&pool).await
 }
 
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v2_float4")))]
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_float4")))]
 async fn float4_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
     sign_boundary_is_monotonic::<eql_tests::scalar_domains::F4>(&pool).await
 }
 
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v2_float8")))]
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_float8")))]
 async fn float8_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
     sign_boundary_is_monotonic::<eql_tests::scalar_domains::F8>(&pool).await
 }

@@ -7,11 +7,11 @@
 //!   * The malformed-length guards build ORE terms by hand from short byte
 //!     strings, exercising length validation without real ciphertexts.
 //!   * The ordering properties (all-pairs oracle agreement + antisymmetry) read
-//!     the committed `eql_v2_numeric` / `eql_v2_timestamptz` fixtures, whose
+//!     the committed `eql_v3_numeric` / `eql_v3_timestamptz` fixtures, whose
 //!     catalog order is the strict ascending oracle.
 //!   * The `1 == 1.0` ORE collision reads the committed `v3_numeric_collision`
 //!     fixture — the one place the value-equal pair can live, since the catalog
-//!     distinctness guard forbids it in `eql_v2_numeric`.
+//!     distinctness guard forbids it in `eql_v3_numeric`.
 //!
 //! Fixtures are generated once (with creds) in the `build-archive` CI job and
 //! baked into the test binaries via `include_str!`, so the no-creds shards
@@ -248,11 +248,11 @@ async fn comparator_length_guard_sweep(pool: PgPool) -> Result<()> {
 }
 
 /// Width: a numeric ORE term must be 14 blocks => 49*14 + 16 = 702 bytes.
-#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v2_numeric")))]
+#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_numeric")))]
 async fn numeric_term_is_14_blocks(pool: PgPool) -> Result<()> {
     let width: i32 = sqlx::query_scalar(
         "SELECT octet_length((((eql_v3.ord_term( \
-            (SELECT payload FROM fixtures.eql_v2_numeric WHERE plaintext = (-1000000)::numeric) \
+            (SELECT payload FROM fixtures.eql_v3_numeric WHERE plaintext = (-1000000)::numeric) \
             ::eql_v3.numeric_ord)).terms)[1]).bytes)",
     )
     .fetch_one(&pool)
@@ -269,7 +269,7 @@ async fn numeric_term_is_14_blocks(pool: PgPool) -> Result<()> {
 /// list is the strict ascending oracle (matching `NUMERIC_FIXTURES`' catalog
 /// order); `assert_orders_like_oracle` fails loudly if it drifts from the
 /// committed fixture.
-#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v2_numeric")))]
+#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_numeric")))]
 async fn numeric_terms_order_like_decimal_ord(pool: PgPool) -> Result<()> {
     let ascending: Vec<String> = [
         "-1000000000000",
@@ -290,16 +290,16 @@ async fn numeric_terms_order_like_decimal_ord(pool: PgPool) -> Result<()> {
     .iter()
     .map(|v| format!("({v})::numeric"))
     .collect();
-    assert_orders_like_oracle(&pool, "eql_v2_numeric", "numeric_ord", &ascending).await
+    assert_orders_like_oracle(&pool, "eql_v3_numeric", "numeric_ord", &ascending).await
 }
 
 /// Width + single-pair sanity for the 12-block (timestamptz, N=12 => 604 bytes)
 /// term. The full ordering property is `timestamptz_terms_order_like_datetime_ord`.
-#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v2_timestamptz")))]
+#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_timestamptz")))]
 async fn timestamptz_term_is_12_blocks(pool: PgPool) -> Result<()> {
     let width: i32 = sqlx::query_scalar(
         "SELECT octet_length((((eql_v3.ord_term( \
-            (SELECT payload FROM fixtures.eql_v2_timestamptz WHERE plaintext = '1970-01-01T00:00:00Z'::timestamptz) \
+            (SELECT payload FROM fixtures.eql_v3_timestamptz WHERE plaintext = '1970-01-01T00:00:00Z'::timestamptz) \
             ::eql_v3.timestamptz_ord)).terms)[1]).bytes)",
     )
     .fetch_one(&pool)
@@ -317,7 +317,7 @@ async fn timestamptz_term_is_12_blocks(pool: PgPool) -> Result<()> {
 /// coverage as numeric. The 15 values are the strict ascending oracle (matching
 /// `TIMESTAMPTZ_FIXTURES`' catalog order); `assert_orders_like_oracle` fails
 /// loudly if the list drifts from the committed fixture.
-#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v2_timestamptz")))]
+#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_timestamptz")))]
 async fn timestamptz_terms_order_like_datetime_ord(pool: PgPool) -> Result<()> {
     let ascending: Vec<String> = [
         "1900-01-01T00:00:00Z",
@@ -339,18 +339,18 @@ async fn timestamptz_terms_order_like_datetime_ord(pool: PgPool) -> Result<()> {
     .iter()
     .map(|v| format!("'{v}'::timestamptz"))
     .collect();
-    assert_orders_like_oracle(&pool, "eql_v2_timestamptz", "timestamptz_ord", &ascending).await
+    assert_orders_like_oracle(&pool, "eql_v3_timestamptz", "timestamptz_ord", &ascending).await
 }
 
 /// A real wide-block term must compare equal to itself — the reflexive
 /// `eq`-true path (`functions.sql:166`) at N=14 and N=12, creds-free (reuses the
 /// generated fixtures). Distinct from the `1 == 1.0` collision (Gap 1), which is
 /// equality across *different* ciphertexts.
-#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v2_numeric", "eql_v2_timestamptz")))]
+#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_numeric", "eql_v3_timestamptz")))]
 async fn wide_block_term_compares_equal_to_itself(pool: PgPool) -> Result<()> {
     let numeric = compare_fixture_pair(
         &pool,
-        "eql_v2_numeric",
+        "eql_v3_numeric",
         "numeric_ord",
         "(1)::numeric",
         "(1)::numeric",
@@ -360,7 +360,7 @@ async fn wide_block_term_compares_equal_to_itself(pool: PgPool) -> Result<()> {
 
     let timestamptz = compare_fixture_pair(
         &pool,
-        "eql_v2_timestamptz",
+        "eql_v3_timestamptz",
         "timestamptz_ord",
         "'2000-01-01T00:00:00Z'::timestamptz",
         "'2000-01-01T00:00:00Z'::timestamptz",
@@ -390,7 +390,7 @@ async fn compare_collision_ids(pool: &PgPool, a: i64, b: i64) -> Result<i32> {
 /// ciphertext: they are value-equal numerics, so their ORE terms must compare
 /// `0`. Always-on via the committed `v3_numeric_collision` fixture — the only
 /// place the value-equal pair can live, since the catalog distinctness guard
-/// (`scalar_domains.rs` `numeric_value_guards`) forbids it in `eql_v2_numeric`.
+/// (`scalar_domains.rs` `numeric_value_guards`) forbids it in `eql_v3_numeric`.
 /// This is the positive counterpart to that negative guard.
 ///
 /// Asserted in BOTH directions (a scale-biased comparator could pass a

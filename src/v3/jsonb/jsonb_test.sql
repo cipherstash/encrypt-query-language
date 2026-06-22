@@ -46,9 +46,9 @@ BEGIN
   -- -> extracts an entry by selector. NOTE: the selector literal MUST be typed
   -- (`::text`). A bare untyped literal (`doc -> 'sel_hm'`) resolves to the native
   -- `jsonb -> text` operator because PostgreSQL reduces the `eql_v3.json` domain to
-  -- its base type during operator resolution of an unknown-typed RHS — see
-  -- docs/decisions/2026-06-10-eql-v3-json-type-kind.md. Typed operands (the Proxy
-  -- interface) always resolve to our operator.
+  -- its base type during operator resolution of an unknown-typed RHS — see the
+  -- "Typed operands" caveat in docs/reference/json-support.md. Typed operands (the
+  -- Proxy interface) always resolve to our operator.
   entry_a := doc -> 'sel_hm'::text;
   IF eql_v3.selector(entry_a) <> 'sel_hm' THEN RAISE EXCEPTION '-> selector mismatch'; END IF;
 

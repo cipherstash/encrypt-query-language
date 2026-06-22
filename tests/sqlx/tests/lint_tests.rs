@@ -305,7 +305,7 @@ async fn lint_phase_1_operators_are_clean(pool: PgPool) -> Result<()> {
 /// regression to plpgsql or a pinned `search_path` breaks index
 /// engagement.
 ///
-/// Storage-only variants (the bare `eql_v2_<T>` domain with no
+/// Storage-only variants (the bare `eql_v3_<T>` domain with no
 /// capability suffix) are intentionally excluded — every operator on
 /// them is a non-STRICT plpgsql blocker, which doesn't need to be
 /// inlinable.

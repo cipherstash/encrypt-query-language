@@ -552,10 +552,10 @@ cp -a migrations "$BK/migrations"
 # The int4 fixture is gitignored (regenerated) and absent in a bare checkout —
 # back it up only if present, and on restore drop the empty stand-in if so.
 HAD_FIXTURE=0
-if [ -f fixtures/eql_v2_int4.sql ]; then cp -a fixtures/eql_v2_int4.sql "$BK/eql_v2_int4.sql"; HAD_FIXTURE=1; fi
+if [ -f fixtures/eql_v3_int4.sql ]; then cp -a fixtures/eql_v3_int4.sql "$BK/eql_v3_int4.sql"; HAD_FIXTURE=1; fi
 restore() {
   rm -rf migrations && cp -a "$BK/migrations" migrations
-  if [ "$HAD_FIXTURE" = 1 ]; then cp -af "$BK/eql_v2_int4.sql" fixtures/eql_v2_int4.sql; else rm -f fixtures/eql_v2_int4.sql; fi
+  if [ "$HAD_FIXTURE" = 1 ]; then cp -af "$BK/eql_v3_int4.sql" fixtures/eql_v3_int4.sql; else rm -f fixtures/eql_v3_int4.sql; fi
   rm -rf "$BK"
 }
 trap restore EXIT
@@ -564,7 +564,7 @@ trap restore EXIT
 # the snapshot deterministic across local and CI.
 rm -rf migrations && mkdir migrations
 : > migrations/0001_placeholder.sql
-: > fixtures/eql_v2_int4.sql
+: > fixtures/eql_v3_int4.sql
 # Expand into a temp file and mv into place only on success — a redirect straight
 # onto the snapshot would zero it before cargo runs, so a transient expand
 # failure would leave a 0-byte snapshot locally. (Under `set -euo pipefail` a
