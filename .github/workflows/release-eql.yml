@@ -73,8 +73,6 @@ jobs:
           path: |
             release/cipherstash-encrypt.sql
             release/cipherstash-encrypt-uninstall.sql
-            release/cipherstash-encrypt-v3.sql
-            release/cipherstash-encrypt-v3-uninstall.sql
 
       - name: Publish EQL release artifacts
         uses: softprops/action-gh-release@v2
@@ -83,10 +81,6 @@ jobs:
           files: |
             release/cipherstash-encrypt.sql
             release/cipherstash-encrypt-uninstall.sql
-            release/cipherstash-encrypt-supabase.sql
-            release/cipherstash-encrypt-uninstall-supabase.sql
-            release/cipherstash-encrypt-v3.sql
-            release/cipherstash-encrypt-v3-uninstall.sql
 
       - name: Notify Multitudes
         if: github.event_name == 'release'

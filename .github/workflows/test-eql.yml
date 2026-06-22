@@ -162,11 +162,10 @@ jobs:
         run: |
           mise run test:sqlx:archive
 
-      # Ship ALL release variants, not just the main installer: the
-      # build_validation_tests read cipherstash-encrypt{,-protect,-protect-uninstall,
-      # -v3,-v3-uninstall}.sql from ../../release at RUN time (std::fs, not embedded),
-      # and release/ is gitignored so the shard checkout has none of them. `mise run
-      # build` (via prep) produced the whole set in build-archive.
+      # Ship the built release artifacts: build_validation_tests read
+      # cipherstash-encrypt{,-uninstall}.sql from ../../release at RUN time
+      # (std::fs, not embedded), and release/ is gitignored so the shard checkout
+      # has none of them. `mise run build` (via prep) produced them in build-archive.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: nextest-archive
