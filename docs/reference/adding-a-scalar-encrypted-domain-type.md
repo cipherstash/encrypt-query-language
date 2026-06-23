@@ -135,6 +135,16 @@ enum's `impl` methods (`json_key`, `extractor`, `ctor`, `role`,
 `operators`, `requires`) with matching `#[test]`s (`term_tests` /
 `term_helper_tests`) — never a free-form catalog field.
 
+**Non-empty `ob` invariant (ORE-bearing domains).** Any domain whose terms
+include `Term::Ore` (`_ord` / `_ord_ore`, and text `_search`) automatically
+emits an extra `CHECK` requiring `ob` to be a non-empty array
+(`jsonb_array_length(VALUE -> 'ob') > 0`). An empty ORE term (`ob: []`) is only
+ever produced by encrypting the empty string into an ordered column, and is
+rejected at the boundary rather than ordered (issue #262). This is emitted from
+the catalog by the codegen renderer (`DomainBlock::ore_check` in
+`crates/eql-codegen/src/context.rs`, gated on `Term::provides_ordering`), not
+hand-added — a new ordered scalar gets it for free.
+
 **Twins.** `int4_ord` and `int4_ord_ore` both carry `&[Term::Ore]`. The
 generator emits them as independent domains with byte-identical SQL modulo type
 name (`ordered_files_byte_identical_modulo_typename`). Twins let callers choose

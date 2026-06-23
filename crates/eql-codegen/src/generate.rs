@@ -432,6 +432,37 @@ mod tests {
         }
     }
 
+    /// The non-empty-`ob` CHECK (issue #262) is emitted only on ORE-bearing
+    /// domains. An empty ORE term (`ob: []`) is what encrypting the empty string
+    /// into an ordered column produces; the constraint rejects it at the domain
+    /// boundary. Storage-only (`int4`) and equality-only (`int4_eq`) domains carry
+    /// no `ob`, so they must NOT gain the clause.
+    #[test]
+    fn ore_bearing_domains_reject_empty_ob() {
+        // Per-domain assertion: a domain's CREATE block carries the clause iff it
+        // is ORE-bearing. Slice each domain's CHECK out of the rendered file so a
+        // clause on the wrong domain cannot pass via whole-file `contains`.
+        let sql = render_types_file(spec("int4"));
+        let clause = "jsonb_array_length(VALUE -> 'ob') > 0";
+        for (dom, expected) in [
+            ("int4", false),
+            ("int4_eq", false),
+            ("int4_ord", true),
+            ("int4_ord_ore", true),
+        ] {
+            let head = format!("CREATE DOMAIN eql_v3.{dom} AS jsonb");
+            let start = sql.find(&head).unwrap_or_else(|| panic!("missing {dom}"));
+            // The CHECK ends at the closing `);` of this CREATE DOMAIN block.
+            let end = start + sql[start..].find(");").expect("unterminated CHECK");
+            let block = &sql[start..end];
+            assert_eq!(
+                block.contains(clause),
+                expected,
+                "domain {dom}: expected non-empty-ob CHECK present={expected}",
+            );
+        }
+    }
+
     #[test]
     fn storage_functions_file_is_all_blockers() {
         let s = spec("int4");

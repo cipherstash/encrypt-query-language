@@ -71,6 +71,20 @@ impl Term {
     pub const fn provides_ordering(self) -> bool {
         matches!(self, Term::Ore)
     }
+
+    /// JSON key whose payload must be a NON-EMPTY array for this term to be
+    /// well-formed, or `None` if the term imposes no such structural rule. The
+    /// ORE term (`ob`) is an array of block terms; an empty array (`ob: []`) is
+    /// only ever produced by encrypting the empty string into an ordered column,
+    /// and the domain CHECK rejects it at the boundary rather than ordering it
+    /// (issue #262). A new array-backed term opts in here, so the domain CHECK
+    /// never hardcodes a single key.
+    pub const fn nonempty_array_key(self) -> Option<&'static str> {
+        match self {
+            Term::Ore => Some(self.json_key()),
+            Term::Hm | Term::Bloom => None,
+        }
+    }
 }
 
 impl Term {
@@ -94,6 +108,13 @@ impl Term {
     /// JSON payload keys required by these terms (deduped, in order).
     pub fn term_json_keys(terms: &[Term]) -> Vec<&'static str> {
         Self::dedupe_preserving_order(terms.iter().map(|t| t.json_key()))
+    }
+
+    /// JSON keys whose payload must be a non-empty array across these terms
+    /// (deduped, in order). Symmetric to [`Term::term_json_keys`]; drives the
+    /// domain CHECK's non-empty-array clauses. See [`Term::nonempty_array_key`].
+    pub fn nonempty_array_keys(terms: &[Term]) -> Vec<&'static str> {
+        Self::dedupe_preserving_order(terms.iter().filter_map(|t| t.nonempty_array_key()))
     }
 
     /// Distinct extractor-bearing terms, first occurrence per extractor wins.

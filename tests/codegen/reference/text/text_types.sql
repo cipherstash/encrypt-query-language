@@ -67,6 +67,8 @@ BEGIN
         AND VALUE ? 'c'
         AND VALUE ? 'hm'
         AND VALUE ? 'ob'
+        AND jsonb_typeof(VALUE -> 'ob') = 'array'
+        AND jsonb_array_length(VALUE -> 'ob') > 0
         AND VALUE->>'v' = '2'
       );
   END IF;
@@ -84,6 +86,8 @@ BEGIN
         AND VALUE ? 'c'
         AND VALUE ? 'hm'
         AND VALUE ? 'ob'
+        AND jsonb_typeof(VALUE -> 'ob') = 'array'
+        AND jsonb_array_length(VALUE -> 'ob') > 0
         AND VALUE->>'v' = '2'
       );
   END IF;
@@ -102,6 +106,8 @@ BEGIN
         AND VALUE ? 'hm'
         AND VALUE ? 'ob'
         AND VALUE ? 'bf'
+        AND jsonb_typeof(VALUE -> 'ob') = 'array'
+        AND jsonb_array_length(VALUE -> 'ob') > 0
         AND VALUE->>'v' = '2'
       );
   END IF;
