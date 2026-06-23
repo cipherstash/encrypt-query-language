@@ -62,7 +62,7 @@ ANALYZE users;
 
 ## 4. Insert and read through the Proxy
 
-Run writes and reads through CipherStash Proxy. On insert, the Proxy encrypts the plaintext into the EQL payload (envelope `v`/`i`/`c` plus the configured index terms — see the [payload format](../reference/PAYLOAD.md)); on read, it decrypts automatically.
+Run writes and reads through CipherStash Proxy. On insert, the Proxy encrypts the plaintext into the EQL payload (envelope `v`/`i`/`c` plus the configured index terms — see the [payload / wire format](../../crates/eql-types/README.md)); on read, it decrypts automatically.
 
 ```sql
 -- Through the Proxy: the plaintext is encrypted on the way in
@@ -114,7 +114,7 @@ SELECT encrypted_profile -> 'email_selector'::text FROM users;
 
 **Which operators are available on which column?** See the [SQL support matrix](../reference/sql-support.md).
 
-**Where is the data format documented?** See the [payload format](../reference/PAYLOAD.md).
+**Where is the data format documented?** See the [payload / wire format](../../crates/eql-types/README.md) for the scalar envelope and index terms, and [EQL with JSON and JSONB](../reference/json-support.md) for the `eql_v3.json` document format.
 
 ## Troubleshooting
 

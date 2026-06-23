@@ -57,11 +57,13 @@ CREATE FUNCTION eql_v3."[operator]"(...)
 --! @brief [Type name] index term type
 --!
 --! Domain type representing [description of what this type represents].
---! Used for [use case] via the '[index_name]' index type.
+--! Used for [use case] during searchable-encryption queries (e.g. equality via
+--! `eq_term`, ordering via `ord_term`).
 --!
---! @see eql_v3.add_search_config
+--! @see eql_v3.eq_term
 --! @note This is a transient type used only during query execution
-CREATE DOMAIN eql_v3.[type_name] AS [base_type];
+--! @note Encrypted-domain types are jsonb-backed — always `AS jsonb`, never domain-over-domain
+CREATE DOMAIN eql_v3.[type_name] AS jsonb;
 ```
 
 ## Template: Composite Type

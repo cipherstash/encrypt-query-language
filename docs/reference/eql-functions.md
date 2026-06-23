@@ -157,7 +157,7 @@ SELECT eql_v3.min(price_jsonb::eql_v3.int4_ord) FROM products;
 - [Database Indexes](./database-indexes.md) — functional-index recipes and performance.
 - [JSON/JSONB Support](./json-support.md) — `eql_v3.json` worked examples.
 - [SQL support matrix](./sql-support.md) — operators by domain variant.
-- [Payload Format](./PAYLOAD.md) — EQL data format specification.
+- [Payload / wire format](../../crates/eql-types/README.md) — canonical encrypted-payload wire types (envelope + index terms).
 - Client-side index configuration — [Protect.js schema reference](https://github.com/cipherstash/protectjs/blob/main/docs/reference/schema.md).
 
 ---

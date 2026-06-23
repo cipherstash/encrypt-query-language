@@ -183,7 +183,7 @@ The native `jsonb` operators `?`, `?|`, `?&`, `@?`, `@@`, `#>`, `#>>`, `-`, `#-`
 Structured Encryption (ste_vec) makes a JSONB document searchable by:
 
 1. **Flattening the structure** — each unique path to a leaf gets a deterministic selector hash.
-2. **Encrypting terms** — each path and value is encrypted into per-path terms (`hm` for equality; `ocv` / `ocf` CLLW ORE for ordered String / Number leaves).
+2. **Encrypting terms** — each path and value is encrypted into per-path terms (`hm` for equality; `oc` CLLW ORE for ordered String / Number leaves).
 3. **Storing the `sv` array** — all encrypted terms live in the document's `sv` vector.
 
 **Example document:**
