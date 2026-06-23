@@ -271,7 +271,11 @@ async fn jsonb_array_to_bytea_array_input_shapes(pool: PgPool) -> Result<()> {
 /// across the same three input shapes. Safety net for the same plpgsql→sql
 /// inlining refactor. Behaviour pinned:
 ///   - JSON null  (`'null'`) → NULL composite
-///   - empty array (`'[]'`)  → NULL composite (inner array_agg is NULL)
+///   - empty array (`'[]'`)  → non-NULL composite with ZERO terms (issue #262).
+///     An empty `ob` is what encrypting the empty string `""` produces; it must
+///     stay comparable so it sorts first, not collapse to NULL terms and drop
+///     out of ordered queries. The inner `array_agg`'s NULL is coalesced to an
+///     empty `ore_block_256_term[]`.
 ///   - populated array       → non-NULL composite with one term per element
 ///
 /// Same documented delta as T6 for a non-array JSON scalar.
@@ -295,12 +299,23 @@ async fn jsonb_array_to_ore_block_input_shapes(pool: PgPool) -> Result<()> {
             .await?;
     assert!(is_null, "JSON null must yield NULL composite");
 
-    // Empty array → NULL composite.
+    // Empty array → non-NULL composite with ZERO terms (issue #262). The empty
+    // `ob` from encrypting `""` must remain comparable (so it sorts first via the
+    // comparator's cardinality guard) rather than collapsing to NULL terms.
     let is_null: bool =
         sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_ore_block_256('[]'::jsonb) IS NULL")
             .fetch_one(&pool)
             .await?;
-    assert!(is_null, "empty JSON array must yield NULL composite");
+    assert!(!is_null, "empty JSON array must yield a non-NULL composite");
+    let term_count: i32 = sqlx::query_scalar(
+        "SELECT cardinality((eql_v3.jsonb_array_to_ore_block_256('[]'::jsonb)).terms)",
+    )
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(
+        term_count, 0,
+        "empty JSON array must yield a zero-term composite"
+    );
 
     // Single-element array → non-NULL composite with exactly 1 term.
     let term_count: i32 = sqlx::query_scalar(

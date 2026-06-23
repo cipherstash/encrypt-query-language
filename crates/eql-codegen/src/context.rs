@@ -59,6 +59,11 @@ pub struct DomainBlock {
     pub typname: String,   // sql_str-escaped bare name, e.g. int4_ord_ore
     pub name: String,      // raw bare name (unescaped), e.g. int4_ord_ore
     pub keys: Vec<String>, // ordered, sql_str-escaped key tokens (envelope + ciphertext + term keys)
+    // sql_str-escaped keys whose payload must be a non-empty array (the ORE term
+    // `ob`). Derived from the domain's terms exactly like `keys`, so the template
+    // stays term-agnostic — it renders a non-empty-array CHECK per key without
+    // hardcoding `ob`. Empty for non-ORE domains. See issue #262.
+    pub nonempty_array_keys: Vec<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -83,6 +88,12 @@ pub fn domain_block(token: &str, domain: &DomainSpec) -> DomainBlock {
         typname: sql_str(&name),
         name,
         keys,
+        // Derived from the terms the same way `keys` is — the rule lives on
+        // `Term::nonempty_array_key`, not here.
+        nonempty_array_keys: Term::nonempty_array_keys(domain.terms)
+            .into_iter()
+            .map(sql_str)
+            .collect(),
     }
 }
 

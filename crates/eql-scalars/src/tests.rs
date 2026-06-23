@@ -308,6 +308,26 @@ mod term_helper_tests {
     }
 
     #[test]
+    fn nonempty_array_key_is_ob_only_for_ore() {
+        assert_eq!(Term::Ore.nonempty_array_key(), Some("ob"));
+        assert_eq!(Term::Hm.nonempty_array_key(), None);
+        assert_eq!(Term::Bloom.nonempty_array_key(), None);
+    }
+
+    #[test]
+    fn nonempty_array_keys_collects_only_ore() {
+        // text_search-shaped term set: only the ORE term contributes a key.
+        assert_eq!(
+            Term::nonempty_array_keys(&[Term::Hm, Term::Ore, Term::Bloom]),
+            vec!["ob"]
+        );
+        // No ORE term => no non-empty-array CHECK.
+        assert!(Term::nonempty_array_keys(&[Term::Hm]).is_empty());
+        assert!(Term::nonempty_array_keys(&[Term::Bloom]).is_empty());
+        assert!(Term::nonempty_array_keys(&[]).is_empty());
+    }
+
+    #[test]
     fn requires_are_deduplicated_in_order() {
         assert_eq!(
             Term::term_requires(&[Term::Ore, Term::Ore, Term::Hm]),
