@@ -34,27 +34,18 @@ This project uses `mise` for task management. Common commands:
 
 ### Build System
 - Dependencies are resolved using `-- REQUIRE:` comments in SQL files
-- Build outputs to `release/` directory:
-  - `cipherstash-encrypt.sql` - Main installer
-  - `cipherstash-encrypt-supabase.sql` - Supabase-compatible (excludes operator classes)
-  - `cipherstash-encrypt-protect.sql` - ProtectJS variant (excludes config management)
-  - `cipherstash-encrypt-v3.sql` - Standalone, self-contained `eql_v3` surface only (globbed from `src/v3` alone; no `eql_v2`, installable into a DB with no `eql_v2` present)
-  - Corresponding uninstallers for each variant
+- Build outputs to `release/` directory (a single installer + uninstaller, assembled from `src/v3` alone):
+  - `cipherstash-encrypt.sql` - The sole installer: the self-contained `eql_v3` surface, globbed from `src/v3` only (no `eql_v2`; installable into a DB with no `eql_v2` present)
+  - `cipherstash-encrypt-uninstall.sql` - Matching uninstaller
 
-#### Build Variants
-| Variant | Excludes | Use Case |
-|---------|----------|----------|
-| Main | Nothing | Full EQL with all features |
-| Supabase | Operator classes | Supabase compatibility |
-| Protect | `src/config/*`, `src/encryptindex/*` | ProtectJS (no database-side config) |
-| v3-only | Everything outside `src/v3` (and `pin_search_path.sql`) | Self-contained `eql_v3` surface, `eql_v2`-free (gated by `mise run test:self_contained_v3`) |
+There are no longer separate Main / Supabase / Protect / v3-only build variants. The combined `eql_v2` build that previously produced multiple artefacts has been removed; the v3 surface now ships as one self-contained installer under the canonical `cipherstash-encrypt.sql` name (`tasks/build.sh` globs `src/v3` only). Because the surface owns no `eql_v2` dependency, it is already Supabase / managed-Postgres compatible (functional indexes over extractors, no superuser-only operator classes) without a dedicated subset build. Self-containment — no `-- REQUIRE:` edge pointing outside `src/v3`, no `eql_v2.<symbol>` anywhere in the surface — is enforced at build time by `verify_v3_self_contained` in `tasks/build.sh` and CI-gated by `mise run test:self_contained_v3`.
 
 ## Project Architecture
 
 This is the **Encrypt Query Language (EQL)** - a PostgreSQL extension for searchable encryption. Key architectural components:
 
 ### Core Structure
-- **Schema**: Core EQL functions/types are in the `eql_v2` PostgreSQL schema. The encrypted-domain type families (`int4`, `int2`, `int8`, `date`, `timestamptz`, `numeric`, `text`, `bool`, `float4`, `float8`) live in a separate `eql_v3` schema (see below). The `eql_v3` surface is **self-contained**: it owns its own copies of the searchable-encrypted-metadata (SEM) index-term types (`eql_v3.hmac_256`, `eql_v3.ore_block_256`, hand-written under `src/v3/sem/`) and has no runtime dependency on `eql_v2`. `eql_v2` is unchanged and remains the documented public API.
+- **Schema**: EQL ships a single PostgreSQL schema, `eql_v3`, which holds the encrypted-domain type families (`int4`, `int2`, `int8`, `date`, `timestamptz`, `numeric`, `text`, `bool`, `float4`, `float8`). The `eql_v3` surface is **self-contained**: it owns its own copies of the searchable-encrypted-metadata (SEM) index-term types (`eql_v3.hmac_256`, `eql_v3.ore_block_256`, `eql_v3.bloom_filter`, hand-written under `src/v3/sem/`) and installs into a database with no other EQL schema present. The earlier `eql_v2` schema (composite `eql_v2_encrypted` column type, database-side configuration management, operator-class-on-column indexing) was **removed in 3.0.0** — see the `[Unreleased]`/3.0.0 entry in `CHANGELOG.md`. `eql_v2` is no longer built or shipped; it survives only in fork-provenance comments under `src/v3/` (the v3 SEM types were forked from the old v2 originals) and in historical records (`CHANGELOG.md`, the v2.x upgrade guides).
 - **Main Type**: `eql_v2_encrypted` - composite type for encrypted columns (stored as JSONB)
 - **Configuration**: `eql_v2_configuration` table tracks encryption configs
 - **Index Types**: Various encrypted index types (blake3, hmac_256, bloom_filter, ore variants)
@@ -79,7 +70,7 @@ This is the **Encrypt Query Language (EQL)** - a PostgreSQL extension for search
 
 ### Encrypted-Domain Types
 
-`src/v3/scalars/` holds the generated **encrypted-domain type families** — jsonb-backed PostgreSQL domains in the **`eql_v3` schema**, one domain per operator/index capability (`eql_v3.<T>` storage-only, `eql_v3.<T>_eq`, `eql_v3.<T>_ord`). The schema qualifier replaces the old version-prefixed name, so the domains are `eql_v3.int4`, `eql_v3.int4_eq`, `eql_v3.int4_ord`, `eql_v3.int4_ord_ore` — created in `eql_v3`, not `public`. Their extractors/wrappers/aggregates (`eql_v3.eq_term`, `eql_v3.ord_term`, `eql_v3.eq`/`lt`/…, `eql_v3.min`/`max`) also live in `eql_v3`, and the SEM index-term types they return and construct (`eql_v3.hmac_256`, `eql_v3.ore_block_256`) are **also `eql_v3`** — hand-written under `src/v3/sem/` so the whole v3 surface is self-contained (no `eql_v2.<symbol>` appears anywhere in v3 SQL; CI gates this via `mise run test:self_contained_v3` and the standalone `release/cipherstash-encrypt-v3.sql` installer). `eql_v3.int4` (PR #239, supersedes #225) is the reference scalar implementation; the catalog now generates a full surface for `int4`, `int2`, `int8`, `date`, `timestamptz`, `numeric`, `text`, `bool`, `float4`, and `float8`, all following this materializer pattern. `jsonb` is the only catalog scalar with no generated SQL surface yet — it needs a separate SQL design beyond the ordered-scalar materializer, and the `eql-scalars` fixture catalog (`crates/eql-scalars`) models its fixture values ahead of that surface.
+`src/v3/scalars/` holds the generated **encrypted-domain type families** — jsonb-backed PostgreSQL domains in the **`eql_v3` schema**, one domain per operator/index capability (`eql_v3.<T>` storage-only, `eql_v3.<T>_eq`, `eql_v3.<T>_ord`). The schema qualifier replaces the old version-prefixed name, so the domains are `eql_v3.int4`, `eql_v3.int4_eq`, `eql_v3.int4_ord`, `eql_v3.int4_ord_ore` — created in `eql_v3`, not `public`. Their extractors/wrappers/aggregates (`eql_v3.eq_term`, `eql_v3.ord_term`, `eql_v3.eq`/`lt`/…, `eql_v3.min`/`max`) also live in `eql_v3`, and the SEM index-term types they return and construct (`eql_v3.hmac_256`, `eql_v3.ore_block_256`) are **also `eql_v3`** — hand-written under `src/v3/sem/` so the whole v3 surface is self-contained (no `eql_v2.<symbol>` appears anywhere in v3 SQL; CI gates this via `mise run test:self_contained_v3` and the self-contained `release/cipherstash-encrypt.sql` installer). `eql_v3.int4` (PR #239, supersedes #225) is the reference scalar implementation; the catalog now generates a full surface for `int4`, `int2`, `int8`, `date`, `timestamptz`, `numeric`, `text`, `bool`, `float4`, and `float8`, all following this materializer pattern. `jsonb` is the only catalog scalar with no generated SQL surface yet — it needs a separate SQL design beyond the ordered-scalar materializer, and the `eql-scalars` fixture catalog (`crates/eql-scalars`) models its fixture values ahead of that surface.
 
 Adding a scalar encrypted-domain type is one row in the Rust catalog `eql-scalars::CATALOG` (`crates/eql-scalars/src/lib.rs`): a `ScalarSpec` giving the type `token` (e.g. `int8`), its `ScalarKind` (the `kind` field), the `DomainSpec`s mapping each generated domain suffix to its fixed index `Term`s (`_eq => [Hm]`, `_ord`/`_ord_ore => [Ore]`), and the `Fixture` value list. Term capabilities are fixed in the `Term` enum's `impl` methods (with unit tests): `Hm` provides equality, and `Ore` provides equality plus ordering. There is no TOML manifest and no Python — the catalog is the source of truth, validated by the compiler (an undefined term or unknown scalar is a compile error) plus catalog `#[test]`s. `mise run build` runs `cargo run -p eql-codegen`, which regenerates the scalar SQL surface into `src/v3/scalars/<T>/` from `CATALOG` at the start of every build; that surface includes supported comparison wrappers plus blockers for native `jsonb` operators that would otherwise be reachable through domain fallback. `cargo run -p eql-codegen` regenerates every type at once (the same call `mise run build` uses; there is no per-type codegen task). The generated `*_types.sql` / `*_functions.sql` / `*_operators.sql` / `*_aggregates.sql` files are gitignored and never committed. The per-type plaintext fixture lists the SQLx matrix consumes are **not** a generated file — they are materialised from each `CATALOG` row at compile time as `eql_scalars::INT4_VALUES` / `INT2_VALUES` (the `int_values!` macro) and read directly by `ScalarType::FIXTURE_VALUES`; a Rust source of truth no longer round-trips through a committed generated `.rs`. Generated SQL carries a `-- AUTOMATICALLY GENERATED FILE` header (the project-wide marker `docs:validate` greps on); change the catalog and rebuild, never hand-edit. Hand-written SQL beyond the fixed surface goes in `src/v3/scalars/<T>/<T>_extensions.sql` with no auto-generated header and explicit `-- REQUIRE:` edges — that file IS committed. `jsonb` is out of scope for this scalar materializer.
 
@@ -214,7 +205,6 @@ HTML output is also generated in `docs/api/html/` for local preview only.
 - SQL files are modular - put operator wrappers in `operators.sql`, implementation in `functions.sql`
 - All SQL files must have `-- REQUIRE:` dependency declarations
 - Build system uses `tsort` to resolve dependency order
-- Supabase build excludes operator classes (not supported)
 - **Documentation**: All functions/types must have Doxygen comments (see Documentation Standards above)
 
 ### Function Language Choice (SQL vs PL/pgSQL)
@@ -281,7 +271,7 @@ The entry under `Changed` / `Deprecated` should cross-link to the `U-NNN`. See `
 
 ### Versioning
 
-The `eql_v2` PostgreSQL schema name is part of the public API and is **independent of the EQL release version**. Major-version bumps to EQL do not rename the schema. The `eql_v3` schema is **not** a rename of `eql_v2`: it is a separate, additional schema introduced to namespace the encrypted-domain type families. Both schemas coexist; `eql_v2` keeps the core types/operators and is unchanged. Adding a new schema for a new surface is additive, not a public-API break. When deciding on a version bump:
+The `eql_v3` PostgreSQL schema name is part of the public API and is **independent of the EQL release version**: major-version bumps to EQL do not rename the schema. `eql_v3` is **not** a rename of `eql_v2` — it is a distinct surface (the encrypted-domain scalar type families). The earlier `eql_v2` schema was removed in 3.0.0 (a major, public-API-breaking change); it is no longer shipped, and `eql_v3` is the sole surface going forward. When deciding on a version bump:
 
 - **Patch (`2.3.x`)** — bug fixes, no behaviour changes
 - **Minor (`2.x.0`)** — additive changes, behaviour changes that don't break the public API (signatures, schema name, payload format, operator names)

@@ -38,9 +38,9 @@ During documentation, you will encounter discrepancies between:
 **Add to:** `docs/development/documentation-questions.md`
 **Format:**
 ```
-- [ ] DISCREPANCY: eql_v2.add_column behavior
-      SQL code: raises exception if column already encrypted
-      Reference docs: suggest idempotent behavior
+- [ ] DISCREPANCY: eql_v3.eq_term behavior
+      SQL code: raises exception when the payload is missing its equality term
+      Reference docs: suggest it returns NULL for incomplete payloads
       Question: Is SQL correct or does it need fixing?
       For review by: Principal Engineer
 ```
@@ -55,16 +55,16 @@ During documentation, you will encounter discrepancies between:
 **Example:**
 ```sql
 --! @brief Extract ciphertext from encrypted value
---! @param encrypted JSONB Raw encrypted value
+--! @param val JSONB Raw encrypted value
 --! @return Text Extracted ciphertext
 --! @note Issue #XXX: Returns null for malformed input instead of raising error
-CREATE FUNCTION eql_v2.ciphertext(encrypted jsonb) ...
+CREATE FUNCTION eql_v3.ciphertext(val jsonb) ...
 ```
 
 **Add to:** `docs/development/documentation-blockers.md`
 **Format:**
 ```
-- [ ] BUG FOUND: eql_v2.ciphertext
+- [ ] BUG FOUND: eql_v3.ciphertext
       Issue: Returns null for malformed input instead of raising error
       GitHub Issue: #XXX
       Action: Documented actual behavior, flagged for fix

@@ -3,7 +3,7 @@
 ## Table of Contents
 
 - [How this project is organised](#how-this-project-is-organised)
-  - [Schemas: `eql_v2` and `eql_v3`](#schemas-eql_v2-and-eql_v3)
+  - [The `eql_v3` surface](#the-eql_v3-surface)
   - [Repository layout](#repository-layout)
 - [Set up a local development environment](#set-up-a-local-development-environment)
   - [Installing mise](#installing-mise)
@@ -36,23 +36,25 @@ mise has tasks for:
   part of `build`)
 - Validating and generating documentation (`docs:validate`, `docs:generate`)
 
-### Schemas: `eql_v2` and `eql_v3`
+### The `eql_v3` surface
 
-EQL installs into two PostgreSQL schemas, both of which coexist:
+EQL installs a single, self-contained PostgreSQL schema, **`eql_v3`**, which
+namespaces the encrypted-domain **scalar type families** (`int4`, `int2`,
+`int8`, `date`, `timestamptz`, `numeric`, `text`, `bool`, `float4`, `float8`).
+It owns its own copies of the searchable-encrypted-metadata (SEM) index-term
+types it needs (`eql_v3.hmac_256`, `eql_v3.ore_block_256`, `eql_v3.bloom_filter`),
+so the surface has no dependency on any other EQL schema and installs into a
+database with nothing else present.
 
-- **`eql_v2`** — the unchanged core public API: the core encrypted types,
-  functions, and operators. The `eql_v2` schema name is part of the public API
-  and is independent of the EQL release version.
-- **`eql_v3`** — an additional, self-contained schema that namespaces the
-  encrypted-domain **scalar type families** (`int4`, `int2`, `int8`, `date`,
-  `timestamptz`, `numeric`, `text`, `bool`, `float4`, `float8`). It owns its
-  own copies of the searchable-encrypted-metadata (SEM) index-term types it
-  needs (`eql_v3.hmac_256`, `eql_v3.ore_block_256`), so it has no runtime
-  dependency on `eql_v2`.
-
-The current install script is built from the `eql_v3` surface. Adding a new
-schema for a new surface is additive — it is not a rename of `eql_v2` and not a
-public-API break.
+> **About `eql_v2`.** Earlier EQL releases shipped an `eql_v2` schema — a
+> composite encrypted column type, database-side configuration management, and
+> operator-class-on-column indexing. That surface was **removed in 3.0.0**; the
+> repo now builds and ships only `eql_v3`, and the encryption client
+> (CipherStash Proxy / Protect.js) owns the configuration model the database-side
+> `eql_v2` functions previously provided. You will still see `eql_v2` named in
+> fork-provenance comments under `src/v3/` (the v3 SEM types were forked from the
+> old v2 originals) and in historical records (`CHANGELOG.md`, the v2.x upgrade
+> guides) — those mentions are deliberate and do not mean `eql_v2` is installed.
 
 ### Repository layout
 

@@ -134,8 +134,8 @@ SELECT * FROM events
   LIMIT 10;
 ```
 
-This is the `eql_v3` replacement for the old `eql_v2.order_by(...)` helper,
-which no longer exists. See the
+Writing the sort key as `eql_v3.ord_term(col)` is the way to order encrypted
+rows directly out of the btree. See the
 [sort-key trap](./docs/reference/database-indexes.md#range-queries-and-order-by)
 for the full explanation.
 
@@ -152,9 +152,8 @@ SELECT eql_v3.max(encrypted_amount::eql_v3.int4_ord) FROM orders;
 
 ## Text matching (not `LIKE`)
 
-There is **no `LIKE` / `ILIKE` on encrypted text in `eql_v3`**. The old
-`eql_v2.like` / `eql_v2.ilike` functions and the `~~` / `~~*` operators on
-encrypted columns have been removed; `LIKE` / `ILIKE` are blocked on every
+There is **no SQL `LIKE` / `ILIKE` pattern matching on encrypted text in
+`eql_v3`**. The `LIKE` / `ILIKE` operators (`~~` / `~~*`) are blocked on every
 encrypted domain variant and raise an "operator not supported" exception.
 
 Text search is now **bloom-filter token containment** via `@>` / `<@` on a
