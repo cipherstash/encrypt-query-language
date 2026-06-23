@@ -72,7 +72,7 @@ EQL allows you to perform queries on encrypted data without decrypting it, suppo
 ## Best practices
 
 - **Use EQL functions** when interacting with encrypted data.
-- **Define database constraints**to maintain data integrity.
+- **Define database constraints** to maintain data integrity.
 - **Secure key management** of encryption keys.
 - **Monitor query performance** and optimize as needed.
 

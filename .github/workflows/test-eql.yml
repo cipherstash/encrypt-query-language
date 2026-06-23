@@ -489,6 +489,10 @@ jobs:
         run: |
           mise run docs:validate:source
 
+      - name: Assert user-facing docs are free of the removed eql_v2 surface
+        run: |
+          mise run test:docs_v3_grep
+
   # The e2e (fresh-encryption) property suite. Encrypts random values through
   # ZeroKMS at run time, so it needs CS_* creds and is PG-version-independent —
   # one PG17 run, never the matrix. Compiles the `proptest-e2e`-gated binaries

@@ -15,10 +15,10 @@
 --!
 --! @example
 --! -- [Example description]
---! SELECT eql_v2.function_name('value1', 'value2');
+--! SELECT eql_v3.function_name('value1', 'value2');
 --!
---! @see eql_v2.related_function
-CREATE FUNCTION eql_v2.function_name(...)
+--! @see eql_v3.related_function
+CREATE FUNCTION eql_v3.function_name(...)
 ```
 
 ## Template: Private/Internal Function
@@ -28,7 +28,7 @@ CREATE FUNCTION eql_v2.function_name(...)
 --! @internal
 --! @param param_name [Type] [Description]
 --! @return [Return type] [Description]
-CREATE FUNCTION eql_v2._internal_function(...)
+CREATE FUNCTION eql_v3._internal_function(...)
 ```
 
 ## Template: Operator Implementation
@@ -39,16 +39,16 @@ CREATE FUNCTION eql_v2._internal_function(...)
 --! Implements the [operator] operator using [index type] for
 --! [operation description] without decryption.
 --!
---! @param a eql_v2_encrypted Left operand
---! @param b eql_v2_encrypted Right operand
+--! @param a eql_v3.[domain_type] Left operand
+--! @param b eql_v3.[domain_type] Right operand
 --! @return Boolean [Result description]
 --!
 --! @example
 --! -- [Specific example showing operator usage]
 --! SELECT * FROM table WHERE encrypted_col [operator] value;
 --!
---! @see eql_v2.[related_function]
-CREATE FUNCTION eql_v2."[operator]"(...)
+--! @see eql_v3.[related_function]
+CREATE FUNCTION eql_v3."[operator]"(...)
 ```
 
 ## Template: Domain Type
@@ -57,11 +57,13 @@ CREATE FUNCTION eql_v2."[operator]"(...)
 --! @brief [Type name] index term type
 --!
 --! Domain type representing [description of what this type represents].
---! Used for [use case] via the '[index_name]' index type.
+--! Used for [use case] during searchable-encryption queries (e.g. equality via
+--! `eq_term`, ordering via `ord_term`).
 --!
---! @see eql_v2.add_search_config
+--! @see eql_v3.eq_term
 --! @note This is a transient type used only during query execution
-CREATE DOMAIN eql_v2.[type_name] AS [base_type];
+--! @note Encrypted-domain types are jsonb-backed — always `AS jsonb`, never domain-over-domain
+CREATE DOMAIN eql_v3.[type_name] AS jsonb;
 ```
 
 ## Template: Composite Type
@@ -72,7 +74,7 @@ CREATE DOMAIN eql_v2.[type_name] AS [base_type];
 --! [Detailed description including structure/fields]
 --!
 --! @see [related functions]
-CREATE TYPE eql_v2.[type_name] AS (
+CREATE TYPE eql_v3.[type_name] AS (
   field_name field_type
 );
 ```
@@ -85,7 +87,7 @@ CREATE TYPE eql_v2.[type_name] AS (
 --! @param $1 [State type] [State description]
 --! @param $2 [Input type] [Input description]
 --! @return [State type] [Updated state description]
-CREATE FUNCTION eql_v2._state_function(...)
+CREATE FUNCTION eql_v3._state_function(...)
 
 --! @brief [Aggregate behavior description]
 --!
@@ -97,8 +99,8 @@ CREATE FUNCTION eql_v2._state_function(...)
 --! @example
 --! -- [Example query using aggregate]
 --!
---! @see eql_v2._state_function
-CREATE AGGREGATE eql_v2.aggregate_name(...) (...)
+--! @see eql_v3._state_function
+CREATE AGGREGATE eql_v3.aggregate_name(...) (...)
 ```
 
 ## Template: Operator Class
@@ -127,5 +129,5 @@ CREATE OPERATOR CLASS [opclass_name] ...
 --! @param value [Type] [Value being checked]
 --! @return Boolean True if constraint satisfied
 --! @throws Exception if [constraint violation condition]
-CREATE FUNCTION eql_v2.[constraint_function](...)
+CREATE FUNCTION eql_v3.[constraint_function](...)
 ```

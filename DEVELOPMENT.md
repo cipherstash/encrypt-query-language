@@ -3,81 +3,113 @@
 ## Table of Contents
 
 - [How this project is organised](#how-this-project-is-organised)
+  - [The `eql_v3` surface](#the-eql_v3-surface)
+  - [Repository layout](#repository-layout)
 - [Set up a local development environment](#set-up-a-local-development-environment)
   - [Installing mise](#installing-mise)
+- [Building](#building)
+  - [The catalog and code generation](#the-catalog-and-code-generation)
+  - [The dependency system](#the-dependency-system)
+  - [Building a release locally](#building-a-release-locally)
 - [Testing](#testing)
   - [Running tests locally](#running-tests-locally)
+  - [Rust workspace tests (no database)](#rust-workspace-tests-no-database)
+- [Adding to the `eql_v3` surface](#adding-to-the-eql_v3-surface)
+  - [Adding a scalar encrypted-domain type](#adding-a-scalar-encrypted-domain-type)
+  - [Hand-written SQL](#hand-written-sql)
+  - [Documentation comments](#documentation-comments)
 - [Releasing](#releasing)
-- [Building](#building)
-  - [Dependencies](#dependencies)
-  - [Building a release locally](#building-a-release-locally)
-- [Structure](#structure)
-  - [Schema](#schema)
-  - [Types](#types)
-    - [Encrypted column type](#encrypted-column-type)
-    - [Encrypted index term types](#encrypted-index-term-types)
-  - [Operators](#operators)
-    - [Working without operators](#working-without-operators)
-  - [Configuration table](#configuration-table)
+  - [dbdev](#dbdev)
 
-### How this project is organised
+## How this project is organised
 
-Development is managed through [mise](https://mise.jdx.dev/), both locally and [in CI](https://github.com/cipherstash/encrypt-query-language/actions).
+Encrypt Query Language (EQL) is a PostgreSQL extension for searchable
+encryption. Development is managed through [mise](https://mise.jdx.dev/), both
+locally and [in CI](https://github.com/cipherstash/encrypt-query-language/actions).
 
 mise has tasks for:
 
-- Building EQL install and uninstall scripts (`build`)
+- Building the EQL install and uninstall scripts (`build`)
 - Starting and stopping PostgreSQL containers (`postgres:up`, `postgres:down`)
-- Running unit and integration tests (`test`, `reset`)
+- Running tests and resetting database state (`test`, `reset`)
+- Regenerating the encrypted-domain SQL surface from the Rust catalog (run as
+  part of `build`)
+- Validating and generating documentation (`docs:validate`, `docs:generate`)
 
-These are the important files in the repo:
+### The `eql_v3` surface
 
-```
+EQL installs a single, self-contained PostgreSQL schema, **`eql_v3`**, which
+namespaces the encrypted-domain **scalar type families** (`int4`, `int2`,
+`int8`, `date`, `timestamptz`, `numeric`, `text`, `bool`, `float4`, `float8`).
+It owns its own copies of the searchable-encrypted-metadata (SEM) index-term
+types it needs (`eql_v3.hmac_256`, `eql_v3.ore_block_256`, `eql_v3.bloom_filter`),
+so the surface has no dependency on any other EQL schema and installs into a
+database with nothing else present.
+
+> **About `eql_v2`.** Earlier EQL releases shipped an `eql_v2` schema — a
+> composite encrypted column type, database-side configuration management, and
+> operator-class-on-column indexing. That surface was **removed in 3.0.0**; the
+> repo now builds and ships only `eql_v3`, and the encryption client
+> (CipherStash Proxy / Protect.js) owns the configuration model the database-side
+> `eql_v2` functions previously provided. You will still see `eql_v2` named in
+> fork-provenance comments under `src/v3/` (the v3 SEM types were forked from the
+> old v2 originals) and in historical records (`CHANGELOG.md`, the v2.x upgrade
+> guides) — those mentions are deliberate and do not mean `eql_v2` is installed.
+
+### Repository layout
+
+These are the important files and directories in the repo:
+
+```text
 .
-├── mise.toml              <-- the main config file for mise
-├── tasks/                 <-- mise tasks
-├── src/                   <-- The individual SQL components that make up EQL
-│   ├── blake3/            <-- blake3 index term type
-│   ├── encrypted/         <-- Encrypted column type
-│   ├── operators/         <-- Operators for the encrypted column type
-│   ├── match/             <-- match index term type
-│   ├── unique/            <-- unique index term type
-│   ├── ore/               <-- ore index term type
-│   ├── ore_cllw_u64_8/    <-- ore-cllw fixed index term type
-│   ├── ore_cllw_var_8/    <-- ore-cllw variable index term type
-│   ├── config/            <-- Configuration management for encrypted columns
-│   ├── schema.sql         <-- Defines the PostgreSQL schema for namespacing EQL
-│   ├── crypto.sql         <-- Installs pg_crypto extension, required by ORE
-│   ├── common.sql         <-- Shared helper functions
-│   └── version.sql        <-- Defines function to query current EQL version - automatically generated on build
-├── docs/                  <-- Tutorial, reference, and concept documentation
-├── tests/                 <-- Unit and integration tests
-│   ├── docker-compose.yml <-- Docker configuration for running PostgreSQL instances
-│   └── *.sql              <-- Helpers and test data loaded during test runs
-├── release/               <-- Build artifacts produced by the `build` task
-├── examples/              <-- Example uses of EQL in different languages
-└── playground/            <-- Playground enviroment for experimenting with EQL and CipherStash Proxy
+├── mise.toml                  <-- the main config file for mise
+├── tasks/                     <-- mise task scripts (build, test, reset, docs, …)
+│   ├── build.sh               <-- regenerates + assembles the release SQL
+│   ├── test.sh                <-- runs the SQLx test suite
+│   ├── reset.sh               <-- uninstall + install EQL into local postgres
+│   ├── postgres.toml          <-- postgres:up / postgres:down / postgres:reset
+│   ├── docs/                  <-- documentation generate/validate tasks
+│   └── test/                  <-- additional test tasks (self_contained_v3, …)
+├── crates/                    <-- Rust workspace: catalog, code generator, types
+│   ├── eql-scalars/           <-- THE catalog (eql-scalars::CATALOG): source of truth
+│   ├── eql-codegen/           <-- renders the eql_v3 scalar SQL from the catalog
+│   ├── eql-types/             <-- shared Rust types + generated TS/JSON Schema bindings
+│   └── eql-tests-macros/      <-- proc-macros used by the SQLx test matrix
+├── src/                       <-- SQL components that make up EQL
+│   ├── v3/                    <-- the self-contained eql_v3 surface
+│   │   ├── schema.sql         <-- defines the eql_v3 PostgreSQL schema
+│   │   ├── crypto.sql         <-- crypto helpers (forked for v3)
+│   │   ├── common.sql         <-- shared helper functions (forked for v3)
+│   │   ├── version.sql        <-- eql_v3.version() — generated from version.template
+│   │   ├── version.template   <-- template for version.sql
+│   │   ├── sem/               <-- hand-written SEM index-term types (hmac_256, ore_block_256, …)
+│   │   ├── scalars/           <-- generated scalar domain families, one dir per type
+│   │   │   ├── functions.sql  <-- shared blocker for native jsonb operators
+│   │   │   └── <T>/           <-- e.g. int4/, text/, bool/ (mostly gitignored, generated)
+│   │   ├── jsonb/             <-- jsonb SteVec support
+│   │   └── lint/              <-- structural lints
+│   ├── deps-v3.txt            <-- REQUIRE edges for the v3 surface
+│   ├── deps-ordered-v3.txt    <-- tsorted build order
+│   └── README.md
+├── docs/                      <-- reference, concept, and API documentation
+├── tests/                     <-- test framework and fixtures
+│   ├── docker-compose.yml     <-- Docker config for PostgreSQL 14–17 (port 7432)
+│   └── sqlx/                  <-- Rust/SQLx test suite
+└── release/                   <-- build artifacts produced by `mise run build`
+    ├── cipherstash-encrypt.sql           <-- installer
+    └── cipherstash-encrypt-uninstall.sql <-- uninstaller
 ```
 
-Tests are in the `tests/sqlx/` directory using Rust and the SQLx framework.
-
-We break SQL into small modules named after what they do.
-
-In general, operator functions are thin wrappers around larger functions that do the actual work.
-Put the wrapper functions in `operators.sql` and the larger functions in `functions.sql`.
-
-Dependencies between SQL in `src/` are declared in a comment at the top of each file.
-All SQL files should `REQUIRE` the source file of any other object they reference.
-
-All files must have at least one declaration, and the default is to reference the schema:
-
-```
--- REQUIRE: src/schema.sql
-```
+> [!IMPORTANT]
+> The per-type scalar SQL files (`src/v3/scalars/<T>/<T>_types.sql`,
+> `*_functions.sql`, `*_operators.sql`, `*_aggregates.sql`) are **generated**
+> and **gitignored**. Never hand-edit them — they are overwritten on every
+> build. See [The catalog and code generation](#the-catalog-and-code-generation).
 
 ## Set up a local development environment
 
-> [!IMPORTANT] > **Before you follow this how-to** you need to have this software installed:
+> [!IMPORTANT]
+> **Before you follow this how-to** you need to have this software installed:
 >
 > - [mise](https://mise.jdx.dev/) — see the [installing mise](#installing-mise) instructions
 > - [Docker](https://www.docker.com/) — see Docker's [documentation for installing](https://docs.docker.com/get-started/get-docker/)
@@ -89,10 +121,10 @@ Local development quickstart:
 git clone https://github.com/cipherstash/encrypt-query-language
 cd encrypt-query-language
 
-# Install dependencies
+# Trust the mise config and install tooling (Rust toolchain, sqlx-cli, …)
 mise trust --yes
 
-# Build EQL installer and uninstaller, outputting to release/
+# Build the EQL installer and uninstaller, outputting to release/
 mise run build
 
 # Start a postgres instance (defaults to PostgreSQL 17)
@@ -127,38 +159,114 @@ echo 'eval "$(mise activate bash)"' >> ~/.bashrc
 echo 'eval "$(mise activate zsh)"' >> ~/.zshrc
 ```
 
-We use [`cargo-binstall`](https://github.com/cargo-bins/cargo-binstall) for faster installation of tools installed via `mise` and Cargo.
-We install `cargo-binstall` via `mise` when installing development and testing dependencies.
+We use [`cargo-binstall`](https://github.com/cargo-bins/cargo-binstall) for
+faster installation of tools installed via mise and Cargo. It is installed via
+mise when bootstrapping development and testing dependencies.
 
 > [!TIP]
-> We provide abbreviations for most of the commands that follow.
-> For example, `mise run postgres:setup` can be abbreviated to `mise r s`.
-> Run `mise tasks --extended` to see the task shortcuts.
+> Many tasks have short aliases. For example, `mise run build` can be
+> abbreviated to `mise r b`, and `mise run clean` to `mise r k`.
+> Run `mise tasks --extended` to see the available tasks and shortcuts.
+
+## Building
+
+The build regenerates the `eql_v3` scalar SQL surface from the Rust catalog,
+resolves SQL dependencies into a single ordered file, and writes the install
+and uninstall scripts to `release/`.
+
+### The catalog and code generation
+
+The `eql_v3` scalar encrypted-domain types are **generated** from a single Rust
+source of truth — the `CATALOG` const in
+[`crates/eql-scalars/src/lib.rs`](./crates/eql-scalars/src/lib.rs). There is no
+TOML manifest and no Python.
+
+Each scalar type is one `ScalarSpec` row in `CATALOG`, declaring:
+
+- the type `token` (e.g. `int8`),
+- its `ScalarKind` (the `kind` field),
+- the `DomainSpec`s mapping each generated domain suffix to its fixed index
+  `Term`s (`_eq => [Hm]`, `_ord` / `_ord_ore => [Ore]`), and
+- the plaintext `Fixture` value list the SQLx test matrix consumes.
+
+`mise run build` invokes `cargo run -p eql-codegen`, which regenerates the SQL
+surface into `src/v3/scalars/<T>/` from `CATALOG` at the start of every build.
+For an unchanged catalog, regeneration is deterministic and byte-identical.
+
+The generated files
+(`<T>_types.sql` / `<T>_functions.sql` / `<T>_operators.sql` /
+`<T>_aggregates.sql`) carry an `-- AUTOMATICALLY GENERATED FILE` header (the
+project-wide marker that `docs:validate` greps for), are **gitignored**, and
+are **never committed**. If `mise run build` produces unexpected output, the
+change is in `crates/eql-scalars/src` (the catalog/terms) or
+`crates/eql-codegen/src` (the renderers), not in run-to-run variation.
+
+### The dependency system
+
+SQL sources under `src/v3/` are split into small modules. Dependencies between
+them are declared with `-- REQUIRE:` comments at the top of each file — every
+file should `REQUIRE` the source of any other object it references.
+
+At minimum, a file references the schema:
+
+```text
+-- REQUIRE: src/v3/schema.sql
+```
+
+The build collects these edges into `src/deps-v3.txt`, resolves them with
+`tsort` into `src/deps-ordered-v3.txt`, and concatenates the files in
+dependency order to produce a single installer. The build fails loudly if a
+file referenced in the dependency list does not exist.
+
+The `eql_v3` surface is **self-contained**: no `eql_v2.<symbol>` reference
+appears anywhere under `src/v3/`. This invariant is enforced in CI by
+`mise run test:self_contained_v3`.
+
+### Building a release locally
+
+To build a release locally, run:
+
+```bash
+# alias: mise r b
+mise run build
+```
+
+This produces two SQL files in `release/`:
+
+- An installer (`cipherstash-encrypt.sql`), and
+- An uninstaller (`cipherstash-encrypt-uninstall.sql`)
+
+> [!TIP]
+> A bare build can leave stale generated files. When in doubt, run a clean
+> build:
+>
+> ```bash
+> mise run clean && mise run build   # alias: mise r k && mise r b
+> ```
 
 ## Testing
 
-There are tests for checking EQL against PostgreSQL versions 14–17, that verify:
+EQL is tested against PostgreSQL versions 14–17. The suite is written in Rust
+using the SQLx framework and lives in `tests/sqlx/`. Container configuration is
+in `tests/docker-compose.yml`; the database listens on **port 7432**
+(`localhost:7432`, user `cipherstash`, password `password`).
 
-- Adding, removing, and modifying encrypted data and indexes
-- Validating, applying, and removing configuration for encrypted data and encrypted indexes
-- Validating schemas for EQL configuration, encrypted data, and encrypted indexes
-- Using PostgreSQL operators on encrypted data and indexes (`=`, `<>`, `@>`)
-
-Tests are written in Rust using the SQLx framework and live in `tests/sqlx/`.
-
-The easiest way to run the tests [is in GitHub Actions](./.github/workflows/test-eql.yml):
-
-- Automatically whenever there are changes in the `sql/`, `tests/`, or `tasks/` directories
-- By manually running [the workflow](https://github.com/cipherstash/encrypt-query-language/actions/workflows/test-eql.yml)
-
-You can also [run the tests locally](#running-tests-locally) when doing local development.
+> [!IMPORTANT]
+> EQL is searchable encryption, so tests run against **real ciphertexts and
+> index terms** produced by the actual crypto — never hand-curated or synthetic
+> blobs. Fixtures are generated by encrypting plaintext through
+> cipherstash-client, so the SQLx suite **requires** CipherStash credentials
+> (ZeroKMS auth plus a client key). CI has them. Do not add static/committed
+> fixtures to dodge this dependency. See the `test:sqlx:prep` comment in
+> `mise.toml` for the exact environment variables.
 
 ### Running tests locally
 
 > [!IMPORTANT]
-> **Before you run the tests locally** you need to [set up a local dev environment](#set-up-a-local-development-environment).
+> **Before you run the tests locally** you need to
+> [set up a local dev environment](#set-up-a-local-development-environment).
 
-To run tests locally with PostgreSQL 17:
+To run the tests against PostgreSQL 17:
 
 ```shell
 # Start a postgres instance (defaults to PostgreSQL 17)
@@ -171,7 +279,8 @@ mise run test
 mise run postgres:down
 ```
 
-You can run the same tasks for Postgres 14, 15, 16, and 17 by specifying arguments:
+You can run the same tasks against Postgres 14, 15, and 16 by specifying
+arguments:
 
 ```shell
 # Start a postgres 14 instance
@@ -184,193 +293,157 @@ mise run test --postgres 14
 mise run postgres:down
 ```
 
-The configuration for the Postgres containers in `tests/docker-compose.yml`.
-
 Limitations:
 
-- **Volumes for Postgres containers are not persistent.**
-  If you need to look at data in the container, uncomment a volume in
-  `tests/docker-compose.yml`
-- **You can't run multiple Postgres containers at the same time.**
-  All the containers bind to the same port (`7543`). If you want to run
-  multiple containers at the same time, you have to change the ports by
-  editing `tests/docker-compose.yml`
+- **Volumes for Postgres containers are not persistent.** If you need to look at
+  data in the container, uncomment a volume in `tests/docker-compose.yml`.
+- **You can't run multiple Postgres containers at the same time.** All the
+  containers bind to the same port (`7432`). To run multiple containers
+  concurrently, change the ports in `tests/docker-compose.yml`.
+
+### Rust workspace tests (no database)
+
+The catalog, code generator, and shared types have fast tests that do not need a
+database:
+
+```bash
+# Catalog + generator tests (eql-scalars, eql-codegen)
+mise run test:codegen
+
+# Compile, lint, and test the std-only workspace crates
+mise run test:crates
+
+# Parity gate: assert eql-codegen output matches the reference SQL byte-for-byte
+mise run codegen:parity
+
+# Assert the eql_v3 surface is self-contained (no eql_v2 leakage)
+mise run test:self_contained_v3
+```
+
+The catalog is validated by the Rust compiler (an undefined term or unknown
+scalar is a compile error) plus catalog `#[test]`s, so many mistakes are caught
+without a database at all.
+
+## Adding to the `eql_v3` surface
+
+### Adding a scalar encrypted-domain type
+
+Adding a scalar encrypted-domain type (e.g. a new ordered numeric scalar) is one
+`ScalarSpec` row in `eql-scalars::CATALOG`
+([`crates/eql-scalars/src/lib.rs`](./crates/eql-scalars/src/lib.rs)). New term
+behaviour belongs in the `Term` enum's `impl` methods (with tests), not in
+free-form catalog data. After editing the catalog, run `mise run build` to
+regenerate the SQL surface.
+
+Follow the reference guide:
+[`docs/reference/adding-a-scalar-encrypted-domain-type.md`](./docs/reference/adding-a-scalar-encrypted-domain-type.md).
+The mechanics are fixed for ordered scalar domains; the catalog row only
+declares the token, kind, domain suffixes, and terms.
+
+A few footguns the generator exists to prevent — worth knowing when reading the
+output:
+
+- **Blockers must never be `STRICT`** and must be `LANGUAGE plpgsql`, not
+  `LANGUAGE sql`. A blocker exists to always `RAISE`; a `STRICT` or inlinable
+  body lets the planner skip it and silently bypass the "operator not supported"
+  exception.
+- **No domain-over-domain** (`CREATE DOMAIN a AS b`) and **no operator class on
+  a domain.** Index through a functional index on the extractor
+  (`eq_term` / `ord_term`).
+- **Inlinable functions** (extractors, comparison wrappers) need `LANGUAGE sql`,
+  a single-statement `SELECT`, `IMMUTABLE`, and **no `SET` clause** — a pinned
+  `search_path` disables inlining.
+
+### Hand-written SQL
+
+Generated files are gitignored and overwritten on every build, so hand-written
+SQL never goes in them. Hand-written SQL beyond the fixed generated surface
+goes in `src/v3/scalars/<T>/<T>_extensions.sql` — no auto-generated header,
+explicit `-- REQUIRE:` edges, and **it is committed**. The hand-written SEM
+index-term types live under `src/v3/sem/`.
+
+When adding SQL, follow these conventions:
+
+- Never drop the configuration table — it may contain customer data and must
+  survive across EQL versions.
+- Everything else should have a `DROP IF EXISTS`.
+- Functions should be `DROP` then `CREATE` (not `CREATE OR REPLACE`) — data
+  types cannot be changed once created, so dropping first is more flexible.
+- Keep `DROP` and `CREATE` together in the code.
+- In general, put operator wrappers in `operators.sql` and the larger
+  implementation functions in `functions.sql`. Operator functions are thin
+  wrappers around the functions that do the actual work.
+
+### Documentation comments
+
+All SQL functions and types must be documented with Doxygen-style comments using
+the `--!` prefix. At minimum provide `@brief`, plus `@param` for parameters and
+`@return` for non-void returns. Verify coverage and required tags with:
+
+```bash
+mise run docs:validate
+```
+
+See the **Documentation Standards** section in
+[`CLAUDE.md`](./CLAUDE.md) for the full tag list, an annotated example, and the
+generation tasks (`mise run docs:generate`).
 
 ## Releasing
 
 To cut a [release](https://github.com/cipherstash/encrypt-query-language/releases) of EQL:
 
 1. Draft a [new release](https://github.com/cipherstash/encrypt-query-language/releases/new) on GitHub.
-1. Choose a tag, and create a new one with the prefix `eql-` followed by a [semver](https://semver.org/) (for example, `eql-1.2.3`).
+1. Choose a tag, and create a new one with the prefix `eql-` followed by a
+   [semver](https://semver.org/) (for example, `eql-1.2.3`).
 1. Generate the release notes.
-1. Optionally set the release to be the latest (you can set a release to be latest later on if you are testing out a release first).
+1. Optionally set the release to be the latest (you can mark a release as latest
+   later if you are testing it first).
 1. Click `Publish release`.
 
-This will trigger the [Release EQL](https://github.com/cipherstash/encrypt-query-language/actions/workflows/release-eql.yml) workflow, which will build and attach artifacts to [the release](https://github.com/cipherstash/encrypt-query-language/releases/).
+This triggers the
+[Release EQL](https://github.com/cipherstash/encrypt-query-language/actions/workflows/release-eql.yml)
+workflow, which builds and attaches artifacts to the release.
+
+See `CHANGELOG.md` and `docs/upgrading/` for changelog and upgrade-note
+discipline — user-facing changes need a `## [Unreleased]` changelog entry in the
+same PR, and behaviour callers should be aware of needs a numbered upgrade note.
 
 #### Public documentation updates
 
-When a tag with the `eql-` prefix is pushed (for example, `eql-1.2.3`), the workflow at `.github/workflows/rebuild-docs.yml` runs and sends a webhook to our Vercel-hosted public docs site to trigger a rebuild.
+When a tag with the `eql-` prefix is pushed (for example, `eql-1.2.3`), the
+workflow at `.github/workflows/rebuild-docs.yml` runs and sends a webhook to the
+Vercel-hosted public docs site to trigger a rebuild.
 
 What happens end-to-end:
 
-- Release EQL builds EQL artifacts and generates API docs (HTML, XML, Markdown). The Markdown frontmatter includes the release version.
-- Rebuild Docs posts to the `DOCS_WEBHOOK_URL` secret, which Vercel uses to kick off a fresh build of the public docs.
-- The public docs site pulls the latest generated reference (`docs/api/markdown/API.md`) and publishes it under the corresponding version.
+- Release EQL builds EQL artifacts and generates API docs (HTML, XML, Markdown).
+  The Markdown frontmatter includes the release version.
+- Rebuild Docs posts to the `DOCS_WEBHOOK_URL` secret, which Vercel uses to kick
+  off a fresh build of the public docs.
+- The public docs site pulls the latest generated reference
+  (`docs/api/markdown/API.md`) and publishes it under the corresponding version.
 
 Manual triggers and troubleshooting:
 
-- You can re-run the “Rebuild Docs” workflow from the Actions tab if a build fails downstream.
-- Ensure the repository secret `DOCS_WEBHOOK_URL` is set and valid; the workflow simply POSTs to that URL.
-
-This mirrors the process used in the sibling `protect` repository so both products’ documentation stay in sync with releases.
+- You can re-run the "Rebuild Docs" workflow from the Actions tab if a build
+  fails downstream.
+- Ensure the repository secret `DOCS_WEBHOOK_URL` is set and valid; the workflow
+  simply POSTs to that URL.
 
 ### dbdev
 
-We publish a Trusted Language Extension for PostgreSQL for use on [dbdev](https://database.dev/).
-You can find the extension on [dbdev's extension catalog](https://database.dev/cipherstash/eql).
-
-#### Publishing to dbdev
-
-**DISCLAIMER:** At the moment, we are manually publishing the extension to dbdev and the versions might not be in sync with the releases on GitHub until we automate this process.
-
-Steps to publish
+We publish a Trusted Language Extension for PostgreSQL for use on
+[dbdev](https://database.dev/). You can find the extension on
+[dbdev's extension catalog](https://database.dev/cipherstash/eql).
 
 > [!NOTE]
-> Make sure you have the [dbdev CLI](https://supabase.github.io/dbdev/cli/) installed and logged in using the `dbdev shared token` in 1Password.
+> Publishing to dbdev is currently manual, so the dbdev version may lag the
+> GitHub releases until the process is automated. You need the
+> [dbdev CLI](https://supabase.github.io/dbdev/cli/) installed and logged in.
 
-1. Run `mise run build` to build the extension which will create the following file in the `dbdev` directory. (Note: this release artifact is built from the Supabase release artifact).
-2. After the build is complete, you will have a file in the `dbdev` directory called `eql--0.0.0.sql`.
-3. Update the file name from `eql--0.0.0.sql` replacing `0.0.0` with the version number of the release.
-4. Also update the `eql.control` file with the new version number.
-5. Run `dbdev publish` to publish the extension to dbdev.
+Steps to publish:
 
-Reach out to @calvinbrewer if you need help.
-
-## Building
-
-### Dependencies
-
-SQL sources are split into smaller files in `src/`.
-Dependencies are resolved at build time to construct a single SQL file with the correct ordering.
-
-### Building a release locally
-
-To build a release locally, run:
-
-```bash
-mise run build
-```
-
-This produces two SQL files in `releases/`:
-
-- An installer (`cipherstash-encrypt.sql`), and
-- An uninstaller (`cipherstash-encrypt-uninstall.sql`)
-
-## Structure
-
-### Adding SQL
-
-When adding new SQL files to the project, follow these guidelines:
-
-- Never drop the configuration table as it may contain customer data and needs to live across EQL versions
-- Everything else should have a `DROP IF EXISTS`
-- Functions should be `DROP` and `CREATE`, instead of `CREATE OR REPLACE`
-  - Data types cannot be changed once created, so dropping first is more flexible
-- Keep `DROP` and `CREATE` together in the code
-- Types need to be dropped last, add to the `666-drop_types.sql`
-
-### Schema
-
-EQL is installed into the `eql_v2` PostgreSQL schema.
-
-### Types
-
-#### Encrypted column type
-
-`public.eql_v2_encrypted` is EQL's encrypted column type, defined as PostgreSQL composite type.
-
-This column type is used for storing the encrypted value and any associated indexes for searching.
-The associated indexes are described in the [index term types](#index-term-types) section.
-
-`public.eql_v2_encrypted` is in the public schema, because once it's used by a user in one of their tables, encrypted column types cannot be dropped without dropping data.
-
-#### Encrypted index term types
-
-Each type of encrypted index (`unique`, `match`, `ore`) has an associated type, functions, and operators.
-
-These are transient runtime types, used internally by EQL functions and operators:
-
-- `eql_v2.blake3`
-- `eql_v2.hmac_256`
-- `eql_v2.bloom_filter`
-- `eql_v2.ore_cllw_u64_8`
-- `eql_v2.ore_cllw_var_8`
-- `eql_v2.ore_block_u64_8_256`
-- `eql_v2.ore_block_u64_8_256_term`
-
-The data in the column is converted into these types, when any operations are being performed on that encrypted data.
-
-### Operators
-
-Searchable encryption functionality is driven by operators on two types:
-
-- EQL's `eql_v2_encrypted` column type
-- PostgreSQL's `jsonb` column type
-
-For convenience, operators allow comparisons between `eql_v2_encrypted` and `jsonb` column types.
-
-Operators allow comparisons between:
-
-- `eql_v2_encrypted` and `eql_v2_encrypted`
-- `jsonb` and `eql_v2_encrypted`
-- `eql_v2_encrypted` and `jsonb`
-
-Operators defined on the `eql_v2_encrypted` dispatch to the underlying index terms based on the most efficient order of operations.
-
-For example, it is possible to have both `unique` and `ore` indexes defined.
-For equality (`=`, `<>`) operations, a `unique` index term is a text comparison and should be preferred over an `ore` index term.
-
-The index term types and functions are internal implementation details and should not be exposed as operators on the `eql_v2_encrypted` type.
-For example, `eql_v2_encrypted` should not have an operator with the `ore_block_u64_8_256` type.
-Users should never need to think about or interact with EQL internals.
-
-#### Working without operators
-
-There are scenarios where users are unable to install EQL operators in your database.
-Users will experience this in more restrictive environments like Supabase.
-
-EQL can still be used, but requires the use of functions instead of operators.
-
-For example, to perform an equality query:
-
-```sql
-SELECT email FROM users WHERE eql_v2.eq(email, $1);
-```
-
-### Configuration table
-
-EQL uses a table for tracking configuration state in the database, called `public.eql_v2_configuration`.
-
-This table should never be dropped, except by a user explicitly uninstalling EQL.
-
-<!--
-TODO(toby): probably move to README
-TODO(toby): include examples of how to get data out of the table
-
-EQL Design Note
-Experimenting with using a Composite type instead of a Domain type for the encrypted column.
-Composite types are a bit more capable. Domain types are more like an alias for the underlying type (in this case jsonb)
-The consequence of using a Composite type is that the data is stored in the column as a Tuple - effectively the data is wrapped in ()
-This means
-on insert/update the data needs to be cast to eql_v2_encrypted (proxy mapping will handle)
-on read the data needs to be cast back to jsonb if a customer needs the raw json (for data lake transfer etc etc)
-Already built cast helpers so syntax is something like
-    INSERT INTO encrypted (e) VALUES (
-        eql_v2.to_encrypted('{}')
-    );
-
-    INSERT INTO encrypted (e) VALUES (
-        '{}'::jsonb::eql_v2_encrypted
-    );
--->
+1. Run `mise run build` to build the extension artifacts.
+1. Update the artifact file name and the `eql.control` file with the new version
+   number.
+1. Run `dbdev publish` to publish the extension to dbdev.

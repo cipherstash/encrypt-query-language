@@ -1,6 +1,6 @@
 # `postgres-eql` Docker image
 
-A layered image that ships an official `postgres` image with [CipherStash EQL](https://github.com/cipherstash/encrypt-query-language) pre-installed. One `docker run` and you have a Postgres with the `eql_v2` schema, types, and operators ready to use.
+A layered image that ships an official `postgres` image with [CipherStash EQL](https://github.com/cipherstash/encrypt-query-language) pre-installed. One `docker run` and you have a Postgres with the `eql_v3` schema, types, and operators ready to use.
 
 ## Quick start
 
@@ -12,7 +12,7 @@ docker run --rm -p 5432:5432 -e POSTGRES_PASSWORD=postgres \
 Then in another shell:
 
 ```sh
-PGPASSWORD=postgres psql -h localhost -U postgres -c "SELECT eql_v2.version();"
+PGPASSWORD=postgres psql -h localhost -U postgres -c "SELECT eql_v3.version();"
 ```
 
 ## Tags

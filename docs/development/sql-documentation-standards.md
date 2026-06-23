@@ -21,115 +21,100 @@
 
 ### Public Function
 ```sql
---! @brief Initialize a column for encryption/decryption
+--! @brief Extract the equality (hm) index term from an encrypted value
 --!
---! This function configures the CipherStash Proxy to encrypt/decrypt
---! data in the specified column. Must be called before adding search indexes.
+--! Returns the HMAC equality term used by `=` / `<>` and by a functional
+--! hash index. Inlinable, so a functional index on this extractor engages
+--! bare-form queries.
 --!
---! @param table_name Text name of table containing the column
---! @param column_name Text name of column to encrypt
---! @param cast_as Text PostgreSQL type to cast decrypted value (default: 'text')
---! @param migrating Boolean whether this is migration operation (default: false)
---! @return JSONB Configuration object with encryption settings
---! @throws Exception if table or column does not exist
+--! @param a eql_v3.int4_eq Encrypted value carrying an `hm` term
+--! @return eql_v3.hmac_256 The equality index term
 --!
 --! @example
---! SELECT eql_v2.add_column('users', 'encrypted_email', 'text');
+--! CREATE INDEX ON users USING hash (eql_v3.eq_term(salary_eq));
 --!
---! @see eql_v2.add_search_config
-CREATE FUNCTION eql_v2.add_column(
-  table_name text,
-  column_name text,
-  cast_as text DEFAULT 'text',
-  migrating boolean DEFAULT false
-) RETURNS jsonb
+--! @see eql_v3.ord_term
+CREATE FUNCTION eql_v3.eq_term(a eql_v3.int4_eq)
+  RETURNS eql_v3.hmac_256
 AS $$ ... $$;
 ```
 
 ### Private Function
 ```sql
---! @brief Internal helper for encryption validation
+--! @brief Internal helper for encrypted-payload validation
 --! @internal
---! @param config JSONB Configuration object to validate
---! @return Boolean True if configuration is valid
-CREATE FUNCTION eql_v2._validate_config(config jsonb)
+--! @param val JSONB Encrypted payload to validate
+--! @return Boolean True if the payload is well-formed
+CREATE FUNCTION eql_v3._validate_payload(val jsonb)
   RETURNS boolean
 AS $$ ... $$;
 ```
 
 ### Operator
 ```sql
---! @brief Equality comparison for encrypted values
+--! @brief Equality comparison for an encrypted-domain value
 --!
---! Implements the = operator for encrypted column comparisons.
---! Uses encrypted index terms for comparison without decryption.
+--! Implements the `=` operator for an `eql_v3` domain variant. Reduces to a
+--! comparison on the extracted equality term — no decryption.
 --!
---! @param a eql_v2_encrypted Left operand
---! @param b eql_v2_encrypted Right operand
---! @return Boolean True if values are equal via encrypted comparison
+--! @param a eql_v3.int4_eq Left operand
+--! @param b eql_v3.int4_eq Right operand
+--! @return Boolean True if the equality terms match
 --!
 --! @example
 --! -- Using operator syntax:
---! SELECT * FROM users WHERE encrypted_email = encrypted_value;
+--! SELECT * FROM users WHERE encrypted_email = $1;
 --!
---! @see eql_v2.compare
-CREATE FUNCTION eql_v2."="(a eql_v2_encrypted, b eql_v2_encrypted)
+--! @see eql_v3.eq_term
+CREATE FUNCTION eql_v3.eq(a eql_v3.int4_eq, b eql_v3.int4_eq)
   RETURNS boolean
 AS $$ ... $$;
 
 CREATE OPERATOR = (
-  FUNCTION=eql_v2."=",
-  LEFTARG=eql_v2_encrypted,
-  RIGHTARG=eql_v2_encrypted
+  FUNCTION=eql_v3.eq,
+  LEFTARG=eql_v3.int4_eq,
+  RIGHTARG=eql_v3.int4_eq
 );
 ```
 
 ### Type
 ```sql
---! @brief Composite type for encrypted column data
+--! @brief Encrypted-domain type for an equality-searchable int4 column
 --!
---! This is the core type used for all encrypted columns. Data is stored
---! as JSONB with the following structure:
---! - `c`: ciphertext (encrypted value)
---! - `i`: index terms (searchable metadata)
---! - `k`: key ID
---! - `m`: metadata
+--! A `jsonb`-backed domain in the `eql_v3` schema. The `CHECK` requires the
+--! envelope keys (`v`, `i`, `c`), the equality term (`hm`), and pins the
+--! payload version (`VALUE->>'v' = '2'`).
 --!
---! @see eql_v2.ciphertext
---! @see eql_v2.meta_data
-CREATE TYPE eql_v2_encrypted AS (
-  data jsonb
-);
+--! @see eql_v3.eq_term
+CREATE DOMAIN eql_v3.int4_eq AS jsonb
+  CHECK ( ... );
 ```
 
 ### Aggregate
 ```sql
---! @brief State transition function for grouped_value aggregate
+--! @brief State transition function for the MIN aggregate
 --! @internal
---! @param $1 JSONB Accumulated state
---! @param $2 JSONB New value
---! @return JSONB Updated state
-CREATE FUNCTION eql_v2._first_grouped_value(jsonb, jsonb)
-  RETURNS jsonb
+--! @param $1 eql_v3.int4_ord Accumulated state
+--! @param $2 eql_v3.int4_ord New value
+--! @return eql_v3.int4_ord Updated state
+CREATE FUNCTION eql_v3.min_sfunc(eql_v3.int4_ord, eql_v3.int4_ord)
+  RETURNS eql_v3.int4_ord
 AS $$ ... $$;
 
---! @brief Return first non-null value in a group
+--! @brief Minimum encrypted value in a group
 --!
---! Aggregate function that returns the first non-null encrypted value
---! encountered in a GROUP BY clause.
+--! Aggregate over an ordered encrypted-domain column. Comparison routes
+--! through the variant's `<` operator (the ORE block term) — no decryption.
 --!
---! @param input JSONB Encrypted values to aggregate
---! @return JSONB First non-null value in group
+--! @param input eql_v3.int4_ord Encrypted values to aggregate
+--! @return eql_v3.int4_ord The minimum value
 --!
 --! @example
---! -- Get first email per user group
---! SELECT user_id, eql_v2.grouped_value(encrypted_email)
---! FROM user_emails
---! GROUP BY user_id;
+--! SELECT eql_v3.min(price_encrypted) FROM products;
 --!
---! @see eql_v2._first_grouped_value
-CREATE AGGREGATE eql_v2.grouped_value(jsonb) (
-  SFUNC = eql_v2._first_grouped_value,
-  STYPE = jsonb
+--! @see eql_v3.min_sfunc
+CREATE AGGREGATE eql_v3.min(eql_v3.int4_ord) (
+  SFUNC = eql_v3.min_sfunc,
+  STYPE = eql_v3.int4_ord
 );
 ```

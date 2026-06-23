@@ -1,443 +1,125 @@
-# CipherStash Proxy Configuration with EQL functions
+# Setting up encrypted columns with CipherStash Proxy
+
+This tutorial walks through an end-to-end round trip: defining encrypted columns with EQL, configuring searchable encryption in the encryption client, and inserting and querying data through [CipherStash Proxy](https://github.com/cipherstash/proxy).
+
+## How the pieces fit together
+
+EQL (the `eql_v3` schema) and the encryption client split responsibilities:
+
+| Responsibility | Owner |
+| --- | --- |
+| Encrypted-column **types** and **operators** (`eql_v3.text_eq`, `eql_v3.json`, `=`, `@>`, …) | **EQL** (this repo) |
+| PostgreSQL **functional indexes** on the term extractors | **EQL** / you |
+| **Which columns are encrypted** and **which index terms** each carries | The **encryption client** — [CipherStash Proxy](https://github.com/cipherstash/proxy) / [Protect.js](https://github.com/cipherstash/protectjs) |
+| Performing **encryption / decryption** on the wire | The encryption client |
+
+> **There is no database-side configuration API in `eql_v3`.** Earlier versions configured searchable encryption with database functions (`add_column`, `add_search_config`). That surface has been removed — configuration now lives entirely in the client. The database's only job is to *store* the encrypted columns (typed as `eql_v3` domains) and *resolve* the encrypted operators.
 
 ## Prerequisites
 
-> [!IMPORTANT] 
-> Before using any EQL configuration functions, you must first create the encrypted column in your database table:
+- EQL installed into your database (the `eql_v3` surface). See the [README](../../README.md#installation).
+- A running CipherStash Proxy (or a Protect.js client) configured for your workspace.
+
+## 1. Define encrypted columns
+
+Type each column as the `eql_v3` domain **variant** for the capability you need (see the [SQL support matrix](../reference/sql-support.md) for the full list):
 
 ```sql
--- First, add the encrypted column to your table
-ALTER TABLE users ADD COLUMN encrypted_email eql_v2_encrypted;
+-- equality-searchable encrypted text
+ALTER TABLE users  ADD COLUMN encrypted_email eql_v3.text_eq;
+
+-- range/ordering-searchable encrypted timestamp
+ALTER TABLE events ADD COLUMN encrypted_at    eql_v3.timestamptz_ord;
+
+-- full-text (bloom) searchable encrypted text
+ALTER TABLE users  ADD COLUMN encrypted_name  eql_v3.text_match;
+
+-- searchable encrypted JSON document
+ALTER TABLE users  ADD COLUMN encrypted_profile eql_v3.json;
 ```
 
-The column **must** be of type `eql_v2_encrypted`.
-If you try to configure a column that doesn't exist in the database, you'll get the error:
+The variant fixes the column's searchable surface: `_eq` for `=`, `_ord` for ordering/range, `text_match` for `@>` token containment, `eql_v3.json` for encrypted JSON. The bare `eql_v3.<T>` variant is storage/decryption only.
 
-```
-ERROR: Some pending columns do not have an encrypted target
-```
+## 2. Configure searchable encryption in the client
 
-## Initializing column configuration
+Tell the encryption client which columns to encrypt and which index terms to emit. This is **client-side configuration**, not SQL:
 
-After creating the encrypted column, initialize it for use with CipherStash Proxy using the `eql_v2.add_column` function:
+- **Protect.js** — define the columns and indexes in the schema. See the [Protect.js schema reference](https://github.com/cipherstash/protectjs/blob/main/docs/reference/schema.md).
+- **CipherStash Proxy** — configure the encrypted columns in the Proxy's mapping config. See [CipherStash Proxy](https://github.com/cipherstash/proxy).
+
+The terms the client emits (`hm` for equality, `ob` for ordering, `bf` for match, ste_vec for JSON) must match the column's domain variant from step 1 — e.g. configure an equality index for a column typed `eql_v3.text_eq`.
+
+## 3. Create functional indexes
+
+Index the term extractor so queries engage an index. Each capability has one recipe (full detail in [Database Indexes](../reference/database-indexes.md)):
 
 ```sql
-SELECT eql_v2.add_column('users', 'encrypted_email', 'text'); -- Initialize the new encrypted column
+CREATE INDEX users_email_eq  ON users  USING hash  (eql_v3.eq_term(encrypted_email));
+CREATE INDEX events_at_ord   ON events USING btree (eql_v3.ord_term(encrypted_at));
+CREATE INDEX users_name_match ON users USING gin   (eql_v3.match_term(encrypted_name));
+ANALYZE users;
 ```
 
-**Full signature:**
-```sql
-SELECT eql_v2.add_column(
-  'table_name',       -- Name of the table
-  'column_name',      -- Name of the encrypted column (must already exist as type eql_v2_encrypted)
-  'cast_as',          -- PostgreSQL type to cast decrypted data [optional, defaults to 'text']
-  migrating           -- If true, stages changes without immediate activation [optional, defaults to false]
-);
-```
+## 4. Insert and read through the Proxy
 
-**Note:** This function allows you to encrypt and decrypt data but does not enable searchable encryption. See [Searching data with EQL](#searching-data-with-eql) for enabling searchable encryption.
-
-## Complete setup workflow
-
-Here's the complete workflow to set up an encrypted column with search capabilities:
+Run writes and reads through CipherStash Proxy. On insert, the Proxy encrypts the plaintext into the EQL payload (envelope `v`/`i`/`c` plus the configured index terms — see the [payload / wire format](../../crates/eql-types/README.md)); on read, it decrypts automatically.
 
 ```sql
--- Step 1: Create the encrypted column in your table
-ALTER TABLE users ADD COLUMN encrypted_email eql_v2_encrypted;
+-- Through the Proxy: the plaintext is encrypted on the way in
+INSERT INTO users (encrypted_email)
+VALUES ('{"v":2,"k":"pt","p":"test@example.com","i":{"t":"users","c":"encrypted_email"}}');
 
--- Step 2: Configure the column for encryption/decryption
-SELECT eql_v2.add_column('users', 'encrypted_email', 'text');
-
--- Step 3: Add search indexes as needed
-SELECT eql_v2.add_search_config('users', 'encrypted_email', 'unique', 'text');
-SELECT eql_v2.add_search_config('users', 'encrypted_email', 'match', 'text');
-
--- Step 4: Verify configuration
-SELECT * FROM eql_v2.config();
-```
-
-## Refreshing CipherStash Proxy configuration
-
-CipherStash Proxy refreshes the configuration every 60 seconds. To force an immediate refresh, run:
-
-```sql
-SELECT eql_v2.reload_config();
-```
-
-> Note: This statement must be executed when connected to CipherStash Proxy.
-> When connected to the database directly, it is a no-op.
-
-## Storing data
-
-Encrypted data is stored as `jsonb` values in the PostgreSQL database, regardless of the original data type.
-
-You can read more about the data format [here](../reference/PAYLOAD.md).
-
-### Inserting data
-
-When inserting data into the encrypted column, wrap the plaintext in the appropriate EQL payload. These statements must be run through the CipherStash Proxy to **encrypt** the data.
-
-**Example:**
-
-```sql
-INSERT INTO users (encrypted_email) VALUES (
-  '{"v":2,"k":"pt","p":"test@example.com","i":{"t":"users","c":"encrypted_email"}}'
-);
-```
-
-Data is stored in the PostgreSQL database as:
-
-```json
-{
-  "c": "generated_ciphertext",
-  "i": {
-    "c": "encrypted_email",
-    "t": "users"
-  },
-  "k": "ct",
-  "bf": null,
-  "ob": null,
-  "u": null,
-  "v": 2
-}
-```
-
-### Reading data
-
-When querying data, select the encrypted column. CipherStash Proxy will **decrypt** the data automatically.
-
-**Example:**
-
-```sql
+-- Through the Proxy: the ciphertext is decrypted on the way out
 SELECT encrypted_email FROM users;
 ```
 
-Data is returned as:
+> Run directly against the database (bypassing the Proxy) and you will see the stored `jsonb` ciphertext payload, not plaintext.
 
-```json
-{
-  "k": "pt",
-  "p": "test@example.com",
-  "i": {
-    "t": "users",
-    "c": "encrypted_email"
-  },
-  "v": 2,
-  "q": null
-}
-```
+## 5. Searching data
 
-> Note: If you execute this query directly on the database, you will not see any plaintext data but rather the `jsonb` payload with the ciphertext.
+Type the query operand (the Proxy supplies typed parameters automatically; in hand-written SQL, cast). For the full operator surface see the [SQL support matrix](../reference/sql-support.md) and [EQL Functions Reference](../reference/eql-functions.md).
 
-## Configuring indexes for searching data
-
-In order to perform searchable operations on encrypted data, you must configure indexes for the encrypted columns.
-
-> **IMPORTANT:** If you have existing data that's encrypted and you add or modify an index, all the data will need to be re-encrypted.
-> This is due to the way CipherStash Proxy handles searchable encryption operations.
-
-### Adding an index
-
-**Prerequisites:** The encrypted column must already exist in the database (see [Prerequisites](#prerequisites)) and be configured with `eql_v2.add_column`.
-
-Add an index to an encrypted column using the `eql_v2.add_search_config` function:
+**Equality** (`eql_v3.text_eq`):
 
 ```sql
-SELECT eql_v2.add_search_config(
-  'table_name',       -- Name of the table
-  'column_name',      -- Name of the column
-  'index_name',       -- Index kind ('unique', 'match', 'ore', 'ste_vec')
-  'cast_as',          -- PostgreSQL type to cast decrypted data ('text', 'int', etc.) [optional, defaults to 'text']
-  'opts',             -- Index options as JSONB [optional, defaults to '{}']
-  migrating           -- If true, stages changes without immediate activation [optional, defaults to false]
-);
+SELECT * FROM users WHERE encrypted_email = $1;
+-- operator-free form (e.g. Supabase):
+SELECT * FROM users WHERE eql_v3.eq(encrypted_email, $1::eql_v3.text_eq);
 ```
 
-You can read more about the index configuration options [here](../reference/index-config.md).
-
-**Example (Unique index):**
+**Range / ordering** (`eql_v3.timestamptz_ord`):
 
 ```sql
-SELECT eql_v2.add_search_config(
-  'users',
-  'encrypted_email',
-  'unique',
-  'text'
-);
+SELECT * FROM events WHERE encrypted_at < $1 ORDER BY eql_v3.ord_term(encrypted_at) DESC;
 ```
 
-**Example (With custom options and staging):**
+**Full-text match** (`eql_v3.text_match`) — bloom-filter token containment, not `LIKE`:
 
 ```sql
-SELECT eql_v2.add_search_config(
-  'users',
-  'encrypted_name',
-  'match',
-  'text',
-  '{"k": 6, "bf": 4096}',
-  true  -- Stage changes without immediate activation
-);
+SELECT * FROM users WHERE encrypted_name @> $1::eql_v3.text_match;
 ```
 
-Configuration changes are automatically migrated and activated unless the `migrating` parameter is set to `true`.
-
-## Searching data with EQL
-
-EQL provides specialized functions to interact with encrypted data, supporting operations like equality checks, range queries, and unique constraints.
-
-In order to use the specialized functions, you must first configure the corresponding indexes.
-
-### Equality search
-
-Enable exact equality search on encrypted data using the `unique` index (backed by hmac_256 or blake3).
-
-**Index configuration example:**
+**Encrypted JSON** (`eql_v3.json`) — containment and field access; see [EQL with JSON and JSONB](../reference/json-support.md):
 
 ```sql
-SELECT eql_v2.add_search_config(
-  'users',
-  'encrypted_email',
-  'unique',
-  'text'
-);
+SELECT * FROM users WHERE encrypted_profile @> $1::eql_v3.ste_vec_query;
+SELECT encrypted_profile -> 'email_selector'::text FROM users;
 ```
 
-**Query using operators (recommended):**
+## Frequently asked questions
 
-```sql
--- Use the = operator directly on the encrypted column
-SELECT * FROM users
-WHERE encrypted_email = '{"v":2,"k":"pt","p":"test@example.com","i":{"t":"users","c":"encrypted_email"}}'::eql_v2_encrypted;
-```
+**Can I use EQL without an encryption client?** No — encryption and decryption are performed by CipherStash Proxy or Protect.js. EQL provides the database-side types, operators, and indexes; the client provides the crypto and the configuration.
 
-**Query using functions (for Supabase or operator-restricted environments):**
+**How do I choose which columns are searchable, and how?** In the client configuration (Protect.js schema / Proxy mapping), matched to the column's `eql_v3` domain variant. There are no database-side `add_column` / `add_search_config` calls.
 
-```sql
-SELECT * FROM users
-WHERE eql_v2.eq(encrypted_email,
-  '{"v":2,"k":"pt","p":"test@example.com","i":{"t":"users","c":"encrypted_email"}}'::eql_v2_encrypted
-);
-```
+**Which operators are available on which column?** See the [SQL support matrix](../reference/sql-support.md).
 
-Equivalent plaintext query:
-
-```sql
-SELECT * FROM users WHERE email = 'test@example.com';
-```
-
-### Full-text search
-
-Enables full-text search on encrypted data using the `match` index (backed by bloom filters).
-
-**Index configuration example:**
-
-```sql
-SELECT eql_v2.add_search_config(
-  'users',
-  'encrypted_name',
-  'match',
-  'text',
-  '{"token_filters": [{"kind": "downcase"}], "tokenizer": { "kind": "ngram", "token_length": 3 }}'
-);
-```
-
-**Query using operators (recommended):**
-
-```sql
--- Use the ~~ (LIKE) operator directly on the encrypted column
-SELECT * FROM users
-WHERE encrypted_name ~~ '{"v":2,"k":"pt","p":"alice","i":{"t":"users","c":"encrypted_name"}}'::eql_v2_encrypted;
-
--- Case-insensitive search with ~~* (ILIKE)
-SELECT * FROM users
-WHERE encrypted_name ~~* '{"v":2,"k":"pt","p":"alice","i":{"t":"users","c":"encrypted_name"}}'::eql_v2_encrypted;
-```
-
-**Query using functions (for Supabase or operator-restricted environments):**
-
-```sql
-SELECT * FROM users
-WHERE eql_v2.like(encrypted_name,
-  '{"v":2,"k":"pt","p":"alice","i":{"t":"users","c":"encrypted_name"}}'::eql_v2_encrypted
-);
-```
-
-Equivalent plaintext query:
-
-```sql
-SELECT * FROM users WHERE name LIKE '%alice%';
-```
-
-### Range queries
-
-Enable range queries and ordering on encrypted data using the `ore` index (Order-Revealing Encryption). Supports:
-
-- `ORDER BY`
-- `WHERE` with comparison operators (`<`, `<=`, `>`, `>=`, `=`, `<>`)
-
-**Index configuration example:**
-
-```sql
-SELECT eql_v2.add_search_config(
-  'events',
-  'encrypted_date',
-  'ore',
-  'date'
-);
-```
-
-**Query using operators (recommended):**
-
-```sql
--- Range comparison - use comparison operators directly
-SELECT * FROM events
-WHERE encrypted_date < '{"v":2,"k":"pt","p":"2023-10-05","i":{"t":"events","c":"encrypted_date"}}'::eql_v2_encrypted;
-
-SELECT * FROM events
-WHERE encrypted_date >= '{"v":2,"k":"pt","p":"2023-01-01","i":{"t":"events","c":"encrypted_date"}}'::eql_v2_encrypted;
-
--- Ordering - use ORDER BY directly
-SELECT * FROM events ORDER BY encrypted_date DESC;
-SELECT * FROM events ORDER BY encrypted_date ASC;
-```
-
-Equivalent plaintext queries:
-
-```sql
-SELECT * FROM events WHERE date < '2023-10-05';
-SELECT * FROM events WHERE date >= '2023-01-01';
-SELECT * FROM events ORDER BY date DESC;
-```
-
-### Array Operations
-
-EQL supports array operations on encrypted data:
-
-```sql
--- Get array length
-SELECT eql_v2.jsonb_array_length(encrypted_array) FROM users;
-
--- Get array elements
-SELECT eql_v2.jsonb_array_elements(encrypted_array) FROM users;
-
--- Get array element ciphertexts
-SELECT eql_v2.jsonb_array_elements_text(encrypted_array) FROM users;
-```
-
-### JSON Path Operations
-
-EQL supports JSON path operations on encrypted data using the `->` and `->>` operators:
-
-```sql
--- Get encrypted value at path
-SELECT encrypted_data->'$.field' FROM users;
-
--- Get ciphertext at path
-SELECT encrypted_data->>'$.field' FROM users;
-```
-
-### Containment Operations
-
-For encrypted JSONB data, EQL provides containment operations using the `@>` and `<@` operators:
-
-```sql
--- Check if encrypted_data contains specific structure
-SELECT * FROM users
-WHERE encrypted_data @> '{"v":2,"k":"pt","p":{"account":{"roles":["admin"]}},"i":{"t":"users","c":"encrypted_data"},"q":"ste_vec"}'::eql_v2_encrypted;
-
--- Check if structure is contained in encrypted_data
-SELECT * FROM users
-WHERE '{"v":2,"k":"pt","p":{"roles":["admin"]},"i":{"t":"users","c":"encrypted_data"},"q":"ste_vec"}'::eql_v2_encrypted <@ encrypted_data;
-```
-
-### Text Pattern Matching
-
-EQL supports pattern matching with the `~~` (LIKE) operator:
-
-```sql
--- Pattern matching (case-sensitive)
-SELECT * FROM users
-WHERE encrypted_name ~~ '{"v":2,"k":"pt","p":"Alice%","i":{"t":"users","c":"encrypted_name"},"q":"match"}'::eql_v2_encrypted;
-
--- Pattern matching (case-insensitive)
-SELECT * FROM users
-WHERE encrypted_name ~~* '{"v":2,"k":"pt","p":"alice%","i":{"t":"users","c":"encrypted_name"},"q":"match"}'::eql_v2_encrypted;
-```
-
-## JSON and JSONB support
-
-EQL supports encrypting entire JSON and JSONB data sets.
-This warrants a separate section in the documentation.
-You can read more about the JSONB support in the [JSONB reference guide](../reference/json-support.md).
-
-## Frequently Asked Questions
-
-### How do I integrate CipherStash EQL with my application?
-
-Use CipherStash Proxy to intercept PostgreSQL queries and handle encryption and decryption automatically.
-The proxy interacts with the database using the EQL functions and types defined in this documentation.
-
-Use the [helper packages](#helper-packages-and-examples) to integrate EQL functions into your application.
-
-### Can I use EQL without the CipherStash Proxy?
-
-No, CipherStash Proxy is required to handle the encryption and decryption operations based on the configurations and indexes defined.
-
-### How is data encrypted in the database?
-
-Data is encrypted using CipherStash's cryptographic schemes and stored in the `eql_v2_encrypted` column as a JSONB payload.
-Encryption and decryption are handled by CipherStash Proxy.
-
-### What index types are available?
-
-EQL supports the following index types:
-
-- `unique` - For exact equality searches using HMAC-256
-- `match` - For full-text search using bloom filters
-- `ore` - For range queries and ordering using Order-Revealing Encryption
-- `ste_vec` - For JSON/JSONB containment operations using Structured Encryption
-
-### How do I manage configurations?
-
-Use these functions to manage your EQL configurations:
-
-**Column Management:**
-- `eql_v2.add_column(table_name, column_name, cast_as DEFAULT 'text', migrating DEFAULT false)` - Add a new encrypted column
-- `eql_v2.remove_column(table_name, column_name, migrating DEFAULT false)` - Remove an encrypted column completely
-
-**Index Management:**
-- `eql_v2.add_search_config(table_name, column_name, index_name, cast_as DEFAULT 'text', opts DEFAULT '{}', migrating DEFAULT false)` - Add a search index to a column
-- `eql_v2.remove_search_config(table_name, column_name, index_name, migrating DEFAULT false)` - Remove a specific search index (preserves column configuration)
-- `eql_v2.modify_search_config(table_name, column_name, index_name, cast_as DEFAULT 'text', opts DEFAULT '{}', migrating DEFAULT false)` - Modify an existing search index
-
-**Configuration Management:**
-- `eql_v2.migrate_config()` - Manually migrate pending configuration to encrypting state
-- `eql_v2.activate_config()` - Manually activate encrypting configuration
-- `eql_v2.discard()` - Discard pending configuration changes
-- `eql_v2.config()` - View current configuration in tabular format (returns a table with columns: state, relation, col_name, decrypts_as, indexes)
-
-> [!NOTE]  
-> All configuration functions automatically migrate and activate changes unless `migrating` is set to `true`. 
->
-> When `migrating` is `true`, changes are staged but not immediately applied, allowing for batch configuration updates.
-
-**Important Behavior Differences:**
-- `remove_search_config()` removes only the specified index but preserves the column configuration (including `cast_as` setting)
-- `remove_column()` removes the entire column configuration including all its indexes
-- Empty configurations (no tables/columns) are automatically maintained as active to reflect the current state
+**Where is the data format documented?** See the [payload / wire format](../../crates/eql-types/README.md) for the scalar envelope and index terms, and [EQL with JSON and JSONB](../reference/json-support.md) for the `eql_v3.json` document format.
 
 ## Troubleshooting
 
-### Common errors
+**Operator resolves to native `jsonb` / returns `NULL` instead of searching.** The query operand was an untyped literal, so PostgreSQL flattened the `eql_v3` domain to `jsonb`. Type the operand (`$1::eql_v3.text_eq`, `$1::eql_v3.ste_vec_query`) — the Proxy does this automatically.
 
-**Error: "Some pending columns do not have an encrypted target"**
-- **Cause**: You're trying to configure a column that doesn't exist as `eql_v2_encrypted` type in the database
-- **Solution**: First create the encrypted column with `ALTER TABLE table_name ADD COLUMN column_name eql_v2_encrypted;`
+**`=` returns no rows.** The column's values do not carry an `hm` equality term. Confirm the client is configured to emit the right term for the column's variant (step 2), and that data was written through the Proxy after configuring it.
 
-**Error: "Config exists for column: table_name column_name"**
-- **Cause**: You're trying to add a column that's already configured
-- **Solution**: Use `eql_v2.add_search_config()` to add indexes to existing columns, or `eql_v2.remove_column()` first if you want to reconfigure
-
-**Error: "No configuration exists for column: table_name column_name"**
-- **Cause**: You're trying to add search config to a column that hasn't been configured with `add_column` yet
-- **Solution**: First run `eql_v2.add_column()` to configure the column, then add search indexes
+**Index not used.** Build the functional index on the extractor (step 3), run `ANALYZE`, and confirm the operand is typed. See [Database Indexes — Troubleshooting](../reference/database-indexes.md#troubleshooting).

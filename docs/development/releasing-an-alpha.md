@@ -11,12 +11,12 @@ builds with `mise run build --version <tag>` and attaches these artifacts to the
 
 | Artifact | What it installs |
 |----------|------------------|
-| `cipherstash-encrypt.sql` / `-uninstall.sql` | Full EQL (`eql_v2` + `eql_v3`) |
-| `cipherstash-encrypt-supabase.sql` / `-uninstall-supabase.sql` | Supabase variant |
-| `cipherstash-encrypt-v3.sql` / `-v3-uninstall.sql` | **Standalone, self-contained `eql_v3` surface** (no `eql_v2`) |
+| `cipherstash-encrypt.sql` / `cipherstash-encrypt-uninstall.sql` | **The standalone, self-contained `eql_v3` surface** (no `eql_v2`) |
+| `eql-docs-*.zip` / `eql-docs-*.tar.gz` | Packaged API documentation (from the `publish-docs` job) |
 
-The `eql_v3` installer is the one an alpha consumer wants: it installs the `eql_v3`
-schema into a database with no `eql_v2` present.
+`cipherstash-encrypt.sql` is the only installer: it installs the `eql_v3`
+schema into a database with no `eql_v2` present. (There is no longer a separate
+`-supabase` or `-v3` artifact — the single installer *is* the self-contained v3 surface.)
 
 ## Why a prerelease is different
 
@@ -50,7 +50,7 @@ mise run release:preview --dry-run
 
 # Override the base version / channel / exact tag / target:
 mise run release:preview --version 3.0.0 --channel beta   # -> eql-3.0.0-beta.1
-mise run release:preview --tag eql-3.0.0-rc.1 --target v3-publish-release-artifacts
+mise run release:preview --tag eql-3.0.0-rc.1 --target eql_v3
 ```
 
 | Flag | Meaning | Default |
@@ -79,14 +79,14 @@ to **"Confirm the workflow attached the artifacts"** and the smoke test below.
 3. **Verify the build produces the v3 artifacts locally** (the same files the workflow attaches):
    ```bash
    mise run clean && mise run build
-   ls -la release/cipherstash-encrypt-v3.sql release/cipherstash-encrypt-v3-uninstall.sql
+   ls -la release/cipherstash-encrypt.sql release/cipherstash-encrypt-uninstall.sql
    ```
-   Both must be non-empty (the installer is ~750KB+; the uninstaller is small).
+   Both must be non-empty (the installer is ~900KB+; the uninstaller is small).
 
 4. **Cut the prerelease.** Target the branch carrying the v3 surface and mark it `--prerelease`:
    ```bash
    gh release create eql-3.0.0-alpha.1 \
-     --target v3-publish-release-artifacts \
+     --target eql_v3 \
      --prerelease \
      --title "eql-3.0.0-alpha.1" \
      --notes "Alpha of the standalone eql_v3 surface. See [Unreleased] in CHANGELOG.md."
@@ -98,17 +98,18 @@ to **"Confirm the workflow attached the artifacts"** and the smoke test below.
    gh run watch
    gh release view eql-3.0.0-alpha.1
    ```
-   The release should list all six `.sql` artifacts, including
-   `cipherstash-encrypt-v3.sql` and `cipherstash-encrypt-v3-uninstall.sql`.
+   The release should list the two `.sql` artifacts (`cipherstash-encrypt.sql`
+   and `cipherstash-encrypt-uninstall.sql`) plus the packaged docs bundle.
 
 ## Smoke-test the alpha
 
 Install the standalone v3 surface into a clean database (no `eql_v2`) and confirm it loads:
 
 ```bash
-gh release download eql-3.0.0-alpha.1 -p 'cipherstash-encrypt-v3.sql'
-psql "$DATABASE_URL" -f cipherstash-encrypt-v3.sql
-psql "$DATABASE_URL" -c "\dn eql_v3"   # eql_v3 schema present
+gh release download eql-3.0.0-alpha.1 -p 'cipherstash-encrypt.sql'
+psql "$DATABASE_URL" -f cipherstash-encrypt.sql
+psql "$DATABASE_URL" -c "\dn eql_v3"            # eql_v3 schema present
+psql "$DATABASE_URL" -c "SELECT eql_v3.version();"  # reports the released semver
 ```
 
 ## Promoting to a final release later
