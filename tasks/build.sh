@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Build SQL into single release file"
 #MISE alias="b"
-#MISE sources=["src/v3/**/*.sql", "tasks/pin_search_path_v3.sql", "tasks/uninstall-v3.sql", "crates/eql-scalars/src/**/*.rs", "crates/eql-codegen/src/**/*.rs"]
+#MISE sources=["src/v3/**/*.sql", "src/v3/version.template", "tasks/pin_search_path_v3.sql", "tasks/uninstall-v3.sql", "crates/eql-scalars/src/**/*.rs", "crates/eql-codegen/src/**/*.rs"]
 #MISE outputs=["release/cipherstash-encrypt.sql","release/cipherstash-encrypt-uninstall.sql"]
 #USAGE flag "--version <version>" help="Specify release version of EQL" default="DEV"
 
@@ -80,6 +80,16 @@ rm -f release/cipherstash-encrypt-uninstall.sql
 
 rm -f src/deps-v3.txt
 rm -f src/deps-ordered-v3.txt
+rm -f src/v3/version.sql
+
+
+# Bake the release version into eql_v3.version() (and the eql_v3 schema
+# comment) before the glob below picks it up. The version is supplied via
+# `mise run build --version <semver>` (the `usage_version` env var mise derives
+# from the #USAGE flag); local builds with no flag fall back to DEV. The
+# generated src/v3/version.sql is gitignored, like the other generated v3 SQL.
+RELEASE_VERSION=${usage_version:-DEV}
+sed "s/\$RELEASE_VERSION/$RELEASE_VERSION/g" src/v3/version.template > src/v3/version.sql
 
 
 # The self-contained eql_v3 surface — schema, SEM types, scalar domains —

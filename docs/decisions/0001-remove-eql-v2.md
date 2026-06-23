@@ -60,6 +60,10 @@ The supported searchable-encryption capabilities (equality, ordered range,
 `MIN`/`MAX`, encrypted-JSONB document containment and path access) are all
 provided by the `eql_v3` surface.
 
+Version introspection is **re-homed, not dropped**: `eql_v2.version()` is
+replaced by `eql_v3.version()` (bare-semver text, also published as the
+`eql_v3` schema comment), baked in at build time the same way.
+
 ## Consequences
 
 - **This is a major (3.0.0) break of the public API.** Callers using the

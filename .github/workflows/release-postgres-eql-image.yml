@@ -38,8 +38,9 @@ jobs:
     outputs:
       # Used for image tags, e.g. "2.1.8" -> ghcr.io/.../postgres-eql:17-2.1.8
       eql_version: ${{ steps.ver.outputs.eql_version }}
-      # Passed to `mise run build --version`. Matches the existing release-eql.yml
-      # convention so eql_v2.version() in the image is byte-identical to the SQL release.
+      # Passed to `mise run build --version`. Bare semver (no `eql-` prefix),
+      # matching release-eql.yml, so eql_v3.version() in the image is
+      # byte-identical to the SQL release.
       build_version: ${{ steps.ver.outputs.build_version }}
       update_floating_tags: ${{ steps.ver.outputs.update_floating_tags }}
 
@@ -61,8 +62,8 @@ jobs:
           INPUT_FLOATING: ${{ inputs.update_floating_tags }}
         run: |
           if [[ "$EVENT_NAME" == "release" ]]; then
-            build_version="$RELEASE_TAG"          # e.g. "eql-2.1.8"
             eql_version="${RELEASE_TAG#eql-}"     # e.g. "2.1.8"
+            build_version="$eql_version"          # bare semver for eql_v3.version()
             floating="true"
           else
             eql_version="$INPUT_VERSION"
