@@ -278,6 +278,12 @@ These frameworks use EQL to enable searchable encryption functionality in Postgr
 
 EQL is distributed as a versioned install script (`cipherstash-encrypt.sql`) published with each [GitHub release](https://github.com/cipherstash/encrypt-query-language/releases). Track the release tag you installed; re-running the install script is idempotent and upgrades the `eql_v3` surface in place.
 
+You can check the version installed in a database by running:
+
+```sql
+SELECT eql_v3.version();
+```
+
 ### Upgrading
 
 To upgrade to the latest version of EQL, you can simply run the install script again.

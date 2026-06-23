@@ -10,6 +10,7 @@ cd "$REPO_ROOT"
 # A file deleted by the migration (e.g. index-config.md) is simply skipped.
 TIER1=(
   "README.md"
+  "docker/README.md"
   "docs/README.md"
   "docs/reference/eql-functions.md"
   "docs/reference/query-performance.md"
