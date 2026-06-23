@@ -2,15 +2,12 @@
 //! encrypted-metadata (SEM) index-term functions (`eql_v3.hmac_256`,
 //! `eql_v3.ore_block_256` and their comparators).
 //!
-//! These functions are a HAND-PORT of the `eql_v2` originals (`src/v3/sem/`).
+//! These functions are the self-contained `eql_v3` SEM surface (`src/v3/sem/`).
 //! The scalar matrix already exercises the happy path of the *array* comparator
 //! end-to-end against real ciphertext fixtures (ordering, equality, min/max,
 //! injectivity, index engagement). This file covers the branches the matrix
-//! structurally cannot reach, and which are otherwise tested only on the
-//! `eql_v2` copies (in `tests/index_compare_tests.rs`):
+//! structurally cannot reach:
 //!
-//! - T1: differential v2↔v3 parity on real `ob` fixtures (the strongest guard
-//!   against a faithful-port slip — see below).
 //! - T2: the `'Ciphertexts are different lengths'` RAISE (all real fixtures are
 //!   equal length, so the matrix never hits it).
 //! - T3: NULL-term ordering inside `compare_ore_block_256_term` — the
@@ -18,10 +15,8 @@
 //! - T4: array-level NULL + empty/cardinality base cases of the recursion.
 //! - T5: presence checks (`has_*`) and the missing-`ob` RAISE.
 //!
-//! All migrations (`001`–`007`) auto-apply to every `#[sqlx::test]` pool, so the
-//! real `ore` table (ids 1–1000) and both schemas are available with no setup.
-
-use std::collections::HashSet;
+//! These tests build terms directly from hex literals, so they need no fixture
+//! data or table setup.
 
 use anyhow::Result;
 use eql_tests::assert_raises;
@@ -31,65 +26,6 @@ use sqlx::PgPool;
 /// structural/edge-case tests.
 fn term(hex: &str) -> String {
     format!("ROW(decode('{hex}', 'hex'))::eql_v3.ore_block_256_term")
-}
-
-/// T1 — Differential parity: the same real `ob` payload must compare identically
-/// through the `eql_v2` and `eql_v3` array comparators. `eql_v2` is the trusted
-/// oracle; `eql_v3` is the byte-port. Both sides route through the SAME path
-/// (jsonb extractor → composite → `compare_ore_block_256_terms`) so the
-/// schema prefix is the only variable — any divergence is a genuine port bug.
-/// v3 has no encrypted-arg `compare` overload, hence the extractor routing.
-#[sqlx::test]
-async fn ore_v2_v3_comparator_parity_on_real_fixtures(pool: PgPool) -> Result<()> {
-    // Pairs spanning equal and unequal ids. Plaintext order of the fixtures is
-    // undocumented, so we assert v2≡v3 agreement (not a specific sign).
-    let pairs = [
-        (1i64, 1i64),
-        (1, 2),
-        (2, 1),
-        (1, 500),
-        (500, 1),
-        (42, 42),
-        (10, 900),
-        (900, 10),
-    ];
-
-    let sql = r#"
-        WITH a AS (SELECT e::jsonb AS j FROM ore WHERE id = $1),
-             b AS (SELECT e::jsonb AS j FROM ore WHERE id = $2)
-        SELECT
-          eql_v2.compare_ore_block_u64_8_256_terms(
-            eql_v2.ore_block_u64_8_256(a.j), eql_v2.ore_block_u64_8_256(b.j)) AS v2,
-          eql_v3.compare_ore_block_256_terms(
-            eql_v3.ore_block_256(a.j), eql_v3.ore_block_256(b.j)) AS v3
-        FROM a, b
-    "#;
-
-    let mut v3_signs: HashSet<i32> = HashSet::new();
-    for (x, y) in pairs {
-        let (v2, v3): (i32, i32) = sqlx::query_as(sql).bind(x).bind(y).fetch_one(&pool).await?;
-        assert_eq!(
-            v2, v3,
-            "eql_v2 and eql_v3 ORE comparators disagree on ids ({x},{y}): v2={v2} v3={v3}"
-        );
-        v3_signs.insert(v3);
-    }
-
-    // Non-triviality: the sample must have actually exercised lt, eq, and gt —
-    // otherwise the parity check could pass on a degenerate all-equal path.
-    assert!(
-        v3_signs.contains(&0),
-        "sample must include an equal pair (0)"
-    );
-    assert!(
-        v3_signs.contains(&-1),
-        "sample must include a less-than pair (-1)"
-    );
-    assert!(
-        v3_signs.contains(&1),
-        "sample must include a greater-than pair (1)"
-    );
-    Ok(())
 }
 
 /// T2 — The term comparator must reject ciphertexts of different lengths. This
@@ -416,8 +352,7 @@ async fn jsonb_array_to_ore_block_input_shapes(pool: PgPool) -> Result<()> {
 /// (term×term, term[]×term[], composite×composite). Two load-bearing catalog
 /// properties are pinned at the same layer:
 ///
-///   - `IMMUTABLE` (`provolatile = 'i'`). This deliberately diverges from the
-///     `eql_v2` originals, which carry no marker and default to `VOLATILE`. The
+///   - `IMMUTABLE` (`provolatile = 'i'`). The
 ///     comparison is deterministic — pgcrypto `encrypt()` is itself `IMMUTABLE`
 ///     — and the marker is what lets the planner fold/cache these in
 ///     ordering/index contexts, so a silent regression to `VOLATILE` (e.g.

@@ -63,8 +63,13 @@ jobs:
           cache: true # [default: true] cache mise using GitHub's cache
 
       - name: Build EQL release
+        # Strip the `eql-` tag prefix so eql_v3.version() reports bare semver
+        # (e.g. "3.0.0"). Non-release events (workflow_dispatch / PR) have no
+        # tag, so TAG is empty and the build falls back to its DEV default.
+        env:
+          TAG: ${{ github.event.release.tag_name }}
         run: |
-          mise run build --version ${{github.event.release.tag_name}}
+          mise run build --version "${TAG#eql-}"
 
       - name: Upload EQL artifacts
         uses: actions/upload-artifact@v4
@@ -73,8 +78,6 @@ jobs:
           path: |
             release/cipherstash-encrypt.sql
             release/cipherstash-encrypt-uninstall.sql
-            release/cipherstash-encrypt-v3.sql
-            release/cipherstash-encrypt-v3-uninstall.sql
 
       - name: Publish EQL release artifacts
         uses: softprops/action-gh-release@v2
@@ -83,10 +86,6 @@ jobs:
           files: |
             release/cipherstash-encrypt.sql
             release/cipherstash-encrypt-uninstall.sql
-            release/cipherstash-encrypt-supabase.sql
-            release/cipherstash-encrypt-uninstall-supabase.sql
-            release/cipherstash-encrypt-v3.sql
-            release/cipherstash-encrypt-v3-uninstall.sql
 
       - name: Notify Multitudes
         if: github.event_name == 'release'

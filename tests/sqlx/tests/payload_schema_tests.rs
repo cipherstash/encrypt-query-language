@@ -326,8 +326,7 @@ fn v2_3_legacy_split_ore_fields_are_rejected() {
     // leading domain-tag byte on the ciphertext.
     //
     // The OPE-side legacy fields (`opf` / `opv`) are also rejected — v2.3
-    // doesn't support OPE on `eql_v2_encrypted` (deferred to a future
-    // separate type).
+    // doesn't support OPE (deferred to a future separate type).
     let cases = [
         (
             "encrypted payload with legacy ocf",

@@ -66,8 +66,8 @@ echo "==> Building (clean) to verify v3 artifacts for ${tag}"
 mise run clean
 mise run build --version "${tag}"
 
-v3_installer="release/cipherstash-encrypt-v3.sql"
-v3_uninstaller="release/cipherstash-encrypt-v3-uninstall.sql"
+v3_installer="release/cipherstash-encrypt.sql"
+v3_uninstaller="release/cipherstash-encrypt-uninstall.sql"
 for f in "$v3_installer" "$v3_uninstaller"; do
   [[ -s "$f" ]] || err "expected non-empty build artifact missing: $f"
 done

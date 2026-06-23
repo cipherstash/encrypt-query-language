@@ -1,6 +1,6 @@
 //! EQL lint runtime tests
 //!
-//! These tests run `eql_v2.lints()` against the installed EQL surface and
+//! These tests run `eql_v3.lints()` against the installed EQL surface and
 //! assert on the shape of the result.
 //!
 //! The lint is intentionally noisy on the current state of EQL — every
@@ -32,7 +32,7 @@ struct LintRow {
 
 async fn fetch_lints(pool: &PgPool) -> Result<Vec<LintRow>> {
     let rows = sqlx::query_as::<_, LintRow>(
-        "SELECT severity, category, object_name, message FROM eql_v2.lints() ORDER BY category, object_name",
+        "SELECT severity, category, object_name, message FROM eql_v3.lints() ORDER BY category, object_name",
     )
     .fetch_all(pool)
     .await?;
@@ -41,7 +41,7 @@ async fn fetch_lints(pool: &PgPool) -> Result<Vec<LintRow>> {
 
 #[sqlx::test]
 async fn lint_function_exists_and_row_schema_parses(pool: PgPool) -> Result<()> {
-    // Schema-only check: `eql_v2.lints()` exists and its rows decode into
+    // Schema-only check: `eql_v3.lints()` exists and its rows decode into
     // `LintRow`. Previous incarnation asserted `!rows.is_empty()` and so
     // would fail on a *cleaner* build (e.g. when Phase 1+ removes the
     // current noisy violations), reading like a regression for a good
@@ -102,7 +102,7 @@ async fn lint_categories_are_well_known(pool: PgPool) -> Result<()> {
 async fn lint_flags_blocker_in_language_sql(pool: PgPool) -> Result<()> {
     sqlx::query(
         r#"
-        CREATE FUNCTION eql_v2.test_bad_blocker_sql(a eql_v3.int4, b eql_v3.int4)
+        CREATE FUNCTION eql_v3.test_bad_blocker_sql(a eql_v3.int4, b eql_v3.int4)
         RETURNS boolean LANGUAGE sql IMMUTABLE
         AS $$ SELECT eql_v3.encrypted_domain_unsupported_bool('eql_v3.int4', '=') $$;
         "#,
@@ -140,7 +140,7 @@ async fn lint_flags_blocker_in_language_sql(pool: PgPool) -> Result<()> {
 async fn lint_flags_strict_blocker(pool: PgPool) -> Result<()> {
     sqlx::query(
         r#"
-        CREATE FUNCTION eql_v2.test_bad_blocker_strict(a eql_v3.int4, b eql_v3.int4)
+        CREATE FUNCTION eql_v3.test_bad_blocker_strict(a eql_v3.int4, b eql_v3.int4)
         RETURNS boolean LANGUAGE plpgsql IMMUTABLE STRICT
         AS $$ BEGIN RETURN eql_v3.encrypted_domain_unsupported_bool('eql_v3.int4', '='); END; $$;
         "#,
@@ -201,24 +201,22 @@ async fn lint_does_not_report_generated_blockers_as_inlinability_errors(
     Ok(())
 }
 
-/// An `eql_v2_*` domain whose base type is another `eql_v2_*` domain (not
-/// jsonb) silently bypasses the storage variant's blockers: operators
+/// An `eql_v3` domain whose base type is another `eql_v3` encrypted domain
+/// (not jsonb) silently bypasses the storage variant's blockers: operators
 /// resolve against the ultimate base type, so a derived domain does not
 /// inherit the base domain's operator surface. See CLAUDE.md footguns.
 /// This test plants a domain-over-domain offender and asserts the lint
 /// surfaces it under `domain_over_domain`.
 #[sqlx::test]
 async fn lint_flags_domain_over_domain(pool: PgPool) -> Result<()> {
-    sqlx::query(r#"CREATE DOMAIN public.eql_v2_test_baddom AS eql_v3.int4;"#)
+    sqlx::query(r#"CREATE DOMAIN eql_v3.test_baddom AS eql_v3.int4;"#)
         .execute(&pool)
         .await?;
 
     let rows = fetch_lints(&pool).await?;
     let violations: Vec<&LintRow> = rows
         .iter()
-        .filter(|r| {
-            r.category == "domain_over_domain" && r.object_name.contains("eql_v2_test_baddom")
-        })
+        .filter(|r| r.category == "domain_over_domain" && r.object_name.contains("test_baddom"))
         .collect();
 
     assert!(
@@ -234,11 +232,11 @@ async fn lint_flags_domain_over_domain(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-/// An operator class declared `FOR TYPE` on an `eql_v2_*` domain bypasses
+/// An operator class declared `FOR TYPE` on an `eql_v3` domain bypasses
 /// the operator-resolution that the storage blockers depend on. The
 /// recommended pattern is a functional index on the extractor; opclasses
 /// on domains must never appear. See CLAUDE.md footguns. The current
-/// build emits zero opclasses on `eql_v2_*` domains, so this test is
+/// build emits zero opclasses on `eql_v3` domains, so this test is
 /// negative: it asserts the rule category is well-known and surfaces no
 /// rows. A positive test would require constructing a valid opclass on a
 /// domain, which is non-trivial scaffolding — the `domain_opclass`
@@ -259,44 +257,6 @@ async fn lint_domain_opclass_surface_is_clean(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-/// Phase 1 regression: the operators rewritten in #193 (=, <>, ~~, ~~*,
-/// @>, <@ on eql_v2_encrypted) must report zero lint violations. If this
-/// test fails, an inlinability regression has been introduced into one
-/// of the core operators that PostgREST and ORM bare-form queries rely
-/// on.
-#[sqlx::test]
-async fn lint_phase_1_operators_are_clean(pool: PgPool) -> Result<()> {
-    let rows = fetch_lints(&pool).await?;
-    let phase_1_prefixes = [
-        "operator =(eql_v2_encrypted",
-        "operator <>(eql_v2_encrypted",
-        "operator =(jsonb, eql_v2_encrypted",
-        "operator <>(jsonb, eql_v2_encrypted",
-        "operator ~~(eql_v2_encrypted",
-        "operator ~~*(eql_v2_encrypted",
-        "operator ~~(jsonb, eql_v2_encrypted",
-        "operator ~~*(jsonb, eql_v2_encrypted",
-        "operator @>(eql_v2_encrypted",
-        "operator <@(eql_v2_encrypted",
-    ];
-
-    let violations: Vec<_> = rows
-        .iter()
-        .filter(|row| {
-            phase_1_prefixes
-                .iter()
-                .any(|prefix| row.object_name.starts_with(prefix))
-        })
-        .collect();
-
-    assert!(
-        violations.is_empty(),
-        "Phase 1 operators should report zero lint violations, but got: {:#?}",
-        violations
-    );
-    Ok(())
-}
-
 /// Every encrypted-scalar-domain family's inlinable operator surface
 /// must report zero lint violations. The supported operators on the
 /// `_eq`, `_ord`, and `_ord_ore` variants are codegen-emitted SQL
@@ -305,7 +265,7 @@ async fn lint_phase_1_operators_are_clean(pool: PgPool) -> Result<()> {
 /// regression to plpgsql or a pinned `search_path` breaks index
 /// engagement.
 ///
-/// Storage-only variants (the bare `eql_v3_<T>` domain with no
+/// Storage-only variants (the bare `eql_v3.<T>` domain with no
 /// capability suffix) are intentionally excluded — every operator on
 /// them is a non-STRICT plpgsql blocker, which doesn't need to be
 /// inlinable.

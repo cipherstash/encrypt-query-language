@@ -1,9 +1,8 @@
--- REQUIRE: src/schema.sql
 -- REQUIRE: src/v3/schema.sql
 
 --! @brief EQL lint: detect non-inlinable operator implementation functions
 --!
---! Returns one row per violation found in the installed EQL surface. The
+--! Returns one row per violation found in the installed `eql_v3` surface. The
 --! Postgres planner can only inline a function during index matching when:
 --!
 --!   * `LANGUAGE sql` (plpgsql / C / etc. cannot be inlined)
@@ -17,13 +16,13 @@
 --! this lint. A `LANGUAGE sql` function with a multi-statement body, a CTE,
 --! or any pre-SELECT statement will pass all four implemented checks while
 --! remaining non-inlinable. Implementing the check requires walking `prosrc`
---! (or `pg_get_functiondef`); tracked as a follow-up to #194.
+--! (or `pg_get_functiondef`); tracked as a follow-up.
 --!
---! Operators on encrypted types (`eql_v2_encrypted`, `eql_v2.bloom_filter`,
---! `eql_v2.ore_*`, etc.) whose implementation functions fail any of these
---! rules silently fall back to seq scan when the documented functional
---! indexes (`eql_v2.hmac_256(col)`, `eql_v2.bloom_filter(col)`,
---! `eql_v2.ste_vec(col)`) are in place. This lint surfaces every such case.
+--! Operators on `eql_v3` types (the jsonb-backed encrypted-domain families and
+--! the SEM index-term types `eql_v3.ore_block_256`, `eql_v3.ore_cllw`) whose
+--! implementation functions fail any of these rules silently fall back to seq
+--! scan when the documented functional indexes (`eql_v3.eq_term(col)`,
+--! `eql_v3.ord_term(col)`) are in place. This lint surfaces every such case.
 --!
 --! Severity:
 --!   `error`   — fixable, blocks index matching, ship-blocking.
@@ -48,28 +47,26 @@
 --!                                PostgreSQL skips the body and returns NULL
 --!                                on NULL arguments, silently bypassing the
 --!                                RAISE.
---!   `domain_over_domain`      — an encrypted domain (`eql_v3.*` or
---!                                `public.eql_v2_*`) is derived from another
---!                                encrypted domain rather than jsonb.
+--!   `domain_over_domain`      — an `eql_v3` encrypted domain is derived from
+--!                                another encrypted domain rather than jsonb.
 --!                                Operators resolve against the ultimate base
 --!                                type, so the derived domain does not
 --!                                inherit the base domain's blocker surface.
 --!   `domain_opclass`          — an operator class is declared FOR TYPE on an
---!                                encrypted domain (`eql_v3.*` or
---!                                `public.eql_v2_*`). Opclasses on domains
---!                                bypass operator resolution; use a
+--!                                `eql_v3` encrypted domain. Opclasses on
+--!                                domains bypass operator resolution; use a
 --!                                functional index on the extractor instead.
 --!
 --! @example
 --! ```
 --! SELECT severity, category, object_name, message
---!   FROM eql_v2.lints()
+--!   FROM eql_v3.lints()
 --!  WHERE severity = 'error'
 --!  ORDER BY category, object_name;
 --! ```
 --!
 --! @return SETOF record (severity text, category text, object_name text, message text)
-CREATE OR REPLACE FUNCTION eql_v2.lints()
+CREATE OR REPLACE FUNCTION eql_v3.lints()
 RETURNS TABLE (
   severity text,
   category text,
@@ -79,9 +76,9 @@ RETURNS TABLE (
 LANGUAGE sql STABLE
 AS $$
   WITH
-  -- All operators where at least one operand involves an EQL type. Limits
+  -- All operators where at least one operand is an `eql_v3` type. Limits
   -- the scope of the lint to the operator surface customers actually hit
-  -- via SQL (`col = val`, `col LIKE '...'`, `col @> '...'` and friends).
+  -- via SQL (`col = val`, `col @> '...'` and friends).
   eql_operators AS (
     SELECT
       op.oid              AS oprid,
@@ -94,9 +91,7 @@ AS $$
     WHERE EXISTS (
         SELECT 1 FROM pg_type t
          WHERE t.oid IN (op.oprleft, op.oprright)
-           AND (t.typname LIKE 'eql_v2%'
-             OR t.typnamespace = 'eql_v2'::regnamespace
-             OR t.typnamespace = 'eql_v3'::regnamespace)
+           AND t.typnamespace = 'eql_v3'::regnamespace
       )
   ),
 
@@ -119,14 +114,15 @@ AS $$
     JOIN pg_language lang_l ON lang_l.oid = p.prolang
   ),
 
-  -- Encrypted-domain blockers: functions in `eql_v2` whose body contains
-  -- one of the two blocker markers emitted by the codegen
-  -- (`encrypted_domain_unsupported_bool` for boolean blockers; the literal
-  -- `is not supported for` for path-operator blockers) AND that take at
-  -- least one `public.eql_v2_*` domain over jsonb argument. The argument
-  -- filter excludes the shared `encrypted_domain_unsupported_bool(text,
-  -- text)` helper itself, which contains the marker in its body but is
-  -- not a blocker.
+  -- Encrypted-domain blockers: functions in `eql_v3` whose body contains
+  -- a blocker marker emitted by the codegen (any of the
+  -- `encrypted_domain_unsupported_*` helper calls — `_bool` for boolean
+  -- blockers, `_jsonb` for the native-jsonb-operator blockers; plus the
+  -- literal `is not supported for` for older path-operator blockers) AND
+  -- that take at least one `eql_v3` domain over jsonb argument. The argument
+  -- filter excludes the shared `encrypted_domain_unsupported_*(text, text)`
+  -- helpers themselves, which contain the marker in their body but are not
+  -- blockers (they take text arguments, not a domain).
   encrypted_domain_blockers AS (
     SELECT
       p.oid                                        AS oid,
@@ -136,8 +132,8 @@ AS $$
     FROM pg_catalog.pg_proc p
     JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
     JOIN pg_catalog.pg_language lang_l ON lang_l.oid = p.prolang
-    WHERE n.nspname IN ('eql_v2', 'eql_v3')
-      AND (p.prosrc LIKE '%encrypted_domain_unsupported_bool%'
+    WHERE n.nspname = 'eql_v3'
+      AND (p.prosrc LIKE '%encrypted_domain_unsupported%'
         OR p.prosrc LIKE '%is not supported for%')
       AND EXISTS (
         SELECT 1
@@ -147,10 +143,7 @@ AS $$
         JOIN pg_catalog.pg_type bt ON bt.oid = dt.typbasetype
         WHERE dt.typtype = 'd'
           AND bt.typname = 'jsonb'
-          AND (
-            dn.nspname = 'eql_v3'
-            OR (dn.nspname = 'public' AND dt.typname LIKE 'eql_v2\_%')
-          )
+          AND dn.nspname = 'eql_v3'
       )
   )
 
@@ -326,15 +319,9 @@ AS $$
   JOIN pg_catalog.pg_type bt ON bt.oid = dt.typbasetype
   JOIN pg_catalog.pg_namespace bn ON bn.oid = bt.typnamespace
   WHERE dt.typtype = 'd'
-    AND (
-      dn.nspname = 'eql_v3'
-      OR (dn.nspname = 'public' AND dt.typname LIKE 'eql_v2\_%')
-    )
+    AND dn.nspname = 'eql_v3'
     AND bt.typtype = 'd'
-    AND (
-      bn.nspname = 'eql_v3'
-      OR (bn.nspname = 'public' AND bt.typname LIKE 'eql_v2\_%')
-    )
+    AND bn.nspname = 'eql_v3'
 
   -- ┌─────────────────────────────────────────────────────────────────┐
   -- │ Domain opclass: an operator class declared FOR TYPE on an       │
@@ -356,16 +343,13 @@ AS $$
   JOIN pg_catalog.pg_namespace tn ON tn.oid = t.typnamespace
   JOIN pg_catalog.pg_namespace cn ON cn.oid = oc.opcnamespace
   WHERE t.typtype = 'd'
-    AND (
-      tn.nspname = 'eql_v3'
-      OR (tn.nspname = 'public' AND t.typname LIKE 'eql_v2\_%')
-    )
+    AND tn.nspname = 'eql_v3'
 
   ORDER BY 1, 2, 3;
 $$;
 
-COMMENT ON FUNCTION eql_v2.lints() IS
+COMMENT ON FUNCTION eql_v3.lints() IS
   'EQL lint: returns one row per non-inlinable operator implementation. '
-  'Run `SELECT * FROM eql_v2.lints() WHERE severity = ''error''` for a '
-  'CI-gateable check that all operator implementations on EQL types are '
+  'Run `SELECT * FROM eql_v3.lints() WHERE severity = ''error''` for a '
+  'CI-gateable check that all operator implementations on eql_v3 types are '
   'eligible for planner inlining.';

@@ -16,8 +16,9 @@ use std::fmt;
 use cipherstash_client::encryption::Plaintext;
 use eql_scalars::ScalarKind;
 
-/// The `cast_as` argument for `eql_v2.add_search_config`. The field is
-/// private so the allowlist is the set of `pub const`s below.
+/// The `cast_as` argument identifying a plaintext's target SQL type for
+/// encryption. The field is private so the allowlist is the set of
+/// `pub const`s below.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Cast(&'static str);
 
