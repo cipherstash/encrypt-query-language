@@ -149,6 +149,27 @@ catalog cross-check) fails the job.
 
 See `docs/reference/adding-a-scalar-encrypted-domain-type.md` §3 (matrix oracle + inventory snapshot).
 
+## matrix_jsonb_entry_tests.txt
+
+`matrix_jsonb_entry_tests.txt` pins the test-name set for the jsonb SteVec-entry
+behaviour matrix (`jsonb_entry_matrix!`), whose names live under
+`jsonb_entry::…`. It is a deliberate **sibling** of the scalar matrix inventory
+above, **not** folded into it: the driver type (`JsonbEntryInt4`) is intentionally
+not an `eql-scalars::CATALOG` type, so it has no `scalars::<T>::` tests and no
+`eql-codegen list-types` row — hence this snapshot is checked on its own, with
+**no catalog cross-check**. The matrix reuses the scalar matrix generators to
+exercise `eql_v3.ste_vec_entry` equality/order/aggregate behaviour. No database
+is required (`--list` only enumerates).
+
+Verify with `mise run test:matrix:inventory:jsonb_entry`. Regenerate with:
+
+```bash
+cd tests/sqlx
+cargo test --no-default-features --test encrypted_domain -- --list \
+  | sed -n 's/: test$//p' | grep '^jsonb_entry::.*jsonb_entry_int4' \
+  | sed -E 's/_int4_/_<T>_/' | LC_ALL=C sort -u > snapshots/matrix_jsonb_entry_tests.txt
+```
+
 ## v3_jsonb_tests.txt
 
 `v3_jsonb_tests.txt` pins the SQLx test-name set for the hand-written

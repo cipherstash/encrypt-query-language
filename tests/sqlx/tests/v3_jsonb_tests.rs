@@ -688,6 +688,19 @@ macro_rules! v3_jsonb_supported_null {
 
 // A well-formed empty document — the non-NULL counterpart used by the blocker
 // arms below.
+//
+// Intentionally crypto-free: this is the minimal structurally-valid envelope
+// (empty `i`, version literal, empty `sv`), NOT a stand-in for a generated
+// fixture. It carries zero `hm`/`oc`/`ore` index terms, so the real-encrypted-
+// data rule (fixtures must come from actual crypto) does not apply — there is
+// nothing fabricated to pass off as a real ciphertext. The blocker and
+// bare-operand tests that use it exercise PostgreSQL domain/operator resolution
+// (a pure type-system property, independent of payload contents), and their
+// negative-control assertions DEPEND on `sv` being empty (e.g. bare `-> 'sv'`
+// must return native `[]`; typed `-> 'sv'::text` must find no entry -> NULL).
+// Swapping in a populated real-fixture document would break those assertions.
+// Crypto-exercising arms in this file use the generated `fixtures.v3_ste_vec`
+// fixture instead (see `SEL_ROOT_HM` / `root_hm_term`).
 const NN_DOC: &str = r#"{"i":{},"v":2,"sv":[]}"#;
 
 v3_jsonb_supported_null!(
@@ -864,6 +877,146 @@ async fn v3_jsonb_root_doc_doc_comparison_blockers(pool: PgPool) -> anyhow::Resu
         let sql = format!("SELECT {lhs} {op} {rhs}");
         eql_tests::assert_raises(&pool, &sql, &[], "is not supported").await?;
     }
+    Ok(())
+}
+
+// D7 (negative control) — pins the domain-flattening rule that makes the typed
+// RHS in `v3_jsonb_blocker_cases!` LOAD-BEARING (file header, lines 13–20). A
+// BARE (unknown-typed) operand flattens `eql_v3.json` to native `jsonb`, so the
+// SAME operator that RAISES with a typed RHS in D7 must SUCCEED here — resolving
+// to native and returning a value, never reaching our blocker. Without this, the
+// `::text` / `::jsonb` typing in D7 could silently become unnecessary (or, worse,
+// a resolution change could route typed operands to native too) and no test
+// would notice. See the "Typed operands" caveat in `docs/reference/json-support.md`.
+#[sqlx::test]
+async fn v3_jsonb_bare_operand_flattens_to_native(pool: PgPool) -> anyhow::Result<()> {
+    let doc = format!("'{}'::eql_v3.json", NN_DOC);
+
+    // `?` is blocked with a typed RHS in D7 (`question`). Bare `'sv'` is unknown
+    // -> native `jsonb ? text` -> top-level key present -> TRUE, no raise.
+    let bare_question: bool = sqlx::query_scalar(&format!("SELECT {doc} ? 'sv'"))
+        .fetch_one(&pool)
+        .await?;
+    assert!(
+        bare_question,
+        "bare `?` must resolve to native `jsonb ? text` (top-level key 'sv' is \
+         present in NN_DOC -> true); a raise would mean it reached our blocker, \
+         breaking the documented domain-flattening contract"
+    );
+
+    // Same operator, TYPED RHS -> our blocker raises. Proves the divergence is
+    // real (this is the D7 `question` case, re-asserted here to keep the
+    // bare/typed contrast in one place).
+    eql_tests::assert_raises(
+        &pool,
+        &format!("SELECT {doc} ? 'sv'::text"),
+        &[],
+        "is not supported",
+    )
+    .await?;
+
+    // `||` is blocked with a typed RHS in D7 (`concat`). Bare `'{}'` is unknown
+    // -> native `jsonb || jsonb` -> merged object, no raise.
+    let bare_concat: String = sqlx::query_scalar(&format!("SELECT ({doc} || '{{}}')::text"))
+        .fetch_one(&pool)
+        .await?;
+    assert!(
+        bare_concat.contains("\"sv\""),
+        "bare `||` must resolve to native `jsonb || jsonb` and return the merged \
+         document, got {bare_concat:?}"
+    );
+    eql_tests::assert_raises(
+        &pool,
+        &format!("SELECT {doc} || '{{}}'::jsonb"),
+        &[],
+        "is not supported",
+    )
+    .await?;
+
+    Ok(())
+}
+
+// D7 (negative control, finding #1) — the `->`/`->>` SUPPORTED operators are the
+// DANGEROUS face of domain-flattening. Unlike the blockers above (typed RHS
+// RAISES, bare RHS merely succeeds-as-native), `->`/`->>` SILENTLY return a WRONG
+// answer for a bare untyped selector: `doc -> 'sel'` flattens `eql_v3.json` to
+// native `jsonb -> text` (a root-key lookup on the envelope), NOT the v3
+// selector-lookup operator. This pins BOTH which operator binds (`pg_typeof`) and
+// the user-visible divergence, so a future resolution change in either direction
+// goes red. The contract is intrinsic to the domain type-kind and CANNOT be
+// closed by an extra operator/blocker (an unknown-typed RHS always reduces the
+// domain to its base `jsonb`, and the native operator wins the exact-match
+// tiebreak); it is mitigated only by the Proxy always sending typed `$n`
+// parameters. A direct-SQL caller writing the bare form gets native semantics
+// with no error. See the `@warning` in `src/v3/jsonb/operators.sql:20-28` and the
+// "Typed operands" caveat in `docs/reference/json-support.md`.
+#[sqlx::test]
+async fn v3_jsonb_arrow_bare_operand_flattens_to_native(pool: PgPool) -> anyhow::Result<()> {
+    let doc = format!("'{}'::eql_v3.json", NN_DOC);
+
+    // --- `->` : which operator binds? -------------------------------------
+    // Bare selector -> NATIVE `jsonb -> text` (result type is `jsonb`).
+    let bare_ty: String = sqlx::query_scalar(&format!("SELECT pg_typeof({doc} -> 'sv')::text"))
+        .fetch_one(&pool)
+        .await?;
+    assert_eq!(
+        bare_ty, "jsonb",
+        "bare `->` must flatten to native `jsonb -> text`; binding the v3 operator \
+         (eql_v3.ste_vec_entry) here would mean the domain-flattening contract changed"
+    );
+    // Typed selector -> the v3 operator (result type is `eql_v3.ste_vec_entry`).
+    let typed_ty: String =
+        sqlx::query_scalar(&format!("SELECT pg_typeof({doc} -> 'sv'::text)::text"))
+            .fetch_one(&pool)
+            .await?;
+    assert_eq!(
+        typed_ty, "eql_v3.ste_vec_entry",
+        "typed `-> 'sv'::text` must bind the v3 selector-lookup operator"
+    );
+
+    // --- `->` : the user-visible WRONG answer -----------------------------
+    // Native root-key lookup finds the top-level `sv` array (non-NULL `[]`); the
+    // v3 selector lookup finds no entry with selector 'sv' in the empty sv array
+    // (NULL). The bare form silently returns the envelope's raw `sv`, not an
+    // encrypted entry — the false-negative finding #1 documents.
+    let bare_val: String = sqlx::query_scalar(&format!("SELECT ({doc} -> 'sv')::text"))
+        .fetch_one(&pool)
+        .await?;
+    assert_eq!(
+        bare_val, "[]",
+        "bare `->` returns the native root-key lookup of `sv` (the raw envelope \
+         array), demonstrating the silent wrong answer"
+    );
+    let typed_val: Option<String> =
+        sqlx::query_scalar(&format!("SELECT ({doc} -> 'sv'::text)::text"))
+            .fetch_one(&pool)
+            .await?;
+    assert!(
+        typed_val.is_none(),
+        "typed `-> 'sv'::text` finds no sv entry in the empty document -> NULL, \
+         got {typed_val:?}"
+    );
+
+    // --- `->>` : same divergence. Both overloads return `text`, so the split is
+    //            value-only: bare native `->>` serializes the root `sv` value
+    //            ('[]'); typed v3 `->>` finds no entry (NULL).
+    let bare_text: Option<String> = sqlx::query_scalar(&format!("SELECT {doc} ->> 'sv'"))
+        .fetch_one(&pool)
+        .await?;
+    assert_eq!(
+        bare_text.as_deref(),
+        Some("[]"),
+        "bare `->>` must resolve to native `jsonb ->> text` and serialize the root \
+         `sv` value"
+    );
+    let typed_text: Option<String> = sqlx::query_scalar(&format!("SELECT {doc} ->> 'sv'::text"))
+        .fetch_one(&pool)
+        .await?;
+    assert!(
+        typed_text.is_none(),
+        "typed `->> 'sv'::text` finds no sv entry -> NULL, got {typed_text:?}"
+    );
+
     Ok(())
 }
 

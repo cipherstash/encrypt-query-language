@@ -60,11 +60,13 @@ CREATE FUNCTION eql_v3."->"(e eql_v3.json, selector integer)
 AS $$
   SELECT CASE
     WHEN eql_v3.is_ste_vec_array(e) THEN
-      -- NOTE: `e::jsonb` is REQUIRED. `e` is eql_v3.json and the custom
-      -- `->(eql_v3.json, text)` operator is already created earlier in
-      -- this file, so a bare `e -> 'sv'` would resolve to that selector-lookup
-      -- operator (searching for an sv entry with selector 'sv') instead of
-      -- native jsonb array access. Casting to jsonb forces native `->`.
+      -- NOTE: `e::jsonb` makes the native-jsonb traversal explicit. `'sv'` is an
+      -- unknown-typed literal, so `e -> 'sv'` already flattens `eql_v3.json` to
+      -- its base type and binds native `jsonb -> text` (see the @warning above) —
+      -- the custom `->(eql_v3.json, text)` operator does NOT capture a bare
+      -- untyped literal. The cast documents that intent and guards the `-> selector`
+      -- (integer) hop from ever resolving to the v3 `->(eql_v3.json, integer)`
+      -- operator instead of native array access.
       (eql_v3.meta_data(e) || (e::jsonb -> 'sv' -> selector))::eql_v3.ste_vec_entry
     ELSE NULL
   END
