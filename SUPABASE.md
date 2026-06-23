@@ -1,146 +1,226 @@
-# Supabase
+# EQL on Supabase and managed PostgreSQL
 
-## No operators, no problems
+EQL's `eql_v3` surface is designed to work on Supabase and other managed
+PostgreSQL deployments where you cannot run as superuser, cannot install
+custom operator classes, and cannot edit `postgresql.conf` per session.
 
-Supabase [does not currently support](https://github.com/supabase/supautils/issues/72) custom operators.
-The EQL operator functions can be used in this situation.
+There is **no separate Supabase build of EQL**. The single installer
+(`release/cipherstash-encrypt.sql`) is the same artefact you install
+everywhere. This page explains *why* `eql_v3` runs on Supabase unchanged,
+and the small number of things you do differently on a managed platform.
 
-In EQL, PostgreSQL operators are an alias for a function, so the implementation and behaviour remains the same across operators and functions.
+## Why `eql_v3` works on Supabase
 
-| Operator | Function                                                      | Example                                                                      |
-| -------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `=`      | `eql_v2.eq(eql_v2_encrypted, eql_v2_encrypted)`               | `SELECT * FROM users WHERE eql_v2.eq(encrypted_email, $1)`<br>               |
-| `<>`     | `eql_v2.neq(eql_v2_encrypted, eql_v2_encrypted)`              | `SELECT * FROM users WHERE eql_v2.neq(encrypted_email, $1)`<br>              |
-| `<`      | `eql_v2.lt(eql_v2_encrypted, eql_v2_encrypted)`               | `SELECT * FROM users WHERE eql_v2.lt(encrypted_email, $1)`<br>               |
-| `<=`     | `eql_v2.lte(eql_v2_encrypted, eql_v2_encrypted)`              | `SELECT * FROM users WHERE eql_v2.lte(encrypted_email, $1)`<br>              |
-| `>`      | `eql_v2.gt(eql_v2_encrypted, eql_v2_encrypted)`               | `SELECT * FROM users WHERE eql_v2.gt(encrypted_email, $1)`<br>               |
-| `>=`     | `eql_v2.gte(eql_v2_encrypted, eql_v2_encrypted)`              | `SELECT * FROM users WHERE eql_v2.gte(encrypted_email, $1)`<br>              |
-| `~~`     | `eql_v2.like(eql_v2_encrypted, eql_v2_encrypted)`             | `SELECT * FROM users WHERE eql_v2.like(encrypted_email, $1)`<br>             |
-| `~~*`    | `eql_v2.ilike(eql_v2_encrypted, eql_v2_encrypted)`            | `SELECT * FROM users WHERE eql_v2.ilike(encrypted_email, $1)`<br>            |
-| `LIKE`   | `eql_v2.like(eql_v2_encrypted, eql_v2_encrypted)`             | `SELECT * FROM users WHERE eql_v2.like(encrypted_email, $1)`<br>             |
-| `ILIKE`  | `eql_v2.ilike(eql_v2_encrypted, eql_v2_encrypted)`            | `SELECT * FROM users WHERE eql_v2.ilike(encrypted_email, $1)`<br>            |
-| `@>`     | `eql_v2.ste_vec_contains(eql_v2_encrypted, eql_v2_encrypted)` | `SELECT * FROM users WHERE eql_v2.ste_vec_contains(encrypted_array, $1)`<br> |
-| `<@`     | `eql_v2.ste_vec_contains(eql_v2_encrypted, eql_v2_encrypted)` | `SELECT * FROM users WHERE eql_v2.ste_vec_contains($1, encrypted_array)`<br> |
+Earlier EQL relied on PostgreSQL operator classes to make encrypted
+comparisons engage indexes. Operator classes require elevated privileges
+and Supabase [does not support custom operators](https://github.com/supabase/supautils/issues/72),
+so that recipe needed a cut-down build.
 
-### Core Functions
+`eql_v3` removes the dependency entirely. Every encrypted column is typed as
+a `jsonb`-backed **domain** in the `eql_v3` schema (for example
+`eql_v3.text_eq`, `eql_v3.int4_ord`, `eql_v3.json`), and search is driven by
+**functional indexes over small term-extractor functions** rather than an
+operator class on the column:
 
-| Function                          | Description                                          | Exa     mple                                         |
-| --------------------------------- | --------------------------------------------------------- | ----------------------------------------------- |
-| `eql_v2.ciphertext(val)`          | Extract ciphertext from encrypted value              | `SELECT eql_v2.ciphertext     (encrypted_field)`     |
-| `eql_v2.blake3(val)`              | Extract blake3 hash from encrypted value             | `SELECT eql_v2.blake3(     encrypted_field)`         |
-| `eql_v2.hmac_256(val)`            | Extract hmac_256 index from encrypted value            | `SELECT eql_v2.hmac_256(encrypted_fie     ld)`         |
-| `eql_v2.bloom_filter(val)`        | Extract match index from encrypted value             | `SELECT eql_v2.bloom_filter(encrypted_field)`               |
-| `eql_v2.ore_block_u64_8_256(val)` | Extract ORE index from encrypted value               | `SELECT eql_v2.ore_block_u64_8_256(encrypted_field)`   |
-| `eql_v2.ore_cllw_u64_8(val)`      | Extract CLLW ORE index from encrypted value          | `SELECT eql_v2.ore_cllw_u64_8(encrypted_fie     ld)` |
-| `eql_v2.ore_cllw_var_8(val)`      | Extract variable CLLW ORE index from encrypted value | `SELECT eql_v2.ore_cllw_var_8(     encrypted_field)` |
+- `eql_v3.eq_term(col)` — the equality (`hm` / hmac_256) term.
+- `eql_v3.ord_term(col)` — the ordering (`ob` / ore_block_256) term.
+- `eql_v3.match_term(col)` — the text-containment (`bf` / bloom_filter) term.
 
-### Aggregate Functions
-
-| Function          | Description                             | Example                              |
-| ----------------- | --------------------------------------- | ------------------------------------ |
-| `eql_v2.min(val)` | Get minimum value from encrypted column | `SELECT eql_v2.min(encrypted_field)` |
-| `eql_v2.max(val)` | Get maximum value from encrypted column | `SELECT eql_v2.max(encrypted_field)` |
-
-### Configuration Functions
-
-| Function                                                                     | Description                     | Example                                                                   |
-| ---------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------- |
-| `eql_v2.config_default(config)`                                              | Get default configuration       | `SELECT eql_v2.config_default(NULL)`                                      |
-| `eql_v2.config_add_table(table_name, config)`                                | Add table to configuration      | `SELECT eql_v2.config_add_table('users', config)`                         |
-| `eql_v2.config_add_column(table_name, column_name, config)`                  | Add column to configuration     | `SELECT eql_v2.config_add_column('users', 'email', config)`               |
-| `eql_v2.config_add_cast(table_name, column_name, cast_as, config)`           | Add cast configuration          | `SELECT eql_v2.config_add_cast('users', 'email', 'text', config)`         |
-| `eql_v2.config_add_index(table_name, column_name, index_name, opts, config)` | Add index to configuration      | `SELECT eql_v2.config_add_index('users', 'email', 'match', opts, config)` |
-| `eql_v2.config_match_default()`                                              | Get default match index options | `SELECT eql_v2.config_match_default()`                                    |
-
-### Example SQL Statements
-
-#### Equality `=`
-
-**Operator**
+These extractors are inlinable (`LANGUAGE sql`, single `SELECT`, `IMMUTABLE`,
+no pinned `search_path`), so the planner rewrites a bare-form predicate into
+the same expression as the index and matches it structurally — no per-query
+rewriting required. Creating a functional index needs no superuser and no
+operator class, so the recipe is identical on Supabase, RDS, Cloud SQL, and a
+self-hosted server:
 
 ```sql
-SELECT * FROM users WHERE encrypted_email = $1
+-- Equality (hash index on the eq_term extractor)
+CREATE INDEX users_email_eq ON users USING hash (eql_v3.eq_term(encrypted_email));
+
+-- Ordering / range (btree index on the ord_term extractor)
+CREATE INDEX events_at_ord ON events USING btree (eql_v3.ord_term(encrypted_at));
+
+-- Text containment (GIN index on the match_term extractor)
+CREATE INDEX users_name_match ON users USING gin (eql_v3.match_term(encrypted_name));
+
+ANALYZE users;
 ```
 
-**Function**
+`eql_v3` deliberately ships **no** `encrypted_operator_class`, so there is
+nothing operator-class-shaped to install and nothing that needs superuser.
+See [Database Indexes for Encrypted Columns](./docs/reference/database-indexes.md)
+for the full recipes, GIN containment, and large-table build guidance.
+
+## Typed columns, not database-side config
+
+`eql_v3` has **no database-side configuration API**. The earlier
+`config_add_table` / `config_add_column` / `config_add_index` functions are
+gone. The searchable surface of a column is fixed by the **domain variant you
+type it as**, and which index terms travel in a value's payload is decided by
+the encryption client — [CipherStash Proxy](https://github.com/cipherstash/proxy)
+or [Protect.js](https://github.com/cipherstash/protectjs):
+
+- `eql_v3.<T>_eq` carries an `hm` term — supports `=` / `<>`, `GROUP BY`, `DISTINCT`.
+- `eql_v3.<T>_ord` (and the `_ord_ore` twin) carries an `ob` term — adds `<` `<=` `>` `>=`, `ORDER BY`, `MIN` / `MAX`.
+- `eql_v3.text_match` carries a `bf` term — supports bloom-filter token containment (`@>` / `<@`).
+- `eql_v3.text_search` carries all three terms — equality, ordering, and containment on `text`.
+
+Configuring those columns is a client-side concern. See:
+
+- [CipherStash Proxy configuration tutorial](./docs/tutorials/proxy-configuration.md)
+- [Protect.js schema reference](https://github.com/cipherstash/protectjs/blob/main/docs/reference/schema.md)
+
+## Operators on Supabase
+
+In `eql_v3`, each supported SQL operator is an alias for an EQL function, so
+implementation and behaviour are identical whether you write the operator or
+the function. The operator forms are inlinable and engage the functional
+indexes above, so the operator form is the recommended one. The function
+equivalents exist for environments or query builders where the bare operator
+is awkward to express.
+
+| Operator | Function equivalent                                | Example                                                            |
+| -------- | -------------------------------------------------- | ----------------------------------------------------------------- |
+| `=`      | `eql_v3.eq(col, $1)`                               | `SELECT * FROM users WHERE eql_v3.eq(encrypted_email, $1)`        |
+| `<>`     | `eql_v3.neq(col, $1)`                              | `SELECT * FROM users WHERE eql_v3.neq(encrypted_email, $1)`       |
+| `<`      | `eql_v3.lt(col, $1)`                               | `SELECT * FROM events WHERE eql_v3.lt(encrypted_at, $1)`          |
+| `<=`     | `eql_v3.lte(col, $1)`                              | `SELECT * FROM events WHERE eql_v3.lte(encrypted_at, $1)`         |
+| `>`      | `eql_v3.gt(col, $1)`                               | `SELECT * FROM events WHERE eql_v3.gt(encrypted_at, $1)`          |
+| `>=`     | `eql_v3.gte(col, $1)`                              | `SELECT * FROM events WHERE eql_v3.gte(encrypted_at, $1)`         |
+| `@>`     | `eql_v3.contains(col, $1)`                         | `SELECT * FROM users WHERE eql_v3.contains(encrypted_name, $1)`   |
+| `<@`     | `eql_v3.contained_by(col, $1)`                     | `SELECT * FROM users WHERE eql_v3.contained_by(encrypted_name, $1)` |
+
+`eql_v3.eq` / `neq` / `lt` / `lte` / `gt` / `gte` / `contains` /
+`contained_by` are each overloaded for `(domain, domain)`, `(domain, jsonb)`,
+and `(jsonb, domain)`, so a `jsonb` operand is accepted directly and resolved
+against the typed side.
+
+### Equality `=`
+
+Operator form (recommended — engages the index):
 
 ```sql
-SELECT * FROM users WHERE eql_v2.eq(encrypted_email, $1)
+SELECT * FROM users WHERE encrypted_email = $1;
 ```
 
-#### Like & ILIKE `~~, ~~*`
-
-**Operator**
+Function form (equivalent):
 
 ```sql
-SELECT * FROM users WHERE encrypted_email LIKE $1
+SELECT * FROM users WHERE eql_v3.eq(encrypted_email, $1);
 ```
 
-**Function**
+### Range and ordering `<` `<=` `>` `>=`
+
+The column must be typed as an `_ord` / `_ord_ore` variant (or
+`text_search`) so it carries the `ob` term:
 
 ```sql
-SELECT * FROM users WHERE eql_v2.like(encrypted_email, $1)
+SELECT * FROM events WHERE encrypted_at < $1;
+SELECT * FROM events WHERE eql_v3.lt(encrypted_at, $1);
 ```
-
-#### Case Sensitivity
-
-The EQL `eql_v2.like` and `eql_v2.ilike` functions are equivalent.
-
-The behaviour of EQL's encrypted `LIKE` operators is slightly different to the behaviour of PostgreSQL's `LIKE` operator.
-In EQL, the `LIKE` operator can be used on `match` indexes.
-Case sensitivity is determined by the [index term configuration](./docs/reference/INDEX.md#options-for-match-indexes-opts) of `match` indexes.
-A `match` index term can be configured to enable case sensitive searches with token filters (for example, `downcase` and `upcase`).
-The data is encrypted based on the index term configurat     ion.
-The `LIKE` operation is always the same, even if the data is----- tokenised differently.
-The different operators are kept to preserve the semantics of SQL statements in client      applications.
 
 ### `ORDER BY`
 
-Ordering requires wrapping the ordered column in the `eql_v2.order_by` function, like this:
+Ordering uses the same ORE (`ob`) term as range comparisons, on an `_ord` /
+`_ord_ore` (or `text_search`) column. The `<`/`>` operators inline in
+*predicates*, but the planner does **not** rewrite *sort keys* — so to stream
+rows out of the btree already ordered (no `Sort` node), write the sort key in
+extractor form:
 
 ```sql
-SELECT * FROM users ORDER BY eql_v2.order_by(encrypted_created_at) DESC;
+SELECT * FROM events
+  WHERE encrypted_at < $1
+  ORDER BY eql_v3.ord_term(encrypted_at) DESC
+  LIMIT 10;
 ```
 
-PostgreSQL uses operators when handling `ORDER BY` operations. The `eql_v2.order_by` function behaves in the same way as the comparison operators, using the appropriate index type (ore_block_u64_8_256, ore_cllw_u64_8, or ore_cllw_var_8) to determine the ordering.
+This is the `eql_v3` replacement for the old `eql_v2.order_by(...)` helper,
+which no longer exists. See the
+[sort-key trap](./docs/reference/database-indexes.md#range-queries-and-order-by)
+for the full explanation.
 
-### JSONB Support
+### Aggregates `MIN` / `MAX`
 
-All comparison functions also support `jsonb` parameters through automatic type casting. This means you can use either `eql_v2_encrypted` or `jsonb` values in your queries:
+`MIN` / `MAX` are exposed on the ordered variants as
+`eql_v3.min(eql_v3.<T>_ord)` / `eql_v3.max(eql_v3.<T>_ord)` (and the
+`_ord_ore` twin). Type the column as `_ord`, or cast at the call site:
 
 ```sql
--- Using eql_v2_encrypted
-SELECT * FROM users WHERE eql_v2.eq(encrypted_email, encrypted_value);
-
--- Using jsonb
-SELECT * FROM users WHERE eql_v2.eq(encrypted_email, jsonb_value);
+SELECT eql_v3.min(encrypted_at) FROM events;
+SELECT eql_v3.max(encrypted_amount::eql_v3.int4_ord) FROM orders;
 ```
 
-The functions will automatically cast the `jsonb` value to `eql_v2_encrypted` before performing the comparison.
+## Text matching (not `LIKE`)
 
-### Array Operations
+There is **no `LIKE` / `ILIKE` on encrypted text in `eql_v3`**. The old
+`eql_v2.like` / `eql_v2.ilike` functions and the `~~` / `~~*` operators on
+encrypted columns have been removed; `LIKE` / `ILIKE` are blocked on every
+encrypted domain variant and raise an "operator not supported" exception.
 
-EQL supports array operations on encrypted data:
+Text search is now **bloom-filter token containment** via `@>` / `<@` on a
+column typed `eql_v3.text_match` or `eql_v3.text_search`. This tests whether
+the encrypted text contains the (encrypted) search terms — a probabilistic
+ngram match, not a SQL pattern match:
 
 ```sql
--- Get array length
-SELECT eql_v2.jsonb_array_length(encrypted_array) FROM users;
-
--- Get array elements
-SELECT eql_v2.jsonb_array_elements(encrypted_array) FROM users;
-
--- Get array element ciphertexts
-SELECT eql_v2.jsonb_array_elements_text(encrypted_array) FROM users;
+-- Column typed eql_v3.text_match or eql_v3.text_search,
+-- with: CREATE INDEX ... USING gin (eql_v3.match_term(encrypted_name));
+SELECT * FROM users WHERE encrypted_name @> $1;
+SELECT * FROM users WHERE eql_v3.contains(encrypted_name, $1);
 ```
 
-### JSON Path Operations
+Case sensitivity and tokenisation are properties of how the value was
+encrypted (token filters configured in the client), not of the SQL operator.
+See the [SQL support matrix](./docs/reference/sql-support.md) for which
+operator resolves on which variant.
 
-EQL supports JSON path operations on encrypted data:
+## Encrypted JSON documents
+
+`eql_v3.json` is the structured-encryption (ste_vec) document domain. It
+supports document containment (`@>` / `<@`), field access (`->` / `->>`), and
+the `eql_v3.jsonb_path_*` helper functions, all without operator classes:
 
 ```sql
--- Get encrypted value at path
-SELECT encrypted_data->'$.field' FROM users;
+-- Document containment (GIN-indexable on Supabase)
+SELECT * FROM orders WHERE data_encrypted @> $1::eql_v3.ste_vec_query;
 
--- Get ciphertext at path
-SELECT encrypted_data->>'$.field' FROM users;
+-- Field access (selector is the deterministic selector hash, typed as text)
+SELECT data_encrypted -> '<selector>'::text FROM orders;
 ```
+
+For containment indexing, build a GIN index over the query shape — see
+[GIN Indexes for JSONB Containment](./docs/reference/database-indexes.md#gin-indexes-for-jsonb-containment).
+Worked examples are in [EQL with JSON and JSONB](./docs/reference/json-support.md).
+
+## Typed operands matter
+
+For the encrypted operator (and therefore the functional index) to resolve,
+the comparison operand must carry a known type — a typed parameter (`$1`,
+which CipherStash Proxy supplies) or an explicit cast:
+
+```sql
+-- ✓ resolves the encrypted operator → uses the index
+WHERE encrypted_email = $1;
+WHERE encrypted_email = $1::eql_v3.text_eq;
+
+-- ✗ a bare jsonb literal falls through to native jsonb semantics
+WHERE encrypted_email = '{"hm":"abc"}'::jsonb;
+```
+
+CipherStash Proxy rewrites bound parameters so the encrypted operator and any
+functional indexes are selected automatically. When bypassing the Proxy, type
+the parameter yourself.
+
+## See also
+
+- [Database Indexes for Encrypted Columns](./docs/reference/database-indexes.md) — functional-index and GIN recipes, plus large-table build guidance.
+- [SQL support matrix](./docs/reference/sql-support.md) — which operators work against which domain variant.
+- [EQL Functions Reference](./docs/reference/eql-functions.md) — complete function and operator API.
+- [EQL with JSON and JSONB](./docs/reference/json-support.md) — `eql_v3.json` worked examples.
+- [CipherStash Proxy configuration tutorial](./docs/tutorials/proxy-configuration.md) — setting up encrypted columns end to end.
+
+---
+
+### Didn't find what you wanted?
+
+[Click here to let us know what was missing from our docs.](https://github.com/cipherstash/encrypt-query-language/issues/new?template=docs-feedback.yml&title=[Docs:]%20Feedback%20on%20SUPABASE.md)
