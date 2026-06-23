@@ -3355,12 +3355,10 @@ macro_rules! __scalar_matrix_aggregate_typecheck_case {
                             $agg_fn, d,
                         ));
                     // 42883 = undefined_function (no overload defined at all);
-                    // 42725 = ambiguous_function (multiple overloads resolve,
-                    // none specific to this variant). Either confirms the
-                    // variant carries no MIN/MAX of its own — the generic
-                    // eql_v2_encrypted overload is reachable via cast but
-                    // can't be resolved unambiguously from a domain-typed
-                    // column. Both outcomes are acceptable "not supported".
+                    // 42725 = ambiguous_function (multiple non-variant-specific
+                    // overloads resolve, none specific to this variant). Both
+                    // outcomes confirm the variant carries no MIN/MAX of its own
+                    // and are acceptable "not supported".
                     let db_err = err.as_database_error()
                         .expect("expected database error from typecheck probe");
                     let code = db_err.code();

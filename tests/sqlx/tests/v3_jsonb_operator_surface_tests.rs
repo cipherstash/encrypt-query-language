@@ -65,17 +65,12 @@ fn norm(ty: &str) -> String {
 
 #[sqlx::test]
 async fn v3_jsonb_surface_supported_or_blocked(pool: PgPool) -> anyhow::Result<()> {
-    // Native jsonb operator symbols (left OR right operand is plaintext jsonb),
-    // excluding EQL's own cross-type operators on the legacy `eql_v2_encrypted`
-    // composite (those take a jsonb operand but are not native and unreachable
-    // from a v3 domain).
+    // Native jsonb operator symbols (left OR right operand is plaintext jsonb).
     let native: Vec<String> = sqlx::query_scalar(
         r#"
         SELECT DISTINCT o.oprname
         FROM pg_catalog.pg_operator o
         WHERE (o.oprleft = 'jsonb'::regtype OR o.oprright = 'jsonb'::regtype)
-          AND o.oprleft  NOT IN (SELECT oid FROM pg_catalog.pg_type WHERE typname = 'eql_v2_encrypted')
-          AND o.oprright NOT IN (SELECT oid FROM pg_catalog.pg_type WHERE typname = 'eql_v2_encrypted')
         ORDER BY 1
         "#,
     )

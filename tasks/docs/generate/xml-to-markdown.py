@@ -194,7 +194,7 @@ def process_function(memberdef):
     # For SQL operators, Doxygen uses schema name as function name
     # Extract actual operator from brief description
     brief_elem = memberdef.find('briefdescription')
-    if func_name in ['eql_v2', 'public'] and brief_elem is not None:
+    if func_name in ['eql_v2', 'eql_v3', 'public'] and brief_elem is not None:
         brief_para = brief_elem.find('para')
         if brief_para is not None and brief_para.text:
             # Check if brief starts with an operator (like "->>" or "->")
