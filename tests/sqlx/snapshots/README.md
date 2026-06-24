@@ -147,7 +147,7 @@ catalog cross-check) fails the job.
 ## When you must update this
 
 - **Adding a new scalar type** → add the catalog row in
-  `eql-scalars::CATALOG`, wire the SQLx matrix oracle (see
+  `eql-domains::CATALOG`, wire the SQLx matrix oracle (see
   `docs/reference/adding-a-scalar-encrypted-domain-type.md` §3), then run
   `mise run test:matrix:inventory`. No snapshot edit is needed for an ordered
   (`caps = [eq, ord]`) type (matches the canonical baseline) or an equality-only
@@ -173,7 +173,7 @@ See `docs/reference/adding-a-scalar-encrypted-domain-type.md` §3 (matrix oracle
 behaviour matrix (`jsonb_entry_matrix!`), whose names live under
 `jsonb_entry::…`. It is a deliberate **sibling** of the scalar matrix inventory
 above, **not** folded into it: the driver type (`JsonbEntryInt4`) is intentionally
-not an `eql-scalars::CATALOG` type, so it has no `scalars::<T>::` tests and no
+not an `eql-domains::CATALOG` type, so it has no `scalars::<T>::` tests and no
 `eql-codegen list-types` row — hence this snapshot is checked on its own, with
 **no catalog cross-check**. The matrix reuses the scalar matrix generators to
 exercise `eql_v3.ste_vec_entry` equality/order/aggregate behaviour. No database

@@ -3,7 +3,7 @@
 //! Replaces the Python-era `fixture:generate <name>` per-type scripts and the
 //! `fixture:generate:all` TOML-glob loop (which spawned a separate `cargo test`
 //! per type). This runs ALL scalar fixture generators in ONE process, iterating
-//! `eql_scalars::CATALOG` for the authoritative token set.
+//! `eql_domains::CATALOG` for the authoritative token set.
 //!
 //! The encrypted-fixture logic itself is unchanged — each type's
 //! `fixtures::eql_v3_<T>::spec().run()` still produces
@@ -13,7 +13,7 @@
 //!   mise run fixture:generate:all
 #![cfg(feature = "fixture-gen")]
 
-use eql_scalars::CATALOG;
+use eql_domains::CATALOG;
 
 // `generate_for_token(token: &str) -> anyhow::Result<()>` is generated from the
 // single harness list in `tests/sqlx/src/scalar_types.rs`: one match arm per
@@ -43,7 +43,7 @@ async fn generate_all() -> anyhow::Result<()> {
     eprintln!("Regenerated v3_ste_vec.");
 
     // The scalar-shaped SteVec document fixture — one `{"field": <int4>}`
-    // document per `eql_scalars::INT4_VALUES`, with an int4 plaintext oracle —
+    // document per `eql_domains::INT4_VALUES`, with an int4 plaintext oracle —
     // drives the jsonb-entry behaviour matrix. Same pipeline, split payload
     // (jsonb-document encryption input, int4 oracle column).
     eprintln!("Generating fixture v3_doc_int4 (scalar-shaped SteVec document)...");
@@ -60,7 +60,7 @@ async fn generate_all() -> anyhow::Result<()> {
     eprintln!("Regenerated v3_numeric_collision.");
 
     // The empty-string ordered-text fixture (`""`, `"frank"`, `"zebra"`). Not a
-    // CATALOG scalar — `eql-scalars::TEXT_FIXTURES` excludes `""` (issue #262) —
+    // CATALOG scalar — `eql-domains::TEXT_FIXTURES` excludes `""` (issue #262) —
     // so it rides the same pipeline as a hand-written `FixtureSpec<String>`.
     // Gives the "empty sorts first" contract (ORDER BY / min / max) a committed
     // real-ciphertext home.

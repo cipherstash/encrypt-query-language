@@ -1,5 +1,5 @@
 [package]
-name = "eql-scalars"
+name = "eql-domains"
 version = "0.1.0"
 edition = "2021"
 description = "Scalar/term catalog for EQL encrypted-domain codegen (std-only, no deps)."
@@ -13,7 +13,7 @@ description = "Scalar/term catalog for EQL encrypted-domain codegen (std-only, n
 workspace = true
 
 # Dev-only. proptest is NOT a runtime dependency: it never compiles on the SQL
-# build path (eql-codegen depends on eql-scalars' lib, not its tests), so the
+# build path (eql-codegen depends on eql-domains' lib, not its tests), so the
 # "INTENTIONALLY no dependencies" rule above — which is about build-path deps —
 # is preserved. Used by src/proptest_invariants.rs (the catalog suite of
 # property tests, no DB, runs in the lean `mise run test:crates` / fork CI path).

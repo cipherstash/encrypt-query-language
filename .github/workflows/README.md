@@ -109,7 +109,7 @@ All jobs run on `blacksmith-16vcpu-ubuntu-2204`. "PG set" follows the event
 | **validate** (per PG) | `docs:validate:documented-sql` + `test:clean_install_v3` | DB-backed SQL doc-syntax check; clean-DB `eql_v3` install smoke | yes | no |
 | **docs-static** | `docs:validate:source` | SQL doxygen coverage + required-tags (DB-free); relevance-gated like the other heavy jobs (its inputs — `src/**`, the `crates/**` codegen build, `tasks/docs/**` — are a subset of the `relevant` filter) | no | no |
 | **schema** | `test:schema` | v2.2 / v2.3 payload JSON-schema validation | no | no |
-| **rust-crates** | `test:crates` + `types:check` | `cargo fmt --check`, clippy + `cargo test` for `eql-scalars` / `eql-codegen` / `eql-tests-macros` / `eql-types`; verify TS bindings + JSON schemas are fresh | no | no |
+| **rust-crates** | `test:crates` + `types:check` | `cargo fmt --check`, clippy + `cargo test` for `eql-domains` / `eql-codegen` / `eql-tests-macros` / `eql-types`; verify TS bindings + JSON schemas are fresh | no | no |
 | **codegen** | `codegen:parity` | Generated encrypted-domain SQL matches the golden output | no | no |
 | **self-contained-v3** | `test:self_contained_v3` | `eql_v3` surface has no `eql_v2` dependency | no | no |
 | **matrix-coverage** | `test:matrix:inventory` (+`:jsonb_entry`, `:v3-jsonb`) + `test:matrix:catalog-coverage` | Scalar-matrix test-name snapshots are not silently dropped; catalog surface is covered | no | no |
@@ -126,7 +126,7 @@ CI jobs:
 
 | Suite | Job | Trigger coverage | DB | `CS_*` | Notes |
 |---|---|---|---|---|---|
-| **catalog** (`eql-scalars` `proptest_invariants`) | **rust-crates** (`cargo test -p eql-scalars`; proptest is a dev-dep) | relevant PR + queue | no | no | pure-Rust catalog invariants; shrinking enabled |
+| **catalog** (`eql-domains` `proptest_invariants`) | **rust-crates** (`cargo test -p eql-domains`; proptest is a dev-dep) | relevant PR + queue | no | no | pure-Rust catalog invariants; shrinking enabled |
 | **fixture** (function-double oracles, extractor identity, `match_smoke`, `edge_cases`) | **test** shards (default features) | relevant PR (PG17×4) + queue (PG14–17×2) | yes | no | oracle over the **committed** real-ciphertext fixtures |
 | **e2e** (`e2e_oracle`, `#[cfg(feature = "proptest-e2e")]`) | **e2e** job (`test:sqlx:e2e`) | relevant PR (PG17) + queue (PG17) | yes | yes | oracle over **fresh** ZeroKMS encryption; PG-version-independent, so one PG17 run |
 

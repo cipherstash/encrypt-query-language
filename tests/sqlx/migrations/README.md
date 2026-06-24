@@ -36,7 +36,7 @@ cp release/cipherstash-encrypt.sql tests/sqlx/migrations/001_install_eql.sql
 ## Adding New Test Data
 
 Test data is provided by generated fixtures, not migrations. To add a new
-scalar fixture, add a row to `eql-scalars::CATALOG`; the generator produces
+scalar fixture, add a row to `eql-domains::CATALOG`; the generator produces
 `tests/sqlx/fixtures/eql_v3_<T>.sql` on the next `mise run test:sqlx`. A test
 opts in with `#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_<T>")))]`.
 See `tests/sqlx/fixtures/FIXTURE_SCHEMA.md`.

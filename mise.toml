@@ -31,7 +31,7 @@
 "cargo:cargo-expand" = "1.0.122"
 # Still required by the documentation tooling (`tasks/docs/generate/*.py`, run
 # by `docs:generate:markdown` in the release workflow). The encrypted-domain
-# codegen toolchain is now Rust (eql-scalars/eql-codegen) and needs no Python.
+# codegen toolchain is now Rust (eql-domains/eql-codegen) and needs no Python.
 "python" = "3.13"
 
 [task_config]
@@ -72,7 +72,7 @@ cd tests/sqlx
 sqlx migrate run
 
 # Regenerate fixtures every run — they are not committed (see .gitignore).
-# fixture:generate:all iterates eql-scalars::CATALOG and generates every
+# fixture:generate:all iterates eql-domains::CATALOG and generates every
 # scalar fixture in one process, so new scalar types are picked up
 # automatically (add the catalog row + the fixture wiring) without editing
 # this task.
@@ -158,7 +158,7 @@ run = "bash tasks/codegen-parity.sh"
 description = "Run the encrypted-domain catalog + generator tests (no database required)"
 dir = "{{config_root}}"
 run = """
-cargo test -p eql-scalars -p eql-codegen
+cargo test -p eql-domains -p eql-codegen
 """
 
 [tasks."test:crates"]
@@ -166,7 +166,7 @@ description = "Compile, lint and test the std-only Rust workspace crates (no dat
 dir = "{{config_root}}"
 run = """
 #!/usr/bin/env bash
-# eql-scalars / eql-codegen / eql-tests-macros / eql-types are the lean
+# eql-domains / eql-codegen / eql-tests-macros / eql-types are the lean
 # workspace members. Scope explicitly to them (NOT --workspace): a
 # workspace-wide test would drag in tests/sqlx, whose suite needs Postgres +
 # CS_* secrets and is already covered by the `test` job. eql-tests-macros only
@@ -179,8 +179,8 @@ run = """
 # /bin/sh (dash on the CI images).
 set -euo pipefail
 cargo fmt --check
-cargo clippy -p eql-scalars -p eql-codegen -p eql-tests-macros -p eql-types --all-targets -- -D warnings
-cargo test -p eql-scalars -p eql-codegen -p eql-tests-macros -p eql-types
+cargo clippy -p eql-domains -p eql-codegen -p eql-tests-macros -p eql-types --all-targets -- -D warnings
+cargo test -p eql-domains -p eql-codegen -p eql-tests-macros -p eql-types
 """
 
 [tasks."types:generate"]
@@ -473,7 +473,7 @@ run = """
 #!/usr/bin/env bash
 # The jsonb-entry behaviour matrix (jsonb_entry_matrix!) is a SIBLING of the
 # scalar matrix inventory, NOT folded into it: JsonbEntryInt4 is deliberately
-# not a eql-scalars::CATALOG type, so it has no scalars::<T>:: tests and no
+# not a eql-domains::CATALOG type, so it has no scalars::<T>:: tests and no
 # `eql-codegen list-types` row. Its names live under `jsonb_entry::…` and are
 # pinned by this isolated snapshot (no catalog cross-check). No database needed.
 set -euo pipefail

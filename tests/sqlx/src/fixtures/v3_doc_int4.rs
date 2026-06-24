@@ -1,5 +1,5 @@
 //! The `v3_doc_int4` fixture — a SteVec document carrying one int4 scalar at
-//! `$.field`, one row per `eql_scalars::INT4_VALUES`. Lets the scalar matrix's
+//! `$.field`, one row per `eql_domains::INT4_VALUES`. Lets the scalar matrix's
 //! behaviour generators run against the entry extracted at that selector
 //! (`payload -> SELECTOR`), reusing the int4 oracle.
 //!
@@ -53,7 +53,7 @@ pub const SELECTOR: &str = "fce8be759db230351b10a058b7ba50a7";
 /// Build the plaintext documents: `{"field": <value>}` per int4 fixture value,
 /// paired with the bare int4 oracle value.
 fn documents() -> Vec<(i32, Value)> {
-    eql_scalars::INT4_VALUES
+    eql_domains::INT4_VALUES
         .iter()
         .map(|&v| (v, serde_json::json!({ FIELD: v })))
         .collect()
@@ -99,7 +99,7 @@ mod tests {
     #[test]
     fn documents_are_one_per_int4_fixture_value() {
         let docs = documents();
-        assert_eq!(docs.len(), eql_scalars::INT4_VALUES.len());
+        assert_eq!(docs.len(), eql_domains::INT4_VALUES.len());
         for (v, doc) in &docs {
             assert_eq!(doc[FIELD].as_i64(), Some(*v as i64));
         }

@@ -14,7 +14,7 @@
 use std::fmt;
 
 use cipherstash_client::encryption::Plaintext;
-use eql_scalars::ScalarKind;
+use eql_domains::ScalarKind;
 
 /// The `cast_as` argument identifying a plaintext's target SQL type for
 /// encryption. The field is private so the allowlist is the set of
@@ -81,7 +81,7 @@ impl fmt::Display for PlaintextSqlType {
 ///
 /// Only the wired kinds (the integer kinds, `Text`, plus `Date` / `Timestamptz`)
 /// have `EqlPlaintext` impls, so only those resolve; the remaining kinds mirror the
-/// `eql_scalars` accessor convention and `panic!`, since no impl can ever reach
+/// `eql_domains` accessor convention and `panic!`, since no impl can ever reach
 /// them.
 const fn cast_for_kind(kind: ScalarKind) -> Cast {
     match kind {

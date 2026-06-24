@@ -14,7 +14,7 @@
 //! The [`v3`] module holds the `eql_v3` encrypted-domain types: one struct
 //! per SQL domain (`eql_v3.int4_eq`, `eql_v3.text_match`, …),
 //! *capability-encoded* — index terms are required fields, never `Option`.
-//! It mirrors `eql-scalars::CATALOG` 1:1, enforced by
+//! It mirrors `eql-domains::CATALOG` 1:1, enforced by
 //! `tests/catalog_parity.rs`.
 //!
 //! Wire rule: **field names ARE wire names** — no `#[serde(rename)]`

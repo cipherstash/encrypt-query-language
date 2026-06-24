@@ -5,7 +5,7 @@
 //! matrix's correctness/ordering/null/order-by/count/index generators run
 //! against jsonb-entry comparisons instead of whole-column scalar casts.
 //!
-//! It is deliberately NOT a `eql_scalars::CATALOG` scalar (it has no generated
+//! It is deliberately NOT a `eql_domains::CATALOG` scalar (it has no generated
 //! domain family and must stay out of the scalar matrix inventory). The entry
 //! suite invokes it through the reduced `jsonb_entry_matrix!` macro.
 
@@ -41,7 +41,7 @@ impl<'r> sqlx::Decode<'r, sqlx::Postgres> for JsonbEntryInt4 {
 /// because the trait returns `&'static [Self]` and `i32`'s const slice cannot
 /// be reinterpreted as `&[JsonbEntryInt4]` without an allocation.
 static VALUES: std::sync::LazyLock<Vec<JsonbEntryInt4>> = std::sync::LazyLock::new(|| {
-    eql_scalars::INT4_VALUES
+    eql_domains::INT4_VALUES
         .iter()
         .copied()
         .map(JsonbEntryInt4)
@@ -157,7 +157,7 @@ mod tests {
             .iter()
             .map(|e| e.0)
             .collect();
-        assert_eq!(got, eql_scalars::INT4_VALUES.to_vec());
+        assert_eq!(got, eql_domains::INT4_VALUES.to_vec());
     }
 
     #[test]

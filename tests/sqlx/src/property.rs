@@ -20,7 +20,7 @@
 
 use crate::scalar_domains::{ScalarDomainSpec, ScalarType, Variant};
 use anyhow::{Context, Result};
-use eql_scalars::Term;
+use eql_domains::Term;
 use sqlx::{PgPool, Row as _};
 
 /// Apply the SQLx migrations (the EQL install in `001_install_eql.sql`, plus the

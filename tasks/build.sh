@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Build SQL into single release file"
 #MISE alias="b"
-#MISE sources=["src/v3/**/*.sql", "src/v3/version.template", "tasks/pin_search_path_v3.sql", "tasks/uninstall-v3.sql", "crates/eql-scalars/src/**/*.rs", "crates/eql-codegen/src/**/*.rs"]
+#MISE sources=["src/v3/**/*.sql", "src/v3/version.template", "tasks/pin_search_path_v3.sql", "tasks/uninstall-v3.sql", "crates/eql-domains/src/**/*.rs", "crates/eql-codegen/src/**/*.rs"]
 #MISE outputs=["release/cipherstash-encrypt.sql","release/cipherstash-encrypt-uninstall.sql"]
 #USAGE flag "--version <version>" help="Specify release version of EQL" default="DEV"
 
@@ -11,7 +11,7 @@ set -euo pipefail
 
 # Regenerate encrypted-domain SQL from the Rust catalog before building.
 # Generated files (src/v3/scalars/<T>/<T>_*.sql) are gitignored; the
-# catalog at crates/eql-scalars/src (eql-scalars::CATALOG) is the source of
+# catalog at crates/eql-domains/src (eql-domains::CATALOG) is the source of
 # truth, rendered by the eql-codegen binary.
 #
 # Nuke every generated file first so a type removed from the catalog can't
@@ -25,10 +25,10 @@ find src/v3/scalars -mindepth 2 -type f \
      -o -name '*_aggregates.sql' \) \
   -delete 2>/dev/null || true
 
-# Regenerate every type — the catalog (eql-scalars::CATALOG) is the single
+# Regenerate every type — the catalog (eql-domains::CATALOG) is the single
 # source of truth for the enumeration; eql-codegen renders all SQL in one
 # deterministic run. The plaintext fixture lists are not generated — the SQLx
-# tests read them straight from the catalog (eql_scalars::INT4_VALUES / …). The
+# tests read them straight from the catalog (eql_domains::INT4_VALUES / …). The
 # orphan sweep above still handles the catalog-removed case the generator cannot.
 cargo run -p eql-codegen
 

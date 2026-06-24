@@ -47,7 +47,7 @@ async fn disjoint_value_does_not_match(pool: PgPool) -> anyhow::Result<()> {
     // A bloom filter is probabilistic and admits false positives, so a true
     // negative is only deterministic for inputs that share no n-grams. "aard"
     // (3-grams `aar`, `ard`) and "zzzz" (`zzz`) are chosen ngram-disjoint in
-    // TEXT_FIXTURES (crates/eql-scalars/src/lib.rs) precisely for this assertion;
+    // TEXT_FIXTURES (crates/eql-domains/src/lib.rs) precisely for this assertion;
     // keep them disjoint if the fixture list changes.
     let hay = payload_for(&pool, "aard").await?;
     let needle = payload_for(&pool, "zzzz").await?;

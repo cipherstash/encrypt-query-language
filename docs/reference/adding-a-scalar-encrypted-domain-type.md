@@ -18,7 +18,7 @@ index-term types they return (`eql_v3.hmac_256`,
 needs and is fully self-contained (CI gates this — see §6).
 
 The whole SQL surface is **generated** from a single Rust source of truth: the
-`CATALOG` const in [`crates/eql-scalars/src/lib.rs`](../../crates/eql-scalars/src/lib.rs),
+`CATALOG` const in [`crates/eql-domains/src/lib.rs`](../../crates/eql-domains/src/lib.rs),
 rendered by the [`eql-codegen`](../../crates/eql-codegen/) crate. There is no
 TOML manifest and no Python — adding a type is adding one `ScalarSpec` row,
 validated by the compiler plus catalog `#[test]`s. The reference type is
@@ -34,7 +34,7 @@ materializer (see §7).
 
 To add a scalar type `<T>` (e.g. `int8`), with Rust type `<R>` (e.g. `i64`):
 
-1. **Add a `ScalarSpec` row to `eql_scalars::CATALOG`** — `token`, `kind`,
+1. **Add a `ScalarSpec` row to `eql_domains::CATALOG`** — `token`, `kind`,
    `domains`, `fixtures` (§2). If the type needs a new scalar width, add a
    `ScalarKind` variant first; if it needs new term behaviour, that goes in the
    `Term` enum's `impl`, never in catalog data.
@@ -75,7 +75,7 @@ Hand-written SQL beyond the fixed surface goes in
 ## 2. The catalog row (`ScalarSpec`)
 
 A scalar type is one `ScalarSpec` row in
-[`crates/eql-scalars/src/lib.rs`](../../crates/eql-scalars/src/lib.rs):
+[`crates/eql-domains/src/lib.rs`](../../crates/eql-domains/src/lib.rs):
 
 ```rust
 ScalarSpec {
@@ -118,7 +118,7 @@ than a runtime validator:
   comes from the `Term` enum.
 - **`fixtures`** — the type's plaintext fixture list (see below).
 
-**Terms** are fixed by the `Term` enum (`crates/eql-scalars/src/lib.rs`). The
+**Terms** are fixed by the `Term` enum (`crates/eql-domains/src/lib.rs`). The
 `json_key` / `extractor` / `ctor` values are the cross-schema SQL contract (the
 Returns column below is `eql_v3.` + `ctor`) — changing one is a generated-SQL
 behaviour change, not a refactor:
@@ -227,7 +227,7 @@ comment on the `TIMESTAMPTZ` spec). Its value-wiring is the temporal path below;
 the only practical difference from `date` is that values are UTC-normalized. The
 three divergences (for the ordered `date`):
 
-- **String-backed fixtures.** `eql-scalars` stays zero-dependency, so the
+- **String-backed fixtures.** `eql-domains` stays zero-dependency, so the
   catalog stores ISO strings (`Fixture::Date("1970-01-01")`), not `chrono`
   values. There is **no** `int_values!` / `<T>_VALUES` const for a temporal kind
   (chrono constructors are not `const`). The SQLx harness parses the catalog
@@ -435,14 +435,14 @@ regenerate).
 
 Regeneration is deterministic: identical catalog + renderers produce
 byte-identical SQL. If `mise run build` produces unexpected output, the change
-is in `crates/eql-scalars/src` (catalog/terms) or `crates/eql-codegen/src`
+is in `crates/eql-domains/src` (catalog/terms) or `crates/eql-codegen/src`
 (renderers) — not run-to-run variation.
 
 Run, in order:
 
 - `cargo run -p eql-codegen` (optional; refreshes all generated SQL from the
   catalog before a full build)
-- `mise run test:codegen` (`cargo test -p eql-scalars -p eql-codegen`)
+- `mise run test:codegen` (`cargo test -p eql-domains -p eql-codegen`)
 - `mise run test:matrix:inventory` (matrix inventory + catalog cross-check; no
   database)
 - `mise run clean && mise run build` (regenerates every type's SQL from the
@@ -718,7 +718,7 @@ ninety hand-written declarations that must agree with each other and with
 `eql-codegen` is a small Rust crate with a binary entry point. The generator
 runs as `cargo run -p eql-codegen` (no subcommand), which calls
 `generate::generate_all` (`crates/eql-codegen/src/generate.rs`) over every row of
-`eql_scalars::CATALOG`, writing each type's SQL into
+`eql_domains::CATALOG`, writing each type's SQL into
 `src/v3/scalars/<token>/`. A second subcommand, `cargo run -p eql-codegen
 -- list-types`, prints the catalog tokens one per line (consumed by the fixture
 and matrix-inventory enumeration). `main` (`crates/eql-codegen/src/main.rs`)
@@ -738,7 +738,7 @@ preserved by the name patterns.)
 
 Stages, in order (`generate_all` → `generate_type`):
 
-1. **Read the catalog.** `eql_scalars::CATALOG` is the in-binary source of truth
+1. **Read the catalog.** `eql_domains::CATALOG` is the in-binary source of truth
    — a `&[ScalarSpec]`. There is no parse/validate stage at generation time: the
    catalog is validated at compile time (an undefined `Term` or unknown
    `ScalarKind` does not compile) and by the catalog `#[test]`s, so the data is
@@ -796,10 +796,10 @@ domain's function and operator files), and carries Doxygen `--! @file` /
 ### Generator tests and the parity gate
 
 The generator's tests are Rust, run by `mise run test:codegen` (`cargo test -p
-eql-scalars -p eql-codegen`) — no database. `mise run test:crates` adds `cargo
+eql-domains -p eql-codegen`) — no database. `mise run test:crates` adds `cargo
 clippy ... -D warnings`.
 
-- **`eql-scalars` unit tests** — `rust_tests`, `term_tests`,
+- **`eql-domains` unit tests** — `rust_tests`, `term_tests`,
   `term_helper_tests`, `fixture_tests`, `catalog_tests`, `invariant_tests`,
   `values_tests` over `CATALOG`, the `Term` / `ScalarKind` / `Fixture` impls, and
   the materialised `<T>_VALUES` consts.

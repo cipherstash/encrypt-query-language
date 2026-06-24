@@ -1,4 +1,4 @@
-//! The drift gate: the v3 domain inventory must mirror `eql-scalars::CATALOG`
+//! The drift gate: the v3 domain inventory must mirror `eql-domains::CATALOG`
 //! — the same catalog that generates the `eql_v3` SQL surface — exactly:
 //! every domain, in catalog order, and every domain's wire contract, pinned
 //! through the published JSON Schema. schemars output reflects the real
@@ -11,7 +11,7 @@
 
 use std::collections::BTreeSet;
 
-use eql_scalars::{Term, CATALOG, ENVELOPE_KEYS};
+use eql_domains::{Term, CATALOG, ENVELOPE_KEYS};
 use eql_types::{v3, EQL_SCHEMA_VERSION};
 use serde_json::{json, Value};
 

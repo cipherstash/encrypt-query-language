@@ -33,7 +33,7 @@ pub mod driver;
 pub mod v3_ste_vec;
 
 // The scalar-shaped SteVec document fixture — a SteVec document carrying one
-// int4 scalar at `$.field` per `eql_scalars::INT4_VALUES`. A SPLIT fixture
+// int4 scalar at `$.field` per `eql_domains::INT4_VALUES`. A SPLIT fixture
 // (jsonb-document encryption input, int4 plaintext oracle), so it uses the
 // `run_with_payloads` seam rather than `FixtureSpec::run`. Drives the
 // jsonb-entry behaviour matrix (`JsonbEntryInt4`).
@@ -47,7 +47,7 @@ pub mod v3_doc_int4;
 pub mod v3_numeric_collision;
 
 // The empty-string ordered-text fixture (`""`, `"frank"`, `"zebra"`). Not a
-// CATALOG scalar — `eql-scalars::TEXT_FIXTURES` deliberately excludes `""`
+// CATALOG scalar — `eql-domains::TEXT_FIXTURES` deliberately excludes `""`
 // (issue #262) — so it is hand-written and registered here directly (like the
 // other `v3_` fixtures). Gives the "empty sorts first" contract (ORDER BY /
 // min / max over `text_ord`) a committed real-ciphertext home.
@@ -60,5 +60,5 @@ pub mod eql_doubles;
 // The per-type scalar fixture modules (`eql_v3_int4`, `eql_v3_int2`, …) are
 // generated from the harness list in `scalar_types.rs`. Each expands to
 // `pub mod eql_v3_<T> { … scalar_fixture! … }`, reading its plaintext values
-// directly from the catalog (`eql_scalars::<TOKEN>_VALUES`).
+// directly from the catalog (`eql_domains::<TOKEN>_VALUES`).
 crate::scalar_types!(fixture_modules);

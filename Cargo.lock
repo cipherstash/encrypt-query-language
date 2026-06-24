@@ -1165,7 +1165,7 @@ dependencies = [
 name = "eql-codegen"
 version = "0.1.0"
 dependencies = [
- "eql-scalars",
+ "eql-domains",
  "minijinja",
  "serde",
  "serde_json",
@@ -1173,7 +1173,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "eql-scalars"
+name = "eql-domains"
 version = "0.1.0"
 dependencies = [
  "proptest",
@@ -1183,7 +1183,7 @@ dependencies = [
 name = "eql-tests-macros"
 version = "0.1.0"
 dependencies = [
- "eql-scalars",
+ "eql-domains",
  "proc-macro2",
  "quote",
  "syn 2.0.108",
@@ -1193,7 +1193,7 @@ dependencies = [
 name = "eql-types"
 version = "0.1.0"
 dependencies = [
- "eql-scalars",
+ "eql-domains",
  "schemars",
  "serde",
  "serde_json",
@@ -1207,7 +1207,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "cipherstash-client",
- "eql-scalars",
+ "eql-domains",
  "eql-tests-macros",
  "hex",
  "jsonschema",

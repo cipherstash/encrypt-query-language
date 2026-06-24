@@ -273,7 +273,7 @@ Tests connect to PostgreSQL database configured by SQLx:
 
 - ✅ ~~Convert remaining SQL tests~~ **COMPLETE!**
 - Property-based tests: implemented in `tests/encrypted_domain/property/` and
-  `crates/eql-scalars/src/proptest_invariants.rs` (CIP-3141). One unit-level
+  `crates/eql-domains/src/proptest_invariants.rs` (CIP-3141). One unit-level
   **catalog** suite (no DB) plus two integration suites — **fixture** (operator +
   function-double oracles, term-extractor identity, and bloom match smoke over the
   committed real-ciphertext fixtures) and **e2e** (oracle over fresh end-to-end

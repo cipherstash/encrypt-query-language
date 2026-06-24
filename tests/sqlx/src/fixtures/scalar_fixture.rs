@@ -35,7 +35,7 @@
 ///
 /// - `$name` — the fixture name (`"eql_v3_int2"`), drives every derived path.
 /// - `$ty` — the Rust plaintext type (`i16` / `chrono::NaiveDate` / `String`).
-/// - `$values` — the value source: the catalog const (`eql_scalars::INT2_VALUES`)
+/// - `$values` — the value source: the catalog const (`eql_domains::INT2_VALUES`)
 ///   for integers, or the harness accessor (`date_values()` / `text_values()`).
 ///
 /// `Unique` drives `=` / `<>` (HMAC); `Ore` drives `<` `<=` `>` `>=` (ORE block

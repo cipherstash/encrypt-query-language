@@ -1,8 +1,8 @@
 ["fixture:generate:all"]
-description = "Regenerate every scalar SQLx fixture in one process, driven by eql-scalars::CATALOG"
+description = "Regenerate every scalar SQLx fixture in one process, driven by eql-domains::CATALOG"
 # Replaces the Python-era per-type `fixture:generate <name>` script and the
 # TOML-glob `fixture:generate:all` loop (one `cargo test` per type). The
-# generate_all_fixtures test iterates eql-scalars::CATALOG and runs every
+# generate_all_fixtures test iterates eql-domains::CATALOG and runs every
 # eql_v3_<T> fixture generator in a SINGLE process. The encrypted-fixture logic
 # is unchanged; only enumeration + entry point changed.
 #

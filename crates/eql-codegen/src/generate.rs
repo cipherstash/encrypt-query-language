@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use eql_scalars::{DomainSpec, ScalarSpec, Term};
+use eql_domains::{DomainSpec, ScalarSpec, Term};
 
 use crate::context::{domain_name, is_ord_capable};
 use crate::operator_surface::OPERATORS;
@@ -245,9 +245,9 @@ pub fn generate_type(spec: &ScalarSpec, out_dir: &Path) -> Result<Vec<PathBuf>, 
 /// Generate every catalog type's gitignored SQL surface under `out_root`. The
 /// single entry point: replaces Python's per-type and --all forms. The
 /// plaintext fixture lists are not generated — they live in the catalog
-/// (`eql_scalars::INT4_VALUES` / `INT2_VALUES`), read directly by the SQLx tests.
+/// (`eql_domains::INT4_VALUES` / `INT2_VALUES`), read directly by the SQLx tests.
 pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
-    for spec in eql_scalars::CATALOG {
+    for spec in eql_domains::CATALOG {
         let token = spec.token;
         let out_dir = out_root.join(V3_SCALARS_DIR).join(token);
         let written = generate_type(spec, &out_dir)?;
@@ -258,7 +258,7 @@ pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
         }
         println!("generated {} files for {token}", written.len());
     }
-    let tokens: Vec<&str> = eql_scalars::CATALOG.iter().map(|s| s.token).collect();
+    let tokens: Vec<&str> = eql_domains::CATALOG.iter().map(|s| s.token).collect();
     println!(
         "codegen: ok ({} types: {})",
         tokens.len(),
@@ -270,7 +270,7 @@ pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use eql_scalars::CATALOG;
+    use eql_domains::CATALOG;
 
     fn spec(token: &str) -> &'static ScalarSpec {
         CATALOG
@@ -668,7 +668,7 @@ mod tests {
     #[test]
     fn domain_block_escapes_quote_bearing_name() {
         use crate::context::domain_block;
-        use eql_scalars::DomainSpec;
+        use eql_domains::DomainSpec;
         let block = domain_block(
             "int4",
             &DomainSpec {

@@ -46,7 +46,7 @@ field names are unchanged from v2 (the purpose-named rename in
 
 `tests/catalog_parity.rs` asserts the domain inventory —
 [`v3::all()`](src/v3/mod.rs), a `Vec<Box<dyn DomainType>>` of zero-sized
-type-level handles — exactly covers `eql-scalars::CATALOG` (the same catalog
+type-level handles — exactly covers `eql-domains::CATALOG` (the same catalog
 that generates the `eql_v3` SQL surface): every domain, in order. Adding a
 scalar to the catalog without adding its types here fails the build.
 Wire-key strictness (required term keys, unknown-key rejection, envelope

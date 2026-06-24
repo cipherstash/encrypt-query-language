@@ -71,7 +71,7 @@ These are the important files and directories in the repo:
 │   ├── docs/                  <-- documentation generate/validate tasks
 │   └── test/                  <-- additional test tasks (self_contained_v3, …)
 ├── crates/                    <-- Rust workspace: catalog, code generator, types
-│   ├── eql-scalars/           <-- THE catalog (eql-scalars::CATALOG): source of truth
+│   ├── eql-domains/           <-- THE catalog (eql-domains::CATALOG): source of truth
 │   ├── eql-codegen/           <-- renders the eql_v3 scalar SQL from the catalog
 │   ├── eql-types/             <-- shared Rust types + generated TS/JSON Schema bindings
 │   └── eql-tests-macros/      <-- proc-macros used by the SQLx test matrix
@@ -178,7 +178,7 @@ and uninstall scripts to `release/`.
 
 The `eql_v3` scalar encrypted-domain types are **generated** from a single Rust
 source of truth — the `CATALOG` const in
-[`crates/eql-scalars/src/lib.rs`](./crates/eql-scalars/src/lib.rs). There is no
+[`crates/eql-domains/src/lib.rs`](./crates/eql-domains/src/lib.rs). There is no
 TOML manifest and no Python.
 
 Each scalar type is one `ScalarSpec` row in `CATALOG`, declaring:
@@ -198,7 +198,7 @@ The generated files
 `<T>_aggregates.sql`) carry an `-- AUTOMATICALLY GENERATED FILE` header (the
 project-wide marker that `docs:validate` greps for), are **gitignored**, and
 are **never committed**. If `mise run build` produces unexpected output, the
-change is in `crates/eql-scalars/src` (the catalog/terms) or
+change is in `crates/eql-domains/src` (the catalog/terms) or
 `crates/eql-codegen/src` (the renderers), not in run-to-run variation.
 
 ### The dependency system
@@ -307,7 +307,7 @@ The catalog, code generator, and shared types have fast tests that do not need a
 database:
 
 ```bash
-# Catalog + generator tests (eql-scalars, eql-codegen)
+# Catalog + generator tests (eql-domains, eql-codegen)
 mise run test:codegen
 
 # Compile, lint, and test the std-only workspace crates
@@ -329,8 +329,8 @@ without a database at all.
 ### Adding a scalar encrypted-domain type
 
 Adding a scalar encrypted-domain type (e.g. a new ordered numeric scalar) is one
-`ScalarSpec` row in `eql-scalars::CATALOG`
-([`crates/eql-scalars/src/lib.rs`](./crates/eql-scalars/src/lib.rs)). New term
+`ScalarSpec` row in `eql-domains::CATALOG`
+([`crates/eql-domains/src/lib.rs`](./crates/eql-domains/src/lib.rs)). New term
 behaviour belongs in the `Term` enum's `impl` methods (with tests), not in
 free-form catalog data. After editing the catalog, run `mise run build` to
 regenerate the SQL surface.

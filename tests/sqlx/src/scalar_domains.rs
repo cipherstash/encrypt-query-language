@@ -10,7 +10,7 @@
 //! `T::fixture_values()`, and the `Variant` enum.
 
 use anyhow::{bail, Context, Result};
-use eql_scalars::{Term, CATALOG};
+use eql_domains::{Term, CATALOG};
 use sqlx::PgPool;
 use std::fmt::{Debug, Display};
 
@@ -44,7 +44,7 @@ pub trait ScalarType:
     /// `chrono::NaiveDate`, whose `from_ymd_opt` is not `const`) cannot be
     /// materialised into a const slice; the harness builds those into a
     /// `LazyLock<Vec<_>>` and returns a borrow of it (see `date_values`).
-    /// Integer scalars return their `eql_scalars::<T>_VALUES` const directly.
+    /// Integer scalars return their `eql_domains::<T>_VALUES` const directly.
     ///
     /// For types driven by `scalar_matrix!` (caps = [eq, ord]), the values MUST
     /// include the three `OrderedScalar` pivots (`min_pivot()`, `max_pivot()`,
@@ -223,7 +223,7 @@ pub trait MatchScalar: ScalarType {
 }
 
 // The per-type `impl ScalarType` blocks for the **integer** scalars (each
-// carrying its `PG_TYPE` token, `fixture_values() = eql_scalars::<TOKEN>_VALUES`,
+// carrying its `PG_TYPE` token, `fixture_values() = eql_domains::<TOKEN>_VALUES`,
 // and `min_pivot()`/`max_pivot()` = `Self::MIN`/`Self::MAX`) are generated from
 // the single harness list in `scalar_types.rs`. To add an integer type, add a
 // `token => rust_type` line there — not an impl here.
@@ -239,7 +239,7 @@ crate::scalar_types!(scalar_type_impls);
 /// catalog row: a `LazyLock<Vec<T>>` parsing the catalog fixture strings, a
 /// public `<accessor>()` returning a borrow of it, `impl ScalarType for T`, and
 /// a `#[cfg(test)]` module asserting the parsed values track the catalog and
-/// include the pivots. The chrono analogue of `eql_scalars::int_values!`
+/// include the pivots. The chrono analogue of `eql_domains::int_values!`
 /// (integers materialise a `const` slice; temporals can't, so values live in a
 /// `LazyLock`). `parse`/`sql_lit` are expressions so each type supplies its own
 /// chrono parsing and SQL literal form. Boundary pivots are not parameters: they
@@ -261,7 +261,7 @@ macro_rules! temporal_values {
                 .fixtures
                 .iter()
                 .map(|f| match f {
-                    ::eql_scalars::Fixture::$variant(s) => parse(s),
+                    ::eql_domains::Fixture::$variant(s) => parse(s),
                     other => panic!(concat!("non-", $pg, " fixture in ", $pg, " catalog row: {:?}"), other),
                 })
                 .collect()
@@ -309,7 +309,7 @@ macro_rules! temporal_values {
             fn values_match_catalog_fixtures() {
                 let parse: fn(&str) -> $ty = $parse;
                 let want: Vec<$ty> = $spec.fixtures.iter().map(|f| match f {
-                    ::eql_scalars::Fixture::$variant(s) => parse(s),
+                    ::eql_domains::Fixture::$variant(s) => parse(s),
                     other => panic!("non-{} fixture: {:?}", $pg, other),
                 }).collect();
                 assert_eq!($accessor(), want.as_slice());
@@ -338,10 +338,10 @@ macro_rules! temporal_values {
 /// kind-agnostic core shared by every non-integer scalar: `temporal_values!`
 /// adds the chrono-specific `ScalarType`/`OrderedScalar`/`SignedScalar` wiring on
 /// top, while `text`/`numeric` supply their own (they are not signed). Integer
-/// scalars do not use this — they materialise a `const` slice in `eql-scalars`
+/// scalars do not use this — they materialise a `const` slice in `eql-domains`
 /// (`int_values!`) and impl `ScalarType` via the proc-macro.
 ///
-/// `$variant` is the `eql_scalars::Fixture` variant this scalar's rows use
+/// `$variant` is the `eql_domains::Fixture` variant this scalar's rows use
 /// (`Text`/`Numeric`/`Date`/`Timestamptz`); `$parse` maps each `&Fixture` to
 /// `$ty` (and owns its own loud "wrong variant" panic). The accessor is `pub` so
 /// the `eql_v3_<T>` fixture module can hand the slice to `scalar_fixture!`.
@@ -356,7 +356,7 @@ macro_rules! lazy_values {
         parse     = $parse:expr $(,)?
     ) => {
         static $cell: std::sync::LazyLock<Vec<$ty>> = std::sync::LazyLock::new(|| {
-            let parse: fn(&::eql_scalars::Fixture) -> $ty = $parse;
+            let parse: fn(&::eql_domains::Fixture) -> $ty = $parse;
             $spec.fixtures.iter().map(parse).collect()
         });
 
@@ -377,7 +377,7 @@ temporal_values! {
     cell      = DATE_VALUES_CELL,
     accessor  = date_values,
     rust_type = chrono::NaiveDate,
-    spec      = eql_scalars::DATE,
+    spec      = eql_domains::DATE,
     variant   = Date,
     pg_type   = "date",
     parse     = |s| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
@@ -395,7 +395,7 @@ temporal_values! {
     cell      = TIMESTAMPTZ_VALUES_CELL,
     accessor  = timestamptz_values,
     rust_type = chrono::DateTime<chrono::Utc>,
-    spec      = eql_scalars::TIMESTAMPTZ,
+    spec      = eql_domains::TIMESTAMPTZ,
     variant   = Timestamptz,
     pg_type   = "timestamptz",
     parse     = |s| chrono::DateTime::parse_from_rfc3339(s)
@@ -407,7 +407,7 @@ temporal_values! {
 /// Focused guards for the timestamptz value wiring that the `temporal_values!`
 /// auto-generated tests can't cover, because every catalog fixture is already
 /// `…Z` (UTC). Both tests intentionally live in the harness, not in
-/// `eql-scalars`, which is deliberately zero-dep (no chrono).
+/// `eql-domains`, which is deliberately zero-dep (no chrono).
 #[cfg(test)]
 mod timestamptz_value_guards {
     use super::*;
@@ -439,7 +439,7 @@ mod timestamptz_value_guards {
         assert_eq!((utc.hour(), utc.day()), (0, 1));
     }
 
-    /// `eql-scalars::invariant_tests::fixture_values_are_distinct_by_resolved_number`
+    /// `eql-domains::invariant_tests::fixture_values_are_distinct_by_resolved_number`
     /// keys `Fixture::Timestamptz` by its literal string, so two RFC3339 strings
     /// that denote the same UTC instant (e.g. `…00:00Z` vs `…01:00+01:00`) would
     /// pass as "distinct" there. The fixture *table* keys on the parsed
@@ -461,7 +461,7 @@ mod timestamptz_value_guards {
 
 // `text` is hand-written rather than driven by `temporal_values!`: it is an
 // owned `String` (not chrono-backed), so it materialises its values from the
-// `eql_scalars::TEXT_VALUES` const slice rather than parsing catalog strings.
+// `eql_domains::TEXT_VALUES` const slice rather than parsing catalog strings.
 // `text_values()` is public so the `eql_v3_text` fixture module (emitted by
 // `scalar_types!(fixture_modules)`) can hand the slice to `scalar_fixture!`.
 
@@ -475,11 +475,11 @@ lazy_values! {
     cell      = TEXT_VALUES_CELL,
     accessor  = text_values,
     rust_type = String,
-    spec      = eql_scalars::TEXT,
+    spec      = eql_domains::TEXT,
     variant   = Text,
     pg_type   = "text",
     parse     = |f| match f {
-        eql_scalars::Fixture::Text(s) => s.to_string(),
+        eql_domains::Fixture::Text(s) => s.to_string(),
         other => panic!("non-text fixture in text catalog row: {other:?}"),
     },
 }
@@ -541,7 +541,7 @@ impl MatchScalar for String {
 // `numeric` is hand-written (like `text`): an owned `rust_decimal::Decimal`,
 // not chrono-backed, so it parses the catalog's `Fixture::Numeric` strings into
 // a `LazyLock<Vec<Decimal>>` rather than going through `temporal_values!`. The
-// catalog stays zero-dep, so the parse happens here, not in `eql-scalars`.
+// catalog stays zero-dep, so the parse happens here, not in `eql-domains`.
 
 // `numeric`'s value wiring goes through the shared `lazy_values!` materializer
 // (same as `text`), parsing the catalog's `Fixture::Numeric` strings into
@@ -553,11 +553,11 @@ lazy_values! {
     cell      = NUMERIC_VALUES_CELL,
     accessor  = numeric_values,
     rust_type = rust_decimal::Decimal,
-    spec      = eql_scalars::NUMERIC,
+    spec      = eql_domains::NUMERIC,
     variant   = Numeric,
     pg_type   = "numeric",
     parse     = |f| match f {
-        eql_scalars::Fixture::Numeric(s) => {
+        eql_domains::Fixture::Numeric(s) => {
             use std::str::FromStr;
             rust_decimal::Decimal::from_str(s)
                 .unwrap_or_else(|e| panic!("invalid numeric catalog fixture {s:?}: {e}"))
@@ -592,7 +592,7 @@ impl OrderedScalar for rust_decimal::Decimal {
 // ordered non-integer kind. The signed-only sign-boundary test bounds on
 // `SignedScalar`, so it is not instantiated for numeric.
 
-/// `eql-scalars`' distinctness invariant keys `Fixture::Numeric` by its literal
+/// `eql-domains`' distinctness invariant keys `Fixture::Numeric` by its literal
 /// string, so `"1"` and `"1.0"` would pass there as "distinct". But they denote
 /// the same `Decimal` value (and collide in the ORE ciphertext, per ore-rs's
 /// `equivalent_forms_collide_in_ciphertext`), so an aliasing pair would insert
@@ -641,11 +641,11 @@ mod numeric_value_guards {
 /// order (`[false, true]`). Public so the `eql_v3_bool` fixture module (emitted
 /// by `scalar_types!(fixture_modules)`) can hand the slice to `scalar_fixture!`.
 static BOOL_VALUES_CELL: std::sync::LazyLock<Vec<bool>> = std::sync::LazyLock::new(|| {
-    eql_scalars::BOOL
+    eql_domains::BOOL
         .fixtures
         .iter()
         .map(|f| match f {
-            eql_scalars::Fixture::Bool(b) => *b,
+            eql_domains::Fixture::Bool(b) => *b,
             other => panic!("non-bool fixture in bool catalog row: {other:?}"),
         })
         .collect()
@@ -757,7 +757,7 @@ mod text_value_tests {
             .iter()
             .map(|s| s.as_str())
             .collect();
-        assert_eq!(got, eql_scalars::TEXT_VALUES.to_vec());
+        assert_eq!(got, eql_domains::TEXT_VALUES.to_vec());
     }
 
     /// Directly exercises the `String` `to_sql_literal` override's
@@ -881,11 +881,11 @@ lazy_values! {
     cell      = FLOAT4_VALUES_CELL,
     accessor  = float4_values,
     rust_type = F4,
-    spec      = eql_scalars::FLOAT4,
+    spec      = eql_domains::FLOAT4,
     variant   = Float,
     pg_type   = "float4",
     parse     = |f| match f {
-        eql_scalars::Fixture::Float(s) => F4(s
+        eql_domains::Fixture::Float(s) => F4(s
             .parse()
             .unwrap_or_else(|e| panic!("invalid float4 catalog fixture {s:?}: {e}"))),
         other => panic!("non-float fixture in float4 catalog row: {other:?}"),
@@ -896,11 +896,11 @@ lazy_values! {
     cell      = FLOAT8_VALUES_CELL,
     accessor  = float8_values,
     rust_type = F8,
-    spec      = eql_scalars::FLOAT8,
+    spec      = eql_domains::FLOAT8,
     variant   = Float,
     pg_type   = "float8",
     parse     = |f| match f {
-        eql_scalars::Fixture::Float(s) => F8(s
+        eql_domains::Fixture::Float(s) => F8(s
             .parse()
             .unwrap_or_else(|e| panic!("invalid float8 catalog fixture {s:?}: {e}"))),
         other => panic!("non-float fixture in float8 catalog row: {other:?}"),
@@ -989,11 +989,11 @@ mod float_value_guards {
     fn float4_values_match_catalog_and_are_finite_non_negative_zero() {
         let vals = float4_values();
         // Parsed from the catalog, in order.
-        let want: Vec<F4> = eql_scalars::FLOAT4
+        let want: Vec<F4> = eql_domains::FLOAT4
             .fixtures
             .iter()
             .map(|f| match f {
-                eql_scalars::Fixture::Float(s) => F4(s.parse().unwrap()),
+                eql_domains::Fixture::Float(s) => F4(s.parse().unwrap()),
                 other => panic!("non-float fixture: {other:?}"),
             })
             .collect();
@@ -1009,11 +1009,11 @@ mod float_value_guards {
     #[test]
     fn float8_values_match_catalog_and_are_finite_non_negative_zero() {
         let vals = float8_values();
-        let want: Vec<F8> = eql_scalars::FLOAT8
+        let want: Vec<F8> = eql_domains::FLOAT8
             .fixtures
             .iter()
             .map(|f| match f {
-                eql_scalars::Fixture::Float(s) => F8(s.parse().unwrap()),
+                eql_domains::Fixture::Float(s) => F8(s.parse().unwrap()),
                 other => panic!("non-float fixture: {other:?}"),
             })
             .collect();
@@ -1682,7 +1682,7 @@ mod arbitrary_value_tests {
 #[cfg(test)]
 mod oracle_inventory_tests {
     use super::*;
-    use eql_scalars::CATALOG;
+    use eql_domains::CATALOG;
 
     /// The set of catalog tokens that should get an `eq` + `ord` fixture/e2e
     /// oracle suite is exactly the ordered (non-storage-only) scalars. Pin it so
