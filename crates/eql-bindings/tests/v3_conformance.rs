@@ -125,11 +125,14 @@ fn rejects_unknown_keys() {
 
 #[test]
 fn int4_ord_rejects_missing_ore_term() {
+    // Omit `hm`: it is not an Int4Ord field, so leaving it in would trip
+    // deny_unknown_fields and the rejection could pass for the wrong reason.
+    // This payload carries only the base fields, so the sole cause of failure
+    // is the absent `ob`.
     let no_ob = json!({
         "v": 2,
         "i": { "t": "users", "c": "age" },
-        "c": "mp_base85_ciphertext",
-        "hm": "deadbeef"
+        "c": "mp_base85_ciphertext"
     });
     let result: Result<Int4Ord, _> = serde_json::from_value(no_ob);
     assert!(result.is_err(), "Int4Ord must reject a payload with no ob");
