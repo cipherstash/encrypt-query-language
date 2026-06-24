@@ -606,28 +606,37 @@ echo "Catalog-coverage OK: every CATALOG (type, domain) has matrix tests."
 """
 
 [tasks."test:matrix:expand"]
-description = "Regenerate the int4 matrix cargo-expand snapshot (requires the pinned nightly + cargo-expand)"
+description = "Regenerate the matrix cargo-expand drift snapshots (int4, text, bool — one per reachable scalar_matrix! arm; requires the pinned nightly + cargo-expand)"
 dir = "{{config_root}}/tests/sqlx"
 run = """
 #!/usr/bin/env bash
-# Body-level fidelity backstop for the macro: the expanded source of the int4
-# matrix arms. The `cargo +nightly-...` invocation below is the SINGLE source of
-# the pinned nightly date — .github/workflows/macro-expand-eql.yml greps it from
-# here rather than hardcoding, so there is nothing to keep in lockstep. The date
-# is pinned to a known-good value so the snapshot only moves when *the macro*
-# moves, not when nightly reformats — bump it deliberately, here, in one place.
+# Body-level fidelity backstop for the macro: the expanded source of the matrix
+# arms, one snapshot per *reachable* `scalar_matrix!` arm (tests/sqlx/src/matrix.rs):
+#   int4 -> [eq, ord]          (= rides the ORE ordered index)
+#   text -> [eq, ord, search]  (bloom `_match` + `_eqidx` index split)
+#   bool -> [storage]          (single term-less domain; direct leaf drivers)
+# The arms emit structurally different bodies, so no single type subsumes the
+# others (text does NOT subsume int4: its `ord` btree combo omits `=`). The `[eq]`
+# arm has no consumer and is uncovered by design. The `cargo +nightly-...`
+# invocation below is the SINGLE source of the pinned nightly date —
+# .github/workflows/macro-expand-eql.yml greps it from here rather than
+# hardcoding, so there is nothing to keep in lockstep. The date is pinned to a
+# known-good value so the snapshots only move when *the macro* moves, not when
+# nightly reformats — bump it deliberately, here, in one place.
 #
 # `#[sqlx::test]` embeds one `sqlx::migrate::Migration` per file in migrations/
-# plus the fixture (via include_str) into EVERY generated test — ~477 MB of
-# repeated data dwarfing the macro bodies, and non-deterministic across
+# plus the fixture (via include_str) into EVERY generated test — hundreds of MB
+# of repeated data dwarfing the macro bodies, and non-deterministic across
 # environments (the generated 001_install_eql.sql is absent in a bare checkout).
-# Normalise both to fixed empties so the snapshot depends only on matrix.rs +
+# Normalise both to fixed empties so each snapshot depends only on matrix.rs +
 # the sqlx/test harness: swap migrations/ for a single empty placeholder and
-# empty the int4 fixture, expand, then restore (trap fires on any exit). This is
-# expand-only surgery on gitignored/generated inputs; nothing here is committed.
+# empty each target's fixture (every scalar suite include_str!'s exactly
+# fixtures/eql_v3_<token>.sql), expand, then restore (trap fires on any exit).
+# This is expand-only surgery on gitignored/generated inputs; nothing here is
+# committed.
 #
-# Non-blocking lane (no Postgres, never compiled): the `.rs` name lives under
-# snapshots/, not tests/, so Cargo never treats it as a test target.
+# Non-blocking lane (no Postgres, never compiled): the `.rs` names live under
+# snapshots/, not tests/, so Cargo never treats them as test targets.
 set -euo pipefail
 # Force the mise-pinned cargo-expand (mise.toml [tools]) to win over any stray
 # global `cargo install cargo-expand` in ~/.cargo/bin, which otherwise sits
@@ -636,30 +645,47 @@ set -euo pipefail
 PATH="$(mise where cargo:cargo-expand)/bin:$PATH"
 export PATH
 mkdir -p snapshots fixtures
+# One target per reachable scalar_matrix! arm. Add a token here to pin another
+# arm; its snapshot is written to snapshots/<token>_expanded.rs.
+TARGETS=(int4 text bool)
 BK=$(mktemp -d)
 cp -a migrations "$BK/migrations"
-# The int4 fixture is gitignored (regenerated) and absent in a bare checkout —
-# back it up only if present, and on restore drop the empty stand-in if so.
-HAD_FIXTURE=0
-if [ -f fixtures/eql_v3_int4.sql ]; then cp -a fixtures/eql_v3_int4.sql "$BK/eql_v3_int4.sql"; HAD_FIXTURE=1; fi
+mkdir -p "$BK/fixtures"
+# Each target fixture is gitignored (regenerated) and absent in a bare checkout —
+# back it up only if present. Presence of the backup file is itself the record of
+# "this fixture existed", so restore needs no separate flag (bash 3.2 safe: no
+# associative arrays).
+for t in "${TARGETS[@]}"; do
+  if [ -f "fixtures/eql_v3_${t}.sql" ]; then
+    cp -a "fixtures/eql_v3_${t}.sql" "$BK/fixtures/eql_v3_${t}.sql"
+  fi
+done
 restore() {
   rm -rf migrations && cp -a "$BK/migrations" migrations
-  if [ "$HAD_FIXTURE" = 1 ]; then cp -af "$BK/eql_v3_int4.sql" fixtures/eql_v3_int4.sql; else rm -f fixtures/eql_v3_int4.sql; fi
+  for t in "${TARGETS[@]}"; do
+    if [ -f "$BK/fixtures/eql_v3_${t}.sql" ]; then
+      cp -af "$BK/fixtures/eql_v3_${t}.sql" "fixtures/eql_v3_${t}.sql"
+    else
+      rm -f "fixtures/eql_v3_${t}.sql"
+    fi
+  done
   rm -rf "$BK"
 }
 trap restore EXIT
-# Wipe + recreate so the expand input is ALWAYS exactly one empty migration +
-# one empty fixture, regardless of what the checkout had — this is what makes
-# the snapshot deterministic across local and CI.
+# Wipe + recreate so the expand input is ALWAYS exactly one empty migration + one
+# empty fixture per target, regardless of what the checkout had — this is what
+# makes the snapshots deterministic across local and CI.
 rm -rf migrations && mkdir migrations
 : > migrations/0001_placeholder.sql
-: > fixtures/eql_v3_int4.sql
-# Expand into a temp file and mv into place only on success — a redirect straight
-# onto the snapshot would zero it before cargo runs, so a transient expand
-# failure would leave a 0-byte snapshot locally. (Under `set -euo pipefail` a
-# cargo failure aborts the script and the trap restores migrations/fixtures; the
-# temp file is then orphaned in $TMPDIR, which is acceptable.)
-OUT=$(mktemp)
-cargo +nightly-2026-05-01 expand --test encrypted_domain scalars::int4 > "$OUT"
-mv "$OUT" snapshots/int4_expanded.rs
+for t in "${TARGETS[@]}"; do : > "fixtures/eql_v3_${t}.sql"; done
+# Expand each target into a temp file and mv into place only on success — a
+# redirect straight onto the snapshot would zero it before cargo runs, so a
+# transient expand failure would leave a 0-byte snapshot locally. (Under
+# `set -euo pipefail` a cargo failure aborts the script and the trap restores
+# migrations/fixtures; the temp file is then orphaned in $TMPDIR, acceptable.)
+for t in "${TARGETS[@]}"; do
+  OUT=$(mktemp)
+  cargo +nightly-2026-05-01 expand --test encrypted_domain "scalars::${t}" > "$OUT"
+  mv "$OUT" "snapshots/${t}_expanded.rs"
+done
 """
