@@ -204,3 +204,42 @@ cargo test --test v3_jsonb_tests --test v3_jsonb_operator_surface_tests -- --lis
 ```
 
 CI verifies it with `mise run test:v3-jsonb:inventory`.
+
+## Macro expansion body snapshots (`*_expanded.rs`)
+
+`int4_expanded.rs`, `text_expanded.rs`, and `bool_expanded.rs` are a **different
+kind** of snapshot from the `matrix_tests*.txt` inventories above. The inventories
+pin the *set of test names*; these pin the **generated bodies** — the actual
+`cargo expand` output of the `scalar_matrix!` macro. The inventory catches a whole
+arm being added or removed; the expansion snapshot catches a change *inside* a
+generated body that leaves the name set unchanged.
+
+One snapshot per **reachable** `scalar_matrix!` arm (`tests/sqlx/src/matrix.rs`),
+because the arms emit structurally different bodies and none subsumes another:
+
+| snapshot | type | arm | unique body surface |
+|----------|------|-----|---------------------|
+| `int4_expanded.rs` | `int4` | `caps = [eq, ord]` | the `ord`/`ord_ore` btree combo carries `=` **plus** the four ordering ops on one index — proves `=` rides the ORE ordered index (the path all eight integer/temporal/float types use) |
+| `text_expanded.rs` | `text` | `caps = [eq, ord, search]` | `=` split into separate `*_eqidx` combos; `_match`/`_search` bloom (`@>`/`<@`) and GIN arms |
+| `bool_expanded.rs` | `bool` | `caps = [storage]` | single term-less domain; bypasses `scalar_domain_matrix!`, calling the leaf drivers directly (every comparison/containment op is a blocker) |
+
+`text` does **not** make `int4` redundant: its `ord` btree combo omits `=` (moved
+to `_eqidx`), so the "`=` rides the ORE ordered index" body exists only in the
+`int4` snapshot. The `caps = [eq]` arm has no consumer and is uncovered by design.
+
+These are **committed** (tracked), unlike the gitignored generated SQL. They carry
+`linguist-generated` via `.gitattributes` so GitHub collapses them in diffs.
+
+### Regenerating
+
+Requires the pinned nightly toolchain + `cargo-expand` (both single-sourced in
+`mise.toml`); no database or CipherStash creds (expand-only, fixtures emptied):
+
+```bash
+mise run test:matrix:expand   # rewrites all three *_expanded.rs
+```
+
+Pinning another arm is one edit to the `TARGETS=(...)` list in the
+`test:matrix:expand` task. The nightly lane in
+`.github/workflows/macro-expand-eql.yml` regenerates and `git diff --exit-code`s
+all three (non-blocking: nightly-only, off the PR critical path).
