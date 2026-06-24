@@ -1,5 +1,5 @@
 [package]
-name = "eql-types"
+name = "eql-bindings"
 version = "0.1.0"
 edition = "2021"
 description = "Canonical wire types for EQL payloads — single source of truth for Rust, TypeScript (ts-rs), and JSON Schema (schemars)."

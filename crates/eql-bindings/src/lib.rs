@@ -1,4 +1,4 @@
-//! # eql-types — canonical EQL payload types
+//! # eql-bindings — canonical EQL payload types
 //!
 //! One Rust definition per EQL payload shape — the single source of truth
 //! for every tool that produces or consumes EQL payloads

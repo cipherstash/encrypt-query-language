@@ -5,14 +5,14 @@
 //! serde contract, so per domain this catches an `Option` term field or a
 //! wrong wire key (`required`), a struct that lost
 //! `#[serde(deny_unknown_fields)]` (`additionalProperties: false`), and a
-//! `v` field that is not [`eql_types::SchemaVersion`] (the `$ref` and its
+//! `v` field that is not [`eql_bindings::SchemaVersion`] (the `$ref` and its
 //! `const: 2`). Behavioural spot checks of the same properties live in
 //! `tests/v3_conformance.rs`.
 
 use std::collections::BTreeSet;
 
+use eql_bindings::{v3, EQL_SCHEMA_VERSION};
 use eql_domains::{Term, CATALOG, ENVELOPE_KEYS};
-use eql_types::{v3, EQL_SCHEMA_VERSION};
 use serde_json::{json, Value};
 
 #[test]

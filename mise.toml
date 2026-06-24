@@ -166,11 +166,11 @@ description = "Compile, lint and test the std-only Rust workspace crates (no dat
 dir = "{{config_root}}"
 run = """
 #!/usr/bin/env bash
-# eql-domains / eql-codegen / eql-tests-macros / eql-types are the lean
+# eql-domains / eql-codegen / eql-tests-macros / eql-bindings are the lean
 # workspace members. Scope explicitly to them (NOT --workspace): a
 # workspace-wide test would drag in tests/sqlx, whose suite needs Postgres +
 # CS_* secrets and is already covered by the `test` job. eql-tests-macros only
-# pulls syn/quote/proc-macro2 and eql-types only serde/serde_json/ts-rs, so
+# pulls syn/quote/proc-macro2 and eql-bindings only serde/serde_json/ts-rs, so
 # they stay in the lean set. clippy is likewise scoped — a workspace clippy
 # recompiles the heavy sqlx/tokio/cipherstash-client tree for no added coverage
 # of these crates.
@@ -179,12 +179,12 @@ run = """
 # /bin/sh (dash on the CI images).
 set -euo pipefail
 cargo fmt --check
-cargo clippy -p eql-domains -p eql-codegen -p eql-tests-macros -p eql-types --all-targets -- -D warnings
-cargo test -p eql-domains -p eql-codegen -p eql-tests-macros -p eql-types
+cargo clippy -p eql-domains -p eql-codegen -p eql-tests-macros -p eql-bindings --all-targets -- -D warnings
+cargo test -p eql-domains -p eql-codegen -p eql-tests-macros -p eql-bindings
 """
 
 [tasks."types:generate"]
-description = "Regenerate eql-types TypeScript bindings and JSON Schemas from the Rust types (no database required)"
+description = "Regenerate eql-bindings TypeScript bindings and JSON Schemas from the Rust types (no database required)"
 dir = "{{config_root}}"
 run = """
 #!/usr/bin/env bash
@@ -195,33 +195,33 @@ run = """
 # would then leave the working tree missing it. Instead, export into a
 # throwaway temp dir (ts-rs honors TS_RS_EXPORT_DIR; tests/export.rs honors
 # EQL_TYPES_SCHEMA_DIR; every type uses the v3/ subdir, so the temp tree
-# mirrors crates/eql-types/{bindings,schema} exactly) and only swap it into
+# mirrors crates/eql-bindings/{bindings,schema} exactly) and only swap it into
 # place after the tests succeed. The swap stays out of the tests themselves —
 # they run in parallel and can't safely rm.
 set -euo pipefail
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
-TS_RS_EXPORT_DIR="$tmp/bindings" EQL_TYPES_SCHEMA_DIR="$tmp/schema" cargo test -p eql-types
-rm -rf crates/eql-types/bindings crates/eql-types/schema
-mv "$tmp/bindings" crates/eql-types/bindings
-mv "$tmp/schema" crates/eql-types/schema
+TS_RS_EXPORT_DIR="$tmp/bindings" EQL_TYPES_SCHEMA_DIR="$tmp/schema" cargo test -p eql-bindings
+rm -rf crates/eql-bindings/bindings crates/eql-bindings/schema
+mv "$tmp/bindings" crates/eql-bindings/bindings
+mv "$tmp/schema" crates/eql-bindings/schema
 """
 
 [tasks."types:check"]
-description = "Verify the checked-in eql-types bindings/ and schema/ are fresh (regenerate + git diff)"
+description = "Verify the checked-in eql-bindings bindings/ and schema/ are fresh (regenerate + git diff)"
 dir = "{{config_root}}"
 depends = ["types:generate"]
 run = """
 #!/usr/bin/env bash
 set -euo pipefail
-git diff --exit-code -- crates/eql-types/bindings crates/eql-types/schema || {
-  echo "eql-types bindings/ or schema/ are stale — run 'mise run types:generate' and commit the result" >&2
+git diff --exit-code -- crates/eql-bindings/bindings crates/eql-bindings/schema || {
+  echo "eql-bindings bindings/ or schema/ are stale — run 'mise run types:generate' and commit the result" >&2
   exit 1
 }
 # git diff is blind to brand-new files; untracked output is stale too.
-untracked=$(git ls-files --others --exclude-standard -- crates/eql-types/bindings crates/eql-types/schema)
+untracked=$(git ls-files --others --exclude-standard -- crates/eql-bindings/bindings crates/eql-bindings/schema)
 if [ -n "$untracked" ]; then
-  echo "eql-types has uncommitted generated files:" >&2
+  echo "eql-bindings has uncommitted generated files:" >&2
   echo "$untracked" >&2
   exit 1
 fi

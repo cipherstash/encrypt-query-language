@@ -73,7 +73,7 @@ These are the important files and directories in the repo:
 ├── crates/                    <-- Rust workspace: catalog, code generator, types
 │   ├── eql-domains/           <-- THE catalog (eql-domains::CATALOG): source of truth
 │   ├── eql-codegen/           <-- renders the eql_v3 scalar SQL from the catalog
-│   ├── eql-types/             <-- shared Rust types + generated TS/JSON Schema bindings
+│   ├── eql-bindings/             <-- shared Rust types + generated TS/JSON Schema bindings
 │   └── eql-tests-macros/      <-- proc-macros used by the SQLx test matrix
 ├── src/                       <-- SQL components that make up EQL
 │   ├── v3/                    <-- the self-contained eql_v3 surface

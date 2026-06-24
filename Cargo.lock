@@ -1162,6 +1162,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "eql-bindings"
+version = "0.1.0"
+dependencies = [
+ "eql-domains",
+ "schemars",
+ "serde",
+ "serde_json",
+ "ts-rs",
+]
+
+[[package]]
 name = "eql-codegen"
 version = "0.1.0"
 dependencies = [
@@ -1187,17 +1198,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.108",
-]
-
-[[package]]
-name = "eql-types"
-version = "0.1.0"
-dependencies = [
- "eql-domains",
- "schemars",
- "serde",
- "serde_json",
- "ts-rs",
 ]
 
 [[package]]

@@ -98,7 +98,7 @@ pub enum ScalarKind {
 ///
 /// Lives here — in the catalog — because it is cross-schema contract data
 /// consumed on both sides of the generated surface: `eql-codegen` builds
-/// every domain CHECK from it, and `eql-types` builds its payload structs
+/// every domain CHECK from it, and `eql-bindings` builds its payload structs
 /// and parity tests against it. One definition, so the envelope cannot
 /// drift between the SQL and the canonical types.
 pub const ENVELOPE_KEYS: &[&str] = &["v", "i", "c"];

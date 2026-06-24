@@ -9,7 +9,7 @@
 //! `TS_RS_EXPORT_DIR` — so `mise run types:generate` can redirect output to a
 //! throwaway temp dir and only swap it into place after a successful build.
 
-use eql_types::v3;
+use eql_bindings::v3;
 
 #[test]
 fn dump_v3_json_schemas() {
