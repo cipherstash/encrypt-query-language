@@ -9,6 +9,24 @@ token-normalized list of every `scalars::<T>::*` test name in the
 **committed test baselines**, not gitignored generated SQL — keep them in
 version control.
 
+**Regenerating: use the one atomic command.** The four scalar shapes are not
+independent — eq-only is *derived* from the ordered baseline — so regenerating
+them one at a time off stale inputs is how a shape silently drifts (see issue
+#300). Regenerate all four at once with:
+
+```bash
+mise run test:matrix:snapshots:regen
+```
+
+It lists the `encrypted_domain` binary once and rewrites `matrix_tests.txt`,
+`matrix_tests_eq_only.txt`, `matrix_tests_text.txt`, and
+`matrix_tests_storage_only.txt` in dependency order, then validate with
+`mise run test:matrix:inventory` and commit any changes. The per-shape `grep`/`sed`
+recipes below document what that task does for each shape (and how the inventory
+gate re-derives them); prefer the single command over running them by hand. The
+two sibling snapshots (`matrix_jsonb_entry_tests.txt`, `v3_jsonb_tests.txt`) are
+**not** covered by it — they have their own recipes lower down.
+
 The per-type `<T>_matrix_tests.txt` files are gone. They were byte-identical
 modulo the type token (the matrix tests are macro-generated from one
 `scalar_matrix!` invocation per type with no per-type variation), so a
@@ -138,13 +156,13 @@ catalog cross-check) fails the job.
   first such type, commit that snapshot. The cross-check confirms the type is wired.
 - **Removing a scalar type** → remove the catalog row and its matrix wiring; the
   cross-check then sees the type gone from both sides.
-- **Changing which matrix tests the macro emits** → regenerate and commit
-  `matrix_tests.txt` in the same change:
+- **Changing which matrix tests the macro emits** → regenerate and commit **all
+  affected shape snapshots** in the same change. A macro change can touch more
+  than one shape at once (issue #300: a dispatch arm that began emitting for the
+  storage-only shape too), so regenerate them atomically rather than by hand:
   ```bash
-  cd tests/sqlx
-  cargo test --no-default-features --test encrypted_domain -- --list \
-    | sed -n 's/: test$//p' | grep '^scalars::int4::' \
-    | sed -e 's/^scalars::int4::/scalars::<T>::/' -e 's/_int4_/_<T>_/g' | LC_ALL=C sort > snapshots/matrix_tests.txt
+  mise run test:matrix:snapshots:regen   # rewrites all four shapes from one listing
+  mise run test:matrix:inventory         # validate, then commit any changed snapshot
   ```
 
 See `docs/reference/adding-a-scalar-encrypted-domain-type.md` §3 (matrix oracle + inventory snapshot).
