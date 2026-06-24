@@ -1,10 +1,11 @@
 name: "Macro expand EQL"
 
-# Regenerates the int4 matrix `cargo expand` snapshot and fails if it has
-# drifted from the committed copy. This is a body-level fidelity backstop for
-# the `ordered_numeric_matrix!` / `scalar_domain_matrix!` macros — the
-# name-inventory snapshot (test-eql.yml `matrix-coverage` job) catches
-# add/remove of whole arms; this catches changes *inside* the generated bodies.
+# Regenerates the matrix `cargo expand` snapshots (one per reachable
+# `scalar_matrix!` arm: int4 = [eq, ord], text = [eq, ord, search], bool =
+# [storage]) and fails if any has drifted from its committed copy. This is a
+# body-level fidelity backstop for the matrix macros — the name-inventory
+# snapshot (test-eql.yml `matrix-coverage` job) catches add/remove of whole
+# arms; this catches changes *inside* the generated bodies.
 #
 # Non-blocking by design: it is NOT a required PR check. `cargo expand` needs a
 # nightly toolchain, so it is isolated off the PR path.
@@ -75,8 +76,11 @@ jobs:
           test -n "$NIGHTLY" || { echo "could not find pinned nightly in mise.toml"; exit 1; }
           rustup toolchain install "$NIGHTLY" --profile minimal --component rustfmt
 
-      - name: Regenerate and verify the matrix expansion snapshot
+      - name: Regenerate and verify the matrix expansion snapshots
         run: |
           mise run test:matrix:expand
-          git diff --exit-code -- tests/sqlx/snapshots/int4_expanded.rs \
+          git diff --exit-code -- \
+            tests/sqlx/snapshots/int4_expanded.rs \
+            tests/sqlx/snapshots/text_expanded.rs \
+            tests/sqlx/snapshots/bool_expanded.rs \
             || { echo "Expansion snapshot stale — run 'mise run test:matrix:expand' (needs the pinned nightly) and commit."; exit 1; }
