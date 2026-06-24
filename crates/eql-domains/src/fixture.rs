@@ -28,7 +28,14 @@ impl Fixture {
                 Some(_) => Some(0),
                 None => None,
             },
-            Fixture::Int(n) => Some(n),
+            // Gate the literal on the integer kinds too, mirroring the sentinels
+            // above: a hand-built `Int(n)` on a non-integer kind resolves to
+            // `None` rather than fabricating a number for a `Text`/`Date`/`Bool`
+            // kind that has no integer projection.
+            Fixture::Int(n) => match kind.as_bounded_int() {
+                Some(_) => Some(n),
+                None => None,
+            },
             Fixture::Numeric(_)
             | Fixture::Text(_)
             | Fixture::Jsonb(_)

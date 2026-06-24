@@ -118,7 +118,7 @@ impl ScalarKind {
             ScalarKind::I16 => "i16",
             ScalarKind::I32 => "i32",
             ScalarKind::I64 => "i64",
-            ScalarKind::Text => "text",
+            ScalarKind::Text => "String",
             ScalarKind::Date => "chrono::NaiveDate",
             ScalarKind::Timestamptz => "chrono::DateTime<Utc>",
             ScalarKind::Numeric => "rust_decimal::Decimal",
