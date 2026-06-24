@@ -416,26 +416,51 @@ EQL_ROOT="{{config_root}}"
 source "${EQL_ROOT}/tasks/test/stub-fixtures.sh"
 listing=$(cargo test --no-default-features --test encrypted_domain -- --list | sed -n 's/: test$//p')
 
-# Ordered baseline (canonical) — written first because the eq-only shape is
+# A compile failure already aborts above (set -e on the assignment); this guards
+# the rarer "compiled but produced no test names" case so an empty listing can
+# never reach the writes below and overwrite the committed baselines with nothing.
+[ -n "$listing" ] || { echo "No test names from 'cargo test --list' — refusing to touch snapshots." >&2; exit 1; }
+
+# Build all four shapes into a temp dir, validate each is non-empty, THEN move
+# them into place together. Writing snapshots/ directly is unsafe: the `>` redirect
+# truncates the committed file before the pipeline's grep runs, so a driver type
+# whose arms vanished (matrix wiring removed) would leave a truncated baseline
+# behind. Staging in a temp dir keeps the task atomic — on any failure the
+# committed snapshots are never touched. NOTE: stub-fixtures.sh owns the single
+# EXIT trap (it removes the compile stubs), so we must NOT set our own; remove the
+# temp dir explicitly instead (a harmless leak under $TMPDIR on early abort).
+stage=$(mktemp -d)
+
+# Ordered baseline (canonical) — staged first because the eq-only shape is
 # DERIVED from it below.
 printf '%s\\n' "$listing" | grep '^scalars::int4::' \
   | sed -e 's/^scalars::int4::/scalars::<T>::/' -e 's/_int4_/_<T>_/g' \
-  | LC_ALL=C sort > snapshots/matrix_tests.txt
+  | LC_ALL=C sort > "$stage/matrix_tests.txt"
 
 # Eq-only shape: DERIVED from the freshly-regenerated ordered baseline (the
 # inventory gate re-derives and pins this exact relationship).
-grep -vE '_ord|order_by|routes_through_ob' snapshots/matrix_tests.txt \
-  | LC_ALL=C sort -u > snapshots/matrix_tests_eq_only.txt
+grep -vE '_ord|order_by|routes_through_ob' "$stage/matrix_tests.txt" \
+  | LC_ALL=C sort -u > "$stage/matrix_tests_eq_only.txt"
 
 # Text shape: SUPERSET of ordered, from its own driver type.
 printf '%s\\n' "$listing" | grep '^scalars::text::' \
   | sed -e 's/^scalars::text::/scalars::<T>::/' -e 's/_text_/_<T>_/g' \
-  | LC_ALL=C sort > snapshots/matrix_tests_text.txt
+  | LC_ALL=C sort > "$stage/matrix_tests_text.txt"
 
 # Storage-only shape: term-less surface arms only, from its own driver type.
 printf '%s\\n' "$listing" | grep '^scalars::bool::' \
   | sed -e 's/^scalars::bool::/scalars::<T>::/' -e 's/_bool_/_<T>_/g' \
-  | LC_ALL=C sort > snapshots/matrix_tests_storage_only.txt
+  | LC_ALL=C sort > "$stage/matrix_tests_storage_only.txt"
+
+# Every shape must have arms; an empty one means a driver type lost its matrix
+# wiring. Fail WITHOUT overwriting the committed snapshot.
+for f in matrix_tests.txt matrix_tests_eq_only.txt matrix_tests_text.txt matrix_tests_storage_only.txt; do
+  [ -s "$stage/$f" ] || { echo "Regenerated $f is empty (driver type missing its matrix tests?) — refusing to overwrite snapshots/$f." >&2; rm -rf "$stage"; exit 1; }
+done
+
+mv "$stage/matrix_tests.txt" "$stage/matrix_tests_eq_only.txt" \
+   "$stage/matrix_tests_text.txt" "$stage/matrix_tests_storage_only.txt" snapshots/
+rm -rf "$stage"
 
 echo "Regenerated 4 scalar matrix snapshots (ordered, eq-only, text, storage-only)."
 echo "Run 'mise run test:matrix:inventory' to validate, then commit any changes."
