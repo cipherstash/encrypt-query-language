@@ -15,9 +15,9 @@ pub(crate) const SCHEMA: &str = "eql_v3";
 
 /// Always-present payload keys checked for presence in every domain CHECK.
 /// Term-specific keys are appended after these by `context::domain_block`.
-/// Defined in the catalog (`eql_scalars::ENVELOPE_KEYS`) so the CHECKs and
-/// the `eql-types` payload structs share one envelope definition.
-pub(crate) const ENVELOPE_KEYS: &[&str] = eql_scalars::ENVELOPE_KEYS;
+/// Defined in the catalog (`eql_domains::ENVELOPE_KEYS`) so the CHECKs and
+/// the `eql-bindings` payload structs share one envelope definition.
+pub(crate) const ENVELOPE_KEYS: &[&str] = eql_domains::ENVELOPE_KEYS;
 
 /// Escape a string for use inside a single-quoted SQL literal by doubling
 /// embedded single quotes.

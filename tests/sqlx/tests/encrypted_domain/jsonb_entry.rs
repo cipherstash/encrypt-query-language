@@ -6,7 +6,7 @@
 //! (containment / path query / array ops / the operator-surface guard) remain
 //! in `v3_jsonb_tests` / `v3_jsonb_operator_surface_tests`.
 //!
-//! The view type (`JsonbEntryInt4`) is deliberately NOT a `eql_scalars::CATALOG`
+//! The view type (`JsonbEntryInt4`) is deliberately NOT a `eql_domains::CATALOG`
 //! scalar, so this suite is hand-written rather than emitted by the
 //! `scalar_types!` list — and its test names live under `jsonb_entry::…`,
 //! validated by `test:matrix:inventory:jsonb_entry` (NOT the scalar inventory).

@@ -11,7 +11,7 @@ by the Rust fixture framework in `tests/sqlx/src/fixtures/` and is gitignored.
 ## Generated `eql_v3` fixtures
 
 `mise run fixture:generate:all` (the `generate_all_fixtures` test, run over
-`eql-scalars::CATALOG`) materialises the fixtures into this directory:
+`eql-domains::CATALOG`) materialises the fixtures into this directory:
 
 ```text
 Generated eql_v3 fixtures (gitignored)

@@ -3,9 +3,9 @@
 //! catalog-driven sweep (every domain, every required key) lives in
 //! `catalog_parity.rs`.
 
-use eql_types::v3::int4::{Int4, Int4Eq, Int4Ord, Int4OrdOre};
-use eql_types::v3::text::TextMatch;
-use eql_types::v3::DomainType;
+use eql_bindings::v3::int4::{Int4, Int4Eq, Int4Ord, Int4OrdOre};
+use eql_bindings::v3::text::TextMatch;
+use eql_bindings::v3::DomainType;
 use serde_json::json;
 
 #[test]
@@ -125,11 +125,14 @@ fn rejects_unknown_keys() {
 
 #[test]
 fn int4_ord_rejects_missing_ore_term() {
+    // Omit `hm`: it is not an Int4Ord field, so leaving it in would trip
+    // deny_unknown_fields and the rejection could pass for the wrong reason.
+    // This payload carries only the base fields, so the sole cause of failure
+    // is the absent `ob`.
     let no_ob = json!({
         "v": 2,
         "i": { "t": "users", "c": "age" },
-        "c": "mp_base85_ciphertext",
-        "hm": "deadbeef"
+        "c": "mp_base85_ciphertext"
     });
     let result: Result<Int4Ord, _> = serde_json::from_value(no_ob);
     assert!(result.is_err(), "Int4Ord must reject a payload with no ob");
@@ -168,7 +171,7 @@ fn non_int4_tokens_round_trip_every_domain() {
     // `catalog_parity.rs` checks domain *names* only, never the wire shape.
     // This sweep roundtrips every non-int4 domain and pins its catalog name,
     // failing the instant a token drifts from the shared envelope/term contract.
-    use eql_types::v3::{date::*, int2::*, int8::*, numeric::*, text::*};
+    use eql_bindings::v3::{date::*, int2::*, int8::*, numeric::*, text::*};
 
     // Wire builders for the three shapes the ordered tokens share.
     let storage = |t: &str| json!({ "v": 2, "i": { "t": t, "c": "x" }, "c": "ct" });
@@ -227,7 +230,7 @@ fn timestamptz_round_trips_and_enforces_term_capabilities() {
     // field typo would pass `catalog_parity` (domain names only) but is caught
     // here. (Was equality-only while the ORE comparator was hardcoded to 8
     // blocks; promoted once `eql_v3.ore_block_256` generalized to any width.)
-    use eql_types::v3::timestamptz::{
+    use eql_bindings::v3::timestamptz::{
         Timestamptz, TimestamptzEq, TimestamptzOrd, TimestamptzOrdOre,
     };
 

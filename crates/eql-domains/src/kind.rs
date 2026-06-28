@@ -112,13 +112,13 @@ impl ScalarKind {
     /// has **no generated SQL surface** and no catalog row, so calling this on it
     /// is a programming error and panics loudly rather than returning a plausible
     /// SQL token a premature caller might feed into codegen. Only call site today
-    /// is `crates/eql-scalars/src/tests.rs`.
+    /// is `crates/eql-domains/src/tests.rs`.
     pub const fn rust_type(self) -> &'static str {
         match self {
             ScalarKind::I16 => "i16",
             ScalarKind::I32 => "i32",
             ScalarKind::I64 => "i64",
-            ScalarKind::Text => "text",
+            ScalarKind::Text => "String",
             ScalarKind::Date => "chrono::NaiveDate",
             ScalarKind::Timestamptz => "chrono::DateTime<Utc>",
             ScalarKind::Numeric => "rust_decimal::Decimal",

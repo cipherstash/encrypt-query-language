@@ -1,4 +1,4 @@
-# eql-types
+# eql-bindings
 
 Canonical wire types for EQL payloads — **one Rust definition per payload
 shape**, the single source of truth for every tool that produces or consumes
@@ -46,7 +46,7 @@ field names are unchanged from v2 (the purpose-named rename in
 
 `tests/catalog_parity.rs` asserts the domain inventory —
 [`v3::all()`](src/v3/mod.rs), a `Vec<Box<dyn DomainType>>` of zero-sized
-type-level handles — exactly covers `eql-scalars::CATALOG` (the same catalog
+type-level handles — exactly covers `eql-domains::CATALOG` (the same catalog
 that generates the `eql_v3` SQL surface): every domain, in order. Adding a
 scalar to the catalog without adding its types here fails the build.
 Wire-key strictness (required term keys, unknown-key rejection, envelope
@@ -60,7 +60,7 @@ mise run types:generate   # clean-regenerate bindings/ and schema/
 mise run types:check      # regenerate + fail if checked-in outputs are stale
 ```
 
-Both wrap `cargo test -p eql-types`, which runs the conformance tests and
+Both wrap `cargo test -p eql-bindings`, which runs the conformance tests and
 regenerates `bindings/` (TypeScript, via ts-rs) and `schema/` (JSON Schema,
 via `tests/export.rs`, with canonical `$id`s injected). Both directories are
 checked in so reviewers can see the codegen output without running anything;
@@ -69,7 +69,7 @@ CI runs `types:check` to keep them fresh. The crate is also part of the lean
 
 Note that both exporters default to writing under the crate dir (ts-rs to
 `./bindings`, `tests/export.rs` to `./schema`), so a plain
-`cargo test -p eql-types` (and therefore `mise run test:crates`) regenerates
+`cargo test -p eql-bindings` (and therefore `mise run test:crates`) regenerates
 `bindings/` and `schema/` **in place** as a side effect — it can leave your
 working tree dirty if the checked-in copies were stale. Only `types:generate`
 isolates the writes (it exports into a temp dir and swaps them in after the

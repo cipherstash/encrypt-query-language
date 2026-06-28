@@ -13,7 +13,7 @@ named for what they operate on, not by an abstract tier letter:
 
 | Suite | Location | Kind | Inputs | DB / creds |
 |-------|----------|------|--------|------------|
-| **catalog** | [`crates/eql-scalars/src/proptest_invariants.rs`](../../../../../crates/eql-scalars/src/proptest_invariants.rs) | unit (pure Rust) | generated terms / kinds | none — runs in fork CI |
+| **catalog** | [`crates/eql-domains/src/proptest_invariants.rs`](../../../../../crates/eql-domains/src/proptest_invariants.rs) | unit (pure Rust) | generated terms / kinds | none — runs in fork CI |
 | **fixture** | [`fixture_oracle.rs`](./fixture_oracle.rs) | integration | committed fixture rows (real ciphertext) | isolated per-test DB (`#[sqlx::test]`) |
 | **e2e** | [`e2e_oracle.rs`](./e2e_oracle.rs) | integration | freshly generated plaintexts, encrypted each run | shared test DB **+ ZeroKMS creds** |
 
@@ -32,10 +32,10 @@ payloads.
 
 ### catalog — catalog invariants, no database
 
-Pure-Rust `proptest` over the `eql-scalars` catalog: term/operator/extractor
+Pure-Rust `proptest` over the `eql-domains` catalog: term/operator/extractor
 consistency, "every blocker is non-`STRICT` + `plpgsql`", payload-key set ==
 declared terms, integer-range ordering. No DB, no encryption, no creds, so it
-runs in the lean `cargo test -p eql-scalars` path (and on fork PRs). This is the
+runs in the lean `cargo test -p eql-domains` path (and on fork PRs). This is the
 only suite where `proptest` shrinking is meaningful and enabled.
 
 ### fixture — oracle over committed ciphertext
@@ -156,7 +156,7 @@ encryption to reach inputs the fixtures can't.
 
 ```bash
 # catalog suite only (no DB, no creds)
-cargo test -p eql-scalars proptest_invariants
+cargo test -p eql-domains proptest_invariants
 
 # fixture + edge-case suites (needs a prepared DB)
 mise run test:sqlx:prep

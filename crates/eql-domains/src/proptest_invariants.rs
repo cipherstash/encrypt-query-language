@@ -1,7 +1,7 @@
 //! Catalog suite (CIP-3141): property-based invariants over the scalar/term catalog.
 //!
 //! Pure Rust — no database, no encryption, no creds. These run in the lean
-//! `cargo test -p eql-scalars` path (fork CI). They assert the *catalog* is
+//! `cargo test -p eql-domains` path (fork CI). They assert the *catalog* is
 //! internally consistent for any generated input; the DB-backed oracle suites
 //! (fixture/e2e) live in `tests/sqlx`.
 
@@ -13,7 +13,7 @@ fn any_term() -> impl Strategy<Value = Term> {
     prop_oneof![Just(Term::Hm), Just(Term::Ore), Just(Term::Bloom)]
 }
 
-/// Strategy over the ten scalar kinds.
+/// Strategy over the eleven scalar kinds.
 fn any_kind() -> impl Strategy<Value = ScalarKind> {
     prop_oneof![
         Just(ScalarKind::I16),
@@ -22,6 +22,7 @@ fn any_kind() -> impl Strategy<Value = ScalarKind> {
         Just(ScalarKind::Numeric),
         Just(ScalarKind::Text),
         Just(ScalarKind::Jsonb),
+        Just(ScalarKind::Bool),
         Just(ScalarKind::Date),
         Just(ScalarKind::Timestamptz),
         Just(ScalarKind::F32),

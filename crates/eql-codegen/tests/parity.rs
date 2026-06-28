@@ -4,11 +4,11 @@
 //! `-- REFERENCE:` provenance line). Every catalog type has a committed
 //! reference, generated once; the reference — not the retired Python generator
 //! — is the sole oracle. The reference dirs are *discovered* dynamically and
-//! cross-checked against `eql_scalars::CATALOG`, so a new catalog type with no
+//! cross-checked against `eql_domains::CATALOG`, so a new catalog type with no
 //! reference (or a stale reference with no catalog row) fails here. The
 //! plaintext fixture lists are not
-//! generated; they live in the catalog (`eql_scalars::INT4_VALUES` /
-//! `INT2_VALUES`) and are pinned by `eql-scalars`'s own `values_tests`.
+//! generated; they live in the catalog (`eql_domains::INT4_VALUES` /
+//! `INT2_VALUES`) and are pinned by `eql-domains`'s own `values_tests`.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -79,7 +79,7 @@ fn reference_body(reference: &str) -> String {
 fn reference_dirs_match_catalog_tokens() {
     let root = repo_root();
     let refs = reference_tokens(&root);
-    let catalog: BTreeSet<String> = eql_scalars::CATALOG
+    let catalog: BTreeSet<String> = eql_domains::CATALOG
         .iter()
         .map(|s| s.token.to_string())
         .collect();

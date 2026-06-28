@@ -11,7 +11,7 @@ proc-macro = true
 syn = { version = "2", features = ["full"] }
 quote = "1"
 proc-macro2 = "1"
-eql-scalars = { path = "../eql-scalars" }
+eql-domains = { path = "../eql-domains" }
 
 [lints]
 workspace = true

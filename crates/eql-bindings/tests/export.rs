@@ -9,12 +9,18 @@
 //! `TS_RS_EXPORT_DIR` — so `mise run types:generate` can redirect output to a
 //! throwaway temp dir and only swap it into place after a successful build.
 
-use eql_types::v3;
+use eql_bindings::v3;
 
 #[test]
 fn dump_v3_json_schemas() {
     let base = std::env::var("EQL_TYPES_SCHEMA_DIR").unwrap_or_else(|_| "schema".into());
     let dir = format!("{base}/v3");
+    // Clear any prior output first so JSON for a domain that was removed from the
+    // catalog does not linger as a stale checked-in file. `schema/v3` holds only
+    // this test's generated `*.json`, so recreating it from scratch is safe.
+    if std::path::Path::new(&dir).exists() {
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
     std::fs::create_dir_all(&dir).unwrap();
     for entry in v3::all() {
         let mut schema = serde_json::to_value(entry.schema()).unwrap();

@@ -2,7 +2,7 @@
 
 use crate::consts::*;
 use crate::operator_surface::Operator;
-use eql_scalars::{DomainSpec, Term};
+use eql_domains::{DomainSpec, Term};
 
 /// Build the minijinja environment with the embedded templates: one whole-file
 /// template per output file (`types`/`functions`/`operators`/`aggregates`) plus

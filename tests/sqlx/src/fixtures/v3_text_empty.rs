@@ -4,7 +4,7 @@
 //! Hand-written, non-catalog (like `v3_numeric_collision`), because the
 //! catalog-driven `eql_v2_text` fixture deliberately EXCLUDES `""`: encrypting
 //! the empty string yields an empty ORE term (`ob: []`), the only value that
-//! does, so `eql-scalars::TEXT_FIXTURES` drops it. This bespoke fixture is the
+//! does, so `eql-domains::TEXT_FIXTURES` drops it. This bespoke fixture is the
 //! one place a real-ciphertext empty-`ob` payload lives — its purpose is to
 //! prove the ORE-bearing domains REJECT that payload at their non-empty-`ob`
 //! CHECK (issue #262, SQLSTATE `23514`), while the non-empty controls cast and

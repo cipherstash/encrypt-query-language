@@ -1,18 +1,18 @@
-//! The drift gate: the v3 domain inventory must mirror `eql-scalars::CATALOG`
+//! The drift gate: the v3 domain inventory must mirror `eql-domains::CATALOG`
 //! — the same catalog that generates the `eql_v3` SQL surface — exactly:
 //! every domain, in catalog order, and every domain's wire contract, pinned
 //! through the published JSON Schema. schemars output reflects the real
 //! serde contract, so per domain this catches an `Option` term field or a
 //! wrong wire key (`required`), a struct that lost
 //! `#[serde(deny_unknown_fields)]` (`additionalProperties: false`), and a
-//! `v` field that is not [`eql_types::SchemaVersion`] (the `$ref` and its
+//! `v` field that is not [`eql_bindings::SchemaVersion`] (the `$ref` and its
 //! `const: 2`). Behavioural spot checks of the same properties live in
 //! `tests/v3_conformance.rs`.
 
 use std::collections::BTreeSet;
 
-use eql_scalars::{Term, CATALOG, ENVELOPE_KEYS};
-use eql_types::{v3, EQL_SCHEMA_VERSION};
+use eql_bindings::{v3, EQL_SCHEMA_VERSION};
+use eql_domains::{Term, CATALOG, ENVELOPE_KEYS};
 use serde_json::{json, Value};
 
 #[test]

@@ -1,5 +1,5 @@
 [package]
-name = "eql-types"
+name = "eql-bindings"
 version = "0.1.0"
 edition = "2021"
 description = "Canonical wire types for EQL payloads — single source of truth for Rust, TypeScript (ts-rs), and JSON Schema (schemars)."
@@ -14,6 +14,6 @@ schemars = "0.8"
 
 [dev-dependencies]
 # Parity oracle: tests/catalog_parity.rs asserts the v3 domain inventory
-# exactly covers eql_scalars::CATALOG, so the types here cannot drift from
+# exactly covers eql_domains::CATALOG, so the types here cannot drift from
 # the generated SQL surface.
-eql-scalars = { path = "../eql-scalars" }
+eql-domains = { path = "../eql-domains" }

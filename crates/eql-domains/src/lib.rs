@@ -98,7 +98,7 @@ pub enum ScalarKind {
 ///
 /// Lives here — in the catalog — because it is cross-schema contract data
 /// consumed on both sides of the generated surface: `eql-codegen` builds
-/// every domain CHECK from it, and `eql-types` builds its payload structs
+/// every domain CHECK from it, and `eql-bindings` builds its payload structs
 /// and parity tests against it. One definition, so the envelope cannot
 /// drift between the SQL and the canonical types.
 pub const ENVELOPE_KEYS: &[&str] = &["v", "i", "c"];
@@ -368,7 +368,7 @@ const INT8: ScalarSpec = ScalarSpec {
 /// Public (unlike the integer specs) because the SQLx harness reads
 /// `DATE.fixtures` directly to parse the ISO strings into `chrono::NaiveDate`
 /// at runtime — there is no `DATE_VALUES` const (chrono is not `const`-friendly
-/// and `eql-scalars` stays zero-dep, so no typed slice is materialised here).
+/// and `eql-domains` stays zero-dep, so no typed slice is materialised here).
 pub const DATE: ScalarSpec = ScalarSpec {
     token: "date",
     kind: ScalarKind::Date,
@@ -385,7 +385,7 @@ pub const DATE: ScalarSpec = ScalarSpec {
 ///
 /// Public (like `DATE`) because the SQLx harness reads `TIMESTAMPTZ.fixtures`
 /// directly to parse the RFC3339 strings into `chrono::DateTime<Utc>` at runtime
-/// (no `TIMESTAMPTZ_VALUES` const; `eql-scalars` stays zero-dep).
+/// (no `TIMESTAMPTZ_VALUES` const; `eql-domains` stays zero-dep).
 pub const TIMESTAMPTZ: ScalarSpec = ScalarSpec {
     token: "timestamptz",
     kind: ScalarKind::Timestamptz,

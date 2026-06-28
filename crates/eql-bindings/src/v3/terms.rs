@@ -7,7 +7,7 @@
 //! schemars registers a named definition that every domain schema `$ref`s.
 //! A plain Rust `type` alias would vanish in both outputs.
 //!
-//! Names follow the SEM constructor names in `eql-scalars` (`Term::ctor()`):
+//! Names follow the SEM constructor names in `eql-domains` (`Term::ctor()`):
 //! a future scheme change (e.g. a 12-block wide ORE term for timestamptz
 //! ordering) is a new newtype, not a hunt through `Vec<String>` fields.
 

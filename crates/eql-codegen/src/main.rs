@@ -9,7 +9,7 @@ fn main() -> ExitCode {
     // `list-types`: print catalog tokens, one per line. Consumed by Plan 3's
     // fixtures-all and matrix-inventory enumeration.
     if args.len() == 2 && args[1] == "list-types" {
-        for spec in eql_scalars::CATALOG {
+        for spec in eql_domains::CATALOG {
             println!("{}", spec.token);
         }
         return ExitCode::SUCCESS;

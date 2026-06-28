@@ -1,11 +1,11 @@
-//! `dump_catalog` — serialize the `eql_scalars::CATALOG` surface (each type's
+//! `dump_catalog` — serialize the `eql_domains::CATALOG` surface (each type's
 //! domains and their supported SQL operators) for downstream verification
 //! tooling. The reusable producer behind `eql-codegen -- dump-catalog`.
 //!
 //! Stage 1 consumes the `(type, domain)` shape; later stages consume the
 //! per-domain `supported_ops`. Blocked-operator tagging is added in Stage 4.
 
-use eql_scalars::{Term, CATALOG};
+use eql_domains::{Term, CATALOG};
 use serde::Serialize;
 
 /// The catalog surface: every scalar type and its domains.
@@ -36,7 +36,7 @@ pub struct DomainEntry {
     pub supported_ops: Vec<&'static str>,
 }
 
-/// Build the catalog surface description from `eql_scalars::CATALOG`.
+/// Build the catalog surface description from `eql_domains::CATALOG`.
 pub fn dump_catalog() -> CatalogDump {
     let types = CATALOG
         .iter()
@@ -99,7 +99,7 @@ mod tests {
     fn timestamptz_is_ordered() {
         // timestamptz was promoted to the ordered shape once
         // `compare_ore_block_256_term` generalized to N blocks (see #284 / the
-        // `EQ_ONLY_DOMAINS` note in `eql-scalars`). It now mirrors int4's
+        // `EQ_ONLY_DOMAINS` note in `eql-domains`). It now mirrors int4's
         // four-domain ordered surface.
         let dump = dump_catalog();
         let ts = dump

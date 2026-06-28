@@ -140,6 +140,17 @@ mod rust_tests {
     }
 
     #[test]
+    fn text_maps_to_string() {
+        // `rust_type()` is the canonical Rust *plaintext* type name, not the SQL
+        // token: `text` maps onto an owned `String`, matching the other arms
+        // (`chrono::NaiveDate`, `rust_decimal::Decimal`) which all name Rust types.
+        assert_eq!(ScalarKind::Text.rust_type(), "String");
+        assert!(ScalarKind::Text.is_text());
+        assert!(!ScalarKind::Text.is_int());
+        assert_eq!(ScalarKind::Text.as_bounded_int(), None);
+    }
+
+    #[test]
     fn numeric_maps_to_decimal() {
         // Ordered, non-integer, non-chrono kind (14-block ORE): carries a rust
         // type but no i128 range, so it is not `is_int()` and `as_bounded_int()`
@@ -483,6 +494,18 @@ mod fixture_tests {
         assert_eq!(Fixture::Zero.numeric_value(ScalarKind::Text), None);
         assert_eq!(Fixture::Min.numeric_value(ScalarKind::Text), None);
         assert_eq!(Fixture::Max.numeric_value(ScalarKind::Date), None);
+    }
+
+    #[test]
+    fn int_literal_value_is_none_on_non_integer_kinds() {
+        // `Fixture::Int(n)` is gated on the integer kinds like the sentinels: a
+        // hand-built literal paired with a non-integer kind has no integer
+        // projection and must resolve to `None`, not fabricate `Some(n)`.
+        assert_eq!(Fixture::Int(7).numeric_value(ScalarKind::Text), None);
+        assert_eq!(Fixture::Int(7).numeric_value(ScalarKind::Date), None);
+        assert_eq!(Fixture::Int(7).numeric_value(ScalarKind::Bool), None);
+        // Still resolves verbatim on an integer kind.
+        assert_eq!(Fixture::Int(7).numeric_value(ScalarKind::I32), Some(7));
     }
 
     #[test]

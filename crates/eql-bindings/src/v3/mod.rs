@@ -3,7 +3,7 @@
 //! One Rust struct per **SQL domain** in the `eql_v3` schema — the
 //! capability-encoded design from the original int4 scalar prototype
 //! (PR #236's first cut), formalized:
-//! the SQL surface is generated from `eql-scalars::CATALOG`, and these types
+//! the SQL surface is generated from `eql-domains::CATALOG`, and these types
 //! mirror it 1:1 (enforced by `tests/catalog_parity.rs`, which fails if the
 //! catalog and [`all`] ever disagree on the set or order of domains; the
 //! catalog-derived wire-key gate is schema-based and lands with the stacked
@@ -74,7 +74,7 @@ pub const SCHEMA_ID_BASE: &str = "https://schemas.cipherstash.com/eql/v3/";
 /// Each token file implements this next to the type it describes; the SQL
 /// domain string is defined exactly once, in that impl, and
 /// `tests/catalog_parity.rs` cross-checks every entry of [`all`] against
-/// `eql-scalars::CATALOG` — a typo'd or mis-ordered domain fails there.
+/// `eql-domains::CATALOG` — a typo'd or mis-ordered domain fails there.
 /// Public so FFI consumers can enumerate the protocol surface too.
 pub trait DomainType {
     /// Fully-qualified SQL domain name, e.g. `"eql_v3.int4_eq"` — the
@@ -92,7 +92,7 @@ pub trait DomainType {
     fn sql_domain(&self) -> &'static str;
 
     /// Unqualified SQL domain name (e.g. `"int4_eq"`) — [`Self::sql_domain`]
-    /// minus the schema qualifier; matches `eql-scalars`
+    /// minus the schema qualifier; matches `eql-domains`
     /// `ScalarSpec::domain_name`.
     fn domain(&self) -> &'static str {
         self.sql_domain()
@@ -132,7 +132,7 @@ where
     }
 }
 
-/// Every v3 domain type, in `eql-scalars::CATALOG` order (token order, then
+/// Every v3 domain type, in `eql-domains::CATALOG` order (token order, then
 /// each token's domains in manifest order) — the one hand-maintained list of
 /// types in the crate.
 pub fn all() -> Vec<Box<dyn DomainType>> {
