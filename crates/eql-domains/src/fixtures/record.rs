@@ -162,14 +162,68 @@ const fn str_eq(a: &str, b: &str) -> bool {
     true
 }
 
+/// A stable `u8` tag per `ScalarKind`, so two kinds can be compared in `const`
+/// context (`PartialEq` is not `const fn` on stable). Only the parity block's
+/// `family.name` ↔ `kind` binding consumes this.
+const fn kind_tag(kind: ScalarKind) -> u8 {
+    match kind {
+        ScalarKind::I16 => 0,
+        ScalarKind::I32 => 1,
+        ScalarKind::I64 => 2,
+        ScalarKind::Numeric => 3,
+        ScalarKind::Text => 4,
+        ScalarKind::Jsonb => 5,
+        ScalarKind::Date => 6,
+        ScalarKind::Timestamptz => 7,
+        ScalarKind::Bool => 8,
+        ScalarKind::F32 => 9,
+        ScalarKind::F64 => 10,
+    }
+}
+
+/// The native scalar each catalog family is supposed to map onto, keyed by
+/// `family.name`. The single source the parity block uses to bind every
+/// `TypeFixtures.kind` to its family at build time. An unmapped name is a
+/// const-eval panic, so a new scalar type cannot be added without naming its
+/// expected kind here.
+const fn expected_kind(name: &str) -> ScalarKind {
+    if str_eq(name, "int2") {
+        ScalarKind::I16
+    } else if str_eq(name, "int4") {
+        ScalarKind::I32
+    } else if str_eq(name, "int8") {
+        ScalarKind::I64
+    } else if str_eq(name, "date") {
+        ScalarKind::Date
+    } else if str_eq(name, "timestamptz") {
+        ScalarKind::Timestamptz
+    } else if str_eq(name, "numeric") {
+        ScalarKind::Numeric
+    } else if str_eq(name, "text") {
+        ScalarKind::Text
+    } else if str_eq(name, "bool") {
+        ScalarKind::Bool
+    } else if str_eq(name, "float4") {
+        ScalarKind::F32
+    } else if str_eq(name, "float8") {
+        ScalarKind::F64
+    } else {
+        panic!("unmapped scalar token in expected_kind — name its kind here")
+    }
+}
+
 /// Compile-time parity guard: `FIXTURES` must mirror `CATALOG` exactly, in
-/// order. This is the build-time invariant that REPLACES `DomainFamily`'s old
+/// order, AND every record's `kind` must match the kind its family maps onto.
+/// This is the build-time invariant that REPLACES `DomainFamily`'s old
 /// compiler-enforced `kind`/`fixtures` fields — every catalog row has exactly
-/// one fixture record and vice-versa, same order. As a `const` item it is
-/// const-evaluated on every `cargo build`: a missing, extra, or misaligned
-/// `TypeFixtures` fails the build with `error[E0080]: evaluation panicked`
-/// carrying the message below — it cannot be `#[cfg]`-gated away or skipped by a
-/// test filter. It proves NAME + ORDERING coverage only; fixture-VALUE
+/// one fixture record and vice-versa, same order, with the right `kind`. As a
+/// `const` item it is const-evaluated on every `cargo build`: a missing, extra,
+/// or misaligned `TypeFixtures`, or one carrying the wrong `kind` (e.g.
+/// `TypeFixtures { family: &INT8, kind: I16, .. }`), fails the build with
+/// `error[E0080]: evaluation panicked` carrying the message below — it cannot be
+/// `#[cfg]`-gated away or skipped by a test filter, so the `kind` mismatch is
+/// caught before any consumer (including `eql-tests-macros` expansion) sees
+/// `FIXTURES`. It proves NAME + ORDERING + KIND coverage; fixture-VALUE
 /// correctness is gated by the in-crate value/invariant tests, not here.
 const _: () = {
     assert!(
@@ -181,6 +235,10 @@ const _: () = {
         assert!(
             str_eq(crate::CATALOG[i].name, FIXTURES[i].family.name),
             "FIXTURES must mirror CATALOG in order: name mismatch at this index"
+        );
+        assert!(
+            kind_tag(FIXTURES[i].kind) == kind_tag(expected_kind(FIXTURES[i].family.name)),
+            "TypeFixtures.kind does not match the kind its family maps onto"
         );
         i += 1;
     }

@@ -4,11 +4,12 @@
 
 /// The fixed-width integer kinds — exactly those scalar kinds with an `i128`
 /// range and `MIN`/`MAX`/`Zero` sentinels. These accessors are **total**: every
-/// variant answers every method. Non-integer kinds (`Numeric`/`Text`/`Jsonb`/
-/// `Date`) are simply not representable here, so there is no partial function to
-/// panic — `ScalarKind::Date` cannot call `min_symbol()` because `Date` is not a
-/// `BoundedIntKind`. Reach this type from a `ScalarKind` via
-/// [`ScalarKind::as_bounded_int`]. (Accessors are impl'd below.)
+/// variant answers every method. The non-integer kinds (`Numeric`/`Text`/
+/// `Jsonb`/`Date`/`Timestamptz`/`Bool`/`F32`/`F64`) are simply not representable
+/// here, so there is no partial function to panic — `ScalarKind::Date` cannot
+/// call `min_symbol()` because `Date` is not a `BoundedIntKind`. Reach this type
+/// from a `ScalarKind` via [`ScalarKind::as_bounded_int`]. (Accessors are impl'd
+/// below.)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BoundedIntKind {
     I16,
@@ -16,9 +17,11 @@ pub enum BoundedIntKind {
     I64,
 }
 
-/// The native scalar a domain type maps onto. Integer kinds carry i128 bounds;
-/// the others (`Numeric`/`Text`/`Jsonb`) have string fixtures and no numeric
-/// range — though `Numeric`/`Text` are still ORE-orderable, only `Jsonb` is not.
+/// The native scalar a domain type maps onto. The integer kinds (`I16`/`I32`/
+/// `I64`) carry i128 bounds; the non-integer kinds (`Numeric`/`Text`/`Jsonb`/
+/// `Date`/`Timestamptz`/`Bool`/`F32`/`F64`) have no i128 range and string- or
+/// bool-backed fixtures. All but `Jsonb` and `Bool` are still ORE-orderable —
+/// `Jsonb` has no order, and `Bool` is storage-only (no comparison surface).
 /// Capability layer only: `CATALOG` declares which kinds actually exist.
 ///
 /// The bounded-numeric accessors live on the total [`BoundedIntKind`], reached

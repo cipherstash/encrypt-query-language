@@ -685,7 +685,7 @@ impl ScalarType for bool {
 mod bool_value_tests {
     use super::*;
 
-    /// The harness value list matches the catalog `BOOL.fixtures` and carries
+    /// The harness value list matches the catalog `BOOL_FIXTURES.values` and carries
     /// both boolean values — the oracle cannot drift from the catalog the fixture
     /// generator encrypts.
     #[test]

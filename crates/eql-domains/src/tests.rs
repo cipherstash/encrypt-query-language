@@ -877,13 +877,12 @@ mod catalog_tests {
     }
 
     /// Catalog-wide `family.name` ↔ `kind` guard over EVERY record, not just the
-    /// integer ones. `TypeFixtures` carries `family` and `kind` as independent
-    /// fields, and the compile-time parity block checks only `family.name` +
-    /// length — so `TypeFixtures { family: &INT8, kind: I16, .. }` would compile
-    /// and the parity block would pass. This test is the single guard that binds
-    /// every record's `kind` to the kind its family is supposed to map onto, for
-    /// all kinds (the non-integer kinds are otherwise only checked by individual
-    /// `*_spec` tests). A mismatched or swapped `kind` fails here.
+    /// integer ones. The primary binding is now the compile-time parity block in
+    /// `fixtures/record.rs` (`kind_tag(FIXTURES[i].kind) == expected_kind(..)`),
+    /// which fails the build before any consumer sees a record carrying the wrong
+    /// `kind` (e.g. `TypeFixtures { family: &INT8, kind: I16, .. }`). This test is
+    /// the secondary safety net: an independent restatement of the same mapping,
+    /// so a regression in the const guard's helpers is still caught here.
     #[test]
     fn every_record_kind_matches_its_family() {
         for rec in FIXTURES {
