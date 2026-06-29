@@ -876,6 +876,38 @@ mod catalog_tests {
         }
     }
 
+    /// Catalog-wide `family.name` ↔ `kind` guard over EVERY record, not just the
+    /// integer ones. `TypeFixtures` carries `family` and `kind` as independent
+    /// fields, and the compile-time parity block checks only `family.name` +
+    /// length — so `TypeFixtures { family: &INT8, kind: I16, .. }` would compile
+    /// and the parity block would pass. This test is the single guard that binds
+    /// every record's `kind` to the kind its family is supposed to map onto, for
+    /// all kinds (the non-integer kinds are otherwise only checked by individual
+    /// `*_spec` tests). A mismatched or swapped `kind` fails here.
+    #[test]
+    fn every_record_kind_matches_its_family() {
+        for rec in FIXTURES {
+            let expected = match rec.family.name {
+                "int2" => ScalarKind::I16,
+                "int4" => ScalarKind::I32,
+                "int8" => ScalarKind::I64,
+                "date" => ScalarKind::Date,
+                "timestamptz" => ScalarKind::Timestamptz,
+                "numeric" => ScalarKind::Numeric,
+                "text" => ScalarKind::Text,
+                "bool" => ScalarKind::Bool,
+                "float4" => ScalarKind::F32,
+                "float8" => ScalarKind::F64,
+                other => panic!("unmapped scalar token {other} in FIXTURES"),
+            };
+            assert_eq!(
+                rec.kind, expected,
+                "{} record carries the wrong kind",
+                rec.family.name
+            );
+        }
+    }
+
     #[test]
     fn domain_name_concatenates_token_and_suffix() {
         let s = scalar("int4");

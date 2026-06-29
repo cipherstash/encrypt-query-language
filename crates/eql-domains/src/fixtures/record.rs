@@ -185,3 +185,28 @@ const _: () = {
         i += 1;
     }
 };
+
+#[cfg(test)]
+mod str_eq_tests {
+    use super::str_eq;
+
+    /// `str_eq` is the sole new logic the compile-time parity guard relies on,
+    /// and the guard only ever exercises the *matching* path against the real
+    /// (aligned) `CATALOG`/`FIXTURES`. A bug in `str_eq` that returned `true` for
+    /// differing bytes would silently neuter the guard, so pin its behaviour
+    /// directly: equal strings match; any length or byte difference does not.
+    #[test]
+    fn str_eq_matches_iff_byte_identical() {
+        assert!(str_eq("", ""));
+        assert!(str_eq("ab", "ab"));
+        assert!(str_eq("int4", "int4"));
+        // Differing length.
+        assert!(!str_eq("a", "ab"));
+        assert!(!str_eq("ab", "a"));
+        assert!(!str_eq("", "a"));
+        // Same length, one byte differs (the path that would neuter the guard).
+        assert!(!str_eq("a", "b"));
+        assert!(!str_eq("int4", "int8"));
+        assert!(!str_eq("date", "bate"));
+    }
+}

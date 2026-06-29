@@ -42,10 +42,12 @@ pub enum ScalarKind {
     Date,
     /// UTC timestamp (`chrono::DateTime<Utc>`). Ordered like the integer kinds
     /// via ORE, but string-backed (RFC3339) at the catalog layer and with no
-    /// i128 range — so it is *not* `is_int()` and the bounded-numeric accessors
-    /// panic for it, exactly like the other non-integer kinds. UTC-normalized:
-    /// cipherstash has no tz-preserving type, so it maps to the `timestamp`
-    /// cast and the SQL `timestamp with time zone` plaintext type.
+    /// i128 range — so it is *not* `is_int()` and `as_bounded_int()` returns
+    /// `None` for it, like the other non-integer kinds. The bounded-numeric
+    /// accessors live on `BoundedIntKind`, which `Timestamptz` cannot be, so they
+    /// are unreachable for it by construction rather than by a runtime panic.
+    /// UTC-normalized: cipherstash has no tz-preserving type, so it maps to the
+    /// `timestamp` cast and the SQL `timestamp with time zone` plaintext type.
     Timestamptz,
     /// Boolean (`bool`). **Encryption-only / storage-only**: it carries no index
     /// term and is *not* `is_int()`/`is_temporal()`/`is_text()`. A two-value
