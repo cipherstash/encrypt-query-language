@@ -1178,8 +1178,12 @@ version = "0.1.0"
 dependencies = [
  "eql-domains",
  "minijinja",
+ "prettyplease",
+ "proc-macro2",
+ "quote",
  "serde",
  "serde_json",
+ "syn 2.0.108",
  "thiserror 2.0.18",
 ]
 
