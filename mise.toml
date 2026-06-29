@@ -529,7 +529,7 @@ run = """
 # Forward catalog-coverage: for each scalar type in the catalog, every domain
 # the catalog declares for it must have at least one matrix test name. FINER
 # than test:matrix:inventory (which reconciles only TYPES against list-types):
-# a DomainSpec added to a catalog row without matrix wiring passes the type
+# a Domain added to a catalog row without matrix wiring passes the type
 # inventory but fails here. Domain granularity only (Stage 1); per-operator
 # execution coverage is the Stage 4 matcher's job. No database needed.
 #

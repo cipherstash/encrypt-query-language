@@ -1,7 +1,7 @@
 //! Unit tests for the scalar/term catalog. Kept as one `#[cfg(test)]` module
 //! (declared from `lib.rs`) rather than co-located with each impl file because
 //! `rust_tests` spans `BoundedIntKind` + `ScalarKind` + `Fixture` +
-//! `ScalarSpec`. Each inner module imports the crate-root catalog with
+//! `DomainFamily`. Each inner module imports the crate-root catalog with
 //! `use crate::*;`; the crate-local `fixtures!` macro is in scope here by textual
 //! scoping (this module is declared after the macro definition in `lib.rs`).
 
@@ -174,7 +174,7 @@ mod rust_tests {
                         spec.kind.is_int(),
                         "pivot sentinel {fixture:?} on non-integer kind {:?} (token `{}`)",
                         spec.kind,
-                        spec.token,
+                        spec.name,
                     );
                 }
             }
@@ -194,11 +194,11 @@ mod rust_tests {
 
     #[test]
     fn is_eq_only_detects_absence_of_ord_domains() {
-        let int4 = CATALOG.iter().find(|s| s.token == "int4").unwrap();
+        let int4 = CATALOG.iter().find(|s| s.name == "int4").unwrap();
         assert!(!int4.is_eq_only(), "int4 is ordered");
-        let date = CATALOG.iter().find(|s| s.token == "date").unwrap();
+        let date = CATALOG.iter().find(|s| s.name == "date").unwrap();
         assert!(!date.is_eq_only(), "date is ordered");
-        let ts = CATALOG.iter().find(|s| s.token == "timestamptz").unwrap();
+        let ts = CATALOG.iter().find(|s| s.name == "timestamptz").unwrap();
         assert!(
             !ts.is_eq_only(),
             "timestamptz is now ordered (native 12-block ORE, comparator generalized to N blocks)"
@@ -207,8 +207,8 @@ mod rust_tests {
         // No catalog type is currently eq-only, so exercise `is_eq_only()`'s
         // positive path with a synthetic spec built on the retained
         // `EQ_ONLY_DOMAINS` shape (storage + `_eq`, no `_ord`).
-        let eq_only = ScalarSpec {
-            token: "synthetic_eq_only",
+        let eq_only = DomainFamily {
+            name: "synthetic_eq_only",
             kind: ScalarKind::Timestamptz,
             domains: EQ_ONLY_DOMAINS,
             fixtures: &[],
@@ -566,16 +566,16 @@ mod fixture_tests {
 mod catalog_tests {
     use crate::*;
 
-    fn scalar(token: &str) -> &'static ScalarSpec {
+    fn scalar(token: &str) -> &'static DomainFamily {
         CATALOG
             .iter()
-            .find(|s| s.token == token)
+            .find(|s| s.name == token)
             .unwrap_or_else(|| panic!("{token} missing from CATALOG"))
     }
 
     #[test]
     fn catalog_has_all_tokens_in_order() {
-        let tokens: Vec<&str> = CATALOG.iter().map(|s| s.token).collect();
+        let tokens: Vec<&str> = CATALOG.iter().map(|s| s.name).collect();
         assert_eq!(
             tokens,
             vec![
@@ -600,7 +600,7 @@ mod catalog_tests {
         assert_eq!(b.kind.rust_type(), "bool");
         // Storage-only: exactly one term-less domain, no `_eq`/`_ord` — no SEM
         // index term, no comparison surface.
-        let shape: Vec<(&str, &[Term])> = b.domains.iter().map(|d| (d.suffix, d.terms)).collect();
+        let shape: Vec<(&str, &[Term])> = b.domains.iter().map(|d| (d.name, d.terms)).collect();
         assert_eq!(shape, vec![("", &[] as &[Term])]);
         // bool is none of the comparison-capable kinds.
         assert!(!b.kind.is_int());
@@ -612,7 +612,7 @@ mod catalog_tests {
         // storage-only.
         assert!(b.is_eq_only());
         assert!(b.is_storage_only());
-        assert!(b.domain_by_suffix("_eq").is_none());
+        assert!(b.domain_by_name("eq").is_none());
         // Both boolean plaintexts are present as fixtures.
         assert_eq!(b.fixtures, &[Fixture::Bool(false), Fixture::Bool(true)]);
     }
@@ -624,9 +624,9 @@ mod catalog_tests {
         for s in CATALOG {
             assert_eq!(
                 s.is_storage_only(),
-                s.token == "bool",
+                s.name == "bool",
                 "{} storage-only classification is wrong",
-                s.token
+                s.name
             );
         }
     }
@@ -635,17 +635,14 @@ mod catalog_tests {
     fn text_spec_is_in_catalog() {
         let text = scalar("text");
         assert_eq!(text.kind, ScalarKind::Text);
-        let suffixes: Vec<_> = text.domains.iter().map(|d| d.suffix).collect();
-        assert_eq!(
-            suffixes,
-            vec!["", "_eq", "_match", "_ord_ore", "_ord", "_search"]
-        );
+        let names: Vec<_> = text.domains.iter().map(|d| d.name).collect();
+        assert_eq!(names, vec!["", "eq", "match", "ord_ore", "ord", "search"]);
     }
 
     #[test]
     fn text_match_domain_carries_only_bloom() {
         let text = scalar("text");
-        let m = text.domains.iter().find(|d| d.suffix == "_match").unwrap();
+        let m = text.domains.iter().find(|d| d.name == "match").unwrap();
         assert_eq!(m.terms, &[Term::Bloom]);
     }
 
@@ -674,26 +671,26 @@ mod catalog_tests {
                     Term::extractor_for_operator(d.terms, op),
                     Some("eq_term"),
                     "text{} must resolve `{op}` to eq_term (exact hm), not ORE",
-                    d.suffix
+                    d.name
                 );
             }
             // And the payload requires hm for these domains.
             assert!(
                 Term::term_json_keys(d.terms).contains(&"hm"),
                 "text{} must require the `hm` payload key",
-                d.suffix
+                d.name
             );
         }
     }
 
     #[test]
-    fn domain_by_suffix_finds_declared_suffixes() {
+    fn domain_by_name_finds_declared_names() {
         let text = scalar("text");
         assert_eq!(
-            text.domain_by_suffix("_search").map(|d| d.suffix),
-            Some("_search")
+            text.domain_by_name("search").map(|d| d.name),
+            Some("search")
         );
-        assert!(text.domain_by_suffix("_nope").is_none());
+        assert!(text.domain_by_name("nope").is_none());
     }
 
     #[test]
@@ -702,7 +699,7 @@ mod catalog_tests {
         let search = text
             .domains
             .iter()
-            .find(|d| d.suffix == "_search")
+            .find(|d| d.name == "search")
             .expect("text must declare a _search domain");
         assert_eq!(
             search.terms,
@@ -792,40 +789,39 @@ mod catalog_tests {
         // the two-domain EQ-ONLY shape (storage + `_eq`), the one-domain
         // STORAGE-ONLY shape (storage only — encryption-only scalars like
         // `bool`), or the ORDERED shape plus a `_match` domain (text's Bloom
-        // containment). This catches accidental drift — a typo'd suffix, a wrong
+        // containment). This catches accidental drift — a typo'd domain name, a wrong
         // term, a dropped domain — without hardcoding which token gets which
         // shape (that is the catalog's job; the matrix dispatch and the inventory
         // snapshots are shape-aware). Subsumes the old per-type
         // `<T>_maps_to_*_with_four_domains` / `<T>_domain_terms_match_manifest` tests.
         let ordered: Vec<(&str, &[Term])> = vec![
             ("", &[] as &[Term]),
-            ("_eq", &[Term::Hm][..]),
-            ("_ord_ore", &[Term::Ore][..]),
-            ("_ord", &[Term::Ore][..]),
+            ("eq", &[Term::Hm][..]),
+            ("ord_ore", &[Term::Ore][..]),
+            ("ord", &[Term::Ore][..]),
         ];
-        let eq_only: Vec<(&str, &[Term])> = vec![("", &[] as &[Term]), ("_eq", &[Term::Hm][..])];
+        let eq_only: Vec<(&str, &[Term])> = vec![("", &[] as &[Term]), ("eq", &[Term::Hm][..])];
         let storage_only: Vec<(&str, &[Term])> = vec![("", &[] as &[Term])];
         let ordered_match: Vec<(&str, &[Term])> = vec![
             ("", &[] as &[Term]),
-            ("_eq", &[Term::Hm][..]),
-            ("_match", &[Term::Bloom][..]),
-            ("_ord_ore", &[Term::Ore][..]),
-            ("_ord", &[Term::Ore][..]),
+            ("eq", &[Term::Hm][..]),
+            ("match", &[Term::Bloom][..]),
+            ("ord_ore", &[Term::Ore][..]),
+            ("ord", &[Term::Ore][..]),
         ];
         // text's current shape: equality is exact on the ordered domains (they
         // lead with `Hm`), plus a combined `_search` domain carrying all three
         // terms. `=`/`<>` route through `hm` on every eq-capable text domain.
         let text_search: Vec<(&str, &[Term])> = vec![
             ("", &[] as &[Term]),
-            ("_eq", &[Term::Hm][..]),
-            ("_match", &[Term::Bloom][..]),
-            ("_ord_ore", &[Term::Hm, Term::Ore][..]),
-            ("_ord", &[Term::Hm, Term::Ore][..]),
-            ("_search", &[Term::Hm, Term::Ore, Term::Bloom][..]),
+            ("eq", &[Term::Hm][..]),
+            ("match", &[Term::Bloom][..]),
+            ("ord_ore", &[Term::Hm, Term::Ore][..]),
+            ("ord", &[Term::Hm, Term::Ore][..]),
+            ("search", &[Term::Hm, Term::Ore, Term::Bloom][..]),
         ];
         for s in CATALOG {
-            let shape: Vec<(&str, &[Term])> =
-                s.domains.iter().map(|d| (d.suffix, d.terms)).collect();
+            let shape: Vec<(&str, &[Term])> = s.domains.iter().map(|d| (d.name, d.terms)).collect();
             assert!(
                 shape == ordered
                     || shape == eq_only
@@ -833,7 +829,7 @@ mod catalog_tests {
                     || shape == ordered_match
                     || shape == text_search,
                 "{} has an unrecognised domain shape: {shape:?}",
-                s.token
+                s.name
             );
         }
     }
@@ -850,7 +846,7 @@ mod catalog_tests {
             assert!(
                 !is_eq_only,
                 "{} is unexpectedly eq-only; no catalog type is eq-only currently",
-                s.token
+                s.name
             );
         }
     }
@@ -861,13 +857,13 @@ mod catalog_tests {
         // CATALOG. Replaces the per-type `<T>_maps_to_iNN` / `<T>_rust_type`
         // restatements.
         for s in CATALOG.iter().filter(|s| s.kind.is_int()) {
-            let expected = match s.token {
+            let expected = match s.name {
                 "int2" => ScalarKind::I16,
                 "int4" => ScalarKind::I32,
                 "int8" => ScalarKind::I64,
                 other => panic!("unmapped integer scalar token {other}"),
             };
-            assert_eq!(s.kind, expected, "{} maps to the wrong kind", s.token);
+            assert_eq!(s.kind, expected, "{} maps to the wrong kind", s.name);
         }
     }
 
@@ -889,12 +885,12 @@ mod values_tests {
     /// `check(&INTx, INTx_VALUES)` line, not a duplicated reference list. Subsumes
     /// the old per-type `<T>_values_materialise_to_typed_array` references and
     /// `materialised_values_track_their_fixture_lists`.
-    fn check<T: Copy + Into<i128>>(spec: &ScalarSpec, values: &[T]) {
+    fn check<T: Copy + Into<i128>>(spec: &DomainFamily, values: &[T]) {
         assert_eq!(
             values.len(),
             spec.fixtures.len(),
             "{}: value count != fixture count",
-            spec.token
+            spec.name
         );
         for (i, (v, f)) in values.iter().zip(spec.fixtures).enumerate() {
             assert_eq!(
@@ -902,7 +898,7 @@ mod values_tests {
                 f.numeric_value(spec.kind)
                     .expect("integer scalar fixture resolves to a number"),
                 "{}: value[{i}] does not match resolved fixture {f:?}",
-                spec.token
+                spec.name
             );
         }
     }
@@ -999,19 +995,19 @@ mod values_tests {
 mod float_tests {
     use crate::*;
 
-    fn scalar(token: &str) -> &'static ScalarSpec {
+    fn scalar(token: &str) -> &'static DomainFamily {
         CATALOG
             .iter()
-            .find(|s| s.token == token)
+            .find(|s| s.name == token)
             .unwrap_or_else(|| panic!("{token} missing from CATALOG"))
     }
 
     #[test]
     fn float_specs_are_in_catalog_with_ordered_shape() {
-        for token in ["float4", "float8"] {
-            let s = scalar(token);
-            let suffixes: Vec<_> = s.domains.iter().map(|d| d.suffix).collect();
-            assert_eq!(suffixes, vec!["", "_eq", "_ord_ore", "_ord"]);
+        for family_name in ["float4", "float8"] {
+            let s = scalar(family_name);
+            let names: Vec<_> = s.domains.iter().map(|d| d.name).collect();
+            assert_eq!(names, vec!["", "eq", "ord_ore", "ord"]);
         }
         assert_eq!(scalar("float4").kind, ScalarKind::F32);
         assert_eq!(scalar("float8").kind, ScalarKind::F64);
@@ -1039,29 +1035,38 @@ mod float_tests {
     /// ±Inf MUST be present (the boundary pivots).
     #[test]
     fn float_fixtures_exclude_nan_and_negative_zero_and_include_infinities() {
-        for token in ["float4", "float8"] {
-            let s = scalar(token);
+        for family_name in ["float4", "float8"] {
+            let s = scalar(family_name);
             let strings: Vec<&str> = s
                 .fixtures
                 .iter()
                 .map(|f| match f {
                     Fixture::Float(v) => *v,
-                    other => panic!("{token} fixture must be Fixture::Float, got {other:?}"),
+                    other => panic!("{family_name} fixture must be Fixture::Float, got {other:?}"),
                 })
                 .collect();
             for v in &strings {
                 let parsed: f64 = v
                     .parse()
-                    .unwrap_or_else(|_| panic!("{token} fixture {v:?} must parse as f64"));
-                assert!(!parsed.is_nan(), "{token} fixture {v:?} is NaN");
+                    .unwrap_or_else(|_| panic!("{family_name} fixture {v:?} must parse as f64"));
+                assert!(!parsed.is_nan(), "{family_name} fixture {v:?} is NaN");
                 assert!(
                     !(parsed == 0.0 && parsed.is_sign_negative()),
-                    "{token} fixture {v:?} is -0.0"
+                    "{family_name} fixture {v:?} is -0.0"
                 );
             }
-            assert!(strings.contains(&"inf"), "{token} must include +inf pivot");
-            assert!(strings.contains(&"-inf"), "{token} must include -inf pivot");
-            assert!(strings.contains(&"0"), "{token} must include 0 (origin)");
+            assert!(
+                strings.contains(&"inf"),
+                "{family_name} must include +inf pivot"
+            );
+            assert!(
+                strings.contains(&"-inf"),
+                "{family_name} must include -inf pivot"
+            );
+            assert!(
+                strings.contains(&"0"),
+                "{family_name} must include 0 (origin)"
+            );
         }
     }
 
@@ -1070,8 +1075,8 @@ mod float_tests {
     /// fetch_fixture_payload's fetch_one).
     #[test]
     fn float_fixtures_are_distinct_by_value() {
-        for token in ["float4", "float8"] {
-            let s = scalar(token);
+        for family_name in ["float4", "float8"] {
+            let s = scalar(family_name);
             let parsed: Vec<u64> = s
                 .fixtures
                 .iter()
@@ -1087,7 +1092,11 @@ mod float_tests {
             let mut sorted = parsed.clone();
             sorted.sort_unstable();
             sorted.dedup();
-            assert_eq!(sorted.len(), parsed.len(), "{token} has duplicate fixtures");
+            assert_eq!(
+                sorted.len(),
+                parsed.len(),
+                "{family_name} has duplicate fixtures"
+            );
         }
     }
 }
@@ -1097,14 +1106,14 @@ mod invariant_tests {
     use std::collections::HashMap;
 
     #[test]
-    fn every_domain_name_starts_with_its_token() {
+    fn every_domain_name_starts_with_its_family_name() {
         for s in CATALOG {
             for d in s.domains {
                 let name = s.domain_name(d);
                 assert!(
-                    name == s.token || name.starts_with(&format!("{}_", s.token)),
-                    "{name} does not start with token {}",
-                    s.token
+                    name == s.name || name.starts_with(&format!("{}_", s.name)),
+                    "{name} does not start with family name {}",
+                    s.name
                 );
             }
         }
@@ -1113,7 +1122,7 @@ mod invariant_tests {
     #[test]
     fn every_type_has_at_least_one_domain() {
         for s in CATALOG {
-            assert!(!s.domains.is_empty(), "{} has no domains", s.token);
+            assert!(!s.domains.is_empty(), "{} has no domains", s.name);
         }
     }
 
@@ -1164,14 +1173,14 @@ mod invariant_tests {
             assert!(
                 resolved.contains(&bk.min_value()),
                 "{} fixtures missing MIN",
-                s.token
+                s.name
             );
             assert!(
                 resolved.contains(&bk.max_value()),
                 "{} fixtures missing MAX",
-                s.token
+                s.name
             );
-            assert!(resolved.contains(&0), "{} fixtures missing zero", s.token);
+            assert!(resolved.contains(&0), "{} fixtures missing zero", s.name);
         }
     }
 
@@ -1181,7 +1190,7 @@ mod invariant_tests {
             let mut seen: HashMap<DistinctKey, Fixture> = HashMap::new();
             for f in s.fixtures {
                 if let Some(prev) = seen.insert(distinct_key(*f, s.kind), *f) {
-                    panic!("{}: {f:?} duplicates {prev:?}", s.token);
+                    panic!("{}: {f:?} duplicates {prev:?}", s.name);
                 }
             }
         }
@@ -1225,7 +1234,7 @@ mod invariant_tests {
                 assert!(
                     n >= lo && n <= hi,
                     "{}: fixture {f:?} resolves to {n}, out of range [{lo}, {hi}]",
-                    s.token
+                    s.name
                 );
             }
         }
@@ -1234,7 +1243,7 @@ mod invariant_tests {
     #[test]
     fn helper_outputs_match_for_known_domains() {
         // Cross-check the Term helpers against a known domain shape on int4.
-        let s = CATALOG.iter().find(|s| s.token == "int4").unwrap();
+        let s = CATALOG.iter().find(|s| s.name == "int4").unwrap();
         // storage domain: no terms.
         assert_eq!(Term::role_for_terms(s.domains[0].terms), Role::Storage);
         assert!(Term::operators_for_terms(s.domains[0].terms).is_empty());

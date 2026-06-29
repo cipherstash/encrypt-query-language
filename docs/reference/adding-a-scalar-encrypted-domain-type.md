@@ -20,7 +20,7 @@ needs and is fully self-contained (CI gates this — see §6).
 The whole SQL surface is **generated** from a single Rust source of truth: the
 `CATALOG` const in [`crates/eql-domains/src/lib.rs`](../../crates/eql-domains/src/lib.rs),
 rendered by the [`eql-codegen`](../../crates/eql-codegen/) crate. There is no
-TOML manifest and no Python — adding a type is adding one `ScalarSpec` row,
+TOML manifest and no Python — adding a type is adding one `DomainFamily` row,
 validated by the compiler plus catalog `#[test]`s. The reference type is
 `eql_v3.int4`; `eql_v3.text` is the worked non-integer example (ordered +
 equality + a `match` capability via the `Bloom` term); `eql_v3.bool` is the
@@ -34,7 +34,7 @@ materializer (see §7).
 
 To add a scalar type `<T>` (e.g. `int8`), with Rust type `<R>` (e.g. `i64`):
 
-1. **Add a `ScalarSpec` row to `eql_domains::CATALOG`** — `token`, `kind`,
+1. **Add a `DomainFamily` row to `eql_domains::CATALOG`** — `name`, `kind`,
    `domains`, `fixtures` (§2). If the type needs a new scalar width, add a
    `ScalarKind` variant first; if it needs new term behaviour, that goes in the
    `Term` enum's `impl`, never in catalog data.
@@ -72,20 +72,20 @@ Hand-written SQL beyond the fixed surface goes in
 
 ---
 
-## 2. The catalog row (`ScalarSpec`)
+## 2. The catalog row (`DomainFamily`)
 
-A scalar type is one `ScalarSpec` row in
+A scalar type is one `DomainFamily` row in
 [`crates/eql-domains/src/lib.rs`](../../crates/eql-domains/src/lib.rs):
 
 ```rust
-ScalarSpec {
-    token: "int4",
+DomainFamily {
+    name: "int4",
     kind: ScalarKind::I32,
     domains: &[
-        DomainSpec { suffix: "",         terms: &[] },
-        DomainSpec { suffix: "_eq",      terms: &[Term::Hm] },
-        DomainSpec { suffix: "_ord_ore", terms: &[Term::Ore] },
-        DomainSpec { suffix: "_ord",     terms: &[Term::Ore] },
+        Domain { name: "",        terms: &[] },
+        Domain { name: "eq",      terms: &[Term::Hm] },
+        Domain { name: "ord_ore", terms: &[Term::Ore] },
+        Domain { name: "ord",     terms: &[Term::Ore] },
     ],
     fixtures: INT4_FIXTURES,
 }
@@ -94,9 +94,11 @@ ScalarSpec {
 The fields, all enforced by the type system and the catalog `#[test]`s rather
 than a runtime validator:
 
-- **`token`** — the type token (`int4`); supplies `<T>` everywhere. Each
-  domain's full name is `token` + `suffix` (`ScalarSpec::domain_name`), pinned by
-  `every_domain_name_starts_with_its_token`.
+- **`name`** — the type name (`int4`); supplies `<T>` everywhere. Each domain's
+  full name is the family `name` + `_` + the domain `name`
+  (`DomainFamily::domain_name`); codegen owns the `_` join (`Domain::full_name`),
+  and an empty domain `name` yields the bare family name. Pinned by
+  `every_domain_name_starts_with_its_family_name`.
 - **`kind`** — a `ScalarKind` (`I16` / `I32` / `I64` / `Numeric` / `Text` /
   `Jsonb` / `Date` / `Timestamptz`), carrying the Rust type name. Only the
   integer kinds have an
@@ -110,10 +112,10 @@ than a runtime validator:
   `BoundedIntKind` variant** (rust-type name, `MIN`/`MAX`/zero symbols, bounds)
   plus its `ScalarKind` variant and `as_bounded_int` arm, with unit tests over
   the `impl` methods.
-- **`domains`** — a non-empty `&[DomainSpec]` (pinned by
-  `every_type_has_at_least_one_domain`), each a `suffix` + the fixed `&[Term]` it
-  carries. The storage domain is `suffix: ""` with no terms; `_eq => [Term::Hm]`;
-  `_ord` and `_ord_ore => [Term::Ore]`. A `DomainSpec` declares nothing else — no
+- **`domains`** — a non-empty `&[Domain]` (pinned by
+  `every_type_has_at_least_one_domain`), each a bare `name` + the fixed `&[Term]` it
+  carries. The storage domain is `name: ""` with no terms; `eq => [Term::Hm]`;
+  `ord` and `ord_ore => [Term::Ore]`. A `Domain` declares nothing else — no
   extractor names, no operator lists, no REQUIRE edges. Every behavioural fact
   comes from the `Term` enum.
 - **`fixtures`** — the type's plaintext fixture list (see below).
@@ -739,11 +741,11 @@ preserved by the name patterns.)
 Stages, in order (`generate_all` → `generate_type`):
 
 1. **Read the catalog.** `eql_domains::CATALOG` is the in-binary source of truth
-   — a `&[ScalarSpec]`. There is no parse/validate stage at generation time: the
+   — a `&[DomainFamily]`. There is no parse/validate stage at generation time: the
    catalog is validated at compile time (an undefined `Term` or unknown
    `ScalarKind` does not compile) and by the catalog `#[test]`s, so the data is
    already well-formed by the time `generate_all` runs.
-2. **Resolve terms.** For each `DomainSpec`, the `Term` enum's `impl` methods
+2. **Resolve terms.** For each `Domain`, the `Term` enum's `impl` methods
    supply the extractor name, return type, JSON envelope key, supported
    operators, and the SQL `-- REQUIRE:` edges those terms imply
    (`Term::operators_for_terms`, `term_json_keys`, `term_requires`,
@@ -876,8 +878,8 @@ deliberately offers no search surface at all.
 What makes it storage-only:
 
 - **One term-less domain.** Its catalog row uses `STORAGE_ONLY_DOMAINS` — a
-  single `DomainSpec { suffix: "", terms: &[] }`. No `_eq`, no `_ord`, no SEM
-  index term. `ScalarSpec::is_storage_only()` recognises this shape (a single
+  single `Domain { name: "", terms: &[] }`. No `_eq`, no `_ord`, no SEM
+  index term. `DomainFamily::is_storage_only()` recognises this shape (a single
   term-less storage domain); it is *also* `is_eq_only()` (no `_ord`), so the
   harness checks storage-only **first**.
 - **Generator: no changes needed.** The SQL generator already handles a

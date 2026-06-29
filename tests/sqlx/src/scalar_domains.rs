@@ -1121,6 +1121,20 @@ impl Variant {
         }
     }
 
+    /// The bare catalog domain name this variant maps to (no leading `_`), as
+    /// stored in `Domain::name` / looked up via `DomainFamily::domain_by_name`.
+    /// `suffix()` is the SQL-qualifying form (`_eq`); this is the catalog key
+    /// (`eq`). Storage is the empty bare name.
+    pub const fn name(self) -> &'static str {
+        match self {
+            Variant::Storage => "",
+            Variant::Eq => "eq",
+            Variant::Ord => "ord",
+            Variant::OrdOre => "ord_ore",
+            Variant::Search => "search",
+        }
+    }
+
     /// The fixed index terms this variant's domain carries for scalar `token`,
     /// from `CATALOG`. Panics if the `(token, suffix())` pair is not declared —
     /// the resolution backstop test guarantees every instantiated pair
@@ -1129,8 +1143,8 @@ impl Variant {
     pub fn terms_for(self, token: &str) -> &'static [Term] {
         CATALOG
             .iter()
-            .find(|s| s.token == token)
-            .and_then(|s| s.domain_by_suffix(self.suffix()))
+            .find(|s| s.name == token)
+            .and_then(|s| s.domain_by_name(self.name()))
             .map(|d| d.terms)
             .unwrap_or_else(|| {
                 panic!(
@@ -1146,8 +1160,8 @@ impl Variant {
     pub fn is_declared_for(self, token: &str) -> bool {
         CATALOG
             .iter()
-            .find(|s| s.token == token)
-            .and_then(|s| s.domain_by_suffix(self.suffix()))
+            .find(|s| s.name == token)
+            .and_then(|s| s.domain_by_name(self.name()))
             .is_some()
     }
 
@@ -1315,20 +1329,20 @@ combos with distinct dom_names",
 pub fn token_has_bloom_term(token: &str) -> bool {
     CATALOG
         .iter()
-        .find(|s| s.token == token)
+        .find(|s| s.name == token)
         .map(|s| s.domains.iter().any(|d| d.terms.contains(&Term::Bloom)))
         .unwrap_or(false)
 }
 
 /// True when scalar `token` is **storage-only / encryption-only** (a single
 /// term-less domain, no `_eq`/`_ord`/`_match`) — e.g. `bool`. Catalog-derived
-/// via `ScalarSpec::is_storage_only`. Such a type's fixture is encrypted with no
+/// via `DomainFamily::is_storage_only`. Such a type's fixture is encrypted with no
 /// search index, so its payload carries only `{v,i,c}` (no `hm`/`ob`/`bf`); the
 /// fixture-shape assertions branch on this.
 pub fn token_is_storage_only(token: &str) -> bool {
     CATALOG
         .iter()
-        .find(|s| s.token == token)
+        .find(|s| s.name == token)
         .map(|s| s.is_storage_only())
         .unwrap_or(false)
 }
@@ -1548,18 +1562,18 @@ mod catalog_resolution_tests {
                 let suffix = variant.suffix();
                 // A variant is instantiated for a token iff that token declares
                 // the suffix; only assert those pairs.
-                if let Some(d) = spec.domain_by_suffix(suffix) {
+                if let Some(d) = spec.domain_by_name(variant.name()) {
                     assert!(
-                        variant.is_declared_for(spec.token),
+                        variant.is_declared_for(spec.name),
                         "{}{} declared in CATALOG but is_declared_for is false",
-                        spec.token,
+                        spec.name,
                         suffix
                     );
                     assert_eq!(
-                        variant.terms_for(spec.token),
+                        variant.terms_for(spec.name),
                         d.terms,
                         "{}{} term set drift between Variant and CATALOG",
-                        spec.token,
+                        spec.name,
                         suffix
                     );
                 }
@@ -1695,8 +1709,8 @@ mod oracle_inventory_tests {
         // no `_ord` domain and must short-circuit to false, not panic.
         let ordered: Vec<&str> = CATALOG
             .iter()
-            .filter(|s| Variant::Ord.is_declared_for(s.token) && Variant::Ord.supports_ord(s.token))
-            .map(|s| s.token)
+            .filter(|s| Variant::Ord.is_declared_for(s.name) && Variant::Ord.supports_ord(s.name))
+            .map(|s| s.name)
             .collect();
         assert_eq!(
             ordered,
@@ -1729,8 +1743,8 @@ mod oracle_inventory_tests {
         // scalar with no `_ord` domain (bool), so short-circuit first.
         let ordered: Vec<&str> = CATALOG
             .iter()
-            .filter(|s| Variant::Ord.is_declared_for(s.token) && Variant::Ord.supports_ord(s.token))
-            .map(|s| s.token)
+            .filter(|s| Variant::Ord.is_declared_for(s.name) && Variant::Ord.supports_ord(s.name))
+            .map(|s| s.name)
             .collect();
         // Keep in lockstep with the fixture_oracle_suite! / e2e_oracle_suite!
         // instantiation lists.

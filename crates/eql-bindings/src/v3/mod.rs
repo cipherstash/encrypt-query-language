@@ -93,7 +93,7 @@ pub trait DomainType {
 
     /// Unqualified SQL domain name (e.g. `"int4_eq"`) — [`Self::sql_domain`]
     /// minus the schema qualifier; matches `eql-domains`
-    /// `ScalarSpec::domain_name`.
+    /// `DomainFamily::domain_name`.
     fn domain(&self) -> &'static str {
         self.sql_domain()
             .strip_prefix("eql_v3.")

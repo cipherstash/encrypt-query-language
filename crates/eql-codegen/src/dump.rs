@@ -25,12 +25,14 @@ pub struct TypeEntry {
 
 #[derive(Serialize)]
 pub struct DomainEntry {
-    /// Test-name segment: the base domain (`suffix == ""`) is `storage`;
-    /// otherwise the suffix without its leading underscore (`_eq` → `eq`,
-    /// `_ord_ore` → `ord_ore`).
+    /// Test-name segment: the base domain (`name == ""`) is `storage`;
+    /// otherwise the bare domain name (`eq`, `ord`, …).
     pub segment: String,
-    /// Raw catalog suffix (`""`, `_eq`, `_ord`, `_ord_ore`, `_match`).
-    pub suffix: &'static str,
+    /// The `suffix` wire field (`""`, `_eq`, `_ord`, `_ord_ore`, `_match`),
+    /// reconstructed by re-prefixing the bare domain name with `_` so the
+    /// emitted JSON stays byte-stable after the catalog dropped the leading
+    /// underscore from its stored domain names.
+    pub suffix: String,
     /// SQL operators the domain's terms support, in catalog order. Empty for
     /// the storage domain (no terms).
     pub supported_ops: Vec<&'static str>,
@@ -45,17 +47,21 @@ pub fn dump_catalog() -> CatalogDump {
                 .domains
                 .iter()
                 .map(|d| DomainEntry {
-                    segment: if d.suffix.is_empty() {
+                    segment: if d.name.is_empty() {
                         "storage".to_string()
                     } else {
-                        d.suffix.trim_start_matches('_').to_string()
+                        d.name.to_string()
                     },
-                    suffix: d.suffix,
+                    suffix: if d.name.is_empty() {
+                        String::new()
+                    } else {
+                        format!("_{}", d.name)
+                    },
                     supported_ops: Term::operators_for_terms(d.terms),
                 })
                 .collect();
             TypeEntry {
-                token: spec.token,
+                token: spec.name,
                 is_eq_only: spec.is_eq_only(),
                 domains,
             }
@@ -93,6 +99,23 @@ mod tests {
 
         let ord = int4.domains.iter().find(|d| d.segment == "ord").unwrap();
         assert_eq!(ord.supported_ops, ["=", "<>", "<", "<=", ">", ">="]);
+    }
+
+    /// Pins the hand-re-derived `suffix` wire field — the one channel with no
+    /// other automated reader — so its underscore-prefixed values stay
+    /// byte-stable after the catalog dropped the leading underscore from its
+    /// stored (now bare) domain names.
+    #[test]
+    fn int4_suffix_field_is_underscore_prefixed() {
+        let dump = dump_catalog();
+        let int4 = dump
+            .types
+            .iter()
+            .find(|t| t.token == "int4")
+            .expect("int4 present in catalog");
+
+        let suffixes: Vec<&str> = int4.domains.iter().map(|d| d.suffix.as_str()).collect();
+        assert_eq!(suffixes, ["", "_eq", "_ord_ore", "_ord"]);
     }
 
     #[test]

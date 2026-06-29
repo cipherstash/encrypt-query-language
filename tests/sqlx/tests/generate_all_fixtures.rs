@@ -27,8 +27,8 @@ eql_tests::scalar_types!(fixture_dispatch);
 async fn generate_all() -> anyhow::Result<()> {
     let mut generated = 0usize;
     for spec in CATALOG {
-        eprintln!("Generating fixture eql_v3_{}...", spec.token);
-        generate_for_token(spec.token).await?;
+        eprintln!("Generating fixture eql_v3_{}...", spec.name);
+        generate_for_token(spec.name).await?;
         generated += 1;
     }
     assert!(generated > 0, "CATALOG is empty — nothing to generate");
