@@ -43,138 +43,41 @@
 //! mode this tier exists to retire, and `_ord` vs `_ord_ore` are identical
 //! shapes that no sniffing can separate. Consumers read from a typed column
 //! and already know the domain.
-
-use std::marker::PhantomData;
-
-use schemars::{schema_for, JsonSchema, Schema};
+//!
+//! ## Per-family caller-facing notes
+//!
+//! These are not derivable from the catalog and are documented here because the
+//! per-family modules are generated.
+//!
+//! **`float8` / `float4` special values.** `-0.0` canonicalizes to `+0.0`
+//! (equal under `=`, IEEE-consistent) and `±Inf` order correctly
+//! (`-Inf < finite < +Inf`). **NaN is unordered and unspecified in the
+//! encoder**: it can be encrypted, stored, and pass the domain CHECK, but it
+//! carries **no comparison guarantee** and does NOT follow IEEE semantics. The
+//! domain CHECK validates only the envelope — it cannot inspect the ciphertext
+//! — so a NaN payload is never rejected server-side. **Reject NaN client-side
+//! before encryption** if your column must not contain it; otherwise a NaN row
+//! sorts at an arbitrary (but deterministic) position in an encrypted range
+//! scan. See the `float_special` regression suite for the locked behaviour.
+//!
+//! **`bool` is storage-only by design.** It has no `_eq`/`_ord` domain and
+//! carries no index term: a two-value column has so little cardinality that any
+//! searchable index (even HMAC equality) would trivially leak the plaintext
+//! distribution. The payload is `{v,i,c}` only and every operator is blocked.
 
 pub mod bool;
 pub mod date;
+pub mod domain_type;
 pub mod float4;
 pub mod float8;
 pub mod int2;
 pub mod int4;
 pub mod int8;
+pub mod inventory;
 pub mod numeric;
 pub mod terms;
 pub mod text;
 pub mod timestamptz;
 
-/// The PostgreSQL schema every domain in this module inhabits.
-pub const SQL_SCHEMA: &str = "eql_v3";
-
-/// Base URL for the canonical `$id` of every published v3 JSON Schema.
-/// The per-domain `$id` is `{SCHEMA_ID_BASE}{domain}.json` (see
-/// [`DomainType::schema_id`]); `tests/export.rs` injects it at write time.
-pub const SCHEMA_ID_BASE: &str = "https://schemas.cipherstash.com/eql/v3/";
-
-/// One v3 domain type — implemented by every payload type, so any payload
-/// value can report the SQL domain it inhabits (`payload.sql_domain()`).
-///
-/// Each token file implements this next to the type it describes; the SQL
-/// domain string is defined exactly once, in that impl, and
-/// `tests/catalog_parity.rs` cross-checks every entry of [`all`] against
-/// `eql-domains::CATALOG` — a typo'd or mis-ordered domain fails there.
-/// Public so FFI consumers can enumerate the protocol surface too.
-pub trait DomainType {
-    /// Fully-qualified SQL domain name, e.g. `"eql_v3.int4_eq"` — the
-    /// per-type fact everything else derives from, defined once in each
-    /// type's impl.
-    ///
-    /// `where Self: Sized` keeps the trait object-safe (the method is
-    /// excluded from the vtable); through `dyn DomainType`, use
-    /// [`Self::sql_domain`].
-    fn sql_domain_static() -> &'static str
-    where
-        Self: Sized;
-
-    /// Fully-qualified SQL domain name of this payload value.
-    fn sql_domain(&self) -> &'static str;
-
-    /// Unqualified SQL domain name (e.g. `"int4_eq"`) — [`Self::sql_domain`]
-    /// minus the schema qualifier; matches `eql-domains`
-    /// `DomainFamily::domain_name`.
-    fn domain(&self) -> &'static str {
-        self.sql_domain()
-            .strip_prefix("eql_v3.")
-            .expect("sql_domain must be qualified with the eql_v3 schema")
-    }
-
-    /// Canonical `$id` for this domain's published JSON Schema —
-    /// `{SCHEMA_ID_BASE}{domain}.json`. The single source of truth for the
-    /// identity `tests/export.rs` injects; pinned by `tests/catalog_parity.rs`.
-    fn schema_id(&self) -> String {
-        format!("{SCHEMA_ID_BASE}{}.json", self.domain())
-    }
-
-    /// The type's JSON Schema.
-    fn schema(&self) -> Schema;
-}
-
-/// Type-level handle: lets [`all`] enumerate the domain types without
-/// payload values to box — `Box::new(PhantomData::<Int4Eq>)` is zero-sized,
-/// and the delegation goes through [`DomainType::sql_domain_static`], so no
-/// payload instance is ever constructed.
-impl<T> DomainType for PhantomData<T>
-where
-    T: DomainType + JsonSchema,
-{
-    fn sql_domain_static() -> &'static str {
-        T::sql_domain_static()
-    }
-
-    fn sql_domain(&self) -> &'static str {
-        T::sql_domain_static()
-    }
-
-    fn schema(&self) -> Schema {
-        schema_for!(T)
-    }
-}
-
-/// Every v3 domain type, in `eql-domains::CATALOG` order (token order, then
-/// each token's domains in manifest order) — the one hand-maintained list of
-/// types in the crate.
-pub fn all() -> Vec<Box<dyn DomainType>> {
-    vec![
-        Box::new(PhantomData::<int4::Int4>),
-        Box::new(PhantomData::<int4::Int4Eq>),
-        Box::new(PhantomData::<int4::Int4OrdOre>),
-        Box::new(PhantomData::<int4::Int4Ord>),
-        Box::new(PhantomData::<int2::Int2>),
-        Box::new(PhantomData::<int2::Int2Eq>),
-        Box::new(PhantomData::<int2::Int2OrdOre>),
-        Box::new(PhantomData::<int2::Int2Ord>),
-        Box::new(PhantomData::<int8::Int8>),
-        Box::new(PhantomData::<int8::Int8Eq>),
-        Box::new(PhantomData::<int8::Int8OrdOre>),
-        Box::new(PhantomData::<int8::Int8Ord>),
-        Box::new(PhantomData::<date::Date>),
-        Box::new(PhantomData::<date::DateEq>),
-        Box::new(PhantomData::<date::DateOrdOre>),
-        Box::new(PhantomData::<date::DateOrd>),
-        Box::new(PhantomData::<timestamptz::Timestamptz>),
-        Box::new(PhantomData::<timestamptz::TimestamptzEq>),
-        Box::new(PhantomData::<timestamptz::TimestamptzOrdOre>),
-        Box::new(PhantomData::<timestamptz::TimestamptzOrd>),
-        Box::new(PhantomData::<numeric::Numeric>),
-        Box::new(PhantomData::<numeric::NumericEq>),
-        Box::new(PhantomData::<numeric::NumericOrdOre>),
-        Box::new(PhantomData::<numeric::NumericOrd>),
-        Box::new(PhantomData::<text::Text>),
-        Box::new(PhantomData::<text::TextEq>),
-        Box::new(PhantomData::<text::TextMatch>),
-        Box::new(PhantomData::<text::TextOrdOre>),
-        Box::new(PhantomData::<text::TextOrd>),
-        Box::new(PhantomData::<text::TextSearch>),
-        Box::new(PhantomData::<bool::Bool>),
-        Box::new(PhantomData::<float4::Float4>),
-        Box::new(PhantomData::<float4::Float4Eq>),
-        Box::new(PhantomData::<float4::Float4OrdOre>),
-        Box::new(PhantomData::<float4::Float4Ord>),
-        Box::new(PhantomData::<float8::Float8>),
-        Box::new(PhantomData::<float8::Float8Eq>),
-        Box::new(PhantomData::<float8::Float8OrdOre>),
-        Box::new(PhantomData::<float8::Float8Ord>),
-    ]
-}
+pub use domain_type::{DomainType, SCHEMA_ID_BASE, SQL_SCHEMA};
+pub use inventory::all;
