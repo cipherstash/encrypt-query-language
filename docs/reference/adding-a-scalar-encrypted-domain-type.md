@@ -98,7 +98,7 @@ than a runtime validator:
   full name is the family `name` + `_` + the domain `name`
   (`DomainFamily::domain_name`); codegen owns the `_` join (`Domain::full_name`),
   and an empty domain `name` yields the bare family name. Pinned by
-  `every_domain_name_starts_with_its_token`.
+  `every_domain_name_starts_with_its_family_name`.
 - **`kind`** — a `ScalarKind` (`I16` / `I32` / `I64` / `Numeric` / `Text` /
   `Jsonb` / `Date` / `Timestamptz`), carrying the Rust type name. Only the
   integer kinds have an

@@ -68,14 +68,14 @@ pub struct DomainBlock {
 
 #[derive(serde::Serialize)]
 pub struct TypesContext {
-    pub token: String,
+    pub family_name: String,
     pub domains: Vec<DomainBlock>,
 }
 
 /// Build the per-domain block data (port of `render_domain_block`'s value logic,
 /// minus comment prose and the CHECK skeleton — those are template-resident).
-pub fn domain_block(token: &str, domain: &Domain) -> DomainBlock {
-    let name = domain.full_name(token);
+pub fn domain_block(family_name: &str, domain: &Domain) -> DomainBlock {
+    let name = domain.full_name(family_name);
 
     let mut keys: Vec<String> = ENVELOPE_KEYS.iter().map(|k| sql_str(k)).collect();
     for k in Term::term_json_keys(domain.terms) {
@@ -134,7 +134,7 @@ pub enum FnEntry {
 #[derive(serde::Serialize)]
 pub struct FunctionsContext {
     pub requires: Vec<String>, // dependency paths only; template emits "-- REQUIRE:"
-    pub token: String,
+    pub family_name: String,
     pub name: String,       // full domain name (family-name + "_" + domain-name)
     pub dom: String,        // schema-qualified domain, e.g. eql_v3.int4_eq
     pub domain_lit: String, // sql_str(dom), defensively escaped for the RAISE literal
@@ -209,7 +209,7 @@ pub struct OpEntry {
 #[derive(serde::Serialize)]
 pub struct OperatorsContext {
     pub requires: Vec<String>,
-    pub token: String,
+    pub family_name: String,
     pub name: String,
     pub dom: String,
     pub operators: Vec<OpEntry>,
@@ -236,7 +236,7 @@ pub fn operator_entry(op: &Operator, leftarg: &str, rightarg: &str, supported: b
 #[derive(serde::Serialize)]
 pub struct AggregatesContext {
     pub requires: Vec<String>, // dependency paths only; template emits "-- REQUIRE:"
-    pub token: String,
+    pub family_name: String,
     pub name: String,
     pub dom: String,                        // schema-qualified domain, hoisted
     pub aggregates: &'static [AggregateOp], // == AGGREGATE_OPS

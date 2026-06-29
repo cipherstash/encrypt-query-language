@@ -2,7 +2,7 @@
 {% for r in requires -%}
 -- REQUIRE: {{ r }}
 {% endfor %}
---! @file encrypted_domain/{{ token }}/{{ name }}_operators.sql
+--! @file encrypted_domain/{{ family_name }}/{{ name }}_operators.sql
 --! @brief Operators for {{ dom }}.
 {% for o in operators %}
 CREATE OPERATOR {{ o.symbol }} (

@@ -206,7 +206,8 @@ pub struct Domain {
 }
 
 /// A scalar encrypted-domain type: its SQL `name`, native Rust type, generated
-/// domains, and fixture plaintext list. The Rust analogue of one `*.toml`.
+/// domains, and fixture plaintext list. One row of the Rust `CATALOG` — the
+/// source of truth for the type (there is no TOML manifest).
 /// (`domain_name`/`is_eq_only` are impl'd in `spec`.)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DomainFamily {

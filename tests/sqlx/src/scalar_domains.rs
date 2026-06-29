@@ -1121,6 +1121,20 @@ impl Variant {
         }
     }
 
+    /// The bare catalog domain name this variant maps to (no leading `_`), as
+    /// stored in `Domain::name` / looked up via `DomainFamily::domain_by_name`.
+    /// `suffix()` is the SQL-qualifying form (`_eq`); this is the catalog key
+    /// (`eq`). Storage is the empty bare name.
+    pub const fn name(self) -> &'static str {
+        match self {
+            Variant::Storage => "",
+            Variant::Eq => "eq",
+            Variant::Ord => "ord",
+            Variant::OrdOre => "ord_ore",
+            Variant::Search => "search",
+        }
+    }
+
     /// The fixed index terms this variant's domain carries for scalar `token`,
     /// from `CATALOG`. Panics if the `(token, suffix())` pair is not declared —
     /// the resolution backstop test guarantees every instantiated pair
@@ -1130,7 +1144,7 @@ impl Variant {
         CATALOG
             .iter()
             .find(|s| s.name == token)
-            .and_then(|s| s.domain_by_name(self.suffix().trim_start_matches('_')))
+            .and_then(|s| s.domain_by_name(self.name()))
             .map(|d| d.terms)
             .unwrap_or_else(|| {
                 panic!(
@@ -1147,7 +1161,7 @@ impl Variant {
         CATALOG
             .iter()
             .find(|s| s.name == token)
-            .and_then(|s| s.domain_by_name(self.suffix().trim_start_matches('_')))
+            .and_then(|s| s.domain_by_name(self.name()))
             .is_some()
     }
 
@@ -1548,7 +1562,7 @@ mod catalog_resolution_tests {
                 let suffix = variant.suffix();
                 // A variant is instantiated for a token iff that token declares
                 // the suffix; only assert those pairs.
-                if let Some(d) = spec.domain_by_name(suffix.trim_start_matches('_')) {
+                if let Some(d) = spec.domain_by_name(variant.name()) {
                     assert!(
                         variant.is_declared_for(spec.name),
                         "{}{} declared in CATALOG but is_declared_for is false",

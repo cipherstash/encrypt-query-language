@@ -11,14 +11,14 @@ use crate::operator_surface::OPERATORS;
 const V3_SCHEMA: &str = "src/v3/schema.sql";
 /// REQUIRE edge for the hand-written shared blocker helper.
 const V3_SCALARS_BLOCKER: &str = "src/v3/scalars/functions.sql";
-/// Root of the generated per-token scalar surface. The single place the tree
+/// Root of the generated per-type scalar surface. The single place the tree
 /// layout is spelled out — keeps `types_path`/`scalar_path` and the REQUIRE
 /// vecs from drifting if the surface ever relocates again.
 const V3_SCALARS_DIR: &str = "src/v3/scalars";
 
-/// REQUIRE path for a generated file `file` under a token's scalar dir.
-fn scalar_path(token: &str, file: &str) -> String {
-    format!("{V3_SCALARS_DIR}/{token}/{file}")
+/// REQUIRE path for a generated file `file` under a family's scalar dir.
+fn scalar_path(family_name: &str, file: &str) -> String {
+    format!("{V3_SCALARS_DIR}/{family_name}/{file}")
 }
 
 /// The second-parameter name for an operator's generated signature. The `->` and
@@ -33,8 +33,8 @@ fn arg_b_name(symbol: &str) -> &'static str {
 }
 
 /// REQUIRE path for a type's _types.sql. Port of `_types_path`.
-fn types_path(token: &str) -> String {
-    scalar_path(token, &format!("{token}_types.sql"))
+fn types_path(family_name: &str) -> String {
+    scalar_path(family_name, &format!("{family_name}_types.sql"))
 }
 
 /// Body for <T>_types.sql: every domain in one idempotent DO block.
@@ -42,7 +42,7 @@ fn types_path(token: &str) -> String {
 pub fn render_types_file(spec: &DomainFamily) -> String {
     use crate::context::{domain_block, environment, TypesContext};
     let ctx = TypesContext {
-        token: spec.name.to_string(),
+        family_name: spec.name.to_string(),
         domains: spec
             .domains
             .iter()
@@ -57,10 +57,10 @@ pub fn render_types_file(spec: &DomainFamily) -> String {
 }
 
 /// REQUIRE edges for a domain's _functions.sql. Port of `_functions_requires`.
-fn functions_requires(token: &str, terms: &[Term]) -> Vec<String> {
+fn functions_requires(family_name: &str, terms: &[Term]) -> Vec<String> {
     let mut reqs = vec![
         V3_SCHEMA.to_string(),
-        types_path(token),
+        types_path(family_name),
         V3_SCALARS_BLOCKER.to_string(),
     ];
     for extra in Term::term_requires(terms) {
@@ -72,12 +72,12 @@ fn functions_requires(token: &str, terms: &[Term]) -> Vec<String> {
 }
 
 /// Body for a domain's _functions.sql. Port of `render_functions_file`.
-pub fn render_functions_file(token: &str, domain: &Domain) -> String {
+pub fn render_functions_file(family_name: &str, domain: &Domain) -> String {
     use crate::consts::sql_str;
     use crate::context::{
         environment, extractor_entry, unsupported_entry, wrapper_entry, FunctionsContext, SqlParam,
     };
-    let name = domain.full_name(token);
+    let name = domain.full_name(family_name);
     let dom = domain_name(&name);
     let domain_lit = sql_str(&dom);
     let supported = Term::operators_for_terms(domain.terms);
@@ -112,8 +112,8 @@ pub fn render_functions_file(token: &str, domain: &Domain) -> String {
     }
 
     let ctx = FunctionsContext {
-        requires: functions_requires(token, domain.terms),
-        token: token.to_string(),
+        requires: functions_requires(family_name, domain.terms),
+        family_name: family_name.to_string(),
         name,
         dom,
         domain_lit,
@@ -127,9 +127,9 @@ pub fn render_functions_file(token: &str, domain: &Domain) -> String {
 }
 
 /// Body for a domain's _operators.sql. Port of `render_operators_file`.
-pub fn render_operators_file(token: &str, domain: &Domain) -> String {
+pub fn render_operators_file(family_name: &str, domain: &Domain) -> String {
     use crate::context::{environment, operator_entry, OperatorsContext};
-    let name = domain.full_name(token);
+    let name = domain.full_name(family_name);
     let dom = domain_name(&name);
     let supported = Term::operators_for_terms(domain.terms);
     let is_supported = |op: &str| supported.contains(&op);
@@ -152,10 +152,10 @@ pub fn render_operators_file(token: &str, domain: &Domain) -> String {
     let ctx = OperatorsContext {
         requires: vec![
             V3_SCHEMA.to_string(),
-            types_path(token),
-            scalar_path(token, &format!("{name}_functions.sql")),
+            types_path(family_name),
+            scalar_path(family_name, &format!("{name}_functions.sql")),
         ],
-        token: token.to_string(),
+        family_name: family_name.to_string(),
         name,
         dom,
         operators,
@@ -169,21 +169,21 @@ pub fn render_operators_file(token: &str, domain: &Domain) -> String {
 
 /// Body for a domain's _aggregates.sql, or None if not ord-capable.
 /// Port of `render_aggregates_file`.
-pub fn render_aggregates_file(token: &str, domain: &Domain) -> Option<String> {
+pub fn render_aggregates_file(family_name: &str, domain: &Domain) -> Option<String> {
     use crate::context::{environment, AggregatesContext, AGGREGATE_OPS};
     if !is_ord_capable(domain.terms) {
         return None;
     }
-    let name = domain.full_name(token);
+    let name = domain.full_name(family_name);
     let dom = domain_name(&name);
     let ctx = AggregatesContext {
         requires: vec![
             V3_SCHEMA.to_string(),
-            types_path(token),
-            scalar_path(token, &format!("{name}_functions.sql")),
-            scalar_path(token, &format!("{name}_operators.sql")),
+            types_path(family_name),
+            scalar_path(family_name, &format!("{name}_functions.sql")),
+            scalar_path(family_name, &format!("{name}_operators.sql")),
         ],
-        token: token.to_string(),
+        family_name: family_name.to_string(),
         name,
         dom,                       // hoisted: one copy, template reads {{ dom }}
         aggregates: AGGREGATE_OPS, // iterate the const directly (no per-entry wrapper)
@@ -204,10 +204,10 @@ use crate::writer::{
 /// Regenerate every generated file for one type into `out_dir`.
 /// Port of `generate_type`. Returns the written paths.
 pub fn generate_type(spec: &DomainFamily, out_dir: &Path) -> Result<Vec<PathBuf>, WriteError> {
-    let token = spec.name;
-    let mut targets = vec![out_dir.join(format!("{token}_types.sql"))];
+    let family_name = spec.name;
+    let mut targets = vec![out_dir.join(format!("{family_name}_types.sql"))];
     for d in spec.domains {
-        let name = d.full_name(token);
+        let name = d.full_name(family_name);
         targets.push(out_dir.join(format!("{name}_functions.sql")));
         targets.push(out_dir.join(format!("{name}_operators.sql")));
         if is_ord_capable(d.terms) {
@@ -219,21 +219,21 @@ pub fn generate_type(spec: &DomainFamily, out_dir: &Path) -> Result<Vec<PathBuf>
 
     let mut written: Vec<PathBuf> = Vec::new();
 
-    let types_path = out_dir.join(format!("{token}_types.sql"));
+    let types_path = out_dir.join(format!("{family_name}_types.sql"));
     write_generated_file(&types_path, &render_types_file(spec))?;
     written.push(types_path);
 
     for d in spec.domains {
-        let name = d.full_name(token);
+        let name = d.full_name(family_name);
         let fn_path = out_dir.join(format!("{name}_functions.sql"));
-        write_generated_file(&fn_path, &render_functions_file(token, d))?;
+        write_generated_file(&fn_path, &render_functions_file(family_name, d))?;
         written.push(fn_path);
 
         let op_path = out_dir.join(format!("{name}_operators.sql"));
-        write_generated_file(&op_path, &render_operators_file(token, d))?;
+        write_generated_file(&op_path, &render_operators_file(family_name, d))?;
         written.push(op_path);
 
-        if let Some(agg) = render_aggregates_file(token, d) {
+        if let Some(agg) = render_aggregates_file(family_name, d) {
             let agg_path = out_dir.join(format!("{name}_aggregates.sql"));
             write_generated_file(&agg_path, &agg)?;
             written.push(agg_path);
@@ -248,22 +248,18 @@ pub fn generate_type(spec: &DomainFamily, out_dir: &Path) -> Result<Vec<PathBuf>
 /// (`eql_domains::INT4_VALUES` / `INT2_VALUES`), read directly by the SQLx tests.
 pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
     for spec in eql_domains::CATALOG {
-        let token = spec.name;
-        let out_dir = out_root.join(V3_SCALARS_DIR).join(token);
+        let family_name = spec.name;
+        let out_dir = out_root.join(V3_SCALARS_DIR).join(family_name);
         let written = generate_type(spec, &out_dir)?;
 
         for p in &written {
             let rel = p.strip_prefix(out_root).unwrap_or(p);
             println!("generated {}", rel.display());
         }
-        println!("generated {} files for {token}", written.len());
+        println!("generated {} files for {family_name}", written.len());
     }
-    let tokens: Vec<&str> = eql_domains::CATALOG.iter().map(|s| s.name).collect();
-    println!(
-        "codegen: ok ({} types: {})",
-        tokens.len(),
-        tokens.join(", ")
-    );
+    let names: Vec<&str> = eql_domains::CATALOG.iter().map(|s| s.name).collect();
+    println!("codegen: ok ({} types: {})", names.len(), names.join(", "));
     Ok(0)
 }
 
@@ -272,11 +268,11 @@ mod tests {
     use super::*;
     use eql_domains::CATALOG;
 
-    fn spec(token: &str) -> &'static DomainFamily {
+    fn spec(family_name: &str) -> &'static DomainFamily {
         CATALOG
             .iter()
-            .find(|s| s.name == token)
-            .expect("catalog token")
+            .find(|s| s.name == family_name)
+            .expect("catalog family")
     }
 
     fn domain<'a>(spec: &'a DomainFamily, name: &str) -> &'a Domain {
@@ -305,20 +301,20 @@ mod tests {
         out
     }
 
-    fn rendered_for(token: &str, name: &str, spec: &DomainFamily) -> String {
-        if name == format!("{token}_types.sql") {
+    fn rendered_for(family_name: &str, name: &str, spec: &DomainFamily) -> String {
+        if name == format!("{family_name}_types.sql") {
             return render_types_file(spec);
         }
         for d in spec.domains {
-            let full = d.full_name(token);
+            let full = d.full_name(family_name);
             if name == format!("{full}_functions.sql") {
-                return render_functions_file(token, d);
+                return render_functions_file(family_name, d);
             }
             if name == format!("{full}_operators.sql") {
-                return render_operators_file(token, d);
+                return render_operators_file(family_name, d);
             }
             if name == format!("{full}_aggregates.sql") {
-                return render_aggregates_file(token, d)
+                return render_aggregates_file(family_name, d)
                     .expect("reference exists but generator skipped (not ord-capable)");
             }
         }
@@ -577,8 +573,8 @@ mod tests {
     fn inlinable_functions_have_no_set_search_path() {
         let s = spec("int4");
         // Extractors and wrappers (eq/ord functions files) are inlinable SQL.
-        for suffix in ["eq", "ord"] {
-            let sql = render_functions_file("int4", domain(s, suffix));
+        for name in ["eq", "ord"] {
+            let sql = render_functions_file("int4", domain(s, name));
             // Inlinable rows are the LANGUAGE sql ones; none may pin search_path.
             for block in sql.split("CREATE FUNCTION").skip(1) {
                 if block.contains("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE") {

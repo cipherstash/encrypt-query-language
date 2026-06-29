@@ -2,7 +2,7 @@
 {% for r in requires -%}
 -- REQUIRE: {{ r }}
 {% endfor %}
---! @file encrypted_domain/{{ token }}/{{ name }}_aggregates.sql
+--! @file encrypted_domain/{{ family_name }}/{{ name }}_aggregates.sql
 --! @brief Aggregates for {{ dom }}.
 {% for a in aggregates %}
 --! @brief State function for {{ a.name }} on {{ dom }}.

@@ -101,6 +101,23 @@ mod tests {
         assert_eq!(ord.supported_ops, ["=", "<>", "<", "<=", ">", ">="]);
     }
 
+    /// Pins the hand-re-derived `suffix` wire field — the one channel with no
+    /// other automated reader — so its underscore-prefixed values stay
+    /// byte-stable after the catalog dropped the leading underscore from its
+    /// stored (now bare) domain names.
+    #[test]
+    fn int4_suffix_field_is_underscore_prefixed() {
+        let dump = dump_catalog();
+        let int4 = dump
+            .types
+            .iter()
+            .find(|t| t.token == "int4")
+            .expect("int4 present in catalog");
+
+        let suffixes: Vec<&str> = int4.domains.iter().map(|d| d.suffix.as_str()).collect();
+        assert_eq!(suffixes, ["", "_eq", "_ord_ore", "_ord"]);
+    }
+
     #[test]
     fn timestamptz_is_ordered() {
         // timestamptz was promoted to the ordered shape once

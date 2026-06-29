@@ -338,7 +338,7 @@ regenerate the SQL surface.
 Follow the reference guide:
 [`docs/reference/adding-a-scalar-encrypted-domain-type.md`](./docs/reference/adding-a-scalar-encrypted-domain-type.md).
 The mechanics are fixed for ordered scalar domains; the catalog row only
-declares the token, kind, domain suffixes, and terms.
+declares the name, kind, bare domain names, and terms.
 
 A few footguns the generator exists to prevent — worth knowing when reading the
 output:

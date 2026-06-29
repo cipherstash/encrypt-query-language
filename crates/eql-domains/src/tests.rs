@@ -635,11 +635,8 @@ mod catalog_tests {
     fn text_spec_is_in_catalog() {
         let text = scalar("text");
         assert_eq!(text.kind, ScalarKind::Text);
-        let suffixes: Vec<_> = text.domains.iter().map(|d| d.name).collect();
-        assert_eq!(
-            suffixes,
-            vec!["", "eq", "match", "ord_ore", "ord", "search"]
-        );
+        let names: Vec<_> = text.domains.iter().map(|d| d.name).collect();
+        assert_eq!(names, vec!["", "eq", "match", "ord_ore", "ord", "search"]);
     }
 
     #[test]
@@ -1007,10 +1004,10 @@ mod float_tests {
 
     #[test]
     fn float_specs_are_in_catalog_with_ordered_shape() {
-        for token in ["float4", "float8"] {
-            let s = scalar(token);
-            let suffixes: Vec<_> = s.domains.iter().map(|d| d.name).collect();
-            assert_eq!(suffixes, vec!["", "eq", "ord_ore", "ord"]);
+        for family_name in ["float4", "float8"] {
+            let s = scalar(family_name);
+            let names: Vec<_> = s.domains.iter().map(|d| d.name).collect();
+            assert_eq!(names, vec!["", "eq", "ord_ore", "ord"]);
         }
         assert_eq!(scalar("float4").kind, ScalarKind::F32);
         assert_eq!(scalar("float8").kind, ScalarKind::F64);
@@ -1038,29 +1035,38 @@ mod float_tests {
     /// ±Inf MUST be present (the boundary pivots).
     #[test]
     fn float_fixtures_exclude_nan_and_negative_zero_and_include_infinities() {
-        for token in ["float4", "float8"] {
-            let s = scalar(token);
+        for family_name in ["float4", "float8"] {
+            let s = scalar(family_name);
             let strings: Vec<&str> = s
                 .fixtures
                 .iter()
                 .map(|f| match f {
                     Fixture::Float(v) => *v,
-                    other => panic!("{token} fixture must be Fixture::Float, got {other:?}"),
+                    other => panic!("{family_name} fixture must be Fixture::Float, got {other:?}"),
                 })
                 .collect();
             for v in &strings {
                 let parsed: f64 = v
                     .parse()
-                    .unwrap_or_else(|_| panic!("{token} fixture {v:?} must parse as f64"));
-                assert!(!parsed.is_nan(), "{token} fixture {v:?} is NaN");
+                    .unwrap_or_else(|_| panic!("{family_name} fixture {v:?} must parse as f64"));
+                assert!(!parsed.is_nan(), "{family_name} fixture {v:?} is NaN");
                 assert!(
                     !(parsed == 0.0 && parsed.is_sign_negative()),
-                    "{token} fixture {v:?} is -0.0"
+                    "{family_name} fixture {v:?} is -0.0"
                 );
             }
-            assert!(strings.contains(&"inf"), "{token} must include +inf pivot");
-            assert!(strings.contains(&"-inf"), "{token} must include -inf pivot");
-            assert!(strings.contains(&"0"), "{token} must include 0 (origin)");
+            assert!(
+                strings.contains(&"inf"),
+                "{family_name} must include +inf pivot"
+            );
+            assert!(
+                strings.contains(&"-inf"),
+                "{family_name} must include -inf pivot"
+            );
+            assert!(
+                strings.contains(&"0"),
+                "{family_name} must include 0 (origin)"
+            );
         }
     }
 
@@ -1069,8 +1075,8 @@ mod float_tests {
     /// fetch_fixture_payload's fetch_one).
     #[test]
     fn float_fixtures_are_distinct_by_value() {
-        for token in ["float4", "float8"] {
-            let s = scalar(token);
+        for family_name in ["float4", "float8"] {
+            let s = scalar(family_name);
             let parsed: Vec<u64> = s
                 .fixtures
                 .iter()
@@ -1086,7 +1092,11 @@ mod float_tests {
             let mut sorted = parsed.clone();
             sorted.sort_unstable();
             sorted.dedup();
-            assert_eq!(sorted.len(), parsed.len(), "{token} has duplicate fixtures");
+            assert_eq!(
+                sorted.len(),
+                parsed.len(),
+                "{family_name} has duplicate fixtures"
+            );
         }
     }
 }
@@ -1096,13 +1106,13 @@ mod invariant_tests {
     use std::collections::HashMap;
 
     #[test]
-    fn every_domain_name_starts_with_its_token() {
+    fn every_domain_name_starts_with_its_family_name() {
         for s in CATALOG {
             for d in s.domains {
                 let name = s.domain_name(d);
                 assert!(
                     name == s.name || name.starts_with(&format!("{}_", s.name)),
-                    "{name} does not start with token {}",
+                    "{name} does not start with family name {}",
                     s.name
                 );
             }
