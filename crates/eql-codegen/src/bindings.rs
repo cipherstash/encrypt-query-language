@@ -9,7 +9,7 @@
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 
-use eql_domains::{Domain, DomainFamily, Term};
+use eql_domains::{Domain, DomainFamily, Term, CATALOG};
 
 use crate::consts::RUST_GENERATED_MARKER;
 
@@ -170,6 +170,49 @@ pub fn render_family_bindings(family: &DomainFamily) -> String {
     format_rs(file)
 }
 
+/// Render the generated `crates/eql-bindings/src/v3/inventory.rs`: just `all()`
+/// in CATALOG order, referencing the family structs through `super::`. The
+/// `pub mod` declarations, the trait re-export, the trait/newtypes, and the
+/// architectural module doc all stay hand-written (mod.rs / domain_type.rs /
+/// terms.rs).
+pub fn render_inventory_rs() -> String {
+    let all_entries: TokenStream = CATALOG
+        .iter()
+        .flat_map(|f| {
+            let m = format_ident!("{}", f.name);
+            f.domains
+                .iter()
+                .map(move |d| {
+                    let s = format_ident!("{}", pascal(&d.full_name(f.name)));
+                    quote! { Box::new(PhantomData::<super::#m::#s>), }
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect();
+
+    let mod_doc = "The `all()` inventory — every v3 domain payload type in \
+                   eql-domains::CATALOG order. Generated from the catalog; the \
+                   DomainType trait, the shared newtypes, and the architectural \
+                   module doc stay hand-written (domain_type.rs / terms.rs / mod.rs).";
+
+    let file = quote! {
+        #![doc = #mod_doc]
+
+        use std::marker::PhantomData;
+
+        use super::domain_type::DomainType;
+
+        /// Every v3 domain type, in `eql-domains::CATALOG` order — generated.
+        pub fn all() -> Vec<Box<dyn DomainType>> {
+            vec![
+                #all_entries
+            ]
+        }
+    };
+
+    format_rs(file)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -271,6 +314,33 @@ mod tests {
         assert!(!out.contains("Hmac256"));
         assert!(!out.contains("OreBlock256"));
         assert!(!out.contains("BloomFilter"));
+    }
+
+    #[test]
+    fn inventory_enumerates_all_in_catalog_order() {
+        let out = render_inventory_rs();
+        assert!(out.starts_with(crate::consts::RUST_GENERATED_MARKER));
+        assert!(out.contains("pub fn all() -> Vec<Box<dyn DomainType>>"));
+        assert!(!out.contains("pub mod "));
+        let first = out.find("PhantomData::<super::int4::Int4>").unwrap();
+        let last = out.find("PhantomData::<super::float8::Float8Ord>").unwrap();
+        assert!(first < last);
+        for ty in [
+            "super::text::Text",
+            "super::text::TextEq",
+            "super::text::TextMatch",
+            "super::text::TextOrdOre",
+            "super::text::TextOrd",
+            "super::text::TextSearch",
+        ] {
+            assert!(
+                out.contains(&format!("PhantomData::<{ty}>")),
+                "missing {ty}"
+            );
+        }
+        let entries = out.matches("Box::new(PhantomData::<").count();
+        let domains: usize = eql_domains::CATALOG.iter().map(|f| f.domains.len()).sum();
+        assert_eq!(entries, domains);
     }
 
     #[test]
