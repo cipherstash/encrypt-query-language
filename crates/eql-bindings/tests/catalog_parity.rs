@@ -5,10 +5,13 @@
 //! wrong/dropped required key, a struct that lost
 //! `#[serde(deny_unknown_fields)]` (`additionalProperties: false`), and a `v`
 //! field that is not [`eql_bindings::SchemaVersion`] (the `$ref` and its
-//! `const: 2`). The inventory set/order is no longer policed here — it is
-//! generated from `CATALOG` (`inventory.rs`) and cannot drift; the emitted
-//! `.ts` property order is pinned by `tests/ts_property_order.rs`. Behavioural
-//! spot checks live in `tests/v3_conformance.rs`.
+//! `const: 2`). The inventory set/order IS policed here by
+//! `inventory_exactly_covers_catalog_in_order()`, which asserts `v3::all()`
+//! lists exactly the `CATALOG` domains in catalog order (the generated
+//! `inventory.rs` byte-parity gate lives in eql-codegen; this covers the
+//! compiled `all()`). The emitted `.ts` property order is pinned by
+//! `tests/ts_property_order.rs`. Behavioural spot checks live in
+//! `tests/v3_conformance.rs`.
 
 use std::collections::BTreeSet;
 

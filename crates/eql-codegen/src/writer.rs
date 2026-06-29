@@ -75,7 +75,9 @@ pub fn clean_generated_files(directory: &Path, kind: GeneratedKind) -> io::Resul
         return Ok(Vec::new());
     }
     let mut paths: Vec<PathBuf> = fs::read_dir(directory)?
-        .filter_map(|e| e.ok().map(|e| e.path()))
+        .map(|e| e.map(|e| e.path()))
+        .collect::<io::Result<Vec<_>>>()?
+        .into_iter()
         .filter(|p| p.extension().and_then(|x| x.to_str()) == Some(kind.extension()))
         .collect();
     paths.sort();

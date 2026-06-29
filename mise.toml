@@ -211,15 +211,25 @@ tmp="$(mktemp -d)"
 # capture. The snapshot is a filesystem copy (not `git checkout`) so a dev's
 # legitimate uncommitted edits survive a failed run.
 v3="crates/eql-bindings/src/v3"
+bindings="crates/eql-bindings/bindings"
+schema="crates/eql-bindings/schema"
 cp -R "$v3" "$tmp/v3-snapshot"
+cp -R "$bindings" "$tmp/bindings-snapshot"
+cp -R "$schema" "$tmp/schema-snapshot"
 ok=0
-trap 'if [ "$ok" != 1 ]; then rm -rf "$v3"; mv "$tmp/v3-snapshot" "$v3"; fi; rm -rf "$tmp"' EXIT
+trap 'if [ "$ok" != 1 ]; then
+  rm -rf "$v3" "$bindings" "$schema"
+  mv "$tmp/v3-snapshot" "$v3"
+  mv "$tmp/bindings-snapshot" "$bindings"
+  mv "$tmp/schema-snapshot" "$schema"
+fi
+rm -rf "$tmp"' EXIT
 # Default no-arg eql-codegen stays SQL-only; `bindings` is the Rust-only subcommand.
 cargo run -q -p eql-codegen -- bindings
 TS_RS_EXPORT_DIR="$tmp/bindings" EQL_TYPES_SCHEMA_DIR="$tmp/schema" cargo test -p eql-bindings
-rm -rf crates/eql-bindings/bindings crates/eql-bindings/schema
-mv "$tmp/bindings" crates/eql-bindings/bindings
-mv "$tmp/schema" crates/eql-bindings/schema
+rm -rf "$bindings" "$schema"
+mv "$tmp/bindings" "$bindings"
+mv "$tmp/schema" "$schema"
 ok=1
 """
 

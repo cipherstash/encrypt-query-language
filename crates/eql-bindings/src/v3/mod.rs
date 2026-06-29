@@ -27,7 +27,7 @@
 //! error — the Rust analogue of the CHECK constraint.
 //!
 //! One exception to "`ob` for `_ord`": `text`'s ordered domains carry **both**
-//! `hm` and `ob` (`text_ord`, `text_ord_ore`, `text_search`), where the integer
+//! `hm` and `ob` (`text_ord`, `text_ord_ore`, `text_search`), where the non-text
 //! ordered domains carry `ob` alone. Text routes `=`/`<>` through `hm` rather
 //! than the ORE term because lexicographic ORE over text is not equality-
 //! lossless, so equality needs the HMAC. The generated struct doc surfaces this
