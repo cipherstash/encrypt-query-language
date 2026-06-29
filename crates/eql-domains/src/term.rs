@@ -33,6 +33,20 @@ impl Term {
         }
     }
 
+    /// The shared binding newtype carrying this term's payload field on the
+    /// wire (`Hmac256` for `hm`, `OreBlock256` for `ob`, `BloomFilter` for
+    /// `bf`). Part of the structural wire contract, beside [`Term::json_key`]/
+    /// [`Term::ctor`] — a new term names its newtype HERE, so the bindings
+    /// emitter (which matches on `Term`) stays exhaustive at compile time
+    /// instead of panicking at codegen runtime on an unmapped key.
+    pub const fn binding_newtype(self) -> &'static str {
+        match self {
+            Term::Hm => "Hmac256",
+            Term::Ore => "OreBlock256",
+            Term::Bloom => "BloomFilter",
+        }
+    }
+
     /// Generated-file [`Role`] contributed by this single term. A domain's role
     /// is the richest of its terms' roles — see [`Term::role_for_terms`].
     pub const fn role(self) -> Role {
@@ -110,6 +124,23 @@ impl Term {
         Self::dedupe_preserving_order(terms.iter().map(|t| t.json_key()))
     }
 
+    /// The distinct terms contributing a payload field, in wire order: one per
+    /// [`Term::json_key`], deduped first-occurrence-wins. Symmetric to
+    /// [`Term::term_json_keys`] but returns the `Term`s, so the bindings emitter
+    /// reads both the field key ([`Term::json_key`]) and its newtype
+    /// ([`Term::binding_newtype`]) while matching on the enum.
+    pub fn payload_terms(terms: &[Term]) -> Vec<Term> {
+        let mut seen: Vec<&str> = Vec::new();
+        let mut out: Vec<Term> = Vec::new();
+        for &t in terms {
+            if !seen.contains(&t.json_key()) {
+                seen.push(t.json_key());
+                out.push(t);
+            }
+        }
+        out
+    }
+
     /// JSON keys whose payload must be a non-empty array across these terms
     /// (deduped, in order). Symmetric to [`Term::term_json_keys`]; drives the
     /// domain CHECK's non-empty-array clauses. See [`Term::nonempty_array_key`].
@@ -160,5 +191,32 @@ impl Term {
             .map(|t| t.role())
             .max_by_key(|r| r.rank())
             .unwrap_or(Role::Storage)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn binding_newtype_maps_each_term() {
+        assert_eq!(Term::Hm.binding_newtype(), "Hmac256");
+        assert_eq!(Term::Ore.binding_newtype(), "OreBlock256");
+        assert_eq!(Term::Bloom.binding_newtype(), "BloomFilter");
+    }
+
+    #[test]
+    fn payload_terms_is_one_field_per_json_key_in_order() {
+        let keys: Vec<&str> = Term::payload_terms(&[Term::Hm, Term::Ore])
+            .iter()
+            .map(|t| t.json_key())
+            .collect();
+        assert_eq!(keys, ["hm", "ob"]);
+        let keys: Vec<&str> = Term::payload_terms(&[Term::Hm, Term::Hm])
+            .iter()
+            .map(|t| t.json_key())
+            .collect();
+        assert_eq!(keys, ["hm"]);
+        assert!(Term::payload_terms(&[]).is_empty());
     }
 }
