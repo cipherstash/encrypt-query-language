@@ -258,7 +258,7 @@ macro_rules! temporal_values {
         static $cell: std::sync::LazyLock<Vec<$ty>> = std::sync::LazyLock::new(|| {
             let parse: fn(&str) -> $ty = $parse;
             $spec
-                .fixtures
+                .values
                 .iter()
                 .map(|f| match f {
                     ::eql_domains::Fixture::$variant(s) => parse(s),
@@ -308,7 +308,7 @@ macro_rules! temporal_values {
             #[test]
             fn values_match_catalog_fixtures() {
                 let parse: fn(&str) -> $ty = $parse;
-                let want: Vec<$ty> = $spec.fixtures.iter().map(|f| match f {
+                let want: Vec<$ty> = $spec.values.iter().map(|f| match f {
                     ::eql_domains::Fixture::$variant(s) => parse(s),
                     other => panic!("non-{} fixture: {:?}", $pg, other),
                 }).collect();
@@ -357,7 +357,7 @@ macro_rules! lazy_values {
     ) => {
         static $cell: std::sync::LazyLock<Vec<$ty>> = std::sync::LazyLock::new(|| {
             let parse: fn(&::eql_domains::Fixture) -> $ty = $parse;
-            $spec.fixtures.iter().map(parse).collect()
+            $spec.values.iter().map(parse).collect()
         });
 
         #[doc = concat!("Typed `", stringify!($ty), "` fixtures for `", $pg, "`, materialised once from the catalog.")]
@@ -377,7 +377,7 @@ temporal_values! {
     cell      = DATE_VALUES_CELL,
     accessor  = date_values,
     rust_type = chrono::NaiveDate,
-    spec      = eql_domains::DATE,
+    spec      = eql_domains::DATE_FIXTURES,
     variant   = Date,
     pg_type   = "date",
     parse     = |s| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
@@ -395,7 +395,7 @@ temporal_values! {
     cell      = TIMESTAMPTZ_VALUES_CELL,
     accessor  = timestamptz_values,
     rust_type = chrono::DateTime<chrono::Utc>,
-    spec      = eql_domains::TIMESTAMPTZ,
+    spec      = eql_domains::TIMESTAMPTZ_FIXTURES,
     variant   = Timestamptz,
     pg_type   = "timestamptz",
     parse     = |s| chrono::DateTime::parse_from_rfc3339(s)
@@ -475,7 +475,7 @@ lazy_values! {
     cell      = TEXT_VALUES_CELL,
     accessor  = text_values,
     rust_type = String,
-    spec      = eql_domains::TEXT,
+    spec      = eql_domains::TEXT_FIXTURES,
     variant   = Text,
     pg_type   = "text",
     parse     = |f| match f {
@@ -553,7 +553,7 @@ lazy_values! {
     cell      = NUMERIC_VALUES_CELL,
     accessor  = numeric_values,
     rust_type = rust_decimal::Decimal,
-    spec      = eql_domains::NUMERIC,
+    spec      = eql_domains::NUMERIC_FIXTURES,
     variant   = Numeric,
     pg_type   = "numeric",
     parse     = |f| match f {
@@ -641,8 +641,8 @@ mod numeric_value_guards {
 /// order (`[false, true]`). Public so the `eql_v3_bool` fixture module (emitted
 /// by `scalar_types!(fixture_modules)`) can hand the slice to `scalar_fixture!`.
 static BOOL_VALUES_CELL: std::sync::LazyLock<Vec<bool>> = std::sync::LazyLock::new(|| {
-    eql_domains::BOOL
-        .fixtures
+    eql_domains::BOOL_FIXTURES
+        .values
         .iter()
         .map(|f| match f {
             eql_domains::Fixture::Bool(b) => *b,
@@ -685,7 +685,7 @@ impl ScalarType for bool {
 mod bool_value_tests {
     use super::*;
 
-    /// The harness value list matches the catalog `BOOL.fixtures` and carries
+    /// The harness value list matches the catalog `BOOL_FIXTURES.values` and carries
     /// both boolean values — the oracle cannot drift from the catalog the fixture
     /// generator encrypts.
     #[test]
@@ -881,7 +881,7 @@ lazy_values! {
     cell      = FLOAT4_VALUES_CELL,
     accessor  = float4_values,
     rust_type = F4,
-    spec      = eql_domains::FLOAT4,
+    spec      = eql_domains::FLOAT4_FIXTURES,
     variant   = Float,
     pg_type   = "float4",
     parse     = |f| match f {
@@ -896,7 +896,7 @@ lazy_values! {
     cell      = FLOAT8_VALUES_CELL,
     accessor  = float8_values,
     rust_type = F8,
-    spec      = eql_domains::FLOAT8,
+    spec      = eql_domains::FLOAT8_FIXTURES,
     variant   = Float,
     pg_type   = "float8",
     parse     = |f| match f {
@@ -989,8 +989,8 @@ mod float_value_guards {
     fn float4_values_match_catalog_and_are_finite_non_negative_zero() {
         let vals = float4_values();
         // Parsed from the catalog, in order.
-        let want: Vec<F4> = eql_domains::FLOAT4
-            .fixtures
+        let want: Vec<F4> = eql_domains::FLOAT4_FIXTURES
+            .values
             .iter()
             .map(|f| match f {
                 eql_domains::Fixture::Float(s) => F4(s.parse().unwrap()),
@@ -1009,8 +1009,8 @@ mod float_value_guards {
     #[test]
     fn float8_values_match_catalog_and_are_finite_non_negative_zero() {
         let vals = float8_values();
-        let want: Vec<F8> = eql_domains::FLOAT8
-            .fixtures
+        let want: Vec<F8> = eql_domains::FLOAT8_FIXTURES
+            .values
             .iter()
             .map(|f| match f {
                 eql_domains::Fixture::Float(s) => F8(s.parse().unwrap()),

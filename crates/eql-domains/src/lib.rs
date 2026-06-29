@@ -1,11 +1,5 @@
 //! Scalar/term catalog for EQL encrypted-domain codegen — the single Rust
-//! source of truth for every scalar type, term, and fixture. Std-only, no
-//! dependencies.
-//!
-//! `Fixture` is value-kind tagged (one non-generic enum, variant = value kind),
-//! so a single `CATALOG` spans every scalar kind. Integer literals are
-//! range-checked at their definition site by `fixtures!` (`N(-40000)` for `i16`
-//! does not compile).
+//! source of truth for every scalar type and term. Std-only, no dependencies.
 //!
 //! Capability axes are independent: equality covers every kind; order covers
 //! every kind except `jsonb` (ORE compares ciphertext, so it is
@@ -15,82 +9,28 @@
 //!
 //! Public names are consumed verbatim by the later codegen plans — do not rename.
 //!
-//! **Layout.** This file holds the *definitions* — the type vocabulary and the
-//! catalog data — so the whole catalog reads top-to-bottom. The inherent `impl`
-//! blocks live in sibling modules (`kind`, `term`, `fixture`, `spec`); the unit
-//! tests live in `tests`. The methods travel with their types, so nothing here
-//! re-exports them.
+//! **Layout.** This file holds the *structural* catalog: the `DomainFamily`/
+//! `Domain`/`Term`/`Role` definitions, the per-type `DomainFamily` rows, and
+//! `CATALOG` — so the structural surface reads top-to-bottom. `DomainFamily` is
+//! purely `{ name, domains }`; the native-scalar `kind` and the plaintext
+//! `fixtures` are a fixture-layer concern that lives in the `fixtures` module
+//! (the `ScalarKind`/`Fixture` vocabulary, the per-type `TypeFixtures` records +
+//! `FIXTURES` table, and the materialised `*_VALUES` slices), joined back to a
+//! catalog row by `name`. The inherent `impl` blocks for the structural types
+//! live in sibling modules (`term`, `spec`); the unit tests live in `tests`. The
+//! crate-root `pub use fixtures::{…}` below preserves the public fixture-layer
+//! paths.
 
-mod fixture;
-mod kind;
+#[macro_use]
+mod fixtures;
 mod spec;
 mod term;
 
-/// The fixed-width integer kinds — exactly those scalar kinds with an `i128`
-/// range and `MIN`/`MAX`/`Zero` sentinels. These accessors are **total**: every
-/// variant answers every method. Non-integer kinds (`Numeric`/`Text`/`Jsonb`/
-/// `Date`) are simply not representable here, so there is no partial function to
-/// panic — `ScalarKind::Date` cannot call `min_symbol()` because `Date` is not a
-/// `BoundedIntKind`. Reach this type from a `ScalarKind` via
-/// [`ScalarKind::as_bounded_int`]. (Accessors are impl'd in `kind`.)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BoundedIntKind {
-    I16,
-    I32,
-    I64,
-}
-
-/// The native scalar a domain type maps onto. Integer kinds carry i128 bounds;
-/// the others (`Numeric`/`Text`/`Jsonb`) have string fixtures and no numeric
-/// range — though `Numeric`/`Text` are still ORE-orderable, only `Jsonb` is not.
-/// Capability layer only: `CATALOG` declares which kinds actually exist.
-///
-/// The bounded-numeric accessors live on the total [`BoundedIntKind`], reached
-/// via [`ScalarKind::as_bounded_int`]; non-integer kinds have no such accessor,
-/// so misuse is a compile error rather than a runtime panic. (Accessors are
-/// impl'd in `kind`.)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ScalarKind {
-    I16,
-    I32,
-    I64,
-    Numeric,
-    Text,
-    Jsonb,
-    /// Calendar date (`chrono::NaiveDate`). Ordered like the integer kinds via
-    /// ORE, but string-backed (ISO-8601) at the catalog layer and with no i128
-    /// range — so it is *not* `is_int()` and `as_bounded_int()` returns `None`
-    /// for it, like the other non-integer kinds. The bounded-numeric accessors
-    /// live on `BoundedIntKind`, which `Date` cannot be, so they are
-    /// unreachable for it by construction rather than by a runtime panic.
-    Date,
-    /// UTC timestamp (`chrono::DateTime<Utc>`). Ordered like the integer kinds
-    /// via ORE, but string-backed (RFC3339) at the catalog layer and with no
-    /// i128 range — so it is *not* `is_int()` and the bounded-numeric accessors
-    /// panic for it, exactly like the other non-integer kinds. UTC-normalized:
-    /// cipherstash has no tz-preserving type, so it maps to the `timestamp`
-    /// cast and the SQL `timestamp with time zone` plaintext type.
-    Timestamptz,
-    /// Boolean (`bool`). **Encryption-only / storage-only**: it carries no index
-    /// term and is *not* `is_int()`/`is_temporal()`/`is_text()`. A two-value
-    /// column has such low cardinality that any searchable index (even HMAC
-    /// equality) would trivially leak the plaintext distribution, so the catalog
-    /// gives `bool` a single term-less storage domain and no `_eq`/`_ord` — the
-    /// value is encrypted at rest and decrypted by the proxy, never searched
-    /// server-side. Like the other non-integer kinds, the bounded-numeric
-    /// accessors are unreachable for it by construction.
-    Bool,
-    /// 32-bit IEEE-754 binary float (`f32`, Postgres `real`/`float4`).
-    /// Ordered like the integer kinds via ORE, but with no i128 range
-    /// (`as_bounded_int()` returns `None`) and string-backed at the catalog
-    /// layer. Encrypts through the single f64 float crypto path
-    /// (`Plaintext::Float`) — the f32→f64 widening is exact and monotonic.
-    F32,
-    /// 64-bit IEEE-754 binary float (`f64`, Postgres `double precision`/
-    /// `float8`). The native width of the float crypto path (`F32` widens into
-    /// it); otherwise classified exactly like [`ScalarKind::F32`].
-    F64,
-}
+pub use fixtures::{
+    BoundedIntKind, Fixture, ScalarKind, TypeFixtures, BOOL_FIXTURES, DATE_FIXTURES, FIXTURES,
+    FLOAT4_FIXTURES, FLOAT8_FIXTURES, INT2_FIXTURES, INT2_VALUES, INT4_FIXTURES, INT4_VALUES,
+    INT8_FIXTURES, INT8_VALUES, NUMERIC_FIXTURES, TEXT_FIXTURES, TEXT_VALUES, TIMESTAMPTZ_FIXTURES,
+};
 
 /// Always-present payload keys required by every generated domain CHECK,
 /// before the domain's term keys, in order: envelope version (`v`), ident
@@ -159,43 +99,6 @@ impl Role {
     }
 }
 
-/// A single fixture plaintext value, value-kind tagged: `Min`/`Max`/`Zero` are
-/// the integer matrix pivots (resolved per-kind); `Int` is an integer literal;
-/// `Numeric`/`Text`/`Jsonb` carry rendered string literals.
-///
-/// `fixtures!` range-checks `Int` literals at compile time, but a hand-built
-/// `Fixture::Int(n)` is not — hence the runtime invariant tests. `Int(MIN)` and
-/// `Min` resolve to the same numeric value via `numeric_value`.
-/// (`numeric_value` is impl'd in `fixture`.)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Fixture {
-    Min,
-    Max,
-    Zero,
-    Int(i128),
-    Numeric(&'static str),
-    Text(&'static str),
-    Jsonb(&'static str),
-    /// An ISO-8601 date string (`"1970-01-01"`). The catalog stays zero-dep, so
-    /// the string is parsed into a `chrono::NaiveDate` in the SQLx harness, not
-    /// here. Distinct by literal, like the other string-backed fixtures.
-    Date(&'static str),
-    /// An RFC3339 UTC timestamp string (`"1970-01-01T00:00:00Z"`). The catalog
-    /// stays zero-dep, so the string is parsed into a `chrono::DateTime<Utc>` in
-    /// the SQLx harness, not here. Distinct by literal, like `Date`.
-    Timestamptz(&'static str),
-    /// A boolean plaintext (`true` / `false`). The `bool` scalar is
-    /// storage-only, so this fixture is encrypted (ciphertext only, no index
-    /// term) and never participates in a comparison pivot. Distinct by value.
-    Bool(bool),
-    /// An IEEE-754 float plaintext rendered as a string (`"0.5"`, `"-inf"`).
-    /// The catalog stays zero-dep, so the string is parsed into `f32`/`f64` in
-    /// the SQLx harness, not here. Distinct by parsed value (the harness
-    /// `float_fixtures_are_distinct_by_value` guard enforces this). NaN and
-    /// `-0.0` are deliberately excluded; `±Inf` (`"inf"`/`"-inf"`) ARE fixtures.
-    Float(&'static str),
-}
-
 /// One generated public domain: a bare domain name joined under the family
 /// name (codegen owns the `_` separator) plus the fixed index terms it
 /// carries. Name `""` is the storage-only domain.
@@ -205,41 +108,15 @@ pub struct Domain {
     pub terms: &'static [Term],
 }
 
-/// A scalar encrypted-domain type: its SQL `name`, native Rust type, generated
-/// domains, and fixture plaintext list. One row of the Rust `CATALOG` — the
-/// source of truth for the type (there is no TOML manifest).
-/// (`domain_name`/`is_eq_only` are impl'd in `spec`.)
+/// A scalar encrypted-domain type's structural surface: its SQL `name` and the
+/// generated domains. One row of the Rust `CATALOG`. The native-scalar `kind`
+/// and the plaintext `fixtures` are a fixture-layer concern and live in the
+/// `fixtures` module's `TypeFixtures` records, joined back by `name`.
+/// (`domain_name`/`is_eq_only`/… are impl'd in `spec`.)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DomainFamily {
     pub name: &'static str,
-    pub kind: ScalarKind,
     pub domains: &'static [Domain],
-    pub fixtures: &'static [Fixture],
-}
-
-/// Builds a `&[Fixture]`. The `int <ty>;` arm (a tt-muncher over `Min`/`Max`/
-/// `Zero` and `N(<lit>)`) range-checks each literal against `<ty>` at compile
-/// time via `const _RANGE_CHECK`, so out-of-range literals do not compile;
-/// `text;`/`numeric;`/`jsonb;` wrap string literals. The reject case has no
-/// in-crate test (macro isn't exported, no `trybuild` under zero-deps) — verify
-/// by hand with a bad `N(..)`.
-macro_rules! fixtures {
-    (int $t:ty; $($body:tt)*) => { fixtures!(@int $t; [] $($body)*) };
-    (@int $t:ty; [$($acc:expr),*]) => { &[$($acc),*] };
-    (@int $t:ty; [$($acc:expr),*] , $($r:tt)*) => { fixtures!(@int $t; [$($acc),*] $($r)*) };
-    (@int $t:ty; [$($acc:expr),*] Min  $($r:tt)*) => { fixtures!(@int $t; [$($acc,)* Fixture::Min ] $($r)*) };
-    (@int $t:ty; [$($acc:expr),*] Max  $($r:tt)*) => { fixtures!(@int $t; [$($acc,)* Fixture::Max ] $($r)*) };
-    (@int $t:ty; [$($acc:expr),*] Zero $($r:tt)*) => { fixtures!(@int $t; [$($acc,)* Fixture::Zero] $($r)*) };
-    (@int $t:ty; [$($acc:expr),*] N($v:literal) $($r:tt)*) => {
-        fixtures!(@int $t; [$($acc,)* Fixture::Int({ const _RANGE_CHECK: $t = $v; $v as i128 })] $($r)*)
-    };
-    (text;    $($s:literal),* $(,)?) => { &[$(Fixture::Text($s)),*] };
-    (numeric; $($s:literal),* $(,)?) => { &[$(Fixture::Numeric($s)),*] };
-    (jsonb;   $($s:literal),* $(,)?) => { &[$(Fixture::Jsonb($s)),*] };
-    (date;    $($s:literal),* $(,)?) => { &[$(Fixture::Date($s)),*] };
-    (timestamptz; $($s:literal),* $(,)?) => { &[$(Fixture::Timestamptz($s)),*] };
-    (bool;    $($b:literal),* $(,)?) => { &[$(Fixture::Bool($b)),*] };
-    (float;   $($s:literal),* $(,)?) => { &[$(Fixture::Float($s)),*] };
 }
 
 /// Domains shared by every ordered-integer scalar, in manifest file order:
@@ -283,99 +160,33 @@ const EQ_ONLY_DOMAINS: &[Domain] = &[
     },
 ];
 
-/// int4 fixture plaintexts.
-/// `N(..)` literals are range-checked against `i32` at compile time.
-const INT4_FIXTURES: &[Fixture] = fixtures!(int i32;
-    Min, N(-100), N(-1), Zero, N(1), N(2), N(5), N(10), N(17), N(25),
-    N(42), N(50), N(100), N(250), N(1000), N(9999), Max);
-
-/// int2 fixture plaintexts.
-/// `N(..)` literals are range-checked against `i16` at compile time.
-const INT2_FIXTURES: &[Fixture] = fixtures!(int i16;
-    Min, N(-30000), N(-100), N(-1), Zero, N(1), N(2), N(5), N(10), N(17),
-    N(25), N(42), N(50), N(100), N(250), N(1000), N(9999), N(30000), Max);
-
-/// int8 fixture plaintexts — the int4 set plus two values beyond the i32 range
-/// (`±5_000_000_000`) so the matrix exercises the full 64-bit width. `N(..)`
-/// literals are range-checked against `i64` at compile time.
-const INT8_FIXTURES: &[Fixture] = fixtures!(int i64;
-    Min, N(-5000000000), N(-100), N(-1), Zero, N(1), N(2), N(5), N(10), N(17),
-    N(25), N(42), N(50), N(100), N(250), N(1000), N(9999), N(5000000000), Max);
-
-/// date fixture plaintexts — ISO-8601 (`YYYY-MM-DD`) strings, parsed into
-/// `chrono::NaiveDate` in the SQLx harness (the catalog stays zero-dep). The
-/// three temporal pivots MUST be present verbatim: `"1900-01-01"` (min_pivot),
-/// `"1970-01-01"` (zero = `NaiveDate::default()`), and `"2099-12-31"`
-/// (max_pivot) — the matrix fetches each one's ciphertext via
-/// `fetch_fixture_payload`, which fails loudly if a row is absent. The interior
-/// dates span varied years/months so range operators yield distinguishable
-/// counts. All distinct.
-const DATE_FIXTURES: &[Fixture] = fixtures!(date;
-    "1900-01-01", "1950-07-15", "1969-12-31", "1970-01-01", "1970-01-02",
-    "1980-02-29", "1991-11-09", "1999-12-31", "2000-01-01", "2004-02-29",
-    "2012-06-30", "2016-03-15", "2020-10-21", "2024-02-29", "2038-01-19",
-    "2099-12-31");
-
-/// timestamptz fixture plaintexts — RFC3339 UTC strings, parsed into
-/// `chrono::DateTime<Utc>` in the SQLx harness (the catalog stays zero-dep).
-/// The three temporal pivots MUST be present verbatim: `"1900-01-01T00:00:00Z"`
-/// (min_pivot), `"1970-01-01T00:00:00Z"` (zero = `DateTime::<Utc>::default()`,
-/// the Unix epoch), and `"2099-12-31T23:59:59Z"` (max_pivot) — the matrix
-/// fetches each one's ciphertext via `fetch_fixture_payload`, which fails loudly
-/// if a row is absent. The interior timestamps span varied dates AND times of
-/// day so range operators yield distinguishable counts. All distinct.
-const TIMESTAMPTZ_FIXTURES: &[Fixture] = fixtures!(timestamptz;
-    "1900-01-01T00:00:00Z", "1950-07-15T06:30:00Z", "1969-12-31T23:59:59Z",
-    "1970-01-01T00:00:00Z", "1970-01-01T00:00:01Z", "1985-04-12T23:20:50Z",
-    "1999-12-31T23:59:59Z", "2000-01-01T00:00:00Z", "2004-02-29T12:00:00Z",
-    "2012-06-30T11:59:59Z", "2016-03-15T08:15:30Z", "2020-10-21T14:45:00Z",
-    "2024-02-29T17:30:45Z", "2038-01-19T03:14:07Z", "2099-12-31T23:59:59Z");
-
-/// `numeric` fixture plaintexts — distinct by `Decimal` value, spanning sign,
-/// magnitude, and scale, and including `0` plus the min/max pivots
-/// (`-1000000000000` / `1000000000000`). They mirror `ore-rs`'s own
-/// order-pinning vectors so the 14-block ORE edges (sign + high/low blocks) are
-/// exercised. Each literal is distinct by parsed value (no `"1"`/`"1.0"`
-/// aliasing) — the harness `numeric_fixtures_distinct_by_value` guard enforces
-/// this, since the zero-dep catalog only dedupes by literal string.
-const NUMERIC_FIXTURES: &[Fixture] = fixtures!(numeric;
-    "-1000000000000", "-1000000", "-1.001", "-1", "-0.5", "-0.001",
-    "0", "0.001", "0.5", "0.999999999", "1", "1.001", "1000000", "1000000000000");
-
 const INT4: DomainFamily = DomainFamily {
     name: "int4",
-    kind: ScalarKind::I32,
     domains: ORDERED_INT_DOMAINS,
-    fixtures: INT4_FIXTURES,
 };
 
 const INT2: DomainFamily = DomainFamily {
     name: "int2",
-    kind: ScalarKind::I16,
     domains: ORDERED_INT_DOMAINS,
-    fixtures: INT2_FIXTURES,
 };
 
 const INT8: DomainFamily = DomainFamily {
     name: "int8",
-    kind: ScalarKind::I64,
     domains: ORDERED_INT_DOMAINS,
-    fixtures: INT8_FIXTURES,
 };
 
 /// `date` — an ordered, non-integer scalar. Reuses `ORDERED_INT_DOMAINS` (the
 /// four-domain ordered shape is identical to the integer scalars); only the
-/// kind and fixtures differ.
+/// kind and fixtures (in `DATE_FIXTURES`) differ.
 ///
 /// Public (unlike the integer specs) because the SQLx harness reads
-/// `DATE.fixtures` directly to parse the ISO strings into `chrono::NaiveDate`
-/// at runtime — there is no `DATE_VALUES` const (chrono is not `const`-friendly
-/// and `eql-domains` stays zero-dep, so no typed slice is materialised here).
+/// `DATE_FIXTURES.values` directly to parse the ISO strings into
+/// `chrono::NaiveDate` at runtime — there is no `DATE_VALUES` const (chrono is
+/// not `const`-friendly and `eql-domains` stays zero-dep, so no typed slice is
+/// materialised here).
 pub const DATE: DomainFamily = DomainFamily {
     name: "date",
-    kind: ScalarKind::Date,
     domains: ORDERED_INT_DOMAINS,
-    fixtures: DATE_FIXTURES,
 };
 
 /// `timestamptz` — an **ordered**, UTC-normalized non-integer scalar. Uses the
@@ -385,14 +196,13 @@ pub const DATE: DomainFamily = DomainFamily {
 /// Values are UTC-normalized (cipherstash has no tz-preserving type) and encrypt
 /// under the `timestamp` cast.
 ///
-/// Public (like `DATE`) because the SQLx harness reads `TIMESTAMPTZ.fixtures`
-/// directly to parse the RFC3339 strings into `chrono::DateTime<Utc>` at runtime
-/// (no `TIMESTAMPTZ_VALUES` const; `eql-domains` stays zero-dep).
+/// Public (like `DATE`) because the SQLx harness reads
+/// `TIMESTAMPTZ_FIXTURES.values` directly to parse the RFC3339 strings into
+/// `chrono::DateTime<Utc>` at runtime (no `TIMESTAMPTZ_VALUES` const;
+/// `eql-domains` stays zero-dep).
 pub const TIMESTAMPTZ: DomainFamily = DomainFamily {
     name: "timestamptz",
-    kind: ScalarKind::Timestamptz,
     domains: ORDERED_INT_DOMAINS,
-    fixtures: TIMESTAMPTZ_FIXTURES,
 };
 
 /// `numeric` — an **ordered** non-integer scalar backed by
@@ -404,14 +214,12 @@ pub const TIMESTAMPTZ: DomainFamily = DomainFamily {
 /// order (equivalent scales collide, like `Decimal`'s own `Ord`).
 ///
 /// Public (like `DATE` / `TIMESTAMPTZ`) so the SQLx harness reads
-/// `NUMERIC.fixtures` directly to parse the decimal strings into
+/// `NUMERIC_FIXTURES.values` directly to parse the decimal strings into
 /// `rust_decimal::Decimal` at runtime (the catalog stays zero-dep: no
 /// `rust_decimal`).
 pub const NUMERIC: DomainFamily = DomainFamily {
     name: "numeric",
-    kind: ScalarKind::Numeric,
     domains: ORDERED_INT_DOMAINS,
-    fixtures: NUMERIC_FIXTURES,
 };
 
 /// Domains for `text`: the ordered shape (with exact `hm` equality on the
@@ -462,107 +270,44 @@ const STORAGE_ONLY_DOMAINS: &[Domain] = &[Domain {
     terms: &[],
 }];
 
-/// `bool` fixture plaintexts — both values. `bool` is storage-only, so these are
-/// encrypted (ciphertext only) and never used as comparison pivots; they exist
-/// so the SQLx matrix can prove the storage domain accepts a real bool ciphertext
-/// and rejects every operator. Distinct by value.
-const BOOL_FIXTURES: &[Fixture] = fixtures!(bool; false, true);
-
 /// `bool` — an **encryption-only / storage-only** scalar (`ScalarKind::Bool`).
 /// One term-less storage domain (`eql_v3.bool`), no `_eq`/`_ord`: a two-value
 /// column has too little cardinality for any searchable index without leaking the
 /// plaintext, so the value is encrypted at rest and decrypted by the proxy,
-/// never searched server-side. Public so the SQLx harness reads `BOOL.fixtures`
-/// directly (there is no `BOOL_VALUES` materializer — the two values are read
-/// straight from the catalog).
+/// never searched server-side. Public so the SQLx harness reads
+/// `BOOL_FIXTURES.values` directly (there is no `BOOL_VALUES` materializer — the
+/// two values are read straight from the record).
 pub const BOOL: DomainFamily = DomainFamily {
     name: "bool",
-    kind: ScalarKind::Bool,
     domains: STORAGE_ONLY_DOMAINS,
-    fixtures: BOOL_FIXTURES,
 };
-
-/// `text` fixture plaintexts — curated so eq/ord give a lexicographic spread
-/// and the match suite has a known substring pair (`"aardvark"`/`"aard"`,
-/// sharing 3-grams) and a disjoint value (`"zzzz"`, no shared 3-grams).
-/// `"aard"` is the lexicographic `min_pivot`, `"zzzz"` the `max_pivot`, and
-/// `"frank"` the interior `mid_pivot`; all three must be present verbatim so the
-/// matrix can fetch their ciphertext. All distinct.
-///
-/// The empty string is deliberately **not** a fixture: text is an ordered, not
-/// signed, scalar (no numeric origin), and `""` encrypts to an empty ORE term
-/// whose comparison is undefined (see issue #262). The interior pivot is a real
-/// median value, not `String::default()`.
-const TEXT_FIXTURES: &[Fixture] = fixtures!(text;
-    "aard", "aardvark", "alice", "bob", "carol",
-    "dave", "erin", "frank", "mallory", "trent", "zzzz",
-    // Divergence pair (G3 4b): every contiguous 3-gram of NEEDLE (`abcabd` →
-    // {abc, bca, cab, abd}) is present in HAY (`qabcqbcaqcabqabd`), yet NEEDLE is
-    // NOT a contiguous substring of HAY (the `q` separators break the run). So
-    // bloom `@>` is true while `HAY LIKE '%NEEDLE%'` is false — the deterministic
-    // bloom-vs-LIKE divergence locked in by `bloom_matches_where_like_would_not`.
-    // Verified against the real cipherstash bf term sets (contiguous 3-grams,
-    // k=6 hashing): bf(NEEDLE) ⊆ bf(HAY). Both are 3-gram-disjoint from the
-    // `aard`/`zzzz` disjoint pair and sort interior to the min/mid/max pivots, so
-    // they perturb no eq/ord oracle. Keep them diverging if edited (the pure-Rust
-    // guard `divergence_pair_is_contiguity_diverging` in src/tests.rs enforces it).
-    "qabcqbcaqcabqabd", "abcabd");
 
 /// `text` — an ordered, non-integer, unbounded scalar. Adds a `_match` domain
 /// (the `Bloom` term) on top of the ordered shape. Public because the SQLx
-/// harness reads `TEXT_VALUES` (materialised below).
+/// harness reads `TEXT_VALUES` (materialised in the `fixtures` module).
 pub const TEXT: DomainFamily = DomainFamily {
     name: "text",
-    kind: ScalarKind::Text,
     domains: TEXT_DOMAINS,
-    fixtures: TEXT_FIXTURES,
 };
-
-/// `float4` fixture plaintexts — IEEE-754 strings parsed into `f32` in the SQLx
-/// harness (the catalog stays zero-dep). EVERY value is exactly representable in
-/// f32 — each is a dyadic rational `n/2^k` (e.g. `2.25 = 9/4`, `0.25 = 1/4`,
-/// `1024 = 2^10`), the value class `real` stores losslessly — so the `real`
-/// round-trip is lossless and the f32→f64 widening before encryption is exact.
-/// Keep new fixtures dyadic: a value like `0.1` is NOT f32-exact, and the
-/// oracle's expected order (parsed `f32`) would then disagree with the value the
-/// `real` column actually rounds to. The three pivots MUST be present
-/// verbatim: `"-inf"` (min_pivot), `"0"` (origin/mid), `"inf"` (max_pivot).
-/// NaN and `-0.0` are deliberately excluded (see the `float_special` suite).
-/// Distinctness is enforced by `Fixture::Float` (above) and its guard test.
-const FLOAT4_FIXTURES: &[Fixture] = fixtures!(float;
-    "-inf", "-1024", "-2.25", "-1", "-0.5", "-0.25",
-    "0", "0.25", "0.5", "1", "2.25", "1024", "inf");
-
-/// `float8` fixture plaintexts — IEEE-754 strings parsed into `f64` in the SQLx
-/// harness. The native width of the float crypto path; values span sign and
-/// magnitude including subnormal-free interior points. The three pivots MUST be
-/// present verbatim: `"-inf"` (min_pivot), `"0"` (origin/mid), `"inf"`
-/// (max_pivot). NaN and `-0.0` are deliberately excluded.
-const FLOAT8_FIXTURES: &[Fixture] = fixtures!(float;
-    "-inf", "-1e300", "-1000000", "-1.5", "-1", "-0.001",
-    "0", "0.001", "1", "1.5", "1000000", "1e300", "inf");
 
 /// `float4` — an **ordered**, non-integer scalar (Postgres `real`). Reuses the
 /// four-domain ordered shape (`ORDERED_INT_DOMAINS`); only kind and fixtures
 /// differ. Both float widths encrypt through the SAME f64 crypto path
 /// (`Plaintext::Float`), so `float4` vs `float8` is purely a Postgres-surface
 /// distinction. Public (like `DATE`/`NUMERIC`) so the SQLx harness reads
-/// `FLOAT4.fixtures` directly to parse the strings into `f32`.
+/// `FLOAT4_FIXTURES.values` directly to parse the strings into `f32`.
 pub const FLOAT4: DomainFamily = DomainFamily {
     name: "float4",
-    kind: ScalarKind::F32,
     domains: ORDERED_INT_DOMAINS,
-    fixtures: FLOAT4_FIXTURES,
 };
 
 /// `float8` — an **ordered**, non-integer scalar (Postgres `double precision`),
 /// the native width of the float crypto path. Reuses the ordered shape. Public
-/// so the SQLx harness reads `FLOAT8.fixtures` directly to parse into `f64`.
+/// so the SQLx harness reads `FLOAT8_FIXTURES.values` directly to parse into
+/// `f64`.
 pub const FLOAT8: DomainFamily = DomainFamily {
     name: "float8",
-    kind: ScalarKind::F64,
     domains: ORDERED_INT_DOMAINS,
-    fixtures: FLOAT8_FIXTURES,
 };
 
 /// The scalar catalog — the single source of truth. Order is significant (it
@@ -579,89 +324,6 @@ pub const CATALOG: &[DomainFamily] = &[
     FLOAT4,
     FLOAT8,
 ];
-
-/// Materialise an integer scalar's fixtures into a typed `&'static` slice at
-/// compile time. This is the **single-sourced** plaintext list the SQLx test
-/// matrix reads via `ScalarType::fixture_values()` and the fixture generator
-/// encrypts — derived from the same `CATALOG` row that drives SQL generation,
-/// so the oracle cannot drift from the fixture. (It replaces the old generated,
-/// committed `tests/sqlx/src/fixtures/<T>_values.rs` — a Rust source of truth no
-/// longer needs to round-trip through generated Rust.)
-///
-/// Integer kinds only: a non-numeric fixture (`Text`/`Numeric`/`Jsonb`) is a
-/// const-eval error, mirroring `numeric_value`'s `None`.
-macro_rules! int_values {
-    ($name:ident, $ty:ty, $spec:expr) => {
-        #[doc = concat!("Distinct plaintext fixture values for `", stringify!($spec), "`, ")]
-        #[doc = "materialised from its `CATALOG` row (see `int_values!`)."]
-        pub const $name: &[$ty] = {
-            const SPEC: DomainFamily = $spec;
-            const N: usize = SPEC.fixtures.len();
-            const ARR: [$ty; N] = {
-                let mut out = [0 as $ty; N];
-                let mut i = 0;
-                while i < N {
-                    out[i] = match SPEC.fixtures[i].numeric_value(SPEC.kind) {
-                        Some(v) => {
-                            // Const-eval bounds check: a fixture value that does
-                            // not fit the narrowed target type would otherwise be
-                            // silently truncated/wrapped by `as`. Make it a
-                            // compile-time error instead.
-                            if v < <$ty>::MIN as i128 || v > <$ty>::MAX as i128 {
-                                panic!(concat!(
-                                    "integer scalar fixture value out of range for `",
-                                    stringify!($ty),
-                                    "`"
-                                ));
-                            }
-                            v as $ty
-                        }
-                        None => panic!("integer scalar fixture must resolve to a number"),
-                    };
-                    i += 1;
-                }
-                out
-            };
-            &ARR
-        };
-    };
-}
-
-int_values!(INT4_VALUES, i32, INT4);
-int_values!(INT2_VALUES, i16, INT2);
-int_values!(INT8_VALUES, i64, INT8);
-
-/// Materialise a `text` scalar's fixtures into a `&'static [&'static str]` at
-/// compile time — the single-sourced plaintext list the SQLx matrix reads via
-/// `ScalarType::fixture_values()` and the fixture generator encrypts. Unlike
-/// `date` (chrono is not `const`-friendly), a `Fixture::Text(&'static str)` is
-/// already const, so text materialises a typed slice like the integer kinds.
-/// A non-text fixture is a const-eval panic (compile-time guard).
-macro_rules! text_values {
-    ($name:ident, $spec:expr) => {
-        #[doc = concat!("Distinct plaintext fixture values for `", stringify!($spec), "`, ")]
-        #[doc = "materialised from its `CATALOG` row (see `text_values!`)."]
-        pub const $name: &[&'static str] = {
-            const SPEC: DomainFamily = $spec;
-            const N: usize = SPEC.fixtures.len();
-            const ARR: [&'static str; N] = {
-                let mut out = [""; N];
-                let mut i = 0;
-                while i < N {
-                    out[i] = match SPEC.fixtures[i] {
-                        Fixture::Text(s) => s,
-                        _ => panic!("text scalar fixture must be Fixture::Text"),
-                    };
-                    i += 1;
-                }
-                out
-            };
-            &ARR
-        };
-    };
-}
-
-text_values!(TEXT_VALUES, TEXT);
 
 #[cfg(test)]
 mod tests;

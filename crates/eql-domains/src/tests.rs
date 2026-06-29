@@ -2,8 +2,9 @@
 //! (declared from `lib.rs`) rather than co-located with each impl file because
 //! `rust_tests` spans `BoundedIntKind` + `ScalarKind` + `Fixture` +
 //! `DomainFamily`. Each inner module imports the crate-root catalog with
-//! `use crate::*;`; the crate-local `fixtures!` macro is in scope here by textual
-//! scoping (this module is declared after the macro definition in `lib.rs`).
+//! `use crate::*;`; the crate-local `fixtures!` macro is in scope here via the
+//! `#[macro_use] mod fixtures;` chain in `lib.rs` (it is defined in
+//! `fixtures/fixture.rs`).
 
 mod rust_tests {
     use crate::*;
@@ -167,14 +168,14 @@ mod rust_tests {
     /// the source of truth.
     #[test]
     fn pivot_sentinels_only_appear_with_integer_kinds() {
-        for spec in CATALOG {
-            for fixture in spec.fixtures {
+        for rec in FIXTURES {
+            for fixture in rec.values {
                 if matches!(fixture, Fixture::Min | Fixture::Max | Fixture::Zero) {
                     assert!(
-                        spec.kind.is_int(),
+                        rec.kind.is_int(),
                         "pivot sentinel {fixture:?} on non-integer kind {:?} (token `{}`)",
-                        spec.kind,
-                        spec.name,
+                        rec.kind,
+                        rec.family.name,
                     );
                 }
             }
@@ -209,9 +210,7 @@ mod rust_tests {
         // `EQ_ONLY_DOMAINS` shape (storage + `_eq`, no `_ord`).
         let eq_only = DomainFamily {
             name: "synthetic_eq_only",
-            kind: ScalarKind::Timestamptz,
             domains: EQ_ONLY_DOMAINS,
-            fixtures: &[],
         };
         assert!(
             eq_only.is_eq_only(),
@@ -573,6 +572,13 @@ mod catalog_tests {
             .unwrap_or_else(|| panic!("{token} missing from CATALOG"))
     }
 
+    fn fixtures(token: &str) -> &'static TypeFixtures {
+        FIXTURES
+            .iter()
+            .find(|f| f.family.name == token)
+            .unwrap_or_else(|| panic!("{token} missing from FIXTURES"))
+    }
+
     #[test]
     fn catalog_has_all_tokens_in_order() {
         let tokens: Vec<&str> = CATALOG.iter().map(|s| s.name).collect();
@@ -596,17 +602,18 @@ mod catalog_tests {
     #[test]
     fn bool_spec_is_storage_only_encryption_only() {
         let b = scalar("bool");
-        assert_eq!(b.kind, ScalarKind::Bool);
-        assert_eq!(b.kind.rust_type(), "bool");
+        let bf = fixtures("bool");
+        assert_eq!(bf.kind, ScalarKind::Bool);
+        assert_eq!(bf.kind.rust_type(), "bool");
         // Storage-only: exactly one term-less domain, no `_eq`/`_ord` — no SEM
         // index term, no comparison surface.
         let shape: Vec<(&str, &[Term])> = b.domains.iter().map(|d| (d.name, d.terms)).collect();
         assert_eq!(shape, vec![("", &[] as &[Term])]);
         // bool is none of the comparison-capable kinds.
-        assert!(!b.kind.is_int());
-        assert!(!b.kind.is_temporal());
-        assert!(!b.kind.is_text());
-        assert_eq!(b.kind.as_bounded_int(), None);
+        assert!(!bf.kind.is_int());
+        assert!(!bf.kind.is_temporal());
+        assert!(!bf.kind.is_text());
+        assert_eq!(bf.kind.as_bounded_int(), None);
         // is_eq_only() is true (no `_ord` domain), but the shape is strictly
         // smaller than eq-only — there is no `_eq` domain either, so it is
         // storage-only.
@@ -614,7 +621,7 @@ mod catalog_tests {
         assert!(b.is_storage_only());
         assert!(b.domain_by_name("eq").is_none());
         // Both boolean plaintexts are present as fixtures.
-        assert_eq!(b.fixtures, &[Fixture::Bool(false), Fixture::Bool(true)]);
+        assert_eq!(bf.values, &[Fixture::Bool(false), Fixture::Bool(true)]);
     }
 
     #[test]
@@ -634,7 +641,7 @@ mod catalog_tests {
     #[test]
     fn text_spec_is_in_catalog() {
         let text = scalar("text");
-        assert_eq!(text.kind, ScalarKind::Text);
+        assert_eq!(fixtures("text").kind, ScalarKind::Text);
         let names: Vec<_> = text.domains.iter().map(|d| d.name).collect();
         assert_eq!(names, vec!["", "eq", "match", "ord_ore", "ord", "search"]);
     }
@@ -739,9 +746,8 @@ mod catalog_tests {
     /// analogue.
     #[test]
     fn temporal_fixtures_include_pivot_plaintexts() {
-        let date = scalar("date");
-        let strings: Vec<&str> = date
-            .fixtures
+        let strings: Vec<&str> = fixtures("date")
+            .values
             .iter()
             .filter_map(|f| match f {
                 Fixture::Date(s) => Some(*s),
@@ -761,9 +767,8 @@ mod catalog_tests {
     /// `temporal_fixtures_include_pivot_plaintexts`.
     #[test]
     fn timestamptz_fixtures_include_pivot_plaintexts() {
-        let ts = scalar("timestamptz");
-        let strings: Vec<&str> = ts
-            .fixtures
+        let strings: Vec<&str> = fixtures("timestamptz")
+            .values
             .iter()
             .filter_map(|f| match f {
                 Fixture::Timestamptz(s) => Some(*s),
@@ -856,14 +861,49 @@ mod catalog_tests {
         // The kind↔rust-type pairing for every integer scalar, generic over
         // CATALOG. Replaces the per-type `<T>_maps_to_iNN` / `<T>_rust_type`
         // restatements.
-        for s in CATALOG.iter().filter(|s| s.kind.is_int()) {
-            let expected = match s.name {
+        for rec in FIXTURES.iter().filter(|r| r.kind.is_int()) {
+            let expected = match rec.family.name {
                 "int2" => ScalarKind::I16,
                 "int4" => ScalarKind::I32,
                 "int8" => ScalarKind::I64,
                 other => panic!("unmapped integer scalar token {other}"),
             };
-            assert_eq!(s.kind, expected, "{} maps to the wrong kind", s.name);
+            assert_eq!(
+                rec.kind, expected,
+                "{} maps to the wrong kind",
+                rec.family.name
+            );
+        }
+    }
+
+    /// Catalog-wide `family.name` ↔ `kind` guard over EVERY record, not just the
+    /// integer ones. The primary binding is now the compile-time parity block in
+    /// `fixtures/record.rs` (`kind_tag(FIXTURES[i].kind) == expected_kind(..)`),
+    /// which fails the build before any consumer sees a record carrying the wrong
+    /// `kind` (e.g. `TypeFixtures { family: &INT8, kind: I16, .. }`). This test is
+    /// the secondary safety net: an independent restatement of the same mapping,
+    /// so a regression in the const guard's helpers is still caught here.
+    #[test]
+    fn every_record_kind_matches_its_family() {
+        for rec in FIXTURES {
+            let expected = match rec.family.name {
+                "int2" => ScalarKind::I16,
+                "int4" => ScalarKind::I32,
+                "int8" => ScalarKind::I64,
+                "date" => ScalarKind::Date,
+                "timestamptz" => ScalarKind::Timestamptz,
+                "numeric" => ScalarKind::Numeric,
+                "text" => ScalarKind::Text,
+                "bool" => ScalarKind::Bool,
+                "float4" => ScalarKind::F32,
+                "float8" => ScalarKind::F64,
+                other => panic!("unmapped scalar token {other} in FIXTURES"),
+            };
+            assert_eq!(
+                rec.kind, expected,
+                "{} record carries the wrong kind",
+                rec.family.name
+            );
         }
     }
 
@@ -885,29 +925,29 @@ mod values_tests {
     /// `check(&INTx, INTx_VALUES)` line, not a duplicated reference list. Subsumes
     /// the old per-type `<T>_values_materialise_to_typed_array` references and
     /// `materialised_values_track_their_fixture_lists`.
-    fn check<T: Copy + Into<i128>>(spec: &DomainFamily, values: &[T]) {
+    fn check<T: Copy + Into<i128>>(rec: &TypeFixtures, values: &[T]) {
         assert_eq!(
             values.len(),
-            spec.fixtures.len(),
+            rec.values.len(),
             "{}: value count != fixture count",
-            spec.name
+            rec.family.name
         );
-        for (i, (v, f)) in values.iter().zip(spec.fixtures).enumerate() {
+        for (i, (v, f)) in values.iter().zip(rec.values).enumerate() {
             assert_eq!(
                 (*v).into(),
-                f.numeric_value(spec.kind)
+                f.numeric_value(rec.kind)
                     .expect("integer scalar fixture resolves to a number"),
                 "{}: value[{i}] does not match resolved fixture {f:?}",
-                spec.name
+                rec.family.name
             );
         }
     }
 
     #[test]
     fn materialised_values_match_resolved_fixtures() {
-        check(&INT4, INT4_VALUES);
-        check(&INT2, INT2_VALUES);
-        check(&INT8, INT8_VALUES);
+        check(&INT4_FIXTURES, INT4_VALUES);
+        check(&INT2_FIXTURES, INT2_VALUES);
+        check(&INT8_FIXTURES, INT8_VALUES);
     }
 
     #[test]
@@ -935,6 +975,7 @@ mod values_tests {
     #[test]
     fn text_values_match_fixtures_in_order() {
         let from_fixtures: Vec<&str> = TEXT_FIXTURES
+            .values
             .iter()
             .map(|f| match f {
                 Fixture::Text(s) => *s,
@@ -1002,6 +1043,13 @@ mod float_tests {
             .unwrap_or_else(|| panic!("{token} missing from CATALOG"))
     }
 
+    fn fixtures(token: &str) -> &'static TypeFixtures {
+        FIXTURES
+            .iter()
+            .find(|f| f.family.name == token)
+            .unwrap_or_else(|| panic!("{token} missing from FIXTURES"))
+    }
+
     #[test]
     fn float_specs_are_in_catalog_with_ordered_shape() {
         for family_name in ["float4", "float8"] {
@@ -1009,8 +1057,8 @@ mod float_tests {
             let names: Vec<_> = s.domains.iter().map(|d| d.name).collect();
             assert_eq!(names, vec!["", "eq", "ord_ore", "ord"]);
         }
-        assert_eq!(scalar("float4").kind, ScalarKind::F32);
-        assert_eq!(scalar("float8").kind, ScalarKind::F64);
+        assert_eq!(fixtures("float4").kind, ScalarKind::F32);
+        assert_eq!(fixtures("float8").kind, ScalarKind::F64);
     }
 
     #[test]
@@ -1036,9 +1084,8 @@ mod float_tests {
     #[test]
     fn float_fixtures_exclude_nan_and_negative_zero_and_include_infinities() {
         for family_name in ["float4", "float8"] {
-            let s = scalar(family_name);
-            let strings: Vec<&str> = s
-                .fixtures
+            let strings: Vec<&str> = fixtures(family_name)
+                .values
                 .iter()
                 .map(|f| match f {
                     Fixture::Float(v) => *v,
@@ -1076,9 +1123,8 @@ mod float_tests {
     #[test]
     fn float_fixtures_are_distinct_by_value() {
         for family_name in ["float4", "float8"] {
-            let s = scalar(family_name);
-            let parsed: Vec<u64> = s
-                .fixtures
+            let parsed: Vec<u64> = fixtures(family_name)
+                .values
                 .iter()
                 .map(|f| match f {
                     Fixture::Float(v) => {
@@ -1160,37 +1206,41 @@ mod invariant_tests {
     fn fixtures_include_min_max_and_zero() {
         // The MIN/MAX/ZERO pivots are an integer-kind invariant; non-integer
         // kinds (text/numeric/jsonb) have no such pivots.
-        for s in CATALOG.iter().filter(|s| s.kind.is_int()) {
-            let bk = s
+        for rec in FIXTURES.iter().filter(|r| r.kind.is_int()) {
+            let bk = rec
                 .kind
                 .as_bounded_int()
                 .expect("loop is filtered to integer kinds");
-            let resolved: Vec<i128> = s
-                .fixtures
+            let resolved: Vec<i128> = rec
+                .values
                 .iter()
-                .filter_map(|f| f.numeric_value(s.kind))
+                .filter_map(|f| f.numeric_value(rec.kind))
                 .collect();
             assert!(
                 resolved.contains(&bk.min_value()),
                 "{} fixtures missing MIN",
-                s.name
+                rec.family.name
             );
             assert!(
                 resolved.contains(&bk.max_value()),
                 "{} fixtures missing MAX",
-                s.name
+                rec.family.name
             );
-            assert!(resolved.contains(&0), "{} fixtures missing zero", s.name);
+            assert!(
+                resolved.contains(&0),
+                "{} fixtures missing zero",
+                rec.family.name
+            );
         }
     }
 
     #[test]
     fn fixture_values_are_distinct_by_resolved_number() {
-        for s in CATALOG {
+        for rec in FIXTURES {
             let mut seen: HashMap<DistinctKey, Fixture> = HashMap::new();
-            for f in s.fixtures {
-                if let Some(prev) = seen.insert(distinct_key(*f, s.kind), *f) {
-                    panic!("{}: {f:?} duplicates {prev:?}", s.name);
+            for f in rec.values {
+                if let Some(prev) = seen.insert(distinct_key(*f, rec.kind), *f) {
+                    panic!("{}: {f:?} duplicates {prev:?}", rec.family.name);
                 }
             }
         }
@@ -1221,20 +1271,20 @@ mod invariant_tests {
     #[test]
     fn every_fixture_value_is_within_kind_bounds() {
         // Asserts the resolved sentinels stay within bounds (integer kinds only).
-        for s in CATALOG.iter().filter(|s| s.kind.is_int()) {
-            let bk = s
+        for rec in FIXTURES.iter().filter(|r| r.kind.is_int()) {
+            let bk = rec
                 .kind
                 .as_bounded_int()
                 .expect("loop is filtered to integer kinds");
             let (lo, hi) = (bk.min_value(), bk.max_value());
-            for f in s.fixtures {
-                let Some(n) = f.numeric_value(s.kind) else {
+            for f in rec.values {
+                let Some(n) = f.numeric_value(rec.kind) else {
                     continue;
                 };
                 assert!(
                     n >= lo && n <= hi,
                     "{}: fixture {f:?} resolves to {n}, out of range [{lo}, {hi}]",
-                    s.name
+                    rec.family.name
                 );
             }
         }

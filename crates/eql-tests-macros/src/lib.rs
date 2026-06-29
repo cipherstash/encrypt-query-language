@@ -58,6 +58,10 @@ impl Parse for ScalarEntry {
 
 /// The `eql-domains::CATALOG` row for `token`, or a hard panic at macro-expansion
 /// time if the token is unknown — a dispatch-list entry must name a catalog type.
+/// Now used only by the structural predicates (`is_eq_only_token`,
+/// `is_storage_only_token`, `has_search_token`); the kind-predicates read the
+/// native scalar kind from `fixtures_for_token` (it is no longer a `DomainFamily`
+/// field).
 fn spec_for_token(token: &str) -> &'static eql_domains::DomainFamily {
     eql_domains::CATALOG
         .iter()
@@ -65,12 +69,24 @@ fn spec_for_token(token: &str) -> &'static eql_domains::DomainFamily {
         .unwrap_or_else(|| panic!("scalar token `{token}` not in eql-domains::CATALOG"))
 }
 
+/// The `eql-domains::FIXTURES` record for `token`, or a hard panic at
+/// macro-expansion time if the token is unknown. The kind-predicates read the
+/// native scalar kind from the fixture layer (it is no longer a `DomainFamily`
+/// field); the structural predicates (`is_eq_only`, `is_storage_only`,
+/// `has_search`) keep reading `spec_for_token`.
+fn fixtures_for_token(token: &str) -> &'static eql_domains::TypeFixtures {
+    eql_domains::FIXTURES
+        .iter()
+        .find(|f| f.family.name == token)
+        .unwrap_or_else(|| panic!("scalar token `{token}` not in eql-domains::FIXTURES"))
+}
+
 /// True when `token`'s catalog kind is temporal (chrono-backed). Replaces the
 /// `[temporal]` marker: temporal scalars hand off their `impl ScalarType` to
 /// `temporal_values!` (so `emit_scalar_type_impls` skips them) and stamp the
 /// `temporal` fixture variant.
 fn is_temporal_token(token: &str) -> bool {
-    spec_for_token(token).kind.is_temporal()
+    fixtures_for_token(token).kind.is_temporal()
 }
 
 /// True when `token`'s catalog kind is a fixed-width integer (`int2`/`int4`/
@@ -80,7 +96,7 @@ fn is_temporal_token(token: &str) -> bool {
 /// non-integer kind (`date`, `text`) is hand-written in `scalar_domains.rs` and
 /// skipped by `scalar_type_impls_tokens`.
 fn is_int_token(token: &str) -> bool {
-    spec_for_token(token).kind.is_int()
+    fixtures_for_token(token).kind.is_int()
 }
 
 /// True when `token`'s catalog kind is `text` — an unbounded, owned-`String`
@@ -90,7 +106,7 @@ fn is_int_token(token: &str) -> bool {
 /// generated payloads carry `bf`) and draws its values from the harness accessor
 /// (`text_values()`). Replaces the `[text]` marker.
 fn is_text_token(token: &str) -> bool {
-    spec_for_token(token).kind.is_text()
+    fixtures_for_token(token).kind.is_text()
 }
 
 /// True when `token`'s catalog row is the `numeric` kind (owned
@@ -98,7 +114,10 @@ fn is_text_token(token: &str) -> bool {
 /// non-chrono, so it stamps the `numeric` fixture discriminator and draws its
 /// values from the harness accessor (`numeric_values()`).
 fn is_numeric_token(token: &str) -> bool {
-    matches!(spec_for_token(token).kind, eql_domains::ScalarKind::Numeric)
+    matches!(
+        fixtures_for_token(token).kind,
+        eql_domains::ScalarKind::Numeric
+    )
 }
 
 /// True when `token`'s catalog row is an IEEE-754 float kind (`F32`/`F64`).
@@ -107,7 +126,7 @@ fn is_numeric_token(token: &str) -> bool {
 /// (`float4_values()` / `float8_values()`).
 fn is_float_token(token: &str) -> bool {
     matches!(
-        spec_for_token(token).kind,
+        fixtures_for_token(token).kind,
         eql_domains::ScalarKind::F32 | eql_domains::ScalarKind::F64
     )
 }
@@ -709,8 +728,11 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "not in eql-domains::CATALOG")]
+    #[should_panic(expected = "not in eql-domains::FIXTURES")]
     fn unknown_token_fails_loudly() {
+        // `is_temporal_token` reads the native scalar kind from the fixture
+        // layer, so an unknown token now fails loudly via the `FIXTURES` lookup
+        // (the structural predicates still fail via `CATALOG` / `spec_for_token`).
         is_temporal_token("nonesuch");
     }
 
