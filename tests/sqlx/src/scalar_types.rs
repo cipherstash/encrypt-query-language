@@ -7,7 +7,7 @@
 //! `docs/reference/adding-a-scalar-encrypted-domain-type.md` §3). The entry
 //! carries no shape marker: whether a type is temporal (chrono-backed) or
 //! equality-only is read from its `eql-domains::CATALOG` row
-//! (`ScalarKind::is_temporal()` / `ScalarSpec::is_eq_only()`). A temporal
+//! (`ScalarKind::is_temporal()` / `DomainFamily::is_eq_only()`). A temporal
 //! scalar generates its `impl ScalarType` via `temporal_values!` in
 //! `scalar_domains.rs` and gets pivot-presence fixture asserts instead of the
 //! integer signed-extreme ones.

@@ -196,22 +196,23 @@ pub enum Fixture {
     Float(&'static str),
 }
 
-/// One generated public domain: a suffix appended to the type token and the
-/// fixed index terms it carries. Suffix `""` is the storage-only domain.
+/// One generated public domain: a bare domain name joined under the family
+/// name (codegen owns the `_` separator) plus the fixed index terms it
+/// carries. Name `""` is the storage-only domain.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct DomainSpec {
-    pub suffix: &'static str,
+pub struct Domain {
+    pub name: &'static str,
     pub terms: &'static [Term],
 }
 
-/// A scalar encrypted-domain type: its SQL token, native Rust type, generated
+/// A scalar encrypted-domain type: its SQL `name`, native Rust type, generated
 /// domains, and fixture plaintext list. The Rust analogue of one `*.toml`.
 /// (`domain_name`/`is_eq_only` are impl'd in `spec`.)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ScalarSpec {
-    pub token: &'static str,
+pub struct DomainFamily {
+    pub name: &'static str,
     pub kind: ScalarKind,
-    pub domains: &'static [DomainSpec],
+    pub domains: &'static [Domain],
     pub fixtures: &'static [Fixture],
 }
 
@@ -242,21 +243,21 @@ macro_rules! fixtures {
 
 /// Domains shared by every ordered-integer scalar, in manifest file order:
 /// storage (no terms), `_eq` (hm), `_ord_ore` (ore), `_ord` (ore).
-const ORDERED_INT_DOMAINS: &[DomainSpec] = &[
-    DomainSpec {
-        suffix: "",
+const ORDERED_INT_DOMAINS: &[Domain] = &[
+    Domain {
+        name: "",
         terms: &[],
     },
-    DomainSpec {
-        suffix: "_eq",
+    Domain {
+        name: "eq",
         terms: &[Term::Hm],
     },
-    DomainSpec {
-        suffix: "_ord_ore",
+    Domain {
+        name: "ord_ore",
         terms: &[Term::Ore],
     },
-    DomainSpec {
-        suffix: "_ord",
+    Domain {
+        name: "ord",
         terms: &[Term::Ore],
     },
 ];
@@ -270,13 +271,13 @@ const ORDERED_INT_DOMAINS: &[DomainSpec] = &[
 /// so a future non-orderable scalar (e.g. a hash-only type) can reuse it without
 /// reconstructing the shape.
 #[allow(dead_code)]
-const EQ_ONLY_DOMAINS: &[DomainSpec] = &[
-    DomainSpec {
-        suffix: "",
+const EQ_ONLY_DOMAINS: &[Domain] = &[
+    Domain {
+        name: "",
         terms: &[],
     },
-    DomainSpec {
-        suffix: "_eq",
+    Domain {
+        name: "eq",
         terms: &[Term::Hm],
     },
 ];
@@ -340,22 +341,22 @@ const NUMERIC_FIXTURES: &[Fixture] = fixtures!(numeric;
     "-1000000000000", "-1000000", "-1.001", "-1", "-0.5", "-0.001",
     "0", "0.001", "0.5", "0.999999999", "1", "1.001", "1000000", "1000000000000");
 
-const INT4: ScalarSpec = ScalarSpec {
-    token: "int4",
+const INT4: DomainFamily = DomainFamily {
+    name: "int4",
     kind: ScalarKind::I32,
     domains: ORDERED_INT_DOMAINS,
     fixtures: INT4_FIXTURES,
 };
 
-const INT2: ScalarSpec = ScalarSpec {
-    token: "int2",
+const INT2: DomainFamily = DomainFamily {
+    name: "int2",
     kind: ScalarKind::I16,
     domains: ORDERED_INT_DOMAINS,
     fixtures: INT2_FIXTURES,
 };
 
-const INT8: ScalarSpec = ScalarSpec {
-    token: "int8",
+const INT8: DomainFamily = DomainFamily {
+    name: "int8",
     kind: ScalarKind::I64,
     domains: ORDERED_INT_DOMAINS,
     fixtures: INT8_FIXTURES,
@@ -369,8 +370,8 @@ const INT8: ScalarSpec = ScalarSpec {
 /// `DATE.fixtures` directly to parse the ISO strings into `chrono::NaiveDate`
 /// at runtime — there is no `DATE_VALUES` const (chrono is not `const`-friendly
 /// and `eql-domains` stays zero-dep, so no typed slice is materialised here).
-pub const DATE: ScalarSpec = ScalarSpec {
-    token: "date",
+pub const DATE: DomainFamily = DomainFamily {
+    name: "date",
     kind: ScalarKind::Date,
     domains: ORDERED_INT_DOMAINS,
     fixtures: DATE_FIXTURES,
@@ -386,8 +387,8 @@ pub const DATE: ScalarSpec = ScalarSpec {
 /// Public (like `DATE`) because the SQLx harness reads `TIMESTAMPTZ.fixtures`
 /// directly to parse the RFC3339 strings into `chrono::DateTime<Utc>` at runtime
 /// (no `TIMESTAMPTZ_VALUES` const; `eql-domains` stays zero-dep).
-pub const TIMESTAMPTZ: ScalarSpec = ScalarSpec {
-    token: "timestamptz",
+pub const TIMESTAMPTZ: DomainFamily = DomainFamily {
+    name: "timestamptz",
     kind: ScalarKind::Timestamptz,
     domains: ORDERED_INT_DOMAINS,
     fixtures: TIMESTAMPTZ_FIXTURES,
@@ -405,8 +406,8 @@ pub const TIMESTAMPTZ: ScalarSpec = ScalarSpec {
 /// `NUMERIC.fixtures` directly to parse the decimal strings into
 /// `rust_decimal::Decimal` at runtime (the catalog stays zero-dep: no
 /// `rust_decimal`).
-pub const NUMERIC: ScalarSpec = ScalarSpec {
-    token: "numeric",
+pub const NUMERIC: DomainFamily = DomainFamily {
+    name: "numeric",
     kind: ScalarKind::Numeric,
     domains: ORDERED_INT_DOMAINS,
     fixtures: NUMERIC_FIXTURES,
@@ -422,41 +423,41 @@ pub const NUMERIC: ScalarSpec = ScalarSpec {
 /// claim; it simply never wins because `Hm` precedes it (Option 1, catalog
 /// ordering). Integer kinds keep `[Ore]`-only `_ord` domains — ORE equality is
 /// lossless for them.
-const TEXT_DOMAINS: &[DomainSpec] = &[
-    DomainSpec {
-        suffix: "",
+const TEXT_DOMAINS: &[Domain] = &[
+    Domain {
+        name: "",
         terms: &[],
     },
-    DomainSpec {
-        suffix: "_eq",
+    Domain {
+        name: "eq",
         terms: &[Term::Hm],
     },
-    DomainSpec {
-        suffix: "_match",
+    Domain {
+        name: "match",
         terms: &[Term::Bloom],
     },
-    DomainSpec {
-        suffix: "_ord_ore",
+    Domain {
+        name: "ord_ore",
         terms: &[Term::Hm, Term::Ore],
     },
-    DomainSpec {
-        suffix: "_ord",
+    Domain {
+        name: "ord",
         terms: &[Term::Hm, Term::Ore],
     },
-    DomainSpec {
-        suffix: "_search",
+    Domain {
+        name: "search",
         terms: &[Term::Hm, Term::Ore, Term::Bloom],
     },
 ];
 
-/// Storage-only domains: a single term-less domain (suffix `""`). The canonical
+/// Storage-only domains: a single term-less domain (name `""`). The canonical
 /// shape for an **encryption-only** scalar — encrypted at rest, decrypted by the
 /// proxy, never searched server-side. No `_eq`/`_ord`, so no SEM index term and
 /// no comparison surface (every operator on the domain is a blocker). Used by
 /// `bool`, whose two-value cardinality makes any searchable index a plaintext
 /// leak. Validated as a known-valid shape by `every_type_uses_a_known_domain_shape`.
-const STORAGE_ONLY_DOMAINS: &[DomainSpec] = &[DomainSpec {
-    suffix: "",
+const STORAGE_ONLY_DOMAINS: &[Domain] = &[Domain {
+    name: "",
     terms: &[],
 }];
 
@@ -473,8 +474,8 @@ const BOOL_FIXTURES: &[Fixture] = fixtures!(bool; false, true);
 /// never searched server-side. Public so the SQLx harness reads `BOOL.fixtures`
 /// directly (there is no `BOOL_VALUES` materializer — the two values are read
 /// straight from the catalog).
-pub const BOOL: ScalarSpec = ScalarSpec {
-    token: "bool",
+pub const BOOL: DomainFamily = DomainFamily {
+    name: "bool",
     kind: ScalarKind::Bool,
     domains: STORAGE_ONLY_DOMAINS,
     fixtures: BOOL_FIXTURES,
@@ -509,8 +510,8 @@ const TEXT_FIXTURES: &[Fixture] = fixtures!(text;
 /// `text` — an ordered, non-integer, unbounded scalar. Adds a `_match` domain
 /// (the `Bloom` term) on top of the ordered shape. Public because the SQLx
 /// harness reads `TEXT_VALUES` (materialised below).
-pub const TEXT: ScalarSpec = ScalarSpec {
-    token: "text",
+pub const TEXT: DomainFamily = DomainFamily {
+    name: "text",
     kind: ScalarKind::Text,
     domains: TEXT_DOMAINS,
     fixtures: TEXT_FIXTURES,
@@ -546,8 +547,8 @@ const FLOAT8_FIXTURES: &[Fixture] = fixtures!(float;
 /// (`Plaintext::Float`), so `float4` vs `float8` is purely a Postgres-surface
 /// distinction. Public (like `DATE`/`NUMERIC`) so the SQLx harness reads
 /// `FLOAT4.fixtures` directly to parse the strings into `f32`.
-pub const FLOAT4: ScalarSpec = ScalarSpec {
-    token: "float4",
+pub const FLOAT4: DomainFamily = DomainFamily {
+    name: "float4",
     kind: ScalarKind::F32,
     domains: ORDERED_INT_DOMAINS,
     fixtures: FLOAT4_FIXTURES,
@@ -556,8 +557,8 @@ pub const FLOAT4: ScalarSpec = ScalarSpec {
 /// `float8` — an **ordered**, non-integer scalar (Postgres `double precision`),
 /// the native width of the float crypto path. Reuses the ordered shape. Public
 /// so the SQLx harness reads `FLOAT8.fixtures` directly to parse into `f64`.
-pub const FLOAT8: ScalarSpec = ScalarSpec {
-    token: "float8",
+pub const FLOAT8: DomainFamily = DomainFamily {
+    name: "float8",
     kind: ScalarKind::F64,
     domains: ORDERED_INT_DOMAINS,
     fixtures: FLOAT8_FIXTURES,
@@ -565,7 +566,7 @@ pub const FLOAT8: ScalarSpec = ScalarSpec {
 
 /// The scalar catalog — the single source of truth. Order is significant (it
 /// drives generation order). New types are appended as their SQL surface lands.
-pub const CATALOG: &[ScalarSpec] = &[
+pub const CATALOG: &[DomainFamily] = &[
     INT4,
     INT2,
     INT8,
@@ -593,7 +594,7 @@ macro_rules! int_values {
         #[doc = concat!("Distinct plaintext fixture values for `", stringify!($spec), "`, ")]
         #[doc = "materialised from its `CATALOG` row (see `int_values!`)."]
         pub const $name: &[$ty] = {
-            const SPEC: ScalarSpec = $spec;
+            const SPEC: DomainFamily = $spec;
             const N: usize = SPEC.fixtures.len();
             const ARR: [$ty; N] = {
                 let mut out = [0 as $ty; N];
@@ -640,7 +641,7 @@ macro_rules! text_values {
         #[doc = concat!("Distinct plaintext fixture values for `", stringify!($spec), "`, ")]
         #[doc = "materialised from its `CATALOG` row (see `text_values!`)."]
         pub const $name: &[&'static str] = {
-            const SPEC: ScalarSpec = $spec;
+            const SPEC: DomainFamily = $spec;
             const N: usize = SPEC.fixtures.len();
             const ARR: [&'static str; N] = {
                 let mut out = [""; N];

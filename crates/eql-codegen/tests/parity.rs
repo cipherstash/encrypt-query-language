@@ -81,7 +81,7 @@ fn reference_dirs_match_catalog_tokens() {
     let refs = reference_tokens(&root);
     let catalog: BTreeSet<String> = eql_domains::CATALOG
         .iter()
-        .map(|s| s.token.to_string())
+        .map(|s| s.name.to_string())
         .collect();
     assert_eq!(
         refs, catalog,

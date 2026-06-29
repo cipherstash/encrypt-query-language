@@ -58,10 +58,10 @@ impl Parse for ScalarEntry {
 
 /// The `eql-domains::CATALOG` row for `token`, or a hard panic at macro-expansion
 /// time if the token is unknown — a dispatch-list entry must name a catalog type.
-fn spec_for_token(token: &str) -> &'static eql_domains::ScalarSpec {
+fn spec_for_token(token: &str) -> &'static eql_domains::DomainFamily {
     eql_domains::CATALOG
         .iter()
-        .find(|s| s.token == token)
+        .find(|s| s.name == token)
         .unwrap_or_else(|| panic!("scalar token `{token}` not in eql-domains::CATALOG"))
 }
 
@@ -140,7 +140,7 @@ fn has_search_token(token: &str) -> bool {
     spec_for_token(token)
         .domains
         .iter()
-        .any(|d| d.suffix == "_search")
+        .any(|d| d.name == "search")
 }
 
 /// The comma-separated list (optional trailing comma).

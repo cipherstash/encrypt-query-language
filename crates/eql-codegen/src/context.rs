@@ -2,7 +2,7 @@
 
 use crate::consts::*;
 use crate::operator_surface::Operator;
-use eql_domains::{DomainSpec, Term};
+use eql_domains::{Domain, Term};
 
 /// Build the minijinja environment with the embedded templates: one whole-file
 /// template per output file (`types`/`functions`/`operators`/`aggregates`) plus
@@ -74,8 +74,8 @@ pub struct TypesContext {
 
 /// Build the per-domain block data (port of `render_domain_block`'s value logic,
 /// minus comment prose and the CHECK skeleton — those are template-resident).
-pub fn domain_block(token: &str, domain: &DomainSpec) -> DomainBlock {
-    let name = domain.name_with_token(token);
+pub fn domain_block(token: &str, domain: &Domain) -> DomainBlock {
+    let name = domain.full_name(token);
 
     let mut keys: Vec<String> = ENVELOPE_KEYS.iter().map(|k| sql_str(k)).collect();
     for k in Term::term_json_keys(domain.terms) {
@@ -135,7 +135,7 @@ pub enum FnEntry {
 pub struct FunctionsContext {
     pub requires: Vec<String>, // dependency paths only; template emits "-- REQUIRE:"
     pub token: String,
-    pub name: String,       // full domain name (token+suffix)
+    pub name: String,       // full domain name (family-name + "_" + domain-name)
     pub dom: String,        // schema-qualified domain, e.g. eql_v3.int4_eq
     pub domain_lit: String, // sql_str(dom), defensively escaped for the RAISE literal
     pub entries: Vec<FnEntry>,

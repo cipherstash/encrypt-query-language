@@ -181,12 +181,12 @@ source of truth — the `CATALOG` const in
 [`crates/eql-domains/src/lib.rs`](./crates/eql-domains/src/lib.rs). There is no
 TOML manifest and no Python.
 
-Each scalar type is one `ScalarSpec` row in `CATALOG`, declaring:
+Each scalar type is one `DomainFamily` row in `CATALOG`, declaring:
 
-- the type `token` (e.g. `int8`),
+- the type `name` (e.g. `int8`),
 - its `ScalarKind` (the `kind` field),
-- the `DomainSpec`s mapping each generated domain suffix to its fixed index
-  `Term`s (`_eq => [Hm]`, `_ord` / `_ord_ore => [Ore]`), and
+- the `Domain`s mapping each generated (bare) domain name to its fixed index
+  `Term`s (`eq => [Hm]`, `ord` / `ord_ore => [Ore]`), and
 - the plaintext `Fixture` value list the SQLx test matrix consumes.
 
 `mise run build` invokes `cargo run -p eql-codegen`, which regenerates the SQL
@@ -329,7 +329,7 @@ without a database at all.
 ### Adding a scalar encrypted-domain type
 
 Adding a scalar encrypted-domain type (e.g. a new ordered numeric scalar) is one
-`ScalarSpec` row in `eql-domains::CATALOG`
+`DomainFamily` row in `eql-domains::CATALOG`
 ([`crates/eql-domains/src/lib.rs`](./crates/eql-domains/src/lib.rs)). New term
 behaviour belongs in the `Term` enum's `impl` methods (with tests), not in
 free-form catalog data. After editing the catalog, run `mise run build` to

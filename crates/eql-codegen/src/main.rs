@@ -10,7 +10,7 @@ fn main() -> ExitCode {
     // fixtures-all and matrix-inventory enumeration.
     if args.len() == 2 && args[1] == "list-types" {
         for spec in eql_domains::CATALOG {
-            println!("{}", spec.token);
+            println!("{}", spec.name);
         }
         return ExitCode::SUCCESS;
     }

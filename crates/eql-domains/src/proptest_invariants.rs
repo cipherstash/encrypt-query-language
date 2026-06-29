@@ -123,7 +123,7 @@ fn eq_only_specs_have_no_ordering_operators() {
                 assert!(
                     !ops.iter().any(|o| matches!(*o, "<" | "<=" | ">" | ">=")),
                     "eq-only spec {} exposes an ordering operator on {}",
-                    spec.token,
+                    spec.name,
                     spec.domain_name(dom)
                 );
             }
