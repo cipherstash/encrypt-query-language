@@ -27,6 +27,26 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
 
+    // `bindings`: regenerate the committed Rust payload bindings under
+    // crates/eql-bindings/src/v3. The default no-arg run stays SQL-only; this
+    // is wired as the first step of `mise run types:generate`.
+    if args.len() == 2 && args[1] == "bindings" {
+        match eql_codegen::bindings::generate_bindings(&repo_root()) {
+            Ok(written) => {
+                for p in &written {
+                    let rel = p.strip_prefix(repo_root()).unwrap_or(p);
+                    println!("generated {}", rel.display());
+                }
+                println!("bindings: ok ({} files)", written.len());
+                return ExitCode::SUCCESS;
+            }
+            Err(e) => {
+                eprintln!("error: {e}");
+                return ExitCode::FAILURE;
+            }
+        }
+    }
+
     if args.len() == 1 {
         // No args: generate every type's gitignored SQL surface.
         match generate_all(&repo_root()) {
@@ -42,5 +62,6 @@ fn main() -> ExitCode {
     eprintln!("Usage: eql-codegen            (generate all types)");
     eprintln!("       eql-codegen list-types (print catalog tokens)");
     eprintln!("       eql-codegen dump-catalog (print catalog surface as JSON)");
+    eprintln!("       eql-codegen bindings   (regenerate eql-bindings Rust payload types)");
     ExitCode::from(2)
 }

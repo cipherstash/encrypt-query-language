@@ -6,12 +6,18 @@
 //! `rustfmt` (prettyplease is rustfmt-clean but not rustfmt-identical), with
 //! the `// @generated` ownership marker prepended as line 1.
 
+use std::path::{Path, PathBuf};
+
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 
 use eql_domains::{Domain, DomainFamily, Term, CATALOG};
 
 use crate::consts::RUST_GENERATED_MARKER;
+use crate::writer::{
+    clean_generated_files, ensure_generated_paths_writable, write_generated_file, GeneratedKind,
+    WriteError,
+};
 
 /// Format a token stream into committed Rust source. `prettyplease::unparse`
 /// gives deterministic, parseable output; the `@generated` marker is prepended
@@ -213,6 +219,38 @@ pub fn render_inventory_rs() -> String {
     format_rs(file)
 }
 
+/// Relative path (from repo root) of the generated v3 bindings directory.
+const V3_BINDINGS_DIR: &str = "crates/eql-bindings/src/v3";
+
+/// Regenerate every committed Rust binding file under `out_root`: one
+/// `<family>.rs` per catalog family plus the `inventory.rs` `all()` list.
+/// Hand-written `terms.rs` / `domain_type.rs` / `mod.rs` carry no marker, so
+/// they are never cleaned or clobbered. Returns the written paths.
+pub fn generate_bindings(out_root: &Path) -> Result<Vec<PathBuf>, WriteError> {
+    let dir = out_root.join(V3_BINDINGS_DIR);
+
+    let mut targets: Vec<PathBuf> = CATALOG
+        .iter()
+        .map(|f| dir.join(format!("{}.rs", f.name)))
+        .collect();
+    targets.push(dir.join("inventory.rs"));
+
+    ensure_generated_paths_writable(&targets, GeneratedKind::Rust)?;
+    clean_generated_files(&dir, GeneratedKind::Rust)?;
+
+    let mut written = Vec::new();
+    for f in CATALOG {
+        let p = dir.join(format!("{}.rs", f.name));
+        write_generated_file(&p, &render_family_bindings(f), GeneratedKind::Rust)?;
+        written.push(p);
+    }
+    let invp = dir.join("inventory.rs");
+    write_generated_file(&invp, &render_inventory_rs(), GeneratedKind::Rust)?;
+    written.push(invp);
+
+    Ok(written)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -314,6 +352,28 @@ mod tests {
         assert!(!out.contains("Hmac256"));
         assert!(!out.contains("OreBlock256"));
         assert!(!out.contains("BloomFilter"));
+    }
+
+    #[test]
+    fn generate_bindings_writes_family_files_and_inventory_with_markers() {
+        let tmp = crate::writer::test_support::tempdir();
+        let written = generate_bindings(tmp.path()).unwrap();
+        let dir = tmp.path().join("crates/eql-bindings/src/v3");
+        assert_eq!(written.len(), eql_domains::CATALOG.len() + 1);
+        assert!(dir.join("int4.rs").is_file());
+        assert!(dir.join("text.rs").is_file());
+        assert!(dir.join("inventory.rs").is_file());
+        assert!(
+            !dir.join("mod.rs").exists(),
+            "mod.rs stays hand-written; not generated"
+        );
+        for p in &written {
+            let body = std::fs::read_to_string(p).unwrap();
+            assert!(
+                body.starts_with(crate::consts::RUST_GENERATED_MARKER),
+                "{p:?}"
+            );
+        }
     }
 
     #[test]
