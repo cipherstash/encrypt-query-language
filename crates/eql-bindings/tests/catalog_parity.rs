@@ -1,32 +1,20 @@
-//! The drift gate: the v3 domain inventory must mirror `eql-domains::CATALOG`
-//! — the same catalog that generates the `eql_v3` SQL surface — exactly:
-//! every domain, in catalog order, and every domain's wire contract, pinned
-//! through the published JSON Schema. schemars output reflects the real
-//! serde contract, so per domain this catches an `Option` term field or a
-//! wrong wire key (`required`), a struct that lost
-//! `#[serde(deny_unknown_fields)]` (`additionalProperties: false`), and a
-//! `v` field that is not [`eql_bindings::SchemaVersion`] (the `$ref` and its
-//! `const: 2`). Behavioural spot checks of the same properties live in
-//! `tests/v3_conformance.rs`.
+//! The drift gate: every v3 domain's wire contract — pinned through the
+//! published JSON Schema — must match `eql-domains::CATALOG`, the same catalog
+//! that GENERATES both the SQL surface and these payload structs. schemars
+//! output reflects the real serde contract, so per domain this catches a
+//! wrong/dropped required key, a struct that lost
+//! `#[serde(deny_unknown_fields)]` (`additionalProperties: false`), and a `v`
+//! field that is not [`eql_bindings::SchemaVersion`] (the `$ref` and its
+//! `const: 2`). The inventory set/order is no longer policed here — it is
+//! generated from `CATALOG` (`inventory.rs`) and cannot drift; the emitted
+//! `.ts` property order is pinned by `tests/ts_property_order.rs`. Behavioural
+//! spot checks live in `tests/v3_conformance.rs`.
 
 use std::collections::BTreeSet;
 
 use eql_bindings::{v3, EQL_SCHEMA_VERSION};
 use eql_domains::{Term, CATALOG, ENVELOPE_KEYS};
 use serde_json::{json, Value};
-
-#[test]
-fn inventory_exactly_covers_catalog() {
-    let expected: Vec<String> = CATALOG
-        .iter()
-        .flat_map(|spec| spec.domains.iter().map(|d| spec.domain_name(d)))
-        .collect();
-    let actual: Vec<&str> = v3::all().iter().map(|e| e.domain()).collect();
-    assert_eq!(
-        actual, expected,
-        "v3::all() must list every CATALOG domain, in catalog order"
-    );
-}
 
 /// The *published* JSON Schemas must agree with the catalog: each domain's
 /// schema `required` list is exactly envelope + catalog term keys — the
@@ -64,6 +52,30 @@ fn schema_required_keys_match_catalog_terms() {
             );
         }
     }
+}
+
+/// `v3::all()` must list exactly the catalog domains, in catalog order. The
+/// generated `inventory.rs` makes this structurally true, but the only cargo-
+/// level guard was `schema_required_keys_match_catalog_terms`, which iterates
+/// CATALOG and *finds* each entry — it catches a missing entry but neither an
+/// extra entry nor a wrong order. (The byte-parity gate in eql-codegen covers
+/// the generated `inventory.rs` source; this covers the actually-compiled
+/// `all()` at the eql-bindings level.) A direct ordered `assert_eq!` restores
+/// both directions, the regression dropped when `inventory_exactly_covers_catalog`
+/// was removed (commit 27c200c4).
+#[test]
+fn inventory_exactly_covers_catalog_in_order() {
+    let expected: Vec<String> = CATALOG
+        .iter()
+        .flat_map(|spec| spec.domains.iter().map(move |d| spec.domain_name(d)))
+        .collect();
+    let actual: Vec<String> = v3::all().iter().map(|e| e.domain().to_string()).collect();
+    assert_eq!(
+        actual, expected,
+        "v3::all() must list exactly the catalog domains in catalog order \
+         (extra/missing entry or reordering) — regenerate with \
+         `mise run types:generate` and commit inventory.rs"
+    );
 }
 
 /// The published `$id` is the schema's identity URL — `tests/export.rs`
