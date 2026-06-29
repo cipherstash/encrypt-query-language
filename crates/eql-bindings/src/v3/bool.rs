@@ -12,7 +12,7 @@
 //! trivially leak the plaintext distribution. The payload is `{v,i,c}` only —
 //! no `hm`/`ob`/`bf` — and every operator on the domain is blocked.
 
-use schemars::{schema::RootSchema, schema_for};
+use schemars::{schema_for, Schema};
 
 use crate::v3::terms::Ciphertext;
 use crate::v3::DomainType;
@@ -44,7 +44,7 @@ impl DomainType for Bool {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(Bool)
     }
 }

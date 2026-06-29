@@ -9,7 +9,7 @@
 //! length, the 12-block `ob` term orders correctly and the ordered domains
 //! ship. The wire shape is unchanged — the `ob` array just carries 12 blocks.
 
-use schemars::{schema::RootSchema, schema_for};
+use schemars::{schema_for, Schema};
 
 use crate::v3::terms::{Ciphertext, Hmac256, OreBlock256};
 use crate::v3::DomainType;
@@ -41,7 +41,7 @@ impl DomainType for Timestamptz {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(Timestamptz)
     }
 }
@@ -71,7 +71,7 @@ impl DomainType for TimestamptzEq {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(TimestamptzEq)
     }
 }
@@ -101,7 +101,7 @@ impl DomainType for TimestamptzOrdOre {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(TimestamptzOrdOre)
     }
 }
@@ -131,7 +131,7 @@ impl DomainType for TimestamptzOrd {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(TimestamptzOrd)
     }
 }

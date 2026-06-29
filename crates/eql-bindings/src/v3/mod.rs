@@ -46,7 +46,7 @@
 
 use std::marker::PhantomData;
 
-use schemars::{schema::RootSchema, schema_for, JsonSchema};
+use schemars::{schema_for, JsonSchema, Schema};
 
 pub mod bool;
 pub mod date;
@@ -108,7 +108,7 @@ pub trait DomainType {
     }
 
     /// The type's JSON Schema.
-    fn schema(&self) -> RootSchema;
+    fn schema(&self) -> Schema;
 }
 
 /// Type-level handle: lets [`all`] enumerate the domain types without
@@ -127,7 +127,7 @@ where
         T::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(T)
     }
 }

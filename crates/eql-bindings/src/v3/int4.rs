@@ -7,7 +7,7 @@
 //! | [`Int4OrdOre`] | `eql_v3.int4_ord_ore`  | `v` `i` `c` `ob`   | `=` `<>` `<` `<=` `>` `>=` |
 //! | [`Int4Ord`]    | `eql_v3.int4_ord`      | `v` `i` `c` `ob`   | `=` `<>` `<` `<=` `>` `>=` |
 
-use schemars::{schema::RootSchema, schema_for};
+use schemars::{schema_for, Schema};
 
 use crate::v3::terms::{Ciphertext, Hmac256, OreBlock256};
 use crate::v3::DomainType;
@@ -39,7 +39,7 @@ impl DomainType for Int4 {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(Int4)
     }
 }
@@ -69,7 +69,7 @@ impl DomainType for Int4Eq {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(Int4Eq)
     }
 }
@@ -101,7 +101,7 @@ impl DomainType for Int4OrdOre {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(Int4OrdOre)
     }
 }
@@ -131,7 +131,7 @@ impl DomainType for Int4Ord {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(Int4Ord)
     }
 }

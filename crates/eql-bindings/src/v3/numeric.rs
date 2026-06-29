@@ -8,7 +8,7 @@
 //! more block strings — and the generalized `eql_v3.ore_block_256` comparator
 //! orders any block count, so no new type is needed here.
 
-use schemars::{schema::RootSchema, schema_for};
+use schemars::{schema_for, Schema};
 
 use crate::v3::terms::{Ciphertext, Hmac256, OreBlock256};
 use crate::v3::DomainType;
@@ -40,7 +40,7 @@ impl DomainType for Numeric {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(Numeric)
     }
 }
@@ -70,7 +70,7 @@ impl DomainType for NumericEq {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(NumericEq)
     }
 }
@@ -100,7 +100,7 @@ impl DomainType for NumericOrdOre {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(NumericOrdOre)
     }
 }
@@ -130,7 +130,7 @@ impl DomainType for NumericOrd {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(NumericOrd)
     }
 }

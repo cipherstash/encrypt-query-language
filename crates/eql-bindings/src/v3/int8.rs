@@ -1,7 +1,7 @@
 //! The `int8` encrypted-domain family. Same four-domain ordered shape as
 //! [`crate::v3::int4`] — see that module for the capability table.
 
-use schemars::{schema::RootSchema, schema_for};
+use schemars::{schema_for, Schema};
 
 use crate::v3::terms::{Ciphertext, Hmac256, OreBlock256};
 use crate::v3::DomainType;
@@ -33,7 +33,7 @@ impl DomainType for Int8 {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(Int8)
     }
 }
@@ -63,7 +63,7 @@ impl DomainType for Int8Eq {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(Int8Eq)
     }
 }
@@ -93,7 +93,7 @@ impl DomainType for Int8OrdOre {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(Int8OrdOre)
     }
 }
@@ -123,7 +123,7 @@ impl DomainType for Int8Ord {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(Int8Ord)
     }
 }

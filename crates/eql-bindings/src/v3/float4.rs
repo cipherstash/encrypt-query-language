@@ -13,7 +13,7 @@
 //! server-side — reject it client-side** caveat) is identical to `float8`; see
 //! [`crate::v3::float8`] for the full note.
 
-use schemars::{schema::RootSchema, schema_for};
+use schemars::{schema_for, Schema};
 
 use crate::v3::terms::{Ciphertext, Hmac256, OreBlock256};
 use crate::v3::DomainType;
@@ -45,7 +45,7 @@ impl DomainType for Float4 {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(Float4)
     }
 }
@@ -75,7 +75,7 @@ impl DomainType for Float4Eq {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(Float4Eq)
     }
 }
@@ -105,7 +105,7 @@ impl DomainType for Float4OrdOre {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(Float4OrdOre)
     }
 }
@@ -135,7 +135,7 @@ impl DomainType for Float4Ord {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(Float4Ord)
     }
 }

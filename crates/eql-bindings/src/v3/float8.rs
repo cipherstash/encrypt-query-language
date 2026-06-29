@@ -22,7 +22,7 @@
 //! rather than being excluded the way native Postgres `double precision` would.
 //! See the `float_special` regression suite for the locked behaviour.
 
-use schemars::{schema::RootSchema, schema_for};
+use schemars::{schema_for, Schema};
 
 use crate::v3::terms::{Ciphertext, Hmac256, OreBlock256};
 use crate::v3::DomainType;
@@ -54,7 +54,7 @@ impl DomainType for Float8 {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(Float8)
     }
 }
@@ -84,7 +84,7 @@ impl DomainType for Float8Eq {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(Float8Eq)
     }
 }
@@ -114,7 +114,7 @@ impl DomainType for Float8OrdOre {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(Float8OrdOre)
     }
 }
@@ -144,7 +144,7 @@ impl DomainType for Float8Ord {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(Float8Ord)
     }
 }

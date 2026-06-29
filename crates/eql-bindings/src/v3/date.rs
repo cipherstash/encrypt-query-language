@@ -3,7 +3,7 @@
 //! ciphertext, so dates order like integers); see that module for the
 //! capability table.
 
-use schemars::{schema::RootSchema, schema_for};
+use schemars::{schema_for, Schema};
 
 use crate::v3::terms::{Ciphertext, Hmac256, OreBlock256};
 use crate::v3::DomainType;
@@ -35,7 +35,7 @@ impl DomainType for Date {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(Date)
     }
 }
@@ -65,7 +65,7 @@ impl DomainType for DateEq {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(DateEq)
     }
 }
@@ -95,7 +95,7 @@ impl DomainType for DateOrdOre {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(DateOrdOre)
     }
 }
@@ -125,7 +125,7 @@ impl DomainType for DateOrd {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(DateOrd)
     }
 }

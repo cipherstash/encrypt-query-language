@@ -43,13 +43,14 @@ fn schema_required_keys_match_catalog_terms() {
                 .find(|e| e.domain() == name)
                 .unwrap_or_else(|| panic!("no domain inventory entry for {name}"));
 
-            let schema = entry.schema();
-            let object = schema
-                .schema
-                .object
-                .as_ref()
-                .unwrap_or_else(|| panic!("{name}: schema is not an object"));
-            let required: BTreeSet<&str> = object.required.iter().map(String::as_str).collect();
+            let schema: Value = serde_json::to_value(entry.schema())
+                .unwrap_or_else(|e| panic!("{name}: schema does not serialize: {e}"));
+            let required: BTreeSet<&str> = schema["required"]
+                .as_array()
+                .unwrap_or_else(|| panic!("{name}: schema has no required array"))
+                .iter()
+                .map(|v| v.as_str().expect("required entry is a string"))
+                .collect();
 
             let expected: BTreeSet<&str> = ENVELOPE_KEYS
                 .iter()
@@ -125,18 +126,18 @@ fn schemas_are_strict() {
              (struct lost #[serde(deny_unknown_fields)]?)"
         );
         assert_eq!(
-            schema.pointer("/definitions/Identifier/additionalProperties"),
+            schema.pointer("/$defs/Identifier/additionalProperties"),
             Some(&json!(false)),
             "{name}: Identifier definition must set additionalProperties: false"
         );
         assert_eq!(
-            schema.pointer("/properties/v/allOf/0/$ref"),
-            Some(&json!("#/definitions/SchemaVersion")),
+            schema.pointer("/properties/v/$ref"),
+            Some(&json!("#/$defs/SchemaVersion")),
             "{name}: the v property must $ref the SchemaVersion definition \
              (field declared as a bare integer instead of SchemaVersion?)"
         );
         assert_eq!(
-            schema.pointer("/definitions/SchemaVersion/const"),
+            schema.pointer("/$defs/SchemaVersion/const"),
             Some(&json!(EQL_SCHEMA_VERSION)),
             "{name}: SchemaVersion must pin const: {EQL_SCHEMA_VERSION}"
         );

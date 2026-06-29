@@ -1,14 +1,11 @@
 {
-  "$id": "https://schemas.cipherstash.com/eql/v3/text_match.json",
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "additionalProperties": false,
-  "definitions": {
+  "$defs": {
     "BloomFilter": {
       "description": "Bloom-filter match term — the `bf` wire key. Backs the `_match` domains (`@>`/`<@` containment). Signed i16: EQL stores the filter as PostgreSQL `smallint[]`, and filters sized above 32768 emit upper-half bit positions as negative signed values.",
       "items": {
         "format": "int16",
-        "maximum": 32767.0,
-        "minimum": -32768.0,
+        "maximum": 32767,
+        "minimum": -32768,
         "type": "integer"
       },
       "type": "array"
@@ -31,8 +28,8 @@
         }
       },
       "required": [
-        "c",
-        "t"
+        "t",
+        "c"
       ],
       "type": "object"
     },
@@ -42,46 +39,33 @@
       "type": "integer"
     }
   },
+  "$id": "https://schemas.cipherstash.com/eql/v3/text_match.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
   "description": "`eql_v3.text_match` — Bloom-filter containment match.",
   "properties": {
     "bf": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/BloomFilter"
-        }
-      ],
+      "$ref": "#/$defs/BloomFilter",
       "description": "Bloom-filter match term (signed smallint bit positions)."
     },
     "c": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/Ciphertext"
-        }
-      ],
+      "$ref": "#/$defs/Ciphertext",
       "description": "mp_base85 source ciphertext. Required by the domain CHECK."
     },
     "i": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/Identifier"
-        }
-      ],
+      "$ref": "#/$defs/Identifier",
       "description": "Table/column identifier. Required by the domain CHECK."
     },
     "v": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/SchemaVersion"
-        }
-      ],
-      "description": "Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other value fails deserialization."
+      "$ref": "#/$defs/SchemaVersion",
+      "description": "Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other\nvalue fails deserialization."
     }
   },
   "required": [
-    "bf",
-    "c",
+    "v",
     "i",
-    "v"
+    "c",
+    "bf"
   ],
   "title": "TextMatch",
   "type": "object"

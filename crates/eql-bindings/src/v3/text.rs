@@ -2,7 +2,7 @@
 //! [`crate::v3::int4`] plus a `_match` domain backed by the Bloom-filter
 //! term (`@>`/`<@` containment for `LIKE`-style matching).
 
-use schemars::{schema::RootSchema, schema_for};
+use schemars::{schema_for, Schema};
 
 use crate::v3::terms::{BloomFilter, Ciphertext, Hmac256, OreBlock256};
 use crate::v3::DomainType;
@@ -34,7 +34,7 @@ impl DomainType for Text {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(Text)
     }
 }
@@ -64,7 +64,7 @@ impl DomainType for TextEq {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(TextEq)
     }
 }
@@ -94,7 +94,7 @@ impl DomainType for TextMatch {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(TextMatch)
     }
 }
@@ -129,7 +129,7 @@ impl DomainType for TextOrdOre {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(TextOrdOre)
     }
 }
@@ -163,7 +163,7 @@ impl DomainType for TextOrd {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(TextOrd)
     }
 }
@@ -199,7 +199,7 @@ impl DomainType for TextSearch {
         Self::sql_domain_static()
     }
 
-    fn schema(&self) -> RootSchema {
+    fn schema(&self) -> Schema {
         schema_for!(TextSearch)
     }
 }

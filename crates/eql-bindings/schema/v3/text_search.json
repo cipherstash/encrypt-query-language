@@ -1,14 +1,11 @@
 {
-  "$id": "https://schemas.cipherstash.com/eql/v3/text_search.json",
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "additionalProperties": false,
-  "definitions": {
+  "$defs": {
     "BloomFilter": {
       "description": "Bloom-filter match term — the `bf` wire key. Backs the `_match` domains (`@>`/`<@` containment). Signed i16: EQL stores the filter as PostgreSQL `smallint[]`, and filters sized above 32768 emit upper-half bit positions as negative signed values.",
       "items": {
         "format": "int16",
-        "maximum": 32767.0,
-        "minimum": -32768.0,
+        "maximum": 32767,
+        "minimum": -32768,
         "type": "integer"
       },
       "type": "array"
@@ -18,7 +15,7 @@
       "type": "string"
     },
     "Hmac256": {
-      "description": "HMAC-SHA-256 equality term — the `hm` wire key. Backs the `_eq` domains (`=`, `<>`). SQL-side constructor: `eql_v3.hmac_256`.",
+      "description": "HMAC-SHA-256 equality term — the `hm` wire key. Backs the `_eq` domains\n(`=`, `<>`). SQL-side constructor: `eql_v3.hmac_256`.",
       "type": "string"
     },
     "Identifier": {
@@ -35,13 +32,13 @@
         }
       },
       "required": [
-        "c",
-        "t"
+        "t",
+        "c"
       ],
       "type": "object"
     },
     "OreBlock256": {
-      "description": "Block-ORE order term — the `ob` wire key. Backs the `_ord` / `_ord_ore` domains (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's domain, so it serves equality too. The block count is width-agnostic on the wire (8 for the int scalars, 12 for timestamptz, 14 for numeric) — the array just carries more block strings. SQL-side constructor: `eql_v3.ore_block_256`.",
+      "description": "Block-ORE order term — the `ob` wire key. Backs the `_ord` / `_ord_ore`\ndomains (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's\ndomain, so it serves equality too. The block count is width-agnostic on the\nwire (8 for the int scalars, 12 for timestamptz, 14 for numeric) — the\narray just carries more block strings. SQL-side constructor:\n`eql_v3.ore_block_256`.",
       "items": {
         "type": "string"
       },
@@ -53,64 +50,43 @@
       "type": "integer"
     }
   },
-  "description": "`eql_v3.text_search` — the full text search surface: HMAC equality, ORE ordering, and Bloom-filter containment match (`[Hm, Ore, Bloom]`). The superset domain combining `_eq`, `_ord`, and `_match`.",
+  "$id": "https://schemas.cipherstash.com/eql/v3/text_search.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "`eql_v3.text_search` — the full text search surface: HMAC equality, ORE\nordering, and Bloom-filter containment match (`[Hm, Ore, Bloom]`). The\nsuperset domain combining `_eq`, `_ord`, and `_match`.",
   "properties": {
     "bf": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/BloomFilter"
-        }
-      ],
+      "$ref": "#/$defs/BloomFilter",
       "description": "Bloom-filter match term (signed smallint bit positions)."
     },
     "c": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/Ciphertext"
-        }
-      ],
+      "$ref": "#/$defs/Ciphertext",
       "description": "mp_base85 source ciphertext. Required by the domain CHECK."
     },
     "hm": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/Hmac256"
-        }
-      ],
+      "$ref": "#/$defs/Hmac256",
       "description": "HMAC-SHA-256 equality term."
     },
     "i": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/Identifier"
-        }
-      ],
+      "$ref": "#/$defs/Identifier",
       "description": "Table/column identifier. Required by the domain CHECK."
     },
     "ob": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/OreBlock256"
-        }
-      ],
+      "$ref": "#/$defs/OreBlock256",
       "description": "Block-ORE order term."
     },
     "v": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/SchemaVersion"
-        }
-      ],
-      "description": "Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other value fails deserialization."
+      "$ref": "#/$defs/SchemaVersion",
+      "description": "Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other\nvalue fails deserialization."
     }
   },
   "required": [
-    "bf",
+    "v",
+    "i",
     "c",
     "hm",
-    "i",
     "ob",
-    "v"
+    "bf"
   ],
   "title": "TextSearch",
   "type": "object"
