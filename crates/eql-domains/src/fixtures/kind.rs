@@ -1,8 +1,72 @@
-//! Inherent impls for the scalar-kind vocabulary: [`BoundedIntKind`] (the total
-//! accessors for fixed-width integer kinds) and [`ScalarKind`] (the native
-//! scalar a domain maps onto). Definitions live in `lib.rs`.
+//! [`ScalarKind`] / [`BoundedIntKind`] — the native scalar a domain maps onto
+//! plus the total fixed-width-integer accessors. Defs and impls co-located here
+//! (the fixture-layer vocabulary).
 
-use crate::{BoundedIntKind, ScalarKind};
+/// The fixed-width integer kinds — exactly those scalar kinds with an `i128`
+/// range and `MIN`/`MAX`/`Zero` sentinels. These accessors are **total**: every
+/// variant answers every method. Non-integer kinds (`Numeric`/`Text`/`Jsonb`/
+/// `Date`) are simply not representable here, so there is no partial function to
+/// panic — `ScalarKind::Date` cannot call `min_symbol()` because `Date` is not a
+/// `BoundedIntKind`. Reach this type from a `ScalarKind` via
+/// [`ScalarKind::as_bounded_int`]. (Accessors are impl'd below.)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BoundedIntKind {
+    I16,
+    I32,
+    I64,
+}
+
+/// The native scalar a domain type maps onto. Integer kinds carry i128 bounds;
+/// the others (`Numeric`/`Text`/`Jsonb`) have string fixtures and no numeric
+/// range — though `Numeric`/`Text` are still ORE-orderable, only `Jsonb` is not.
+/// Capability layer only: `CATALOG` declares which kinds actually exist.
+///
+/// The bounded-numeric accessors live on the total [`BoundedIntKind`], reached
+/// via [`ScalarKind::as_bounded_int`]; non-integer kinds have no such accessor,
+/// so misuse is a compile error rather than a runtime panic. (Accessors are
+/// impl'd below.)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScalarKind {
+    I16,
+    I32,
+    I64,
+    Numeric,
+    Text,
+    Jsonb,
+    /// Calendar date (`chrono::NaiveDate`). Ordered like the integer kinds via
+    /// ORE, but string-backed (ISO-8601) at the catalog layer and with no i128
+    /// range — so it is *not* `is_int()` and `as_bounded_int()` returns `None`
+    /// for it, like the other non-integer kinds. The bounded-numeric accessors
+    /// live on `BoundedIntKind`, which `Date` cannot be, so they are
+    /// unreachable for it by construction rather than by a runtime panic.
+    Date,
+    /// UTC timestamp (`chrono::DateTime<Utc>`). Ordered like the integer kinds
+    /// via ORE, but string-backed (RFC3339) at the catalog layer and with no
+    /// i128 range — so it is *not* `is_int()` and the bounded-numeric accessors
+    /// panic for it, exactly like the other non-integer kinds. UTC-normalized:
+    /// cipherstash has no tz-preserving type, so it maps to the `timestamp`
+    /// cast and the SQL `timestamp with time zone` plaintext type.
+    Timestamptz,
+    /// Boolean (`bool`). **Encryption-only / storage-only**: it carries no index
+    /// term and is *not* `is_int()`/`is_temporal()`/`is_text()`. A two-value
+    /// column has such low cardinality that any searchable index (even HMAC
+    /// equality) would trivially leak the plaintext distribution, so the catalog
+    /// gives `bool` a single term-less storage domain and no `_eq`/`_ord` — the
+    /// value is encrypted at rest and decrypted by the proxy, never searched
+    /// server-side. Like the other non-integer kinds, the bounded-numeric
+    /// accessors are unreachable for it by construction.
+    Bool,
+    /// 32-bit IEEE-754 binary float (`f32`, Postgres `real`/`float4`).
+    /// Ordered like the integer kinds via ORE, but with no i128 range
+    /// (`as_bounded_int()` returns `None`) and string-backed at the catalog
+    /// layer. Encrypts through the single f64 float crypto path
+    /// (`Plaintext::Float`) — the f32→f64 widening is exact and monotonic.
+    F32,
+    /// 64-bit IEEE-754 binary float (`f64`, Postgres `double precision`/
+    /// `float8`). The native width of the float crypto path (`F32` widens into
+    /// it); otherwise classified exactly like [`ScalarKind::F32`].
+    F64,
+}
 
 impl BoundedIntKind {
     /// The Rust type name as it appears in generated source (e.g. `"i32"`).
