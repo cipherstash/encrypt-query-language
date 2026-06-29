@@ -198,7 +198,8 @@ pub fn render_aggregates_file(family_name: &str, domain: &Domain) -> Option<Stri
 }
 
 use crate::writer::{
-    clean_generated_files, ensure_generated_paths_writable, write_generated_file, WriteError,
+    clean_generated_files, ensure_generated_paths_writable, write_generated_file, GeneratedKind,
+    WriteError,
 };
 
 /// Regenerate every generated file for one type into `out_dir`.
@@ -214,28 +215,36 @@ pub fn generate_type(spec: &DomainFamily, out_dir: &Path) -> Result<Vec<PathBuf>
             targets.push(out_dir.join(format!("{name}_aggregates.sql")));
         }
     }
-    ensure_generated_paths_writable(&targets)?;
-    clean_generated_files(out_dir)?;
+    ensure_generated_paths_writable(&targets, GeneratedKind::Sql)?;
+    clean_generated_files(out_dir, GeneratedKind::Sql)?;
 
     let mut written: Vec<PathBuf> = Vec::new();
 
     let types_path = out_dir.join(format!("{family_name}_types.sql"));
-    write_generated_file(&types_path, &render_types_file(spec))?;
+    write_generated_file(&types_path, &render_types_file(spec), GeneratedKind::Sql)?;
     written.push(types_path);
 
     for d in spec.domains {
         let name = d.full_name(family_name);
         let fn_path = out_dir.join(format!("{name}_functions.sql"));
-        write_generated_file(&fn_path, &render_functions_file(family_name, d))?;
+        write_generated_file(
+            &fn_path,
+            &render_functions_file(family_name, d),
+            GeneratedKind::Sql,
+        )?;
         written.push(fn_path);
 
         let op_path = out_dir.join(format!("{name}_operators.sql"));
-        write_generated_file(&op_path, &render_operators_file(family_name, d))?;
+        write_generated_file(
+            &op_path,
+            &render_operators_file(family_name, d),
+            GeneratedKind::Sql,
+        )?;
         written.push(op_path);
 
         if let Some(agg) = render_aggregates_file(family_name, d) {
             let agg_path = out_dir.join(format!("{name}_aggregates.sql"));
-            write_generated_file(&agg_path, &agg)?;
+            write_generated_file(&agg_path, &agg, GeneratedKind::Sql)?;
             written.push(agg_path);
         }
     }

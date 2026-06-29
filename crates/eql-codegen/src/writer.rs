@@ -4,11 +4,33 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::consts::AUTO_GENERATED_MARKER;
+use crate::consts::{AUTO_GENERATED_MARKER, RUST_GENERATED_MARKER};
 
-/// First line of the SQL header — the ownership marker.
-const fn sql_marker() -> &'static str {
-    AUTO_GENERATED_MARKER
+/// Which generated-file family a writer call targets — selects the ownership
+/// marker and the cleanup file extension so one writer serves both the SQL
+/// surface (`generate.rs`) and the Rust bindings (`bindings.rs`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GeneratedKind {
+    Sql,
+    Rust,
+}
+
+impl GeneratedKind {
+    /// The exact first-line ownership marker for this kind.
+    pub const fn marker(self) -> &'static str {
+        match self {
+            GeneratedKind::Sql => AUTO_GENERATED_MARKER,
+            GeneratedKind::Rust => RUST_GENERATED_MARKER,
+        }
+    }
+
+    /// The file extension `clean_generated_files` filters on for this kind.
+    pub const fn extension(self) -> &'static str {
+        match self {
+            GeneratedKind::Sql => "sql",
+            GeneratedKind::Rust => "rs",
+        }
+    }
 }
 
 /// Raised when the generator would clobber a hand-written file, or on an
@@ -32,25 +54,27 @@ fn first_line(path: &Path) -> io::Result<String> {
         .to_string())
 }
 
-/// True if the file carries the SQL AUTO-GENERATED marker. Port of `is_generated`.
-pub fn is_generated(path: &Path) -> bool {
-    path.is_file() && first_line(path).map(|l| l == sql_marker()).unwrap_or(false)
+/// True if the file carries this kind's AUTO-GENERATED marker as line 1.
+pub fn is_generated(path: &Path, kind: GeneratedKind) -> bool {
+    path.is_file()
+        && first_line(path)
+            .map(|l| l == kind.marker())
+            .unwrap_or(false)
 }
 
-/// Delete every generated .sql file in `directory`, returning removed paths.
-/// Port of `clean_generated_files`.
-pub fn clean_generated_files(directory: &Path) -> io::Result<Vec<PathBuf>> {
+/// Delete every generated file of `kind` in `directory`, returning removed paths.
+pub fn clean_generated_files(directory: &Path, kind: GeneratedKind) -> io::Result<Vec<PathBuf>> {
     if !directory.is_dir() {
         return Ok(Vec::new());
     }
     let mut paths: Vec<PathBuf> = fs::read_dir(directory)?
         .filter_map(|e| e.ok().map(|e| e.path()))
-        .filter(|p| p.extension().and_then(|x| x.to_str()) == Some("sql"))
+        .filter(|p| p.extension().and_then(|x| x.to_str()) == Some(kind.extension()))
         .collect();
     paths.sort();
     let mut removed = Vec::new();
     for p in paths {
-        if is_generated(&p) {
+        if is_generated(&p, kind) {
             fs::remove_file(&p)?;
             removed.push(p);
         }
@@ -58,43 +82,45 @@ pub fn clean_generated_files(directory: &Path) -> io::Result<Vec<PathBuf>> {
     Ok(removed)
 }
 
-/// Refuse a generation run if any target is hand-written. Port of
-/// `ensure_generated_paths_writable`.
-pub fn ensure_generated_paths_writable(paths: &[PathBuf]) -> Result<(), WriteError> {
+/// Refuse a generation run if any target is hand-written (lacks this kind's marker).
+pub fn ensure_generated_paths_writable(
+    paths: &[PathBuf],
+    kind: GeneratedKind,
+) -> Result<(), WriteError> {
     for path in paths {
-        if path.exists() && !is_generated(path) {
+        if path.exists() && !is_generated(path, kind) {
             return Err(WriteError::Ownership(format!(
-                "refusing to overwrite hand-written file: {} (no AUTO-GENERATED header). \
+                "refusing to overwrite hand-written file: {} (no {:?} AUTO-GENERATED header). \
                  Remove it by hand if it is a one-time generator-adoption target.",
-                path.display()
+                path.display(),
+                kind
             )));
         }
     }
     Ok(())
 }
 
-/// Write the rendered SQL `body` to `path`, after refusing to clobber a
-/// hand-written file. The SQL templates emit the `-- AUTOMATICALLY GENERATED
-/// FILE.` marker as their own first line, so the writer writes `body` verbatim
-/// — it does not prepend a header.
-pub fn write_generated_file(path: &Path, body: &str) -> Result<(), WriteError> {
-    ensure_generated_paths_writable(std::slice::from_ref(&path.to_path_buf()))?;
-    // The template is trusted to carry the ownership marker as its first line,
-    // but a renderer bug (or a hand-edited template) could drop it — which would
-    // then defeat `is_generated`/`clean_generated_files`, leaving an unowned file
-    // the next run refuses to overwrite. Validate the marker before writing.
+/// Write `body` to `path` after refusing to clobber a hand-written file. The
+/// renderer is trusted to carry `kind.marker()` as the first line; validate it
+/// before writing.
+pub fn write_generated_file(
+    path: &Path,
+    body: &str,
+    kind: GeneratedKind,
+) -> Result<(), WriteError> {
+    ensure_generated_paths_writable(std::slice::from_ref(&path.to_path_buf()), kind)?;
     let first = body
         .lines()
         .next()
         .unwrap_or("")
         .trim_end_matches(['\r', '\n']);
-    if first != sql_marker() {
+    if first != kind.marker() {
         return Err(WriteError::Ownership(format!(
-            "refusing to write generated file without the AUTO-GENERATED marker as its \
-             first line: {} (expected first line {:?}, got {:?}). The SQL template must \
-             emit the marker.",
+            "refusing to write generated file without the {:?} AUTO-GENERATED marker as its \
+             first line: {} (expected first line {:?}, got {:?}).",
+            kind,
             path.display(),
-            sql_marker(),
+            kind.marker(),
             first
         )));
     }
@@ -142,11 +168,42 @@ mod tests {
     use super::*;
 
     #[test]
+    fn is_generated_recognises_rust_marker_and_ignores_sql_in_rs() {
+        use crate::consts::RUST_GENERATED_MARKER;
+        let d = tmp();
+        let rs = d.path().join("int4.rs");
+        fs::write(&rs, format!("{RUST_GENERATED_MARKER}\npub struct Int4;\n")).unwrap();
+        assert!(is_generated(&rs, GeneratedKind::Rust));
+        assert!(!is_generated(&rs, GeneratedKind::Sql));
+    }
+
+    #[test]
+    fn clean_filters_by_kind_extension() {
+        use crate::consts::RUST_GENERATED_MARKER;
+        let d = tmp();
+        let gen_rs = d.path().join("int4.rs");
+        let gen_sql = d.path().join("int4_types.sql");
+        let hand_rs = d.path().join("terms.rs");
+        fs::write(
+            &gen_rs,
+            format!("{RUST_GENERATED_MARKER}\npub struct Int4;\n"),
+        )
+        .unwrap();
+        fs::write(&gen_sql, format!("{AUTO_GENERATED_MARKER}\nSELECT 1;\n")).unwrap();
+        fs::write(&hand_rs, "//! hand-written\npub struct Terms;\n").unwrap();
+        let removed = clean_generated_files(d.path(), GeneratedKind::Rust).unwrap();
+        assert!(!gen_rs.exists());
+        assert!(gen_sql.exists(), "different kind, untouched");
+        assert!(hand_rs.exists(), "no marker, kept");
+        assert_eq!(removed.len(), 1);
+    }
+
+    #[test]
     fn is_generated_true_for_header() {
         let d = tmp();
         let p = d.path().join("x.sql");
         fs::write(&p, format!("{AUTO_GENERATED_MARKER}\nSELECT 1;\n")).unwrap();
-        assert!(is_generated(&p));
+        assert!(is_generated(&p, GeneratedKind::Sql));
     }
 
     #[test]
@@ -154,16 +211,16 @@ mod tests {
         let d = tmp();
         let p = d.path().join("x.sql");
         fs::write(&p, "-- REQUIRE: src/schema.sql\nSELECT 1;\n").unwrap();
-        assert!(!is_generated(&p));
+        assert!(!is_generated(&p, GeneratedKind::Sql));
     }
 
     #[test]
     fn is_generated_true_for_crlf_header() {
         let d = tmp();
         let p = d.path().join("x.sql");
-        let marker = sql_marker();
+        let marker = GeneratedKind::Sql.marker();
         fs::write(&p, format!("{marker}\r\nSELECT 1;\n")).unwrap();
-        assert!(is_generated(&p));
+        assert!(is_generated(&p, GeneratedKind::Sql));
     }
 
     #[test]
@@ -173,10 +230,10 @@ mod tests {
         // The template render carries the marker on line 1; the writer writes it
         // through unchanged.
         let body = format!("{AUTO_GENERATED_MARKER}\nDO $$ BEGIN END $$;\n");
-        write_generated_file(&p, &body).unwrap();
+        write_generated_file(&p, &body, GeneratedKind::Sql).unwrap();
         let text = fs::read_to_string(&p).unwrap();
         assert_eq!(text, body);
-        assert!(is_generated(&p));
+        assert!(is_generated(&p, GeneratedKind::Sql));
     }
 
     #[test]
@@ -186,7 +243,7 @@ mod tests {
         // A body whose first line is NOT the AUTO-GENERATED marker must be
         // rejected — the template is required to emit it.
         let body = "-- REQUIRE: src/v3/schema.sql\nDO $$ BEGIN END $$;\n";
-        let err = write_generated_file(&p, body).unwrap_err();
+        let err = write_generated_file(&p, body, GeneratedKind::Sql).unwrap_err();
         assert!(matches!(err, WriteError::Ownership(_)));
         assert!(err.to_string().contains("AUTO-GENERATED marker"));
         assert!(
@@ -200,7 +257,8 @@ mod tests {
         let d = tmp();
         let p = d.path().join("int4_types.sql");
         fs::write(&p, "-- REQUIRE: src/schema.sql\n-- hand-written\n").unwrap();
-        let err = write_generated_file(&p, "DO $$ BEGIN END $$;\n").unwrap_err();
+        let err =
+            write_generated_file(&p, "DO $$ BEGIN END $$;\n", GeneratedKind::Sql).unwrap_err();
         assert!(matches!(err, WriteError::Ownership(_)));
         assert!(err.to_string().contains("hand-written"));
     }
@@ -216,7 +274,9 @@ mod tests {
         )
         .unwrap();
         fs::write(&hand, "-- REQUIRE: src/schema.sql\n-- hand-written\n").unwrap();
-        let err = ensure_generated_paths_writable(&[generated.clone(), hand.clone()]).unwrap_err();
+        let err =
+            ensure_generated_paths_writable(&[generated.clone(), hand.clone()], GeneratedKind::Sql)
+                .unwrap_err();
         assert!(err.to_string().contains("int4_eq_functions.sql"));
         assert!(generated.exists());
         assert!(hand.exists());
@@ -227,7 +287,12 @@ mod tests {
         let d = tmp();
         let p = d.path().join("int4_types.sql");
         fs::write(&p, format!("{AUTO_GENERATED_MARKER}\n-- old content\n")).unwrap();
-        write_generated_file(&p, &format!("{AUTO_GENERATED_MARKER}\n-- new content\n")).unwrap();
+        write_generated_file(
+            &p,
+            &format!("{AUTO_GENERATED_MARKER}\n-- new content\n"),
+            GeneratedKind::Sql,
+        )
+        .unwrap();
         let text = fs::read_to_string(&p).unwrap();
         assert!(text.contains("-- new content"));
         assert!(!text.contains("-- old content"));
@@ -242,7 +307,7 @@ mod tests {
         fs::write(&gen1, format!("{AUTO_GENERATED_MARKER}\nSELECT 1;\n")).unwrap();
         fs::write(&gen2, format!("{AUTO_GENERATED_MARKER}\nSELECT 2;\n")).unwrap();
         fs::write(&hand, "-- REQUIRE: src/schema.sql\n-- hand-written\n").unwrap();
-        let removed = clean_generated_files(d.path()).unwrap();
+        let removed = clean_generated_files(d.path(), GeneratedKind::Sql).unwrap();
         assert!(!gen1.exists());
         assert!(!gen2.exists());
         assert!(hand.exists());
@@ -252,7 +317,9 @@ mod tests {
     #[test]
     fn clean_on_empty_directory() {
         let d = tmp();
-        assert!(clean_generated_files(d.path()).unwrap().is_empty());
+        assert!(clean_generated_files(d.path(), GeneratedKind::Sql)
+            .unwrap()
+            .is_empty());
     }
 
     #[test]
@@ -265,7 +332,7 @@ mod tests {
         fs::write(&blocker, "i am a file\n").unwrap();
         let target = blocker.join("int4_types.sql"); // parent is a file
         let body = format!("{AUTO_GENERATED_MARKER}\nDO $$ BEGIN END $$;\n");
-        let err = write_generated_file(&target, &body).unwrap_err();
+        let err = write_generated_file(&target, &body, GeneratedKind::Sql).unwrap_err();
         assert!(matches!(err, WriteError::Io(_)), "expected Io, got {err:?}");
         assert!(err.to_string().starts_with("io error: "));
     }
