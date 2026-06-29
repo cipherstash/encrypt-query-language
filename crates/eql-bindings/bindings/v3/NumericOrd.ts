@@ -5,23 +5,8 @@ import type { OreBlock256 } from "./OreBlock256";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `eql_v3.numeric_ord` — full comparison (`=` `<>` `<` `<=` `>` `>=`).
+ * `eql_v3.numeric_ord` — ordering domain.
+ *
+ * Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.
  */
-export type NumericOrd = { 
-/**
- * Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
- * value fails deserialization.
- */
-v: SchemaVersion, 
-/**
- * Table/column identifier. Required by the domain CHECK.
- */
-i: Identifier, 
-/**
- * mp_base85 source ciphertext. Required by the domain CHECK.
- */
-c: Ciphertext, 
-/**
- * Block-ORE order term (14 blocks for numeric). Serves equality too.
- */
-ob: OreBlock256, };
+export type NumericOrd = { v: SchemaVersion, i: Identifier, c: Ciphertext, ob: OreBlock256, };

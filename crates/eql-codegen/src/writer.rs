@@ -54,12 +54,19 @@ fn first_line(path: &Path) -> io::Result<String> {
         .to_string())
 }
 
-/// True if the file carries this kind's AUTO-GENERATED marker as line 1.
-pub fn is_generated(path: &Path, kind: GeneratedKind) -> bool {
-    path.is_file()
-        && first_line(path)
-            .map(|l| l == kind.marker())
-            .unwrap_or(false)
+/// Whether the file carries this kind's AUTO-GENERATED marker as line 1.
+///
+/// `Ok(false)` means genuinely-not-generated and safe to write over: the path is
+/// absent or is not a regular file. An EXISTING regular file that cannot be read
+/// (EACCES, invalid UTF-8) returns `Err` rather than being silently reported as
+/// not-generated — otherwise the ownership preflight would abort with a
+/// misleading "refusing to overwrite hand-written file (no AUTO-GENERATED
+/// header)" instead of surfacing the real read failure.
+pub fn is_generated(path: &Path, kind: GeneratedKind) -> io::Result<bool> {
+    if !path.is_file() {
+        return Ok(false);
+    }
+    Ok(first_line(path)? == kind.marker())
 }
 
 /// Delete every generated file of `kind` in `directory`, returning removed paths.
@@ -74,7 +81,7 @@ pub fn clean_generated_files(directory: &Path, kind: GeneratedKind) -> io::Resul
     paths.sort();
     let mut removed = Vec::new();
     for p in paths {
-        if is_generated(&p, kind) {
+        if is_generated(&p, kind)? {
             fs::remove_file(&p)?;
             removed.push(p);
         }
@@ -88,7 +95,7 @@ pub fn ensure_generated_paths_writable(
     kind: GeneratedKind,
 ) -> Result<(), WriteError> {
     for path in paths {
-        if path.exists() && !is_generated(path, kind) {
+        if path.exists() && !is_generated(path, kind)? {
             return Err(WriteError::Ownership(format!(
                 "refusing to overwrite hand-written file: {} (no {:?} AUTO-GENERATED header). \
                  Remove it by hand if it is a one-time generator-adoption target.",
@@ -173,8 +180,8 @@ mod tests {
         let d = tmp();
         let rs = d.path().join("int4.rs");
         fs::write(&rs, format!("{RUST_GENERATED_MARKER}\npub struct Int4;\n")).unwrap();
-        assert!(is_generated(&rs, GeneratedKind::Rust));
-        assert!(!is_generated(&rs, GeneratedKind::Sql));
+        assert!(is_generated(&rs, GeneratedKind::Rust).unwrap());
+        assert!(!is_generated(&rs, GeneratedKind::Sql).unwrap());
     }
 
     #[test]
@@ -203,7 +210,7 @@ mod tests {
         let d = tmp();
         let p = d.path().join("x.sql");
         fs::write(&p, format!("{AUTO_GENERATED_MARKER}\nSELECT 1;\n")).unwrap();
-        assert!(is_generated(&p, GeneratedKind::Sql));
+        assert!(is_generated(&p, GeneratedKind::Sql).unwrap());
     }
 
     #[test]
@@ -211,7 +218,7 @@ mod tests {
         let d = tmp();
         let p = d.path().join("x.sql");
         fs::write(&p, "-- REQUIRE: src/schema.sql\nSELECT 1;\n").unwrap();
-        assert!(!is_generated(&p, GeneratedKind::Sql));
+        assert!(!is_generated(&p, GeneratedKind::Sql).unwrap());
     }
 
     #[test]
@@ -220,7 +227,7 @@ mod tests {
         let p = d.path().join("x.sql");
         let marker = GeneratedKind::Sql.marker();
         fs::write(&p, format!("{marker}\r\nSELECT 1;\n")).unwrap();
-        assert!(is_generated(&p, GeneratedKind::Sql));
+        assert!(is_generated(&p, GeneratedKind::Sql).unwrap());
     }
 
     #[test]
@@ -233,7 +240,7 @@ mod tests {
         write_generated_file(&p, &body, GeneratedKind::Sql).unwrap();
         let text = fs::read_to_string(&p).unwrap();
         assert_eq!(text, body);
-        assert!(is_generated(&p, GeneratedKind::Sql));
+        assert!(is_generated(&p, GeneratedKind::Sql).unwrap());
     }
 
     #[test]
@@ -280,6 +287,46 @@ mod tests {
         assert!(err.to_string().contains("int4_eq_functions.sql"));
         assert!(generated.exists());
         assert!(hand.exists());
+    }
+
+    #[test]
+    fn preflight_surfaces_read_error_not_misleading_handwritten() {
+        // An EXISTING generated target that becomes unreadable (here: invalid
+        // UTF-8) must not be silently misclassified as hand-written. The old
+        // `first_line(...).unwrap_or(false)` collapsed every read error to "not
+        // generated", so the preflight aborted with the misleading "refusing to
+        // overwrite hand-written file (no AUTO-GENERATED header)". The read
+        // failure must surface distinctly instead.
+        let d = tmp();
+        let p = d.path().join("int4.rs");
+        fs::write(&p, [0xff, 0xfe, 0x00]).unwrap();
+        let err = ensure_generated_paths_writable(std::slice::from_ref(&p), GeneratedKind::Rust)
+            .unwrap_err();
+        assert!(matches!(err, WriteError::Io(_)), "expected Io, got {err:?}");
+        assert!(
+            !err.to_string().contains("hand-written"),
+            "must not report an unreadable existing file as hand-written: {err}"
+        );
+    }
+
+    #[test]
+    fn is_generated_errors_on_unreadable_existing_file() {
+        // Direct contract: an existing file that cannot be decoded is an Err,
+        // never Ok(false) (which would mean "not generated, safe to clobber").
+        let d = tmp();
+        let p = d.path().join("x.rs");
+        fs::write(&p, [0xff, 0xfe, 0x00]).unwrap();
+        let err = is_generated(&p, GeneratedKind::Rust).unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+    }
+
+    #[test]
+    fn is_generated_ok_false_for_absent_or_non_file() {
+        // NotFound / non-file paths are genuinely "not generated" (Ok(false)),
+        // distinct from a read error on an existing file.
+        let d = tmp();
+        assert!(!is_generated(&d.path().join("missing.rs"), GeneratedKind::Rust).unwrap());
+        assert!(!is_generated(d.path(), GeneratedKind::Rust).unwrap()); // a directory
     }
 
     #[test]

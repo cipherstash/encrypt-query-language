@@ -53,31 +53,25 @@
   "$id": "https://schemas.cipherstash.com/eql/v3/text_search.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "`eql_v3.text_search` — the full text search surface: HMAC equality, ORE\nordering, and Bloom-filter containment match (`[Hm, Ore, Bloom]`). The\nsuperset domain combining `_eq`, `_ord`, and `_match`.",
+  "description": "`eql_v3.text_search` — search domain.\n\nOperators: `=` `<>` `<` `<=` `>` `>=` `@>` `<@`. Required keys: `v` `i` `c` `hm` `ob` `bf`.",
   "properties": {
     "bf": {
-      "$ref": "#/$defs/BloomFilter",
-      "description": "Bloom-filter match term (signed smallint bit positions)."
+      "$ref": "#/$defs/BloomFilter"
     },
     "c": {
-      "$ref": "#/$defs/Ciphertext",
-      "description": "mp_base85 source ciphertext. Required by the domain CHECK."
+      "$ref": "#/$defs/Ciphertext"
     },
     "hm": {
-      "$ref": "#/$defs/Hmac256",
-      "description": "HMAC-SHA-256 equality term."
+      "$ref": "#/$defs/Hmac256"
     },
     "i": {
-      "$ref": "#/$defs/Identifier",
-      "description": "Table/column identifier. Required by the domain CHECK."
+      "$ref": "#/$defs/Identifier"
     },
     "ob": {
-      "$ref": "#/$defs/OreBlock256",
-      "description": "Block-ORE order term."
+      "$ref": "#/$defs/OreBlock256"
     },
     "v": {
-      "$ref": "#/$defs/SchemaVersion",
-      "description": "Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other\nvalue fails deserialization."
+      "$ref": "#/$defs/SchemaVersion"
     }
   },
   "required": [

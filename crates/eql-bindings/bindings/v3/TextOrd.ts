@@ -6,29 +6,8 @@ import type { OreBlock256 } from "./OreBlock256";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `eql_v3.text_ord` — full lexicographic comparison
- * (`=` `<>` `<` `<=` `>` `>=`). Carries both `hm` (equality) and `ob`
- * (ordering) — text routes equality through `hm` (`[Hm, Ore]`).
+ * `eql_v3.text_ord` — ordering domain.
+ *
+ * Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `hm` `ob`.
  */
-export type TextOrd = { 
-/**
- * Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
- * value fails deserialization.
- */
-v: SchemaVersion, 
-/**
- * Table/column identifier. Required by the domain CHECK.
- */
-i: Identifier, 
-/**
- * mp_base85 source ciphertext. Required by the domain CHECK.
- */
-c: Ciphertext, 
-/**
- * HMAC-SHA-256 equality term. Text routes `=`/`<>` through `hm`.
- */
-hm: Hmac256, 
-/**
- * Block-ORE order term.
- */
-ob: OreBlock256, };
+export type TextOrd = { v: SchemaVersion, i: Identifier, c: Ciphertext, hm: Hmac256, ob: OreBlock256, };

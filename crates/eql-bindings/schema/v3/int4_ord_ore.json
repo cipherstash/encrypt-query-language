@@ -39,23 +39,19 @@
   "$id": "https://schemas.cipherstash.com/eql/v3/int4_ord_ore.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "`eql_v3.int4_ord_ore` — full comparison (`=` `<>` `<` `<=` `>` `>=`),\nscheme-explicit name. Same shape as [`Int4Ord`], distinct SQL domain.",
+  "description": "`eql_v3.int4_ord_ore` — ordering domain.\n\nOperators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.",
   "properties": {
     "c": {
-      "$ref": "#/$defs/Ciphertext",
-      "description": "mp_base85 source ciphertext. Required by the domain CHECK."
+      "$ref": "#/$defs/Ciphertext"
     },
     "i": {
-      "$ref": "#/$defs/Identifier",
-      "description": "Table/column identifier. Required by the domain CHECK."
+      "$ref": "#/$defs/Identifier"
     },
     "ob": {
-      "$ref": "#/$defs/OreBlock256",
-      "description": "Block-ORE order term. Serves equality too — ORE over a\nfull-domain `int4` is lossless, so no separate `hm` is carried."
+      "$ref": "#/$defs/OreBlock256"
     },
     "v": {
-      "$ref": "#/$defs/SchemaVersion",
-      "description": "Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other\nvalue fails deserialization."
+      "$ref": "#/$defs/SchemaVersion"
     }
   },
   "required": [

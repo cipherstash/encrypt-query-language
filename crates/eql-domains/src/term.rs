@@ -113,6 +113,23 @@ impl Term {
         out
     }
 
+    /// Distinct terms keyed by `key`, first occurrence wins, order preserved.
+    /// The `Term`-returning sibling of [`Self::dedupe_preserving_order`] (which
+    /// returns the `&str` keys): [`Term::payload_terms`] keys on
+    /// [`Term::json_key`], [`Term::extractor_terms`] on [`Term::extractor`].
+    fn dedupe_terms_by(terms: &[Term], key: fn(Term) -> &'static str) -> Vec<Term> {
+        let mut seen: Vec<&str> = Vec::new();
+        let mut out: Vec<Term> = Vec::new();
+        for &t in terms {
+            let k = key(t);
+            if !seen.contains(&k) {
+                seen.push(k);
+                out.push(t);
+            }
+        }
+        out
+    }
+
     /// Supported operators for the union of a domain's terms (catalog order,
     /// deduped).
     pub fn operators_for_terms(terms: &[Term]) -> Vec<&'static str> {
@@ -130,15 +147,7 @@ impl Term {
     /// reads both the field key ([`Term::json_key`]) and its newtype
     /// ([`Term::binding_newtype`]) while matching on the enum.
     pub fn payload_terms(terms: &[Term]) -> Vec<Term> {
-        let mut seen: Vec<&str> = Vec::new();
-        let mut out: Vec<Term> = Vec::new();
-        for &t in terms {
-            if !seen.contains(&t.json_key()) {
-                seen.push(t.json_key());
-                out.push(t);
-            }
-        }
-        out
+        Self::dedupe_terms_by(terms, Term::json_key)
     }
 
     /// JSON keys whose payload must be a non-empty array across these terms
@@ -152,15 +161,7 @@ impl Term {
     /// Two terms sharing an extractor collapse to the first, since the generated
     /// `eq_term`/`ord_term`/`match_term` function is emitted once per extractor.
     pub fn extractor_terms(terms: &[Term]) -> Vec<Term> {
-        let mut seen: Vec<&str> = Vec::new();
-        let mut out: Vec<Term> = Vec::new();
-        for &t in terms {
-            if !seen.contains(&t.extractor()) {
-                seen.push(t.extractor());
-                out.push(t);
-            }
-        }
-        out
+        Self::dedupe_terms_by(terms, Term::extractor)
     }
 
     /// SQL `-- REQUIRE:` edges needed by these terms (deduped, in order).

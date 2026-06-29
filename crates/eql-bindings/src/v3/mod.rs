@@ -4,11 +4,10 @@
 //! capability-encoded design from the original int4 scalar prototype
 //! (PR #236's first cut), formalized:
 //! the SQL surface is generated from `eql-domains::CATALOG`, and these types
-//! mirror it 1:1 (enforced by `tests/catalog_parity.rs`, which fails if the
-//! catalog and [`all`] ever disagree on the set or order of domains; the
-//! catalog-derived wire-key gate is schema-based and lands with the stacked
-//! schemars change, with per-type strictness spot checks in
-//! `tests/v3_conformance.rs`).
+//! mirror it 1:1 — `all()` is generated from the same catalog (`inventory.rs`),
+//! so it cannot drift; the published JSON Schema wire contract is pinned by
+//! `tests/catalog_parity.rs` and the emitted `.ts` property order by
+//! `tests/ts_property_order.rs`.
 //!
 //! **Versioning.** "v3" is the SQL schema generation (`eql_v3.*` domains).
 //! The JSON envelope version is still `v: 2` ([`crate::EQL_SCHEMA_VERSION`]) —
@@ -26,6 +25,13 @@
 //! [`int4::Int4Eq`] and `hm` is present, guaranteed by the Rust type and
 //! (SQL-side) by the domain CHECK. A missing term key is a deserialization
 //! error — the Rust analogue of the CHECK constraint.
+//!
+//! One exception to "`ob` for `_ord`": `text`'s ordered domains carry **both**
+//! `hm` and `ob` (`text_ord`, `text_ord_ore`, `text_search`), where the integer
+//! ordered domains carry `ob` alone. Text routes `=`/`<>` through `hm` rather
+//! than the ORE term because lexicographic ORE over text is not equality-
+//! lossless, so equality needs the HMAC. The generated struct doc surfaces this
+//! structurally — its required-keys line lists `hm` `ob` rather than just `ob`.
 //!
 //! The types are also **strict**: every struct is
 //! `#[serde(deny_unknown_fields)]`, so a payload carrying keys outside the

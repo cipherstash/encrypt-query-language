@@ -39,23 +39,19 @@
   "$id": "https://schemas.cipherstash.com/eql/v3/numeric_ord_ore.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "`eql_v3.numeric_ord_ore` — full comparison, scheme-explicit name.",
+  "description": "`eql_v3.numeric_ord_ore` — ordering domain.\n\nOperators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.",
   "properties": {
     "c": {
-      "$ref": "#/$defs/Ciphertext",
-      "description": "mp_base85 source ciphertext. Required by the domain CHECK."
+      "$ref": "#/$defs/Ciphertext"
     },
     "i": {
-      "$ref": "#/$defs/Identifier",
-      "description": "Table/column identifier. Required by the domain CHECK."
+      "$ref": "#/$defs/Identifier"
     },
     "ob": {
-      "$ref": "#/$defs/OreBlock256",
-      "description": "Block-ORE order term (14 blocks for numeric). Serves equality too."
+      "$ref": "#/$defs/OreBlock256"
     },
     "v": {
-      "$ref": "#/$defs/SchemaVersion",
-      "description": "Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other\nvalue fails deserialization."
+      "$ref": "#/$defs/SchemaVersion"
     }
   },
   "required": [

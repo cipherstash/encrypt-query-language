@@ -42,23 +42,19 @@
   "$id": "https://schemas.cipherstash.com/eql/v3/text_match.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "`eql_v3.text_match` — Bloom-filter containment match.",
+  "description": "`eql_v3.text_match` — match domain.\n\nOperators: `@>` `<@`. Required keys: `v` `i` `c` `bf`.",
   "properties": {
     "bf": {
-      "$ref": "#/$defs/BloomFilter",
-      "description": "Bloom-filter match term (signed smallint bit positions)."
+      "$ref": "#/$defs/BloomFilter"
     },
     "c": {
-      "$ref": "#/$defs/Ciphertext",
-      "description": "mp_base85 source ciphertext. Required by the domain CHECK."
+      "$ref": "#/$defs/Ciphertext"
     },
     "i": {
-      "$ref": "#/$defs/Identifier",
-      "description": "Table/column identifier. Required by the domain CHECK."
+      "$ref": "#/$defs/Identifier"
     },
     "v": {
-      "$ref": "#/$defs/SchemaVersion",
-      "description": "Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other\nvalue fails deserialization."
+      "$ref": "#/$defs/SchemaVersion"
     }
   },
   "required": [

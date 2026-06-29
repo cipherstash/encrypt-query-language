@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 
-use eql_domains::{Domain, DomainFamily, Term, CATALOG};
+use eql_domains::{Domain, DomainFamily, Term, CATALOG, ENVELOPE_KEYS};
 
 use crate::consts::RUST_GENERATED_MARKER;
 use crate::writer::{
@@ -62,22 +62,13 @@ fn rustfmt(src: &str) -> String {
     String::from_utf8(out.stdout).expect("rustfmt output is UTF-8")
 }
 
-/// PascalCase a snake_case domain name: "int4_ord_ore" -> "Int4OrdOre".
-fn pascal(name: &str) -> String {
-    name.split('_')
-        .filter(|s| !s.is_empty())
-        .map(|s| {
-            let mut chars = s.chars();
-            match chars.next() {
-                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-                None => String::new(),
-            }
-        })
-        .collect()
-}
-
 /// Capability label for a domain's single catalog-derived doc line, keyed on
-/// the bare domain name. Parallels the SQL emitter's per-domain `--! @brief`.
+/// the bare domain name. The match is keyed on the `&str` bare name (finer than
+/// the typed [`eql_domains::Role`], which collapses `match`/`search` into
+/// `Ord`), so it cannot be made exhaustive at the type level. Instead the
+/// catch-all `panic!`s: an unmapped bare-domain name aborts codegen loudly,
+/// forcing a deliberate label choice rather than silently emitting generic-but-
+/// wrong doc text — preserving the "compile-checked catalog" guarantee.
 fn capability_label(domain_name: &str) -> &'static str {
     match domain_name {
         "" => "storage-only domain",
@@ -85,20 +76,68 @@ fn capability_label(domain_name: &str) -> &'static str {
         "ord" | "ord_ore" => "ordering domain",
         "match" => "match domain",
         "search" => "search domain",
-        _ => "encrypted domain",
+        other => panic!(
+            "unmapped bare domain name {other:?} — add it to capability_label \
+             in crates/eql-codegen/src/bindings.rs"
+        ),
     }
 }
 
-/// One payload struct + its three-method `DomainType` impl. One struct doc
-/// line, no field docs. Term fields come from `Term::payload_terms`, matching
-/// on the enum for the field key and its newtype. The `schema` method returns
+/// Render the catalog-derived struct doc lines for a domain: a summary line
+/// (`` `eql_v3.<name>` — <label>. ``) and a detail line listing the supported
+/// SQL operators and the required payload keys. Every part is derived from data
+/// the catalog already carries — the capability label, the operator union
+/// (`Term::operators_for_terms`), and the key list (`ENVELOPE_KEYS` ++
+/// `Term::term_json_keys`) — so it stays deterministic and cannot drift from the
+/// payload shape. No free-form prose and no field docs: per-field semantics live
+/// on the shared term newtypes (`terms.rs`) and per-family caveats in `mod.rs`.
+fn struct_doc_lines(full: &str, domain: &Domain) -> [String; 3] {
+    // Leading space matches the `///` doc-comment convention (`#[doc = " …"]`):
+    // rustfmt renders it as `/// …` and ts-rs as ` * …`. Without it the emitted
+    // JSDoc/`///` lose the space after the prefix (`*`text`). schemars strips the
+    // single leading space, so JSON Schema `description` is unaffected.
+    let summary = format!(" `eql_v3.{full}` — {}.", capability_label(domain.name));
+
+    let ops = Term::operators_for_terms(domain.terms);
+    let ops_str = if ops.is_empty() {
+        "none".to_string()
+    } else {
+        ops.iter()
+            .map(|o| format!("`{o}`"))
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+
+    let keys_str = ENVELOPE_KEYS
+        .iter()
+        .copied()
+        .chain(Term::term_json_keys(domain.terms))
+        .map(|k| format!("`{k}`"))
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    let detail = format!(" Operators: {ops_str}. Required keys: {keys_str}.");
+    // Blank middle line so rustdoc/schemars/ts-rs treat the summary as the short
+    // description and the operators/keys line as the body.
+    [summary, String::new(), detail]
+}
+
+/// One payload struct + its three-method `DomainType` impl. A catalog-derived
+/// struct doc (summary + operators + required keys — see [`struct_doc_lines`]),
+/// no field docs. Term fields come from `Term::payload_terms`, matching on the
+/// enum for the field key and its newtype. The `schema` method returns
 /// `schemars::Schema` (1.x).
 fn render_struct(family: &DomainFamily, domain: &Domain) -> TokenStream {
     let full = domain.full_name(family.name);
-    let ident = format_ident!("{}", pascal(&full));
+    let ident = format_ident!("{}", domain.struct_ident(family.name));
     let sql_domain = format!("eql_v3.{full}");
-    let sdoc = format!("`eql_v3.{full}` — {}.", capability_label(domain.name));
+    let [doc_summary, doc_blank, doc_detail] = struct_doc_lines(&full, domain);
 
+    // The envelope triple is hardcoded (not looped over `ENVELOPE_KEYS`) because
+    // each key maps to a distinct Rust type: `v: SchemaVersion`, `i: Identifier`,
+    // `c: Ciphertext`. The order and membership must stay in lockstep with
+    // `eql_domains::ENVELOPE_KEYS` — `envelope_fields_match_catalog_keys` (below)
+    // fails if that ever diverges.
     let mut fields = TokenStream::new();
     fields.extend(quote! { pub v: SchemaVersion, });
     fields.extend(quote! { pub i: Identifier, });
@@ -110,7 +149,9 @@ fn render_struct(family: &DomainFamily, domain: &Domain) -> TokenStream {
     }
 
     quote! {
-        #[doc = #sdoc]
+        #[doc = #doc_summary]
+        #[doc = #doc_blank]
+        #[doc = #doc_detail]
         #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
         #[ts(export, export_to = "v3/")]
         #[serde(deny_unknown_fields)]
@@ -154,19 +195,18 @@ pub fn render_family_bindings(family: &DomainFamily) -> String {
         .collect();
 
     let mod_doc = format!(
-        "The `{}` encrypted-domain family — generated from the eql-domains catalog.",
+        " The `{}` encrypted-domain family — generated from the eql-domains catalog.",
         family.name
     );
 
     let file = quote! {
         #![doc = #mod_doc]
 
-        use schemars::{schema_for, Schema};
+        use schemars::{schema_for, JsonSchema, Schema};
 
         use crate::v3::terms::{ #(#used_idents),* };
         use crate::v3::DomainType;
         use crate::{Identifier, SchemaVersion};
-        use schemars::JsonSchema;
         use serde::{Deserialize, Serialize};
         use ts_rs::TS;
 
@@ -189,14 +229,14 @@ pub fn render_inventory_rs() -> String {
             f.domains
                 .iter()
                 .map(move |d| {
-                    let s = format_ident!("{}", pascal(&d.full_name(f.name)));
+                    let s = format_ident!("{}", d.struct_ident(f.name));
                     quote! { Box::new(PhantomData::<super::#m::#s>), }
                 })
                 .collect::<Vec<_>>()
         })
         .collect();
 
-    let mod_doc = "The `all()` inventory — every v3 domain payload type in \
+    let mod_doc = " The `all()` inventory — every v3 domain payload type in \
                    eql-domains::CATALOG order. Generated from the catalog; the \
                    DomainType trait, the shared newtypes, and the architectural \
                    module doc stay hand-written (domain_type.rs / terms.rs / mod.rs).";
@@ -222,31 +262,50 @@ pub fn render_inventory_rs() -> String {
 /// Relative path (from repo root) of the generated v3 bindings directory.
 const V3_BINDINGS_DIR: &str = "crates/eql-bindings/src/v3";
 
+/// Render every binding file to memory (NO filesystem writes): one
+/// `(<dir>/<family>.rs, body)` per catalog family in CATALOG order, then
+/// `inventory.rs`. Kept separate from the write orchestration so a render panic
+/// — an unmapped bare-domain name in [`capability_label`], or a missing/failing
+/// `rustfmt` in [`format_rs`] — aborts BEFORE [`generate_bindings`] deletes any
+/// committed source.
+fn render_bindings(dir: &Path) -> Vec<(PathBuf, String)> {
+    let mut rendered: Vec<(PathBuf, String)> = CATALOG
+        .iter()
+        .map(|f| {
+            (
+                dir.join(format!("{}.rs", f.name)),
+                render_family_bindings(f),
+            )
+        })
+        .collect();
+    rendered.push((dir.join("inventory.rs"), render_inventory_rs()));
+    rendered
+}
+
 /// Regenerate every committed Rust binding file under `out_root`: one
 /// `<family>.rs` per catalog family plus the `inventory.rs` `all()` list.
 /// Hand-written `terms.rs` / `domain_type.rs` / `mod.rs` carry no marker, so
 /// they are never cleaned or clobbered. Returns the written paths.
+///
+/// Renders everything to memory FIRST and only then touches the filesystem
+/// (writability preflight → delete stale generated files → write). A render
+/// panic therefore aborts before any deletion, so a recoverable error cannot
+/// leave committed source emptied (the SQL surface is gitignored and does not
+/// share this risk).
 pub fn generate_bindings(out_root: &Path) -> Result<Vec<PathBuf>, WriteError> {
     let dir = out_root.join(V3_BINDINGS_DIR);
 
-    let mut targets: Vec<PathBuf> = CATALOG
-        .iter()
-        .map(|f| dir.join(format!("{}.rs", f.name)))
-        .collect();
-    targets.push(dir.join("inventory.rs"));
+    let rendered = render_bindings(&dir);
+    let targets: Vec<PathBuf> = rendered.iter().map(|(p, _)| p.clone()).collect();
 
     ensure_generated_paths_writable(&targets, GeneratedKind::Rust)?;
     clean_generated_files(&dir, GeneratedKind::Rust)?;
 
-    let mut written = Vec::new();
-    for f in CATALOG {
-        let p = dir.join(format!("{}.rs", f.name));
-        write_generated_file(&p, &render_family_bindings(f), GeneratedKind::Rust)?;
-        written.push(p);
+    let mut written = Vec::with_capacity(rendered.len());
+    for (p, body) in &rendered {
+        write_generated_file(p, body, GeneratedKind::Rust)?;
+        written.push(p.clone());
     }
-    let invp = dir.join("inventory.rs");
-    write_generated_file(&invp, &render_inventory_rs(), GeneratedKind::Rust)?;
-    written.push(invp);
 
     Ok(written)
 }
@@ -319,6 +378,37 @@ mod tests {
     }
 
     #[test]
+    fn struct_doc_carries_derivable_operators_and_required_keys() {
+        // The struct doc is derived entirely from catalog data already present:
+        // the capability label + the operator union (`Term::operators_for_terms`)
+        // + the required-key list (`ENVELOPE_KEYS` ++ `Term::term_json_keys`).
+        // No field docs, no new free-form catalog prose.
+        let int4 = render_family_bindings(family("int4"));
+
+        // Storage-only: no operators.
+        assert!(int4.contains("`eql_v3.int4` — storage-only domain."));
+        assert!(int4.contains("Operators: none."));
+        assert!(int4.contains("Required keys: `v` `i` `c`."));
+
+        // Equality: `=`/`<>` and the `hm` key.
+        assert!(int4.contains("`eql_v3.int4_eq` — equality domain."));
+        assert!(int4.contains("Operators: `=` `<>`."));
+        assert!(int4.contains("Required keys: `v` `i` `c` `hm`."));
+
+        // Ordering: full comparison operators and the `ob` key.
+        assert!(int4.contains("Operators: `=` `<>` `<` `<=` `>` `>=`."));
+        assert!(int4.contains("Required keys: `v` `i` `c` `ob`."));
+
+        // text_ord carries BOTH `hm` and `ob` — the dual-term distinction that
+        // previously lived only in hand-written prose is now derivable in the doc.
+        let text = render_family_bindings(family("text"));
+        assert!(text.contains("Required keys: `v` `i` `c` `hm` `ob`."));
+        assert!(text.contains("`eql_v3.text_match` — match domain."));
+        assert!(text.contains("Operators: `@>` `<@`."));
+        assert!(text.contains("Required keys: `v` `i` `c` `bf`."));
+    }
+
+    #[test]
     fn text_family_includes_bloom_and_dual_term_ord() {
         let out = render_family_bindings(family("text"));
         for s in [
@@ -377,6 +467,36 @@ mod tests {
     }
 
     #[test]
+    fn render_bindings_is_side_effect_free_and_complete() {
+        // generate_bindings renders to memory BEFORE deleting any committed
+        // source, so a render panic aborts before deletion. Lock in the
+        // load-bearing property: render writes NOTHING to disk. A pre-existing
+        // file in the target dir survives the render call untouched, and render
+        // returns one entry per family plus inventory (last).
+        let tmp = crate::writer::test_support::tempdir();
+        let dir = tmp.path().join(V3_BINDINGS_DIR);
+        std::fs::create_dir_all(&dir).unwrap();
+        let sentinel = dir.join("int4.rs");
+        std::fs::write(&sentinel, "SENTINEL").unwrap();
+
+        let rendered = render_bindings(&dir);
+
+        assert_eq!(rendered.len(), CATALOG.len() + 1);
+        assert_eq!(
+            std::fs::read_to_string(&sentinel).unwrap(),
+            "SENTINEL",
+            "render_bindings must not write to disk"
+        );
+        assert!(rendered.last().unwrap().0.ends_with("inventory.rs"));
+        for (p, body) in &rendered {
+            assert!(
+                body.starts_with(crate::consts::RUST_GENERATED_MARKER),
+                "{p:?} body lacks the marker"
+            );
+        }
+    }
+
+    #[test]
     fn inventory_enumerates_all_in_catalog_order() {
         let out = render_inventory_rs();
         assert!(out.starts_with(crate::consts::RUST_GENERATED_MARKER));
@@ -401,6 +521,64 @@ mod tests {
         let entries = out.matches("Box::new(PhantomData::<").count();
         let domains: usize = eql_domains::CATALOG.iter().map(|f| f.domains.len()).sum();
         assert_eq!(entries, domains);
+    }
+
+    #[test]
+    fn envelope_fields_match_catalog_keys() {
+        // `render_struct` hardcodes the `v`/`i`/`c` envelope triple (each maps to
+        // a distinct Rust type) rather than looping `ENVELOPE_KEYS`. Tie the two
+        // together: the leading fields of a generated struct must equal
+        // `ENVELOPE_KEYS`, in order, so a change to the catalog's envelope keys
+        // can't silently diverge from the emitter.
+        let out = render_family_bindings(family("int4"));
+        let leading: Vec<String> = field_idents(&out, "Int4");
+        let expected: Vec<String> = eql_domains::ENVELOPE_KEYS
+            .iter()
+            .map(|k| k.to_string())
+            .collect();
+        assert_eq!(
+            leading, expected,
+            "the hardcoded envelope triple in render_struct must match \
+             eql_domains::ENVELOPE_KEYS (update both together)"
+        );
+    }
+
+    #[test]
+    fn every_catalog_bare_domain_name_has_an_explicit_label() {
+        // The "compile-checked catalog" intent: a new bare-domain name must force
+        // a capability_label decision, not silently inherit a generic fallback.
+        // Every name the catalog actually uses must resolve to one of the known,
+        // explicitly-mapped labels.
+        let known = [
+            "storage-only domain",
+            "equality domain",
+            "ordering domain",
+            "match domain",
+            "search domain",
+        ];
+        for f in CATALOG {
+            for d in f.domains {
+                let label = capability_label(d.name);
+                assert!(
+                    known.contains(&label),
+                    "{}.{:?} maps to unexpected label {label:?}",
+                    f.name,
+                    d.name
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn capability_label_panics_loudly_on_unmapped_name() {
+        // An unmapped bare-domain name must abort codegen, not emit generic-but-
+        // wrong doc text. Guards against the old silent `_ => "encrypted domain"`
+        // fallback creeping back in.
+        let err = std::panic::catch_unwind(|| capability_label("totally_new_capability"));
+        assert!(
+            err.is_err(),
+            "capability_label must panic on an unmapped bare domain name"
+        );
     }
 
     #[test]

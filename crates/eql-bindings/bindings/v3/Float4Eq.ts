@@ -5,23 +5,8 @@ import type { Identifier } from "./Identifier";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `eql_v3.float4_eq` — HMAC equality (`=`, `<>`).
+ * `eql_v3.float4_eq` — equality domain.
+ *
+ * Operators: `=` `<>`. Required keys: `v` `i` `c` `hm`.
  */
-export type Float4Eq = { 
-/**
- * Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
- * value fails deserialization.
- */
-v: SchemaVersion, 
-/**
- * Table/column identifier. Required by the domain CHECK.
- */
-i: Identifier, 
-/**
- * mp_base85 source ciphertext. Required by the domain CHECK.
- */
-c: Ciphertext, 
-/**
- * HMAC-SHA-256 equality term.
- */
-hm: Hmac256, };
+export type Float4Eq = { v: SchemaVersion, i: Identifier, c: Ciphertext, hm: Hmac256, };

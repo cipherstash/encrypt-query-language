@@ -20,12 +20,10 @@ pub const SCHEMA_ID_BASE: &str = "https://schemas.cipherstash.com/eql/v3/";
 /// value can report the SQL domain it inhabits (`payload.sql_domain()`).
 ///
 /// Each token file implements this next to the type it describes; the SQL
-/// domain string is defined exactly once, in that impl, and
-/// `tests/catalog_parity.rs` cross-checks every entry of [`all`] against
-/// `eql-domains::CATALOG` — a typo'd or mis-ordered domain fails there.
+/// domain string is defined exactly once, in that impl. `all()` is generated
+/// from `eql-domains::CATALOG` (`inventory.rs`), so it cannot drift; the
+/// published JSON Schema wire contract is pinned by `tests/catalog_parity.rs`.
 /// Public so FFI consumers can enumerate the protocol surface too.
-///
-/// [`all`]: super::all
 pub trait DomainType {
     /// Fully-qualified SQL domain name, e.g. `"eql_v3.int4_eq"` — the
     /// per-type fact everything else derives from, defined once in each
