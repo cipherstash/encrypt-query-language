@@ -52,7 +52,8 @@ To add a scalar type `<T>` (e.g. `int8`), with Rust type `<R>` (e.g. `i64`):
    - The catalog row ALSO drives the **Rust payload bindings**: `eql-codegen
      bindings` (run first by `mise run types:generate`) regenerates the
      committed `crates/eql-bindings/src/v3/<family>.rs` struct + `DomainType`
-     impl and its `inventory.rs`/`all()` entry (one catalog-derived doc line, no
+     impl and its `inventory.rs`/`all()` entry (a two-line catalog-derived
+     struct doc — a summary line plus an operators/required-keys detail line, no
      field docs), and the `ts-rs`/`schemars` derives then emit the committed
      `bindings/v3/*.ts` + `schema/v3/*.json`. Unlike the SQL these `.rs` ARE
      committed (`// @generated`), so run `mise run types:generate` and commit

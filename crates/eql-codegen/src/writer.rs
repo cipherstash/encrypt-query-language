@@ -1,8 +1,10 @@
 //! Ownership-guarded file writer.
 
+use std::collections::HashSet;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::consts::{AUTO_GENERATED_MARKER, RUST_GENERATED_MARKER};
 
@@ -91,13 +93,68 @@ pub fn clean_generated_files(directory: &Path, kind: GeneratedKind) -> io::Resul
     Ok(removed)
 }
 
+/// A path normalised for set membership. Resolves to the canonical path when the
+/// file exists (collapsing `.`/`..`/symlink differences so a read-dir entry and a
+/// caller-constructed `dir.join(name)` compare equal); falls back to the raw path
+/// when canonicalisation fails (e.g. the file was removed concurrently).
+fn normalize(path: &Path) -> PathBuf {
+    fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
+}
+
+/// Build a membership set of normalised paths from the files a generation run
+/// just wrote, for `remove_generated_orphans` to consult.
+pub fn normalized_set(paths: &[PathBuf]) -> HashSet<PathBuf> {
+    paths.iter().map(|p| normalize(p)).collect()
+}
+
+/// Delete generated files of `kind` in `directory` that were NOT part of the set
+/// of paths just written (`keep`), returning removed paths.
+///
+/// This is the orphan-removal half of the write-then-delete discipline: a
+/// generation run writes every current artifact first, then calls this to prune
+/// stale generated files (e.g. a domain or whole type dropped from the catalog).
+/// Because deletion happens only after all writes have succeeded, an aborted run
+/// can never leave the tree with files deleted-but-not-rewritten. Like
+/// `clean_generated_files`, it only ever removes marker-bearing files, so
+/// hand-written files (no marker) are always preserved.
+pub fn remove_generated_orphans(
+    directory: &Path,
+    kind: GeneratedKind,
+    keep: &HashSet<PathBuf>,
+) -> io::Result<Vec<PathBuf>> {
+    if !directory.is_dir() {
+        return Ok(Vec::new());
+    }
+    let mut paths: Vec<PathBuf> = fs::read_dir(directory)?
+        .map(|e| e.map(|e| e.path()))
+        .collect::<io::Result<Vec<_>>>()?
+        .into_iter()
+        .filter(|p| p.extension().and_then(|x| x.to_str()) == Some(kind.extension()))
+        .collect();
+    paths.sort();
+    let mut removed = Vec::new();
+    for p in paths {
+        if keep.contains(&normalize(&p)) {
+            continue;
+        }
+        if is_generated(&p, kind)? {
+            fs::remove_file(&p)?;
+            removed.push(p);
+        }
+    }
+    Ok(removed)
+}
+
 /// Refuse a generation run if any target is hand-written (lacks this kind's marker).
 pub fn ensure_generated_paths_writable(
     paths: &[PathBuf],
     kind: GeneratedKind,
 ) -> Result<(), WriteError> {
     for path in paths {
-        if path.exists() && !is_generated(path, kind)? {
+        // `symlink_metadata` (lstat) detects ANY pre-existing entry the later
+        // `fs::rename` would clobber — including a dangling/broken symlink that
+        // `Path::exists` (which follows symlinks) reports as absent.
+        if fs::symlink_metadata(path).is_ok() && !is_generated(path, kind)? {
             return Err(WriteError::Ownership(format!(
                 "refusing to overwrite hand-written file: {} (no {:?} AUTO-GENERATED header). \
                  Remove it by hand if it is a one-time generator-adoption target.",
@@ -136,7 +193,40 @@ pub fn write_generated_file(
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    fs::write(path, body)?;
+    write_atomic(path, body)?;
+    Ok(())
+}
+
+/// Process-unique suffix counter for temp file names.
+static TMP_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+/// Write `body` to `path` atomically: stage it in a sibling temp file in the same
+/// directory, then `fs::rename` it into place. A same-directory rename is atomic
+/// on POSIX, so a reader (or an aborted/crashed run) never observes a truncated or
+/// half-written `path` — it sees either the old contents or the complete new ones.
+/// The temp file is removed on any failure so a failed write leaves no debris.
+fn write_atomic(path: &Path, body: &str) -> io::Result<()> {
+    let file_name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("generated");
+    let n = TMP_COUNTER.fetch_add(1, Ordering::Relaxed);
+    // Include the PID so concurrent codegen runs in SEPARATE processes (each with
+    // its own TMP_COUNTER starting at 0) cannot stage onto the same sibling temp
+    // path in a shared output directory.
+    let pid = std::process::id();
+    let tmp = match path.parent() {
+        Some(parent) => parent.join(format!(".{file_name}.tmp.{pid}.{n}")),
+        None => PathBuf::from(format!(".{file_name}.tmp.{pid}.{n}")),
+    };
+    if let Err(e) = fs::write(&tmp, body) {
+        let _ = fs::remove_file(&tmp);
+        return Err(e);
+    }
+    if let Err(e) = fs::rename(&tmp, path) {
+        let _ = fs::remove_file(&tmp);
+        return Err(e);
+    }
     Ok(())
 }
 
@@ -311,6 +401,29 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn preflight_refuses_pre_existing_dangling_symlink() {
+        // A dangling (broken) symlink at the target path is a pre-existing entry
+        // that `fs::rename` would clobber, yet `Path::exists` (symlink-following)
+        // reports it absent. The preflight must still refuse it: `symlink_metadata`
+        // (lstat) sees the link, `is_generated` finds no marker (is_file() is false
+        // for a broken link), so the path is treated as a non-generated entry that
+        // must not be silently overwritten.
+        let d = tmp();
+        let link = d.path().join("int4.rs");
+        let missing_target = d.path().join("does-not-exist");
+        std::os::unix::fs::symlink(&missing_target, &link).unwrap();
+        assert!(
+            !link.exists(),
+            "precondition: the symlink is dangling (exists() is false)"
+        );
+
+        let err = ensure_generated_paths_writable(std::slice::from_ref(&link), GeneratedKind::Rust)
+            .unwrap_err();
+        assert!(matches!(err, WriteError::Ownership(_)), "got {err:?}");
+    }
+
     #[test]
     fn is_generated_errors_on_unreadable_existing_file() {
         // Direct contract: an existing file that cannot be decoded is an Err,
@@ -369,6 +482,95 @@ mod tests {
         assert!(clean_generated_files(d.path(), GeneratedKind::Sql)
             .unwrap()
             .is_empty());
+    }
+
+    #[test]
+    fn write_leaves_no_temp_debris_on_success() {
+        // The atomic temp+rename must not leave its sibling temp file behind on a
+        // successful write — only the final target should remain.
+        let d = tmp();
+        let p = d.path().join("int4_types.sql");
+        let body = format!("{AUTO_GENERATED_MARKER}\nSELECT 1;\n");
+        write_generated_file(&p, &body, GeneratedKind::Sql).unwrap();
+        let leftovers: Vec<PathBuf> = fs::read_dir(d.path())
+            .unwrap()
+            .map(|e| e.unwrap().path())
+            .filter(|p| p.file_name().unwrap().to_str().unwrap().contains(".tmp."))
+            .collect();
+        assert!(
+            leftovers.is_empty(),
+            "temp debris left behind: {leftovers:?}"
+        );
+        let entries: Vec<_> = fs::read_dir(d.path()).unwrap().collect();
+        assert_eq!(
+            entries.len(),
+            1,
+            "exactly one file (the target) should exist"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_failure_preserves_existing_target_and_leaves_no_temp() {
+        // Atomicity under failure: when staging the new body fails (here: the
+        // directory is read-only, so the temp file can't be created), the existing
+        // target must keep its OLD contents — never a truncated/half-written file —
+        // and no temp debris may survive.
+        use std::os::unix::fs::PermissionsExt;
+        let d = tmp();
+        let p = d.path().join("int4_types.sql");
+        let old = format!("{AUTO_GENERATED_MARKER}\n-- OLD content\n");
+        fs::write(&p, &old).unwrap();
+
+        let mut perms = fs::metadata(d.path()).unwrap().permissions();
+        perms.set_mode(0o555); // r-x: reads allowed, new files refused
+        fs::set_permissions(d.path(), perms).unwrap();
+
+        let new = format!("{AUTO_GENERATED_MARKER}\n-- NEW content\n");
+        let err = write_generated_file(&p, &new, GeneratedKind::Sql).unwrap_err();
+
+        // Restore write perms BEFORE asserting so TempDir::drop can clean up.
+        let mut perms = fs::metadata(d.path()).unwrap().permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(d.path(), perms).unwrap();
+
+        assert!(matches!(err, WriteError::Io(_)), "expected Io, got {err:?}");
+        assert_eq!(
+            fs::read_to_string(&p).unwrap(),
+            old,
+            "existing target must keep its old contents on a failed write"
+        );
+        let leftovers: Vec<PathBuf> = fs::read_dir(d.path())
+            .unwrap()
+            .map(|e| e.unwrap().path())
+            .filter(|p| p.file_name().unwrap().to_str().unwrap().contains(".tmp."))
+            .collect();
+        assert!(
+            leftovers.is_empty(),
+            "temp debris left behind: {leftovers:?}"
+        );
+    }
+
+    #[test]
+    fn remove_generated_orphans_keeps_written_and_handwritten() {
+        // The orphan sweep deletes only marker-bearing generated files that were
+        // NOT just written; files in `keep` and hand-written (no marker) files
+        // always survive.
+        let d = tmp();
+        let kept = d.path().join("int4_eq_functions.sql"); // generated, in keep
+        let orphan = d.path().join("int4_gone_functions.sql"); // generated, dropped
+        let hand = d.path().join("int4_extensions.sql"); // hand-written, no marker
+        fs::write(&kept, format!("{AUTO_GENERATED_MARKER}\nSELECT 1;\n")).unwrap();
+        fs::write(&orphan, format!("{AUTO_GENERATED_MARKER}\nSELECT 2;\n")).unwrap();
+        fs::write(&hand, "-- REQUIRE: src/schema.sql\n-- hand-written\n").unwrap();
+
+        let keep = normalized_set(std::slice::from_ref(&kept));
+        let removed = remove_generated_orphans(d.path(), GeneratedKind::Sql, &keep).unwrap();
+
+        assert!(kept.exists(), "written file must be kept");
+        assert!(!orphan.exists(), "dropped generated file must be removed");
+        assert!(hand.exists(), "hand-written file (no marker) must be kept");
+        assert_eq!(removed, vec![orphan]);
     }
 
     #[test]

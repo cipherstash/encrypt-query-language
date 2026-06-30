@@ -2,14 +2,14 @@
 //! `eql_v3.compare_ore_block_256_term(s)`.
 //!
 //! Every test here is **always-on** — it runs in normal (no-creds) CI, because
-//! it sources real ORE terms from committed fixtures rather than encrypting at
+//! it sources real ORE terms from generated fixtures rather than encrypting at
 //! runtime:
 //!   * The malformed-length guards build ORE terms by hand from short byte
 //!     strings, exercising length validation without real ciphertexts.
 //!   * The ordering properties (all-pairs oracle agreement + antisymmetry) read
-//!     the committed `eql_v3_numeric` / `eql_v3_timestamptz` fixtures, whose
+//!     the generated `eql_v3_numeric` / `eql_v3_timestamptz` fixtures, whose
 //!     catalog order is the strict ascending oracle.
-//!   * The `1 == 1.0` ORE collision reads the committed `v3_numeric_collision`
+//!   * The `1 == 1.0` ORE collision reads the generated `v3_numeric_collision`
 //!     fixture — the one place the value-equal pair can live, since the catalog
 //!     distinctness guard forbids it in `eql_v3_numeric`.
 //!
@@ -47,7 +47,7 @@ fn term_sql(fill: char, len: usize) -> String {
 }
 
 /// Assert the ORE comparator agrees with an explicit oracle order over a
-/// committed fixture. `ascending[i]` is the SQL literal (with cast) for the
+/// generated fixture. `ascending[i]` is the SQL literal (with cast) for the
 /// value whose oracle rank is `i`; its real ciphertext is fetched from
 /// `fixtures.{table}` by `plaintext` and loaded into a connection-local
 /// `ore_sample(rank, payload)`.
@@ -59,7 +59,7 @@ fn term_sql(fill: char, len: usize) -> String {
 ///   * **Antisymmetry** — `compare(a, b) = -compare(b, a)` for all distinct
 ///     pairs.
 ///
-/// Creds-free: every term is a real committed ciphertext. The per-row
+/// Creds-free: every term is a real generated ciphertext. The per-row
 /// `rows_affected == 1` check fails loudly if the `ascending` list drifts from
 /// the fixture (a removed/renamed value resolves to zero rows).
 async fn assert_orders_like_oracle(
@@ -318,7 +318,7 @@ async fn numeric_term_is_14_blocks(pool: PgPool) -> Result<()> {
 /// fail; the all-pairs sweep makes a single lucky pair unable to mask it. The
 /// list is the strict ascending oracle (matching `NUMERIC_FIXTURES`' catalog
 /// order); `assert_orders_like_oracle` fails loudly if it drifts from the
-/// committed fixture.
+/// generated fixture.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_numeric")))]
 async fn numeric_terms_order_like_decimal_ord(pool: PgPool) -> Result<()> {
     let ascending: Vec<String> = [
@@ -366,7 +366,7 @@ async fn timestamptz_term_is_12_blocks(pool: PgPool) -> Result<()> {
 /// working 8 and the headline 14, so it needs the same left-block-deciding
 /// coverage as numeric. The 15 values are the strict ascending oracle (matching
 /// `TIMESTAMPTZ_FIXTURES`' catalog order); `assert_orders_like_oracle` fails
-/// loudly if the list drifts from the committed fixture.
+/// loudly if the list drifts from the generated fixture.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_timestamptz")))]
 async fn timestamptz_terms_order_like_datetime_ord(pool: PgPool) -> Result<()> {
     let ascending: Vec<String> = [
@@ -438,7 +438,7 @@ async fn compare_collision_ids(pool: &PgPool, a: i64, b: i64) -> Result<i32> {
 
 /// Scale-equivalent decimals (`1` and `1.0`) must collide in the ORE
 /// ciphertext: they are value-equal numerics, so their ORE terms must compare
-/// `0`. Always-on via the committed `v3_numeric_collision` fixture — the only
+/// `0`. Always-on via the generated `v3_numeric_collision` fixture — the only
 /// place the value-equal pair can live, since the catalog distinctness guard
 /// (`scalar_domains.rs` `numeric_value_guards`) forbids it in `eql_v3_numeric`.
 /// This is the positive counterpart to that negative guard.

@@ -29,7 +29,7 @@ plain `jsonb`, so each script applies standalone. The document fixtures
 surface being installed.
 
 **Regenerated every test run.** `mise run test:sqlx` invokes the generator
-before `cargo test`, so a stale committed fixture cannot mask a payload-shape
+before `cargo test`, so a stale generated fixture cannot mask a payload-shape
 regression. The generator encrypts in-process via `cipherstash-client`; it
 needs a live Postgres plus **both** CipherStash credential pairs in the shell
 environment (they are not alternatives): `CS_CLIENT_ACCESS_KEY` +

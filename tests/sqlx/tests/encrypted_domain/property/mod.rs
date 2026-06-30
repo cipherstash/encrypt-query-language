@@ -22,7 +22,7 @@ pub(crate) fn migrator() -> sqlx::migrate::Migrator {
 
 // NULL / blocker / CHECK-constraint unit tests.
 mod edge_cases;
-// fixture suite: operator + function-double oracles over the committed fixture
+// fixture suite: operator + function-double oracles over the generated fixture
 // rows (real ciphertext), plus term-extractor identity.
 mod fixture_oracle;
 // fixture suite: example-based bloom match smoke over the text `_match` fixtures.

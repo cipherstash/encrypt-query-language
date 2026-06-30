@@ -6,7 +6,7 @@
 //! Unlike the scalar fixtures (`FixtureSpec<i32>::run()` encrypts bare ints)
 //! and `v3_ste_vec` (`FixtureSpec<serde_json::Value>::run()` makes the
 //! `plaintext` column jsonb), this fixture is a SPLIT: the encryption input is a
-//! `serde_json::Value` document stream while the committed `plaintext` oracle
+//! `serde_json::Value` document stream while the generated `plaintext` oracle
 //! column is bare `int4`. It therefore encrypts the documents directly via
 //! `cipherstash::encrypt_store` and stores them through the
 //! `FixtureSpec::run_with_payloads` seam, with a `FixtureSpec<i32>` driving the
@@ -21,11 +21,11 @@ use serde_json::Value;
 use super::index_kind::IndexKind;
 use super::spec::FixtureSpec;
 
-/// The committed fixture name → table `fixtures.v3_doc_int4`, script
+/// The generated fixture name → table `fixtures.v3_doc_int4`, script
 /// `v3_doc_int4.sql`, SQLx ref `scripts("v3_doc_int4")`.
 const NAME: &str = "v3_doc_int4";
 
-/// The committed `payload` column type — the `eql_v3.json` document DOMAIN, so
+/// The generated `payload` column type — the `eql_v3.json` document DOMAIN, so
 /// the domain CHECK runs when the fixture loads.
 const PAYLOAD_TYPE: &str = "eql_v3.json";
 
@@ -62,7 +62,7 @@ fn documents() -> Vec<(i32, Value)> {
 /// Generate `tests/sqlx/fixtures/v3_doc_int4.sql`. Splits the two value
 /// streams: the `serde_json::Value` documents are encrypted with
 /// `IndexKind::SteVec`, while the `int4` plaintexts drive the fixture-table
-/// schema and the committed `plaintext` oracle column. `.run()` is NOT used —
+/// schema and the generated `plaintext` oracle column. `.run()` is NOT used —
 /// it would encrypt bare `i32` values instead of `{"field": int}` documents.
 pub async fn generate() -> Result<()> {
     use super::cipherstash;

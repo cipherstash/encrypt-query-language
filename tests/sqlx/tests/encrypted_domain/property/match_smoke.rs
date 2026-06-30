@@ -26,7 +26,7 @@ const TEXT_MATCH_DOMAIN: &str = "eql_v3.text_match";
 
 #[sqlx::test]
 async fn text_match_smoke(pool: PgPool) -> Result<()> {
-    // Match payloads come from the committed text fixture (encrypted with
+    // Match payloads come from the generated text fixture (encrypted with
     // [Unique, Ore, Match], so each carries a `bf`); load it into this test's
     // isolated DB on demand.
     load_fixtures::<String>(&pool).await?;

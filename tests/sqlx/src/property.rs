@@ -3,7 +3,7 @@
 //! `assert_eq_oracle` / `assert_ord_oracle` take a set of
 //! `(plaintext, payload_json)` rows and check SQL operator results against the
 //! plaintext oracle over every ordered pair. The fixture suite feeds them rows
-//! read from the committed fixtures (real ciphertext); the e2e suite feeds
+//! read from the generated fixtures (real ciphertext); the e2e suite feeds
 //! them rows it batch-encrypts from freshly generated plaintexts. The engine is
 //! identical for both.
 //!

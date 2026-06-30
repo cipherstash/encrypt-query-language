@@ -6,8 +6,14 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-echo "==> Generating with the Rust generator (writes the real repo tree)"
-cargo run -q -p eql-codegen -- > /dev/null
+# Generate into a throwaway tree (EQL_CODEGEN_OUT_ROOT), NOT the live repo, so a
+# parity run never mutates src/v3/scalars — a partial/failed generate can't
+# corrupt the working tree, and the gate has no side effects. The temp tree
+# mirrors the repo layout under src/v3/scalars/<token>/.
+GEN_ROOT="$(mktemp -d)"
+trap 'rm -rf "$GEN_ROOT"' EXIT
+echo "==> Generating with the Rust generator into a temp tree ($GEN_ROOT)"
+EQL_CODEGEN_OUT_ROOT="$GEN_ROOT" cargo run -q -p eql-codegen -- > /dev/null
 
 # Every catalog type has a committed reference under tests/codegen/reference/<token>/,
 # generated once. Discover them (each subdir is one token) and gate each against
@@ -35,22 +41,21 @@ fi
 
 for token in $tokens; do
   ref_dir="tests/codegen/reference/$token"
-  gen_dir="src/v3/scalars/$token"
+  gen_dir="$GEN_ROOT/src/v3/scalars/$token"
 
   echo "==> [$token] Comparing generated SQL file SET vs reference (catches extra/dropped files)"
   # The content loop below is reference-driven: it verifies every reference file has a
   # matching generated body, so a DROPPED file fails there. It cannot see an EXTRA
   # generated file (a new template output, or the new half of a rename) — that name
   # is never iterated. Assert the sets are equal first to close that blind spot.
-  # "Generated" excludes any committed, hand-written SQL (e.g. <token>_extensions.sql),
-  # which lives in this dir but has no reference counterpart; git-tracked == hand-written.
+  # The temp tree holds ONLY generated files (no committed/hand-written SQL and no
+  # git tracking), so the generated set is simply every *.sql in the dir.
   # find (not `ls *.sql`) so an empty dir yields zero lines instead of aborting
   # under `set -e`; `-maxdepth 1` + sed strips the leading `./` for bare names.
   reference_set=$(cd "$ref_dir" \
     && find . -maxdepth 1 -name '*.sql' | sed 's#.*/##' | LC_ALL=C sort)
   gen_set=$(cd "$gen_dir" \
-    && comm -23 <(find . -maxdepth 1 -name '*.sql' | sed 's#.*/##' | LC_ALL=C sort) \
-                <(git ls-files . | sed 's#.*/##' | LC_ALL=C sort))
+    && find . -maxdepth 1 -name '*.sql' | sed 's#.*/##' | LC_ALL=C sort)
   if [ "$reference_set" != "$gen_set" ]; then
     echo "[$token] generated SQL file set differs from reference (< reference, > generated):" >&2
     diff <(echo "$reference_set") <(echo "$gen_set") >&2 || true

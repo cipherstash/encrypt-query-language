@@ -39,7 +39,7 @@
 ///   for integers, or the harness accessor (`date_values()` / `text_values()`).
 ///
 /// `Unique` drives `=` / `<>` (HMAC); `Ore` drives `<` `<=` `>` `>=` (ORE block
-/// terms); `Match` drives `@>` / `<@` (bloom filter). The committed payload is
+/// terms); `Match` drives `@>` / `<@` (bloom filter). The generated payload is
 /// always `jsonb`.
 #[macro_export]
 macro_rules! scalar_fixture {

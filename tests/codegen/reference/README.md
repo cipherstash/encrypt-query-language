@@ -24,6 +24,6 @@ Every catalog token **must** have a committed `tests/codegen/reference/<token>/`
 
 A deliberate generator change (template/term/catalog edit) regenerates the affected references in the same PR.
 
-## No committed fixture values
+## No generated fixture values
 
 Plaintext fixture lists are **not** generated and **not** committed as `<T>_values.rs` files — there are none in the tree. They live in the catalog as `eql_domains::INT4_VALUES` / `INT2_VALUES`, materialised at compile time by the `int_values!` macro in `crates/eql-domains/src/lib.rs` from each `CATALOG` row, and pinned by `eql-domains`'s own `values_tests`. The parity gate only globs `*.sql`; it does not check any `values.rs`.

@@ -43,14 +43,14 @@ pub mod v3_doc_int4;
 // CATALOG scalar — the catalog distinctness guard forbids the value-equal pair
 // `1`/`1.0` — so it is hand-written and registered here directly (like the
 // other `v3_` fixtures). Gives the `1 == 1.0` ORE collision an always-on
-// (committed-fixture) home instead of a creds-gated runtime encryption.
+// (generated-fixture) home instead of a creds-gated runtime encryption.
 pub mod v3_numeric_collision;
 
 // The empty-string ordered-text fixture (`""`, `"frank"`, `"zebra"`). Not a
 // CATALOG scalar — `eql-domains::TEXT_FIXTURES` deliberately excludes `""`
 // (issue #262) — so it is hand-written and registered here directly (like the
 // other `v3_` fixtures). Gives the "empty sorts first" contract (ORDER BY /
-// min / max over `text_ord`) a committed real-ciphertext home.
+// min / max over `text_ord`) a generated real-ciphertext home.
 pub mod v3_text_empty;
 
 // Per-type "doubles" fixtures (each plaintext encrypted twice) for the

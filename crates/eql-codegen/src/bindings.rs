@@ -15,8 +15,8 @@ use eql_domains::{Domain, DomainFamily, Term, CATALOG, ENVELOPE_KEYS};
 
 use crate::consts::RUST_GENERATED_MARKER;
 use crate::writer::{
-    clean_generated_files, ensure_generated_paths_writable, write_generated_file, GeneratedKind,
-    WriteError,
+    ensure_generated_paths_writable, normalized_set, remove_generated_orphans,
+    write_generated_file, GeneratedKind, WriteError,
 };
 
 /// Format a token stream into committed Rust source. `prettyplease::unparse`
@@ -287,11 +287,14 @@ fn render_bindings(dir: &Path) -> Vec<(PathBuf, String)> {
 /// Hand-written `terms.rs` / `domain_type.rs` / `mod.rs` carry no marker, so
 /// they are never cleaned or clobbered. Returns the written paths.
 ///
-/// Renders everything to memory FIRST and only then touches the filesystem
-/// (writability preflight → delete stale generated files → write). A render
-/// panic therefore aborts before any deletion, so a recoverable error cannot
-/// leave committed source emptied (the SQL surface is gitignored and does not
-/// share this risk).
+/// Ordering is render-all → preflight → write-all (atomic) → delete-orphans:
+/// everything is rendered to memory first, then every current file is written
+/// (each via an atomic same-dir temp+rename) BEFORE any stale generated file is
+/// deleted. A render panic aborts before the filesystem is touched, and because
+/// deletion happens only after all writes succeed, a write error mid-run can
+/// never leave committed source deleted-but-not-rewritten. The orphan sweep
+/// prunes `<family>.rs` for a type dropped from the catalog, marker-aware so the
+/// hand-written `terms.rs` / `domain_type.rs` / `mod.rs` are always preserved.
 pub fn generate_bindings(out_root: &Path) -> Result<Vec<PathBuf>, WriteError> {
     let dir = out_root.join(V3_BINDINGS_DIR);
 
@@ -299,13 +302,13 @@ pub fn generate_bindings(out_root: &Path) -> Result<Vec<PathBuf>, WriteError> {
     let targets: Vec<PathBuf> = rendered.iter().map(|(p, _)| p.clone()).collect();
 
     ensure_generated_paths_writable(&targets, GeneratedKind::Rust)?;
-    clean_generated_files(&dir, GeneratedKind::Rust)?;
 
     let mut written = Vec::with_capacity(rendered.len());
     for (p, body) in &rendered {
         write_generated_file(p, body, GeneratedKind::Rust)?;
         written.push(p.clone());
     }
+    remove_generated_orphans(&dir, GeneratedKind::Rust, &normalized_set(&written))?;
 
     Ok(written)
 }

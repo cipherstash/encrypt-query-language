@@ -24,9 +24,9 @@ fn is_valid_identifier(s: &str) -> bool {
     chars.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
 }
 
-/// Allowlist of committed `payload` column types. `jsonb` for the scalar
+/// Allowlist of generated `payload` column types. `jsonb` for the scalar
 /// fixtures; `eql_v3.json` for the v3 jsonb (SteVec document) fixture, whose
-/// committed `payload` column is the `eql_v3.json` DOMAIN so the domain CHECK
+/// generated `payload` column is the `eql_v3.json` DOMAIN so the domain CHECK
 /// runs on load. Schema-qualified tokens are allowed — each is an exact,
 /// vetted entry here, never a free-form `&str`.
 pub const ALLOWED_COLUMN_TYPES: &[&str] = &["jsonb", "eql_v3.json"];
@@ -66,7 +66,7 @@ impl fmt::Display for FixtureIdentifier {
     }
 }
 
-/// A validated committed-payload column type token. Construction proves the
+/// A validated generated-payload column type token. Construction proves the
 /// string is in `ALLOWED_COLUMN_TYPES`.
 #[derive(Debug, Clone)]
 pub struct ColumnType(String);
