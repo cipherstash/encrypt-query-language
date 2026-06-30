@@ -13,7 +13,7 @@
 # Unrelated commits skip the gate entirely, so this is a no-op for most commits.
 set -euo pipefail
 
-staged=$(git diff --cached --name-only --diff-filter=ACMR)
+staged=$(git diff --cached --name-only --diff-filter=ACMRD)
 
 if echo "$staged" | grep -Eq '^(crates/eql-domains/|crates/eql-codegen/|src/v3/scalars/|crates/eql-bindings/src/v3/|crates/eql-bindings/bindings/|crates/eql-bindings/schema/)'; then
   echo "pre-commit: catalog/generator/generated surface touched — verifying freshness…"

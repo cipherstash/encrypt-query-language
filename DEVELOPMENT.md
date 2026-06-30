@@ -105,7 +105,7 @@ These are the important files and directories in the repo:
 > `*_functions.sql`, `*_operators.sql`, `*_aggregates.sql`) are **generated**
 > but **committed in place** (so the shipped SQL is reviewable in diffs and the
 > file is consistent with the committed Rust bindings). Never hand-edit them —
-> they are overwritten on every build and CI's `codegen:parity` gate reverts any
+> they are overwritten on every build and CI's `codegen:parity` gate fails on any
 > drift. See [The catalog and code generation](#the-catalog-and-code-generation).
 
 ## Set up a local development environment
@@ -366,7 +366,7 @@ output:
 
 ### Hand-written SQL
 
-Generated files are overwritten on every build (and CI reverts any drift), so
+Generated files are overwritten on every build (and CI fails on any drift), so
 hand-written SQL never goes in them — even though they are committed. Hand-written
 SQL beyond the fixed generated surface goes in
 `src/v3/scalars/<T>/<T>_extensions.sql` — no auto-generated header, explicit
