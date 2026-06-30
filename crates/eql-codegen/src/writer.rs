@@ -151,7 +151,10 @@ pub fn ensure_generated_paths_writable(
     kind: GeneratedKind,
 ) -> Result<(), WriteError> {
     for path in paths {
-        if path.exists() && !is_generated(path, kind)? {
+        // `symlink_metadata` (lstat) detects ANY pre-existing entry the later
+        // `fs::rename` would clobber — including a dangling/broken symlink that
+        // `Path::exists` (which follows symlinks) reports as absent.
+        if fs::symlink_metadata(path).is_ok() && !is_generated(path, kind)? {
             return Err(WriteError::Ownership(format!(
                 "refusing to overwrite hand-written file: {} (no {:?} AUTO-GENERATED header). \
                  Remove it by hand if it is a one-time generator-adoption target.",
@@ -208,9 +211,13 @@ fn write_atomic(path: &Path, body: &str) -> io::Result<()> {
         .and_then(|n| n.to_str())
         .unwrap_or("generated");
     let n = TMP_COUNTER.fetch_add(1, Ordering::Relaxed);
+    // Include the PID so concurrent codegen runs in SEPARATE processes (each with
+    // its own TMP_COUNTER starting at 0) cannot stage onto the same sibling temp
+    // path in a shared output directory.
+    let pid = std::process::id();
     let tmp = match path.parent() {
-        Some(parent) => parent.join(format!(".{file_name}.tmp.{n}")),
-        None => PathBuf::from(format!(".{file_name}.tmp.{n}")),
+        Some(parent) => parent.join(format!(".{file_name}.tmp.{pid}.{n}")),
+        None => PathBuf::from(format!(".{file_name}.tmp.{pid}.{n}")),
     };
     if let Err(e) = fs::write(&tmp, body) {
         let _ = fs::remove_file(&tmp);
@@ -392,6 +399,29 @@ mod tests {
             !err.to_string().contains("hand-written"),
             "must not report an unreadable existing file as hand-written: {err}"
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn preflight_refuses_pre_existing_dangling_symlink() {
+        // A dangling (broken) symlink at the target path is a pre-existing entry
+        // that `fs::rename` would clobber, yet `Path::exists` (symlink-following)
+        // reports it absent. The preflight must still refuse it: `symlink_metadata`
+        // (lstat) sees the link, `is_generated` finds no marker (is_file() is false
+        // for a broken link), so the path is treated as a non-generated entry that
+        // must not be silently overwritten.
+        let d = tmp();
+        let link = d.path().join("int4.rs");
+        let missing_target = d.path().join("does-not-exist");
+        std::os::unix::fs::symlink(&missing_target, &link).unwrap();
+        assert!(
+            !link.exists(),
+            "precondition: the symlink is dangling (exists() is false)"
+        );
+
+        let err = ensure_generated_paths_writable(std::slice::from_ref(&link), GeneratedKind::Rust)
+            .unwrap_err();
+        assert!(matches!(err, WriteError::Ownership(_)), "got {err:?}");
     }
 
     #[test]

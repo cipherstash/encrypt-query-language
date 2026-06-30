@@ -36,12 +36,25 @@ fn ts_property_order(ts: &str) -> Vec<String> {
         .collect()
 }
 
+/// Base directory ts-rs exported the `.ts` files into. `mise run types:generate`
+/// redirects generation to a throwaway tree via `TS_RS_EXPORT_DIR` (mirroring
+/// ts-rs itself), so the guard must read the FRESHLY generated files there, not
+/// the committed `bindings/`. Falls back to the committed `bindings/` dir (next
+/// to the crate manifest) for a plain `cargo test`.
+fn ts_export_base() -> String {
+    match std::env::var("TS_RS_EXPORT_DIR") {
+        Ok(dir) if !dir.is_empty() => dir,
+        _ => format!("{}/bindings", env!("CARGO_MANIFEST_DIR")),
+    }
+}
+
 #[test]
 fn every_ts_export_has_envelope_then_term_property_order() {
+    let base = ts_export_base();
     for family in CATALOG {
         for domain in family.domains {
             let stem = domain.struct_ident(family.name);
-            let path = format!("{}/bindings/v3/{stem}.ts", env!("CARGO_MANIFEST_DIR"));
+            let path = format!("{base}/v3/{stem}.ts");
             let ts = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path}: {e}"));
 
             let mut expected = vec!["v".to_string(), "i".to_string(), "c".to_string()];

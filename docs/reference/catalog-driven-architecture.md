@@ -315,7 +315,7 @@ distinctions become visible — e.g. `text_ord` lists `v i c hm ob` (dual-term) 
 
 ### 4.1 SQL surface — `src/v3/scalars/<T>/` (gitignored)
 
-```
+```text
 src/v3/scalars/
 ├── functions.sql          ← hand-written shared blocker helper (COMMITTED)
 ├── int4/

@@ -2,6 +2,7 @@
 //! No `assert_cmd` in this repo, so we drive the compiled binary directly via
 //! the `CARGO_BIN_EXE_eql-codegen` path Cargo injects for integration tests.
 
+use std::path::PathBuf;
 use std::process::Command;
 
 /// Path to the compiled `eql-codegen` binary, injected by Cargo.
@@ -9,15 +10,37 @@ fn bin() -> &'static str {
     env!("CARGO_BIN_EXE_eql-codegen")
 }
 
-/// `bindings` exits 0 and reports the written-file count. The success path
-/// regenerates the committed `crates/eql-bindings/src/v3/*.rs` in place, but
-/// generation is deterministic and those files are committed-fresh, so the run
-/// is idempotent (no working-tree change). The count is one file per catalog
-/// family plus `inventory.rs`.
+/// A throwaway directory under the system temp root, removed on drop. Lets the
+/// smoke test redirect `bindings` output via `EQL_CODEGEN_OUT_ROOT` instead of
+/// writing into the committed source tree.
+struct TempDir(PathBuf);
+impl Drop for TempDir {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+fn tempdir() -> TempDir {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let mut p = std::env::temp_dir();
+    p.push(format!("eql-codegen-cli-{}-{nanos}", std::process::id()));
+    std::fs::create_dir_all(&p).unwrap();
+    TempDir(p)
+}
+
+/// `bindings` exits 0 and reports the written-file count. Run against a throwaway
+/// `EQL_CODEGEN_OUT_ROOT` tree so the smoke test proves the subcommand honours
+/// the output-root override (test isolation) and never touches the committed
+/// `crates/eql-bindings/src/v3/*.rs`. The count is one file per catalog family
+/// plus `inventory.rs`.
 #[test]
 fn bindings_subcommand_succeeds_and_reports_count() {
+    let out_root = tempdir();
     let out = Command::new(bin())
         .arg("bindings")
+        .env("EQL_CODEGEN_OUT_ROOT", out_root.0.as_os_str())
         .output()
         .expect("run eql-codegen bindings");
     assert!(
@@ -30,6 +53,14 @@ fn bindings_subcommand_succeeds_and_reports_count() {
     assert!(
         stdout.contains(&format!("bindings: ok ({expected} files)")),
         "expected 'bindings: ok ({expected} files)' in stdout, got:\n{stdout}"
+    );
+    // The override must have routed output into the temp tree, leaving the
+    // committed bindings tree untouched.
+    let generated = out_root.0.join("crates/eql-bindings/src/v3/inventory.rs");
+    assert!(
+        generated.is_file(),
+        "expected generated inventory.rs under the override root at {}",
+        generated.display()
     );
 }
 

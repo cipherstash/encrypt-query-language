@@ -283,12 +283,17 @@ pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
     // every current type wrote successfully, so it never deletes-before-write.
     let keep = normalized_set(&all_written);
     if scalars_root.is_dir() {
-        let mut subdirs: Vec<PathBuf> = fs::read_dir(&scalars_root)?
-            .map(|e| e.map(|e| e.path()))
-            .collect::<std::io::Result<Vec<_>>>()?
-            .into_iter()
-            .filter(|p| p.is_dir())
-            .collect();
+        // `file_type()` does NOT follow symlinks (unlike `Path::is_dir`), so a
+        // symlinked entry under scalars_root is skipped rather than traversed —
+        // the orphan sweep can never delete files outside `out_root` through a
+        // symlink.
+        let mut subdirs: Vec<PathBuf> = Vec::new();
+        for entry in fs::read_dir(&scalars_root)? {
+            let entry = entry?;
+            if entry.file_type()?.is_dir() {
+                subdirs.push(entry.path());
+            }
+        }
         subdirs.sort();
         for dir in subdirs {
             for removed in remove_generated_orphans(&dir, GeneratedKind::Sql, &keep)? {
@@ -315,12 +320,16 @@ pub fn clean_all(out_root: &Path) -> Result<Vec<PathBuf>, WriteError> {
     if !scalars_root.is_dir() {
         return Ok(Vec::new());
     }
-    let mut subdirs: Vec<PathBuf> = fs::read_dir(&scalars_root)?
-        .map(|e| e.map(|e| e.path()))
-        .collect::<std::io::Result<Vec<_>>>()?
-        .into_iter()
-        .filter(|p| p.is_dir())
-        .collect();
+    // `file_type()` does NOT follow symlinks (unlike `Path::is_dir`), so a
+    // symlinked entry under scalars_root is skipped, never descended into for
+    // marker-aware deletion.
+    let mut subdirs: Vec<PathBuf> = Vec::new();
+    for entry in fs::read_dir(&scalars_root)? {
+        let entry = entry?;
+        if entry.file_type()?.is_dir() {
+            subdirs.push(entry.path());
+        }
+    }
     subdirs.sort();
     let mut removed = Vec::new();
     for dir in subdirs {
@@ -579,6 +588,42 @@ mod tests {
                 .join("int4/int4_types.sql")
                 .exists(),
             "catalog types are generated"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn generate_all_does_not_follow_symlinked_subdir_for_orphan_sweep() {
+        // A symlinked entry under src/v3/scalars must NOT be descended into by the
+        // cross-dir orphan sweep: `file_type()` reports the entry as a symlink (not
+        // a dir), so files in the link target — which live OUTSIDE out_root — are
+        // never marker-deleted. With the old `Path::is_dir()` (symlink-following)
+        // scan, the generated file under the target would be swept.
+        let d = crate::writer::test_support::tempdir();
+        let root = d.path();
+        let scalars = root.join(V3_SCALARS_DIR);
+        fs::create_dir_all(&scalars).unwrap();
+
+        // An outside-the-tree dir holding a marker-bearing generated file that is
+        // NOT part of any catalog write, i.e. an "orphan" the sweep would target if
+        // it could reach it.
+        let outside = d.path().join("outside-target");
+        fs::create_dir_all(&outside).unwrap();
+        let victim = outside.join("int4_types.sql");
+        fs::write(
+            &victim,
+            format!("{}\nSELECT 1;\n", crate::consts::AUTO_GENERATED_MARKER),
+        )
+        .unwrap();
+
+        // Plant the symlink as a scalars subdir entry pointing at the outside dir.
+        std::os::unix::fs::symlink(&outside, scalars.join("evil")).unwrap();
+
+        generate_all(root).unwrap();
+
+        assert!(
+            victim.exists(),
+            "file behind a symlinked subdir must not be swept (no symlink traversal)"
         );
     }
 

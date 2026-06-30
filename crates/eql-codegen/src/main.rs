@@ -42,10 +42,10 @@ fn main() -> ExitCode {
     // crates/eql-bindings/src/v3. The default no-arg run stays SQL-only; this
     // is wired as the first step of `mise run types:generate`.
     if args.len() == 2 && args[1] == "bindings" {
-        match eql_codegen::bindings::generate_bindings(&repo_root()) {
+        match eql_codegen::bindings::generate_bindings(&out_root()) {
             Ok(written) => {
                 for p in &written {
-                    let rel = p.strip_prefix(repo_root()).unwrap_or(p);
+                    let rel = p.strip_prefix(out_root()).unwrap_or(p);
                     println!("generated {}", rel.display());
                 }
                 println!("bindings: ok ({} files)", written.len());
