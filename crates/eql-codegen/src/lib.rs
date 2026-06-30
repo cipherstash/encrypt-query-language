@@ -1,8 +1,8 @@
 //! Scalar encrypted-domain SQL generator. Renders the `eql-domains` catalog to
-//! the gitignored SQL surface, validated byte-for-byte against the per-token
-//! reference SQL files under `tests/codegen/reference/<token>/` (modulo the one
-//! `-- REFERENCE:` provenance line each reference file carries). The plaintext
-//! fixture lists the SQLx matrix consumes live in the catalog itself
+//! the committed SQL surface under `src/v3/scalars/<token>/`, drift-gated
+//! byte-for-byte by `mise run codegen:parity` (regenerate in place +
+//! `git diff --exit-code`, mirroring `types:check` for the Rust bindings). The
+//! plaintext fixture lists the SQLx matrix consumes live in the catalog itself
 //! (`eql_domains::INT4_VALUES` / `INT2_VALUES`), not in a generated file.
 
 use std::path::PathBuf;

@@ -1,20 +1,28 @@
-//! THE PARITY GATE. Runs the Rust generator (into a temp dir) and asserts the
-//! generated SQL surface is byte-for-byte equal to the committed reference SQL
-//! files under `tests/codegen/reference/<token>/` (modulo the one leading
-//! `-- REFERENCE:` provenance line). Every catalog type has a committed
-//! reference, generated once; the reference — not the retired Python generator
-//! — is the sole oracle. The reference dirs are *discovered* dynamically and
-//! cross-checked against `eql_domains::CATALOG`, so a new catalog type with no
-//! reference (or a stale reference with no catalog row) fails here. The
-//! plaintext fixture lists are not
-//! generated; they live in the catalog (`eql_domains::INT4_VALUES` /
-//! `INT2_VALUES`) and are pinned by `eql-domains`'s own `values_tests`.
+//! STRUCTURAL GATES over the committed scalar SQL surface.
+//!
+//! Byte-for-byte parity between the generator and the committed
+//! `src/v3/scalars/<token>/` files is enforced by `mise run codegen:parity`
+//! (regenerate in place + `git diff --exit-code`), mirroring how
+//! `mise run types:check` gates the committed Rust bindings. These in-process
+//! tests are the belt-and-suspenders that run in a plain `cargo test` (no git,
+//! no build): they assert the committed token dirs match `eql_domains::CATALOG`
+//! and that every generated file carries its owner-marker, plus the
+//! determinism promise (identical `CATALOG` => byte-identical SQL).
+//!
+//! The plaintext fixture lists are not generated; they live in the catalog
+//! (`eql_domains::INT4_VALUES` / `INT2_VALUES`) and are pinned by `eql-domains`'s
+//! own `values_tests`.
 
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use eql_codegen::repo_root;
+
+/// SQL generated-file marker — the first line every generated `.sql` carries.
+/// Kept in lockstep with `eql_codegen`'s crate-private `AUTO_GENERATED_MARKER`
+/// (asserted there by `consts::tests::sql_marker_is_grep_compatible_single_line`).
+const AUTO_GENERATED_MARKER: &str = "-- AUTOMATICALLY GENERATED FILE.";
 
 /// A temp dir removed on drop, so parity runs don't leak `/tmp` trees.
 struct TempDir(PathBuf);
@@ -40,92 +48,69 @@ fn tempdir(tag: &str) -> TempDir {
     TempDir(p)
 }
 
-/// The committed reference token dirs under `tests/codegen/reference/` (every
-/// entry that is a directory; `README.md` and any stray file are skipped).
-fn reference_tokens(root: &Path) -> BTreeSet<String> {
-    fs::read_dir(root.join("tests/codegen/reference"))
-        .expect("reference dir")
+/// The committed scalar token dirs under `src/v3/scalars/` (every entry that is
+/// a directory; the depth-1 hand-written `functions.sql` is a file and skipped).
+fn committed_scalar_tokens(root: &Path) -> BTreeSet<String> {
+    fs::read_dir(root.join("src/v3/scalars"))
+        .expect("src/v3/scalars dir")
         .filter_map(|e| e.ok())
         .filter(|e| e.path().is_dir())
         .map(|e| e.file_name().to_str().unwrap().to_string())
         .collect()
 }
 
-/// The sorted `*.sql` file names directly under `dir`.
-fn sql_names(dir: &Path) -> Vec<String> {
-    let mut names: Vec<String> = fs::read_dir(dir)
-        .unwrap()
-        .filter_map(|e| e.ok().map(|e| e.path()))
-        .filter(|p| p.extension().and_then(|x| x.to_str()) == Some("sql"))
-        .map(|p| p.file_name().unwrap().to_str().unwrap().to_string())
-        .collect();
-    names.sort();
-    names
-}
-
-/// Strip the leading `-- REFERENCE:` provenance line(s), preserving the
-/// remaining bytes verbatim (`split_inclusive` keeps the `\n` terminators).
-/// What remains is the generated body, which already starts with the
-/// template-owned `-- AUTOMATICALLY GENERATED FILE.` marker — the same first
-/// line the materialised file carries — so the comparison is byte-for-byte.
-fn reference_body(reference: &str) -> String {
-    reference
-        .split_inclusive('\n')
-        .skip_while(|l| l.starts_with("-- REFERENCE:") || l.starts_with("// REFERENCE:"))
-        .collect()
-}
-
 #[test]
-fn reference_dirs_match_catalog_tokens() {
+fn committed_scalar_dirs_match_catalog_tokens() {
     let root = repo_root();
-    let refs = reference_tokens(&root);
+    let dirs = committed_scalar_tokens(&root);
     let catalog: BTreeSet<String> = eql_domains::CATALOG
         .iter()
         .map(|s| s.name.to_string())
         .collect();
     assert_eq!(
-        refs, catalog,
-        "committed reference dirs must equal the catalog token set: a new \
-         catalog type needs a committed `tests/codegen/reference/<token>/` reference \
-         (generate it with `cargo run -p eql-codegen` and prepend a `-- REFERENCE:` \
-         line), and a stale reference with no catalog row must be removed"
+        dirs, catalog,
+        "committed src/v3/scalars/<token>/ dirs must equal the catalog token set: a new \
+         catalog type needs its regenerated SQL committed (run `mise run build` and commit \
+         src/v3/scalars), and a stale dir with no catalog row must be removed"
     );
 }
 
+/// Every generated `.sql` under a committed token dir must start with the
+/// owner-marker. The writer only ever overwrites/prunes marker-bearing files,
+/// so a generated file missing its marker would silently escape regeneration and
+/// orphan-pruning. Hand-written `*_extensions.sql` (and the depth-1
+/// `functions.sql`, which is not under a token dir) carry no marker and are
+/// deliberately excluded.
 #[test]
-fn rust_generator_matches_reference_files() {
+fn every_generated_sql_file_starts_with_marker() {
     let root = repo_root();
-    let out = tempdir("rust-reference");
-    eql_codegen::generate::generate_all(out.path()).expect("rust generate_all");
-
-    for token in reference_tokens(&root) {
-        let ref_dir = root.join("tests/codegen/reference").join(&token);
-        let gen_dir = out.path().join("src/v3/scalars").join(&token);
-
-        // Assert the generated .sql file SET matches the reference set first. The
-        // per-file byte comparison below only iterates reference files, so a
-        // missing generated file would surface only as an opaque `unwrap` panic on
-        // the `read_to_string` below, and an EXTRA generated file (one the
-        // reference never pins) would pass silently — it is never iterated. This
-        // set check turns both into a clear file-set diff.
-        let ref_names = sql_names(&ref_dir);
-        let gen_names = sql_names(&gen_dir);
-        assert_eq!(
-            gen_names, ref_names,
-            "{token}: generated .sql file set differs from reference set \
-             (reference: {ref_names:?}, generated: {gen_names:?})"
-        );
-
-        for name in &ref_names {
-            let reference = fs::read_to_string(ref_dir.join(name)).unwrap();
-            let expected = reference_body(&reference);
-            let actual = fs::read_to_string(gen_dir.join(name)).unwrap();
+    let mut checked = 0;
+    for token in committed_scalar_tokens(&root) {
+        let dir = root.join("src/v3/scalars").join(&token);
+        for entry in fs::read_dir(&dir).unwrap() {
+            let path = entry.unwrap().path();
+            let name = path.file_name().unwrap().to_str().unwrap().to_string();
+            if path.extension().and_then(|e| e.to_str()) != Some("sql")
+                || name.ends_with("_extensions.sql")
+            {
+                continue;
+            }
+            let text = fs::read_to_string(&path).unwrap();
+            let first = text.lines().next().unwrap_or_default();
             assert_eq!(
-                actual, expected,
-                "{token}/{name}: materialised output differs from reference"
+                first,
+                AUTO_GENERATED_MARKER,
+                "{}: generated SQL must start with the owner-marker so the writer \
+                 recognises it for overwrite/prune (found {first:?})",
+                path.display()
             );
+            checked += 1;
         }
     }
+    assert!(
+        checked >= 11,
+        "expected >=11 generated SQL files across all tokens, checked {checked}"
+    );
 }
 
 /// Run the generator twice into separate temp dirs and assert every emitted file
@@ -172,35 +157,5 @@ fn generate_all_is_deterministic_across_runs() {
     );
     for ((na, ca), (_nb, cb)) in fa.iter().zip(fb.iter()) {
         assert_eq!(ca, cb, "{na}: two generator runs produced different bytes");
-    }
-}
-
-/// Both Rust strippers (the in-crate `strip_reference_marker` and this file's
-/// reference test) skip a variable number of leading `-- REFERENCE:` lines, while
-/// the shell gate skips exactly one with `tail -n +2`. They agree only while
-/// every reference file carries exactly one marker line — make that explicit
-/// across every committed reference dir.
-#[test]
-fn every_reference_file_has_exactly_one_marker_line() {
-    let root = repo_root();
-    for token in reference_tokens(&root) {
-        let dir = root.join("tests/codegen/reference").join(&token);
-        for entry in fs::read_dir(&dir).unwrap() {
-            let path = entry.unwrap().path();
-            let ext = path.extension().and_then(|e| e.to_str());
-            if ext != Some("sql") && ext != Some("rs") {
-                continue;
-            }
-            let text = fs::read_to_string(&path).unwrap();
-            let markers = text
-                .lines()
-                .take_while(|l| l.starts_with("-- REFERENCE:") || l.starts_with("// REFERENCE:"))
-                .count();
-            assert_eq!(
-                markers, 1,
-                "{}: expected exactly 1 leading REFERENCE marker line (shell `tail -n +2` assumes one); found {markers}",
-                path.display()
-            );
-        }
     }
 }

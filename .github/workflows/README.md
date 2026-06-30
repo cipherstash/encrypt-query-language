@@ -110,7 +110,7 @@ All jobs run on `blacksmith-16vcpu-ubuntu-2204`. "PG set" follows the event
 | **docs-static** | `docs:validate:source` | SQL doxygen coverage + required-tags (DB-free); relevance-gated like the other heavy jobs (its inputs — `src/**`, the `crates/**` codegen build, `tasks/docs/**` — are a subset of the `relevant` filter) | no | no |
 | **schema** | `test:schema` | v2.2 / v2.3 payload JSON-schema validation | no | no |
 | **rust-crates** | `test:crates` + `types:check` | `cargo fmt --check`, clippy + `cargo test` for `eql-domains` / `eql-codegen` / `eql-tests-macros` / `eql-bindings`; verify TS bindings + JSON schemas are fresh | no | no |
-| **codegen** | `codegen:parity` | Generated encrypted-domain SQL matches the golden output | no | no |
+| **codegen** | `codegen:parity` | Regenerate encrypted-domain SQL in place + `git diff` drift gate (committed `src/v3/scalars/` matches the generator) | no | no |
 | **self-contained-v3** | `test:self_contained_v3` | `eql_v3` surface has no `eql_v2` dependency | no | no |
 | **matrix-coverage** | `test:matrix:inventory` (+`:jsonb_entry`, `:v3-jsonb`) + `test:matrix:catalog-coverage` | Scalar-matrix test-name snapshots are not silently dropped; catalog surface is covered | no | no |
 | **splinter** | `test:splinter` | Supabase/Splinter lints over the installed EQL | yes (PG17) | no |

@@ -150,9 +150,14 @@ cargo test --test payload_schema_tests
 """
 
 [tasks."codegen:parity"]
-description = "Parity gate: Rust eql-codegen output matches the int4 reference SQL files (byte-for-byte)"
+description = "Drift gate: regenerate the scalar SQL surface in place and fail if the committed src/v3/scalars files differ (mirrors types:check)"
 dir = "{{config_root}}"
 run = "bash tasks/codegen-parity.sh"
+
+[tasks."install-hooks"]
+description = "Point git at the committed hooks in tasks/githooks (run once per clone) so commits touching the catalog/generated surfaces are drift-gated locally"
+dir = "{{config_root}}"
+run = "git config core.hooksPath tasks/githooks"
 
 [tasks."test:codegen"]
 description = "Run the encrypted-domain catalog + generator tests (no database required)"
