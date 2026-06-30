@@ -5,23 +5,8 @@ import type { OreBlock256 } from "./OreBlock256";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `eql_v3.float8_ord` — full comparison (`=` `<>` `<` `<=` `>` `>=`).
+ * `eql_v3.float8_ord` — ordering domain.
+ *
+ * Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.
  */
-export type Float8Ord = { 
-/**
- * Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
- * value fails deserialization.
- */
-v: SchemaVersion, 
-/**
- * Table/column identifier. Required by the domain CHECK.
- */
-i: Identifier, 
-/**
- * mp_base85 source ciphertext. Required by the domain CHECK.
- */
-c: Ciphertext, 
-/**
- * Block-ORE order term (8 blocks for float). Serves equality too.
- */
-ob: OreBlock256, };
+export type Float8Ord = { v: SchemaVersion, i: Identifier, c: Ciphertext, ob: OreBlock256, };

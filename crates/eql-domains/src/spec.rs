@@ -17,6 +17,26 @@ impl Domain {
             format!("{family_name}_{}", self.name)
         }
     }
+
+    /// The PascalCase Rust/TS struct identifier for this domain under
+    /// `family_name`: the [`Self::full_name`] snake_case name mangled to
+    /// PascalCase (`"int4_ord_ore"` -> `"Int4OrdOre"`, storage `""` ->
+    /// `"Int4"`). The SINGLE source of truth for the mangler — the bindings
+    /// emitter (`eql-codegen`) and the TS-property-order guard (`eql-bindings`)
+    /// both call this instead of carrying private copies that could drift.
+    pub fn struct_ident(&self, family_name: &str) -> String {
+        self.full_name(family_name)
+            .split('_')
+            .filter(|s| !s.is_empty())
+            .map(|s| {
+                let mut chars = s.chars();
+                match chars.next() {
+                    Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+                    None => String::new(),
+                }
+            })
+            .collect()
+    }
 }
 
 impl DomainFamily {
@@ -53,5 +73,33 @@ impl DomainFamily {
     /// across the catalog tests and the SQLx harness.
     pub fn domain_by_name(&self, name: &str) -> Option<&Domain> {
         self.domains.iter().find(|d| d.name == name)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Domain, Term};
+
+    #[test]
+    fn struct_ident_mangles_full_name_to_pascalcase() {
+        let storage = Domain {
+            name: "",
+            terms: &[],
+        };
+        let ord_ore = Domain {
+            name: "ord_ore",
+            terms: &[Term::Ore],
+        };
+        // storage domain => bare family name
+        assert_eq!(storage.struct_ident("int4"), "Int4");
+        // multi-segment bare name joins under the family
+        assert_eq!(ord_ore.struct_ident("int4"), "Int4OrdOre");
+        assert_eq!(ord_ore.struct_ident("timestamptz"), "TimestamptzOrdOre");
+        // single-segment bare name
+        let eq = Domain {
+            name: "eq",
+            terms: &[Term::Hm],
+        };
+        assert_eq!(eq.struct_ident("float8"), "Float8Eq");
     }
 }

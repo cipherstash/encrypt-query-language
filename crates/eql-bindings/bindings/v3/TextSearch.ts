@@ -7,33 +7,8 @@ import type { OreBlock256 } from "./OreBlock256";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `eql_v3.text_search` — the full text search surface: HMAC equality, ORE
- * ordering, and Bloom-filter containment match (`[Hm, Ore, Bloom]`). The
- * superset domain combining `_eq`, `_ord`, and `_match`.
+ * `eql_v3.text_search` — search domain.
+ *
+ * Operators: `=` `<>` `<` `<=` `>` `>=` `@>` `<@`. Required keys: `v` `i` `c` `hm` `ob` `bf`.
  */
-export type TextSearch = { 
-/**
- * Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
- * value fails deserialization.
- */
-v: SchemaVersion, 
-/**
- * Table/column identifier. Required by the domain CHECK.
- */
-i: Identifier, 
-/**
- * mp_base85 source ciphertext. Required by the domain CHECK.
- */
-c: Ciphertext, 
-/**
- * HMAC-SHA-256 equality term.
- */
-hm: Hmac256, 
-/**
- * Block-ORE order term.
- */
-ob: OreBlock256, 
-/**
- * Bloom-filter match term (signed smallint bit positions).
- */
-bf: BloomFilter, };
+export type TextSearch = { v: SchemaVersion, i: Identifier, c: Ciphertext, hm: Hmac256, ob: OreBlock256, bf: BloomFilter, };

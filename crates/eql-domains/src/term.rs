@@ -33,6 +33,20 @@ impl Term {
         }
     }
 
+    /// The shared binding newtype carrying this term's payload field on the
+    /// wire (`Hmac256` for `hm`, `OreBlock256` for `ob`, `BloomFilter` for
+    /// `bf`). Part of the structural wire contract, beside [`Term::json_key`]/
+    /// [`Term::ctor`] — a new term names its newtype HERE, so the bindings
+    /// emitter (which matches on `Term`) stays exhaustive at compile time
+    /// instead of panicking at codegen runtime on an unmapped key.
+    pub const fn binding_newtype(self) -> &'static str {
+        match self {
+            Term::Hm => "Hmac256",
+            Term::Ore => "OreBlock256",
+            Term::Bloom => "BloomFilter",
+        }
+    }
+
     /// Generated-file [`Role`] contributed by this single term. A domain's role
     /// is the richest of its terms' roles — see [`Term::role_for_terms`].
     pub const fn role(self) -> Role {
@@ -99,6 +113,23 @@ impl Term {
         out
     }
 
+    /// Distinct terms keyed by `key`, first occurrence wins, order preserved.
+    /// The `Term`-returning sibling of [`Self::dedupe_preserving_order`] (which
+    /// returns the `&str` keys): [`Term::payload_terms`] keys on
+    /// [`Term::json_key`], [`Term::extractor_terms`] on [`Term::extractor`].
+    fn dedupe_terms_by(terms: &[Term], key: fn(Term) -> &'static str) -> Vec<Term> {
+        let mut seen: Vec<&str> = Vec::new();
+        let mut out: Vec<Term> = Vec::new();
+        for &t in terms {
+            let k = key(t);
+            if !seen.contains(&k) {
+                seen.push(k);
+                out.push(t);
+            }
+        }
+        out
+    }
+
     /// Supported operators for the union of a domain's terms (catalog order,
     /// deduped).
     pub fn operators_for_terms(terms: &[Term]) -> Vec<&'static str> {
@@ -108,6 +139,15 @@ impl Term {
     /// JSON payload keys required by these terms (deduped, in order).
     pub fn term_json_keys(terms: &[Term]) -> Vec<&'static str> {
         Self::dedupe_preserving_order(terms.iter().map(|t| t.json_key()))
+    }
+
+    /// The distinct terms contributing a payload field, in wire order: one per
+    /// [`Term::json_key`], deduped first-occurrence-wins. Symmetric to
+    /// [`Term::term_json_keys`] but returns the `Term`s, so the bindings emitter
+    /// reads both the field key ([`Term::json_key`]) and its newtype
+    /// ([`Term::binding_newtype`]) while matching on the enum.
+    pub fn payload_terms(terms: &[Term]) -> Vec<Term> {
+        Self::dedupe_terms_by(terms, Term::json_key)
     }
 
     /// JSON keys whose payload must be a non-empty array across these terms
@@ -121,15 +161,7 @@ impl Term {
     /// Two terms sharing an extractor collapse to the first, since the generated
     /// `eq_term`/`ord_term`/`match_term` function is emitted once per extractor.
     pub fn extractor_terms(terms: &[Term]) -> Vec<Term> {
-        let mut seen: Vec<&str> = Vec::new();
-        let mut out: Vec<Term> = Vec::new();
-        for &t in terms {
-            if !seen.contains(&t.extractor()) {
-                seen.push(t.extractor());
-                out.push(t);
-            }
-        }
-        out
+        Self::dedupe_terms_by(terms, Term::extractor)
     }
 
     /// SQL `-- REQUIRE:` edges needed by these terms (deduped, in order).
@@ -160,5 +192,32 @@ impl Term {
             .map(|t| t.role())
             .max_by_key(|r| r.rank())
             .unwrap_or(Role::Storage)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn binding_newtype_maps_each_term() {
+        assert_eq!(Term::Hm.binding_newtype(), "Hmac256");
+        assert_eq!(Term::Ore.binding_newtype(), "OreBlock256");
+        assert_eq!(Term::Bloom.binding_newtype(), "BloomFilter");
+    }
+
+    #[test]
+    fn payload_terms_is_one_field_per_json_key_in_order() {
+        let keys: Vec<&str> = Term::payload_terms(&[Term::Hm, Term::Ore])
+            .iter()
+            .map(|t| t.json_key())
+            .collect();
+        assert_eq!(keys, ["hm", "ob"]);
+        let keys: Vec<&str> = Term::payload_terms(&[Term::Hm, Term::Hm])
+            .iter()
+            .map(|t| t.json_key())
+            .collect();
+        assert_eq!(keys, ["hm"]);
+        assert!(Term::payload_terms(&[]).is_empty());
     }
 }

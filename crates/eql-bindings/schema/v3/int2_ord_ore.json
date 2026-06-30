@@ -1,8 +1,5 @@
 {
-  "$id": "https://schemas.cipherstash.com/eql/v3/int2_ord_ore.json",
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "additionalProperties": false,
-  "definitions": {
+  "$defs": {
     "Ciphertext": {
       "description": "mp_base85 source ciphertext — the `c` envelope key.\n\nRequired by every v3 domain CHECK; present on every payload.",
       "type": "string"
@@ -21,13 +18,13 @@
         }
       },
       "required": [
-        "c",
-        "t"
+        "t",
+        "c"
       ],
       "type": "object"
     },
     "OreBlock256": {
-      "description": "Block-ORE order term — the `ob` wire key. Backs the `_ord` / `_ord_ore` domains (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's domain, so it serves equality too. The block count is width-agnostic on the wire (8 for the int scalars, 12 for timestamptz, 14 for numeric) — the array just carries more block strings. SQL-side constructor: `eql_v3.ore_block_256`.",
+      "description": "Block-ORE order term — the `ob` wire key. Backs the `_ord` / `_ord_ore`\ndomains (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's\ndomain, so it serves equality too. The block count is width-agnostic on the\nwire (8 for the int scalars, 12 for timestamptz, 14 for numeric) — the\narray just carries more block strings. SQL-side constructor:\n`eql_v3.ore_block_256`.",
       "items": {
         "type": "string"
       },
@@ -39,46 +36,29 @@
       "type": "integer"
     }
   },
-  "description": "`eql_v3.int2_ord_ore` — full comparison, scheme-explicit name.",
+  "$id": "https://schemas.cipherstash.com/eql/v3/int2_ord_ore.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "`eql_v3.int2_ord_ore` — ordering domain.\n\nOperators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.",
   "properties": {
     "c": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/Ciphertext"
-        }
-      ],
-      "description": "mp_base85 source ciphertext. Required by the domain CHECK."
+      "$ref": "#/$defs/Ciphertext"
     },
     "i": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/Identifier"
-        }
-      ],
-      "description": "Table/column identifier. Required by the domain CHECK."
+      "$ref": "#/$defs/Identifier"
     },
     "ob": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/OreBlock256"
-        }
-      ],
-      "description": "Block-ORE order term. Serves equality too."
+      "$ref": "#/$defs/OreBlock256"
     },
     "v": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/SchemaVersion"
-        }
-      ],
-      "description": "Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other value fails deserialization."
+      "$ref": "#/$defs/SchemaVersion"
     }
   },
   "required": [
-    "c",
+    "v",
     "i",
-    "ob",
-    "v"
+    "c",
+    "ob"
   ],
   "title": "Int2OrdOre",
   "type": "object"

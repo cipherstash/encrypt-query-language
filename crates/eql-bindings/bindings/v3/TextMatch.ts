@@ -5,23 +5,8 @@ import type { Identifier } from "./Identifier";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `eql_v3.text_match` — Bloom-filter containment match.
+ * `eql_v3.text_match` — match domain.
+ *
+ * Operators: `@>` `<@`. Required keys: `v` `i` `c` `bf`.
  */
-export type TextMatch = { 
-/**
- * Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other
- * value fails deserialization.
- */
-v: SchemaVersion, 
-/**
- * Table/column identifier. Required by the domain CHECK.
- */
-i: Identifier, 
-/**
- * mp_base85 source ciphertext. Required by the domain CHECK.
- */
-c: Ciphertext, 
-/**
- * Bloom-filter match term (signed smallint bit positions).
- */
-bf: BloomFilter, };
+export type TextMatch = { v: SchemaVersion, i: Identifier, c: Ciphertext, bf: BloomFilter, };

@@ -1,8 +1,5 @@
 {
-  "$id": "https://schemas.cipherstash.com/eql/v3/bool.json",
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "additionalProperties": false,
-  "definitions": {
+  "$defs": {
     "Ciphertext": {
       "description": "mp_base85 source ciphertext — the `c` envelope key.\n\nRequired by every v3 domain CHECK; present on every payload.",
       "type": "string"
@@ -21,8 +18,8 @@
         }
       },
       "required": [
-        "c",
-        "t"
+        "t",
+        "c"
       ],
       "type": "object"
     },
@@ -32,37 +29,25 @@
       "type": "integer"
     }
   },
-  "description": "`eql_v3.bool` — storage only / encryption-only; every operator is blocked.",
+  "$id": "https://schemas.cipherstash.com/eql/v3/bool.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "`eql_v3.bool` — storage-only domain.\n\nOperators: none. Required keys: `v` `i` `c`.",
   "properties": {
     "c": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/Ciphertext"
-        }
-      ],
-      "description": "mp_base85 source ciphertext. Required by the domain CHECK."
+      "$ref": "#/$defs/Ciphertext"
     },
     "i": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/Identifier"
-        }
-      ],
-      "description": "Table/column identifier. Required by the domain CHECK."
+      "$ref": "#/$defs/Identifier"
     },
     "v": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/SchemaVersion"
-        }
-      ],
-      "description": "Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other value fails deserialization."
+      "$ref": "#/$defs/SchemaVersion"
     }
   },
   "required": [
-    "c",
+    "v",
     "i",
-    "v"
+    "c"
   ],
   "title": "Bool",
   "type": "object"

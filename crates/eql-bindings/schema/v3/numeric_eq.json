@@ -1,14 +1,11 @@
 {
-  "$id": "https://schemas.cipherstash.com/eql/v3/numeric_eq.json",
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "additionalProperties": false,
-  "definitions": {
+  "$defs": {
     "Ciphertext": {
       "description": "mp_base85 source ciphertext — the `c` envelope key.\n\nRequired by every v3 domain CHECK; present on every payload.",
       "type": "string"
     },
     "Hmac256": {
-      "description": "HMAC-SHA-256 equality term — the `hm` wire key. Backs the `_eq` domains (`=`, `<>`). SQL-side constructor: `eql_v3.hmac_256`.",
+      "description": "HMAC-SHA-256 equality term — the `hm` wire key. Backs the `_eq` domains\n(`=`, `<>`). SQL-side constructor: `eql_v3.hmac_256`.",
       "type": "string"
     },
     "Identifier": {
@@ -25,8 +22,8 @@
         }
       },
       "required": [
-        "c",
-        "t"
+        "t",
+        "c"
       ],
       "type": "object"
     },
@@ -36,46 +33,29 @@
       "type": "integer"
     }
   },
-  "description": "`eql_v3.numeric_eq` — HMAC equality (`=`, `<>`).",
+  "$id": "https://schemas.cipherstash.com/eql/v3/numeric_eq.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "`eql_v3.numeric_eq` — equality domain.\n\nOperators: `=` `<>`. Required keys: `v` `i` `c` `hm`.",
   "properties": {
     "c": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/Ciphertext"
-        }
-      ],
-      "description": "mp_base85 source ciphertext. Required by the domain CHECK."
+      "$ref": "#/$defs/Ciphertext"
     },
     "hm": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/Hmac256"
-        }
-      ],
-      "description": "HMAC-SHA-256 equality term."
+      "$ref": "#/$defs/Hmac256"
     },
     "i": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/Identifier"
-        }
-      ],
-      "description": "Table/column identifier. Required by the domain CHECK."
+      "$ref": "#/$defs/Identifier"
     },
     "v": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/SchemaVersion"
-        }
-      ],
-      "description": "Envelope version — always `2` (`EQL_SCHEMA_VERSION`); any other value fails deserialization."
+      "$ref": "#/$defs/SchemaVersion"
     }
   },
   "required": [
-    "c",
-    "hm",
+    "v",
     "i",
-    "v"
+    "c",
+    "hm"
   ],
   "title": "NumericEq",
   "type": "object"

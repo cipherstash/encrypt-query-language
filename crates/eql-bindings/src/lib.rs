@@ -76,27 +76,20 @@ impl<'de> Deserialize<'de> for SchemaVersion {
 /// Manual schema: pins `v` to the literal `2` (`const`), mirroring the
 /// domain CHECK — the derive would emit an unconstrained integer.
 impl schemars::JsonSchema for SchemaVersion {
-    fn schema_name() -> String {
-        "SchemaVersion".to_owned()
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "SchemaVersion".into()
     }
 
-    fn json_schema(_: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-        schemars::schema::SchemaObject {
-            instance_type: Some(schemars::schema::InstanceType::Integer.into()),
-            const_value: Some(serde_json::json!(EQL_SCHEMA_VERSION)),
-            metadata: Some(Box::new(schemars::schema::Metadata {
-                // KEEP IN SYNC with the `SchemaVersion` doc comment above — it
-                // is the canonical text. A derived `JsonSchema` would copy the
-                // doc comment automatically; this manual impl can't, so this
-                // hand-written copy must be updated alongside it.
-                description: Some(
-                    "The envelope version field (`v`) — always exactly `2` on the wire.".to_owned(),
-                ),
-                ..Default::default()
-            })),
-            ..Default::default()
-        }
-        .into()
+    fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        // KEEP IN SYNC with the `SchemaVersion` doc comment above — it is the
+        // canonical text. A derived `JsonSchema` would copy the doc comment
+        // automatically; this manual impl can't, so this hand-written copy
+        // must be updated alongside it.
+        schemars::json_schema!({
+            "type": "integer",
+            "const": EQL_SCHEMA_VERSION,
+            "description": "The envelope version field (`v`) — always exactly `2` on the wire.",
+        })
     }
 }
 

@@ -7,6 +7,7 @@
 
 use std::path::PathBuf;
 
+pub mod bindings;
 pub mod consts;
 pub mod context;
 pub mod dump;

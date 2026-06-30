@@ -49,6 +49,18 @@ To add a scalar type `<T>` (e.g. `int8`), with Rust type `<R>` (e.g. `i64`):
    runs the generator first). One run regenerates *every* catalog type; there is
    no per-type codegen task. The generated `*_{types,functions,operators,aggregates}.sql`
    are gitignored and never committed.
+   - The catalog row ALSO drives the **Rust payload bindings**: `eql-codegen
+     bindings` (run first by `mise run types:generate`) regenerates the
+     committed `crates/eql-bindings/src/v3/<family>.rs` struct + `DomainType`
+     impl and its `inventory.rs`/`all()` entry (one catalog-derived doc line, no
+     field docs), and the `ts-rs`/`schemars` derives then emit the committed
+     `bindings/v3/*.ts` + `schema/v3/*.json`. Unlike the SQL these `.rs` ARE
+     committed (`// @generated`), so run `mise run types:generate` and commit
+     the result; `mise run types:check` is the drift gate. For a new *domain* in
+     an existing family `mod.rs` is untouched, but a new *family* needs a
+     one-line `pub mod <family>;` added to the hand-written `mod.rs` — and any
+     non-derivable caller caveat (e.g. a security note) belongs in the `mod.rs`
+     doc, never the generated family file.
 5. **Snapshot the matrix inventory and commit the reference SQL files** —
    `mise run test:matrix:inventory` (§3), and commit the per-type reference SQL
    files under `tests/codegen/reference/<T>/` (every catalog type must have them — §4).
