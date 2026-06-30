@@ -1,7 +1,7 @@
 //! `FixtureSpec<T>` — the type-checked fixture plug-in contract.
 //!
 //! `T` is the Rust plaintext type, inferred from `.with_values()`. Everything
-//! not derivable — the indexes, the committed `payload` column type, the
+//! not derivable — the indexes, the generated `payload` column type, the
 //! data — is explicit. The fixture name drives every path by convention:
 //!   - table        `fixtures.<name>`
 //!   - working table `public._fixture_<name>`
@@ -74,7 +74,7 @@ impl<'a, T> FixtureSpec<'a, T> {
         self
     }
 
-    /// Set the committed `payload` column SQL type. Defaults to `"jsonb"`.
+    /// Set the generated `payload` column SQL type. Defaults to `"jsonb"`.
     ///
     /// # Panics
     /// Panics if `column_type` is not in `validation::ALLOWED_COLUMN_TYPES`.
@@ -115,7 +115,7 @@ impl<'a, T> FixtureSpec<'a, T> {
         self.values
     }
 
-    /// `fixtures.<name>` — the committed fixture table.
+    /// `fixtures.<name>` — the generated fixture table.
     pub fn fixture_table(&self) -> String {
         format!("fixtures.{}", self.name)
     }
@@ -157,9 +157,9 @@ impl<'a, T> FixtureSpec<'a, T> {
         )
     }
 
-    /// The committed fixture script's header + schema + DDL, up to (not
+    /// The generated fixture script's header + schema + DDL, up to (not
     /// including) the rendered INSERT rows. The driver appends the INSERTs.
-    /// `payload` uses the committed `column_type` (`jsonb` for #224), not
+    /// `payload` uses the generated `column_type` (`jsonb` for #224), not
     /// `eql_v2_encrypted`; `plaintext` uses the SQL type for `T`.
     pub fn fixture_script_preamble(&self) -> String
     where
@@ -187,7 +187,7 @@ impl<'a, T> FixtureSpec<'a, T> {
     }
 
     /// SQL run on the *direct* connection to render each working-table row as
-    /// a committed INSERT. `format('%L', ...)` does server-side literal
+    /// a generated INSERT. `format('%L', ...)` does server-side literal
     /// escaping; row values never pass through Rust string interpolation.
     /// `payload::text` projects the already-encrypted JSONB straight through
     /// — the working table stores the cipherstash-client-encrypted payload as
@@ -360,7 +360,7 @@ mod tests {
     }
 
     #[test]
-    fn fixture_script_preamble_renders_the_committed_table() {
+    fn fixture_script_preamble_renders_the_generated_table() {
         let preamble = int4_spec().fixture_script_preamble();
         // header
         assert!(preamble.contains("AUTO-GENERATED"));
@@ -379,7 +379,7 @@ mod tests {
     #[test]
     fn fixture_script_preamble_attributes_encryption_to_cipherstash_client() {
         // The preamble must record the encryption path so a reader of the
-        // committed SQL can trace it back to the generator.
+        // generated SQL can trace it back to the generator.
         let preamble = int4_spec().fixture_script_preamble();
         assert!(preamble.contains("cipherstash-client"));
         assert!(
@@ -389,8 +389,8 @@ mod tests {
     }
 
     #[test]
-    fn fixture_script_preamble_uses_the_committed_column_type() {
-        // The committed table uses .with_column_type(), NOT eql_v2_encrypted.
+    fn fixture_script_preamble_uses_the_generated_column_type() {
+        // The generated table uses .with_column_type(), NOT eql_v2_encrypted.
         let preamble = int4_spec().fixture_script_preamble();
         assert!(!preamble.contains("eql_v2_encrypted"));
     }

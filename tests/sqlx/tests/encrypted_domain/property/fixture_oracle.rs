@@ -1,4 +1,4 @@
-//! fixture suite (CIP-3141): property tests over the real, committed fixture rows.
+//! fixture suite (CIP-3141): property tests over the real, generated fixture rows.
 //!
 //! The fixture table `fixtures.eql_v3_<T>` carries `(plaintext, payload)` rows
 //! encrypted by cipherstash-client during `test:sqlx:prep`. proptest selects a
@@ -131,7 +131,7 @@ pub(crate) fn embedded_doubles_sql<T: ScalarType>() -> &'static str {
     }
 }
 
-/// Load `T`'s committed fixtures into `pool`'s isolated scratch DB via the
+/// Load `T`'s generated fixtures into `pool`'s isolated scratch DB via the
 /// `include_str!`-embedded SQL. The fixture SQL is self-contained (`CREATE SCHEMA
 /// IF NOT EXISTS fixtures` / `CREATE` / `INSERT`); since each `#[sqlx::test]` DB
 /// is private to its test there is no concurrency on it. `pub(crate)` so
@@ -145,7 +145,7 @@ pub(crate) async fn load_fixtures<T: ScalarType>(pool: &PgPool) -> Result<()> {
     Ok(())
 }
 
-/// Load the committed fixtures for `T` into this test's isolated scratch
+/// Load the generated fixtures for `T` into this test's isolated scratch
 /// DB and read every `(plaintext, payload::text)` row, in id order.
 pub(crate) async fn load_rows<T: ScalarType>(pool: &PgPool) -> Result<Arc<Vec<Row<T>>>> {
     load_fixtures::<T>(pool).await?;
@@ -258,7 +258,7 @@ where
 /// Strategy + config shared by the eq and ord runs: `cases` multisets of
 /// `2..=12` indices into the fixtures (repeats wanted so the equality diagonal
 /// includes identical-ciphertext self-pairs). No regression file — these sample
-/// committed fixtures, nothing to persist/replay.
+/// generated fixtures, nothing to persist/replay.
 fn config_and_strategy(cases: u32, n: usize) -> (Config, impl Strategy<Value = Vec<usize>>) {
     let config = Config {
         cases,
@@ -435,7 +435,7 @@ fixture_fn_oracle_suite!(int2_fn, i16, ordered);
 fixture_fn_oracle_suite!(int8_fn, i64, ordered);
 // date, timestamptz, and numeric are all ordered scalars on the `eql_v3` base,
 // so each gets eq/neq functions + eq_term identity plus the four ord functions
-// on both ordered twins. The committed fixtures already encrypt the whole
+// on both ordered twins. The generated fixtures already encrypt the whole
 // catalog, so this is full function-level coverage at zero marginal ZeroKMS cost.
 fixture_fn_oracle_suite!(date_fn, chrono::NaiveDate, ordered);
 fixture_fn_oracle_suite!(timestamptz_fn, chrono::DateTime<chrono::Utc>, ordered);
@@ -446,7 +446,7 @@ fixture_fn_oracle_suite!(numeric_fn, rust_decimal::Decimal, ordered);
 // through `hm`, the four ord ops through ORE) — the generic `ordered` arm only
 // runs the four ord ops on the ordered twins. text also declares `_search`
 // ([Hm, Ore, Bloom]), which `Variant::Search` reaches but the generic macro
-// never instantiates. The committed text fixture is encrypted with
+// never instantiates. The generated text fixture is encrypted with
 // [Unique, Ore, Match], so its payload carries hm+ob+bf and casts cleanly to
 // every text domain. The fixture rows excludes the empty string (issue #262),
 // so no generator filtering is needed here.

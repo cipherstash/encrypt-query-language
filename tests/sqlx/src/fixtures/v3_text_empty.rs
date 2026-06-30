@@ -10,7 +10,7 @@
 //! CHECK (issue #262, SQLSTATE `23514`), while the non-empty controls cast and
 //! order cleanly. See `tests/v3_text_empty_constraint_tests.rs`.
 //!
-//! The committed `payload` column is plain `jsonb`, so all three rows load; the
+//! The generated `payload` column is plain `jsonb`, so all three rows load; the
 //! rejection happens when a test casts the `id = 1` row to `eql_v3.text_ord` /
 //! `eql_v3.text_ord_ore`, not at fixture load.
 //!
@@ -26,7 +26,7 @@ use anyhow::Result;
 use super::index_kind::IndexKind;
 use super::spec::FixtureSpec;
 
-/// The committed fixture name → table `fixtures.v3_text_empty`, script
+/// The generated fixture name → table `fixtures.v3_text_empty`, script
 /// `v3_text_empty.sql`, SQLx ref `scripts("v3_text_empty")`.
 const NAME: &str = "v3_text_empty";
 

@@ -14,22 +14,17 @@ set -euo pipefail
 # catalog at crates/eql-domains/src (eql-domains::CATALOG) is the source of
 # truth, rendered by the eql-codegen binary.
 #
-# Nuke every generated file first so a type removed from the catalog can't
-# leave orphans in src/ that the `src/**/*.sql` build glob would silently
-# pick up. eql-codegen cleans within a directory it regenerates, but never
-# runs for a type no longer in the catalog. Hand-written *_extensions.sql is
-# preserved by the name patterns; -mindepth 2 keeps the type-agnostic
-# src/v3/scalars/functions.sql safe.
-find src/v3/scalars -mindepth 2 -type f \
-  \( -name '*_types.sql' -o -name '*_functions.sql' -o -name '*_operators.sql' \
-     -o -name '*_aggregates.sql' \) \
-  -delete 2>/dev/null || true
-
-# Regenerate every type — the catalog (eql-domains::CATALOG) is the single
-# source of truth for the enumeration; eql-codegen renders all SQL in one
-# deterministic run. The plaintext fixture lists are not generated — the SQLx
-# tests read them straight from the catalog (eql_domains::INT4_VALUES / …). The
-# orphan sweep above still handles the catalog-removed case the generator cannot.
+# eql-codegen owns orphan removal: it writes every current file first (each via
+# an atomic temp+rename), then prunes stale generated SQL across ALL
+# src/v3/scalars/* type dirs — marker-aware, so a type dropped from the catalog
+# can't leave orphans the `src/**/*.sql` build glob would pick up, and a
+# hand-written *_extensions.sql (no AUTO-GENERATED marker) is never deleted.
+# Because deletion happens only after every write succeeds, an aborted run never
+# leaves the tree stripped (unlike the old filename-pattern `find -delete`, which
+# deleted before regenerating and was blind to the AUTO-GENERATED marker).
+#
+# The plaintext fixture lists are not generated — the SQLx tests read them
+# straight from the catalog (eql_domains::INT4_VALUES / …).
 cargo run -p eql-codegen
 
 # Fail loudly if any file referenced in a tsorted dep list doesn't exist.

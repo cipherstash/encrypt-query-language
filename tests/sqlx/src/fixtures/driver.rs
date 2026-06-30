@@ -8,7 +8,7 @@
 //! beats a partial fixture.
 //!
 //! The `public._fixture_<name>` working table is transient plumbing: `.run()`
-//! creates it, encrypts into it, renders the committed rows from it, then
+//! creates it, encrypts into it, renders the generated rows from it, then
 //! drops it before returning. The drop runs unconditionally once the table
 //! exists — on success *and* on any returned error: `run` captures the
 //! post-schema result, drops the table, and only then propagates a failure.
@@ -114,7 +114,7 @@ where
     /// schema/insert/render/drop pipeline inline against that connection
     /// (no second connection needed — encryption happens in Rust via
     /// cipherstash-client), then composes the rendered INSERT lines with
-    /// `fixture_script_preamble` and writes the committed script to disk.
+    /// `fixture_script_preamble` and writes the generated script to disk.
     ///
     /// The pipeline mirrors the teardown contract in `run_with`: drop the
     /// working table unconditionally once it has been created, and
@@ -142,7 +142,7 @@ where
     }
 
     /// The shared generation pipeline: apply the working schema, encrypt + insert
-    /// `values`, render the committed INSERT lines, then drop the working table.
+    /// `values`, render the generated INSERT lines, then drop the working table.
     ///
     /// Honours the teardown contract: once the working table exists it is dropped
     /// unconditionally (success *or* error), and failures propagate in causal
@@ -183,7 +183,7 @@ where
             .collect()
     }
 
-    /// Compose the committed script (preamble + optional extra header + the
+    /// Compose the generated script (preamble + optional extra header + the
     /// rendered INSERT lines) and write it to `tests/sqlx/fixtures/<name>.sql`.
     fn write_script(
         &self,
@@ -209,7 +209,7 @@ where
 
     /// Encrypt every value in `values` via cipherstash-client in **one batched
     /// call**, then INSERT each ciphertext into the working table as plain JSONB.
-    /// The committed `ColumnConfig` is built once from the spec's indexes + cast
+    /// The generated `ColumnConfig` is built once from the spec's indexes + cast
     /// — the fixture name is fed as the table identifier so the resulting
     /// payload's `i.t` field matches the working table, preserving the shape
     /// Proxy used to emit.
@@ -250,10 +250,10 @@ where
     /// encrypted payloads** instead of encrypting `self.values()` in-driver.
     ///
     /// The split-payload seam: encryption input and the plaintext oracle column
-    /// are different value streams. `self.values()` drives the committed
+    /// are different value streams. `self.values()` drives the generated
     /// `plaintext` column (the oracle) and the fixture-table schema; `payloads`
     /// are the already-encrypted JSONB documents to store in `payload`. Used by
-    /// the `v3_doc_int4` fixture, whose committed payload is a SteVec document
+    /// the `v3_doc_int4` fixture, whose generated payload is a SteVec document
     /// encrypted from `{"field": <int>}` while the oracle column is the bare
     /// `int4`.
     ///
@@ -261,7 +261,7 @@ where
     /// `run()` exactly — same connection-from-env, schema → insert → render →
     /// drop-on-error teardown → file-write pipeline — but inserts the supplied
     /// payloads rather than calling `cipherstash::encrypt_store(self.values())`.
-    /// Narrow by design: it exists only for fixtures whose committed payload is
+    /// Narrow by design: it exists only for fixtures whose generated payload is
     /// encrypted from one value stream while the plaintext oracle is another.
     pub async fn run_with_payloads(&self, payloads: Vec<serde_json::Value>) -> Result<()> {
         anyhow::ensure!(
@@ -370,7 +370,7 @@ where
     ///    return, whatever happens next.
     /// 3. Run `insert_rows()`. Its result is captured (not
     ///    `?`-propagated) so the drop in step 5 always runs.
-    /// 4. If the inserter succeeded, render the committed rows via
+    /// 4. If the inserter succeeded, render the generated rows via
     ///    `render_rows_sql` on `direct`. Skipped on inserter error.
     /// 5. Drop the working table on `direct` unconditionally.
     /// 6. Propagate failures in causal order: inserter error first
@@ -443,7 +443,7 @@ mod tests {
     }
 
     #[sqlx::test]
-    async fn run_with_renders_committed_rows_and_drops_working_table(pool: PgPool) -> Result<()> {
+    async fn run_with_renders_generated_rows_and_drops_working_table(pool: PgPool) -> Result<()> {
         let spec = small_spec("driver_test_a");
         let working = spec.working_table();
         let working_for_closure = working.clone();
@@ -495,7 +495,7 @@ mod tests {
                 line.starts_with(
                     "INSERT INTO fixtures.driver_test_a (id, plaintext, payload) VALUES ("
                 ),
-                "rendered line should target the committed table: {line}"
+                "rendered line should target the generated table: {line}"
             );
         }
 

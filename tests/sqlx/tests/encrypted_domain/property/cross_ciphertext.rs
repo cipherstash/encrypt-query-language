@@ -1,7 +1,7 @@
 //! fixture-suite (CIP-3141) cross-ciphertext equality test.
 //!
 //! Proves "two independent encryptions of one value compare equal" using the
-//! committed `fixtures.eql_v3_<T>_doubles` tables — each plaintext encrypted
+//! generated `fixtures.eql_v3_<T>_doubles` tables — each plaintext encrypted
 //! twice, so the table carries equal-plaintext / distinct-ciphertext rows. No
 //! fresh encryption, no creds: it reads the already-encrypted doubles, so it
 //! runs in the credential-free `mise run test:sqlx` path. Distinct from the

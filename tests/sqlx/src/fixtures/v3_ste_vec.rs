@@ -5,7 +5,7 @@
 //! A `serde_json::Value` is a first-class `EqlPlaintext` (see
 //! `eql_plaintext.rs`), so the document fixture is just a
 //! `FixtureSpec<serde_json::Value>` with the `IndexKind::SteVec` index and an
-//! `eql_v3.json` committed `payload` column. `FixtureSpec::run` encrypts each
+//! `eql_v3.json` generated `payload` column. `FixtureSpec::run` encrypts each
 //! document through cipherstash-client into a SteVec payload, stages it, and
 //! writes `tests/sqlx/fixtures/v3_ste_vec.sql` (gitignored — regenerated on
 //! every `mise run test:sqlx`) with the identical

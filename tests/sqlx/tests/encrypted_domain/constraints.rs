@@ -9,7 +9,7 @@
 //! namespace, so the matrix-inventory snapshot (which pins the uniform per-type
 //! test set) does not mis-read it as a scalar type.
 //!
-//! All ciphertext is REAL: every payload comes from the committed/generated
+//! All ciphertext is REAL: every payload comes from the generated
 //! `fixtures.eql_v3_int4` table (Proxy-encrypted, HMAC + ORE block terms) via
 //! `fetch_fixture_payload::<i32>`. No synthetic / hand-written encrypted blobs.
 //!

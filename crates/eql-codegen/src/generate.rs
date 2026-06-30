@@ -197,57 +197,61 @@ pub fn render_aggregates_file(family_name: &str, domain: &Domain) -> Option<Stri
     )
 }
 
+use std::fs;
+
 use crate::writer::{
-    clean_generated_files, ensure_generated_paths_writable, write_generated_file, GeneratedKind,
-    WriteError,
+    ensure_generated_paths_writable, normalized_set, remove_generated_orphans,
+    write_generated_file, GeneratedKind, WriteError,
 };
 
-/// Regenerate every generated file for one type into `out_dir`.
-/// Port of `generate_type`. Returns the written paths.
-pub fn generate_type(spec: &DomainFamily, out_dir: &Path) -> Result<Vec<PathBuf>, WriteError> {
+/// Render every generated file for one type into memory, paired with its output
+/// path under `out_dir`. Mirrors `bindings::render_bindings`: rendering happens
+/// before any filesystem mutation, so a render `.expect` panic aborts the run
+/// before a single file is written or deleted. Order matches `generate_type`'s
+/// write order (types file, then per-domain functions/operators/aggregates).
+pub fn render_type(spec: &DomainFamily, out_dir: &Path) -> Vec<(PathBuf, String)> {
     let family_name = spec.name;
-    let mut targets = vec![out_dir.join(format!("{family_name}_types.sql"))];
+    let mut rendered = vec![(
+        out_dir.join(format!("{family_name}_types.sql")),
+        render_types_file(spec),
+    )];
     for d in spec.domains {
         let name = d.full_name(family_name);
-        targets.push(out_dir.join(format!("{name}_functions.sql")));
-        targets.push(out_dir.join(format!("{name}_operators.sql")));
-        if is_ord_capable(d.terms) {
-            targets.push(out_dir.join(format!("{name}_aggregates.sql")));
-        }
-    }
-    ensure_generated_paths_writable(&targets, GeneratedKind::Sql)?;
-    clean_generated_files(out_dir, GeneratedKind::Sql)?;
-
-    let mut written: Vec<PathBuf> = Vec::new();
-
-    let types_path = out_dir.join(format!("{family_name}_types.sql"));
-    write_generated_file(&types_path, &render_types_file(spec), GeneratedKind::Sql)?;
-    written.push(types_path);
-
-    for d in spec.domains {
-        let name = d.full_name(family_name);
-        let fn_path = out_dir.join(format!("{name}_functions.sql"));
-        write_generated_file(
-            &fn_path,
-            &render_functions_file(family_name, d),
-            GeneratedKind::Sql,
-        )?;
-        written.push(fn_path);
-
-        let op_path = out_dir.join(format!("{name}_operators.sql"));
-        write_generated_file(
-            &op_path,
-            &render_operators_file(family_name, d),
-            GeneratedKind::Sql,
-        )?;
-        written.push(op_path);
-
+        rendered.push((
+            out_dir.join(format!("{name}_functions.sql")),
+            render_functions_file(family_name, d),
+        ));
+        rendered.push((
+            out_dir.join(format!("{name}_operators.sql")),
+            render_operators_file(family_name, d),
+        ));
         if let Some(agg) = render_aggregates_file(family_name, d) {
-            let agg_path = out_dir.join(format!("{name}_aggregates.sql"));
-            write_generated_file(&agg_path, &agg, GeneratedKind::Sql)?;
-            written.push(agg_path);
+            rendered.push((out_dir.join(format!("{name}_aggregates.sql")), agg));
         }
     }
+    rendered
+}
+
+/// Regenerate every generated file for one type into `out_dir`, crash-safely.
+/// Port of `generate_type`. Returns the written paths.
+///
+/// Ordering is render-all → preflight → write-all (atomic) → delete-orphans:
+/// every current file is rendered to memory and written (each via an atomic
+/// same-dir temp+rename) before any stale generated file is deleted. A render
+/// panic or write error therefore can never leave the directory with files
+/// deleted-but-not-rewritten. The trailing orphan sweep prunes generated SQL for
+/// domains dropped from the catalog, marker-aware (hand-written files survive).
+pub fn generate_type(spec: &DomainFamily, out_dir: &Path) -> Result<Vec<PathBuf>, WriteError> {
+    let rendered = render_type(spec, out_dir);
+    let targets: Vec<PathBuf> = rendered.iter().map(|(p, _)| p.clone()).collect();
+    ensure_generated_paths_writable(&targets, GeneratedKind::Sql)?;
+
+    let mut written: Vec<PathBuf> = Vec::with_capacity(rendered.len());
+    for (path, body) in &rendered {
+        write_generated_file(path, body, GeneratedKind::Sql)?;
+        written.push(path.clone());
+    }
+    remove_generated_orphans(out_dir, GeneratedKind::Sql, &normalized_set(&written))?;
     Ok(written)
 }
 
@@ -256,9 +260,11 @@ pub fn generate_type(spec: &DomainFamily, out_dir: &Path) -> Result<Vec<PathBuf>
 /// plaintext fixture lists are not generated — they live in the catalog
 /// (`eql_domains::INT4_VALUES` / `INT2_VALUES`), read directly by the SQLx tests.
 pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
+    let scalars_root = out_root.join(V3_SCALARS_DIR);
+    let mut all_written: Vec<PathBuf> = Vec::new();
     for spec in eql_domains::CATALOG {
         let family_name = spec.name;
-        let out_dir = out_root.join(V3_SCALARS_DIR).join(family_name);
+        let out_dir = scalars_root.join(family_name);
         let written = generate_type(spec, &out_dir)?;
 
         for p in &written {
@@ -266,10 +272,61 @@ pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
             println!("generated {}", rel.display());
         }
         println!("generated {} files for {family_name}", written.len());
+        all_written.extend(written.iter().cloned());
     }
+
+    // Orphan sweep across every scalar type dir. `generate_type` already prunes
+    // stale files *within* a regenerated dir, but a type dropped from the catalog
+    // entirely leaves a dir the generator never revisits — its generated SQL must
+    // still go (this is the responsibility build.sh's filename-pattern `find
+    // -delete` used to own, now marker-aware and inside codegen). Runs only after
+    // every current type wrote successfully, so it never deletes-before-write.
+    let keep = normalized_set(&all_written);
+    if scalars_root.is_dir() {
+        let mut subdirs: Vec<PathBuf> = fs::read_dir(&scalars_root)?
+            .map(|e| e.map(|e| e.path()))
+            .collect::<std::io::Result<Vec<_>>>()?
+            .into_iter()
+            .filter(|p| p.is_dir())
+            .collect();
+        subdirs.sort();
+        for dir in subdirs {
+            for removed in remove_generated_orphans(&dir, GeneratedKind::Sql, &keep)? {
+                let rel = removed.strip_prefix(out_root).unwrap_or(&removed);
+                println!("removed orphan {}", rel.display());
+            }
+        }
+    }
+
     let names: Vec<&str> = eql_domains::CATALOG.iter().map(|s| s.name).collect();
     println!("codegen: ok ({} types: {})", names.len(), names.join(", "));
     Ok(0)
+}
+
+/// Remove every generated SQL file under `out_root`'s `src/v3/scalars/*` type
+/// dirs, marker-aware. Replaces build.sh's filename-pattern `find -delete`: it
+/// deletes only files carrying the AUTO-GENERATED marker, so a hand-written
+/// `<T>_extensions.sql` (no marker) and the committed depth-1
+/// `src/v3/scalars/functions.sql` (not in a type subdir) are preserved. Returns
+/// the removed paths.
+pub fn clean_all(out_root: &Path) -> Result<Vec<PathBuf>, WriteError> {
+    use crate::writer::clean_generated_files;
+    let scalars_root = out_root.join(V3_SCALARS_DIR);
+    if !scalars_root.is_dir() {
+        return Ok(Vec::new());
+    }
+    let mut subdirs: Vec<PathBuf> = fs::read_dir(&scalars_root)?
+        .map(|e| e.map(|e| e.path()))
+        .collect::<std::io::Result<Vec<_>>>()?
+        .into_iter()
+        .filter(|p| p.is_dir())
+        .collect();
+    subdirs.sort();
+    let mut removed = Vec::new();
+    for dir in subdirs {
+        removed.extend(clean_generated_files(&dir, GeneratedKind::Sql)?);
+    }
+    Ok(removed)
 }
 
 #[cfg(test)]
@@ -423,6 +480,106 @@ mod tests {
                 .unwrap()
                 .starts_with(&format!("{}\n", crate::consts::AUTO_GENERATED_MARKER)));
         }
+    }
+
+    #[test]
+    fn generate_type_prunes_orphaned_generated_files() {
+        // A generated file for a domain no longer produced (here: a stale
+        // `int4_gone_functions.sql`) is pruned by the trailing orphan sweep, while
+        // a hand-written file with no marker survives.
+        let d = crate::writer::test_support::tempdir();
+        let out = d.path().join("int4");
+        fs::create_dir_all(&out).unwrap();
+        let orphan = out.join("int4_gone_functions.sql");
+        let hand = out.join("int4_extensions.sql");
+        fs::write(
+            &orphan,
+            format!("{}\nSELECT 1;\n", crate::consts::AUTO_GENERATED_MARKER),
+        )
+        .unwrap();
+        fs::write(&hand, "-- REQUIRE: src/v3/schema.sql\n-- hand-written\n").unwrap();
+
+        generate_type(spec("int4"), &out).unwrap();
+
+        assert!(!orphan.exists(), "stale generated file must be pruned");
+        assert!(hand.exists(), "hand-written file must survive the sweep");
+        assert!(out.join("int4_types.sql").exists(), "current files written");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn generate_type_failure_does_not_delete_before_writing() {
+        // The write-then-delete discipline: if a write fails, nothing has been
+        // deleted yet. Seed an existing generated target (old content) plus an
+        // orphan, make the dir read-only so the first write fails, and assert both
+        // survive untouched — the destructive orphan sweep never ran.
+        use std::os::unix::fs::PermissionsExt;
+        let d = crate::writer::test_support::tempdir();
+        let out = d.path().join("int4");
+        fs::create_dir_all(&out).unwrap();
+        let marker = crate::consts::AUTO_GENERATED_MARKER;
+        let types = out.join("int4_types.sql");
+        let orphan = out.join("int4_gone_functions.sql");
+        let old = format!("{marker}\n-- OLD\n");
+        fs::write(&types, &old).unwrap();
+        fs::write(&orphan, format!("{marker}\nSELECT 1;\n")).unwrap();
+
+        let mut perms = fs::metadata(&out).unwrap().permissions();
+        perms.set_mode(0o555);
+        fs::set_permissions(&out, perms).unwrap();
+
+        let err = generate_type(spec("int4"), &out).unwrap_err();
+
+        let mut perms = fs::metadata(&out).unwrap().permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&out, perms).unwrap();
+
+        assert!(matches!(err, WriteError::Io(_)), "expected Io, got {err:?}");
+        assert_eq!(
+            fs::read_to_string(&types).unwrap(),
+            old,
+            "existing target keeps old content — never deleted/truncated"
+        );
+        assert!(
+            orphan.exists(),
+            "orphan must survive: the delete step runs only after writes succeed"
+        );
+    }
+
+    #[test]
+    fn generate_all_prunes_orphaned_type_dir() {
+        // A whole type dir for a token absent from the catalog (here: `bogus`) is
+        // swept by generate_all's cross-dir orphan pass — the case build.sh's
+        // `find -delete` used to own, now marker-aware inside codegen.
+        let d = crate::writer::test_support::tempdir();
+        let root = d.path();
+        let bogus_dir = root.join(V3_SCALARS_DIR).join("bogus");
+        fs::create_dir_all(&bogus_dir).unwrap();
+        let bogus = bogus_dir.join("bogus_types.sql");
+        let bogus_hand = bogus_dir.join("bogus_extensions.sql");
+        fs::write(
+            &bogus,
+            format!("{}\nSELECT 1;\n", crate::consts::AUTO_GENERATED_MARKER),
+        )
+        .unwrap();
+        fs::write(&bogus_hand, "-- hand-written, no marker\n").unwrap();
+
+        generate_all(root).unwrap();
+
+        assert!(
+            !bogus.exists(),
+            "generated file in a dropped type dir is pruned"
+        );
+        assert!(
+            bogus_hand.exists(),
+            "hand-written file in that dir survives"
+        );
+        assert!(
+            root.join(V3_SCALARS_DIR)
+                .join("int4/int4_types.sql")
+                .exists(),
+            "catalog types are generated"
+        );
     }
 
     #[test]

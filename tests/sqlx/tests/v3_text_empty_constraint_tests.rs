@@ -10,7 +10,7 @@
 //! "empty sorts first" cardinality guard remains in place as defense-in-depth
 //! for any path that bypasses the domain (e.g. a composite built directly).
 //!
-//! These tests ride the committed `v3_text_empty` fixture (real ciphertexts for
+//! These tests ride the generated `v3_text_empty` fixture (real ciphertexts for
 //! `""`, `"frank"`, `"zebra"`; ids 1/2/3). The fixture's `payload` column is
 //! plain `jsonb`, so every row loads; the rejection happens at the cast in each
 //! test, not at fixture load. The fixture carries `hm` + `ob` (Unique + Ore, no

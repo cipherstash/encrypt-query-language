@@ -54,7 +54,7 @@ async fn generate_all() -> anyhow::Result<()> {
     // CATALOG scalar — the distinctness guard forbids `1`/`1.0` coexisting in
     // `eql_v3_numeric` — so it rides the same pipeline as a hand-written
     // `FixtureSpec<Decimal>`. Gives the always-on `1 == 1.0` ORE collision test
-    // its committed fixture.
+    // its generated fixture.
     eprintln!("Generating fixture v3_numeric_collision (1 == 1.0 ORE collision)...");
     eql_tests::fixtures::v3_numeric_collision::generate().await?;
     eprintln!("Regenerated v3_numeric_collision.");
@@ -62,7 +62,7 @@ async fn generate_all() -> anyhow::Result<()> {
     // The empty-string ordered-text fixture (`""`, `"frank"`, `"zebra"`). Not a
     // CATALOG scalar — `eql-domains::TEXT_FIXTURES` excludes `""` (issue #262) —
     // so it rides the same pipeline as a hand-written `FixtureSpec<String>`.
-    // Gives the "empty sorts first" contract (ORDER BY / min / max) a committed
+    // Gives the "empty sorts first" contract (ORDER BY / min / max) a generated
     // real-ciphertext home.
     eprintln!("Generating fixture v3_text_empty (empty-string ordered text)...");
     eql_tests::fixtures::v3_text_empty::generate().await?;

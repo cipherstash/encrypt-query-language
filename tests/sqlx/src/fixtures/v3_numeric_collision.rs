@@ -24,7 +24,7 @@ use std::str::FromStr;
 use super::index_kind::IndexKind;
 use super::spec::FixtureSpec;
 
-/// The committed fixture name → table `fixtures.v3_numeric_collision`, script
+/// The generated fixture name → table `fixtures.v3_numeric_collision`, script
 /// `v3_numeric_collision.sql`, SQLx ref `scripts("v3_numeric_collision")`.
 const NAME: &str = "v3_numeric_collision";
 
