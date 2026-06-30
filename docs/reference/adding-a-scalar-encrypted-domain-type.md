@@ -2,7 +2,7 @@
 
 The one reference for adding a scalar encrypted-domain type (`int4`, `int2`,
 and future ordered numeric scalars). The **top half** (§§1–4) is the path you
-follow to add a type; the **reference half** (§§5–7) is the detail behind it —
+follow to add a type; the **reference half** (§§5–8) is the detail behind it —
 the generated surface, its invariants, and how the generator itself works.
 Read top-down to ship a type; drop into the reference half when something
 breaks or you need the *why*.
@@ -15,7 +15,7 @@ aggregates also live in `eql_v3`; the searchable-encrypted-metadata (SEM)
 index-term types they return (`eql_v3.hmac_256`,
 `eql_v3.ore_block_256`) are **also `eql_v3`** — hand-written under
 `src/v3/sem/`. The whole v3 surface is self-contained: it owns every type it
-needs and is fully self-contained (CI gates this — see §6).
+needs and is fully self-contained (CI gates this via `mise run test:self_contained_v3`).
 
 The whole SQL surface is **generated** from a single Rust source of truth: the
 `CATALOG` const in [`crates/eql-domains/src/lib.rs`](../../crates/eql-domains/src/lib.rs),
@@ -34,10 +34,11 @@ materializer (see §7).
 
 To add a scalar type `<T>` (e.g. `int8`), with Rust type `<R>` (e.g. `i64`):
 
-1. **Add a `DomainFamily` row to `eql_domains::CATALOG`** — `name`, `kind`,
-   `domains`, `fixtures` (§2). If the type needs a new scalar width, add a
-   `ScalarKind` variant first; if it needs new term behaviour, that goes in the
-   `Term` enum's `impl`, never in catalog data.
+1. **Add a `DomainFamily` row to `eql_domains::CATALOG`** — just `name` +
+   `domains` — plus a matching `TypeFixtures` record (carrying the `kind` and the
+   plaintext fixture `values`) in the `fixtures` module (§2). If the type needs a
+   new scalar width, add a `ScalarKind` variant first; if it needs new term
+   behaviour, that goes in the `Term` enum's `impl`, never in catalog data.
 2. **Materialise the value list** — `int_values!(<T_UPPER>_VALUES, <R>, <T_UPPER>);`
    next to `CATALOG`, pinned by a `values_tests` assertion (§2). This is the
    single source the SQLx matrix reads; there is no generated `<T>_values.rs`.
@@ -55,7 +56,7 @@ To add a scalar type `<T>` (e.g. `int8`), with Rust type `<R>` (e.g. `i64`):
      impl and its `inventory.rs`/`all()` entry (a two-line catalog-derived
      struct doc — a summary line plus an operators/required-keys detail line, no
      field docs), and the `ts-rs`/`schemars` derives then emit the committed
-     `bindings/v3/*.ts` + `schema/v3/*.json`. Unlike the SQL these `.rs` ARE
+     `crates/eql-bindings/bindings/v3/*.ts` + `crates/eql-bindings/schema/v3/*.json`. Unlike the SQL these `.rs` ARE
      committed (`// @generated`), so run `mise run types:generate` and commit
      the result; `mise run types:check` is the drift gate. For a new *domain* in
      an existing family `mod.rs` is untouched, but a new *family* needs a
@@ -74,7 +75,7 @@ Things you do **not** do:
   `*_operators.sql` / `*_aggregates.sql` are gitignored; the catalog plus the
   renderers are the source of truth. Change the catalog and rebuild — never
   hand-edit generated SQL.
-- **Don't edit `mise.toml`, the CI workflow, `pin_search_path.sql`, or
+- **Don't edit `mise.toml`, the CI workflow, `pin_search_path_v3.sql`, or
   `splinter.sh`** for an ordinary type — they recognise the generated surface
   intrinsically (§5, §6). The exception is a brand-new *term* whose extractor
   has a new name (§5).
@@ -88,50 +89,62 @@ Hand-written SQL beyond the fixed surface goes in
 ## 2. The catalog row (`DomainFamily`)
 
 A scalar type is one `DomainFamily` row in
-[`crates/eql-domains/src/lib.rs`](../../crates/eql-domains/src/lib.rs):
+[`crates/eql-domains/src/lib.rs`](../../crates/eql-domains/src/lib.rs), paired
+with a `TypeFixtures` record in
+[`crates/eql-domains/src/fixtures/record.rs`](../../crates/eql-domains/src/fixtures/record.rs):
 
 ```rust
-DomainFamily {
+// The structural catalog row — name + domains only:
+const INT4: DomainFamily = DomainFamily {
     name: "int4",
+    domains: ORDERED_INT_DOMAINS, // storage, _eq (hm), _ord_ore (ore), _ord (ore)
+};
+
+// The fixture-layer record — kind + plaintext values — joined back to the
+// catalog row by `family.name`:
+pub const INT4_FIXTURES: TypeFixtures = TypeFixtures {
+    family: &crate::INT4,
     kind: ScalarKind::I32,
-    domains: &[
-        Domain { name: "",        terms: &[] },
-        Domain { name: "eq",      terms: &[Term::Hm] },
-        Domain { name: "ord_ore", terms: &[Term::Ore] },
-        Domain { name: "ord",     terms: &[Term::Ore] },
-    ],
-    fixtures: INT4_FIXTURES,
-}
+    values: fixtures!(int i32;
+        Min, N(-100), N(-1), Zero, N(1), N(2), N(5), N(10), N(17), N(25),
+        N(42), N(50), N(100), N(250), N(1000), N(9999), Max),
+};
 ```
 
-The fields, all enforced by the type system and the catalog `#[test]`s rather
-than a runtime validator:
+`DomainFamily` carries only **`name`** and **`domains`**; the **`kind`** and
+plaintext **`values`** are a fixture-layer concern that lives on the paired
+`TypeFixtures` record, not on `DomainFamily`. A compile-time `const _` parity
+block in `record.rs` enforces the 1:1 — every `CATALOG` row has exactly one
+`TypeFixtures` (same order) carrying the right `kind`. All are otherwise enforced
+by the type system and the catalog `#[test]`s rather than a runtime validator:
 
-- **`name`** — the type name (`int4`); supplies `<T>` everywhere. Each domain's
-  full name is the family `name` + `_` + the domain `name`
-  (`DomainFamily::domain_name`); codegen owns the `_` join (`Domain::full_name`),
-  and an empty domain `name` yields the bare family name. Pinned by
-  `every_domain_name_starts_with_its_family_name`.
-- **`kind`** — a `ScalarKind` (`I16` / `I32` / `I64` / `Numeric` / `Text` /
-  `Jsonb` / `Date` / `Timestamptz`), carrying the Rust type name. Only the
-  integer kinds have an
-  i128 range with `Min`/`Max`/`Zero` sentinels: those bounded accessors
-  (`min_symbol`/`max_symbol`/`zero_symbol`/`min_value`/`max_value`) live on the
-  total `BoundedIntKind` sub-enum, reached via `ScalarKind::as_bounded_int() ->
-  Option<BoundedIntKind>`. Non-integer kinds
-  (`Numeric`/`Text`/`Jsonb`/`Date`/`Timestamptz`)
-  return `None` and simply have no bounded accessor — misuse is a compile error,
-  not a runtime panic. **If `<T>` needs a new fixed-width integer, add a
-  `BoundedIntKind` variant** (rust-type name, `MIN`/`MAX`/zero symbols, bounds)
-  plus its `ScalarKind` variant and `as_bounded_int` arm, with unit tests over
-  the `impl` methods.
-- **`domains`** — a non-empty `&[Domain]` (pinned by
+- **`name`** (on `DomainFamily`) — the type name (`int4`); supplies `<T>`
+  everywhere. Each domain's full name is the family `name` + `_` + the domain
+  `name` (`DomainFamily::domain_name`); codegen owns the `_` join
+  (`Domain::full_name`), and an empty domain `name` yields the bare family name.
+  Pinned by `every_domain_name_starts_with_its_family_name`.
+- **`domains`** (on `DomainFamily`) — a non-empty `&[Domain]` (pinned by
   `every_type_has_at_least_one_domain`), each a bare `name` + the fixed `&[Term]` it
   carries. The storage domain is `name: ""` with no terms; `eq => [Term::Hm]`;
   `ord` and `ord_ore => [Term::Ore]`. A `Domain` declares nothing else — no
   extractor names, no operator lists, no REQUIRE edges. Every behavioural fact
   comes from the `Term` enum.
-- **`fixtures`** — the type's plaintext fixture list (see below).
+- **`kind`** (on the `TypeFixtures` record) — a `ScalarKind` (`I16` / `I32` /
+  `I64` / `Numeric` / `Text` / `Jsonb` / `Date` / `Timestamptz` / `Bool` / `F32` /
+  `F64`), carrying the Rust type name. Only the
+  integer kinds have an
+  i128 range with `Min`/`Max`/`Zero` sentinels: those bounded accessors
+  (`min_symbol`/`max_symbol`/`zero_symbol`/`min_value`/`max_value`) live on the
+  total `BoundedIntKind` sub-enum, reached via `ScalarKind::as_bounded_int() ->
+  Option<BoundedIntKind>`. Non-integer kinds
+  (`Numeric`/`Text`/`Jsonb`/`Bool`/`F32`/`F64`/`Date`/`Timestamptz`)
+  return `None` and simply have no bounded accessor — misuse is a compile error,
+  not a runtime panic. **If `<T>` needs a new fixed-width integer, add a
+  `BoundedIntKind` variant** (rust-type name, `MIN`/`MAX`/zero symbols, bounds)
+  plus its `ScalarKind` variant and `as_bounded_int` arm, with unit tests over
+  the `impl` methods.
+- **`values`** (on the `TypeFixtures` record) — the type's plaintext fixture
+  list (see below).
 
 **Terms** are fixed by the `Term` enum (`crates/eql-domains/src/lib.rs`). The
 `json_key` / `extractor` / `ctor` values are the cross-schema SQL contract (the
@@ -156,8 +169,10 @@ emits an extra `CHECK` requiring `ob` to be a non-empty array
 (`jsonb_array_length(VALUE -> 'ob') > 0`). An empty ORE term (`ob: []`) is only
 ever produced by encrypting the empty string into an ordered column, and is
 rejected at the boundary rather than ordered (issue #262). This is emitted from
-the catalog by the codegen renderer (`DomainBlock::ore_check` in
-`crates/eql-codegen/src/context.rs`, gated on `Term::provides_ordering`), not
+the catalog by the codegen renderer (the `nonempty_array_keys` field on
+`DomainBlock` in `crates/eql-codegen/src/context.rs`, populated from
+`Term::nonempty_array_keys`, which filters on the per-term
+`Term::nonempty_array_key()` — `Some("ob")` only for `Term::Ore`), not
 hand-added — a new ordered scalar gets it for free.
 
 **Twins.** `int4_ord` and `int4_ord_ore` both carry `&[Term::Ore]`. The
@@ -173,19 +188,22 @@ the way you want the output to read.
 
 ### Fixtures — single-sourcing the value list
 
-The `fixtures` field is an ordered `&[Fixture]` — the single source of truth
+The `TypeFixtures` record's `values` field is an ordered `&[Fixture]` — the
+single source of truth
 for the type's plaintext list, consumed by both the SQLx fixture generator and
 the matrix oracle. A `Fixture` is value-kind tagged: `Min` / `Max` / `Zero` (the
 integer matrix pivots, resolved per-kind), `Int(i128)` (an integer literal), and
-`Numeric` / `Text` / `Jsonb` / `Date` / `Timestamptz` string variants. The
+`Numeric` / `Text` / `Jsonb` / `Date` / `Timestamptz` / `Float` string variants
+(plus a `Bool` variant for the storage-only `bool` scalar). The
 `fixtures!` macro
 range-checks each `Int` literal against the kind at compile time (`N(-40000)`
 for an `i16` kind does not compile):
 
 ```rust
-const INT4_FIXTURES: &[Fixture] = fixtures!(int i32;
+// the `values:` expression of INT4_FIXTURES (a `TypeFixtures`):
+values: fixtures!(int i32;
     Min, N(-100), N(-1), Zero, N(1), N(2), N(5), N(10), N(17), N(25),
-    N(42), N(50), N(100), N(250), N(1000), N(9999), Max);
+    N(42), N(50), N(100), N(250), N(1000), N(9999), Max),
 ```
 
 Catalog `#[test]`s enforce a **distinct-plaintext contract** plus the
@@ -206,11 +224,11 @@ Beyond the pivots, choose values so range operators produce distinguishable
 result counts, include useful boundaries, and cover omitted-term negative cases.
 
 The plaintext list is **not** rendered to a generated file. The `int_values!`
-macro (next to `CATALOG`) materialises a `Fixture` list into a typed `pub const
+macro (in `crates/eql-domains/src/fixtures/values.rs`) materialises a `Fixture` list into a typed `pub const
 <T_UPPER>_VALUES: &[<rust_type>]` at compile time (`INT4_VALUES`, `INT2_VALUES`):
 
 ```rust
-int_values!(INT4_VALUES, i32, INT4);
+int_values!(INT4_VALUES, i32, INT4_FIXTURES);
 ```
 
 Both consumers reference that single symbol — the fixture generator
@@ -298,7 +316,7 @@ integer kinds:
 |------|-----|
 | `tests/sqlx/src/scalar_types.rs` | One `<T> => <R>` line in the `scalar_types!` list (e.g. `int8 => i64,`). This single line drives the `impl ScalarType` **(integer kinds only)**, the `eql_v3_<T>` fixture module, the `scalar_matrix!` suite, and the `generate_for_token` arm — all generated by the `eql-tests-macros` proc-macros. |
 | `tests/sqlx/src/fixtures/eql_plaintext.rs` | A sealed `EqlPlaintext` impl for `<R>`: `impl Sealed for <R> {}` and `impl EqlPlaintext for <R>` carrying just `const KIND: ScalarKind` plus the value-typed `to_plaintext` → the right `Plaintext` variant. `CAST` and `PLAINTEXT_SQL_TYPE` are **derived** from `KIND` via the `cast_for_kind` / `plaintext_sql_type_for_kind` `const fn` defaults, so a brand-new kind needs an arm in those two helpers — not a per-type const (see §3.1 for a non-integer kind's full wiring). Keep the three `#[test]`s (cast / sql-type / to_plaintext) mirroring the existing ones. |
-| `tests/sqlx/src/scalar_domains.rs` **(non-integer only)** | The `impl ScalarType` the proc-macro skips for non-integer kinds. For a **chrono-backed** kind (`date`, `timestamptz`) this is a `temporal_values!` invocation that materialises the catalog ISO/RFC3339 strings into a `LazyLock<Vec<_>>` and emits `impl ScalarType` + `OrderedScalar` (+ `SignedScalar` for `date`). For **`text`** it is a hand-written `impl ScalarType` / `OrderedScalar` block (lexicographic `min`/`max`/`mid` pivots, `to_sql_literal` override) — `String` has no numeric origin, so it is deliberately **not** `SignedScalar`. |
+| `tests/sqlx/src/scalar_domains.rs` **(non-integer only)** | The `impl ScalarType` the proc-macro skips for non-integer kinds. For a **chrono-backed** kind (`date`, `timestamptz`) this is a `temporal_values!` invocation that materialises the catalog ISO/RFC3339 strings into a `LazyLock<Vec<_>>` and emits `impl ScalarType` + `OrderedScalar` (+ `SignedScalar` for `date` and `timestamptz`). For **`text`** it is a hand-written `impl ScalarType` / `OrderedScalar` block (an overridden lexicographic-median `mid_pivot()` — `min`/`max` inherit the fixture-derived defaults — plus a `to_sql_literal` override) — `String` has no numeric origin, so it is deliberately **not** `SignedScalar`. |
 
 The single `<T> => <R>` line in `scalar_types.rs` is the harness source of
 truth. The four code-generators (`emit_scalar_type_impls`,
@@ -339,7 +357,7 @@ no live catalog type today) vs `ORDERED_INT_DOMAINS` (→ `[eq, ord]`). (`EQ_ONL
 is currently unused — `timestamptz` was promoted to the ordered shape once the ORE
 comparator generalized to N blocks.) The pivot *sweep* is uniform
 across every ordered type (one canonical snapshot); the signed-only sign-boundary
-test (`SignedScalar`, `int2`/`int4`/`int8`/`date`/`timestamptz`) lives outside `scalars::` in
+test (`SignedScalar`, `int2`/`int4`/`int8`/`date`/`timestamptz`/`float4`/`float8`) lives outside `scalars::` in
 `encrypted_domain/signed.rs`, so a `text` instantiation of it is a compile error
 and it never enters the inventory snapshot. The `matrix.rs` module header is the
 canonical,
@@ -421,24 +439,33 @@ such a domain you must, in addition to the catalog row:
 
 ### Matrix coverage inventory snapshot
 
-The *set of test names* the matrix emits is guarded by **one** committed,
-token-normalized snapshot at `tests/sqlx/snapshots/matrix_tests.txt` — the
+The *set of test names* the matrix emits is guarded by **four** committed,
+token-normalized **shape** snapshots under `tests/sqlx/snapshots/` — each the
 sorted inventory of every `scalars::<T>::*` test name with the type token
-replaced by the literal `<T>`. (The per-type `<T>_matrix_tests.txt` files are
-gone: they were byte-identical modulo the token, so one canonical set plus a
-per-type normalize-and-compare carries the same signal at a fraction of the
-committed surface.) This is the guard that catches a silently dropped, renamed,
+replaced by the literal `<T>`. The canonical baseline is `matrix_tests.txt` (the
+ordered `caps = [eq, ord]` shape); alongside it are `matrix_tests_eq_only.txt`
+(the eq-only shape, *derived* from the baseline minus the `_ord`/`order_by`/
+`routes_through_ob` lines), `matrix_tests_text.txt` (the text shape, a *superset*
+of the baseline adding the `_search`/`_eqidx`/`_match` arms), and
+`matrix_tests_storage_only.txt` (the storage-only shape, e.g. `bool` — see §8).
+(The per-type `<T>_matrix_tests.txt` files are
+gone: they were byte-identical modulo the token, so the shape snapshots plus a
+per-type normalize-and-compare carry the same signal at a fraction of the
+committed surface.) These are the guard that catches a silently dropped, renamed,
 or `#[cfg]`-gated matrix test — a behaviour the SQLx assertions cannot see (a
-deleted test just stops running). The snapshot is a committed test baseline,
+deleted test just stops running). The snapshots are committed test baselines,
 **not** gitignored generated SQL.
 
 `mise run test:matrix:inventory` discovers the present scalar types from the
-`encrypted_domain` binary's `--list`, normalizes each type's token to `<T>`,
-asserts every type's set equals the canonical snapshot, and cross-checks the
-discovered type set against `cargo run -p eql-codegen -- list-types` (the
-catalog is the single source). You do **not** edit a per-type snapshot or touch
-`mise.toml` / the CI workflow — you only regenerate the one `matrix_tests.txt`
-when the macro's emitted name set itself changes. A catalog type missing its
+`encrypted_domain` binary's `--list`, normalizes each type's token to `<T>`, and
+matches each discovered type against whichever shape applies — the canonical
+ordered baseline, the derived eq-only subset, the text superset, or the
+storage-only set — then cross-checks the discovered type set against
+`cargo run -p eql-codegen -- list-types` (the catalog is the single source). You
+do **not** edit a per-type snapshot or touch `mise.toml` / the CI workflow — you
+regenerate the affected shape snapshots (all four atomically via
+`mise run test:matrix:snapshots:regen`) only when the macro's emitted name set
+itself changes. A catalog type missing its
 matrix wiring fails the cross-check. The CI `matrix-coverage` job gates it.
 **`tests/sqlx/snapshots/README.md` is the source of truth** for the mechanics
 (pinned feature set, the catalog cross-check, the CI diff, and when to
@@ -468,8 +495,10 @@ Run, in order:
 - `mise run --output prefix test:splinter --postgres 17` after a PostgreSQL 17
   install has built EQL
 
-The CI codegen job is a prerequisite of the PostgreSQL test matrix, so
-generated-SQL drift is caught before database tests run.
+The CI `codegen` job runs `mise run codegen:parity` as an independent required
+check (feeding the final `ci-required` gate); it no longer blocks the PostgreSQL
+test matrix from starting — the shards run after `build-archive` in parallel with
+codegen.
 
 **Commit a per-type reference baseline.** Every catalog type **must** have a
 committed `tests/codegen/reference/<T>/` baseline, generated once and checked in
@@ -649,7 +678,7 @@ extends). Use it for cross-domain casts, helper functions, or type-specific
 constraints. Unlike the generated siblings, **`<T>_extensions.sql` IS
 committed.** (Neither `int4` nor `int2` ships one today.)
 
-`tasks/pin_search_path.sql` describes the fallback marker for inline-critical
+`tasks/pin_search_path_v3.sql` describes the fallback marker for inline-critical
 extension functions that take no domain argument and so escape the structural
 skip:
 
@@ -693,14 +722,14 @@ unreachable. Invariants encoded in the renderers / templates and guarded by
 Two pieces of build tooling recognise the generated output without per-type
 edits:
 
-- **`tasks/pin_search_path.sql`** — structural skip identifies encrypted-domain
+- **`tasks/pin_search_path_v3.sql`** — structural skip identifies encrypted-domain
   functions by language (`sql`), volatility (`IMMUTABLE`), and a jsonb-backed
   `DOMAIN` argument in the `eql_v3` schema. New scalar types need no edit.
 - **`tasks/test/splinter.sh`** — name-based allowlist. The converged wrapper /
   extractor names (`eq`, `neq`, `lt`, `lte`, `gt`, `gte`, `eq_term`, `ord_term`,
   the `Bloom` term's `match_term` extractor and its `contains` / `contained_by`
   containment wrappers) plus the generated `min` / `max` aggregates and the SEM
-  `hmac_256` / `ore_block_256` / `bloom_filter` constructors are already
+  `hmac_256` / `ore_block_256` / `bloom_filter` types' constructors and comparators are already
   covered by `eql_v3`-schema entries. A new scalar type inherits coverage; **a
   new term needs splinter entries for each new name it introduces — both its
   extractor and its comparison wrappers** (adding `Bloom` required `match_term`,
@@ -718,14 +747,14 @@ adding a type.
 A single scalar type emits several hundred SQL declarations. For `int4`: eleven
 files, four domains, three extractors, dozens of wrappers and blockers, 176
 `CREATE OPERATOR` statements (44 per domain), and MIN/MAX aggregates per ordered
-domain. (The per-domain figure is fixed — 44 operators per domain, the `1 + 2D +
-A` file formula below — so a type with more domains, e.g. `text`'s five, scales
+domain. (The per-domain figure is fixed — 44 `CREATE OPERATOR` statements per domain, the `1 + 2D +
+A` file formula below — so a type with more domains, e.g. `text`'s six, scales
 those totals up.)
 The shape is mechanical and the invariants are unforgiving — a `STRICT` blocker
 silently bypasses its exception; a pinned `search_path` reverts queries to seq
 scans. The generator exists so each new type adds one `CATALOG` row rather than
 ninety hand-written declarations that must agree with each other and with
-`pin_search_path.sql`, `tasks/test/splinter.sh`, and
+`pin_search_path_v3.sql`, `tasks/test/splinter.sh`, and
 `src/v3/scalars/functions.sql`.
 
 ### Pipeline
@@ -734,10 +763,15 @@ ninety hand-written declarations that must agree with each other and with
 runs as `cargo run -p eql-codegen` (no subcommand), which calls
 `generate::generate_all` (`crates/eql-codegen/src/generate.rs`) over every row of
 `eql_domains::CATALOG`, writing each type's SQL into
-`src/v3/scalars/<token>/`. A second subcommand, `cargo run -p eql-codegen
--- list-types`, prints the catalog tokens one per line (consumed by the fixture
-and matrix-inventory enumeration). `main` (`crates/eql-codegen/src/main.rs`)
-recognises exactly these two forms; any other argument is a usage error.
+`src/v3/scalars/<token>/`. Three subcommands round out the surface:
+`-- list-types` prints the catalog tokens one per line (consumed by the fixture
+and matrix-inventory enumeration); `-- dump-catalog` prints the catalog surface
+(types → domains → supported operators) as JSON (consumed by the
+catalog-coverage / log-verification gates); and `-- bindings` regenerates the
+committed `eql-bindings` Rust payload types (the first step of `mise run
+types:generate`). `main` (`crates/eql-codegen/src/main.rs`) recognises exactly
+these four forms (no-arg generate-all, `list-types`, `dump-catalog`,
+`bindings`); any other argument is a usage error.
 
 The generator targets the `eql_v3` schema throughout: `SCHEMA = "eql_v3"`
 (`crates/eql-codegen/src/consts.rs`) qualifies both the domain families and the
@@ -770,14 +804,15 @@ Stages, in order (`generate_all` → `generate_type`):
    **minijinja** templates (`crates/eql-codegen/templates/*.j2`, compiled in via
    `include_str!` — no runtime file IO). The structural shape of each declaration
    is split between the context builders (Rust) and the templates (Jinja).
-4. **Write.** `clean_generated_files` first deletes every generated `.sql` in the
-   target directory (recognised by the header marker) so an abandoned domain
-   disappears on the next regeneration; `ensure_generated_paths_writable` then
-   refuses to proceed if any target path is a hand-written file lacking the
-   marker; `write_generated_file` writes each rendered body verbatim
-   (`crates/eql-codegen/src/writer.rs`). The template emits the `-- AUTOMATICALLY
-   GENERATED FILE.` marker as its own first line, so the writer does not prepend
-   a header — it only uses the marker to recognise files it owns.
+4. **Write.** `ensure_generated_paths_writable` runs first and refuses to proceed
+   if any target path is a hand-written file lacking the marker; `write_generated_file`
+   then writes each rendered body verbatim; finally `remove_generated_orphans`
+   prunes — marker-aware — any previously-generated `.sql` no longer produced, so an
+   abandoned domain disappears on the next regeneration (a hand-written file with no
+   marker always survives) (`crates/eql-codegen/src/writer.rs`). The template emits
+   the `-- AUTOMATICALLY GENERATED FILE.` marker as its own first line, so the
+   writer does not prepend a header — it only uses the marker to recognise files it
+   owns.
 
 There is no caching layer and no incremental mode. Each run regenerates every
 output for every catalog type from scratch.
@@ -840,8 +875,9 @@ CI runs these in three jobs in `.github/workflows/test-eql.yml`: `rust-crates`
 (`Rust workspace crates`, runs `mise run test:crates`), `codegen`
 (`Encrypted-domain codegen`, runs `mise run codegen:parity`), and
 `matrix-coverage` (`Matrix coverage inventory`, runs `mise run
-test:matrix:inventory`). The codegen job is a prerequisite of the PostgreSQL
-test matrix.
+test:matrix:inventory`). These run as independent required checks feeding the
+final `ci-required` gate; the `codegen` job no longer blocks the PostgreSQL test
+matrix from starting (the gate was removed — shards start after `build-archive`).
 
 Adding a new **term** is a bigger move than adding a type: edit the `Term` enum's
 `impl` methods, add `#[test]`s, add a `splinter.sh` entry for **each new name the
@@ -898,7 +934,7 @@ What makes it storage-only:
 - **Generator: no changes needed.** The SQL generator already handles a
   zero-term, single-domain type — it emits exactly three files (`bool_types.sql`,
   `bool_functions.sql`, `bool_operators.sql`; no `_aggregates.sql`, since no
-  ordered domain). All 44 functions are `plpgsql` blockers, all 44 operators back
+  ordered domain). All 44 functions are `plpgsql` blockers, all 44 `CREATE OPERATOR` statements back
   onto them: every comparison/containment/path operator reachable through domain
   fallback raises. The domain `CHECK` still pins `{v,i,c}` + `VALUE->>'v' = '2'`.
 - **Kind, not term.** Add a `ScalarKind` variant (`Bool`) with
@@ -933,5 +969,5 @@ What makes it storage-only:
 
 Everything else is the standard path: one catalog row, regenerate, commit the
 `tests/codegen/reference/bool/` baseline (3 files), no edits to
-`pin_search_path.sql` or `splinter.sh` (a storage-only type emits only blockers
+`pin_search_path_v3.sql` or `splinter.sh` (a storage-only type emits only blockers
 — no extractors/wrappers/aggregates, so no new inline-critical names).

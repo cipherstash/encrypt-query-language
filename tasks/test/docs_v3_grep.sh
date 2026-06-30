@@ -27,7 +27,7 @@ cd "$REPO_ROOT"
 # Out of scope (NOT scanned) — these legitimately retain eql_v2 and are excluded
 # by path, not by silent omission:
 #   docs/upgrading/      historical upgrade guides for the v2.x line
-#   docs/development/     internal contributor/process docs (reference-sync, etc.)
+#   docs/development/     internal contributor/process docs (release runbook, etc.)
 #   CHANGELOG.md          the permanent release record (documents the v2 removal)
 #   CLAUDE.md             project/dev instructions (describe the removal + provenance)
 #   DEVELOPMENT.md        contributor guide; its eql_v2 mentions are the removal
