@@ -49,7 +49,8 @@ To add a scalar type `<T>` (e.g. `int8`), with Rust type `<R>` (e.g. `i64`):
 4. **Regenerate** — `cargo run -p eql-codegen` (or just `mise run build`, which
    runs the generator first). One run regenerates *every* catalog type; there is
    no per-type codegen task. The generated `*_{types,functions,operators,aggregates}.sql`
-   are gitignored and never committed.
+   are committed in place under `src/v3/scalars/<T>/` — regenerate and commit the
+   SQL diff alongside the catalog change.
    - The catalog row ALSO drives the **Rust payload bindings**: `eql-codegen
      bindings` (run first by `mise run types:generate`) regenerates the
      committed `crates/eql-bindings/src/v3/<family>.rs` struct + `DomainType`
@@ -63,18 +64,19 @@ To add a scalar type `<T>` (e.g. `int8`), with Rust type `<R>` (e.g. `i64`):
      one-line `pub mod <family>;` added to the hand-written `mod.rs` — and any
      non-derivable caller caveat (e.g. a security note) belongs in the `mod.rs`
      doc, never the generated family file.
-5. **Snapshot the matrix inventory and commit the reference SQL files** —
-   `mise run test:matrix:inventory` (§3), and commit the per-type reference SQL
-   files under `tests/codegen/reference/<T>/` (every catalog type must have them — §4).
+5. **Snapshot the matrix inventory and commit the generated SQL files** —
+   `mise run test:matrix:inventory` (§3), and commit the regenerated per-type SQL
+   files under `src/v3/scalars/<T>/` (every catalog type must have them — §4).
 6. **Verify** — `mise run test:codegen`, the relevant SQLx suites, and the
    PostgreSQL matrix (§4).
 
 Things you do **not** do:
 
-- **Don't commit generated SQL.** `*_types.sql` / `*_functions.sql` /
-  `*_operators.sql` / `*_aggregates.sql` are gitignored; the catalog plus the
-  renderers are the source of truth. Change the catalog and rebuild — never
-  hand-edit generated SQL.
+- **Don't hand-edit generated SQL.** `*_types.sql` / `*_functions.sql` /
+  `*_operators.sql` / `*_aggregates.sql` are committed in place under
+  `src/v3/scalars/<T>/`, but the catalog plus the renderers are the source of
+  truth. Change the catalog and rebuild, then commit the regenerated SQL —
+  never edit the generated files directly.
 - **Don't edit `mise.toml`, the CI workflow, `pin_search_path_v3.sql`, or
   `splinter.sh`** for an ordinary type — they recognise the generated surface
   intrinsically (§5, §6). The exception is a brand-new *term* whose extractor
@@ -454,7 +456,7 @@ per-type normalize-and-compare carry the same signal at a fraction of the
 committed surface.) These are the guard that catches a silently dropped, renamed,
 or `#[cfg]`-gated matrix test — a behaviour the SQLx assertions cannot see (a
 deleted test just stops running). The snapshots are committed test baselines,
-**not** gitignored generated SQL.
+**not** part of the generated SQL surface.
 
 `mise run test:matrix:inventory` discovers the present scalar types from the
 `encrypted_domain` binary's `--list`, normalizes each type's token to `<T>`, and
@@ -500,17 +502,17 @@ check (feeding the final `ci-required` gate); it no longer blocks the PostgreSQL
 test matrix from starting — the shards run after `build-archive` in parallel with
 codegen.
 
-**Commit a per-type reference baseline.** Every catalog type **must** have a
-committed `tests/codegen/reference/<T>/` baseline, generated once and checked in
-(see `tests/codegen/reference/README.md` for the regenerate-and-commit recipe).
-The generator is type-generic, but per-type domain *shapes* differ — ordered
-types (including `timestamptz`) carry `_ord`/`_ord_ore` + aggregates, a
-hypothetical equality-only type (`EQ_ONLY_DOMAINS`) would omit them, and the
-Bloom `text_match` domain renders `@>`/`<@` as supported
-containment operators no ordered type emits — so anchoring every type catches a
-regression in any shape, not just the ordered one. `reference_dirs_match_catalog_tokens`
-(in `crates/eql-codegen/tests/parity.rs`) fails CI if a catalog row has no reference
-or a reference has no catalog row. Drift protection is further reinforced by the
+**Commit the generated SQL in place.** Every catalog type **must** have its
+generated SQL committed under `src/v3/scalars/<T>/` (regenerate with
+`mise run build`, then commit the SQL diff). The generator is type-generic, but
+per-type domain *shapes* differ — ordered types (including `timestamptz`) carry
+`_ord`/`_ord_ore` + aggregates, a hypothetical equality-only type
+(`EQ_ONLY_DOMAINS`) would omit them, and the Bloom `text_match` domain renders
+`@>`/`<@` as supported containment operators no ordered type emits — so
+committing every type catches a regression in any shape, not just the ordered
+one. `committed_scalar_dirs_match_catalog_tokens` (in
+`crates/eql-codegen/tests/parity.rs`) fails CI if a catalog row has no committed
+scalar dir or a dir has no catalog row. Drift protection is further reinforced by the
 catalog `values_tests` pinning the materialised `<T>_VALUES`, the
 catalog/generator `#[test]`s, and the `scalar_matrix!` SQLx suite (behaviour, not
 bytes).
@@ -524,8 +526,8 @@ This is the contract the generated SQL satisfies. You normally never read it to
 
 ### Domains and CHECK constraints
 
-The generator emits `src/v3/scalars/<T>/<T>_types.sql` (gitignored;
-materialised on every build) with one idempotent `DO $$ ... $$` block. Every
+The generator emits `src/v3/scalars/<T>/<T>_types.sql` (committed in place;
+regenerated on every build) with one idempotent `DO $$ ... $$` block. Every
 domain is a concrete domain over `jsonb` in the `eql_v3` schema — **never**
 `CREATE DOMAIN a AS b` over another generated domain (PostgreSQL resolves
 operators against the underlying base type, bypassing the fixed surface). Each
@@ -821,9 +823,9 @@ output for every catalog type from scratch.
 
 For a type with `D` domains of which `A` are ordered, the generator writes `1 +
 2D + A` SQL files into `src/v3/scalars/<token>/`. For `int4` (`D = 4`, `A =
-2`): eleven SQL files. The outputs are gitignored
-(`.gitignore` excludes `src/v3/scalars/*/*_{types,functions,operators,aggregates}.sql`)
-and regenerated at the start of every build.
+2`): eleven SQL files. The outputs are committed in place under
+`src/v3/scalars/<token>/` and regenerated at the start of every build (commit the
+regenerated SQL diff alongside any catalog change).
 
 | File                              | Content                                                                                  |
 | --------------------------------- | ---------------------------------------------------------------------------------------- |
@@ -857,19 +859,20 @@ clippy ... -D warnings`.
   escaping guards, and twin byte-identity
   (`crates/eql-codegen/src/generate.rs` `#[cfg(test)]`).
 - **The parity gate** — `mise run codegen:parity` (`tasks/codegen-parity.sh`).
-  It runs the generator into the real tree, then for **every** committed
-  reference token dir (1) compares that type's generated SQL **file set** against
-  the reference under `tests/codegen/reference/<token>/*.sql`, excluding committed
-  hand-written files (`comm -23` of `ls` against `git ls-files`), so an extra or
-  dropped generated file fails; and (2) diffs each reference file **byte-for-byte**
-  against its generated counterpart, after dropping the reference's single leading
-  `-- REFERENCE:` provenance line (`tail -n +2`). The same byte-for-byte
-  assertion runs in-crate as `crates/eql-codegen/tests/parity.rs`
-  (`rust_generator_matches_reference_files`), alongside
-  `generate_all_is_deterministic_across_runs` (two runs are byte-identical) and
-  `reference_dirs_match_catalog_tokens` (reference dirs == catalog tokens). The
-  reference SQL files — not any Python oracle — are the sole contract that survives
-  generator refactors.
+  It is a regenerate-in-place + git-diff drift gate: it runs
+  `cargo run -p eql-codegen` (regenerating the SQL into `src/v3/scalars/` in
+  place), then `git diff --exit-code -- src/v3/scalars` (any drift from the
+  committed surface fails), then a `git ls-files --others` untracked-file check
+  (a newly generated file that was never committed fails). This is the **same
+  pattern `mise run types:check` uses** for the committed Rust bindings — both
+  generated targets (SQL + bindings) are committed in place and drift-gated by
+  regenerate-and-git-diff. The in-crate assertions run as
+  `crates/eql-codegen/tests/parity.rs`: `every_generated_sql_file_starts_with_marker`
+  (every committed generated file opens with the marker),
+  `generate_all_is_deterministic_across_runs` (two runs are byte-identical), and
+  `committed_scalar_dirs_match_catalog_tokens` (committed scalar dirs == catalog
+  tokens). The committed `src/v3/scalars/` SQL — not any Python oracle — is the
+  sole contract that survives generator refactors.
 
 CI runs these in three jobs in `.github/workflows/test-eql.yml`: `rust-crates`
 (`Rust workspace crates`, runs `mise run test:crates`), `codegen`
@@ -884,8 +887,8 @@ Adding a new **term** is a bigger move than adding a type: edit the `Term` enum'
 term introduces** — its extractor *and* its comparison wrappers, plus any new SEM
 constructor (adding `Bloom` required `match_term`, `contains`, `contained_by`,
 and the SEM `bloom_filter`) — and, because it changes the generated surface,
-regenerate and commit the affected reference files under
-`tests/codegen/reference/<token>/`.
+regenerate and commit the affected SQL files under
+`src/v3/scalars/<token>/`.
 
 ---
 
@@ -968,6 +971,6 @@ What makes it storage-only:
   (`shape="storage_only"`).
 
 Everything else is the standard path: one catalog row, regenerate, commit the
-`tests/codegen/reference/bool/` baseline (3 files), no edits to
+generated `src/v3/scalars/bool/` SQL (3 files), no edits to
 `pin_search_path_v3.sql` or `splinter.sh` (a storage-only type emits only blockers
 — no extractors/wrappers/aggregates, so no new inline-critical names).

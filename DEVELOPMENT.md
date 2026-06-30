@@ -85,7 +85,7 @@ These are the important files and directories in the repo:
 │   │   ├── sem/               <-- hand-written SEM index-term types (hmac_256, ore_block_256, …)
 │   │   ├── scalars/           <-- generated scalar domain families, one dir per type
 │   │   │   ├── functions.sql  <-- shared blocker for native jsonb operators
-│   │   │   └── <T>/           <-- e.g. int4/, text/, bool/ (mostly gitignored, generated)
+│   │   │   └── <T>/           <-- e.g. int4/, text/, bool/ (generated, committed in place)
 │   │   ├── jsonb/             <-- jsonb SteVec support
 │   │   └── lint/              <-- structural lints
 │   ├── deps-v3.txt            <-- REQUIRE edges for the v3 surface
@@ -103,8 +103,10 @@ These are the important files and directories in the repo:
 > [!IMPORTANT]
 > The per-type scalar SQL files (`src/v3/scalars/<T>/<T>_types.sql`,
 > `*_functions.sql`, `*_operators.sql`, `*_aggregates.sql`) are **generated**
-> and **gitignored**. Never hand-edit them — they are overwritten on every
-> build. See [The catalog and code generation](#the-catalog-and-code-generation).
+> but **committed in place** (so the shipped SQL is reviewable in diffs and the
+> file is consistent with the committed Rust bindings). Never hand-edit them —
+> they are overwritten on every build and CI's `codegen:parity` gate fails on any
+> drift. See [The catalog and code generation](#the-catalog-and-code-generation).
 
 ## Set up a local development environment
 
@@ -123,6 +125,10 @@ cd encrypt-query-language
 
 # Trust the mise config and install tooling (Rust toolchain, sqlx-cli, …)
 mise trust --yes
+
+# (Optional, recommended) Install the git pre-commit hook that drift-gates the
+# generated surfaces (committed SQL + bindings) locally, before push.
+mise run install-hooks
 
 # Build the EQL installer and uninstaller, outputting to release/
 mise run build
@@ -196,10 +202,14 @@ For an unchanged catalog, regeneration is deterministic and byte-identical.
 The generated files
 (`<T>_types.sql` / `<T>_functions.sql` / `<T>_operators.sql` /
 `<T>_aggregates.sql`) carry an `-- AUTOMATICALLY GENERATED FILE` header (the
-project-wide marker that `docs:validate` greps for), are **gitignored**, and
-are **never committed**. If `mise run build` produces unexpected output, the
-change is in `crates/eql-domains/src` (the catalog/terms) or
-`crates/eql-codegen/src` (the renderers), not in run-to-run variation.
+project-wide marker that `docs:validate` greps for) and are **committed in
+place** under `src/v3/scalars/<T>/`. Because regeneration is deterministic, a
+catalog change shows up as a reviewable diff in these files; `mise run build`
+keeps them fresh, and `mise run codegen:parity` (CI + the optional pre-commit
+hook) fails if the committed copy ever drifts from the catalog. If
+`mise run build` produces unexpected output, the change is in
+`crates/eql-domains/src` (the catalog/terms) or `crates/eql-codegen/src` (the
+renderers), not in run-to-run variation.
 
 ### The dependency system
 
@@ -313,7 +323,7 @@ mise run test:codegen
 # Compile, lint, and test the std-only workspace crates
 mise run test:crates
 
-# Parity gate: assert eql-codegen output matches the reference SQL byte-for-byte
+# Drift gate: regenerate the SQL surface and fail if committed src/v3/scalars drifts
 mise run codegen:parity
 
 # Assert the eql_v3 surface is self-contained (no eql_v2 leakage)
@@ -356,11 +366,13 @@ output:
 
 ### Hand-written SQL
 
-Generated files are gitignored and overwritten on every build, so hand-written
-SQL never goes in them. Hand-written SQL beyond the fixed generated surface
-goes in `src/v3/scalars/<T>/<T>_extensions.sql` — no auto-generated header,
-explicit `-- REQUIRE:` edges, and **it is committed**. The hand-written SEM
-index-term types live under `src/v3/sem/`.
+Generated files are overwritten on every build (and CI fails on any drift), so
+hand-written SQL never goes in them — even though they are committed. Hand-written
+SQL beyond the fixed generated surface goes in
+`src/v3/scalars/<T>/<T>_extensions.sql` — no auto-generated header, explicit
+`-- REQUIRE:` edges, and it is committed (and, unlike the generated files, never
+rewritten by the generator). The hand-written SEM index-term types live under
+`src/v3/sem/`.
 
 When adding SQL, follow these conventions:
 

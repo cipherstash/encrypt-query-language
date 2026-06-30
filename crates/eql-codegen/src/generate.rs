@@ -357,44 +357,7 @@ mod tests {
             .expect("domain name")
     }
 
-    use crate::repo_root;
     use std::fs;
-
-    fn strip_reference_marker(text: &str) -> String {
-        let mut lines: Vec<&str> = text.lines().collect();
-        // .lines() drops the trailing newline; re-add per line and handle the
-        // first marker line(s).
-        while !lines.is_empty()
-            && (lines[0].starts_with("-- REFERENCE:") || lines[0].starts_with("// REFERENCE:"))
-        {
-            lines.remove(0);
-        }
-        let mut out = lines.join("\n");
-        if text.ends_with('\n') {
-            out.push('\n');
-        }
-        out
-    }
-
-    fn rendered_for(family_name: &str, name: &str, spec: &DomainFamily) -> String {
-        if name == format!("{family_name}_types.sql") {
-            return render_types_file(spec);
-        }
-        for d in spec.domains {
-            let full = d.full_name(family_name);
-            if name == format!("{full}_functions.sql") {
-                return render_functions_file(family_name, d);
-            }
-            if name == format!("{full}_operators.sql") {
-                return render_operators_file(family_name, d);
-            }
-            if name == format!("{full}_aggregates.sql") {
-                return render_aggregates_file(family_name, d)
-                    .expect("reference exists but generator skipped (not ord-capable)");
-            }
-        }
-        panic!("unrecognised reference filename: {name}");
-    }
 
     #[test]
     fn arg_b_name_is_selector_only_for_path_operators() {
@@ -416,52 +379,6 @@ mod tests {
         assert!(sql.contains("RAISE EXCEPTION 'operator % is not supported for %', '<'"));
         assert!(sql.contains("CREATE FUNCTION eql_v3.\"->\"("));
         assert!(sql.contains("RAISE EXCEPTION 'operator % is not supported for %', '->'"));
-    }
-
-    /// The committed reference token dirs under `tests/codegen/reference/`.
-    fn reference_tokens(root: &std::path::Path) -> Vec<String> {
-        let mut tokens: Vec<String> = fs::read_dir(root.join("tests/codegen/reference"))
-            .expect("reference dir")
-            .filter_map(|e| e.ok())
-            .filter(|e| e.path().is_dir())
-            .map(|e| e.file_name().to_str().unwrap().to_string())
-            .collect();
-        tokens.sort();
-        tokens
-    }
-
-    /// Byte-compare every `render_*_file` output against its committed reference,
-    /// for **every** catalog type with a reference dir (not just int4). This is
-    /// the in-crate reference gate over the render functions directly (the
-    /// integration `parity.rs` gate runs `generate_all` to disk). The reference
-    /// dirs are cross-checked against the catalog by `parity.rs`'s
-    /// `reference_dirs_match_catalog_tokens`.
-    #[test]
-    fn generator_matches_reference_files() {
-        let root = repo_root();
-        let mut checked = 0;
-        for token in reference_tokens(&root) {
-            let s = spec(&token);
-            let ref_dir = root.join("tests/codegen/reference").join(&token);
-            for entry in fs::read_dir(&ref_dir).expect("reference dir") {
-                let path = entry.unwrap().path();
-                if path.extension().and_then(|e| e.to_str()) != Some("sql") {
-                    continue;
-                }
-                let name = path.file_name().unwrap().to_str().unwrap().to_string();
-                let expected = strip_reference_marker(&fs::read_to_string(&path).unwrap());
-                let actual = rendered_for(&token, &name, s);
-                assert_eq!(
-                    actual, expected,
-                    "{token}/{name}: generator diverged from reference"
-                );
-                checked += 1;
-            }
-        }
-        assert!(
-            checked >= 11,
-            "expected >=11 reference SQL files across all tokens, checked {checked}"
-        );
     }
 
     #[test]

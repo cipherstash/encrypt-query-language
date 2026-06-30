@@ -28,7 +28,7 @@ flowchart TD
     end
 
     subgraph OUT["③ OUTPUTS"]
-        SQL["SQL surface<br/>src/v3/scalars/&lt;T&gt;/*.sql<br/>(gitignored)"]
+        SQL["SQL surface<br/>src/v3/scalars/&lt;T&gt;/*.sql<br/>(committed in place)"]
         RS["Rust bindings<br/>crates/eql-bindings/src/v3/&lt;T&gt;.rs<br/>(committed, @generated)"]
         TS["TypeScript<br/>crates/eql-bindings/bindings/v3/*.ts<br/>(committed)"]
         JS["JSON Schema<br/>crates/eql-bindings/schema/v3/*.json<br/>(committed)"]
@@ -237,7 +237,7 @@ flowchart TD
     R -.->|render panic| ABORT["abort before any file is written or deleted"]
 ```
 
-The Rust bindings (committed) and the SQL surface (gitignored) share this
+The Rust bindings and the SQL surface are both committed in place and share this
 discipline; `eql-codegen clean` exposes just the marker-aware SQL removal step.
 
 ### 3.1 SQL generation (`generate.rs` + `context.rs` + minijinja templates)
@@ -313,13 +313,13 @@ distinctions become visible — e.g. `text_ord` lists `v i c hm ob` (dual-term) 
 
 ## 4. Layer ③ — The Three Outputs
 
-### 4.1 SQL surface — `src/v3/scalars/<T>/` (gitignored)
+### 4.1 SQL surface — `src/v3/scalars/<T>/` (committed in place)
 
 ```text
 src/v3/scalars/
 ├── functions.sql          ← hand-written shared blocker helper (COMMITTED)
 ├── int4/
-│   ├── int4_types.sql            (gitignored)
+│   ├── int4_types.sql            (generated, committed)
 │   ├── int4_functions.sql        (storage-only blockers)
 │   ├── int4_eq_functions.sql     (eq_term extractor + eq/neq wrappers)
 │   ├── int4_eq_operators.sql     (CREATE OPERATOR)
@@ -331,9 +331,9 @@ src/v3/scalars/
 └── ...
 ```
 
-`.gitignore` excludes the four generated patterns (`*_types.sql`, `*_functions.sql`,
-`*_operators.sql`, `*_aggregates.sql`); they're regenerated on every `mise run build`.
-Generated files carry the `-- AUTOMATICALLY GENERATED FILE.` header that `docs:validate`
+The four generated patterns (`*_types.sql`, `*_functions.sql`,
+`*_operators.sql`, `*_aggregates.sql`) are committed in place and regenerated on every
+`mise run build`. Generated files carry the `-- AUTOMATICALLY GENERATED FILE.` header that `docs:validate`
 greps on. Domains are `CREATE DOMAIN ... AS jsonb` with envelope + term-key `CHECK`s (and
 ORE non-empty-array checks), never domain-over-domain.
 
@@ -508,7 +508,7 @@ change.
 ```mermaid
 flowchart LR
     subgraph gates["CI GATES"]
-        CP["codegen:parity<br/>regenerate SQL, diff vs<br/>tests/codegen/reference/&lt;T&gt;/"]
+        CP["codegen:parity<br/>regenerate SQL in place,<br/>git diff vs committed src/v3/scalars/&lt;T&gt;/"]
         TC["types:check<br/>regenerate Rust+TS+JSON,<br/>git diff --exit-code"]
         SC["test:self_contained_v3<br/>no legacy v2-schema symbols under src/v3,<br/>v3-only dep closure + installer"]
         MI["test:matrix:inventory<br/>test-name snapshots"]
@@ -517,14 +517,14 @@ flowchart LR
 
 | Gate | Pattern | Catches |
 |------|---------|---------|
-| `codegen:parity` | regenerate gitignored SQL, byte-diff vs golden references | renderer drift; new type without a golden reference |
+| `codegen:parity` | regenerate SQL in place, `git diff --exit-code` + untracked check | renderer drift; uncommitted/hand-edited generated SQL |
 | `types:check` | regenerate committed bindings, `git diff --exit-code` + untracked check | stale/hand-edited TS/JSON/Rust bindings |
 | `test:self_contained_v3` | grep + dep-closure + installer scan | any legacy v2-schema symbol leaking into the v3 surface |
 | `test:matrix:inventory` | normalized test-name set vs 4 baselines + `list-types` | dropped/renamed test; catalog type missing wiring |
 
-`types:check` is the committed-reference analogue of `codegen:parity`: same
-regenerate-and-diff pattern, adapted because the bindings output is committed (the SQL is
-not).
+`codegen:parity` and `types:check` are the same gate applied to two committed
+generated targets: both regenerate in place and `git diff --exit-code`, because the SQL
+surface and the bindings are both committed.
 
 ---
 
@@ -580,7 +580,7 @@ tests. Everything else is one row, the compiler, and the generators.
 | Hand-written bindings core | `crates/eql-bindings/src/v3/{mod,domain_type,terms}.rs`; `SchemaVersion`/`Identifier` in `crates/eql-bindings/src/lib.rs` |
 | Generated bindings | `crates/eql-bindings/src/v3/<family>.rs`, `inventory.rs` |
 | TS / JSON Schema | `crates/eql-bindings/bindings/v3/`, `crates/eql-bindings/schema/v3/` |
-| Generated SQL | `src/v3/scalars/<T>/` (gitignored) |
+| Generated SQL | `src/v3/scalars/<T>/` (committed in place) |
 | Encrypted fixtures | `tests/sqlx/fixtures/eql_v3*.sql`, `tests/sqlx/fixtures/v3_*.sql` (gitignored) |
 | Fixture pipeline | `tests/sqlx/src/fixtures/{spec,driver,scalar_fixture}.rs` |
 | Matrix macro | `tests/sqlx/src/matrix.rs` |
