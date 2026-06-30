@@ -510,7 +510,7 @@ flowchart LR
     subgraph gates["CI GATES"]
         CP["codegen:parity<br/>regenerate SQL, diff vs<br/>tests/codegen/reference/&lt;T&gt;/"]
         TC["types:check<br/>regenerate Rust+TS+JSON,<br/>git diff --exit-code"]
-        SC["test:self_contained_v3<br/>no eql_v2.* under src/v3,<br/>v3-only dep closure + installer"]
+        SC["test:self_contained_v3<br/>no legacy v2-schema symbols under src/v3,<br/>v3-only dep closure + installer"]
         MI["test:matrix:inventory<br/>test-name snapshots"]
     end
 ```
@@ -519,7 +519,7 @@ flowchart LR
 |------|---------|---------|
 | `codegen:parity` | regenerate gitignored SQL, byte-diff vs golden references | renderer drift; new type without a golden reference |
 | `types:check` | regenerate committed bindings, `git diff --exit-code` + untracked check | stale/hand-edited TS/JSON/Rust bindings |
-| `test:self_contained_v3` | grep + dep-closure + installer scan | any `eql_v2.*` leak into the v3 surface |
+| `test:self_contained_v3` | grep + dep-closure + installer scan | any legacy v2-schema symbol leaking into the v3 surface |
 | `test:matrix:inventory` | normalized test-name set vs 4 baselines + `list-types` | dropped/renamed test; catalog type missing wiring |
 
 `types:check` is the committed-reference analogue of `codegen:parity`: same
