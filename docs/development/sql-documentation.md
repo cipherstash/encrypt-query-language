@@ -10,7 +10,7 @@ prefix (not plain `--`). Coverage and required tags are checked by `mise run doc
 ## Required / Encouraged / Optional tags
 
 ### Mandatory
-- `@brief` - One sentence description
+- `@brief` - one-sentence description
 - `@param` - For each parameter (with type and description)
 - `@return` - Return value description (include structure for JSONB)
 
