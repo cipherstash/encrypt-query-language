@@ -150,7 +150,7 @@ cargo test --test payload_schema_tests
 """
 
 [tasks."codegen:parity"]
-description = "Drift gate: regenerate the scalar SQL surface in place and fail if the committed src/v3/scalars files differ (mirrors types:check)"
+description = "Drift gate: regenerate the scalar SQL surface in place (overwrites src/v3/scalars in the working tree) and fail if the committed files differ (mirrors types:check)"
 dir = "{{config_root}}"
 run = "bash tasks/codegen-parity.sh"
 

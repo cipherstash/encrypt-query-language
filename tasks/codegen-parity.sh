@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
-#MISE description="Drift gate: regenerate the scalar SQL surface in place and fail if the committed src/v3/scalars files differ (mirrors types:check for the Rust bindings)"
+#MISE description="Drift gate: regenerate the scalar SQL surface in place (overwrites src/v3/scalars in the working tree) and fail if the committed files differ (mirrors types:check for the Rust bindings)"
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
+# SIDE EFFECT: this regenerates src/v3/scalars/**/*.sql IN PLACE — it overwrites
+# the working-tree copies of the generated SQL (exactly as `mise run build`
+# already does on every build). This is safe: the output is a pure function of
+# the catalog (anything overwritten is reproducible) and hand-edits to generated
+# files are forbidden, so the only thing a run can clobber is a forbidden edit.
+# Do not expect this gate to be read-only.
+#
 # Regenerate the scalar SQL surface IN PLACE from the eql-domains catalog, then
 # assert the committed tree is unchanged — the same regenerate-and-git-diff
 # pattern `mise run types:check` uses for the committed Rust bindings. The
