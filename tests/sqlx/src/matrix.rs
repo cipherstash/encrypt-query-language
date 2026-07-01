@@ -4,7 +4,7 @@
 //!
 //! - **`scalar_matrix!`** — the recommended wrapper. One invocation per type
 //!   (~5 lines), with a `caps` capability marker selecting the shape:
-//!   `caps = [eq, ord]` for an ordered scalar (i32, i64, date, timestamptz,
+//!   `caps = [eq, ord]` for an ordered scalar (i32, i64, date, timestamp,
 //!   ...) where all four variants are present and the full
 //!   `=`/`<>`/`<`/`>`/`min`/`max` surface applies; `caps = [eq]` for a
 //!   hypothetical equality-only scalar (e.g. a future hash-only type) where
@@ -149,11 +149,11 @@ fn collect_index_scan_nodes(value: &serde_json::Value, found: &mut Vec<(String, 
 /// - `caps = [eq, ord]` — the ordered-numeric shape (all four variants;
 ///   `=`/`<>`/`<`/`<=`/`>`/`>=`; ORDER BY / ORDER BY USING; ORE injectivity;
 ///   the ordered functional index). Consumers:
-///   `int2`/`int4`/`int8`/`date`/`timestamptz`/`numeric`.
+///   `int2`/`int4`/`int8`/`date`/`timestamp`/`numeric`.
 /// - `caps = [eq]` — equality-only (storage + `_eq` only; `=`/`<>` meaningful,
 ///   the four ord operators are deliberate blockers). The empty `ord_domains`
 ///   make the order-by / ORE arms emit zero tests. No current consumer —
-///   `timestamptz` was promoted to the ordered shape once the N-block ORE
+///   `timestamp` was promoted to the ordered shape once the N-block ORE
 ///   comparator could order its native 12-block width.
 ///
 /// Both arms take the identical `(suite, scalar, eql_type)` signature, so the

@@ -30,7 +30,7 @@ pub const DOUBLES_TOKENS: &[&str] = &[
     "int4",
     "int8",
     "date",
-    "timestamptz",
+    "timestamp",
     "numeric",
     "text",
 ];
@@ -83,7 +83,7 @@ pub async fn generate(token: &str) -> Result<()> {
         "int4" => generate_doubles_for::<i32>().await,
         "int8" => generate_doubles_for::<i64>().await,
         "date" => generate_doubles_for::<chrono::NaiveDate>().await,
-        "timestamptz" => generate_doubles_for::<chrono::DateTime<chrono::Utc>>().await,
+        "timestamp" => generate_doubles_for::<chrono::DateTime<chrono::Utc>>().await,
         "numeric" => generate_doubles_for::<rust_decimal::Decimal>().await,
         "text" => generate_doubles_for::<String>().await,
         other => anyhow::bail!(

@@ -229,7 +229,7 @@ pub trait MatchScalar: ScalarType {
 // `token => rust_type` line there — not an impl here.
 //
 // Temporal scalars (`chrono::NaiveDate`, and `DateTime<Utc>` in the stacked
-// timestamptz PR) are hand-written below instead: their fixture values cannot be
+// timestamp PR) are hand-written below instead: their fixture values cannot be
 // a `const` slice (chrono constructors are not `const`), and their pivots are
 // explicit sentinels rather than `Self::MIN`/`Self::MAX`. The macro emits only
 // integer impls.
@@ -342,7 +342,7 @@ macro_rules! temporal_values {
 /// (`int_values!`) and impl `ScalarType` via the proc-macro.
 ///
 /// `$variant` is the `eql_domains::Fixture` variant this scalar's rows use
-/// (`Text`/`Numeric`/`Date`/`Timestamptz`); `$parse` maps each `&Fixture` to
+/// (`Text`/`Numeric`/`Date`/`Timestamp`); `$parse` maps each `&Fixture` to
 /// `$ty` (and owns its own loud "wrong variant" panic). The accessor is `pub` so
 /// the `eql_v3_<T>` fixture module can hand the slice to `scalar_fixture!`.
 macro_rules! lazy_values {
@@ -385,31 +385,31 @@ temporal_values! {
     sql_lit   = |v| format!("'{v}'"),
 }
 
-// `timestamptz`'s `ScalarType` wiring, generated from its catalog row by the
-// same `temporal_values!` path as `date`. timestamptz is ordered (its catalog
+// `timestamp`'s `ScalarType` wiring, generated from its catalog row by the
+// same `temporal_values!` path as `date`. timestamp is ordered (its catalog
 // row uses the ordered domain shape, 12-block ORE), and the *value* wiring is
 // identical to any temporal scalar: RFC3339 strings parsed once into
-// `DateTime<Utc>` behind `timestamptz_values()`. The pivots are retained as the
+// `DateTime<Utc>` behind `timestamp_values()`. The pivots are retained as the
 // three min/mid/max anchors the matrix sweeps.
 temporal_values! {
-    cell      = TIMESTAMPTZ_VALUES_CELL,
-    accessor  = timestamptz_values,
+    cell      = TIMESTAMP_VALUES_CELL,
+    accessor  = timestamp_values,
     rust_type = chrono::DateTime<chrono::Utc>,
-    spec      = eql_domains::TIMESTAMPTZ_FIXTURES,
-    variant   = Timestamptz,
-    pg_type   = "timestamptz",
+    spec      = eql_domains::TIMESTAMP_FIXTURES,
+    variant   = Timestamp,
+    pg_type   = "timestamp",
     parse     = |s| chrono::DateTime::parse_from_rfc3339(s)
-        .expect("catalog timestamptz fixture must be RFC3339")
+        .expect("catalog timestamp fixture must be RFC3339")
         .with_timezone(&chrono::Utc),
     sql_lit   = |v| format!("'{}'", v.to_rfc3339()),
 }
 
-/// Focused guards for the timestamptz value wiring that the `temporal_values!`
+/// Focused guards for the timestamp value wiring that the `temporal_values!`
 /// auto-generated tests can't cover, because every catalog fixture is already
 /// `…Z` (UTC). Both tests intentionally live in the harness, not in
 /// `eql-domains`, which is deliberately zero-dep (no chrono).
 #[cfg(test)]
-mod timestamptz_value_guards {
+mod timestamp_value_guards {
     use super::*;
 
     // Mirror of the `temporal_values!` parse closure above. Kept independent so
@@ -440,7 +440,7 @@ mod timestamptz_value_guards {
     }
 
     /// `eql-domains::invariant_tests::fixture_values_are_distinct_by_resolved_number`
-    /// keys `Fixture::Timestamptz` by its literal string, so two RFC3339 strings
+    /// keys `Fixture::Timestamp` by its literal string, so two RFC3339 strings
     /// that denote the same UTC instant (e.g. `…00:00Z` vs `…01:00+01:00`) would
     /// pass as "distinct" there. The fixture *table* keys on the parsed
     /// `DateTime<Utc>`, so an aliasing pair would silently insert duplicate
@@ -449,12 +449,12 @@ mod timestamptz_value_guards {
     #[test]
     fn fixtures_are_distinct_by_instant() {
         use std::collections::HashSet;
-        let vals = timestamptz_values(); // &[DateTime<Utc>], parsed from the catalog
+        let vals = timestamp_values(); // &[DateTime<Utc>], parsed from the catalog
         let unique: HashSet<_> = vals.iter().collect();
         assert_eq!(
             unique.len(),
             vals.len(),
-            "two timestamptz fixtures alias to the same UTC instant",
+            "two timestamp fixtures alias to the same UTC instant",
         );
     }
 }
@@ -1719,7 +1719,7 @@ mod oracle_inventory_tests {
                 "int2",
                 "int8",
                 "date",
-                "timestamptz",
+                "timestamp",
                 "numeric",
                 "text",
                 "float4",
@@ -1755,7 +1755,7 @@ mod oracle_inventory_tests {
                 "int2",
                 "int8",
                 "date",
-                "timestamptz",
+                "timestamp",
                 "numeric",
                 "text",
                 "float4",

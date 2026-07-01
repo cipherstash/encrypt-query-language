@@ -55,7 +55,7 @@ macro_rules! scalar_types {
             int2 => i16,
             int8 => i64,
             date => chrono::NaiveDate,
-            timestamptz => chrono::DateTime<chrono::Utc>,
+            timestamp => chrono::DateTime<chrono::Utc>,
             numeric => rust_decimal::Decimal,
             text => String,
             bool => bool,

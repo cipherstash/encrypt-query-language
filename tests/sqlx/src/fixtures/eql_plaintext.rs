@@ -58,6 +58,11 @@ impl PlaintextSqlType {
     pub const SMALLINT: PlaintextSqlType = PlaintextSqlType("smallint");
     pub const BIGINT: PlaintextSqlType = PlaintextSqlType("bigint");
     pub const DATE: PlaintextSqlType = PlaintextSqlType("date");
+    // Deliberately named `TIMESTAMPTZ`: this is the Postgres *native storage*
+    // column type (`timestamp with time zone`), not the EQL domain. The EQL
+    // domain is now `timestamp` (see `ScalarKind::Timestamp`), but the plaintext
+    // oracle column must stay `timestamp with time zone` so sqlx binds
+    // `DateTime<Utc>` correctly.
     pub const TIMESTAMPTZ: PlaintextSqlType = PlaintextSqlType("timestamp with time zone");
     pub const TEXT: PlaintextSqlType = PlaintextSqlType("text");
     pub const JSONB: PlaintextSqlType = PlaintextSqlType("jsonb");
@@ -79,7 +84,7 @@ impl fmt::Display for PlaintextSqlType {
 
 /// The EQL `cast_as` for a scalar kind, drawn from the `Cast` allowlist.
 ///
-/// Only the wired kinds (the integer kinds, `Text`, plus `Date` / `Timestamptz`)
+/// Only the wired kinds (the integer kinds, `Text`, plus `Date` / `Timestamp`)
 /// have `EqlPlaintext` impls, so only those resolve; the remaining kinds mirror the
 /// `eql_domains` accessor convention and `panic!`, since no impl can ever reach
 /// them.
@@ -89,7 +94,7 @@ const fn cast_for_kind(kind: ScalarKind) -> Cast {
         ScalarKind::I16 => Cast::SMALL_INT,
         ScalarKind::I64 => Cast::BIG_INT,
         ScalarKind::Date => Cast::DATE,
-        ScalarKind::Timestamptz => Cast::TIMESTAMP,
+        ScalarKind::Timestamp => Cast::TIMESTAMP,
         ScalarKind::Text => Cast::TEXT,
         ScalarKind::Numeric => Cast::DECIMAL,
         ScalarKind::Bool => Cast::BOOLEAN,
@@ -103,14 +108,14 @@ const fn cast_for_kind(kind: ScalarKind) -> Cast {
 
 /// The `plaintext` oracle column SQL type for a scalar kind, drawn from the
 /// `PlaintextSqlType` allowlist. As with `cast_for_kind`, only the wired kinds
-/// (integers, `Text`, plus `Date` / `Timestamptz`) resolve.
+/// (integers, `Text`, plus `Date` / `Timestamp`) resolve.
 const fn plaintext_sql_type_for_kind(kind: ScalarKind) -> PlaintextSqlType {
     match kind {
         ScalarKind::I32 => PlaintextSqlType::INTEGER,
         ScalarKind::I16 => PlaintextSqlType::SMALLINT,
         ScalarKind::I64 => PlaintextSqlType::BIGINT,
         ScalarKind::Date => PlaintextSqlType::DATE,
-        ScalarKind::Timestamptz => PlaintextSqlType::TIMESTAMPTZ,
+        ScalarKind::Timestamp => PlaintextSqlType::TIMESTAMPTZ,
         ScalarKind::Text => PlaintextSqlType::TEXT,
         ScalarKind::Numeric => PlaintextSqlType::NUMERIC,
         ScalarKind::Bool => PlaintextSqlType::BOOLEAN,
@@ -195,7 +200,7 @@ impl EqlPlaintext for chrono::NaiveDate {
 }
 
 impl EqlPlaintext for chrono::DateTime<chrono::Utc> {
-    const KIND: ScalarKind = ScalarKind::Timestamptz;
+    const KIND: ScalarKind = ScalarKind::Timestamp;
 
     fn to_plaintext(&self) -> Plaintext {
         Plaintext::Timestamp(Some(*self))
@@ -360,7 +365,7 @@ mod tests {
 
     #[test]
     fn datetime_utc_casts_to_timestamp() {
-        // timestamptz is UTC-normalized — cipherstash has no tz-preserving
+        // timestamp is UTC-normalized — cipherstash has no tz-preserving
         // type, so it encrypts under the `timestamp` cast.
         assert_eq!(
             <chrono::DateTime<chrono::Utc> as EqlPlaintext>::CAST.as_str(),
@@ -369,7 +374,7 @@ mod tests {
     }
 
     #[test]
-    fn datetime_utc_plaintext_sql_type_is_timestamptz() {
+    fn datetime_utc_plaintext_sql_type_is_timestamp_with_time_zone() {
         assert_eq!(
             <chrono::DateTime<chrono::Utc> as EqlPlaintext>::PLAINTEXT_SQL_TYPE.as_str(),
             "timestamp with time zone"
