@@ -416,10 +416,7 @@ async fn wide_block_term_compares_equal_to_itself(pool: PgPool) -> Result<()> {
         "'2000-01-01T00:00:00Z'::timestamptz",
     )
     .await?;
-    assert_eq!(
-        timestamp, 0,
-        "a 12-block timestamp term must equal itself"
-    );
+    assert_eq!(timestamp, 0, "a 12-block timestamp term must equal itself");
     Ok(())
 }
 

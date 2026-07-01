@@ -230,9 +230,7 @@ fn timestamp_round_trips_and_enforces_term_capabilities() {
     // field typo would pass `catalog_parity` (domain names only) but is caught
     // here. (Was equality-only while the ORE comparator was hardcoded to 8
     // blocks; promoted once `eql_v3.ore_block_256` generalized to any width.)
-    use eql_bindings::v3::timestamp::{
-        Timestamp, TimestampEq, TimestampOrd, TimestampOrdOre,
-    };
+    use eql_bindings::v3::timestamp::{Timestamp, TimestampEq, TimestampOrd, TimestampOrdOre};
 
     // Storage-only: envelope, no term.
     let storage = json!({
@@ -264,10 +262,7 @@ fn timestamp_round_trips_and_enforces_term_capabilities() {
     });
     let parsed: TimestampOrd = serde_json::from_value(with_ob.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), with_ob);
-    assert_eq!(
-        TimestampOrd::sql_domain_static(),
-        "eql_v3.timestamp_ord"
-    );
+    assert_eq!(TimestampOrd::sql_domain_static(), "eql_v3.timestamp_ord");
     let parsed: TimestampOrdOre = serde_json::from_value(with_ob.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), with_ob);
     assert_eq!(
