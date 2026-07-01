@@ -8,6 +8,67 @@
 //! payload shapes, supported operators, index extractor expressions,
 //! ground-truth result sets — is derived from `T::PG_TYPE`,
 //! `T::fixture_values()`, and the `Variant` enum.
+//!
+//! # Plaintext oracle columns: `PG_TYPE` vs `PLAINTEXT_SQL_TYPE`
+//!
+//! EQL stores encrypted values as **jsonb**: every `eql_v3.<T>*` domain is
+//! `CREATE DOMAIN … AS jsonb`, and the ciphertext + index terms live inside the
+//! JSON payload. No concrete Postgres scalar type appears in the product at all.
+//!
+//! The concrete Postgres type shows up in exactly one place — the **plaintext
+//! oracle** columns these tests build alongside the jsonb payload: the fixture
+//! tables (`fixtures.eql_v3_<T>`) and the matrix temp tables. Those columns hold
+//! the cleartext ground truth that the encrypted results are checked against
+//! (`ORDER BY` order, decode-and-compare, min/max/eq pivots). So `PG_TYPE` /
+//! `PLAINTEXT_SQL_TYPE` are purely a *test-harness* concern; the catalog,
+//! codegen, and bindings only ever know the jsonb domain *name*.
+//!
+//! `ScalarType` carries two members for the two roles that one string used to
+//! play:
+//!
+//! - [`ScalarType::PG_TYPE`] — the **EQL domain token / identifier**: the suffix
+//!   in the SQL domain name (`eql_v3.<PG_TYPE>_ord`) and the fixture table name
+//!   (`fixtures.eql_v3_<PG_TYPE>`), plus capability lookups. Never a plaintext
+//!   column type.
+//! - [`ScalarType::PLAINTEXT_SQL_TYPE`] — the **actual Postgres storage type**
+//!   of the cleartext value in the oracle columns. Defaults to `PG_TYPE`.
+//!
+//! For every scalar except `timestamp` the two coincide — `int4`, `date`,
+//! `numeric`, … are each a valid Postgres type equal to their domain token.
+//! `timestamp` is the sole divergence: its domain token is `timestamp` (chosen
+//! to match the cipherstash cast / `ColumnType::Timestamp` / `Plaintext::Timestamp`
+//! naming), but the encrypted value is a UTC **instant** — `chrono::DateTime<Utc>`,
+//! the only sub-day temporal `Plaintext` variant cipherstash offers — whose
+//! faithful Postgres type is `timestamp with time zone`, not the SQL-standard
+//! (tz-naive) `timestamp`. The temporal impls therefore override
+//! `PLAINTEXT_SQL_TYPE`, deriving it from `EqlPlaintext` (the `ScalarKind`-keyed
+//! source the fixture generator also uses) so it cannot drift from a literal.
+//!
+//! ## Why the oracle stays `timestamp with time zone`, not `timestamp`
+//!
+//! The tests only assert ordering/equality, which are monotonic under any
+//! faithful relabelling — so this is a deliberate choice, not a hard constraint.
+//! Two reasons make the tz-aware oracle the better one:
+//!
+//! 1. **It would force the harness type to `NaiveDateTime`.** sqlx binds
+//!    `DateTime<Utc>` only to `timestamptz` and `NaiveDateTime` only to
+//!    `timestamp`, and the oracle column is decoded straight back into the
+//!    scalar type. A bare `timestamp` column would require flipping the scalar
+//!    from `DateTime<Utc>` to `NaiveDateTime`, rippling through the
+//!    `EqlPlaintext`/encryption wiring (encryption still needs a `DateTime<Utc>`,
+//!    so `to_plaintext` would call `.and_utc()` — the instant reappearing), the
+//!    fixture strings, `parse`/`sql_lit`, and every test that names the type.
+//! 2. **A no-tz column has no fixed instant.** Writing or casting between
+//!    `timestamptz` and `timestamp` applies `AT TIME ZONE current_setting('TimeZone')`,
+//!    so a `timestamp` oracle would become **session-timezone-dependent** (fine
+//!    under UTC CI, silently shifted for a dev in another zone). Keeping the
+//!    oracle `timestamp with time zone` makes it a faithful, environment-
+//!    independent record of the encrypted instant — for the price of one const.
+//!
+//! Keeping `PLAINTEXT_SQL_TYPE` on `ScalarType` (rather than reading
+//! `EqlPlaintext` directly at each use site) also covers view scalars like
+//! `JsonbEntryInt4`, which are `ScalarType`s but deliberately *not*
+//! `EqlPlaintext`s; those inherit the `PG_TYPE` default.
 
 use anyhow::{bail, Context, Result};
 use eql_domains::{Term, CATALOG};
@@ -28,20 +89,24 @@ pub trait ScalarType:
     + for<'r> sqlx::Decode<'r, sqlx::Postgres>
     + sqlx::Type<sqlx::Postgres>
 {
-    /// Postgres native type token — also the suffix in the SQL domain
-    /// name and the fixture script name. Examples: `"int4"`, `"int8"`.
+    /// The EQL domain token / identifier — the suffix in the SQL domain name
+    /// (`eql_v3.<PG_TYPE>_ord`) and the fixture script/table name
+    /// (`fixtures.eql_v3_<PG_TYPE>`). Examples: `"int4"`, `"timestamp"`. This is
+    /// an *identifier*, not necessarily a valid plaintext column type — see
+    /// [`ScalarType::PLAINTEXT_SQL_TYPE`] and the module docs.
     const PG_TYPE: &'static str;
 
-    /// Postgres type of the `plaintext` oracle column, for tests that
+    /// Postgres storage type of the `plaintext` oracle column, for tests that
     /// materialise a plaintext column or a typed `NULL` sentinel. Defaults to
     /// `PG_TYPE`, which is a valid plaintext type for every catalog scalar
-    /// except `timestamp` (whose domain token is `timestamp` but whose
-    /// plaintext is `timestamp with time zone`, a UTC instant) — the temporal
-    /// impls override it, deriving the value from `EqlPlaintext` (the same
+    /// except `timestamp` (whose domain token is `timestamp` but whose plaintext
+    /// is `timestamp with time zone`, a UTC instant) — the temporal impls
+    /// override it, deriving the value from `EqlPlaintext` (the same
     /// `ScalarKind`-keyed source the fixture generator uses) so it cannot drift.
     /// Kept on `ScalarType`, not read from `EqlPlaintext` directly, because some
     /// test scalars (`JsonbEntryInt4`) are `ScalarType`s but deliberately NOT
-    /// `EqlPlaintext`s; those inherit the `PG_TYPE` default.
+    /// `EqlPlaintext`s; those inherit the `PG_TYPE` default. See the module docs
+    /// for why the oracle stays tz-aware rather than becoming a bare `timestamp`.
     const PLAINTEXT_SQL_TYPE: &'static str = Self::PG_TYPE;
 
     /// Distinct plaintext values present in the fixture, in a stable
