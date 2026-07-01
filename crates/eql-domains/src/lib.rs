@@ -317,16 +317,7 @@ pub const FLOAT8: DomainFamily = DomainFamily {
 /// The scalar catalog — the single source of truth. Order is significant (it
 /// drives generation order). New types are appended as their SQL surface lands.
 pub const CATALOG: &[DomainFamily] = &[
-    INT4,
-    INT2,
-    INT8,
-    DATE,
-    TIMESTAMP,
-    NUMERIC,
-    TEXT,
-    BOOL,
-    FLOAT4,
-    FLOAT8,
+    INT4, INT2, INT8, DATE, TIMESTAMP, NUMERIC, TEXT, BOOL, FLOAT4, FLOAT8,
 ];
 
 #[cfg(test)]

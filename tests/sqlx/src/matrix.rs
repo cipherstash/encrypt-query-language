@@ -2065,8 +2065,10 @@ macro_rules! __scalar_matrix_ord_routes_case {
 
                 let mut tx = pool.begin().await?;
                 sqlx::query(&format!(
+                    // Plaintext type, not the `PG_TYPE` domain token — they
+                    // diverge for `timestamp` (see the nulls-ordering arm).
                     "CREATE TEMP TABLE {table} (plaintext {pg}, value {d}) ON COMMIT DROP",
-                    pg = <$scalar as ScalarType>::PG_TYPE,
+                    pg = <$scalar as ScalarType>::PLAINTEXT_SQL_TYPE,
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!(
                     "INSERT INTO {table}(plaintext, value) \
@@ -2416,8 +2418,10 @@ macro_rules! __scalar_matrix_index_case {
                 let mut tx = pool.begin().await?;
 
                 sqlx::query(&format!(
+                    // Plaintext type, not the `PG_TYPE` domain token — they
+                    // diverge for `timestamp` (see the nulls-ordering arm).
                     "CREATE TEMP TABLE {table} (plaintext {pg}, value {d}) ON COMMIT DROP",
-                    pg = <$scalar as $crate::scalar_domains::ScalarType>::PG_TYPE,
+                    pg = <$scalar as $crate::scalar_domains::ScalarType>::PLAINTEXT_SQL_TYPE,
                     d = &spec.sql_domain,
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!(
