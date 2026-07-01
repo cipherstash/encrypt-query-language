@@ -33,7 +33,10 @@ jobs:
   build-sql:
     runs-on: blacksmith-16vcpu-ubuntu-2204
     name: Build EQL SQL
-    if: ${{ github.event_name != 'release' || contains(github.event.release.tag_name, 'eql') }}
+    # `!startsWith(...'eql-bindings')` excludes the eql-bindings crate tags
+    # (eql-bindings-v*) cut by release-plz — a Rust-crate release must not build
+    # a Postgres+EQL image. Downstream jobs `needs: build-sql`, so they skip too.
+    if: ${{ github.event_name != 'release' || (contains(github.event.release.tag_name, 'eql') && !startsWith(github.event.release.tag_name, 'eql-bindings')) }}
     timeout-minutes: 5
     outputs:
       # Used for image tags, e.g. "2.1.8" -> ghcr.io/.../postgres-eql:17-2.1.8

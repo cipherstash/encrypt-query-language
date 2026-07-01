@@ -28,8 +28,11 @@ jobs:
     runs-on: blacksmith-16vcpu-ubuntu-2204
     name: Verify CHANGELOG entry
     # Only real (non-prerelease) eql-* releases. Pre-releases keep their
-    # entries under [Unreleased] until the final release is cut.
-    if: ${{ github.event_name == 'release' && contains(github.event.release.tag_name, 'eql') && github.event.release.prerelease == false }}
+    # entries under [Unreleased] until the final release is cut. The
+    # `!startsWith(...'eql-bindings')` guard excludes the eql-bindings crate
+    # tags (eql-bindings-v*) cut by release-plz — those are Rust-crate releases,
+    # not SQL-surface releases.
+    if: ${{ github.event_name == 'release' && contains(github.event.release.tag_name, 'eql') && !startsWith(github.event.release.tag_name, 'eql-bindings') && github.event.release.prerelease == false }}
     timeout-minutes: 5
 
     steps:
@@ -50,7 +53,9 @@ jobs:
   build-and-publish:
     runs-on: blacksmith-16vcpu-ubuntu-2204
     name: Build EQL
-    if: ${{ github.event_name != 'release' || contains(github.event.release.tag_name, 'eql') }}
+    # `!startsWith(...'eql-bindings')` excludes the eql-bindings crate tags
+    # (eql-bindings-v*) cut by release-plz, which are not SQL-surface releases.
+    if: ${{ github.event_name != 'release' || (contains(github.event.release.tag_name, 'eql') && !startsWith(github.event.release.tag_name, 'eql-bindings')) }}
     timeout-minutes: 5
 
     steps:
@@ -100,7 +105,9 @@ jobs:
   publish-docs:
     runs-on: blacksmith-16vcpu-ubuntu-2204
     name: Build and Publish Documentation
-    if: ${{ github.event_name != 'release' || contains(github.event.release.tag_name, 'eql') }}
+    # `!startsWith(...'eql-bindings')` excludes the eql-bindings crate tags
+    # (eql-bindings-v*) cut by release-plz, which are not SQL-surface releases.
+    if: ${{ github.event_name != 'release' || (contains(github.event.release.tag_name, 'eql') && !startsWith(github.event.release.tag_name, 'eql-bindings')) }}
     timeout-minutes: 10
 
     steps:
