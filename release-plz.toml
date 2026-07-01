@@ -1,0 +1,30 @@
+# release-plz configuration.
+#
+# Scope: this repository's primary artefact is the EQL SQL surface, released
+# manually via `eql-<semver>` git tags (see `.github/workflows/release-eql.yml`
+# and the "Cutting a release" section of CLAUDE.md). release-plz is scoped
+# NARROWLY to publishing the one Rust crate we ship to crates.io:
+# `eql-bindings`. Every other workspace member is `publish = false` in its
+# Cargo.toml, and release-plz automatically skips `publish = false` packages —
+# so there is no per-package `release = false` to maintain here.
+#
+# The crate is tagged `eql-bindings-v<semver>` (release-plz's default workspace
+# tag). That tag deliberately does NOT match the EQL SQL-release automation:
+# the `eql`-keyed workflows (release-eql, release-postgres-eql-image,
+# rebuild-docs) now exclude `eql-bindings-*` so a crate release never triggers
+# an SQL build, Docker image, or docs-site rebuild.
+
+[workspace]
+# Keep a per-crate changelog (crates/eql-bindings/CHANGELOG.md) — the repo-root
+# CHANGELOG.md is the SQL surface's changelog and must stay untouched.
+changelog_update = true
+# Create a GitHub Release for each published crate version.
+git_release_enable = true
+# Open the release PR against main with a clear label.
+pr_labels = ["release", "eql-bindings"]
+
+[[package]]
+name = "eql-bindings"
+# Explicit even though it is the only publishable crate: documents intent and
+# guards against a future crate accidentally being picked up.
+release = true

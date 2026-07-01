@@ -344,6 +344,16 @@ jobs:
         run: |
           mise run types:check
 
+      # Publish gate for eql-bindings (the one crate we ship to crates.io via
+      # release-plz). `--dry-run` packages + compiles the crate exactly as
+      # crates.io would, catching publish-blockers — missing `license`/metadata,
+      # a real path dependency without a version — on the PR rather than at
+      # release time. No token needed. `--allow-dirty` tolerates any files the
+      # preceding regenerate-and-diff steps leave in the working tree.
+      - name: Verify eql-bindings packages cleanly for crates.io
+        run: |
+          cargo publish -p eql-bindings --dry-run --allow-dirty
+
   codegen:
     name: "Encrypted-domain codegen"
     needs: [changes]

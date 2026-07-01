@@ -3,6 +3,14 @@ name = "eql-bindings"
 version = "0.1.0"
 edition = "2021"
 description = "Canonical wire types for EQL payloads — single source of truth for Rust, TypeScript (ts-rs), and JSON Schema (schemars)."
+# crates.io metadata. `license` is REQUIRED by crates.io — publish fails without
+# it. The rest drive discoverability and the docs.rs / crates.io sidebar links.
+license = "MIT"
+repository = "https://github.com/cipherstash/encrypt-query-language"
+homepage = "https://github.com/cipherstash/encrypt-query-language"
+readme = "README.md"
+keywords = ["encryption", "postgres", "eql", "cipherstash", "searchable"]
+categories = ["cryptography", "database"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }

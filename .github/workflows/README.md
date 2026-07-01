@@ -20,12 +20,31 @@ actually runs).
 | **test-eql.yml** | `pull_request`, `merge_group`, `workflow_dispatch` | Full test/lint/validate matrix; the one required check | **Yes** — `ci-required` |
 | **release-eql.yml** | `release: published`, `pull_request` (paths), `workflow_dispatch` | Build release SQL + docs; PR runs everything **but** the publish step | No |
 | **release-postgres-eql-image.yml** | `release: published`, `workflow_dispatch` | Build & push the Postgres+EQL Docker image to GHCR | No |
+| **release-plz.yml** | `push: main`, `workflow_dispatch` | Publish the `eql-bindings` crate to crates.io (Trusted Publishing) + open the release PR | No |
 | **bench-eql.yml** | `push: main` (paths), `schedule` 02:00 UTC daily, `workflow_dispatch` | `test:bench` (bench cargo feature). **Never runs on PRs** | No |
 | **macro-expand-eql.yml** | `schedule` 03:00 UTC daily, `workflow_dispatch` | Regenerate the int4 `cargo expand` matrix snapshot; needs pinned nightly | **No — explicitly non-blocking** |
 | **rebuild-docs.yml** | `push: tags` | Fire a docs-site rebuild webhook | N/A |
 
 Only **test-eql.yml** gates merges. Bench regressions and stale `cargo expand`
 snapshots surface on the nightly schedule, not on the PR that caused them.
+
+### Two release tag families
+
+There are two independent release flows keyed on distinct git tags:
+
+- **`eql-<semver>`** (e.g. `eql-3.0.0`) — the EQL **SQL surface** release, cut
+  manually as a GitHub Release. Drives `release-eql.yml`,
+  `release-postgres-eql-image.yml`, and `rebuild-docs.yml`.
+- **`eql-bindings-v<semver>`** (e.g. `eql-bindings-v0.1.0`) — the **`eql-bindings`
+  Rust crate** release, cut automatically by `release-plz.yml` when its release
+  PR merges. Publishes to crates.io only.
+
+The three SQL-surface workflows explicitly **exclude** `eql-bindings-*` tags
+(`!startsWith(...'eql-bindings')` guards; a `!eql-bindings-*` filter in
+`rebuild-docs.yml`) so a crate release never triggers an SQL build, Docker
+image, or docs-site rebuild. `eql-bindings` is tested on every PR by the
+`rust-crates` job (`mise run test:crates` plus a `cargo publish --dry-run`
+packaging gate); every other workspace crate is `publish = false`.
 
 ---
 

@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - 'eql-*'
+      # Exclude the eql-bindings crate tags (eql-bindings-v*) cut by release-plz
+      # — a Rust-crate release must not fire the docs-site rebuild webhook.
+      - '!eql-bindings-*'
 
 jobs:
   trigger-docs-rebuild:
