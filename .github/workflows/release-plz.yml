@@ -1,24 +1,34 @@
 name: "Release eql-bindings (crates.io)"
 
-# Publishes the `eql-bindings` crate to crates.io via release-plz.
+# Publishes the `eql-bindings` crate to crates.io via release-plz. Mirrors the
+# canonical cipherstash-suite release-plz setup (crates.io Trusted Publishing
+# via OIDC — no long-lived token; GPG-signed release commits/tags; `release`
+# before `release-pr`) and keeps EQL's own infra conventions (blacksmith runner,
+# mise toolchain).
 #
-# Two jobs, both on push to main (i.e. after a PR merges through the queue):
-#   * release      — publishes any crate version whose tag does not yet exist,
-#                     creates the git tag + GitHub Release. Uses crates.io
-#                     Trusted Publishing (OIDC) — NO long-lived token.
-#   * release-pr   — opens/updates the "release" PR that bumps the version and
-#                     updates crates/eql-bindings/CHANGELOG.md from the commits.
+# Flow (see also cipherstash-suite RELEASING.md):
+#   1. Push to main -> `release-pr` opens/updates a release PR (version bump +
+#      crates/eql-bindings/CHANGELOG.md from conventional commits).
+#   2. Merge that PR -> `release` publishes to crates.io, tags, and cuts a
+#      GitHub Release.
+# `release-pr` runs AFTER `release` (needs: release): if it ran first it would
+# see the just-merged `chore: release` commit as unreleased and open a recursive
+# release PR. (cipherstash-suite commit 02a989405.)
 #
-# One-time crates.io setup (Trusted Publishing): on crates.io, under the
-# eql-bindings crate's Settings -> Trusted Publishing, add a GitHub publisher:
-#   owner=cipherstash  repo=encrypt-query-language  workflow=release-plz.yml
-# For a brand-new crate name, register the trusted publisher before the first
-# publish (crates.io supports pre-registering a publisher for an unclaimed name).
+# One-time crates.io setup (Trusted Publishing): on the eql-bindings crate's
+# Settings -> Trusted Publishing, add a GitHub publisher with
+#   Repository: cipherstash/encrypt-query-language   Workflow: release-plz.yml
+# For a brand-new crate name, register the publisher before the first publish.
 #
-# NB: PRs opened by the default GITHUB_TOKEN do not trigger other workflows, so
-# the release PR would not get CI. To run CI on the release PR, add a
-# fine-grained PAT or GitHub App token as the `RELEASE_PLZ_TOKEN` secret; it is
-# picked up automatically below (falling back to GITHUB_TOKEN when unset).
+# Secrets: GPG_PRIVATE_KEY (release-commit/tag signing key). crates.io auth is
+# OIDC (id-token: write), so NO CARGO_REGISTRY_TOKEN. The GitHub PR/tag ops use
+# the default GITHUB_TOKEN; enable "Allow GitHub Actions to create and approve
+# pull requests" in repo settings so the release PR can be opened.
+
+permissions:
+  pull-requests: write
+  contents: write
+  id-token: write # crates.io Trusted Publishing (OIDC)
 
 on:
   push:
@@ -34,27 +44,30 @@ defaults:
   run:
     shell: bash {0}
 
-# Never run two release-plz invocations concurrently — a second run could race
-# the tag/publish of the first.
+# Static group: push-to-main and workflow_dispatch share it so two release-plz
+# invocations never race a tag/publish. Never cancel — a cancelled release could
+# leave a half-published state.
 concurrency:
-  group: release-plz-${{ github.ref }}
+  group: release-plz
   cancel-in-progress: false
 
 jobs:
-  # Publish crates whose version tag doesn't exist yet + cut the GitHub Release.
   release:
-    name: "Publish to crates.io"
+    name: "Release"
     runs-on: blacksmith-16vcpu-ubuntu-2204
-    # Do not run on forks.
-    if: ${{ github.repository == 'cipherstash/encrypt-query-language' }}
-    permissions:
-      contents: write # push tags + create GitHub Releases
-      id-token: write # crates.io Trusted Publishing (OIDC)
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          persist-credentials: false
+
+      # Sign release-plz's commits and tags with the shared release key.
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v7
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+          git_tag_gpgsign: true
 
       - uses: jdx/mise-action@v3
         with:
@@ -62,32 +75,29 @@ jobs:
           install: true
           cache: true
 
-      # Mint a short-lived crates.io token from the GitHub OIDC identity. No
-      # secret is stored in the repo; the token is scoped to this run.
-      - uses: rust-lang/crates-io-auth-action@v1
-        id: auth
-
       - name: Run release-plz release
         uses: release-plz/action@v0.5
         with:
           command: release
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
-          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Open/update the release PR (version bump + changelog).
   release-pr:
-    name: "Open release PR"
+    name: "Release PR"
     runs-on: blacksmith-16vcpu-ubuntu-2204
-    if: ${{ github.repository == 'cipherstash/encrypt-query-language' }}
-    permissions:
-      contents: write # push the release branch
-      pull-requests: write # open/update the release PR
+    needs: release
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          persist-credentials: false
+
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v7
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+          git_tag_gpgsign: true
 
       - uses: jdx/mise-action@v3
         with:
@@ -100,4 +110,4 @@ jobs:
         with:
           command: release-pr
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
