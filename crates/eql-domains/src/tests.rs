@@ -42,7 +42,7 @@ mod rust_tests {
         assert_eq!(ScalarKind::Text.as_bounded_int(), None);
         assert_eq!(ScalarKind::Jsonb.as_bounded_int(), None);
         assert_eq!(ScalarKind::Date.as_bounded_int(), None);
-        assert_eq!(ScalarKind::Timestamptz.as_bounded_int(), None);
+        assert_eq!(ScalarKind::Timestamp.as_bounded_int(), None);
         assert_eq!(ScalarKind::F32.as_bounded_int(), None);
         assert_eq!(ScalarKind::F64.as_bounded_int(), None);
     }
@@ -82,7 +82,7 @@ mod rust_tests {
         assert!(!ScalarKind::Text.is_int());
         assert!(!ScalarKind::Jsonb.is_int());
         assert!(!ScalarKind::Date.is_int());
-        assert!(!ScalarKind::Timestamptz.is_int());
+        assert!(!ScalarKind::Timestamp.is_int());
         assert!(!ScalarKind::F32.is_int());
         assert!(!ScalarKind::F64.is_int());
     }
@@ -97,7 +97,7 @@ mod rust_tests {
             ScalarKind::Numeric,
             ScalarKind::Jsonb,
             ScalarKind::Date,
-            ScalarKind::Timestamptz,
+            ScalarKind::Timestamp,
             ScalarKind::F32,
             ScalarKind::F64,
         ] {
@@ -131,13 +131,13 @@ mod rust_tests {
     }
 
     #[test]
-    fn timestamptz_maps_to_datetime() {
+    fn timestamp_maps_to_datetime() {
         // Temporal, non-integer, ordered kind: it carries a rust type but no
         // i128 range, so it is not `is_int()` and `as_bounded_int()` returns
         // `None` — the bounded accessors are not reachable for it.
-        assert_eq!(ScalarKind::Timestamptz.rust_type(), "chrono::DateTime<Utc>");
-        assert!(!ScalarKind::Timestamptz.is_int());
-        assert_eq!(ScalarKind::Timestamptz.as_bounded_int(), None);
+        assert_eq!(ScalarKind::Timestamp.rust_type(), "chrono::DateTime<Utc>");
+        assert!(!ScalarKind::Timestamp.is_int());
+        assert_eq!(ScalarKind::Timestamp.as_bounded_int(), None);
     }
 
     #[test]
@@ -185,7 +185,7 @@ mod rust_tests {
     #[test]
     fn is_temporal_classifies_chrono_kinds() {
         assert!(ScalarKind::Date.is_temporal());
-        assert!(ScalarKind::Timestamptz.is_temporal());
+        assert!(ScalarKind::Timestamp.is_temporal());
         assert!(!ScalarKind::I16.is_temporal());
         assert!(!ScalarKind::I32.is_temporal());
         assert!(!ScalarKind::I64.is_temporal());
@@ -199,10 +199,10 @@ mod rust_tests {
         assert!(!int4.is_eq_only(), "int4 is ordered");
         let date = CATALOG.iter().find(|s| s.name == "date").unwrap();
         assert!(!date.is_eq_only(), "date is ordered");
-        let ts = CATALOG.iter().find(|s| s.name == "timestamptz").unwrap();
+        let ts = CATALOG.iter().find(|s| s.name == "timestamp").unwrap();
         assert!(
             !ts.is_eq_only(),
-            "timestamptz is now ordered (native 12-block ORE, comparator generalized to N blocks)"
+            "timestamp is now ordered (native 12-block ORE, comparator generalized to N blocks)"
         );
 
         // No catalog type is currently eq-only, so exercise `is_eq_only()`'s
@@ -476,7 +476,7 @@ mod fixture_tests {
             None
         );
         assert_eq!(
-            Fixture::Timestamptz("1970-01-01T00:00:00Z").numeric_value(ScalarKind::Timestamptz),
+            Fixture::Timestamp("1970-01-01T00:00:00Z").numeric_value(ScalarKind::Timestamp),
             None
         );
     }
@@ -534,12 +534,12 @@ mod fixture_tests {
             &[Fixture::Date("1970-01-01"), Fixture::Date("2099-12-31")]
         );
         const STAMPS: &[Fixture] =
-            fixtures!(timestamptz; "1970-01-01T00:00:00Z", "2099-12-31T23:59:59Z");
+            fixtures!(timestamp; "1970-01-01T00:00:00Z", "2099-12-31T23:59:59Z");
         assert_eq!(
             STAMPS,
             &[
-                Fixture::Timestamptz("1970-01-01T00:00:00Z"),
-                Fixture::Timestamptz("2099-12-31T23:59:59Z")
+                Fixture::Timestamp("1970-01-01T00:00:00Z"),
+                Fixture::Timestamp("2099-12-31T23:59:59Z")
             ]
         );
     }
@@ -589,7 +589,7 @@ mod catalog_tests {
                 "int2",
                 "int8",
                 "date",
-                "timestamptz",
+                "timestamp",
                 "numeric",
                 "text",
                 "bool",
@@ -763,15 +763,15 @@ mod catalog_tests {
     }
 
     /// The three temporal matrix pivots must be present verbatim in
-    /// TIMESTAMPTZ's fixture strings — the timestamptz analogue of
+    /// TIMESTAMP's fixture strings — the timestamp analogue of
     /// `temporal_fixtures_include_pivot_plaintexts`.
     #[test]
-    fn timestamptz_fixtures_include_pivot_plaintexts() {
-        let strings: Vec<&str> = fixtures("timestamptz")
+    fn timestamp_fixtures_include_pivot_plaintexts() {
+        let strings: Vec<&str> = fixtures("timestamp")
             .values
             .iter()
             .filter_map(|f| match f {
-                Fixture::Timestamptz(s) => Some(*s),
+                Fixture::Timestamp(s) => Some(*s),
                 _ => None,
             })
             .collect();
@@ -782,7 +782,7 @@ mod catalog_tests {
         ] {
             assert!(
                 strings.contains(&pivot),
-                "timestamptz fixtures missing temporal pivot {pivot}"
+                "timestamp fixtures missing temporal pivot {pivot}"
             );
         }
     }
@@ -842,7 +842,7 @@ mod catalog_tests {
     #[test]
     fn ordered_and_eq_only_shapes_are_used_as_declared() {
         // No catalog type is the two-domain equality-only shape: the ordered
-        // types use the four-domain shape (timestamptz was promoted to ordered
+        // types use the four-domain shape (timestamp was promoted to ordered
         // once the ORE comparator generalized to N blocks — see the numeric/ORE
         // work), and `bool` is the one-domain storage-only shape (strictly
         // smaller than eq-only). So `domains.len() == 2` should appear nowhere.
@@ -891,7 +891,7 @@ mod catalog_tests {
                 "int4" => ScalarKind::I32,
                 "int8" => ScalarKind::I64,
                 "date" => ScalarKind::Date,
-                "timestamptz" => ScalarKind::Timestamptz,
+                "timestamp" => ScalarKind::Timestamp,
                 "numeric" => ScalarKind::Numeric,
                 "text" => ScalarKind::Text,
                 "bool" => ScalarKind::Bool,
@@ -1187,7 +1187,7 @@ mod invariant_tests {
             | Fixture::Text(s)
             | Fixture::Jsonb(s)
             | Fixture::Date(s)
-            | Fixture::Timestamptz(s)
+            | Fixture::Timestamp(s)
             // Float fixtures dedupe by their literal here, like the other
             // string-backed kinds (every float literal is distinct; the harness
             // `float_fixtures_are_distinct_by_value` guard pins value-distinctness).
