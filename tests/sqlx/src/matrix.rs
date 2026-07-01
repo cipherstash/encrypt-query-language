@@ -4,7 +4,7 @@
 //!
 //! - **`scalar_matrix!`** — the recommended wrapper. One invocation per type
 //!   (~5 lines), with a `caps` capability marker selecting the shape:
-//!   `caps = [eq, ord]` for an ordered scalar (i32, i64, date, timestamptz,
+//!   `caps = [eq, ord]` for an ordered scalar (i32, i64, date, timestamp,
 //!   ...) where all four variants are present and the full
 //!   `=`/`<>`/`<`/`>`/`min`/`max` surface applies; `caps = [eq]` for a
 //!   hypothetical equality-only scalar (e.g. a future hash-only type) where
@@ -149,11 +149,11 @@ fn collect_index_scan_nodes(value: &serde_json::Value, found: &mut Vec<(String, 
 /// - `caps = [eq, ord]` — the ordered-numeric shape (all four variants;
 ///   `=`/`<>`/`<`/`<=`/`>`/`>=`; ORDER BY / ORDER BY USING; ORE injectivity;
 ///   the ordered functional index). Consumers:
-///   `int2`/`int4`/`int8`/`date`/`timestamptz`/`numeric`.
+///   `int2`/`int4`/`int8`/`date`/`timestamp`/`numeric`.
 /// - `caps = [eq]` — equality-only (storage + `_eq` only; `=`/`<>` meaningful,
 ///   the four ord operators are deliberate blockers). The empty `ord_domains`
 ///   make the order-by / ORE arms emit zero tests. No current consumer —
-///   `timestamptz` was promoted to the ordered shape once the N-block ORE
+///   `timestamp` was promoted to the ordered shape once the N-block ORE
 ///   comparator could order its native 12-block width.
 ///
 /// Both arms take the identical `(suite, scalar, eql_type)` signature, so the
@@ -2065,8 +2065,10 @@ macro_rules! __scalar_matrix_ord_routes_case {
 
                 let mut tx = pool.begin().await?;
                 sqlx::query(&format!(
+                    // Plaintext type, not the `PG_TYPE` domain token — they
+                    // diverge for `timestamp` (see the nulls-ordering arm).
                     "CREATE TEMP TABLE {table} (plaintext {pg}, value {d}) ON COMMIT DROP",
-                    pg = <$scalar as ScalarType>::PG_TYPE,
+                    pg = <$scalar as ScalarType>::PLAINTEXT_SQL_TYPE,
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!(
                     "INSERT INTO {table}(plaintext, value) \
@@ -2416,8 +2418,10 @@ macro_rules! __scalar_matrix_index_case {
                 let mut tx = pool.begin().await?;
 
                 sqlx::query(&format!(
+                    // Plaintext type, not the `PG_TYPE` domain token — they
+                    // diverge for `timestamp` (see the nulls-ordering arm).
                     "CREATE TEMP TABLE {table} (plaintext {pg}, value {d}) ON COMMIT DROP",
-                    pg = <$scalar as $crate::scalar_domains::ScalarType>::PG_TYPE,
+                    pg = <$scalar as $crate::scalar_domains::ScalarType>::PLAINTEXT_SQL_TYPE,
                     d = &spec.sql_domain,
                 )).execute(&mut *tx).await?;
                 sqlx::query(&format!(
@@ -2665,7 +2669,15 @@ macro_rules! __scalar_matrix_order_by_nulls_case {
                 );
                 let fixture_table =
                     <$scalar as $crate::scalar_domains::ScalarType>::fixture_table_name();
-                let pg = <$scalar as $crate::scalar_domains::ScalarType>::PG_TYPE;
+                // The `plaintext` column mirrors the fixture's plaintext storage
+                // type, which is NOT always `PG_TYPE`: `timestamp`'s domain token
+                // is `timestamp` but its plaintext is `timestamp with time zone`
+                // (a UTC instant), so a bare `timestamp` column would fail to
+                // decode back into `DateTime<Utc>`. `PLAINTEXT_SQL_TYPE` defaults
+                // to `PG_TYPE` and is derived from `EqlPlaintext` for the temporal
+                // types; using it here (not `EqlPlaintext` directly) also covers
+                // view scalars like `JsonbEntryInt4` that are not `EqlPlaintext`.
+                let pg = <$scalar as $crate::scalar_domains::ScalarType>::PLAINTEXT_SQL_TYPE;
 
                 let mut tx = pool.begin().await?;
                 sqlx::query(&format!(

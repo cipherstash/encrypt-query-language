@@ -119,8 +119,8 @@ mod tests {
     }
 
     #[test]
-    fn timestamptz_is_ordered() {
-        // timestamptz was promoted to the ordered shape once
+    fn timestamp_is_ordered() {
+        // timestamp was promoted to the ordered shape once
         // `compare_ore_block_256_term` generalized to N blocks (see #284 / the
         // `EQ_ONLY_DOMAINS` note in `eql-domains`). It now mirrors int4's
         // four-domain ordered surface.
@@ -128,9 +128,9 @@ mod tests {
         let ts = dump
             .types
             .iter()
-            .find(|t| t.token == "timestamptz")
-            .expect("timestamptz present in catalog");
-        assert!(!ts.is_eq_only, "timestamptz is an ordered type");
+            .find(|t| t.token == "timestamp")
+            .expect("timestamp present in catalog");
+        assert!(!ts.is_eq_only, "timestamp is an ordered type");
 
         let segments: Vec<&str> = ts.domains.iter().map(|d| d.segment.as_str()).collect();
         assert_eq!(segments, ["storage", "eq", "ord_ore", "ord"]);

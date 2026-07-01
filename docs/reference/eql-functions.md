@@ -33,8 +33,8 @@ SELECT * FROM users WHERE encrypted_email <> $1;
 On `eql_v3.<T>_ord` / `_ord_ore` and `eql_v3.text_search` (carry an `ob` ORE term):
 
 ```sql
-SELECT * FROM events WHERE encrypted_at <  $1::eql_v3.timestamptz_ord;
-SELECT * FROM events WHERE encrypted_at >= $1::eql_v3.timestamptz_ord;
+SELECT * FROM events WHERE encrypted_at <  $1::eql_v3.timestamp_ord;
+SELECT * FROM events WHERE encrypted_at >= $1::eql_v3.timestamp_ord;
 
 -- Ordering (write the sort key as the extractor to engage the index — see Database Indexes)
 SELECT * FROM events ORDER BY eql_v3.ord_term(encrypted_at) DESC;
@@ -75,7 +75,7 @@ eql_v3.contained_by(a, b)   -- <@
 
 ```sql
 SELECT * FROM users WHERE eql_v3.eq(encrypted_email, $1::eql_v3.text_eq);
-SELECT * FROM events WHERE eql_v3.lt(encrypted_at, $1::eql_v3.timestamptz_ord);
+SELECT * FROM events WHERE eql_v3.lt(encrypted_at, $1::eql_v3.timestamp_ord);
 ```
 
 There are no `like` / `ilike` function forms — text matching is `eql_v3.contains` (`@>`) on a `text_match` value.

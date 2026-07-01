@@ -632,7 +632,7 @@ mod tests {
         // No eq-only row exists in the live catalog yet, so pass the shape
         // directly: an eq-only token routes to the `caps = [eq]` arm (empty
         // ord_domains), never the ordered `caps = [eq, ord]` arm.
-        let token: Ident = syn::parse_str("timestamptz").unwrap();
+        let token: Ident = syn::parse_str("timestamp").unwrap();
         let rust_type: Type = syn::parse_str("chrono::DateTime<chrono::Utc>").unwrap();
         let out = norm(&matrix_suite_for_entry(
             &token, &rust_type, false, true, false,
@@ -668,7 +668,7 @@ mod tests {
         assert!(is_eq_only_token("bool"));
         assert!(!is_storage_only_token("int4"));
         assert!(!is_storage_only_token("text"));
-        assert!(!is_storage_only_token("timestamptz"));
+        assert!(!is_storage_only_token("timestamp"));
     }
 
     #[test]

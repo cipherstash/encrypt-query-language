@@ -94,7 +94,7 @@ mod tests {
         assert_eq!(storage.struct_ident("int4"), "Int4");
         // multi-segment bare name joins under the family
         assert_eq!(ord_ore.struct_ident("int4"), "Int4OrdOre");
-        assert_eq!(ord_ore.struct_ident("timestamptz"), "TimestamptzOrdOre");
+        assert_eq!(ord_ore.struct_ident("timestamp"), "TimestampOrdOre");
         // single-segment bare name
         let eq = Domain {
             name: "eq",

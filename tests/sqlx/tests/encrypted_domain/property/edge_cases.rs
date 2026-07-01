@@ -67,11 +67,11 @@ async fn containment_blocker_raises_on_eq_domain(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
-async fn ordering_blocked_on_timestamptz_eq_domain(pool: PgPool) -> Result<()> {
-    // timestamptz is an ordered scalar on the `eql_v3` base (its `_ord`/`_ord_ore`
+async fn ordering_blocked_on_timestamp_eq_domain(pool: PgPool) -> Result<()> {
+    // timestamp is an ordered scalar on the `eql_v3` base (its `_ord`/`_ord_ore`
     // domains order via the wide-ORE comparator). But the equality-only `_eq`
     // domain still must NOT answer ordering: an ordering operator on
-    // `timestamptz_eq` must RAISE (and be non-STRICT), not silently mis-order —
+    // `timestamp_eq` must RAISE (and be non-STRICT), not silently mis-order —
     // exactly as `int4_eq` does. Callers order via the `_ord` twins, not `_eq`.
     let d = ScalarDomainSpec::new::<chrono::DateTime<chrono::Utc>>(Variant::Eq).sql_domain;
     let sql = format!("SELECT (NULL::{d}) < (NULL::{d})");

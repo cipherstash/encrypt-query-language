@@ -24,7 +24,7 @@ fn any_kind() -> impl Strategy<Value = ScalarKind> {
         Just(ScalarKind::Jsonb),
         Just(ScalarKind::Bool),
         Just(ScalarKind::Date),
-        Just(ScalarKind::Timestamptz),
+        Just(ScalarKind::Timestamp),
         Just(ScalarKind::F32),
         Just(ScalarKind::F64),
     ]

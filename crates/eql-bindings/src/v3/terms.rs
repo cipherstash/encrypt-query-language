@@ -8,7 +8,7 @@
 //! A plain Rust `type` alias would vanish in both outputs.
 //!
 //! Names follow the SEM constructor names in `eql-domains` (`Term::ctor()`):
-//! a future scheme change (e.g. a 12-block wide ORE term for timestamptz
+//! a future scheme change (e.g. a 12-block wide ORE term for timestamp
 //! ordering) is a new newtype, not a hunt through `Vec<String>` fields.
 
 use schemars::JsonSchema;
@@ -31,7 +31,7 @@ pub struct Hmac256(pub String);
 /// Block-ORE order term — the `ob` wire key. Backs the `_ord` / `_ord_ore`
 /// domains (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's
 /// domain, so it serves equality too. The block count is width-agnostic on the
-/// wire (8 for the int scalars, 12 for timestamptz, 14 for numeric) — the
+/// wire (8 for the int scalars, 12 for timestamp, 14 for numeric) — the
 /// array just carries more block strings. SQL-side constructor:
 /// `eql_v3.ore_block_256`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, TS, JsonSchema)]

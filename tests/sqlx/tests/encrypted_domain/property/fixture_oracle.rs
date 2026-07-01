@@ -60,10 +60,10 @@ pub(crate) fn embedded_fixture_sql<T: ScalarType>() -> &'static str {
             env!("CARGO_MANIFEST_DIR"),
             "/fixtures/eql_v3_text.sql"
         )),
-        "timestamptz" => {
+        "timestamp" => {
             include_str!(concat!(
                 env!("CARGO_MANIFEST_DIR"),
-                "/fixtures/eql_v3_timestamptz.sql"
+                "/fixtures/eql_v3_timestamp.sql"
             ))
         }
         "numeric" => include_str!(concat!(
@@ -110,10 +110,10 @@ pub(crate) fn embedded_doubles_sql<T: ScalarType>() -> &'static str {
             env!("CARGO_MANIFEST_DIR"),
             "/fixtures/eql_v3_date_doubles.sql"
         )),
-        "timestamptz" => {
+        "timestamp" => {
             include_str!(concat!(
                 env!("CARGO_MANIFEST_DIR"),
-                "/fixtures/eql_v3_timestamptz_doubles.sql"
+                "/fixtures/eql_v3_timestamp_doubles.sql"
             ))
         }
         "numeric" => include_str!(concat!(
@@ -330,7 +330,7 @@ fixture_oracle_suite!(int4, i32, ordered);
 fixture_oracle_suite!(int2, i16, ordered);
 fixture_oracle_suite!(int8, i64, ordered);
 fixture_oracle_suite!(date, chrono::NaiveDate, ordered);
-fixture_oracle_suite!(timestamptz, chrono::DateTime<chrono::Utc>, ordered);
+fixture_oracle_suite!(timestamp, chrono::DateTime<chrono::Utc>, ordered);
 fixture_oracle_suite!(numeric, rust_decimal::Decimal, ordered);
 fixture_oracle_suite!(text, String, ordered);
 fixture_oracle_suite!(float4, eql_tests::scalar_domains::F4, ordered);
@@ -433,12 +433,12 @@ macro_rules! fixture_fn_oracle_suite {
 
 fixture_fn_oracle_suite!(int2_fn, i16, ordered);
 fixture_fn_oracle_suite!(int8_fn, i64, ordered);
-// date, timestamptz, and numeric are all ordered scalars on the `eql_v3` base,
+// date, timestamp, and numeric are all ordered scalars on the `eql_v3` base,
 // so each gets eq/neq functions + eq_term identity plus the four ord functions
 // on both ordered twins. The generated fixtures already encrypt the whole
 // catalog, so this is full function-level coverage at zero marginal ZeroKMS cost.
 fixture_fn_oracle_suite!(date_fn, chrono::NaiveDate, ordered);
-fixture_fn_oracle_suite!(timestamptz_fn, chrono::DateTime<chrono::Utc>, ordered);
+fixture_fn_oracle_suite!(timestamp_fn, chrono::DateTime<chrono::Utc>, ordered);
 fixture_fn_oracle_suite!(numeric_fn, rust_decimal::Decimal, ordered);
 
 // text is bespoke rather than `fixture_fn_oracle_suite!`: its ordered domains

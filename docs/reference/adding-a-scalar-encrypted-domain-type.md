@@ -132,14 +132,14 @@ by the type system and the catalog `#[test]`s rather than a runtime validator:
   extractor names, no operator lists, no REQUIRE edges. Every behavioural fact
   comes from the `Term` enum.
 - **`kind`** (on the `TypeFixtures` record) — a `ScalarKind` (`I16` / `I32` /
-  `I64` / `Numeric` / `Text` / `Jsonb` / `Date` / `Timestamptz` / `Bool` / `F32` /
+  `I64` / `Numeric` / `Text` / `Jsonb` / `Date` / `Timestamp` / `Bool` / `F32` /
   `F64`), carrying the Rust type name. Only the
   integer kinds have an
   i128 range with `Min`/`Max`/`Zero` sentinels: those bounded accessors
   (`min_symbol`/`max_symbol`/`zero_symbol`/`min_value`/`max_value`) live on the
   total `BoundedIntKind` sub-enum, reached via `ScalarKind::as_bounded_int() ->
   Option<BoundedIntKind>`. Non-integer kinds
-  (`Numeric`/`Text`/`Jsonb`/`Bool`/`F32`/`F64`/`Date`/`Timestamptz`)
+  (`Numeric`/`Text`/`Jsonb`/`Bool`/`F32`/`F64`/`Date`/`Timestamp`)
   return `None` and simply have no bounded accessor — misuse is a compile error,
   not a runtime panic. **If `<T>` needs a new fixed-width integer, add a
   `BoundedIntKind` variant** (rust-type name, `MIN`/`MAX`/zero symbols, bounds)
@@ -195,7 +195,7 @@ single source of truth
 for the type's plaintext list, consumed by both the SQLx fixture generator and
 the matrix oracle. A `Fixture` is value-kind tagged: `Min` / `Max` / `Zero` (the
 integer matrix pivots, resolved per-kind), `Int(i128)` (an integer literal), and
-`Numeric` / `Text` / `Jsonb` / `Date` / `Timestamptz` / `Float` string variants
+`Numeric` / `Text` / `Jsonb` / `Date` / `Timestamp` / `Float` string variants
 (plus a `Bool` variant for the storage-only `bool` scalar). The
 `fixtures!` macro
 range-checks each `Int` literal against the kind at compile time (`N(-40000)`
@@ -242,7 +242,7 @@ generated Rust. Pin the exact materialised list with a `values_tests` assertion.
 The materialiser macro differs by kind: `int_values!` for integers, `text_values!`
 for `text` (a `Fixture::Text(&'static str)` is already `const`, so it too
 materialises a typed `&'static` slice), and **none** for the chrono-backed
-temporal kinds (`date`/`timestamptz`) — chrono constructors are not `const`, so
+temporal kinds (`date`/`timestamp`) — chrono constructors are not `const`, so
 there is no `<T>_VALUES` const; the SQLx harness parses the catalog strings into a
 `LazyLock<Vec<_>>` instead (§"Temporal kinds" and `scalar_domains.rs`).
 
@@ -251,14 +251,14 @@ there is no `<T>_VALUES` const; the SQLx harness parses the catalog strings into
 A **temporal** scalar (`date` is the *ordered* temporal reference) is *ordered
 but non-integer*, so it diverges from the integer path in three places — all in
 the catalog/harness, never the SQL codegen (domains stay jsonb-backed and
-token-driven). **`timestamptz` follows the same *ordered* temporal path as
+token-driven). **`timestamp` follows the same *ordered* temporal path as
 `date`** — its catalog row carries the full ordered domain set (storage + `_eq` +
 `_ord`/`_ord_ore`). cipherstash encrypts `Plaintext::Timestamp` at native
 12-block ORE width, and the `eql_v3` comparator
 (`eql_v3.compare_ore_block_256_term`) now derives its block count `N` from the
 term length instead of assuming 8, so the 12-block ciphertexts order correctly
 (see the N-block ORE comparator entry in the `CHANGELOG.md` and the catalog
-comment on the `TIMESTAMPTZ` spec). Its value-wiring is the temporal path below;
+comment on the `TIMESTAMP` spec). Its value-wiring is the temporal path below;
 the only practical difference from `date` is that values are UTC-normalized. The
 three divergences (for the ordered `date`):
 
@@ -283,7 +283,7 @@ three divergences (for the ordered `date`):
   entry (`ScalarType` already bounds `Ord + Clone`), so a boundary pivot is a
   fixture row by construction and cannot drift. **No impl overrides them.** Only
   `mid_pivot()` is ever overridden: it defaults to `Self::default()` (the numeric
-  origin / epoch — a real fixture for the integer kinds, `date`, `timestamptz`,
+  origin / epoch — a real fixture for the integer kinds, `date`, `timestamp`,
   and `numeric`), and `text` overrides it with a real median fixture because
   `String::default()` is the degenerate empty string (issue #262). The proc-macro
   and the `temporal_values!` macro therefore emit an empty `impl OrderedScalar`
@@ -310,7 +310,7 @@ The generated SQL is enough to *install* the domains, but the
 scalar. `<R>` is the scalar's Rust type (`i32` for `int4`, `i16` for `int2`).
 The registrations depend on whether `<R>` is an **integer** kind. For an
 integer type (the `int4` reference) there are **two**; a **non-integer
-(string-backed)** type — `date`, `timestamptz`, `text` — needs a **third**
+(string-backed)** type — `date`, `timestamp`, `text` — needs a **third**
 (`scalar_domains.rs`), because the proc-macro emits `impl ScalarType` only for
 integer kinds:
 
@@ -318,7 +318,7 @@ integer kinds:
 |------|-----|
 | `tests/sqlx/src/scalar_types.rs` | One `<T> => <R>` line in the `scalar_types!` list (e.g. `int8 => i64,`). This single line drives the `impl ScalarType` **(integer kinds only)**, the `eql_v3_<T>` fixture module, the `scalar_matrix!` suite, and the `generate_for_token` arm — all generated by the `eql-tests-macros` proc-macros. |
 | `tests/sqlx/src/fixtures/eql_plaintext.rs` | A sealed `EqlPlaintext` impl for `<R>`: `impl Sealed for <R> {}` and `impl EqlPlaintext for <R>` carrying just `const KIND: ScalarKind` plus the value-typed `to_plaintext` → the right `Plaintext` variant. `CAST` and `PLAINTEXT_SQL_TYPE` are **derived** from `KIND` via the `cast_for_kind` / `plaintext_sql_type_for_kind` `const fn` defaults, so a brand-new kind needs an arm in those two helpers — not a per-type const (see §3.1 for a non-integer kind's full wiring). Keep the three `#[test]`s (cast / sql-type / to_plaintext) mirroring the existing ones. |
-| `tests/sqlx/src/scalar_domains.rs` **(non-integer only)** | The `impl ScalarType` the proc-macro skips for non-integer kinds. For a **chrono-backed** kind (`date`, `timestamptz`) this is a `temporal_values!` invocation that materialises the catalog ISO/RFC3339 strings into a `LazyLock<Vec<_>>` and emits `impl ScalarType` + `OrderedScalar` (+ `SignedScalar` for `date` and `timestamptz`). For **`text`** it is a hand-written `impl ScalarType` / `OrderedScalar` block (an overridden lexicographic-median `mid_pivot()` — `min`/`max` inherit the fixture-derived defaults — plus a `to_sql_literal` override) — `String` has no numeric origin, so it is deliberately **not** `SignedScalar`. |
+| `tests/sqlx/src/scalar_domains.rs` **(non-integer only)** | The `impl ScalarType` the proc-macro skips for non-integer kinds. For a **chrono-backed** kind (`date`, `timestamp`) this is a `temporal_values!` invocation that materialises the catalog ISO/RFC3339 strings into a `LazyLock<Vec<_>>` and emits `impl ScalarType` + `OrderedScalar` (+ `SignedScalar` for `date` and `timestamp`). For **`text`** it is a hand-written `impl ScalarType` / `OrderedScalar` block (an overridden lexicographic-median `mid_pivot()` — `min`/`max` inherit the fixture-derived defaults — plus a `to_sql_literal` override) — `String` has no numeric origin, so it is deliberately **not** `SignedScalar`. |
 
 The single `<T> => <R>` line in `scalar_types.rs` is the harness source of
 truth. The four code-generators (`emit_scalar_type_impls`,
@@ -356,10 +356,10 @@ surface leaf drivers directly (§8). **You never write `caps`**: the
 is a pure function of which domain-suffix slice the catalog row uses —
 `STORAGE_ONLY_DOMAINS` (→ `[storage]`, e.g. `bool`), `EQ_ONLY_DOMAINS` (→ `[eq]`,
 no live catalog type today) vs `ORDERED_INT_DOMAINS` (→ `[eq, ord]`). (`EQ_ONLY_DOMAINS`
-is currently unused — `timestamptz` was promoted to the ordered shape once the ORE
+is currently unused — `timestamp` was promoted to the ordered shape once the ORE
 comparator generalized to N blocks.) The pivot *sweep* is uniform
 across every ordered type (one canonical snapshot); the signed-only sign-boundary
-test (`SignedScalar`, `int2`/`int4`/`int8`/`date`/`timestamptz`/`float4`/`float8`) lives outside `scalars::` in
+test (`SignedScalar`, `int2`/`int4`/`int8`/`date`/`timestamp`/`float4`/`float8`) lives outside `scalars::` in
 `encrypted_domain/signed.rs`, so a `text` instantiation of it is a compile error
 and it never enters the inventory snapshot. The `matrix.rs` module header is the
 canonical,
@@ -372,7 +372,7 @@ do not add assertions for term behaviour the catalog does not promise.
 ### 3.1 Wiring a brand-new non-integer kind
 
 The integer arms above suffice for a new *width* of an existing integer kind. A
-brand-new **non-integer** kind (the way `Date`/`Timestamptz`/`Text` were each
+brand-new **non-integer** kind (the way `Date`/`Timestamp`/`Text` were each
 first added) also needs, in `tests/sqlx/src/fixtures/eql_plaintext.rs`:
 
 - a `Cast` const + a `PlaintextSqlType` const (e.g. `Cast::DATE`,
@@ -420,7 +420,7 @@ it also needs:
   `Decimal` impls live in the crate's library code).
 
 See the N-block ORE comparator entry in the `CHANGELOG.md` for the comparator
-change the wide `numeric` / `timestamptz` terms rely on.
+change the wide `numeric` / `timestamp` terms rely on.
 
 ### New-capability domains (e.g. `_match` / `Bloom`)
 
@@ -505,7 +505,7 @@ codegen.
 **Commit the generated SQL in place.** Every catalog type **must** have its
 generated SQL committed under `src/v3/scalars/<T>/` (regenerate with
 `mise run build`, then commit the SQL diff). The generator is type-generic, but
-per-type domain *shapes* differ — ordered types (including `timestamptz`) carry
+per-type domain *shapes* differ — ordered types (including `timestamp`) carry
 `_ord`/`_ord_ore` + aggregates, a hypothetical equality-only type
 (`EQ_ONLY_DOMAINS`) would omit them, and the Bloom `text_match` domain renders
 `@>`/`<@` as supported containment operators no ordered type emits — so

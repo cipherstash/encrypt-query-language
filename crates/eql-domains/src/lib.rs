@@ -29,7 +29,7 @@ mod term;
 pub use fixtures::{
     BoundedIntKind, Fixture, ScalarKind, TypeFixtures, BOOL_FIXTURES, DATE_FIXTURES, FIXTURES,
     FLOAT4_FIXTURES, FLOAT8_FIXTURES, INT2_FIXTURES, INT2_VALUES, INT4_FIXTURES, INT4_VALUES,
-    INT8_FIXTURES, INT8_VALUES, NUMERIC_FIXTURES, TEXT_FIXTURES, TEXT_VALUES, TIMESTAMPTZ_FIXTURES,
+    INT8_FIXTURES, INT8_VALUES, NUMERIC_FIXTURES, TEXT_FIXTURES, TEXT_VALUES, TIMESTAMP_FIXTURES,
 };
 
 /// Always-present payload keys required by every generated domain CHECK,
@@ -142,7 +142,7 @@ const ORDERED_INT_DOMAINS: &[Domain] = &[
 
 /// Equality-only domains: storage (no terms) + `_eq` (hm). The canonical shape
 /// for a scalar type that can hash for equality but is not ORE-orderable.
-/// **Currently unused:** `timestamptz` (the previous sole user) was promoted to
+/// **Currently unused:** `timestamp` (the previous sole user) was promoted to
 /// the ordered shape once `eql_v3.compare_ore_block_256_term` generalized to N
 /// blocks and could order its native 12-block ORE width. Retained — and still
 /// validated as a known-valid shape by `every_type_uses_a_known_domain_shape` —
@@ -189,19 +189,23 @@ pub const DATE: DomainFamily = DomainFamily {
     domains: ORDERED_INT_DOMAINS,
 };
 
-/// `timestamptz` — an **ordered**, UTC-normalized non-integer scalar. Uses the
+/// `timestamp` — an **ordered**, UTC-normalized non-integer scalar. Uses the
 /// four-domain ordered shape (storage, `_eq`, `_ord`, `_ord_ore`): cipherstash
 /// encrypts `Plaintext::Timestamp` at native 12-block ORE width, which the
 /// generalized `eql_v3.compare_ore_block_256_term` comparator orders correctly.
 /// Values are UTC-normalized (cipherstash has no tz-preserving type) and encrypt
-/// under the `timestamp` cast.
+/// under the `timestamp` cast. NOTE: the value is an instant (Postgres `timestamp
+/// with time zone`); it wears the SQL-standard name `timestamp` to match the
+/// cipherstash cast/`ColumnType`/`Plaintext` convention. A genuinely
+/// without-time-zone `timestamp` (naive wall-clock) is a future, additive type,
+/// blocked on cipherstash-client ORE pre-indexing for naive datetimes.
 ///
 /// Public (like `DATE`) because the SQLx harness reads
-/// `TIMESTAMPTZ_FIXTURES.values` directly to parse the RFC3339 strings into
-/// `chrono::DateTime<Utc>` at runtime (no `TIMESTAMPTZ_VALUES` const;
+/// `TIMESTAMP_FIXTURES.values` directly to parse the RFC3339 strings into
+/// `chrono::DateTime<Utc>` at runtime (no `TIMESTAMP_VALUES` const;
 /// `eql-domains` stays zero-dep).
-pub const TIMESTAMPTZ: DomainFamily = DomainFamily {
-    name: "timestamptz",
+pub const TIMESTAMP: DomainFamily = DomainFamily {
+    name: "timestamp",
     domains: ORDERED_INT_DOMAINS,
 };
 
@@ -213,7 +217,7 @@ pub const TIMESTAMPTZ: DomainFamily = DomainFamily {
 /// harness `Decimal: Ord`, which `ore-rs` guarantees agrees with the ciphertext
 /// order (equivalent scales collide, like `Decimal`'s own `Ord`).
 ///
-/// Public (like `DATE` / `TIMESTAMPTZ`) so the SQLx harness reads
+/// Public (like `DATE` / `TIMESTAMP`) so the SQLx harness reads
 /// `NUMERIC_FIXTURES.values` directly to parse the decimal strings into
 /// `rust_decimal::Decimal` at runtime (the catalog stays zero-dep: no
 /// `rust_decimal`).
@@ -313,16 +317,7 @@ pub const FLOAT8: DomainFamily = DomainFamily {
 /// The scalar catalog — the single source of truth. Order is significant (it
 /// drives generation order). New types are appended as their SQL surface lands.
 pub const CATALOG: &[DomainFamily] = &[
-    INT4,
-    INT2,
-    INT8,
-    DATE,
-    TIMESTAMPTZ,
-    NUMERIC,
-    TEXT,
-    BOOL,
-    FLOAT4,
-    FLOAT8,
+    INT4, INT2, INT8, DATE, TIMESTAMP, NUMERIC, TEXT, BOOL, FLOAT4, FLOAT8,
 ];
 
 #[cfg(test)]

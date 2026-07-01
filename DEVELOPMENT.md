@@ -40,7 +40,7 @@ mise has tasks for:
 
 EQL installs a single, self-contained PostgreSQL schema, **`eql_v3`**, which
 namespaces the encrypted-domain **scalar type families** (`int4`, `int2`,
-`int8`, `date`, `timestamptz`, `numeric`, `text`, `bool`, `float4`, `float8`).
+`int8`, `date`, `timestamp`, `numeric`, `text`, `bool`, `float4`, `float8`).
 It owns its own copies of the searchable-encrypted-metadata (SEM) index-term
 types it needs (`eql_v3.hmac_256`, `eql_v3.ore_block_256`, `eql_v3.bloom_filter`),
 so the surface has no dependency on any other EQL schema and installs into a
