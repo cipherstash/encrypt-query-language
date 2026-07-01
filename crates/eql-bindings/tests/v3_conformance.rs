@@ -223,15 +223,15 @@ fn non_int4_tokens_round_trip_every_domain() {
 }
 
 #[test]
-fn timestamptz_round_trips_and_enforces_term_capabilities() {
-    // timestamptz is an ordered token (12-block ORE) — it carries the full
+fn timestamp_round_trips_and_enforces_term_capabilities() {
+    // timestamp is an ordered token (12-block ORE) — it carries the full
     // storage/`_eq`/`_ord`/`_ord_ore` shape, the same as the int scalars. The
     // int4 template was copy-pasted to produce it, so a dropped `hm`/`ob` or a
     // field typo would pass `catalog_parity` (domain names only) but is caught
     // here. (Was equality-only while the ORE comparator was hardcoded to 8
     // blocks; promoted once `eql_v3.ore_block_256` generalized to any width.)
-    use eql_bindings::v3::timestamptz::{
-        Timestamptz, TimestamptzEq, TimestamptzOrd, TimestamptzOrdOre,
+    use eql_bindings::v3::timestamp::{
+        Timestamp, TimestampEq, TimestampOrd, TimestampOrdOre,
     };
 
     // Storage-only: envelope, no term.
@@ -240,9 +240,9 @@ fn timestamptz_round_trips_and_enforces_term_capabilities() {
         "i": { "t": "events", "c": "occurred_at" },
         "c": "mp_base85_ciphertext"
     });
-    let parsed: Timestamptz = serde_json::from_value(storage.clone()).unwrap();
+    let parsed: Timestamp = serde_json::from_value(storage.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), storage);
-    assert_eq!(Timestamptz::sql_domain_static(), "eql_v3.timestamptz");
+    assert_eq!(Timestamp::sql_domain_static(), "eql_v3.timestamp");
 
     // Equality: envelope + hm.
     let with_hm = json!({
@@ -251,9 +251,9 @@ fn timestamptz_round_trips_and_enforces_term_capabilities() {
         "c": "mp_base85_ciphertext",
         "hm": "deadbeef"
     });
-    let parsed: TimestamptzEq = serde_json::from_value(with_hm.clone()).unwrap();
+    let parsed: TimestampEq = serde_json::from_value(with_hm.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), with_hm);
-    assert_eq!(TimestamptzEq::sql_domain_static(), "eql_v3.timestamptz_eq");
+    assert_eq!(TimestampEq::sql_domain_static(), "eql_v3.timestamp_eq");
 
     // Ordered: envelope + ob (a 12-block array on the wire; shape is the same).
     let with_ob = json!({
@@ -262,17 +262,17 @@ fn timestamptz_round_trips_and_enforces_term_capabilities() {
         "c": "mp_base85_ciphertext",
         "ob": ["b0", "b1"]
     });
-    let parsed: TimestamptzOrd = serde_json::from_value(with_ob.clone()).unwrap();
+    let parsed: TimestampOrd = serde_json::from_value(with_ob.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), with_ob);
     assert_eq!(
-        TimestamptzOrd::sql_domain_static(),
-        "eql_v3.timestamptz_ord"
+        TimestampOrd::sql_domain_static(),
+        "eql_v3.timestamp_ord"
     );
-    let parsed: TimestamptzOrdOre = serde_json::from_value(with_ob.clone()).unwrap();
+    let parsed: TimestampOrdOre = serde_json::from_value(with_ob.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), with_ob);
     assert_eq!(
-        TimestamptzOrdOre::sql_domain_static(),
-        "eql_v3.timestamptz_ord_ore"
+        TimestampOrdOre::sql_domain_static(),
+        "eql_v3.timestamp_ord_ore"
     );
 
     // The searchable domains cannot let their term silently become optional.
@@ -281,14 +281,14 @@ fn timestamptz_round_trips_and_enforces_term_capabilities() {
         "i": { "t": "events", "c": "occurred_at" },
         "c": "mp_base85_ciphertext"
     });
-    let result: Result<TimestamptzEq, _> = serde_json::from_value(no_hm.clone());
+    let result: Result<TimestampEq, _> = serde_json::from_value(no_hm.clone());
     assert!(
         result.is_err(),
-        "TimestamptzEq must reject a payload with no hm"
+        "TimestampEq must reject a payload with no hm"
     );
-    let result: Result<TimestamptzOrd, _> = serde_json::from_value(no_hm);
+    let result: Result<TimestampOrd, _> = serde_json::from_value(no_hm);
     assert!(
         result.is_err(),
-        "TimestamptzOrd must reject a payload with no ob"
+        "TimestampOrd must reject a payload with no ob"
     );
 }

@@ -5,8 +5,8 @@ import type { OreBlock256 } from "./OreBlock256";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `eql_v3.timestamptz_ord_ore` — ordering domain.
+ * `eql_v3.timestamp_ord_ore` — ordering domain.
  *
  * Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.
  */
-export type TimestamptzOrdOre = { v: SchemaVersion, i: Identifier, c: Ciphertext, ob: OreBlock256, };
+export type TimestampOrdOre = { v: SchemaVersion, i: Identifier, c: Ciphertext, ob: OreBlock256, };

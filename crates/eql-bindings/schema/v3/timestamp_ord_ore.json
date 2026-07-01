@@ -23,22 +23,32 @@
       ],
       "type": "object"
     },
+    "OreBlock256": {
+      "description": "Block-ORE order term — the `ob` wire key. Backs the `_ord` / `_ord_ore`\ndomains (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's\ndomain, so it serves equality too. The block count is width-agnostic on the\nwire (8 for the int scalars, 12 for timestamptz, 14 for numeric) — the\narray just carries more block strings. SQL-side constructor:\n`eql_v3.ore_block_256`.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "SchemaVersion": {
       "const": 2,
       "description": "The envelope version field (`v`) — always exactly `2` on the wire.",
       "type": "integer"
     }
   },
-  "$id": "https://schemas.cipherstash.com/eql/v3/timestamptz.json",
+  "$id": "https://schemas.cipherstash.com/eql/v3/timestamp_ord_ore.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "`eql_v3.timestamptz` — storage-only domain.\n\nOperators: none. Required keys: `v` `i` `c`.",
+  "description": "`eql_v3.timestamp_ord_ore` — ordering domain.\n\nOperators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.",
   "properties": {
     "c": {
       "$ref": "#/$defs/Ciphertext"
     },
     "i": {
       "$ref": "#/$defs/Identifier"
+    },
+    "ob": {
+      "$ref": "#/$defs/OreBlock256"
     },
     "v": {
       "$ref": "#/$defs/SchemaVersion"
@@ -47,8 +57,9 @@
   "required": [
     "v",
     "i",
-    "c"
+    "c",
+    "ob"
   ],
-  "title": "Timestamptz",
+  "title": "TimestampOrdOre",
   "type": "object"
 }

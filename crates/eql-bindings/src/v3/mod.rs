@@ -83,7 +83,7 @@ pub mod inventory;
 pub mod numeric;
 pub mod terms;
 pub mod text;
-pub mod timestamptz;
+pub mod timestamp;
 
 pub use domain_type::{DomainType, SCHEMA_ID_BASE, SQL_SCHEMA};
 pub use inventory::all;
