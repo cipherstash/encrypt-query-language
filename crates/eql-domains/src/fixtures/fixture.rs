@@ -24,7 +24,7 @@ macro_rules! fixtures {
     (numeric; $($s:literal),* $(,)?) => { &[$(Fixture::Numeric($s)),*] };
     (jsonb;   $($s:literal),* $(,)?) => { &[$(Fixture::Jsonb($s)),*] };
     (date;    $($s:literal),* $(,)?) => { &[$(Fixture::Date($s)),*] };
-    (timestamptz; $($s:literal),* $(,)?) => { &[$(Fixture::Timestamptz($s)),*] };
+    (timestamp; $($s:literal),* $(,)?) => { &[$(Fixture::Timestamp($s)),*] };
     (bool;    $($b:literal),* $(,)?) => { &[$(Fixture::Bool($b)),*] };
     (float;   $($s:literal),* $(,)?) => { &[$(Fixture::Float($s)),*] };
 }
@@ -53,7 +53,7 @@ pub enum Fixture {
     /// An RFC3339 UTC timestamp string (`"1970-01-01T00:00:00Z"`). The catalog
     /// stays zero-dep, so the string is parsed into a `chrono::DateTime<Utc>` in
     /// the SQLx harness, not here. Distinct by literal, like `Date`.
-    Timestamptz(&'static str),
+    Timestamp(&'static str),
     /// A boolean plaintext (`true` / `false`). The `bool` scalar is
     /// storage-only, so this fixture is encrypted (ciphertext only, no index
     /// term) and never participates in a comparison pivot. Distinct by value.
@@ -103,7 +103,7 @@ impl Fixture {
             | Fixture::Text(_)
             | Fixture::Jsonb(_)
             | Fixture::Date(_)
-            | Fixture::Timestamptz(_)
+            | Fixture::Timestamp(_)
             | Fixture::Float(_)
             | Fixture::Bool(_) => None,
         }

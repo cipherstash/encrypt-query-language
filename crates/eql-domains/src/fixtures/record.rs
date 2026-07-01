@@ -63,13 +63,13 @@ pub const DATE_FIXTURES: TypeFixtures = TypeFixtures {
         "2099-12-31"),
 };
 
-/// timestamptz fixtures — RFC3339 UTC strings; the three temporal pivots
+/// timestamp fixtures — RFC3339 UTC strings; the three temporal pivots
 /// (`1900-01-01T00:00:00Z`, `1970-01-01T00:00:00Z`, `2099-12-31T23:59:59Z`)
 /// MUST be present verbatim.
-pub const TIMESTAMPTZ_FIXTURES: TypeFixtures = TypeFixtures {
-    family: &crate::TIMESTAMPTZ,
-    kind: ScalarKind::Timestamptz,
-    values: fixtures!(timestamptz;
+pub const TIMESTAMP_FIXTURES: TypeFixtures = TypeFixtures {
+    family: &crate::TIMESTAMP,
+    kind: ScalarKind::Timestamp,
+    values: fixtures!(timestamp;
         "1900-01-01T00:00:00Z", "1950-07-15T06:30:00Z", "1969-12-31T23:59:59Z",
         "1970-01-01T00:00:00Z", "1970-01-01T00:00:01Z", "1985-04-12T23:20:50Z",
         "1999-12-31T23:59:59Z", "2000-01-01T00:00:00Z", "2004-02-29T12:00:00Z",
@@ -136,7 +136,7 @@ pub const FIXTURES: &[TypeFixtures] = &[
     INT2_FIXTURES,
     INT8_FIXTURES,
     DATE_FIXTURES,
-    TIMESTAMPTZ_FIXTURES,
+    TIMESTAMP_FIXTURES,
     NUMERIC_FIXTURES,
     TEXT_FIXTURES,
     BOOL_FIXTURES,
@@ -174,7 +174,7 @@ const fn kind_tag(kind: ScalarKind) -> u8 {
         ScalarKind::Text => 4,
         ScalarKind::Jsonb => 5,
         ScalarKind::Date => 6,
-        ScalarKind::Timestamptz => 7,
+        ScalarKind::Timestamp => 7,
         ScalarKind::Bool => 8,
         ScalarKind::F32 => 9,
         ScalarKind::F64 => 10,
@@ -195,8 +195,8 @@ const fn expected_kind(name: &str) -> ScalarKind {
         ScalarKind::I64
     } else if str_eq(name, "date") {
         ScalarKind::Date
-    } else if str_eq(name, "timestamptz") {
-        ScalarKind::Timestamptz
+    } else if str_eq(name, "timestamp") {
+        ScalarKind::Timestamp
     } else if str_eq(name, "numeric") {
         ScalarKind::Numeric
     } else if str_eq(name, "text") {
