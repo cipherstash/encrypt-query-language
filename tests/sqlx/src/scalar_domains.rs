@@ -32,6 +32,18 @@ pub trait ScalarType:
     /// name and the fixture script name. Examples: `"int4"`, `"int8"`.
     const PG_TYPE: &'static str;
 
+    /// Postgres type of the `plaintext` oracle column, for tests that
+    /// materialise a plaintext column or a typed `NULL` sentinel. Defaults to
+    /// `PG_TYPE`, which is a valid plaintext type for every catalog scalar
+    /// except `timestamp` (whose domain token is `timestamp` but whose
+    /// plaintext is `timestamp with time zone`, a UTC instant) — the temporal
+    /// impls override it, deriving the value from `EqlPlaintext` (the same
+    /// `ScalarKind`-keyed source the fixture generator uses) so it cannot drift.
+    /// Kept on `ScalarType`, not read from `EqlPlaintext` directly, because some
+    /// test scalars (`JsonbEntryInt4`) are `ScalarType`s but deliberately NOT
+    /// `EqlPlaintext`s; those inherit the `PG_TYPE` default.
+    const PLAINTEXT_SQL_TYPE: &'static str = Self::PG_TYPE;
+
     /// Distinct plaintext values present in the fixture, in a stable
     /// order that MUST match fixture insertion order (the SQL script's
     /// `id` sequence). Callers rely on this: the fixture-shape test
@@ -274,6 +286,12 @@ macro_rules! temporal_values {
 
         impl ScalarType for $ty {
             const PG_TYPE: &'static str = $pg;
+            // Derived from `EqlPlaintext` (the `ScalarKind`-keyed source of
+            // truth), so the temporal plaintext type cannot drift from the one
+            // the fixture generator uses. For `timestamp` this resolves to
+            // `timestamp with time zone`, not the `timestamp` domain token.
+            const PLAINTEXT_SQL_TYPE: &'static str =
+                <$ty as $crate::fixtures::EqlPlaintext>::PLAINTEXT_SQL_TYPE.as_str();
             fn fixture_values() -> &'static [$ty] { $accessor() }
             fn to_sql_literal(value: &$ty) -> String {
                 let f: fn(&$ty) -> String = $sql_lit;

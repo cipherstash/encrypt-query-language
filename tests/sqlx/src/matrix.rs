@@ -2665,7 +2665,15 @@ macro_rules! __scalar_matrix_order_by_nulls_case {
                 );
                 let fixture_table =
                     <$scalar as $crate::scalar_domains::ScalarType>::fixture_table_name();
-                let pg = <$scalar as $crate::scalar_domains::ScalarType>::PG_TYPE;
+                // The `plaintext` column mirrors the fixture's plaintext storage
+                // type, which is NOT always `PG_TYPE`: `timestamp`'s domain token
+                // is `timestamp` but its plaintext is `timestamp with time zone`
+                // (a UTC instant), so a bare `timestamp` column would fail to
+                // decode back into `DateTime<Utc>`. `PLAINTEXT_SQL_TYPE` defaults
+                // to `PG_TYPE` and is derived from `EqlPlaintext` for the temporal
+                // types; using it here (not `EqlPlaintext` directly) also covers
+                // view scalars like `JsonbEntryInt4` that are not `EqlPlaintext`.
+                let pg = <$scalar as $crate::scalar_domains::ScalarType>::PLAINTEXT_SQL_TYPE;
 
                 let mut tx = pool.begin().await?;
                 sqlx::query(&format!(

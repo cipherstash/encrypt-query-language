@@ -71,7 +71,9 @@ impl PlaintextSqlType {
     pub const REAL: PlaintextSqlType = PlaintextSqlType("real");
     pub const DOUBLE_PRECISION: PlaintextSqlType = PlaintextSqlType("double precision");
 
-    pub fn as_str(&self) -> &'static str {
+    /// `const` so `ScalarType::PLAINTEXT_SQL_TYPE` impls can derive their
+    /// `&'static str` from this newtype in a const initializer.
+    pub const fn as_str(&self) -> &'static str {
         self.0
     }
 }
