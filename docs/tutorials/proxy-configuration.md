@@ -29,7 +29,7 @@ Type each column as the `eql_v3` domain **variant** for the capability you need 
 ALTER TABLE users  ADD COLUMN encrypted_email eql_v3.text_eq;
 
 -- range/ordering-searchable encrypted timestamp
-ALTER TABLE events ADD COLUMN encrypted_at    eql_v3.timestamptz_ord;
+ALTER TABLE events ADD COLUMN encrypted_at    eql_v3.timestamp_ord;
 
 -- full-text (bloom) searchable encrypted text
 ALTER TABLE users  ADD COLUMN encrypted_name  eql_v3.text_match;
@@ -87,7 +87,7 @@ SELECT * FROM users WHERE encrypted_email = $1;
 SELECT * FROM users WHERE eql_v3.eq(encrypted_email, $1::eql_v3.text_eq);
 ```
 
-**Range / ordering** (`eql_v3.timestamptz_ord`):
+**Range / ordering** (`eql_v3.timestamp_ord`):
 
 ```sql
 SELECT * FROM events WHERE encrypted_at < $1 ORDER BY eql_v3.ord_term(encrypted_at) DESC;

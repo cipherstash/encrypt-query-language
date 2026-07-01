@@ -326,7 +326,7 @@ discovered=$(printf '%s\\n' "$listing" \
 # An equality-only type (no `_ord` domain) emits a strict SUBSET of the
 # canonical (ordered) snapshot: the same names minus every ord-only line
 # (`_ord` / `order_by` / `routes_through_ob`). Derive that subset once into a
-# file, so an equality-only scalar (e.g. timestamptz) needs NO second committed
+# file, so an equality-only scalar (e.g. timestamp) needs NO second committed
 # snapshot — it is validated against this derivation from the single baseline.
 # Materialise to a file (not a shell variable) so both shapes compare via the
 # same `cmp`/`diff` path: a variable would strip trailing newlines on capture

@@ -71,7 +71,7 @@ EQL installs the following components into the `eql_v3` schema:
 | Name                                                | Entity Type   | Purpose                                                              |
 | --------------------------------------------------- | ------------- | ------------------------------------------------------------------- |
 | `eql_v3`                                            | Schema        | Holds all EQL types, operators, functions, and aggregates           |
-| `eql_v3.<T>`, `eql_v3.<T>_eq`, `eql_v3.<T>_ord`     | Domain types  | Per-scalar encrypted columns (one family per scalar: `int4`, `text`, `timestamptz`, …) |
+| `eql_v3.<T>`, `eql_v3.<T>_eq`, `eql_v3.<T>_ord`     | Domain types  | Per-scalar encrypted columns (one family per scalar: `int4`, `text`, `timestamp`, …) |
 | `eql_v3.json`                                       | Domain type   | Encrypted JSON (structured-encryption) documents                    |
 | `eql_v3.eq_term` / `ord_term` / `match_term`        | Functions     | Index-term extractors for functional indexes                        |
 

@@ -35,7 +35,7 @@ signal at a fraction of the committed surface.
 
 For equality-only types there is a second committed snapshot,
 `matrix_tests_eq_only.txt`. An eq-only scalar (`scalar_matrix! { caps = [eq] }`,
-e.g. `timestamptz`) emits exactly the ordered name set MINUS the ord-only lines,
+e.g. `timestamp`) emits exactly the ordered name set MINUS the ord-only lines,
 so this file is **derived** from `matrix_tests.txt` (minus every line matching
 `_ord` / `order_by` / `routes_through_ob`) — but it is committed and pinned: the
 inventory gate re-derives the set at runtime and asserts it equals this

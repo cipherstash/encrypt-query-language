@@ -70,7 +70,7 @@ Everything starts in `crates/eql-domains/src/lib.rs`:
 
 ```rust
 pub const CATALOG: &[DomainFamily] = &[
-    INT4, INT2, INT8, DATE, TIMESTAMPTZ,
+    INT4, INT2, INT8, DATE, TIMESTAMP,
     NUMERIC, TEXT, BOOL, FLOAT4, FLOAT8,
 ];
 ```
@@ -105,7 +105,7 @@ classDiagram
     class ScalarKind {
         <<enum>>
         I16 I32 I64 Numeric Text
-        Jsonb Date Timestamptz Bool F32 F64
+        Jsonb Date Timestamp Bool F32 F64
     }
     class TypeFixtures {
         +family: &DomainFamily
@@ -173,7 +173,7 @@ flowchart LR
 | Family | Kind | Shape |
 |--------|------|-------|
 | `int4`/`int2`/`int8` | I32/I16/I64 | ordered |
-| `date`/`timestamptz` | Date/Timestamptz | ordered |
+| `date`/`timestamp` | Date/Timestamp | ordered |
 | `numeric` | Numeric | ordered |
 | `float4`/`float8` | F32/F64 | ordered |
 | `text` | Text | text-search (equality always routes through `Hm` — ORE is not equality-lossless for text) |

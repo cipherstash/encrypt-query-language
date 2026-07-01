@@ -4,7 +4,7 @@ This page summarises which SQL operators and language features work against EQL-
 
 EQL ships its searchable-encryption surface as PostgreSQL **domains in the `eql_v3` schema**:
 
-- **per-scalar encrypted-domain types** — `eql_v3.int4`, `eql_v3.text`, `eql_v3.timestamptz`, … — one family of domain *variants* per scalar; and
+- **per-scalar encrypted-domain types** — `eql_v3.int4`, `eql_v3.text`, `eql_v3.timestamp`, … — one family of domain *variants* per scalar; and
 - **an encrypted-JSON document type** — `eql_v3.json` — for structured-encryption (ste_vec) JSONB.
 
 The capability of a column is fixed by the **domain variant you type it as**. There is no database-side `add_search_config` / `add_column` step: which index terms travel in a value's payload is decided by the encryption client ([CipherStash Proxy](https://github.com/cipherstash/proxy) / [Protect.js](https://github.com/cipherstash/protectjs)), and the column's domain variant is what makes the matching operators resolve. Unsupported operators are not silent no-ops — they route to blocker functions that `RAISE` an "operator not supported" exception (a `NULL` operand still raises; the blockers are deliberately not `STRICT`).
@@ -15,7 +15,7 @@ The capability of a column is fixed by the **domain variant you type it as**. Th
 
 Each scalar type `<T>` is a family of `jsonb`-backed domains in `eql_v3`. The catalog scalar tokens that ship today are:
 
-`int2`, `int4`, `int8`, `numeric`, `float4`, `float8`, `date`, `timestamptz`, `text`, `bool`.
+`int2`, `int4`, `int8`, `numeric`, `float4`, `float8`, `date`, `timestamp`, `text`, `bool`.
 
 (See [Adding a Scalar Encrypted-Domain Type](./adding-a-scalar-encrypted-domain-type.md) for how the family is generated.) The domains live in the `eql_v3` schema — `DROP SCHEMA eql_v3 CASCADE` removes them — and their extracted index-term types are the self-contained `eql_v3` SEM types (`eql_v3.hmac_256`, `eql_v3.ore_block_256`, `eql_v3.bloom_filter`).
 
