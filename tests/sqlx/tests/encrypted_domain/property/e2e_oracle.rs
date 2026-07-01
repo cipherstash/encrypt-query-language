@@ -157,9 +157,9 @@ e2e_oracle_suite!(
     ]
 );
 e2e_oracle_suite!(
-    timestamptz,
+    timestamp,
     chrono::DateTime<chrono::Utc>,
-    "proptest_e2e_timestamptz",
+    "proptest_e2e_timestamp",
     seeds = [
         chrono::DateTime::parse_from_rfc3339("1900-01-01T00:00:00Z")
             .unwrap()

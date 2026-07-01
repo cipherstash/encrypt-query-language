@@ -75,7 +75,7 @@ Same oracle engine, but each case **generates fresh random plaintexts and
 encrypts them end-to-end through ZeroKMS** (one batched call per case) before
 querying. Gated behind the `proptest-e2e` cargo feature — `mise run test:sqlx`
 enables it (CI has the secrets); a bare `cargo test` compiles it out. Covers
-every ordered scalar (int2/int4/int8/date/timestamptz/numeric/text) via the
+every ordered scalar (int2/int4/int8/date/timestamp/numeric/text) via the
 `ScalarType::arbitrary_value()` strategy seam — integers draw the full
 `any::<T>()` range, non-integer scalars sample their cast-valid fixture set
 (their plaintexts have no usable bounded `Arbitrary`). `bool` is storage-only

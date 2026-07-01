@@ -7,7 +7,7 @@
 //!   * The malformed-length guards build ORE terms by hand from short byte
 //!     strings, exercising length validation without real ciphertexts.
 //!   * The ordering properties (all-pairs oracle agreement + antisymmetry) read
-//!     the generated `eql_v3_numeric` / `eql_v3_timestamptz` fixtures, whose
+//!     the generated `eql_v3_numeric` / `eql_v3_timestamp` fixtures, whose
 //!     catalog order is the strict ascending oracle.
 //!   * The `1 == 1.0` ORE collision reads the generated `v3_numeric_collision`
 //!     fixture — the one place the value-equal pair can live, since the catalog
@@ -343,32 +343,32 @@ async fn numeric_terms_order_like_decimal_ord(pool: PgPool) -> Result<()> {
     assert_orders_like_oracle(&pool, "eql_v3_numeric", "numeric_ord", &ascending).await
 }
 
-/// Width + single-pair sanity for the 12-block (timestamptz, N=12 => 604 bytes)
-/// term. The full ordering property is `timestamptz_terms_order_like_datetime_ord`.
-#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_timestamptz")))]
-async fn timestamptz_term_is_12_blocks(pool: PgPool) -> Result<()> {
+/// Width + single-pair sanity for the 12-block (timestamp, N=12 => 604 bytes)
+/// term. The full ordering property is `timestamp_terms_order_like_datetime_ord`.
+#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_timestamp")))]
+async fn timestamp_term_is_12_blocks(pool: PgPool) -> Result<()> {
     let width: i32 = sqlx::query_scalar(
         "SELECT octet_length((((eql_v3.ord_term( \
-            (SELECT payload FROM fixtures.eql_v3_timestamptz WHERE plaintext = '1970-01-01T00:00:00Z'::timestamptz) \
-            ::eql_v3.timestamptz_ord)).terms)[1]).bytes)",
+            (SELECT payload FROM fixtures.eql_v3_timestamp WHERE plaintext = '1970-01-01T00:00:00Z'::timestamptz) \
+            ::eql_v3.timestamp_ord)).terms)[1]).bytes)",
     )
     .fetch_one(&pool)
     .await?;
     assert_eq!(
         width, 604,
-        "timestamptz ORE term must be 12 blocks (604 bytes)"
+        "timestamp ORE term must be 12 blocks (604 bytes)"
     );
     Ok(())
 }
 
-/// 12-block (timestamptz) terms must order like `DateTime<Utc>`'s `Ord` over
+/// 12-block (timestamp) terms must order like `DateTime<Utc>`'s `Ord` over
 /// ALL pairs, plus antisymmetry. N=12 is the only width strictly between the
 /// working 8 and the headline 14, so it needs the same left-block-deciding
 /// coverage as numeric. The 15 values are the strict ascending oracle (matching
-/// `TIMESTAMPTZ_FIXTURES`' catalog order); `assert_orders_like_oracle` fails
+/// `TIMESTAMP_FIXTURES`' catalog order); `assert_orders_like_oracle` fails
 /// loudly if the list drifts from the generated fixture.
-#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_timestamptz")))]
-async fn timestamptz_terms_order_like_datetime_ord(pool: PgPool) -> Result<()> {
+#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_timestamp")))]
+async fn timestamp_terms_order_like_datetime_ord(pool: PgPool) -> Result<()> {
     let ascending: Vec<String> = [
         "1900-01-01T00:00:00Z",
         "1950-07-15T06:30:00Z",
@@ -389,14 +389,14 @@ async fn timestamptz_terms_order_like_datetime_ord(pool: PgPool) -> Result<()> {
     .iter()
     .map(|v| format!("'{v}'::timestamptz"))
     .collect();
-    assert_orders_like_oracle(&pool, "eql_v3_timestamptz", "timestamptz_ord", &ascending).await
+    assert_orders_like_oracle(&pool, "eql_v3_timestamp", "timestamp_ord", &ascending).await
 }
 
 /// A real wide-block term must compare equal to itself — the reflexive
 /// `eq`-true path (`functions.sql:166`) at N=14 and N=12, creds-free (reuses the
 /// generated fixtures). Distinct from the `1 == 1.0` collision (Gap 1), which is
 /// equality across *different* ciphertexts.
-#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_numeric", "eql_v3_timestamptz")))]
+#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_numeric", "eql_v3_timestamp")))]
 async fn wide_block_term_compares_equal_to_itself(pool: PgPool) -> Result<()> {
     let numeric = compare_fixture_pair(
         &pool,
@@ -408,17 +408,17 @@ async fn wide_block_term_compares_equal_to_itself(pool: PgPool) -> Result<()> {
     .await?;
     assert_eq!(numeric, 0, "a 14-block numeric term must equal itself");
 
-    let timestamptz = compare_fixture_pair(
+    let timestamp = compare_fixture_pair(
         &pool,
-        "eql_v3_timestamptz",
-        "timestamptz_ord",
+        "eql_v3_timestamp",
+        "timestamp_ord",
         "'2000-01-01T00:00:00Z'::timestamptz",
         "'2000-01-01T00:00:00Z'::timestamptz",
     )
     .await?;
     assert_eq!(
-        timestamptz, 0,
-        "a 12-block timestamptz term must equal itself"
+        timestamp, 0,
+        "a 12-block timestamp term must equal itself"
     );
     Ok(())
 }
