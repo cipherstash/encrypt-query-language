@@ -505,14 +505,20 @@ async fn v3_jsonb_raw_helpers_contains_and_contained_by(pool: PgPool) -> anyhow:
     ))
     .fetch_one(&pool)
     .await?;
-    assert!(sub, "jsonb_contained_by: subset must be contained by superset");
+    assert!(
+        sub,
+        "jsonb_contained_by: subset must be contained by superset"
+    );
 
     let backwards: bool = sqlx::query_scalar(&format!(
         "SELECT eql_v3.jsonb_contains('{subset}'::jsonb, '{full}'::jsonb)"
     ))
     .fetch_one(&pool)
     .await?;
-    assert!(!backwards, "jsonb_contains: subset must not contain superset");
+    assert!(
+        !backwards,
+        "jsonb_contains: subset must not contain superset"
+    );
 
     // The raw helper must agree with the typed `@>` operator (which binds to
     // eql_v3.ste_vec_contains, not this function) on the same well-formed inputs.
@@ -521,7 +527,10 @@ async fn v3_jsonb_raw_helpers_contains_and_contained_by(pool: PgPool) -> anyhow:
     ))
     .fetch_one(&pool)
     .await?;
-    assert_eq!(sup, typed, "jsonb_contains must agree with the typed @> operator");
+    assert_eq!(
+        sup, typed,
+        "jsonb_contains must agree with the typed @> operator"
+    );
 
     Ok(())
 }
@@ -546,7 +555,10 @@ async fn v3_jsonb_has_ore_cllw_entry_branches(pool: PgPool) -> anyhow::Result<()
     ))
     .fetch_one(&pool)
     .await?;
-    assert!(!has_no_oc, "has_ore_cllw must be false for an hm-only entry");
+    assert!(
+        !has_no_oc,
+        "has_ore_cllw must be false for an hm-only entry"
+    );
 
     Ok(())
 }
