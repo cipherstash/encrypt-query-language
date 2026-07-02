@@ -357,6 +357,44 @@ pub const FLOAT8: DomainFamily = DomainFamily {
     domains: ORDERED_INT_DOMAINS,
 };
 
+/// The SteVec (encrypted-JSONB) domains of the `jsonb` family. Every one has
+/// empty `terms` — but these domains ARE searchable: each carries its index
+/// terms *structurally*, inside the payload (`hm` for hash-equality, `oc` for
+/// CLLW-ORE ordering, one per `sv` leaf), not as a flat family-level `Term`.
+/// Empty `terms` records "no flat-scalar term surface," never "no index
+/// capability"; the capability is described by the `Shape` and enforced by the
+/// hand-written SQL CHECKs under `src/v3/jsonb/`. The coupling is pinned by
+/// `tests::shape_and_terms_are_consistent`. The SQL
+/// surface is hand-written under `src/v3/jsonb/` (the SQL generator SKIPS these),
+/// and the Rust payload structs are hand-written in
+/// `crates/eql-bindings/src/v3/jsonb.rs` (their fields/serde are not derivable
+/// from the catalog); the catalog drives only their inventory membership + order.
+const JSONB_DOMAINS: &[Domain] = &[
+    Domain {
+        name: "json",
+        terms: &[],
+        shape: Shape::SteVecDocument,
+    },
+    Domain {
+        name: "ste_vec_entry",
+        terms: &[],
+        shape: Shape::SteVecEntry,
+    },
+    Domain {
+        name: "ste_vec_query",
+        terms: &[],
+        shape: Shape::SteVecQuery,
+    },
+];
+
+/// `jsonb` — the encrypted-JSONB (SteVec) family: `eql_v3.json` (document),
+/// `eql_v3.ste_vec_entry` (one sv element), `eql_v3.ste_vec_query` (containment
+/// needle). Added to `CATALOG` at the flip task.
+pub const JSONB: DomainFamily = DomainFamily {
+    name: "jsonb",
+    domains: JSONB_DOMAINS,
+};
+
 /// The scalar catalog — the single source of truth. Order is significant (it
 /// drives generation order). New types are appended as their SQL surface lands.
 pub const CATALOG: &[DomainFamily] = &[

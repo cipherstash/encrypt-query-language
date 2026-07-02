@@ -1317,3 +1317,40 @@ mod invariant_tests {
         );
     }
 }
+
+mod shape_tests {
+    #[test]
+    fn shape_and_terms_are_consistent() {
+        use crate::{Shape, CATALOG, JSONB};
+        // Check both the live catalog AND the not-yet-catalogued JSONB const, so
+        // the invariant is pinned before jsonb joins CATALOG.
+        let families = CATALOG.iter().chain(std::iter::once(&JSONB));
+        for f in families {
+            for d in f.domains {
+                let scalar = matches!(d.shape, Shape::Scalar);
+                // Non-scalar ⇒ empty terms; non-empty terms ⇒ scalar.
+                if !scalar {
+                    assert!(
+                        d.terms.is_empty(),
+                        "non-scalar {}.{} must have empty terms",
+                        f.name,
+                        d.name
+                    );
+                }
+                if !d.terms.is_empty() {
+                    assert!(scalar, "termful {}.{} must be Shape::Scalar", f.name, d.name);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn jsonb_family_is_non_scalar_and_not_yet_in_catalog() {
+        use crate::{Shape, CATALOG, JSONB};
+        assert!(!JSONB.is_scalar());
+        assert_eq!(JSONB.domains.len(), 3);
+        assert!(matches!(JSONB.domains[0].shape, Shape::SteVecDocument));
+        assert!(JSONB.domains.iter().all(|d| d.terms.is_empty()));
+        assert!(!CATALOG.iter().any(|f| f.name == "jsonb"));
+    }
+}
