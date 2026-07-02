@@ -24,34 +24,67 @@ For an application role (for example a Supabase `authenticated` / `anon` role, o
 a dedicated app role) that queries encrypted columns:
 
 ```sql
--- Required: use the public API schema and its objects.
+-- The public API surface: domains, operators, function equivalents, aggregates.
 GRANT USAGE ON SCHEMA eql_v3 TO app_role;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA eql_v3 TO app_role;
+
+-- The internal surface. The supported operators and aggregates dispatch into it
+-- (see "What each query path requires" below), so a role that runs equality or
+-- ordering queries, aggregates, or writes encrypted JSON needs it too.
+GRANT USAGE ON SCHEMA eql_v3_internal TO app_role;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA eql_v3_internal TO app_role;
+
+-- pgcrypto (Supabase installs it here). The ORE comparison behind ordering and
+-- MIN/MAX calls pgcrypto `encrypt()`, so ordered/aggregated queries need USAGE
+-- on its schema. If pgcrypto lives elsewhere, grant USAGE on that schema instead.
+GRANT USAGE ON SCHEMA extensions TO app_role;
+
 -- Optionally keep future functions granted:
 ALTER DEFAULT PRIVILEGES IN SCHEMA eql_v3 GRANT EXECUTE ON FUNCTIONS TO app_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA eql_v3_internal GRANT EXECUTE ON FUNCTIONS TO app_role;
 ```
 
-Grant only what the deployment needs; narrow to individual functions where you
-can.
+Grant only what the deployment needs; the mapping below lets you narrow further.
 
-### `eql_v3_internal`
+### What each query path requires
 
-`eql_v3_internal` is **not** part of the public API and normally needs no grant.
-It holds index-term TYPES, unsupported-operator blockers, aggregate state
-functions, opclass comparators, and CHECK validators — implementation detail.
+`eql_v3_internal` is **not** a public API — you never name its objects directly —
+but the supported `eql_v3` surface *reaches into it*, so a query role commonly
+needs `USAGE` on it anyway. The exact requirement is path-dependent:
 
-A public `eql_v3` operator or aggregate can dispatch into an internal backing
-object (a blocker, or an aggregate state function). If a low-privilege role hits
-a "permission denied for schema eql_v3_internal" error while using a supported
-operator or aggregate, grant it deliberately:
+| Query path | `eql_v3` | `eql_v3_internal` | `extensions` (pgcrypto) |
+| --- | :---: | :---: | :---: |
+| Equality (`=` / `eql_v3.eq`) | ✅ | ✅ | — |
+| Ordering (`<` `<=` `>` `>=` / `eql_v3.lt`…) | ✅ | ✅ | ✅ |
+| `MIN` / `MAX` aggregates | ✅ | ✅ | ✅ |
+| jsonb containment read (`@>` `<@` / `ste_vec_contains`) | ✅ | — | — |
+| Cast/write raw JSON → `eql_v3.json` | ✅ | ✅ | — |
+| Cast/write raw JSON → a scalar domain (`eql_v3.int4`…) | ✅ | — | — |
 
-```sql
-GRANT USAGE ON SCHEMA eql_v3_internal TO app_role;
-```
+Why the internal grant is needed even though you only call public objects:
 
-Prefer granting the minimum. The **supported** operator surface is designed so
-the function-form equivalents callers actually invoke (`eql_v3.eq`,
-`eql_v3.jsonb_contains`, …) live in the public `eql_v3` schema — see below.
+- **Equality** inlines the index-term constructor
+  `eql_v3_internal.hmac_256(jsonb)` (via `eq_term`); **ordering** inlines
+  `eql_v3_internal.ore_block_256` (via `ord_term`) and its comparator. The public
+  wrappers are inlinable SQL, so the internal call becomes part of *your* query
+  and is checked against *your* role's privileges.
+- **`MIN`/`MAX`** dispatch into the aggregate state functions
+  `eql_v3_internal.min_sfunc` / `max_sfunc`.
+- The **ORE comparison** behind ordering and `MIN`/`MAX` calls pgcrypto
+  `encrypt()`, which the installer places in the `extensions` schema — hence the
+  `USAGE` there.
+- **Casting raw jsonb to `eql_v3.json`** fires its domain `CHECK`,
+  `eql_v3_internal.is_valid_ste_vec_document_payload`. (Scalar domain CHECKs are
+  pure structural jsonb tests, so casting to a scalar domain needs no internal
+  grant.)
+
+The hand-written jsonb containment **read** path (`eql_v3.ste_vec_contains` and
+the `@>` / `<@` operators over it) is `plpgsql` — never inlined — so it runs under
+the public `eql_v3` grant alone.
+
+This behaviour is gated by `tests/sqlx/tests/v3_privilege_tests.rs`. So the
+public **function equivalents** (below) change *how* you invoke a supported
+operation on operator-free platforms — not *which* schemas you must grant.
 
 ## Operators vs. function equivalents (operator-free platforms)
 

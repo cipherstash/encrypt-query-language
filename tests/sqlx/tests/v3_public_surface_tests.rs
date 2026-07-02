@@ -105,7 +105,7 @@ async fn public_surface(pool: &PgPool) -> Result<Vec<String>> {
 /// storage domain (empty term-name), `<family>_<term>` otherwise. These MUST
 /// live in `eql_v3` (never `eql_v3_internal`), and are a subset of the installed
 /// `eql_v3` domains (the hand-written jsonb-family domains — `json`,
-/// `ste_vec_query`, `ste_vec_entry` — are the remainder).
+/// `jsonb_query`, `jsonb_entry` — are the remainder).
 fn catalog_domain_names() -> Vec<String> {
     let mut names = Vec::new();
     // Scalar families only — the jsonb (SteVec) family's domains (`json`,
