@@ -137,6 +137,11 @@ Use for application queries in production:
 GRANT USAGE ON SCHEMA eql_v3 TO your_app_user;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA eql_v3 TO your_app_user;
 
+-- eql_v3_internal holds the implementation the public eql_v3 operators dispatch
+-- into. Grant it the same way as eql_v3 — explicitly, per runtime role.
+GRANT USAGE ON SCHEMA eql_v3_internal TO your_app_user;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA eql_v3_internal TO your_app_user;
+
 -- User table access (normal application permissions)
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE your_tables TO your_app_user;
 ```
