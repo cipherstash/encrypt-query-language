@@ -99,6 +99,7 @@ async fn lint_categories_are_well_known(pool: PgPool) -> Result<()> {
         "blocker_strict",
         "domain_over_domain",
         "domain_opclass",
+        "schema_placement",
     ];
     for row in rows {
         assert!(
@@ -274,6 +275,57 @@ async fn lint_domain_opclass_surface_is_clean(pool: PgPool) -> Result<()> {
         violations.is_empty(),
         "domain_opclass surface should be empty in a clean build, got: {:#?}",
         violations
+    );
+    Ok(())
+}
+
+/// The public `eql_v3` schema must hold only jsonb-backed encrypted-domain
+/// types; a naked composite/enum type there is an internal index-term type in
+/// the wrong schema (Table-Builder-picker clutter the split exists to prevent).
+/// A clean build has none, so this is negative: `schema_placement` surfaces no
+/// rows. The independent net is the placement invariant in
+/// `tests/v3_public_surface_tests.rs`.
+#[sqlx::test]
+async fn lint_schema_placement_surface_is_clean(pool: PgPool) -> Result<()> {
+    let rows = fetch_lints(&pool).await?;
+    let violations: Vec<&LintRow> = rows
+        .iter()
+        .filter(|r| r.category == "schema_placement")
+        .collect();
+    assert!(
+        violations.is_empty(),
+        "schema_placement surface should be empty in a clean build, got: {:#?}",
+        violations
+    );
+    Ok(())
+}
+
+/// Planting a naked composite type in the public `eql_v3` schema must be flagged
+/// under `schema_placement` — the exact regression (an internal index-term type
+/// created in the public schema) the split exists to prevent.
+#[sqlx::test]
+async fn lint_flags_composite_type_in_eql_v3(pool: PgPool) -> Result<()> {
+    sqlx::query(r#"CREATE TYPE eql_v3.test_bad_placement AS (x integer);"#)
+        .execute(&pool)
+        .await?;
+
+    let rows = fetch_lints(&pool).await?;
+    let violations: Vec<&LintRow> = rows
+        .iter()
+        .filter(|r| {
+            r.category == "schema_placement" && r.object_name.contains("test_bad_placement")
+        })
+        .collect();
+
+    assert!(
+        !violations.is_empty(),
+        "Expected `schema_placement` to flag the composite type in eql_v3, \
+         but got no matching row. All lint rows:\n{:#?}",
+        rows
+    );
+    assert_eq!(
+        violations[0].severity, "error",
+        "schema_placement must be severity=error"
     );
     Ok(())
 }

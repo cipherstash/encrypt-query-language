@@ -243,3 +243,32 @@ Pinning another arm is one edit to the `TARGETS=(...)` list in the
 `test:matrix:expand` task. The nightly lane in
 `.github/workflows/macro-expand-eql.yml` regenerates and `git diff --exit-code`s
 all three (non-blocking: nightly-only, off the PR critical path).
+
+## `eql_v3` public-surface golden — `eql_v3_public_surface.txt`
+
+Exhaustive snapshot of every object visible in the **public** `eql_v3` schema:
+domains/composites/enums, functions, aggregates, operators, and casts, each
+rendered as a normalized, schema-qualified line and `LC_ALL=C`-sorted. Owned by
+`tests/v3_public_surface_tests.rs::eql_v3_public_surface_matches_golden`, it pins
+*what the split puts in the public API* — the point of the `eql_v3` /
+`eql_v3_internal` split is to keep index-term-only types out of what a Supabase
+Studio user sees, and nothing else in the suite gates that. Any object
+added/removed/renamed in `eql_v3` forces a conscious update here.
+
+Unlike the matrix snapshots (regenerated DB-free via `--list`), this one is
+**DB-backed** — the test reads `pg_catalog` from the installed schema, so a
+running Postgres reachable via `DATABASE_URL` is required. It is **committed**
+(tracked) and enforced by the normal SQLx suite: the test embeds the file via
+`include_str!` and asserts against the live surface (no separate `git diff` gate
+needed — a drift fails the test directly). Regenerate with:
+
+```bash
+mise run test:surface:snapshot:regen   # writes eql_v3_public_surface.txt
+```
+
+then re-run `mise run test:sqlx` to validate and commit. If an object should be
+*internal*, create it in `eql_v3_internal` instead of regenerating the golden.
+The companion placement invariants in the same test file (no naked
+composite/enum types in `eql_v3`; every public type is a jsonb-backed domain;
+every `eql_domains::CATALOG` domain landed in `eql_v3`) are structural and need
+no snapshot.

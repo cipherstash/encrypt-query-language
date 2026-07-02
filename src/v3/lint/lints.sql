@@ -56,6 +56,13 @@
 --!                                `eql_v3` encrypted domain. Opclasses on
 --!                                domains bypass operator resolution; use a
 --!                                functional index on the extractor instead.
+--!   `schema_placement`        — a naked composite or enum TYPE lives in the
+--!                                public `eql_v3` schema. Internal index-term
+--!                                types (e.g. `ore_block_256_term`) belong in
+--!                                `eql_v3_internal`; a composite/enum in
+--!                                `eql_v3` clutters the Supabase Table Builder
+--!                                type picker, which the schema split exists to
+--!                                prevent. Move it to `eql_v3_internal`.
 --!
 --! @example
 --! ```
@@ -344,6 +351,28 @@ AS $$
   JOIN pg_catalog.pg_namespace cn ON cn.oid = oc.opcnamespace
   WHERE t.typtype = 'd'
     AND tn.nspname = ANY(eql_v3_internal.owned_schemas())
+
+  -- ┌─────────────────────────────────────────────────────────────────┐
+  -- │ Schema placement: the public `eql_v3` schema must hold only the  │
+  -- │ jsonb-backed encrypted-domain types. A naked composite/enum type │
+  -- │ there is an internal index-term type in the wrong schema — it     │
+  -- │ clutters the Supabase type picker the split exists to keep clean. │
+  -- └─────────────────────────────────────────────────────────────────┘
+
+  UNION ALL
+
+  SELECT
+    'error',
+    'schema_placement',
+    format('type %I.%I', n.nspname, t.typname),
+    format(
+      'Type `%s.%s` is a %s in the public `eql_v3` schema. Only jsonb-backed encrypted-domain types belong in `eql_v3`; internal index-term types belong in `eql_v3_internal` so they stay out of the Supabase Table Builder type picker. Move it to `eql_v3_internal`.',
+      n.nspname, t.typname,
+      CASE t.typtype WHEN 'c' THEN 'composite type' WHEN 'e' THEN 'enum type' ELSE 'type' END)
+  FROM pg_catalog.pg_type t
+  JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+  WHERE n.nspname = 'eql_v3'
+    AND t.typtype IN ('c', 'e')
 
   ORDER BY 1, 2, 3;
 $$;

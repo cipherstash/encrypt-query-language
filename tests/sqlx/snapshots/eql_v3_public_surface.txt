@@ -1,0 +1,143 @@
+aggregate eql_v3.max(eql_v3.date_ord)
+aggregate eql_v3.max(eql_v3.date_ord_ore)
+aggregate eql_v3.max(eql_v3.float4_ord)
+aggregate eql_v3.max(eql_v3.float4_ord_ore)
+aggregate eql_v3.max(eql_v3.float8_ord)
+aggregate eql_v3.max(eql_v3.float8_ord_ore)
+aggregate eql_v3.max(eql_v3.int2_ord)
+aggregate eql_v3.max(eql_v3.int2_ord_ore)
+aggregate eql_v3.max(eql_v3.int4_ord)
+aggregate eql_v3.max(eql_v3.int4_ord_ore)
+aggregate eql_v3.max(eql_v3.int8_ord)
+aggregate eql_v3.max(eql_v3.int8_ord_ore)
+aggregate eql_v3.max(eql_v3.numeric_ord)
+aggregate eql_v3.max(eql_v3.numeric_ord_ore)
+aggregate eql_v3.max(eql_v3.ste_vec_entry)
+aggregate eql_v3.max(eql_v3.text_ord)
+aggregate eql_v3.max(eql_v3.text_ord_ore)
+aggregate eql_v3.max(eql_v3.text_search)
+aggregate eql_v3.max(eql_v3.timestamp_ord)
+aggregate eql_v3.max(eql_v3.timestamp_ord_ore)
+aggregate eql_v3.min(eql_v3.date_ord)
+aggregate eql_v3.min(eql_v3.date_ord_ore)
+aggregate eql_v3.min(eql_v3.float4_ord)
+aggregate eql_v3.min(eql_v3.float4_ord_ore)
+aggregate eql_v3.min(eql_v3.float8_ord)
+aggregate eql_v3.min(eql_v3.float8_ord_ore)
+aggregate eql_v3.min(eql_v3.int2_ord)
+aggregate eql_v3.min(eql_v3.int2_ord_ore)
+aggregate eql_v3.min(eql_v3.int4_ord)
+aggregate eql_v3.min(eql_v3.int4_ord_ore)
+aggregate eql_v3.min(eql_v3.int8_ord)
+aggregate eql_v3.min(eql_v3.int8_ord_ore)
+aggregate eql_v3.min(eql_v3.numeric_ord)
+aggregate eql_v3.min(eql_v3.numeric_ord_ore)
+aggregate eql_v3.min(eql_v3.ste_vec_entry)
+aggregate eql_v3.min(eql_v3.text_ord)
+aggregate eql_v3.min(eql_v3.text_ord_ore)
+aggregate eql_v3.min(eql_v3.text_search)
+aggregate eql_v3.min(eql_v3.timestamp_ord)
+aggregate eql_v3.min(eql_v3.timestamp_ord_ore)
+cast eql_v3."json" -> eql_v3.ste_vec_query
+function eql_v3.->(e eql_v3."json", selector integer)
+function eql_v3.->(e eql_v3."json", selector text)
+function eql_v3.->>(e eql_v3."json", selector integer)
+function eql_v3.->>(e eql_v3."json", selector text)
+function eql_v3.<@(a eql_v3."json", b eql_v3."json")
+function eql_v3.<@(a eql_v3.ste_vec_entry, b eql_v3."json")
+function eql_v3.<@(a eql_v3.ste_vec_query, b eql_v3."json")
+function eql_v3.@>(a eql_v3."json", b eql_v3."json")
+function eql_v3.@>(a eql_v3."json", b eql_v3.ste_vec_entry)
+function eql_v3.@>(a eql_v3."json", b eql_v3.ste_vec_query)
+function eql_v3.ciphertext(val jsonb)
+function eql_v3.eq_term(a eql_v3.date_eq)
+function eql_v3.eq_term(a eql_v3.float4_eq)
+function eql_v3.eq_term(a eql_v3.float8_eq)
+function eql_v3.eq_term(a eql_v3.int2_eq)
+function eql_v3.eq_term(a eql_v3.int4_eq)
+function eql_v3.eq_term(a eql_v3.int8_eq)
+function eql_v3.eq_term(a eql_v3.numeric_eq)
+function eql_v3.eq_term(a eql_v3.text_eq)
+function eql_v3.eq_term(a eql_v3.text_ord)
+function eql_v3.eq_term(a eql_v3.text_ord_ore)
+function eql_v3.eq_term(a eql_v3.text_search)
+function eql_v3.eq_term(a eql_v3.timestamp_eq)
+function eql_v3.eq_term(entry eql_v3.ste_vec_entry)
+function eql_v3.has_ore_cllw(entry eql_v3.ste_vec_entry)
+function eql_v3.jsonb_array_elements(val jsonb)
+function eql_v3.jsonb_array_elements_text(val jsonb)
+function eql_v3.jsonb_array_length(val jsonb)
+function eql_v3.jsonb_path_exists(val jsonb, selector text)
+function eql_v3.jsonb_path_query(val jsonb, selector text)
+function eql_v3.jsonb_path_query_first(val jsonb, selector text)
+function eql_v3.lints()
+function eql_v3.match_term(a eql_v3.text_match)
+function eql_v3.match_term(a eql_v3.text_search)
+function eql_v3.meta_data(val jsonb)
+function eql_v3.ord_term(a eql_v3.date_ord)
+function eql_v3.ord_term(a eql_v3.date_ord_ore)
+function eql_v3.ord_term(a eql_v3.float4_ord)
+function eql_v3.ord_term(a eql_v3.float4_ord_ore)
+function eql_v3.ord_term(a eql_v3.float8_ord)
+function eql_v3.ord_term(a eql_v3.float8_ord_ore)
+function eql_v3.ord_term(a eql_v3.int2_ord)
+function eql_v3.ord_term(a eql_v3.int2_ord_ore)
+function eql_v3.ord_term(a eql_v3.int4_ord)
+function eql_v3.ord_term(a eql_v3.int4_ord_ore)
+function eql_v3.ord_term(a eql_v3.int8_ord)
+function eql_v3.ord_term(a eql_v3.int8_ord_ore)
+function eql_v3.ord_term(a eql_v3.numeric_ord)
+function eql_v3.ord_term(a eql_v3.numeric_ord_ore)
+function eql_v3.ord_term(a eql_v3.text_ord)
+function eql_v3.ord_term(a eql_v3.text_ord_ore)
+function eql_v3.ord_term(a eql_v3.text_search)
+function eql_v3.ord_term(a eql_v3.timestamp_ord)
+function eql_v3.ord_term(a eql_v3.timestamp_ord_ore)
+function eql_v3.ore_cllw(entry eql_v3.ste_vec_entry)
+function eql_v3.selector(entry eql_v3.ste_vec_entry)
+function eql_v3.selector(val jsonb)
+function eql_v3.ste_vec(val jsonb)
+function eql_v3.to_ste_vec_query(e eql_v3."json")
+function eql_v3.version()
+type eql_v3.bool d
+type eql_v3.date d
+type eql_v3.date_eq d
+type eql_v3.date_ord d
+type eql_v3.date_ord_ore d
+type eql_v3.float4 d
+type eql_v3.float4_eq d
+type eql_v3.float4_ord d
+type eql_v3.float4_ord_ore d
+type eql_v3.float8 d
+type eql_v3.float8_eq d
+type eql_v3.float8_ord d
+type eql_v3.float8_ord_ore d
+type eql_v3.int2 d
+type eql_v3.int2_eq d
+type eql_v3.int2_ord d
+type eql_v3.int2_ord_ore d
+type eql_v3.int4 d
+type eql_v3.int4_eq d
+type eql_v3.int4_ord d
+type eql_v3.int4_ord_ore d
+type eql_v3.int8 d
+type eql_v3.int8_eq d
+type eql_v3.int8_ord d
+type eql_v3.int8_ord_ore d
+type eql_v3.json d
+type eql_v3.numeric d
+type eql_v3.numeric_eq d
+type eql_v3.numeric_ord d
+type eql_v3.numeric_ord_ore d
+type eql_v3.ste_vec_entry d
+type eql_v3.ste_vec_query d
+type eql_v3.text d
+type eql_v3.text_eq d
+type eql_v3.text_match d
+type eql_v3.text_ord d
+type eql_v3.text_ord_ore d
+type eql_v3.text_search d
+type eql_v3.timestamp d
+type eql_v3.timestamp_eq d
+type eql_v3.timestamp_ord d
+type eql_v3.timestamp_ord_ore d

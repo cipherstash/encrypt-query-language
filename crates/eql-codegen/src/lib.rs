@@ -27,3 +27,14 @@ pub fn repo_root() -> PathBuf {
         .unwrap()
         .to_path_buf()
 }
+
+/// The schemas the eql_v3 surface owns, public first: `[SCHEMA, INTERNAL_SCHEMA]`.
+///
+/// Public accessor over the crate-private `consts::SCHEMA` / `INTERNAL_SCHEMA`
+/// so the binary (`list-schemas`) and the `test:schemas:parity` gate can read
+/// the Rust side of the schema split without exposing the consts. This is the
+/// Rust counterpart of the SQL `eql_v3_internal.owned_schemas()` function in
+/// `src/v3/schema.sql`; the parity gate compares the two so they cannot drift.
+pub fn owned_schemas() -> [&'static str; 2] {
+    [consts::SCHEMA, consts::INTERNAL_SCHEMA]
+}

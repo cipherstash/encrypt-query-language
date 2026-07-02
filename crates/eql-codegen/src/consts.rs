@@ -57,6 +57,21 @@ mod tests {
     }
 
     #[test]
+    fn schema_consts_match_sql_owned_schemas() {
+        // The Rust side of the schema split. These literals must equal the SQL
+        // `eql_v3_internal.owned_schemas()` array in src/v3/schema.sql; the
+        // `mise run test:schemas:parity` gate compares the two (via the
+        // `list-schemas` subcommand) so a hand-edit to one side without the
+        // other fails CI. Pinning the values here catches a Rust-side rename
+        // before the SQL is even consulted.
+        assert_eq!(SCHEMA, "eql_v3");
+        assert_eq!(INTERNAL_SCHEMA, "eql_v3_internal");
+        // `owned_schemas()` (lib.rs) is the public accessor the binary prints;
+        // it must derive from these consts, public first.
+        assert_eq!(crate::owned_schemas(), [SCHEMA, INTERNAL_SCHEMA]);
+    }
+
+    #[test]
     fn sql_str_doubles_single_quotes() {
         assert_eq!(sql_str("o'brien"), "o''brien");
         assert_eq!(sql_str("a'b'c"), "a''b''c");
