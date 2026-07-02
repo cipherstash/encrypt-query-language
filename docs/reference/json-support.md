@@ -159,7 +159,6 @@ GROUP BY eql_v3.eq_term(encrypted_json -> 'color_selector'::text);
 - **`eql_v3.jsonb_array_length(val jsonb) RETURNS integer`**
 - **`eql_v3.jsonb_array_elements(val jsonb)`**
 - **`eql_v3.jsonb_array_elements_text(val jsonb) RETURNS SETOF text`**
-- **`eql_v3.is_ste_vec_array(val jsonb) RETURNS boolean`**
 
 ### Entry comparison / aggregate
 
@@ -167,12 +166,7 @@ GROUP BY eql_v3.eq_term(encrypted_json -> 'color_selector'::text);
 - **`eql_v3.ore_cllw(entry eql_v3.jsonb_entry)`** — ordering term (backs `<` … `>=`); **`eql_v3.has_ore_cllw(entry)`** reports whether the leaf carries one.
 - **`eql_v3.min(eql_v3.jsonb_entry)` / `eql_v3.max(...)`** — MIN / MAX over an extracted ordered leaf.
 
-### GIN-indexable helpers
-
-These build native containment queries; see [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment).
-
-- **`eql_v3.jsonb_array(val jsonb) RETURNS jsonb[]`** — encrypted document as a native `jsonb[]` for GIN indexing.
-- **`eql_v3.jsonb_contains(a jsonb, b jsonb)`** / **`eql_v3.jsonb_contained_by(a jsonb, b jsonb)`** — containment / reverse-containment checks.
+For GIN-indexable JSONB containment, see [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment) (`eql_v3.to_ste_vec_query(col)::jsonb jsonb_path_ops`).
 
 ### Blocked operators
 

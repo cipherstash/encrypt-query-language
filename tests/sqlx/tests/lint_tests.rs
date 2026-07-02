@@ -50,6 +50,27 @@ async fn lint_function_exists_and_row_schema_parses(pool: PgPool) -> Result<()> 
     Ok(())
 }
 
+/// `eql_v3_internal.owned_schemas()` is the single source of truth every
+/// `eql_v3.lints()` schema-scoped CTE (and `tasks/pin_search_path_v3.sql`)
+/// joins against instead of repeating the `('eql_v3', 'eql_v3_internal')`
+/// literal at each call site. Pin its exact contract: an edit that adds,
+/// drops, or typos an entry silently narrows or widens every lint/pin scope
+/// at once, so this failing loudly here is cheaper than tracing a missed
+/// violation back to a one-character array typo.
+#[sqlx::test]
+async fn owned_schemas_returns_exactly_the_two_v3_schemas(pool: PgPool) -> Result<()> {
+    let schemas: Vec<String> =
+        sqlx::query_scalar("SELECT unnest(eql_v3_internal.owned_schemas())::text ORDER BY 1")
+            .fetch_all(&pool)
+            .await?;
+    assert_eq!(
+        schemas,
+        vec!["eql_v3".to_string(), "eql_v3_internal".to_string()],
+        "eql_v3_internal.owned_schemas() must return exactly {{eql_v3, eql_v3_internal}}"
+    );
+    Ok(())
+}
+
 #[sqlx::test]
 async fn lint_severity_values_are_well_known(pool: PgPool) -> Result<()> {
     let rows = fetch_lints(&pool).await?;

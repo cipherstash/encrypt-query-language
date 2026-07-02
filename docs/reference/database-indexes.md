@@ -187,8 +187,6 @@ SELECT * FROM orders WHERE data_encrypted @> $1::eql_v3.jsonb_query;
 
 The needle must be typed — `$1::eql_v3.jsonb_query`, another `eql_v3.json`, or an `eql_v3.jsonb_entry`. A bare untyped literal falls through to native `jsonb @>`.
 
-EQL also ships convenience helpers for building containment queries: `eql_v3.jsonb_array(col)` (extracts the encrypted document as a native `jsonb[]`), and `eql_v3.jsonb_contains(a, b)` / `eql_v3.jsonb_contained_by(a, b)`.
-
 ### GIN vs B-tree / hash
 
 | Feature        | hash / btree on extractor      | GIN on `to_ste_vec_query` |

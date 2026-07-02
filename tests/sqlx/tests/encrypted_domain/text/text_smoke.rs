@@ -75,7 +75,7 @@ async fn empty_bloom_has_empty_set_semantics(pool: PgPool) -> anyhow::Result<()>
 
 #[sqlx::test]
 async fn match_null_propagates(pool: PgPool) -> anyhow::Result<()> {
-    // `eql_v3.contains` / `eql_v3.contained_by` are STRICT, so a NULL operand
+    // `eql_v3_internal.contains` / `eql_v3_internal.contained_by` are STRICT, so a NULL operand
     // yields NULL (three-valued logic) rather than false or an error.
     const BF: &str = r#"{"v":"2","i":{},"c":"x","bf":[1,2,3]}"#;
     for op in ["@>", "<@"] {

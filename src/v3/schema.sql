@@ -37,3 +37,21 @@ DROP SCHEMA IF EXISTS eql_v3_internal CASCADE;
 CREATE SCHEMA eql_v3_internal;
 COMMENT ON SCHEMA eql_v3_internal IS
   'EQL internal implementation detail; not a public API surface.';
+
+--! @brief Schemas owned by the eql_v3 surface
+--!
+--! Single source of truth for tooling that must enumerate every schema this
+--! installer owns (`eql_v3.lints()`, `tasks/pin_search_path_v3.sql`), so a
+--! future third eql_v3-family schema is one array literal to edit instead of
+--! a hardcoded schema-name predicate repeated at every call site. Keep in
+--! sync with the `SCHEMA` / `INTERNAL_SCHEMA` constants in
+--! `crates/eql-codegen/src/consts.rs` — those drive what codegen emits into
+--! each schema; this drives what tooling scans across both.
+--!
+--! @return name[] The schema names eql_v3 owns (public + internal).
+CREATE FUNCTION eql_v3_internal.owned_schemas()
+  RETURNS name[]
+  LANGUAGE sql IMMUTABLE PARALLEL SAFE
+AS $$
+  SELECT ARRAY['eql_v3', 'eql_v3_internal']::name[]
+$$;

@@ -19,7 +19,7 @@
 --! (or `pg_get_functiondef`); tracked as a follow-up.
 --!
 --! Operators on `eql_v3` types (the jsonb-backed encrypted-domain families and
---! the SEM index-term types `eql_v3.ore_block_256`, `eql_v3.ore_cllw`) whose
+--! the SEM index-term types `eql_v3_internal.ore_block_256`, `eql_v3_internal.ore_cllw`) whose
 --! implementation functions fail any of these rules silently fall back to seq
 --! scan when the documented functional indexes (`eql_v3.eq_term(col)`,
 --! `eql_v3.ord_term(col)`) are in place. This lint surfaces every such case.
@@ -91,7 +91,7 @@ AS $$
     WHERE EXISTS (
         SELECT 1 FROM pg_type t
          WHERE t.oid IN (op.oprleft, op.oprright)
-           AND t.typnamespace IN ('eql_v3'::regnamespace, 'eql_v3_internal'::regnamespace)
+           AND t.typnamespace IN (SELECT oid FROM pg_namespace WHERE nspname = ANY(eql_v3_internal.owned_schemas()))
       )
   ),
 
@@ -132,7 +132,7 @@ AS $$
     FROM pg_catalog.pg_proc p
     JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
     JOIN pg_catalog.pg_language lang_l ON lang_l.oid = p.prolang
-    WHERE n.nspname IN ('eql_v3', 'eql_v3_internal')
+    WHERE n.nspname = ANY(eql_v3_internal.owned_schemas())
       AND (p.prosrc LIKE '%encrypted_domain_unsupported%'
         OR p.prosrc LIKE '%is not supported for%')
       AND EXISTS (
@@ -143,7 +143,7 @@ AS $$
         JOIN pg_catalog.pg_type bt ON bt.oid = dt.typbasetype
         WHERE dt.typtype = 'd'
           AND bt.typname = 'jsonb'
-          AND dn.nspname IN ('eql_v3', 'eql_v3_internal')
+          AND dn.nspname = ANY(eql_v3_internal.owned_schemas())
       )
   )
 
@@ -319,9 +319,9 @@ AS $$
   JOIN pg_catalog.pg_type bt ON bt.oid = dt.typbasetype
   JOIN pg_catalog.pg_namespace bn ON bn.oid = bt.typnamespace
   WHERE dt.typtype = 'd'
-    AND dn.nspname IN ('eql_v3', 'eql_v3_internal')
+    AND dn.nspname = ANY(eql_v3_internal.owned_schemas())
     AND bt.typtype = 'd'
-    AND bn.nspname IN ('eql_v3', 'eql_v3_internal')
+    AND bn.nspname = ANY(eql_v3_internal.owned_schemas())
 
   -- ┌─────────────────────────────────────────────────────────────────┐
   -- │ Domain opclass: an operator class declared FOR TYPE on an       │
@@ -343,7 +343,7 @@ AS $$
   JOIN pg_catalog.pg_namespace tn ON tn.oid = t.typnamespace
   JOIN pg_catalog.pg_namespace cn ON cn.oid = oc.opcnamespace
   WHERE t.typtype = 'd'
-    AND tn.nspname IN ('eql_v3', 'eql_v3_internal')
+    AND tn.nspname = ANY(eql_v3_internal.owned_schemas())
 
   ORDER BY 1, 2, 3;
 $$;

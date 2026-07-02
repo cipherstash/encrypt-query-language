@@ -196,7 +196,7 @@ impl Overload {
 
 /// Shared all-pairs driver for the **named-function** oracles. For every
 /// ordered pair `(a, b)` in `rows`, emit a single `SELECT` whose columns are
-/// `eql_v3.<func>(...)` for every `func` in `funcs` across every
+/// `eql_v3_internal.<func>(...)` for every `func` in `funcs` across every
 /// [`Overload`] (a 6-column query for the two eq functions, 12 for the four
 /// ord functions), then assert each column against `expected(a, b, func)`.
 /// Collapsing each pair to one round trip keeps the only cost this family adds
@@ -248,7 +248,7 @@ where
     Ok(())
 }
 
-/// Equality **function** oracle: `eql_v3.eq` / `eql_v3.neq` across all three
+/// Equality **function** oracle: `eql_v3_internal.eq` / `eql_v3_internal.neq` across all three
 /// overloads agree with the plaintext (in)equality, for every ordered pair.
 /// `variant` is the eq-capable domain to run on (`Eq` normally; `Search` for
 /// text's combined `_search` domain). Complements `assert_eq_oracle`'s operator
@@ -279,7 +279,7 @@ pub async fn assert_eq_fn_oracle<T: ScalarType>(
     .await
 }
 
-/// Ordering **function** oracle: `eql_v3.lt` / `lte` / `gt` / `gte` across all
+/// Ordering **function** oracle: `eql_v3_internal.lt` / `lte` / `gt` / `gte` across all
 /// three overloads agree with the plaintext ordering, for every ordered pair.
 /// `variant` is an ordered domain (`Ord` / `OrdOre`, or `Search` for text).
 pub async fn assert_ord_fn_oracle<T: ScalarType>(
@@ -403,7 +403,7 @@ pub async fn assert_extractor_oracle<T: ScalarType>(
 /// admits false positives and the plaintext oracle is substring, not equality,
 /// so this is curated rather than a random property: three fixtures with known
 /// n-gram relationships (`haystack` ⊇ `needle`, `disjoint` shares none). Asserts
-/// `eql_v3.contains` / `contained_by` respect **left-contains-right** `@>` and
+/// `eql_v3_internal.contains` / `contained_by` respect **left-contains-right** `@>` and
 /// that `match_term` yields a non-empty `bf` array. Operands are the payload
 /// JSON literals cast to `domain` (`eql_v3.text_match`).
 pub async fn assert_match_smoke(

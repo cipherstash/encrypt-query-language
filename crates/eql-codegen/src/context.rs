@@ -113,9 +113,9 @@ pub struct SqlParam {
 #[serde(tag = "kind")]
 pub enum FnEntry {
     Extractor {
-        ret: String,       // e.g. eql_v3.hmac_256 (selection STAYS in Rust)
+        ret: String,       // e.g. eql_v3_internal.hmac_256 (selection STAYS in Rust)
         extractor: String, // e.g. eq_term
-        ctor: String,      // e.g. hmac_256 (called as {{ schema }}.{{ ctor }})
+        ctor: String,      // e.g. hmac_256 (called as {{ internal_schema }}.{{ ctor }})
     },
     Wrapper {
         op: String,            // SQL operator used in the body, e.g. =
