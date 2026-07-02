@@ -3,7 +3,6 @@
 -- REQUIRE: src/v3/scalars/float4/float4_types.sql
 -- REQUIRE: src/v3/scalars/functions.sql
 -- REQUIRE: src/v3/sem/ope_cllw/functions.sql
--- REQUIRE: src/v3/sem/ope_cllw/operators.sql
 
 --! @file encrypted_domain/float4/float4_ord_ope_functions.sql
 --! @brief Functions for eql_v3.float4_ord_ope.

@@ -50,10 +50,15 @@ pub const ENVELOPE_KEYS: &[&str] = &["v", "i", "c"];
 /// `Ore` is the block-ORE array term (`ob`, compared by the custom N-block
 /// protocol) and `Ope` is the CLLW-OPE term (`op`, a hex-encoded ciphertext
 /// that is natively bytea-sortable after hex-decode: no custom comparison
-/// protocol). The `json_key`/`extractor`/`ctor` values are the cross-schema
-/// SQL contract — changing one is a generated-SQL behaviour change, not a
-/// refactor. (The per-term accessors and `*_for_terms` helpers are impl'd in
-/// `term`.)
+/// protocol). `Ope`'s `=`/`<>` claim on the integer families rests on OPE
+/// being deterministic — an order-preserving encryption maps equal
+/// plaintexts to equal ciphertexts (a randomized term would make `op`-routed
+/// equality silently return false negatives); re-verify against real
+/// ciphertexts once cipherstash-client emits `op` and the fixture pipeline
+/// covers the `_ord_ope` domains. The `json_key`/`extractor`/`ctor` values
+/// are the cross-schema SQL contract — changing one is a generated-SQL
+/// behaviour change, not a refactor. (The per-term accessors and
+/// `*_for_terms` helpers are impl'd in `term`.)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Term {
     Hm,

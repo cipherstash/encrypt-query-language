@@ -3,20 +3,21 @@
 --! @file v3/sem/ope_cllw/types.sql
 --! @brief CLLW OPE index term type for scalar range queries (eql_v3 SEM)
 --!
---! Composite type for CLLW (Copyless Logarithmic Width) Order-Preserving
---! Encryption. The ciphertext is stored in the `op` field of encrypted scalar
---! payloads (the `_ord_ope` domains). The wire-format `op` value is a
---! hex-encoded ciphertext; the decoded `bytes` field carries the raw byte
---! string.
+--! Domain type representing a CLLW (Copyless Logarithmic Width)
+--! Order-Preserving Encryption term. The ciphertext is stored hex-encoded in
+--! the `op` field of encrypted scalar payloads (the `_ord_ope` domains); the
+--! domain carries the hex-decoded bytes.
 --!
---! Unlike the CLLW ORE term (`oc`, eql_v3.ore_cllw, compared by a custom
---! per-byte protocol), the OPE ciphertext is order-preserving under plain
---! byte comparison: hex-decode to bytea and native bytea ordering IS the
---! plaintext ordering. No custom comparison protocol is required — the
---! operators and the btree comparator reduce to native bytea comparisons.
+--! A DOMAIN over bytea, not a composite: the OPE ciphertext is
+--! order-preserving under plain byte comparison, so the domain inherits
+--! bytea's native comparison operators and DEFAULT btree operator class
+--! outright — no hand-written operators, comparator, or operator class (the
+--! same pattern as eql_v3.hmac_256 over text). That keeps the whole
+--! comparison chain inlinable, so a functional btree index on
+--! `eql_v3.ord_ope_term(col)` engages structurally for the `_ord_ope`
+--! domains' comparison operators. Contrast eql_v3.ore_cllw (`oc`), the SteVec
+--! CLLW-*ORE* composite compared by a custom per-byte protocol.
 --!
---! @note This is a transient type used only during query execution.
---! @see eql_v3.compare_ope_cllw_term
-CREATE TYPE eql_v3.ope_cllw AS (
-  bytes bytea
-);
+--! @note Transient type used only during query execution.
+--! @see eql_v3.ope_cllw
+CREATE DOMAIN eql_v3.ope_cllw AS bytea;

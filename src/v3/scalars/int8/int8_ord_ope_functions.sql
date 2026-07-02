@@ -3,7 +3,6 @@
 -- REQUIRE: src/v3/scalars/int8/int8_types.sql
 -- REQUIRE: src/v3/scalars/functions.sql
 -- REQUIRE: src/v3/sem/ope_cllw/functions.sql
--- REQUIRE: src/v3/sem/ope_cllw/operators.sql
 
 --! @file encrypted_domain/int8/int8_ord_ope_functions.sql
 --! @brief Functions for eql_v3.int8_ord_ope.

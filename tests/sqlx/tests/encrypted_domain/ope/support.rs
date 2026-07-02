@@ -6,8 +6,21 @@
 //! The CLLW-OPE term (`op`) is a hex-encoded ciphertext that is
 //! order-preserving under native bytea comparison, so ordering assertions can
 //! be stated directly on hand-built hex strings — deterministic, no
-//! encryption/fixtures needed (the pinned cipherstash-client does not emit
-//! `op` yet, so there is no generated fixture to lean on).
+//! encryption/fixtures needed.
+//!
+//! **Follow-up (real ciphertexts).** The pinned cipherstash-client does not
+//! emit `op` yet, so there is no generated fixture to lean on and these
+//! suites use synthetic hex — a deliberate, temporary exception to the
+//! "tests run against real encrypted data" rule in CLAUDE.md. Once the
+//! client emits `op` for ordered scalars (CIP-3280 landed on client main),
+//! the fixture pipeline picks the term up and the matrix/property suites
+//! must gain real-ciphertext `ord_ope` coverage — in particular verifying
+//! against real crypto that the ciphertext order matches plaintext order and
+//! that CLLW-OPE is deterministic (equal plaintexts produce equal `op`
+//! terms; the integer families' `=`/`<>` route through `op`, so a randomized
+//! term would silently produce false negatives). These literal-payload
+//! suites verify the SQL surface (routing, inlining, index engagement, CHECK
+//! discipline), not the cryptography.
 
 /// Literal cast expression for an `eql_v3.<domain>` payload carrying BOTH the
 /// exact-equality term `hm` and the CLLW-OPE hex term `op`. Domain CHECKs
@@ -34,10 +47,13 @@ macro_rules! ope_ord_smoke {
 
         #[sqlx::test]
         async fn ord_ope_orders_by_decoded_bytes(pool: PgPool) -> anyhow::Result<()> {
-            // Native bytea order over the decoded hex: 0x00ff < 0x0100 (a
-            // hex-STRING comparison would also say so; 0x02 < 0x0100 would not
-            // — the pairs below fail if comparison ever degrades to text order
-            // over the hex).
+            // Native bytea order over the decoded hex. Note: for valid
+            // (even-length, lowercase) hex, lexicographic hex-STRING order
+            // coincides with decoded-bytea order — each byte maps to two hex
+            // digits monotonically and the prefix rules agree — so no such
+            // pair can discriminate the two orders; these assertions pin
+            // decode-and-compare correctness, including the mixed-length
+            // prefix rule ("00" < "0100").
             for (lo, hi) in [("00ff", "0100"), ("00", "0100"), ("0a", "ff")] {
                 let lt: bool = sqlx::query_scalar(&format!(
                     "SELECT ({}) < ({})",

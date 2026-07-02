@@ -4,7 +4,6 @@
 -- REQUIRE: src/v3/scalars/functions.sql
 -- REQUIRE: src/v3/sem/hmac_256/functions.sql
 -- REQUIRE: src/v3/sem/ope_cllw/functions.sql
--- REQUIRE: src/v3/sem/ope_cllw/operators.sql
 
 --! @file encrypted_domain/text/text_ord_ope_functions.sql
 --! @brief Functions for eql_v3.text_ord_ope.

@@ -653,15 +653,17 @@ mod tests {
     fn ope_functions_file_counts() {
         // The OPE ordered domain mirrors the ORE one — same operator surface
         // (18 wrappers), one extractor — but the extractor is `ord_ope_term`
-        // returning the SEM `eql_v3.ope_cllw` composite, and the REQUIRE edges
-        // point at the ope_cllw SEM files.
+        // returning the SEM `eql_v3.ope_cllw` domain (over bytea), and the
+        // sole SEM REQUIRE edge is the extractor file: the bytea-backed
+        // domain inherits native comparison operators, so there is no
+        // hand-written operators.sql to depend on (unlike Ore).
         let s = spec("int4");
         let sql = render_functions_file(s.name, domain(s, "ord_ope"));
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
         assert!(sql.contains("CREATE FUNCTION eql_v3.ord_ope_term(a eql_v3.int4_ord_ope)"));
         assert!(sql.contains("RETURNS eql_v3.ope_cllw"));
         assert!(sql.contains("-- REQUIRE: src/v3/sem/ope_cllw/functions.sql"));
-        assert!(sql.contains("-- REQUIRE: src/v3/sem/ope_cllw/operators.sql"));
+        assert!(!sql.contains("-- REQUIRE: src/v3/sem/ope_cllw/operators.sql"));
         assert_eq!(
             sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
                 .count(),

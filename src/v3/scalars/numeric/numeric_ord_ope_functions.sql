@@ -3,7 +3,6 @@
 -- REQUIRE: src/v3/scalars/numeric/numeric_types.sql
 -- REQUIRE: src/v3/scalars/functions.sql
 -- REQUIRE: src/v3/sem/ope_cllw/functions.sql
--- REQUIRE: src/v3/sem/ope_cllw/operators.sql
 
 --! @file encrypted_domain/numeric/numeric_ord_ope_functions.sql
 --! @brief Functions for eql_v3.numeric_ord_ope.

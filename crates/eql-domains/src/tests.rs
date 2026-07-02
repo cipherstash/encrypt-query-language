@@ -277,11 +277,14 @@ mod term_tests {
 
     #[test]
     fn ope_term_contract() {
-        // CLLW-OPE (`op`): a hex-encoded ciphertext that is natively
-        // bytea-sortable — decode hex → bytea → default btree ordering, no
-        // custom comparison protocol. The extractor name is deliberately NOT
-        // "ord_term": `dedupe_terms_by(extractor)` would collapse it against
-        // `Term::Ore` on a hypothetical mixed `[Ore, Ope]` domain.
+        // CLLW-OPE (`op`): a hex-encoded, deterministic ciphertext that is
+        // natively bytea-sortable — decode hex → eql_v3.ope_cllw (a domain
+        // over bytea) → native comparison operators and default btree
+        // ordering, no custom comparison protocol and no hand-written
+        // operators (so the SEM surface is the extractor alone, like `Hm`).
+        // The extractor name is deliberately NOT "ord_term":
+        // `dedupe_terms_by(extractor)` would collapse it against `Term::Ore`
+        // on a hypothetical mixed `[Ore, Ope]` domain.
         let ope = Term::Ope;
         assert_eq!(ope.json_key(), "op");
         assert_eq!(ope.extractor(), "ord_ope_term");
@@ -289,13 +292,7 @@ mod term_tests {
         assert_eq!(ope.binding_newtype(), "OpeCllw");
         assert_eq!(ope.role(), Role::Ord);
         assert_eq!(ope.operators(), &["=", "<>", "<", "<=", ">", ">="]);
-        assert_eq!(
-            ope.requires(),
-            &[
-                "src/v3/sem/ope_cllw/functions.sql",
-                "src/v3/sem/ope_cllw/operators.sql",
-            ]
-        );
+        assert_eq!(ope.requires(), &["src/v3/sem/ope_cllw/functions.sql"]);
         assert!(ope.provides_ordering());
         // `op` is a single hex string, not an array — no non-empty-array CHECK.
         assert_eq!(ope.nonempty_array_key(), None);

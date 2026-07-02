@@ -9,6 +9,53 @@ use crate::ope_support::ope_cast;
 crate::ope_ord_smoke!("int4_ord_ope");
 
 #[sqlx::test]
+async fn ord_ope_functional_index_engages_for_range_and_equality(
+    pool: PgPool,
+) -> anyhow::Result<()> {
+    // The headline capability: a functional btree index on the documented
+    // extractor expression must be USABLE for the domain's `<` and `=`
+    // predicates. `eql_v3.ope_cllw` is a domain over bytea, so the inlined
+    // wrapper (`ord_ope_term(a) < ord_ope_term(b)` -> `decode(...) <
+    // decode(...)`) matches the index expression under the native bytea
+    // opclass — the same mechanism as `hm` equality. `enable_seqscan = off`
+    // proves usability only (the matrix's scale tests own preference).
+    let mut tx = pool.begin().await?;
+    sqlx::query("CREATE TABLE ope_idx (id int, payload eql_v3.int4_ord_ope)")
+        .execute(&mut *tx)
+        .await?;
+    for (id, op) in [(1, "00"), (2, "0a"), (3, "7f"), (4, "ff"), (5, "ffff")] {
+        sqlx::query(&format!(
+            "INSERT INTO ope_idx VALUES ({id}, ({}))",
+            ope_cast("int4_ord_ope", "aa", op)
+        ))
+        .execute(&mut *tx)
+        .await?;
+    }
+    sqlx::query("CREATE INDEX ope_idx_ord ON ope_idx USING btree (eql_v3.ord_ope_term(payload))")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("SET LOCAL enable_seqscan = off")
+        .execute(&mut *tx)
+        .await?;
+
+    for op in ["<", "<=", ">", ">=", "="] {
+        let query = format!(
+            "SELECT id FROM ope_idx WHERE payload {op} ({})",
+            ope_cast("int4_ord_ope", "aa", "7f")
+        );
+        eql_tests::matrix::assert_index_scan_uses(
+            &mut *tx,
+            &query,
+            "ope_idx_ord",
+            &format!("int4_ord_ope `{op}` must engage the ord_ope_term btree index"),
+        )
+        .await?;
+    }
+    tx.rollback().await?;
+    Ok(())
+}
+
+#[sqlx::test]
 async fn ord_ope_shorter_prefix_sorts_first(pool: PgPool) -> anyhow::Result<()> {
     // Native bytea semantics: a strict prefix sorts before its extension.
     let lt: bool = sqlx::query_scalar(&format!(
