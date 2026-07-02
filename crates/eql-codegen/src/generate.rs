@@ -373,11 +373,11 @@ mod tests {
         let s = spec("int4");
         let d = domain(s, "eq");
         let sql = render_functions_file("int4", d);
-        assert!(sql.contains("CREATE FUNCTION eql_v3.eq("));
+        assert!(sql.contains("CREATE FUNCTION eql_v3_internal.eq("));
         assert!(sql.contains("AS $$ SELECT"));
-        assert!(sql.contains("CREATE FUNCTION eql_v3.lt("));
+        assert!(sql.contains("CREATE FUNCTION eql_v3_internal.lt("));
         assert!(sql.contains("RAISE EXCEPTION 'operator % is not supported for %', '<'"));
-        assert!(sql.contains("CREATE FUNCTION eql_v3.\"->\"("));
+        assert!(sql.contains("CREATE FUNCTION eql_v3_internal.\"->\"("));
         assert!(sql.contains("RAISE EXCEPTION 'operator % is not supported for %', '->'"));
     }
 
@@ -607,7 +607,7 @@ mod tests {
         let sql = render_functions_file(s.name, domain(s, "eq"));
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
         assert!(sql.contains("CREATE FUNCTION eql_v3.eq_term(a eql_v3.int4_eq)"));
-        assert!(sql.contains("RETURNS eql_v3.hmac_256"));
+        assert!(sql.contains("RETURNS eql_v3_internal.hmac_256"));
         assert_eq!(
             sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
                 .count(),
@@ -623,7 +623,7 @@ mod tests {
         let sql = render_functions_file(s.name, domain(s, "ord"));
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
         assert!(sql.contains("CREATE FUNCTION eql_v3.ord_term(a eql_v3.int4_ord)"));
-        assert!(sql.contains("RETURNS eql_v3.ore_block_256"));
+        assert!(sql.contains("RETURNS eql_v3_internal.ore_block_256"));
         assert_eq!(
             sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
                 .count(),
@@ -654,8 +654,8 @@ mod tests {
         let sql = render_aggregates_file(s.name, domain(s, "ord")).unwrap();
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 2);
         assert_eq!(sql.matches("CREATE AGGREGATE").count(), 2);
-        assert!(sql.contains("eql_v3.min_sfunc"));
-        assert!(sql.contains("eql_v3.max_sfunc"));
+        assert!(sql.contains("eql_v3_internal.min_sfunc"));
+        assert!(sql.contains("eql_v3_internal.max_sfunc"));
         assert!(sql.contains("-- REQUIRE: src/v3/scalars/int4/int4_ord_operators.sql"));
         assert!(sql.contains("-- REQUIRE: src/v3/scalars/int4/int4_ord_functions.sql"));
         assert!(sql.contains("-- REQUIRE: src/v3/scalars/int4/int4_types.sql"));

@@ -10,7 +10,7 @@
 --! @param a eql_v3.text
 --! @param b eql_v3.text
 --! @return boolean
-CREATE FUNCTION eql_v3.eq(a eql_v3.text, b eql_v3.text)
+CREATE FUNCTION eql_v3_internal.eq(a eql_v3.text, b eql_v3.text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -19,7 +19,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.eq(a eql_v3.text, b jsonb)
+CREATE FUNCTION eql_v3_internal.eq(a eql_v3.text, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -28,7 +28,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v3.text
 --! @return boolean
-CREATE FUNCTION eql_v3.eq(a jsonb, b eql_v3.text)
+CREATE FUNCTION eql_v3_internal.eq(a jsonb, b eql_v3.text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -37,7 +37,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b eql_v3.text
 --! @return boolean
-CREATE FUNCTION eql_v3.neq(a eql_v3.text, b eql_v3.text)
+CREATE FUNCTION eql_v3_internal.neq(a eql_v3.text, b eql_v3.text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -46,7 +46,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.neq(a eql_v3.text, b jsonb)
+CREATE FUNCTION eql_v3_internal.neq(a eql_v3.text, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -55,7 +55,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v3.text
 --! @return boolean
-CREATE FUNCTION eql_v3.neq(a jsonb, b eql_v3.text)
+CREATE FUNCTION eql_v3_internal.neq(a jsonb, b eql_v3.text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -64,7 +64,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b eql_v3.text
 --! @return boolean
-CREATE FUNCTION eql_v3.lt(a eql_v3.text, b eql_v3.text)
+CREATE FUNCTION eql_v3_internal.lt(a eql_v3.text, b eql_v3.text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -73,7 +73,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.lt(a eql_v3.text, b jsonb)
+CREATE FUNCTION eql_v3_internal.lt(a eql_v3.text, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -82,7 +82,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v3.text
 --! @return boolean
-CREATE FUNCTION eql_v3.lt(a jsonb, b eql_v3.text)
+CREATE FUNCTION eql_v3_internal.lt(a jsonb, b eql_v3.text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -91,7 +91,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b eql_v3.text
 --! @return boolean
-CREATE FUNCTION eql_v3.lte(a eql_v3.text, b eql_v3.text)
+CREATE FUNCTION eql_v3_internal.lte(a eql_v3.text, b eql_v3.text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -100,7 +100,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.lte(a eql_v3.text, b jsonb)
+CREATE FUNCTION eql_v3_internal.lte(a eql_v3.text, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -109,7 +109,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v3.text
 --! @return boolean
-CREATE FUNCTION eql_v3.lte(a jsonb, b eql_v3.text)
+CREATE FUNCTION eql_v3_internal.lte(a jsonb, b eql_v3.text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -118,7 +118,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b eql_v3.text
 --! @return boolean
-CREATE FUNCTION eql_v3.gt(a eql_v3.text, b eql_v3.text)
+CREATE FUNCTION eql_v3_internal.gt(a eql_v3.text, b eql_v3.text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -127,7 +127,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.gt(a eql_v3.text, b jsonb)
+CREATE FUNCTION eql_v3_internal.gt(a eql_v3.text, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -136,7 +136,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v3.text
 --! @return boolean
-CREATE FUNCTION eql_v3.gt(a jsonb, b eql_v3.text)
+CREATE FUNCTION eql_v3_internal.gt(a jsonb, b eql_v3.text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -145,7 +145,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b eql_v3.text
 --! @return boolean
-CREATE FUNCTION eql_v3.gte(a eql_v3.text, b eql_v3.text)
+CREATE FUNCTION eql_v3_internal.gte(a eql_v3.text, b eql_v3.text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -154,7 +154,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.gte(a eql_v3.text, b jsonb)
+CREATE FUNCTION eql_v3_internal.gte(a eql_v3.text, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -163,7 +163,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v3.text
 --! @return boolean
-CREATE FUNCTION eql_v3.gte(a jsonb, b eql_v3.text)
+CREATE FUNCTION eql_v3_internal.gte(a jsonb, b eql_v3.text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -172,7 +172,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b eql_v3.text
 --! @return boolean
-CREATE FUNCTION eql_v3.contains(a eql_v3.text, b eql_v3.text)
+CREATE FUNCTION eql_v3_internal.contains(a eql_v3.text, b eql_v3.text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -181,7 +181,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.contains(a eql_v3.text, b jsonb)
+CREATE FUNCTION eql_v3_internal.contains(a eql_v3.text, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -190,7 +190,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v3.text
 --! @return boolean
-CREATE FUNCTION eql_v3.contains(a jsonb, b eql_v3.text)
+CREATE FUNCTION eql_v3_internal.contains(a jsonb, b eql_v3.text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -199,7 +199,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b eql_v3.text
 --! @return boolean
-CREATE FUNCTION eql_v3.contained_by(a eql_v3.text, b eql_v3.text)
+CREATE FUNCTION eql_v3_internal.contained_by(a eql_v3.text, b eql_v3.text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -208,7 +208,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.contained_by(a eql_v3.text, b jsonb)
+CREATE FUNCTION eql_v3_internal.contained_by(a eql_v3.text, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -217,7 +217,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v3.text
 --! @return boolean
-CREATE FUNCTION eql_v3.contained_by(a jsonb, b eql_v3.text)
+CREATE FUNCTION eql_v3_internal.contained_by(a jsonb, b eql_v3.text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -226,7 +226,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param selector text
 --! @return eql_v3.text
-CREATE FUNCTION eql_v3."->"(a eql_v3.text, selector text)
+CREATE FUNCTION eql_v3_internal."->"(a eql_v3.text, selector text)
 RETURNS eql_v3.text IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -235,7 +235,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param selector integer
 --! @return eql_v3.text
-CREATE FUNCTION eql_v3."->"(a eql_v3.text, selector integer)
+CREATE FUNCTION eql_v3_internal."->"(a eql_v3.text, selector integer)
 RETURNS eql_v3.text IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -244,7 +244,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param selector eql_v3.text
 --! @return eql_v3.text
-CREATE FUNCTION eql_v3."->"(a jsonb, selector eql_v3.text)
+CREATE FUNCTION eql_v3_internal."->"(a jsonb, selector eql_v3.text)
 RETURNS eql_v3.text IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -253,7 +253,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param selector text
 --! @return text
-CREATE FUNCTION eql_v3."->>"(a eql_v3.text, selector text)
+CREATE FUNCTION eql_v3_internal."->>"(a eql_v3.text, selector text)
 RETURNS text IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -262,7 +262,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param selector integer
 --! @return text
-CREATE FUNCTION eql_v3."->>"(a eql_v3.text, selector integer)
+CREATE FUNCTION eql_v3_internal."->>"(a eql_v3.text, selector integer)
 RETURNS text IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -271,7 +271,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param selector eql_v3.text
 --! @return text
-CREATE FUNCTION eql_v3."->>"(a jsonb, selector eql_v3.text)
+CREATE FUNCTION eql_v3_internal."->>"(a jsonb, selector eql_v3.text)
 RETURNS text IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -280,7 +280,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b text
 --! @return boolean
-CREATE FUNCTION eql_v3."?"(a eql_v3.text, b text)
+CREATE FUNCTION eql_v3_internal."?"(a eql_v3.text, b text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -289,7 +289,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b text[]
 --! @return boolean
-CREATE FUNCTION eql_v3."?|"(a eql_v3.text, b text[])
+CREATE FUNCTION eql_v3_internal."?|"(a eql_v3.text, b text[])
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?|', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -298,7 +298,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b text[]
 --! @return boolean
-CREATE FUNCTION eql_v3."?&"(a eql_v3.text, b text[])
+CREATE FUNCTION eql_v3_internal."?&"(a eql_v3.text, b text[])
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?&', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -307,7 +307,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b jsonpath
 --! @return boolean
-CREATE FUNCTION eql_v3."@?"(a eql_v3.text, b jsonpath)
+CREATE FUNCTION eql_v3_internal."@?"(a eql_v3.text, b jsonpath)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@?', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -316,7 +316,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b jsonpath
 --! @return boolean
-CREATE FUNCTION eql_v3."@@"(a eql_v3.text, b jsonpath)
+CREATE FUNCTION eql_v3_internal."@@"(a eql_v3.text, b jsonpath)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -325,7 +325,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b text[]
 --! @return jsonb
-CREATE FUNCTION eql_v3."#>"(a eql_v3.text, b text[])
+CREATE FUNCTION eql_v3_internal."#>"(a eql_v3.text, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -334,7 +334,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b text[]
 --! @return text
-CREATE FUNCTION eql_v3."#>>"(a eql_v3.text, b text[])
+CREATE FUNCTION eql_v3_internal."#>>"(a eql_v3.text, b text[])
 RETURNS text IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>>', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -343,7 +343,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b text
 --! @return jsonb
-CREATE FUNCTION eql_v3."-"(a eql_v3.text, b text)
+CREATE FUNCTION eql_v3_internal."-"(a eql_v3.text, b text)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -352,7 +352,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b integer
 --! @return jsonb
-CREATE FUNCTION eql_v3."-"(a eql_v3.text, b integer)
+CREATE FUNCTION eql_v3_internal."-"(a eql_v3.text, b integer)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -361,7 +361,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b text[]
 --! @return jsonb
-CREATE FUNCTION eql_v3."-"(a eql_v3.text, b text[])
+CREATE FUNCTION eql_v3_internal."-"(a eql_v3.text, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -370,7 +370,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b text[]
 --! @return jsonb
-CREATE FUNCTION eql_v3."#-"(a eql_v3.text, b text[])
+CREATE FUNCTION eql_v3_internal."#-"(a eql_v3.text, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#-', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -379,7 +379,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b eql_v3.text
 --! @return jsonb
-CREATE FUNCTION eql_v3."||"(a eql_v3.text, b eql_v3.text)
+CREATE FUNCTION eql_v3_internal."||"(a eql_v3.text, b eql_v3.text)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -388,7 +388,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text
 --! @param b jsonb
 --! @return jsonb
-CREATE FUNCTION eql_v3."||"(a eql_v3.text, b jsonb)
+CREATE FUNCTION eql_v3_internal."||"(a eql_v3.text, b jsonb)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;
@@ -397,7 +397,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v3.text
 --! @return jsonb
-CREATE FUNCTION eql_v3."||"(a jsonb, b eql_v3.text)
+CREATE FUNCTION eql_v3_internal."||"(a jsonb, b eql_v3.text)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'eql_v3.text'; END; $$
 LANGUAGE plpgsql;

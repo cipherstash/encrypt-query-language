@@ -50,6 +50,7 @@ pub fn environment() -> minijinja::Environment<'static> {
     )
     .expect("aggregates.sql template");
     env.add_global("schema", SCHEMA);
+    env.add_global("internal_schema", INTERNAL_SCHEMA);
     env
 }
 
@@ -144,12 +145,12 @@ pub struct FunctionsContext {
 /// Build the inlinable index-extractor entry for a domain term.
 ///
 /// The `RETURNS` type name equals the constructor name (`hmac_256`,
-/// `ore_block_256`); qualify it with `SCHEMA` — the same schema as the
-/// body's constructor call — so the declared return type and the call stay in
-/// lockstep. `Term::returns()` is intentionally not used.
+/// `ore_block_256`); qualify it with `INTERNAL_SCHEMA` — the same schema as
+/// the body's constructor call — so the declared return type and the call
+/// stay in lockstep. `Term::returns()` is intentionally not used.
 pub fn extractor_entry(term: Term) -> FnEntry {
     FnEntry::Extractor {
-        ret: format!("{SCHEMA}.{}", term.ctor()),
+        ret: format!("{INTERNAL_SCHEMA}.{}", term.ctor()),
         extractor: term.extractor().to_string(),
         ctor: term.ctor().to_string(),
     }
