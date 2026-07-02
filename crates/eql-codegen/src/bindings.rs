@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 
-use eql_domains::{Domain, DomainFamily, Term, CATALOG, ENVELOPE_KEYS};
+use eql_domains::{Domain, DomainFamily, Shape, Term, CATALOG, ENVELOPE_KEYS};
 
 use crate::consts::RUST_GENERATED_MARKER;
 use crate::writer::{
@@ -229,7 +229,13 @@ pub fn render_inventory_rs() -> String {
             f.domains
                 .iter()
                 .map(move |d| {
-                    let s = format_ident!("{}", d.struct_ident(f.name));
+                    let ident = match d.shape {
+                        Shape::Scalar => d.struct_ident(f.name),
+                        Shape::SteVecDocument => "SteVecDocument".to_string(),
+                        Shape::SteVecEntry => "SteVecEntry".to_string(),
+                        Shape::SteVecQuery => "SteVecQuery".to_string(),
+                    };
+                    let s = format_ident!("{}", ident);
                     quote! { Box::new(PhantomData::<super::#m::#s>), }
                 })
                 .collect::<Vec<_>>()
@@ -269,8 +275,7 @@ const V3_BINDINGS_DIR: &str = "crates/eql-bindings/src/v3";
 /// `rustfmt` in [`format_rs`] — aborts BEFORE [`generate_bindings`] deletes any
 /// committed source.
 fn render_bindings(dir: &Path) -> Vec<(PathBuf, String)> {
-    let mut rendered: Vec<(PathBuf, String)> = CATALOG
-        .iter()
+    let mut rendered: Vec<(PathBuf, String)> = eql_domains::scalar_families()
         .map(|f| {
             (
                 dir.join(format!("{}.rs", f.name)),
@@ -452,7 +457,7 @@ mod tests {
         let tmp = crate::writer::test_support::tempdir();
         let written = generate_bindings(tmp.path()).unwrap();
         let dir = tmp.path().join("crates/eql-bindings/src/v3");
-        assert_eq!(written.len(), eql_domains::CATALOG.len() + 1);
+        assert_eq!(written.len(), eql_domains::scalar_families().count() + 1);
         assert!(dir.join("int4.rs").is_file());
         assert!(dir.join("text.rs").is_file());
         assert!(dir.join("inventory.rs").is_file());
@@ -484,7 +489,7 @@ mod tests {
 
         let rendered = render_bindings(&dir);
 
-        assert_eq!(rendered.len(), CATALOG.len() + 1);
+        assert_eq!(rendered.len(), eql_domains::scalar_families().count() + 1);
         assert_eq!(
             std::fs::read_to_string(&sentinel).unwrap(),
             "SENTINEL",
@@ -559,7 +564,7 @@ mod tests {
             "match domain",
             "search domain",
         ];
-        for f in CATALOG {
+        for f in eql_domains::scalar_families() {
             for d in f.domains {
                 let label = capability_label(d.name);
                 assert!(
@@ -570,6 +575,19 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn render_bindings_skips_non_scalar_families() {
+        let tmp = crate::writer::test_support::tempdir();
+        let dir = tmp.path().join(V3_BINDINGS_DIR);
+        let rendered = render_bindings(&dir);
+        assert!(
+            !rendered.iter().any(|(p, _)| p.ends_with("jsonb.rs")),
+            "jsonb.rs is hand-written; the generator must not emit it"
+        );
+        // One file per scalar family + inventory.
+        assert_eq!(rendered.len(), eql_domains::scalar_families().count() + 1);
     }
 
     #[test]
