@@ -482,7 +482,9 @@ mod tests {
                         .bind(id)
                         .bind(*value)
                         .bind(
-                            r#"{"v":2,"c":"x","i":{"t":"_fixture_driver_test_a","c":"payload"},"hm":"x","ob":["1"]}"#,
+                            // The v3 shape production stages after the
+                            // from_v2 conversion (v: 3, no k).
+                            r#"{"v":3,"c":"x","i":{"t":"_fixture_driver_test_a","c":"payload"},"hm":"x","ob":["1"]}"#,
                         )
                         .execute(&mut *c)
                         .await?;
