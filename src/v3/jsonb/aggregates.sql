@@ -36,7 +36,7 @@
 --! @param state eql_v3.jsonb_entry Running extremum.
 --! @param value eql_v3.jsonb_entry Candidate entry.
 --! @return eql_v3.jsonb_entry The lesser orderable entry by `ore_cllw`.
-CREATE FUNCTION eql_v3.ste_vec_entry_min_sfunc(
+CREATE FUNCTION eql_v3.jsonb_entry_min_sfunc(
   state eql_v3.jsonb_entry,
   value eql_v3.jsonb_entry
 )
@@ -65,21 +65,21 @@ $$;
 --! @param input eql_v3.jsonb_entry
 --! @return eql_v3.jsonb_entry The entry with the smallest CLLW ORE term.
 CREATE AGGREGATE eql_v3.min(eql_v3.jsonb_entry) (
-  sfunc = eql_v3.ste_vec_entry_min_sfunc,
+  sfunc = eql_v3.jsonb_entry_min_sfunc,
   stype = eql_v3.jsonb_entry,
-  combinefunc = eql_v3.ste_vec_entry_min_sfunc,
+  combinefunc = eql_v3.jsonb_entry_min_sfunc,
   parallel = safe
 );
 
 --! @brief State function for max on eql_v3.jsonb_entry.
 --!
 --! Keeps whichever orderable entry has the greater CLLW ORE term. `oc`-less
---! entries are skipped, mirroring `ste_vec_entry_min_sfunc` (see the file @note).
+--! entries are skipped, mirroring `jsonb_entry_min_sfunc` (see the file @note).
 --!
 --! @param state eql_v3.jsonb_entry Running extremum.
 --! @param value eql_v3.jsonb_entry Candidate entry.
 --! @return eql_v3.jsonb_entry The greater orderable entry by `ore_cllw`.
-CREATE FUNCTION eql_v3.ste_vec_entry_max_sfunc(
+CREATE FUNCTION eql_v3.jsonb_entry_max_sfunc(
   state eql_v3.jsonb_entry,
   value eql_v3.jsonb_entry
 )
@@ -108,8 +108,8 @@ $$;
 --! @param input eql_v3.jsonb_entry
 --! @return eql_v3.jsonb_entry The entry with the largest CLLW ORE term.
 CREATE AGGREGATE eql_v3.max(eql_v3.jsonb_entry) (
-  sfunc = eql_v3.ste_vec_entry_max_sfunc,
+  sfunc = eql_v3.jsonb_entry_max_sfunc,
   stype = eql_v3.jsonb_entry,
-  combinefunc = eql_v3.ste_vec_entry_max_sfunc,
+  combinefunc = eql_v3.jsonb_entry_max_sfunc,
   parallel = safe
 );
