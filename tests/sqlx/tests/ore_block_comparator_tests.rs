@@ -203,7 +203,10 @@ async fn empty_ore_term_sorts_before_non_empty(pool: PgPool) -> Result<()> {
     // Empty `ob` taken through the real extractor path (the buggy site).
     let empty = "eql_v3_internal.ore_block_256('{\"ob\": []}'::jsonb)";
     // A non-empty composite: one synthetic valid-width term; content irrelevant.
-    let non_empty = format!("ROW(ARRAY[{}])::eql_v3_internal.ore_block_256", term_sql('a', 408));
+    let non_empty = format!(
+        "ROW(ARRAY[{}])::eql_v3_internal.ore_block_256",
+        term_sql('a', 408)
+    );
 
     let lt: Option<i32> = sqlx::query_scalar(&format!(
         "SELECT eql_v3_internal.compare_ore_block_256_terms({empty}, {non_empty})"

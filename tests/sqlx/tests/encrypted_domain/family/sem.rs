@@ -123,7 +123,10 @@ async fn sem_presence_checks_and_missing_ob_behaviour(pool: PgPool) -> Result<()
             r#"SELECT eql_v3_internal.has_ore_block_256('{"ob":["aa"]}'::jsonb)"#,
             true,
         ),
-        (r#"SELECT eql_v3_internal.has_ore_block_256('{}'::jsonb)"#, false),
+        (
+            r#"SELECT eql_v3_internal.has_ore_block_256('{}'::jsonb)"#,
+            false,
+        ),
         // json-null `ob` is typed `'null'`, not `'array'` → absent.
         (
             r#"SELECT eql_v3_internal.has_ore_block_256('{"ob":null}'::jsonb)"#,
@@ -141,7 +144,10 @@ async fn sem_presence_checks_and_missing_ob_behaviour(pool: PgPool) -> Result<()
             r#"SELECT eql_v3_internal.has_ore_block_256('{"ob":{}}'::jsonb)"#,
             false,
         ),
-        (r#"SELECT eql_v3_internal.has_hmac_256('{"hm":"abc"}'::jsonb)"#, true),
+        (
+            r#"SELECT eql_v3_internal.has_hmac_256('{"hm":"abc"}'::jsonb)"#,
+            true,
+        ),
         (r#"SELECT eql_v3_internal.has_hmac_256('{}'::jsonb)"#, false),
     ];
     for (sql, expected) in bool_cases {
@@ -169,9 +175,10 @@ async fn sem_presence_checks_and_missing_ob_behaviour(pool: PgPool) -> Result<()
     .await?;
 
     // NULL jsonb → NULL composite (STRICT short-circuit), NOT a raise.
-    let is_null: bool = sqlx::query_scalar("SELECT eql_v3_internal.ore_block_256(NULL::jsonb) IS NULL")
-        .fetch_one(&pool)
-        .await?;
+    let is_null: bool =
+        sqlx::query_scalar("SELECT eql_v3_internal.ore_block_256(NULL::jsonb) IS NULL")
+            .fetch_one(&pool)
+            .await?;
     assert!(
         is_null,
         "NULL jsonb must extract to a NULL composite, not raise"
@@ -197,34 +204,38 @@ async fn jsonb_array_to_bytea_array_input_shapes(pool: PgPool) -> Result<()> {
     // SQL NULL (distinct from JSON null `'null'`). The function is NOT STRICT,
     // so the body runs: `jsonb_typeof(NULL)` is NULL → the CASE guard
     // `WHEN jsonb_typeof(val) = 'array'` is not-true → ELSE NULL.
-    let is_null: bool =
-        sqlx::query_scalar("SELECT eql_v3_internal.jsonb_array_to_bytea_array(NULL::jsonb) IS NULL")
-            .fetch_one(&pool)
-            .await?;
+    let is_null: bool = sqlx::query_scalar(
+        "SELECT eql_v3_internal.jsonb_array_to_bytea_array(NULL::jsonb) IS NULL",
+    )
+    .fetch_one(&pool)
+    .await?;
     assert!(
         is_null,
         "SQL NULL must yield NULL bytea[] (function is not STRICT)"
     );
 
     // JSON null → NULL.
-    let is_null: bool =
-        sqlx::query_scalar("SELECT eql_v3_internal.jsonb_array_to_bytea_array('null'::jsonb) IS NULL")
-            .fetch_one(&pool)
-            .await?;
+    let is_null: bool = sqlx::query_scalar(
+        "SELECT eql_v3_internal.jsonb_array_to_bytea_array('null'::jsonb) IS NULL",
+    )
+    .fetch_one(&pool)
+    .await?;
     assert!(is_null, "JSON null must yield NULL bytea[]");
 
     // Empty array → NULL (array_agg over zero rows).
-    let is_null: bool =
-        sqlx::query_scalar("SELECT eql_v3_internal.jsonb_array_to_bytea_array('[]'::jsonb) IS NULL")
-            .fetch_one(&pool)
-            .await?;
+    let is_null: bool = sqlx::query_scalar(
+        "SELECT eql_v3_internal.jsonb_array_to_bytea_array('[]'::jsonb) IS NULL",
+    )
+    .fetch_one(&pool)
+    .await?;
     assert!(is_null, "empty JSON array must yield NULL bytea[]");
 
     // Single-element array → one decoded bytea element.
-    let decoded: Vec<Vec<u8>> =
-        sqlx::query_scalar("SELECT eql_v3_internal.jsonb_array_to_bytea_array('[\"aabb\"]'::jsonb)")
-            .fetch_one(&pool)
-            .await?;
+    let decoded: Vec<Vec<u8>> = sqlx::query_scalar(
+        "SELECT eql_v3_internal.jsonb_array_to_bytea_array('[\"aabb\"]'::jsonb)",
+    )
+    .fetch_one(&pool)
+    .await?;
     assert_eq!(
         decoded,
         vec![vec![0xaau8, 0xbb]],
@@ -255,10 +266,11 @@ async fn jsonb_array_to_bytea_array_input_shapes(pool: PgPool) -> Result<()> {
 
     // Same delta for a non-array JSON object — `jsonb_typeof` is 'object', so
     // the CASE guard is not-true → ELSE NULL (not a raise).
-    let is_null: bool =
-        sqlx::query_scalar("SELECT eql_v3_internal.jsonb_array_to_bytea_array('{}'::jsonb) IS NULL")
-            .fetch_one(&pool)
-            .await?;
+    let is_null: bool = sqlx::query_scalar(
+        "SELECT eql_v3_internal.jsonb_array_to_bytea_array('{}'::jsonb) IS NULL",
+    )
+    .fetch_one(&pool)
+    .await?;
     assert!(
         is_null,
         "non-array JSON object must yield NULL (documented delta)"
@@ -283,29 +295,32 @@ async fn jsonb_array_to_bytea_array_input_shapes(pool: PgPool) -> Result<()> {
 async fn jsonb_array_to_ore_block_input_shapes(pool: PgPool) -> Result<()> {
     // SQL NULL (distinct from JSON null `'null'`). Not STRICT, so the body
     // runs: `jsonb_typeof(NULL)` is NULL → CASE guard not-true → ELSE NULL.
-    let is_null: bool =
-        sqlx::query_scalar("SELECT eql_v3_internal.jsonb_array_to_ore_block_256(NULL::jsonb) IS NULL")
-            .fetch_one(&pool)
-            .await?;
+    let is_null: bool = sqlx::query_scalar(
+        "SELECT eql_v3_internal.jsonb_array_to_ore_block_256(NULL::jsonb) IS NULL",
+    )
+    .fetch_one(&pool)
+    .await?;
     assert!(
         is_null,
         "SQL NULL must yield NULL composite (function is not STRICT)"
     );
 
     // JSON null → NULL composite.
-    let is_null: bool =
-        sqlx::query_scalar("SELECT eql_v3_internal.jsonb_array_to_ore_block_256('null'::jsonb) IS NULL")
-            .fetch_one(&pool)
-            .await?;
+    let is_null: bool = sqlx::query_scalar(
+        "SELECT eql_v3_internal.jsonb_array_to_ore_block_256('null'::jsonb) IS NULL",
+    )
+    .fetch_one(&pool)
+    .await?;
     assert!(is_null, "JSON null must yield NULL composite");
 
     // Empty array → non-NULL composite with ZERO terms (issue #262). The empty
     // `ob` from encrypting `""` must remain comparable (so it sorts first via the
     // comparator's cardinality guard) rather than collapsing to NULL terms.
-    let is_null: bool =
-        sqlx::query_scalar("SELECT eql_v3_internal.jsonb_array_to_ore_block_256('[]'::jsonb) IS NULL")
-            .fetch_one(&pool)
-            .await?;
+    let is_null: bool = sqlx::query_scalar(
+        "SELECT eql_v3_internal.jsonb_array_to_ore_block_256('[]'::jsonb) IS NULL",
+    )
+    .fetch_one(&pool)
+    .await?;
     assert!(!is_null, "empty JSON array must yield a non-NULL composite");
     let term_count: i32 = sqlx::query_scalar(
         "SELECT cardinality((eql_v3_internal.jsonb_array_to_ore_block_256('[]'::jsonb)).terms)",
@@ -340,10 +355,11 @@ async fn jsonb_array_to_ore_block_input_shapes(pool: PgPool) -> Result<()> {
     );
 
     // Deliberate delta: a non-array JSON scalar returns NULL (not a raise).
-    let is_null: bool =
-        sqlx::query_scalar("SELECT eql_v3_internal.jsonb_array_to_ore_block_256('5'::jsonb) IS NULL")
-            .fetch_one(&pool)
-            .await?;
+    let is_null: bool = sqlx::query_scalar(
+        "SELECT eql_v3_internal.jsonb_array_to_ore_block_256('5'::jsonb) IS NULL",
+    )
+    .fetch_one(&pool)
+    .await?;
     assert!(
         is_null,
         "non-array JSON scalar must yield NULL (documented delta)"
@@ -351,10 +367,11 @@ async fn jsonb_array_to_ore_block_input_shapes(pool: PgPool) -> Result<()> {
 
     // Same delta for a non-array JSON object — `jsonb_typeof` is 'object', so
     // the CASE guard is not-true → ELSE NULL (not a raise).
-    let is_null: bool =
-        sqlx::query_scalar("SELECT eql_v3_internal.jsonb_array_to_ore_block_256('{}'::jsonb) IS NULL")
-            .fetch_one(&pool)
-            .await?;
+    let is_null: bool = sqlx::query_scalar(
+        "SELECT eql_v3_internal.jsonb_array_to_ore_block_256('{}'::jsonb) IS NULL",
+    )
+    .fetch_one(&pool)
+    .await?;
     assert!(
         is_null,
         "non-array JSON object must yield NULL (documented delta)"
@@ -424,10 +441,11 @@ async fn ore_comparators_are_immutable(pool: PgPool) -> Result<()> {
 /// whose CHECK guarantees `bf`).
 #[sqlx::test]
 async fn bloom_filter_extractor_reads_bf_array(pool: PgPool) -> Result<()> {
-    let got: Vec<i16> =
-        sqlx::query_scalar("SELECT eql_v3_internal.bloom_filter('{\"bf\":[1,2,3]}'::jsonb)::smallint[]")
-            .fetch_one(&pool)
-            .await?;
+    let got: Vec<i16> = sqlx::query_scalar(
+        "SELECT eql_v3_internal.bloom_filter('{\"bf\":[1,2,3]}'::jsonb)::smallint[]",
+    )
+    .fetch_one(&pool)
+    .await?;
     assert_eq!(got, vec![1i16, 2, 3]);
     Ok(())
 }
@@ -437,10 +455,11 @@ async fn bloom_filter_extractor_returns_null_without_bf(pool: PgPool) -> Result<
     // Inlinable SQL extractor (like hmac_256): a payload without `bf` yields
     // NULL, not an exception. The RAISE is redundant because the `text_match`
     // domain CHECK already guarantees `bf` is present on the typed path.
-    let got: Option<Vec<i16>> =
-        sqlx::query_scalar("SELECT eql_v3_internal.bloom_filter('{\"hm\":\"x\"}'::jsonb)::smallint[]")
-            .fetch_one(&pool)
-            .await?;
+    let got: Option<Vec<i16>> = sqlx::query_scalar(
+        "SELECT eql_v3_internal.bloom_filter('{\"hm\":\"x\"}'::jsonb)::smallint[]",
+    )
+    .fetch_one(&pool)
+    .await?;
     assert!(
         got.is_none(),
         "absent bf must return NULL (capability is tied to the domain)"
@@ -455,10 +474,11 @@ async fn bloom_filter_extractor_returns_null_for_non_array_bf(pool: PgPool) -> R
     // domain CHECK only requires the `bf` key to be present, not that it is an
     // array, so a non-array `bf` can reach the extractor even on a typed value;
     // gating on `jsonb_typeof(...) = 'array'` treats it like an absent key.
-    let got: Option<Vec<i16>> =
-        sqlx::query_scalar("SELECT eql_v3_internal.bloom_filter('{\"bf\":null}'::jsonb)::smallint[]")
-            .fetch_one(&pool)
-            .await?;
+    let got: Option<Vec<i16>> = sqlx::query_scalar(
+        "SELECT eql_v3_internal.bloom_filter('{\"bf\":null}'::jsonb)::smallint[]",
+    )
+    .fetch_one(&pool)
+    .await?;
     assert!(got.is_none(), "non-array bf must return NULL, not raise");
     Ok(())
 }
