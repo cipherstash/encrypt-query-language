@@ -26,6 +26,7 @@ Every scalar generates a storage-only variant plus the query variants its capabi
 | `eql_v3.<T>`                  | none (storage only)       | —                        |    ❌    |        ❌         |      ❌       |    ❌     |
 | `eql_v3.<T>_eq`               | `hm` (hmac_256)           | `eql_v3.eq_term(col)`    |    ✅    |        ❌         |      ❌       |    ❌     |
 | `eql_v3.<T>_ord` / `_ord_ore` | `ob` (ore_block_256)      | `eql_v3.ord_term(col)`   |    ✅    |        ✅         |      ✅       |    ❌     |
+| `eql_v3.<T>_ord_ope`          | `op` (ope_cllw)           | `eql_v3.ord_ope_term(col)` |  ✅    |        ✅         |      ✅       |    ❌     |
 | `eql_v3.text_match`           | `bf` (bloom_filter)       | `eql_v3.match_term(col)` |    ❌    |        ❌         |      ❌       |    ✅\*   |
 | `eql_v3.text_search`          | `hm` + `ob` + `bf`        | all three extractors     |    ✅    |        ✅         |      ✅       |    ✅\*   |
 
@@ -35,6 +36,7 @@ Notes:
 
 - The bare `eql_v3.<T>` variant carries no index term and **blocks every comparison operator** — it is storage / decryption only. Type the column as `_eq` or `_ord` (or cast at the call site, e.g. `col::eql_v3.int4_ord`) when you need to query.
 - `_ord` and `_ord_ore` are **twins**: byte-identical surfaces backed by the ORE block term. Pick the name that documents intent ("ordered" vs "ordered via ORE block"); both support the full ordered surface and the `MIN` / `MAX` aggregates.
+- `_ord_ope` exposes the **same ordered surface** backed by the CLLW-OPE term instead: `op` is a hex-encoded, order-preserving ciphertext compared by native bytea ordering after hex-decode (no custom comparison protocol). On `text_ord_ope`, `=` / `<>` route through `hm` (exact HMAC), like `text_ord` — OPE over text is not equality-lossless.
 - `=` / `<>` is the only searchable surface for `_eq`. On `_ord` variants the equality operators are available too (alongside the ordered ones).
 - `bool` is **storage-only** by design — a two-value column has too little cardinality for any searchable index to be safe, so it ships only `eql_v3.bool` (no `_eq` / `_ord`).
 - `LIKE` / `ILIKE` (`~~` / `~~*`) and the native JSONB operators are **blocked on every scalar domain variant** — they are meaningless on a scalar payload. Text matching is the bloom-filter `@>` on `text_match`, not `LIKE`.
@@ -46,7 +48,7 @@ Notes:
 
 A ✅ means the operator resolves on a column typed as that domain variant. A ❌ means the operator is blocked (it raises) for that variant.
 
-| SQL operator              | Meaning                        | `eql_v3.<T>` | `_eq` | `_ord` / `_ord_ore` | `text_match` | `text_search` |
+| SQL operator              | Meaning                        | `eql_v3.<T>` | `_eq` | `_ord` / `_ord_ore` / `_ord_ope` | `text_match` | `text_search` |
 | ------------------------- | ------------------------------ | :----------: | :---: | :-----------------: | :----------: | :-----------: |
 | `=`                       | Equality                       |      ❌      |  ✅   |         ✅          |      ❌      |      ✅       |
 | `<>` / `!=`               | Inequality                     |      ❌      |  ✅   |         ✅          |      ❌      |      ✅       |

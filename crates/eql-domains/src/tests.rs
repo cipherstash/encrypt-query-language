@@ -276,6 +276,44 @@ mod term_tests {
     }
 
     #[test]
+    fn ope_term_contract() {
+        // CLLW-OPE (`op`): a hex-encoded ciphertext that is natively
+        // bytea-sortable — decode hex → bytea → default btree ordering, no
+        // custom comparison protocol. The extractor name is deliberately NOT
+        // "ord_term": `dedupe_terms_by(extractor)` would collapse it against
+        // `Term::Ore` on a hypothetical mixed `[Ore, Ope]` domain.
+        let ope = Term::Ope;
+        assert_eq!(ope.json_key(), "op");
+        assert_eq!(ope.extractor(), "ord_ope_term");
+        assert_eq!(ope.ctor(), "ope_cllw");
+        assert_eq!(ope.binding_newtype(), "OpeCllw");
+        assert_eq!(ope.role(), Role::Ord);
+        assert_eq!(ope.operators(), &["=", "<>", "<", "<=", ">", ">="]);
+        assert_eq!(
+            ope.requires(),
+            &[
+                "src/v3/sem/ope_cllw/functions.sql",
+                "src/v3/sem/ope_cllw/operators.sql",
+            ]
+        );
+        assert!(ope.provides_ordering());
+        // `op` is a single hex string, not an array — no non-empty-array CHECK.
+        assert_eq!(ope.nonempty_array_key(), None);
+    }
+
+    #[test]
+    fn ope_extractor_never_collides_with_ore_extractor() {
+        // Both terms provide ordering, but their extractors are distinct
+        // functions returning distinct SEM types — a mixed `[Ore, Ope]` domain
+        // must emit BOTH extractors, not collapse to the first.
+        assert_ne!(Term::Ore.extractor(), Term::Ope.extractor());
+        assert_eq!(
+            Term::extractor_terms(&[Term::Ore, Term::Ope]),
+            vec![Term::Ore, Term::Ope]
+        );
+    }
+
+    #[test]
     fn bloom_extractor_routes_match_operators() {
         let terms = &[Term::Bloom];
         assert_eq!(
@@ -336,6 +374,8 @@ mod term_helper_tests {
         assert_eq!(Term::Ore.nonempty_array_key(), Some("ob"));
         assert_eq!(Term::Hm.nonempty_array_key(), None);
         assert_eq!(Term::Bloom.nonempty_array_key(), None);
+        // `op` is a single hex string, not an array.
+        assert_eq!(Term::Ope.nonempty_array_key(), None);
     }
 
     #[test]
@@ -658,7 +698,10 @@ mod catalog_tests {
         let text = scalar("text");
         assert_eq!(fixtures("text").kind, ScalarKind::Text);
         let names: Vec<_> = text.domains.iter().map(|d| d.name).collect();
-        assert_eq!(names, vec!["", "eq", "match", "ord_ore", "ord", "search"]);
+        assert_eq!(
+            names,
+            vec!["", "eq", "match", "ord_ore", "ord", "ord_ope", "search"]
+        );
     }
 
     #[test]
@@ -669,12 +712,35 @@ mod catalog_tests {
     }
 
     #[test]
-    fn provides_ordering_is_true_only_for_ore() {
+    fn provides_ordering_is_true_only_for_ordering_terms() {
         // Per-term ordering capability — distinct from Role (the whole-domain
-        // file role derived from the first term). Only Ore provides `< <= > >=`.
+        // file role derived from the first term). Ore and Ope provide
+        // `< <= > >=`; the equality/match terms do not.
         assert!(Term::Ore.provides_ordering());
+        assert!(Term::Ope.provides_ordering());
         assert!(!Term::Hm.provides_ordering());
         assert!(!Term::Bloom.provides_ordering());
+    }
+
+    #[test]
+    fn every_ordered_scalar_declares_an_ord_ope_domain() {
+        // Every ordered scalar family (the ORDERED_INT_DOMAINS users plus text)
+        // carries an `_ord_ope` domain whose ordering term is Ope. Text leads
+        // with Hm (equality must stay exact — ORE/OPE over text is not
+        // equality-lossless); the rest are `[Ope]` only.
+        for s in crate::scalar_families() {
+            if s.is_eq_only() {
+                continue; // storage-only (bool) / eq-only shapes carry no ord domains
+            }
+            let d = s
+                .domain_by_name("ord_ope")
+                .unwrap_or_else(|| panic!("{} is ordered but has no ord_ope domain", s.name));
+            if s.name == "text" {
+                assert_eq!(d.terms, &[Term::Hm, Term::Ope]);
+            } else {
+                assert_eq!(d.terms, &[Term::Ope]);
+            }
+        }
     }
 
     #[test]
@@ -819,6 +885,7 @@ mod catalog_tests {
             ("eq", &[Term::Hm][..]),
             ("ord_ore", &[Term::Ore][..]),
             ("ord", &[Term::Ore][..]),
+            ("ord_ope", &[Term::Ope][..]),
         ];
         let eq_only: Vec<(&str, &[Term])> = vec![("", &[] as &[Term]), ("eq", &[Term::Hm][..])];
         let storage_only: Vec<(&str, &[Term])> = vec![("", &[] as &[Term])];
@@ -828,6 +895,7 @@ mod catalog_tests {
             ("match", &[Term::Bloom][..]),
             ("ord_ore", &[Term::Ore][..]),
             ("ord", &[Term::Ore][..]),
+            ("ord_ope", &[Term::Ope][..]),
         ];
         // text's current shape: equality is exact on the ordered domains (they
         // lead with `Hm`), plus a combined `_search` domain carrying all three
@@ -838,6 +906,7 @@ mod catalog_tests {
             ("match", &[Term::Bloom][..]),
             ("ord_ore", &[Term::Hm, Term::Ore][..]),
             ("ord", &[Term::Hm, Term::Ore][..]),
+            ("ord_ope", &[Term::Hm, Term::Ope][..]),
             ("search", &[Term::Hm, Term::Ore, Term::Bloom][..]),
         ];
         for s in crate::scalar_families() {
@@ -1071,7 +1140,7 @@ mod float_tests {
         for family_name in ["float4", "float8"] {
             let s = scalar(family_name);
             let names: Vec<_> = s.domains.iter().map(|d| d.name).collect();
-            assert_eq!(names, vec!["", "eq", "ord_ore", "ord"]);
+            assert_eq!(names, vec!["", "eq", "ord_ore", "ord", "ord_ope"]);
         }
         assert_eq!(fixtures("float4").kind, ScalarKind::F32);
         assert_eq!(fixtures("float8").kind, ScalarKind::F64);

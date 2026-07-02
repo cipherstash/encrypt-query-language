@@ -6,21 +6,27 @@
 use crate::{Role, Term};
 
 impl Term {
-    /// JSON payload key carrying this term (`"hm"` / `"ob"`).
+    /// JSON payload key carrying this term (`"hm"` / `"ob"` / `"bf"` / `"op"`).
     pub const fn json_key(self) -> &'static str {
         match self {
             Term::Hm => "hm",
             Term::Ore => "ob",
             Term::Bloom => "bf",
+            Term::Ope => "op",
         }
     }
 
-    /// The generated extractor function name (`"eq_term"` / `"ord_term"`).
+    /// The generated extractor function name (`"eq_term"` / `"ord_term"` /
+    /// `"match_term"` / `"ord_ope_term"`). `Ope` deliberately does NOT reuse
+    /// `"ord_term"`: `dedupe_terms_by(Term::extractor)` collapses terms
+    /// sharing an extractor name, so a shared name would silently drop the
+    /// OPE extractor from a mixed `[Ore, Ope]` domain.
     pub const fn extractor(self) -> &'static str {
         match self {
             Term::Hm => "eq_term",
             Term::Ore => "ord_term",
             Term::Bloom => "match_term",
+            Term::Ope => "ord_ope_term",
         }
     }
 
@@ -30,6 +36,7 @@ impl Term {
             Term::Hm => "hmac_256",
             Term::Ore => "ore_block_256",
             Term::Bloom => "bloom_filter",
+            Term::Ope => "ope_cllw",
         }
     }
 
@@ -44,6 +51,7 @@ impl Term {
             Term::Hm => "Hmac256",
             Term::Ore => "OreBlock256",
             Term::Bloom => "BloomFilter",
+            Term::Ope => "OpeCllw",
         }
     }
 
@@ -54,6 +62,7 @@ impl Term {
             Term::Hm => Role::Eq,
             Term::Ore => Role::Ord,
             Term::Bloom => Role::Match,
+            Term::Ope => Role::Ord,
         }
     }
 
@@ -63,6 +72,7 @@ impl Term {
             Term::Hm => &["=", "<>"],
             Term::Ore => &["=", "<>", "<", "<=", ">", ">="],
             Term::Bloom => &["@>", "<@"],
+            Term::Ope => &["=", "<>", "<", "<=", ">", ">="],
         }
     }
 
@@ -75,6 +85,10 @@ impl Term {
                 "src/v3/sem/ore_block_256/operators.sql",
             ],
             Term::Bloom => &["src/v3/sem/bloom_filter/functions.sql"],
+            Term::Ope => &[
+                "src/v3/sem/ope_cllw/functions.sql",
+                "src/v3/sem/ope_cllw/operators.sql",
+            ],
         }
     }
 
@@ -83,7 +97,7 @@ impl Term {
     /// role derived from the first term). New ordering terms opt in here, so
     /// `is_ord_capable` never hardcodes a single ordering term.
     pub const fn provides_ordering(self) -> bool {
-        matches!(self, Term::Ore)
+        matches!(self, Term::Ore | Term::Ope)
     }
 
     /// JSON key whose payload must be a NON-EMPTY array for this term to be
@@ -96,7 +110,8 @@ impl Term {
     pub const fn nonempty_array_key(self) -> Option<&'static str> {
         match self {
             Term::Ore => Some(self.json_key()),
-            Term::Hm | Term::Bloom => None,
+            // `op` is a single hex string, not an array.
+            Term::Hm | Term::Bloom | Term::Ope => None,
         }
     }
 }
@@ -204,6 +219,7 @@ mod tests {
         assert_eq!(Term::Hm.binding_newtype(), "Hmac256");
         assert_eq!(Term::Ore.binding_newtype(), "OreBlock256");
         assert_eq!(Term::Bloom.binding_newtype(), "BloomFilter");
+        assert_eq!(Term::Ope.binding_newtype(), "OpeCllw");
     }
 
     #[test]

@@ -21,6 +21,14 @@ mod text_smoke;
 #[path = "encrypted_domain/text/text_match.rs"]
 mod text_match;
 
+// CLLW-OPE (`op` term, `*_ord_ope` domains) literal-payload smoke suite. The
+// pinned cipherstash-client does not emit `op` yet, so these use hand-built
+// hex payloads instead of generated fixtures. Deliberately NOT under
+// `scalars::` — the matrix-inventory gate treats every `scalars::<X>::`
+// prefix as a scalar type (same rationale as the text suites).
+#[path = "encrypted_domain/ope/ope_smoke.rs"]
+mod ope_smoke;
+
 // Signed-only sign-boundary suite (`int`, `date`). Like the text suites it
 // lives outside `scalars::` so the matrix-inventory snapshot (which pins the
 // uniform per-type set) does not see the signed-only delta.

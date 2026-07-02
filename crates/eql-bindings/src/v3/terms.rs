@@ -42,6 +42,16 @@ pub struct OreCllw(pub String);
 #[ts(export, export_to = "v3/")]
 pub struct Selector(pub String);
 
+/// CLLW-OPE order term — the `op` wire key. Backs the scalar `_ord_ope`
+/// domains (`=` `<>` `<` `<=` `>` `>=`): a hex-encoded CLLW OPE ciphertext,
+/// sortable via native bytea comparison after hex-decode — unlike `ob`
+/// (block-ORE) and `oc` (CLLW-ORE) it needs no custom comparator. SQL-side
+/// constructor: `eql_v3.ope_cllw`. Distinct from [`OreCllw`] (`oc`), the
+/// SteVec CLLW-*ORE* term compared by the custom per-byte protocol.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+pub struct OpeCllw(pub String);
+
 /// Block-ORE order term — the `ob` wire key. Backs the `_ord` / `_ord_ore`
 /// domains (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's
 /// domain, so it serves equality too. The block count is width-agnostic on the
@@ -123,6 +133,12 @@ impl From<String> for OreCllw {
 }
 
 impl From<String> for Selector {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl From<String> for OpeCllw {
     fn from(value: String) -> Self {
         Self(value)
     }

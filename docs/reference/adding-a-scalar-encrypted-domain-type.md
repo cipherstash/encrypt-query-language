@@ -153,11 +153,19 @@ by the type system and the catalog `#[test]`s rather than a runtime validator:
 Returns column below is `eql_v3.` + `ctor`) — changing one is a generated-SQL
 behaviour change, not a refactor:
 
-| Term    | JSON key | Extractor    | Returns                          | Operators                  |
-| ------- | -------- | ------------ | -------------------------------- | -------------------------- |
-| `Hm`    | `hm`     | `eq_term`    | `eql_v3.hmac_256`                | `=` `<>`                   |
-| `Ore`   | `ob`     | `ord_term`   | `eql_v3.ore_block_256`     | `=` `<>` `<` `<=` `>` `>=` |
-| `Bloom` | `bf`     | `match_term` | `eql_v3.bloom_filter`            | `@>` `<@`                  |
+| Term    | JSON key | Extractor      | Returns                          | Operators                  |
+| ------- | -------- | -------------- | -------------------------------- | -------------------------- |
+| `Hm`    | `hm`     | `eq_term`      | `eql_v3.hmac_256`                | `=` `<>`                   |
+| `Ore`   | `ob`     | `ord_term`     | `eql_v3.ore_block_256`     | `=` `<>` `<` `<=` `>` `>=` |
+| `Bloom` | `bf`     | `match_term`   | `eql_v3.bloom_filter`            | `@>` `<@`                  |
+| `Ope`   | `op`     | `ord_ope_term` | `eql_v3.ope_cllw`                | `=` `<>` `<` `<=` `>` `>=` |
+
+(`Ope` is the CLLW-OPE term: a hex-encoded, order-preserving ciphertext whose
+SEM type reduces comparison to native bytea ordering after hex-decode — no
+custom comparison protocol, unlike `Ore`'s N-block protocol. Its extractor is
+deliberately NOT `ord_term`: two terms sharing an extractor name collapse in
+`dedupe_terms_by(Term::extractor)`, so a mixed `[Ore, Ope]` domain would lose
+one extractor.)
 
 A type that needs a non-ORE equality term on an ordered domain needs a **new
 `Term`**, not a catalog flag. Adding a term is a code change to the `Term`

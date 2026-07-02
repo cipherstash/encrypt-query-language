@@ -72,5 +72,21 @@ BEGIN
         AND VALUE->>'v' = '2'
       );
   END IF;
+
+  --! @brief Encrypted domain eql_v3.int2_ord_ope.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = 'int2_ord_ope' AND typnamespace = 'eql_v3'::regnamespace
+  ) THEN
+    CREATE DOMAIN eql_v3.int2_ord_ope AS jsonb
+      CHECK (
+        jsonb_typeof(VALUE) = 'object'
+        AND VALUE ? 'v'
+        AND VALUE ? 'i'
+        AND VALUE ? 'c'
+        AND VALUE ? 'op'
+        AND VALUE->>'v' = '2'
+      );
+  END IF;
 END
 $$;

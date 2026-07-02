@@ -73,7 +73,7 @@ fn capability_label(domain_name: &str) -> &'static str {
     match domain_name {
         "" => "storage-only domain",
         "eq" => "equality domain",
-        "ord" | "ord_ore" => "ordering domain",
+        "ord" | "ord_ore" | "ord_ope" => "ordering domain",
         "match" => "match domain",
         "search" => "search domain",
         other => panic!(
@@ -348,6 +348,7 @@ mod tests {
             "struct Int4Eq ",
             "struct Int4OrdOre ",
             "struct Int4Ord ",
+            "struct Int4OrdOpe ",
         ] {
             assert!(out.contains(s), "missing {s}");
         }
@@ -356,19 +357,21 @@ mod tests {
                 "#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]"
             )
             .count(),
-            4
+            5
         );
-        assert_eq!(out.matches("#[ts(export, export_to = \"v3/\")]").count(), 4);
-        assert_eq!(out.matches("#[serde(deny_unknown_fields)]").count(), 4);
+        assert_eq!(out.matches("#[ts(export, export_to = \"v3/\")]").count(), 5);
+        assert_eq!(out.matches("#[serde(deny_unknown_fields)]").count(), 5);
         assert!(out.contains("`eql_v3.int4_eq` — equality domain."));
         assert!(out.contains("`eql_v3.int4` — storage-only domain."));
         assert!(out.contains("`eql_v3.int4_ord` — ordering domain."));
+        assert!(out.contains("`eql_v3.int4_ord_ope` — ordering domain."));
         assert!(!out.contains("Envelope version"));
         assert!(!out.contains("HMAC-SHA-256 equality term"));
         assert_eq!(field_idents(&out, "Int4"), ["v", "i", "c"]);
         assert_eq!(field_idents(&out, "Int4Eq"), ["v", "i", "c", "hm"]);
         assert_eq!(field_idents(&out, "Int4OrdOre"), ["v", "i", "c", "ob"]);
         assert_eq!(field_idents(&out, "Int4Ord"), ["v", "i", "c", "ob"]);
+        assert_eq!(field_idents(&out, "Int4OrdOpe"), ["v", "i", "c", "op"]);
         assert!(out.contains("impl DomainType for Int4Eq"));
         assert!(out.contains("fn sql_domain_static()"));
         assert!(out.contains("\"eql_v3.int4_eq\""));
@@ -401,6 +404,10 @@ mod tests {
         assert!(int4.contains("Operators: `=` `<>` `<` `<=` `>` `>=`."));
         assert!(int4.contains("Required keys: `v` `i` `c` `ob`."));
 
+        // OPE ordering: same operator set, `op` key instead of `ob`.
+        assert!(int4.contains("`eql_v3.int4_ord_ope` — ordering domain."));
+        assert!(int4.contains("Required keys: `v` `i` `c` `op`."));
+
         // text_ord carries BOTH `hm` and `ob` — the dual-term distinction that
         // previously lived only in hand-written prose is now derivable in the doc.
         let text = render_family_bindings(family("text"));
@@ -419,6 +426,7 @@ mod tests {
             "struct TextMatch ",
             "struct TextOrdOre ",
             "struct TextOrd ",
+            "struct TextOrdOpe ",
             "struct TextSearch ",
         ] {
             assert!(out.contains(s), "missing {s}");
@@ -427,6 +435,11 @@ mod tests {
         assert!(out.contains("`eql_v3.text_search` — search domain."));
         assert!(out.contains("bf: BloomFilter"));
         assert_eq!(field_idents(&out, "TextOrd"), ["v", "i", "c", "hm", "ob"]);
+        // text_ord_ope is dual-term like text_ord: equality stays exact via hm.
+        assert_eq!(
+            field_idents(&out, "TextOrdOpe"),
+            ["v", "i", "c", "hm", "op"]
+        );
         assert_eq!(field_idents(&out, "TextMatch"), ["v", "i", "c", "bf"]);
         assert_eq!(
             field_idents(&out, "TextSearch"),
@@ -505,7 +518,9 @@ mod tests {
         assert!(out.contains("pub fn all() -> Vec<Box<dyn DomainType>>"));
         assert!(!out.contains("pub mod "));
         let first = out.find("PhantomData::<super::int4::Int4>").unwrap();
-        let last = out.find("PhantomData::<super::float8::Float8Ord>").unwrap();
+        let last = out
+            .find("PhantomData::<super::float8::Float8OrdOpe>")
+            .unwrap();
         assert!(first < last);
         for ty in [
             "super::text::Text",
@@ -513,6 +528,7 @@ mod tests {
             "super::text::TextMatch",
             "super::text::TextOrdOre",
             "super::text::TextOrd",
+            "super::text::TextOrdOpe",
             "super::text::TextSearch",
         ] {
             assert!(

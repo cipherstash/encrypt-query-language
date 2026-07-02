@@ -46,15 +46,20 @@ pub const ENVELOPE_KEYS: &[&str] = &["v", "i", "c"];
 
 /// A fixed index term known to the scalar materializer.
 ///
-/// `Hm` provides equality; `Ore` provides equality plus ordering. The
-/// `json_key`/`extractor`/`ctor` values are the cross-schema SQL contract —
-/// changing one is a generated-SQL behaviour change, not a refactor. (The
-/// per-term accessors and `*_for_terms` helpers are impl'd in `term`.)
+/// `Hm` provides equality; `Ore` and `Ope` provide equality plus ordering —
+/// `Ore` is the block-ORE array term (`ob`, compared by the custom N-block
+/// protocol) and `Ope` is the CLLW-OPE term (`op`, a hex-encoded ciphertext
+/// that is natively bytea-sortable after hex-decode: no custom comparison
+/// protocol). The `json_key`/`extractor`/`ctor` values are the cross-schema
+/// SQL contract — changing one is a generated-SQL behaviour change, not a
+/// refactor. (The per-term accessors and `*_for_terms` helpers are impl'd in
+/// `term`.)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Term {
     Hm,
     Ore,
     Bloom,
+    Ope,
 }
 
 /// The generated-file role of a domain, resolved from its terms by the
@@ -153,7 +158,10 @@ pub struct DomainFamily {
 }
 
 /// Domains shared by every ordered-integer scalar, in manifest file order:
-/// storage (no terms), `_eq` (hm), `_ord_ore` (ore), `_ord` (ore).
+/// storage (no terms), `_eq` (hm), `_ord_ore` (ore), `_ord` (ore),
+/// `_ord_ope` (ope). `_ord_ope` carries the CLLW-OPE term (`op`): a
+/// hex-encoded ciphertext ordered by native bytea comparison after
+/// hex-decode — unlike `_ord`/`_ord_ore` it needs no custom comparator.
 const ORDERED_INT_DOMAINS: &[Domain] = &[
     Domain {
         name: "",
@@ -173,6 +181,11 @@ const ORDERED_INT_DOMAINS: &[Domain] = &[
     Domain {
         name: "ord",
         terms: &[Term::Ore],
+        shape: Shape::Scalar,
+    },
+    Domain {
+        name: "ord_ope",
+        terms: &[Term::Ope],
         shape: Shape::Scalar,
     },
 ];
@@ -266,15 +279,17 @@ pub const NUMERIC: DomainFamily = DomainFamily {
 };
 
 /// Domains for `text`: the ordered shape (with exact `hm` equality on the
-/// ordered domains), a `_match` domain (`Bloom` containment), and a combined
-/// `_search` domain carrying equality + ordering + match in one type.
+/// ordered domains), a `_match` domain (`Bloom` containment), an `_ord_ope`
+/// domain (CLLW-OPE ordering), and a combined `_search` domain carrying
+/// equality + ordering + match in one type.
 ///
 /// **Equality always routes through `hm`.** Every eq-capable text domain leads
-/// with `Hm` so `=`/`<>` resolve to `eq_term`/`hm`, never the ORE (`ob`) term —
-/// ORE is not exact for `text`. `Term::Ore` keeps its kind-agnostic `=`/`<>`
-/// claim; it simply never wins because `Hm` precedes it (Option 1, catalog
-/// ordering). Integer kinds keep `[Ore]`-only `_ord` domains — ORE equality is
-/// lossless for them.
+/// with `Hm` so `=`/`<>` resolve to `eq_term`/`hm`, never the ORE (`ob`) or
+/// OPE (`op`) ordering term — text ordering terms are not equality-lossless.
+/// `Term::Ore`/`Term::Ope` keep their kind-agnostic `=`/`<>` claim; they
+/// simply never win because `Hm` precedes them (Option 1, catalog ordering).
+/// Integer kinds keep `[Ore]`-only `_ord` and `[Ope]`-only `_ord_ope` domains
+/// — ordering-term equality is lossless for them.
 const TEXT_DOMAINS: &[Domain] = &[
     Domain {
         name: "",
@@ -299,6 +314,11 @@ const TEXT_DOMAINS: &[Domain] = &[
     Domain {
         name: "ord",
         terms: &[Term::Hm, Term::Ore],
+        shape: Shape::Scalar,
+    },
+    Domain {
+        name: "ord_ope",
+        terms: &[Term::Hm, Term::Ope],
         shape: Shape::Scalar,
     },
     Domain {

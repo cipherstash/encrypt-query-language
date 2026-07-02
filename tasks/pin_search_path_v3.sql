@@ -10,9 +10,10 @@
 --! Supabase splinter's `function_search_path_mutable` lint.
 --!
 --! @note A SET clause disables SQL-function inlining. The inline-critical SEM
---!       helpers (ore_block_256_*, ore_cllw_*, ore_cllw/has_ore_cllw,
---!       hmac_256, bloom_filter over jsonb) and the encrypted-domain family
---!       (recognised structurally) are deliberately left unpinned.
+--!       helpers (ore_block_256_*, ore_cllw_*, ope_cllw_*,
+--!       ore_cllw/has_ore_cllw, ope_cllw/has_ope_cllw, hmac_256, bloom_filter
+--!       over jsonb) and the encrypted-domain family (recognised structurally)
+--!       are deliberately left unpinned.
 --! @see tasks/test/splinter.sh
 --! @see tasks/build.sh
 
@@ -47,8 +48,15 @@ BEGIN
         AND p.proname IN ('ore_cllw_eq', 'ore_cllw_neq',
                           'ore_cllw_lt', 'ore_cllw_lte',
                           'ore_cllw_gt', 'ore_cllw_gte'))
+      OR (p.pronargs = 2
+        AND p.proname IN ('ope_cllw_eq', 'ope_cllw_neq',
+                          'ope_cllw_lt', 'ope_cllw_lte',
+                          'ope_cllw_gt', 'ope_cllw_gte'))
       OR (p.pronargs = 1
         AND p.proname IN ('ore_cllw', 'has_ore_cllw')
+        AND p.proargtypes[0] = jsonb_oid)
+      OR (p.pronargs = 1
+        AND p.proname IN ('ope_cllw', 'has_ope_cllw')
         AND p.proargtypes[0] = jsonb_oid)
       OR (p.pronargs = 1
         AND p.proname = 'hmac_256'

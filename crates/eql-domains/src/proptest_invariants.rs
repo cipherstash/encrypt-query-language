@@ -8,9 +8,14 @@
 use crate::{ScalarKind, Term};
 use proptest::prelude::*;
 
-/// Strategy over the three index terms.
+/// Strategy over the four index terms.
 fn any_term() -> impl Strategy<Value = Term> {
-    prop_oneof![Just(Term::Hm), Just(Term::Ore), Just(Term::Bloom)]
+    prop_oneof![
+        Just(Term::Hm),
+        Just(Term::Ore),
+        Just(Term::Bloom),
+        Just(Term::Ope)
+    ]
 }
 
 /// Strategy over the eleven scalar kinds.
@@ -31,15 +36,17 @@ fn any_kind() -> impl Strategy<Value = ScalarKind> {
 }
 
 proptest! {
-    /// `Ore` (ordering) supports a strict superset of `Hm` (equality):
-    /// every operator Hm provides, Ore also provides.
+    /// The ordering terms (`Ore`, `Ope`) support a strict superset of `Hm`
+    /// (equality): every operator Hm provides, each ordering term also provides.
     #[test]
-    fn ore_operators_superset_of_hm(_ in any::<()>()) {
-        for op in Term::Hm.operators() {
-            prop_assert!(
-                Term::Ore.operators().contains(op),
-                "Ore must support every Hm operator; missing {op}"
-            );
+    fn ordering_term_operators_superset_of_hm(_ in any::<()>()) {
+        for term in [Term::Ore, Term::Ope] {
+            for op in Term::Hm.operators() {
+                prop_assert!(
+                    term.operators().contains(op),
+                    "{term:?} must support every Hm operator; missing {op}"
+                );
+            }
         }
     }
 
