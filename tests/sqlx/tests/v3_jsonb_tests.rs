@@ -526,6 +526,31 @@ async fn v3_jsonb_raw_helpers_contains_and_contained_by(pool: PgPool) -> anyhow:
     Ok(())
 }
 
+/// `eql_v3.has_ore_cllw(jsonb_entry)` is otherwise only exercised incidentally
+/// — `jsonb_entry_int4_fixture_shape` asserts every fixture row's `oc`-bearing
+/// entry passes it, but never exercises the false branch (an entry with `hm`
+/// only, no `oc`). Dedicated positive/negative coverage of both branches.
+#[sqlx::test]
+async fn v3_jsonb_has_ore_cllw_entry_branches(pool: PgPool) -> anyhow::Result<()> {
+    let with_oc = oc_entry(OC_LADDER[0]);
+    let has_oc: bool = sqlx::query_scalar(&format!(
+        "SELECT eql_v3.has_ore_cllw('{with_oc}'::eql_v3.jsonb_entry)"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    assert!(has_oc, "has_ore_cllw must be true for an oc-bearing entry");
+
+    let hm_only = entry(SEL_ROOT_HM, "hm", HM_TERM_FORGED);
+    let has_no_oc: bool = sqlx::query_scalar(&format!(
+        "SELECT eql_v3.has_ore_cllw('{hm_only}'::eql_v3.jsonb_entry)"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    assert!(!has_no_oc, "has_ore_cllw must be false for an hm-only entry");
+
+    Ok(())
+}
+
 /// LB1–LB3 structural invariants of the GENERATED fixture, asserted directly
 /// (the containment / index oracles only imply them). This is the "generated
 /// fixture matches the load-bearing properties" guard, and it doubles as the
