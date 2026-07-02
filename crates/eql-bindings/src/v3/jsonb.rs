@@ -39,12 +39,6 @@ impl SteVecForm {
     pub const SV: Self = Self("sv");
 }
 
-impl Default for SteVecForm {
-    fn default() -> Self {
-        Self::SV
-    }
-}
-
 impl<'de> Deserialize<'de> for SteVecForm {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

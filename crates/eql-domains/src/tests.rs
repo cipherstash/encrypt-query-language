@@ -1175,7 +1175,7 @@ mod invariant_tests {
                 // family's document domain) predates the catalog and keeps
                 // its established name rather than following the
                 // family+suffix convention — see `Domain::full_name`.
-                if matches!(d.shape, Shape::SteVecDocument) {
+                if s.name == "jsonb" && d.name == "json" {
                     continue;
                 }
                 let name = s.domain_name(d);
@@ -1375,7 +1375,8 @@ mod shape_tests {
         use crate::{Shape, CATALOG, JSONB};
         assert!(!JSONB.is_scalar());
         assert_eq!(JSONB.domains.len(), 3);
-        assert!(matches!(JSONB.domains[0].shape, Shape::SteVecDocument));
+        assert!(matches!(JSONB.domains[0].shape, Shape::SteVec));
+        assert_eq!(JSONB.domains[0].name, "json");
         assert!(JSONB.domains.iter().all(|d| d.terms.is_empty()));
         assert!(
             CATALOG.iter().any(|f| f.name == "jsonb"),

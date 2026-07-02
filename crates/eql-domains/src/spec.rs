@@ -11,13 +11,14 @@ impl Domain {
     /// the `_` join — codegen builds every domain name through this, so the
     /// "domain name starts with the family name" rule is structural.
     ///
-    /// One documented exception: [`crate::Shape::SteVecDocument`] (the `jsonb`
-    /// family's `eql_v3.json`) predates the catalog and doesn't follow the
-    /// family+suffix convention (`family_name` is `"jsonb"`, not `"json"`), so
-    /// its `name` is returned verbatim instead of being joined. Every other
-    /// domain — scalar or the other two SteVec shapes — uses the join.
+    /// One documented exception: the `jsonb` family's document domain
+    /// (`eql_v3.json`, `Domain.name == "json"`) predates the catalog and
+    /// doesn't follow the family+suffix convention (`family_name` is
+    /// `"jsonb"`, not `"json"`), so its `name` is returned verbatim instead of
+    /// being joined. Every other domain — scalar or the other two SteVec
+    /// shapes — uses the join.
     pub fn full_name(&self, family_name: &str) -> String {
-        if matches!(self.shape, crate::Shape::SteVecDocument) {
+        if matches!(self.shape, crate::Shape::SteVec) && self.name == "json" {
             return self.name.to_string();
         }
         if self.name.is_empty() {
@@ -37,13 +38,7 @@ impl Domain {
         self.full_name(family_name)
             .split('_')
             .filter(|s| !s.is_empty())
-            .map(|s| {
-                let mut chars = s.chars();
-                match chars.next() {
-                    Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-                    None => String::new(),
-                }
-            })
+            .map(capitalize)
             .collect()
     }
 
@@ -60,17 +55,28 @@ impl Domain {
     /// shape-aware, unlike [`Self::struct_ident`]. For [`crate::Shape::Scalar`]
     /// this is exactly `struct_ident` (derived from the domain name). The
     /// SteVec shapes' struct bodies are hand-written (not name-derivable — see
-    /// `crates/eql-bindings/src/v3/jsonb.rs`), so their identifiers are fixed
-    /// literals here instead. The SINGLE source of truth for that mapping —
-    /// `eql-codegen`'s inventory renderer calls this instead of carrying its
-    /// own copy of the shape match.
+    /// `crates/eql-bindings/src/v3/jsonb.rs`), but their identifiers ARE
+    /// name-derivable (`"SteVec" + capitalize(name)`), with one irregular case:
+    /// the document domain's established name `"json"` maps to `SteVecDocument`,
+    /// not `SteVecJson` (mirroring the exception `full_name` already carries).
+    /// The SINGLE source of truth for that mapping — `eql-codegen`'s inventory
+    /// renderer calls this instead of carrying its own copy of the shape match.
     pub fn rust_struct_name(&self, family_name: &str) -> String {
         match self.shape {
             crate::Shape::Scalar => self.struct_ident(family_name),
-            crate::Shape::SteVecDocument => "SteVecDocument".to_string(),
-            crate::Shape::SteVecEntry => "SteVecEntry".to_string(),
-            crate::Shape::SteVecQuery => "SteVecQuery".to_string(),
+            crate::Shape::SteVec if self.name == "json" => "SteVecDocument".to_string(),
+            crate::Shape::SteVec => format!("SteVec{}", capitalize(self.name)),
         }
+    }
+}
+
+/// PascalCase a single snake_case segment (no `_` splitting — callers split
+/// first): `"ord_ore"`'s `"ore"` segment -> `"Ore"`, `"entry"` -> `"Entry"`.
+fn capitalize(s: &str) -> String {
+    let mut chars = s.chars();
+    match chars.next() {
+        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+        None => String::new(),
     }
 }
 

@@ -183,9 +183,10 @@ flowchart LR
 
 **`jsonb` sits outside this classification.** It carries three domains — `eql_v3.json`
 (document), `eql_v3.jsonb_entry` (one `sv` leaf), `eql_v3.jsonb_query` (containment
-needle) — each tagged `Shape::SteVecDocument` / `SteVecEntry` / `SteVecQuery` rather than
-`Shape::Scalar`, with an empty flat `terms` list: capability lives *structurally* inside
-the payload (per-`sv`-leaf `hm` XOR `oc`), not as a family-level `Term` set.
+needle) — each tagged `Shape::SteVec` rather than `Shape::Scalar`, with an empty flat
+`terms` list: capability lives *structurally* inside the payload (per-`sv`-leaf `hm`
+XOR `oc`), not as a family-level `Term` set. `Domain.name` (`"json"`/`"entry"`/`"query"`)
+disambiguates which of the three a given domain is — see `Domain::rust_struct_name`.
 `scalar_families()` filters `CATALOG` down to the `Shape::Scalar` rows, so `jsonb` never
 reaches `every_type_uses_a_known_domain_shape`, the ordered-scalar materializer (§3), or
 the scalar SQLx matrix. Its SQL surface is hand-written under `src/v3/jsonb/`

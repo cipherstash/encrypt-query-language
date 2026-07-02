@@ -121,12 +121,14 @@ impl Role {
 pub enum Shape {
     /// Flat `{v, i, c, +terms}` — every existing scalar family (default).
     Scalar,
-    /// `eql_v3.json` → `{v, i, sv: [SteVecEntry]}`.
-    SteVecDocument,
-    /// `eql_v3.jsonb_entry` → `{s, c, a?, #[flatten] SteVecTerm}`.
-    SteVecEntry,
-    /// `eql_v3.jsonb_query` → `{sv: [SteVecQueryEntry]}`.
-    SteVecQuery,
+    /// A `jsonb` family payload: `eql_v3.json` (`{v, i, sv: [entry]}`),
+    /// `eql_v3.jsonb_entry` (`{s, c, a?, #[flatten] SteVecTerm}`), or
+    /// `eql_v3.jsonb_query` (`{sv: [query-entry]}`). The three differ in
+    /// payload body but share the non-flat-scalar shape, so a single variant
+    /// covers them; `Domain.name` (`"json"`/`"entry"`/`"query"`) already
+    /// disambiguates which one a given domain is (see `Domain::full_name` /
+    /// `Domain::rust_struct_name`).
+    SteVec,
 }
 
 /// One generated public domain: a bare domain name joined under the family
@@ -376,31 +378,32 @@ const JSONB_DOMAINS: &[Domain] = &[
         // does not follow the family+suffix convention (family is "jsonb", not
         // "json") — an explicit literal name, not the empty-suffix
         // bare-family-name convention every scalar storage domain uses.
-        // `Domain::full_name` special-cases `Shape::SteVecDocument` to return
-        // this verbatim instead of concatenating.
+        // `Domain::full_name` special-cases the name `"json"` to return it
+        // verbatim instead of concatenating.
         name: "json",
         terms: &[],
-        shape: Shape::SteVecDocument,
+        shape: Shape::SteVec,
     },
     Domain {
         name: "entry",
         terms: &[],
-        shape: Shape::SteVecEntry,
+        shape: Shape::SteVec,
     },
     Domain {
         name: "query",
         terms: &[],
-        shape: Shape::SteVecQuery,
+        shape: Shape::SteVec,
     },
 ];
 
 /// `jsonb` — the encrypted-JSONB (SteVec) family: `eql_v3.json` (document, the
 /// one explicit-name exception — see `JSONB_DOMAINS`), `eql_v3.jsonb_entry`
 /// (one sv element), `eql_v3.jsonb_query` (containment needle). The Rust
-/// struct identity also diverges from the derived convention (hand-written
-/// `SteVecDocument`/`SteVecEntry`/`SteVecQuery`, not name-derived), which is
-/// what `Domain::rust_struct_name` exists to bridge. Added to `CATALOG` at the
-/// flip task.
+/// struct *bodies* are hand-written (`crates/eql-bindings/src/v3/jsonb.rs`,
+/// not derivable from the catalog); `Domain::rust_struct_name` derives their
+/// *identifiers* (`SteVecDocument`/`SteVecEntry`/`SteVecQuery`) from
+/// `Domain.name` so codegen's inventory renderer doesn't need its own copy of
+/// the mapping. Added to `CATALOG` at the flip task.
 pub const JSONB: DomainFamily = DomainFamily {
     name: "jsonb",
     domains: JSONB_DOMAINS,
