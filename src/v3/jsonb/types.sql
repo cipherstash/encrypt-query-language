@@ -15,7 +15,7 @@
 --! @param val jsonb Candidate entry payload.
 --! @return boolean True when `val` is an sv entry with string `s`, string `c`,
 --!         and exactly one string deterministic term (`hm` XOR `oc`).
-CREATE FUNCTION eql_v3.is_valid_ste_vec_entry_payload(val jsonb)
+CREATE FUNCTION eql_v3_internal.is_valid_ste_vec_entry_payload(val jsonb)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -38,7 +38,7 @@ $$;
 --! @return boolean True when `val` is `{"sv":[...]}` and every element carries
 --!         string `s`, no ciphertext, and exactly one string term (`hm` XOR
 --!         `oc`).
-CREATE FUNCTION eql_v3.is_valid_ste_vec_query_payload(val jsonb)
+CREATE FUNCTION eql_v3_internal.is_valid_ste_vec_query_payload(val jsonb)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -70,7 +70,7 @@ $$;
 --! @param val jsonb Candidate document payload.
 --! @return boolean True when `val` is an encrypted document envelope with
 --!         `v = 2`, `i`, an `sv` array, and valid sv entry elements.
-CREATE FUNCTION eql_v3.is_valid_ste_vec_document_payload(val jsonb)
+CREATE FUNCTION eql_v3_internal.is_valid_ste_vec_document_payload(val jsonb)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -85,7 +85,7 @@ AS $$
        FROM jsonb_array_elements(
          CASE WHEN jsonb_typeof(val -> 'sv') = 'array' THEN val -> 'sv' ELSE '[]'::jsonb END
        ) AS elem
-       WHERE NOT eql_v3.is_valid_ste_vec_entry_payload(elem)
+       WHERE NOT eql_v3_internal.is_valid_ste_vec_entry_payload(elem)
      ),
     false
   )
@@ -106,7 +106,7 @@ $$;
 --!       `'{"i":{},"v":2,"sv":[...]}'::eql_v3.json`.
 CREATE DOMAIN eql_v3.json AS jsonb
   CHECK (
-    eql_v3.is_valid_ste_vec_document_payload(VALUE)
+    eql_v3_internal.is_valid_ste_vec_document_payload(VALUE)
   );
 
 --! @brief Domain type for an individual sv element.
@@ -121,7 +121,7 @@ CREATE DOMAIN eql_v3.json AS jsonb
 --! @see src/v3/jsonb/operators.sql
 CREATE DOMAIN eql_v3.jsonb_entry AS jsonb
   CHECK (
-    eql_v3.is_valid_ste_vec_entry_payload(VALUE)
+    eql_v3_internal.is_valid_ste_vec_entry_payload(VALUE)
   );
 
 --! @brief Domain type for an STE-vec containment needle.
@@ -137,7 +137,7 @@ CREATE DOMAIN eql_v3.jsonb_entry AS jsonb
 --! @see eql_v3.to_ste_vec_query
 CREATE DOMAIN eql_v3.jsonb_query AS jsonb
   CHECK (
-    eql_v3.is_valid_ste_vec_query_payload(VALUE)
+    eql_v3_internal.is_valid_ste_vec_query_payload(VALUE)
   );
 
 --! @brief Convert an eql_v3.json to a jsonb_query needle.

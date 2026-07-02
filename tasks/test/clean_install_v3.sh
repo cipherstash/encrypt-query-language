@@ -53,7 +53,7 @@ DECLARE
 BEGIN
   -- The blocker always RAISEs; catch it and assert we got the expected message.
   BEGIN
-    PERFORM eql_v3.encrypted_domain_unsupported_bool('eql_v3.int4', '<');
+    PERFORM eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.int4', '<');
   EXCEPTION WHEN OTHERS THEN
     raised := true;
     IF SQLERRM <> 'operator < is not supported for eql_v3.int4' THEN
@@ -62,7 +62,7 @@ BEGIN
   END;
 
   IF NOT raised THEN
-    RAISE EXCEPTION 'blocker eql_v3.encrypted_domain_unsupported_bool did not raise';
+    RAISE EXCEPTION 'blocker eql_v3_internal.encrypted_domain_unsupported_bool did not raise';
   END IF;
 END $$;
 SQL
