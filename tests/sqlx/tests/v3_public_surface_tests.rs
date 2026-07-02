@@ -33,7 +33,10 @@ const GOLDEN: &str = include_str!("../snapshots/eql_v3_public_surface.txt");
 /// Filesystem path to the golden, used ONLY by the local regen path
 /// (`EQL_UPDATE_SNAPSHOTS=1`), which always runs on the build machine where this
 /// compile-time path is valid.
-const GOLDEN_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/snapshots/eql_v3_public_surface.txt");
+const GOLDEN_PATH: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/snapshots/eql_v3_public_surface.txt"
+);
 
 /// Enumerates every object owned by the `eql_v3` public schema as normalized,
 /// schema-qualified text lines. Run on a connection with
@@ -89,7 +92,9 @@ async fn public_surface(pool: &PgPool) -> Result<Vec<String>> {
     sqlx::query("SET search_path = pg_catalog")
         .execute(&mut *conn)
         .await?;
-    let mut entries: Vec<String> = sqlx::query_scalar(SURFACE_SQL).fetch_all(&mut *conn).await?;
+    let mut entries: Vec<String> = sqlx::query_scalar(SURFACE_SQL)
+        .fetch_all(&mut *conn)
+        .await?;
     // Byte-order sort to match the `LC_ALL=C sort` convention used by the other
     // committed snapshots.
     entries.sort();
@@ -144,8 +149,16 @@ async fn eql_v3_public_surface_matches_golden(pool: PgPool) -> Result<()> {
              `EQL_UPDATE_SNAPSHOTS=1 mise run test:surface:snapshot:regen` and commit \
              {GOLDEN_PATH}.\n\
              If an object should be internal, create it in eql_v3_internal instead.",
-            if added.is_empty() { "(none)".to_string() } else { added.join("\n  ") },
-            if removed.is_empty() { "(none)".to_string() } else { removed.join("\n  ") },
+            if added.is_empty() {
+                "(none)".to_string()
+            } else {
+                added.join("\n  ")
+            },
+            if removed.is_empty() {
+                "(none)".to_string()
+            } else {
+                removed.join("\n  ")
+            },
         );
     }
     Ok(())
