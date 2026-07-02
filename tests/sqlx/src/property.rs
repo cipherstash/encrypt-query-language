@@ -222,7 +222,7 @@ where
             for &overload in &Overload::ALL {
                 let (l, r) = overload.operands(&a.payload_json, &b.payload_json, domain);
                 for &func in funcs {
-                    exprs.push(format!("eql_v3.{func}({l}, {r})"));
+                    exprs.push(format!("eql_v3_internal.{func}({l}, {r})"));
                     meta.push((overload, func, expected(&a.plaintext, &b.plaintext, func)));
                 }
             }
@@ -237,7 +237,7 @@ where
                     .with_context(|| format!("reading column {i} of: {sql}"))?;
                 anyhow::ensure!(
                     got == Some(*want),
-                    "fn eql_v3.{func} on {domain} ({overload:?}): plaintext {:?} vs {:?} \
+                    "fn eql_v3_internal.{func} on {domain} ({overload:?}): plaintext {:?} vs {:?} \
                      expected {want}, SQL returned {got:?}",
                     a.plaintext,
                     b.plaintext,
@@ -314,7 +314,7 @@ pub async fn assert_ord_fn_oracle<T: ScalarType>(
 /// term stored in the payload. For `variant`'s domain, drives whichever
 /// extractors its catalog terms declare:
 /// - an `Hm` term ⇒ `eql_v3.eq_term(<dom>)::text` equals the payload's `hm`
-///   string (`eql_v3.hmac_256` is a domain over `text`, so the hex comes back
+///   string (`eql_v3_internal.hmac_256` is a domain over `text`, so the hex comes back
 ///   verbatim — no `encode`/`decode`).
 /// - an `Ore` term ⇒ the `ord_term` composite, re-rendered to a hex-block array
 ///   (`encode((t).bytes,'hex')` per block, ordinal order), equals the payload's
@@ -373,7 +373,7 @@ pub async fn assert_extractor_oracle<T: ScalarType>(
             // Re-render the ORE composite to its stored hex-block array
             // (lower-case `encode(...,'hex')`, in array-subscript order, which is
             // the order `jsonb_array_to_ore_block_256` built `terms` from the
-            // payload's `ob`). `eql_v3.ore_block_256_term` is a single-field
+            // payload's `ob`). `eql_v3_internal.ore_block_256_term` is a single-field
             // composite `(bytes bytea)`; a `WITH ORDINALITY AS u(t, n)` column-
             // alias list expands that single field to `bytea` (so `(t).bytes`
             // fails to resolve), so index `terms` with `generate_subscripts`
@@ -422,32 +422,32 @@ pub async fn assert_match_smoke(
     let cases: [(&str, String, bool); 6] = [
         (
             "contains(haystack, needle)",
-            format!("eql_v3.contains({haystack}, {needle})"),
+            format!("eql_v3_internal.contains({haystack}, {needle})"),
             true,
         ),
         (
             "contains(needle, haystack)",
-            format!("eql_v3.contains({needle}, {haystack})"),
+            format!("eql_v3_internal.contains({needle}, {haystack})"),
             false,
         ),
         (
             "contains(haystack, disjoint)",
-            format!("eql_v3.contains({haystack}, {disjoint})"),
+            format!("eql_v3_internal.contains({haystack}, {disjoint})"),
             false,
         ),
         (
             "contained_by(needle, haystack)",
-            format!("eql_v3.contained_by({needle}, {haystack})"),
+            format!("eql_v3_internal.contained_by({needle}, {haystack})"),
             true,
         ),
         (
             "contained_by(haystack, needle)",
-            format!("eql_v3.contained_by({haystack}, {needle})"),
+            format!("eql_v3_internal.contained_by({haystack}, {needle})"),
             false,
         ),
         (
             "contained_by(disjoint, haystack)",
-            format!("eql_v3.contained_by({disjoint}, {haystack})"),
+            format!("eql_v3_internal.contained_by({disjoint}, {haystack})"),
             false,
         ),
     ];

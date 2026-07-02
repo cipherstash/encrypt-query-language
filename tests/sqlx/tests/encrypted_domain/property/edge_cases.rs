@@ -105,7 +105,7 @@ async fn every_eql_v3_blocker_is_non_strict_plpgsql(pool: PgPool) -> Result<()> 
         FROM pg_catalog.pg_proc p
         JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
         JOIN pg_catalog.pg_language  l ON l.oid = p.prolang
-        WHERE n.nspname = 'eql_v3'
+        WHERE n.nspname IN ('eql_v3', 'eql_v3_internal')
           AND p.prosrc LIKE '%is not supported for %'
         "#,
     )

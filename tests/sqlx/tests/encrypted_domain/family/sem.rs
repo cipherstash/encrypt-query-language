@@ -1,6 +1,6 @@
 //! Direct behavioural tests for the self-contained `eql_v3` searchable-
-//! encrypted-metadata (SEM) index-term functions (`eql_v3.hmac_256`,
-//! `eql_v3.ore_block_256` and their comparators).
+//! encrypted-metadata (SEM) index-term functions (`eql_v3_internal.hmac_256`,
+//! `eql_v3_internal.ore_block_256` and their comparators).
 //!
 //! These functions are the self-contained `eql_v3` SEM surface (`src/v3/sem/`).
 //! The scalar matrix already exercises the happy path of the *array* comparator
@@ -25,7 +25,7 @@ use sqlx::PgPool;
 /// A single term built directly from hex — no encryption needed for the
 /// structural/edge-case tests.
 fn term(hex: &str) -> String {
-    format!("ROW(decode('{hex}', 'hex'))::eql_v3.ore_block_256_term")
+    format!("ROW(decode('{hex}', 'hex'))::eql_v3_internal.ore_block_256_term")
 }
 
 /// T2 — The term comparator must reject ciphertexts of different lengths. This
@@ -33,7 +33,7 @@ fn term(hex: &str) -> String {
 #[sqlx::test]
 async fn ore_term_comparator_rejects_different_length_ciphertexts(pool: PgPool) -> Result<()> {
     let sql = format!(
-        "SELECT eql_v3.compare_ore_block_256_term({}, {})",
+        "SELECT eql_v3_internal.compare_ore_block_256_term({}, {})",
         term("aabbccdd"),   // 4 bytes
         term("aabbccddee"), // 5 bytes
     );
@@ -48,19 +48,19 @@ async fn ore_term_comparator_rejects_different_length_ciphertexts(pool: PgPool) 
 #[sqlx::test]
 async fn ore_term_comparator_null_ordering(pool: PgPool) -> Result<()> {
     let t = term("aabb");
-    let n = "NULL::eql_v3.ore_block_256_term";
+    let n = "NULL::eql_v3_internal.ore_block_256_term";
 
     let cases = [
         (
-            format!("SELECT eql_v3.compare_ore_block_256_term({n}, {t})"),
+            format!("SELECT eql_v3_internal.compare_ore_block_256_term({n}, {t})"),
             -1,
         ),
         (
-            format!("SELECT eql_v3.compare_ore_block_256_term({t}, {n})"),
+            format!("SELECT eql_v3_internal.compare_ore_block_256_term({t}, {n})"),
             1,
         ),
         (
-            format!("SELECT eql_v3.compare_ore_block_256_term({n}, {n})"),
+            format!("SELECT eql_v3_internal.compare_ore_block_256_term({n}, {n})"),
             0,
         ),
     ];
@@ -78,15 +78,15 @@ async fn ore_term_comparator_null_ordering(pool: PgPool) -> Result<()> {
 #[sqlx::test]
 async fn ore_terms_array_null_and_empty_base_cases(pool: PgPool) -> Result<()> {
     let t = format!("ARRAY[{}]", term("aabb"));
-    let empty = "ARRAY[]::eql_v3.ore_block_256_term[]";
-    let null_arr = "NULL::eql_v3.ore_block_256_term[]";
+    let empty = "ARRAY[]::eql_v3_internal.ore_block_256_term[]";
+    let null_arr = "NULL::eql_v3_internal.ore_block_256_term[]";
 
     // NULL array operand → NULL result (the array overload returns NULL; it is
     // not STRICT). Typed as Option<i32>; the shared `assert_null` helper only
     // types Option<bool>, so query directly here.
     for sql in [
-        format!("SELECT eql_v3.compare_ore_block_256_terms({null_arr}, {t})"),
-        format!("SELECT eql_v3.compare_ore_block_256_terms({t}, {null_arr})"),
+        format!("SELECT eql_v3_internal.compare_ore_block_256_terms({null_arr}, {t})"),
+        format!("SELECT eql_v3_internal.compare_ore_block_256_terms({t}, {null_arr})"),
     ] {
         let got: Option<i32> = sqlx::query_scalar(&sql).fetch_one(&pool).await?;
         assert!(got.is_none(), "NULL array operand must yield NULL: {sql}");
@@ -94,15 +94,15 @@ async fn ore_terms_array_null_and_empty_base_cases(pool: PgPool) -> Result<()> {
 
     let cases = [
         (
-            format!("SELECT eql_v3.compare_ore_block_256_terms({empty}, {empty})"),
+            format!("SELECT eql_v3_internal.compare_ore_block_256_terms({empty}, {empty})"),
             0,
         ),
         (
-            format!("SELECT eql_v3.compare_ore_block_256_terms({empty}, {t})"),
+            format!("SELECT eql_v3_internal.compare_ore_block_256_terms({empty}, {t})"),
             -1,
         ),
         (
-            format!("SELECT eql_v3.compare_ore_block_256_terms({t}, {empty})"),
+            format!("SELECT eql_v3_internal.compare_ore_block_256_terms({t}, {empty})"),
             1,
         ),
     ];
@@ -120,13 +120,13 @@ async fn ore_terms_array_null_and_empty_base_cases(pool: PgPool) -> Result<()> {
 async fn sem_presence_checks_and_missing_ob_behaviour(pool: PgPool) -> Result<()> {
     let bool_cases = [
         (
-            r#"SELECT eql_v3.has_ore_block_256('{"ob":["aa"]}'::jsonb)"#,
+            r#"SELECT eql_v3_internal.has_ore_block_256('{"ob":["aa"]}'::jsonb)"#,
             true,
         ),
-        (r#"SELECT eql_v3.has_ore_block_256('{}'::jsonb)"#, false),
+        (r#"SELECT eql_v3_internal.has_ore_block_256('{}'::jsonb)"#, false),
         // json-null `ob` is typed `'null'`, not `'array'` → absent.
         (
-            r#"SELECT eql_v3.has_ore_block_256('{"ob":null}'::jsonb)"#,
+            r#"SELECT eql_v3_internal.has_ore_block_256('{"ob":null}'::jsonb)"#,
             false,
         ),
         // Present-but-non-array `ob` is rejected as absent: a well-formed ORE
@@ -134,15 +134,15 @@ async fn sem_presence_checks_and_missing_ob_behaviour(pool: PgPool) -> Result<()
         // both → false. This is the boundary that makes `ore_block_256` RAISE on
         // a malformed `ob` instead of degrading it to a NULL index term.
         (
-            r#"SELECT eql_v3.has_ore_block_256('{"ob":5}'::jsonb)"#,
+            r#"SELECT eql_v3_internal.has_ore_block_256('{"ob":5}'::jsonb)"#,
             false,
         ),
         (
-            r#"SELECT eql_v3.has_ore_block_256('{"ob":{}}'::jsonb)"#,
+            r#"SELECT eql_v3_internal.has_ore_block_256('{"ob":{}}'::jsonb)"#,
             false,
         ),
-        (r#"SELECT eql_v3.has_hmac_256('{"hm":"abc"}'::jsonb)"#, true),
-        (r#"SELECT eql_v3.has_hmac_256('{}'::jsonb)"#, false),
+        (r#"SELECT eql_v3_internal.has_hmac_256('{"hm":"abc"}'::jsonb)"#, true),
+        (r#"SELECT eql_v3_internal.has_hmac_256('{}'::jsonb)"#, false),
     ];
     for (sql, expected) in bool_cases {
         let got: bool = sqlx::query_scalar(sql).fetch_one(&pool).await?;
@@ -152,7 +152,7 @@ async fn sem_presence_checks_and_missing_ob_behaviour(pool: PgPool) -> Result<()
     // Missing `ob` → RAISE.
     assert_raises(
         &pool,
-        r#"SELECT eql_v3.ore_block_256('{"foo":1}'::jsonb)"#,
+        r#"SELECT eql_v3_internal.ore_block_256('{"foo":1}'::jsonb)"#,
         &[],
         "Expected an ore index (ob) value",
     )
@@ -162,14 +162,14 @@ async fn sem_presence_checks_and_missing_ob_behaviour(pool: PgPool) -> Result<()
     // NULL index term (`has_ore_block_256` reports it absent).
     assert_raises(
         &pool,
-        r#"SELECT eql_v3.ore_block_256('{"ob":5}'::jsonb)"#,
+        r#"SELECT eql_v3_internal.ore_block_256('{"ob":5}'::jsonb)"#,
         &[],
         "Expected an ore index (ob) value",
     )
     .await?;
 
     // NULL jsonb → NULL composite (STRICT short-circuit), NOT a raise.
-    let is_null: bool = sqlx::query_scalar("SELECT eql_v3.ore_block_256(NULL::jsonb) IS NULL")
+    let is_null: bool = sqlx::query_scalar("SELECT eql_v3_internal.ore_block_256(NULL::jsonb) IS NULL")
         .fetch_one(&pool)
         .await?;
     assert!(
@@ -179,7 +179,7 @@ async fn sem_presence_checks_and_missing_ob_behaviour(pool: PgPool) -> Result<()
     Ok(())
 }
 
-/// T6 — Characterization of `eql_v3.jsonb_array_to_bytea_array(jsonb)` across its
+/// T6 — Characterization of `eql_v3_internal.jsonb_array_to_bytea_array(jsonb)` across its
 /// three real-world input shapes. This is the safety net for the plpgsql→sql
 /// inlining refactor (the function is reached per-encrypted-value, so it must be
 /// inlinable). Behaviour pinned:
@@ -198,7 +198,7 @@ async fn jsonb_array_to_bytea_array_input_shapes(pool: PgPool) -> Result<()> {
     // so the body runs: `jsonb_typeof(NULL)` is NULL → the CASE guard
     // `WHEN jsonb_typeof(val) = 'array'` is not-true → ELSE NULL.
     let is_null: bool =
-        sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_bytea_array(NULL::jsonb) IS NULL")
+        sqlx::query_scalar("SELECT eql_v3_internal.jsonb_array_to_bytea_array(NULL::jsonb) IS NULL")
             .fetch_one(&pool)
             .await?;
     assert!(
@@ -208,21 +208,21 @@ async fn jsonb_array_to_bytea_array_input_shapes(pool: PgPool) -> Result<()> {
 
     // JSON null → NULL.
     let is_null: bool =
-        sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_bytea_array('null'::jsonb) IS NULL")
+        sqlx::query_scalar("SELECT eql_v3_internal.jsonb_array_to_bytea_array('null'::jsonb) IS NULL")
             .fetch_one(&pool)
             .await?;
     assert!(is_null, "JSON null must yield NULL bytea[]");
 
     // Empty array → NULL (array_agg over zero rows).
     let is_null: bool =
-        sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_bytea_array('[]'::jsonb) IS NULL")
+        sqlx::query_scalar("SELECT eql_v3_internal.jsonb_array_to_bytea_array('[]'::jsonb) IS NULL")
             .fetch_one(&pool)
             .await?;
     assert!(is_null, "empty JSON array must yield NULL bytea[]");
 
     // Single-element array → one decoded bytea element.
     let decoded: Vec<Vec<u8>> =
-        sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_bytea_array('[\"aabb\"]'::jsonb)")
+        sqlx::query_scalar("SELECT eql_v3_internal.jsonb_array_to_bytea_array('[\"aabb\"]'::jsonb)")
             .fetch_one(&pool)
             .await?;
     assert_eq!(
@@ -233,7 +233,7 @@ async fn jsonb_array_to_bytea_array_input_shapes(pool: PgPool) -> Result<()> {
 
     // Populated array → hex-decoded bytea[] round-trip.
     let decoded: Vec<Vec<u8>> = sqlx::query_scalar(
-        "SELECT eql_v3.jsonb_array_to_bytea_array('[\"aabb\",\"ccdd\"]'::jsonb)",
+        "SELECT eql_v3_internal.jsonb_array_to_bytea_array('[\"aabb\",\"ccdd\"]'::jsonb)",
     )
     .fetch_one(&pool)
     .await?;
@@ -245,7 +245,7 @@ async fn jsonb_array_to_bytea_array_input_shapes(pool: PgPool) -> Result<()> {
 
     // Deliberate delta: a non-array JSON scalar returns NULL (not a raise).
     let is_null: bool =
-        sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_bytea_array('5'::jsonb) IS NULL")
+        sqlx::query_scalar("SELECT eql_v3_internal.jsonb_array_to_bytea_array('5'::jsonb) IS NULL")
             .fetch_one(&pool)
             .await?;
     assert!(
@@ -256,7 +256,7 @@ async fn jsonb_array_to_bytea_array_input_shapes(pool: PgPool) -> Result<()> {
     // Same delta for a non-array JSON object — `jsonb_typeof` is 'object', so
     // the CASE guard is not-true → ELSE NULL (not a raise).
     let is_null: bool =
-        sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_bytea_array('{}'::jsonb) IS NULL")
+        sqlx::query_scalar("SELECT eql_v3_internal.jsonb_array_to_bytea_array('{}'::jsonb) IS NULL")
             .fetch_one(&pool)
             .await?;
     assert!(
@@ -267,7 +267,7 @@ async fn jsonb_array_to_bytea_array_input_shapes(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-/// T7 — Characterization of `eql_v3.jsonb_array_to_ore_block_256(jsonb)`
+/// T7 — Characterization of `eql_v3_internal.jsonb_array_to_ore_block_256(jsonb)`
 /// across the same three input shapes. Safety net for the same plpgsql→sql
 /// inlining refactor. Behaviour pinned:
 ///   - JSON null  (`'null'`) → NULL composite
@@ -284,7 +284,7 @@ async fn jsonb_array_to_ore_block_input_shapes(pool: PgPool) -> Result<()> {
     // SQL NULL (distinct from JSON null `'null'`). Not STRICT, so the body
     // runs: `jsonb_typeof(NULL)` is NULL → CASE guard not-true → ELSE NULL.
     let is_null: bool =
-        sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_ore_block_256(NULL::jsonb) IS NULL")
+        sqlx::query_scalar("SELECT eql_v3_internal.jsonb_array_to_ore_block_256(NULL::jsonb) IS NULL")
             .fetch_one(&pool)
             .await?;
     assert!(
@@ -294,7 +294,7 @@ async fn jsonb_array_to_ore_block_input_shapes(pool: PgPool) -> Result<()> {
 
     // JSON null → NULL composite.
     let is_null: bool =
-        sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_ore_block_256('null'::jsonb) IS NULL")
+        sqlx::query_scalar("SELECT eql_v3_internal.jsonb_array_to_ore_block_256('null'::jsonb) IS NULL")
             .fetch_one(&pool)
             .await?;
     assert!(is_null, "JSON null must yield NULL composite");
@@ -303,12 +303,12 @@ async fn jsonb_array_to_ore_block_input_shapes(pool: PgPool) -> Result<()> {
     // `ob` from encrypting `""` must remain comparable (so it sorts first via the
     // comparator's cardinality guard) rather than collapsing to NULL terms.
     let is_null: bool =
-        sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_ore_block_256('[]'::jsonb) IS NULL")
+        sqlx::query_scalar("SELECT eql_v3_internal.jsonb_array_to_ore_block_256('[]'::jsonb) IS NULL")
             .fetch_one(&pool)
             .await?;
     assert!(!is_null, "empty JSON array must yield a non-NULL composite");
     let term_count: i32 = sqlx::query_scalar(
-        "SELECT cardinality((eql_v3.jsonb_array_to_ore_block_256('[]'::jsonb)).terms)",
+        "SELECT cardinality((eql_v3_internal.jsonb_array_to_ore_block_256('[]'::jsonb)).terms)",
     )
     .fetch_one(&pool)
     .await?;
@@ -319,7 +319,7 @@ async fn jsonb_array_to_ore_block_input_shapes(pool: PgPool) -> Result<()> {
 
     // Single-element array → non-NULL composite with exactly 1 term.
     let term_count: i32 = sqlx::query_scalar(
-        "SELECT cardinality((eql_v3.jsonb_array_to_ore_block_256('[\"aabb\"]'::jsonb)).terms)",
+        "SELECT cardinality((eql_v3_internal.jsonb_array_to_ore_block_256('[\"aabb\"]'::jsonb)).terms)",
     )
     .fetch_one(&pool)
     .await?;
@@ -330,7 +330,7 @@ async fn jsonb_array_to_ore_block_input_shapes(pool: PgPool) -> Result<()> {
 
     // Populated array → non-NULL composite with one term per element.
     let term_count: i32 = sqlx::query_scalar(
-        "SELECT cardinality((eql_v3.jsonb_array_to_ore_block_256('[\"aabb\",\"ccdd\",\"eeff\"]'::jsonb)).terms)",
+        "SELECT cardinality((eql_v3_internal.jsonb_array_to_ore_block_256('[\"aabb\",\"ccdd\",\"eeff\"]'::jsonb)).terms)",
     )
     .fetch_one(&pool)
     .await?;
@@ -341,7 +341,7 @@ async fn jsonb_array_to_ore_block_input_shapes(pool: PgPool) -> Result<()> {
 
     // Deliberate delta: a non-array JSON scalar returns NULL (not a raise).
     let is_null: bool =
-        sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_ore_block_256('5'::jsonb) IS NULL")
+        sqlx::query_scalar("SELECT eql_v3_internal.jsonb_array_to_ore_block_256('5'::jsonb) IS NULL")
             .fetch_one(&pool)
             .await?;
     assert!(
@@ -352,7 +352,7 @@ async fn jsonb_array_to_ore_block_input_shapes(pool: PgPool) -> Result<()> {
     // Same delta for a non-array JSON object — `jsonb_typeof` is 'object', so
     // the CASE guard is not-true → ELSE NULL (not a raise).
     let is_null: bool =
-        sqlx::query_scalar("SELECT eql_v3.jsonb_array_to_ore_block_256('{}'::jsonb) IS NULL")
+        sqlx::query_scalar("SELECT eql_v3_internal.jsonb_array_to_ore_block_256('{}'::jsonb) IS NULL")
             .fetch_one(&pool)
             .await?;
     assert!(
@@ -386,7 +386,7 @@ async fn ore_comparators_are_immutable(pool: PgPool) -> Result<()> {
                p.provolatile::text                         AS provolatile,
                p.proisstrict                               AS isstrict
         FROM pg_catalog.pg_proc p
-        WHERE p.pronamespace = 'eql_v3'::regnamespace
+        WHERE p.pronamespace = 'eql_v3_internal'::regnamespace
           AND p.proname IN (
             'compare_ore_block_256_term',
             'compare_ore_block_256_terms'
@@ -418,14 +418,14 @@ async fn ore_comparators_are_immutable(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-/// T9 — Bloom-filter SEM extractor (`eql_v3.bloom_filter(jsonb)`): reads the
+/// T9 — Bloom-filter SEM extractor (`eql_v3_internal.bloom_filter(jsonb)`): reads the
 /// `bf` array out of a payload. Inlinable SQL mirroring `hmac_256` — NULL on a
 /// missing key, not a raise (the `match` capability is tied to the domain,
 /// whose CHECK guarantees `bf`).
 #[sqlx::test]
 async fn bloom_filter_extractor_reads_bf_array(pool: PgPool) -> Result<()> {
     let got: Vec<i16> =
-        sqlx::query_scalar("SELECT eql_v3.bloom_filter('{\"bf\":[1,2,3]}'::jsonb)::smallint[]")
+        sqlx::query_scalar("SELECT eql_v3_internal.bloom_filter('{\"bf\":[1,2,3]}'::jsonb)::smallint[]")
             .fetch_one(&pool)
             .await?;
     assert_eq!(got, vec![1i16, 2, 3]);
@@ -438,7 +438,7 @@ async fn bloom_filter_extractor_returns_null_without_bf(pool: PgPool) -> Result<
     // NULL, not an exception. The RAISE is redundant because the `text_match`
     // domain CHECK already guarantees `bf` is present on the typed path.
     let got: Option<Vec<i16>> =
-        sqlx::query_scalar("SELECT eql_v3.bloom_filter('{\"hm\":\"x\"}'::jsonb)::smallint[]")
+        sqlx::query_scalar("SELECT eql_v3_internal.bloom_filter('{\"hm\":\"x\"}'::jsonb)::smallint[]")
             .fetch_one(&pool)
             .await?;
     assert!(
@@ -456,7 +456,7 @@ async fn bloom_filter_extractor_returns_null_for_non_array_bf(pool: PgPool) -> R
     // array, so a non-array `bf` can reach the extractor even on a typed value;
     // gating on `jsonb_typeof(...) = 'array'` treats it like an absent key.
     let got: Option<Vec<i16>> =
-        sqlx::query_scalar("SELECT eql_v3.bloom_filter('{\"bf\":null}'::jsonb)::smallint[]")
+        sqlx::query_scalar("SELECT eql_v3_internal.bloom_filter('{\"bf\":null}'::jsonb)::smallint[]")
             .fetch_one(&pool)
             .await?;
     assert!(got.is_none(), "non-array bf must return NULL, not raise");
@@ -472,7 +472,7 @@ async fn bloom_filter_extractor_empty_array_is_empty_not_null(pool: PgPool) -> R
     // via literal `text_match` casts. Distinct from the absent/non-array NULL
     // branches above.
     let got: Option<Vec<i16>> =
-        sqlx::query_scalar("SELECT eql_v3.bloom_filter('{\"bf\":[]}'::jsonb)::smallint[]")
+        sqlx::query_scalar("SELECT eql_v3_internal.bloom_filter('{\"bf\":[]}'::jsonb)::smallint[]")
             .fetch_one(&pool)
             .await?;
     assert_eq!(
@@ -483,7 +483,7 @@ async fn bloom_filter_extractor_empty_array_is_empty_not_null(pool: PgPool) -> R
     Ok(())
 }
 
-/// T10 — `eql_v3.has_bloom_filter(jsonb)` presence predicate. Mirrors the
+/// T10 — `eql_v3_internal.has_bloom_filter(jsonb)` presence predicate. Mirrors the
 /// `has_hmac_256` / `has_ore_block_256` coverage in T5: its two-part guard
 /// (`val ? 'bf'` AND `val ->> 'bf' IS NOT NULL`) is exercised across present,
 /// absent, and json-null cases. The `{"bf":null}` → false case pins the
@@ -494,17 +494,17 @@ async fn has_bloom_filter_detects_bf_presence(pool: PgPool) -> Result<()> {
     let bool_cases = [
         // present + non-null array → true
         (
-            r#"SELECT eql_v3.has_bloom_filter('{"bf":[1,2,3]}'::jsonb)"#,
+            r#"SELECT eql_v3_internal.has_bloom_filter('{"bf":[1,2,3]}'::jsonb)"#,
             true,
         ),
         // key absent → false
         (
-            r#"SELECT eql_v3.has_bloom_filter('{"hm":"x"}'::jsonb)"#,
+            r#"SELECT eql_v3_internal.has_bloom_filter('{"hm":"x"}'::jsonb)"#,
             false,
         ),
         // key present but json-null → false (the `->> ... IS NOT NULL` half)
         (
-            r#"SELECT eql_v3.has_bloom_filter('{"bf":null}'::jsonb)"#,
+            r#"SELECT eql_v3_internal.has_bloom_filter('{"bf":null}'::jsonb)"#,
             false,
         ),
     ];
@@ -515,7 +515,7 @@ async fn has_bloom_filter_detects_bf_presence(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-/// T11 — Planner-selectivity metadata for the `eql_v3.ore_block_256`
+/// T11 — Planner-selectivity metadata for the `eql_v3_internal.ore_block_256`
 /// `=` / `<>` operators. `<>` must use the inequality estimators
 /// (`neqsel` / `neqjoinsel`) and must NOT declare `HASHES` — an earlier revision
 /// copied `=`'s `eqsel` / `eqjoinsel` + `HASHES` onto `<>`, which is meaningless
@@ -529,8 +529,8 @@ async fn ore_block_comparison_operators_declare_correct_selectivity(pool: PgPool
         SELECT o.oprrest::text, o.oprjoin::text, o.oprcanhash, o.oprcanmerge
         FROM pg_operator o
         WHERE o.oprname = '='
-          AND o.oprleft  = 'eql_v3.ore_block_256'::regtype
-          AND o.oprright = 'eql_v3.ore_block_256'::regtype
+          AND o.oprleft  = 'eql_v3_internal.ore_block_256'::regtype
+          AND o.oprright = 'eql_v3_internal.ore_block_256'::regtype
         "#,
     )
     .fetch_one(&pool)
@@ -545,8 +545,8 @@ async fn ore_block_comparison_operators_declare_correct_selectivity(pool: PgPool
         SELECT o.oprrest::text, o.oprjoin::text, o.oprcanhash
         FROM pg_operator o
         WHERE o.oprname = '<>'
-          AND o.oprleft  = 'eql_v3.ore_block_256'::regtype
-          AND o.oprright = 'eql_v3.ore_block_256'::regtype
+          AND o.oprleft  = 'eql_v3_internal.ore_block_256'::regtype
+          AND o.oprright = 'eql_v3_internal.ore_block_256'::regtype
         "#,
     )
     .fetch_one(&pool)

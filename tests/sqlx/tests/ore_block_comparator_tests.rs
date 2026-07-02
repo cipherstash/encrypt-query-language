@@ -1,5 +1,5 @@
 //! Direct tests for the generalized N-block ORE comparator
-//! `eql_v3.compare_ore_block_256_term(s)`.
+//! `eql_v3_internal.compare_ore_block_256_term(s)`.
 //!
 //! Every test here is **always-on** — it runs in normal (no-creds) CI, because
 //! it sources real ORE terms from generated fixtures rather than encrypting at
@@ -32,7 +32,7 @@ async fn compare_fixture_pair(
     hi: &str,
 ) -> Result<i32> {
     let sql = format!(
-        "SELECT eql_v3.compare_ore_block_256_terms( \
+        "SELECT eql_v3_internal.compare_ore_block_256_terms( \
             eql_v3.ord_term((SELECT payload FROM fixtures.{table} WHERE plaintext = {lo})::eql_v3.{ord_domain}), \
             eql_v3.ord_term((SELECT payload FROM fixtures.{table} WHERE plaintext = {hi})::eql_v3.{ord_domain}))"
     );
@@ -43,7 +43,7 @@ async fn compare_fixture_pair(
 /// bytes are cryptographically meaningless, so this only drives length/structure
 /// validation, never ordering semantics.
 fn term_sql(fill: char, len: usize) -> String {
-    format!("ROW(repeat('{fill}', {len})::bytea)::eql_v3.ore_block_256_term")
+    format!("ROW(repeat('{fill}', {len})::bytea)::eql_v3_internal.ore_block_256_term")
 }
 
 /// Assert the ORE comparator agrees with an explicit oracle order over a
@@ -92,7 +92,7 @@ async fn assert_orders_like_oracle(
     // Oracle agreement: lower rank (smaller value) MUST compare -1.
     let order_violations: i64 = sqlx::query_scalar(&format!(
         "SELECT count(*) FROM ore_sample a JOIN ore_sample b ON a.rank < b.rank \
-         WHERE eql_v3.compare_ore_block_256_terms( \
+         WHERE eql_v3_internal.compare_ore_block_256_terms( \
              eql_v3.ord_term(a.payload::eql_v3.{ord_domain}), \
              eql_v3.ord_term(b.payload::eql_v3.{ord_domain})) <> -1"
     ))
@@ -106,10 +106,10 @@ async fn assert_orders_like_oracle(
     // Antisymmetry: compare(a, b) = -compare(b, a) for every distinct pair.
     let antisymmetry_violations: i64 = sqlx::query_scalar(&format!(
         "SELECT count(*) FROM ore_sample a JOIN ore_sample b ON a.rank <> b.rank \
-         WHERE eql_v3.compare_ore_block_256_terms( \
+         WHERE eql_v3_internal.compare_ore_block_256_terms( \
                  eql_v3.ord_term(a.payload::eql_v3.{ord_domain}), \
                  eql_v3.ord_term(b.payload::eql_v3.{ord_domain})) \
-             <> - eql_v3.compare_ore_block_256_terms( \
+             <> - eql_v3_internal.compare_ore_block_256_terms( \
                  eql_v3.ord_term(b.payload::eql_v3.{ord_domain}), \
                  eql_v3.ord_term(a.payload::eql_v3.{ord_domain}))"
     ))
@@ -128,9 +128,9 @@ async fn assert_orders_like_oracle(
 /// not fire first).
 #[sqlx::test]
 async fn comparator_rejects_non_conforming_length(pool: PgPool) -> Result<()> {
-    let sql = "SELECT eql_v3.compare_ore_block_256_term( \
-        ROW('\\x00010203'::bytea)::eql_v3.ore_block_256_term, \
-        ROW('\\x04050607'::bytea)::eql_v3.ore_block_256_term)";
+    let sql = "SELECT eql_v3_internal.compare_ore_block_256_term( \
+        ROW('\\x00010203'::bytea)::eql_v3_internal.ore_block_256_term, \
+        ROW('\\x04050607'::bytea)::eql_v3_internal.ore_block_256_term)";
     let err = sqlx::query_scalar::<_, i32>(sql)
         .fetch_one(&pool)
         .await
@@ -149,9 +149,9 @@ async fn comparator_rejects_non_conforming_length(pool: PgPool) -> Result<()> {
 /// all-blocks-equal path and wrongly returns 0).
 #[sqlx::test]
 async fn comparator_rejects_sixteen_byte_term(pool: PgPool) -> Result<()> {
-    let sql = "SELECT eql_v3.compare_ore_block_256_term( \
-        ROW(repeat('a', 16)::bytea)::eql_v3.ore_block_256_term, \
-        ROW(repeat('b', 16)::bytea)::eql_v3.ore_block_256_term)";
+    let sql = "SELECT eql_v3_internal.compare_ore_block_256_term( \
+        ROW(repeat('a', 16)::bytea)::eql_v3_internal.ore_block_256_term, \
+        ROW(repeat('b', 16)::bytea)::eql_v3_internal.ore_block_256_term)";
     let err = sqlx::query_scalar::<_, i32>(sql)
         .fetch_one(&pool)
         .await
@@ -173,9 +173,9 @@ async fn comparator_rejects_sixteen_byte_term(pool: PgPool) -> Result<()> {
 /// ahead of the malformed-length guard. Creds-free (hand-built bytea).
 #[sqlx::test]
 async fn comparator_rejects_mismatched_block_widths(pool: PgPool) -> Result<()> {
-    let sql = "SELECT eql_v3.compare_ore_block_256_term( \
-        ROW(repeat('a', 408)::bytea)::eql_v3.ore_block_256_term, \
-        ROW(repeat('b', 702)::bytea)::eql_v3.ore_block_256_term)";
+    let sql = "SELECT eql_v3_internal.compare_ore_block_256_term( \
+        ROW(repeat('a', 408)::bytea)::eql_v3_internal.ore_block_256_term, \
+        ROW(repeat('b', 702)::bytea)::eql_v3_internal.ore_block_256_term)";
     let err = sqlx::query_scalar::<_, i32>(sql)
         .fetch_one(&pool)
         .await
@@ -201,12 +201,12 @@ async fn comparator_rejects_mismatched_block_widths(pool: PgPool) -> Result<()> 
 #[sqlx::test]
 async fn empty_ore_term_sorts_before_non_empty(pool: PgPool) -> Result<()> {
     // Empty `ob` taken through the real extractor path (the buggy site).
-    let empty = "eql_v3.ore_block_256('{\"ob\": []}'::jsonb)";
+    let empty = "eql_v3_internal.ore_block_256('{\"ob\": []}'::jsonb)";
     // A non-empty composite: one synthetic valid-width term; content irrelevant.
-    let non_empty = format!("ROW(ARRAY[{}])::eql_v3.ore_block_256", term_sql('a', 408));
+    let non_empty = format!("ROW(ARRAY[{}])::eql_v3_internal.ore_block_256", term_sql('a', 408));
 
     let lt: Option<i32> = sqlx::query_scalar(&format!(
-        "SELECT eql_v3.compare_ore_block_256_terms({empty}, {non_empty})"
+        "SELECT eql_v3_internal.compare_ore_block_256_terms({empty}, {non_empty})"
     ))
     .fetch_one(&pool)
     .await?;
@@ -217,7 +217,7 @@ async fn empty_ore_term_sorts_before_non_empty(pool: PgPool) -> Result<()> {
     );
 
     let gt: Option<i32> = sqlx::query_scalar(&format!(
-        "SELECT eql_v3.compare_ore_block_256_terms({non_empty}, {empty})"
+        "SELECT eql_v3_internal.compare_ore_block_256_terms({non_empty}, {empty})"
     ))
     .fetch_one(&pool)
     .await?;
@@ -228,7 +228,7 @@ async fn empty_ore_term_sorts_before_non_empty(pool: PgPool) -> Result<()> {
     );
 
     let eq: Option<i32> = sqlx::query_scalar(&format!(
-        "SELECT eql_v3.compare_ore_block_256_terms({empty}, {empty})"
+        "SELECT eql_v3_internal.compare_ore_block_256_terms({empty}, {empty})"
     ))
     .fetch_one(&pool)
     .await?;
@@ -253,7 +253,7 @@ async fn comparator_length_guard_sweep(pool: PgPool) -> Result<()> {
     // Invalid: not 49*N + 16 (16 and 4 are covered by the dedicated tests above).
     for len in [15usize, 17, 50, 64, 66, 407, 409, 701, 703] {
         let sql = format!(
-            "SELECT eql_v3.compare_ore_block_256_term({}, {})",
+            "SELECT eql_v3_internal.compare_ore_block_256_term({}, {})",
             term_sql('a', len),
             term_sql('b', len)
         );
@@ -274,7 +274,7 @@ async fn comparator_length_guard_sweep(pool: PgPool) -> Result<()> {
         let len = 49 * n + 16;
 
         let eq: i32 = sqlx::query_scalar(&format!(
-            "SELECT eql_v3.compare_ore_block_256_term({}, {})",
+            "SELECT eql_v3_internal.compare_ore_block_256_term({}, {})",
             term_sql('a', len),
             term_sql('a', len)
         ))
@@ -283,7 +283,7 @@ async fn comparator_length_guard_sweep(pool: PgPool) -> Result<()> {
         assert_eq!(eq, 0, "len {len} (N={n}): identical terms must compare 0");
 
         let ne: i32 = sqlx::query_scalar(&format!(
-            "SELECT eql_v3.compare_ore_block_256_term({}, {})",
+            "SELECT eql_v3_internal.compare_ore_block_256_term({}, {})",
             term_sql('a', len),
             term_sql('b', len)
         ))
@@ -426,7 +426,7 @@ async fn wide_block_term_compares_equal_to_itself(pool: PgPool) -> Result<()> {
 /// equality matches both `1` and `1.0`).
 async fn compare_collision_ids(pool: &PgPool, a: i64, b: i64) -> Result<i32> {
     let sql = format!(
-        "SELECT eql_v3.compare_ore_block_256_terms( \
+        "SELECT eql_v3_internal.compare_ore_block_256_terms( \
             eql_v3.ord_term((SELECT payload FROM fixtures.v3_numeric_collision WHERE id = {a})::eql_v3.numeric_ord), \
             eql_v3.ord_term((SELECT payload FROM fixtures.v3_numeric_collision WHERE id = {b})::eql_v3.numeric_ord))"
     );

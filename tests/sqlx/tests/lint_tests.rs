@@ -104,7 +104,7 @@ async fn lint_flags_blocker_in_language_sql(pool: PgPool) -> Result<()> {
         r#"
         CREATE FUNCTION eql_v3.test_bad_blocker_sql(a eql_v3.int4, b eql_v3.int4)
         RETURNS boolean LANGUAGE sql IMMUTABLE
-        AS $$ SELECT eql_v3.encrypted_domain_unsupported_bool('eql_v3.int4', '=') $$;
+        AS $$ SELECT eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.int4', '=') $$;
         "#,
     )
     .execute(&pool)
@@ -142,7 +142,7 @@ async fn lint_flags_strict_blocker(pool: PgPool) -> Result<()> {
         r#"
         CREATE FUNCTION eql_v3.test_bad_blocker_strict(a eql_v3.int4, b eql_v3.int4)
         RETURNS boolean LANGUAGE plpgsql IMMUTABLE STRICT
-        AS $$ BEGIN RETURN eql_v3.encrypted_domain_unsupported_bool('eql_v3.int4', '='); END; $$;
+        AS $$ BEGIN RETURN eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.int4', '='); END; $$;
         "#,
     )
     .execute(&pool)

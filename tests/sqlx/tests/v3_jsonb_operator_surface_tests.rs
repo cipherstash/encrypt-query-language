@@ -377,12 +377,12 @@ const NON_BOOLEAN_BLOCKER_RETURN_TYPES: &[(&str, &str)] = &[
 
 #[sqlx::test]
 async fn v3_jsonb_blocker_return_types_match_native(pool: PgPool) -> anyhow::Result<()> {
-    // Every eql_v3 jsonb_blocked% function with its declared return type.
+    // Every eql_v3_internal jsonb_blocked% function with its declared return type.
     let rows: Vec<(String, String)> = sqlx::query_as(
         r#"
         SELECT p.proname, pg_catalog.format_type(p.prorettype, NULL)
         FROM pg_proc p
-        WHERE p.pronamespace = 'eql_v3'::regnamespace
+        WHERE p.pronamespace = 'eql_v3_internal'::regnamespace
           AND p.proname LIKE 'jsonb_blocked%'
         "#,
     )
@@ -390,7 +390,7 @@ async fn v3_jsonb_blocker_return_types_match_native(pool: PgPool) -> anyhow::Res
     .await?;
     assert!(
         !rows.is_empty(),
-        "expected eql_v3 jsonb_blocked% functions to exist"
+        "expected eql_v3_internal jsonb_blocked% functions to exist"
     );
 
     let non_boolean: std::collections::BTreeMap<&str, &str> =

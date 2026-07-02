@@ -52,7 +52,7 @@ async fn disabling_storage_eq_blocker_flips_blocker_arm(pool: PgPool) -> Result<
     // (eql_v3.int4, eql_v3.int4) now resolves to this no-raise body.
     mutate(
         &pool,
-        "CREATE OR REPLACE FUNCTION eql_v3.eq(a eql_v3.int4, b eql_v3.int4) \
+        "CREATE OR REPLACE FUNCTION eql_v3_internal.eq(a eql_v3.int4, b eql_v3.int4) \
          RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$ SELECT true $$",
     )
     .await?;
@@ -143,14 +143,14 @@ async fn rerouting_ord_eq_through_hm_flips_ord_routes_arm(pool: PgPool) -> Resul
         "baseline: `_ord` `=` must match exactly the pivot via ob with hm stripped (got {baseline})"
     );
 
-    // Mutation: reroute `_ord` `=` through HMAC. `eql_v3.hmac_256(jsonb)` is
+    // Mutation: reroute `_ord` `=` through HMAC. `eql_v3_internal.hmac_256(jsonb)` is
     // STRICT and the `hm` key is absent, so it yields NULL and `=` matches
     // nothing.
     mutate(
         &pool,
-        "CREATE OR REPLACE FUNCTION eql_v3.eq(a eql_v3.int4_ord, b eql_v3.int4_ord) \
+        "CREATE OR REPLACE FUNCTION eql_v3_internal.eq(a eql_v3.int4_ord, b eql_v3.int4_ord) \
          RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE \
-         AS $$ SELECT eql_v3.hmac_256(a::jsonb) = eql_v3.hmac_256(b::jsonb) $$",
+         AS $$ SELECT eql_v3_internal.hmac_256(a::jsonb) = eql_v3_internal.hmac_256(b::jsonb) $$",
     )
     .await?;
 
@@ -180,7 +180,7 @@ async fn dropping_strict_on_eq_flips_supported_null_arm(pool: PgPool) -> Result<
     // keeps the oid; the operator now ignores NULL semantics.
     mutate(
         &pool,
-        "CREATE OR REPLACE FUNCTION eql_v3.eq(a eql_v3.int4_eq, b eql_v3.int4_eq) \
+        "CREATE OR REPLACE FUNCTION eql_v3_internal.eq(a eql_v3.int4_eq, b eql_v3.int4_eq) \
          RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$ SELECT true $$",
     )
     .await?;
@@ -198,7 +198,7 @@ async fn dropping_strict_on_eq_flips_supported_null_arm(pool: PgPool) -> Result<
     Ok(())
 }
 
-// 5. Ord `<` correctness routes through `eql_v3.lt`. Turning `lt` into a
+// 5. Ord `<` correctness routes through `eql_v3_internal.lt`. Turning `lt` into a
 //    blocker makes `<` raise — proving the ord `<` correctness arm has teeth.
 //    Crucially, ORDER BY routes through `ord_term`, NOT `<`, so it must stay
 //    green here. This is the #5-vs-#7 split: #5 attacks `<`, #7 attacks the
@@ -236,13 +236,13 @@ async fn blocking_lt_flips_lt_arm_but_not_order_by(pool: PgPool) -> Result<()> {
         "baseline: ORDER BY ord_term ASC must be plaintext-sorted"
     );
 
-    // Mutation: turn `eql_v3.lt(_ord, _ord)` into a blocker. Must be
+    // Mutation: turn `eql_v3_internal.lt(_ord, _ord)` into a blocker. Must be
     // LANGUAGE plpgsql and non-STRICT so the RAISE always fires.
     mutate(
         &pool,
-        "CREATE OR REPLACE FUNCTION eql_v3.lt(a eql_v3.int4_ord, b eql_v3.int4_ord) \
+        "CREATE OR REPLACE FUNCTION eql_v3_internal.lt(a eql_v3.int4_ord, b eql_v3.int4_ord) \
          RETURNS boolean LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE \
-         AS $$ BEGIN RETURN eql_v3.encrypted_domain_unsupported_bool('eql_v3.int4_ord', '<'); END; $$",
+         AS $$ BEGIN RETURN eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.int4_ord', '<'); END; $$",
     )
     .await?;
 
@@ -305,12 +305,12 @@ async fn rerouting_eq_eq_through_ob_flips_eq_arm(pool: PgPool) -> Result<()> {
     );
 
     // Mutation: reroute `_eq` `=` through ORE. The `ob` key is absent, so
-    // `eql_v3.ore_block_256(jsonb)` raises rather than matching.
+    // `eql_v3_internal.ore_block_256(jsonb)` raises rather than matching.
     mutate(
         &pool,
-        "CREATE OR REPLACE FUNCTION eql_v3.eq(a eql_v3.int4_eq, b eql_v3.int4_eq) \
+        "CREATE OR REPLACE FUNCTION eql_v3_internal.eq(a eql_v3.int4_eq, b eql_v3.int4_eq) \
          RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE \
-         AS $$ SELECT eql_v3.ore_block_256(a::jsonb) = eql_v3.ore_block_256(b::jsonb) $$",
+         AS $$ SELECT eql_v3_internal.ore_block_256(a::jsonb) = eql_v3_internal.ore_block_256(b::jsonb) $$",
     )
     .await?;
 
@@ -362,8 +362,8 @@ async fn collapsing_ord_term_flips_order_by_arm(pool: PgPool) -> Result<()> {
     let const_payload = fetch_fixture_payload::<i32>(&pool, 0).await?;
     let ddl = format!(
         "CREATE OR REPLACE FUNCTION eql_v3.ord_term(a eql_v3.int4_ord) \
-         RETURNS eql_v3.ore_block_256 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE \
-         AS $mutbody$ SELECT eql_v3.ore_block_256('{esc}'::jsonb) $mutbody$",
+         RETURNS eql_v3_internal.ore_block_256 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE \
+         AS $mutbody$ SELECT eql_v3_internal.ore_block_256('{esc}'::jsonb) $mutbody$",
         esc = const_payload.replace('\'', "''"),
     );
     mutate(&pool, &ddl).await?;
@@ -417,8 +417,8 @@ async fn making_ord_term_non_strict_flips_order_by_nulls_arm(pool: PgPool) -> Re
     let const_payload = fetch_fixture_payload::<i32>(&pool, 0).await?;
     let ddl = format!(
         "CREATE OR REPLACE FUNCTION eql_v3.ord_term(a eql_v3.int4_ord) \
-         RETURNS eql_v3.ore_block_256 LANGUAGE sql IMMUTABLE PARALLEL SAFE \
-         AS $mutbody$ SELECT eql_v3.ore_block_256(\
+         RETURNS eql_v3_internal.ore_block_256 LANGUAGE sql IMMUTABLE PARALLEL SAFE \
+         AS $mutbody$ SELECT eql_v3_internal.ore_block_256(\
          coalesce(a, '{esc}'::jsonb::eql_v3.int4_ord)::jsonb) $mutbody$",
         esc = const_payload.replace('\'', "''"),
     );

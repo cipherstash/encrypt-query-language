@@ -1591,9 +1591,9 @@ async fn v3_jsonb_arrow_integer_index_on_array(pool: PgPool) -> anyhow::Result<(
 async fn v3_jsonb_ore_cllw_null_bytes_composite_raises(pool: PgPool) -> anyhow::Result<()> {
     eql_tests::assert_raises(
         &pool,
-        "SELECT eql_v3.compare_ore_cllw_term(
-           ROW(NULL)::eql_v3.ore_cllw,
-           ROW(decode('00', 'hex'))::eql_v3.ore_cllw
+        "SELECT eql_v3_internal.compare_ore_cllw_term(
+           ROW(NULL)::eql_v3_internal.ore_cllw,
+           ROW(decode('00', 'hex'))::eql_v3_internal.ore_cllw
          )",
         &[],
         "NULL bytes field",
