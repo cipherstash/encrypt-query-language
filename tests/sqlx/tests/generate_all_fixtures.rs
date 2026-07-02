@@ -13,7 +13,6 @@
 //!   mise run fixture:generate:all
 #![cfg(feature = "fixture-gen")]
 
-use eql_domains::CATALOG;
 
 // `generate_for_token(token: &str) -> anyhow::Result<()>` is generated from the
 // single harness list in `tests/sqlx/src/scalar_types.rs`: one match arm per
@@ -26,7 +25,7 @@ eql_tests::scalar_types!(fixture_dispatch);
 #[ignore = "generator — run via `mise run fixture:generate:all`"]
 async fn generate_all() -> anyhow::Result<()> {
     let mut generated = 0usize;
-    for spec in CATALOG {
+    for spec in eql_domains::scalar_families() {
         eprintln!("Generating fixture eql_v3_{}...", spec.name);
         generate_for_token(spec.name).await?;
         generated += 1;

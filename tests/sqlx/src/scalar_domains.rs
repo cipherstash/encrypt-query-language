@@ -1640,7 +1640,7 @@ mod catalog_resolution_tests {
     /// the catalog would otherwise only surface when that specific DB test runs.
     #[test]
     fn every_matrix_variant_pair_resolves_in_catalog() {
-        for spec in CATALOG {
+        for spec in eql_domains::scalar_families() {
             for variant in Variant::ALL {
                 let suffix = variant.suffix();
                 // A variant is instantiated for a token iff that token declares

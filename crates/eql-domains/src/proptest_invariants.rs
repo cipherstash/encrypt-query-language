@@ -5,7 +5,7 @@
 //! internally consistent for any generated input; the DB-backed oracle suites
 //! (fixture/e2e) live in `tests/sqlx`.
 
-use crate::{ScalarKind, Term, CATALOG};
+use crate::{ScalarKind, Term};
 use proptest::prelude::*;
 
 /// Strategy over the three index terms.
@@ -96,7 +96,7 @@ proptest! {
 /// set, so an exhaustive loop is the right tool, not a generator).
 #[test]
 fn every_catalog_domain_payload_keys_match_its_terms() {
-    for spec in CATALOG {
+    for spec in crate::scalar_families() {
         for dom in spec.domains {
             // Exact set equality: the payload keys are precisely each term's
             // json_key (deduped) — no missing keys and no extras.
@@ -116,7 +116,7 @@ fn every_catalog_domain_payload_keys_match_its_terms() {
 
 #[test]
 fn eq_only_specs_have_no_ordering_operators() {
-    for spec in CATALOG {
+    for spec in crate::scalar_families() {
         if spec.is_eq_only() {
             for dom in spec.domains {
                 let ops = Term::operators_for_terms(dom.terms);

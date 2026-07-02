@@ -825,7 +825,7 @@ mod catalog_tests {
             ("ord", &[Term::Hm, Term::Ore][..]),
             ("search", &[Term::Hm, Term::Ore, Term::Bloom][..]),
         ];
-        for s in CATALOG {
+        for s in crate::scalar_families() {
             let shape: Vec<(&str, &[Term])> = s.domains.iter().map(|d| (d.name, d.terms)).collect();
             assert!(
                 shape == ordered
@@ -897,6 +897,7 @@ mod catalog_tests {
                 "bool" => ScalarKind::Bool,
                 "float4" => ScalarKind::F32,
                 "float8" => ScalarKind::F64,
+                "jsonb" => ScalarKind::Jsonb,
                 other => panic!("unmapped scalar token {other} in FIXTURES"),
             };
             assert_eq!(
