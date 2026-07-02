@@ -37,6 +37,13 @@ impl Domain {
             })
             .collect()
     }
+
+    /// True when this domain carries the flat scalar payload shape. False for
+    /// the SteVec shapes (the `jsonb` family). The single predicate scalar-only
+    /// consumers filter on.
+    pub const fn is_scalar(&self) -> bool {
+        matches!(self.shape, crate::Shape::Scalar)
+    }
 }
 
 impl DomainFamily {
@@ -74,21 +81,29 @@ impl DomainFamily {
     pub fn domain_by_name(&self, name: &str) -> Option<&Domain> {
         self.domains.iter().find(|d| d.name == name)
     }
+
+    /// True when every domain in this family is [`crate::Shape::Scalar`] — i.e. it
+    /// is a flat scalar family, not the SteVec `jsonb` family.
+    pub fn is_scalar(&self) -> bool {
+        self.domains.iter().all(|d| d.is_scalar())
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{Domain, Term};
+    use crate::{Domain, Shape, Term};
 
     #[test]
     fn struct_ident_mangles_full_name_to_pascalcase() {
         let storage = Domain {
             name: "",
             terms: &[],
+            shape: Shape::Scalar,
         };
         let ord_ore = Domain {
             name: "ord_ore",
             terms: &[Term::Ore],
+            shape: Shape::Scalar,
         };
         // storage domain => bare family name
         assert_eq!(storage.struct_ident("int4"), "Int4");
@@ -99,7 +114,17 @@ mod tests {
         let eq = Domain {
             name: "eq",
             terms: &[Term::Hm],
+            shape: Shape::Scalar,
         };
         assert_eq!(eq.struct_ident("float8"), "Float8Eq");
+    }
+
+    #[test]
+    fn scalar_families_are_all_scalar_for_now() {
+        use crate::{scalar_families, CATALOG};
+        assert_eq!(scalar_families().count(), CATALOG.len());
+        for f in scalar_families() {
+            assert!(f.is_scalar());
+        }
     }
 }

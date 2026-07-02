@@ -792,12 +792,13 @@ mod tests {
     #[test]
     fn domain_block_escapes_quote_bearing_name() {
         use crate::context::domain_block;
-        use eql_domains::Domain;
+        use eql_domains::{Domain, Shape};
         let block = domain_block(
             "int4",
             &Domain {
                 name: "q",
                 terms: &[],
+                shape: Shape::Scalar,
             },
         );
         assert_eq!(block.typname, "int4_q"); // no quote present → unchanged
