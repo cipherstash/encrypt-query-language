@@ -32,12 +32,16 @@ pub enum FromV2Error {
     /// A term key the target domain requires is absent from the input. For
     /// SteVec entries `key` is `"hm|oc"`: an entry must carry exactly one of
     /// the two, and this variant reports the "neither" half (the "both" half
-    /// is [`FromV2Error::AmbiguousTerm`]).
+    /// is [`FromV2Error::AmbiguousTerm`]) with `entry` locating the offender.
     MissingTerm {
-        /// The (unqualified) target domain name, e.g. `text_eq` or `json`.
+        /// The (unqualified) target domain name, e.g. `text_eq`, or the
+        /// SteVec shape (`json` / `jsonb_query`) for per-entry terms.
         domain: String,
         /// The missing wire key (`hm`/`ob`/`bf`/`op`, or `hm|oc` for entries).
         key: String,
+        /// Zero-based index of the term-less `sv` entry; `None` for flat
+        /// scalar payloads, which have no entries to index.
+        entry: Option<usize>,
     },
     /// A SteVec entry carries BOTH `hm` and `oc`; the v2 and v3 contracts
     /// both require exactly one, and picking one would silently drop a term.
@@ -104,7 +108,21 @@ impl fmt::Display for FromV2Error {
             Self::UnknownDomain { name } => {
                 write!(f, "unknown target domain {name:?}")
             }
-            Self::MissingTerm { domain, key } => {
+            Self::MissingTerm {
+                domain,
+                key,
+                entry: Some(entry),
+            } => {
+                write!(
+                    f,
+                    "sv entry {entry} carries no term key `{key}` required by `{domain}`"
+                )
+            }
+            Self::MissingTerm {
+                domain,
+                key,
+                entry: None,
+            } => {
                 write!(f, "target domain `{domain}` requires term key `{key}`, absent from the v2 payload")
             }
             Self::AmbiguousTerm { entry } => {

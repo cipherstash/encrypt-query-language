@@ -27,6 +27,17 @@
 //! [`FromV2Error::BloomOutOfRange`]; already-negative values pass through).
 //! `ob` and `op` pass through verbatim.
 //!
+//! Two deliberate points of divergence from the v2.3 schema file:
+//!
+//! - **`k` is required.** The v2.3 schema marks `k` optional on the `ct`
+//!   form; this converter requires it (cipherstash-client emits it on every
+//!   payload). A `k`-less input is [`FromV2Error::UnknownKind`] — fail-closed
+//!   beats guessing the shape of an unlabelled payload.
+//! - **`op` is accepted as a scalar term key.** The v2.3 schema predates the
+//!   CLLW-OPE term and cannot carry it (`additionalProperties: false`);
+//!   cipherstash-client emits `op` for OPE-ordered columns ahead of the v3
+//!   envelope, and the `_ord_ope` targets require it.
+//!
 //! **SteVec** (v2 `k: "sv"` → [`TargetDomain::Json`]): keeps the root `k`
 //! (the v3 document models the `"sv"` form discriminator — required on the
 //! wire), sets `v: 3`, keeps `i`; per entry keeps `s`, `c`, the optional
@@ -159,6 +170,11 @@ fn invalid(msg: &str) -> FromV2Error {
 }
 
 /// Final gate: strict-parse `value` through `domain`'s binding struct.
+///
+/// Rebuilds the inventory per call (as [`TargetDomain::parse`] does): a
+/// static cache would need `all()` to return `dyn DomainType + Send + Sync`
+/// — public API churn not worth ~50 zero-sized boxes per conversion unless
+/// bulk-migration profiling ever says otherwise.
 fn validate_as(domain: &str, value: &Value) -> Result<(), FromV2Error> {
     let entry = all()
         .into_iter()
@@ -187,6 +203,7 @@ fn convert_scalar(obj: &Map<String, Value>, target: ScalarTarget) -> Result<Valu
         let v = obj.get(key).ok_or_else(|| FromV2Error::MissingTerm {
             domain: target.domain().into(),
             key: key.into(),
+            entry: None,
         })?;
         let converted = if key == "bf" {
             convert_bloom(v)?
@@ -302,18 +319,33 @@ enum EntryShape {
     Query,
 }
 
+impl EntryShape {
+    /// The keys the converted entry keeps beyond its term.
+    fn kept_keys(self) -> &'static [&'static str] {
+        match self {
+            Self::Document => &["s", "c", "a"],
+            Self::Query => &["s"],
+        }
+    }
+
+    /// The (unqualified) SQL domain this entry shape belongs to, for error
+    /// context.
+    fn domain(self) -> &'static str {
+        match self {
+            Self::Document => "json",
+            Self::Query => "jsonb_query",
+        }
+    }
+}
+
 /// Convert one v2 sv element: copy the shape's keys and exactly one of
 /// `hm` XOR `oc`.
 fn convert_entry(idx: usize, entry: &Value, shape: EntryShape) -> Result<Value, FromV2Error> {
     let obj = entry
         .as_object()
         .ok_or_else(|| invalid("`sv` entries must be JSON objects"))?;
-    let keep: &[&str] = match shape {
-        EntryShape::Document => &["s", "c", "a"],
-        EntryShape::Query => &["s"],
-    };
     let mut out = Map::new();
-    for &key in keep {
+    for &key in shape.kept_keys() {
         if let Some(v) = obj.get(key) {
             out.insert(key.into(), v.clone());
         }
@@ -329,8 +361,9 @@ fn convert_entry(idx: usize, entry: &Value, shape: EntryShape) -> Result<Value, 
         }
         (None, None) => {
             return Err(FromV2Error::MissingTerm {
-                domain: "json".into(),
+                domain: shape.domain().into(),
                 key: "hm|oc".into(),
+                entry: Some(idx),
             })
         }
     }

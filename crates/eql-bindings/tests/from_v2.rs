@@ -181,9 +181,11 @@ fn text_search_copies_hm_ob_and_bf() {
 fn missing_required_term_fails_closed() {
     let err = from_v2(&v2_ct_minimal(), target("text_eq")).unwrap_err();
     match err {
-        FromV2Error::MissingTerm { domain, key } => {
+        FromV2Error::MissingTerm { domain, key, entry } => {
             assert_eq!(domain, "text_eq");
             assert_eq!(key, "hm");
+            // Scalar payloads have no sv entries to index.
+            assert_eq!(entry, None);
         }
         other => panic!("expected MissingTerm, got {other:?}"),
     }
@@ -231,6 +233,40 @@ fn bloom_filter_element_above_u16_is_out_of_range() {
         from_v2(&v2, target("text_search")).unwrap_err(),
         FromV2Error::BloomOutOfRange { .. }
     ));
+}
+
+#[test]
+fn bloom_filter_reinterpretation_is_exhaustively_correct() {
+    // Exhaustive over EVERY representable input — stronger than a sampled
+    // property test, and the domain is only ~98k values: the signed range is
+    // identity, the unsigned upper half wraps two's-complement, and in both
+    // cases the 16-bit pattern is preserved (`out as u16 == in as u16`, the
+    // reinterpretation invariant).
+    let inputs: Vec<i64> = (i64::from(i16::MIN)..=i64::from(u16::MAX)).collect();
+    let mut v2 = v2_ct_full();
+    v2["bf"] = json!(inputs);
+    let out = from_v2(&v2, target("text_search")).unwrap();
+    let out_bf = out["bf"].as_array().unwrap();
+    assert_eq!(out_bf.len(), inputs.len());
+    for (n, o) in inputs.iter().zip(out_bf) {
+        let o = o.as_i64().unwrap();
+        assert!((i64::from(i16::MIN)..=i64::from(i16::MAX)).contains(&o));
+        assert_eq!(o as u16, *n as u16, "bit pattern must be preserved for {n}");
+        if *n <= i64::from(i16::MAX) {
+            assert_eq!(o, *n, "signed range is identity");
+        } else {
+            assert_eq!(o, *n - 65536, "unsigned upper half wraps negative");
+        }
+    }
+    // The exact first values outside the representable domain are rejected.
+    for bad in [i64::from(i16::MIN) - 1, i64::from(u16::MAX) + 1] {
+        let mut v2 = v2_ct_full();
+        v2["bf"] = json!([bad]);
+        assert!(matches!(
+            from_v2(&v2, target("text_search")).unwrap_err(),
+            FromV2Error::BloomOutOfRange { index: 0, value } if value == bad
+        ));
+    }
 }
 
 #[test]
@@ -327,13 +363,19 @@ fn ste_vec_entry_with_both_terms_is_ambiguous() {
 
 #[test]
 fn ste_vec_entry_with_neither_term_is_missing() {
+    // Term-less entry at index 1: the error must locate it (mirroring
+    // AmbiguousTerm) and name the document domain.
     let mut v2 = v2_sv();
-    v2["sv"][0] = json!({ "s": SELECTOR, "c": CIPHERTEXT });
+    v2["sv"][1] = json!({ "s": SELECTOR, "c": CIPHERTEXT });
     let err = from_v2(&v2, TargetDomain::Json).unwrap_err();
-    assert!(
-        matches!(err, FromV2Error::MissingTerm { .. }),
-        "got {err:?}"
-    );
+    match err {
+        FromV2Error::MissingTerm { domain, key, entry } => {
+            assert_eq!(domain, "json");
+            assert_eq!(key, "hm|oc");
+            assert_eq!(entry, Some(1));
+        }
+        other => panic!("expected MissingTerm, got {other:?}"),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -375,11 +417,17 @@ fn ste_vec_query_entry_term_errors_match_document_rules() {
         from_v2_query(&both, TargetDomain::Json).unwrap_err(),
         FromV2Error::AmbiguousTerm { entry: 0 }
     ));
-    let neither = json!({ "sv": [ { "s": SELECTOR } ] });
-    assert!(matches!(
-        from_v2_query(&neither, TargetDomain::Json).unwrap_err(),
-        FromV2Error::MissingTerm { .. }
-    ));
+    // The query path names ITS shape (jsonb_query, not json) and locates the
+    // entry.
+    let neither = json!({ "sv": [ { "s": SELECTOR, "hm": HEX }, { "s": SELECTOR } ] });
+    match from_v2_query(&neither, TargetDomain::Json).unwrap_err() {
+        FromV2Error::MissingTerm { domain, key, entry } => {
+            assert_eq!(domain, "jsonb_query");
+            assert_eq!(key, "hm|oc");
+            assert_eq!(entry, Some(1));
+        }
+        other => panic!("expected MissingTerm, got {other:?}"),
+    }
 }
 
 #[test]
