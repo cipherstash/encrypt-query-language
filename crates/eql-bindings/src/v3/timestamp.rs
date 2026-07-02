@@ -24,6 +24,15 @@ impl DomainType for Timestamp {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&[])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        Timestamp::deserialize(value).map(|_| ())
+    }
     fn schema(&self) -> Schema {
         schema_for!(Timestamp)
     }
@@ -46,6 +55,15 @@ impl DomainType for TimestampEq {
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["hm"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        TimestampEq::deserialize(value).map(|_| ())
     }
     fn schema(&self) -> Schema {
         schema_for!(TimestampEq)
@@ -70,6 +88,15 @@ impl DomainType for TimestampOrdOre {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["ob"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        TimestampOrdOre::deserialize(value).map(|_| ())
+    }
     fn schema(&self) -> Schema {
         schema_for!(TimestampOrdOre)
     }
@@ -93,6 +120,15 @@ impl DomainType for TimestampOrd {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["ob"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        TimestampOrd::deserialize(value).map(|_| ())
+    }
     fn schema(&self) -> Schema {
         schema_for!(TimestampOrd)
     }
@@ -115,6 +151,15 @@ impl DomainType for TimestampOrdOpe {
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["op"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        TimestampOrdOpe::deserialize(value).map(|_| ())
     }
     fn schema(&self) -> Schema {
         schema_for!(TimestampOrdOpe)

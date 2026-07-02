@@ -24,6 +24,15 @@ impl DomainType for Text {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&[])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        Text::deserialize(value).map(|_| ())
+    }
     fn schema(&self) -> Schema {
         schema_for!(Text)
     }
@@ -47,6 +56,15 @@ impl DomainType for TextEq {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["hm"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        TextEq::deserialize(value).map(|_| ())
+    }
     fn schema(&self) -> Schema {
         schema_for!(TextEq)
     }
@@ -69,6 +87,15 @@ impl DomainType for TextMatch {
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["bf"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        TextMatch::deserialize(value).map(|_| ())
     }
     fn schema(&self) -> Schema {
         schema_for!(TextMatch)
@@ -94,6 +121,15 @@ impl DomainType for TextOrdOre {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["hm", "ob"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        TextOrdOre::deserialize(value).map(|_| ())
+    }
     fn schema(&self) -> Schema {
         schema_for!(TextOrdOre)
     }
@@ -117,6 +153,15 @@ impl DomainType for TextOrd {
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["hm", "ob"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        TextOrd::deserialize(value).map(|_| ())
     }
     fn schema(&self) -> Schema {
         schema_for!(TextOrd)
@@ -142,6 +187,15 @@ impl DomainType for TextOrdOpe {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["hm", "op"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        TextOrdOpe::deserialize(value).map(|_| ())
+    }
     fn schema(&self) -> Schema {
         schema_for!(TextOrdOpe)
     }
@@ -166,6 +220,15 @@ impl DomainType for TextSearch {
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["hm", "ob", "bf"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        TextSearch::deserialize(value).map(|_| ())
     }
     fn schema(&self) -> Schema {
         schema_for!(TextSearch)

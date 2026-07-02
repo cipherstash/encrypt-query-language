@@ -143,6 +143,11 @@ macro_rules! ste_vec_domain_type {
             fn sql_domain(&self) -> &'static str {
                 Self::sql_domain_static()
             }
+            // `term_json_keys` keeps the trait default (`None`): SteVec index
+            // terms live per sv leaf (`hm` XOR `oc`), not as flat payload keys.
+            fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+                <$ty as Deserialize>::deserialize(value).map(|_| ())
+            }
             fn schema(&self) -> Schema {
                 schema_for!($ty)
             }
