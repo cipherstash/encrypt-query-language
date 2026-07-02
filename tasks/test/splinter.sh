@@ -92,7 +92,7 @@ function_search_path_mutable	eql_v3	ore_cllw_lte	function	Inner comparator for t
 function_search_path_mutable	eql_v3	ore_cllw_gt	function	Inner comparator for the eql_v3.ore_cllw `>` operator. Same rationale as eql_v3.ore_cllw_eq.
 function_search_path_mutable	eql_v3	ore_cllw_gte	function	Inner comparator for the eql_v3.ore_cllw `>=` operator. Same rationale as eql_v3.ore_cllw_eq.
 # Encrypted-JSONB document surface (src/v3/jsonb): the hand-written eql_v3.json /
-# ste_vec_entry / ste_vec_query domains and their selector/extractor/operator
+# jsonb_entry / jsonb_query domains and their selector/extractor/operator
 # functions. Inlinable for functional-index matching; left unpinned by
 # tasks/pin_search_path_v3.sql via either
 # the structural jsonb-domain-arg skip or the documented `eql-inline-critical`
@@ -102,9 +102,9 @@ function_search_path_mutable	eql_v3	->	function	Typed sv-element selector lookup
 function_search_path_mutable	eql_v3	->>	function	Text sv-element selector lookup on the eql_v3 encrypted-JSONB surface: inlinable SQL over an eql_v3.json domain arg, text-returning counterpart to eql_v3.->. Structural domain-arg skip. Two overloads: (json, text), (json, int).
 function_search_path_mutable	eql_v3	@>	function	Containment (@>) operator wrapper on the eql_v3 encrypted-JSONB surface: inlinable SQL so the planner can match the functional GIN index on eql_v3.jsonb_array(col). Structural domain-arg skip (eql_v3.json). Three overloads.
 function_search_path_mutable	eql_v3	<@	function	Contained-by (<@) operator wrapper on the eql_v3 encrypted-JSONB surface: same rationale as eql_v3.@>. Three overloads.
-function_search_path_mutable	eql_v3	ore_cllw	function	ORE-CLLW extractor on the eql_v3 encrypted-JSONB surface: inlinable SQL so `eql_v3.ore_cllw(col -> 'sel')` folds into the calling query and reaches the functional btree opclass on eql_v3.ore_cllw. Structural domain-arg skip. Two overloads: (jsonb) (SEM fork), (eql_v3.ste_vec_entry).
-function_search_path_mutable	eql_v3	has_ore_cllw	function	ORE-CLLW presence check on the eql_v3 encrypted-JSONB surface: inlinable SQL counterpart to eql_v3.ore_cllw, structural domain-arg skip. Two overloads: (jsonb) (SEM fork), (eql_v3.ste_vec_entry).
-function_search_path_mutable	eql_v3	selector	function	STE-vec entry selector extractor: typed (eql_v3.ste_vec_entry) overload, inlinable so `eql_v3.selector(col -> 'sel')` folds into the calling query. Structural domain-arg skip. The (jsonb) overload is plpgsql with a pinned search_path and does not surface.
+function_search_path_mutable	eql_v3	ore_cllw	function	ORE-CLLW extractor on the eql_v3 encrypted-JSONB surface: inlinable SQL so `eql_v3.ore_cllw(col -> 'sel')` folds into the calling query and reaches the functional btree opclass on eql_v3.ore_cllw. Structural domain-arg skip. Two overloads: (jsonb) (SEM fork), (eql_v3.jsonb_entry).
+function_search_path_mutable	eql_v3	has_ore_cllw	function	ORE-CLLW presence check on the eql_v3 encrypted-JSONB surface: inlinable SQL counterpart to eql_v3.ore_cllw, structural domain-arg skip. Two overloads: (jsonb) (SEM fork), (eql_v3.jsonb_entry).
+function_search_path_mutable	eql_v3	selector	function	STE-vec entry selector extractor: typed (eql_v3.jsonb_entry) overload, inlinable so `eql_v3.selector(col -> 'sel')` folds into the calling query. Structural domain-arg skip. The (jsonb) overload is plpgsql with a pinned search_path and does not surface.
 function_search_path_mutable	eql_v3	to_ste_vec_query	function	Encrypted-JSONB query-document constructor (CAST WITH FUNCTION for eql_v3.ste_vec_query): inlinable SQL over an eql_v3.json domain arg, structural domain-arg skip. Builds the ste_vec query value the @>/<@ wrappers compare against; must inline to fold into the calling query.
 function_search_path_mutable	eql_v3	jsonb_array	function	ste_vec array extractor for the eql_v3 encrypted-JSONB surface: inlinable SQL (raw jsonb arg) behind the functional GIN index expression eql_v3.jsonb_array(col). Takes bare jsonb, so it carries the documented `eql-inline-critical` COMMENT marker that pin_search_path_v3.sql honours rather than the structural skip.
 function_search_path_mutable	eql_v3	jsonb_contains	function	GIN-inlining wrapper: unfolds to eql_v3.jsonb_array(a) @> eql_v3.jsonb_array(b). Carries the `eql-inline-critical` COMMENT marker.
