@@ -287,3 +287,134 @@ fn timestamp_round_trips_and_enforces_term_capabilities() {
         "TimestampOrd must reject a payload with no ob"
     );
 }
+
+#[test]
+fn stevec_document_round_trips_and_enforces_envelope() {
+    use eql_bindings::v3::jsonb::SteVecDocument;
+    use eql_bindings::v3::DomainType;
+    let wire = json!({
+        "v": 2,
+        "i": { "t": "users", "c": "profile" },
+        "sv": [
+            { "s": "sel_root", "c": "ct_root", "hm": "deadbeef" },
+            { "s": "sel_age", "c": "ct_age", "a": true, "oc": "cllw_ore" }
+        ]
+    });
+    let parsed: SteVecDocument = serde_json::from_value(wire.clone()).unwrap();
+    assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
+    assert_eq!(SteVecDocument::sql_domain_static(), "eql_v3.json");
+
+    // Envelope negatives (parity with the scalar int4 tests).
+    for missing in ["v", "i", "sv"] {
+        let mut w = wire.clone();
+        w.as_object_mut().unwrap().remove(missing);
+        assert!(
+            serde_json::from_value::<SteVecDocument>(w).is_err(),
+            "missing {missing} must fail"
+        );
+    }
+    // Wrong version.
+    let mut wrong_v = wire.clone();
+    wrong_v["v"] = json!(3);
+    assert!(serde_json::from_value::<SteVecDocument>(wrong_v).is_err());
+    // Unknown top-level key (deny_unknown_fields; no flatten on the document).
+    let mut extra = wire.clone();
+    extra
+        .as_object_mut()
+        .unwrap()
+        .insert("bogus".into(), json!(1));
+    assert!(serde_json::from_value::<SteVecDocument>(extra).is_err());
+}
+
+#[test]
+fn stevec_entry_untagged_term_and_neither_term_rejected() {
+    use eql_bindings::v3::jsonb::{SteVecEntry, SteVecTerm};
+    // hm arm.
+    let hm: SteVecEntry =
+        serde_json::from_value(json!({ "s": "sel", "c": "ct", "hm": "deadbeef" })).unwrap();
+    assert!(matches!(hm.term, SteVecTerm::Hmac { .. }));
+    // oc arm.
+    let oc: SteVecEntry =
+        serde_json::from_value(json!({ "s": "sel", "c": "ct", "oc": "cllw" })).unwrap();
+    assert!(matches!(oc.term, SteVecTerm::OreCllw { .. }));
+    // Lax: tolerates root i/v merged in by `->`.
+    let merged: SteVecEntry = serde_json::from_value(
+        json!({ "s": "sel", "c": "ct", "hm": "x", "i": {"t":"a","c":"b"}, "v": 2 }),
+    )
+    .unwrap();
+    assert!(matches!(merged.term, SteVecTerm::Hmac { .. }));
+    // MARQUEE NEGATIVE: neither hm nor oc must fail (untagged enum has no matching arm).
+    assert!(
+        serde_json::from_value::<SteVecEntry>(json!({ "s": "sel", "c": "ct" })).is_err(),
+        "an entry with neither hm nor oc must be rejected"
+    );
+}
+
+#[test]
+fn stevec_query_round_trips() {
+    use eql_bindings::v3::jsonb::SteVecQuery;
+    use eql_bindings::v3::DomainType;
+    let wire = json!({ "sv": [ { "s": "sel", "hm": "deadbeef" } ] });
+    let parsed: SteVecQuery = serde_json::from_value(wire.clone()).unwrap();
+    assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
+    assert_eq!(SteVecQuery::sql_domain_static(), "eql_v3.ste_vec_query");
+    // Unknown top-level key rejected (SteVecQuery has no flatten field).
+    assert!(serde_json::from_value::<SteVecQuery>(json!({ "sv": [], "bogus": 1 })).is_err());
+    // NOTE: a query ELEMENT carrying `c` is NOT rejected here — SteVecQueryEntry
+    // has a flattened term, so deny_unknown_fields is inert. The "no ciphertext"
+    // rule is enforced by the SQL CHECK (is_valid_ste_vec_query_payload) and
+    // exercised in the real-crypto test (v3_ste_vec).
+}
+
+#[test]
+fn stevec_document_and_query_schemas_are_strict() {
+    use eql_bindings::v3::jsonb::{SteVecDocument, SteVecQuery};
+    use eql_bindings::v3::DomainType;
+    use eql_bindings::{Identifier, SchemaVersion};
+    let doc = SteVecDocument {
+        v: SchemaVersion::CURRENT,
+        i: Identifier {
+            t: "x".into(),
+            c: "y".into(),
+        },
+        sv: vec![],
+    };
+    let sdoc = serde_json::to_value(doc.schema()).unwrap();
+    assert_eq!(sdoc.pointer("/additionalProperties"), Some(&json!(false)));
+    assert_eq!(
+        sdoc.pointer("/properties/v/$ref"),
+        Some(&json!("#/$defs/SchemaVersion"))
+    );
+    assert_eq!(
+        sdoc.pointer("/$defs/SchemaVersion/const"),
+        Some(&json!(eql_bindings::EQL_SCHEMA_VERSION))
+    );
+    let q = SteVecQuery { sv: vec![] };
+    let sq = serde_json::to_value(q.schema()).unwrap();
+    assert_eq!(sq.pointer("/additionalProperties"), Some(&json!(false)));
+    // SteVecDocument/Query domain names.
+    assert_eq!(SteVecDocument::sql_domain_static(), "eql_v3.json");
+    assert_eq!(SteVecQuery::sql_domain_static(), "eql_v3.ste_vec_query");
+}
+
+#[test]
+fn stevec_ts_exports_have_expected_shape() {
+    // The ts-rs flatten/untagged risk: pin the emitted .ts structurally so a
+    // regression is a test failure, not a human-inspection miss. During
+    // `types:check`, read the freshly exported TS_RS_EXPORT_DIR output; plain
+    // `cargo test` falls back to committed bindings next to the crate manifest.
+    let base = match std::env::var("TS_RS_EXPORT_DIR") {
+        Ok(dir) if !dir.is_empty() => format!("{dir}/v3"),
+        _ => format!("{}/bindings/v3", env!("CARGO_MANIFEST_DIR")),
+    };
+    let term = std::fs::read_to_string(format!("{base}/SteVecTerm.ts")).unwrap();
+    assert!(
+        term.contains("hm") && term.contains("oc"),
+        "SteVecTerm.ts must expose both hm and oc arms"
+    );
+    let entry = std::fs::read_to_string(format!("{base}/SteVecEntry.ts")).unwrap();
+    for f in ["s", "c", "a", "hm"] {
+        // hm appears via the flattened term; a/c/s are direct fields.
+        assert!(entry.contains(f), "SteVecEntry.ts missing `{f}`");
+    }
+}
