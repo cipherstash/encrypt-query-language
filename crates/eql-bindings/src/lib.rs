@@ -30,6 +30,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+pub mod from_v2;
 pub mod v3;
 
 /// EQL wire-format version. Hard-coded to `3` for every payload in the
