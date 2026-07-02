@@ -33,10 +33,10 @@ echo "==> asserting NO eql_v2 schema exists (proves no v2 dependency)"
 
 echo "==> smoke: domains, SEM types, extractors, opclass functional index (D4)"
 "${RUN[@]}" <<'SQL'
--- Domains and SEM types exist in eql_v3.
+-- Domains stay in eql_v3; SEM index-term types now live in eql_v3_internal.
 SELECT 'eql_v3.int4_ord'::regtype;
-SELECT 'eql_v3.hmac_256'::regtype;
-SELECT 'eql_v3.ore_block_256'::regtype;
+SELECT 'eql_v3_internal.hmac_256'::regtype;
+SELECT 'eql_v3_internal.ore_block_256'::regtype;
 
 -- A real ordered-domain column + the documented functional index. This is the
 -- D4 proof: it fails outright if the ported operator_class is absent.

@@ -109,14 +109,14 @@ $$;
 --! `oc` is absent (btree NULL-filters such rows from range queries).
 --!
 --! @param entry eql_v3.jsonb_entry
---! @return eql_v3.ore_cllw Composite carrying the CLLW ciphertext, or NULL.
+--! @return eql_v3_internal.ore_cllw Composite carrying the CLLW ciphertext, or NULL.
 --! @see eql_v3.has_ore_cllw
 CREATE FUNCTION eql_v3.ore_cllw(entry eql_v3.jsonb_entry)
-  RETURNS eql_v3.ore_cllw
+  RETURNS eql_v3_internal.ore_cllw
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   SELECT CASE WHEN entry ->> 'oc' IS NULL THEN NULL
-              ELSE ROW(decode(entry ->> 'oc', 'hex'))::eql_v3.ore_cllw
+              ELSE ROW(decode(entry ->> 'oc', 'hex'))::eql_v3_internal.ore_cllw
          END
 $$;
 

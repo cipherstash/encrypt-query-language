@@ -45,8 +45,8 @@ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 DECLARE
-  value_ore eql_v3.ore_cllw := eql_v3.ore_cllw(value);
-  state_ore eql_v3.ore_cllw := eql_v3.ore_cllw(state);
+  value_ore eql_v3_internal.ore_cllw := eql_v3.ore_cllw(value);
+  state_ore eql_v3_internal.ore_cllw := eql_v3.ore_cllw(state);
 BEGIN
   -- A non-orderable (oc-less) candidate never replaces the running extremum.
   IF value_ore IS NULL THEN
@@ -88,8 +88,8 @@ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 DECLARE
-  value_ore eql_v3.ore_cllw := eql_v3.ore_cllw(value);
-  state_ore eql_v3.ore_cllw := eql_v3.ore_cllw(state);
+  value_ore eql_v3_internal.ore_cllw := eql_v3.ore_cllw(value);
+  state_ore eql_v3_internal.ore_cllw := eql_v3.ore_cllw(state);
 BEGIN
   -- A non-orderable (oc-less) candidate never replaces the running extremum.
   IF value_ore IS NULL THEN
