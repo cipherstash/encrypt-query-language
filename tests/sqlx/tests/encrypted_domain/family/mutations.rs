@@ -198,7 +198,7 @@ async fn dropping_strict_on_eq_flips_supported_null_arm(pool: PgPool) -> Result<
     Ok(())
 }
 
-// 5. Ord `<` correctness routes through `eql_v3_internal.lt`. Turning `lt` into a
+// 5. Ord `<` correctness routes through `eql_v3.lt`. Turning `lt` into a
 //    blocker makes `<` raise — proving the ord `<` correctness arm has teeth.
 //    Crucially, ORDER BY routes through `ord_term`, NOT `<`, so it must stay
 //    green here. This is the #5-vs-#7 split: #5 attacks `<`, #7 attacks the

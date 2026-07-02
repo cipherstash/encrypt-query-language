@@ -224,10 +224,7 @@ async fn direct_contains_function_matches_operator(pool: PgPool) -> anyhow::Resu
     .fetch_one(&pool)
     .await?;
 
-    assert!(
-        fn_hit,
-        "eql_v3.contains('aardvark','aard') must be true"
-    );
+    assert!(fn_hit, "eql_v3.contains('aardvark','aard') must be true");
     assert_eq!(
         fn_hit, op_hit,
         "eql_v3.contains must agree with the @> operator"
