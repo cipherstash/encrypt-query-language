@@ -19,9 +19,9 @@ CREATE OPERATOR FAMILY eql_v3_internal.ore_block_256_operator_family USING btree
 --! Supports operators: <, <=, =, >=, >. Uses comparison function
 --! compare_ore_block_256_terms.
 CREATE OPERATOR CLASS eql_v3_internal.ore_block_256_operator_class DEFAULT FOR TYPE eql_v3_internal.ore_block_256 USING btree FAMILY eql_v3_internal.ore_block_256_operator_family  AS
-        OPERATOR 1 eql_v3_internal.<,
-        OPERATOR 2 eql_v3_internal.<=,
-        OPERATOR 3 eql_v3_internal.=,
-        OPERATOR 4 eql_v3_internal.>=,
-        OPERATOR 5 eql_v3_internal.>,
+        OPERATOR 1 public.<,
+        OPERATOR 2 public.<=,
+        OPERATOR 3 public.=,
+        OPERATOR 4 public.>=,
+        OPERATOR 5 public.>,
         FUNCTION 1 eql_v3_internal.compare_ore_block_256_terms(a eql_v3_internal.ore_block_256, b eql_v3_internal.ore_block_256);

@@ -105,62 +105,62 @@ AS $$
 $$;
 
 
-CREATE OPERATOR eql_v3_internal.= (
+CREATE OPERATOR public.= (
   FUNCTION = eql_v3_internal.ore_cllw_eq,
   LEFTARG = eql_v3_internal.ore_cllw,
   RIGHTARG = eql_v3_internal.ore_cllw,
-  COMMUTATOR = OPERATOR(eql_v3_internal.=),
-  NEGATOR = OPERATOR(eql_v3_internal.<>),
+  COMMUTATOR = OPERATOR(public.=),
+  NEGATOR = OPERATOR(public.<>),
   RESTRICT = eqsel,
   JOIN = eqjoinsel
 );
 
-CREATE OPERATOR eql_v3_internal.<> (
+CREATE OPERATOR public.<> (
   FUNCTION = eql_v3_internal.ore_cllw_neq,
   LEFTARG = eql_v3_internal.ore_cllw,
   RIGHTARG = eql_v3_internal.ore_cllw,
-  COMMUTATOR = OPERATOR(eql_v3_internal.<>),
-  NEGATOR = OPERATOR(eql_v3_internal.=),
+  COMMUTATOR = OPERATOR(public.<>),
+  NEGATOR = OPERATOR(public.=),
   RESTRICT = neqsel,
   JOIN = neqjoinsel
 );
 
-CREATE OPERATOR eql_v3_internal.< (
+CREATE OPERATOR public.< (
   FUNCTION = eql_v3_internal.ore_cllw_lt,
   LEFTARG = eql_v3_internal.ore_cllw,
   RIGHTARG = eql_v3_internal.ore_cllw,
-  COMMUTATOR = OPERATOR(eql_v3_internal.>),
-  NEGATOR = OPERATOR(eql_v3_internal.>=),
+  COMMUTATOR = OPERATOR(public.>),
+  NEGATOR = OPERATOR(public.>=),
   RESTRICT = scalarltsel,
   JOIN = scalarltjoinsel
 );
 
-CREATE OPERATOR eql_v3_internal.<= (
+CREATE OPERATOR public.<= (
   FUNCTION = eql_v3_internal.ore_cllw_lte,
   LEFTARG = eql_v3_internal.ore_cllw,
   RIGHTARG = eql_v3_internal.ore_cllw,
-  COMMUTATOR = OPERATOR(eql_v3_internal.>=),
-  NEGATOR = OPERATOR(eql_v3_internal.>),
+  COMMUTATOR = OPERATOR(public.>=),
+  NEGATOR = OPERATOR(public.>),
   RESTRICT = scalarlesel,
   JOIN = scalarlejoinsel
 );
 
-CREATE OPERATOR eql_v3_internal.> (
+CREATE OPERATOR public.> (
   FUNCTION = eql_v3_internal.ore_cllw_gt,
   LEFTARG = eql_v3_internal.ore_cllw,
   RIGHTARG = eql_v3_internal.ore_cllw,
-  COMMUTATOR = OPERATOR(eql_v3_internal.<),
-  NEGATOR = OPERATOR(eql_v3_internal.<=),
+  COMMUTATOR = OPERATOR(public.<),
+  NEGATOR = OPERATOR(public.<=),
   RESTRICT = scalargtsel,
   JOIN = scalargtjoinsel
 );
 
-CREATE OPERATOR eql_v3_internal.>= (
+CREATE OPERATOR public.>= (
   FUNCTION = eql_v3_internal.ore_cllw_gte,
   LEFTARG = eql_v3_internal.ore_cllw,
   RIGHTARG = eql_v3_internal.ore_cllw,
-  COMMUTATOR = OPERATOR(eql_v3_internal.<=),
-  NEGATOR = OPERATOR(eql_v3_internal.<),
+  COMMUTATOR = OPERATOR(public.<=),
+  NEGATOR = OPERATOR(public.<),
   RESTRICT = scalargesel,
   JOIN = scalargejoinsel
 );

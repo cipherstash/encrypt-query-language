@@ -21,9 +21,9 @@ CREATE OPERATOR FAMILY eql_v3_internal.ore_cllw_ops USING btree;
 CREATE OPERATOR CLASS eql_v3_internal.ore_cllw_ops
   DEFAULT FOR TYPE eql_v3_internal.ore_cllw
   USING btree FAMILY eql_v3_internal.ore_cllw_ops AS
-    OPERATOR 1 eql_v3_internal.<  (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
-    OPERATOR 2 eql_v3_internal.<= (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
-    OPERATOR 3 eql_v3_internal.=  (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
-    OPERATOR 4 eql_v3_internal.>= (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
-    OPERATOR 5 eql_v3_internal.>  (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
+    OPERATOR 1 public.<  (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
+    OPERATOR 2 public.<= (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
+    OPERATOR 3 public.=  (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
+    OPERATOR 4 public.>= (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
+    OPERATOR 5 public.>  (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
     FUNCTION 1 eql_v3_internal.compare_ore_cllw_term(eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw);
