@@ -10,10 +10,14 @@
 //! `cipherstash-client` 0.35 exposes the same surface natively. This module
 //! owns the bootstrap — `build_cipher()` builds a `ScopedCipher<AutoStrategy>` —
 //! and the batched helper `encrypt_store()` that wraps `eql::encrypt_eql` and
-//! returns the resulting EQL ciphertexts as `serde_json::Value`s ready to bind
-//! into a `jsonb` column. A fixture-generator process makes exactly one
-//! `encrypt_store` call, so the cipher is built once per process by
-//! construction — no static cache, no cross-runtime hazard.
+//! returns the resulting EQL payloads as `serde_json::Value`s ready to bind
+//! into a `jsonb` column. The pinned client emits the **v2** wire; every
+//! payload is routed through `eql_bindings::from_v2` (see the sibling
+//! `v3_convert` module) before it leaves `encrypt_store`, so the fixtures
+//! carry the v3 envelope the `eql_v3` domain CHECKs require. A
+//! fixture-generator process makes exactly one `encrypt_store` call, so the
+//! cipher is built once per process by construction — no static cache, no
+//! cross-runtime hazard.
 //!
 //! `column_config_for` is the bridge between the fixture spec's string-typed
 //! index names (`"unique"`, `"ore"`, …) and the typed `IndexType` enum
@@ -73,7 +77,11 @@ pub const STE_VEC_PREFIX: &str = "v3_ste_vec";
 /// fail on an unknown index name. Extending fixture coverage to a new
 /// index is one variant on `IndexKind` plus one arm here, both compile-
 /// time checked.
-pub fn column_config_for(spec_indexes: &[IndexKind], cast: Cast) -> Result<ColumnConfig> {
+///
+/// Private: [`encrypt_store`] builds the config itself from the caller's
+/// index set, so the seam is structurally the only entry point — no
+/// caller can hold a config that drifts from the conversion targets.
+fn column_config_for(spec_indexes: &[IndexKind], cast: Cast) -> Result<ColumnConfig> {
     let column_type = cast_to_column_type(cast)?;
     let mut config = ColumnConfig::build(PAYLOAD_COLUMN).casts_as(column_type);
 
@@ -134,31 +142,42 @@ fn index_type_for(kind: IndexKind) -> IndexType {
     }
 }
 
-/// Encrypt a batch of plaintext values for storage and return one EQL
-/// ciphertext per input as a `serde_json::Value` ready to bind into a
+/// Encrypt a batch of plaintext values for storage and return one **v3**
+/// EQL payload per input as a `serde_json::Value` ready to bind into a
 /// `jsonb` column.
+///
+/// The `ColumnConfig` is built here from `indexes` + `T::CAST` (via
+/// [`column_config_for`]), so the config driving encryption and the
+/// conversion targets derived from the same index set cannot drift apart.
 ///
 /// One `encrypt_eql` call regardless of `values.len()` — ZeroKMS does the
 /// round trip once, not N times. The per-value field in each
 /// `PreparedPlaintext` is `value.to_plaintext()`; the config, identifier,
 /// and `EqlOperation::Store` are shared across the batch.
 ///
-/// Uses `EqlOperation::Store`, which yields a full storage payload
-/// (`{"k": "ct", "v": 2, "i": …, "c": …, "hm": …, "ob": …}`) — the same
-/// shape Proxy produced for the working table. `EqlEncryptOpts::default()`
-/// uses the cipher's default keyset, no lock context, no service token, no
-/// index filter — the same defaults Proxy uses for column-config-driven
-/// inserts.
+/// Uses `EqlOperation::Store`, which yields a full v2 storage payload
+/// (`{"k": "ct", "v": 2, "i": …, "c": …, "hm": …, "ob": …}`) — the pinned
+/// client still speaks the v2 wire. Every payload is then routed through
+/// `eql_bindings::from_v2` (see [`super::v3_convert`]) before it is
+/// returned, so callers only ever see v3 payloads that satisfy the
+/// `v = '3'` domain CHECKs. `EqlEncryptOpts::default()` uses the cipher's
+/// default keyset, no lock context, no service token, no index filter —
+/// the same defaults Proxy uses for column-config-driven inserts.
 ///
 /// An empty `values` slice short-circuits before `build_cipher()` so a
 /// caller with nothing to encrypt does not pay the ZeroKMS bootstrap
-/// cost.
+/// cost. The config is still built (and so validated) first: a
+/// misconfigured fixture must fail even when its value list happens to
+/// be empty, not be masked by the short-circuit.
 pub async fn encrypt_store<T: EqlPlaintext>(
     table: &str,
     column: &str,
     values: &[T],
-    config: &ColumnConfig,
+    indexes: &[IndexKind],
 ) -> Result<Vec<serde_json::Value>> {
+    let config = &column_config_for(indexes, T::CAST)
+        .context("building ColumnConfig from the fixture indexes")?;
+
     if values.is_empty() {
         return Ok(Vec::new());
     }
@@ -198,7 +217,7 @@ pub async fn encrypt_store<T: EqlPlaintext>(
         ));
     }
 
-    outputs
+    let v2_payloads: Vec<serde_json::Value> = outputs
         .into_iter()
         .map(|output| {
             let ciphertext: EqlCiphertext = match output {
@@ -214,7 +233,13 @@ pub async fn encrypt_store<T: EqlPlaintext>(
             };
             serde_json::to_value(&ciphertext).context("serialising EqlCiphertext to JSON")
         })
-        .collect()
+        .collect::<Result<_>>()?;
+
+    // The pinned client emits the v2 wire; the v3 domain CHECKs require
+    // v = '3'. Convert fail-closed through eql_bindings::from_v2 so no raw
+    // v2 payload can ever reach a written fixture (CIP-3347).
+    super::v3_convert::to_v3_payloads(v2_payloads, T::KIND, indexes)
+        .context("converting encrypted payloads to the v3 envelope")
 }
 
 #[cfg(test)]
@@ -260,8 +285,9 @@ mod tests {
         // Running this test under `cargo test` (no `fixture-gen` feature,
         // no CS_* env vars) proves the short-circuit: if `build_cipher()`
         // were reached, the missing credentials would surface as an error.
-        let config = column_config_for(&[IndexKind::Unique], Cast::INT).unwrap();
-        let out = encrypt_store::<i32>("t", "c", &[], &config).await.unwrap();
+        let out = encrypt_store::<i32>("t", "c", &[], &[IndexKind::Unique])
+            .await
+            .unwrap();
         assert!(out.is_empty(), "empty input must yield empty output");
     }
 
@@ -311,14 +337,14 @@ mod live_tests {
     use super::*;
     use serde_json::Value;
 
-    /// Config used by every live test — `Unique` drives the `hm` term,
-    /// `Ore` drives the `ob` term, so the returned payloads carry both.
-    fn int_config_with_hm_and_ob() -> ColumnConfig {
-        column_config_for(&[IndexKind::Unique, IndexKind::Ore], Cast::INT).unwrap()
-    }
+    /// The index set used by every live test — `Unique` drives the `hm`
+    /// term, `Ore` drives the `ob` term, so the returned payloads carry
+    /// both.
+    const INT_INDEXES: &[IndexKind] = &[IndexKind::Unique, IndexKind::Ore];
 
-    /// Assert the well-formed Store shape: the payload is a JSON object
-    /// with non-null `v`, `c`, `hm`, `ob`, and `i` fields. Mirrors the
+    /// Assert the well-formed v3 Store shape: the payload is a JSON object
+    /// with non-null `v`, `c`, `hm`, `ob`, and `i` fields, `v = 3`, and no
+    /// `k` discriminator (dropped by the from_v2 conversion). Mirrors the
     /// per-key assertions in the generated `scalars::int4` matrix suite
     /// (emitted from the `scalar_types!` list in `scalar_types.rs`).
     fn assert_store_shape(payload: &Value) {
@@ -329,22 +355,25 @@ mod live_tests {
                 "payload must carry a non-null `{key}` field; got {payload}"
             );
         }
-        // `v` is the EQL payload-format version. The cipherstash-client
-        // JSON encodes it as the integer 2; the existing fixture tests
-        // check `payload->>'v' = '2'` via Postgres's text-cast operator.
-        // Asserting the number here matches the source format directly.
+        // `v` is the EQL payload-format version. The client emits the v2
+        // wire; encrypt_store converts through eql_bindings::from_v2, so
+        // the observable output declares the v3 envelope and no longer
+        // carries the v2 `k` form discriminator.
         assert_eq!(
             obj.get("v").and_then(Value::as_i64),
-            Some(2),
-            "payload must declare v = 2; got {payload}"
+            Some(3),
+            "payload must declare v = 3; got {payload}"
+        );
+        assert!(
+            !obj.contains_key("k"),
+            "a converted scalar payload must not carry `k`; got {payload}"
         );
     }
 
     #[tokio::test]
     #[ignore = "live ZeroKMS — run via `cargo test --features fixture-gen -- --ignored`"]
     async fn encrypt_store_single_value_returns_one_eql_payload() {
-        let config = int_config_with_hm_and_ob();
-        let out = encrypt_store("live_one", "payload", &[42_i32], &config)
+        let out = encrypt_store("live_one", "payload", &[42_i32], INT_INDEXES)
             .await
             .expect("encrypt_store should succeed against live ZeroKMS");
         assert_eq!(out.len(), 1, "single input should produce single output");
@@ -354,9 +383,8 @@ mod live_tests {
     #[tokio::test]
     #[ignore = "live ZeroKMS — run via `cargo test --features fixture-gen -- --ignored`"]
     async fn encrypt_store_batch_returns_one_payload_per_input_in_input_order() {
-        let config = int_config_with_hm_and_ob();
         let values = [-1_i32, 1, 42];
-        let out = encrypt_store("live_batch", "payload", &values, &config)
+        let out = encrypt_store("live_batch", "payload", &values, INT_INDEXES)
             .await
             .expect("encrypt_store should succeed against live ZeroKMS");
         assert_eq!(
@@ -389,8 +417,7 @@ mod live_tests {
         // yield three distinct `hm` strings. Mirrors
         // `hmac_equality_terms_are_distinct_for_distinct_values` in the
         // fixture-tests but at the unit-test layer.
-        let config = int_config_with_hm_and_ob();
-        let out = encrypt_store("live_distinct", "payload", &[-1_i32, 1, 42], &config)
+        let out = encrypt_store("live_distinct", "payload", &[-1_i32, 1, 42], INT_INDEXES)
             .await
             .expect("encrypt_store should succeed against live ZeroKMS");
 

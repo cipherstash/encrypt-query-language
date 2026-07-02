@@ -66,7 +66,6 @@ fn documents() -> Vec<(i32, Value)> {
 /// it would encrypt bare `i32` values instead of `{"field": int}` documents.
 pub async fn generate() -> Result<()> {
     use super::cipherstash;
-    use super::eql_plaintext::EqlPlaintext;
 
     let pairs = documents();
     let plaintexts: Vec<i32> = pairs.iter().map(|(v, _)| *v).collect();
@@ -78,10 +77,12 @@ pub async fn generate() -> Result<()> {
         .with_values(&plaintexts);
     let working = spec.working_table();
 
-    let config =
-        cipherstash::column_config_for(spec.indexes(), <serde_json::Value as EqlPlaintext>::CAST)?;
+    // `encrypt_store` builds the SteVec ColumnConfig from the spec's index
+    // set + the document CAST, and returns payloads already converted to the
+    // v3 envelope (root `{v: 3, k: "sv", i, sv}`) via eql_bindings::from_v2.
     let payloads =
-        cipherstash::encrypt_store(&working, cipherstash::PAYLOAD_COLUMN, &docs, &config).await?;
+        cipherstash::encrypt_store(&working, cipherstash::PAYLOAD_COLUMN, &docs, spec.indexes())
+            .await?;
     anyhow::ensure!(
         payloads.len() == plaintexts.len(),
         "encrypt_store returned {} payloads for {} documents",
