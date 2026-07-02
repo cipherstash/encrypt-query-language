@@ -161,6 +161,20 @@ mod rust_tests {
         assert_eq!(ScalarKind::Numeric.as_bounded_int(), None);
     }
 
+    #[test]
+    fn jsonb_maps_to_serde_json_value() {
+        // The SteVec `jsonb` family's plaintext is an arbitrary JSON document, so
+        // its `rust_type` is `serde_json::Value` (its encrypted bindings are the
+        // hand-written SteVec structs, not a flat-scalar struct). Non-integer,
+        // non-ordered, so not `is_int()` and `as_bounded_int()` is `None`. Pins
+        // the `rust_type` arm at parity with every sibling kind's pinning test —
+        // and guards against a regression to the old panic.
+        assert_eq!(ScalarKind::Jsonb.rust_type(), "serde_json::Value");
+        assert!(!ScalarKind::Jsonb.is_int());
+        assert!(!ScalarKind::Jsonb.is_text());
+        assert_eq!(ScalarKind::Jsonb.as_bounded_int(), None);
+    }
+
     /// The structural guarantee that replaces the old runtime panics: a
     /// `Min`/`Max`/`Zero` pivot sentinel may only appear in a `CATALOG` row whose
     /// kind is an integer kind. `numeric_value` would resolve to `None` for a
@@ -1157,6 +1171,13 @@ mod invariant_tests {
     fn every_domain_name_starts_with_its_family_name() {
         for s in CATALOG {
             for d in s.domains {
+                // The one documented exception: `eql_v3.json` (the jsonb
+                // family's document domain) predates the catalog and keeps
+                // its established name rather than following the
+                // family+suffix convention — see `Domain::full_name`.
+                if matches!(d.shape, Shape::SteVecDocument) {
+                    continue;
+                }
                 let name = s.domain_name(d);
                 assert!(
                     name == s.name || name.starts_with(&format!("{}_", s.name)),

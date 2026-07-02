@@ -3,7 +3,7 @@
 -- REQUIRE: src/v3/sem/ore_cllw/operators.sql
 
 --! @file v3/jsonb/aggregates.sql
---! @brief min / max aggregates over eql_v3.ste_vec_entry.
+--! @brief min / max aggregates over eql_v3.jsonb_entry.
 --!
 --! SteVec document entries extracted at a selector (`doc -> 'sel'`) order by
 --! their CLLW ORE (`oc`) term, so the extremum is picked by comparing
@@ -27,20 +27,20 @@
 --!   row is `oc`-less. An all-`oc`-less input has no orderable extremum and
 --!   returns the (arbitrary) STRICT seed.
 
---! @brief State function for min on eql_v3.ste_vec_entry.
+--! @brief State function for min on eql_v3.jsonb_entry.
 --!
 --! Keeps whichever orderable entry has the lesser CLLW ORE term. STRICT, so SQL
 --! NULL entries are skipped by the aggregate machinery; `oc`-less (non-orderable)
 --! entries are skipped explicitly (see the @note on this file).
 --!
---! @param state eql_v3.ste_vec_entry Running extremum.
---! @param value eql_v3.ste_vec_entry Candidate entry.
---! @return eql_v3.ste_vec_entry The lesser orderable entry by `ore_cllw`.
+--! @param state eql_v3.jsonb_entry Running extremum.
+--! @param value eql_v3.jsonb_entry Candidate entry.
+--! @return eql_v3.jsonb_entry The lesser orderable entry by `ore_cllw`.
 CREATE FUNCTION eql_v3.ste_vec_entry_min_sfunc(
-  state eql_v3.ste_vec_entry,
-  value eql_v3.ste_vec_entry
+  state eql_v3.jsonb_entry,
+  value eql_v3.jsonb_entry
 )
-RETURNS eql_v3.ste_vec_entry
+RETURNS eql_v3.jsonb_entry
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
@@ -61,29 +61,29 @@ BEGIN
 END;
 $$;
 
---! @brief min aggregate over eql_v3.ste_vec_entry.
---! @param input eql_v3.ste_vec_entry
---! @return eql_v3.ste_vec_entry The entry with the smallest CLLW ORE term.
-CREATE AGGREGATE eql_v3.min(eql_v3.ste_vec_entry) (
+--! @brief min aggregate over eql_v3.jsonb_entry.
+--! @param input eql_v3.jsonb_entry
+--! @return eql_v3.jsonb_entry The entry with the smallest CLLW ORE term.
+CREATE AGGREGATE eql_v3.min(eql_v3.jsonb_entry) (
   sfunc = eql_v3.ste_vec_entry_min_sfunc,
-  stype = eql_v3.ste_vec_entry,
+  stype = eql_v3.jsonb_entry,
   combinefunc = eql_v3.ste_vec_entry_min_sfunc,
   parallel = safe
 );
 
---! @brief State function for max on eql_v3.ste_vec_entry.
+--! @brief State function for max on eql_v3.jsonb_entry.
 --!
 --! Keeps whichever orderable entry has the greater CLLW ORE term. `oc`-less
 --! entries are skipped, mirroring `ste_vec_entry_min_sfunc` (see the file @note).
 --!
---! @param state eql_v3.ste_vec_entry Running extremum.
---! @param value eql_v3.ste_vec_entry Candidate entry.
---! @return eql_v3.ste_vec_entry The greater orderable entry by `ore_cllw`.
+--! @param state eql_v3.jsonb_entry Running extremum.
+--! @param value eql_v3.jsonb_entry Candidate entry.
+--! @return eql_v3.jsonb_entry The greater orderable entry by `ore_cllw`.
 CREATE FUNCTION eql_v3.ste_vec_entry_max_sfunc(
-  state eql_v3.ste_vec_entry,
-  value eql_v3.ste_vec_entry
+  state eql_v3.jsonb_entry,
+  value eql_v3.jsonb_entry
 )
-RETURNS eql_v3.ste_vec_entry
+RETURNS eql_v3.jsonb_entry
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
@@ -104,12 +104,12 @@ BEGIN
 END;
 $$;
 
---! @brief max aggregate over eql_v3.ste_vec_entry.
---! @param input eql_v3.ste_vec_entry
---! @return eql_v3.ste_vec_entry The entry with the largest CLLW ORE term.
-CREATE AGGREGATE eql_v3.max(eql_v3.ste_vec_entry) (
+--! @brief max aggregate over eql_v3.jsonb_entry.
+--! @param input eql_v3.jsonb_entry
+--! @return eql_v3.jsonb_entry The entry with the largest CLLW ORE term.
+CREATE AGGREGATE eql_v3.max(eql_v3.jsonb_entry) (
   sfunc = eql_v3.ste_vec_entry_max_sfunc,
-  stype = eql_v3.ste_vec_entry,
+  stype = eql_v3.jsonb_entry,
   combinefunc = eql_v3.ste_vec_entry_max_sfunc,
   parallel = safe
 );

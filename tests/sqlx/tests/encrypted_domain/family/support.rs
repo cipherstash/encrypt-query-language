@@ -146,10 +146,10 @@ async fn no_cross_variant_operator_is_declared(pool: PgPool) -> Result<()> {
     // `=`. If someone accidentally adds such an operator, this test fails.
     //
     // The jsonb DOCUMENT surface is excluded: it intentionally defines
-    // cross-type containment operators (`json @> ste_vec_query`,
-    // `json @> ste_vec_entry` and their `<@` commutators) — the documented
+    // cross-type containment operators (`json @> jsonb_query`,
+    // `json @> jsonb_entry` and their `<@` commutators) — the documented
     // document-containment API, not scalar capability variants that must
-    // resolve to a blocker. So `json` / `ste_vec_entry` / `ste_vec_query` are
+    // resolve to a blocker. So `json` / `jsonb_entry` / `jsonb_query` are
     // out of scope for this scalar-variant guard.
     //
     // The check is structural (`pg_operator`) rather than dynamic
@@ -167,8 +167,8 @@ async fn no_cross_variant_operator_is_declared(pool: PgPool) -> Result<()> {
         WHERE ln.nspname = 'eql_v3'
           AND rn.nspname = 'eql_v3'
           AND lt.typname <> rt.typname
-          AND lt.typname NOT IN ('json', 'ste_vec_entry', 'ste_vec_query')
-          AND rt.typname NOT IN ('json', 'ste_vec_entry', 'ste_vec_query')
+          AND lt.typname NOT IN ('json', 'jsonb_entry', 'jsonb_query')
+          AND rt.typname NOT IN ('json', 'jsonb_entry', 'jsonb_query')
         ORDER BY 1
         "#,
     )

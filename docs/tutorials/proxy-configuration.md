@@ -102,7 +102,7 @@ SELECT * FROM users WHERE encrypted_name @> $1::eql_v3.text_match;
 **Encrypted JSON** (`eql_v3.json`) — containment and field access; see [EQL with JSON and JSONB](../reference/json-support.md):
 
 ```sql
-SELECT * FROM users WHERE encrypted_profile @> $1::eql_v3.ste_vec_query;
+SELECT * FROM users WHERE encrypted_profile @> $1::eql_v3.jsonb_query;
 SELECT encrypted_profile -> 'email_selector'::text FROM users;
 ```
 
@@ -118,7 +118,7 @@ SELECT encrypted_profile -> 'email_selector'::text FROM users;
 
 ## Troubleshooting
 
-**Operator resolves to native `jsonb` / returns `NULL` instead of searching.** The query operand was an untyped literal, so PostgreSQL flattened the `eql_v3` domain to `jsonb`. Type the operand (`$1::eql_v3.text_eq`, `$1::eql_v3.ste_vec_query`) — the Proxy does this automatically.
+**Operator resolves to native `jsonb` / returns `NULL` instead of searching.** The query operand was an untyped literal, so PostgreSQL flattened the `eql_v3` domain to `jsonb`. Type the operand (`$1::eql_v3.text_eq`, `$1::eql_v3.jsonb_query`) — the Proxy does this automatically.
 
 **`=` returns no rows.** The column's values do not carry an `hm` equality term. Confirm the client is configured to emit the right term for the column's variant (step 2), and that data was written through the Proxy after configuring it.
 

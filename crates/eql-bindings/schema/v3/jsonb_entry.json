@@ -17,7 +17,7 @@
       "type": "string"
     }
   },
-  "$id": "https://schemas.cipherstash.com/eql/v3/ste_vec_entry.json",
+  "$id": "https://schemas.cipherstash.com/eql/v3/jsonb_entry.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "anyOf": [
     {
@@ -43,7 +43,7 @@
       "type": "object"
     }
   ],
-  "description": "`eql_v3.ste_vec_entry` — one sv element (returned by `->`). Carries a selector\n`s`, ciphertext `c`, optional array-membership marker `a`, and exactly one of\n`hm` XOR `oc`. LAX (flatten precludes `deny_unknown_fields`): tolerates the\nroot `i`/`v` merged in by `->`. XOR of the term is enforced by the SQL CHECK.",
+  "description": "`eql_v3.jsonb_entry` — one sv element (returned by `->`). Carries a selector\n`s`, ciphertext `c`, optional array-membership marker `a`, and exactly one of\n`hm` XOR `oc`. LAX (flatten precludes `deny_unknown_fields`): tolerates the\nroot `i`/`v` merged in by `->`. XOR of the term is enforced by the SQL CHECK.",
   "properties": {
     "a": {
       "type": [

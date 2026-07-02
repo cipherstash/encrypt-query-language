@@ -4,10 +4,10 @@
 -- REQUIRE: src/v3/sem/ore_cllw/operators.sql
 
 --! @file v3/jsonb/operators.sql
---! @brief Operators on eql_v3.json and eql_v3.ste_vec_entry.
+--! @brief Operators on eql_v3.json and eql_v3.jsonb_entry.
 
 ------------------------------------------------------------------------------
--- -> field accessor (returns ste_vec_entry)
+-- -> field accessor (returns jsonb_entry)
 ------------------------------------------------------------------------------
 
 --! @brief -> operator with text selector.
@@ -29,9 +29,9 @@
 --!
 --! @param e eql_v3.json Root encrypted payload.
 --! @param selector text Selector hash.
---! @return eql_v3.ste_vec_entry Matching entry merged with root meta, or NULL.
+--! @return eql_v3.jsonb_entry Matching entry merged with root meta, or NULL.
 CREATE FUNCTION eql_v3."->"(e eql_v3.json, selector text)
-  RETURNS eql_v3.ste_vec_entry
+  RETURNS eql_v3.jsonb_entry
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   SELECT (
@@ -41,7 +41,7 @@ AS $$
       '$.sv[*] ? (@.s == $sel)'::jsonpath,
       jsonb_build_object('sel', selector)
     )
-  )::eql_v3.ste_vec_entry
+  )::eql_v3.jsonb_entry
 $$;
 
 CREATE OPERATOR ->(
@@ -53,9 +53,9 @@ CREATE OPERATOR ->(
 --! @brief -> operator with integer array index (0-based, JSONB convention).
 --! @param e eql_v3.json Encrypted sv-array payload.
 --! @param selector integer Array index.
---! @return eql_v3.ste_vec_entry Matching entry merged with root meta, or NULL.
+--! @return eql_v3.jsonb_entry Matching entry merged with root meta, or NULL.
 CREATE FUNCTION eql_v3."->"(e eql_v3.json, selector integer)
-  RETURNS eql_v3.ste_vec_entry
+  RETURNS eql_v3.jsonb_entry
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   SELECT CASE
@@ -67,7 +67,7 @@ AS $$
       -- untyped literal. The cast documents that intent and guards the `-> selector`
       -- (integer) hop from ever resolving to the v3 `->(eql_v3.json, integer)`
       -- operator instead of native array access.
-      (eql_v3.meta_data(e) || (e::jsonb -> 'sv' -> selector))::eql_v3.ste_vec_entry
+      (eql_v3.meta_data(e) || (e::jsonb -> 'sv' -> selector))::eql_v3.jsonb_entry
     ELSE NULL
   END
 $$;
@@ -85,7 +85,7 @@ CREATE OPERATOR ->(
 --! @brief ->> operator with text selector. Inlinable alias of -> coerced to
 --!        text.
 --!
---! Intentional v2 parity: this serializes the entire matched ste_vec_entry
+--! Intentional v2 parity: this serializes the entire matched jsonb_entry
 --! object as JSON text. It does not decrypt or return scalar plaintext like
 --! native `jsonb ->>`.
 --! @param e eql_v3.json Encrypted payload.
@@ -144,15 +144,15 @@ CREATE OPERATOR @>(
   RIGHTARG=eql_v3.json
 );
 
---! @brief @> contains operator with an ste_vec_query needle.
+--! @brief @> contains operator with an jsonb_query needle.
 --!
 --! Inlines to native `jsonb @>` over `eql_v3.to_ste_vec_query(a)::jsonb`, so a
 --! functional GIN index on the same expression engages.
 --!
 --! @param a eql_v3.json Container.
---! @param b eql_v3.ste_vec_query Query payload.
+--! @param b eql_v3.jsonb_query Query payload.
 --! @return boolean True if a contains b.
-CREATE FUNCTION eql_v3."@>"(a eql_v3.json, b eql_v3.ste_vec_query)
+CREATE FUNCTION eql_v3."@>"(a eql_v3.json, b eql_v3.jsonb_query)
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -162,18 +162,18 @@ $$;
 CREATE OPERATOR @>(
   FUNCTION=eql_v3."@>",
   LEFTARG=eql_v3.json,
-  RIGHTARG=eql_v3.ste_vec_query
+  RIGHTARG=eql_v3.jsonb_query
 );
 
---! @brief @> contains operator with a single ste_vec_entry needle.
+--! @brief @> contains operator with a single jsonb_entry needle.
 --!
 --! Wraps the entry into a single-element sv array (stripping `c`) and reduces
 --! to the same `to_ste_vec_query(a)::jsonb @> needle::jsonb` form.
 --!
 --! @param a eql_v3.json Container.
---! @param b eql_v3.ste_vec_entry Single entry.
+--! @param b eql_v3.jsonb_entry Single entry.
 --! @return boolean True if a contains an sv entry matching b.
-CREATE FUNCTION eql_v3."@>"(a eql_v3.json, b eql_v3.ste_vec_entry)
+CREATE FUNCTION eql_v3."@>"(a eql_v3.json, b eql_v3.jsonb_entry)
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -195,7 +195,7 @@ $$;
 CREATE OPERATOR @>(
   FUNCTION=eql_v3."@>",
   LEFTARG=eql_v3.json,
-  RIGHTARG=eql_v3.ste_vec_entry
+  RIGHTARG=eql_v3.jsonb_entry
 );
 
 ------------------------------------------------------------------------------
@@ -219,11 +219,11 @@ CREATE OPERATOR <@(
   RIGHTARG=eql_v3.json
 );
 
---! @brief <@ contained-by operator with an ste_vec_query LHS.
---! @param a eql_v3.ste_vec_query Query payload.
+--! @brief <@ contained-by operator with an jsonb_query LHS.
+--! @param a eql_v3.jsonb_query Query payload.
 --! @param b eql_v3.json Container.
 --! @return boolean True if b contains a.
-CREATE FUNCTION eql_v3."<@"(a eql_v3.ste_vec_query, b eql_v3.json)
+CREATE FUNCTION eql_v3."<@"(a eql_v3.jsonb_query, b eql_v3.json)
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -232,15 +232,15 @@ $$;
 
 CREATE OPERATOR <@(
   FUNCTION=eql_v3."<@",
-  LEFTARG=eql_v3.ste_vec_query,
+  LEFTARG=eql_v3.jsonb_query,
   RIGHTARG=eql_v3.json
 );
 
---! @brief <@ contained-by operator with a ste_vec_entry LHS.
---! @param a eql_v3.ste_vec_entry Single entry.
+--! @brief <@ contained-by operator with a jsonb_entry LHS.
+--! @param a eql_v3.jsonb_entry Single entry.
 --! @param b eql_v3.json Container.
 --! @return boolean True if b contains a.
-CREATE FUNCTION eql_v3."<@"(a eql_v3.ste_vec_entry, b eql_v3.json)
+CREATE FUNCTION eql_v3."<@"(a eql_v3.jsonb_entry, b eql_v3.json)
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -249,20 +249,20 @@ $$;
 
 CREATE OPERATOR <@(
   FUNCTION=eql_v3."<@",
-  LEFTARG=eql_v3.ste_vec_entry,
+  LEFTARG=eql_v3.jsonb_entry,
   RIGHTARG=eql_v3.json
 );
 
 ------------------------------------------------------------------------------
--- ste_vec_entry comparisons
+-- jsonb_entry comparisons
 ------------------------------------------------------------------------------
 
---! @brief Equality on ste_vec_entry via eq_term (hm-or-oc byte equality).
+--! @brief Equality on jsonb_entry via eq_term (hm-or-oc byte equality).
 --! @internal
---! @param a eql_v3.ste_vec_entry Left operand
---! @param b eql_v3.ste_vec_entry Right operand
+--! @param a eql_v3.jsonb_entry Left operand
+--! @param b eql_v3.jsonb_entry Right operand
 --! @return boolean True if the entries are equal
-CREATE FUNCTION eql_v3.eq(a eql_v3.ste_vec_entry, b eql_v3.ste_vec_entry)
+CREATE FUNCTION eql_v3.eq(a eql_v3.jsonb_entry, b eql_v3.jsonb_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -271,20 +271,20 @@ $$;
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3.eq,
-  LEFTARG  = eql_v3.ste_vec_entry,
-  RIGHTARG = eql_v3.ste_vec_entry,
+  LEFTARG  = eql_v3.jsonb_entry,
+  RIGHTARG = eql_v3.jsonb_entry,
   COMMUTATOR = =,
   NEGATOR  = <>,
   RESTRICT = eqsel,
   JOIN     = eqjoinsel
 );
 
---! @brief Inequality on ste_vec_entry via eq_term.
+--! @brief Inequality on jsonb_entry via eq_term.
 --! @internal
---! @param a eql_v3.ste_vec_entry Left operand
---! @param b eql_v3.ste_vec_entry Right operand
+--! @param a eql_v3.jsonb_entry Left operand
+--! @param b eql_v3.jsonb_entry Right operand
 --! @return boolean True if the entries are not equal
-CREATE FUNCTION eql_v3.neq(a eql_v3.ste_vec_entry, b eql_v3.ste_vec_entry)
+CREATE FUNCTION eql_v3.neq(a eql_v3.jsonb_entry, b eql_v3.jsonb_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -293,20 +293,20 @@ $$;
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3.neq,
-  LEFTARG  = eql_v3.ste_vec_entry,
-  RIGHTARG = eql_v3.ste_vec_entry,
+  LEFTARG  = eql_v3.jsonb_entry,
+  RIGHTARG = eql_v3.jsonb_entry,
   COMMUTATOR = <>,
   NEGATOR  = =,
   RESTRICT = neqsel,
   JOIN     = neqjoinsel
 );
 
---! @brief Less-than on ste_vec_entry via ore_cllw.
+--! @brief Less-than on jsonb_entry via ore_cllw.
 --! @internal
---! @param a eql_v3.ste_vec_entry Left operand
---! @param b eql_v3.ste_vec_entry Right operand
+--! @param a eql_v3.jsonb_entry Left operand
+--! @param b eql_v3.jsonb_entry Right operand
 --! @return boolean True if a is less than b
-CREATE FUNCTION eql_v3.lt(a eql_v3.ste_vec_entry, b eql_v3.ste_vec_entry)
+CREATE FUNCTION eql_v3.lt(a eql_v3.jsonb_entry, b eql_v3.jsonb_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -315,20 +315,20 @@ $$;
 
 CREATE OPERATOR < (
   FUNCTION = eql_v3.lt,
-  LEFTARG  = eql_v3.ste_vec_entry,
-  RIGHTARG = eql_v3.ste_vec_entry,
+  LEFTARG  = eql_v3.jsonb_entry,
+  RIGHTARG = eql_v3.jsonb_entry,
   COMMUTATOR = >,
   NEGATOR  = >=,
   RESTRICT = scalarltsel,
   JOIN     = scalarltjoinsel
 );
 
---! @brief Less-than-or-equal on ste_vec_entry via ore_cllw.
+--! @brief Less-than-or-equal on jsonb_entry via ore_cllw.
 --! @internal
---! @param a eql_v3.ste_vec_entry Left operand
---! @param b eql_v3.ste_vec_entry Right operand
+--! @param a eql_v3.jsonb_entry Left operand
+--! @param b eql_v3.jsonb_entry Right operand
 --! @return boolean True if a is less than or equal to b
-CREATE FUNCTION eql_v3.lte(a eql_v3.ste_vec_entry, b eql_v3.ste_vec_entry)
+CREATE FUNCTION eql_v3.lte(a eql_v3.jsonb_entry, b eql_v3.jsonb_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -337,20 +337,20 @@ $$;
 
 CREATE OPERATOR <= (
   FUNCTION = eql_v3.lte,
-  LEFTARG  = eql_v3.ste_vec_entry,
-  RIGHTARG = eql_v3.ste_vec_entry,
+  LEFTARG  = eql_v3.jsonb_entry,
+  RIGHTARG = eql_v3.jsonb_entry,
   COMMUTATOR = >=,
   NEGATOR  = >,
   RESTRICT = scalarlesel,
   JOIN     = scalarlejoinsel
 );
 
---! @brief Greater-than on ste_vec_entry via ore_cllw.
+--! @brief Greater-than on jsonb_entry via ore_cllw.
 --! @internal
---! @param a eql_v3.ste_vec_entry Left operand
---! @param b eql_v3.ste_vec_entry Right operand
+--! @param a eql_v3.jsonb_entry Left operand
+--! @param b eql_v3.jsonb_entry Right operand
 --! @return boolean True if a is greater than b
-CREATE FUNCTION eql_v3.gt(a eql_v3.ste_vec_entry, b eql_v3.ste_vec_entry)
+CREATE FUNCTION eql_v3.gt(a eql_v3.jsonb_entry, b eql_v3.jsonb_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -359,20 +359,20 @@ $$;
 
 CREATE OPERATOR > (
   FUNCTION = eql_v3.gt,
-  LEFTARG  = eql_v3.ste_vec_entry,
-  RIGHTARG = eql_v3.ste_vec_entry,
+  LEFTARG  = eql_v3.jsonb_entry,
+  RIGHTARG = eql_v3.jsonb_entry,
   COMMUTATOR = <,
   NEGATOR  = <=,
   RESTRICT = scalargtsel,
   JOIN     = scalargtjoinsel
 );
 
---! @brief Greater-than-or-equal on ste_vec_entry via ore_cllw.
+--! @brief Greater-than-or-equal on jsonb_entry via ore_cllw.
 --! @internal
---! @param a eql_v3.ste_vec_entry Left operand
---! @param b eql_v3.ste_vec_entry Right operand
+--! @param a eql_v3.jsonb_entry Left operand
+--! @param b eql_v3.jsonb_entry Right operand
 --! @return boolean True if a is greater than or equal to b
-CREATE FUNCTION eql_v3.gte(a eql_v3.ste_vec_entry, b eql_v3.ste_vec_entry)
+CREATE FUNCTION eql_v3.gte(a eql_v3.jsonb_entry, b eql_v3.jsonb_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -381,8 +381,8 @@ $$;
 
 CREATE OPERATOR >= (
   FUNCTION = eql_v3.gte,
-  LEFTARG  = eql_v3.ste_vec_entry,
-  RIGHTARG = eql_v3.ste_vec_entry,
+  LEFTARG  = eql_v3.jsonb_entry,
+  RIGHTARG = eql_v3.jsonb_entry,
   COMMUTATOR = <=,
   NEGATOR  = <,
   RESTRICT = scalargesel,

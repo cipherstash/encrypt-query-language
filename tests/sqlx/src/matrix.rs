@@ -454,9 +454,9 @@ macro_rules! scalar_matrix {
 /// no scalar analogue or assert document-specific surface.
 /// `ord_routes_through_ob` and scalar `ore_injectivity` are also excluded: they
 /// are scalar-term invariants and are not semantically correct for
-/// `ste_vec_entry` (entry equality routes through `eq_term`, not ORE).
+/// `jsonb_entry` (entry equality routes through `eq_term`, not ORE).
 ///
-/// The single `(entry, Ord)` "domain" is variant-independent — `ste_vec_entry`
+/// The single `(entry, Ord)` "domain" is variant-independent — `jsonb_entry`
 /// has one domain. Equality reduces through `eql_v3.eq_term`; ordering, index,
 /// count-distinct, and aggregates reduce through `eql_v3.ore_cllw` via the
 /// `JsonbEntryInt4` extractor overrides.
@@ -504,12 +504,12 @@ macro_rules! jsonb_entry_matrix {
         // entries: that shared driver also sweeps a bare-jsonb RHS
         // (`value < '<lit>'::jsonb`), which is load-bearing for scalars (they have
         // `(domain, jsonb)` cross-type operators) but UNSAFE for entries —
-        // `ste_vec_entry` has no `(entry, jsonb)` operator, so a bare-jsonb RHS
+        // `jsonb_entry` has no `(entry, jsonb)` operator, so a bare-jsonb RHS
         // flattens to native `jsonb < jsonb` (no ore_cllw, no index) rather than
         // the entry operator. The hand-written `jsonb_entry_int4_index_engages`
         // test in the suite probes index engagement with the domain-cast RHS only.
 
-        // Aggregates: eql_v3.min/max over ste_vec_entry (src/v3/jsonb/aggregates.sql).
+        // Aggregates: eql_v3.min/max over jsonb_entry (src/v3/jsonb/aggregates.sql).
         // The aggregate leaf cases compare extrema via the ord-extractor seam
         // (eql_v3.ore_cllw for entries), so the entry min/max route through the
         // `oc` (CLLW ORE) term exactly like the comparison operators.

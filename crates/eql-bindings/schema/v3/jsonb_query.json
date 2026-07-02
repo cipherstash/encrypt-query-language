@@ -49,10 +49,10 @@
       "type": "object"
     }
   },
-  "$id": "https://schemas.cipherstash.com/eql/v3/ste_vec_query.json",
+  "$id": "https://schemas.cipherstash.com/eql/v3/jsonb_query.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "`eql_v3.ste_vec_query` — a containment needle (`{sv:[query-entry]}`). Strict.",
+  "description": "`eql_v3.jsonb_query` — a containment needle (`{sv:[query-entry]}`). Strict.",
   "properties": {
     "sv": {
       "items": {

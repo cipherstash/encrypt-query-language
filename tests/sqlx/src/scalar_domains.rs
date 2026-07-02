@@ -137,7 +137,7 @@ pub trait ScalarType:
 
     /// SQL domain the comparable value is cast to. Default: the generated
     /// scalar domain `eql_v3.<pg_type><variant_suffix>`. A non-scalar surface
-    /// (e.g. a SteVec entry, whose single domain `eql_v3.ste_vec_entry` is
+    /// (e.g. a SteVec entry, whose single domain `eql_v3.jsonb_entry` is
     /// variant-independent) overrides this to ignore the suffix.
     fn sql_domain(variant: Variant) -> String {
         format!("eql_v3.{}{}", Self::PG_TYPE, variant.suffix())
@@ -147,8 +147,8 @@ pub trait ScalarType:
     /// Default: the bare `payload` column (a whole encrypted-scalar payload).
     /// A SteVec-entry view overrides this with an extraction expression such
     /// as `(payload -> '<selector>')`, which already has type
-    /// `eql_v3.ste_vec_entry`. The expression is cast to `sql_domain(variant)`
-    /// at every call site, so a redundant `::eql_v3.ste_vec_entry` cast on an
+    /// `eql_v3.jsonb_entry`. The expression is cast to `sql_domain(variant)`
+    /// at every call site, so a redundant `::eql_v3.jsonb_entry` cast on an
     /// already-entry expression is a harmless no-op.
     fn column_expr() -> String {
         "payload".to_string()

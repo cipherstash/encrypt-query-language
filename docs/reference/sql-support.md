@@ -134,16 +134,16 @@ The search capabilities available on a value extracted via `->` or `eql_v3.jsonb
 
 | SQL form                         | Resolves to                                        | Returns / notes |
 | -------------------------------- | -------------------------------------------------- | --------------- |
-| `doc @> needle` / `needle <@ doc` | `eql_v3."@>"` / `eql_v3."<@"`                      | document containment; GIN-indexable via `eql_v3.to_ste_vec_query(doc)::jsonb` — see [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment). `needle` must be typed (`$1::eql_v3.ste_vec_query`, another `eql_v3.json`, or an `eql_v3.ste_vec_entry`). |
-| `doc -> 'sel'::text` / `doc -> N` | `eql_v3."->"`                                     | field / 0-based array-element access; returns `eql_v3.ste_vec_entry`. |
+| `doc @> needle` / `needle <@ doc` | `eql_v3."@>"` / `eql_v3."<@"`                      | document containment; GIN-indexable via `eql_v3.to_ste_vec_query(doc)::jsonb` — see [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment). `needle` must be typed (`$1::eql_v3.jsonb_query`, another `eql_v3.json`, or an `eql_v3.jsonb_entry`). |
+| `doc -> 'sel'::text` / `doc -> N` | `eql_v3."->"`                                     | field / 0-based array-element access; returns `eql_v3.jsonb_entry`. |
 | `doc ->> 'sel'::text`            | `eql_v3."->>"`                                     | the matching entry serialized as `text` (ciphertext JSON, **not** decrypted plaintext). |
-| extracted-leaf `=` `<>`          | `eql_v3.eq_term(eql_v3.ste_vec_entry)`             | equality on a value extracted via `->` (e.g. `doc -> 'sel'::text = $1`). |
-| extracted-leaf `<` `<=` `>` `>=` | `eql_v3.ore_cllw(eql_v3.ste_vec_entry)`            | ordered comparison on an extracted String / Number leaf. |
-| `MIN` / `MAX` of extracted leaf  | `eql_v3.min(eql_v3.ste_vec_entry)` / `max`         | over an extracted ordered leaf. |
+| extracted-leaf `=` `<>`          | `eql_v3.eq_term(eql_v3.jsonb_entry)`             | equality on a value extracted via `->` (e.g. `doc -> 'sel'::text = $1`). |
+| extracted-leaf `<` `<=` `>` `>=` | `eql_v3.ore_cllw(eql_v3.jsonb_entry)`            | ordered comparison on an extracted String / Number leaf. |
+| `MIN` / `MAX` of extracted leaf  | `eql_v3.min(eql_v3.jsonb_entry)` / `max`         | over an extracted ordered leaf. |
 | `eql_v3.jsonb_path_query(doc, sel)` | path query                                      | set-returning; yields encrypted entries. Also `jsonb_path_query_first`, `jsonb_path_exists`. |
 | `eql_v3.jsonb_array_length/elements/elements_text(doc)` | array helpers                  | length / set-returning elements / element text. |
 
-> **Typed operands (important).** The selector / needle operand must carry a **known type** — a typed parameter (`$1`, which the Proxy supplies) or an explicit cast (`doc -> 'sel'::text`, `$1::eql_v3.ste_vec_query`). A bare untyped literal (`doc -> 'sel'`) resolves to the **native `jsonb` operator** (PostgreSQL reduces the `eql_v3.json` domain to its `jsonb` base type for an unknown-typed RHS) and silently returns native jsonb semantics instead of the encrypted operator.
+> **Typed operands (important).** The selector / needle operand must carry a **known type** — a typed parameter (`$1`, which the Proxy supplies) or an explicit cast (`doc -> 'sel'::text`, `$1::eql_v3.jsonb_query`). A bare untyped literal (`doc -> 'sel'`) resolves to the **native `jsonb` operator** (PostgreSQL reduces the `eql_v3.json` domain to its `jsonb` base type for an unknown-typed RHS) and silently returns native jsonb semantics instead of the encrypted operator.
 
 ### Blocked JSONB operators
 

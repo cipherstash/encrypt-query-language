@@ -71,16 +71,12 @@ fn schema_required_keys_match_catalog_terms() {
 /// was removed (commit 27c200c4).
 #[test]
 fn inventory_exactly_covers_catalog_in_order() {
+    // `domain_name` is correct for every shape (including the jsonb family's
+    // one documented exception, the `eql_v3.json` document domain — see
+    // `Domain::full_name`), so no per-shape branch is needed here.
     let expected: Vec<String> = CATALOG
         .iter()
-        .flat_map(|spec| {
-            spec.domains.iter().map(move |d| match d.shape {
-                eql_domains::Shape::Scalar => spec.domain_name(d),
-                eql_domains::Shape::SteVecDocument => "json".to_string(),
-                eql_domains::Shape::SteVecEntry => "ste_vec_entry".to_string(),
-                eql_domains::Shape::SteVecQuery => "ste_vec_query".to_string(),
-            })
-        })
+        .flat_map(|spec| spec.domains.iter().map(move |d| spec.domain_name(d)))
         .collect();
     let actual: Vec<String> = v3::all().iter().map(|e| e.domain().to_string()).collect();
     assert_eq!(
@@ -144,9 +140,7 @@ fn schemas_are_strict() {
         let is_scalar = CATALOG
             .iter()
             .flat_map(|s| s.domains.iter().map(move |d| (s, d)))
-            .find(|(s, d)| {
-                (d.is_scalar() && s.domain_name(d) == name) || (!d.is_scalar() && d.name == name)
-            })
+            .find(|(s, d)| s.domain_name(d) == name)
             .map(|(_, d)| d.is_scalar())
             .unwrap_or(true);
         if !is_scalar {

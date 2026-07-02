@@ -26,7 +26,7 @@ pub struct SteVecDocument {
     pub sv: Vec<SteVecEntry>,
 }
 
-/// `eql_v3.ste_vec_entry` — one sv element (returned by `->`). Carries a selector
+/// `eql_v3.jsonb_entry` — one sv element (returned by `->`). Carries a selector
 /// `s`, ciphertext `c`, optional array-membership marker `a`, and exactly one of
 /// `hm` XOR `oc`. LAX (flatten precludes `deny_unknown_fields`): tolerates the
 /// root `i`/`v` merged in by `->`. XOR of the term is enforced by the SQL CHECK.
@@ -35,13 +35,19 @@ pub struct SteVecDocument {
 pub struct SteVecEntry {
     pub s: Selector,
     pub c: Ciphertext,
+    // `#[ts(optional = nullable)]` emits `a?: boolean | null` — ts-rs does NOT
+    // infer optionality from serde `default`/`skip_serializing_if` (10.1: only an
+    // explicit `#[ts(optional)]`/`optional = nullable` does), so without this the
+    // TS binding would render `a` REQUIRED and drift from the JSON Schema, which
+    // excludes `a` from `required`. `= nullable` keeps the `| null`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional = nullable)]
     pub a: Option<bool>,
     #[serde(flatten)]
     pub term: SteVecTerm,
 }
 
-/// `eql_v3.ste_vec_query` — a containment needle (`{sv:[query-entry]}`). Strict.
+/// `eql_v3.jsonb_query` — a containment needle (`{sv:[query-entry]}`). Strict.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
@@ -87,5 +93,5 @@ macro_rules! ste_vec_domain_type {
 }
 
 ste_vec_domain_type!(SteVecDocument, "eql_v3.json");
-ste_vec_domain_type!(SteVecEntry, "eql_v3.ste_vec_entry");
-ste_vec_domain_type!(SteVecQuery, "eql_v3.ste_vec_query");
+ste_vec_domain_type!(SteVecEntry, "eql_v3.jsonb_entry");
+ste_vec_domain_type!(SteVecQuery, "eql_v3.jsonb_query");

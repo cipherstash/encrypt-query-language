@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 
-use eql_domains::{Domain, DomainFamily, Shape, Term, CATALOG, ENVELOPE_KEYS};
+use eql_domains::{Domain, DomainFamily, Term, CATALOG, ENVELOPE_KEYS};
 
 use crate::consts::RUST_GENERATED_MARKER;
 use crate::writer::{
@@ -229,13 +229,7 @@ pub fn render_inventory_rs() -> String {
             f.domains
                 .iter()
                 .map(move |d| {
-                    let ident = match d.shape {
-                        Shape::Scalar => d.struct_ident(f.name),
-                        Shape::SteVecDocument => "SteVecDocument".to_string(),
-                        Shape::SteVecEntry => "SteVecEntry".to_string(),
-                        Shape::SteVecQuery => "SteVecQuery".to_string(),
-                    };
-                    let s = format_ident!("{}", ident);
+                    let s = format_ident!("{}", d.rust_struct_name(f.name));
                     quote! { Box::new(PhantomData::<super::#m::#s>), }
                 })
                 .collect::<Vec<_>>()

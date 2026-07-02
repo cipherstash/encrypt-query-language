@@ -123,9 +123,9 @@ pub enum Shape {
     Scalar,
     /// `eql_v3.json` → `{v, i, sv: [SteVecEntry]}`.
     SteVecDocument,
-    /// `eql_v3.ste_vec_entry` → `{s, c, a?, #[flatten] SteVecTerm}`.
+    /// `eql_v3.jsonb_entry` → `{s, c, a?, #[flatten] SteVecTerm}`.
     SteVecEntry,
-    /// `eql_v3.ste_vec_query` → `{sv: [SteVecQueryEntry]}`.
+    /// `eql_v3.jsonb_query` → `{sv: [SteVecQueryEntry]}`.
     SteVecQuery,
 }
 
@@ -372,25 +372,35 @@ pub const FLOAT8: DomainFamily = DomainFamily {
 /// from the catalog); the catalog drives only their inventory membership + order.
 const JSONB_DOMAINS: &[Domain] = &[
     Domain {
+        // The established document name `eql_v3.json` predates the catalog and
+        // does not follow the family+suffix convention (family is "jsonb", not
+        // "json") — an explicit literal name, not the empty-suffix
+        // bare-family-name convention every scalar storage domain uses.
+        // `Domain::full_name` special-cases `Shape::SteVecDocument` to return
+        // this verbatim instead of concatenating.
         name: "json",
         terms: &[],
         shape: Shape::SteVecDocument,
     },
     Domain {
-        name: "ste_vec_entry",
+        name: "entry",
         terms: &[],
         shape: Shape::SteVecEntry,
     },
     Domain {
-        name: "ste_vec_query",
+        name: "query",
         terms: &[],
         shape: Shape::SteVecQuery,
     },
 ];
 
-/// `jsonb` — the encrypted-JSONB (SteVec) family: `eql_v3.json` (document),
-/// `eql_v3.ste_vec_entry` (one sv element), `eql_v3.ste_vec_query` (containment
-/// needle). Added to `CATALOG` at the flip task.
+/// `jsonb` — the encrypted-JSONB (SteVec) family: `eql_v3.json` (document, the
+/// one explicit-name exception — see `JSONB_DOMAINS`), `eql_v3.jsonb_entry`
+/// (one sv element), `eql_v3.jsonb_query` (containment needle). The Rust
+/// struct identity also diverges from the derived convention (hand-written
+/// `SteVecDocument`/`SteVecEntry`/`SteVecQuery`, not name-derived), which is
+/// what `Domain::rust_struct_name` exists to bridge. Added to `CATALOG` at the
+/// flip task.
 pub const JSONB: DomainFamily = DomainFamily {
     name: "jsonb",
     domains: JSONB_DOMAINS,

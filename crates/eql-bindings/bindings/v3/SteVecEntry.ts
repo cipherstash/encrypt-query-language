@@ -5,9 +5,9 @@ import type { OreCllw } from "./OreCllw";
 import type { Selector } from "./Selector";
 
 /**
- * `eql_v3.ste_vec_entry` — one sv element (returned by `->`). Carries a selector
+ * `eql_v3.jsonb_entry` — one sv element (returned by `->`). Carries a selector
  * `s`, ciphertext `c`, optional array-membership marker `a`, and exactly one of
  * `hm` XOR `oc`. LAX (flatten precludes `deny_unknown_fields`): tolerates the
  * root `i`/`v` merged in by `->`. XOR of the term is enforced by the SQL CHECK.
  */
-export type SteVecEntry = { s: Selector, c: Ciphertext, a: boolean | null, } & ({ hm: Hmac256, } | { oc: OreCllw, });
+export type SteVecEntry = { s: Selector, c: Ciphertext, a?: boolean | null, } & ({ hm: Hmac256, } | { oc: OreCllw, });

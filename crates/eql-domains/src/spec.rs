@@ -10,7 +10,16 @@ impl Domain {
     /// empty domain name => the bare family name). The **single** site that owns
     /// the `_` join — codegen builds every domain name through this, so the
     /// "domain name starts with the family name" rule is structural.
+    ///
+    /// One documented exception: [`crate::Shape::SteVecDocument`] (the `jsonb`
+    /// family's `eql_v3.json`) predates the catalog and doesn't follow the
+    /// family+suffix convention (`family_name` is `"jsonb"`, not `"json"`), so
+    /// its `name` is returned verbatim instead of being joined. Every other
+    /// domain — scalar or the other two SteVec shapes — uses the join.
     pub fn full_name(&self, family_name: &str) -> String {
+        if matches!(self.shape, crate::Shape::SteVecDocument) {
+            return self.name.to_string();
+        }
         if self.name.is_empty() {
             family_name.to_string()
         } else {
@@ -39,10 +48,29 @@ impl Domain {
     }
 
     /// True when this domain carries the flat scalar payload shape. False for
-    /// the SteVec shapes (the `jsonb` family). The single predicate scalar-only
-    /// consumers filter on.
+    /// the SteVec shapes (the `jsonb` family). The per-domain primitive that
+    /// [`DomainFamily::is_scalar`] and [`crate::scalar_families`] are built on —
+    /// most scalar-only consumers filter through those family-level helpers, not
+    /// this predicate directly (the `ts_property_order` guard is the exception).
     pub const fn is_scalar(&self) -> bool {
         matches!(self.shape, crate::Shape::Scalar)
+    }
+
+    /// The Rust/TS struct identifier that represents this domain's payload —
+    /// shape-aware, unlike [`Self::struct_ident`]. For [`crate::Shape::Scalar`]
+    /// this is exactly `struct_ident` (derived from the domain name). The
+    /// SteVec shapes' struct bodies are hand-written (not name-derivable — see
+    /// `crates/eql-bindings/src/v3/jsonb.rs`), so their identifiers are fixed
+    /// literals here instead. The SINGLE source of truth for that mapping —
+    /// `eql-codegen`'s inventory renderer calls this instead of carrying its
+    /// own copy of the shape match.
+    pub fn rust_struct_name(&self, family_name: &str) -> String {
+        match self.shape {
+            crate::Shape::Scalar => self.struct_ident(family_name),
+            crate::Shape::SteVecDocument => "SteVecDocument".to_string(),
+            crate::Shape::SteVecEntry => "SteVecEntry".to_string(),
+            crate::Shape::SteVecQuery => "SteVecQuery".to_string(),
+        }
     }
 }
 
@@ -128,5 +156,37 @@ mod tests {
         for f in scalar_families() {
             assert!(f.is_scalar());
         }
+    }
+
+    #[test]
+    fn jsonb_domain_names_follow_the_family_suffix_convention() {
+        // Entry/query carry the same family+suffix naming as every scalar
+        // family. The document is the one documented exception — its
+        // established name `json` doesn't match the family name `jsonb`, so
+        // `full_name` returns it verbatim rather than concatenating. Real SQL
+        // names: eql_v3.json, eql_v3.jsonb_entry, eql_v3.jsonb_query.
+        use crate::JSONB;
+        assert_eq!(JSONB.domain_name(&JSONB.domains[0]), "json");
+        assert_eq!(JSONB.domain_name(&JSONB.domains[1]), "jsonb_entry");
+        assert_eq!(JSONB.domain_name(&JSONB.domains[2]), "jsonb_query");
+    }
+
+    #[test]
+    fn rust_struct_name_is_shape_aware() {
+        // Scalar: derived, same as struct_ident. Non-scalar: the hand-written
+        // SteVec struct names — the ONE place these two universes diverge.
+        use crate::JSONB;
+        let int4_eq = Domain {
+            name: "eq",
+            terms: &[Term::Hm],
+            shape: Shape::Scalar,
+        };
+        assert_eq!(int4_eq.rust_struct_name("int4"), "Int4Eq");
+        assert_eq!(
+            JSONB.domains[0].rust_struct_name(JSONB.name),
+            "SteVecDocument"
+        );
+        assert_eq!(JSONB.domains[1].rust_struct_name(JSONB.name), "SteVecEntry");
+        assert_eq!(JSONB.domains[2].rust_struct_name(JSONB.name), "SteVecQuery");
     }
 }

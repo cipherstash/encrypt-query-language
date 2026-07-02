@@ -106,7 +106,7 @@ CREATE INDEX ON users USING gin   (eql_v3.match_term(name_match));
 
 > The full per-domain operator / wrapper / blocker surface (and the `eql_v3.<T>` / `_eq` / `_ord` / `_ord_ore` domain types themselves) is documented in [SQL support](./sql-support.md#encrypted-domain-scalar-types-eql_v3t) and the [scalar encrypted-domain type reference](./adding-a-scalar-encrypted-domain-type.md).
 
-The `eql_v3.json` document type extracts entry-level terms with `eql_v3.eq_term(eql_v3.ste_vec_entry)` and `eql_v3.ore_cllw(eql_v3.ste_vec_entry)` — see [json-support.md](./json-support.md).
+The `eql_v3.json` document type extracts entry-level terms with `eql_v3.eq_term(eql_v3.jsonb_entry)` and `eql_v3.ore_cllw(eql_v3.jsonb_entry)` — see [json-support.md](./json-support.md).
 
 ---
 
@@ -143,7 +143,7 @@ SELECT eql_v3.max(price_encrypted) FROM products WHERE category = 'electronics';
 SELECT eql_v3.min(price_jsonb::eql_v3.int4_ord) FROM products;
 ```
 
-`MIN` / `MAX` over a value extracted from an `eql_v3.json` document use `eql_v3.min(eql_v3.ste_vec_entry)` / `max` — see [json-support.md](./json-support.md).
+`MIN` / `MAX` over a value extracted from an `eql_v3.json` document use `eql_v3.min(eql_v3.jsonb_entry)` / `max` — see [json-support.md](./json-support.md).
 
 `SUM` / `AVG` and other arithmetic aggregates are **not** supported on encrypted columns (they would require homomorphic encryption) — decrypt at the application boundary. `MIN` / `MAX` only need comparator-revealing terms.
 

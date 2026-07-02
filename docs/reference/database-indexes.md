@@ -154,7 +154,7 @@ Why the raw column does not scale: `GROUP BY col` uses the entire encrypted payl
 
 ### Field-level equality index (ste_vec elements)
 
-For `GROUP BY` / `DISTINCT` / equality on a value extracted from an `eql_v3.json` document — e.g. `doc -> 'email'` — index the extractor applied to the selector. The extracted entry is an `eql_v3.ste_vec_entry`, and `=` on it inlines to `eql_v3.eq_term(a) = eql_v3.eq_term(b)`:
+For `GROUP BY` / `DISTINCT` / equality on a value extracted from an `eql_v3.json` document — e.g. `doc -> 'email'` — index the extractor applied to the selector. The extracted entry is an `eql_v3.jsonb_entry`, and `=` on it inlines to `eql_v3.eq_term(a) = eql_v3.eq_term(b)`:
 
 ```sql
 CREATE INDEX users_data_email_eq
@@ -165,7 +165,7 @@ SELECT count(*) FROM users
   GROUP BY eql_v3.eq_term(data_encrypted -> '<selector-for-email>'::text);
 
 SELECT * FROM users
-  WHERE data_encrypted -> '<selector-for-email>'::text = $1::eql_v3.ste_vec_entry;
+  WHERE data_encrypted -> '<selector-for-email>'::text = $1::eql_v3.jsonb_entry;
 ```
 
 For ordered field-level access, index `eql_v3.ore_cllw(doc -> '<selector>'::text)` (a btree) and write `ORDER BY eql_v3.ore_cllw(doc -> '<selector>'::text)` — the same sort-key rule as above. The `<selector>` value is the deterministic selector hash the crypto layer emits in each `sv` element's `s` field, not a plaintext JSONPath. The operand on `->` must be typed (`-> '<sel>'::text`); a bare untyped literal falls through to native `jsonb ->`.
@@ -181,11 +181,11 @@ CREATE INDEX orders_data_gin
   ON orders USING gin (eql_v3.to_ste_vec_query(data_encrypted)::jsonb jsonb_path_ops);
 ANALYZE orders;
 
-SELECT * FROM orders WHERE data_encrypted @> $1::eql_v3.ste_vec_query;
+SELECT * FROM orders WHERE data_encrypted @> $1::eql_v3.jsonb_query;
 -- Bitmap Index Scan on orders_data_gin
 ```
 
-The needle must be typed — `$1::eql_v3.ste_vec_query`, another `eql_v3.json`, or an `eql_v3.ste_vec_entry`. A bare untyped literal falls through to native `jsonb @>`.
+The needle must be typed — `$1::eql_v3.jsonb_query`, another `eql_v3.json`, or an `eql_v3.jsonb_entry`. A bare untyped literal falls through to native `jsonb @>`.
 
 EQL also ships convenience helpers for building containment queries: `eql_v3.jsonb_array(col)` (extracts the encrypted document as a native `jsonb[]`), and `eql_v3.jsonb_contains(a, b)` / `eql_v3.jsonb_contained_by(a, b)`.
 

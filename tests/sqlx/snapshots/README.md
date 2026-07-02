@@ -176,7 +176,7 @@ above, **not** folded into it: the driver type (`JsonbEntryInt4`) is intentional
 not an `eql-domains::CATALOG` type, so it has no `scalars::<T>::` tests and no
 `eql-codegen list-types` row — hence this snapshot is checked on its own, with
 **no catalog cross-check**. The matrix reuses the scalar matrix generators to
-exercise `eql_v3.ste_vec_entry` equality/order/aggregate behaviour. No database
+exercise `eql_v3.jsonb_entry` equality/order/aggregate behaviour. No database
 is required (`--list` only enumerates).
 
 Verify with `mise run test:matrix:inventory:jsonb_entry`. Regenerate with:

@@ -22,7 +22,7 @@ use std::collections::BTreeSet;
 /// operator, not a blocker).
 const SUPPORTED_ROOT_SYMBOLS: &[&str] = &["@>", "<@", "->", "->>"];
 
-/// Entry comparison symbols on `eql_v3.ste_vec_entry`.
+/// Entry comparison symbols on `eql_v3.jsonb_entry`.
 const SUPPORTED_ENTRY_SYMBOLS: &[&str] = &["=", "<>", "<", "<=", ">", ">="];
 
 /// Native jsonb operators the surface BLOCKS (each raises "is not supported").
@@ -37,8 +37,8 @@ async fn v3_jsonb_operators(pool: &PgPool) -> anyhow::Result<Vec<(String, String
         r#"
         WITH d AS (
           SELECT 'eql_v3.json'::regtype          AS j,
-                 'eql_v3.ste_vec_entry'::regtype  AS e,
-                 'eql_v3.ste_vec_query'::regtype  AS q
+                 'eql_v3.jsonb_entry'::regtype  AS e,
+                 'eql_v3.jsonb_query'::regtype  AS q
         )
         SELECT o.oprname,
                pg_catalog.format_type(o.oprleft, NULL)  AS lhs,
@@ -139,22 +139,22 @@ async fn v3_jsonb_surface_supported_signatures(pool: PgPool) -> anyhow::Result<(
     let expected_supported: &[(&str, &str, &str)] = &[
         // containment
         ("@>", "eql_v3.json", "eql_v3.json"),
-        ("@>", "eql_v3.json", "eql_v3.ste_vec_query"),
-        ("@>", "eql_v3.json", "eql_v3.ste_vec_entry"),
+        ("@>", "eql_v3.json", "eql_v3.jsonb_query"),
+        ("@>", "eql_v3.json", "eql_v3.jsonb_entry"),
         ("<@", "eql_v3.json", "eql_v3.json"),
-        ("<@", "eql_v3.ste_vec_query", "eql_v3.json"),
-        ("<@", "eql_v3.ste_vec_entry", "eql_v3.json"),
+        ("<@", "eql_v3.jsonb_query", "eql_v3.json"),
+        ("<@", "eql_v3.jsonb_entry", "eql_v3.json"),
         // path access
         ("->", "eql_v3.json", "text"),
         ("->", "eql_v3.json", "integer"),
         ("->>", "eql_v3.json", "text"),
         // entry comparisons
-        ("=", "eql_v3.ste_vec_entry", "eql_v3.ste_vec_entry"),
-        ("<>", "eql_v3.ste_vec_entry", "eql_v3.ste_vec_entry"),
-        ("<", "eql_v3.ste_vec_entry", "eql_v3.ste_vec_entry"),
-        ("<=", "eql_v3.ste_vec_entry", "eql_v3.ste_vec_entry"),
-        (">", "eql_v3.ste_vec_entry", "eql_v3.ste_vec_entry"),
-        (">=", "eql_v3.ste_vec_entry", "eql_v3.ste_vec_entry"),
+        ("=", "eql_v3.jsonb_entry", "eql_v3.jsonb_entry"),
+        ("<>", "eql_v3.jsonb_entry", "eql_v3.jsonb_entry"),
+        ("<", "eql_v3.jsonb_entry", "eql_v3.jsonb_entry"),
+        ("<=", "eql_v3.jsonb_entry", "eql_v3.jsonb_entry"),
+        (">", "eql_v3.jsonb_entry", "eql_v3.jsonb_entry"),
+        (">=", "eql_v3.jsonb_entry", "eql_v3.jsonb_entry"),
     ];
 
     let mut missing: Vec<(&str, &str, &str)> = Vec::new();
@@ -211,8 +211,8 @@ async fn v3_jsonb_surface_root_comparisons_blocked(pool: PgPool) -> anyhow::Resu
 // ============================================================================
 // (2c) Mixed-shape entry signatures are ABSENT.
 //
-// The entry comparison operators must be (ste_vec_entry, ste_vec_entry) only —
-// never (ste_vec_entry, jsonb) or (jsonb, ste_vec_entry), which would let a
+// The entry comparison operators must be (jsonb_entry, jsonb_entry) only —
+// never (jsonb_entry, jsonb) or (jsonb, jsonb_entry), which would let a
 // raw jsonb operand sneak past the domain. (A runtime such pair flattens to
 // native jsonb, so absence is structural.)
 // ============================================================================
@@ -226,16 +226,16 @@ async fn v3_jsonb_surface_entry_mixed_shapes_absent(pool: PgPool) -> anyhow::Res
                pg_catalog.format_type(o.oprright, NULL)
         FROM pg_operator o
         WHERE o.oprname IN ('=', '<>', '<', '<=', '>', '>=')
-          AND ('eql_v3.ste_vec_entry'::regtype IN (o.oprleft, o.oprright))
-          AND NOT (o.oprleft = 'eql_v3.ste_vec_entry'::regtype
-                   AND o.oprright = 'eql_v3.ste_vec_entry'::regtype)
+          AND ('eql_v3.jsonb_entry'::regtype IN (o.oprleft, o.oprright))
+          AND NOT (o.oprleft = 'eql_v3.jsonb_entry'::regtype
+                   AND o.oprright = 'eql_v3.jsonb_entry'::regtype)
         "#,
     )
     .fetch_all(&pool)
     .await?;
     assert!(
         mixed.is_empty(),
-        "entry comparison operators must be (ste_vec_entry, ste_vec_entry) only; \
+        "entry comparison operators must be (jsonb_entry, jsonb_entry) only; \
          found mixed-shape signature(s): {mixed:#?}"
     );
 
@@ -244,8 +244,8 @@ async fn v3_jsonb_surface_entry_mixed_shapes_absent(pool: PgPool) -> anyhow::Res
         r#"
         SELECT o.oprname
         FROM pg_operator o
-        WHERE o.oprleft = 'eql_v3.ste_vec_entry'::regtype
-          AND o.oprright = 'eql_v3.ste_vec_entry'::regtype
+        WHERE o.oprleft = 'eql_v3.jsonb_entry'::regtype
+          AND o.oprright = 'eql_v3.jsonb_entry'::regtype
         "#,
     )
     .fetch_all(&pool)
@@ -255,7 +255,7 @@ async fn v3_jsonb_surface_entry_mixed_shapes_absent(pool: PgPool) -> anyhow::Res
     for sym in SUPPORTED_ENTRY_SYMBOLS {
         assert!(
             present.contains(*sym),
-            "entry operator {sym} missing on (ste_vec_entry, ste_vec_entry)"
+            "entry operator {sym} missing on (jsonb_entry, jsonb_entry)"
         );
     }
     Ok(())
@@ -311,7 +311,7 @@ async fn v3_jsonb_surface_blocker_signatures(pool: PgPool) -> anyhow::Result<()>
         (">=", "eql_v3.json", "jsonb"),
         (">=", "jsonb", "eql_v3.json"),
         // mixed jsonb containment shapes are blocked; safe forms use json,
-        // ste_vec_query, or ste_vec_entry.
+        // jsonb_query, or jsonb_entry.
         ("@>", "eql_v3.json", "jsonb"),
         ("@>", "jsonb", "eql_v3.json"),
         ("<@", "eql_v3.json", "jsonb"),
