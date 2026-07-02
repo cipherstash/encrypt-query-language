@@ -5,7 +5,7 @@
 //! Stage 1 consumes the `(type, domain)` shape; later stages consume the
 //! per-domain `supported_ops`. Blocked-operator tagging is added in Stage 4.
 
-use eql_domains::{Term, CATALOG};
+use eql_domains::Term;
 use serde::Serialize;
 
 /// The catalog surface: every scalar type and its domains.
@@ -40,8 +40,7 @@ pub struct DomainEntry {
 
 /// Build the catalog surface description from `eql_domains::CATALOG`.
 pub fn dump_catalog() -> CatalogDump {
-    let types = CATALOG
-        .iter()
+    let types = eql_domains::scalar_families()
         .map(|spec| {
             let domains = spec
                 .domains

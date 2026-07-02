@@ -28,6 +28,9 @@ fn schema_required_keys_match_catalog_terms() {
     let entries = v3::all();
     for spec in CATALOG {
         for domain in spec.domains {
+            if !domain.is_scalar() {
+                continue; // SteVec required-keys asserted in Task 8/9
+            }
             let name = spec.domain_name(domain);
             let entry = entries
                 .iter()
@@ -70,7 +73,14 @@ fn schema_required_keys_match_catalog_terms() {
 fn inventory_exactly_covers_catalog_in_order() {
     let expected: Vec<String> = CATALOG
         .iter()
-        .flat_map(|spec| spec.domains.iter().map(move |d| spec.domain_name(d)))
+        .flat_map(|spec| {
+            spec.domains.iter().map(move |d| match d.shape {
+                eql_domains::Shape::Scalar => spec.domain_name(d),
+                eql_domains::Shape::SteVecDocument => "json".to_string(),
+                eql_domains::Shape::SteVecEntry => "ste_vec_entry".to_string(),
+                eql_domains::Shape::SteVecQuery => "ste_vec_query".to_string(),
+            })
+        })
         .collect();
     let actual: Vec<String> = v3::all().iter().map(|e| e.domain().to_string()).collect();
     assert_eq!(
@@ -131,6 +141,17 @@ fn schema_id_is_canonical() {
 fn schemas_are_strict() {
     for entry in v3::all() {
         let name = entry.domain();
+        let is_scalar = CATALOG
+            .iter()
+            .flat_map(|s| s.domains.iter().map(move |d| (s, d)))
+            .find(|(s, d)| {
+                (d.is_scalar() && s.domain_name(d) == name) || (!d.is_scalar() && d.name == name)
+            })
+            .map(|(_, d)| d.is_scalar())
+            .unwrap_or(true);
+        if !is_scalar {
+            continue; // SteVec strictness asserted in Task 9 (Document/Query only)
+        }
         let schema: Value = serde_json::to_value(entry.schema())
             .unwrap_or_else(|e| panic!("{name}: schema does not serialize: {e}"));
 
