@@ -56,8 +56,8 @@ const HM_TERM_FORGED: &str = "aabbccddeeff00112233445566778899";
 //
 // The fixture's real `oc` ciphertexts are not in a guaranteed total order, so
 // the ORDERED-correctness arms (D2) use a CURATED forged `oc` ladder built
-// inline here (forge hex differing in the trailing byte, like the smoke
-// `src/v3/jsonb/jsonb_test.sql`). Under the CLLW per-byte protocol, when the
+// inline here (forge hex differing in the trailing byte). Under the CLLW
+// per-byte protocol, when the
 // first differing byte `b` satisfies `(b+1) == a`, then `a > b`; choosing
 // trailing bytes `..00 < ..01 < ..02` yields a total, known order.
 //
@@ -472,6 +472,57 @@ async fn v3_jsonb_containment_self_and_subset(pool: PgPool) -> anyhow::Result<()
         by_entry && by_entry_rev,
         "entry-needle @> and its <@ reverse must hold"
     );
+    Ok(())
+}
+
+/// The raw-`jsonb` GIN-inlining convenience helpers (`eql_v3.jsonb_contains` /
+/// `eql_v3.jsonb_contained_by`, documented in docs/reference/json-support.md
+/// and docs/reference/database-indexes.md as building blocks for hand-rolled
+/// GIN index expressions over the raw extracted `jsonb[]` array) are
+/// unreachable from the typed `@>`/`<@` operators — those bind to
+/// `eql_v3.ste_vec_contains` instead (see operators.sql) — and previously had
+/// only structural (inlinability-allowlist) coverage, never a behavioral
+/// assertion. Mirrors `v3_jsonb_containment_self_and_subset` but drives the
+/// raw-`jsonb` overload directly, and cross-checks agreement with the typed
+/// `@>` operator on the same inputs.
+#[sqlx::test]
+async fn v3_jsonb_raw_helpers_contains_and_contained_by(pool: PgPool) -> anyhow::Result<()> {
+    let full = doc(&[
+        entry(SEL_ROOT_HM, "hm", HM_TERM_FORGED),
+        oc_entry(OC_LADDER[2]),
+    ]);
+    let subset = doc(&[entry(SEL_ROOT_HM, "hm", HM_TERM_FORGED)]);
+
+    let sup: bool = sqlx::query_scalar(&format!(
+        "SELECT eql_v3.jsonb_contains('{full}'::jsonb, '{subset}'::jsonb)"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    assert!(sup, "jsonb_contains: superset must contain subset");
+
+    let sub: bool = sqlx::query_scalar(&format!(
+        "SELECT eql_v3.jsonb_contained_by('{subset}'::jsonb, '{full}'::jsonb)"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    assert!(sub, "jsonb_contained_by: subset must be contained by superset");
+
+    let backwards: bool = sqlx::query_scalar(&format!(
+        "SELECT eql_v3.jsonb_contains('{subset}'::jsonb, '{full}'::jsonb)"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    assert!(!backwards, "jsonb_contains: subset must not contain superset");
+
+    // The raw helper must agree with the typed `@>` operator (which binds to
+    // eql_v3.ste_vec_contains, not this function) on the same well-formed inputs.
+    let typed: bool = sqlx::query_scalar(&format!(
+        "SELECT '{full}'::eql_v3.json @> '{subset}'::eql_v3.json"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(sup, typed, "jsonb_contains must agree with the typed @> operator");
+
     Ok(())
 }
 

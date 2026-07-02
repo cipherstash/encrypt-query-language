@@ -218,6 +218,11 @@ COMMENT ON FUNCTION eql_v3.jsonb_array(jsonb) IS
 --! @param a jsonb Container payload.
 --! @param b jsonb Search payload.
 --! @return boolean True if a contains all deterministic elements of b.
+--! @note Convenience helper for hand-rolled GIN index expressions over the
+--!       raw extracted `jsonb[]` array (see database-indexes.md). The typed
+--!       `eql_v3.json` `@>`/`<@` operators do NOT call this function — they
+--!       bind to `eql_v3.ste_vec_contains` instead. Public API, reachable
+--!       only from caller-authored SQL.
 CREATE FUNCTION eql_v3.jsonb_contains(a jsonb, b jsonb)
 RETURNS boolean
 IMMUTABLE STRICT PARALLEL SAFE
@@ -233,6 +238,11 @@ COMMENT ON FUNCTION eql_v3.jsonb_contains(jsonb, jsonb) IS
 --! @param a jsonb Payload to check.
 --! @param b jsonb Container payload.
 --! @return boolean True if all elements of a are contained in b.
+--! @note Convenience helper for hand-rolled GIN index expressions over the
+--!       raw extracted `jsonb[]` array (see database-indexes.md). The typed
+--!       `eql_v3.json` `@>`/`<@` operators do NOT call this function — they
+--!       bind to `eql_v3.ste_vec_contains` instead. Public API, reachable
+--!       only from caller-authored SQL.
 CREATE FUNCTION eql_v3.jsonb_contained_by(a jsonb, b jsonb)
 RETURNS boolean
 IMMUTABLE STRICT PARALLEL SAFE
