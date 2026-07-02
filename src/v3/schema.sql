@@ -1,13 +1,15 @@
 --! @file v3/schema.sql
 --! @brief EQL v3 schema creation
 --!
---! Creates the eql_v3 schema, which houses the self-contained encrypted-domain
---! type families (eql_v3.int4, eql_v3.int8, and future scalar domains): their
---! jsonb-backed domains, the searchable-encrypted-metadata (SEM) index-term
---! types they use (eql_v3.hmac_256, eql_v3.ore_block_256), the index-term
---! extractors, comparison wrappers, blockers, and aggregates. The v3 surface is
---! self-contained — it owns every type it needs and has no runtime dependency
---! on another EQL schema.
+--! Creates the eql_v3 and eql_v3_internal schemas. eql_v3 is the public API:
+--! the self-contained encrypted-domain type families (eql_v3.int4, eql_v3.int8,
+--! and future scalar domains) — their jsonb-backed domains, index-term
+--! extractors, and aggregates. eql_v3_internal houses INTERNAL implementation
+--! objects: the searchable-encrypted-metadata (SEM) index-term types
+--! (eql_v3_internal.hmac_256, eql_v3_internal.ore_block_256), the comparison
+--! wrappers, blockers, and aggregate state functions the eql_v3 surface
+--! dispatches into. Together the two schemas are self-contained — they own
+--! every type they need and have no runtime dependency on another EQL schema.
 --!
 --! Drops existing schema if present to support clean reinstallation.
 --!
