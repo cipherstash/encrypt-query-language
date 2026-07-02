@@ -53,6 +53,9 @@ fn every_ts_export_has_envelope_then_term_property_order() {
     let base = ts_export_base();
     for family in CATALOG {
         for domain in family.domains {
+            if !domain.is_scalar() {
+                continue;
+            }
             let stem = domain.struct_ident(family.name);
             let path = format!("{base}/v3/{stem}.ts");
             let ts = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path}: {e}"));

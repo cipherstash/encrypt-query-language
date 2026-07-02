@@ -49,7 +49,7 @@ fn bindings_subcommand_succeeds_and_reports_count() {
         String::from_utf8_lossy(&out.stderr)
     );
     let stdout = String::from_utf8_lossy(&out.stdout);
-    let expected = eql_domains::CATALOG.len() + 1;
+    let expected = eql_domains::scalar_families().count() + 1;
     assert!(
         stdout.contains(&format!("bindings: ok ({expected} files)")),
         "expected 'bindings: ok ({expected} files)' in stdout, got:\n{stdout}"

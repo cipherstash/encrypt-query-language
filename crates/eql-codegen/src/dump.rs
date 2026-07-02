@@ -5,7 +5,7 @@
 //! Stage 1 consumes the `(type, domain)` shape; later stages consume the
 //! per-domain `supported_ops`. Blocked-operator tagging is added in Stage 4.
 
-use eql_domains::{Term, CATALOG};
+use eql_domains::Term;
 use serde::Serialize;
 
 /// The catalog surface: every scalar type and its domains.
@@ -40,8 +40,7 @@ pub struct DomainEntry {
 
 /// Build the catalog surface description from `eql_domains::CATALOG`.
 pub fn dump_catalog() -> CatalogDump {
-    let types = CATALOG
-        .iter()
+    let types = eql_domains::scalar_families()
         .map(|spec| {
             let domains = spec
                 .domains
@@ -137,5 +136,26 @@ mod tests {
 
         let ord = ts.domains.iter().find(|d| d.segment == "ord").unwrap();
         assert_eq!(ord.supported_ops, ["=", "<>", "<", "<=", ">", ">="]);
+    }
+
+    #[test]
+    fn dump_catalog_excludes_non_scalar_jsonb() {
+        // `dump_catalog` (and, via the same `scalar_families()` filter, the CLI
+        // `list-types` / `dump-catalog` output the scalar-matrix tooling consumes)
+        // must NOT surface the SteVec `jsonb` family: it has no `scalars::jsonb::*`
+        // matrix and no generated SQL surface, even though two of its three
+        // domain names (`eql_v3.jsonb_entry` / `eql_v3.jsonb_query`) now follow
+        // the family+suffix string convention — the payload shape is still not
+        // flat. This pins the exclusion directly at the codegen surface rather
+        // than relying only on the transitive `scalar_families()` guard in
+        // `eql-domains`.
+        let dump = dump_catalog();
+        assert!(
+            !dump.types.iter().any(|t| t.token == "jsonb"),
+            "dump_catalog must exclude the non-scalar jsonb family, got tokens: {:?}",
+            dump.types.iter().map(|t| t.token).collect::<Vec<_>>()
+        );
+        // Sanity: the scalar families are still present (the filter isn't empty).
+        assert!(dump.types.iter().any(|t| t.token == "int4"));
     }
 }

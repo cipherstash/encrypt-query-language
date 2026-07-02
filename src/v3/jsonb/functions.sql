@@ -69,9 +69,9 @@ $$ LANGUAGE plpgsql;
 
 --! @brief Extract selector (s) from a ste_vec entry. The DOMAIN CHECK
 --!        guarantees `s` is present, so this is a simple field access.
---! @param entry eql_v3.ste_vec_entry
+--! @param entry eql_v3.jsonb_entry
 --! @return text The selector value.
-CREATE FUNCTION eql_v3.selector(entry eql_v3.ste_vec_entry)
+CREATE FUNCTION eql_v3.selector(entry eql_v3.jsonb_entry)
   RETURNS text
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -82,16 +82,16 @@ $$;
 -- Equality-term extractor (XOR-aware: coalesce(hm, oc))
 ------------------------------------------------------------------------------
 
---! @brief XOR-aware equality term extractor for eql_v3.ste_vec_entry.
+--! @brief XOR-aware equality term extractor for eql_v3.jsonb_entry.
 --!
 --! Returns the bytea of whichever deterministic term the sv entry carries —
 --! `hm` (HMAC-256) or `oc` (CLLW ORE). The two byte distributions are disjoint
 --! by construction, so byte equality on the coalesce is unambiguous. Canonical
---! equality extractor used by `=` / `<>` on ste_vec_entry.
+--! equality extractor used by `=` / `<>` on jsonb_entry.
 --!
---! @param entry eql_v3.ste_vec_entry
+--! @param entry eql_v3.jsonb_entry
 --! @return bytea Decoded `hm` or `oc` bytes (NULL if entry is NULL).
-CREATE FUNCTION eql_v3.eq_term(entry eql_v3.ste_vec_entry)
+CREATE FUNCTION eql_v3.eq_term(entry eql_v3.jsonb_entry)
   RETURNS bytea
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -105,13 +105,13 @@ $$;
 --! @brief Extract CLLW ORE index term from a ste_vec entry.
 --!
 --! `oc` is only ever present on an sv element, never at a root encrypted value,
---! so the typed overload accepts eql_v3.ste_vec_entry. Returns SQL NULL when
+--! so the typed overload accepts eql_v3.jsonb_entry. Returns SQL NULL when
 --! `oc` is absent (btree NULL-filters such rows from range queries).
 --!
---! @param entry eql_v3.ste_vec_entry
+--! @param entry eql_v3.jsonb_entry
 --! @return eql_v3.ore_cllw Composite carrying the CLLW ciphertext, or NULL.
 --! @see eql_v3.has_ore_cllw
-CREATE FUNCTION eql_v3.ore_cllw(entry eql_v3.ste_vec_entry)
+CREATE FUNCTION eql_v3.ore_cllw(entry eql_v3.jsonb_entry)
   RETURNS eql_v3.ore_cllw
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -121,9 +121,9 @@ AS $$
 $$;
 
 --! @brief Check if a ste_vec entry contains a CLLW ORE index term.
---! @param entry eql_v3.ste_vec_entry
+--! @param entry eql_v3.jsonb_entry
 --! @return boolean True if `oc` is present and non-null.
-CREATE FUNCTION eql_v3.has_ore_cllw(entry eql_v3.ste_vec_entry)
+CREATE FUNCTION eql_v3.has_ore_cllw(entry eql_v3.jsonb_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -218,6 +218,11 @@ COMMENT ON FUNCTION eql_v3.jsonb_array(jsonb) IS
 --! @param a jsonb Container payload.
 --! @param b jsonb Search payload.
 --! @return boolean True if a contains all deterministic elements of b.
+--! @note Convenience helper for hand-rolled GIN index expressions over the
+--!       raw extracted `jsonb[]` array (see database-indexes.md). The typed
+--!       `eql_v3.json` `@>`/`<@` operators do NOT call this function — they
+--!       bind to `eql_v3.ste_vec_contains` instead. Public API, reachable
+--!       only from caller-authored SQL.
 CREATE FUNCTION eql_v3.jsonb_contains(a jsonb, b jsonb)
 RETURNS boolean
 IMMUTABLE STRICT PARALLEL SAFE
@@ -233,6 +238,11 @@ COMMENT ON FUNCTION eql_v3.jsonb_contains(jsonb, jsonb) IS
 --! @param a jsonb Payload to check.
 --! @param b jsonb Container payload.
 --! @return boolean True if all elements of a are contained in b.
+--! @note Convenience helper for hand-rolled GIN index expressions over the
+--!       raw extracted `jsonb[]` array (see database-indexes.md). The typed
+--!       `eql_v3.json` `@>`/`<@` operators do NOT call this function — they
+--!       bind to `eql_v3.ste_vec_contains` instead. Public API, reachable
+--!       only from caller-authored SQL.
 CREATE FUNCTION eql_v3.jsonb_contained_by(a jsonb, b jsonb)
 RETURNS boolean
 IMMUTABLE STRICT PARALLEL SAFE
@@ -278,7 +288,7 @@ AS $$
       _a := a[idx];
       result := result OR (
         eql_v3.selector(_a) = eql_v3.selector(b)
-        AND eql_v3.eq_term(_a::eql_v3.ste_vec_entry) = eql_v3.eq_term(b::eql_v3.ste_vec_entry)
+        AND eql_v3.eq_term(_a::eql_v3.jsonb_entry) = eql_v3.eq_term(b::eql_v3.jsonb_entry)
       );
       EXIT WHEN result;
     END LOOP;
@@ -335,20 +345,20 @@ $$ LANGUAGE plpgsql;
 
 --! @brief Query encrypted JSONB for sv elements matching `selector`.
 --!
---! Returns one ste_vec_entry row per matching encrypted element. Returns empty
+--! Returns one jsonb_entry row per matching encrypted element. Returns empty
 --! set on no match. It deliberately does not wrap multiple matches as an
 --! eql_v3.json document, because the root document domain requires an `sv`
---! array and single leaves belong to eql_v3.ste_vec_entry.
+--! array and single leaves belong to eql_v3.jsonb_entry.
 --!
 --! @param val jsonb encrypted EQL payload with `sv`.
 --! @param selector text Selector hash (`s` value).
---! @return SETOF eql_v3.ste_vec_entry Matching encrypted entries.
+--! @return SETOF eql_v3.jsonb_entry Matching encrypted entries.
 --! @see eql_v3.jsonb_path_query_first
 CREATE FUNCTION eql_v3.jsonb_path_query(val jsonb, selector text)
-  RETURNS SETOF eql_v3.ste_vec_entry
+  RETURNS SETOF eql_v3.jsonb_entry
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT (eql_v3.meta_data(val) || elem)::eql_v3.ste_vec_entry
+  SELECT (eql_v3.meta_data(val) || elem)::eql_v3.jsonb_entry
   FROM jsonb_array_elements(val -> 'sv') elem
   WHERE elem ->> 's' = selector
 $$;
@@ -376,12 +386,12 @@ COMMENT ON FUNCTION eql_v3.jsonb_path_exists(jsonb, text) IS
 --! @brief Get the first sv element matching `selector`, or NULL.
 --! @param val jsonb encrypted EQL payload.
 --! @param selector text Selector hash to match.
---! @return eql_v3.ste_vec_entry First matching element or NULL.
+--! @return eql_v3.jsonb_entry First matching element or NULL.
 CREATE FUNCTION eql_v3.jsonb_path_query_first(val jsonb, selector text)
-  RETURNS eql_v3.ste_vec_entry
+  RETURNS eql_v3.jsonb_entry
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT (eql_v3.meta_data(val) || elem)::eql_v3.ste_vec_entry
+  SELECT (eql_v3.meta_data(val) || elem)::eql_v3.jsonb_entry
   FROM jsonb_array_elements(val -> 'sv') elem
   WHERE elem ->> 's' = selector
   LIMIT 1
@@ -417,10 +427,10 @@ $$ LANGUAGE plpgsql;
 
 --! @brief Extract elements of an encrypted JSONB array as rows.
 --! @param val jsonb encrypted EQL payload (must have `a` flag true).
---! @return SETOF eql_v3.ste_vec_entry One row per element (metadata preserved).
+--! @return SETOF eql_v3.jsonb_entry One row per element (metadata preserved).
 --! @throws Exception 'cannot extract elements from non-array' if not an array.
 CREATE FUNCTION eql_v3.jsonb_array_elements(val jsonb)
-  RETURNS SETOF eql_v3.ste_vec_entry
+  RETURNS SETOF eql_v3.jsonb_entry
   IMMUTABLE STRICT PARALLEL SAFE
   SET search_path = pg_catalog, extensions, public
 AS $$
@@ -438,7 +448,7 @@ AS $$
 
     FOR idx IN 1..array_length(sv, 1) LOOP
       item = sv[idx];
-      RETURN NEXT (meta || item)::eql_v3.ste_vec_entry;
+      RETURN NEXT (meta || item)::eql_v3.jsonb_entry;
     END LOOP;
 
     RETURN;

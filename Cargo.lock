@@ -1211,6 +1211,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "cipherstash-client",
+ "eql-bindings",
  "eql-domains",
  "eql-tests-macros",
  "hex",

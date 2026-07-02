@@ -6,7 +6,7 @@
 --! @brief Native-jsonb firewall for eql_v3.json.
 --!
 --! eql_v3.json SUPPORTS @> <@ -> ->> (see operators.sql). Comparisons
---! = <> < <= > >= are supported on eql_v3.ste_vec_entry only, not on the root
+--! = <> < <= > >= are supported on eql_v3.jsonb_entry only, not on the root
 --! document domain.
 --! Every OTHER native jsonb operator reachable via domain fallback against the
 --! base type jsonb is BLOCKED here so an encrypted column can never silently

@@ -120,8 +120,7 @@ async fn placeholder_payload_casts_to_every_declared_domain(pool: PgPool) -> Res
     // moment its CATALOG row lands — no per-type edit here.
     //
     // (Was i32-only with a TODO to generalize; the TODO is now done.)
-    use eql_domains::CATALOG;
-    for spec in CATALOG {
+    for spec in eql_domains::scalar_families() {
         for domain in spec.domains {
             let sql_domain = format!("eql_v3.{}", spec.domain_name(domain));
             let sql = format!("SELECT $1::jsonb::{sql_domain}");
@@ -147,16 +146,35 @@ async fn no_cross_variant_operator_is_declared(pool: PgPool) -> Result<()> {
     // `=`. If someone accidentally adds such an operator, this test fails.
     //
     // The jsonb DOCUMENT surface is excluded: it intentionally defines
-    // cross-type containment operators (`json @> ste_vec_query`,
-    // `json @> ste_vec_entry` and their `<@` commutators) — the documented
+    // cross-type containment operators (`json @> jsonb_query`,
+    // `json @> jsonb_entry` and their `<@` commutators) — the documented
     // document-containment API, not scalar capability variants that must
-    // resolve to a blocker. So `json` / `ste_vec_entry` / `ste_vec_query` are
+    // resolve to a blocker. So `json` / `jsonb_entry` / `jsonb_query` are
     // out of scope for this scalar-variant guard.
     //
     // The check is structural (`pg_operator`) rather than dynamic
     // ("invoke and see it raise") so a future PG version with stricter
     // operator resolution doesn't mask the regression.
-    let cross_variant: Vec<String> = sqlx::query_scalar(
+    // Derive the excluded (non-scalar) domain names from the catalog rather than
+    // hardcoding `'json', 'jsonb_entry', 'jsonb_query'` — a future rename or a
+    // second non-scalar family stays covered automatically (the names come from
+    // the same `DomainFamily::domain_name` the SQL surface is generated through).
+    let excluded: Vec<String> = eql_domains::CATALOG
+        .iter()
+        .filter(|f| !f.is_scalar())
+        .flat_map(|f| f.domains.iter().map(move |d| f.domain_name(d)))
+        .collect();
+    assert!(
+        !excluded.is_empty(),
+        "expected at least one non-scalar (SteVec) family to exclude"
+    );
+    // Trusted catalog identifiers (not user input) → safe to inline as literals.
+    let excluded_sql = excluded
+        .iter()
+        .map(|n| format!("'{n}'"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let cross_variant: Vec<String> = sqlx::query_scalar(&format!(
         r#"
         SELECT format('%s(%s, %s)',
                       o.oprname, lt.typname, rt.typname)
@@ -168,11 +186,11 @@ async fn no_cross_variant_operator_is_declared(pool: PgPool) -> Result<()> {
         WHERE ln.nspname = 'eql_v3'
           AND rn.nspname = 'eql_v3'
           AND lt.typname <> rt.typname
-          AND lt.typname NOT IN ('json', 'ste_vec_entry', 'ste_vec_query')
-          AND rt.typname NOT IN ('json', 'ste_vec_entry', 'ste_vec_query')
+          AND lt.typname NOT IN ({excluded_sql})
+          AND rt.typname NOT IN ({excluded_sql})
         ORDER BY 1
         "#,
-    )
+    ))
     .fetch_all(&pool)
     .await?;
 

@@ -287,3 +287,226 @@ fn timestamp_round_trips_and_enforces_term_capabilities() {
         "TimestampOrd must reject a payload with no ob"
     );
 }
+
+#[test]
+fn stevec_document_round_trips_and_enforces_envelope() {
+    use eql_bindings::v3::jsonb::SteVecDocument;
+    use eql_bindings::v3::DomainType;
+    // The real cipherstash SteVec document envelope carries the `k` form
+    // discriminator (`"sv"`), required by the canonical eql-payload-v2.3
+    // `SteVecPayload` (`required: [v,k,i,sv]`) and emitted on every real payload.
+    // The document struct is strict, so it must MODEL `k` — omitting it would
+    // reject the real wire (the bug this test's real-crypto sibling caught).
+    let wire = json!({
+        "v": 2,
+        "k": "sv",
+        "i": { "t": "users", "c": "profile" },
+        "sv": [
+            { "s": "sel_root", "c": "ct_root", "hm": "deadbeef" },
+            { "s": "sel_age", "c": "ct_age", "a": true, "oc": "cllw_ore" }
+        ]
+    });
+    let parsed: SteVecDocument = serde_json::from_value(wire.clone()).unwrap();
+    assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
+    assert_eq!(SteVecDocument::sql_domain_static(), "eql_v3.json");
+
+    // Envelope negatives (parity with the scalar int4 tests) — now including `k`.
+    for missing in ["v", "k", "i", "sv"] {
+        let mut w = wire.clone();
+        w.as_object_mut().unwrap().remove(missing);
+        assert!(
+            serde_json::from_value::<SteVecDocument>(w).is_err(),
+            "missing {missing} must fail"
+        );
+    }
+    // Wrong version.
+    let mut wrong_v = wire.clone();
+    wrong_v["v"] = json!(3);
+    assert!(serde_json::from_value::<SteVecDocument>(wrong_v).is_err());
+    // Wrong form discriminator: `k` is pinned to "sv" (like `v` is pinned to 2),
+    // so a scalar-ciphertext (`k:"ct"`) payload can't be read back as a document.
+    let mut wrong_k = wire.clone();
+    wrong_k["k"] = json!("ct");
+    assert!(
+        serde_json::from_value::<SteVecDocument>(wrong_k).is_err(),
+        "k other than \"sv\" must fail"
+    );
+    // Unknown top-level key (deny_unknown_fields; no flatten on the document).
+    let mut extra = wire.clone();
+    extra
+        .as_object_mut()
+        .unwrap()
+        .insert("bogus".into(), json!(1));
+    assert!(serde_json::from_value::<SteVecDocument>(extra).is_err());
+}
+
+#[test]
+fn stevec_entry_untagged_term_and_neither_term_rejected() {
+    use eql_bindings::v3::jsonb::{SteVecEntry, SteVecTerm};
+    // hm arm.
+    let hm: SteVecEntry =
+        serde_json::from_value(json!({ "s": "sel", "c": "ct", "hm": "deadbeef" })).unwrap();
+    assert!(matches!(hm.term, SteVecTerm::Hmac { .. }));
+    // oc arm.
+    let oc: SteVecEntry =
+        serde_json::from_value(json!({ "s": "sel", "c": "ct", "oc": "cllw" })).unwrap();
+    assert!(matches!(oc.term, SteVecTerm::OreCllw { .. }));
+    // Lax: tolerates root i/v merged in by `->`.
+    let merged: SteVecEntry = serde_json::from_value(
+        json!({ "s": "sel", "c": "ct", "hm": "x", "i": {"t":"a","c":"b"}, "v": 2 }),
+    )
+    .unwrap();
+    assert!(matches!(merged.term, SteVecTerm::Hmac { .. }));
+    // MARQUEE NEGATIVE: neither hm nor oc must fail (untagged enum has no matching arm).
+    assert!(
+        serde_json::from_value::<SteVecEntry>(json!({ "s": "sel", "c": "ct" })).is_err(),
+        "an entry with neither hm nor oc must be rejected"
+    );
+}
+
+#[test]
+fn stevec_entry_both_terms_present_resolves_to_first_untagged_arm() {
+    // The inverse of the "neither" negative above. On the wire an entry carries
+    // exactly one of `hm` XOR `oc` (enforced by the SQL CHECK, NOT client-side —
+    // `#[serde(untagged)]` cannot express XOR). If a malformed payload somehow
+    // carries BOTH, serde's untagged enum resolves to the FIRST matching arm in
+    // declaration order — `SteVecTerm::Hmac` (the `hm` arm is declared first) —
+    // rather than erroring. This pins that resolution so a reorder of the
+    // `SteVecTerm` variants (which would silently flip the winner to `oc`) is a
+    // test failure, and documents that client-side parsing does not enforce XOR.
+    use eql_bindings::v3::jsonb::{SteVecEntry, SteVecTerm};
+    let both: SteVecEntry =
+        serde_json::from_value(json!({ "s": "sel", "c": "ct", "hm": "deadbeef", "oc": "cllw" }))
+            .expect(
+                "an entry with both hm and oc parses (XOR is a SQL-CHECK invariant, not serde)",
+            );
+    assert!(
+        matches!(both.term, SteVecTerm::Hmac { .. }),
+        "with both hm and oc present, the untagged enum must resolve to the first \
+         arm (Hmac); a flip means the SteVecTerm variant order changed"
+    );
+}
+
+#[test]
+fn stevec_query_round_trips() {
+    use eql_bindings::v3::jsonb::SteVecQuery;
+    use eql_bindings::v3::DomainType;
+    let wire = json!({ "sv": [ { "s": "sel", "hm": "deadbeef" } ] });
+    let parsed: SteVecQuery = serde_json::from_value(wire.clone()).unwrap();
+    assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
+    assert_eq!(SteVecQuery::sql_domain_static(), "eql_v3.jsonb_query");
+    // Unknown top-level key rejected (SteVecQuery has no flatten field).
+    assert!(serde_json::from_value::<SteVecQuery>(json!({ "sv": [], "bogus": 1 })).is_err());
+    // NOTE: a query ELEMENT carrying `c` is NOT rejected here — SteVecQueryEntry
+    // has a flattened term, so deny_unknown_fields is inert. The "no ciphertext"
+    // rule is enforced by the SQL CHECK (is_valid_ste_vec_query_payload) and
+    // exercised in the real-crypto test (v3_ste_vec).
+}
+
+#[test]
+fn stevec_document_and_query_schemas_are_strict() {
+    use eql_bindings::v3::jsonb::{SteVecDocument, SteVecForm, SteVecQuery};
+    use eql_bindings::v3::DomainType;
+    use eql_bindings::{Identifier, SchemaVersion};
+    let doc = SteVecDocument {
+        v: SchemaVersion::CURRENT,
+        k: SteVecForm::SV,
+        i: Identifier {
+            t: "x".into(),
+            c: "y".into(),
+        },
+        sv: vec![],
+    };
+    let sdoc = serde_json::to_value(doc.schema()).unwrap();
+    assert_eq!(sdoc.pointer("/additionalProperties"), Some(&json!(false)));
+    assert_eq!(
+        sdoc.pointer("/properties/v/$ref"),
+        Some(&json!("#/$defs/SchemaVersion"))
+    );
+    assert_eq!(
+        sdoc.pointer("/$defs/SchemaVersion/const"),
+        Some(&json!(eql_bindings::EQL_SCHEMA_VERSION))
+    );
+    // `k` is pinned to the const "sv" via SteVecForm, exactly like `v`/SchemaVersion.
+    assert_eq!(
+        sdoc.pointer("/properties/k/$ref"),
+        Some(&json!("#/$defs/SteVecForm"))
+    );
+    assert_eq!(sdoc.pointer("/$defs/SteVecForm/const"), Some(&json!("sv")));
+    let q = SteVecQuery { sv: vec![] };
+    let sq = serde_json::to_value(q.schema()).unwrap();
+    assert_eq!(sq.pointer("/additionalProperties"), Some(&json!(false)));
+    // SteVecDocument/Query domain names.
+    assert_eq!(SteVecDocument::sql_domain_static(), "eql_v3.json");
+    assert_eq!(SteVecQuery::sql_domain_static(), "eql_v3.jsonb_query");
+}
+
+#[test]
+fn stevec_ts_exports_have_expected_shape() {
+    // The ts-rs flatten/untagged risk: pin the emitted .ts STRUCTURALLY so a
+    // regression is a test failure, not a human-inspection miss. Assertions match
+    // against the `export type <Name> = ...;` BODY LINE — never loose single-char
+    // `contains` over the whole file, which the generated header / imports / doc
+    // comment satisfy trivially (a dropped field would still pass). During
+    // `types:check`, read the freshly exported TS_RS_EXPORT_DIR output; plain
+    // `cargo test` falls back to committed bindings next to the crate manifest.
+    let base = match std::env::var("TS_RS_EXPORT_DIR") {
+        Ok(dir) if !dir.is_empty() => format!("{dir}/v3"),
+        _ => format!("{}/bindings/v3", env!("CARGO_MANIFEST_DIR")),
+    };
+
+    // The single `export type <Name> = ...;` body line, isolated from the header,
+    // imports, and doc comment so substring checks pin the emitted TYPE, not prose.
+    let export_line = |file: &str, name: &str| -> String {
+        let text = std::fs::read_to_string(format!("{base}/{file}")).unwrap();
+        text.lines()
+            .find(|l| l.trim_start().starts_with(&format!("export type {name} ")))
+            .unwrap_or_else(|| panic!("{file}: no `export type {name}` line"))
+            .to_string()
+    };
+
+    // SteVecTerm: the untagged `{ hm } | { oc }` union — both arms present, joined.
+    let term = export_line("SteVecTerm.ts", "SteVecTerm");
+    assert!(
+        term.contains("{ hm: Hmac256, }")
+            && term.contains("{ oc: OreCllw, }")
+            && term.contains('|'),
+        "SteVecTerm.ts must be the `{{ hm }} | {{ oc }}` union, got: {term}"
+    );
+
+    // SteVecEntry: direct fields s/c, the flattened hm|oc term union, and the
+    // OPTIONAL nullable array marker `a`. `a?: boolean | null` (not `a: boolean |
+    // null`) pins ts-rs optionality so the TS binding agrees with the JSON Schema,
+    // which excludes `a` from `required` — the drift a bare `Option<bool>` without
+    // `#[ts(optional = nullable)]` silently reintroduces.
+    let entry = export_line("SteVecEntry.ts", "SteVecEntry");
+    for needle in [
+        "s: Selector",
+        "c: Ciphertext",
+        "a?: boolean | null",
+        "{ hm: Hmac256, }",
+        "{ oc: OreCllw, }",
+    ] {
+        assert!(
+            entry.contains(needle),
+            "SteVecEntry.ts body must contain `{needle}`, got: {entry}"
+        );
+    }
+
+    // Property ORDER pin. The generic `ts_property_order.rs` guard structurally
+    // skips non-scalar (jsonb) domains, so the SteVec property order has no other
+    // regression guard. Assert the exact ordered field prefix so a field reorder
+    // in `jsonb.rs` (which changes the wire/consumer contract) fails here rather
+    // than escaping to a manual diff.
+    assert!(
+        entry.contains("{ s: Selector, c: Ciphertext, a?: boolean | null, }"),
+        "SteVecEntry.ts field order must be s, c, a (then the flattened term union), got: {entry}"
+    );
+    let document = export_line("SteVecDocument.ts", "SteVecDocument");
+    assert!(
+        document.contains(
+            "{ v: SchemaVersion, k: SteVecForm, i: Identifier, sv: Array<SteVecEntry>, }"
+        ),
+        "SteVecDocument.ts field order must be v, k, i, sv, got: {document}"
+    );
+}

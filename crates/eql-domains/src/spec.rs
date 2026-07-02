@@ -10,7 +10,17 @@ impl Domain {
     /// empty domain name => the bare family name). The **single** site that owns
     /// the `_` join — codegen builds every domain name through this, so the
     /// "domain name starts with the family name" rule is structural.
+    ///
+    /// One documented exception: the `jsonb` family's document domain
+    /// (`eql_v3.json`, `Domain.name == "json"`) predates the catalog and
+    /// doesn't follow the family+suffix convention (`family_name` is
+    /// `"jsonb"`, not `"json"`), so its `name` is returned verbatim instead of
+    /// being joined. Every other domain — scalar or the other two SteVec
+    /// shapes — uses the join.
     pub fn full_name(&self, family_name: &str) -> String {
+        if matches!(self.shape, crate::Shape::SteVec) && self.name == "json" {
+            return self.name.to_string();
+        }
         if self.name.is_empty() {
             family_name.to_string()
         } else {
@@ -28,14 +38,45 @@ impl Domain {
         self.full_name(family_name)
             .split('_')
             .filter(|s| !s.is_empty())
-            .map(|s| {
-                let mut chars = s.chars();
-                match chars.next() {
-                    Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-                    None => String::new(),
-                }
-            })
+            .map(capitalize)
             .collect()
+    }
+
+    /// True when this domain carries the flat scalar payload shape. False for
+    /// the SteVec shapes (the `jsonb` family). The per-domain primitive that
+    /// [`DomainFamily::is_scalar`] and [`crate::scalar_families`] are built on —
+    /// most scalar-only consumers filter through those family-level helpers, not
+    /// this predicate directly (the `ts_property_order` guard is the exception).
+    pub const fn is_scalar(&self) -> bool {
+        matches!(self.shape, crate::Shape::Scalar)
+    }
+
+    /// The Rust/TS struct identifier that represents this domain's payload —
+    /// shape-aware, unlike [`Self::struct_ident`]. For [`crate::Shape::Scalar`]
+    /// this is exactly `struct_ident` (derived from the domain name). The
+    /// SteVec shapes' struct bodies are hand-written (not name-derivable — see
+    /// `crates/eql-bindings/src/v3/jsonb.rs`), but their identifiers ARE
+    /// name-derivable (`"SteVec" + capitalize(name)`), with one irregular case:
+    /// the document domain's established name `"json"` maps to `SteVecDocument`,
+    /// not `SteVecJson` (mirroring the exception `full_name` already carries).
+    /// The SINGLE source of truth for that mapping — `eql-codegen`'s inventory
+    /// renderer calls this instead of carrying its own copy of the shape match.
+    pub fn rust_struct_name(&self, family_name: &str) -> String {
+        match self.shape {
+            crate::Shape::Scalar => self.struct_ident(family_name),
+            crate::Shape::SteVec if self.name == "json" => "SteVecDocument".to_string(),
+            crate::Shape::SteVec => format!("SteVec{}", capitalize(self.name)),
+        }
+    }
+}
+
+/// PascalCase a single snake_case segment (no `_` splitting — callers split
+/// first): `"ord_ore"`'s `"ore"` segment -> `"Ore"`, `"entry"` -> `"Entry"`.
+fn capitalize(s: &str) -> String {
+    let mut chars = s.chars();
+    match chars.next() {
+        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+        None => String::new(),
     }
 }
 
@@ -51,8 +92,14 @@ impl DomainFamily {
     /// (storage + `eq`). Replaces the future `[eq_only]` marker: the domain set
     /// already carries this. The `ord_ore` twin only appears alongside `ord`, so
     /// testing `ord` suffices.
+    ///
+    /// A **flat-scalar** predicate: it describes the storage/`_eq`/`_ord` shape,
+    /// which the non-scalar SteVec `jsonb` family does not have (its ordered `oc`
+    /// capability is carried structurally, not as an `ord` domain). So it is
+    /// guarded by [`Self::is_scalar`] — a non-scalar family is never "eq-only",
+    /// even though it happens to declare no domain literally named `ord`.
     pub fn is_eq_only(&self) -> bool {
-        !self.domains.iter().any(|d| d.name == "ord")
+        self.is_scalar() && !self.domains.iter().any(|d| d.name == "ord")
     }
 
     /// True when this type is **storage-only / encryption-only**: it declares a
@@ -74,21 +121,29 @@ impl DomainFamily {
     pub fn domain_by_name(&self, name: &str) -> Option<&Domain> {
         self.domains.iter().find(|d| d.name == name)
     }
+
+    /// True when every domain in this family is [`crate::Shape::Scalar`] — i.e. it
+    /// is a flat scalar family, not the SteVec `jsonb` family.
+    pub fn is_scalar(&self) -> bool {
+        self.domains.iter().all(|d| d.is_scalar())
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{Domain, Term};
+    use crate::{Domain, Shape, Term};
 
     #[test]
     fn struct_ident_mangles_full_name_to_pascalcase() {
         let storage = Domain {
             name: "",
             terms: &[],
+            shape: Shape::Scalar,
         };
         let ord_ore = Domain {
             name: "ord_ore",
             terms: &[Term::Ore],
+            shape: Shape::Scalar,
         };
         // storage domain => bare family name
         assert_eq!(storage.struct_ident("int4"), "Int4");
@@ -99,7 +154,66 @@ mod tests {
         let eq = Domain {
             name: "eq",
             terms: &[Term::Hm],
+            shape: Shape::Scalar,
         };
         assert_eq!(eq.struct_ident("float8"), "Float8Eq");
+    }
+
+    #[test]
+    fn scalar_families_exclude_non_scalar_families_after_jsonb_flip() {
+        use crate::{scalar_families, CATALOG, JSONB};
+        let names: Vec<&str> = scalar_families().map(|f| f.name).collect();
+        assert_eq!(names.len(), CATALOG.len() - 1);
+        assert!(!names.contains(&JSONB.name));
+        for f in scalar_families() {
+            assert!(f.is_scalar());
+        }
+    }
+
+    #[test]
+    fn jsonb_domain_names_follow_the_family_suffix_convention() {
+        // Entry/query carry the same family+suffix naming as every scalar
+        // family. The document is the one documented exception — its
+        // established name `json` doesn't match the family name `jsonb`, so
+        // `full_name` returns it verbatim rather than concatenating. Real SQL
+        // names: eql_v3.json, eql_v3.jsonb_entry, eql_v3.jsonb_query.
+        use crate::JSONB;
+        assert_eq!(JSONB.domain_name(&JSONB.domains[0]), "json");
+        assert_eq!(JSONB.domain_name(&JSONB.domains[1]), "jsonb_entry");
+        assert_eq!(JSONB.domain_name(&JSONB.domains[2]), "jsonb_query");
+    }
+
+    #[test]
+    fn rust_struct_name_is_shape_aware() {
+        // Scalar: derived, same as struct_ident. Non-scalar: the hand-written
+        // SteVec struct names — the ONE place these two universes diverge.
+        use crate::JSONB;
+        let int4_eq = Domain {
+            name: "eq",
+            terms: &[Term::Hm],
+            shape: Shape::Scalar,
+        };
+        assert_eq!(int4_eq.rust_struct_name("int4"), "Int4Eq");
+        assert_eq!(
+            JSONB.domains[0].rust_struct_name(JSONB.name),
+            "SteVecDocument"
+        );
+        assert_eq!(JSONB.domains[1].rust_struct_name(JSONB.name), "SteVecEntry");
+        assert_eq!(JSONB.domains[2].rust_struct_name(JSONB.name), "SteVecQuery");
+    }
+
+    #[test]
+    fn is_eq_only_is_false_for_the_non_scalar_jsonb_family() {
+        // `is_eq_only` describes the flat-scalar shape (storage + `_eq`, no
+        // `_ord`). The non-scalar jsonb family has no flat eq/ord concept — its
+        // ordered `oc` capability is carried structurally, not as an `ord`
+        // domain — so a bare `!any(name == "ord")` would misreport it as
+        // eq-only. It must return false. Guards the latent footgun where jsonb
+        // gets wired into the eq-only-sensitive matrix macros.
+        use crate::JSONB;
+        assert!(
+            !JSONB.is_eq_only(),
+            "the non-scalar jsonb family must not be classified eq-only"
+        );
     }
 }

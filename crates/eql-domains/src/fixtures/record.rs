@@ -128,6 +128,19 @@ pub const FLOAT8_FIXTURES: TypeFixtures = TypeFixtures {
         "0", "0.001", "1", "1.5", "1000000", "1e300", "inf"),
 };
 
+/// jsonb fixtures — PLAINTEXT JSON document strings (NOT ciphertext). Mirrors
+/// the `v3_ste_vec` document shape (`hello`/`number`/`nested`), distinct by
+/// value. The ENCRYPTED SteVec fixture the binding conformance test uses is
+/// generated separately by `tests/sqlx/src/fixtures/v3_ste_vec.rs` (FixtureSpec).
+pub const JSONB_FIXTURES: TypeFixtures = TypeFixtures {
+    family: &crate::JSONB,
+    kind: ScalarKind::Jsonb,
+    values: fixtures!(jsonb;
+        "{\"hello\":\"world-1\",\"number\":1,\"nested\":{\"deep\":\"constant\"}}",
+        "{\"hello\":\"world-2\",\"number\":2,\"nested\":{\"deep\":\"constant\"}}",
+        "{\"hello\":\"world-3\",\"number\":3,\"nested\":{\"deep\":\"constant\"}}"),
+};
+
 /// The fixture table — one record per scalar type, in `CATALOG` order. The
 /// fixture-layer mirror of `CATALOG`; the `const _` parity block below pins the
 /// parity at build time.
@@ -142,6 +155,7 @@ pub const FIXTURES: &[TypeFixtures] = &[
     BOOL_FIXTURES,
     FLOAT4_FIXTURES,
     FLOAT8_FIXTURES,
+    JSONB_FIXTURES,
 ];
 
 /// Compile-time `&str` equality, usable in `const` context. `str::eq` /
@@ -207,6 +221,8 @@ const fn expected_kind(name: &str) -> ScalarKind {
         ScalarKind::F32
     } else if str_eq(name, "float8") {
         ScalarKind::F64
+    } else if str_eq(name, "jsonb") {
+        ScalarKind::Jsonb
     } else {
         panic!("unmapped scalar token in expected_kind — name its kind here")
     }

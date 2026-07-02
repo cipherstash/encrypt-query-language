@@ -161,6 +161,20 @@ mod rust_tests {
         assert_eq!(ScalarKind::Numeric.as_bounded_int(), None);
     }
 
+    #[test]
+    fn jsonb_maps_to_serde_json_value() {
+        // The SteVec `jsonb` family's plaintext is an arbitrary JSON document, so
+        // its `rust_type` is `serde_json::Value` (its encrypted bindings are the
+        // hand-written SteVec structs, not a flat-scalar struct). Non-integer,
+        // non-ordered, so not `is_int()` and `as_bounded_int()` is `None`. Pins
+        // the `rust_type` arm at parity with every sibling kind's pinning test —
+        // and guards against a regression to the old panic.
+        assert_eq!(ScalarKind::Jsonb.rust_type(), "serde_json::Value");
+        assert!(!ScalarKind::Jsonb.is_int());
+        assert!(!ScalarKind::Jsonb.is_text());
+        assert_eq!(ScalarKind::Jsonb.as_bounded_int(), None);
+    }
+
     /// The structural guarantee that replaces the old runtime panics: a
     /// `Min`/`Max`/`Zero` pivot sentinel may only appear in a `CATALOG` row whose
     /// kind is an integer kind. `numeric_value` would resolve to `None` for a
@@ -594,7 +608,8 @@ mod catalog_tests {
                 "text",
                 "bool",
                 "float4",
-                "float8"
+                "float8",
+                "jsonb"
             ]
         );
     }
@@ -825,7 +840,7 @@ mod catalog_tests {
             ("ord", &[Term::Hm, Term::Ore][..]),
             ("search", &[Term::Hm, Term::Ore, Term::Bloom][..]),
         ];
-        for s in CATALOG {
+        for s in crate::scalar_families() {
             let shape: Vec<(&str, &[Term])> = s.domains.iter().map(|d| (d.name, d.terms)).collect();
             assert!(
                 shape == ordered
@@ -897,6 +912,7 @@ mod catalog_tests {
                 "bool" => ScalarKind::Bool,
                 "float4" => ScalarKind::F32,
                 "float8" => ScalarKind::F64,
+                "jsonb" => ScalarKind::Jsonb,
                 other => panic!("unmapped scalar token {other} in FIXTURES"),
             };
             assert_eq!(
@@ -1155,6 +1171,13 @@ mod invariant_tests {
     fn every_domain_name_starts_with_its_family_name() {
         for s in CATALOG {
             for d in s.domains {
+                // The one documented exception: `eql_v3.json` (the jsonb
+                // family's document domain) predates the catalog and keeps
+                // its established name rather than following the
+                // family+suffix convention — see `Domain::full_name`.
+                if s.name == "jsonb" && d.name == "json" {
+                    continue;
+                }
                 let name = s.domain_name(d);
                 assert!(
                     name == s.name || name.starts_with(&format!("{}_", s.name)),
@@ -1314,6 +1337,50 @@ mod invariant_tests {
         assert_eq!(
             Term::extractor_for_operator(s.domains[3].terms, "<"),
             Some("ord_term")
+        );
+    }
+}
+
+mod shape_tests {
+    #[test]
+    fn shape_and_terms_are_consistent() {
+        use crate::{Shape, CATALOG};
+        // jsonb is now in CATALOG (post-flip), so iterating CATALOG covers it —
+        // no separate chain of the JSONB const needed.
+        for f in CATALOG {
+            for d in f.domains {
+                let scalar = matches!(d.shape, Shape::Scalar);
+                // Non-scalar ⇒ empty terms; non-empty terms ⇒ scalar.
+                if !scalar {
+                    assert!(
+                        d.terms.is_empty(),
+                        "non-scalar {}.{} must have empty terms",
+                        f.name,
+                        d.name
+                    );
+                }
+                if !d.terms.is_empty() {
+                    assert!(
+                        scalar,
+                        "termful {}.{} must be Shape::Scalar",
+                        f.name, d.name
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn jsonb_family_is_non_scalar_and_in_catalog_after_flip() {
+        use crate::{Shape, CATALOG, JSONB};
+        assert!(!JSONB.is_scalar());
+        assert_eq!(JSONB.domains.len(), 3);
+        assert!(matches!(JSONB.domains[0].shape, Shape::SteVec));
+        assert_eq!(JSONB.domains[0].name, "json");
+        assert!(JSONB.domains.iter().all(|d| d.terms.is_empty()));
+        assert!(
+            CATALOG.iter().any(|f| f.name == "jsonb"),
+            "JSONB must be catalogued at the flip"
         );
     }
 }

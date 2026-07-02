@@ -33,6 +33,12 @@ eql-tests-macros = { path = "../../crates/eql-tests-macros" }
 # test targets (`tests/encrypted_domain`), not just under `cfg(test)`.
 proptest = "1"
 
+[dev-dependencies]
+# Parses real generated SteVec ciphertext rows into the canonical payload
+# bindings (tests/v3_jsonb_bindings_tests.rs) — ties eql-bindings to real
+# cipherstash crypto AND the hand-written src/v3/jsonb/types.sql domain CHECK.
+eql-bindings = { path = "../../crates/eql-bindings" }
+
 [lints]
 workspace = true
 

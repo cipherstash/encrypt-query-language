@@ -24,7 +24,7 @@
 //! - composite is `eql_v3.ore_cllw AS (bytes bytea)`; literals via
 //!   `ROW(decode('<hex>','hex'))::eql_v3.ore_cllw`.
 //! - there is only ONE extractor overload, `eql_v3.ore_cllw(jsonb)` — v3 has no
-//!   encrypted-column type, no `ste_vec_entry` domain, and no `->` selector. So
+//!   encrypted-column type, no `jsonb_entry` domain, and no `->` selector. So
 //!   the functional-index tests build on a plain `jsonb` column via
 //!   `eql_v3.ore_cllw(value)`, and the v2 `..._via_arrow_chain` test has no v3
 //!   analogue.

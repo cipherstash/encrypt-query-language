@@ -44,5 +44,8 @@ pub fn all() -> Vec<Box<dyn DomainType>> {
         Box::new(PhantomData::<super::float8::Float8Eq>),
         Box::new(PhantomData::<super::float8::Float8OrdOre>),
         Box::new(PhantomData::<super::float8::Float8Ord>),
+        Box::new(PhantomData::<super::jsonb::SteVecDocument>),
+        Box::new(PhantomData::<super::jsonb::SteVecEntry>),
+        Box::new(PhantomData::<super::jsonb::SteVecQuery>),
     ]
 }

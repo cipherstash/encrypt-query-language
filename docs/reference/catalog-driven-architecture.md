@@ -150,10 +150,12 @@ Cross-term helpers compose these into the per-domain answers the renderers consu
 
 ### 2.3 The domain shapes
 
-Every current family uses one of three catalog shapes. The invariant test
-`every_type_uses_a_known_domain_shape` accepts these current shapes plus two
-known-but-unused shapes (`eq-only` and `ordered+match`) so future rows fail loudly
-if they drift into an unreviewed shape:
+Every current **scalar** family — every row in `eql_domains::scalar_families()` — uses
+one of three catalog shapes. The invariant test `every_type_uses_a_known_domain_shape`
+iterates `scalar_families()`, not the full `CATALOG`, and accepts these current shapes
+plus two known-but-unused shapes (`eq-only` and `ordered+match`) so future scalar rows
+fail loudly if they drift into an unreviewed shape. The eleventh `CATALOG` family,
+`jsonb`, is not scalar-shaped at all — see the note after the family table below.
 
 ```mermaid
 flowchart LR
@@ -178,6 +180,23 @@ flowchart LR
 | `float4`/`float8` | F32/F64 | ordered |
 | `text` | Text | text-search (equality always routes through `Hm` — ORE is not equality-lossless for text) |
 | `bool` | Bool | storage-only (2-value cardinality leak → no searchable index) |
+
+**`jsonb` sits outside this classification.** It carries three domains — `eql_v3.json`
+(document), `eql_v3.jsonb_entry` (one `sv` leaf), `eql_v3.jsonb_query` (containment
+needle) — each tagged `Shape::SteVec` rather than `Shape::Scalar`, with an empty flat
+`terms` list: capability lives *structurally* inside the payload (per-`sv`-leaf `hm`
+XOR `oc`), not as a family-level `Term` set. `Domain.name` (`"json"`/`"entry"`/`"query"`)
+disambiguates which of the three a given domain is — see `Domain::rust_struct_name`.
+`scalar_families()` filters `CATALOG` down to the `Shape::Scalar` rows, so `jsonb` never
+reaches `every_type_uses_a_known_domain_shape`, the ordered-scalar materializer (§3), or
+the scalar SQLx matrix. Its SQL surface is hand-written under `src/v3/jsonb/`
+(`eql-codegen` renders SQL only for `scalar_families()`) and its Rust structs are
+hand-written in `crates/eql-bindings/src/v3/jsonb.rs` — only inventory membership and
+`CATALOG` order are catalog-driven. This is also why the class diagram in §2.1 lists
+`Jsonb` as a `ScalarKind` variant even though `jsonb` is not a `Shape::Scalar` family:
+`ScalarKind` and `Shape` are independent axes, and `JSONB_FIXTURES`
+(`crates/eql-domains/src/fixtures/record.rs`) needs a `ScalarKind` purely for the
+`FIXTURES`/`CATALOG` parity machinery.
 
 ### 2.4 Fixtures live beside the catalog
 

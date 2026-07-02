@@ -1,0 +1,124 @@
+{
+  "$defs": {
+    "Ciphertext": {
+      "description": "mp_base85 source ciphertext — the `c` envelope key.\n\nRequired by every v3 domain CHECK; present on every payload.",
+      "type": "string"
+    },
+    "Hmac256": {
+      "description": "HMAC-SHA-256 equality term — the `hm` wire key. Backs the `_eq` domains\n(`=`, `<>`). SQL-side constructor: `eql_v3.hmac_256`.",
+      "type": "string"
+    },
+    "Identifier": {
+      "additionalProperties": false,
+      "description": "Table + column identifier — wire shape `{\"t\": \"...\", \"c\": \"...\"}`.\n\nShared by every payload.",
+      "properties": {
+        "c": {
+          "description": "Column name.",
+          "type": "string"
+        },
+        "t": {
+          "description": "Table name.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "t",
+        "c"
+      ],
+      "type": "object"
+    },
+    "OreCllw": {
+      "description": "CLLW-ORE ordered term — the `oc` wire key of a SteVec entry. Backs entry\nordering (`<` `<=` `>` `>=`) and equality on ordered leaves. SQL-side\nconstructor: `eql_v3.ore_cllw`. A SteVec entry carries exactly one of `hm`\n(equality) XOR `oc` (ordering) — enforced by the SQL domain CHECK.",
+      "type": "string"
+    },
+    "SchemaVersion": {
+      "const": 2,
+      "description": "The envelope version field (`v`) — always exactly `2` on the wire.",
+      "type": "integer"
+    },
+    "Selector": {
+      "description": "A SteVec selector — the `s` wire key. Addresses a JSON path leaf within an\nencrypted document (`eql_v3.json`); present on every entry and query element.",
+      "type": "string"
+    },
+    "SteVecEntry": {
+      "anyOf": [
+        {
+          "properties": {
+            "hm": {
+              "$ref": "#/$defs/Hmac256"
+            }
+          },
+          "required": [
+            "hm"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "oc": {
+              "$ref": "#/$defs/OreCllw"
+            }
+          },
+          "required": [
+            "oc"
+          ],
+          "type": "object"
+        }
+      ],
+      "description": "`eql_v3.jsonb_entry` — one sv element (returned by `->`). Carries a selector\n`s`, ciphertext `c`, optional array-membership marker `a`, and exactly one of\n`hm` XOR `oc`. LAX (flatten precludes `deny_unknown_fields`): tolerates the\nroot `i`/`v` merged in by `->`. XOR of the term is enforced by the SQL CHECK.",
+      "properties": {
+        "a": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "c": {
+          "$ref": "#/$defs/Ciphertext"
+        },
+        "s": {
+          "$ref": "#/$defs/Selector"
+        }
+      },
+      "required": [
+        "s",
+        "c"
+      ],
+      "type": "object"
+    },
+    "SteVecForm": {
+      "const": "sv",
+      "description": "The `k` envelope form discriminator — always `\"sv\"` for a SteVec document.",
+      "type": "string"
+    }
+  },
+  "$id": "https://schemas.cipherstash.com/eql/v3/json.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "`eql_v3.json` — a SteVec encrypted-JSONB document (`{v, k, i, sv:[entry]}`,\nno root ciphertext). Strict. `k` is the `\"sv\"` form discriminator (see\n[`SteVecForm`]) — carried on the real wire, so the strict struct models it.",
+  "properties": {
+    "i": {
+      "$ref": "#/$defs/Identifier"
+    },
+    "k": {
+      "$ref": "#/$defs/SteVecForm"
+    },
+    "sv": {
+      "items": {
+        "$ref": "#/$defs/SteVecEntry"
+      },
+      "type": "array"
+    },
+    "v": {
+      "$ref": "#/$defs/SchemaVersion"
+    }
+  },
+  "required": [
+    "v",
+    "k",
+    "i",
+    "sv"
+  ],
+  "title": "SteVecDocument",
+  "type": "object"
+}

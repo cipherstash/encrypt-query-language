@@ -63,8 +63,7 @@ fn committed_scalar_tokens(root: &Path) -> BTreeSet<String> {
 fn committed_scalar_dirs_match_catalog_tokens() {
     let root = repo_root();
     let dirs = committed_scalar_tokens(&root);
-    let catalog: BTreeSet<String> = eql_domains::CATALOG
-        .iter()
+    let catalog: BTreeSet<String> = eql_domains::scalar_families()
         .map(|s| s.name.to_string())
         .collect();
     assert_eq!(
@@ -110,6 +109,16 @@ fn every_generated_sql_file_starts_with_marker() {
     assert!(
         checked >= 11,
         "expected >=11 generated SQL files across all tokens, checked {checked}"
+    );
+}
+
+#[test]
+fn generate_all_skips_non_scalar_families() {
+    let tmp = tempdir("skip-non-scalar");
+    eql_codegen::generate::generate_all(tmp.path()).unwrap();
+    assert!(
+        !tmp.path().join("src/v3/scalars/jsonb").exists(),
+        "SteVec family must not emit a src/v3/scalars/jsonb SQL dir"
     );
 }
 

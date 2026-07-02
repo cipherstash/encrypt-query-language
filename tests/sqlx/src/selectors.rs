@@ -38,7 +38,9 @@ impl Selectors {
 
     // Nested path selectors
     // NOTE: These are placeholders - current test data doesn't have nested objects
-    // See tests/ste_vec.sql for actual data structure
+    // See tests/sqlx/src/fixtures/v3_ste_vec.rs (the `documents()` fn) for the
+    // actual current SteVec document shape, or tests/sqlx/fixtures/FIXTURE_SCHEMA.md
+    // for the generated fixture layout.
 
     /// Selector for $.nested path (hypothetical nested object)
     /// Maps to: $.nested (not present in current test data)

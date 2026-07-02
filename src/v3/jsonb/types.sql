@@ -7,8 +7,8 @@
 --! against the ultimate base type jsonb, so the native-jsonb firewall in
 --! blockers.sql can attach):
 --!   - eql_v3.json     — storage/root: an EQL envelope object ({i, v, ...}).
---!   - eql_v3.ste_vec_entry — a single sv element (returned by `->`).
---!   - eql_v3.ste_vec_query  — a containment needle (sv elements, no ciphertext).
+--!   - eql_v3.jsonb_entry — a single sv element (returned by `->`).
+--!   - eql_v3.jsonb_query  — a containment needle (sv elements, no ciphertext).
 
 --! @brief Validate a single SteVec entry payload.
 --! @internal
@@ -119,7 +119,7 @@ CREATE DOMAIN eql_v3.json AS jsonb
 --! `i`/`v` merged in by `->`) are allowed.
 --!
 --! @see src/v3/jsonb/operators.sql
-CREATE DOMAIN eql_v3.ste_vec_entry AS jsonb
+CREATE DOMAIN eql_v3.jsonb_entry AS jsonb
   CHECK (
     eql_v3.is_valid_ste_vec_entry_payload(VALUE)
   );
@@ -133,14 +133,14 @@ CREATE DOMAIN eql_v3.ste_vec_entry AS jsonb
 --! `jsonb @>`.
 --!
 --! @note Construct from inline JSON via the DOMAIN cast:
---!       `'{"sv":[{"s":"<sel>","hm":"<hm>"}]}'::eql_v3.ste_vec_query`.
+--!       `'{"sv":[{"s":"<sel>","hm":"<hm>"}]}'::eql_v3.jsonb_query`.
 --! @see eql_v3.to_ste_vec_query
-CREATE DOMAIN eql_v3.ste_vec_query AS jsonb
+CREATE DOMAIN eql_v3.jsonb_query AS jsonb
   CHECK (
     eql_v3.is_valid_ste_vec_query_payload(VALUE)
   );
 
---! @brief Convert an eql_v3.json to a ste_vec_query needle.
+--! @brief Convert an eql_v3.json to a jsonb_query needle.
 --!
 --! Normalises each sv element down to the matching-relevant fields: `s` plus
 --! exactly one of `hm` / `oc`. Other fields (`c`, `a`, `i`/`v`, anything else)
@@ -149,10 +149,10 @@ CREATE DOMAIN eql_v3.ste_vec_query AS jsonb
 --!   `GIN (eql_v3.to_ste_vec_query(col)::jsonb jsonb_path_ops)`.
 --!
 --! @param e eql_v3.json Source encrypted payload
---! @return eql_v3.ste_vec_query Query-shaped needle, sv elements normalised.
---! @see eql_v3.ste_vec_query
+--! @return eql_v3.jsonb_query Query-shaped needle, sv elements normalised.
+--! @see eql_v3.jsonb_query
 CREATE FUNCTION eql_v3.to_ste_vec_query(e eql_v3.json)
-  RETURNS eql_v3.ste_vec_query
+  RETURNS eql_v3.jsonb_query
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   SELECT jsonb_build_object(
@@ -170,9 +170,9 @@ AS $$
        FROM jsonb_array_elements(e::jsonb -> 'sv') AS elem),
       '[]'::jsonb
     )
-  )::eql_v3.ste_vec_query
+  )::eql_v3.jsonb_query
 $$;
 
-CREATE CAST (eql_v3.json AS eql_v3.ste_vec_query)
+CREATE CAST (eql_v3.json AS eql_v3.jsonb_query)
   WITH FUNCTION eql_v3.to_ste_vec_query
   AS ASSIGNMENT;

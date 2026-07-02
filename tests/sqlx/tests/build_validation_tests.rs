@@ -59,7 +59,7 @@ fn v3_variant_omits_v2_coupled_pin_search_path() {
     // removed eql_v2-coupled tasks/pin_search_path.sql (which referenced
     // public.eql_v2_encrypted / eql_v2.ste_vec_entry and only pinned eql_v2
     // functions). Match the eql_v2-QUALIFIED markers: a bare `ste_vec_entry`
-    // substring would false-positive on the legitimate `eql_v3.ste_vec_entry`
+    // substring would false-positive on the legitimate `eql_v3.jsonb_entry`
     // DOMAIN that the v3 jsonb document surface defines.
     let sql = read_release_sql("cipherstash-encrypt.sql");
     assert!(
