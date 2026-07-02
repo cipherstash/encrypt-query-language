@@ -262,7 +262,7 @@ pub fn generate_type(spec: &DomainFamily, out_dir: &Path) -> Result<Vec<PathBuf>
 pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
     let scalars_root = out_root.join(V3_SCALARS_DIR);
     let mut all_written: Vec<PathBuf> = Vec::new();
-    for spec in eql_domains::CATALOG {
+    for spec in eql_domains::scalar_families() {
         let family_name = spec.name;
         let out_dir = scalars_root.join(family_name);
         let written = generate_type(spec, &out_dir)?;
@@ -303,7 +303,7 @@ pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
         }
     }
 
-    let names: Vec<&str> = eql_domains::CATALOG.iter().map(|s| s.name).collect();
+    let names: Vec<&str> = eql_domains::scalar_families().map(|s| s.name).collect();
     println!("codegen: ok ({} types: {})", names.len(), names.join(", "));
     Ok(0)
 }
