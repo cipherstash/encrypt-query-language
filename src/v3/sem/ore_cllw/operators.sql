@@ -105,62 +105,62 @@ AS $$
 $$;
 
 
-CREATE OPERATOR = (
+CREATE OPERATOR eql_v3_internal.= (
   FUNCTION = eql_v3_internal.ore_cllw_eq,
   LEFTARG = eql_v3_internal.ore_cllw,
   RIGHTARG = eql_v3_internal.ore_cllw,
-  COMMUTATOR = =,
-  NEGATOR = <>,
+  COMMUTATOR = OPERATOR(eql_v3_internal.=),
+  NEGATOR = OPERATOR(eql_v3_internal.<>),
   RESTRICT = eqsel,
   JOIN = eqjoinsel
 );
 
-CREATE OPERATOR <> (
+CREATE OPERATOR eql_v3_internal.<> (
   FUNCTION = eql_v3_internal.ore_cllw_neq,
   LEFTARG = eql_v3_internal.ore_cllw,
   RIGHTARG = eql_v3_internal.ore_cllw,
-  COMMUTATOR = <>,
-  NEGATOR = =,
+  COMMUTATOR = OPERATOR(eql_v3_internal.<>),
+  NEGATOR = OPERATOR(eql_v3_internal.=),
   RESTRICT = neqsel,
   JOIN = neqjoinsel
 );
 
-CREATE OPERATOR < (
+CREATE OPERATOR eql_v3_internal.< (
   FUNCTION = eql_v3_internal.ore_cllw_lt,
   LEFTARG = eql_v3_internal.ore_cllw,
   RIGHTARG = eql_v3_internal.ore_cllw,
-  COMMUTATOR = >,
-  NEGATOR = >=,
+  COMMUTATOR = OPERATOR(eql_v3_internal.>),
+  NEGATOR = OPERATOR(eql_v3_internal.>=),
   RESTRICT = scalarltsel,
   JOIN = scalarltjoinsel
 );
 
-CREATE OPERATOR <= (
+CREATE OPERATOR eql_v3_internal.<= (
   FUNCTION = eql_v3_internal.ore_cllw_lte,
   LEFTARG = eql_v3_internal.ore_cllw,
   RIGHTARG = eql_v3_internal.ore_cllw,
-  COMMUTATOR = >=,
-  NEGATOR = >,
+  COMMUTATOR = OPERATOR(eql_v3_internal.>=),
+  NEGATOR = OPERATOR(eql_v3_internal.>),
   RESTRICT = scalarlesel,
   JOIN = scalarlejoinsel
 );
 
-CREATE OPERATOR > (
+CREATE OPERATOR eql_v3_internal.> (
   FUNCTION = eql_v3_internal.ore_cllw_gt,
   LEFTARG = eql_v3_internal.ore_cllw,
   RIGHTARG = eql_v3_internal.ore_cllw,
-  COMMUTATOR = <,
-  NEGATOR = <=,
+  COMMUTATOR = OPERATOR(eql_v3_internal.<),
+  NEGATOR = OPERATOR(eql_v3_internal.<=),
   RESTRICT = scalargtsel,
   JOIN = scalargtjoinsel
 );
 
-CREATE OPERATOR >= (
+CREATE OPERATOR eql_v3_internal.>= (
   FUNCTION = eql_v3_internal.ore_cllw_gte,
   LEFTARG = eql_v3_internal.ore_cllw,
   RIGHTARG = eql_v3_internal.ore_cllw,
-  COMMUTATOR = <=,
-  NEGATOR = <,
+  COMMUTATOR = OPERATOR(eql_v3_internal.<=),
+  NEGATOR = OPERATOR(eql_v3_internal.<),
   RESTRICT = scalargesel,
   JOIN = scalargejoinsel
 );

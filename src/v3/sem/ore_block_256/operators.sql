@@ -111,12 +111,12 @@ $$;
 --! MERGES flag — without it the planner raises "could not find commutator" the
 --! first time an ore_block equality is used as a join qual (e.g. via the inlined
 --! eql_v3_internal.<T>_ord_ore equality wrappers).
-CREATE OPERATOR = (
+CREATE OPERATOR eql_v3_internal.= (
   FUNCTION=eql_v3_internal.ore_block_256_eq,
   LEFTARG=eql_v3_internal.ore_block_256,
   RIGHTARG=eql_v3_internal.ore_block_256,
-  COMMUTATOR = =,
-  NEGATOR = <>,
+  COMMUTATOR = OPERATOR(eql_v3_internal.=),
+  NEGATOR = OPERATOR(eql_v3_internal.<>),
   RESTRICT = eqsel,
   JOIN = eqjoinsel,
   HASHES,
@@ -124,57 +124,57 @@ CREATE OPERATOR = (
 );
 
 --! @brief <> operator for ORE block types
-CREATE OPERATOR <> (
+CREATE OPERATOR eql_v3_internal.<> (
   FUNCTION=eql_v3_internal.ore_block_256_neq,
   LEFTARG=eql_v3_internal.ore_block_256,
   RIGHTARG=eql_v3_internal.ore_block_256,
-  COMMUTATOR = <>,
-  NEGATOR = =,
+  COMMUTATOR = OPERATOR(eql_v3_internal.<>),
+  NEGATOR = OPERATOR(eql_v3_internal.=),
   RESTRICT = neqsel,
   JOIN = neqjoinsel,
   MERGES
 );
 
 --! @brief > operator for ORE block types
-CREATE OPERATOR > (
+CREATE OPERATOR eql_v3_internal.> (
   FUNCTION=eql_v3_internal.ore_block_256_gt,
   LEFTARG=eql_v3_internal.ore_block_256,
   RIGHTARG=eql_v3_internal.ore_block_256,
-  COMMUTATOR = <,
-  NEGATOR = <=,
+  COMMUTATOR = OPERATOR(eql_v3_internal.<),
+  NEGATOR = OPERATOR(eql_v3_internal.<=),
   RESTRICT = scalargtsel,
   JOIN = scalargtjoinsel
 );
 
 --! @brief < operator for ORE block types
-CREATE OPERATOR < (
+CREATE OPERATOR eql_v3_internal.< (
   FUNCTION=eql_v3_internal.ore_block_256_lt,
   LEFTARG=eql_v3_internal.ore_block_256,
   RIGHTARG=eql_v3_internal.ore_block_256,
-  COMMUTATOR = >,
-  NEGATOR = >=,
+  COMMUTATOR = OPERATOR(eql_v3_internal.>),
+  NEGATOR = OPERATOR(eql_v3_internal.>=),
   RESTRICT = scalarltsel,
   JOIN = scalarltjoinsel
 );
 
 --! @brief <= operator for ORE block types
-CREATE OPERATOR <= (
+CREATE OPERATOR eql_v3_internal.<= (
   FUNCTION=eql_v3_internal.ore_block_256_lte,
   LEFTARG=eql_v3_internal.ore_block_256,
   RIGHTARG=eql_v3_internal.ore_block_256,
-  COMMUTATOR = >=,
-  NEGATOR = >,
+  COMMUTATOR = OPERATOR(eql_v3_internal.>=),
+  NEGATOR = OPERATOR(eql_v3_internal.>),
   RESTRICT = scalarlesel,
   JOIN = scalarlejoinsel
 );
 
 --! @brief >= operator for ORE block types
-CREATE OPERATOR >= (
+CREATE OPERATOR eql_v3_internal.>= (
   FUNCTION=eql_v3_internal.ore_block_256_gte,
   LEFTARG=eql_v3_internal.ore_block_256,
   RIGHTARG=eql_v3_internal.ore_block_256,
-  COMMUTATOR = <=,
-  NEGATOR = <,
+  COMMUTATOR = OPERATOR(eql_v3_internal.<=),
+  NEGATOR = OPERATOR(eql_v3_internal.<),
   RESTRICT = scalargesel,
   JOIN = scalargejoinsel
 );
