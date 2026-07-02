@@ -29,7 +29,8 @@ mod term;
 pub use fixtures::{
     BoundedIntKind, Fixture, ScalarKind, TypeFixtures, BOOL_FIXTURES, DATE_FIXTURES, FIXTURES,
     FLOAT4_FIXTURES, FLOAT8_FIXTURES, INT2_FIXTURES, INT2_VALUES, INT4_FIXTURES, INT4_VALUES,
-    INT8_FIXTURES, INT8_VALUES, NUMERIC_FIXTURES, TEXT_FIXTURES, TEXT_VALUES, TIMESTAMP_FIXTURES,
+    INT8_FIXTURES, INT8_VALUES, JSONB_FIXTURES, NUMERIC_FIXTURES, TEXT_FIXTURES, TEXT_VALUES,
+    TIMESTAMP_FIXTURES,
 };
 
 /// Always-present payload keys required by every generated domain CHECK,
@@ -398,7 +399,7 @@ pub const JSONB: DomainFamily = DomainFamily {
 /// The scalar catalog — the single source of truth. Order is significant (it
 /// drives generation order). New types are appended as their SQL surface lands.
 pub const CATALOG: &[DomainFamily] = &[
-    INT4, INT2, INT8, DATE, TIMESTAMP, NUMERIC, TEXT, BOOL, FLOAT4, FLOAT8,
+    INT4, INT2, INT8, DATE, TIMESTAMP, NUMERIC, TEXT, BOOL, FLOAT4, FLOAT8, JSONB,
 ];
 
 /// The scalar (flat) families of `CATALOG`, in order — everything except the

@@ -594,7 +594,8 @@ mod catalog_tests {
                 "text",
                 "bool",
                 "float4",
-                "float8"
+                "float8",
+                "jsonb"
             ]
         );
     }
@@ -1339,19 +1340,26 @@ mod shape_tests {
                     );
                 }
                 if !d.terms.is_empty() {
-                    assert!(scalar, "termful {}.{} must be Shape::Scalar", f.name, d.name);
+                    assert!(
+                        scalar,
+                        "termful {}.{} must be Shape::Scalar",
+                        f.name, d.name
+                    );
                 }
             }
         }
     }
 
     #[test]
-    fn jsonb_family_is_non_scalar_and_not_yet_in_catalog() {
+    fn jsonb_family_is_non_scalar_and_in_catalog_after_flip() {
         use crate::{Shape, CATALOG, JSONB};
         assert!(!JSONB.is_scalar());
         assert_eq!(JSONB.domains.len(), 3);
         assert!(matches!(JSONB.domains[0].shape, Shape::SteVecDocument));
         assert!(JSONB.domains.iter().all(|d| d.terms.is_empty()));
-        assert!(!CATALOG.iter().any(|f| f.name == "jsonb"));
+        assert!(
+            CATALOG.iter().any(|f| f.name == "jsonb"),
+            "JSONB must be catalogued at the flip"
+        );
     }
 }

@@ -180,10 +180,11 @@ impl ScalarKind {
 
     /// A debug/identifier string for the kind: the canonical Rust plaintext type
     /// name (`"i32"`, `"chrono::NaiveDate"`, `"rust_decimal::Decimal"`). `Jsonb`
-    /// has **no generated SQL surface** and no catalog row, so calling this on it
-    /// is a programming error and panics loudly rather than returning a plausible
-    /// SQL token a premature caller might feed into codegen. Only call site today
-    /// is `crates/eql-domains/src/tests.rs`.
+    /// maps to `serde_json::Value` — its plaintext is an arbitrary JSON document.
+    /// Its encrypted bindings are NOT the flat-scalar structs the other kinds
+    /// generate; they are the hand-written SteVec payload types in
+    /// `crates/eql-bindings/src/v3/jsonb.rs` (the SQL generator skips SteVec
+    /// shapes). Only call site today is `crates/eql-domains/src/tests.rs`.
     pub const fn rust_type(self) -> &'static str {
         match self {
             ScalarKind::I16 => "i16",
@@ -196,9 +197,7 @@ impl ScalarKind {
             ScalarKind::Bool => "bool",
             ScalarKind::F32 => "f32",
             ScalarKind::F64 => "f64",
-            ScalarKind::Jsonb => {
-                panic!("ScalarKind::rust_type: jsonb has no generated surface yet")
-            }
+            ScalarKind::Jsonb => "serde_json::Value",
         }
     }
 }

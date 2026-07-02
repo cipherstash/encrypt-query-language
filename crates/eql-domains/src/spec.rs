@@ -120,9 +120,11 @@ mod tests {
     }
 
     #[test]
-    fn scalar_families_are_all_scalar_for_now() {
-        use crate::{scalar_families, CATALOG};
-        assert_eq!(scalar_families().count(), CATALOG.len());
+    fn scalar_families_exclude_non_scalar_families_after_jsonb_flip() {
+        use crate::{scalar_families, CATALOG, JSONB};
+        let names: Vec<&str> = scalar_families().map(|f| f.name).collect();
+        assert_eq!(names.len(), CATALOG.len() - 1);
+        assert!(!names.contains(&JSONB.name));
         for f in scalar_families() {
             assert!(f.is_scalar());
         }

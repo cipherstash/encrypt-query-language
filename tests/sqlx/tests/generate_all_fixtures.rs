@@ -13,7 +13,6 @@
 //!   mise run fixture:generate:all
 #![cfg(feature = "fixture-gen")]
 
-
 // `generate_for_token(token: &str) -> anyhow::Result<()>` is generated from the
 // single harness list in `tests/sqlx/src/scalar_types.rs`: one match arm per
 // token (`"int4" => fixtures::eql_v3_int4::spec().run().await`) plus a loud

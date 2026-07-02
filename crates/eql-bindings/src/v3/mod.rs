@@ -102,6 +102,7 @@ pub mod int2;
 pub mod int4;
 pub mod int8;
 pub mod inventory;
+pub mod jsonb;
 pub mod numeric;
 pub mod terms;
 pub mod text;
