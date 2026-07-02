@@ -373,7 +373,9 @@ mod tests {
         let s = spec("int4");
         let d = domain(s, "eq");
         let sql = render_functions_file("int4", d);
-        assert!(sql.contains("CREATE FUNCTION eql_v3_internal.eq("));
+        // Supported wrapper (`=`) is PUBLIC; unsupported ops (`<`, `->` on an
+        // equality-only domain) stay as internal blockers.
+        assert!(sql.contains("CREATE FUNCTION eql_v3.eq("));
         assert!(sql.contains("AS $$ SELECT"));
         assert!(sql.contains("CREATE FUNCTION eql_v3_internal.lt("));
         assert!(sql.contains("RAISE EXCEPTION 'operator % is not supported for %', '<'"));
@@ -637,6 +639,37 @@ mod tests {
         let s = spec("int4");
         let sql = render_operators_file(s.name, domain(s, "eq"));
         assert_eq!(sql.matches("CREATE OPERATOR").count(), 44);
+    }
+
+    #[test]
+    fn supported_operators_bind_public_wrapper_blocked_bind_internal() {
+        // The operator-equivalent invariant for operator-free platforms: a
+        // SUPPORTED operator's backing function is PUBLIC (`eql_v3.<wrapper>`)
+        // so it is callable by name without the operator; a BLOCKED operator's
+        // backing function stays internal (`eql_v3_internal.<blocker>`).
+        let s = spec("int4");
+        let eq_sql = render_operators_file(s.name, domain(s, "eq"));
+        // `=` is supported on int4_eq → public wrapper.
+        assert!(eq_sql.contains("FUNCTION = eql_v3.eq,"));
+        // `<` is unsupported on the equality-only domain → internal blocker.
+        assert!(eq_sql.contains("FUNCTION = eql_v3_internal.lt,"));
+        // native-jsonb blocker stays internal too.
+        assert!(eq_sql.contains("FUNCTION = eql_v3_internal.\"||\","));
+
+        // Ordered domain: comparison + range wrappers all public.
+        let ord_sql = render_operators_file(s.name, domain(s, "ord"));
+        for f in ["eq", "neq", "lt", "lte", "gt", "gte"] {
+            assert!(
+                ord_sql.contains(&format!("FUNCTION = eql_v3.{f},")),
+                "ordered operator {f} must bind the public wrapper"
+            );
+        }
+
+        // Bloom text_match: containment wrappers are supported → public.
+        let tm = spec("text");
+        let tm_sql = render_operators_file(tm.name, domain(tm, "match"));
+        assert!(tm_sql.contains("FUNCTION = eql_v3.contains,"));
+        assert!(tm_sql.contains("FUNCTION = eql_v3.contained_by,"));
     }
 
     #[test]

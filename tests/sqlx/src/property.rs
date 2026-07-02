@@ -403,7 +403,7 @@ pub async fn assert_extractor_oracle<T: ScalarType>(
 /// admits false positives and the plaintext oracle is substring, not equality,
 /// so this is curated rather than a random property: three fixtures with known
 /// n-gram relationships (`haystack` ⊇ `needle`, `disjoint` shares none). Asserts
-/// `eql_v3_internal.contains` / `contained_by` respect **left-contains-right** `@>` and
+/// `eql_v3.contains` / `contained_by` respect **left-contains-right** `@>` and
 /// that `match_term` yields a non-empty `bf` array. Operands are the payload
 /// JSON literals cast to `domain` (`eql_v3.text_match`).
 pub async fn assert_match_smoke(
@@ -422,32 +422,32 @@ pub async fn assert_match_smoke(
     let cases: [(&str, String, bool); 6] = [
         (
             "contains(haystack, needle)",
-            format!("eql_v3_internal.contains({haystack}, {needle})"),
+            format!("eql_v3.contains({haystack}, {needle})"),
             true,
         ),
         (
             "contains(needle, haystack)",
-            format!("eql_v3_internal.contains({needle}, {haystack})"),
+            format!("eql_v3.contains({needle}, {haystack})"),
             false,
         ),
         (
             "contains(haystack, disjoint)",
-            format!("eql_v3_internal.contains({haystack}, {disjoint})"),
+            format!("eql_v3.contains({haystack}, {disjoint})"),
             false,
         ),
         (
             "contained_by(needle, haystack)",
-            format!("eql_v3_internal.contained_by({needle}, {haystack})"),
+            format!("eql_v3.contained_by({needle}, {haystack})"),
             true,
         ),
         (
             "contained_by(haystack, needle)",
-            format!("eql_v3_internal.contained_by({haystack}, {needle})"),
+            format!("eql_v3.contained_by({haystack}, {needle})"),
             false,
         ),
         (
             "contained_by(disjoint, haystack)",
-            format!("eql_v3_internal.contained_by({disjoint}, {haystack})"),
+            format!("eql_v3.contained_by({disjoint}, {haystack})"),
             false,
         ),
     ];

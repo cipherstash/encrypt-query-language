@@ -29,7 +29,7 @@ AS $$ SELECT eql_v3_internal.ore_block_256(a::jsonb) $$;
 --! @param a eql_v3.text_ord
 --! @param b eql_v3.text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.eq(a eql_v3.text_ord, b eql_v3.text_ord)
+CREATE FUNCTION eql_v3.eq(a eql_v3.text_ord, b eql_v3.text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b) $$;
 
@@ -37,7 +37,7 @@ AS $$ SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b) $$;
 --! @param a eql_v3.text_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.eq(a eql_v3.text_ord, b jsonb)
+CREATE FUNCTION eql_v3.eq(a eql_v3.text_ord, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b::eql_v3.text_ord) $$;
 
@@ -45,7 +45,7 @@ AS $$ SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b::eql_v3.text_ord) $$;
 --! @param a jsonb
 --! @param b eql_v3.text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.eq(a jsonb, b eql_v3.text_ord)
+CREATE FUNCTION eql_v3.eq(a jsonb, b eql_v3.text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a::eql_v3.text_ord) = eql_v3.eq_term(b) $$;
 
@@ -53,7 +53,7 @@ AS $$ SELECT eql_v3.eq_term(a::eql_v3.text_ord) = eql_v3.eq_term(b) $$;
 --! @param a eql_v3.text_ord
 --! @param b eql_v3.text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.neq(a eql_v3.text_ord, b eql_v3.text_ord)
+CREATE FUNCTION eql_v3.neq(a eql_v3.text_ord, b eql_v3.text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b) $$;
 
@@ -61,7 +61,7 @@ AS $$ SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b) $$;
 --! @param a eql_v3.text_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.neq(a eql_v3.text_ord, b jsonb)
+CREATE FUNCTION eql_v3.neq(a eql_v3.text_ord, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b::eql_v3.text_ord) $$;
 
@@ -69,7 +69,7 @@ AS $$ SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b::eql_v3.text_ord) $$;
 --! @param a jsonb
 --! @param b eql_v3.text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.neq(a jsonb, b eql_v3.text_ord)
+CREATE FUNCTION eql_v3.neq(a jsonb, b eql_v3.text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a::eql_v3.text_ord) <> eql_v3.eq_term(b) $$;
 
@@ -77,7 +77,7 @@ AS $$ SELECT eql_v3.eq_term(a::eql_v3.text_ord) <> eql_v3.eq_term(b) $$;
 --! @param a eql_v3.text_ord
 --! @param b eql_v3.text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.lt(a eql_v3.text_ord, b eql_v3.text_ord)
+CREATE FUNCTION eql_v3.lt(a eql_v3.text_ord, b eql_v3.text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
 
@@ -85,7 +85,7 @@ AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
 --! @param a eql_v3.text_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.lt(a eql_v3.text_ord, b jsonb)
+CREATE FUNCTION eql_v3.lt(a eql_v3.text_ord, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b::eql_v3.text_ord) $$;
 
@@ -93,7 +93,7 @@ AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b::eql_v3.text_ord) $$;
 --! @param a jsonb
 --! @param b eql_v3.text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.lt(a jsonb, b eql_v3.text_ord)
+CREATE FUNCTION eql_v3.lt(a jsonb, b eql_v3.text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a::eql_v3.text_ord) < eql_v3.ord_term(b) $$;
 
@@ -101,7 +101,7 @@ AS $$ SELECT eql_v3.ord_term(a::eql_v3.text_ord) < eql_v3.ord_term(b) $$;
 --! @param a eql_v3.text_ord
 --! @param b eql_v3.text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.lte(a eql_v3.text_ord, b eql_v3.text_ord)
+CREATE FUNCTION eql_v3.lte(a eql_v3.text_ord, b eql_v3.text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
 
@@ -109,7 +109,7 @@ AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
 --! @param a eql_v3.text_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.lte(a eql_v3.text_ord, b jsonb)
+CREATE FUNCTION eql_v3.lte(a eql_v3.text_ord, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b::eql_v3.text_ord) $$;
 
@@ -117,7 +117,7 @@ AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b::eql_v3.text_ord) $$;
 --! @param a jsonb
 --! @param b eql_v3.text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.lte(a jsonb, b eql_v3.text_ord)
+CREATE FUNCTION eql_v3.lte(a jsonb, b eql_v3.text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a::eql_v3.text_ord) <= eql_v3.ord_term(b) $$;
 
@@ -125,7 +125,7 @@ AS $$ SELECT eql_v3.ord_term(a::eql_v3.text_ord) <= eql_v3.ord_term(b) $$;
 --! @param a eql_v3.text_ord
 --! @param b eql_v3.text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.gt(a eql_v3.text_ord, b eql_v3.text_ord)
+CREATE FUNCTION eql_v3.gt(a eql_v3.text_ord, b eql_v3.text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
 
@@ -133,7 +133,7 @@ AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
 --! @param a eql_v3.text_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.gt(a eql_v3.text_ord, b jsonb)
+CREATE FUNCTION eql_v3.gt(a eql_v3.text_ord, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b::eql_v3.text_ord) $$;
 
@@ -141,7 +141,7 @@ AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b::eql_v3.text_ord) $$;
 --! @param a jsonb
 --! @param b eql_v3.text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.gt(a jsonb, b eql_v3.text_ord)
+CREATE FUNCTION eql_v3.gt(a jsonb, b eql_v3.text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a::eql_v3.text_ord) > eql_v3.ord_term(b) $$;
 
@@ -149,7 +149,7 @@ AS $$ SELECT eql_v3.ord_term(a::eql_v3.text_ord) > eql_v3.ord_term(b) $$;
 --! @param a eql_v3.text_ord
 --! @param b eql_v3.text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.gte(a eql_v3.text_ord, b eql_v3.text_ord)
+CREATE FUNCTION eql_v3.gte(a eql_v3.text_ord, b eql_v3.text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
 
@@ -157,7 +157,7 @@ AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
 --! @param a eql_v3.text_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.gte(a eql_v3.text_ord, b jsonb)
+CREATE FUNCTION eql_v3.gte(a eql_v3.text_ord, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b::eql_v3.text_ord) $$;
 
@@ -165,7 +165,7 @@ AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b::eql_v3.text_ord) $$;
 --! @param a jsonb
 --! @param b eql_v3.text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.gte(a jsonb, b eql_v3.text_ord)
+CREATE FUNCTION eql_v3.gte(a jsonb, b eql_v3.text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a::eql_v3.text_ord) >= eql_v3.ord_term(b) $$;
 

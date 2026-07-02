@@ -130,12 +130,12 @@ CREATE OPERATOR ->> (
 --! @param a eql_v3.json Container.
 --! @param b eql_v3.json Contained value.
 --! @return boolean True if a contains b.
---! @see eql_v3_internal.ste_vec_contains
+--! @see eql_v3.ste_vec_contains
 CREATE FUNCTION eql_v3."@>"(a eql_v3.json, b eql_v3.json)
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3_internal.ste_vec_contains(a, b)
+  SELECT eql_v3.ste_vec_contains(a, b)
 $$;
 
 CREATE OPERATOR @>(
@@ -210,7 +210,7 @@ CREATE FUNCTION eql_v3."<@"(a eql_v3.json, b eql_v3.json)
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3_internal.ste_vec_contains(b, a)
+  SELECT eql_v3.ste_vec_contains(b, a)
 $$;
 
 CREATE OPERATOR <@(
@@ -258,11 +258,10 @@ CREATE OPERATOR <@(
 ------------------------------------------------------------------------------
 
 --! @brief Equality on jsonb_entry via eq_term (hm-or-oc byte equality).
---! @internal
 --! @param a eql_v3.jsonb_entry Left operand
 --! @param b eql_v3.jsonb_entry Right operand
 --! @return boolean True if the entries are equal
-CREATE FUNCTION eql_v3_internal.eq(a eql_v3.jsonb_entry, b eql_v3.jsonb_entry)
+CREATE FUNCTION eql_v3.eq(a eql_v3.jsonb_entry, b eql_v3.jsonb_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -270,7 +269,7 @@ AS $$
 $$;
 
 CREATE OPERATOR = (
-  FUNCTION = eql_v3_internal.eq,
+  FUNCTION = eql_v3.eq,
   LEFTARG  = eql_v3.jsonb_entry,
   RIGHTARG = eql_v3.jsonb_entry,
   COMMUTATOR = =,
@@ -280,11 +279,10 @@ CREATE OPERATOR = (
 );
 
 --! @brief Inequality on jsonb_entry via eq_term.
---! @internal
 --! @param a eql_v3.jsonb_entry Left operand
 --! @param b eql_v3.jsonb_entry Right operand
 --! @return boolean True if the entries are not equal
-CREATE FUNCTION eql_v3_internal.neq(a eql_v3.jsonb_entry, b eql_v3.jsonb_entry)
+CREATE FUNCTION eql_v3.neq(a eql_v3.jsonb_entry, b eql_v3.jsonb_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -292,7 +290,7 @@ AS $$
 $$;
 
 CREATE OPERATOR <> (
-  FUNCTION = eql_v3_internal.neq,
+  FUNCTION = eql_v3.neq,
   LEFTARG  = eql_v3.jsonb_entry,
   RIGHTARG = eql_v3.jsonb_entry,
   COMMUTATOR = <>,
@@ -302,11 +300,10 @@ CREATE OPERATOR <> (
 );
 
 --! @brief Less-than on jsonb_entry via ore_cllw.
---! @internal
 --! @param a eql_v3.jsonb_entry Left operand
 --! @param b eql_v3.jsonb_entry Right operand
 --! @return boolean True if a is less than b
-CREATE FUNCTION eql_v3_internal.lt(a eql_v3.jsonb_entry, b eql_v3.jsonb_entry)
+CREATE FUNCTION eql_v3.lt(a eql_v3.jsonb_entry, b eql_v3.jsonb_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -314,7 +311,7 @@ AS $$
 $$;
 
 CREATE OPERATOR < (
-  FUNCTION = eql_v3_internal.lt,
+  FUNCTION = eql_v3.lt,
   LEFTARG  = eql_v3.jsonb_entry,
   RIGHTARG = eql_v3.jsonb_entry,
   COMMUTATOR = >,
@@ -324,11 +321,10 @@ CREATE OPERATOR < (
 );
 
 --! @brief Less-than-or-equal on jsonb_entry via ore_cllw.
---! @internal
 --! @param a eql_v3.jsonb_entry Left operand
 --! @param b eql_v3.jsonb_entry Right operand
 --! @return boolean True if a is less than or equal to b
-CREATE FUNCTION eql_v3_internal.lte(a eql_v3.jsonb_entry, b eql_v3.jsonb_entry)
+CREATE FUNCTION eql_v3.lte(a eql_v3.jsonb_entry, b eql_v3.jsonb_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -336,7 +332,7 @@ AS $$
 $$;
 
 CREATE OPERATOR <= (
-  FUNCTION = eql_v3_internal.lte,
+  FUNCTION = eql_v3.lte,
   LEFTARG  = eql_v3.jsonb_entry,
   RIGHTARG = eql_v3.jsonb_entry,
   COMMUTATOR = >=,
@@ -346,11 +342,10 @@ CREATE OPERATOR <= (
 );
 
 --! @brief Greater-than on jsonb_entry via ore_cllw.
---! @internal
 --! @param a eql_v3.jsonb_entry Left operand
 --! @param b eql_v3.jsonb_entry Right operand
 --! @return boolean True if a is greater than b
-CREATE FUNCTION eql_v3_internal.gt(a eql_v3.jsonb_entry, b eql_v3.jsonb_entry)
+CREATE FUNCTION eql_v3.gt(a eql_v3.jsonb_entry, b eql_v3.jsonb_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -358,7 +353,7 @@ AS $$
 $$;
 
 CREATE OPERATOR > (
-  FUNCTION = eql_v3_internal.gt,
+  FUNCTION = eql_v3.gt,
   LEFTARG  = eql_v3.jsonb_entry,
   RIGHTARG = eql_v3.jsonb_entry,
   COMMUTATOR = <,
@@ -368,11 +363,10 @@ CREATE OPERATOR > (
 );
 
 --! @brief Greater-than-or-equal on jsonb_entry via ore_cllw.
---! @internal
 --! @param a eql_v3.jsonb_entry Left operand
 --! @param b eql_v3.jsonb_entry Right operand
 --! @return boolean True if a is greater than or equal to b
-CREATE FUNCTION eql_v3_internal.gte(a eql_v3.jsonb_entry, b eql_v3.jsonb_entry)
+CREATE FUNCTION eql_v3.gte(a eql_v3.jsonb_entry, b eql_v3.jsonb_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -380,7 +374,7 @@ AS $$
 $$;
 
 CREATE OPERATOR >= (
-  FUNCTION = eql_v3_internal.gte,
+  FUNCTION = eql_v3.gte,
   LEFTARG  = eql_v3.jsonb_entry,
   RIGHTARG = eql_v3.jsonb_entry,
   COMMUTATOR = <=,

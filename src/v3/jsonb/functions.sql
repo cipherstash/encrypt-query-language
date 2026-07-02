@@ -191,7 +191,7 @@ $$ LANGUAGE plpgsql;
 --!
 --! @param val jsonb encrypted EQL payload
 --! @return jsonb[] Array of objects with only deterministic fields.
-CREATE FUNCTION eql_v3_internal.jsonb_array(val jsonb)
+CREATE FUNCTION eql_v3.jsonb_array(val jsonb)
 RETURNS jsonb[]
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
@@ -207,7 +207,7 @@ AS $$
   );
 $$;
 
-COMMENT ON FUNCTION eql_v3_internal.jsonb_array(jsonb) IS
+COMMENT ON FUNCTION eql_v3.jsonb_array(jsonb) IS
   'eql-inline-critical: raw-jsonb deterministic-field array helper; must stay inlinable (unpinned search_path)';
 
 ------------------------------------------------------------------------------
@@ -218,40 +218,41 @@ COMMENT ON FUNCTION eql_v3_internal.jsonb_array(jsonb) IS
 --! @param a jsonb Container payload.
 --! @param b jsonb Search payload.
 --! @return boolean True if a contains all deterministic elements of b.
---! @internal
---! @note Raw-`jsonb[]` containment helper over the extracted deterministic
---!       fields. The typed `eql_v3.json` `@>`/`<@` operators do NOT call this
---!       function — they bind to `eql_v3_internal.ste_vec_contains` instead.
---!       Internal to `eql_v3_internal`; callers use the typed operators.
-CREATE FUNCTION eql_v3_internal.jsonb_contains(a jsonb, b jsonb)
+--! @note Public raw-`jsonb[]` containment helper over the extracted
+--!       deterministic fields — the function-form entrypoint for containment on
+--!       platforms without operator support (Supabase/PostgREST). The typed
+--!       `eql_v3.json` `@>` operator does NOT call this function — it binds to
+--!       `eql_v3.ste_vec_contains` instead — but both agree on the result (a
+--!       parity test pins this). Also the documented GIN index expression
+--!       (`eql_v3.jsonb_array(col)`); see docs/reference/database-indexes.md.
+CREATE FUNCTION eql_v3.jsonb_contains(a jsonb, b jsonb)
 RETURNS boolean
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
 AS $$
-  SELECT eql_v3_internal.jsonb_array(a) @> eql_v3_internal.jsonb_array(b);
+  SELECT eql_v3.jsonb_array(a) @> eql_v3.jsonb_array(b);
 $$;
 
-COMMENT ON FUNCTION eql_v3_internal.jsonb_contains(jsonb, jsonb) IS
+COMMENT ON FUNCTION eql_v3.jsonb_contains(jsonb, jsonb) IS
   'eql-inline-critical: raw-jsonb containment helper; must stay inlinable (unpinned search_path)';
 
 --! @brief GIN-indexable "is contained by" check.
 --! @param a jsonb Payload to check.
 --! @param b jsonb Container payload.
 --! @return boolean True if all elements of a are contained in b.
---! @internal
---! @note Raw-`jsonb[]` reverse-containment helper over the extracted
---!       deterministic fields. The typed `eql_v3.json` `@>`/`<@` operators do
---!       NOT call this function — they bind to `eql_v3_internal.ste_vec_contains`
---!       instead. Internal to `eql_v3_internal`; callers use the typed operators.
-CREATE FUNCTION eql_v3_internal.jsonb_contained_by(a jsonb, b jsonb)
+--! @note Public raw-`jsonb[]` reverse-containment helper — the function-form
+--!       entrypoint for `<@` on platforms without operator support. The typed
+--!       `eql_v3.json` `<@` operator binds to `eql_v3.ste_vec_contains` instead,
+--!       but both agree on the result.
+CREATE FUNCTION eql_v3.jsonb_contained_by(a jsonb, b jsonb)
 RETURNS boolean
 IMMUTABLE STRICT PARALLEL SAFE
 LANGUAGE SQL
 AS $$
-  SELECT eql_v3_internal.jsonb_array(a) <@ eql_v3_internal.jsonb_array(b);
+  SELECT eql_v3.jsonb_array(a) <@ eql_v3.jsonb_array(b);
 $$;
 
-COMMENT ON FUNCTION eql_v3_internal.jsonb_contained_by(jsonb, jsonb) IS
+COMMENT ON FUNCTION eql_v3.jsonb_contained_by(jsonb, jsonb) IS
   'eql-inline-critical: raw-jsonb contained-by helper; must stay inlinable (unpinned search_path)';
 
 --! @brief Check if an sv array contains a specific sv element.
@@ -273,7 +274,7 @@ COMMENT ON FUNCTION eql_v3_internal.jsonb_contained_by(jsonb, jsonb) IS
 --! @param a jsonb[] sv array to search within.
 --! @param b jsonb sv element to search for.
 --! @return boolean True if b is found in any element of a.
-CREATE FUNCTION eql_v3_internal.ste_vec_contains(a jsonb[], b jsonb)
+CREATE FUNCTION eql_v3.ste_vec_contains(a jsonb[], b jsonb)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
   SET search_path = pg_catalog, extensions, public
@@ -305,8 +306,8 @@ $$ LANGUAGE plpgsql;
 --! @param a eql_v3.json Container.
 --! @param b eql_v3.json Elements to find.
 --! @return boolean True if all elements of b are contained in a.
---! @see eql_v3_internal.ste_vec_contains(jsonb[], jsonb)
-CREATE FUNCTION eql_v3_internal.ste_vec_contains(a eql_v3.json, b eql_v3.json)
+--! @see eql_v3.ste_vec_contains(jsonb[], jsonb)
+CREATE FUNCTION eql_v3.ste_vec_contains(a eql_v3.json, b eql_v3.json)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
   SET search_path = pg_catalog, extensions, public
@@ -332,7 +333,7 @@ AS $$
 
     FOR idx IN 1..array_length(sv_b, 1) LOOP
       _b := sv_b[idx];
-      result := result AND eql_v3_internal.ste_vec_contains(sv_a, _b);
+      result := result AND eql_v3.ste_vec_contains(sv_a, _b);
     END LOOP;
 
     RETURN result;

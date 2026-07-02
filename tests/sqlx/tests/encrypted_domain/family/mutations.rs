@@ -148,7 +148,7 @@ async fn rerouting_ord_eq_through_hm_flips_ord_routes_arm(pool: PgPool) -> Resul
     // nothing.
     mutate(
         &pool,
-        "CREATE OR REPLACE FUNCTION eql_v3_internal.eq(a eql_v3.int4_ord, b eql_v3.int4_ord) \
+        "CREATE OR REPLACE FUNCTION eql_v3.eq(a eql_v3.int4_ord, b eql_v3.int4_ord) \
          RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE \
          AS $$ SELECT eql_v3_internal.hmac_256(a::jsonb) = eql_v3_internal.hmac_256(b::jsonb) $$",
     )
@@ -180,7 +180,7 @@ async fn dropping_strict_on_eq_flips_supported_null_arm(pool: PgPool) -> Result<
     // keeps the oid; the operator now ignores NULL semantics.
     mutate(
         &pool,
-        "CREATE OR REPLACE FUNCTION eql_v3_internal.eq(a eql_v3.int4_eq, b eql_v3.int4_eq) \
+        "CREATE OR REPLACE FUNCTION eql_v3.eq(a eql_v3.int4_eq, b eql_v3.int4_eq) \
          RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$ SELECT true $$",
     )
     .await?;
@@ -236,11 +236,11 @@ async fn blocking_lt_flips_lt_arm_but_not_order_by(pool: PgPool) -> Result<()> {
         "baseline: ORDER BY ord_term ASC must be plaintext-sorted"
     );
 
-    // Mutation: turn `eql_v3_internal.lt(_ord, _ord)` into a blocker. Must be
+    // Mutation: turn `eql_v3.lt(_ord, _ord)` into a blocker. Must be
     // LANGUAGE plpgsql and non-STRICT so the RAISE always fires.
     mutate(
         &pool,
-        "CREATE OR REPLACE FUNCTION eql_v3_internal.lt(a eql_v3.int4_ord, b eql_v3.int4_ord) \
+        "CREATE OR REPLACE FUNCTION eql_v3.lt(a eql_v3.int4_ord, b eql_v3.int4_ord) \
          RETURNS boolean LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE \
          AS $$ BEGIN RETURN eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.int4_ord', '<'); END; $$",
     )
@@ -308,7 +308,7 @@ async fn rerouting_eq_eq_through_ob_flips_eq_arm(pool: PgPool) -> Result<()> {
     // `eql_v3_internal.ore_block_256(jsonb)` raises rather than matching.
     mutate(
         &pool,
-        "CREATE OR REPLACE FUNCTION eql_v3_internal.eq(a eql_v3.int4_eq, b eql_v3.int4_eq) \
+        "CREATE OR REPLACE FUNCTION eql_v3.eq(a eql_v3.int4_eq, b eql_v3.int4_eq) \
          RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE \
          AS $$ SELECT eql_v3_internal.ore_block_256(a::jsonb) = eql_v3_internal.ore_block_256(b::jsonb) $$",
     )

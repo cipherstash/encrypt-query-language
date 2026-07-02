@@ -201,7 +201,13 @@ pub fn unsupported_entry(op: &Operator, args: [SqlParam; 2], returns: &str) -> F
 #[derive(serde::Serialize)]
 pub struct OpEntry {
     pub symbol: String,
-    pub function_name: String, // unqualified; schema literal lives in the template
+    pub function_name: String, // unqualified; function_schema qualifies it in the template
+    // Schema of the backing function: SCHEMA (public `eql_v3`) for supported
+    // operators — their comparison WRAPPER is public so the operator has a
+    // callable function equivalent on platforms without operator support
+    // (Supabase/PostgREST). INTERNAL_SCHEMA for blocked operators, whose backing
+    // function is a blocker (anti-functionality, never a caller entrypoint).
+    pub function_schema: String,
     pub leftarg: String,
     pub rightarg: String,
     pub metadata: Option<String>, // e.g. "COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel"
@@ -225,9 +231,16 @@ pub fn operator_entry(op: &Operator, leftarg: &str, rightarg: &str, supported: b
     } else {
         None
     };
+    // A supported operator is backed by a public comparison wrapper (SCHEMA); a
+    // blocked one by an internal blocker (INTERNAL_SCHEMA). `supported` tracks
+    // wrapper emission exactly: `is_supported(op) ⟹ extractor_for_operator is
+    // Some`, so `render_functions_file` always emits a wrapper for a supported
+    // operator and a blocker otherwise.
+    let function_schema = if supported { SCHEMA } else { INTERNAL_SCHEMA };
     OpEntry {
         symbol: op.symbol.to_string(),
         function_name: op.function_name.to_string(),
+        function_schema: function_schema.to_string(),
         leftarg: leftarg.to_string(),
         rightarg: rightarg.to_string(),
         metadata,

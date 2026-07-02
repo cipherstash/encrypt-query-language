@@ -108,7 +108,11 @@ async fn public_surface(pool: &PgPool) -> Result<Vec<String>> {
 /// `ste_vec_query`, `ste_vec_entry` — are the remainder).
 fn catalog_domain_names() -> Vec<String> {
     let mut names = Vec::new();
-    for family in eql_domains::CATALOG {
+    // Scalar families only — the jsonb (SteVec) family's domains (`json`,
+    // `jsonb_entry`, `jsonb_query`) use bespoke names, not `<family>_<domain>`,
+    // and are the hand-written "remainder" noted above. Iterating the full
+    // CATALOG would fabricate non-existent names like `jsonb_json`.
+    for family in eql_domains::scalar_families() {
         for domain in family.domains {
             if domain.name.is_empty() {
                 names.push(family.name.to_string());

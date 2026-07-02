@@ -181,7 +181,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.text_match
 --! @param b eql_v3.text_match
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contains(a eql_v3.text_match, b eql_v3.text_match)
+CREATE FUNCTION eql_v3.contains(a eql_v3.text_match, b eql_v3.text_match)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b) $$;
 
@@ -189,7 +189,7 @@ AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b) $$;
 --! @param a eql_v3.text_match
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contains(a eql_v3.text_match, b jsonb)
+CREATE FUNCTION eql_v3.contains(a eql_v3.text_match, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b::eql_v3.text_match) $$;
 
@@ -197,7 +197,7 @@ AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b::eql_v3.text_match) $$;
 --! @param a jsonb
 --! @param b eql_v3.text_match
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contains(a jsonb, b eql_v3.text_match)
+CREATE FUNCTION eql_v3.contains(a jsonb, b eql_v3.text_match)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.match_term(a::eql_v3.text_match) @> eql_v3.match_term(b) $$;
 
@@ -205,7 +205,7 @@ AS $$ SELECT eql_v3.match_term(a::eql_v3.text_match) @> eql_v3.match_term(b) $$;
 --! @param a eql_v3.text_match
 --! @param b eql_v3.text_match
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contained_by(a eql_v3.text_match, b eql_v3.text_match)
+CREATE FUNCTION eql_v3.contained_by(a eql_v3.text_match, b eql_v3.text_match)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.match_term(a) <@ eql_v3.match_term(b) $$;
 
@@ -213,7 +213,7 @@ AS $$ SELECT eql_v3.match_term(a) <@ eql_v3.match_term(b) $$;
 --! @param a eql_v3.text_match
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contained_by(a eql_v3.text_match, b jsonb)
+CREATE FUNCTION eql_v3.contained_by(a eql_v3.text_match, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.match_term(a) <@ eql_v3.match_term(b::eql_v3.text_match) $$;
 
@@ -221,7 +221,7 @@ AS $$ SELECT eql_v3.match_term(a) <@ eql_v3.match_term(b::eql_v3.text_match) $$;
 --! @param a jsonb
 --! @param b eql_v3.text_match
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contained_by(a jsonb, b eql_v3.text_match)
+CREATE FUNCTION eql_v3.contained_by(a jsonb, b eql_v3.text_match)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.match_term(a::eql_v3.text_match) <@ eql_v3.match_term(b) $$;
 

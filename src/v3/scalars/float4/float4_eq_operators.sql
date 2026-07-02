@@ -7,37 +7,37 @@
 --! @brief Operators for eql_v3.float4_eq.
 
 CREATE OPERATOR = (
-  FUNCTION = eql_v3_internal.eq,
+  FUNCTION = eql_v3.eq,
   LEFTARG = eql_v3.float4_eq, RIGHTARG = eql_v3.float4_eq,
   COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 
 CREATE OPERATOR = (
-  FUNCTION = eql_v3_internal.eq,
+  FUNCTION = eql_v3.eq,
   LEFTARG = eql_v3.float4_eq, RIGHTARG = jsonb,
   COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 
 CREATE OPERATOR = (
-  FUNCTION = eql_v3_internal.eq,
+  FUNCTION = eql_v3.eq,
   LEFTARG = jsonb, RIGHTARG = eql_v3.float4_eq,
   COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 
 CREATE OPERATOR <> (
-  FUNCTION = eql_v3_internal.neq,
+  FUNCTION = eql_v3.neq,
   LEFTARG = eql_v3.float4_eq, RIGHTARG = eql_v3.float4_eq,
   COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 
 CREATE OPERATOR <> (
-  FUNCTION = eql_v3_internal.neq,
+  FUNCTION = eql_v3.neq,
   LEFTARG = eql_v3.float4_eq, RIGHTARG = jsonb,
   COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 
 CREATE OPERATOR <> (
-  FUNCTION = eql_v3_internal.neq,
+  FUNCTION = eql_v3.neq,
   LEFTARG = jsonb, RIGHTARG = eql_v3.float4_eq,
   COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );

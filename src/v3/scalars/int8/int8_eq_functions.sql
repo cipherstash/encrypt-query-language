@@ -19,7 +19,7 @@ AS $$ SELECT eql_v3_internal.hmac_256(a::jsonb) $$;
 --! @param a eql_v3.int8_eq
 --! @param b eql_v3.int8_eq
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.eq(a eql_v3.int8_eq, b eql_v3.int8_eq)
+CREATE FUNCTION eql_v3.eq(a eql_v3.int8_eq, b eql_v3.int8_eq)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b) $$;
 
@@ -27,7 +27,7 @@ AS $$ SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b) $$;
 --! @param a eql_v3.int8_eq
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.eq(a eql_v3.int8_eq, b jsonb)
+CREATE FUNCTION eql_v3.eq(a eql_v3.int8_eq, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b::eql_v3.int8_eq) $$;
 
@@ -35,7 +35,7 @@ AS $$ SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b::eql_v3.int8_eq) $$;
 --! @param a jsonb
 --! @param b eql_v3.int8_eq
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.eq(a jsonb, b eql_v3.int8_eq)
+CREATE FUNCTION eql_v3.eq(a jsonb, b eql_v3.int8_eq)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a::eql_v3.int8_eq) = eql_v3.eq_term(b) $$;
 
@@ -43,7 +43,7 @@ AS $$ SELECT eql_v3.eq_term(a::eql_v3.int8_eq) = eql_v3.eq_term(b) $$;
 --! @param a eql_v3.int8_eq
 --! @param b eql_v3.int8_eq
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.neq(a eql_v3.int8_eq, b eql_v3.int8_eq)
+CREATE FUNCTION eql_v3.neq(a eql_v3.int8_eq, b eql_v3.int8_eq)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b) $$;
 
@@ -51,7 +51,7 @@ AS $$ SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b) $$;
 --! @param a eql_v3.int8_eq
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.neq(a eql_v3.int8_eq, b jsonb)
+CREATE FUNCTION eql_v3.neq(a eql_v3.int8_eq, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b::eql_v3.int8_eq) $$;
 
@@ -59,7 +59,7 @@ AS $$ SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b::eql_v3.int8_eq) $$;
 --! @param a jsonb
 --! @param b eql_v3.int8_eq
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.neq(a jsonb, b eql_v3.int8_eq)
+CREATE FUNCTION eql_v3.neq(a jsonb, b eql_v3.int8_eq)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a::eql_v3.int8_eq) <> eql_v3.eq_term(b) $$;
 
