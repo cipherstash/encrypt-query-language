@@ -6,6 +6,6 @@
  * domain, so it serves equality too. The block count is width-agnostic on the
  * wire (8 for the int scalars, 12 for timestamp, 14 for numeric) — the
  * array just carries more block strings. SQL-side constructor:
- * `eql_v3.ore_block_256`.
+ * `eql_v3_internal.ore_block_256`.
  */
 export type OreBlock256 = Array<string>;
