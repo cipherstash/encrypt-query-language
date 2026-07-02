@@ -180,11 +180,15 @@ fn schemas_are_strict() {
 /// index capability is structural, not a flat `Term` list), so the scalar gate
 /// `schema_required_keys_match_catalog_terms` cannot cover them and skips the
 /// family. This pins the published jsonb schemas' `required` sets against the
-/// hand-written SQL CHECK contract in `src/v3/jsonb/types.sql` — the one link
-/// (SQL CHECK ↔ published JSON Schema) that otherwise has no structural test.
+/// SteVec wire contract — the one link (wire ↔ published JSON Schema) that
+/// otherwise has no structural test.
 ///
-/// KEEP IN SYNC with `is_valid_ste_vec_{document,entry,query}_payload`:
-/// - `eql_v3.json`      requires `v` `i` `sv`               (document)
+/// KEEP IN SYNC with the canonical `SteVecPayload`
+/// (`eql-payload-v2.3.schema.json`) and `is_valid_ste_vec_{document,entry,query}_payload`:
+/// - `eql_v3.json`      requires `v` `k` `i` `sv`           (document; `k` = "sv"
+///   form discriminator, required by the canonical SteVecPayload and carried on
+///   every real payload — the SQL CHECK is laxer and only mandates `v`/`i`/`sv`,
+///   but the binding models the real wire, which always carries `k`)
 /// - `eql_v3.jsonb_entry` requires `s` `c` + exactly one of `hm` XOR `oc`
 /// - `eql_v3.jsonb_query`  requires `sv`; each element `s` + `hm` XOR `oc`, no `c`
 #[test]
@@ -209,12 +213,13 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
     };
     let set = |keys: &[&str]| -> BTreeSet<String> { keys.iter().map(|s| s.to_string()).collect() };
 
-    // Document: {v, i, sv}. No root `c` (a document is not itself a ciphertext).
+    // Document: {v, k, i, sv}. No root `c` (a document is not itself a
+    // ciphertext); `k` is the "sv" form discriminator (SteVecForm-pinned).
     let doc = schema_of("json");
     assert_eq!(
         required(&doc, "/required", "json"),
-        set(&["v", "i", "sv"]),
-        "eql_v3.json required keys must match is_valid_ste_vec_document_payload"
+        set(&["v", "k", "i", "sv"]),
+        "eql_v3.json required keys must match the SteVec document wire contract"
     );
 
     // Entry: {s, c} + hm XOR oc. The XOR is expressed as an untagged `anyOf`

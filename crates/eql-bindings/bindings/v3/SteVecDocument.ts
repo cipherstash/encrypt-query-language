@@ -2,9 +2,11 @@
 import type { Identifier } from "./Identifier";
 import type { SchemaVersion } from "./SchemaVersion";
 import type { SteVecEntry } from "./SteVecEntry";
+import type { SteVecForm } from "./SteVecForm";
 
 /**
- * `eql_v3.json` — a SteVec encrypted-JSONB document (`{v, i, sv:[entry]}`, no
- * root ciphertext). Strict.
+ * `eql_v3.json` — a SteVec encrypted-JSONB document (`{v, k, i, sv:[entry]}`,
+ * no root ciphertext). Strict. `k` is the `"sv"` form discriminator (see
+ * [`SteVecForm`]) — carried on the real wire, so the strict struct models it.
  */
-export type SteVecDocument = { v: SchemaVersion, i: Identifier, sv: Array<SteVecEntry>, };
+export type SteVecDocument = { v: SchemaVersion, k: SteVecForm, i: Identifier, sv: Array<SteVecEntry>, };

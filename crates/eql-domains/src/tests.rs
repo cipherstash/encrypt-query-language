@@ -1344,11 +1344,10 @@ mod invariant_tests {
 mod shape_tests {
     #[test]
     fn shape_and_terms_are_consistent() {
-        use crate::{Shape, CATALOG, JSONB};
-        // Check both the live catalog AND the not-yet-catalogued JSONB const, so
-        // the invariant is pinned before jsonb joins CATALOG.
-        let families = CATALOG.iter().chain(std::iter::once(&JSONB));
-        for f in families {
+        use crate::{Shape, CATALOG};
+        // jsonb is now in CATALOG (post-flip), so iterating CATALOG covers it —
+        // no separate chain of the JSONB const needed.
+        for f in CATALOG {
             for d in f.domains {
                 let scalar = matches!(d.shape, Shape::Scalar);
                 // Non-scalar ⇒ empty terms; non-empty terms ⇒ scalar.

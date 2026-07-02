@@ -292,8 +292,14 @@ fn timestamp_round_trips_and_enforces_term_capabilities() {
 fn stevec_document_round_trips_and_enforces_envelope() {
     use eql_bindings::v3::jsonb::SteVecDocument;
     use eql_bindings::v3::DomainType;
+    // The real cipherstash SteVec document envelope carries the `k` form
+    // discriminator (`"sv"`), required by the canonical eql-payload-v2.3
+    // `SteVecPayload` (`required: [v,k,i,sv]`) and emitted on every real payload.
+    // The document struct is strict, so it must MODEL `k` — omitting it would
+    // reject the real wire (the bug this test's real-crypto sibling caught).
     let wire = json!({
         "v": 2,
+        "k": "sv",
         "i": { "t": "users", "c": "profile" },
         "sv": [
             { "s": "sel_root", "c": "ct_root", "hm": "deadbeef" },
@@ -304,8 +310,8 @@ fn stevec_document_round_trips_and_enforces_envelope() {
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
     assert_eq!(SteVecDocument::sql_domain_static(), "eql_v3.json");
 
-    // Envelope negatives (parity with the scalar int4 tests).
-    for missing in ["v", "i", "sv"] {
+    // Envelope negatives (parity with the scalar int4 tests) — now including `k`.
+    for missing in ["v", "k", "i", "sv"] {
         let mut w = wire.clone();
         w.as_object_mut().unwrap().remove(missing);
         assert!(
@@ -317,6 +323,14 @@ fn stevec_document_round_trips_and_enforces_envelope() {
     let mut wrong_v = wire.clone();
     wrong_v["v"] = json!(3);
     assert!(serde_json::from_value::<SteVecDocument>(wrong_v).is_err());
+    // Wrong form discriminator: `k` is pinned to "sv" (like `v` is pinned to 2),
+    // so a scalar-ciphertext (`k:"ct"`) payload can't be read back as a document.
+    let mut wrong_k = wire.clone();
+    wrong_k["k"] = json!("ct");
+    assert!(
+        serde_json::from_value::<SteVecDocument>(wrong_k).is_err(),
+        "k other than \"sv\" must fail"
+    );
     // Unknown top-level key (deny_unknown_fields; no flatten on the document).
     let mut extra = wire.clone();
     extra
@@ -391,11 +405,12 @@ fn stevec_query_round_trips() {
 
 #[test]
 fn stevec_document_and_query_schemas_are_strict() {
-    use eql_bindings::v3::jsonb::{SteVecDocument, SteVecQuery};
+    use eql_bindings::v3::jsonb::{SteVecDocument, SteVecForm, SteVecQuery};
     use eql_bindings::v3::DomainType;
     use eql_bindings::{Identifier, SchemaVersion};
     let doc = SteVecDocument {
         v: SchemaVersion::CURRENT,
+        k: SteVecForm::SV,
         i: Identifier {
             t: "x".into(),
             c: "y".into(),
@@ -412,6 +427,12 @@ fn stevec_document_and_query_schemas_are_strict() {
         sdoc.pointer("/$defs/SchemaVersion/const"),
         Some(&json!(eql_bindings::EQL_SCHEMA_VERSION))
     );
+    // `k` is pinned to the const "sv" via SteVecForm, exactly like `v`/SchemaVersion.
+    assert_eq!(
+        sdoc.pointer("/properties/k/$ref"),
+        Some(&json!("#/$defs/SteVecForm"))
+    );
+    assert_eq!(sdoc.pointer("/$defs/SteVecForm/const"), Some(&json!("sv")));
     let q = SteVecQuery { sv: vec![] };
     let sq = serde_json::to_value(q.schema()).unwrap();
     assert_eq!(sq.pointer("/additionalProperties"), Some(&json!(false)));
@@ -483,7 +504,9 @@ fn stevec_ts_exports_have_expected_shape() {
     );
     let document = export_line("SteVecDocument.ts", "SteVecDocument");
     assert!(
-        document.contains("{ v: SchemaVersion, i: Identifier, sv: Array<SteVecEntry>, }"),
-        "SteVecDocument.ts field order must be v, i, sv, got: {document}"
+        document.contains(
+            "{ v: SchemaVersion, k: SteVecForm, i: Identifier, sv: Array<SteVecEntry>, }"
+        ),
+        "SteVecDocument.ts field order must be v, k, i, sv, got: {document}"
     );
 }

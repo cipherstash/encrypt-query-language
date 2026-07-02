@@ -43,6 +43,19 @@
 //! different: its document/root shape has no root `c`, its entries flatten a
 //! term enum, and only the flatten-free structs can be strict.
 //!
+//! **The `k` form discriminator, and why the flat-scalar structs omit it.** The
+//! canonical EQL payload envelope (`eql-payload-v2.3.schema.json`) carries a `k`
+//! form discriminator: `"ct"` for the scalar-ciphertext form, `"sv"` for the
+//! STE-vec form. It is **optional on the scalar (`ct`) form** — the canonical
+//! `EncryptedPayload` requires only `v`/`c`/`i`, and both the schema and the SQL
+//! CHECKs discriminate structurally (`c`-vs-`sv` presence), not on `k`. So the
+//! flat-scalar structs are deliberately `{v,i,c,+terms}` with no `k` field —
+//! matching the scalar CHECK exactly. (Note: `eql_v3` never *reads* `k` — the
+//! typed domain is the discriminator. If a producer emitted `k:"ct"` on a scalar
+//! payload, these strict structs would reject it; no test currently parses real
+//! scalar ciphertext into the bindings, so that path is unverified.) The one
+//! place `k` is modelled is the SteVec **document** — see the `jsonb` note below.
+//!
 //! ## Why there is no discriminated enum
 //!
 //! Cross-token: impossible — an `int4_eq` and an `int8_eq` payload are
@@ -92,6 +105,17 @@
 //! domain CHECKs (`is_valid_ste_vec_*_payload`), not client-side. Only the two
 //! flatten-free structs — `SteVecDocument` and `SteVecQuery` — are
 //! `#[serde(deny_unknown_fields)]`.
+//!
+//! **The document carries the `k:"sv"` form discriminator.** Unlike the scalar
+//! form (where `k` is optional — see above), the canonical `SteVecPayload`
+//! *requires* `k` (`required: [v,k,i,sv]`, `const "sv"`) and cipherstash-client
+//! emits it on every real SteVec document. Because `SteVecDocument` is strict
+//! (`deny_unknown_fields`), it MUST model `k` or it rejects the real wire — so it
+//! carries a [`jsonb::SteVecForm`] field pinned to `"sv"`, exactly as
+//! `SchemaVersion` pins `v`. `SteVecQuery` needs no `k`: it is a locally-built
+//! `{sv:[…]}` containment needle (`eql_v3.to_ste_vec_query`), not a stored
+//! envelope. `eql_v3` itself never reads `k`; it is passthrough form metadata
+//! that the document preserves on round-trip.
 
 pub mod bool;
 pub mod date;

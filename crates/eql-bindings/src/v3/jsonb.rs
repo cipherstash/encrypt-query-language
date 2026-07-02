@@ -15,13 +15,77 @@ use crate::v3::terms::{Ciphertext, Hmac256, OreCllw, Selector};
 use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
 
-/// `eql_v3.json` — a SteVec encrypted-JSONB document (`{v, i, sv:[entry]}`, no
-/// root ciphertext). Strict.
+/// The `k` envelope key — the EQL payload **form discriminator**, always the
+/// literal `"sv"` for an encrypted-JSONB document.
+///
+/// `k` distinguishes the payload forms in the canonical wire contract (`"ct"` =
+/// scalar ciphertext, `"sv"` = STE-vec). `eql_v3` itself does not consume `k`
+/// (the typed domain + the structural `c`-vs-`sv` shape already discriminate,
+/// and no `eql_v3` SQL reads it), but the canonical `SteVecPayload`
+/// (`eql-payload-v2.3.schema.json`, `required: [v,k,i,sv]`) mandates it and
+/// cipherstash-client emits it on every SteVec document — so the strict document
+/// struct must model it or it rejects the real wire.
+///
+/// Pinned exactly like [`SchemaVersion`] pins `v`: deserialization rejects any
+/// value other than `"sv"`, so a scalar (`k:"ct"`) payload cannot be read back
+/// as a document. The inner value is private; the only constructible instance is
+/// [`SteVecForm::SV`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, TS)]
+#[ts(export, export_to = "v3/")]
+pub struct SteVecForm(#[ts(type = "\"sv\"")] &'static str);
+
+impl SteVecForm {
+    /// The only valid form for a document: the STE-vec discriminator `"sv"`.
+    pub const SV: Self = Self("sv");
+}
+
+impl Default for SteVecForm {
+    fn default() -> Self {
+        Self::SV
+    }
+}
+
+impl<'de> Deserialize<'de> for SteVecForm {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let k = String::deserialize(deserializer)?;
+        if k == "sv" {
+            Ok(Self::SV)
+        } else {
+            Err(serde::de::Error::custom(format!(
+                "unsupported SteVec form discriminator {k:?} (expected \"sv\")"
+            )))
+        }
+    }
+}
+
+/// Manual schema: pins `k` to the literal `"sv"` (`const`), mirroring the
+/// `SchemaVersion` schema — the derive would emit an unconstrained string.
+impl JsonSchema for SteVecForm {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "SteVecForm".into()
+    }
+
+    fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::json_schema!({
+            "type": "string",
+            "const": "sv",
+            "description": "The `k` envelope form discriminator — always `\"sv\"` for a SteVec document.",
+        })
+    }
+}
+
+/// `eql_v3.json` — a SteVec encrypted-JSONB document (`{v, k, i, sv:[entry]}`,
+/// no root ciphertext). Strict. `k` is the `"sv"` form discriminator (see
+/// [`SteVecForm`]) — carried on the real wire, so the strict struct models it.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct SteVecDocument {
     pub v: SchemaVersion,
+    pub k: SteVecForm,
     pub i: Identifier,
     pub sv: Vec<SteVecEntry>,
 }

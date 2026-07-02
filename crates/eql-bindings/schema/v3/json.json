@@ -85,15 +85,23 @@
         "c"
       ],
       "type": "object"
+    },
+    "SteVecForm": {
+      "const": "sv",
+      "description": "The `k` envelope form discriminator — always `\"sv\"` for a SteVec document.",
+      "type": "string"
     }
   },
   "$id": "https://schemas.cipherstash.com/eql/v3/json.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "`eql_v3.json` — a SteVec encrypted-JSONB document (`{v, i, sv:[entry]}`, no\nroot ciphertext). Strict.",
+  "description": "`eql_v3.json` — a SteVec encrypted-JSONB document (`{v, k, i, sv:[entry]}`,\nno root ciphertext). Strict. `k` is the `\"sv\"` form discriminator (see\n[`SteVecForm`]) — carried on the real wire, so the strict struct models it.",
   "properties": {
     "i": {
       "$ref": "#/$defs/Identifier"
+    },
+    "k": {
+      "$ref": "#/$defs/SteVecForm"
     },
     "sv": {
       "items": {
@@ -107,6 +115,7 @@
   },
   "required": [
     "v",
+    "k",
     "i",
     "sv"
   ],
