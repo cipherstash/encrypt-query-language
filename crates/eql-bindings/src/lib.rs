@@ -7,15 +7,21 @@
 //! these definitions — run `cargo test`, see `bindings/v3/` and
 //! `schema/v3/`. The Rust types are the contract.
 //!
-//! ts-rs rule (learned from the original spike): ts-rs silently drops a
-//! serde attribute it cannot parse, so keep field-level serde attributes
-//! out of these types — which the wire rule below already demands.
+//! ts-rs rule for the generated flat-scalar payload structs (learned from the
+//! original spike): ts-rs silently drops a serde attribute it cannot parse, so
+//! keep field-level serde attributes out of generated scalar structs — which
+//! the flat-scalar wire rule below already demands. The hand-written SteVec
+//! `jsonb` structs are the exception: they deliberately use serde `flatten`,
+//! `default`, and `skip_serializing_if` because that wire shape is not
+//! derivable from the scalar catalog.
 //!
 //! The [`v3`] module holds the `eql_v3` encrypted-domain types: one struct
 //! per SQL domain (`eql_v3.int4_eq`, `eql_v3.text_match`, …),
 //! *capability-encoded* — index terms are required fields, never `Option`.
-//! It mirrors `eql-domains::CATALOG` 1:1, enforced by
-//! `tests/catalog_parity.rs`.
+//! The generated flat-scalar payload structs mirror the scalar subset of
+//! `eql-domains::CATALOG` 1:1, enforced by `tests/catalog_parity.rs`; the
+//! hand-written SteVec `jsonb` structs are still listed in the generated
+//! inventory so the full `v3::all()` surface remains catalog-ordered.
 //!
 //! Wire rule: **field names ARE wire names** — no `#[serde(rename)]`
 //! anywhere. The struct definition reads exactly like the JSON payload.

@@ -15,16 +15,17 @@
 //! field names are unchanged from v2 (`hm`/`ob`/`bf`; the purpose-named
 //! rename in the payload-scheme-discipline RFC is deferred).
 //!
-//! ## Shape of every payload
+//! ## Shape of every flat scalar payload
 //!
-//! Envelope (required by every domain CHECK, mirroring `ENVELOPE_KEYS` in
-//! `eql-codegen/src/consts.rs`): `v`, `i`, `c`. Then the domain's required
-//! term keys — `hm` for `_eq`, `ob` for `_ord`/`_ord_ore`, `bf` for
-//! `_match`, none for storage-only. `Option` does not appear in this
-//! module: the capability **is** the type identity. Hold a
-//! [`int4::Int4Eq`] and `hm` is present, guaranteed by the Rust type and
-//! (SQL-side) by the domain CHECK. A missing term key is a deserialization
-//! error — the Rust analogue of the CHECK constraint.
+//! For the generated flat-scalar families, every payload has the shared envelope
+//! keys (required by every scalar domain CHECK, mirroring `ENVELOPE_KEYS` in
+//! `eql-domains`): `v`, `i`, `c`. Then the domain's required term keys — `hm`
+//! for `_eq`, `ob` for `_ord`/`_ord_ore`, `bf` for `_match`, none for
+//! storage-only. `Option` does not appear in the generated scalar structs: the
+//! capability **is** the type identity. Hold a [`int4::Int4Eq`] and `hm` is
+//! present, guaranteed by the Rust type and (SQL-side) by the domain CHECK. A
+//! missing term key is a deserialization error — the Rust analogue of the CHECK
+//! constraint.
 //!
 //! One exception to "`ob` for `_ord`": `text`'s ordered domains carry **both**
 //! `hm` and `ob` (`text_ord`, `text_ord_ore`, `text_search`), where the non-text
@@ -33,22 +34,30 @@
 //! lossless, so equality needs the HMAC. The generated struct doc surfaces this
 //! structurally — its required-keys line lists `hm` `ob` rather than just `ob`.
 //!
-//! The types are also **strict**: every struct is
+//! The generated flat-scalar types are also **strict**: every scalar struct is
 //! `#[serde(deny_unknown_fields)]`, so a payload carrying keys outside the
-//! domain's set fails to deserialize rather than being silently stripped on
-//! the next serialize (a pass-through consumer must not lose data it didn't
-//! know about), and the `v` field is [`crate::SchemaVersion`], which rejects
-//! any version other than `2`.
+//! domain's set fails to deserialize rather than being silently stripped on the
+//! next serialize (a pass-through consumer must not lose data it didn't know
+//! about), and the `v` field is [`crate::SchemaVersion`], which rejects any
+//! version other than `2`. The SteVec `jsonb` family below is structurally
+//! different: its document/root shape has no root `c`, its entries flatten a
+//! term enum, and only the flatten-free structs can be strict.
 //!
 //! ## Why there is no discriminated enum
 //!
 //! Cross-token: impossible — an `int4_eq` and an `int8_eq` payload are
 //! byte-identical on the wire (`v`/`i`/`c`/`hm`); nothing discriminates them.
-//! Per-token: deliberately omitted — an untagged enum over a token's domains
-//! would discriminate by key-sniffing, the exact `v2_3::SteVecTerm` failure
-//! mode this tier exists to retire, and `_ord` vs `_ord_ore` are identical
-//! shapes that no sniffing can separate. Consumers read from a typed column
-//! and already know the domain.
+//! Per-token: for the FLAT SCALAR families it is deliberately omitted — an
+//! untagged enum over a token's domains would discriminate by key-sniffing, and
+//! `_ord` vs `_ord_ore` are identical shapes that no sniffing can separate.
+//! Consumers read from a typed column and already know the domain.
+//!
+//! The SteVec `jsonb` family is the ONE principled exception: a single encrypted
+//! document legitimately mixes `hm` leaves (bool / root) and `oc` leaves
+//! (string / number) in one `sv` array, so `SteVecEntry` must hold either term.
+//! There the untagged [`jsonb::SteVecTerm`] (`{hm} | {oc}`) is inherent to the
+//! wire, not a sniffing workaround — the "per-domain typing is possible"
+//! reasoning above simply does not apply to a heterogeneous `sv` array.
 //!
 //! ## Per-family caller-facing notes
 //!
@@ -70,6 +79,19 @@
 //! carries no index term: a two-value column has so little cardinality that any
 //! searchable index (even HMAC equality) would trivially leak the plaintext
 //! distribution. The payload is `{v,i,c}` only and every operator is blocked.
+//!
+//! **`jsonb` (SteVec) is the one place `Option` and lax serde appear.**
+//! `SteVecEntry.a` is `Option<bool>` — the sv-array-membership marker, absent
+//! for non-array leaves — the sole `Option` in this module. `SteVecEntry` and
+//! `SteVecQueryEntry` both carry a `#[serde(flatten)] SteVecTerm`, and serde
+//! silently disables `#[serde(deny_unknown_fields)]` on any struct with a
+//! flattened field — so these two structs are NECESSARILY lax: they accept
+//! arbitrary extra keys, which is exactly what lets a `->`-returned entry carry
+//! the root `i`/`v` merged in. Strictness for the query/entry contract (e.g.
+//! "a query element carries no ciphertext `c`") is therefore enforced by the SQL
+//! domain CHECKs (`is_valid_ste_vec_*_payload`), not client-side. Only the two
+//! flatten-free structs — `SteVecDocument` and `SteVecQuery` — are
+//! `#[serde(deny_unknown_fields)]`.
 
 pub mod bool;
 pub mod date;

@@ -28,6 +28,20 @@ pub struct Ciphertext(pub String);
 #[ts(export, export_to = "v3/")]
 pub struct Hmac256(pub String);
 
+/// CLLW-ORE ordered term — the `oc` wire key of a SteVec entry. Backs entry
+/// ordering (`<` `<=` `>` `>=`) and equality on ordered leaves. SQL-side
+/// constructor: `eql_v3.ore_cllw`. A SteVec entry carries exactly one of `hm`
+/// (equality) XOR `oc` (ordering) — enforced by the SQL domain CHECK.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+pub struct OreCllw(pub String);
+
+/// A SteVec selector — the `s` wire key. Addresses a JSON path leaf within an
+/// encrypted document (`eql_v3.json`); present on every entry and query element.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+pub struct Selector(pub String);
+
 /// Block-ORE order term — the `ob` wire key. Backs the `_ord` / `_ord_ore`
 /// domains (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's
 /// domain, so it serves equality too. The block count is width-agnostic on the
@@ -98,6 +112,18 @@ impl From<Vec<String>> for OreBlock256 {
 
 impl From<Vec<i16>> for BloomFilter {
     fn from(value: Vec<i16>) -> Self {
+        Self(value)
+    }
+}
+
+impl From<String> for OreCllw {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl From<String> for Selector {
+    fn from(value: String) -> Self {
         Self(value)
     }
 }
