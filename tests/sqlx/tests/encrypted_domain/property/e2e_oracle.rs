@@ -8,7 +8,7 @@
 //! in one batched ZeroKMS call, then runs the all-pairs oracle.
 
 use anyhow::Result;
-use eql_tests::fixtures::cipherstash::{column_config_for, encrypt_store};
+use eql_tests::fixtures::cipherstash::encrypt_store;
 use eql_tests::fixtures::eql_plaintext::EqlPlaintext;
 use eql_tests::fixtures::index_kind::IndexKind;
 use eql_tests::property::{
@@ -23,16 +23,20 @@ use sqlx::PgPool;
 /// Encrypt a batch of plaintext values into `(plaintext, payload_json)` rows
 /// via the existing fixture oracle. One ZeroKMS round trip for the whole batch.
 /// The EQL cast is the type's own `EqlPlaintext::CAST` — never passed in, so it
-/// cannot drift from `T`.
+/// cannot drift from `T`. `encrypt_store` returns v3-envelope payloads
+/// (converted via eql_bindings::from_v2), so the oracle's domain casts
+/// satisfy the `v = '3'` CHECKs.
 async fn encrypt_rows<T>(pool_table: &str, values: &[T]) -> Result<Vec<Row<T>>>
 where
     T: ScalarType + EqlPlaintext + Clone,
 {
-    let config = column_config_for(
+    let payloads = encrypt_store(
+        pool_table,
+        "payload",
+        values,
         &[IndexKind::Unique, IndexKind::Ore],
-        <T as EqlPlaintext>::CAST,
-    )?;
-    let payloads = encrypt_store(pool_table, "payload", values, &config).await?;
+    )
+    .await?;
     // Fail fast on a count mismatch: a silent `zip` truncation would weaken the
     // oracle (fewer pairs than intended) and hide an encrypt_store contract
     // regression. (encrypt_store already checks this, but keep it local/explicit.)
@@ -235,20 +239,18 @@ fn float4_and_float8_share_index_terms_for_the_same_value() -> Result<()> {
     // the identical f64 — any *value* difference would be a width artifact.
     let x: f32 = 2.25;
 
-    let f4_payloads = rt.block_on(async {
-        let cfg = column_config_for(
-            &[IndexKind::Unique, IndexKind::Ore],
-            <F4 as EqlPlaintext>::CAST,
-        )?;
-        encrypt_store("xwidth_f4", "payload", &[F4(x)], &cfg).await
-    })?;
-    let f8_payloads = rt.block_on(async {
-        let cfg = column_config_for(
-            &[IndexKind::Unique, IndexKind::Ore],
-            <F8 as EqlPlaintext>::CAST,
-        )?;
-        encrypt_store("xwidth_f8", "payload", &[F8(x as f64)], &cfg).await
-    })?;
+    let f4_payloads = rt.block_on(encrypt_store(
+        "xwidth_f4",
+        "payload",
+        &[F4(x)],
+        &[IndexKind::Unique, IndexKind::Ore],
+    ))?;
+    let f8_payloads = rt.block_on(encrypt_store(
+        "xwidth_f8",
+        "payload",
+        &[F8(x as f64)],
+        &[IndexKind::Unique, IndexKind::Ore],
+    ))?;
 
     // `hm` (deterministic HMAC) is byte-identical across widths — compare directly.
     let hm = |p: &serde_json::Value| -> Result<String> {

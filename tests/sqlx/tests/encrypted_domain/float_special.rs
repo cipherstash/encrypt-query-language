@@ -18,8 +18,7 @@
 //! so keep this comment pointing at the orderable-bytes canonicalization.
 
 use anyhow::Result;
-use eql_tests::fixtures::cipherstash::{column_config_for, encrypt_store};
-use eql_tests::fixtures::eql_plaintext::EqlPlaintext;
+use eql_tests::fixtures::cipherstash::encrypt_store;
 use eql_tests::fixtures::index_kind::IndexKind;
 use eql_tests::property::{connect_pool, ensure_eql_installed};
 use eql_tests::scalar_domains::F8;
@@ -28,13 +27,17 @@ use sqlx::PgPool;
 /// Encrypt one batch of f64 special values into payload JSON strings, one
 /// ZeroKMS round trip. Mirrors `e2e_oracle::encrypt_rows` but returns only the
 /// payloads (these tests key on position, not plaintext). `encrypt_store`
-/// encrypts through cipherstash-client directly — it needs no `PgPool`.
+/// encrypts through cipherstash-client directly — it needs no `PgPool` — and
+/// returns v3-envelope payloads (converted via eql_bindings::from_v2), so
+/// the casts below satisfy the `v = '3'` domain CHECKs.
 async fn encrypt_specials(values: &[F8]) -> Result<Vec<String>> {
-    let config = column_config_for(
+    let payloads = encrypt_store(
+        "float_special",
+        "payload",
+        values,
         &[IndexKind::Unique, IndexKind::Ore],
-        <F8 as EqlPlaintext>::CAST,
-    )?;
-    let payloads = encrypt_store("float_special", "payload", values, &config).await?;
+    )
+    .await?;
     Ok(payloads.into_iter().map(|p| p.to_string()).collect())
 }
 
