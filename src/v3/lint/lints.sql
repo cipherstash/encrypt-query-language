@@ -91,7 +91,7 @@ AS $$
     WHERE EXISTS (
         SELECT 1 FROM pg_type t
          WHERE t.oid IN (op.oprleft, op.oprright)
-           AND t.typnamespace = 'eql_v3'::regnamespace
+           AND t.typnamespace IN ('eql_v3'::regnamespace, 'eql_v3_internal'::regnamespace)
       )
   ),
 
@@ -132,7 +132,7 @@ AS $$
     FROM pg_catalog.pg_proc p
     JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
     JOIN pg_catalog.pg_language lang_l ON lang_l.oid = p.prolang
-    WHERE n.nspname = 'eql_v3'
+    WHERE n.nspname IN ('eql_v3', 'eql_v3_internal')
       AND (p.prosrc LIKE '%encrypted_domain_unsupported%'
         OR p.prosrc LIKE '%is not supported for%')
       AND EXISTS (
@@ -143,7 +143,7 @@ AS $$
         JOIN pg_catalog.pg_type bt ON bt.oid = dt.typbasetype
         WHERE dt.typtype = 'd'
           AND bt.typname = 'jsonb'
-          AND dn.nspname = 'eql_v3'
+          AND dn.nspname IN ('eql_v3', 'eql_v3_internal')
       )
   )
 
@@ -319,9 +319,9 @@ AS $$
   JOIN pg_catalog.pg_type bt ON bt.oid = dt.typbasetype
   JOIN pg_catalog.pg_namespace bn ON bn.oid = bt.typnamespace
   WHERE dt.typtype = 'd'
-    AND dn.nspname = 'eql_v3'
+    AND dn.nspname IN ('eql_v3', 'eql_v3_internal')
     AND bt.typtype = 'd'
-    AND bn.nspname = 'eql_v3'
+    AND bn.nspname IN ('eql_v3', 'eql_v3_internal')
 
   -- ┌─────────────────────────────────────────────────────────────────┐
   -- │ Domain opclass: an operator class declared FOR TYPE on an       │
@@ -343,7 +343,7 @@ AS $$
   JOIN pg_catalog.pg_namespace tn ON tn.oid = t.typnamespace
   JOIN pg_catalog.pg_namespace cn ON cn.oid = oc.opcnamespace
   WHERE t.typtype = 'd'
-    AND tn.nspname = 'eql_v3'
+    AND tn.nspname IN ('eql_v3', 'eql_v3_internal')
 
   ORDER BY 1, 2, 3;
 $$;
