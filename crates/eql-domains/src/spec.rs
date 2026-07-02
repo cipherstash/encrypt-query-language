@@ -86,8 +86,14 @@ impl DomainFamily {
     /// (storage + `eq`). Replaces the future `[eq_only]` marker: the domain set
     /// already carries this. The `ord_ore` twin only appears alongside `ord`, so
     /// testing `ord` suffices.
+    ///
+    /// A **flat-scalar** predicate: it describes the storage/`_eq`/`_ord` shape,
+    /// which the non-scalar SteVec `jsonb` family does not have (its ordered `oc`
+    /// capability is carried structurally, not as an `ord` domain). So it is
+    /// guarded by [`Self::is_scalar`] — a non-scalar family is never "eq-only",
+    /// even though it happens to declare no domain literally named `ord`.
     pub fn is_eq_only(&self) -> bool {
-        !self.domains.iter().any(|d| d.name == "ord")
+        self.is_scalar() && !self.domains.iter().any(|d| d.name == "ord")
     }
 
     /// True when this type is **storage-only / encryption-only**: it declares a
@@ -188,5 +194,20 @@ mod tests {
         );
         assert_eq!(JSONB.domains[1].rust_struct_name(JSONB.name), "SteVecEntry");
         assert_eq!(JSONB.domains[2].rust_struct_name(JSONB.name), "SteVecQuery");
+    }
+
+    #[test]
+    fn is_eq_only_is_false_for_the_non_scalar_jsonb_family() {
+        // `is_eq_only` describes the flat-scalar shape (storage + `_eq`, no
+        // `_ord`). The non-scalar jsonb family has no flat eq/ord concept — its
+        // ordered `oc` capability is carried structurally, not as an `ord`
+        // domain — so a bare `!any(name == "ord")` would misreport it as
+        // eq-only. It must return false. Guards the latent footgun where jsonb
+        // gets wired into the eq-only-sensitive matrix macros.
+        use crate::JSONB;
+        assert!(
+            !JSONB.is_eq_only(),
+            "the non-scalar jsonb family must not be classified eq-only"
+        );
     }
 }

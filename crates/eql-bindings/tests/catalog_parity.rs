@@ -26,11 +26,11 @@ use serde_json::{json, Value};
 #[test]
 fn schema_required_keys_match_catalog_terms() {
     let entries = v3::all();
-    for spec in CATALOG {
+    // `scalar_families()` is the DRY filter for scalar-only consumers — the
+    // SteVec jsonb domains' required keys are not envelope+terms and are pinned
+    // separately by `jsonb_schema_required_keys_match_the_sql_check_contract`.
+    for spec in eql_domains::scalar_families() {
         for domain in spec.domains {
-            if !domain.is_scalar() {
-                continue; // SteVec required-keys asserted in Task 8/9
-            }
             let name = spec.domain_name(domain);
             let entry = entries
                 .iter()
@@ -135,41 +135,132 @@ fn schema_id_is_canonical() {
 /// `types:check` would happily commit as the new baseline.
 #[test]
 fn schemas_are_strict() {
-    for entry in v3::all() {
-        let name = entry.domain();
-        let is_scalar = CATALOG
-            .iter()
-            .flat_map(|s| s.domains.iter().map(move |d| (s, d)))
-            .find(|(s, d)| s.domain_name(d) == name)
-            .map(|(_, d)| d.is_scalar())
-            .unwrap_or(true);
-        if !is_scalar {
-            continue; // SteVec strictness asserted in Task 9 (Document/Query only)
-        }
-        let schema: Value = serde_json::to_value(entry.schema())
-            .unwrap_or_else(|e| panic!("{name}: schema does not serialize: {e}"));
+    let entries = v3::all();
+    // Iterate the scalar families directly (via the DRY `scalar_families()`
+    // helper) and resolve each to its inventory entry — rather than iterating
+    // every entry and reverse-looking-up its Shape with a fail-open default.
+    // SteVec strictness (Document/Query only) is asserted in `v3_conformance.rs`.
+    for spec in eql_domains::scalar_families() {
+        for domain in spec.domains {
+            let name = spec.domain_name(domain);
+            let entry = entries
+                .iter()
+                .find(|e| e.domain() == name)
+                .unwrap_or_else(|| panic!("no domain inventory entry for {name}"));
+            let schema: Value = serde_json::to_value(entry.schema())
+                .unwrap_or_else(|e| panic!("{name}: schema does not serialize: {e}"));
 
-        assert_eq!(
-            schema.pointer("/additionalProperties"),
-            Some(&json!(false)),
-            "{name}: schema must set additionalProperties: false \
-             (struct lost #[serde(deny_unknown_fields)]?)"
-        );
-        assert_eq!(
-            schema.pointer("/$defs/Identifier/additionalProperties"),
-            Some(&json!(false)),
-            "{name}: Identifier definition must set additionalProperties: false"
-        );
-        assert_eq!(
-            schema.pointer("/properties/v/$ref"),
-            Some(&json!("#/$defs/SchemaVersion")),
-            "{name}: the v property must $ref the SchemaVersion definition \
-             (field declared as a bare integer instead of SchemaVersion?)"
-        );
-        assert_eq!(
-            schema.pointer("/$defs/SchemaVersion/const"),
-            Some(&json!(EQL_SCHEMA_VERSION)),
-            "{name}: SchemaVersion must pin const: {EQL_SCHEMA_VERSION}"
-        );
+            assert_eq!(
+                schema.pointer("/additionalProperties"),
+                Some(&json!(false)),
+                "{name}: schema must set additionalProperties: false \
+                 (struct lost #[serde(deny_unknown_fields)]?)"
+            );
+            assert_eq!(
+                schema.pointer("/$defs/Identifier/additionalProperties"),
+                Some(&json!(false)),
+                "{name}: Identifier definition must set additionalProperties: false"
+            );
+            assert_eq!(
+                schema.pointer("/properties/v/$ref"),
+                Some(&json!("#/$defs/SchemaVersion")),
+                "{name}: the v property must $ref the SchemaVersion definition \
+                 (field declared as a bare integer instead of SchemaVersion?)"
+            );
+            assert_eq!(
+                schema.pointer("/$defs/SchemaVersion/const"),
+                Some(&json!(EQL_SCHEMA_VERSION)),
+                "{name}: SchemaVersion must pin const: {EQL_SCHEMA_VERSION}"
+            );
+        }
     }
+}
+
+/// The jsonb (SteVec) drift gate: the SteVec families' `terms` are empty (their
+/// index capability is structural, not a flat `Term` list), so the scalar gate
+/// `schema_required_keys_match_catalog_terms` cannot cover them and skips the
+/// family. This pins the published jsonb schemas' `required` sets against the
+/// hand-written SQL CHECK contract in `src/v3/jsonb/types.sql` — the one link
+/// (SQL CHECK ↔ published JSON Schema) that otherwise has no structural test.
+///
+/// KEEP IN SYNC with `is_valid_ste_vec_{document,entry,query}_payload`:
+/// - `eql_v3.json`      requires `v` `i` `sv`               (document)
+/// - `eql_v3.jsonb_entry` requires `s` `c` + exactly one of `hm` XOR `oc`
+/// - `eql_v3.jsonb_query`  requires `sv`; each element `s` + `hm` XOR `oc`, no `c`
+#[test]
+fn jsonb_schema_required_keys_match_the_sql_check_contract() {
+    let entries = v3::all();
+    let schema_of = |domain: &str| -> Value {
+        let entry = entries
+            .iter()
+            .find(|e| e.domain() == domain)
+            .unwrap_or_else(|| panic!("no inventory entry for {domain}"));
+        serde_json::to_value(entry.schema())
+            .unwrap_or_else(|e| panic!("{domain}: schema does not serialize: {e}"))
+    };
+    let required = |schema: &Value, ptr: &str, ctx: &str| -> BTreeSet<String> {
+        schema
+            .pointer(ptr)
+            .and_then(|v| v.as_array())
+            .unwrap_or_else(|| panic!("{ctx}: no required array at {ptr}"))
+            .iter()
+            .map(|v| v.as_str().expect("required entry is a string").to_string())
+            .collect()
+    };
+    let set = |keys: &[&str]| -> BTreeSet<String> { keys.iter().map(|s| s.to_string()).collect() };
+
+    // Document: {v, i, sv}. No root `c` (a document is not itself a ciphertext).
+    let doc = schema_of("json");
+    assert_eq!(
+        required(&doc, "/required", "json"),
+        set(&["v", "i", "sv"]),
+        "eql_v3.json required keys must match is_valid_ste_vec_document_payload"
+    );
+
+    // Entry: {s, c} + hm XOR oc. The XOR is expressed as an untagged `anyOf`
+    // over {hm} | {oc} (serde/schemars cannot express exclusivity; the SQL CHECK
+    // owns the XOR). Assert both the base required set and that BOTH term
+    // alternatives are reachable.
+    let entry = schema_of("jsonb_entry");
+    assert_eq!(
+        required(&entry, "/required", "jsonb_entry"),
+        set(&["s", "c"]),
+        "eql_v3.jsonb_entry base required keys must be s + c"
+    );
+    let entry_alts = entry
+        .pointer("/anyOf")
+        .and_then(|v| v.as_array())
+        .expect("jsonb_entry schema must carry an anyOf term union");
+    let alt_keys: BTreeSet<String> = entry_alts
+        .iter()
+        .flat_map(|alt| required(alt, "/required", "jsonb_entry anyOf"))
+        .collect();
+    assert_eq!(
+        alt_keys,
+        set(&["hm", "oc"]),
+        "eql_v3.jsonb_entry anyOf must offer exactly the hm and oc term alternatives"
+    );
+
+    // Query: {sv}. The element (SteVecQueryEntry) requires `s` + hm XOR oc and
+    // carries NO ciphertext `c` — the "queries never carry ciphertext" rule.
+    let query = schema_of("jsonb_query");
+    assert_eq!(
+        required(&query, "/required", "jsonb_query"),
+        set(&["sv"]),
+        "eql_v3.jsonb_query required keys must be sv"
+    );
+    let elem_required = required(
+        &query,
+        "/$defs/SteVecQueryEntry/required",
+        "jsonb_query element",
+    );
+    assert!(
+        elem_required.contains("s"),
+        "jsonb_query element must require a selector s, got {elem_required:?}"
+    );
+    assert!(
+        !elem_required.contains("c"),
+        "jsonb_query element must NOT require a ciphertext c \
+         (is_valid_ste_vec_query_payload forbids it), got {elem_required:?}"
+    );
 }
