@@ -13,14 +13,14 @@ use sqlx::PgPool;
 /// Build a literal `eql_v3.int4_ord_ope` cast expression carrying the CLLW-OPE
 /// hex term `op`.
 fn int4_ope_cast(op_hex: &str) -> String {
-    format!("'{{\"v\":2,\"i\":{{}},\"c\":\"x\",\"op\":\"{op_hex}\"}}'::jsonb::eql_v3.int4_ord_ope")
+    format!("'{{\"v\":3,\"i\":{{}},\"c\":\"x\",\"op\":\"{op_hex}\"}}'::jsonb::eql_v3.int4_ord_ope")
 }
 
 /// Build a literal `eql_v3.text_ord_ope` cast expression carrying both the
 /// exact-equality term `hm` and the CLLW-OPE hex term `op`.
 fn text_ope_cast(hm: &str, op_hex: &str) -> String {
     format!(
-        "'{{\"v\":2,\"i\":{{}},\"c\":\"x\",\"hm\":\"{hm}\",\"op\":\"{op_hex}\"}}'::jsonb::eql_v3.text_ord_ope"
+        "'{{\"v\":3,\"i\":{{}},\"c\":\"x\",\"hm\":\"{hm}\",\"op\":\"{op_hex}\"}}'::jsonb::eql_v3.text_ord_ope"
     )
 }
 
@@ -142,7 +142,7 @@ async fn ord_ope_blocks_unsupported_operators(pool: PgPool) -> anyhow::Result<()
 async fn ord_ope_check_requires_op(pool: PgPool) -> anyhow::Result<()> {
     // The domain CHECK requires the `op` key; an envelope-only payload fails
     // at the cast boundary.
-    let err = sqlx::query("SELECT '{\"v\":2,\"i\":{},\"c\":\"x\"}'::jsonb::eql_v3.int4_ord_ope")
+    let err = sqlx::query("SELECT '{\"v\":3,\"i\":{},\"c\":\"x\"}'::jsonb::eql_v3.int4_ord_ope")
         .execute(&pool)
         .await
         .unwrap_err();

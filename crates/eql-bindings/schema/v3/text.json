@@ -24,8 +24,8 @@
       "type": "object"
     },
     "SchemaVersion": {
-      "const": 2,
-      "description": "The envelope version field (`v`) — always exactly `2` on the wire.",
+      "const": 3,
+      "description": "The envelope version field (`v`) — always exactly `3` on the wire.",
       "type": "integer"
     }
   },

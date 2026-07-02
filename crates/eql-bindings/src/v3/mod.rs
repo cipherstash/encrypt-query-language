@@ -9,18 +9,22 @@
 //! `tests/catalog_parity.rs` and the emitted `.ts` property order by
 //! `tests/ts_property_order.rs`.
 //!
-//! **Versioning.** "v3" is the SQL schema generation (`eql_v3.*` domains).
-//! The JSON envelope version is still `v: 2` ([`crate::EQL_SCHEMA_VERSION`]) —
-//! every generated domain CHECK asserts `VALUE->>'v' = '2'`, and the wire
-//! field names are unchanged from v2 (`hm`/`ob`/`bf`; the purpose-named
-//! rename in the payload-scheme-discipline RFC is deferred).
+//! **Versioning.** "v3" is the SQL schema generation (`eql_v3.*` domains),
+//! and the v3 tier now carries the matching JSON envelope version `v: 3`
+//! ([`crate::EQL_SCHEMA_VERSION`]) — every generated domain CHECK asserts
+//! `VALUE->>'v' = '3'`. The wire field names are unchanged from v2
+//! (`hm`/`ob`/`bf`, plus the new `op`; the purpose-named rename in the
+//! payload-scheme-discipline RFC is deferred). The legacy `eql_v2` wire
+//! (documented by `docs/reference/schema/eql-payload-v2.*.schema.json`)
+//! stays `v: 2`.
 //!
 //! ## Shape of every flat scalar payload
 //!
 //! For the generated flat-scalar families, every payload has the shared envelope
 //! keys (required by every scalar domain CHECK, mirroring `ENVELOPE_KEYS` in
 //! `eql-domains`): `v`, `i`, `c`. Then the domain's required term keys — `hm`
-//! for `_eq`, `ob` for `_ord`/`_ord_ore`, `bf` for `_match`, none for
+//! for `_eq`, `ob` for `_ord`/`_ord_ore`, `op` for `_ord_ope`, `bf` for
+//! `_match`, none for
 //! storage-only. `Option` does not appear in the generated scalar structs: the
 //! capability **is** the type identity. Hold a [`int4::Int4Eq`] and `hm` is
 //! present, guaranteed by the Rust type and (SQL-side) by the domain CHECK. A
@@ -28,18 +32,20 @@
 //! constraint.
 //!
 //! One exception to "`ob` for `_ord`": `text`'s ordered domains carry **both**
-//! `hm` and `ob` (`text_ord`, `text_ord_ore`, `text_search`), where the non-text
-//! ordered domains carry `ob` alone. Text routes `=`/`<>` through `hm` rather
-//! than the ORE term because lexicographic ORE over text is not equality-
-//! lossless, so equality needs the HMAC. The generated struct doc surfaces this
-//! structurally — its required-keys line lists `hm` `ob` rather than just `ob`.
+//! `hm` and the ordering term (`text_ord`/`text_ord_ore`/`text_search` carry
+//! `hm` + `ob`; `text_ord_ope` carries `hm` + `op`), where the non-text
+//! ordered domains carry the ordering term alone. Text routes `=`/`<>`
+//! through `hm` rather than the ordering term because lexicographic ORE/OPE
+//! over text is not equality-lossless, so equality needs the HMAC. The
+//! generated struct doc surfaces this structurally — its required-keys line
+//! lists `hm` `ob` (or `hm` `op`) rather than just the ordering key.
 //!
 //! The generated flat-scalar types are also **strict**: every scalar struct is
 //! `#[serde(deny_unknown_fields)]`, so a payload carrying keys outside the
 //! domain's set fails to deserialize rather than being silently stripped on the
 //! next serialize (a pass-through consumer must not lose data it didn't know
 //! about), and the `v` field is [`crate::SchemaVersion`], which rejects any
-//! version other than `2`. The SteVec `jsonb` family below is structurally
+//! version other than `3`. The SteVec `jsonb` family below is structurally
 //! different: its document/root shape has no root `c`, its entries flatten a
 //! term enum, and only the flatten-free structs can be strict.
 //!

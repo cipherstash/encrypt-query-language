@@ -10,15 +10,15 @@ use sqlx::PgPool;
 /// semantics directly on `bf` arrays — deterministic, with no encryption and no
 /// bloom false positives to reason about.
 fn match_cast(bf: &str) -> String {
-    format!("'{{\"v\":\"2\",\"i\":{{}},\"c\":\"x\",\"bf\":{bf}}}'::jsonb::eql_v3.text_match")
+    format!("'{{\"v\":\"3\",\"i\":{{}},\"c\":\"x\",\"bf\":{bf}}}'::jsonb::eql_v3.text_match")
 }
 
 #[sqlx::test]
 async fn text_match_at_contains_engages(pool: PgPool) -> anyhow::Result<()> {
     // self-containment: a filter contains a subset of itself
     let hit: bool = sqlx::query_scalar(
-        "SELECT ('{\"v\":\"2\",\"i\":{},\"c\":\"x\",\"bf\":[1,2,3]}'::jsonb::eql_v3.text_match)
-              @> ('{\"v\":\"2\",\"i\":{},\"c\":\"x\",\"bf\":[2]}'::jsonb::eql_v3.text_match)",
+        "SELECT ('{\"v\":\"3\",\"i\":{},\"c\":\"x\",\"bf\":[1,2,3]}'::jsonb::eql_v3.text_match)
+              @> ('{\"v\":\"3\",\"i\":{},\"c\":\"x\",\"bf\":[2]}'::jsonb::eql_v3.text_match)",
     )
     .fetch_one(&pool)
     .await?;
@@ -29,8 +29,8 @@ async fn text_match_at_contains_engages(pool: PgPool) -> anyhow::Result<()> {
 #[sqlx::test]
 async fn text_match_eq_is_blocked(pool: PgPool) -> anyhow::Result<()> {
     let err = sqlx::query(
-        "SELECT ('{\"v\":\"2\",\"i\":{},\"c\":\"x\",\"bf\":[1]}'::jsonb::eql_v3.text_match)
-              =  ('{\"v\":\"2\",\"i\":{},\"c\":\"x\",\"bf\":[1]}'::jsonb::eql_v3.text_match)",
+        "SELECT ('{\"v\":\"3\",\"i\":{},\"c\":\"x\",\"bf\":[1]}'::jsonb::eql_v3.text_match)
+              =  ('{\"v\":\"3\",\"i\":{},\"c\":\"x\",\"bf\":[1]}'::jsonb::eql_v3.text_match)",
     )
     .execute(&pool)
     .await
@@ -50,8 +50,8 @@ async fn empty_bloom_has_empty_set_semantics(pool: PgPool) -> anyhow::Result<()>
     // literal payloads so the assertion is deterministic and independent of how
     // the encryptor renders a `bf` for a degenerate plaintext.
     const NON_EMPTY: &str =
-        "'{\"v\":\"2\",\"i\":{},\"c\":\"x\",\"bf\":[1,2,3]}'::jsonb::eql_v3.text_match";
-    const EMPTY: &str = "'{\"v\":\"2\",\"i\":{},\"c\":\"x\",\"bf\":[]}'::jsonb::eql_v3.text_match";
+        "'{\"v\":\"3\",\"i\":{},\"c\":\"x\",\"bf\":[1,2,3]}'::jsonb::eql_v3.text_match";
+    const EMPTY: &str = "'{\"v\":\"3\",\"i\":{},\"c\":\"x\",\"bf\":[]}'::jsonb::eql_v3.text_match";
 
     let everything_contains_empty: bool =
         sqlx::query_scalar(&format!("SELECT ({NON_EMPTY}) @> ({EMPTY})"))
@@ -77,7 +77,7 @@ async fn empty_bloom_has_empty_set_semantics(pool: PgPool) -> anyhow::Result<()>
 async fn match_null_propagates(pool: PgPool) -> anyhow::Result<()> {
     // `eql_v3.contains` / `eql_v3.contained_by` are STRICT, so a NULL operand
     // yields NULL (three-valued logic) rather than false or an error.
-    const BF: &str = r#"{"v":"2","i":{},"c":"x","bf":[1,2,3]}"#;
+    const BF: &str = r#"{"v":"3","i":{},"c":"x","bf":[1,2,3]}"#;
     for op in ["@>", "<@"] {
         let sql =
             format!("SELECT ($1::jsonb::eql_v3.text_match) {op} ($2::jsonb::eql_v3.text_match)");
@@ -160,7 +160,7 @@ async fn text_match_like_ilike_absent(pool: PgPool) -> anyhow::Result<()> {
     // eql_v3.text_match, so they resolve to PostgreSQL's "operator does not
     // exist" rather than an EQL blocker. Pin that they stay absent on the very
     // domain a `LIKE` user would reach for.
-    const BF: &str = r#"{"v":"2","i":{},"c":"x","bf":[1]}"#;
+    const BF: &str = r#"{"v":"3","i":{},"c":"x","bf":[1]}"#;
     for op in ["~~", "~~*"] {
         let sql = format!("SELECT $1::jsonb::eql_v3.text_match {op} $2::jsonb::eql_v3.text_match");
         eql_tests::assert_raises(
@@ -180,7 +180,7 @@ async fn text_match_payload_check_rejects_missing_bf(pool: PgPool) -> anyhow::Re
     // (src/v3/scalars/text/text_types.sql). A well-formed envelope lacking `bf`
     // must be rejected at the cast, so a match query can never silently run
     // against a payload that carries no bloom term.
-    const NO_BF: &str = r#"{"v":"2","i":{},"c":"x"}"#;
+    const NO_BF: &str = r#"{"v":"3","i":{},"c":"x"}"#;
     eql_tests::assert_raises(
         &pool,
         "SELECT $1::jsonb::eql_v3.text_match",

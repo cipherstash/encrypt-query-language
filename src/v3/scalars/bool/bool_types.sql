@@ -17,7 +17,7 @@ BEGIN
         AND VALUE ? 'v'
         AND VALUE ? 'i'
         AND VALUE ? 'c'
-        AND VALUE->>'v' = '2'
+        AND VALUE->>'v' = '3'
       );
   END IF;
 END

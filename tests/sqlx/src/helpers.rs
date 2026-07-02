@@ -15,4 +15,4 @@
 /// (Proxy-encrypted). `bf` is a `smallint[]` (bloom-filter bit positions); a
 /// small integer array satisfies the key-presence CHECK.
 pub const PLACEHOLDER_PAYLOAD: &str =
-    r#"{"v":2,"i":{"t":"t","c":"c"},"c":"sample","hm":"sample","ob":["00"],"bf":[1,2,3]}"#;
+    r#"{"v":3,"i":{"t":"t","c":"c"},"c":"sample","hm":"sample","ob":["00"],"bf":[1,2,3]}"#;

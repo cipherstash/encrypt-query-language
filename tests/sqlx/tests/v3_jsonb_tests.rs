@@ -97,7 +97,7 @@ fn oc_entry(oc_hex: &str) -> String {
 /// literals (each already a JSON object string).
 fn doc(elems: &[String]) -> String {
     format!(
-        r#"{{"i":{{"c":"col","t":"encrypted"}},"v":2,"sv":[{}]}}"#,
+        r#"{{"i":{{"c":"col","t":"encrypted"}},"v":3,"sv":[{}]}}"#,
         elems.join(",")
     )
 }
@@ -789,7 +789,7 @@ macro_rules! v3_jsonb_supported_null {
 // Swapping in a populated real-fixture document would break those assertions.
 // Crypto-exercising arms in this file use the generated `fixtures.v3_ste_vec`
 // fixture instead (see `SEL_ROOT_HM` / `root_hm_term`).
-const NN_DOC: &str = r#"{"i":{},"v":2,"sv":[]}"#;
+const NN_DOC: &str = r#"{"i":{},"v":3,"sv":[]}"#;
 
 v3_jsonb_supported_null!(
     // entry comparisons (= <> < <= > >=), NULL on each side
@@ -801,15 +801,15 @@ v3_jsonb_supported_null!(
     (entry_gt_lhs, "SELECT NULL::eql_v3.jsonb_entry > '{\"s\":\"r\",\"c\":\"x\",\"oc\":\"00\"}'::eql_v3.jsonb_entry"),
     (entry_gte_lhs, "SELECT NULL::eql_v3.jsonb_entry >= '{\"s\":\"r\",\"c\":\"x\",\"oc\":\"00\"}'::eql_v3.jsonb_entry"),
     // document containment: json @> json
-    (doc_contains_doc_lhs, "SELECT NULL::eql_v3.json @> '{\"i\":{},\"v\":2,\"sv\":[]}'::eql_v3.json"),
-    (doc_contains_doc_rhs, "SELECT '{\"i\":{},\"v\":2,\"sv\":[]}'::eql_v3.json @> NULL::eql_v3.json"),
+    (doc_contains_doc_lhs, "SELECT NULL::eql_v3.json @> '{\"i\":{},\"v\":3,\"sv\":[]}'::eql_v3.json"),
+    (doc_contains_doc_rhs, "SELECT '{\"i\":{},\"v\":3,\"sv\":[]}'::eql_v3.json @> NULL::eql_v3.json"),
     // json @> jsonb_query / json @> jsonb_entry
     (doc_contains_query_lhs, "SELECT NULL::eql_v3.json @> '{\"sv\":[]}'::eql_v3.jsonb_query"),
-    (doc_contains_query_rhs, "SELECT '{\"i\":{},\"v\":2,\"sv\":[]}'::eql_v3.json @> NULL::eql_v3.jsonb_query"),
-    (doc_contains_entry_rhs, "SELECT '{\"i\":{},\"v\":2,\"sv\":[]}'::eql_v3.json @> NULL::eql_v3.jsonb_entry"),
+    (doc_contains_query_rhs, "SELECT '{\"i\":{},\"v\":3,\"sv\":[]}'::eql_v3.json @> NULL::eql_v3.jsonb_query"),
+    (doc_contains_entry_rhs, "SELECT '{\"i\":{},\"v\":3,\"sv\":[]}'::eql_v3.json @> NULL::eql_v3.jsonb_entry"),
     // <@ reverses
-    (query_contained_lhs, "SELECT NULL::eql_v3.jsonb_query <@ '{\"i\":{},\"v\":2,\"sv\":[]}'::eql_v3.json"),
-    (entry_contained_lhs, "SELECT NULL::eql_v3.jsonb_entry <@ '{\"i\":{},\"v\":2,\"sv\":[]}'::eql_v3.json"),
+    (query_contained_lhs, "SELECT NULL::eql_v3.jsonb_query <@ '{\"i\":{},\"v\":3,\"sv\":[]}'::eql_v3.json"),
+    (entry_contained_lhs, "SELECT NULL::eql_v3.jsonb_entry <@ '{\"i\":{},\"v\":3,\"sv\":[]}'::eql_v3.json"),
 );
 
 // The `-> text` / `-> int` / `->> text` accessors return non-boolean types, so
@@ -1133,16 +1133,16 @@ v3_jsonb_payload_reject!(
     "eql_v3.json",
     [
         "[]",                                                                 // non-object
-        "{\"v\":2,\"sv\":[]}",                                                // missing i
+        "{\"v\":3,\"sv\":[]}",                                                // missing i
         "{\"i\":{},\"sv\":[]}",                                               // missing v
-        "{\"i\":{},\"v\":3,\"sv\":[]}",                                       // v != 2
-        "{\"i\":{},\"v\":2.0,\"sv\":[]}", // v renders to text '2.0', not '2'
-        "{\"i\":{},\"v\":2}",             // missing sv
-        "{\"i\":{},\"v\":2,\"sv\":{}}",   // sv not an array
-        "{\"i\":{},\"v\":2,\"sv\":[{\"s\":null,\"c\":\"y\",\"hm\":\"00\"}]}", // bad entry s
-        "{\"i\":{},\"v\":2,\"sv\":[{\"s\":\"x\",\"c\":1,\"hm\":\"00\"}]}", // bad entry c
-        "{\"i\":{},\"v\":2,\"sv\":[{\"s\":\"x\",\"c\":\"y\",\"hm\":null}]}", // bad entry hm
-        "{\"i\":{},\"v\":2,\"sv\":[{\"s\":\"x\",\"c\":\"y\",\"oc\":1}]}", // bad entry oc
+        "{\"i\":{},\"v\":2,\"sv\":[]}",   // v != 3 (the legacy 2)
+        "{\"i\":{},\"v\":3.0,\"sv\":[]}", // v renders to text '3.0', not '3'
+        "{\"i\":{},\"v\":3}",             // missing sv
+        "{\"i\":{},\"v\":3,\"sv\":{}}",   // sv not an array
+        "{\"i\":{},\"v\":3,\"sv\":[{\"s\":null,\"c\":\"y\",\"hm\":\"00\"}]}", // bad entry s
+        "{\"i\":{},\"v\":3,\"sv\":[{\"s\":\"x\",\"c\":1,\"hm\":\"00\"}]}", // bad entry c
+        "{\"i\":{},\"v\":3,\"sv\":[{\"s\":\"x\",\"c\":\"y\",\"hm\":null}]}", // bad entry hm
+        "{\"i\":{},\"v\":3,\"sv\":[{\"s\":\"x\",\"c\":\"y\",\"oc\":1}]}", // bad entry oc
     ]
 );
 
@@ -1183,7 +1183,7 @@ v3_jsonb_payload_reject!(
 #[sqlx::test]
 async fn v3_jsonb_payload_check_accepts_valid(pool: PgPool) -> anyhow::Result<()> {
     let ok_doc: bool =
-        sqlx::query_scalar("SELECT '{\"i\":{},\"v\":2,\"sv\":[]}'::eql_v3.json IS NOT NULL")
+        sqlx::query_scalar("SELECT '{\"i\":{},\"v\":3,\"sv\":[]}'::eql_v3.json IS NOT NULL")
             .fetch_one(&pool)
             .await?;
     assert!(ok_doc);
@@ -1210,7 +1210,7 @@ async fn v3_jsonb_payload_check_accepts_valid(pool: PgPool) -> anyhow::Result<()
 #[sqlx::test]
 async fn v3_jsonb_generator_envelope_shape_accepted(pool: PgPool) -> anyhow::Result<()> {
     let envelope = r#"{
-        "k":"sv","v":2,"i":{"c":"payload","t":"_fixture_v3_ste_vec"},
+        "k":"sv","v":3,"i":{"c":"payload","t":"_fixture_v3_ste_vec"},
         "sv":[
             {"s":"87042b77604cf03ab1ec9a05b5f9c2f7","c":"ct","hm":"8477cf88d9be4f92503b0d31dd575704","a":false},
             {"s":"3a114ad13d25b030f41175114347de59","c":"ct","oc":"00010203","a":false}
@@ -1234,7 +1234,7 @@ async fn v3_jsonb_generator_envelope_shape_accepted(pool: PgPool) -> anyhow::Res
 
 /// A curated array-flavoured document (`a:true`) the array functions accept.
 fn array_doc() -> String {
-    r#"{"i":{},"v":2,"a":true,"sv":[{"s":"aa","c":"x","hm":"00"},{"s":"bb","c":"y","hm":"11"}]}"#
+    r#"{"i":{},"v":3,"a":true,"sv":[{"s":"aa","c":"x","hm":"00"},{"s":"bb","c":"y","hm":"11"}]}"#
         .to_string()
 }
 
@@ -1339,7 +1339,7 @@ async fn v3_jsonb_array_length_and_elements(pool: PgPool) -> anyhow::Result<()> 
 #[sqlx::test]
 async fn v3_jsonb_array_length_non_array_raises(pool: PgPool) -> anyhow::Result<()> {
     // A document WITHOUT the `a:true` array flag is not an array.
-    let not_array = r#"{"i":{},"v":2,"sv":[{"s":"aa","c":"x","hm":"00"}]}"#;
+    let not_array = r#"{"i":{},"v":3,"sv":[{"s":"aa","c":"x","hm":"00"}]}"#;
     let sql = format!("SELECT eql_v3.jsonb_array_length('{not_array}'::eql_v3.json::jsonb)");
     eql_tests::assert_raises(&pool, &sql, &[], "non-array").await?;
 

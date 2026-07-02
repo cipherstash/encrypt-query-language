@@ -323,7 +323,7 @@ async fn direct_functions_propagate_null(pool: PgPool) -> anyhow::Result<()> {
     // STRICT: a NULL operand short-circuits the body and returns NULL, not false
     // and not an error. Covers the by-name functions (the operator path is covered
     // by text_smoke::match_null_propagates) including a mixed (domain, jsonb) form.
-    const BF: &str = r#"{"v":"2","i":{},"c":"x","bf":[1,2,3]}"#;
+    const BF: &str = r#"{"v":"3","i":{},"c":"x","bf":[1,2,3]}"#;
 
     // $1 NULL, $2 a real payload — and the reverse — across both functions, both
     // operand positions, and a mixed jsonb overload.

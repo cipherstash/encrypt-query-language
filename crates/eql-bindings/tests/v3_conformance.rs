@@ -11,7 +11,7 @@ use serde_json::json;
 #[test]
 fn int4_storage_round_trips() {
     let wire = json!({
-        "v": 2,
+        "v": 3,
         "i": { "t": "users", "c": "age" },
         "c": "mp_base85_ciphertext"
     });
@@ -23,7 +23,7 @@ fn int4_storage_round_trips() {
 #[test]
 fn int4_eq_round_trips() {
     let wire = json!({
-        "v": 2,
+        "v": 3,
         "i": { "t": "users", "c": "age" },
         "c": "mp_base85_ciphertext",
         "hm": "deadbeef"
@@ -36,7 +36,7 @@ fn int4_eq_round_trips() {
 #[test]
 fn int4_ord_round_trips() {
     let wire = json!({
-        "v": 2,
+        "v": 3,
         "i": { "t": "users", "c": "age" },
         "c": "mp_base85_ciphertext",
         "ob": ["ore_block_0", "ore_block_1"]
@@ -54,7 +54,7 @@ fn int4_ord_ope_round_trips() {
     // `_ord_ope` carries the CLLW-OPE term: `op` is a single hex string (not
     // an array like `ob`), natively bytea-sortable after hex-decode.
     let wire = json!({
-        "v": 2,
+        "v": 3,
         "i": { "t": "users", "c": "age" },
         "c": "mp_base85_ciphertext",
         "op": "00ffab"
@@ -68,7 +68,7 @@ fn int4_ord_ope_round_trips() {
 fn int4_ord_ope_rejects_missing_ope_term() {
     // Only the base fields, so the sole cause of failure is the absent `op`.
     let no_op = json!({
-        "v": 2,
+        "v": 3,
         "i": { "t": "users", "c": "age" },
         "c": "mp_base85_ciphertext"
     });
@@ -85,7 +85,7 @@ fn int4_eq_rejects_missing_hmac() {
     // not representable. This is the bug class — a search term missing its
     // index term — closed at the type boundary, before any consumer runs.
     let no_hm = json!({
-        "v": 2,
+        "v": 3,
         "i": { "t": "users", "c": "age" },
         "c": "mp_base85_ciphertext"
     });
@@ -100,7 +100,7 @@ fn rejects_missing_envelope_keys() {
     // dropping the version, identifier, or ciphertext fails at the type
     // boundary, the Rust analogue of the CHECK's NOT NULL envelope columns.
     let base = json!({
-        "v": 2,
+        "v": 3,
         "i": { "t": "users", "c": "age" },
         "c": "mp_base85_ciphertext",
         "hm": "deadbeef"
@@ -119,10 +119,10 @@ fn rejects_missing_envelope_keys() {
 #[test]
 fn rejects_wrong_envelope_version() {
     // The SchemaVersion field is the Rust analogue of the domain CHECK's
-    // `VALUE->>'v' = '2'`: any other version — including a string "2",
-    // which the CHECK's `->>` coercion would accept — fails at the type
+    // `VALUE->>'v' = '3'`: any other version — the legacy 2, and a string
+    // "3", which the CHECK's `->>` coercion would accept — fails at the type
     // boundary instead of at INSERT.
-    for v in [json!(1), json!(3), json!("2")] {
+    for v in [json!(1), json!(2), json!("3")] {
         let wire = json!({
             "v": v,
             "i": { "t": "users", "c": "age" },
@@ -140,7 +140,7 @@ fn rejects_unknown_keys() {
     // is not silently accepted-and-stripped — a pass-through consumer must
     // not lose data it didn't know about.
     let wire = json!({
-        "v": 2,
+        "v": 3,
         "i": { "t": "users", "c": "age" },
         "c": "mp_base85_ciphertext",
         "hm": "deadbeef",
@@ -160,7 +160,7 @@ fn int4_ord_rejects_missing_ore_term() {
     // This payload carries only the base fields, so the sole cause of failure
     // is the absent `ob`.
     let no_ob = json!({
-        "v": 2,
+        "v": 3,
         "i": { "t": "users", "c": "age" },
         "c": "mp_base85_ciphertext"
     });
@@ -173,7 +173,7 @@ fn text_match_round_trips_signed_bloom_filter() {
     // `bf` is signed i16 (smallint[]): filters sized above 32768 emit
     // upper-half bit positions as negative values.
     let wire = json!({
-        "v": 2,
+        "v": 3,
         "i": { "t": "users", "c": "email" },
         "c": "mp_base85_ciphertext",
         "bf": [-1, -32768, 32767, 0]
@@ -182,7 +182,7 @@ fn text_match_round_trips_signed_bloom_filter() {
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
 
     let no_bf = json!({
-        "v": 2,
+        "v": 3,
         "i": { "t": "users", "c": "email" },
         "c": "mp_base85_ciphertext"
     });
@@ -204,17 +204,17 @@ fn non_int4_tokens_round_trip_every_domain() {
     use eql_bindings::v3::{date::*, int2::*, int8::*, numeric::*, text::*};
 
     // Wire builders for the shapes the ordered tokens share.
-    let storage = |t: &str| json!({ "v": 2, "i": { "t": t, "c": "x" }, "c": "ct" });
-    let eq = |t: &str| json!({ "v": 2, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef" });
-    let ord = |t: &str| json!({ "v": 2, "i": { "t": t, "c": "x" }, "c": "ct", "ob": ["b0", "b1"] });
+    let storage = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct" });
+    let eq = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef" });
+    let ord = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct", "ob": ["b0", "b1"] });
     // `_ord_ope` carries the CLLW-OPE hex string `op` (not an array).
-    let ope = |t: &str| json!({ "v": 2, "i": { "t": t, "c": "x" }, "c": "ct", "op": "00ffab" });
+    let ope = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct", "op": "00ffab" });
     // Text routes equality through `hm`, so its ordered domains carry both `hm`
     // and the ordering term (`[Hm, Ore]` / `[Hm, Ope]`); `text_search` adds the
     // Bloom-filter match term.
-    let text_ord = |t: &str| json!({ "v": 2, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef", "ob": ["b0", "b1"] });
-    let text_ope = |t: &str| json!({ "v": 2, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef", "op": "00ffab" });
-    let text_search = |t: &str| json!({ "v": 2, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef", "ob": ["b0", "b1"], "bf": [1, 2, 3] });
+    let text_ord = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef", "ob": ["b0", "b1"] });
+    let text_ope = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef", "op": "00ffab" });
+    let text_search = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef", "ob": ["b0", "b1"], "bf": [1, 2, 3] });
 
     // Roundtrip a payload byte-for-byte, then confirm the catalog domain name.
     macro_rules! round_trip {
@@ -275,7 +275,7 @@ fn timestamp_round_trips_and_enforces_term_capabilities() {
 
     // Storage-only: envelope, no term.
     let storage = json!({
-        "v": 2,
+        "v": 3,
         "i": { "t": "events", "c": "occurred_at" },
         "c": "mp_base85_ciphertext"
     });
@@ -285,7 +285,7 @@ fn timestamp_round_trips_and_enforces_term_capabilities() {
 
     // Equality: envelope + hm.
     let with_hm = json!({
-        "v": 2,
+        "v": 3,
         "i": { "t": "events", "c": "occurred_at" },
         "c": "mp_base85_ciphertext",
         "hm": "deadbeef"
@@ -296,7 +296,7 @@ fn timestamp_round_trips_and_enforces_term_capabilities() {
 
     // Ordered: envelope + ob (a 12-block array on the wire; shape is the same).
     let with_ob = json!({
-        "v": 2,
+        "v": 3,
         "i": { "t": "events", "c": "occurred_at" },
         "c": "mp_base85_ciphertext",
         "ob": ["b0", "b1"]
@@ -313,7 +313,7 @@ fn timestamp_round_trips_and_enforces_term_capabilities() {
 
     // OPE ordered: envelope + op (a single CLLW-OPE hex string).
     let with_op = json!({
-        "v": 2,
+        "v": 3,
         "i": { "t": "events", "c": "occurred_at" },
         "c": "mp_base85_ciphertext",
         "op": "00ffab"
@@ -327,7 +327,7 @@ fn timestamp_round_trips_and_enforces_term_capabilities() {
 
     // The searchable domains cannot let their term silently become optional.
     let no_hm = json!({
-        "v": 2,
+        "v": 3,
         "i": { "t": "events", "c": "occurred_at" },
         "c": "mp_base85_ciphertext"
     });
@@ -353,7 +353,7 @@ fn stevec_document_round_trips_and_enforces_envelope() {
     // The document struct is strict, so it must MODEL `k` — omitting it would
     // reject the real wire (the bug this test's real-crypto sibling caught).
     let wire = json!({
-        "v": 2,
+        "v": 3,
         "k": "sv",
         "i": { "t": "users", "c": "profile" },
         "sv": [
@@ -374,11 +374,11 @@ fn stevec_document_round_trips_and_enforces_envelope() {
             "missing {missing} must fail"
         );
     }
-    // Wrong version.
+    // Wrong version (the legacy 2 is rejected now the tier carries v: 3).
     let mut wrong_v = wire.clone();
-    wrong_v["v"] = json!(3);
+    wrong_v["v"] = json!(2);
     assert!(serde_json::from_value::<SteVecDocument>(wrong_v).is_err());
-    // Wrong form discriminator: `k` is pinned to "sv" (like `v` is pinned to 2),
+    // Wrong form discriminator: `k` is pinned to "sv" (like `v` is pinned to 3),
     // so a scalar-ciphertext (`k:"ct"`) payload can't be read back as a document.
     let mut wrong_k = wire.clone();
     wrong_k["k"] = json!("ct");
@@ -408,7 +408,7 @@ fn stevec_entry_untagged_term_and_neither_term_rejected() {
     assert!(matches!(oc.term, SteVecTerm::OreCllw { .. }));
     // Lax: tolerates root i/v merged in by `->`.
     let merged: SteVecEntry = serde_json::from_value(
-        json!({ "s": "sel", "c": "ct", "hm": "x", "i": {"t":"a","c":"b"}, "v": 2 }),
+        json!({ "s": "sel", "c": "ct", "hm": "x", "i": {"t":"a","c":"b"}, "v": 3 }),
     )
     .unwrap();
     assert!(matches!(merged.term, SteVecTerm::Hmac { .. }));
