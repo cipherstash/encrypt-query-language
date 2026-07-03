@@ -70,7 +70,7 @@ cargo test --no-default-features --test encrypted_domain -- --list \
 
 For the **storage-only / encryption-only** shape there is a fourth committed
 snapshot, `matrix_tests_storage_only.txt`. A storage-only scalar
-(`scalar_matrix! { caps = [storage] }`, e.g. `bool`) has a single term-less
+(`scalar_matrix! { caps = [storage] }`, e.g. `boolean`) has a single term-less
 domain and **no** comparison/index/order capability, so its name set is neither
 a strip-filter subset of the ordered baseline nor a superset — it is the
 storage-domain surface arms only (sanity, blocker-raises for every comparison +
@@ -82,8 +82,8 @@ with:
 ```bash
 cd tests/sqlx
 cargo test --no-default-features --test encrypted_domain -- --list \
-  | sed -n 's/: test$//p' | grep '^scalars::bool::' \
-  | sed -e 's/^scalars::bool::/scalars::<T>::/' -e 's/_bool_/_<T>_/g' | LC_ALL=C sort > snapshots/matrix_tests_storage_only.txt
+  | sed -n 's/: test$//p' | grep '^scalars::boolean::' \
+  | sed -e 's/^scalars::boolean::/scalars::<T>::/' -e 's/_boolean_/_<T>_/g' | LC_ALL=C sort > snapshots/matrix_tests_storage_only.txt
 ```
 
 The "no per-type variation" property is preserved by design: every ordered
@@ -172,7 +172,7 @@ See `docs/reference/adding-a-scalar-encrypted-domain-type.md` §3 (matrix oracle
 `matrix_jsonb_entry_tests.txt` pins the test-name set for the jsonb SteVec-entry
 behaviour matrix (`jsonb_entry_matrix!`), whose names live under
 `jsonb_entry::…`. It is a deliberate **sibling** of the scalar matrix inventory
-above, **not** folded into it: the driver type (`JsonbEntryInt4`) is intentionally
+above, **not** folded into it: the driver type (`JsonbEntryInteger`) is intentionally
 not an `eql-domains::CATALOG` type, so it has no `scalars::<T>::` tests and no
 `eql-codegen list-types` row — hence this snapshot is checked on its own, with
 **no catalog cross-check**. The matrix reuses the scalar matrix generators to
@@ -184,8 +184,8 @@ Verify with `mise run test:matrix:inventory:jsonb_entry`. Regenerate with:
 ```bash
 cd tests/sqlx
 cargo test --no-default-features --test encrypted_domain -- --list \
-  | sed -n 's/: test$//p' | grep '^jsonb_entry::.*jsonb_entry_int4' \
-  | sed -E 's/_int4_/_<T>_/' | LC_ALL=C sort -u > snapshots/matrix_jsonb_entry_tests.txt
+  | sed -n 's/: test$//p' | grep '^jsonb_entry::.*jsonb_entry_integer' \
+  | sed -E 's/_integer_/_<T>_/' | LC_ALL=C sort -u > snapshots/matrix_jsonb_entry_tests.txt
 ```
 
 ## v3_jsonb_tests.txt
@@ -207,7 +207,7 @@ CI verifies it with `mise run test:v3-jsonb:inventory`.
 
 ## Macro expansion body snapshots (`*_expanded.rs`)
 
-`int4_expanded.rs`, `text_expanded.rs`, and `bool_expanded.rs` are a **different
+`integer_expanded.rs`, `text_expanded.rs`, and `boolean_expanded.rs` are a **different
 kind** of snapshot from the `matrix_tests*.txt` inventories above. The inventories
 pin the *set of test names*; these pin the **generated bodies** — the actual
 `cargo expand` output of the `scalar_matrix!` macro. The inventory catches a whole
@@ -219,13 +219,13 @@ because the arms emit structurally different bodies and none subsumes another:
 
 | snapshot | type | arm | unique body surface |
 |----------|------|-----|---------------------|
-| `int4_expanded.rs` | `int4` | `caps = [eq, ord]` | the `ord`/`ord_ore` btree combo carries `=` **plus** the four ordering ops on one index — proves `=` rides the ORE ordered index (the path all eight integer/temporal/float types use) |
+| `integer_expanded.rs` | `integer` | `caps = [eq, ord]` | the `ord`/`ord_ore` btree combo carries `=` **plus** the four ordering ops on one index — proves `=` rides the ORE ordered index (the path all eight integer/temporal/float types use) |
 | `text_expanded.rs` | `text` | `caps = [eq, ord, search]` | `=` split into separate `*_eqidx` combos; `_match`/`_search` bloom (`@>`/`<@`) and GIN arms |
-| `bool_expanded.rs` | `bool` | `caps = [storage]` | single term-less domain; bypasses `scalar_domain_matrix!`, calling the leaf drivers directly (every comparison/containment op is a blocker) |
+| `boolean_expanded.rs` | `boolean` | `caps = [storage]` | single term-less domain; bypasses `scalar_domain_matrix!`, calling the leaf drivers directly (every comparison/containment op is a blocker) |
 
-`text` does **not** make `int4` redundant: its `ord` btree combo omits `=` (moved
+`text` does **not** make `integer` redundant: its `ord` btree combo omits `=` (moved
 to `_eqidx`), so the "`=` rides the ORE ordered index" body exists only in the
-`int4` snapshot. The `caps = [eq]` arm has no consumer and is uncovered by design.
+`integer` snapshot. The `caps = [eq]` arm has no consumer and is uncovered by design.
 
 These are **committed** (tracked), unlike the gitignored generated SQL. They carry
 `linguist-generated` via `.gitattributes` so GitHub collapses them in diffs.
