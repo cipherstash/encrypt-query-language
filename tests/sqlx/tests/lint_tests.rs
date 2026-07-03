@@ -16,10 +16,10 @@ use eql_tests::Variant;
 use sqlx::PgPool;
 
 /// Pg-type tokens for the encrypted-scalar-domain families currently
-/// materialised. Extending the family (e.g. when `int8`/`bool`/`date`
+/// materialised. Extending the family (e.g. when `bigint`/`bool`/`date`
 /// land) is a one-line array extension here — every downstream
 /// parameterised test picks it up automatically.
-const SCALAR_PG_TYPES: &[&str] = &["int4", "int2"];
+const SCALAR_PG_TYPES: &[&str] = &["integer", "smallint"];
 
 #[derive(Debug, sqlx::FromRow)]
 struct LintRow {
@@ -118,15 +118,15 @@ async fn lint_categories_are_well_known(pool: PgPool) -> Result<()> {
 /// planner can fold or elide the call when the result is provably unused
 /// (a dead CASE branch, a folded predicate), silently bypassing the RAISE
 /// and re-enabling the operator. See CLAUDE.md footguns. This test plants
-/// a fake LANGUAGE sql blocker on `eql_v3.int4` and asserts the lint
+/// a fake LANGUAGE sql blocker on `eql_v3.integer` and asserts the lint
 /// surfaces it under category `blocker_language`.
 #[sqlx::test]
 async fn lint_flags_blocker_in_language_sql(pool: PgPool) -> Result<()> {
     sqlx::query(
         r#"
-        CREATE FUNCTION eql_v3.test_bad_blocker_sql(a eql_v3.int4, b eql_v3.int4)
+        CREATE FUNCTION eql_v3.test_bad_blocker_sql(a eql_v3.integer, b eql_v3.integer)
         RETURNS boolean LANGUAGE sql IMMUTABLE
-        AS $$ SELECT eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.int4', '=') $$;
+        AS $$ SELECT eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.integer', '=') $$;
         "#,
     )
     .execute(&pool)
@@ -156,15 +156,15 @@ async fn lint_flags_blocker_in_language_sql(pool: PgPool) -> Result<()> {
 /// A blocker marked `STRICT` lets PostgreSQL skip the body and return NULL
 /// on a NULL argument — silently bypassing the "operator not supported"
 /// RAISE. See CLAUDE.md footguns. This test plants a fake STRICT plpgsql
-/// blocker on `eql_v3.int4` and asserts the lint surfaces it under
+/// blocker on `eql_v3.integer` and asserts the lint surfaces it under
 /// `blocker_strict`.
 #[sqlx::test]
 async fn lint_flags_strict_blocker(pool: PgPool) -> Result<()> {
     sqlx::query(
         r#"
-        CREATE FUNCTION eql_v3.test_bad_blocker_strict(a eql_v3.int4, b eql_v3.int4)
+        CREATE FUNCTION eql_v3.test_bad_blocker_strict(a eql_v3.integer, b eql_v3.integer)
         RETURNS boolean LANGUAGE plpgsql IMMUTABLE STRICT
-        AS $$ BEGIN RETURN eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.int4', '='); END; $$;
+        AS $$ BEGIN RETURN eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.integer', '='); END; $$;
         "#,
     )
     .execute(&pool)
@@ -208,7 +208,7 @@ async fn lint_does_not_report_generated_blockers_as_inlinability_errors(
                     | "inlinability_volatility"
                     | "inlinability_set_clause"
                     | "inlinability_secdef"
-            ) && r.object_name.contains("eql_v3.int4")
+            ) && r.object_name.contains("eql_v3.integer")
                 && (r.object_name.contains("operator =(")
                     || r.object_name.contains("operator ->(")
                     || r.object_name.contains("operator ?("))
@@ -231,7 +231,7 @@ async fn lint_does_not_report_generated_blockers_as_inlinability_errors(
 /// surfaces it under `domain_over_domain`.
 #[sqlx::test]
 async fn lint_flags_domain_over_domain(pool: PgPool) -> Result<()> {
-    sqlx::query(r#"CREATE DOMAIN eql_v3.test_baddom AS eql_v3.int4;"#)
+    sqlx::query(r#"CREATE DOMAIN eql_v3.test_baddom AS eql_v3.integer;"#)
         .execute(&pool)
         .await?;
 
@@ -344,7 +344,7 @@ async fn lint_flags_composite_type_in_eql_v3(pool: PgPool) -> Result<()> {
 /// inlinable.
 ///
 /// Discovers the eligible operator set from `pg_operator` rather than
-/// hardcoding the int4 inventory — when `int8` (or `bool`, `date`, ...)
+/// hardcoding the integer inventory — when `bigint` (or `bool`, `date`, ...)
 /// lands, this test picks it up automatically with no edit. The earlier
 /// hardcoded list was a copy-paste hazard.
 #[sqlx::test]

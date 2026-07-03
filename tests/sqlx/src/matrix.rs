@@ -149,7 +149,7 @@ fn collect_index_scan_nodes(value: &serde_json::Value, found: &mut Vec<(String, 
 /// - `caps = [eq, ord]` — the ordered-numeric shape (all four variants;
 ///   `=`/`<>`/`<`/`<=`/`>`/`>=`; ORDER BY / ORDER BY USING; ORE injectivity;
 ///   the ordered functional index). Consumers:
-///   `int2`/`int4`/`int8`/`date`/`timestamp`/`numeric`.
+///   `smallint`/`integer`/`bigint`/`date`/`timestamp`/`numeric`.
 /// - `caps = [eq]` — equality-only (storage + `_eq` only; `=`/`<>` meaningful,
 ///   the four ord operators are deliberate blockers). The empty `ord_domains`
 ///   make the order-by / ORE arms emit zero tests. No current consumer —
@@ -445,7 +445,7 @@ macro_rules! scalar_matrix {
 }
 
 /// Reduced behaviour matrix for a SteVec **entry** view type (e.g.
-/// `JsonbEntryInt4`). Runs only the leaf drivers that are surface-agnostic
+/// `JsonbEntryInteger`). Runs only the leaf drivers that are surface-agnostic
 /// once routed through the access-path seam: correctness (d,d only),
 /// supported_null, order_by(+nulls/+using), count, index_engages, and — once
 /// `src/v3/jsonb/aggregates.sql` exists — aggregate(+group_by/+parallel).
@@ -459,7 +459,7 @@ macro_rules! scalar_matrix {
 /// The single `(entry, Ord)` "domain" is variant-independent — `jsonb_entry`
 /// has one domain. Equality reduces through `eql_v3.eq_term`; ordering, index,
 /// count-distinct, and aggregates reduce through `eql_v3.ore_cllw` via the
-/// `JsonbEntryInt4` extractor overrides.
+/// `JsonbEntryInteger` extractor overrides.
 #[macro_export]
 macro_rules! jsonb_entry_matrix {
     (
@@ -506,7 +506,7 @@ macro_rules! jsonb_entry_matrix {
         // `(domain, jsonb)` cross-type operators) but UNSAFE for entries —
         // `jsonb_entry` has no `(entry, jsonb)` operator, so a bare-jsonb RHS
         // flattens to native `jsonb < jsonb` (no ore_cllw, no index) rather than
-        // the entry operator. The hand-written `jsonb_entry_int4_index_engages`
+        // the entry operator. The hand-written `jsonb_entry_integer_index_engages`
         // test in the suite probes index engagement with the domain-cast RHS only.
 
         // Aggregates: eql_v3.min/max over jsonb_entry (src/v3/jsonb/aggregates.sql).
@@ -943,7 +943,7 @@ macro_rules! __scalar_matrix_cross_shape_case {
 // three-valued logic — a supported op (e.g. `<>`) with a NULL operand must
 // yield NULL, not true and not false; easy to get wrong in domain wrappers,
 // which is why every (domain, op) pair is swept here. (Subsumes the deleted
-// `neq_propagates_null_under_three_valued_logic` int4 hand-test.)
+// `neq_propagates_null_under_three_valued_logic` integer hand-test.)
 // ============================================================================
 
 #[macro_export]
@@ -1248,7 +1248,7 @@ macro_rules! __scalar_matrix_native_absent_case {
 // native jsonb operator signatures (see
 // crates/eql-codegen/src/operator_surface.rs OPERATORS): `?` takes text, `-`
 // takes text / integer / text[] (three overloads), `?|`/`?&`/`#>`/`#>>`/`#-`
-// take text[], `@?`/`@@` take jsonpath, `||` takes jsonb. Replaces the int4-only
+// take text[], `@?`/`@@` take jsonpath, `||` takes jsonb. Replaces the integer-only
 // `omitted_native_jsonb_operators_raise_eql_blockers` hand-written test,
 // extending the guarantee to all storage scalars.
 //
@@ -1302,7 +1302,7 @@ macro_rules! __scalar_matrix_native_jsonb_blocker_case {
                 // (op symbol, full SELECT-able expr). The LHS is always
                 // `$1::jsonb::{d}`. `-` carries three arg shapes (text / integer /
                 // text[]) and `||` three overloads — covering every generated
-                // overload exactly as the int4 hand-test did. Each binds one
+                // overload exactly as the integer hand-test did. Each binds one
                 // PLACEHOLDER_PAYLOAD. The swept symbol set is pinned to the
                 // codegen residual by NATIVE_JSONB_BLOCKER_ARM_SYMBOLS.
                 let single: &[(&str, String)] = &[
@@ -2066,7 +2066,7 @@ macro_rules! __scalar_matrix_ord_routes_case {
                 //    payload and prove `=` engages it. The planner only matches
                 //    that index if `=` resolves to `eq_term` — so a green scan is
                 //    positive proof equality is hm-exact, never ORE.
-                //  - non-hm ordered domain (int4/date `[Ore]`): ORE is lossless,
+                //  - non-hm ordered domain (integer/date `[Ore]`): ORE is lossless,
                 //    so `=` legitimately routes through `ord_term`/`ob`. `hm` is
                 //    NOT CHECK-required, so we strip it and prove `=` still works
                 //    via `ob` on an hm-free payload (the original invariant).
@@ -2702,7 +2702,7 @@ macro_rules! __scalar_matrix_order_by_nulls_case {
                 // decode back into `DateTime<Utc>`. `PLAINTEXT_SQL_TYPE` defaults
                 // to `PG_TYPE` and is derived from `EqlPlaintext` for the temporal
                 // types; using it here (not `EqlPlaintext` directly) also covers
-                // view scalars like `JsonbEntryInt4` that are not `EqlPlaintext`.
+                // view scalars like `JsonbEntryInteger` that are not `EqlPlaintext`.
                 let pg = <$scalar as $crate::scalar_domains::ScalarType>::PLAINTEXT_SQL_TYPE;
 
                 let mut tx = pool.begin().await?;
@@ -3427,7 +3427,7 @@ macro_rules! __scalar_matrix_aggregate_typecheck_case {
 // which only covered plain COUNT and only against the eql_v2_encrypted
 // type. Pinning per-variant DISTINCT catches the breakage class where
 // picking the wrong extractor would fail at runtime ("function
-// eql_v3.eq_term(eql_v3.int4_ord) does not exist") — exactly the kind of
+// eql_v3.eq_term(eql_v3.integer_ord) does not exist") — exactly the kind of
 // thing the variant-aware matrix is meant to surface mechanically.
 // ============================================================================
 

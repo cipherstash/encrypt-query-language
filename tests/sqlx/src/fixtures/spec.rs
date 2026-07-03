@@ -237,9 +237,9 @@ impl<'a, T> FixtureSpec<'a, T> {
 mod tests {
     use super::*;
 
-    fn int4_spec() -> FixtureSpec<'static, i32> {
+    fn integer_spec() -> FixtureSpec<'static, i32> {
         const VALUES: &[i32] = &[-1, 1, 42];
-        FixtureSpec::new("eql_v3_int4")
+        FixtureSpec::new("eql_v3_integer")
             .with_index(IndexKind::Unique)
             .with_index(IndexKind::Ore)
             .with_column_type("jsonb")
@@ -248,15 +248,15 @@ mod tests {
 
     #[test]
     fn derives_paths_from_the_name() {
-        let s = int4_spec();
-        assert_eq!(s.fixture_table(), "fixtures.eql_v3_int4");
-        assert_eq!(s.working_table(), "_fixture_eql_v3_int4");
-        assert_eq!(s.script_filename(), "eql_v3_int4.sql");
+        let s = integer_spec();
+        assert_eq!(s.fixture_table(), "fixtures.eql_v3_integer");
+        assert_eq!(s.working_table(), "_fixture_eql_v3_integer");
+        assert_eq!(s.script_filename(), "eql_v3_integer.sql");
     }
 
     #[test]
     fn records_indexes_in_order() {
-        let s = int4_spec();
+        let s = integer_spec();
         assert_eq!(s.indexes(), &[IndexKind::Unique, IndexKind::Ore]);
     }
 
@@ -271,7 +271,7 @@ mod tests {
 
     #[test]
     fn valid_spec_passes_completeness_check() {
-        assert!(int4_spec().check_complete().is_ok());
+        assert!(integer_spec().check_complete().is_ok());
     }
 
     #[test]
@@ -313,7 +313,7 @@ mod tests {
         // A storage-only (encryption-only) fixture legitimately declares zero
         // indexes — the value is encrypted with no search term.
         const V: &[bool] = &[false, true];
-        let s = FixtureSpec::new("eql_v3_bool")
+        let s = FixtureSpec::new("eql_v3_boolean")
             .storage_only()
             .with_values(V);
         assert!(s.indexes().is_empty());
@@ -325,7 +325,7 @@ mod tests {
         // A storage-only fixture must NOT declare an index (that would add a
         // term key to the payload, contradicting the storage-only contract).
         const V: &[bool] = &[false, true];
-        let s = FixtureSpec::new("eql_v3_bool")
+        let s = FixtureSpec::new("eql_v3_boolean")
             .storage_only()
             .with_index(IndexKind::Unique)
             .with_values(V);
@@ -334,9 +334,9 @@ mod tests {
 
     #[test]
     fn working_schema_sql_drops_and_creates_the_working_table() {
-        let sql = int4_spec().working_schema_sql();
-        assert!(sql.contains("DROP TABLE IF EXISTS public._fixture_eql_v3_int4;"));
-        assert!(sql.contains("CREATE TABLE public._fixture_eql_v3_int4 ("));
+        let sql = integer_spec().working_schema_sql();
+        assert!(sql.contains("DROP TABLE IF EXISTS public._fixture_eql_v3_integer;"));
+        assert!(sql.contains("CREATE TABLE public._fixture_eql_v3_integer ("));
         assert!(sql.contains("id BIGINT PRIMARY KEY"));
         assert!(sql.contains("plaintext integer NOT NULL"));
         // The working table's payload is plain jsonb — encryption happens in
@@ -354,7 +354,7 @@ mod tests {
         // ColumnConfig lives entirely in Rust, no add_search_config /
         // remove_search_config calls are emitted, and the working table has
         // no EQL dependency.
-        let sql = int4_spec().working_schema_sql();
+        let sql = integer_spec().working_schema_sql();
         assert!(!sql.contains("add_search_config"));
         assert!(!sql.contains("remove_search_config"));
         assert!(!sql.contains("eql_v2_configuration"));
@@ -362,16 +362,16 @@ mod tests {
 
     #[test]
     fn fixture_script_preamble_renders_the_generated_table() {
-        let preamble = int4_spec().fixture_script_preamble();
+        let preamble = integer_spec().fixture_script_preamble();
         // header
         assert!(preamble.contains("AUTO-GENERATED"));
         assert!(preamble.contains("DO NOT EDIT BY HAND"));
-        assert!(preamble.contains("mise run fixture:generate eql_v3_int4"));
+        assert!(preamble.contains("mise run fixture:generate eql_v3_integer"));
         assert!(preamble.contains("HMAC + ORE block terms"));
         // schema + table in the fixtures schema, jsonb payload
         assert!(preamble.contains("CREATE SCHEMA IF NOT EXISTS fixtures;"));
-        assert!(preamble.contains("DROP TABLE IF EXISTS fixtures.eql_v3_int4;"));
-        assert!(preamble.contains("CREATE TABLE fixtures.eql_v3_int4 ("));
+        assert!(preamble.contains("DROP TABLE IF EXISTS fixtures.eql_v3_integer;"));
+        assert!(preamble.contains("CREATE TABLE fixtures.eql_v3_integer ("));
         assert!(preamble.contains("id BIGINT PRIMARY KEY"));
         assert!(preamble.contains("plaintext integer NOT NULL"));
         assert!(preamble.contains("payload jsonb NOT NULL"));
@@ -381,7 +381,7 @@ mod tests {
     fn fixture_script_preamble_attributes_encryption_to_cipherstash_client() {
         // The preamble must record the encryption path so a reader of the
         // generated SQL can trace it back to the generator.
-        let preamble = int4_spec().fixture_script_preamble();
+        let preamble = integer_spec().fixture_script_preamble();
         assert!(preamble.contains("cipherstash-client"));
         assert!(
             !preamble.contains("CipherStash Proxy"),
@@ -396,7 +396,7 @@ mod tests {
         // envelope. The preamble must record that so a reader of the
         // generated SQL can trace why the payloads differ from raw client
         // output (v: 3, no k).
-        let preamble = int4_spec().fixture_script_preamble();
+        let preamble = integer_spec().fixture_script_preamble();
         assert!(
             preamble.contains("eql_bindings::from_v2"),
             "preamble must record the v2 -> v3 conversion: {preamble}"
@@ -410,16 +410,16 @@ mod tests {
     #[test]
     fn fixture_script_preamble_uses_the_generated_column_type() {
         // The generated table uses .with_column_type(), NOT eql_v2_encrypted.
-        let preamble = int4_spec().fixture_script_preamble();
+        let preamble = integer_spec().fixture_script_preamble();
         assert!(!preamble.contains("eql_v2_encrypted"));
     }
 
     #[test]
     fn render_rows_sql_projects_format_l_over_the_working_table() {
-        let sql = int4_spec().render_rows_sql();
-        assert!(sql.contains("INSERT INTO fixtures.eql_v3_int4 (id, plaintext, payload) VALUES"));
+        let sql = integer_spec().render_rows_sql();
+        assert!(sql.contains("INSERT INTO fixtures.eql_v3_integer (id, plaintext, payload) VALUES"));
         assert!(sql.contains("%L, %L, %L::jsonb"));
-        assert!(sql.contains("FROM public._fixture_eql_v3_int4"));
+        assert!(sql.contains("FROM public._fixture_eql_v3_integer"));
         // payload is already encrypted JSONB in the working table; no
         // composite to unwrap.
         assert!(sql.contains("payload::text"));

@@ -26,9 +26,9 @@ use crate::scalar_domains::ScalarType;
 /// The comparison-capable scalar tokens that get a doubles fixture. `bool` is
 /// storage-only (no equality domain) and is excluded.
 pub const DOUBLES_TOKENS: &[&str] = &[
-    "int2",
-    "int4",
-    "int8",
+    "smallint",
+    "integer",
+    "bigint",
     "date",
     "timestamp",
     "numeric",
@@ -79,9 +79,9 @@ where
 /// unwired token fails generation rather than silently skipping.
 pub async fn generate(token: &str) -> Result<()> {
     match token {
-        "int2" => generate_doubles_for::<i16>().await,
-        "int4" => generate_doubles_for::<i32>().await,
-        "int8" => generate_doubles_for::<i64>().await,
+        "smallint" => generate_doubles_for::<i16>().await,
+        "integer" => generate_doubles_for::<i32>().await,
+        "bigint" => generate_doubles_for::<i64>().await,
         "date" => generate_doubles_for::<chrono::NaiveDate>().await,
         "timestamp" => generate_doubles_for::<chrono::DateTime<chrono::Utc>>().await,
         "numeric" => generate_doubles_for::<rust_decimal::Decimal>().await,

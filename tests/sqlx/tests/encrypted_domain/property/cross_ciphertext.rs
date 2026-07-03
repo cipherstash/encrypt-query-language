@@ -105,9 +105,9 @@ macro_rules! cross_ciphertext_test {
     };
 }
 
-cross_ciphertext_test!(cross_ciphertext_int2, i16);
-cross_ciphertext_test!(cross_ciphertext_int4, i32);
-cross_ciphertext_test!(cross_ciphertext_int8, i64);
+cross_ciphertext_test!(cross_ciphertext_smallint, i16);
+cross_ciphertext_test!(cross_ciphertext_integer, i32);
+cross_ciphertext_test!(cross_ciphertext_bigint, i64);
 cross_ciphertext_test!(cross_ciphertext_date, chrono::NaiveDate);
 cross_ciphertext_test!(cross_ciphertext_timestamp, chrono::DateTime<chrono::Utc>);
 cross_ciphertext_test!(cross_ciphertext_numeric, rust_decimal::Decimal);
