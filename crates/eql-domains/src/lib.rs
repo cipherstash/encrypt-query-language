@@ -295,6 +295,15 @@ pub const NUMERIC: DomainFamily = DomainFamily {
 /// simply never win because `Hm` precedes them (Option 1, catalog ordering).
 /// Integer kinds keep `[Ore]`-only `_ord` and `[Ope]`-only `_ord_ope` domains
 /// — ordering-term equality is lossless for them.
+///
+/// **`_search` deliberately excludes `Ope`.** The combined domain stays
+/// `[Hm, Ore, Bloom]`: its operator surface would not grow (OPE's six
+/// operators are already covered via `Ore`, and range extraction would still
+/// route through `ord_term` — first-ordering-term-wins), while its CHECK would
+/// start requiring an `op` key the pinned client does not emit (CIP-3280),
+/// breaking every `_search` fixture for no new capability. Revisit when a
+/// client release ships `op` emission (CIP-3348) — a search-shaped column that
+/// wants OPE ordering today uses a separate `_ord_ope` column instead.
 const TEXT_DOMAINS: &[Domain] = &[
     Domain {
         name: "",

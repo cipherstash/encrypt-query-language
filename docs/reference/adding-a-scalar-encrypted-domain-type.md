@@ -12,8 +12,9 @@ A scalar encrypted-domain type is a family of concrete `jsonb` domains in the
 `eql_v3.<token>_ord`, …), dropped by `DROP SCHEMA eql_v3 CASCADE`. Their
 extractors, comparison wrappers, and MIN/MAX
 aggregates also live in `eql_v3`; the searchable-encrypted-metadata (SEM)
-index-term types they return (`eql_v3.hmac_256`,
-`eql_v3.ore_block_256`) are **also `eql_v3`** — hand-written under
+index-term types they return (`eql_v3_internal.hmac_256`,
+`eql_v3_internal.ore_block_256`, `eql_v3_internal.ope_cllw`) live in the
+**`eql_v3_internal`** schema — hand-written under
 `src/v3/sem/`. The whole v3 surface is self-contained: it owns every type it
 needs and is fully self-contained (CI gates this via `mise run test:self_contained_v3`).
 
@@ -99,7 +100,7 @@ with a `TypeFixtures` record in
 // The structural catalog row — name + domains only:
 const INT4: DomainFamily = DomainFamily {
     name: "int4",
-    domains: ORDERED_INT_DOMAINS, // storage, _eq (hm), _ord_ore (ore), _ord (ore)
+    domains: ORDERED_INT_DOMAINS, // storage, _eq (hm), _ord_ore (ore), _ord (ore), _ord_ope (ope)
 };
 
 // The fixture-layer record — kind + plaintext values — joined back to the
@@ -150,15 +151,16 @@ by the type system and the catalog `#[test]`s rather than a runtime validator:
 
 **Terms** are fixed by the `Term` enum (`crates/eql-domains/src/lib.rs`). The
 `json_key` / `extractor` / `ctor` values are the cross-schema SQL contract (the
-Returns column below is `eql_v3.` + `ctor`) — changing one is a generated-SQL
+Returns column below is `eql_v3_internal.` + `ctor` — SEM index-term types live
+in the internal schema) — changing one is a generated-SQL
 behaviour change, not a refactor:
 
 | Term    | JSON key | Extractor      | Returns                          | Operators                  |
 | ------- | -------- | -------------- | -------------------------------- | -------------------------- |
-| `Hm`    | `hm`     | `eq_term`      | `eql_v3.hmac_256`                | `=` `<>`                   |
-| `Ore`   | `ob`     | `ord_term`     | `eql_v3.ore_block_256`     | `=` `<>` `<` `<=` `>` `>=` |
-| `Bloom` | `bf`     | `match_term`   | `eql_v3.bloom_filter`            | `@>` `<@`                  |
-| `Ope`   | `op`     | `ord_ope_term` | `eql_v3.ope_cllw`                | `=` `<>` `<` `<=` `>` `>=` |
+| `Hm`    | `hm`     | `eq_term`      | `eql_v3_internal.hmac_256`       | `=` `<>`                   |
+| `Ore`   | `ob`     | `ord_term`     | `eql_v3_internal.ore_block_256`  | `=` `<>` `<` `<=` `>` `>=` |
+| `Bloom` | `bf`     | `match_term`   | `eql_v3_internal.bloom_filter`   | `@>` `<@`                  |
+| `Ope`   | `op`     | `ord_ope_term` | `eql_v3_internal.ope_cllw`       | `=` `<>` `<` `<=` `>` `>=` |
 
 (`Ope` is the CLLW-OPE term: a hex-encoded, order-preserving ciphertext whose
 SEM type reduces comparison to native bytea ordering after hex-decode — no
@@ -263,7 +265,7 @@ token-driven). **`timestamp` follows the same *ordered* temporal path as
 `date`** — its catalog row carries the full ordered domain set (storage + `_eq` +
 `_ord`/`_ord_ore`). cipherstash encrypts `Plaintext::Timestamp` at native
 12-block ORE width, and the `eql_v3` comparator
-(`eql_v3.compare_ore_block_256_term`) now derives its block count `N` from the
+(`eql_v3_internal.compare_ore_block_256_terms`) now derives its block count `N` from the
 term length instead of assuming 8, so the 12-block ciphertexts order correctly
 (see the N-block ORE comparator entry in the `CHANGELOG.md` and the catalog
 comment on the `TIMESTAMP` spec). Its value-wiring is the temporal path below;
@@ -544,11 +546,11 @@ domain's `CHECK` requires:
 - fixed envelope keys `v` and `i`;
 - ciphertext key `c`;
 - catalog JSON keys for the listed terms;
-- the envelope version value `VALUE->>'v' = '2'` — the payload version pin
+- the envelope version value `VALUE->>'v' = '3'` — the payload version pin
   enforced intrinsically by every `eql_v3` domain's `CHECK`.
 
 So a domain with `&[Term::Ore]` requires `v`, `i`, `c`, and `ob` present, with
-`v` pinned to `2`. Beyond key presence and the version value, a malformed term
+`v` pinned to `3`. Beyond key presence and the version value, a malformed term
 can still fail later inside its extractor.
 
 ### Extractors, wrappers, and blockers
@@ -624,15 +626,20 @@ any of its terms provides; the rest stay blockers. `Functions` =
 | `&[Term::Hm]`     |          1 (`eq_term`)    |  6 | 38 | 45 | 44 |
 | `&[Term::Bloom]`  |          1 (`match_term`) |  6 | 38 | 45 | 44 |
 | `&[Term::Ore]`    |          1 (`ord_term`)   | 18 | 26 | 45 | 44 |
+| `&[Term::Ope]`    |          1 (`ord_ope_term`) | 18 | 26 | 45 | 44 |
 | `&[Term::Hm, Term::Ore]` | 2 (`eq_term`, `ord_term`) | 18 | 26 | 46 | 44 |
+| `&[Term::Hm, Term::Ope]` | 2 (`eq_term`, `ord_ope_term`) | 18 | 26 | 46 | 44 |
 | `&[Term::Hm, Term::Ore, Term::Bloom]` | 3 (`eq_term`, `ord_term`, `match_term`) | 24 | 20 | 47 | 44 |
 
 Six wrappers for `Hm` = `=` and `<>` × three shapes; six for `Bloom` = `@>` and
-`<@` × three shapes; eighteen for `Ore` = six operators × three shapes. For the
+`<@` × three shapes; eighteen for `Ore` = six operators × three shapes (`Ope`
+mirrors `Ore`'s eighteen — same six operators through `ord_ope_term`). For the
 multi-term rows the wrapper set is the **deduplicated union**: `[Hm, Ore]` is
 `{=, <>, <, <=, >, >=}` (Ore's `=`/`<>` collapse onto Hm's — only the *extractor*
 differs, so the count stays 18, but `=`/`<>` now resolve through `eq_term`, exact
-HMAC, not ORE); `[Hm, Ore, Bloom]` adds `@>`/`<@` for 24. The extra extractor
+HMAC, not ORE); `[Hm, Ope]` (the `text_ord_ope` shape) collapses identically, so
+`=`/`<>` stay exact HMAC while range operators route through `ord_ope_term`;
+`[Hm, Ore, Bloom]` adds `@>`/`<@` for 24. The extra extractor
 functions are the only thing that grows `Functions` past 45 — the operator total
 is always 44.
 
@@ -650,8 +657,8 @@ encrypted column to native plaintext-`jsonb` semantics.
 ### Aggregates
 
 Each ordered (ord-capable) domain additionally gets a generated
-`<domain>_aggregates.sql`: two state functions (`eql_v3.min_sfunc`,
-`eql_v3.max_sfunc`) and two aggregates (`eql_v3.min(<domain>)`,
+`<domain>_aggregates.sql`: two state functions (`eql_v3_internal.min_sfunc`,
+`eql_v3_internal.max_sfunc`) and two aggregates (`eql_v3.min(<domain>)`,
 `eql_v3.max(<domain>)`). Comparison routes through the domain's `<` / `>`
 operator (the ORE block term — no decryption). The state functions are `LANGUAGE
 plpgsql IMMUTABLE STRICT PARALLEL SAFE` **with** a pinned `SET search_path` —
@@ -671,12 +678,25 @@ extractor, whose return type already carries a default opclass:
 
 ```sql
 CREATE INDEX ... ON table_name USING btree (eql_v3.ord_term(col));
+CREATE INDEX ... ON table_name USING btree (eql_v3.ord_ope_term(col));
 CREATE INDEX ... ON table_name USING hash  (eql_v3.eq_term(col));
 ```
 
 `ore` depends on `src/v3/sem/ore_block_256/functions.sql` and
 `src/v3/sem/ore_block_256/operators.sql`; `hm` depends on
-`src/v3/sem/hmac_256/functions.sql`.
+`src/v3/sem/hmac_256/functions.sql`; `op` depends on
+`src/v3/sem/ope_cllw/functions.sql` only — `eql_v3_internal.ope_cllw` is a
+domain over `bytea`, so it inherits the native comparison operators and DEFAULT
+btree opclass with no hand-written operators file, and the whole comparison
+chain stays inlinable SQL (the reason the `_ord_ope` functional index engages
+structurally).
+
+**Missing-term semantics differ between the two ordering extractors:**
+`eql_v3_internal.ore_block_256(jsonb)` RAISEs on a missing `ob`, while
+`eql_v3_internal.ope_cllw(jsonb)` returns SQL `NULL` on a missing `op` (its body
+is a strict expression chain; a `RAISE` would force `plpgsql` and kill the
+inlining the functional-index design depends on). Raw-`jsonb` callers therefore
+get an error from the ORE path but silent NULL-filtering from the OPE path.
 
 ### Extension files
 
@@ -718,7 +738,7 @@ unreachable. Invariants encoded in the renderers / templates and guarded by
   single-quoted literal passes through `sql_str`
   (`crates/eql-codegen/src/consts.rs`), which doubles embedded single quotes.
 - **No domain-over-domain** — every domain is `CREATE DOMAIN eql_v3.<name> AS
-  jsonb` (`types_file_has_all_four_domains`).
+  jsonb` (`types_file_has_all_five_domains`).
 - **No operator class on a domain** — the generator emits operators, not
   operator classes.
 - **Ownership boundary** — `is_generated` recognises owned files by their header
@@ -737,13 +757,15 @@ edits:
   `DOMAIN` argument in the `eql_v3` schema. New scalar types need no edit.
 - **`tasks/test/splinter.sh`** — name-based allowlist. The converged wrapper /
   extractor names (`eq`, `neq`, `lt`, `lte`, `gt`, `gte`, `eq_term`, `ord_term`,
-  the `Bloom` term's `match_term` extractor and its `contains` / `contained_by`
-  containment wrappers) plus the generated `min` / `max` aggregates and the SEM
-  `hmac_256` / `ore_block_256` / `bloom_filter` types' constructors and comparators are already
-  covered by `eql_v3`-schema entries. A new scalar type inherits coverage; **a
-  new term needs splinter entries for each new name it introduces — both its
-  extractor and its comparison wrappers** (adding `Bloom` required `match_term`,
-  `contains`, `contained_by`, and the SEM `bloom_filter`).
+  `ord_ope_term`, the `Bloom` term's `match_term` extractor and its `contains` /
+  `contained_by` containment wrappers) plus the generated `min` / `max`
+  aggregates are covered by `eql_v3`-schema entries, and the SEM
+  `hmac_256` / `ore_block_256` / `bloom_filter` / `ope_cllw` constructors and
+  comparators by `eql_v3_internal`-schema entries. A new scalar type inherits
+  coverage; **a new term needs splinter entries for each new name it introduces
+  — both its extractor and its comparison wrappers** (adding `Bloom` required
+  `match_term`, `contains`, `contained_by`, and the SEM `bloom_filter`; adding
+  `Ope` required `ord_ope_term` and the SEM `ope_cllw`).
 
 ---
 
@@ -754,11 +776,11 @@ adding a type.
 
 ### Why a generator
 
-A single scalar type emits several hundred SQL declarations. For `int4`: eleven
-files, four domains, three extractors, dozens of wrappers and blockers, 176
+A single scalar type emits several hundred SQL declarations. For `int4`: fourteen
+files, five domains, four extractor functions, dozens of wrappers and blockers, 220
 `CREATE OPERATOR` statements (44 per domain), and MIN/MAX aggregates per ordered
 domain. (The per-domain figure is fixed — 44 `CREATE OPERATOR` statements per domain, the `1 + 2D +
-A` file formula below — so a type with more domains, e.g. `text`'s six, scales
+A` file formula below — so a type with more domains, e.g. `text`'s seven, scales
 those totals up.)
 The shape is mechanical and the invariants are unforgiving — a `STRICT` blocker
 silently bypasses its exception; a pinned `search_path` reverts queries to seq
@@ -783,10 +805,13 @@ types:generate`). `main` (`crates/eql-codegen/src/main.rs`) recognises exactly
 these four forms (no-arg generate-all, `list-types`, `dump-catalog`,
 `bindings`); any other argument is a usage error.
 
-The generator targets the `eql_v3` schema throughout: `SCHEMA = "eql_v3"`
-(`crates/eql-codegen/src/consts.rs`) qualifies both the domain families and the
-SEM index-term types the extractors return (`eql_v3.hmac_256`,
-`eql_v3.ore_block_256`), so the generated SQL is entirely self-contained within `eql_v3`.
+The generator targets two schemas: `SCHEMA = "eql_v3"`
+(`crates/eql-codegen/src/consts.rs`) qualifies the domain families and the
+public callable surface, while `INTERNAL_SCHEMA = "eql_v3_internal"` qualifies
+the SEM index-term types the extractors return (`eql_v3_internal.hmac_256`,
+`eql_v3_internal.ore_block_256`, `eql_v3_internal.ope_cllw`) and the aggregate
+state functions, so the generated SQL is entirely self-contained within the two
+EQL-owned schemas.
 
 `tasks/build.sh` runs `cargo run -p eql-codegen` at the start of every `mise run
 build`, so the generated SQL is never checked in. (The build first sweeps every
@@ -830,14 +855,14 @@ output for every catalog type from scratch.
 ### Generated outputs
 
 For a type with `D` domains of which `A` are ordered, the generator writes `1 +
-2D + A` SQL files into `src/v3/scalars/<token>/`. For `int4` (`D = 4`, `A =
-2`): eleven SQL files. The outputs are committed in place under
+2D + A` SQL files into `src/v3/scalars/<token>/`. For `int4` (`D = 5`, `A =
+3`): fourteen SQL files. The outputs are committed in place under
 `src/v3/scalars/<token>/` and regenerated at the start of every build (commit the
 regenerated SQL diff alongside any catalog change).
 
 | File                              | Content                                                                                  |
 | --------------------------------- | ---------------------------------------------------------------------------------------- |
-| `<token>_types.sql`               | Single idempotent `DO` block creating every domain; each `CHECK` pins the payload version (`VALUE->>'v' = '2'`) and required envelope/ciphertext/term keys; one `--! @brief` per domain |
+| `<token>_types.sql`               | Single idempotent `DO` block creating every domain; each `CHECK` pins the payload version (`VALUE->>'v' = '3'`) and required envelope/ciphertext/term keys; one `--! @brief` per domain |
 | `<domain>_functions.sql`          | One extractor per unique term, then 44 wrappers-or-blockers covering the surface         |
 | `<domain>_operators.sql`          | 44 `CREATE OPERATOR` statements with planner metadata on supported ops                   |
 | `<domain>_aggregates.sql`         | MIN/MAX state functions + `CREATE AGGREGATE`; emitted only for ordered domains           |
@@ -894,7 +919,8 @@ Adding a new **term** is a bigger move than adding a type: edit the `Term` enum'
 `impl` methods, add `#[test]`s, add a `splinter.sh` entry for **each new name the
 term introduces** — its extractor *and* its comparison wrappers, plus any new SEM
 constructor (adding `Bloom` required `match_term`, `contains`, `contained_by`,
-and the SEM `bloom_filter`) — and, because it changes the generated surface,
+and the SEM `bloom_filter`; adding `Ope` required `ord_ope_term` and the SEM
+`ope_cllw`) — and, because it changes the generated surface,
 regenerate and commit the affected SQL files under
 `src/v3/scalars/<token>/`.
 
@@ -947,7 +973,7 @@ What makes it storage-only:
   `bool_functions.sql`, `bool_operators.sql`; no `_aggregates.sql`, since no
   ordered domain). All 44 functions are `plpgsql` blockers, all 44 `CREATE OPERATOR` statements back
   onto them: every comparison/containment/path operator reachable through domain
-  fallback raises. The domain `CHECK` still pins `{v,i,c}` + `VALUE->>'v' = '2'`.
+  fallback raises. The domain `CHECK` still pins `{v,i,c}` + `VALUE->>'v' = '3'`.
 - **Kind, not term.** Add a `ScalarKind` variant (`Bool`) with
   `rust_type() = "bool"`, `as_bounded_int() = None`,
   `is_int`/`is_temporal`/`is_text` all false. Add a `Fixture::Bool(bool)` variant
