@@ -190,7 +190,7 @@ pub fn from_v2_query(v2: &Value, target: TargetDomain) -> Result<Value, FromV2Er
 /// of a shape-erased `Value`.
 ///
 /// Same conversion rules and same failures as [`from_v2_query`] — one shared
-/// conversion path ([`convert_query`]), and the final strict parse through
+/// conversion path (`convert_query`), and the final strict parse through
 /// the query binding struct happens exactly once (here it is KEPT as the enum
 /// variant; in [`from_v2_query`] it is a validate-and-discard check). Because
 /// [`QueryPayload`]'s serialization is untagged,
