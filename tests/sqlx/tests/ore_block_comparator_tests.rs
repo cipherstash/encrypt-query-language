@@ -168,7 +168,7 @@ async fn comparator_rejects_sixteen_byte_term(pool: PgPool) -> Result<()> {
 /// Cross-width footgun: now that N is derived per-term, comparing terms of two
 /// different (individually valid) widths must raise via the equal-length guard,
 /// not silently compare the shared prefix. Both lengths here are well-formed —
-/// 408 = 49*8 + 16 (the int4 width, N=8) and 702 = 49*14 + 16 (the numeric
+/// 408 = 49*8 + 16 (the integer width, N=8) and 702 = 49*14 + 16 (the numeric
 /// width, N=14) — so the only thing that fires is the different-lengths check,
 /// ahead of the malformed-length guard. Creds-free (hand-built bytea).
 #[sqlx::test]
@@ -272,7 +272,7 @@ async fn comparator_length_guard_sweep(pool: PgPool) -> Result<()> {
         );
     }
 
-    // Valid: 49*N + 16 for N = 1..=14 (spans the int4/timestamp/numeric widths).
+    // Valid: 49*N + 16 for N = 1..=14 (spans the integer/timestamp/numeric widths).
     for n in 1..=14usize {
         let len = 49 * n + 16;
 

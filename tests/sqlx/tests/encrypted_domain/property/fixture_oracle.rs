@@ -40,17 +40,17 @@ use std::sync::Arc;
 /// truth for which fixture SQL is embedded.
 pub(crate) fn embedded_fixture_sql<T: ScalarType>() -> &'static str {
     match T::PG_TYPE {
-        "int4" => include_str!(concat!(
+        "integer" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v3_int4.sql"
+            "/fixtures/eql_v3_integer.sql"
         )),
-        "int2" => include_str!(concat!(
+        "smallint" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v3_int2.sql"
+            "/fixtures/eql_v3_smallint.sql"
         )),
-        "int8" => include_str!(concat!(
+        "bigint" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v3_int8.sql"
+            "/fixtures/eql_v3_bigint.sql"
         )),
         "date" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -70,13 +70,13 @@ pub(crate) fn embedded_fixture_sql<T: ScalarType>() -> &'static str {
             env!("CARGO_MANIFEST_DIR"),
             "/fixtures/eql_v3_numeric.sql"
         )),
-        "float4" => include_str!(concat!(
+        "real" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v3_float4.sql"
+            "/fixtures/eql_v3_real.sql"
         )),
-        "float8" => include_str!(concat!(
+        "double" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v3_float8.sql"
+            "/fixtures/eql_v3_double.sql"
         )),
         other => panic!(
             "no embedded fixture for catalog token '{other}'; \
@@ -94,17 +94,17 @@ pub(crate) fn embedded_fixture_sql<T: ScalarType>() -> &'static str {
 /// absence (caught by the loud catch-all) is correct.
 pub(crate) fn embedded_doubles_sql<T: ScalarType>() -> &'static str {
     match T::PG_TYPE {
-        "int2" => include_str!(concat!(
+        "smallint" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v3_int2_doubles.sql"
+            "/fixtures/eql_v3_smallint_doubles.sql"
         )),
-        "int4" => include_str!(concat!(
+        "integer" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v3_int4_doubles.sql"
+            "/fixtures/eql_v3_integer_doubles.sql"
         )),
-        "int8" => include_str!(concat!(
+        "bigint" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/eql_v3_int8_doubles.sql"
+            "/fixtures/eql_v3_bigint_doubles.sql"
         )),
         "date" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -297,7 +297,7 @@ async fn run_ord_oracle<T: ScalarType>(pool: PgPool, cases: u32) -> Result<()> {
 }
 
 /// All fixtured scalars run the same number of proptest cases — the fixture
-/// suite does no new encryption, so there is no reason for int4 to be
+/// suite does no new encryption, so there is no reason for integer to be
 /// privileged. Raise here (one place) if a regression ever needs more cases.
 const FIXTURE_ORACLE_CASES: u32 = 32;
 
@@ -326,22 +326,22 @@ macro_rules! fixture_oracle_suite {
     };
 }
 
-fixture_oracle_suite!(int4, i32, ordered);
-fixture_oracle_suite!(int2, i16, ordered);
-fixture_oracle_suite!(int8, i64, ordered);
+fixture_oracle_suite!(integer, i32, ordered);
+fixture_oracle_suite!(smallint, i16, ordered);
+fixture_oracle_suite!(bigint, i64, ordered);
 fixture_oracle_suite!(date, chrono::NaiveDate, ordered);
 fixture_oracle_suite!(timestamp, chrono::DateTime<chrono::Utc>, ordered);
 fixture_oracle_suite!(numeric, rust_decimal::Decimal, ordered);
 fixture_oracle_suite!(text, String, ordered);
-fixture_oracle_suite!(float4, eql_tests::scalar_domains::F4, ordered);
-fixture_oracle_suite!(float8, eql_tests::scalar_domains::F8, ordered);
+fixture_oracle_suite!(real, eql_tests::scalar_domains::F4, ordered);
+fixture_oracle_suite!(double, eql_tests::scalar_domains::F8, ordered);
 
 // --- function-double oracles (CIP-3141) -------------------------------------
 //
 // The same fixture rows, but calling the generated `eql_v3.*` comparison
 // functions by name across all three overloads and asserting term-extractor
 // identity (eq_term==hm / ord_term==ob). Free of fresh encryption — read-only
-// SQL over the already-encrypted fixtures. int4 is the reference family with
+// SQL over the already-encrypted fixtures. integer is the reference family with
 // explicit tests; the other types go through `fixture_fn_oracle_suite!`.
 
 /// Function-double property driver: like `run_eq_oracle` / `run_ord_oracle`, but
@@ -366,7 +366,7 @@ where
 }
 
 #[sqlx::test]
-async fn prop_int4_eq_fn_oracle_over_fixture(pool: PgPool) -> Result<()> {
+async fn prop_integer_eq_fn_oracle_over_fixture(pool: PgPool) -> Result<()> {
     run_fn_property::<i32, _, _>(pool, 32, |pool, sample| async move {
         assert_eq_fn_oracle::<i32>(&pool, Variant::Eq, &sample).await?;
         assert_extractor_oracle::<i32>(&pool, Variant::Eq, &sample).await
@@ -375,7 +375,7 @@ async fn prop_int4_eq_fn_oracle_over_fixture(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
-async fn prop_int4_ord_fn_oracle_over_fixture(pool: PgPool) -> Result<()> {
+async fn prop_integer_ord_fn_oracle_over_fixture(pool: PgPool) -> Result<()> {
     run_fn_property::<i32, _, _>(pool, 32, |pool, sample| async move {
         assert_ord_fn_oracle::<i32>(&pool, Variant::Ord, &sample).await?;
         assert_extractor_oracle::<i32>(&pool, Variant::Ord, &sample).await?;
@@ -431,8 +431,8 @@ macro_rules! fixture_fn_oracle_suite {
     };
 }
 
-fixture_fn_oracle_suite!(int2_fn, i16, ordered);
-fixture_fn_oracle_suite!(int8_fn, i64, ordered);
+fixture_fn_oracle_suite!(smallint_fn, i16, ordered);
+fixture_fn_oracle_suite!(bigint_fn, i64, ordered);
 // date, timestamp, and numeric are all ordered scalars on the `eql_v3` base,
 // so each gets eq/neq functions + eq_term identity plus the four ord functions
 // on both ordered twins. The generated fixtures already encrypt the whole

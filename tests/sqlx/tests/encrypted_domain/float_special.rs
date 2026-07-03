@@ -1,10 +1,10 @@
-//! Float edge-case behavioural regression suite (CIP — float4/float8).
+//! Float edge-case behavioural regression suite (CIP — real/double).
 //!
 //! Captures the NaN / `-0.0` / `+0.0` / `±Inf` behaviour that the shared
 //! all-pairs oracle deliberately excludes from its fixtures (NaN is unordered
 //! and unspecified in the encoder; `-0.0` canonicalizes to `+0.0`). It encrypts
 //! the special values FRESH through cipherstash at test time, so NaN never
-//! enters the `float8` fixture table.
+//! enters the `double` fixture table.
 //!
 //! IMPORTANT: the NaN eq/order outcomes asserted here are an **artifact of the
 //! canonical NaN bit pattern + deterministic index terms (hm/ore are pure
@@ -41,22 +41,22 @@ async fn encrypt_specials(values: &[F8]) -> Result<Vec<String>> {
     Ok(payloads.into_iter().map(|p| p.to_string()).collect())
 }
 
-/// Cast a payload literal to `eql_v3.float8` and read it back, proving the domain
+/// Cast a payload literal to `eql_v3.double` and read it back, proving the domain
 /// CHECK accepts the encrypted special value.
 async fn cast_passes_check(pool: &PgPool, payload: &str) -> Result<()> {
-    let sql = "SELECT ($1::jsonb::eql_v3.float8) IS NOT NULL";
+    let sql = "SELECT ($1::jsonb::eql_v3.double) IS NOT NULL";
     let ok: bool = sqlx::query_scalar(sql)
         .bind(payload)
         .fetch_one(pool)
         .await?;
-    anyhow::ensure!(ok, "payload failed the eql_v3.float8 CHECK: {payload}");
+    anyhow::ensure!(ok, "payload failed the eql_v3.double CHECK: {payload}");
     Ok(())
 }
 
 /// Compare two payloads under an operator on the `_ord` domain, returning the
 /// boolean result. Used to pin the discovered NaN/±0/±Inf outcomes.
 async fn ord_cmp(pool: &PgPool, a: &str, op: &str, b: &str) -> Result<bool> {
-    let d = "eql_v3.float8_ord";
+    let d = "eql_v3.double_ord";
     let sql = format!("SELECT ($1::jsonb::{d} {op} $2::jsonb::{d})");
     Ok(sqlx::query_scalar(&sql)
         .bind(a)
@@ -67,7 +67,7 @@ async fn ord_cmp(pool: &PgPool, a: &str, op: &str, b: &str) -> Result<bool> {
 
 /// Equality under the `_eq` domain (HMAC).
 async fn eq_cmp(pool: &PgPool, a: &str, b: &str) -> Result<bool> {
-    let d = "eql_v3.float8_eq";
+    let d = "eql_v3.double_eq";
     let sql = format!("SELECT ($1::jsonb::{d} = $2::jsonb::{d})");
     Ok(sqlx::query_scalar(&sql)
         .bind(a)
@@ -85,7 +85,7 @@ async fn setup() -> Result<PgPool> {
 #[tokio::test]
 async fn nan_encrypts_and_passes_check() -> Result<()> {
     // Encrypting f64::NAN succeeds (no panic) and yields a structurally valid
-    // eql_v3.float8 payload. This is the one universal NaN guarantee.
+    // eql_v3.double payload. This is the one universal NaN guarantee.
     let pool = setup().await?;
     let payloads = encrypt_specials(&[F8(f64::NAN)]).await?;
     assert_eq!(payloads.len(), 1);

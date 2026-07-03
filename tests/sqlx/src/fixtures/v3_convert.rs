@@ -16,7 +16,7 @@
 //! its family (the matrix casts the same `payload` column to `<T>`,
 //! `<T>_eq`, `<T>_ord`, …), so it must carry the UNION of the terms the
 //! fixture's indexes produced. No single catalog target requires that union
-//! for the integer families (`int4_eq` requires `hm` alone, `int4_ord_ore`
+//! for the integer families (`integer_eq` requires `hm` alone, `integer_ord_ore`
 //! requires `ob` alone), so conversion runs once per **coverable** family
 //! domain and merges the outputs:
 //!
@@ -36,7 +36,7 @@
 //! identical by construction, and the merge fails closed if they ever
 //! disagree. Every merged key still came out of a validated `from_v2` call.
 //!
-//! The SteVec document fixtures (`v3_ste_vec`, `v3_doc_int4`) convert with
+//! The SteVec document fixtures (`v3_ste_vec`, `v3_doc_integer`) convert with
 //! the single [`TargetDomain::Json`] target — the v3 document keeps
 //! `k: "sv"` (the #336 wire shape) and its per-entry `hm` XOR `oc` terms.
 
@@ -175,7 +175,7 @@ mod tests {
         json!({
             "v": 2,
             "k": "ct",
-            "i": { "t": "_fixture_eql_v3_int4", "c": "payload" },
+            "i": { "t": "_fixture_eql_v3_integer", "c": "payload" },
             "c": "mBbKmsMMkbKAJcY2ZE!ceh0e1t",
             "hm": "e0e1c4bd2ff81c9ad4cc9ae9ab6c47a4cf7d0f7cca6ae916c56008fd5e78c99e",
             "ob": ["0a0b0c", "0d0e0f"],
@@ -200,8 +200,8 @@ mod tests {
         assert_eq!(obj.get("c"), v2_int_payload().get("c"));
 
         // The UNION of the index-produced terms survives — `hm` (for
-        // `int4_eq`) AND `ob` (for `int4_ord`/`int4_ord_ore`) — even though
-        // no single int4 domain requires both.
+        // `integer_eq`) AND `ob` (for `integer_ord`/`integer_ord_ore`) — even though
+        // no single integer domain requires both.
         assert_eq!(obj.get("hm"), v2_int_payload().get("hm"));
         assert_eq!(obj.get("ob"), v2_int_payload().get("ob"));
 
@@ -322,7 +322,7 @@ mod tests {
 
     #[test]
     fn unconsumed_term_fails_closed() {
-        // The int4 family has no bloom domain: a `Match` index there would
+        // The integer family has no bloom domain: a `Match` index there would
         // produce a `bf` term no conversion target keeps. That is a fixture
         // misconfiguration and must error, not silently drop the term.
         let err = to_v3_payloads(

@@ -15,7 +15,7 @@
 
 // `generate_for_token(token: &str) -> anyhow::Result<()>` is generated from the
 // single harness list in `tests/sqlx/src/scalar_types.rs`: one match arm per
-// token (`"int4" => fixtures::eql_v3_int4::spec().run().await`) plus a loud
+// token (`"integer" => fixtures::eql_v3_integer::spec().run().await`) plus a loud
 // catch-all. A catalog token absent from that list hits the catch-all and fails
 // the generator loudly, so a new scalar type cannot silently skip generation.
 eql_tests::scalar_types!(fixture_dispatch);
@@ -40,13 +40,13 @@ async fn generate_all() -> anyhow::Result<()> {
     eql_tests::fixtures::v3_ste_vec::generate().await?;
     eprintln!("Regenerated v3_ste_vec.");
 
-    // The scalar-shaped SteVec document fixture — one `{"field": <int4>}`
-    // document per `eql_domains::INT4_VALUES`, with an int4 plaintext oracle —
+    // The scalar-shaped SteVec document fixture — one `{"field": <integer>}`
+    // document per `eql_domains::INTEGER_VALUES`, with an integer plaintext oracle —
     // drives the jsonb-entry behaviour matrix. Same pipeline, split payload
-    // (jsonb-document encryption input, int4 oracle column).
-    eprintln!("Generating fixture v3_doc_int4 (scalar-shaped SteVec document)...");
-    eql_tests::fixtures::v3_doc_int4::generate().await?;
-    eprintln!("Regenerated v3_doc_int4.");
+    // (jsonb-document encryption input, integer oracle column).
+    eprintln!("Generating fixture v3_doc_integer (scalar-shaped SteVec document)...");
+    eql_tests::fixtures::v3_doc_integer::generate().await?;
+    eprintln!("Regenerated v3_doc_integer.");
 
     // The numeric scale-equivalence collision fixture (`1`, `1.0`, `2`). Not a
     // CATALOG scalar — the distinctness guard forbids `1`/`1.0` coexisting in

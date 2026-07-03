@@ -1,7 +1,7 @@
 name: "Macro expand EQL"
 
 # Regenerates the matrix `cargo expand` snapshots (one per reachable
-# `scalar_matrix!` arm: int4 = [eq, ord], text = [eq, ord, search], bool =
+# `scalar_matrix!` arm: integer = [eq, ord], text = [eq, ord, search], boolean =
 # [storage]) and fails if any has drifted from its committed copy. This is a
 # body-level fidelity backstop for the matrix macros — the name-inventory
 # snapshot (test-eql.yml `matrix-coverage` job) catches add/remove of whole
@@ -80,7 +80,7 @@ jobs:
         run: |
           mise run test:matrix:expand
           git diff --exit-code -- \
-            tests/sqlx/snapshots/int4_expanded.rs \
+            tests/sqlx/snapshots/integer_expanded.rs \
             tests/sqlx/snapshots/text_expanded.rs \
-            tests/sqlx/snapshots/bool_expanded.rs \
+            tests/sqlx/snapshots/boolean_expanded.rs \
             || { echo "Expansion snapshot stale — run 'mise run test:matrix:expand' (needs the pinned nightly) and commit."; exit 1; }

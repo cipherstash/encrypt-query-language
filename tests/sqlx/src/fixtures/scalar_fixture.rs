@@ -1,6 +1,6 @@
 //! `scalar_fixture!` — collapse a scalar fixture wrapper to one invocation.
 //!
-//! Every `eql_v3_<T>` scalar fixture file (`eql_v3_int2`, `eql_v3_int4`, …) is
+//! Every `eql_v3_<T>` scalar fixture file (`eql_v3_smallint`, `eql_v3_integer`, …) is
 //! the same three items differing only in the fixture name, the Rust plaintext
 //! type, and the generated value list: the `spec()` builder, the `fixture-gen`
 //! generator test, and a small property-test module. This macro stamps all
@@ -33,9 +33,9 @@
 ///   extremes), plus a third `Match` index so generated payloads carry `bf` for
 ///   the `text_match` containment surface. Indexes `Unique` + `Ore` + `Match`.
 ///
-/// - `$name` — the fixture name (`"eql_v3_int2"`), drives every derived path.
+/// - `$name` — the fixture name (`"eql_v3_smallint"`), drives every derived path.
 /// - `$ty` — the Rust plaintext type (`i16` / `chrono::NaiveDate` / `String`).
-/// - `$values` — the value source: the catalog const (`eql_domains::INT2_VALUES`)
+/// - `$values` — the value source: the catalog const (`eql_domains::SMALLINT_VALUES`)
 ///   for integers, or the harness accessor (`date_values()` / `text_values()`).
 ///
 /// `Unique` drives `=` / `<>` (HMAC); `Ore` drives `<` `<=` `>` `>=` (ORE block

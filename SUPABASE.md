@@ -18,7 +18,7 @@ so that recipe needed a cut-down build.
 
 `eql_v3` removes the dependency entirely. Every encrypted column is typed as
 a `jsonb`-backed **domain** in the `eql_v3` schema (for example
-`eql_v3.text_eq`, `eql_v3.int4_ord`, `eql_v3.json`), and search is driven by
+`eql_v3.text_eq`, `eql_v3.integer_ord`, `eql_v3.json`), and search is driven by
 **functional indexes over small term-extractor functions** rather than an
 operator class on the column:
 
@@ -147,7 +147,7 @@ for the full explanation.
 
 ```sql
 SELECT eql_v3.min(encrypted_at) FROM events;
-SELECT eql_v3.max(encrypted_amount::eql_v3.int4_ord) FROM orders;
+SELECT eql_v3.max(encrypted_amount::eql_v3.integer_ord) FROM orders;
 ```
 
 ## Text matching (not `LIKE`)

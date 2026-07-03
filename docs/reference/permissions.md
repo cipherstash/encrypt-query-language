@@ -59,7 +59,7 @@ needs `USAGE` on it anyway. The exact requirement is path-dependent:
 | `MIN` / `MAX` aggregates | ✅ | ✅ | ✅ |
 | jsonb containment read (`@>` `<@` / `ste_vec_contains`) | ✅ | — | — |
 | Cast/write raw JSON → `eql_v3.json` | ✅ | ✅ | — |
-| Cast/write raw JSON → a scalar domain (`eql_v3.int4`…) | ✅ | — | — |
+| Cast/write raw JSON → a scalar domain (`eql_v3.integer`…) | ✅ | — | — |
 
 Why the internal grant is needed even though you only call public objects:
 

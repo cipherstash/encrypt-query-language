@@ -26,7 +26,7 @@ pub const SCHEMA_ID_BASE: &str = "https://schemas.cipherstash.com/eql/v3/";
 /// published JSON Schema wire contract is pinned by `tests/catalog_parity.rs`.
 /// Public so FFI consumers can enumerate the protocol surface too.
 pub trait DomainType {
-    /// Fully-qualified SQL domain name, e.g. `"eql_v3.int4_eq"` — the
+    /// Fully-qualified SQL domain name, e.g. `"eql_v3.integer_eq"` — the
     /// per-type fact everything else derives from, defined once in each
     /// type's impl.
     ///
@@ -40,7 +40,7 @@ pub trait DomainType {
     /// Fully-qualified SQL domain name of this payload value.
     fn sql_domain(&self) -> &'static str;
 
-    /// Unqualified SQL domain name (e.g. `"int4_eq"`) — [`Self::sql_domain`]
+    /// Unqualified SQL domain name (e.g. `"integer_eq"`) — [`Self::sql_domain`]
     /// minus the schema qualifier; matches `eql-domains`
     /// `DomainFamily::domain_name`.
     fn domain(&self) -> &'static str {
@@ -93,7 +93,7 @@ pub trait DomainType {
 }
 
 /// Type-level handle: lets [`all`] enumerate the domain types without
-/// payload values to box — `Box::new(PhantomData::<Int4Eq>)` is zero-sized,
+/// payload values to box — `Box::new(PhantomData::<IntegerEq>)` is zero-sized,
 /// and the delegation goes through [`DomainType::sql_domain_static`], so no
 /// payload instance is ever constructed.
 ///

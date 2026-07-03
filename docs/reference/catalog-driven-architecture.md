@@ -82,7 +82,7 @@ Order is **load-bearing** — it drives generation order, inventory order, and s
 ```mermaid
 classDiagram
     class DomainFamily {
-        +name: &str        // "int4", "text", "bool"
+        +name: &str        // "integer", "text", "bool"
         +domains: &[Domain]
     }
     class Domain {
@@ -121,7 +121,7 @@ classDiagram
 
 - **`DomainFamily`** = one scalar type (`name` + the public domains it carries).
 - **`Domain`** = one operator/index capability surface (a bare suffix + fixed terms). The empty
-  name `""` is the storage-only domain (`eql_v3.int4`); `eq`, `ord`, `ord_ore`, `match`,
+  name `""` is the storage-only domain (`eql_v3.integer`); `eq`, `ord`, `ord_ore`, `match`,
   `search` are the searchable ones.
 - **`Term`** = an index-term type. *This is where capability lives.*
 
@@ -144,7 +144,7 @@ Cross-term helpers compose these into the per-domain answers the renderers consu
 `operators_for_terms`, `term_json_keys`, `payload_terms`, `nonempty_array_keys`,
 `extractor_terms`, `term_requires`, `extractor_for_operator`, `role_for_terms`.
 
-> **Key insight:** Adding `int8` adds *no new behavior code* — it reuses `Hm`/`Ore`.
+> **Key insight:** Adding `bigint` adds *no new behavior code* — it reuses `Hm`/`Ore`.
 > New behavior (a new index term) is a new `Term` variant with its `impl` arms + tests.
 > Data (which types exist) is catalog rows; behavior (what terms do) is `Term` impls.
 
@@ -174,12 +174,12 @@ flowchart LR
 
 | Family | Kind | Shape |
 |--------|------|-------|
-| `int4`/`int2`/`int8` | I32/I16/I64 | ordered |
+| `integer`/`smallint`/`bigint` | I32/I16/I64 | ordered |
 | `date`/`timestamp` | Date/Timestamp | ordered |
 | `numeric` | Numeric | ordered |
-| `float4`/`float8` | F32/F64 | ordered |
+| `real`/`double` | F32/F64 | ordered |
 | `text` | Text | text-search (equality always routes through `Hm` — ORE is not equality-lossless for text) |
-| `bool` | Bool | storage-only (2-value cardinality leak → no searchable index) |
+| `boolean` | Bool | storage-only (2-value cardinality leak → no searchable index) |
 
 **`jsonb` sits outside this classification.** It carries three domains — `eql_v3.json`
 (document), `eql_v3.jsonb_entry` (one `sv` leaf), `eql_v3.jsonb_query` (containment
@@ -278,7 +278,7 @@ Each `*_functions.sql` mixes three entry kinds, selected per operator:
 
 | Kind | Template | Language | Purpose |
 |------|----------|----------|---------|
-| **Extractor** | `extractor.sql.j2` | `LANGUAGE sql` (inlinable) | `eq_term(int4_eq) → hmac_256` |
+| **Extractor** | `extractor.sql.j2` | `LANGUAGE sql` (inlinable) | `eq_term(integer_eq) → hmac_256` |
 | **Wrapper** | `wrapper.sql.j2` | `LANGUAGE sql` (inlinable) | `eq(a,b) → eq_term(a)=eq_term(b)` |
 | **Blocker** | `unsupported.sql.j2` | **`LANGUAGE plpgsql`** | `RAISE EXCEPTION 'operator % not supported'` |
 
@@ -305,7 +305,7 @@ flowchart TD
 The struct doc is **derived entirely from catalog data** — no free-form prose:
 
 ```rust
-/// `eql_v3.int4_eq` — equality domain.
+/// `eql_v3.integer_eq` — equality domain.
 ///
 /// Operators: `=` `<>`. Required keys: `v` `i` `c` `hm`.
 ```
@@ -315,7 +315,7 @@ domain name** — making a new shape a compile error rather than a silent fallth
 operators come from `Term::operators_for_terms`, the keys from
 `ENVELOPE_KEYS ++ Term::term_json_keys`. The required-key list is where structural
 distinctions become visible — e.g. `text_ord` lists `v i c hm ob` (dual-term) versus
-`int4_ord`'s `v i c ob`.
+`integer_ord`'s `v i c ob`.
 
 ### 3.3 Why output is byte-identical run-to-run
 
@@ -337,16 +337,16 @@ distinctions become visible — e.g. `text_ord` lists `v i c hm ob` (dual-term) 
 ```text
 src/v3/scalars/
 ├── functions.sql          ← hand-written shared blocker helper (COMMITTED)
-├── int4/
-│   ├── int4_types.sql            (generated, committed)
-│   ├── int4_functions.sql        (storage-only blockers)
-│   ├── int4_eq_functions.sql     (eq_term extractor + eq/neq wrappers)
-│   ├── int4_eq_operators.sql     (CREATE OPERATOR)
-│   ├── int4_ord_functions.sql
-│   ├── int4_ord_operators.sql
-│   ├── int4_ord_aggregates.sql   (min/max)
-│   ├── int4_ord_ore_*.sql
-│   └── int4_extensions.sql       ← hand-written, COMMITTED (if present)
+├── integer/
+│   ├── integer_types.sql            (generated, committed)
+│   ├── integer_functions.sql        (storage-only blockers)
+│   ├── integer_eq_functions.sql     (eq_term extractor + eq/neq wrappers)
+│   ├── integer_eq_operators.sql     (CREATE OPERATOR)
+│   ├── integer_ord_functions.sql
+│   ├── integer_ord_operators.sql
+│   ├── integer_ord_aggregates.sql   (min/max)
+│   ├── integer_ord_ore_*.sql
+│   └── integer_extensions.sql       ← hand-written, COMMITTED (if present)
 └── ...
 ```
 
@@ -367,7 +367,7 @@ flowchart TD
         LIB["lib.rs<br/>SchemaVersion/Identifier"]
     end
     subgraph gen["GENERATED (@generated)"]
-        I4["int4.rs / text.rs / ... (10 files)"]
+        I4["integer.rs / text.rs / ... (10 files)"]
         INV["inventory.rs — all()"]
     end
     DT --> I4
@@ -376,11 +376,11 @@ flowchart TD
     MOD --> gen
 ```
 
-A generated struct (`int4.rs`):
+A generated struct (`integer.rs`):
 
 ```rust
 // @generated by eql-codegen from the eql-domains catalog — do not edit
-/// `eql_v3.int4_eq` — equality domain.
+/// `eql_v3.integer_eq` — equality domain.
 ///
 /// Operators: `=` `<>`. Required keys: `v` `i` `c` `hm`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -394,7 +394,7 @@ pub struct Int4Eq {
 }
 
 impl DomainType for Int4Eq {
-    fn sql_domain_static() -> &'static str { "eql_v3.int4_eq" }
+    fn sql_domain_static() -> &'static str { "eql_v3.integer_eq" }
     fn sql_domain(&self) -> &'static str { Self::sql_domain_static() }
     fn schema(&self) -> Schema { schema_for!(Int4Eq) }
 }
@@ -409,7 +409,7 @@ construction needed) in catalog order.
 > these structs at `cargo test` time, so they must exist on a clean clone.
 
 The module doc carries the **non-derivable** caveats: float **NaN** carries no comparison
-guarantee (reject client-side), and **`bool` is storage-only** (`{v,i,c}` only, every
+guarantee (reject client-side), and **`boolean` is storage-only** (`{v,i,c}` only, every
 operator blocked).
 
 ### 4.3 TypeScript & JSON Schema — `crates/eql-bindings/{bindings,schema}/v3/` (committed)
@@ -417,14 +417,14 @@ operator blocked).
 ```mermaid
 flowchart LR
     RS["Rust structs<br/>#[derive(TS, JsonSchema)]"] -->|ts-rs export<br/>via cargo test -p eql-bindings| TS["crates/eql-bindings/bindings/v3/Int4Eq.ts<br/>(45 files)"]
-    RS -->|schemars via tests/export.rs<br/>injects $id| JS["crates/eql-bindings/schema/v3/int4_eq.json<br/>(39 files)"]
+    RS -->|schemars via tests/export.rs<br/>injects $id| JS["crates/eql-bindings/schema/v3/integer_eq.json<br/>(39 files)"]
 ```
 
 - **TypeScript:** one `.ts` per domain, importing co-located term types; newtypes become
   primitive aliases (`export type Ciphertext = string;`, `export type SchemaVersion = 2;`).
   Doc comments survive from Rust.
 - **JSON Schema:** JSON Schema 2020-12 (schemars 1.x), `additionalProperties: false`,
-  `$id` injected at export (`https://schemas.cipherstash.com/eql/v3/int4_eq.json`), term
+  `$id` injected at export (`https://schemas.cipherstash.com/eql/v3/integer_eq.json`), term
   types as reusable `$defs`. `BloomFilter` and `SchemaVersion` have **manual** `JsonSchema`
   impls (bounded `i16[]`, `const: 2`) that derives can't express.
 
@@ -510,7 +510,7 @@ flowchart TD
     BIN["list test binary --list"] --> DISC["discover scalars::&lt;T&gt;:: prefixes"]
     DISC --> NORM["normalize &lt;T&gt; → literal token"]
     NORM --> CMP{"match committed shape?"}
-    CMP --> M1["matrix_tests.txt (ordered, driver int4)"]
+    CMP --> M1["matrix_tests.txt (ordered, driver integer)"]
     CMP --> M2["matrix_tests_eq_only.txt (derived by grep filter)"]
     CMP --> M3["matrix_tests_text.txt (superset, driver text)"]
     CMP --> M4["matrix_tests_storage_only.txt (driver bool)"]

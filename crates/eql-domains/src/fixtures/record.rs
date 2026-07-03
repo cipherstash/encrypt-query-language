@@ -22,29 +22,29 @@ pub struct TypeFixtures {
     pub values: &'static [Fixture],
 }
 
-/// int4 fixtures. `N(..)` literals are range-checked against `i32` at compile
+/// integer fixtures. `N(..)` literals are range-checked against `i32` at compile
 /// time by `fixtures!`.
-pub const INT4_FIXTURES: TypeFixtures = TypeFixtures {
-    family: &crate::INT4,
+pub const INTEGER_FIXTURES: TypeFixtures = TypeFixtures {
+    family: &crate::INTEGER,
     kind: ScalarKind::I32,
     values: fixtures!(int i32;
         Min, N(-100), N(-1), Zero, N(1), N(2), N(5), N(10), N(17), N(25),
         N(42), N(50), N(100), N(250), N(1000), N(9999), Max),
 };
 
-/// int2 fixtures (`i16`-range-checked).
-pub const INT2_FIXTURES: TypeFixtures = TypeFixtures {
-    family: &crate::INT2,
+/// smallint fixtures (`i16`-range-checked).
+pub const SMALLINT_FIXTURES: TypeFixtures = TypeFixtures {
+    family: &crate::SMALLINT,
     kind: ScalarKind::I16,
     values: fixtures!(int i16;
         Min, N(-30000), N(-100), N(-1), Zero, N(1), N(2), N(5), N(10), N(17),
         N(25), N(42), N(50), N(100), N(250), N(1000), N(9999), N(30000), Max),
 };
 
-/// int8 fixtures (`i64`-range-checked) — the int4 set plus two values beyond the
+/// bigint fixtures (`i64`-range-checked) — the integer set plus two values beyond the
 /// i32 range (`±5_000_000_000`) so the matrix exercises the full 64-bit width.
-pub const INT8_FIXTURES: TypeFixtures = TypeFixtures {
-    family: &crate::INT8,
+pub const BIGINT_FIXTURES: TypeFixtures = TypeFixtures {
+    family: &crate::BIGINT,
     kind: ScalarKind::I64,
     values: fixtures!(int i64;
         Min, N(-5000000000), N(-100), N(-1), Zero, N(1), N(2), N(5), N(10), N(17),
@@ -100,28 +100,28 @@ pub const TEXT_FIXTURES: TypeFixtures = TypeFixtures {
         "qabcqbcaqcabqabd", "abcabd"),
 };
 
-/// bool fixtures — both values. Storage-only: encrypted (ciphertext only), never
+/// boolean fixtures — both values. Storage-only: encrypted (ciphertext only), never
 /// a comparison pivot.
-pub const BOOL_FIXTURES: TypeFixtures = TypeFixtures {
-    family: &crate::BOOL,
+pub const BOOLEAN_FIXTURES: TypeFixtures = TypeFixtures {
+    family: &crate::BOOLEAN,
     kind: ScalarKind::Bool,
     values: fixtures!(bool; false, true),
 };
 
-/// float4 fixtures — IEEE-754 strings, every value dyadic (f32-exact); pivots
+/// real fixtures — IEEE-754 strings, every value dyadic (f32-exact); pivots
 /// `-inf` / `0` / `inf` present verbatim. NaN and `-0.0` excluded.
-pub const FLOAT4_FIXTURES: TypeFixtures = TypeFixtures {
-    family: &crate::FLOAT4,
+pub const REAL_FIXTURES: TypeFixtures = TypeFixtures {
+    family: &crate::REAL,
     kind: ScalarKind::F32,
     values: fixtures!(float;
         "-inf", "-1024", "-2.25", "-1", "-0.5", "-0.25",
         "0", "0.25", "0.5", "1", "2.25", "1024", "inf"),
 };
 
-/// float8 fixtures — IEEE-754 strings; pivots `-inf` / `0` / `inf` present
+/// double fixtures — IEEE-754 strings; pivots `-inf` / `0` / `inf` present
 /// verbatim. NaN and `-0.0` excluded.
-pub const FLOAT8_FIXTURES: TypeFixtures = TypeFixtures {
-    family: &crate::FLOAT8,
+pub const DOUBLE_FIXTURES: TypeFixtures = TypeFixtures {
+    family: &crate::DOUBLE,
     kind: ScalarKind::F64,
     values: fixtures!(float;
         "-inf", "-1e300", "-1000000", "-1.5", "-1", "-0.001",
@@ -145,16 +145,16 @@ pub const JSONB_FIXTURES: TypeFixtures = TypeFixtures {
 /// fixture-layer mirror of `CATALOG`; the `const _` parity block below pins the
 /// parity at build time.
 pub const FIXTURES: &[TypeFixtures] = &[
-    INT4_FIXTURES,
-    INT2_FIXTURES,
-    INT8_FIXTURES,
+    INTEGER_FIXTURES,
+    SMALLINT_FIXTURES,
+    BIGINT_FIXTURES,
     DATE_FIXTURES,
     TIMESTAMP_FIXTURES,
     NUMERIC_FIXTURES,
     TEXT_FIXTURES,
-    BOOL_FIXTURES,
-    FLOAT4_FIXTURES,
-    FLOAT8_FIXTURES,
+    BOOLEAN_FIXTURES,
+    REAL_FIXTURES,
+    DOUBLE_FIXTURES,
     JSONB_FIXTURES,
 ];
 
@@ -201,11 +201,11 @@ const fn kind_tag(kind: ScalarKind) -> u8 {
 /// const-eval panic, so a new scalar type cannot be added without naming its
 /// expected kind here.
 const fn expected_kind(name: &str) -> ScalarKind {
-    if str_eq(name, "int2") {
+    if str_eq(name, "smallint") {
         ScalarKind::I16
-    } else if str_eq(name, "int4") {
+    } else if str_eq(name, "integer") {
         ScalarKind::I32
-    } else if str_eq(name, "int8") {
+    } else if str_eq(name, "bigint") {
         ScalarKind::I64
     } else if str_eq(name, "date") {
         ScalarKind::Date
@@ -215,11 +215,11 @@ const fn expected_kind(name: &str) -> ScalarKind {
         ScalarKind::Numeric
     } else if str_eq(name, "text") {
         ScalarKind::Text
-    } else if str_eq(name, "bool") {
+    } else if str_eq(name, "boolean") {
         ScalarKind::Bool
-    } else if str_eq(name, "float4") {
+    } else if str_eq(name, "real") {
         ScalarKind::F32
-    } else if str_eq(name, "float8") {
+    } else if str_eq(name, "double") {
         ScalarKind::F64
     } else if str_eq(name, "jsonb") {
         ScalarKind::Jsonb
@@ -235,7 +235,7 @@ const fn expected_kind(name: &str) -> ScalarKind {
 /// one fixture record and vice-versa, same order, with the right `kind`. As a
 /// `const` item it is const-evaluated on every `cargo build`: a missing, extra,
 /// or misaligned `TypeFixtures`, or one carrying the wrong `kind` (e.g.
-/// `TypeFixtures { family: &INT8, kind: I16, .. }`), fails the build with
+/// `TypeFixtures { family: &BIGINT, kind: I16, .. }`), fails the build with
 /// `error[E0080]: evaluation panicked` carrying the message below — it cannot be
 /// `#[cfg]`-gated away or skipped by a test filter, so the `kind` mismatch is
 /// caught before any consumer (including `eql-tests-macros` expansion) sees
@@ -273,14 +273,14 @@ mod str_eq_tests {
     fn str_eq_matches_iff_byte_identical() {
         assert!(str_eq("", ""));
         assert!(str_eq("ab", "ab"));
-        assert!(str_eq("int4", "int4"));
+        assert!(str_eq("integer", "integer"));
         // Differing length.
         assert!(!str_eq("a", "ab"));
         assert!(!str_eq("ab", "a"));
         assert!(!str_eq("", "a"));
         // Same length, one byte differs (the path that would neuter the guard).
         assert!(!str_eq("a", "b"));
-        assert!(!str_eq("int4", "int8"));
+        assert!(!str_eq("integer", "bigint"));
         assert!(!str_eq("date", "bate"));
     }
 }

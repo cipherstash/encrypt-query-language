@@ -57,8 +57,8 @@ pub fn environment() -> minijinja::Environment<'static> {
 /// One idempotent CREATE DOMAIN block, with SQL-required values precomputed.
 #[derive(serde::Serialize)]
 pub struct DomainBlock {
-    pub typname: String,   // sql_str-escaped bare name, e.g. int4_ord_ore
-    pub name: String,      // raw bare name (unescaped), e.g. int4_ord_ore
+    pub typname: String,   // sql_str-escaped bare name, e.g. integer_ord_ore
+    pub name: String,      // raw bare name (unescaped), e.g. integer_ord_ore
     pub keys: Vec<String>, // ordered, sql_str-escaped key tokens (envelope + ciphertext + term keys)
     // sql_str-escaped keys whose payload must be a non-empty array (the ORE term
     // `ob`). Derived from the domain's terms exactly like `keys`, so the template
@@ -122,7 +122,7 @@ pub enum FnEntry {
         function_name: String, // e.g. eq
         args: [SqlParam; 2],
         call_a: String, // e.g. eql_v3.eq_term(a)   (embeds extract_arg cast logic)
-        call_b: String, // e.g. eql_v3.eq_term(b::eql_v3.int4_eq)
+        call_b: String, // e.g. eql_v3.eq_term(b::eql_v3.integer_eq)
     },
     Unsupported {
         operator_lit: String,  // sql_str(op), escaped content for the RAISE literal
@@ -137,7 +137,7 @@ pub struct FunctionsContext {
     pub requires: Vec<String>, // dependency paths only; template emits "-- REQUIRE:"
     pub family_name: String,
     pub name: String,       // full domain name (family-name + "_" + domain-name)
-    pub dom: String,        // schema-qualified domain, e.g. eql_v3.int4_eq
+    pub dom: String,        // schema-qualified domain, e.g. eql_v3.integer_eq
     pub domain_lit: String, // sql_str(dom), defensively escaped for the RAISE literal
     pub entries: Vec<FnEntry>,
 }
@@ -256,7 +256,7 @@ pub struct AggregatesContext {
     pub aggregates: &'static [AggregateOp], // == AGGREGATE_OPS
 }
 
-/// The schema-qualified SQL domain type name, e.g. `eql_v3.int4_eq`.
+/// The schema-qualified SQL domain type name, e.g. `eql_v3.integer_eq`.
 /// Port of `domain_name`.
 pub fn domain_name(name: &str) -> String {
     format!("{SCHEMA}.{name}")
@@ -307,7 +307,7 @@ mod tests {
 
     #[test]
     fn domain_name_qualifies_with_schema() {
-        assert_eq!(domain_name("int4_eq"), "eql_v3.int4_eq");
+        assert_eq!(domain_name("integer_eq"), "eql_v3.integer_eq");
     }
 
     #[test]
@@ -360,14 +360,14 @@ mod tests {
             // Supported comparison operator carries its planner metadata.
             (
                 "=",
-                "eql_v3.int4_eq",
+                "eql_v3.integer_eq",
                 true,
                 Some("COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel"),
             ),
             // The same operator, unsupported on this domain → no metadata line.
-            ("=", "eql_v3.int4", false, None),
+            ("=", "eql_v3.integer", false, None),
             // Supported but metadata-less operator (`->`) → still no metadata.
-            ("->", "eql_v3.int4_eq", true, None),
+            ("->", "eql_v3.integer_eq", true, None),
             // `@>` carries containment metadata when supported (the Bloom
             // `text_match` path).
             (
@@ -377,8 +377,8 @@ mod tests {
                 Some("COMMUTATOR = <@, RESTRICT = contsel, JOIN = contjoinsel"),
             ),
             // ... but suppressed when `@>` is a blocker (non-Bloom domains),
-            // which is why the int4 reference is unchanged.
-            ("@>", "eql_v3.int4_eq", false, None),
+            // which is why the integer reference is unchanged.
+            ("@>", "eql_v3.integer_eq", false, None),
         ];
 
         for (symbol, dom, supported, expected) in cases {

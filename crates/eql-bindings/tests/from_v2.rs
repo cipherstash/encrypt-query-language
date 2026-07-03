@@ -93,7 +93,7 @@ fn parse_resolves_every_catalog_scalar_domain_and_json() {
 
 #[test]
 fn parse_rejects_unknown_domain_names() {
-    for name in ["int5", "text_like", "eql_v3.int4_eq", "", "jsonb"] {
+    for name in ["int5", "text_like", "eql_v3.integer_eq", "", "jsonb"] {
         let parsed = TargetDomain::parse(name);
         assert!(
             matches!(parsed, Err(FromV2Error::UnknownDomain { .. })),
@@ -104,10 +104,10 @@ fn parse_rejects_unknown_domain_names() {
 
 #[test]
 fn target_domain_is_copy_and_comparable() {
-    let a = target("int4_eq");
+    let a = target("integer_eq");
     let b = a; // Copy
     assert_eq!(a, b);
-    assert_ne!(a, target("int4"));
+    assert_ne!(a, target("integer"));
     assert_ne!(a, TargetDomain::Json);
 }
 
@@ -117,7 +117,7 @@ fn target_domain_is_copy_and_comparable() {
 
 #[test]
 fn storage_only_scalar_drops_k_and_all_terms() {
-    let out = from_v2(&v2_ct_full(), target("int4")).unwrap();
+    let out = from_v2(&v2_ct_full(), target("integer")).unwrap();
     assert_eq!(out, json!({ "v": 3, "i": ident(), "c": CIPHERTEXT }));
     assert!(is_v3_payload(&out));
 }
@@ -133,8 +133,8 @@ fn text_eq_copies_hm_and_drops_the_rest() {
 }
 
 #[test]
-fn int4_ord_ore_copies_ob_verbatim() {
-    let out = from_v2(&v2_ct_full(), target("int4_ord_ore")).unwrap();
+fn integer_ord_ore_copies_ob_verbatim() {
+    let out = from_v2(&v2_ct_full(), target("integer_ord_ore")).unwrap();
     assert_eq!(
         out,
         json!({ "v": 3, "i": ident(), "c": CIPHERTEXT, "ob": [HEX, HEX_LONG] })
@@ -143,8 +143,8 @@ fn int4_ord_ore_copies_ob_verbatim() {
 }
 
 #[test]
-fn int4_ord_ope_copies_op_verbatim() {
-    let out = from_v2(&v2_ct_full(), target("int4_ord_ope")).unwrap();
+fn integer_ord_ope_copies_op_verbatim() {
+    let out = from_v2(&v2_ct_full(), target("integer_ord_ope")).unwrap();
     assert_eq!(
         out,
         json!({ "v": 3, "i": ident(), "c": CIPHERTEXT, "op": HEX })
@@ -307,7 +307,7 @@ fn unknown_or_missing_kind_is_rejected() {
 fn kind_mismatch_is_rejected_in_both_directions() {
     // sv payload for a scalar target.
     assert!(matches!(
-        from_v2(&v2_sv(), target("int4_eq")).unwrap_err(),
+        from_v2(&v2_sv(), target("integer_eq")).unwrap_err(),
         FromV2Error::KindMismatch { .. }
     ));
     // ct payload for the Json target.

@@ -27,10 +27,10 @@ mod spec;
 mod term;
 
 pub use fixtures::{
-    BoundedIntKind, Fixture, ScalarKind, TypeFixtures, BOOL_FIXTURES, DATE_FIXTURES, FIXTURES,
-    FLOAT4_FIXTURES, FLOAT8_FIXTURES, INT2_FIXTURES, INT2_VALUES, INT4_FIXTURES, INT4_VALUES,
-    INT8_FIXTURES, INT8_VALUES, JSONB_FIXTURES, NUMERIC_FIXTURES, TEXT_FIXTURES, TEXT_VALUES,
-    TIMESTAMP_FIXTURES,
+    BoundedIntKind, Fixture, ScalarKind, TypeFixtures, BIGINT_FIXTURES, BIGINT_VALUES,
+    BOOLEAN_FIXTURES, DATE_FIXTURES, DOUBLE_FIXTURES, FIXTURES, INTEGER_FIXTURES, INTEGER_VALUES,
+    JSONB_FIXTURES, NUMERIC_FIXTURES, REAL_FIXTURES, SMALLINT_FIXTURES, SMALLINT_VALUES,
+    TEXT_FIXTURES, TEXT_VALUES, TIMESTAMP_FIXTURES,
 };
 
 /// Always-present payload keys required by every generated domain CHECK,
@@ -217,18 +217,18 @@ const EQ_ONLY_DOMAINS: &[Domain] = &[
     },
 ];
 
-const INT4: DomainFamily = DomainFamily {
-    name: "int4",
+const INTEGER: DomainFamily = DomainFamily {
+    name: "integer",
     domains: ORDERED_INT_DOMAINS,
 };
 
-const INT2: DomainFamily = DomainFamily {
-    name: "int2",
+const SMALLINT: DomainFamily = DomainFamily {
+    name: "smallint",
     domains: ORDERED_INT_DOMAINS,
 };
 
-const INT8: DomainFamily = DomainFamily {
-    name: "int8",
+const BIGINT: DomainFamily = DomainFamily {
+    name: "bigint",
     domains: ORDERED_INT_DOMAINS,
 };
 
@@ -355,14 +355,14 @@ const STORAGE_ONLY_DOMAINS: &[Domain] = &[Domain {
 }];
 
 /// `bool` — an **encryption-only / storage-only** scalar (`ScalarKind::Bool`).
-/// One term-less storage domain (`eql_v3.bool`), no `_eq`/`_ord`: a two-value
+/// One term-less storage domain (`eql_v3.boolean`), no `_eq`/`_ord`: a two-value
 /// column has too little cardinality for any searchable index without leaking the
 /// plaintext, so the value is encrypted at rest and decrypted by the proxy,
 /// never searched server-side. Public so the SQLx harness reads
-/// `BOOL_FIXTURES.values` directly (there is no `BOOL_VALUES` materializer — the
+/// `BOOLEAN_FIXTURES.values` directly (there is no `BOOL_VALUES` materializer — the
 /// two values are read straight from the record).
-pub const BOOL: DomainFamily = DomainFamily {
-    name: "bool",
+pub const BOOLEAN: DomainFamily = DomainFamily {
+    name: "boolean",
     domains: STORAGE_ONLY_DOMAINS,
 };
 
@@ -374,23 +374,23 @@ pub const TEXT: DomainFamily = DomainFamily {
     domains: TEXT_DOMAINS,
 };
 
-/// `float4` — an **ordered**, non-integer scalar (Postgres `real`). Reuses the
+/// `real` — an **ordered**, non-integer scalar (Postgres `real`). Reuses the
 /// four-domain ordered shape (`ORDERED_INT_DOMAINS`); only kind and fixtures
 /// differ. Both float widths encrypt through the SAME f64 crypto path
-/// (`Plaintext::Float`), so `float4` vs `float8` is purely a Postgres-surface
+/// (`Plaintext::Float`), so `real` vs `double` is purely a Postgres-surface
 /// distinction. Public (like `DATE`/`NUMERIC`) so the SQLx harness reads
-/// `FLOAT4_FIXTURES.values` directly to parse the strings into `f32`.
-pub const FLOAT4: DomainFamily = DomainFamily {
-    name: "float4",
+/// `REAL_FIXTURES.values` directly to parse the strings into `f32`.
+pub const REAL: DomainFamily = DomainFamily {
+    name: "real",
     domains: ORDERED_INT_DOMAINS,
 };
 
-/// `float8` — an **ordered**, non-integer scalar (Postgres `double precision`),
+/// `double` — an **ordered**, non-integer scalar (Postgres `double precision`),
 /// the native width of the float crypto path. Reuses the ordered shape. Public
-/// so the SQLx harness reads `FLOAT8_FIXTURES.values` directly to parse into
+/// so the SQLx harness reads `DOUBLE_FIXTURES.values` directly to parse into
 /// `f64`.
-pub const FLOAT8: DomainFamily = DomainFamily {
-    name: "float8",
+pub const DOUBLE: DomainFamily = DomainFamily {
+    name: "double",
     domains: ORDERED_INT_DOMAINS,
 };
 
@@ -443,10 +443,13 @@ pub const JSONB: DomainFamily = DomainFamily {
     domains: JSONB_DOMAINS,
 };
 
-/// The scalar catalog — the single source of truth. Order is significant (it
-/// drives generation order). New types are appended as their SQL surface lands.
+/// The domain-family catalog — the single source of truth. Includes both the
+/// scalar (flat) families and the non-scalar SteVec `jsonb` family; scalar-only
+/// consumers should iterate [`scalar_families`] instead. Order is significant
+/// (it drives inventory/generation order). New types are appended as their SQL
+/// surface lands.
 pub const CATALOG: &[DomainFamily] = &[
-    INT4, INT2, INT8, DATE, TIMESTAMP, NUMERIC, TEXT, BOOL, FLOAT4, FLOAT8, JSONB,
+    INTEGER, SMALLINT, BIGINT, DATE, TIMESTAMP, NUMERIC, TEXT, BOOLEAN, REAL, DOUBLE, JSONB,
 ];
 
 /// The scalar (flat) families of `CATALOG`, in order — everything except the

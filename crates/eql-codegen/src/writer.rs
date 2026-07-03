@@ -270,8 +270,12 @@ mod tests {
     fn is_generated_recognises_rust_marker_and_ignores_sql_in_rs() {
         use crate::consts::RUST_GENERATED_MARKER;
         let d = tmp();
-        let rs = d.path().join("int4.rs");
-        fs::write(&rs, format!("{RUST_GENERATED_MARKER}\npub struct Int4;\n")).unwrap();
+        let rs = d.path().join("integer.rs");
+        fs::write(
+            &rs,
+            format!("{RUST_GENERATED_MARKER}\npub struct Integer;\n"),
+        )
+        .unwrap();
         assert!(is_generated(&rs, GeneratedKind::Rust).unwrap());
         assert!(!is_generated(&rs, GeneratedKind::Sql).unwrap());
     }
@@ -280,12 +284,12 @@ mod tests {
     fn clean_filters_by_kind_extension() {
         use crate::consts::RUST_GENERATED_MARKER;
         let d = tmp();
-        let gen_rs = d.path().join("int4.rs");
-        let gen_sql = d.path().join("int4_types.sql");
+        let gen_rs = d.path().join("integer.rs");
+        let gen_sql = d.path().join("integer_types.sql");
         let hand_rs = d.path().join("terms.rs");
         fs::write(
             &gen_rs,
-            format!("{RUST_GENERATED_MARKER}\npub struct Int4;\n"),
+            format!("{RUST_GENERATED_MARKER}\npub struct Integer;\n"),
         )
         .unwrap();
         fs::write(&gen_sql, format!("{AUTO_GENERATED_MARKER}\nSELECT 1;\n")).unwrap();
@@ -325,7 +329,7 @@ mod tests {
     #[test]
     fn write_generated_file_writes_rendered_body_verbatim() {
         let d = tmp();
-        let p = d.path().join("int4_types.sql");
+        let p = d.path().join("integer_types.sql");
         // The template render carries the marker on line 1; the writer writes it
         // through unchanged.
         let body = format!("{AUTO_GENERATED_MARKER}\nDO $$ BEGIN END $$;\n");
@@ -338,7 +342,7 @@ mod tests {
     #[test]
     fn write_rejects_body_without_marker() {
         let d = tmp();
-        let p = d.path().join("int4_types.sql");
+        let p = d.path().join("integer_types.sql");
         // A body whose first line is NOT the AUTO-GENERATED marker must be
         // rejected — the template is required to emit it.
         let body = "-- REQUIRE: src/v3/schema.sql\nDO $$ BEGIN END $$;\n";
@@ -354,7 +358,7 @@ mod tests {
     #[test]
     fn write_refuses_to_overwrite_handwritten() {
         let d = tmp();
-        let p = d.path().join("int4_types.sql");
+        let p = d.path().join("integer_types.sql");
         fs::write(&p, "-- REQUIRE: src/schema.sql\n-- hand-written\n").unwrap();
         let err =
             write_generated_file(&p, "DO $$ BEGIN END $$;\n", GeneratedKind::Sql).unwrap_err();
@@ -365,8 +369,8 @@ mod tests {
     #[test]
     fn preflight_refuses_handwritten_target() {
         let d = tmp();
-        let generated = d.path().join("int4_types.sql");
-        let hand = d.path().join("int4_eq_functions.sql");
+        let generated = d.path().join("integer_types.sql");
+        let hand = d.path().join("integer_eq_functions.sql");
         fs::write(
             &generated,
             format!("{AUTO_GENERATED_MARKER}\n-- old generated\n"),
@@ -376,7 +380,7 @@ mod tests {
         let err =
             ensure_generated_paths_writable(&[generated.clone(), hand.clone()], GeneratedKind::Sql)
                 .unwrap_err();
-        assert!(err.to_string().contains("int4_eq_functions.sql"));
+        assert!(err.to_string().contains("integer_eq_functions.sql"));
         assert!(generated.exists());
         assert!(hand.exists());
     }
@@ -390,7 +394,7 @@ mod tests {
         // overwrite hand-written file (no AUTO-GENERATED header)". The read
         // failure must surface distinctly instead.
         let d = tmp();
-        let p = d.path().join("int4.rs");
+        let p = d.path().join("integer.rs");
         fs::write(&p, [0xff, 0xfe, 0x00]).unwrap();
         let err = ensure_generated_paths_writable(std::slice::from_ref(&p), GeneratedKind::Rust)
             .unwrap_err();
@@ -411,7 +415,7 @@ mod tests {
         // for a broken link), so the path is treated as a non-generated entry that
         // must not be silently overwritten.
         let d = tmp();
-        let link = d.path().join("int4.rs");
+        let link = d.path().join("integer.rs");
         let missing_target = d.path().join("does-not-exist");
         std::os::unix::fs::symlink(&missing_target, &link).unwrap();
         assert!(
@@ -447,7 +451,7 @@ mod tests {
     #[test]
     fn write_overwrites_existing_generated_file() {
         let d = tmp();
-        let p = d.path().join("int4_types.sql");
+        let p = d.path().join("integer_types.sql");
         fs::write(&p, format!("{AUTO_GENERATED_MARKER}\n-- old content\n")).unwrap();
         write_generated_file(
             &p,
@@ -463,9 +467,9 @@ mod tests {
     #[test]
     fn clean_removes_only_generated_files() {
         let d = tmp();
-        let gen1 = d.path().join("int4_eq_functions.sql");
-        let gen2 = d.path().join("int4_old_domain_functions.sql");
-        let hand = d.path().join("int4_jsonb_extra.sql");
+        let gen1 = d.path().join("integer_eq_functions.sql");
+        let gen2 = d.path().join("integer_old_domain_functions.sql");
+        let hand = d.path().join("integer_jsonb_extra.sql");
         fs::write(&gen1, format!("{AUTO_GENERATED_MARKER}\nSELECT 1;\n")).unwrap();
         fs::write(&gen2, format!("{AUTO_GENERATED_MARKER}\nSELECT 2;\n")).unwrap();
         fs::write(&hand, "-- REQUIRE: src/schema.sql\n-- hand-written\n").unwrap();
@@ -489,7 +493,7 @@ mod tests {
         // The atomic temp+rename must not leave its sibling temp file behind on a
         // successful write — only the final target should remain.
         let d = tmp();
-        let p = d.path().join("int4_types.sql");
+        let p = d.path().join("integer_types.sql");
         let body = format!("{AUTO_GENERATED_MARKER}\nSELECT 1;\n");
         write_generated_file(&p, &body, GeneratedKind::Sql).unwrap();
         let leftovers: Vec<PathBuf> = fs::read_dir(d.path())
@@ -518,7 +522,7 @@ mod tests {
         // and no temp debris may survive.
         use std::os::unix::fs::PermissionsExt;
         let d = tmp();
-        let p = d.path().join("int4_types.sql");
+        let p = d.path().join("integer_types.sql");
         let old = format!("{AUTO_GENERATED_MARKER}\n-- OLD content\n");
         fs::write(&p, &old).unwrap();
 
@@ -557,9 +561,9 @@ mod tests {
         // NOT just written; files in `keep` and hand-written (no marker) files
         // always survive.
         let d = tmp();
-        let kept = d.path().join("int4_eq_functions.sql"); // generated, in keep
-        let orphan = d.path().join("int4_gone_functions.sql"); // generated, dropped
-        let hand = d.path().join("int4_extensions.sql"); // hand-written, no marker
+        let kept = d.path().join("integer_eq_functions.sql"); // generated, in keep
+        let orphan = d.path().join("integer_gone_functions.sql"); // generated, dropped
+        let hand = d.path().join("integer_extensions.sql"); // hand-written, no marker
         fs::write(&kept, format!("{AUTO_GENERATED_MARKER}\nSELECT 1;\n")).unwrap();
         fs::write(&orphan, format!("{AUTO_GENERATED_MARKER}\nSELECT 2;\n")).unwrap();
         fs::write(&hand, "-- REQUIRE: src/schema.sql\n-- hand-written\n").unwrap();
@@ -581,7 +585,7 @@ mod tests {
         let d = tmp();
         let blocker = d.path().join("not-a-dir");
         fs::write(&blocker, "i am a file\n").unwrap();
-        let target = blocker.join("int4_types.sql"); // parent is a file
+        let target = blocker.join("integer_types.sql"); // parent is a file
         let body = format!("{AUTO_GENERATED_MARKER}\nDO $$ BEGIN END $$;\n");
         let err = write_generated_file(&target, &body, GeneratedKind::Sql).unwrap_err();
         assert!(matches!(err, WriteError::Io(_)), "expected Io, got {err:?}");

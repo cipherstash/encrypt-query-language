@@ -6,19 +6,19 @@
 //! (containment / path query / array ops / the operator-surface guard) remain
 //! in `v3_jsonb_tests` / `v3_jsonb_operator_surface_tests`.
 //!
-//! The view type (`JsonbEntryInt4`) is deliberately NOT a `eql_domains::CATALOG`
+//! The view type (`JsonbEntryInteger`) is deliberately NOT a `eql_domains::CATALOG`
 //! scalar, so this suite is hand-written rather than emitted by the
 //! `scalar_types!` list — and its test names live under `jsonb_entry::…`,
 //! validated by `test:matrix:inventory:jsonb_entry` (NOT the scalar inventory).
 
-use eql_tests::fixtures::v3_doc_int4::SELECTOR;
-use eql_tests::jsonb_entry::JsonbEntryInt4;
+use eql_tests::fixtures::v3_doc_integer::SELECTOR;
+use eql_tests::jsonb_entry::JsonbEntryInteger;
 use eql_tests::scalar_domains::ScalarType;
 
 eql_tests::jsonb_entry_matrix! {
-    suite = jsonb_entry_int4,
-    scalar = eql_tests::jsonb_entry::JsonbEntryInt4,
-    eql_type = "v3_doc_int4",
+    suite = jsonb_entry_integer,
+    scalar = eql_tests::jsonb_entry::JsonbEntryInteger,
+    eql_type = "v3_doc_integer",
 }
 
 // ----------------------------------------------------------------------------
@@ -26,11 +26,11 @@ eql_tests::jsonb_entry_matrix! {
 // real, `oc`-carrying entry from every fixture row — a wrong selector would make
 // every matrix comparison vacuous via NULL extraction rather than failing.
 // ----------------------------------------------------------------------------
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_int4")))]
-async fn jsonb_entry_int4_fixture_shape(pool: sqlx::PgPool) -> anyhow::Result<()> {
-    let n = <JsonbEntryInt4 as ScalarType>::fixture_values().len() as i64;
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_integer")))]
+async fn jsonb_entry_integer_fixture_shape(pool: sqlx::PgPool) -> anyhow::Result<()> {
+    let n = <JsonbEntryInteger as ScalarType>::fixture_values().len() as i64;
 
-    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM fixtures.v3_doc_int4")
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM fixtures.v3_doc_integer")
         .fetch_one(&pool)
         .await?;
     anyhow::ensure!(
@@ -38,8 +38,8 @@ async fn jsonb_entry_int4_fixture_shape(pool: sqlx::PgPool) -> anyhow::Result<()
         "row count must match fixture_values().len(): want {n}, got {count}",
     );
 
-    // ids sequential from 1 (the split generator inserts in INT4_VALUES order).
-    let ids: Vec<i64> = sqlx::query_scalar("SELECT id FROM fixtures.v3_doc_int4 ORDER BY id")
+    // ids sequential from 1 (the split generator inserts in INTEGER_VALUES order).
+    let ids: Vec<i64> = sqlx::query_scalar("SELECT id FROM fixtures.v3_doc_integer ORDER BY id")
         .fetch_all(&pool)
         .await?;
     anyhow::ensure!(
@@ -50,7 +50,7 @@ async fn jsonb_entry_int4_fixture_shape(pool: sqlx::PgPool) -> anyhow::Result<()
     // Every row's entry at the selector is non-NULL — guards against a wrong
     // SELECTOR silently hollowing out the matrix.
     let null_entries: i64 = sqlx::query_scalar(&format!(
-        "SELECT COUNT(*) FROM fixtures.v3_doc_int4 WHERE (payload -> '{SELECTOR}'::text) IS NULL",
+        "SELECT COUNT(*) FROM fixtures.v3_doc_integer WHERE (payload -> '{SELECTOR}'::text) IS NULL",
     ))
     .fetch_one(&pool)
     .await?;
@@ -62,7 +62,7 @@ async fn jsonb_entry_int4_fixture_shape(pool: sqlx::PgPool) -> anyhow::Result<()
     // Every extracted entry is a valid jsonb_entry payload AND carries `oc`
     // (the ordered term the matrix's ore_cllw paths require).
     let invalid: i64 = sqlx::query_scalar(&format!(
-        "SELECT COUNT(*) FROM fixtures.v3_doc_int4 \
+        "SELECT COUNT(*) FROM fixtures.v3_doc_integer \
          WHERE NOT eql_v3_internal.is_valid_ste_vec_entry_payload((payload -> '{SELECTOR}'::text)::jsonb) \
             OR NOT eql_v3.has_ore_cllw((payload -> '{SELECTOR}'::text)::eql_v3.jsonb_entry)",
     ))
@@ -77,7 +77,7 @@ async fn jsonb_entry_int4_fixture_shape(pool: sqlx::PgPool) -> anyhow::Result<()
     // leaves), so the correctness/ordering oracle has real discrimination.
     let distinct_oc: i64 = sqlx::query_scalar(&format!(
         "SELECT COUNT(DISTINCT ((payload -> '{SELECTOR}'::text)::jsonb ->> 'oc')) \
-         FROM fixtures.v3_doc_int4",
+         FROM fixtures.v3_doc_integer",
     ))
     .fetch_one(&pool)
     .await?;
@@ -92,7 +92,7 @@ async fn jsonb_entry_int4_fixture_shape(pool: sqlx::PgPool) -> anyhow::Result<()
 // ----------------------------------------------------------------------------
 // Selector drift guard. The whole entry suite is bound to ONE CipherStash
 // workspace: a SteVec selector is a keyed MAC over (workspace keyset,
-// STE_VEC_PREFIX, path), so regenerating `v3_doc_int4` against a different
+// STE_VEC_PREFIX, path), so regenerating `v3_doc_integer` against a different
 // keyset (rotated/changed CS_WORKSPACE_CRN / CS_CLIENT_KEY) re-pins the
 // `$.field` selector. This reads the LIVE selector from the loaded fixture and
 // asserts it equals the pinned `SELECTOR`, so drift surfaces as one
@@ -101,14 +101,14 @@ async fn jsonb_entry_int4_fixture_shape(pool: sqlx::PgPool) -> anyhow::Result<()
 // would require runtime selector resolution, which the static
 // `ScalarType::column_expr()` seam cannot do — out of scope here.
 // ----------------------------------------------------------------------------
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_int4")))]
-async fn jsonb_entry_int4_selector_matches_fixture(pool: sqlx::PgPool) -> anyhow::Result<()> {
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_integer")))]
+async fn jsonb_entry_integer_selector_matches_fixture(pool: sqlx::PgPool) -> anyhow::Result<()> {
     // The `$.field` ORE-CLLW entry is the sv element carrying `oc`. Cast the
     // `eql_v3.json` payload to bare jsonb FIRST so `-> 'sv'` is the native array
     // accessor, not the custom `eql_v3.json -> text` selector-lookup operator.
     let live: Vec<String> = sqlx::query_scalar(
         "SELECT DISTINCT elem ->> 's' \
-         FROM fixtures.v3_doc_int4, \
+         FROM fixtures.v3_doc_integer, \
               jsonb_array_elements(payload::jsonb -> 'sv') AS elem \
          WHERE elem ? 'oc'",
     )
@@ -117,13 +117,13 @@ async fn jsonb_entry_int4_selector_matches_fixture(pool: sqlx::PgPool) -> anyhow
 
     anyhow::ensure!(
         live.len() == 1,
-        "expected exactly one distinct $.field oc-selector in v3_doc_int4, got {live:?}",
+        "expected exactly one distinct $.field oc-selector in v3_doc_integer, got {live:?}",
     );
     let live = &live[0];
     anyhow::ensure!(
         live == SELECTOR,
-        "v3_doc_int4 $.field oc-selector drifted from the pinned constant.\n  \
-         pinned v3_doc_int4::SELECTOR = {SELECTOR}\n  \
+        "v3_doc_integer $.field oc-selector drifted from the pinned constant.\n  \
+         pinned v3_doc_integer::SELECTOR = {SELECTOR}\n  \
          live fixture selector        = {live}\n\
          The SteVec selector is keyed by the CipherStash workspace; if the \
          workspace/keyset changed, re-pin SELECTOR to the live value above and \
@@ -137,12 +137,12 @@ async fn jsonb_entry_int4_selector_matches_fixture(pool: sqlx::PgPool) -> anyhow
 // terms. Compares `eql_v3.ore_cllw(...)` outputs directly — NOT entry `=`, which
 // tests `eq_term`, not ORE.
 // ----------------------------------------------------------------------------
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_int4")))]
-async fn jsonb_entry_int4_ore_cllw_injectivity(pool: sqlx::PgPool) -> anyhow::Result<()> {
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_integer")))]
+async fn jsonb_entry_integer_ore_cllw_injectivity(pool: sqlx::PgPool) -> anyhow::Result<()> {
     let collisions: i64 = sqlx::query_scalar(&format!(
         "SELECT COUNT(*) \
-         FROM fixtures.v3_doc_int4 a \
-         JOIN fixtures.v3_doc_int4 b ON a.id < b.id \
+         FROM fixtures.v3_doc_integer a \
+         JOIN fixtures.v3_doc_integer b ON a.id < b.id \
          WHERE a.plaintext <> b.plaintext \
            AND eql_v3.ore_cllw((a.payload -> '{SELECTOR}'::text)::eql_v3.jsonb_entry) \
              = eql_v3.ore_cllw((b.payload -> '{SELECTOR}'::text)::eql_v3.jsonb_entry)",
@@ -170,12 +170,12 @@ async fn jsonb_entry_int4_ore_cllw_injectivity(pool: sqlx::PgPool) -> anyhow::Re
 // excluded: entry `=` reduces through `eql_v3.eq_term`, not `ore_cllw`, so the
 // ore_cllw btree cannot serve it.
 // ----------------------------------------------------------------------------
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_int4")))]
-async fn jsonb_entry_int4_index_engages(pool: sqlx::PgPool) -> anyhow::Result<()> {
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_integer")))]
+async fn jsonb_entry_integer_index_engages(pool: sqlx::PgPool) -> anyhow::Result<()> {
     let sel = SELECTOR;
-    let pivot = <JsonbEntryInt4 as ScalarType>::fixture_values()[0];
+    let pivot = <JsonbEntryInteger as ScalarType>::fixture_values()[0];
     let payload =
-        eql_tests::scalar_domains::fetch_fixture_payload::<JsonbEntryInt4>(&pool, pivot).await?;
+        eql_tests::scalar_domains::fetch_fixture_payload::<JsonbEntryInteger>(&pool, pivot).await?;
     let lit = payload.replace('\'', "''");
 
     let mut tx = pool.begin().await?;
@@ -184,7 +184,7 @@ async fn jsonb_entry_int4_index_engages(pool: sqlx::PgPool) -> anyhow::Result<()
         .await?;
     sqlx::query(&format!(
         "INSERT INTO entry_idx(value) \
-         SELECT (payload -> '{sel}'::text)::eql_v3.jsonb_entry FROM fixtures.v3_doc_int4",
+         SELECT (payload -> '{sel}'::text)::eql_v3.jsonb_entry FROM fixtures.v3_doc_integer",
     ))
     .execute(&mut *tx)
     .await?;
@@ -220,11 +220,11 @@ async fn jsonb_entry_int4_index_engages(pool: sqlx::PgPool) -> anyhow::Result<()
 // oc-less. The min/max sfuncs explicitly skip oc-less entries. This feeds a
 // forged hm-only (oc-less) entry in the SEED position alongside real oc-carrying
 // entries and asserts the extremum is the correct ORDERABLE entry, never the
-// oc-less seed. The whole-suite matrix never exercises this (every v3_doc_int4
+// oc-less seed. The whole-suite matrix never exercises this (every v3_doc_integer
 // entry carries oc).
 // ----------------------------------------------------------------------------
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_int4")))]
-async fn jsonb_entry_int4_aggregate_ignores_oc_less_entries(
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_integer")))]
+async fn jsonb_entry_integer_aggregate_ignores_oc_less_entries(
     pool: sqlx::PgPool,
 ) -> anyhow::Result<()> {
     let sel = SELECTOR;
@@ -232,7 +232,7 @@ async fn jsonb_entry_int4_aggregate_ignores_oc_less_entries(
     // exactly one of hm/oc — here `hm`, so `eql_v3.ore_cllw(entry)` is NULL.
     let oc_less = r#"{"s":"forged","c":"x","hm":"00"}"#;
 
-    let mut sorted: Vec<i32> = <JsonbEntryInt4 as ScalarType>::fixture_values()
+    let mut sorted: Vec<i32> = <JsonbEntryInteger as ScalarType>::fixture_values()
         .iter()
         .map(|e| e.0)
         .collect();
@@ -253,22 +253,22 @@ async fn jsonb_entry_int4_aggregate_ignores_oc_less_entries(
     sqlx::query(&format!(
         "INSERT INTO oc_mix(value) \
          SELECT (payload -> '{sel}'::text)::eql_v3.jsonb_entry \
-         FROM fixtures.v3_doc_int4 WHERE plaintext IN ({low}, {high})",
+         FROM fixtures.v3_doc_integer WHERE plaintext IN ({low}, {high})",
     ))
     .execute(&mut *tx)
     .await?;
 
-    // Expected extrema: the orderable entries for the smallest / largest int4,
+    // Expected extrema: the orderable entries for the smallest / largest integer,
     // NOT the oc-less seed.
     let expect_min: String = sqlx::query_scalar(&format!(
         "SELECT ((payload -> '{sel}'::text)::eql_v3.jsonb_entry)::text \
-         FROM fixtures.v3_doc_int4 WHERE plaintext = {low}",
+         FROM fixtures.v3_doc_integer WHERE plaintext = {low}",
     ))
     .fetch_one(&mut *tx)
     .await?;
     let expect_max: String = sqlx::query_scalar(&format!(
         "SELECT ((payload -> '{sel}'::text)::eql_v3.jsonb_entry)::text \
-         FROM fixtures.v3_doc_int4 WHERE plaintext = {high}",
+         FROM fixtures.v3_doc_integer WHERE plaintext = {high}",
     ))
     .fetch_one(&mut *tx)
     .await?;

@@ -142,11 +142,11 @@ fn parse_value_validates_through_the_inventory() {
         "c": "mp_base85_ciphertext",
         "hm": "deadbeef"
     });
-    assert!(entry("int4_eq").parse_value(&eq_payload).is_ok());
+    assert!(entry("integer_eq").parse_value(&eq_payload).is_ok());
     // Missing term key fails.
-    assert!(entry("int4_ord").parse_value(&eq_payload).is_err());
+    assert!(entry("integer_ord").parse_value(&eq_payload).is_err());
     // Unknown key fails (deny_unknown_fields is live through the trait).
-    assert!(entry("int4").parse_value(&eq_payload).is_err());
+    assert!(entry("integer").parse_value(&eq_payload).is_err());
 
     let doc = json!({
         "v": 3,
@@ -180,8 +180,8 @@ fn schema_id_is_canonical() {
     // Fully-literal anchors — no interpolation, so a typo in the helper's base
     // URL or path cannot match.
     assert_eq!(
-        id_of("int4_eq"),
-        "https://schemas.cipherstash.com/eql/v3/int4_eq.json"
+        id_of("integer_eq"),
+        "https://schemas.cipherstash.com/eql/v3/integer_eq.json"
     );
     assert_eq!(
         id_of("text_search"),
@@ -310,14 +310,18 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
         .pointer("/anyOf")
         .and_then(|v| v.as_array())
         .expect("jsonb_entry schema must carry an anyOf term union");
-    let alt_keys: BTreeSet<String> = entry_alts
+    // Assert each arm *independently* — a flat union of required keys would let a
+    // mixed/invalid arm (e.g. one requiring both `hm` and `oc`) slip through.
+    let entry_alt_required: Vec<BTreeSet<String>> = entry_alts
         .iter()
-        .flat_map(|alt| required(alt, "/required", "jsonb_entry anyOf"))
+        .map(|alt| required(alt, "/required", "jsonb_entry anyOf"))
         .collect();
-    assert_eq!(
-        alt_keys,
-        set(&["hm", "oc"]),
-        "eql_v3.jsonb_entry anyOf must offer exactly the hm and oc term alternatives"
+    assert!(
+        entry_alt_required.len() == 2
+            && entry_alt_required.contains(&set(&["hm"]))
+            && entry_alt_required.contains(&set(&["oc"])),
+        "eql_v3.jsonb_entry anyOf must offer exactly the hm-only and oc-only term \
+         alternatives (each arm a singleton), got {entry_alt_required:?}"
     );
 
     // Query: {sv}. The element (SteVecQueryEntry) requires `s` + hm XOR oc and
@@ -341,5 +345,22 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
         !elem_required.contains("c"),
         "jsonb_query element must NOT require a ciphertext c \
          (is_valid_ste_vec_query_payload forbids it), got {elem_required:?}"
+    );
+    // Same arm-wise check as jsonb_entry: the query element's hm XOR oc union must
+    // be two singleton arms, not a flattened set that could mask a mixed branch.
+    let query_alts = query
+        .pointer("/$defs/SteVecQueryEntry/anyOf")
+        .and_then(|v| v.as_array())
+        .expect("jsonb_query element schema must carry an anyOf term union");
+    let query_alt_required: Vec<BTreeSet<String>> = query_alts
+        .iter()
+        .map(|alt| required(alt, "/required", "jsonb_query element anyOf"))
+        .collect();
+    assert!(
+        query_alt_required.len() == 2
+            && query_alt_required.contains(&set(&["hm"]))
+            && query_alt_required.contains(&set(&["oc"])),
+        "eql_v3.jsonb_query element anyOf must offer exactly the hm-only and \
+         oc-only term alternatives (each arm a singleton), got {query_alt_required:?}"
     );
 }

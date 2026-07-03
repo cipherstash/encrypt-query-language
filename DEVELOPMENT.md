@@ -39,8 +39,8 @@ mise has tasks for:
 ### The `eql_v3` surface
 
 EQL installs a single, self-contained PostgreSQL schema, **`eql_v3`**, which
-namespaces the encrypted-domain **scalar type families** (`int4`, `int2`,
-`int8`, `date`, `timestamp`, `numeric`, `text`, `bool`, `float4`, `float8`).
+namespaces the encrypted-domain **scalar type families** (`integer`, `smallint`,
+`bigint`, `date`, `timestamp`, `numeric`, `text`, `boolean`, `real`, `double`).
 It owns its own copies of the searchable-encrypted-metadata (SEM) index-term
 types it needs (`eql_v3.hmac_256`, `eql_v3.ore_block_256`, `eql_v3.bloom_filter`),
 so the surface has no dependency on any other EQL schema and installs into a
@@ -85,7 +85,7 @@ These are the important files and directories in the repo:
 │   │   ├── sem/               <-- hand-written SEM index-term types (hmac_256, ore_block_256, …)
 │   │   ├── scalars/           <-- generated scalar domain families, one dir per type
 │   │   │   ├── functions.sql  <-- shared blocker for native jsonb operators
-│   │   │   └── <T>/           <-- e.g. int4/, text/, bool/ (generated, committed in place)
+│   │   │   └── <T>/           <-- e.g. integer/, text/, bool/ (generated, committed in place)
 │   │   ├── jsonb/             <-- jsonb SteVec support
 │   │   └── lint/              <-- structural lints
 │   ├── deps-v3.txt            <-- REQUIRE edges for the v3 surface
@@ -189,7 +189,7 @@ TOML manifest and no Python.
 
 Each scalar type is one `DomainFamily` row in `CATALOG`, declaring:
 
-- the type `name` (e.g. `int8`),
+- the type `name` (e.g. `bigint`),
 - its `ScalarKind` (the `kind` field),
 - the `Domain`s mapping each generated (bare) domain name to its fixed index
   `Term`s (`eq => [Hm]`, `ord` / `ord_ore => [Ore]`), and

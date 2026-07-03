@@ -4,7 +4,9 @@
 //! generator encrypts. No committed generated `.rs` round-trip.
 
 use super::fixture::Fixture;
-use super::record::{TypeFixtures, INT2_FIXTURES, INT4_FIXTURES, INT8_FIXTURES, TEXT_FIXTURES};
+use super::record::{
+    TypeFixtures, BIGINT_FIXTURES, INTEGER_FIXTURES, SMALLINT_FIXTURES, TEXT_FIXTURES,
+};
 
 /// Materialise an integer record's fixtures into a typed `&'static` slice at
 /// compile time. Integer kinds only: a non-numeric fixture is a const-eval
@@ -42,9 +44,9 @@ macro_rules! int_values {
     };
 }
 
-int_values!(INT4_VALUES, i32, INT4_FIXTURES);
-int_values!(INT2_VALUES, i16, INT2_FIXTURES);
-int_values!(INT8_VALUES, i64, INT8_FIXTURES);
+int_values!(INTEGER_VALUES, i32, INTEGER_FIXTURES);
+int_values!(SMALLINT_VALUES, i16, SMALLINT_FIXTURES);
+int_values!(BIGINT_VALUES, i64, BIGINT_FIXTURES);
 
 /// Materialise a `text` record's fixtures into a `&'static [&'static str]` at
 /// compile time. A non-text fixture is a const-eval panic.

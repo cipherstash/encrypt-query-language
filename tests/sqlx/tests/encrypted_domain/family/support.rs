@@ -9,35 +9,35 @@ use sqlx::PgPool;
 
 #[test]
 fn variant_derives_consistent_sql_domain_and_capabilities() {
-    // Capabilities are catalog-derived for the scalar's token (`int4`). int4's
+    // Capabilities are catalog-derived for the scalar's token (`integer`). integer's
     // ordered domains are `[Ore]`-only — ORE is lossless for integers, so `=`
     // routes through `ord_term`, unlike text where `=` routes through `eq_term`.
     let storage = ScalarDomainSpec::new::<i32>(Variant::Storage);
-    assert_eq!(storage.sql_domain, "eql_v3.int4");
+    assert_eq!(storage.sql_domain, "eql_v3.integer");
     assert!(!storage.supports_eq());
     assert!(!storage.supports_ord());
     assert_eq!(storage.primary_extractor(), None);
     assert_eq!(
-        Variant::Storage.payload_required_keys("int4"),
+        Variant::Storage.payload_required_keys("integer"),
         vec!["v", "i", "c"]
     );
 
     let eq = ScalarDomainSpec::new::<i32>(Variant::Eq);
-    assert_eq!(eq.sql_domain, "eql_v3.int4_eq");
+    assert_eq!(eq.sql_domain, "eql_v3.integer_eq");
     assert!(eq.supports_eq());
     assert!(!eq.supports_ord());
     assert_eq!(eq.primary_extractor().as_deref(), Some("eql_v3.eq_term"));
     assert_eq!(eq.extractor_for_op("=").as_deref(), Some("eql_v3.eq_term"));
     assert_eq!(
-        Variant::Eq.payload_required_keys("int4"),
+        Variant::Eq.payload_required_keys("integer"),
         vec!["v", "i", "c", "hm"]
     );
 
     let ord = ScalarDomainSpec::new::<i32>(Variant::Ord);
-    assert_eq!(ord.sql_domain, "eql_v3.int4_ord");
+    assert_eq!(ord.sql_domain, "eql_v3.integer_ord");
     assert!(ord.supports_ord());
     assert_eq!(ord.primary_extractor().as_deref(), Some("eql_v3.ord_term"));
-    // int4_ord is `[Ore]`-only: equality routes through ORE (lossless for ints).
+    // integer_ord is `[Ore]`-only: equality routes through ORE (lossless for ints).
     assert_eq!(
         ord.extractor_for_op("=").as_deref(),
         Some("eql_v3.ord_term")
@@ -47,12 +47,12 @@ fn variant_derives_consistent_sql_domain_and_capabilities() {
         Some("eql_v3.ord_term")
     );
     assert_eq!(
-        Variant::Ord.payload_required_keys("int4"),
+        Variant::Ord.payload_required_keys("integer"),
         vec!["v", "i", "c", "ob"]
     );
 
     let ord_ore = ScalarDomainSpec::new::<i32>(Variant::OrdOre);
-    assert_eq!(ord_ore.sql_domain, "eql_v3.int4_ord_ore");
+    assert_eq!(ord_ore.sql_domain, "eql_v3.integer_ord_ore");
     assert!(ord_ore.supports_ord());
     assert_eq!(
         ord_ore.primary_extractor().as_deref(),
@@ -139,7 +139,7 @@ async fn placeholder_payload_casts_to_every_declared_domain(pool: PgPool) -> Res
 #[sqlx::test]
 async fn no_cross_variant_operator_is_declared(pool: PgPool) -> Result<()> {
     // The SCALAR family deliberately does NOT define ANY operator that mixes
-    // two different capability variants — e.g. `eql_v3.int4_eq = eql_v3.int4_ord`
+    // two different capability variants — e.g. `eql_v3.integer_eq = eql_v3.integer_ord`
     // would resolve against jsonb (the ultimate base type) and silently
     // bypass the per-variant blockers. The query below has no `oprname`
     // filter, so it catches a cross-variant operator of any kind, not just

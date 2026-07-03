@@ -107,8 +107,8 @@ mod rust_tests {
 
     #[test]
     fn i64_facts() {
-        // Capability-layer fact: i64 is the Rust kind a future int8 maps onto.
-        // Present here so adding int8 later is a pure `CATALOG` append.
+        // Capability-layer fact: i64 is the Rust kind a future bigint maps onto.
+        // Present here so adding bigint later is a pure `CATALOG` append.
         assert_eq!(ScalarKind::I64.rust_type(), "i64");
         let k = ScalarKind::I64
             .as_bounded_int()
@@ -209,8 +209,8 @@ mod rust_tests {
 
     #[test]
     fn is_eq_only_detects_absence_of_ord_domains() {
-        let int4 = CATALOG.iter().find(|s| s.name == "int4").unwrap();
-        assert!(!int4.is_eq_only(), "int4 is ordered");
+        let integer = CATALOG.iter().find(|s| s.name == "integer").unwrap();
+        assert!(!integer.is_eq_only(), "integer is ordered");
         let date = CATALOG.iter().find(|s| s.name == "date").unwrap();
         assert!(!date.is_eq_only(), "date is ordered");
         let ts = CATALOG.iter().find(|s| s.name == "timestamp").unwrap();
@@ -248,7 +248,7 @@ mod term_tests {
     }
 
     #[test]
-    fn ore_term_preserves_int4_sql_contract() {
+    fn ore_term_preserves_integer_sql_contract() {
         let ore = Term::Ore;
         assert_eq!(ore.json_key(), "ob");
         assert_eq!(ore.extractor(), "ord_term");
@@ -636,25 +636,25 @@ mod catalog_tests {
         assert_eq!(
             tokens,
             vec![
-                "int4",
-                "int2",
-                "int8",
+                "integer",
+                "smallint",
+                "bigint",
                 "date",
                 "timestamp",
                 "numeric",
                 "text",
-                "bool",
-                "float4",
-                "float8",
+                "boolean",
+                "real",
+                "double",
                 "jsonb"
             ]
         );
     }
 
     #[test]
-    fn bool_spec_is_storage_only_encryption_only() {
-        let b = scalar("bool");
-        let bf = fixtures("bool");
+    fn boolean_spec_is_storage_only_encryption_only() {
+        let b = scalar("boolean");
+        let bf = fixtures("boolean");
         assert_eq!(bf.kind, ScalarKind::Bool);
         assert_eq!(bf.kind.rust_type(), "bool");
         // Storage-only: exactly one term-less domain, no `_eq`/`_ord` — no SEM
@@ -683,7 +683,7 @@ mod catalog_tests {
         for s in CATALOG {
             assert_eq!(
                 s.is_storage_only(),
-                s.name == "bool",
+                s.name == "boolean",
                 "{} storage-only classification is wrong",
                 s.name
             );
@@ -944,9 +944,9 @@ mod catalog_tests {
         // restatements.
         for rec in FIXTURES.iter().filter(|r| r.kind.is_int()) {
             let expected = match rec.family.name {
-                "int2" => ScalarKind::I16,
-                "int4" => ScalarKind::I32,
-                "int8" => ScalarKind::I64,
+                "smallint" => ScalarKind::I16,
+                "integer" => ScalarKind::I32,
+                "bigint" => ScalarKind::I64,
                 other => panic!("unmapped integer scalar token {other}"),
             };
             assert_eq!(
@@ -961,23 +961,23 @@ mod catalog_tests {
     /// integer ones. The primary binding is now the compile-time parity block in
     /// `fixtures/record.rs` (`kind_tag(FIXTURES[i].kind) == expected_kind(..)`),
     /// which fails the build before any consumer sees a record carrying the wrong
-    /// `kind` (e.g. `TypeFixtures { family: &INT8, kind: I16, .. }`). This test is
+    /// `kind` (e.g. `TypeFixtures { family: &BIGINT, kind: I16, .. }`). This test is
     /// the secondary safety net: an independent restatement of the same mapping,
     /// so a regression in the const guard's helpers is still caught here.
     #[test]
     fn every_record_kind_matches_its_family() {
         for rec in FIXTURES {
             let expected = match rec.family.name {
-                "int2" => ScalarKind::I16,
-                "int4" => ScalarKind::I32,
-                "int8" => ScalarKind::I64,
+                "smallint" => ScalarKind::I16,
+                "integer" => ScalarKind::I32,
+                "bigint" => ScalarKind::I64,
                 "date" => ScalarKind::Date,
                 "timestamp" => ScalarKind::Timestamp,
                 "numeric" => ScalarKind::Numeric,
                 "text" => ScalarKind::Text,
-                "bool" => ScalarKind::Bool,
-                "float4" => ScalarKind::F32,
-                "float8" => ScalarKind::F64,
+                "boolean" => ScalarKind::Bool,
+                "real" => ScalarKind::F32,
+                "double" => ScalarKind::F64,
                 "jsonb" => ScalarKind::Jsonb,
                 other => panic!("unmapped scalar token {other} in FIXTURES"),
             };
@@ -991,10 +991,10 @@ mod catalog_tests {
 
     #[test]
     fn domain_name_concatenates_token_and_suffix() {
-        let s = scalar("int4");
-        assert_eq!(s.domain_name(&s.domains[0]), "int4"); // storage
-        assert_eq!(s.domain_name(&s.domains[1]), "int4_eq");
-        assert_eq!(s.domain_name(&s.domains[3]), "int4_ord");
+        let s = scalar("integer");
+        assert_eq!(s.domain_name(&s.domains[0]), "integer"); // storage
+        assert_eq!(s.domain_name(&s.domains[1]), "integer_eq");
+        assert_eq!(s.domain_name(&s.domains[3]), "integer_ord");
     }
 }
 
@@ -1027,9 +1027,9 @@ mod values_tests {
 
     #[test]
     fn materialised_values_match_resolved_fixtures() {
-        check(&INT4_FIXTURES, INT4_VALUES);
-        check(&INT2_FIXTURES, INT2_VALUES);
-        check(&INT8_FIXTURES, INT8_VALUES);
+        check(&INTEGER_FIXTURES, INTEGER_VALUES);
+        check(&SMALLINT_FIXTURES, SMALLINT_VALUES);
+        check(&BIGINT_FIXTURES, BIGINT_VALUES);
     }
 
     #[test]
@@ -1134,13 +1134,13 @@ mod float_tests {
 
     #[test]
     fn float_specs_are_in_catalog_with_ordered_shape() {
-        for family_name in ["float4", "float8"] {
+        for family_name in ["real", "double"] {
             let s = scalar(family_name);
             let names: Vec<_> = s.domains.iter().map(|d| d.name).collect();
             assert_eq!(names, vec!["", "eq", "ord_ore", "ord", "ord_ope"]);
         }
-        assert_eq!(fixtures("float4").kind, ScalarKind::F32);
-        assert_eq!(fixtures("float8").kind, ScalarKind::F64);
+        assert_eq!(fixtures("real").kind, ScalarKind::F32);
+        assert_eq!(fixtures("double").kind, ScalarKind::F64);
     }
 
     #[test]
@@ -1165,7 +1165,7 @@ mod float_tests {
     /// ±Inf MUST be present (the boundary pivots).
     #[test]
     fn float_fixtures_exclude_nan_and_negative_zero_and_include_infinities() {
-        for family_name in ["float4", "float8"] {
+        for family_name in ["real", "double"] {
             let strings: Vec<&str> = fixtures(family_name)
                 .values
                 .iter()
@@ -1204,7 +1204,7 @@ mod float_tests {
     /// fetch_fixture_payload's fetch_one).
     #[test]
     fn float_fixtures_are_distinct_by_value() {
-        for family_name in ["float4", "float8"] {
+        for family_name in ["real", "double"] {
             let parsed: Vec<u64> = fixtures(family_name)
                 .values
                 .iter()
@@ -1381,8 +1381,8 @@ mod invariant_tests {
 
     #[test]
     fn helper_outputs_match_for_known_domains() {
-        // Cross-check the Term helpers against a known domain shape on int4.
-        let s = CATALOG.iter().find(|s| s.name == "int4").unwrap();
+        // Cross-check the Term helpers against a known domain shape on integer.
+        let s = CATALOG.iter().find(|s| s.name == "integer").unwrap();
         // storage domain: no terms.
         assert_eq!(Term::role_for_terms(s.domains[0].terms), Role::Storage);
         assert!(Term::operators_for_terms(s.domains[0].terms).is_empty());

@@ -79,7 +79,7 @@ mod tests {
     fn sql_str_doubles_single_quotes() {
         assert_eq!(sql_str("o'brien"), "o''brien");
         assert_eq!(sql_str("a'b'c"), "a''b''c");
-        assert_eq!(sql_str("int4_eq"), "int4_eq");
+        assert_eq!(sql_str("integer_eq"), "integer_eq");
         assert_eq!(sql_str("<="), "<=");
     }
 }

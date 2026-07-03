@@ -13,7 +13,7 @@ use crate::v3::all;
 /// target's required term keys — cannot drift from `eql-domains::CATALOG`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TargetDomain {
-    /// A flat scalar domain (`int4`, `text_eq`, `int4_ord_ope`, …): the v2
+    /// A flat scalar domain (`integer`, `text_eq`, `integer_ord_ope`, …): the v2
     /// payload must be the `k: "ct"` form.
     Scalar(ScalarTarget),
     /// The SteVec document domain `eql_v3.json`: the v2 payload must be the
@@ -44,7 +44,7 @@ impl ScalarTarget {
 }
 
 impl TargetDomain {
-    /// Resolve an unqualified v3 domain name (`"int4_ord_ope"`,
+    /// Resolve an unqualified v3 domain name (`"integer_ord_ope"`,
     /// `"text_search"`, `"float8"`, `"json"`, …) against the inventory.
     ///
     /// Shape-aware: scalar domains resolve to [`TargetDomain::Scalar`] with

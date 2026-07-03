@@ -10,7 +10,7 @@
 //! on the *identity predicate*: a `LANGUAGE sql`, `IMMUTABLE` function
 //! taking at least one argument typed as a jsonb-backed DOMAIN of the
 //! encrypted-domain families — a domain in the `eql_v3` schema (e.g.
-//! `eql_v3.int4_eq`). The identity
+//! `eql_v3.integer_eq`). The identity
 //! predicate is proconfig-independent — it describes what a function
 //! intrinsically IS, not whether it has been pinned.
 //!
@@ -24,7 +24,7 @@
 //!
 //! A non-empty result means `pin_search_path_v3.sql` pinned an
 //! inline-critical encrypted-domain function — index engagement is
-//! silently broken for that type. This is not int4-specific: a missed
+//! silently broken for that type. This is not integer-specific: a missed
 //! skip for ANY encrypted-domain type — present or future — fails here,
 //! so a new type's author does not have to remember to add a per-type
 //! inlinability assertion.
@@ -243,8 +243,8 @@ async fn every_inline_critical_eligible_domain_has_inline_critical_functions(
     pool: PgPool,
 ) -> Result<()> {
     // Stronger than a bare `count > 0`: if a future change accidentally
-    // narrows the structural predicate (e.g. hard-codes `int4_%`), a
-    // `count > 0` assertion would still pass while int8/bool/date
+    // narrows the structural predicate (e.g. hard-codes `integer_%`), a
+    // `count > 0` assertion would still pass while bigint/bool/date
     // domains silently lose inline-critical coverage. Instead, assert
     // that EVERY inline-critical-eligible domain (any encrypted-domain
     // family domain over jsonb — `eql_v3.*` —

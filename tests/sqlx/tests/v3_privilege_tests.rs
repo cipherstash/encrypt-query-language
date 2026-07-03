@@ -24,28 +24,29 @@
 use anyhow::Result;
 use sqlx::PgPool;
 
-/// A real equality query (`=` on `int4_eq`) over the committed fixture. The `=`
+/// A real equality query (`=` on `integer_eq`) over the committed fixture. The `=`
 /// operator binds the public wrapper `eql_v3.eq`, whose (inlinable) body calls
 /// `eql_v3.eq_term`, which in turn calls the `eql_v3_internal.hmac_256(jsonb)`
 /// constructor — inlined into the query, that constructor call requires the
 /// caller to hold `eql_v3_internal`, so the path exercises BOTH schemas.
-const EQ_QUERY: &str = "SELECT count(*) FROM fixtures.eql_v3_int4 \
-     WHERE payload::eql_v3.int4_eq = payload::eql_v3.int4_eq";
+const EQ_QUERY: &str = "SELECT count(*) FROM fixtures.eql_v3_integer \
+     WHERE payload::eql_v3.integer_eq = payload::eql_v3.integer_eq";
 
-/// A real ordering query using the `<` *operator* on `int4_ord`, which dispatches
+/// A real ordering query using the `<` *operator* on `integer_ord`, which dispatches
 /// through `eql_v3.lt` → `eql_v3.ord_term` → the `eql_v3_internal.ore_block_256`
-/// constructor + comparator. NB: `ORDER BY payload::eql_v3.int4_ord` alone does
+/// constructor + comparator. NB: `ORDER BY payload::eql_v3.integer_ord` alone does
 /// NOT work here — a bare domain has no ORE opclass, so it silently falls back to
 /// built-in jsonb ordering and never crosses into `eql_v3_internal`. The `<`
 /// operator is what genuinely exercises the encrypted ordering path.
-const ORD_QUERY: &str = "SELECT count(*) FROM fixtures.eql_v3_int4 a, fixtures.eql_v3_int4 b \
-     WHERE a.payload::eql_v3.int4_ord < b.payload::eql_v3.int4_ord";
+const ORD_QUERY: &str =
+    "SELECT count(*) FROM fixtures.eql_v3_integer a, fixtures.eql_v3_integer b \
+     WHERE a.payload::eql_v3.integer_ord < b.payload::eql_v3.integer_ord";
 
-/// A real aggregate (`eql_v3.min` on `int4_ord`). The public aggregate dispatches
+/// A real aggregate (`eql_v3.min` on `integer_ord`). The public aggregate dispatches
 /// into its state function `eql_v3_internal.min_sfunc`, so it requires the
 /// internal grant.
-const AGG_QUERY: &str = "SELECT eql_v3.min(payload::eql_v3.int4_ord) \
-     FROM fixtures.eql_v3_int4";
+const AGG_QUERY: &str = "SELECT eql_v3.min(payload::eql_v3.integer_ord) \
+     FROM fixtures.eql_v3_integer";
 
 /// A real jsonb (SteVec) containment READ path. `eql_v3.ste_vec_contains` is
 /// `plpgsql` (never inlined), so — unlike the scalar operators — it runs under
@@ -158,13 +159,13 @@ fn assert_insufficient_privilege(err: sqlx::Error, context: &str) {
 
 /// Positive: a runtime role granted USAGE + EXECUTE on BOTH schemas (exactly the
 /// README recipe) can run the documented equality, ordering, and aggregate paths.
-#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_int4")))]
+#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_integer")))]
 async fn runtime_role_with_both_schema_grants_can_query(pool: PgPool) -> Result<()> {
     // A single connection for the whole test: SET ROLE is connection-scoped.
     let mut conn = pool.acquire().await?;
     let role = create_isolated_role(&mut conn).await?;
 
-    grant_fixture_access(&mut conn, &role, &["eql_v3_int4"]).await?;
+    grant_fixture_access(&mut conn, &role, &["eql_v3_integer"]).await?;
     grant_schema(&mut conn, &role, "eql_v3").await?;
     grant_schema(&mut conn, &role, "eql_v3_internal").await?;
     // The ORE comparison (ordering / min-max) calls pgcrypto `encrypt()`, which
@@ -204,12 +205,12 @@ async fn runtime_role_with_both_schema_grants_can_query(pool: PgPool) -> Result<
 /// into `eql_v3_internal`, so a missing internal grant raises
 /// `insufficient_privilege` (42501). Pins *why* the docs require the internal
 /// grant: `eql_v3` alone is not enough for the supported operators.
-#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_int4")))]
+#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_integer")))]
 async fn runtime_role_without_internal_grant_is_denied(pool: PgPool) -> Result<()> {
     let mut conn = pool.acquire().await?;
     let role = create_isolated_role(&mut conn).await?;
 
-    grant_fixture_access(&mut conn, &role, &["eql_v3_int4"]).await?;
+    grant_fixture_access(&mut conn, &role, &["eql_v3_integer"]).await?;
     // Public schema ONLY — deliberately omit eql_v3_internal.
     grant_schema(&mut conn, &role, "eql_v3").await?;
 

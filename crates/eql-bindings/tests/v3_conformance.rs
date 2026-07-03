@@ -1,56 +1,56 @@
 //! Conformance for the v3 tier: explicit, readable tests for the reference
-//! token (`int4`) plus the term shapes it doesn't carry. The exhaustive
+//! token (`integer`) plus the term shapes it doesn't carry. The exhaustive
 //! catalog-driven sweep (every domain, every required key) lives in
 //! `catalog_parity.rs`.
 
-use eql_bindings::v3::int4::{Int4, Int4Eq, Int4Ord, Int4OrdOpe, Int4OrdOre};
+use eql_bindings::v3::integer::{Integer, IntegerEq, IntegerOrd, IntegerOrdOpe, IntegerOrdOre};
 use eql_bindings::v3::text::TextMatch;
 use eql_bindings::v3::DomainType;
 use serde_json::json;
 
 #[test]
-fn int4_storage_round_trips() {
+fn integer_storage_round_trips() {
     let wire = json!({
         "v": 3,
         "i": { "t": "users", "c": "age" },
         "c": "mp_base85_ciphertext"
     });
-    let parsed: Int4 = serde_json::from_value(wire.clone()).unwrap();
+    let parsed: Integer = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
-    assert_eq!(Int4::sql_domain_static(), "eql_v3.int4");
+    assert_eq!(Integer::sql_domain_static(), "eql_v3.integer");
 }
 
 #[test]
-fn int4_eq_round_trips() {
+fn integer_eq_round_trips() {
     let wire = json!({
         "v": 3,
         "i": { "t": "users", "c": "age" },
         "c": "mp_base85_ciphertext",
         "hm": "deadbeef"
     });
-    let parsed: Int4Eq = serde_json::from_value(wire.clone()).unwrap();
+    let parsed: IntegerEq = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
-    assert_eq!(Int4Eq::sql_domain_static(), "eql_v3.int4_eq");
+    assert_eq!(IntegerEq::sql_domain_static(), "eql_v3.integer_eq");
 }
 
 #[test]
-fn int4_ord_round_trips() {
+fn integer_ord_round_trips() {
     let wire = json!({
         "v": 3,
         "i": { "t": "users", "c": "age" },
         "c": "mp_base85_ciphertext",
         "ob": ["ore_block_0", "ore_block_1"]
     });
-    let parsed: Int4Ord = serde_json::from_value(wire.clone()).unwrap();
+    let parsed: IntegerOrd = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
     // `_ord_ore` is the same shape under the scheme-explicit domain name.
-    let parsed: Int4OrdOre = serde_json::from_value(wire.clone()).unwrap();
+    let parsed: IntegerOrdOre = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
-    assert_eq!(Int4OrdOre::sql_domain_static(), "eql_v3.int4_ord_ore");
+    assert_eq!(IntegerOrdOre::sql_domain_static(), "eql_v3.integer_ord_ore");
 }
 
 #[test]
-fn int4_ord_ope_round_trips() {
+fn integer_ord_ope_round_trips() {
     // `_ord_ope` carries the CLLW-OPE term: `op` is a single hex string (not
     // an array like `ob`), natively bytea-sortable after hex-decode.
     let wire = json!({
@@ -59,29 +59,29 @@ fn int4_ord_ope_round_trips() {
         "c": "mp_base85_ciphertext",
         "op": "00ffab"
     });
-    let parsed: Int4OrdOpe = serde_json::from_value(wire.clone()).unwrap();
+    let parsed: IntegerOrdOpe = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
-    assert_eq!(Int4OrdOpe::sql_domain_static(), "eql_v3.int4_ord_ope");
+    assert_eq!(IntegerOrdOpe::sql_domain_static(), "eql_v3.integer_ord_ope");
 }
 
 #[test]
-fn int4_ord_ope_rejects_missing_ope_term() {
+fn integer_ord_ope_rejects_missing_ope_term() {
     // Only the base fields, so the sole cause of failure is the absent `op`.
     let no_op = json!({
         "v": 3,
         "i": { "t": "users", "c": "age" },
         "c": "mp_base85_ciphertext"
     });
-    let result: Result<Int4OrdOpe, _> = serde_json::from_value(no_op);
+    let result: Result<IntegerOrdOpe, _> = serde_json::from_value(no_op);
     assert!(
         result.is_err(),
-        "Int4OrdOpe must reject a payload with no op"
+        "IntegerOrdOpe must reject a payload with no op"
     );
 }
 
 #[test]
-fn int4_eq_rejects_missing_hmac() {
-    // The capability is type-enforced: an `int4_eq` payload with no `hm` is
+fn integer_eq_rejects_missing_hmac() {
+    // The capability is type-enforced: an `integer_eq` payload with no `hm` is
     // not representable. This is the bug class — a search term missing its
     // index term — closed at the type boundary, before any consumer runs.
     let no_hm = json!({
@@ -89,8 +89,11 @@ fn int4_eq_rejects_missing_hmac() {
         "i": { "t": "users", "c": "age" },
         "c": "mp_base85_ciphertext"
     });
-    let result: Result<Int4Eq, _> = serde_json::from_value(no_hm);
-    assert!(result.is_err(), "Int4Eq must reject a payload with no hm");
+    let result: Result<IntegerEq, _> = serde_json::from_value(no_hm);
+    assert!(
+        result.is_err(),
+        "IntegerEq must reject a payload with no hm"
+    );
 }
 
 #[test]
@@ -108,10 +111,10 @@ fn rejects_missing_envelope_keys() {
     for key in ["v", "i", "c"] {
         let mut wire = base.clone();
         wire.as_object_mut().unwrap().remove(key);
-        let result: Result<Int4Eq, _> = serde_json::from_value(wire);
+        let result: Result<IntegerEq, _> = serde_json::from_value(wire);
         assert!(
             result.is_err(),
-            "Int4Eq must reject a payload with no {key}"
+            "IntegerEq must reject a payload with no {key}"
         );
     }
 }
@@ -129,8 +132,8 @@ fn rejects_wrong_envelope_version() {
             "c": "mp_base85_ciphertext",
             "hm": "deadbeef"
         });
-        let result: Result<Int4Eq, _> = serde_json::from_value(wire);
-        assert!(result.is_err(), "Int4Eq must reject v = {v}");
+        let result: Result<IntegerEq, _> = serde_json::from_value(wire);
+        assert!(result.is_err(), "IntegerEq must reject v = {v}");
     }
 }
 
@@ -146,16 +149,16 @@ fn rejects_unknown_keys() {
         "hm": "deadbeef",
         "ob": ["ore_block_0"]
     });
-    let result: Result<Int4Eq, _> = serde_json::from_value(wire);
+    let result: Result<IntegerEq, _> = serde_json::from_value(wire);
     assert!(
         result.is_err(),
-        "Int4Eq must reject a payload carrying keys beyond its domain (here: ob)"
+        "IntegerEq must reject a payload carrying keys beyond its domain (here: ob)"
     );
 }
 
 #[test]
-fn int4_ord_rejects_missing_ore_term() {
-    // Omit `hm`: it is not an Int4Ord field, so leaving it in would trip
+fn integer_ord_rejects_missing_ore_term() {
+    // Omit `hm`: it is not an IntegerOrd field, so leaving it in would trip
     // deny_unknown_fields and the rejection could pass for the wrong reason.
     // This payload carries only the base fields, so the sole cause of failure
     // is the absent `ob`.
@@ -164,8 +167,11 @@ fn int4_ord_rejects_missing_ore_term() {
         "i": { "t": "users", "c": "age" },
         "c": "mp_base85_ciphertext"
     });
-    let result: Result<Int4Ord, _> = serde_json::from_value(no_ob);
-    assert!(result.is_err(), "Int4Ord must reject a payload with no ob");
+    let result: Result<IntegerOrd, _> = serde_json::from_value(no_ob);
+    assert!(
+        result.is_err(),
+        "IntegerOrd must reject a payload with no ob"
+    );
 }
 
 #[test]
@@ -194,14 +200,16 @@ fn text_match_round_trips_signed_bloom_filter() {
 }
 
 #[test]
-fn non_int4_tokens_round_trip_every_domain() {
-    // int4 is exercised exhaustively above; the other ordered tokens carry the
+fn non_integer_tokens_round_trip_every_domain() {
+    // integer is exercised exhaustively above; the other ordered tokens carry the
     // *same* wire field names but were serialized by no test, so a copy-paste
-    // field typo (e.g. `hm` -> `hmm` in `int8.rs`) would ship green —
+    // field typo (e.g. `hm` -> `hmm` in `bigint.rs`) would ship green —
     // `catalog_parity.rs` checks domain *names* only, never the wire shape.
-    // This sweep roundtrips every non-int4 domain and pins its catalog name,
+    // This sweep roundtrips every non-integer domain and pins its catalog name,
     // failing the instant a token drifts from the shared envelope/term contract.
-    use eql_bindings::v3::{date::*, int2::*, int8::*, numeric::*, text::*};
+    use eql_bindings::v3::{
+        bigint::*, boolean::*, date::*, double::*, numeric::*, real::*, smallint::*, text::*,
+    };
 
     // Wire builders for the shapes the ordered tokens share.
     let storage = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct" });
@@ -226,17 +234,17 @@ fn non_int4_tokens_round_trip_every_domain() {
         }};
     }
 
-    round_trip!(Int2, storage("a"), "eql_v3.int2");
-    round_trip!(Int2Eq, eq("a"), "eql_v3.int2_eq");
-    round_trip!(Int2Ord, ord("a"), "eql_v3.int2_ord");
-    round_trip!(Int2OrdOre, ord("a"), "eql_v3.int2_ord_ore");
-    round_trip!(Int2OrdOpe, ope("a"), "eql_v3.int2_ord_ope");
+    round_trip!(Smallint, storage("a"), "eql_v3.smallint");
+    round_trip!(SmallintEq, eq("a"), "eql_v3.smallint_eq");
+    round_trip!(SmallintOrd, ord("a"), "eql_v3.smallint_ord");
+    round_trip!(SmallintOrdOre, ord("a"), "eql_v3.smallint_ord_ore");
+    round_trip!(SmallintOrdOpe, ope("a"), "eql_v3.smallint_ord_ope");
 
-    round_trip!(Int8, storage("a"), "eql_v3.int8");
-    round_trip!(Int8Eq, eq("a"), "eql_v3.int8_eq");
-    round_trip!(Int8Ord, ord("a"), "eql_v3.int8_ord");
-    round_trip!(Int8OrdOre, ord("a"), "eql_v3.int8_ord_ore");
-    round_trip!(Int8OrdOpe, ope("a"), "eql_v3.int8_ord_ope");
+    round_trip!(Bigint, storage("a"), "eql_v3.bigint");
+    round_trip!(BigintEq, eq("a"), "eql_v3.bigint_eq");
+    round_trip!(BigintOrd, ord("a"), "eql_v3.bigint_ord");
+    round_trip!(BigintOrdOre, ord("a"), "eql_v3.bigint_ord_ore");
+    round_trip!(BigintOrdOpe, ope("a"), "eql_v3.bigint_ord_ope");
 
     round_trip!(Date, storage("a"), "eql_v3.date");
     round_trip!(DateEq, eq("a"), "eql_v3.date_eq");
@@ -252,6 +260,21 @@ fn non_int4_tokens_round_trip_every_domain() {
     round_trip!(NumericOrdOre, ord("a"), "eql_v3.numeric_ord_ore");
     round_trip!(NumericOrdOpe, ope("a"), "eql_v3.numeric_ord_ope");
 
+    // real/double are the float scalars (renamed from float4/float8); they carry
+    // the same ordered-token wire shape as the int scalars (`hm` eq, `ob` ord).
+    round_trip!(Real, storage("a"), "eql_v3.real");
+    round_trip!(RealEq, eq("a"), "eql_v3.real_eq");
+    round_trip!(RealOrd, ord("a"), "eql_v3.real_ord");
+    round_trip!(RealOrdOre, ord("a"), "eql_v3.real_ord_ore");
+
+    round_trip!(Double, storage("a"), "eql_v3.double");
+    round_trip!(DoubleEq, eq("a"), "eql_v3.double_eq");
+    round_trip!(DoubleOrd, ord("a"), "eql_v3.double_ord");
+    round_trip!(DoubleOrdOre, ord("a"), "eql_v3.double_ord_ore");
+
+    // boolean is storage-only (no eq/ord term) — just the shared envelope.
+    round_trip!(Boolean, storage("a"), "eql_v3.boolean");
+
     // text_match is covered by `text_match_round_trips_signed_bloom_filter`.
     round_trip!(Text, storage("a"), "eql_v3.text");
     round_trip!(TextEq, eq("a"), "eql_v3.text_eq");
@@ -265,7 +288,7 @@ fn non_int4_tokens_round_trip_every_domain() {
 fn timestamp_round_trips_and_enforces_term_capabilities() {
     // timestamp is an ordered token (12-block ORE) — it carries the full
     // storage/`_eq`/`_ord`/`_ord_ore` shape, the same as the int scalars. The
-    // int4 template was copy-pasted to produce it, so a dropped `hm`/`ob` or a
+    // integer template was copy-pasted to produce it, so a dropped `hm`/`ob` or a
     // field typo would pass `catalog_parity` (domain names only) but is caught
     // here. (Was equality-only while the ORE comparator was hardcoded to 8
     // blocks; promoted once `eql_v3.ore_block_256` generalized to any width.)
@@ -365,7 +388,7 @@ fn stevec_document_round_trips_and_enforces_envelope() {
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
     assert_eq!(SteVecDocument::sql_domain_static(), "eql_v3.json");
 
-    // Envelope negatives (parity with the scalar int4 tests) — now including `k`.
+    // Envelope negatives (parity with the scalar integer tests) — now including `k`.
     for missing in ["v", "k", "i", "sv"] {
         let mut w = wire.clone();
         w.as_object_mut().unwrap().remove(missing);
