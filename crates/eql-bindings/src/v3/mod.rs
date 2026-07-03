@@ -77,7 +77,9 @@
 //! is constructible solely from a KNOWN domain name
 //! ([`payload::DomainPayload::parse`], [`crate::from_v2::from_v2_typed`]) —
 //! there is still no `Deserialize`, because inference from bytes remains
-//! unsound.
+//! unsound. The hand-written [`QueryPayload`] enum (`query_payload.rs`)
+//! follows the same Serialize-only rule for QUERY payloads — see its module
+//! doc for why it is hand-written rather than generated.
 //!
 //! The SteVec `jsonb` family is the ONE principled exception: a single encrypted
 //! document legitimately mixes `hm` leaves (bool / root) and `oc` leaves
@@ -141,6 +143,7 @@ pub mod inventory;
 pub mod jsonb;
 pub mod numeric;
 pub mod payload;
+pub mod query_payload;
 pub mod real;
 pub mod smallint;
 pub mod terms;
@@ -150,3 +153,4 @@ pub mod timestamp;
 pub use domain_type::{DomainType, SCHEMA_ID_BASE, SQL_SCHEMA};
 pub use inventory::all;
 pub use payload::DomainPayload;
+pub use query_payload::QueryPayload;

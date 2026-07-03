@@ -70,6 +70,13 @@
 //! payload omits), and this crate will not invent one ahead of the mapper
 //! redesign.
 //!
+//! Query conversion has the same entry-point split as the stored-payload
+//! side: [`from_v2_query`] validates the converted needle and returns the
+//! wire `Value`; [`from_v2_query_typed`] KEEPS the strict parse, returning
+//! the matching [`crate::v3::QueryPayload`] variant (whose untagged
+//! serialization is byte-identical to the `Value` [`from_v2_query`] returns).
+//! One shared conversion path, one strict parse either way.
+//!
 //! ## Decryption root: `sv[0]`
 //!
 //! The record ciphertext of a SteVec document — the `c` downstream decrypt
@@ -90,7 +97,7 @@ pub use target::{ScalarTarget, TargetDomain};
 use serde::de::Error as _;
 use serde_json::{json, Map, Value};
 
-use crate::v3::{all, DomainPayload};
+use crate::v3::{all, DomainPayload, QueryPayload};
 
 /// The v2 wire version this converter accepts.
 const V2_WIRE_VERSION: u64 = 2;
@@ -168,7 +175,56 @@ fn convert(v2: &Value, target: TargetDomain) -> Result<Value, FromV2Error> {
 /// Scalar targets return [`FromV2Error::UnsupportedQueryTarget`]: v2 scalar
 /// query payloads omit `c`, no v3 scalar domain admits a `c`-less payload,
 /// and this crate will not invent a wire shape ahead of the mapper redesign.
+///
+/// Wire-oriented callers keep the `Value`; callers that want the needle
+/// typed use [`from_v2_query_typed`] instead (same conversion, same
+/// failures, one strict parse either way).
 pub fn from_v2_query(v2: &Value, target: TargetDomain) -> Result<Value, FromV2Error> {
+    let out = convert_query(v2, target)?;
+    validate_as(QUERY_DOMAIN, &out)?;
+    Ok(out)
+}
+
+/// Convert an EQL v2.3 QUERY payload into the TYPED v3 query payload for
+/// `target`: [`from_v2_query`] returning the [`QueryPayload`] variant instead
+/// of a shape-erased `Value`.
+///
+/// Same conversion rules and same failures as [`from_v2_query`] — one shared
+/// conversion path ([`convert_query`]), and the final strict parse through
+/// the query binding struct happens exactly once (here it is KEPT as the enum
+/// variant; in [`from_v2_query`] it is a validate-and-discard check). Because
+/// [`QueryPayload`]'s serialization is untagged,
+/// `serde_json::to_value(&from_v2_query_typed(v2, t)?)` equals
+/// `from_v2_query(v2, t)?` exactly (pinned by `tests/query_payload.rs`).
+///
+/// Scalar targets fail with [`FromV2Error::UnsupportedQueryTarget`] exactly
+/// like [`from_v2_query`]: [`QueryPayload`]'s future single-term scalar
+/// variants are deliberately absent until the mapper redesign defines a v3
+/// scalar-query wire shape (see the enum docs).
+pub fn from_v2_query_typed(v2: &Value, target: TargetDomain) -> Result<QueryPayload, FromV2Error> {
+    let out = convert_query(v2, target)?;
+    QueryPayload::parse(QUERY_DOMAIN, &out)
+        .unwrap_or_else(|| {
+            // QUERY_DOMAIN is the literal "jsonb_query", which QueryPayload
+            // resolves to its SteVec variant.
+            unreachable!("query domain {QUERY_DOMAIN} must have a QueryPayload variant")
+        })
+        .map_err(FromV2Error::Invalid)
+}
+
+/// The (unqualified) SQL domain of every convertible query payload. A single
+/// constant is honest today: [`convert_query`] only converts the jsonb
+/// containment needle, so both entry points validate/parse as `jsonb_query`.
+/// When the mapper redesign ships scalar query shapes, the domain becomes a
+/// function of the target and this constant dissolves.
+const QUERY_DOMAIN: &str = "jsonb_query";
+
+/// The shared conversion path behind [`from_v2_query`] /
+/// [`from_v2_query_typed`]: dispatch on the target and build the v3 query
+/// payload `Value`. Does NOT run the final strict parse — each public entry
+/// point does that exactly once (validate-and-discard in [`from_v2_query`],
+/// parse-and-keep in [`from_v2_query_typed`]).
+fn convert_query(v2: &Value, target: TargetDomain) -> Result<Value, FromV2Error> {
     let scalar = match target {
         TargetDomain::Json => return convert_ste_vec_query(v2),
         TargetDomain::Scalar(t) => t,
@@ -314,7 +370,9 @@ fn convert_ste_vec(obj: &Map<String, Value>) -> Result<Value, FromV2Error> {
     Ok(Value::Object(out))
 }
 
-/// v2 query needle `{sv: [{s, hm|oc, …}]}` → v3 `SteVecQuery` shape.
+/// v2 query needle `{sv: [{s, hm|oc, …}]}` → v3 `SteVecQuery` shape. Like the
+/// stored-payload converters, does NOT run the final strict parse — that is
+/// the entry points' job, exactly once.
 fn convert_ste_vec_query(v2: &Value) -> Result<Value, FromV2Error> {
     let obj = v2
         .as_object()
@@ -344,9 +402,7 @@ fn convert_ste_vec_query(v2: &Value) -> Result<Value, FromV2Error> {
         .enumerate()
         .map(|(idx, entry)| convert_entry(idx, entry, EntryShape::Query))
         .collect::<Result<Vec<_>, _>>()?;
-    let out = json!({ "sv": entries });
-    validate_as("jsonb_query", &out)?;
-    Ok(out)
+    Ok(json!({ "sv": entries }))
 }
 
 /// Which keys an sv entry keeps after conversion.
