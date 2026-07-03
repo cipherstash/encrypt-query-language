@@ -278,7 +278,7 @@ mod term_tests {
     #[test]
     fn ope_term_contract() {
         // CLLW-OPE (`op`): a hex-encoded, deterministic ciphertext that is
-        // natively bytea-sortable — decode hex → eql_v3.ope_cllw (a domain
+        // natively bytea-sortable — decode hex → eql_v3_internal.ope_cllw (a domain
         // over bytea) → native comparison operators and default btree
         // ordering, no custom comparison protocol and no hand-written
         // operators (so the SEM surface is the extractor alone, like `Hm`).

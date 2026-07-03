@@ -5,7 +5,7 @@
  * domains (`=` `<>` `<` `<=` `>` `>=`): a hex-encoded CLLW OPE ciphertext,
  * sortable via native bytea comparison after hex-decode — unlike `ob`
  * (block-ORE) and `oc` (CLLW-ORE) it needs no custom comparator. SQL-side
- * constructor: `eql_v3.ope_cllw`. Distinct from [`OreCllw`] (`oc`), the
+ * constructor: `eql_v3_internal.ope_cllw`. Distinct from [`OreCllw`] (`oc`), the
  * SteVec CLLW-*ORE* term compared by the custom per-byte protocol.
  */
 export type OpeCllw = string;

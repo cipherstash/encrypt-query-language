@@ -5,7 +5,7 @@
       "type": "string"
     },
     "Hmac256": {
-      "description": "HMAC-SHA-256 equality term — the `hm` wire key. Backs the `_eq` domains\n(`=`, `<>`). SQL-side constructor: `eql_v3.hmac_256`.",
+      "description": "HMAC-SHA-256 equality term — the `hm` wire key. Backs the `_eq` domains\n(`=`, `<>`). SQL-side constructor: `eql_v3_internal.hmac_256`.",
       "type": "string"
     },
     "Identifier": {
@@ -28,7 +28,7 @@
       "type": "object"
     },
     "OpeCllw": {
-      "description": "CLLW-OPE order term — the `op` wire key. Backs the scalar `_ord_ope`\ndomains (`=` `<>` `<` `<=` `>` `>=`): a hex-encoded CLLW OPE ciphertext,\nsortable via native bytea comparison after hex-decode — unlike `ob`\n(block-ORE) and `oc` (CLLW-ORE) it needs no custom comparator. SQL-side\nconstructor: `eql_v3.ope_cllw`. Distinct from [`OreCllw`] (`oc`), the\nSteVec CLLW-*ORE* term compared by the custom per-byte protocol.",
+      "description": "CLLW-OPE order term — the `op` wire key. Backs the scalar `_ord_ope`\ndomains (`=` `<>` `<` `<=` `>` `>=`): a hex-encoded CLLW OPE ciphertext,\nsortable via native bytea comparison after hex-decode — unlike `ob`\n(block-ORE) and `oc` (CLLW-ORE) it needs no custom comparator. SQL-side\nconstructor: `eql_v3_internal.ope_cllw`. Distinct from [`OreCllw`] (`oc`), the\nSteVec CLLW-*ORE* term compared by the custom per-byte protocol.",
       "type": "string"
     },
     "SchemaVersion": {

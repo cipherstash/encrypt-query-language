@@ -85,7 +85,7 @@ impl Term {
                 "src/v3/sem/ore_block_256/operators.sql",
             ],
             Term::Bloom => &["src/v3/sem/bloom_filter/functions.sql"],
-            // No operators.sql edge: eql_v3.ope_cllw is a domain over bytea,
+            // No operators.sql edge: eql_v3_internal.ope_cllw is a domain over bytea,
             // so it inherits the native bytea comparison operators and btree
             // opclass — the extractor is the whole SEM surface (like Hm).
             Term::Ope => &["src/v3/sem/ope_cllw/functions.sql"],
