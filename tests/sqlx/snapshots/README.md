@@ -188,6 +188,32 @@ cargo test --no-default-features --test encrypted_domain -- --list \
   | sed -E 's/_integer_/_<T>_/' | LC_ALL=C sort -u > snapshots/matrix_jsonb_entry_tests.txt
 ```
 
+## ope_tests.txt
+
+`ope_tests.txt` pins the test-name set for the nine CLLW-OPE suites
+(`tests/encrypted_domain/ope/`) — the `<t>_ord_ope::…` modules covering every
+catalog `_ord_ope` domain (literal-payload SQL-surface smoke tests plus the
+real-ciphertext fixture tests added with CIP-3348). Like
+`matrix_jsonb_entry_tests.txt` it is a deliberate **sibling** of the scalar
+matrix inventory, **not** folded into it: the ope suites live as top-level
+modules (outside `scalars::`, so the type-discovery step does not mis-read
+them as scalar types), and their per-type name sets are not uniform — the
+integer reference module carries the deeper single-type behaviour (prefix
+order, blockers, ORDER BY forms, aggregates) and text pins its hm-routed
+equality — so no single `<T>`-normalized baseline fits. The snapshot therefore
+pins the **full un-normalized list**: every individual ope test name (the
+per-test pinning deferred from #340 review). No database is required (`--list`
+only enumerates).
+
+Verify with `mise run test:matrix:inventory:ope`. Regenerate with:
+
+```bash
+cd tests/sqlx
+cargo test --no-default-features --test encrypted_domain -- --list \
+  | sed -n 's/: test$//p' | grep -E '^[a-z0-9_]+_ord_ope::' \
+  | LC_ALL=C sort > snapshots/ope_tests.txt
+```
+
 ## v3_jsonb_tests.txt
 
 `v3_jsonb_tests.txt` pins the SQLx test-name set for the hand-written

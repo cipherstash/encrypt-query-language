@@ -441,6 +441,7 @@ jobs:
           set -euo pipefail
           mise run test:matrix:inventory
           mise run test:matrix:inventory:jsonb_entry
+          mise run test:matrix:inventory:ope
           mise run test:v3-jsonb:inventory
           git add -N tests/sqlx/snapshots
           git diff --exit-code -- tests/sqlx/snapshots \
