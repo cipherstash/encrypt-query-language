@@ -71,6 +71,14 @@
 //! `_ord` vs `_ord_ore` are identical shapes that no sniffing can separate.
 //! Consumers read from a typed column and already know the domain.
 //!
+//! The generated [`DomainPayload`] enum (`payload.rs`) does NOT contradict
+//! this rule: it spans every stored-payload domain but derives only
+//! `Serialize` (untagged, so the wire form is exactly the inner struct's) and
+//! is constructible solely from a KNOWN domain name
+//! ([`payload::DomainPayload::parse`], [`crate::from_v2::from_v2_typed`]) —
+//! there is still no `Deserialize`, because inference from bytes remains
+//! unsound.
+//!
 //! The SteVec `jsonb` family is the ONE principled exception: a single encrypted
 //! document legitimately mixes `hm` leaves (bool / root) and `oc` leaves
 //! (string / number) in one `sv` array, so `SteVecEntry` must hold either term.
@@ -132,6 +140,7 @@ pub mod integer;
 pub mod inventory;
 pub mod jsonb;
 pub mod numeric;
+pub mod payload;
 pub mod real;
 pub mod smallint;
 pub mod terms;
@@ -140,3 +149,4 @@ pub mod timestamp;
 
 pub use domain_type::{DomainType, SCHEMA_ID_BASE, SQL_SCHEMA};
 pub use inventory::all;
+pub use payload::DomainPayload;

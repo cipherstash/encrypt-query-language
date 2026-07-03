@@ -275,12 +275,132 @@ pub fn render_inventory_rs() -> String {
     format_rs(file)
 }
 
+/// The stored-payload domains of the catalog, in CATALOG order: every flat
+/// scalar domain plus the SteVec document (`eql_v3.json`). The SteVec
+/// entry/query shapes are inventory members but not stored column payloads,
+/// so they are excluded — exactly the set `eql_bindings::from_v2` accepts as
+/// conversion targets ([`render_payload_rs`]'s `DomainPayload` variants).
+fn stored_payload_domains() -> impl Iterator<Item = (&'static DomainFamily, &'static Domain)> {
+    CATALOG
+        .iter()
+        .flat_map(|f| f.domains.iter().map(move |d| (f, d)))
+        .filter(|(f, d)| d.is_scalar() || d.full_name(f.name) == "json")
+}
+
+/// Render the generated `crates/eql-bindings/src/v3/payload.rs`: the
+/// `DomainPayload` enum spanning every stored-payload domain — one variant
+/// per catalog (family, domain) pair mapping to its binding struct, plus the
+/// SteVec document for the `jsonb` family — with its
+/// construct-from-known-domain `parse` constructor.
+///
+/// Serialize-only by design: the enum is `#[serde(untagged)]` so its wire
+/// form is exactly the inner struct's, and it deliberately derives NO
+/// `Deserialize` — cross-token payloads (`integer_eq` vs `bigint_eq`) are
+/// byte-identical on the wire, so a variant can never be inferred from bytes
+/// (the "Why there is no discriminated enum" rule in the v3 module docs);
+/// it can only be constructed from a known target domain. Likewise no ts-rs
+/// or schemars derives: this is a Rust-side ergonomics type, not a new wire
+/// shape, so it must not churn the exported TS/JSON-Schema surface.
+pub fn render_payload_rs() -> String {
+    let mut variants = TokenStream::new();
+    let mut parse_arms = TokenStream::new();
+    let mut inner_arms = TokenStream::new();
+    for (f, d) in stored_payload_domains() {
+        let module = format_ident!("{}", f.name);
+        let strukt = format_ident!("{}", d.rust_struct_name(f.name));
+        let full = d.full_name(f.name);
+        let doc = format!(" The `eql_v3.{full}` payload.");
+        variants.extend(quote! {
+            #[doc = #doc]
+            #strukt(super::#module::#strukt),
+        });
+        parse_arms.extend(quote! {
+            #full => Some(super::#module::#strukt::deserialize(value).map(Self::#strukt)),
+        });
+        inner_arms.extend(quote! {
+            Self::#strukt(payload) => payload,
+        });
+    }
+
+    let mod_doc = " The generated `DomainPayload` enum — every stored-payload v3 \
+                   domain in one Rust type. Generated from the catalog; the \
+                   DomainType trait, the shared newtypes, and the architectural \
+                   module doc stay hand-written (domain_type.rs / terms.rs / mod.rs).";
+
+    let file = quote! {
+        #![doc = #mod_doc]
+
+        use serde::{Deserialize, Serialize};
+
+        use super::domain_type::DomainType;
+
+        /// Every stored-payload v3 domain in one type: one variant per flat
+        /// scalar domain in `eql-domains::CATALOG` plus the SteVec document
+        /// (`eql_v3.json`). Generated from the catalog, so it cannot drift
+        /// when the catalog grows.
+        ///
+        /// Serialization is exactly the inner struct's (`#[serde(untagged)]`
+        /// adds no tagging), so typing a payload never changes the wire.
+        /// Deliberately NO `Deserialize`: cross-token payloads are
+        /// byte-identical on the wire (see "Why there is no discriminated
+        /// enum" in the v3 module docs), so a variant is only constructible
+        /// from a KNOWN domain — [`DomainPayload::parse`] or
+        /// [`crate::from_v2::from_v2_typed`] — never inferred from bytes.
+        #[derive(Clone, Debug, PartialEq, Serialize)]
+        #[serde(untagged)]
+        pub enum DomainPayload {
+            #variants
+        }
+
+        impl DomainPayload {
+            /// Strictly parse `value` as `domain`'s payload, KEEPING the
+            /// parsed value — the constructor counterpart of
+            /// [`DomainType::parse_value`] (which validates and discards).
+            /// `domain` is the unqualified name (`"integer_eq"`, `"json"`,
+            /// …). `None` when `domain` is not a stored-payload domain (the
+            /// SteVec entry/query shapes included); `Some(Err)` when the
+            /// strict parse fails (`deny_unknown_fields`, the
+            /// `SchemaVersion`/`SteVecForm` pins).
+            pub fn parse(
+                domain: &str,
+                value: &serde_json::Value,
+            ) -> Option<Result<Self, serde_json::Error>> {
+                match domain {
+                    #parse_arms
+                    _ => None,
+                }
+            }
+
+            /// The inner payload as a [`DomainType`] trait object.
+            pub fn as_domain_type(&self) -> &dyn DomainType {
+                match self {
+                    #inner_arms
+                }
+            }
+
+            /// Fully-qualified SQL domain name, e.g. `"eql_v3.integer_eq"`.
+            pub fn sql_domain(&self) -> &'static str {
+                self.as_domain_type().sql_domain()
+            }
+
+            /// Unqualified SQL domain name, e.g. `"integer_eq"` — the name
+            /// [`DomainPayload::parse`] accepts.
+            pub fn domain(&self) -> &'static str {
+                self.as_domain_type().domain()
+            }
+        }
+    };
+
+    format_rs(file)
+}
+
 /// Relative path (from repo root) of the generated v3 bindings directory.
 const V3_BINDINGS_DIR: &str = "crates/eql-bindings/src/v3";
 
 /// Render every binding file to memory (NO filesystem writes): one
 /// `(<dir>/<family>.rs, body)` per catalog family in CATALOG order, then
-/// `inventory.rs`. Kept separate from the write orchestration so a render panic
+/// `payload.rs` (the `DomainPayload` enum) and `inventory.rs`. Kept separate
+/// from the write orchestration so a render panic
 /// — an unmapped bare-domain name in [`capability_label`], or a missing/failing
 /// `rustfmt` in [`format_rs`] — aborts BEFORE [`generate_bindings`] deletes any
 /// committed source.
@@ -293,6 +413,7 @@ fn render_bindings(dir: &Path) -> Vec<(PathBuf, String)> {
             )
         })
         .collect();
+    rendered.push((dir.join("payload.rs"), render_payload_rs()));
     rendered.push((dir.join("inventory.rs"), render_inventory_rs()));
     rendered
 }
@@ -480,9 +601,10 @@ mod tests {
         let tmp = crate::writer::test_support::tempdir();
         let written = generate_bindings(tmp.path()).unwrap();
         let dir = tmp.path().join("crates/eql-bindings/src/v3");
-        assert_eq!(written.len(), eql_domains::scalar_families().count() + 1);
+        assert_eq!(written.len(), eql_domains::scalar_families().count() + 2);
         assert!(dir.join("integer.rs").is_file());
         assert!(dir.join("text.rs").is_file());
+        assert!(dir.join("payload.rs").is_file());
         assert!(dir.join("inventory.rs").is_file());
         assert!(
             !dir.join("mod.rs").exists(),
@@ -503,7 +625,7 @@ mod tests {
         // source, so a render panic aborts before deletion. Lock in the
         // load-bearing property: render writes NOTHING to disk. A pre-existing
         // file in the target dir survives the render call untouched, and render
-        // returns one entry per family plus inventory (last).
+        // returns one entry per family plus payload and inventory (last).
         let tmp = crate::writer::test_support::tempdir();
         let dir = tmp.path().join(V3_BINDINGS_DIR);
         std::fs::create_dir_all(&dir).unwrap();
@@ -512,7 +634,7 @@ mod tests {
 
         let rendered = render_bindings(&dir);
 
-        assert_eq!(rendered.len(), eql_domains::scalar_families().count() + 1);
+        assert_eq!(rendered.len(), eql_domains::scalar_families().count() + 2);
         assert_eq!(
             std::fs::read_to_string(&sentinel).unwrap(),
             "SENTINEL",
@@ -525,6 +647,76 @@ mod tests {
                 "{p:?} body lacks the marker"
             );
         }
+    }
+
+    /// Declared variant idents of `enum_name` in generated source, in order.
+    fn variant_idents(src: &str, enum_name: &str) -> Vec<String> {
+        let file = syn::parse_file(src).expect("generated source parses");
+        for item in &file.items {
+            if let syn::Item::Enum(e) = item {
+                if e.ident == enum_name {
+                    return e.variants.iter().map(|v| v.ident.to_string()).collect();
+                }
+            }
+        }
+        panic!("enum {enum_name} not found in generated source");
+    }
+
+    #[test]
+    fn payload_enum_spans_every_stored_domain_in_catalog_order() {
+        let out = render_payload_rs();
+        assert!(out.starts_with(crate::consts::RUST_GENERATED_MARKER));
+
+        // One variant per catalog (family, domain) pair that is a stored
+        // payload: every scalar domain plus the SteVec document. The SteVec
+        // entry/query shapes are inventory members but not stored payloads.
+        let expected: Vec<String> = CATALOG
+            .iter()
+            .flat_map(|f| {
+                f.domains
+                    .iter()
+                    .filter(|d| d.is_scalar() || d.full_name(f.name) == "json")
+                    .map(|d| d.rust_struct_name(f.name))
+            })
+            .collect();
+        assert_eq!(variant_idents(&out, "DomainPayload"), expected);
+        assert!(out.contains("SteVecDocument(super::jsonb::SteVecDocument)"));
+        assert!(!expected.contains(&"SteVecEntry".to_string()));
+        assert!(!expected.contains(&"SteVecQuery".to_string()));
+
+        // parse: one arm per stored domain, keyed on the unqualified name,
+        // falling through to None for everything else.
+        assert!(out.contains(
+            "pub fn parse(\n        domain: &str,\n        value: &serde_json::Value,\n    ) -> Option<Result<Self, serde_json::Error>>"
+        ));
+        assert!(out.contains(r#""integer_eq" =>"#));
+        assert!(out.contains("IntegerEq::deserialize(value).map(Self::IntegerEq)"));
+        assert!(out.contains(r#""json" =>"#));
+        assert!(out.contains("SteVecDocument::deserialize(value).map(Self::SteVecDocument)"));
+        assert!(out.contains("_ => None,"));
+        assert!(out.contains("pub fn as_domain_type(&self) -> &dyn DomainType"));
+        assert!(out.contains("pub fn sql_domain(&self) -> &'static str"));
+        assert!(out.contains("pub fn domain(&self) -> &'static str"));
+    }
+
+    #[test]
+    fn payload_enum_is_untagged_serialize_only_with_no_export_derives() {
+        // The wire form must be exactly the inner struct's, and DomainPayload
+        // is a Rust-side ergonomics type: no Deserialize (inference from
+        // bytes is unsound — cross-token payloads are byte-identical), and no
+        // ts-rs/schemars derives (it must not churn the exported TS/JSON
+        // surface).
+        let out = render_payload_rs();
+        assert!(out.contains("#[derive(Clone, Debug, PartialEq, Serialize)]"));
+        assert!(out.contains("#[serde(untagged)]"));
+        assert!(
+            !out.contains("#[derive(Clone, Debug, PartialEq, Serialize, Deserialize"),
+            "DomainPayload must not derive Deserialize"
+        );
+        assert!(!out.contains("ts_rs"), "no ts-rs on DomainPayload");
+        assert!(!out.contains("#[ts("), "no ts-rs export attributes");
+        assert!(!out.contains("JsonSchema"), "no schemars on DomainPayload");
+        assert!(!out.contains("schema_for!"), "no schema emission");
     }
 
     #[test]
@@ -640,8 +832,8 @@ mod tests {
             !rendered.iter().any(|(p, _)| p.ends_with("jsonb.rs")),
             "jsonb.rs is hand-written; the generator must not emit it"
         );
-        // One file per scalar family + inventory.
-        assert_eq!(rendered.len(), eql_domains::scalar_families().count() + 1);
+        // One file per scalar family + payload + inventory.
+        assert_eq!(rendered.len(), eql_domains::scalar_families().count() + 2);
     }
 
     #[test]
