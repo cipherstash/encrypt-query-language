@@ -20,8 +20,8 @@ hand-copying.
 ## Capability-encoded types
 
 The [`src/v3/`](src/v3/) module has one type per **SQL domain** in the
-`eql_v3` schema — `Int4` / `Int4Eq` / `Int4Ord` / `Int4OrdOre`, and likewise
-for `int2`, `int8`, `date`, `timestamp`, `numeric`, and `text` (which adds
+`eql_v3` schema — `Integer` / `IntegerEq` / `IntegerOrd` / `IntegerOrdOre`, and likewise
+for `smallint`, `bigint`, `date`, `timestamp`, `numeric`, and `text` (which adds
 `TextMatch`) — each carrying its index terms as **required** fields. The
 capability is the type identity; `Option` never appears. A payload missing
 its term key fails to deserialize: the Rust analogue of the SQL domain's
@@ -82,8 +82,8 @@ On the wire, a v3 payload is discriminated only by *which key is present*
 leaves SQL (into protect-ffi, into TypeScript, into a log line) that
 information is gone, and a consumer is back to sniffing keys: the untagged
 failure mode that produced the original protect-dynamodb bug. An earlier
-prototype here carried an `Int4Tagged` enum with a one-field capability tag
-(`"x": "int4_eq"`), which generates a clean TypeScript discriminated union
+prototype here carried an `IntegerTagged` enum with a one-field capability tag
+(`"x": "integer_eq"`), which generates a clean TypeScript discriminated union
 and a JSON Schema `oneOf` with per-branch `const`s. It was removed because
 the tag is not part of the v3 wire contract (the generated domain CHECKs
 know no `x` key) — but it remains the recommended shape if a future payload

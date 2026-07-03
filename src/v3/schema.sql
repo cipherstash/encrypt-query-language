@@ -2,7 +2,7 @@
 --! @brief EQL v3 schema creation
 --!
 --! Creates the eql_v3 and eql_v3_internal schemas. eql_v3 is the public API:
---! the self-contained encrypted-domain type families (eql_v3.int4, eql_v3.int8,
+--! the self-contained encrypted-domain type families (eql_v3.integer, eql_v3.bigint,
 --! and future scalar domains) — their jsonb-backed domains, index-term
 --! extractors, aggregates, AND the operator-backing comparison wrappers
 --! (eq/neq/lt/lte/gt/gte/contains/contained_by, plus the jsonb containment

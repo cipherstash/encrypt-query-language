@@ -132,7 +132,7 @@ AS $$
     -- Wire format per term:
     --   [ N PRP bytes ][ N*16B left blocks ][ 16B hash key ][ N*32B right blocks ]
     --   octet_length = 17*N + 16 + 32*N = 49*N + 16  =>  N = (octet_length - 16) / 49
-    -- This serves int4 (N=8, 408B), timestamp (N=12, 604B), and numeric
+    -- This serves integer (N=8, 408B), timestamp (N=12, 604B), and numeric
     -- (N=14, 702B) with one comparator.
     n            integer;
     left_offset  integer;  -- ordinal offset of the first left block (1 + N PRP bytes)

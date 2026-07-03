@@ -106,8 +106,8 @@ fn schema_id_is_canonical() {
     // Fully-literal anchors — no interpolation, so a typo in the helper's base
     // URL or path cannot match.
     assert_eq!(
-        id_of("int4_eq"),
-        "https://schemas.cipherstash.com/eql/v3/int4_eq.json"
+        id_of("integer_eq"),
+        "https://schemas.cipherstash.com/eql/v3/integer_eq.json"
     );
     assert_eq!(
         id_of("text_search"),

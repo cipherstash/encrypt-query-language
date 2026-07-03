@@ -16,7 +16,7 @@
 //! derivable from the scalar catalog.
 //!
 //! The [`v3`] module holds the `eql_v3` encrypted-domain types: one struct
-//! per SQL domain (`eql_v3.int4_eq`, `eql_v3.text_match`, …),
+//! per SQL domain (`eql_v3.integer_eq`, `eql_v3.text_match`, …),
 //! *capability-encoded* — index terms are required fields, never `Option`.
 //! The generated flat-scalar payload structs mirror the scalar subset of
 //! `eql-domains::CATALOG` 1:1, enforced by `tests/catalog_parity.rs`; the
