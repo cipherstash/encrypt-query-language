@@ -282,7 +282,7 @@ run = """
 # arms). It is not derivable by a strip filter, so it is committed directly and
 # pinned as a strict superset of the baseline. The fourth
 # (snapshots/matrix_tests_storage_only.txt) is the STORAGE-ONLY / encryption-only
-# shape (e.g. `bool`): a single term-less domain with NO comparison/index/order
+# shape (e.g. `boolean`): a single term-less domain with NO comparison/index/order
 # tests — only the surface arms (sanity, blocker, payload-check, path-op,
 # native-absent, typed-column, count, aggregate-typecheck, fixture-shape). It is
 # neither a subset derivable by a strip filter nor a superset, so it is committed
@@ -368,7 +368,7 @@ fi
 # Per-type normalize + compare: each type must match the full canonical snapshot
 # (ordered shape), the derived eq-only subset (equality-only shape), or the
 # committed text superset (text shape), or the committed storage-only set
-# (storage-only / encryption-only shape, e.g. `bool` — a single term-less
+# (storage-only / encryption-only shape, e.g. `boolean` — a single term-less
 # domain with no comparison/index/order tests, only the surface arms).
 checked=0
 while IFS= read -r t; do
@@ -448,9 +448,9 @@ run = """
 #
 # Drivers (one representative type per shape; the inventory gate then asserts
 # every type of that shape matches the snapshot after <T> normalization):
-#   ordered      → scalars::int4::  (caps = [eq, ord])
+#   ordered      → scalars::integer::  (caps = [eq, ord])
 #   text         → scalars::text::  (caps = [eq, ord, search]; superset of ordered)
-#   storage-only → scalars::bool::  (caps = [storage]; term-less surface arms)
+#   storage-only → scalars::boolean::  (caps = [storage]; term-less surface arms)
 #   eq-only      → DERIVED from the ordered baseline (minus _ord/order_by/routes_through_ob)
 #
 # Out of scope by design: the sibling snapshots matrix_jsonb_entry_tests.txt and
@@ -487,8 +487,8 @@ stage=$(mktemp -d)
 
 # Ordered baseline (canonical) — staged first because the eq-only shape is
 # DERIVED from it below.
-printf '%s\\n' "$listing" | grep '^scalars::int4::' \
-  | sed -e 's/^scalars::int4::/scalars::<T>::/' -e 's/_int4_/_<T>_/g' \
+printf '%s\\n' "$listing" | grep '^scalars::integer::' \
+  | sed -e 's/^scalars::integer::/scalars::<T>::/' -e 's/_integer_/_<T>_/g' \
   | LC_ALL=C sort > "$stage/matrix_tests.txt"
 
 # Eq-only shape: DERIVED from the freshly-regenerated ordered baseline (the
@@ -502,8 +502,8 @@ printf '%s\\n' "$listing" | grep '^scalars::text::' \
   | LC_ALL=C sort > "$stage/matrix_tests_text.txt"
 
 # Storage-only shape: term-less surface arms only, from its own driver type.
-printf '%s\\n' "$listing" | grep '^scalars::bool::' \
-  | sed -e 's/^scalars::bool::/scalars::<T>::/' -e 's/_bool_/_<T>_/g' \
+printf '%s\\n' "$listing" | grep '^scalars::boolean::' \
+  | sed -e 's/^scalars::boolean::/scalars::<T>::/' -e 's/_boolean_/_<T>_/g' \
   | LC_ALL=C sort > "$stage/matrix_tests_storage_only.txt"
 
 # Every shape must have arms; an empty one means a driver type lost its matrix
@@ -526,7 +526,7 @@ dir = "{{config_root}}/tests/sqlx"
 run = """
 #!/usr/bin/env bash
 # The jsonb-entry behaviour matrix (jsonb_entry_matrix!) is a SIBLING of the
-# scalar matrix inventory, NOT folded into it: JsonbEntryInt4 is deliberately
+# scalar matrix inventory, NOT folded into it: JsonbEntryInteger is deliberately
 # not a eql-domains::CATALOG type, so it has no scalars::<T>:: tests and no
 # `eql-codegen list-types` row. Its names live under `jsonb_entry::…` and are
 # pinned by this isolated snapshot (no catalog cross-check). No database needed.
@@ -538,8 +538,8 @@ EQL_ROOT="{{config_root}}"
 source "${EQL_ROOT}/tasks/test/stub-fixtures.sh"
 listing=$(cargo test --no-default-features --test encrypted_domain -- --list | sed -n 's/: test$//p')
 printf '%s\\n' "$listing" \
-  | grep '^jsonb_entry::.*jsonb_entry_int4' \
-  | sed -E 's/_int4_/_<T>_/' \
+  | grep '^jsonb_entry::.*jsonb_entry_integer' \
+  | sed -E 's/_integer_/_<T>_/' \
   | LC_ALL=C sort -u > /tmp/matrix-jsonb-entry-current.txt
 if ! cmp -s /tmp/matrix-jsonb-entry-current.txt snapshots/matrix_jsonb_entry_tests.txt; then
   echo "JSONB-entry matrix test-name set differs from snapshots/matrix_jsonb_entry_tests.txt." >&2
@@ -660,17 +660,17 @@ echo "Catalog-coverage OK: every CATALOG (type, domain) has matrix tests."
 """
 
 [tasks."test:matrix:expand"]
-description = "Regenerate the matrix cargo-expand drift snapshots (int4, text, bool — one per reachable scalar_matrix! arm; requires the pinned nightly + cargo-expand)"
+description = "Regenerate the matrix cargo-expand drift snapshots (integer, text, bool — one per reachable scalar_matrix! arm; requires the pinned nightly + cargo-expand)"
 dir = "{{config_root}}/tests/sqlx"
 run = """
 #!/usr/bin/env bash
 # Body-level fidelity backstop for the macro: the expanded source of the matrix
 # arms, one snapshot per *reachable* `scalar_matrix!` arm (tests/sqlx/src/matrix.rs):
-#   int4 -> [eq, ord]          (= rides the ORE ordered index)
+#   integer -> [eq, ord]          (= rides the ORE ordered index)
 #   text -> [eq, ord, search]  (bloom `_match` + `_eqidx` index split)
 #   bool -> [storage]          (single term-less domain; direct leaf drivers)
 # The arms emit structurally different bodies, so no single type subsumes the
-# others (text does NOT subsume int4: its `ord` btree combo omits `=`). The `[eq]`
+# others (text does NOT subsume integer: its `ord` btree combo omits `=`). The `[eq]`
 # arm has no consumer and is uncovered by design. The `cargo +nightly-...`
 # invocation below is the SINGLE source of the pinned nightly date —
 # .github/workflows/macro-expand-eql.yml greps it from here rather than
@@ -701,7 +701,7 @@ export PATH
 mkdir -p snapshots fixtures
 # One target per reachable scalar_matrix! arm. Add a token here to pin another
 # arm; its snapshot is written to snapshots/<token>_expanded.rs.
-TARGETS=(int4 text bool)
+TARGETS=(integer text boolean)
 BK=$(mktemp -d)
 cp -a migrations "$BK/migrations"
 mkdir -p "$BK/fixtures"
