@@ -88,10 +88,10 @@ These extract the index term from an encrypted-domain value. They are generated 
 
 ```sql
 -- Equality term (hm)
-eql_v3.eq_term(a eql_v3.int4_eq)        RETURNS eql_v3.hmac_256
+eql_v3.eq_term(a eql_v3.integer_eq)        RETURNS eql_v3.hmac_256
 -- Ordering term (ob)
-eql_v3.ord_term(a eql_v3.int4_ord)      RETURNS eql_v3.ore_block_256
-eql_v3.ord_term(a eql_v3.int4_ord_ore)  RETURNS eql_v3.ore_block_256
+eql_v3.ord_term(a eql_v3.integer_ord)      RETURNS eql_v3.ore_block_256
+eql_v3.ord_term(a eql_v3.integer_ord_ore)  RETURNS eql_v3.ore_block_256
 -- Text-match term (bf)
 eql_v3.match_term(a eql_v3.text_match)  RETURNS eql_v3.bloom_filter
 ```
@@ -123,11 +123,11 @@ The full encrypted-JSONB function surface — containment, `->` / `->>`, `eql_v3
 Returns the minimum or maximum encrypted value on an ordered encrypted-domain column. Defined per ord-capable variant of every scalar type (`eql_v3.<T>_ord`, `eql_v3.<T>_ord_ore`); the input type selects the aggregate via PostgreSQL's overload resolution.
 
 ```sql
--- int4 — generated for every ordered variant of every scalar type.
-eql_v3.min(eql_v3.int4_ord)      RETURNS eql_v3.int4_ord
-eql_v3.max(eql_v3.int4_ord)      RETURNS eql_v3.int4_ord
-eql_v3.min(eql_v3.int4_ord_ore)  RETURNS eql_v3.int4_ord_ore
-eql_v3.max(eql_v3.int4_ord_ore)  RETURNS eql_v3.int4_ord_ore
+-- integer — generated for every ordered variant of every scalar type.
+eql_v3.min(eql_v3.integer_ord)      RETURNS eql_v3.integer_ord
+eql_v3.max(eql_v3.integer_ord)      RETURNS eql_v3.integer_ord
+eql_v3.min(eql_v3.integer_ord_ore)  RETURNS eql_v3.integer_ord_ore
+eql_v3.max(eql_v3.integer_ord_ore)  RETURNS eql_v3.integer_ord_ore
 ```
 
 Comparison routes through the variant's `<` / `>` operator, which uses the ORE block term — no decryption. The state function is `STRICT`, so `NULL` inputs are skipped and an all-`NULL` input set returns `NULL`.
@@ -135,12 +135,12 @@ Comparison routes through the variant's `<` / `>` operator, which uses the ORE b
 **Example:**
 
 ```sql
--- ord-capable column (e.g. price_encrypted typed as eql_v3.int4_ord)
+-- ord-capable column (e.g. price_encrypted typed as eql_v3.integer_ord)
 SELECT eql_v3.min(price_encrypted) FROM products;
 SELECT eql_v3.max(price_encrypted) FROM products WHERE category = 'electronics';
 
 -- On a generic jsonb column, cast to the right domain
-SELECT eql_v3.min(price_jsonb::eql_v3.int4_ord) FROM products;
+SELECT eql_v3.min(price_jsonb::eql_v3.integer_ord) FROM products;
 ```
 
 `MIN` / `MAX` over a value extracted from an `eql_v3.json` document use `eql_v3.min(eql_v3.jsonb_entry)` / `max` — see [json-support.md](./json-support.md).

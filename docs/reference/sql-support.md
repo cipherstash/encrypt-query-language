@@ -4,7 +4,7 @@ This page summarises which SQL operators and language features work against EQL-
 
 EQL ships its searchable-encryption surface as PostgreSQL **domains in the `eql_v3` schema**:
 
-- **per-scalar encrypted-domain types** — `eql_v3.int4`, `eql_v3.text`, `eql_v3.timestamp`, … — one family of domain *variants* per scalar; and
+- **per-scalar encrypted-domain types** — `eql_v3.integer`, `eql_v3.text`, `eql_v3.timestamp`, … — one family of domain *variants* per scalar; and
 - **an encrypted-JSON document type** — `eql_v3.json` — for structured-encryption (ste_vec) JSONB.
 
 The capability of a column is fixed by the **domain variant you type it as**. There is no database-side `add_search_config` / `add_column` step: which index terms travel in a value's payload is decided by the encryption client ([CipherStash Proxy](https://github.com/cipherstash/proxy) / [Protect.js](https://github.com/cipherstash/protectjs)), and the column's domain variant is what makes the matching operators resolve. Unsupported operators are not silent no-ops — they route to blocker functions that `RAISE` an "operator not supported" exception (a `NULL` operand still raises; the blockers are deliberately not `STRICT`).
@@ -15,7 +15,7 @@ The capability of a column is fixed by the **domain variant you type it as**. Th
 
 Each scalar type `<T>` is a family of `jsonb`-backed domains in `eql_v3`. The catalog scalar tokens that ship today are:
 
-`int2`, `int4`, `int8`, `numeric`, `float4`, `float8`, `date`, `timestamp`, `text`, `bool`.
+`smallint`, `integer`, `bigint`, `numeric`, `real`, `double`, `date`, `timestamp`, `text`, `boolean`.
 
 (See [Adding a Scalar Encrypted-Domain Type](./adding-a-scalar-encrypted-domain-type.md) for how the family is generated.) The domains live in the `eql_v3` schema — `DROP SCHEMA eql_v3 CASCADE` removes them — and their extracted index-term types are the self-contained `eql_v3` SEM types (`eql_v3.hmac_256`, `eql_v3.ore_block_256`, `eql_v3.bloom_filter`).
 
@@ -34,11 +34,11 @@ Every scalar generates a storage-only variant plus the query variants its capabi
 
 Notes:
 
-- The bare `eql_v3.<T>` variant carries no index term and **blocks every comparison operator** — it is storage / decryption only. Type the column as `_eq` or `_ord` (or cast at the call site, e.g. `col::eql_v3.int4_ord`) when you need to query.
+- The bare `eql_v3.<T>` variant carries no index term and **blocks every comparison operator** — it is storage / decryption only. Type the column as `_eq` or `_ord` (or cast at the call site, e.g. `col::eql_v3.integer_ord`) when you need to query.
 - `_ord` and `_ord_ore` are **twins**: byte-identical surfaces backed by the ORE block term. Pick the name that documents intent ("ordered" vs "ordered via ORE block"); both support the full ordered surface and the `MIN` / `MAX` aggregates.
 - `_ord_ope` exposes the **same ordered surface** backed by the CLLW-OPE term instead: `op` is a hex-encoded, order-preserving ciphertext compared by native bytea ordering after hex-decode (no custom comparison protocol). On `text_ord_ope`, `=` / `<>` route through `hm` (exact HMAC), like `text_ord` — OPE over text is not equality-lossless.
 - `=` / `<>` is the only searchable surface for `_eq`. On `_ord` variants the equality operators are available too (alongside the ordered ones).
-- `bool` is **storage-only** by design — a two-value column has too little cardinality for any searchable index to be safe, so it ships only `eql_v3.bool` (no `_eq` / `_ord`).
+- `boolean` is **storage-only** by design — a two-value column has too little cardinality for any searchable index to be safe, so it ships only `eql_v3.boolean` (no `_eq` / `_ord`).
 - `LIKE` / `ILIKE` (`~~` / `~~*`) and the native JSONB operators are **blocked on every scalar domain variant** — they are meaningless on a scalar payload. Text matching is the bloom-filter `@>` on `text_match`, not `LIKE`.
 - `MIN` / `MAX` are exposed only on the ordered variants, as `eql_v3.min(eql_v3.<T>_ord)` / `eql_v3.max(...)` (and the `_ord_ore` twin) — see [EQL Functions Reference](./eql-functions.md#eql_v3min--eql_v3max-per-domain).
 
@@ -77,7 +77,7 @@ This matrix covers higher-level SQL constructs. As above, ✅ requires the colum
 | `WHERE col IN (…)`                   | desugars to `=`                                                                         | `_eq`, `_ord`, `text_search` |
 | `ORDER BY col`                       | meaningful only with an ORE term                                                        | `_ord`, `text_search` |
 | `GROUP BY col` / `DISTINCT`          | needs an equality term                                                                  | `_eq`, `_ord`, `text_search` |
-| `MIN(col)` / `MAX(col)`              | `eql_v3.min(eql_v3.<T>_ord)` / `max` — type the column as `_ord` or cast at the call site (`eql_v3.min(col::eql_v3.int4_ord)`) | `_ord` |
+| `MIN(col)` / `MAX(col)`              | `eql_v3.min(eql_v3.<T>_ord)` / `max` — type the column as `_ord` or cast at the call site (`eql_v3.min(col::eql_v3.integer_ord)`) | `_ord` |
 | `COUNT(col)` / `COUNT(DISTINCT col)` | plain `COUNT(col)` needs no term; `DISTINCT` needs an equality term                     | any / `_eq` for `DISTINCT` |
 | `JOIN … ON lhs.col = rhs.col`        | both sides must share the same keyset and a matching variant                            | `_eq`, `_ord`, `text_search` |
 
@@ -86,7 +86,7 @@ Notes:
 - **Cross-column / cross-table comparisons** (joins, `IN (subquery)`, set-operation dedup) require both sides to have been encrypted with the *same* keyset and a matching variant.
 - **`ORDER BY`** without an ORE term will not produce a meaningful order — type the column as an `_ord` variant when ordering matters.
 - **Aggregates beyond `MIN` / `MAX`** (`SUM`, `AVG`, …) are not supported on encrypted values — decrypt at the application boundary and aggregate client-side.
-- **Parameter binding**: CipherStash Proxy rewrites bound parameters so the encrypted operator and any functional indexes are selected. When bypassing the proxy, type the parameter (`$1::eql_v3.int4_ord`) so the encrypted operator resolves rather than the native `jsonb` one.
+- **Parameter binding**: CipherStash Proxy rewrites bound parameters so the encrypted operator and any functional indexes are selected. When bypassing the proxy, type the parameter (`$1::eql_v3.integer_ord`) so the encrypted operator resolves rather than the native `jsonb` one.
 
 ---
 
