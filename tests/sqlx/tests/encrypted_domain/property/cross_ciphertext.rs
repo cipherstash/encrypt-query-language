@@ -17,7 +17,13 @@
 //!     twins (`assert_ord_oracle`), PLUS `=` TRUE / `<>` FALSE on an equal pair
 //!     through `_ord` and `_ord_ore` — the ORE (`ob`) equality path, which routes
 //!     `=` through `compare_ore_block_256_terms(...) = 0` (GUARANTEED equal for
-//!     two independent encryptions of one value; see the ORE finding in the plan).
+//!     two independent encryptions of one value; see the ORE finding in the plan);
+//!  4. CLLW-OPE determinism (CIP-3348): every equal-plaintext pair carries
+//!     byte-identical `op` hex terms across its two independent encryptions —
+//!     the property that makes op-routed `=`/`<>` on the integer families'
+//!     `_ord_ope` domains sound — and distinct plaintexts carry distinct `op`
+//!     terms; plus `=` TRUE / `<>` FALSE on the distinct-ciphertext pair
+//!     through `_ord_ope` itself.
 //!
 //! `#[sqlx::test]` per type (its own migrated scratch DB), like the rest of the
 //! fixture suite.
@@ -77,6 +83,83 @@ async fn assert_pair_eq_on<T: ScalarType>(
     Ok(())
 }
 
+/// The `op` (CLLW-OPE) hex term of a doubles-row payload. Fails loudly when
+/// the key is missing — the doubles fixtures are generated with the `ope`
+/// index (cipherstash-client 0.38.1+), so an op-less payload means stale
+/// fixtures.
+fn op_term<T: ScalarType>(row: &Row<T>) -> Result<String> {
+    let payload: serde_json::Value = serde_json::from_str(&row.payload_json)?;
+    payload
+        .get("op")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_owned)
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "doubles payload for {} carries no string `op` term — regenerate \
+                 fixtures on cipherstash-client 0.38.1+ (CIP-3348): {}",
+                T::PG_TYPE,
+                row.payload_json
+            )
+        })
+}
+
+/// CLLW-OPE determinism (CIP-3348): two independent encryptions of one
+/// plaintext must carry byte-identical `op` hex terms — the property that
+/// makes op-routed `=`/`<>` on the `_ord_ope` domains sound (a randomized
+/// term would silently return false negatives). Distinct plaintexts must
+/// carry distinct `op` terms (order-preserving => injective).
+fn assert_ope_determinism<T: ScalarType>(rows: &[Row<T>]) -> Result<()> {
+    for i in 0..rows.len() {
+        for j in (i + 1)..rows.len() {
+            let (op_i, op_j) = (op_term::<T>(&rows[i])?, op_term::<T>(&rows[j])?);
+            if rows[i].plaintext == rows[j].plaintext {
+                anyhow::ensure!(
+                    op_i == op_j,
+                    "CLLW-OPE must be deterministic for {}: equal plaintext \
+                     {:?} produced different `op` terms across two independent \
+                     encryptions ({op_i:?} vs {op_j:?})",
+                    T::PG_TYPE,
+                    rows[i].plaintext,
+                );
+            } else {
+                anyhow::ensure!(
+                    op_i != op_j,
+                    "distinct plaintexts ({:?} vs {:?}) for {} must carry \
+                     distinct `op` terms; both were {op_i:?}",
+                    rows[i].plaintext,
+                    rows[j].plaintext,
+                    T::PG_TYPE,
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Like [`assert_pair_eq_on`] but for a domain outside the matrix `Variant`
+/// set — the `_ord_ope` domain, whose coverage lives in the dedicated ope
+/// suites rather than the matrix.
+async fn assert_pair_eq_on_ord_ope<T: ScalarType>(
+    pool: &PgPool,
+    a: &Row<T>,
+    b: &Row<T>,
+) -> Result<()> {
+    let domain = format!("eql_v3.{}_ord_ope", T::PG_TYPE);
+    let a_cast = format!("'{}'::jsonb::{domain}", a.payload_json.replace('\'', "''"));
+    let b_cast = format!("'{}'::jsonb::{domain}", b.payload_json.replace('\'', "''"));
+    let sql = format!("SELECT ({a_cast}) = ({b_cast}), ({a_cast}) <> ({b_cast})");
+    let (eq, neq): (Option<bool>, Option<bool>) = sqlx::query_as(&sql).fetch_one(pool).await?;
+    anyhow::ensure!(
+        eq == Some(true),
+        "cross-ciphertext `=` on {domain} must be TRUE for equal plaintext, got {eq:?}"
+    );
+    anyhow::ensure!(
+        neq == Some(false),
+        "cross-ciphertext `<>` on {domain} must be FALSE for equal plaintext, got {neq:?}"
+    );
+    Ok(())
+}
+
 /// The full cross-ciphertext check for an ordered scalar `T`.
 async fn assert_cross_ciphertext<T: ScalarType>(pool: &PgPool) -> Result<()> {
     let rows = load_doubles_rows::<T>(pool).await?;
@@ -93,6 +176,11 @@ async fn assert_cross_ciphertext<T: ScalarType>(pool: &PgPool) -> Result<()> {
     assert_ord_oracle::<T>(pool, Variant::OrdOre, &rows).await?;
     assert_pair_eq_on::<T>(pool, Variant::Ord, a, b).await?;
     assert_pair_eq_on::<T>(pool, Variant::OrdOre, a, b).await?;
+
+    // (4) CLLW-OPE determinism (CIP-3348) on the real `op` terms, plus the
+    //     op-path equality through `_ord_ope` on the distinct-ciphertext pair.
+    assert_ope_determinism::<T>(&rows)?;
+    assert_pair_eq_on_ord_ope::<T>(pool, a, b).await?;
     Ok(())
 }
 

@@ -21,16 +21,19 @@ mod text_smoke;
 #[path = "encrypted_domain/text/text_match.rs"]
 mod text_match;
 
-// CLLW-OPE (`op` term, `*_ord_ope` domains) literal-payload smoke suites. The
-// pinned cipherstash-client does not emit `op` yet, so these use hand-built
-// hex payloads instead of generated fixtures. One TOP-LEVEL module per ordered
+// CLLW-OPE (`op` term, `*_ord_ope` domains) smoke suites: hand-built literal
+// hex payloads for the SQL surface (routing, inlining, CHECK discipline) PLUS
+// real-ciphertext fixture tests (CIP-3348 — cipherstash-client 0.38.1 emits
+// `op` and the generated fixtures carry it). One TOP-LEVEL module per ordered
 // scalar, named `<t>_ord_ope`, so the `test:matrix:catalog-coverage` gate's
 // dedicated-module pattern (`<t>_<seg>::*`) sees every catalog `ord_ope`
 // domain covered — the same mechanism `text_match` uses for the Bloom domain.
 // Deliberately NOT under `scalars::` — the matrix-inventory gate treats every
 // `scalars::<X>::` prefix as a scalar type (same rationale as the text
-// suites). `ope_support` carries the shared payload builder and the
-// `ope_ord_smoke!` macro the per-type modules invoke.
+// suites). The per-test name set is pinned by `snapshots/ope_tests.txt`
+// (`mise run test:matrix:inventory:ope`). `ope_support` carries the shared
+// payload builder and the `ope_ord_smoke!` / `ope_ord_fixture_smoke!` macros
+// the per-type modules invoke.
 #[path = "encrypted_domain/ope/support.rs"]
 mod ope_support;
 
