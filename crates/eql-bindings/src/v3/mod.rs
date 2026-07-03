@@ -1,7 +1,7 @@
 //! # `eql_v3` domain payload types
 //!
 //! One Rust struct per **SQL domain** in the `eql_v3` schema — the
-//! capability-encoded design from the original int4 scalar prototype
+//! capability-encoded design from the original integer scalar prototype
 //! (PR #236's first cut), formalized:
 //! the SQL surface is generated from `eql-domains::CATALOG`, and these types
 //! mirror it 1:1 — `all()` is generated from the same catalog (`inventory.rs`),
@@ -26,7 +26,7 @@
 //! for `_eq`, `ob` for `_ord`/`_ord_ore`, `op` for `_ord_ope`, `bf` for
 //! `_match`, none for
 //! storage-only. `Option` does not appear in the generated scalar structs: the
-//! capability **is** the type identity. Hold a [`int4::Int4Eq`] and `hm` is
+//! capability **is** the type identity. Hold a [`integer::IntegerEq`] and `hm` is
 //! present, guaranteed by the Rust type and (SQL-side) by the domain CHECK. A
 //! missing term key is a deserialization error — the Rust analogue of the CHECK
 //! constraint.
@@ -64,7 +64,7 @@
 //!
 //! ## Why there is no discriminated enum
 //!
-//! Cross-token: impossible — an `int4_eq` and an `int8_eq` payload are
+//! Cross-token: impossible — an `integer_eq` and a `bigint_eq` payload are
 //! byte-identical on the wire (`v`/`i`/`c`/`hm`); nothing discriminates them.
 //! Per-token: for the FLAT SCALAR families it is deliberately omitted — an
 //! untagged enum over a token's domains would discriminate by key-sniffing, and
@@ -83,7 +83,7 @@
 //! These are not derivable from the catalog and are documented here because the
 //! per-family modules are generated.
 //!
-//! **`float8` / `float4` special values.** `-0.0` canonicalizes to `+0.0`
+//! **`double` / `real` special values.** `-0.0` canonicalizes to `+0.0`
 //! (equal under `=`, IEEE-consistent) and `±Inf` order correctly
 //! (`-Inf < finite < +Inf`). **NaN is unordered and unspecified in the
 //! encoder**: it can be encrypted, stored, and pass the domain CHECK, but it
@@ -94,7 +94,7 @@
 //! sorts at an arbitrary (but deterministic) position in an encrypted range
 //! scan. See the `float_special` regression suite for the locked behaviour.
 //!
-//! **`bool` is storage-only by design.** It has no `_eq`/`_ord` domain and
+//! **`boolean` is storage-only by design.** It has no `_eq`/`_ord` domain and
 //! carries no index term: a two-value column has so little cardinality that any
 //! searchable index (even HMAC equality) would trivially leak the plaintext
 //! distribution. The payload is `{v,i,c}` only and every operator is blocked.
@@ -123,17 +123,17 @@
 //! envelope. `eql_v3` itself never reads `k`; it is passthrough form metadata
 //! that the document preserves on round-trip.
 
-pub mod bool;
+pub mod bigint;
+pub mod boolean;
 pub mod date;
 pub mod domain_type;
-pub mod float4;
-pub mod float8;
-pub mod int2;
-pub mod int4;
-pub mod int8;
+pub mod double;
+pub mod integer;
 pub mod inventory;
 pub mod jsonb;
 pub mod numeric;
+pub mod real;
+pub mod smallint;
 pub mod terms;
 pub mod text;
 pub mod timestamp;

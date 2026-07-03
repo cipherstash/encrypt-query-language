@@ -142,11 +142,11 @@ fn parse_value_validates_through_the_inventory() {
         "c": "mp_base85_ciphertext",
         "hm": "deadbeef"
     });
-    assert!(entry("int4_eq").parse_value(&eq_payload).is_ok());
+    assert!(entry("integer_eq").parse_value(&eq_payload).is_ok());
     // Missing term key fails.
-    assert!(entry("int4_ord").parse_value(&eq_payload).is_err());
+    assert!(entry("integer_ord").parse_value(&eq_payload).is_err());
     // Unknown key fails (deny_unknown_fields is live through the trait).
-    assert!(entry("int4").parse_value(&eq_payload).is_err());
+    assert!(entry("integer").parse_value(&eq_payload).is_err());
 
     let doc = json!({
         "v": 3,
@@ -180,8 +180,8 @@ fn schema_id_is_canonical() {
     // Fully-literal anchors — no interpolation, so a typo in the helper's base
     // URL or path cannot match.
     assert_eq!(
-        id_of("int4_eq"),
-        "https://schemas.cipherstash.com/eql/v3/int4_eq.json"
+        id_of("integer_eq"),
+        "https://schemas.cipherstash.com/eql/v3/integer_eq.json"
     );
     assert_eq!(
         id_of("text_search"),
