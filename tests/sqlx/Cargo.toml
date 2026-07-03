@@ -26,18 +26,17 @@ chrono = { version = "0.4", default-features = false }
 rust_decimal = "1"
 paste = "1"
 eql-domains = { path = "../../crates/eql-domains" }
+# The fixture generator routes every cipherstash-client payload (v2 wire)
+# through `eql_bindings::from_v2` before staging (fixtures/v3_convert.rs), so
+# the bindings are a lib dependency now, not just a dev one (they remain a
+# dev-dependency consumer via tests/v3_jsonb_bindings_tests.rs too).
+eql-bindings = { path = "../../crates/eql-bindings" }
 eql-tests-macros = { path = "../../crates/eql-tests-macros" }
 # proptest is a regular dependency (not dev-only): `ScalarType::arbitrary_value`
 # is a non-test trait method returning `proptest::strategy::BoxedStrategy`, so the
 # lib must see proptest when compiled as a normal dependency of the integration
 # test targets (`tests/encrypted_domain`), not just under `cfg(test)`.
 proptest = "1"
-
-[dev-dependencies]
-# Parses real generated SteVec ciphertext rows into the canonical payload
-# bindings (tests/v3_jsonb_bindings_tests.rs) — ties eql-bindings to real
-# cipherstash crypto AND the hand-written src/v3/jsonb/types.sql domain CHECK.
-eql-bindings = { path = "../../crates/eql-bindings" }
 
 [lints]
 workspace = true

@@ -73,7 +73,7 @@ fn capability_label(domain_name: &str) -> &'static str {
     match domain_name {
         "" => "storage-only domain",
         "eq" => "equality domain",
-        "ord" | "ord_ore" => "ordering domain",
+        "ord" | "ord_ore" | "ord_ope" => "ordering domain",
         "match" => "match domain",
         "search" => "search domain",
         other => panic!(
@@ -148,6 +148,13 @@ fn render_struct(family: &DomainFamily, domain: &Domain) -> TokenStream {
         fields.extend(quote! { pub #fid: #tid, });
     }
 
+    // The domain's required term keys, threaded through the trait so
+    // `from_v2::TargetDomain::parse` resolves them from the inventory alone —
+    // Some(&[]) for a storage-only scalar (None is reserved for the
+    // hand-written SteVec shapes). Parity with the catalog is pinned by
+    // eql-bindings `tests/catalog_parity.rs`.
+    let term_keys = Term::term_json_keys(domain.terms);
+
     quote! {
         #[doc = #doc_summary]
         #[doc = #doc_blank]
@@ -165,6 +172,15 @@ fn render_struct(family: &DomainFamily, domain: &Domain) -> TokenStream {
             }
             fn sql_domain(&self) -> &'static str {
                 Self::sql_domain_static()
+            }
+            fn term_json_keys_static() -> Option<&'static [&'static str]> {
+                Some(&[#(#term_keys),*])
+            }
+            fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+                Self::term_json_keys_static()
+            }
+            fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+                #ident::deserialize(value).map(|_| ())
             }
             fn schema(&self) -> Schema {
                 schema_for!(#ident)
@@ -348,6 +364,7 @@ mod tests {
             "struct Int4Eq ",
             "struct Int4OrdOre ",
             "struct Int4Ord ",
+            "struct Int4OrdOpe ",
         ] {
             assert!(out.contains(s), "missing {s}");
         }
@@ -356,19 +373,21 @@ mod tests {
                 "#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]"
             )
             .count(),
-            4
+            5
         );
-        assert_eq!(out.matches("#[ts(export, export_to = \"v3/\")]").count(), 4);
-        assert_eq!(out.matches("#[serde(deny_unknown_fields)]").count(), 4);
+        assert_eq!(out.matches("#[ts(export, export_to = \"v3/\")]").count(), 5);
+        assert_eq!(out.matches("#[serde(deny_unknown_fields)]").count(), 5);
         assert!(out.contains("`eql_v3.int4_eq` — equality domain."));
         assert!(out.contains("`eql_v3.int4` — storage-only domain."));
         assert!(out.contains("`eql_v3.int4_ord` — ordering domain."));
+        assert!(out.contains("`eql_v3.int4_ord_ope` — ordering domain."));
         assert!(!out.contains("Envelope version"));
         assert!(!out.contains("HMAC-SHA-256 equality term"));
         assert_eq!(field_idents(&out, "Int4"), ["v", "i", "c"]);
         assert_eq!(field_idents(&out, "Int4Eq"), ["v", "i", "c", "hm"]);
         assert_eq!(field_idents(&out, "Int4OrdOre"), ["v", "i", "c", "ob"]);
         assert_eq!(field_idents(&out, "Int4Ord"), ["v", "i", "c", "ob"]);
+        assert_eq!(field_idents(&out, "Int4OrdOpe"), ["v", "i", "c", "op"]);
         assert!(out.contains("impl DomainType for Int4Eq"));
         assert!(out.contains("fn sql_domain_static()"));
         assert!(out.contains("\"eql_v3.int4_eq\""));
@@ -401,6 +420,10 @@ mod tests {
         assert!(int4.contains("Operators: `=` `<>` `<` `<=` `>` `>=`."));
         assert!(int4.contains("Required keys: `v` `i` `c` `ob`."));
 
+        // OPE ordering: same operator set, `op` key instead of `ob`.
+        assert!(int4.contains("`eql_v3.int4_ord_ope` — ordering domain."));
+        assert!(int4.contains("Required keys: `v` `i` `c` `op`."));
+
         // text_ord carries BOTH `hm` and `ob` — the dual-term distinction that
         // previously lived only in hand-written prose is now derivable in the doc.
         let text = render_family_bindings(family("text"));
@@ -419,6 +442,7 @@ mod tests {
             "struct TextMatch ",
             "struct TextOrdOre ",
             "struct TextOrd ",
+            "struct TextOrdOpe ",
             "struct TextSearch ",
         ] {
             assert!(out.contains(s), "missing {s}");
@@ -427,6 +451,11 @@ mod tests {
         assert!(out.contains("`eql_v3.text_search` — search domain."));
         assert!(out.contains("bf: BloomFilter"));
         assert_eq!(field_idents(&out, "TextOrd"), ["v", "i", "c", "hm", "ob"]);
+        // text_ord_ope is dual-term like text_ord: equality stays exact via hm.
+        assert_eq!(
+            field_idents(&out, "TextOrdOpe"),
+            ["v", "i", "c", "hm", "op"]
+        );
         assert_eq!(field_idents(&out, "TextMatch"), ["v", "i", "c", "bf"]);
         assert_eq!(
             field_idents(&out, "TextSearch"),
@@ -505,7 +534,9 @@ mod tests {
         assert!(out.contains("pub fn all() -> Vec<Box<dyn DomainType>>"));
         assert!(!out.contains("pub mod "));
         let first = out.find("PhantomData::<super::int4::Int4>").unwrap();
-        let last = out.find("PhantomData::<super::float8::Float8Ord>").unwrap();
+        let last = out
+            .find("PhantomData::<super::float8::Float8OrdOpe>")
+            .unwrap();
         assert!(first < last);
         for ty in [
             "super::text::Text",
@@ -513,6 +544,7 @@ mod tests {
             "super::text::TextMatch",
             "super::text::TextOrdOre",
             "super::text::TextOrd",
+            "super::text::TextOrdOpe",
             "super::text::TextSearch",
         ] {
             assert!(
@@ -523,6 +555,34 @@ mod tests {
         let entries = out.matches("Box::new(PhantomData::<").count();
         let domains: usize = eql_domains::CATALOG.iter().map(|f| f.domains.len()).sum();
         assert_eq!(entries, domains);
+    }
+
+    #[test]
+    fn generated_impls_thread_term_keys_and_parse_value() {
+        // `from_v2` resolves a target domain's required term keys through the
+        // trait object (`DomainType::term_json_keys`) and validates converted
+        // payloads through `DomainType::parse_value` — both must be emitted on
+        // every generated scalar impl, derived from `Term::term_json_keys`.
+        let int4 = render_family_bindings(family("int4"));
+        assert!(int4.contains("fn term_json_keys_static() -> Option<&'static [&'static str]>"));
+        assert!(int4.contains("fn term_json_keys(&self) -> Option<&'static [&'static str]>"));
+        assert!(
+            int4.contains("fn parse_value("),
+            "generated impls must emit parse_value"
+        );
+        // Storage-only domain: an EMPTY key list (Some, not None — None is the
+        // non-scalar SteVec marker).
+        assert!(int4.contains("Some(&[])"));
+        // Single-term equality domain.
+        assert!(int4.contains(r#"&["hm"]"#));
+        // OPE ordering domain.
+        assert!(int4.contains(r#"&["op"]"#));
+
+        // Multi-term domains list keys in catalog (wire) order.
+        let text = render_family_bindings(family("text"));
+        assert!(text.contains(r#"&["hm", "ob", "bf"]"#), "text_search keys");
+        assert!(text.contains(r#"&["hm", "op"]"#), "text_ord_ope keys");
+        assert!(text.contains(r#"&["bf"]"#), "text_match keys");
     }
 
     #[test]

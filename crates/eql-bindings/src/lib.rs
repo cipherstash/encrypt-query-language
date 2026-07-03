@@ -30,25 +30,28 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+pub mod from_v2;
 pub mod v3;
 
-/// EQL wire-format version. Hard-coded to `2` for every payload — including
-/// the [`v3`] tier, whose generated domain CHECKs assert `VALUE->>'v' = '2'`.
-pub const EQL_SCHEMA_VERSION: u16 = 2;
+/// EQL wire-format version. Hard-coded to `3` for every payload in the
+/// [`v3`] tier, whose generated domain CHECKs assert `VALUE->>'v' = '3'`.
+/// (The legacy `eql_v2` wire stays `v: 2` — see
+/// `docs/reference/schema/eql-payload-v2.*.schema.json`.)
+pub const EQL_SCHEMA_VERSION: u16 = 3;
 
 /// The envelope version field (`v`) — always exactly [`EQL_SCHEMA_VERSION`]
 /// on the wire.
 ///
 /// Deserialization rejects any other value: the Rust analogue of the domain
-/// CHECK's `VALUE->>'v' = '2'`, so a wrong-version payload fails at the type
+/// CHECK's `VALUE->>'v' = '3'`, so a wrong-version payload fails at the type
 /// boundary instead of at INSERT. The inner value is private; the only
 /// constructible instance is the current version.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, TS)]
 #[ts(export, export_to = "v3/")]
-pub struct SchemaVersion(#[ts(type = "2")] u16);
+pub struct SchemaVersion(#[ts(type = "3")] u16);
 
 impl SchemaVersion {
-    /// The current (only) wire version, `2`.
+    /// The current (only) wire version, `3`.
     pub const CURRENT: Self = Self(EQL_SCHEMA_VERSION);
 
     /// The wire value.
@@ -79,7 +82,7 @@ impl<'de> Deserialize<'de> for SchemaVersion {
     }
 }
 
-/// Manual schema: pins `v` to the literal `2` (`const`), mirroring the
+/// Manual schema: pins `v` to the literal `3` (`const`), mirroring the
 /// domain CHECK — the derive would emit an unconstrained integer.
 impl schemars::JsonSchema for SchemaVersion {
     fn schema_name() -> std::borrow::Cow<'static, str> {
@@ -94,7 +97,7 @@ impl schemars::JsonSchema for SchemaVersion {
         schemars::json_schema!({
             "type": "integer",
             "const": EQL_SCHEMA_VERSION,
-            "description": "The envelope version field (`v`) — always exactly `2` on the wire.",
+            "description": "The envelope version field (`v`) — always exactly `3` on the wire.",
         })
     }
 }

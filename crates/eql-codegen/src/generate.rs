@@ -394,7 +394,13 @@ mod tests {
             .map(|p| p.file_name().unwrap().to_str().unwrap().to_string())
             .collect();
         assert!(names.contains(&"int4_types.sql".to_string()));
-        for dom in ["int4", "int4_eq", "int4_ord_ore", "int4_ord"] {
+        for dom in [
+            "int4",
+            "int4_eq",
+            "int4_ord_ore",
+            "int4_ord",
+            "int4_ord_ope",
+        ] {
             assert!(names.contains(&format!("{dom}_functions.sql")));
             assert!(names.contains(&format!("{dom}_operators.sql")));
         }
@@ -402,7 +408,9 @@ mod tests {
         assert!(!names.contains(&"int4_eq_aggregates.sql".to_string()));
         assert!(names.contains(&"int4_ord_ore_aggregates.sql".to_string()));
         assert!(names.contains(&"int4_ord_aggregates.sql".to_string()));
-        assert_eq!(written.len(), 11);
+        assert!(names.contains(&"int4_ord_ope_aggregates.sql".to_string()));
+        // 1 types + 2 per domain (5 domains) + 3 ord-capable aggregates.
+        assert_eq!(written.len(), 14);
         for p in &written {
             assert!(fs::read_to_string(p)
                 .unwrap()
@@ -547,10 +555,16 @@ mod tests {
     }
 
     #[test]
-    fn types_file_has_all_four_domains() {
+    fn types_file_has_all_five_domains() {
         let sql = render_types_file(spec("int4"));
         assert!(sql.contains("-- REQUIRE: src/v3/schema.sql"));
-        for dom in ["int4", "int4_eq", "int4_ord_ore", "int4_ord"] {
+        for dom in [
+            "int4",
+            "int4_eq",
+            "int4_ord_ore",
+            "int4_ord",
+            "int4_ord_ope",
+        ] {
             assert!(
                 sql.contains(&format!("CREATE DOMAIN eql_v3.{dom} AS jsonb")),
                 "missing {dom}"
@@ -575,6 +589,9 @@ mod tests {
             ("int4_eq", false),
             ("int4_ord", true),
             ("int4_ord_ore", true),
+            // The OPE term (`op`) is a single hex string, not an array — no
+            // non-empty-array CHECK on the OPE-bearing domain.
+            ("int4_ord_ope", false),
         ] {
             let head = format!("CREATE DOMAIN eql_v3.{dom} AS jsonb");
             let start = sql.find(&head).unwrap_or_else(|| panic!("missing {dom}"));
@@ -635,6 +652,29 @@ mod tests {
     }
 
     #[test]
+    fn ope_functions_file_counts() {
+        // The OPE ordered domain mirrors the ORE one — same operator surface
+        // (18 wrappers), one extractor — but the extractor is `ord_ope_term`
+        // returning the SEM `eql_v3_internal.ope_cllw` domain (over bytea), and the
+        // sole SEM REQUIRE edge is the extractor file: the bytea-backed
+        // domain inherits native comparison operators, so there is no
+        // hand-written operators.sql to depend on (unlike Ore).
+        let s = spec("int4");
+        let sql = render_functions_file(s.name, domain(s, "ord_ope"));
+        assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
+        assert!(sql.contains("CREATE FUNCTION eql_v3.ord_ope_term(a eql_v3.int4_ord_ope)"));
+        assert!(sql.contains("RETURNS eql_v3_internal.ope_cllw"));
+        assert!(sql.contains("-- REQUIRE: src/v3/sem/ope_cllw/functions.sql"));
+        assert!(!sql.contains("-- REQUIRE: src/v3/sem/ope_cllw/operators.sql"));
+        assert_eq!(
+            sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
+                .count(),
+            19
+        );
+        assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 26);
+    }
+
+    #[test]
     fn operators_file_has_forty_four() {
         let s = spec("int4");
         let sql = render_operators_file(s.name, domain(s, "eq"));
@@ -679,6 +719,7 @@ mod tests {
         assert!(render_aggregates_file(s.name, domain(s, "eq")).is_none());
         assert!(render_aggregates_file(s.name, domain(s, "ord")).is_some());
         assert!(render_aggregates_file(s.name, domain(s, "ord_ore")).is_some());
+        assert!(render_aggregates_file(s.name, domain(s, "ord_ope")).is_some());
     }
 
     #[test]

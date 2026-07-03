@@ -21,6 +21,46 @@ mod text_smoke;
 #[path = "encrypted_domain/text/text_match.rs"]
 mod text_match;
 
+// CLLW-OPE (`op` term, `*_ord_ope` domains) literal-payload smoke suites. The
+// pinned cipherstash-client does not emit `op` yet, so these use hand-built
+// hex payloads instead of generated fixtures. One TOP-LEVEL module per ordered
+// scalar, named `<t>_ord_ope`, so the `test:matrix:catalog-coverage` gate's
+// dedicated-module pattern (`<t>_<seg>::*`) sees every catalog `ord_ope`
+// domain covered — the same mechanism `text_match` uses for the Bloom domain.
+// Deliberately NOT under `scalars::` — the matrix-inventory gate treats every
+// `scalars::<X>::` prefix as a scalar type (same rationale as the text
+// suites). `ope_support` carries the shared payload builder and the
+// `ope_ord_smoke!` macro the per-type modules invoke.
+#[path = "encrypted_domain/ope/support.rs"]
+mod ope_support;
+
+#[path = "encrypted_domain/ope/int4_ord_ope.rs"]
+mod int4_ord_ope;
+
+#[path = "encrypted_domain/ope/int2_ord_ope.rs"]
+mod int2_ord_ope;
+
+#[path = "encrypted_domain/ope/int8_ord_ope.rs"]
+mod int8_ord_ope;
+
+#[path = "encrypted_domain/ope/date_ord_ope.rs"]
+mod date_ord_ope;
+
+#[path = "encrypted_domain/ope/timestamp_ord_ope.rs"]
+mod timestamp_ord_ope;
+
+#[path = "encrypted_domain/ope/numeric_ord_ope.rs"]
+mod numeric_ord_ope;
+
+#[path = "encrypted_domain/ope/text_ord_ope.rs"]
+mod text_ord_ope;
+
+#[path = "encrypted_domain/ope/float4_ord_ope.rs"]
+mod float4_ord_ope;
+
+#[path = "encrypted_domain/ope/float8_ord_ope.rs"]
+mod float8_ord_ope;
+
 // Signed-only sign-boundary suite (`int`, `date`). Like the text suites it
 // lives outside `scalars::` so the matrix-inventory snapshot (which pins the
 // uniform per-type set) does not see the signed-only delta.

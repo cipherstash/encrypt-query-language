@@ -69,7 +69,7 @@ $$;
 --! @internal
 --! @param val jsonb Candidate document payload.
 --! @return boolean True when `val` is an encrypted document envelope with
---!         `v = 2`, `i`, an `sv` array, and valid sv entry elements.
+--!         `v = 3`, `i`, an `sv` array, and valid sv entry elements.
 CREATE FUNCTION eql_v3_internal.is_valid_ste_vec_document_payload(val jsonb)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -77,7 +77,7 @@ AS $$
   SELECT COALESCE(
     jsonb_typeof(val) = 'object'
      AND val ? 'v'
-     AND val ->> 'v' = '2'
+     AND val ->> 'v' = '3'
      AND val ? 'i'
      AND jsonb_typeof(val -> 'sv') = 'array'
      AND NOT EXISTS (
@@ -93,7 +93,7 @@ $$;
 
 --! @brief Storage/root domain for an encrypted JSONB column.
 --!
---! CHECK: a JSON object carrying the EQL envelope (`v = 2` version and `i` index
+--! CHECK: a JSON object carrying the EQL envelope (`v = 3` version and `i` index
 --! metadata). Root `c` is intentionally NOT required — an sv-array root payload
 --! is `{i, v, sv}` with no root ciphertext. The CHECK now also requires an `sv`
 --! array, so the domain accepts only SteVec **document** payloads and rejects
@@ -103,7 +103,7 @@ $$;
 --! stop native jsonb operators from reaching a column value.
 --!
 --! @note Constructing from inline JSON uses the standard DOMAIN cast:
---!       `'{"i":{},"v":2,"sv":[...]}'::eql_v3.json`.
+--!       `'{"i":{},"v":3,"sv":[...]}'::eql_v3.json`.
 CREATE DOMAIN eql_v3.json AS jsonb
   CHECK (
     eql_v3_internal.is_valid_ste_vec_document_payload(VALUE)

@@ -84,7 +84,7 @@ mod tests {
         assert!(!int4.is_eq_only, "int4 is an ordered type");
 
         let segments: Vec<&str> = int4.domains.iter().map(|d| d.segment.as_str()).collect();
-        assert_eq!(segments, ["storage", "eq", "ord_ore", "ord"]);
+        assert_eq!(segments, ["storage", "eq", "ord_ore", "ord", "ord_ope"]);
 
         let storage = int4
             .domains
@@ -98,6 +98,15 @@ mod tests {
 
         let ord = int4.domains.iter().find(|d| d.segment == "ord").unwrap();
         assert_eq!(ord.supported_ops, ["=", "<>", "<", "<=", ">", ">="]);
+
+        // `ord_ope` (CLLW-OPE) advertises the same operator set as the
+        // block-ORE ordered domains — only the term/extractor differ.
+        let ord_ope = int4
+            .domains
+            .iter()
+            .find(|d| d.segment == "ord_ope")
+            .unwrap();
+        assert_eq!(ord_ope.supported_ops, ["=", "<>", "<", "<=", ">", ">="]);
     }
 
     /// Pins the hand-re-derived `suffix` wire field — the one channel with no
@@ -114,7 +123,7 @@ mod tests {
             .expect("int4 present in catalog");
 
         let suffixes: Vec<&str> = int4.domains.iter().map(|d| d.suffix.as_str()).collect();
-        assert_eq!(suffixes, ["", "_eq", "_ord_ore", "_ord"]);
+        assert_eq!(suffixes, ["", "_eq", "_ord_ore", "_ord", "_ord_ope"]);
     }
 
     #[test]
@@ -132,7 +141,7 @@ mod tests {
         assert!(!ts.is_eq_only, "timestamp is an ordered type");
 
         let segments: Vec<&str> = ts.domains.iter().map(|d| d.segment.as_str()).collect();
-        assert_eq!(segments, ["storage", "eq", "ord_ore", "ord"]);
+        assert_eq!(segments, ["storage", "eq", "ord_ore", "ord", "ord_ope"]);
 
         let ord = ts.domains.iter().find(|d| d.segment == "ord").unwrap();
         assert_eq!(ord.supported_ops, ["=", "<>", "<", "<=", ">", ">="]);

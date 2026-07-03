@@ -11,8 +11,9 @@
 --!
 --! @note A SET clause disables SQL-function inlining. The inline-critical SEM
 --!       helpers (ore_block_256_*, ore_cllw_*, ore_cllw/has_ore_cllw,
---!       hmac_256, bloom_filter over jsonb) and the encrypted-domain family
---!       (recognised structurally) are deliberately left unpinned.
+--!       ope_cllw, hmac_256, bloom_filter over jsonb) and the
+--!       encrypted-domain family (recognised structurally) are deliberately
+--!       left unpinned.
 --! @see tasks/test/splinter.sh
 --! @see tasks/build.sh
 
@@ -49,6 +50,12 @@ BEGIN
                           'ore_cllw_gt', 'ore_cllw_gte'))
       OR (p.pronargs = 1
         AND p.proname IN ('ore_cllw', 'has_ore_cllw')
+        AND p.proargtypes[0] = jsonb_oid)
+      -- The CLLW-OPE surface is the extractor alone: eql_v3_internal.ope_cllw is a
+      -- domain over bytea (native comparison operators and btree opclass),
+      -- so there are no ope-specific comparison functions to keep inlinable.
+      OR (p.pronargs = 1
+        AND p.proname = 'ope_cllw'
         AND p.proargtypes[0] = jsonb_oid)
       OR (p.pronargs = 1
         AND p.proname = 'hmac_256'

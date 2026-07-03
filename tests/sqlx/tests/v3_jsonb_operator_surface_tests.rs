@@ -449,7 +449,7 @@ async fn assert_composed_blocked(pool: &PgPool, sql: &str) -> anyhow::Result<()>
 #[sqlx::test]
 async fn v3_jsonb_blocked_composed_expression_raises(pool: PgPool) -> anyhow::Result<()> {
     // A valid eql_v3.json document literal (empty sv array satisfies the CHECK).
-    let j = r#"'{"i":{},"v":2,"sv":[]}'::eql_v3.json"#;
+    let j = r#"'{"i":{},"v":3,"sv":[]}'::eql_v3.json"#;
 
     // Each case wraps a blocked operator (whose return type was boolean before
     // the fix) in a surrounding operator that only resolves against the NATIVE

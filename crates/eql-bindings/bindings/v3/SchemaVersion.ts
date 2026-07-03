@@ -5,8 +5,8 @@
  * on the wire.
  *
  * Deserialization rejects any other value: the Rust analogue of the domain
- * CHECK's `VALUE->>'v' = '2'`, so a wrong-version payload fails at the type
+ * CHECK's `VALUE->>'v' = '3'`, so a wrong-version payload fails at the type
  * boundary instead of at INSERT. The inner value is private; the only
  * constructible instance is the current version.
  */
-export type SchemaVersion = 2;
+export type SchemaVersion = 3;
