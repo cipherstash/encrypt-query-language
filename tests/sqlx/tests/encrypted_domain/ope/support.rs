@@ -193,8 +193,7 @@ macro_rules! ope_ord_fixture_smoke {
             // bytea comparison over the decoded `op` hex, via the extractor)
             // must equal plaintext order. Same Rust-sort oracle as the
             // matrix's ORDER BY arms.
-            let mut expected: Vec<$scalar> =
-                <$scalar as ScalarType>::fixture_values().to_vec();
+            let mut expected: Vec<$scalar> = <$scalar as ScalarType>::fixture_values().to_vec();
             expected.sort();
 
             let asc: Vec<$scalar> = sqlx::query_scalar(&format!(
@@ -257,8 +256,7 @@ macro_rules! ope_ord_fixture_smoke {
                 $domain
             );
 
-            let values: Vec<$scalar> =
-                <$scalar as ScalarType>::fixture_values().to_vec();
+            let values: Vec<$scalar> = <$scalar as ScalarType>::fixture_values().to_vec();
             for op in ["<", "<=", ">", ">=", "=", "<>"] {
                 let mut expected: Vec<$scalar> = values
                     .iter()
@@ -279,8 +277,7 @@ macro_rules! ope_ord_fixture_smoke {
                      WHERE (payload)::eql_v3.{domain} {op} ({pivot_cast})",
                     domain = $domain,
                 );
-                let mut actual: Vec<$scalar> =
-                    sqlx::query_scalar(&sql).fetch_all(&pool).await?;
+                let mut actual: Vec<$scalar> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
                 actual.sort();
                 assert_eq!(
                     actual, expected,

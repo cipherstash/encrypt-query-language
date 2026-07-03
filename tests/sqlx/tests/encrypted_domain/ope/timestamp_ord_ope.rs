@@ -8,4 +8,8 @@ crate::ope_ord_smoke!("timestamp_ord_ope");
 
 // Real-ciphertext coverage (CIP-3348): the generated fixture's client-emitted
 // `op` terms must order and compare like the plaintext oracle.
-crate::ope_ord_fixture_smoke!("timestamp_ord_ope", chrono::DateTime<chrono::Utc>, "eql_v3_timestamp");
+crate::ope_ord_fixture_smoke!(
+    "timestamp_ord_ope",
+    chrono::DateTime<chrono::Utc>,
+    "eql_v3_timestamp"
+);

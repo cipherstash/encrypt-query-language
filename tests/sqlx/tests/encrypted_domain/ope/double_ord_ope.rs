@@ -8,4 +8,8 @@ crate::ope_ord_smoke!("double_ord_ope");
 
 // Real-ciphertext coverage (CIP-3348): the generated fixture's client-emitted
 // `op` terms must order and compare like the plaintext oracle.
-crate::ope_ord_fixture_smoke!("double_ord_ope", eql_tests::scalar_domains::F8, "eql_v3_double");
+crate::ope_ord_fixture_smoke!(
+    "double_ord_ope",
+    eql_tests::scalar_domains::F8,
+    "eql_v3_double"
+);

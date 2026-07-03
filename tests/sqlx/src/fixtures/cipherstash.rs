@@ -349,8 +349,7 @@ mod live_tests {
 
     /// The full ordered-integer index set including `Ope`, which drives the
     /// scalar CLLW-OPE `op` term (cipherstash-client 0.38.1+, CIP-3348).
-    const INT_INDEXES_WITH_OPE: &[IndexKind] =
-        &[IndexKind::Unique, IndexKind::Ore, IndexKind::Ope];
+    const INT_INDEXES_WITH_OPE: &[IndexKind] = &[IndexKind::Unique, IndexKind::Ore, IndexKind::Ope];
 
     /// Assert the well-formed v3 Store shape: the payload is a JSON object
     /// with non-null `v`, `c`, `hm`, `ob`, and `i` fields, `v = 3`, and no
@@ -425,9 +424,14 @@ mod live_tests {
         // term for `ope`-indexed columns; from_v2 routes it through to the
         // `_ord_ope`-capable v3 payload as a single hex string (NOT an
         // array like `ob`).
-        let out = encrypt_store("live_ope", "payload", &[-1_i32, 0, 42], INT_INDEXES_WITH_OPE)
-            .await
-            .expect("encrypt_store should succeed against live ZeroKMS");
+        let out = encrypt_store(
+            "live_ope",
+            "payload",
+            &[-1_i32, 0, 42],
+            INT_INDEXES_WITH_OPE,
+        )
+        .await
+        .expect("encrypt_store should succeed against live ZeroKMS");
         assert_eq!(out.len(), 3);
         for payload in &out {
             assert_store_shape(payload, INT_INDEXES_WITH_OPE);
