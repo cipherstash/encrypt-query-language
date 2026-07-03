@@ -5,9 +5,9 @@
 --! artifact, AFTER all src/v3/**/*.sql files have been concatenated. It lives
 --! outside src/ so it stays out of the dependency graph.
 --!
---! Iterates over functions in the `eql_v3` schema and applies a fixed
---! `search_path` via `ALTER FUNCTION ... SET search_path = ...`, satisfying
---! Supabase splinter's `function_search_path_mutable` lint.
+--! Iterates over functions in the `eql_v3` and `eql_v3_internal` schemas and
+--! applies a fixed `search_path` via `ALTER FUNCTION ... SET search_path = ...`,
+--! satisfying Supabase splinter's `function_search_path_mutable` lint.
 --!
 --! @note A SET clause disables SQL-function inlining. The inline-critical SEM
 --!       helpers (ore_block_256_*, ore_cllw_*, ore_cllw/has_ore_cllw,
@@ -37,7 +37,7 @@ BEGIN
   SELECT pg_catalog.array_agg(p.oid) INTO inline_critical_oids
   FROM pg_catalog.pg_proc p
   JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
-  WHERE n.nspname = 'eql_v3'
+  WHERE n.nspname = ANY(eql_v3_internal.owned_schemas())
     AND (
       (p.pronargs = 2
         AND p.proname IN ('ore_block_256_eq', 'ore_block_256_neq',
@@ -62,7 +62,7 @@ BEGIN
     SELECT p.oid
     FROM pg_catalog.pg_proc p
     JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'eql_v3'
+    WHERE n.nspname = ANY(eql_v3_internal.owned_schemas())
       AND p.prokind IN ('f', 'w')
       AND NOT EXISTS (
         SELECT 1 FROM pg_catalog.unnest(coalesce(p.proconfig, '{}'::text[])) c
@@ -82,7 +82,7 @@ BEGIN
           JOIN pg_catalog.pg_namespace dn ON dn.oid = dt.typnamespace
           WHERE dt.typtype = 'd'
             AND dt.typbasetype = jsonb_oid
-            AND dn.nspname = 'eql_v3'
+            AND dn.nspname = ANY(eql_v3_internal.owned_schemas())
         )
       )
       -- Comment-marker fallback for hand-written inline-critical extension

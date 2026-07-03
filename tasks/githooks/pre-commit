@@ -20,3 +20,11 @@ if echo "$staged" | grep -Eq '^(crates/eql-domains/|crates/eql-codegen/|src/v3/s
   mise run codegen:parity
   mise run types:check
 fi
+
+# Schema-split parity: the SQL owned_schemas() array (src/v3/schema.sql) and the
+# Rust codegen consts (crates/eql-codegen/src/consts.rs) must agree. Trigger on
+# either side so a one-sided rename can't slip through locally.
+if echo "$staged" | grep -Eq '^(src/v3/schema\.sql|crates/eql-codegen/src/consts\.rs|crates/eql-codegen/src/lib\.rs)'; then
+  echo "pre-commit: schema split declaration touched — verifying SQL/Rust parity…"
+  mise run test:schemas:parity
+fi

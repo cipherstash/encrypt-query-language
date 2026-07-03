@@ -50,6 +50,7 @@ pub fn environment() -> minijinja::Environment<'static> {
     )
     .expect("aggregates.sql template");
     env.add_global("schema", SCHEMA);
+    env.add_global("internal_schema", INTERNAL_SCHEMA);
     env
 }
 
@@ -112,9 +113,9 @@ pub struct SqlParam {
 #[serde(tag = "kind")]
 pub enum FnEntry {
     Extractor {
-        ret: String,       // e.g. eql_v3.hmac_256 (selection STAYS in Rust)
+        ret: String,       // e.g. eql_v3_internal.hmac_256 (selection STAYS in Rust)
         extractor: String, // e.g. eq_term
-        ctor: String,      // e.g. hmac_256 (called as {{ schema }}.{{ ctor }})
+        ctor: String,      // e.g. hmac_256 (called as {{ internal_schema }}.{{ ctor }})
     },
     Wrapper {
         op: String,            // SQL operator used in the body, e.g. =
@@ -144,12 +145,12 @@ pub struct FunctionsContext {
 /// Build the inlinable index-extractor entry for a domain term.
 ///
 /// The `RETURNS` type name equals the constructor name (`hmac_256`,
-/// `ore_block_256`); qualify it with `SCHEMA` — the same schema as the
-/// body's constructor call — so the declared return type and the call stay in
-/// lockstep. `Term::returns()` is intentionally not used.
+/// `ore_block_256`); qualify it with `INTERNAL_SCHEMA` — the same schema as
+/// the body's constructor call — so the declared return type and the call
+/// stay in lockstep. `Term::returns()` is intentionally not used.
 pub fn extractor_entry(term: Term) -> FnEntry {
     FnEntry::Extractor {
-        ret: format!("{SCHEMA}.{}", term.ctor()),
+        ret: format!("{INTERNAL_SCHEMA}.{}", term.ctor()),
         extractor: term.extractor().to_string(),
         ctor: term.ctor().to_string(),
     }
@@ -200,7 +201,13 @@ pub fn unsupported_entry(op: &Operator, args: [SqlParam; 2], returns: &str) -> F
 #[derive(serde::Serialize)]
 pub struct OpEntry {
     pub symbol: String,
-    pub function_name: String, // unqualified; schema literal lives in the template
+    pub function_name: String, // unqualified; function_schema qualifies it in the template
+    // Schema of the backing function: SCHEMA (public `eql_v3`) for supported
+    // operators — their comparison WRAPPER is public so the operator has a
+    // callable function equivalent on platforms without operator support
+    // (Supabase/PostgREST). INTERNAL_SCHEMA for blocked operators, whose backing
+    // function is a blocker (anti-functionality, never a caller entrypoint).
+    pub function_schema: String,
     pub leftarg: String,
     pub rightarg: String,
     pub metadata: Option<String>, // e.g. "COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel"
@@ -224,9 +231,16 @@ pub fn operator_entry(op: &Operator, leftarg: &str, rightarg: &str, supported: b
     } else {
         None
     };
+    // A supported operator is backed by a public comparison wrapper (SCHEMA); a
+    // blocked one by an internal blocker (INTERNAL_SCHEMA). `supported` tracks
+    // wrapper emission exactly: `is_supported(op) ⟹ extractor_for_operator is
+    // Some`, so `render_functions_file` always emits a wrapper for a supported
+    // operator and a blocker otherwise.
+    let function_schema = if supported { SCHEMA } else { INTERNAL_SCHEMA };
     OpEntry {
         symbol: op.symbol.to_string(),
         function_name: op.function_name.to_string(),
+        function_schema: function_schema.to_string(),
         leftarg: leftarg.to_string(),
         rightarg: rightarg.to_string(),
         metadata,

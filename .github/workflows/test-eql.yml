@@ -379,6 +379,9 @@ jobs:
       - name: Verify generator parity (golden)
         run: |
           mise run codegen:parity
+      - name: Verify schema split parity (SQL owned_schemas vs Rust consts)
+        run: |
+          mise run test:schemas:parity
 
   self-contained-v3:
     name: "eql_v3 self-containment"

@@ -314,7 +314,7 @@ pub async fn assert_ord_fn_oracle<T: ScalarType>(
 /// term stored in the payload. For `variant`'s domain, drives whichever
 /// extractors its catalog terms declare:
 /// - an `Hm` term ⇒ `eql_v3.eq_term(<dom>)::text` equals the payload's `hm`
-///   string (`eql_v3.hmac_256` is a domain over `text`, so the hex comes back
+///   string (`eql_v3_internal.hmac_256` is a domain over `text`, so the hex comes back
 ///   verbatim — no `encode`/`decode`).
 /// - an `Ore` term ⇒ the `ord_term` composite, re-rendered to a hex-block array
 ///   (`encode((t).bytes,'hex')` per block, ordinal order), equals the payload's
@@ -373,7 +373,7 @@ pub async fn assert_extractor_oracle<T: ScalarType>(
             // Re-render the ORE composite to its stored hex-block array
             // (lower-case `encode(...,'hex')`, in array-subscript order, which is
             // the order `jsonb_array_to_ore_block_256` built `terms` from the
-            // payload's `ob`). `eql_v3.ore_block_256_term` is a single-field
+            // payload's `ob`). `eql_v3_internal.ore_block_256_term` is a single-field
             // composite `(bytes bytea)`; a `WITH ORDINALITY AS u(t, n)` column-
             // alias list expands that single field to `bytea` (so `(t).bytes`
             // fails to resolve), so index `terms` with `generate_subscripts`

@@ -36,7 +36,7 @@
 --! @param state eql_v3.jsonb_entry Running extremum.
 --! @param value eql_v3.jsonb_entry Candidate entry.
 --! @return eql_v3.jsonb_entry The lesser orderable entry by `ore_cllw`.
-CREATE FUNCTION eql_v3.jsonb_entry_min_sfunc(
+CREATE FUNCTION eql_v3_internal.jsonb_entry_min_sfunc(
   state eql_v3.jsonb_entry,
   value eql_v3.jsonb_entry
 )
@@ -45,8 +45,8 @@ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 DECLARE
-  value_ore eql_v3.ore_cllw := eql_v3.ore_cllw(value);
-  state_ore eql_v3.ore_cllw := eql_v3.ore_cllw(state);
+  value_ore eql_v3_internal.ore_cllw := eql_v3.ore_cllw(value);
+  state_ore eql_v3_internal.ore_cllw := eql_v3.ore_cllw(state);
 BEGIN
   -- A non-orderable (oc-less) candidate never replaces the running extremum.
   IF value_ore IS NULL THEN
@@ -65,9 +65,9 @@ $$;
 --! @param input eql_v3.jsonb_entry
 --! @return eql_v3.jsonb_entry The entry with the smallest CLLW ORE term.
 CREATE AGGREGATE eql_v3.min(eql_v3.jsonb_entry) (
-  sfunc = eql_v3.jsonb_entry_min_sfunc,
+  sfunc = eql_v3_internal.jsonb_entry_min_sfunc,
   stype = eql_v3.jsonb_entry,
-  combinefunc = eql_v3.jsonb_entry_min_sfunc,
+  combinefunc = eql_v3_internal.jsonb_entry_min_sfunc,
   parallel = safe
 );
 
@@ -79,7 +79,7 @@ CREATE AGGREGATE eql_v3.min(eql_v3.jsonb_entry) (
 --! @param state eql_v3.jsonb_entry Running extremum.
 --! @param value eql_v3.jsonb_entry Candidate entry.
 --! @return eql_v3.jsonb_entry The greater orderable entry by `ore_cllw`.
-CREATE FUNCTION eql_v3.jsonb_entry_max_sfunc(
+CREATE FUNCTION eql_v3_internal.jsonb_entry_max_sfunc(
   state eql_v3.jsonb_entry,
   value eql_v3.jsonb_entry
 )
@@ -88,8 +88,8 @@ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 DECLARE
-  value_ore eql_v3.ore_cllw := eql_v3.ore_cllw(value);
-  state_ore eql_v3.ore_cllw := eql_v3.ore_cllw(state);
+  value_ore eql_v3_internal.ore_cllw := eql_v3.ore_cllw(value);
+  state_ore eql_v3_internal.ore_cllw := eql_v3.ore_cllw(state);
 BEGIN
   -- A non-orderable (oc-less) candidate never replaces the running extremum.
   IF value_ore IS NULL THEN
@@ -108,8 +108,8 @@ $$;
 --! @param input eql_v3.jsonb_entry
 --! @return eql_v3.jsonb_entry The entry with the largest CLLW ORE term.
 CREATE AGGREGATE eql_v3.max(eql_v3.jsonb_entry) (
-  sfunc = eql_v3.jsonb_entry_max_sfunc,
+  sfunc = eql_v3_internal.jsonb_entry_max_sfunc,
   stype = eql_v3.jsonb_entry,
-  combinefunc = eql_v3.jsonb_entry_max_sfunc,
+  combinefunc = eql_v3_internal.jsonb_entry_max_sfunc,
   parallel = safe
 );

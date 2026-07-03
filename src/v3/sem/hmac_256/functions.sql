@@ -13,17 +13,17 @@
 --! @brief Extract HMAC-SHA256 index term from JSONB payload
 --!
 --! Inlinable single-statement SQL — the planner can fold this into the calling
---! query so functional hash/btree indexes built on `eql_v3.eq_term(col)`
+--! query so functional hash/btree indexes built on `eql_v3_internal.eq_term(col)`
 --! (which calls this) engage structurally.
 --!
 --! @param val jsonb containing encrypted EQL payload
---! @return eql_v3.hmac_256 HMAC-SHA256 hash value, or NULL when `hm` is absent
-CREATE FUNCTION eql_v3.hmac_256(val jsonb)
-  RETURNS eql_v3.hmac_256
+--! @return eql_v3_internal.hmac_256 HMAC-SHA256 hash value, or NULL when `hm` is absent
+CREATE FUNCTION eql_v3_internal.hmac_256(val jsonb)
+  RETURNS eql_v3_internal.hmac_256
   LANGUAGE sql
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT (val ->> 'hm')::eql_v3.hmac_256
+  SELECT (val ->> 'hm')::eql_v3_internal.hmac_256
 $$;
 
 
@@ -31,7 +31,7 @@ $$;
 --!
 --! @param val jsonb containing encrypted EQL payload
 --! @return boolean True if 'hm' field is present and non-null
-CREATE FUNCTION eql_v3.has_hmac_256(val jsonb)
+CREATE FUNCTION eql_v3_internal.has_hmac_256(val jsonb)
   RETURNS boolean
   LANGUAGE sql
   IMMUTABLE STRICT PARALLEL SAFE

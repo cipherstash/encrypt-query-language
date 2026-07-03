@@ -49,7 +49,7 @@ async fn no_encrypted_domain_inline_critical_function_is_pinned(pool: PgPool) ->
         FROM pg_catalog.pg_proc p
         JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
         JOIN pg_catalog.pg_language  l ON l.oid = p.prolang
-        WHERE n.nspname = 'eql_v3'
+        WHERE n.nspname IN ('eql_v3', 'eql_v3_internal')
           AND l.lanname = 'sql'
           AND p.provolatile = 'i'
           AND p.proconfig IS NOT NULL
@@ -62,7 +62,7 @@ async fn no_encrypted_domain_inline_critical_function_is_pinned(pool: PgPool) ->
             WHERE dt.typtype = 'd'
               AND bt.typname = 'jsonb'
               AND (
-                   dn.nspname = 'eql_v3'
+                   dn.nspname IN ('eql_v3', 'eql_v3_internal')
               )
           )
         ORDER BY signature
@@ -131,7 +131,7 @@ async fn eql_v3_sem_inline_critical_functions_are_unpinned(pool: PgPool) -> Resu
          AND e.pronargs = p.pronargs
          AND e.arg0 = p.proargtypes[0]
          AND (e.pronargs = 1 OR e.arg1 = p.proargtypes[1])
-        WHERE n.nspname = 'eql_v3'
+        WHERE n.nspname IN ('eql_v3', 'eql_v3_internal')
           AND (
             (p.pronargs = 2 AND p.proname IN (
               'ore_block_256_eq','ore_block_256_neq',
@@ -210,7 +210,7 @@ async fn eql_v3_sem_inline_critical_helpers_carry_marker(pool: PgPool) -> Result
         FROM expected e
         LEFT JOIN pg_catalog.pg_proc p
           ON p.proname = e.proname
-         AND p.pronamespace = 'eql_v3'::regnamespace
+         AND p.pronamespace IN ('eql_v3'::regnamespace, 'eql_v3_internal'::regnamespace)
          AND p.pronargs = e.pronargs
          AND p.proargtypes[0] = e.arg0
          AND (e.pronargs = 1 OR p.proargtypes[1] = e.arg1)
@@ -264,7 +264,7 @@ async fn every_inline_critical_eligible_domain_has_inline_critical_functions(
         WHERE dt.typtype = 'd'
           AND bt.typname = 'jsonb'
           AND (
-               dn.nspname = 'eql_v3'
+               dn.nspname IN ('eql_v3', 'eql_v3_internal')
           )
           AND (
                dt.typname LIKE '%\_eq'
@@ -276,7 +276,7 @@ async fn every_inline_critical_eligible_domain_has_inline_critical_functions(
             FROM pg_catalog.pg_proc p
             JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
             JOIN pg_catalog.pg_language  l ON l.oid = p.prolang
-            WHERE n.nspname = 'eql_v3'
+            WHERE n.nspname IN ('eql_v3', 'eql_v3_internal')
               AND l.lanname = 'sql'
               AND p.provolatile = 'i'
               AND dt.oid = ANY(p.proargtypes::oid[])
@@ -315,7 +315,7 @@ async fn encrypted_domain_blockers_are_plpgsql_and_non_strict(pool: PgPool) -> R
         FROM pg_catalog.pg_proc p
         JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
         JOIN pg_catalog.pg_language  l ON l.oid = p.prolang
-        WHERE n.nspname = 'eql_v3'
+        WHERE n.nspname IN ('eql_v3', 'eql_v3_internal')
           -- Match every blocker helper the codegen emits — `_bool` (comparison
           -- ops), `_jsonb` (`#>`, `||`, `-`), and `_text` (`#>>`, `->>`) — via
           -- the broad `encrypted_domain_unsupported` prefix, kept verbatim in
@@ -335,7 +335,7 @@ async fn encrypted_domain_blockers_are_plpgsql_and_non_strict(pool: PgPool) -> R
             WHERE dt.typtype = 'd'
               AND bt.typname = 'jsonb'
               AND (
-                   dn.nspname = 'eql_v3'
+                   dn.nspname IN ('eql_v3', 'eql_v3_internal')
               )
           )
           AND (l.lanname <> 'plpgsql' OR p.proisstrict)
@@ -369,11 +369,11 @@ async fn no_encrypted_domain_is_derived_from_another_encrypted_domain(pool: PgPo
         JOIN pg_catalog.pg_namespace bn ON bn.oid = bt.typnamespace
         WHERE dt.typtype = 'd'
           AND (
-               dn.nspname = 'eql_v3'
+               dn.nspname IN ('eql_v3', 'eql_v3_internal')
           )
           AND bt.typtype = 'd'
           AND (
-               bn.nspname = 'eql_v3'
+               bn.nspname IN ('eql_v3', 'eql_v3_internal')
           )
         ORDER BY derived
         "#,
@@ -405,7 +405,7 @@ async fn no_opclass_targets_encrypted_domain(pool: PgPool) -> Result<()> {
         JOIN pg_catalog.pg_namespace cn ON cn.oid = oc.opcnamespace
         WHERE t.typtype = 'd'
           AND (
-               tn.nspname = 'eql_v3'
+               tn.nspname IN ('eql_v3', 'eql_v3_internal')
           )
         ORDER BY opclass
         "#,

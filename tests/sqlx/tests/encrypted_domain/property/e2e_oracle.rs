@@ -220,7 +220,7 @@ e2e_oracle_suite!(
 ///   encodings of one value are byte-UNEQUAL *by construction* — even same-width,
 ///   same-value. Ordering is decided by the ORE compare function, never by raw
 ///   bytes, so the ONLY correct cross-width ORE check is the SQL
-///   `eql_v3.ore_block_256` `=` operator over the extracted `ord_term`s.
+///   `eql_v3_internal.ore_block_256` `=` operator over the extracted `ord_term`s.
 ///
 /// Creds/e2e-gated like the rest of this file.
 #[test]
@@ -265,8 +265,8 @@ fn float4_and_float8_share_index_terms_for_the_same_value() -> Result<()> {
 
     // `ob` (probabilistic ORE) is NOT byte-comparable — the only correct check is
     // the SQL ORE operator over the extracted `ord_term`s. Cast each payload to
-    // its width's `_ord_ore` domain, extract the `eql_v3.ore_block_256` term, and
-    // compare with `=` (eql_v3.ore_block_256_eq => compare_ore_block_256_terms = 0).
+    // its width's `_ord_ore` domain, extract the `eql_v3_internal.ore_block_256` term, and
+    // compare with `=` (eql_v3_internal.ore_block_256_eq => compare_ore_block_256_terms = 0).
     let pool: PgPool = rt.block_on(connect_pool())?;
     rt.block_on(ensure_eql_installed(&pool, &super::migrator()))?;
 
@@ -285,7 +285,7 @@ fn float4_and_float8_share_index_terms_for_the_same_value() -> Result<()> {
     anyhow::ensure!(
         ore_equal == Some(true),
         "float4 and float8 of the same value must compare equal under the SQL ORE \
-         operator (eql_v3.ore_block_256 `=`); got {ore_equal:?}"
+         operator (eql_v3_internal.ore_block_256 `=`); got {ore_equal:?}"
     );
     Ok(())
 }

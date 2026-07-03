@@ -23,7 +23,7 @@ use ts_rs::TS;
 pub struct Ciphertext(pub String);
 
 /// HMAC-SHA-256 equality term — the `hm` wire key. Backs the `_eq` domains
-/// (`=`, `<>`). SQL-side constructor: `eql_v3.hmac_256`.
+/// (`=`, `<>`). SQL-side constructor: `eql_v3_internal.hmac_256`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 pub struct Hmac256(pub String);
@@ -47,7 +47,7 @@ pub struct Selector(pub String);
 /// domain, so it serves equality too. The block count is width-agnostic on the
 /// wire (8 for the int scalars, 12 for timestamp, 14 for numeric) — the
 /// array just carries more block strings. SQL-side constructor:
-/// `eql_v3.ore_block_256`.
+/// `eql_v3_internal.ore_block_256`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 pub struct OreBlock256(pub Vec<String>);

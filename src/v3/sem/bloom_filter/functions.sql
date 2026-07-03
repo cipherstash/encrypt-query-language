@@ -20,7 +20,7 @@
 --! the extractor below, which gates on value-shape inline, nor by the generated
 --! domain CHECK, which tests `bf` presence via the envelope-key skeleton. Kept
 --! as the canonical presence test for callers that need one.
-CREATE FUNCTION eql_v3.has_bloom_filter(val jsonb)
+CREATE FUNCTION eql_v3_internal.has_bloom_filter(val jsonb)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
   SET search_path = pg_catalog, extensions, public
@@ -33,8 +33,8 @@ $$ LANGUAGE plpgsql;
 --! @brief Extract the Bloom-filter index term from a jsonb payload.
 --!
 --! Inlinable single-statement SQL — the planner can fold this into the calling
---! query so the functional GIN index built on `eql_v3.match_term(col)` (which
---! calls this) engages structurally. Mirrors `eql_v3.hmac_256(jsonb)`: no RAISE
+--! query so the functional GIN index built on `eql_v3_internal.match_term(col)` (which
+--! calls this) engages structurally. Mirrors `eql_v3_internal.hmac_256(jsonb)`: no RAISE
 --! and no pinned `search_path`. Returns NULL when `bf` is absent or present but
 --! not a json array, rather than raising. The `text_match` domain CHECK
 --! guarantees the `bf` *key* is present but not that it is an array, so a
@@ -46,14 +46,14 @@ $$ LANGUAGE plpgsql;
 --! everything), matching set-containment semantics.
 --!
 --! @param val jsonb The encrypted payload.
---! @return eql_v3.bloom_filter The `bf` array as a smallint[] domain value, or
+--! @return eql_v3_internal.bloom_filter The `bf` array as a smallint[] domain value, or
 --!   NULL when `bf` is absent or not a json array.
-CREATE FUNCTION eql_v3.bloom_filter(val jsonb)
-  RETURNS eql_v3.bloom_filter
+CREATE FUNCTION eql_v3_internal.bloom_filter(val jsonb)
+  RETURNS eql_v3_internal.bloom_filter
   LANGUAGE sql
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   SELECT CASE WHEN jsonb_typeof(val -> 'bf') = 'array'
-    THEN ARRAY(SELECT jsonb_array_elements(val -> 'bf'))::eql_v3.bloom_filter
+    THEN ARRAY(SELECT jsonb_array_elements(val -> 'bf'))::eql_v3_internal.bloom_filter
   END
 $$;

@@ -154,6 +154,11 @@ description = "Drift gate: regenerate the scalar SQL surface in place (overwrite
 dir = "{{config_root}}"
 run = "bash tasks/codegen-parity.sh"
 
+[tasks."test:schemas:parity"]
+description = "Drift gate: the SQL eql_v3_internal.owned_schemas() array must match the Rust codegen SCHEMA/INTERNAL_SCHEMA consts (DB-free, via list-schemas)"
+dir = "{{config_root}}"
+run = "bash tasks/schemas-parity.sh"
+
 [tasks."install-hooks"]
 description = "Point git at the committed hooks in tasks/githooks (run once per clone) so commits touching the catalog/generated surfaces are drift-gated locally"
 dir = "{{config_root}}"
@@ -406,6 +411,24 @@ if [ "$discovered" != "$catalog" ]; then
 fi
 
 echo "Matrix inventory OK: ${checked} type(s) match the canonical snapshot, its derived eq-only subset, the committed text superset, or the storage-only set; catalog reconciled."
+"""
+
+[tasks."test:surface:snapshot:regen"]
+description = "Regenerate the committed eql_v3 public-surface golden snapshot (DB-backed; needs a running Postgres)"
+dir = "{{config_root}}/tests/sqlx"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+# Unlike the matrix snapshots (regenerated DB-free via `--list`), the public-
+# surface golden is DB-backed: the #[sqlx::test] enumerates the installed eql_v3
+# objects from pg_catalog and writes snapshots/eql_v3_public_surface.txt when
+# EQL_UPDATE_SNAPSHOTS is set (the harness installs the schema per test, so a
+# running Postgres reachable via DATABASE_URL is required). This task only
+# WRITES; the same test asserts against the committed file in a normal run, so
+# validate by re-running the suite without the env var, then commit.
+EQL_UPDATE_SNAPSHOTS=1 cargo test -p eql_tests --test v3_public_surface_tests \\
+  eql_v3_public_surface_matches_golden -- --nocapture
+echo "Wrote snapshots/eql_v3_public_surface.txt — re-run 'mise run test:sqlx' to validate, then commit."
 """
 
 [tasks."test:matrix:snapshots:regen"]

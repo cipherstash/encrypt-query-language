@@ -15,7 +15,7 @@
 --! @param type_name Domain type name (eql_v3.<T>*)
 --! @param operator_name Operator symbol (=, <, @>, ->, etc.)
 --! @return boolean (never returns; always raises)
-CREATE FUNCTION eql_v3.encrypted_domain_unsupported_bool(type_name text, operator_name text)
+CREATE FUNCTION eql_v3_internal.encrypted_domain_unsupported_bool(type_name text, operator_name text)
 RETURNS boolean
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
@@ -33,7 +33,7 @@ $$ LANGUAGE plpgsql;
 --! @param type_name Domain type name (eql_v3.<T>*)
 --! @param operator_name Operator symbol (#>, -, #-, ||, etc.)
 --! @return jsonb (never returns; always raises)
-CREATE FUNCTION eql_v3.encrypted_domain_unsupported_jsonb(type_name text, operator_name text)
+CREATE FUNCTION eql_v3_internal.encrypted_domain_unsupported_jsonb(type_name text, operator_name text)
 RETURNS jsonb
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
@@ -49,7 +49,7 @@ $$ LANGUAGE plpgsql;
 --! @param type_name Domain type name (eql_v3.<T>*)
 --! @param operator_name Operator symbol (#>>)
 --! @return text (never returns; always raises)
-CREATE FUNCTION eql_v3.encrypted_domain_unsupported_text(type_name text, operator_name text)
+CREATE FUNCTION eql_v3_internal.encrypted_domain_unsupported_text(type_name text, operator_name text)
 RETURNS text
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
