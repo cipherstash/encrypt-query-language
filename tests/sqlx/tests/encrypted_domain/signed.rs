@@ -1,5 +1,5 @@
-//! Sign-boundary coverage for **signed** scalars (`int2`/`int4`/`int8`, `date`,
-//! `timestamp`, `float4`/`float8`) — the `SignedScalar` delta on top of the
+//! Sign-boundary coverage for **signed** scalars (`smallint`/`integer`/`bigint`, `date`,
+//! `timestamp`, `real`/`double`) — the `SignedScalar` delta on top of the
 //! uniform ordered matrix.
 //!
 //! ORE encrypts signed values as an offset from a numeric origin (`0` for
@@ -43,8 +43,8 @@ async fn sign_boundary_is_monotonic<T: SignedScalar>(pool: &PgPool) -> anyhow::R
     Ok(())
 }
 
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_int4")))]
-async fn int4_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_integer")))]
+async fn integer_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
     sign_boundary_is_monotonic::<i32>(&pool).await
 }
 
@@ -53,13 +53,13 @@ async fn date_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
     sign_boundary_is_monotonic::<chrono::NaiveDate>(&pool).await
 }
 
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_int2")))]
-async fn int2_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_smallint")))]
+async fn smallint_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
     sign_boundary_is_monotonic::<i16>(&pool).await
 }
 
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_int8")))]
-async fn int8_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_bigint")))]
+async fn bigint_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
     sign_boundary_is_monotonic::<i64>(&pool).await
 }
 
@@ -68,12 +68,12 @@ async fn timestamp_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
     sign_boundary_is_monotonic::<chrono::DateTime<chrono::Utc>>(&pool).await
 }
 
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_float4")))]
-async fn float4_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_real")))]
+async fn real_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
     sign_boundary_is_monotonic::<eql_tests::scalar_domains::F4>(&pool).await
 }
 
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_float8")))]
-async fn float8_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_double")))]
+async fn double_sign_boundary(pool: PgPool) -> anyhow::Result<()> {
     sign_boundary_is_monotonic::<eql_tests::scalar_domains::F8>(&pool).await
 }

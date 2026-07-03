@@ -51,16 +51,16 @@ macro_rules! scalar_types {
     };
     (@dispatch $emitter:ident) => {
         $crate::eql_tests_macros::$emitter! {
-            int4 => i32,
-            int2 => i16,
-            int8 => i64,
+            integer => i32,
+            smallint => i16,
+            bigint => i64,
             date => chrono::NaiveDate,
             timestamp => chrono::DateTime<chrono::Utc>,
             numeric => rust_decimal::Decimal,
             text => String,
-            bool => bool,
-            float4 => eql_tests::scalar_domains::F4,
-            float8 => eql_tests::scalar_domains::F8,
+            boolean => bool,
+            real => eql_tests::scalar_domains::F4,
+            double => eql_tests::scalar_domains::F8,
         }
     };
 }

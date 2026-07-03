@@ -299,7 +299,7 @@ mod tests {
 /// `CS_CLIENT_ACCESS_KEY` / `CS_WORKSPACE_CRN`. Each test is
 /// `#[ignore]` so it only runs under
 /// `cargo test --features fixture-gen -- --ignored`, mirroring the
-/// `generate` test in `eql_v3_int4.rs`.
+/// `generate` test in `eql_v3_integer.rs`.
 ///
 /// These complement the structural fixture-tests in
 /// the `__scalar_matrix_fixture_shape!` arm in `tests/sqlx/src/matrix.rs`: those assert over the
@@ -319,7 +319,7 @@ mod live_tests {
 
     /// Assert the well-formed Store shape: the payload is a JSON object
     /// with non-null `v`, `c`, `hm`, `ob`, and `i` fields. Mirrors the
-    /// per-key assertions in the generated `scalars::int4` matrix suite
+    /// per-key assertions in the generated `scalars::integer` matrix suite
     /// (emitted from the `scalar_types!` list in `scalar_types.rs`).
     fn assert_store_shape(payload: &Value) {
         let obj = payload.as_object().expect("payload must be a JSON object");

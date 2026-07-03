@@ -102,7 +102,7 @@ mod tests {
 
     #[test]
     fn accepts_valid_identifiers() {
-        assert!(FixtureIdentifier::try_from("eql_v3_int4").is_ok());
+        assert!(FixtureIdentifier::try_from("eql_v3_integer").is_ok());
         assert!(FixtureIdentifier::try_from("a").is_ok());
         assert!(FixtureIdentifier::try_from("x9_y").is_ok());
     }
@@ -136,8 +136,8 @@ mod tests {
 
     #[test]
     fn identifier_renders_via_display() {
-        let id = FixtureIdentifier::try_from("eql_v3_int4").unwrap();
-        assert_eq!(format!("{id}"), "eql_v3_int4");
+        let id = FixtureIdentifier::try_from("eql_v3_integer").unwrap();
+        assert_eq!(format!("{id}"), "eql_v3_integer");
     }
 
     #[test]
@@ -145,7 +145,7 @@ mod tests {
         assert!(ColumnType::try_from("jsonb").is_ok());
         assert!(ColumnType::try_from("eql_v3.json").is_ok());
         assert!(ColumnType::try_from("text").is_err());
-        assert!(ColumnType::try_from("eql_v3_int4").is_err());
+        assert!(ColumnType::try_from("eql_v3_integer").is_err());
         assert!(ColumnType::try_from("eql_v3.jsonb").is_err());
         assert!(ColumnType::try_from("jsonb; DROP TABLE x").is_err());
     }

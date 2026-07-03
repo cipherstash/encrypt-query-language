@@ -1,6 +1,6 @@
 //! Structural guard for the blocked native-jsonb operator enumeration.
 //!
-//! The storage-only domains (`eql_v3.int4`, future scalars) promise that
+//! The storage-only domains (`eql_v3.integer`, future scalars) promise that
 //! *every* native jsonb operator is blocked, so an encrypted column can never
 //! fall through to plaintext-jsonb semantics. That promise rests on the
 //! enumerated operator surface in `crates/eql-codegen/src/operator_surface.rs`

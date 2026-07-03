@@ -253,9 +253,9 @@ where
     /// are different value streams. `self.values()` drives the generated
     /// `plaintext` column (the oracle) and the fixture-table schema; `payloads`
     /// are the already-encrypted JSONB documents to store in `payload`. Used by
-    /// the `v3_doc_int4` fixture, whose generated payload is a SteVec document
+    /// the `v3_doc_integer` fixture, whose generated payload is a SteVec document
     /// encrypted from `{"field": <int>}` while the oracle column is the bare
-    /// `int4`.
+    /// `integer`.
     ///
     /// `payloads.len()` must equal `self.values().len()`. Otherwise this mirrors
     /// `run()` exactly — same connection-from-env, schema → insert → render →
@@ -329,8 +329,8 @@ where
     /// INSERT the caller-supplied encrypted payloads alongside `self.values()`
     /// as the plaintext oracle. The plaintext/payload pairing is positional —
     /// `payloads[i]` is the ciphertext for `self.values()[i]` — so the caller
-    /// MUST keep the two streams index-aligned (the `v3_doc_int4` generator
-    /// builds both from the same ordered `INT4_VALUES` walk). Unlike
+    /// MUST keep the two streams index-aligned (the `v3_doc_integer` generator
+    /// builds both from the same ordered `INTEGER_VALUES` walk). Unlike
     /// `insert_direct`, no `cipherstash::encrypt_store` call happens here.
     async fn insert_payloads(
         &self,
@@ -430,7 +430,7 @@ mod tests {
     use super::*;
     use sqlx::PgPool;
 
-    /// A small int4 spec for driver tests. Three values keeps the test fast;
+    /// A small integer spec for driver tests. Three values keeps the test fast;
     /// the driver's orchestration is independent of value count.
     fn small_spec(name: &'static str) -> FixtureSpec<'static, i32> {
         use super::super::index_kind::IndexKind;

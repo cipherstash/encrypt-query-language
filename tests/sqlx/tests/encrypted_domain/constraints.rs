@@ -1,7 +1,7 @@
 //! Table-level SQL constraint coverage for `eql_v3` encrypted-domain columns.
 //!
 //! Covers UNIQUE / NOT NULL / FOREIGN KEY on the jsonb-backed `eql_v3.<T>`
-//! domains (the reference scalar `int4`). The domains are jsonb under the hood, so a table-level constraint
+//! domains (the reference scalar `integer`). The domains are jsonb under the hood, so a table-level constraint
 //! constrains the *raw jsonb payload value*, NOT the semantic plaintext or the
 //! `eq_term` / `ord_term` index term — see the documented findings on each test.
 //!
@@ -10,7 +10,7 @@
 //! test set) does not mis-read it as a scalar type.
 //!
 //! All ciphertext is REAL: every payload comes from the generated
-//! `fixtures.eql_v3_int4` table (Proxy-encrypted, HMAC + ORE block terms) via
+//! `fixtures.eql_v3_integer` table (Proxy-encrypted, HMAC + ORE block terms) via
 //! `fetch_fixture_payload::<i32>`. No synthetic / hand-written encrypted blobs.
 //!
 //! ## What a constraint on a jsonb-backed domain actually constrains
@@ -30,22 +30,22 @@
 use eql_tests::{assert_db_error, fetch_fixture_payload, sql_string_literal};
 use sqlx::PgPool;
 
-/// Fetch the real fixture ciphertext for an `int4` plaintext as an
+/// Fetch the real fixture ciphertext for an `integer` plaintext as an
 /// escaped SQL string literal ready to interpolate as `{lit}::jsonb::<domain>`.
-async fn int4_payload_literal(pool: &PgPool, plaintext: i32) -> anyhow::Result<String> {
+async fn integer_payload_literal(pool: &PgPool, plaintext: i32) -> anyhow::Result<String> {
     let payload = fetch_fixture_payload::<i32>(pool, plaintext).await?;
     Ok(sql_string_literal(&payload))
 }
 
 // ===========================================================================
-// NOT NULL — on the storage-only `eql_v3.int4` domain column.
+// NOT NULL — on the storage-only `eql_v3.integer` domain column.
 // ===========================================================================
 
-/// A `NOT NULL` column attribute on an `eql_v3.int4` (storage) column rejects a
+/// A `NOT NULL` column attribute on an `eql_v3.integer` (storage) column rejects a
 /// NULL insert (SQLSTATE 23502) and accepts a real encrypted value.
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_int4")))]
-async fn not_null_on_int4_storage_column(pool: PgPool) -> anyhow::Result<()> {
-    sqlx::query("CREATE TABLE v3_not_null (id bigint PRIMARY KEY, val eql_v3.int4 NOT NULL)")
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_integer")))]
+async fn not_null_on_integer_storage_column(pool: PgPool) -> anyhow::Result<()> {
+    sqlx::query("CREATE TABLE v3_not_null (id bigint PRIMARY KEY, val eql_v3.integer NOT NULL)")
         .execute(&pool)
         .await?;
 
@@ -55,7 +55,7 @@ async fn not_null_on_int4_storage_column(pool: PgPool) -> anyhow::Result<()> {
     let err = sqlx::query("INSERT INTO v3_not_null (id, val) VALUES (1, NULL)")
         .execute(&pool)
         .await
-        .expect_err("NOT NULL must reject a NULL eql_v3.int4 value");
+        .expect_err("NOT NULL must reject a NULL eql_v3.integer value");
     assert_db_error(&err, "23502", None);
 
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM v3_not_null")
@@ -64,9 +64,9 @@ async fn not_null_on_int4_storage_column(pool: PgPool) -> anyhow::Result<()> {
     assert_eq!(count, 0, "no row after the rejected NULL insert");
 
     // A real encrypted value is accepted.
-    let lit = int4_payload_literal(&pool, 42).await?;
+    let lit = integer_payload_literal(&pool, 42).await?;
     sqlx::query(&format!(
-        "INSERT INTO v3_not_null (id, val) VALUES (2, {lit}::jsonb::eql_v3.int4)"
+        "INSERT INTO v3_not_null (id, val) VALUES (2, {lit}::jsonb::eql_v3.integer)"
     ))
     .execute(&pool)
     .await?;
@@ -80,7 +80,7 @@ async fn not_null_on_int4_storage_column(pool: PgPool) -> anyhow::Result<()> {
 }
 
 // ===========================================================================
-// UNIQUE — on the equality `eql_v3.int4_eq` domain column.
+// UNIQUE — on the equality `eql_v3.integer_eq` domain column.
 //
 // `_eq` is the interesting variant: equality routes through `eq_term` (hmac).
 // But a bare UNIQUE constraint on the domain column does NOT use `eq_term` — it
@@ -88,7 +88,7 @@ async fn not_null_on_int4_storage_column(pool: PgPool) -> anyhow::Result<()> {
 // documents this: identical payload bytes collide; distinct payloads do not.
 // ===========================================================================
 
-/// A `UNIQUE` constraint on an `eql_v3.int4_eq` column rejects a second row
+/// A `UNIQUE` constraint on an `eql_v3.integer_eq` column rejects a second row
 /// carrying the byte-identical fixture payload (23505) and accepts a different
 /// plaintext's payload.
 ///
@@ -102,20 +102,20 @@ async fn not_null_on_int4_storage_column(pool: PgPool) -> anyhow::Result<()> {
 /// collide on this constraint despite being semantically equal — UNIQUE on a
 /// bare encrypted-domain column is byte-identity uniqueness, not
 /// plaintext-uniqueness.
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_int4")))]
-async fn unique_on_int4_eq_column_constrains_raw_payload(pool: PgPool) -> anyhow::Result<()> {
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_integer")))]
+async fn unique_on_integer_eq_column_constrains_raw_payload(pool: PgPool) -> anyhow::Result<()> {
     sqlx::query(
-        "CREATE TABLE v3_unique (id bigint PRIMARY KEY, val eql_v3.int4_eq UNIQUE NOT NULL)",
+        "CREATE TABLE v3_unique (id bigint PRIMARY KEY, val eql_v3.integer_eq UNIQUE NOT NULL)",
     )
     .execute(&pool)
     .await?;
 
-    let p42 = int4_payload_literal(&pool, 42).await?;
-    let p100 = int4_payload_literal(&pool, 100).await?;
+    let p42 = integer_payload_literal(&pool, 42).await?;
+    let p100 = integer_payload_literal(&pool, 100).await?;
 
     // First insert of the 42-payload succeeds.
     sqlx::query(&format!(
-        "INSERT INTO v3_unique (id, val) VALUES (1, {p42}::jsonb::eql_v3.int4_eq)"
+        "INSERT INTO v3_unique (id, val) VALUES (1, {p42}::jsonb::eql_v3.integer_eq)"
     ))
     .execute(&pool)
     .await?;
@@ -128,7 +128,7 @@ async fn unique_on_int4_eq_column_constrains_raw_payload(pool: PgPool) -> anyhow
     // A DIFFERENT plaintext's payload (distinct jsonb) is accepted — UNIQUE does
     // not reject distinct payloads.
     sqlx::query(&format!(
-        "INSERT INTO v3_unique (id, val) VALUES (2, {p100}::jsonb::eql_v3.int4_eq)"
+        "INSERT INTO v3_unique (id, val) VALUES (2, {p100}::jsonb::eql_v3.integer_eq)"
     ))
     .execute(&pool)
     .await?;
@@ -141,7 +141,7 @@ async fn unique_on_int4_eq_column_constrains_raw_payload(pool: PgPool) -> anyhow
     // Re-inserting the BYTE-IDENTICAL 42-payload violates UNIQUE (23505). The
     // constraint name is `<table>_<column>_key` per PostgreSQL's auto-naming.
     let err = sqlx::query(&format!(
-        "INSERT INTO v3_unique (id, val) VALUES (3, {p42}::jsonb::eql_v3.int4_eq)"
+        "INSERT INTO v3_unique (id, val) VALUES (3, {p42}::jsonb::eql_v3.integer_eq)"
     ))
     .execute(&pool)
     .await
@@ -157,7 +157,7 @@ async fn unique_on_int4_eq_column_constrains_raw_payload(pool: PgPool) -> anyhow
 }
 
 // ===========================================================================
-// FOREIGN KEY — child referencing a parent `eql_v3.int4` PRIMARY KEY column.
+// FOREIGN KEY — child referencing a parent `eql_v3.integer` PRIMARY KEY column.
 //
 // FK on a jsonb-backed domain IS feasible: a PRIMARY KEY / UNIQUE on the parent
 // column resolves against the base type (`jsonb`) btree opclass (jsonb has a
@@ -167,7 +167,7 @@ async fn unique_on_int4_eq_column_constrains_raw_payload(pool: PgPool) -> anyhow
 // PK/UNIQUE uses the inherited jsonb btree opclass and works.
 // ===========================================================================
 
-/// A FOREIGN KEY from a child `eql_v3.int4` column to a parent `eql_v3.int4`
+/// A FOREIGN KEY from a child `eql_v3.integer` column to a parent `eql_v3.integer`
 /// PRIMARY KEY column: a matching (byte-identical) reference is accepted, a
 /// dangling reference is rejected (23503).
 ///
@@ -182,10 +182,10 @@ async fn unique_on_int4_eq_column_constrains_raw_payload(pool: PgPool) -> anyhow
 /// plaintext would be a different jsonb and would NOT satisfy the FK — so FK on
 /// a bare encrypted-domain column does not provide plaintext-level referential
 /// integrity.
-#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_int4")))]
-async fn foreign_key_on_int4_domain_columns(pool: PgPool) -> anyhow::Result<()> {
-    // Parent with a PRIMARY KEY on an eql_v3.int4 (jsonb-backed domain) column.
-    sqlx::query("CREATE TABLE v3_parent (ref eql_v3.int4 PRIMARY KEY)")
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_integer")))]
+async fn foreign_key_on_integer_domain_columns(pool: PgPool) -> anyhow::Result<()> {
+    // Parent with a PRIMARY KEY on an eql_v3.integer (jsonb-backed domain) column.
+    sqlx::query("CREATE TABLE v3_parent (ref eql_v3.integer PRIMARY KEY)")
         .execute(&pool)
         .await?;
 
@@ -193,7 +193,7 @@ async fn foreign_key_on_int4_domain_columns(pool: PgPool) -> anyhow::Result<()> 
     sqlx::query(
         "CREATE TABLE v3_child (
              id bigint PRIMARY KEY,
-             parent_ref eql_v3.int4 REFERENCES v3_parent(ref)
+             parent_ref eql_v3.integer REFERENCES v3_parent(ref)
          )",
     )
     .execute(&pool)
@@ -210,12 +210,12 @@ async fn foreign_key_on_int4_domain_columns(pool: PgPool) -> anyhow::Result<()> 
     .await?;
     assert!(fk_exists, "FK constraint must exist on v3_child");
 
-    let p42 = int4_payload_literal(&pool, 42).await?;
-    let p100 = int4_payload_literal(&pool, 100).await?;
+    let p42 = integer_payload_literal(&pool, 42).await?;
+    let p100 = integer_payload_literal(&pool, 100).await?;
 
     // Seed the parent with the 42-payload.
     sqlx::query(&format!(
-        "INSERT INTO v3_parent (ref) VALUES ({p42}::jsonb::eql_v3.int4)"
+        "INSERT INTO v3_parent (ref) VALUES ({p42}::jsonb::eql_v3.integer)"
     ))
     .execute(&pool)
     .await?;
@@ -223,7 +223,7 @@ async fn foreign_key_on_int4_domain_columns(pool: PgPool) -> anyhow::Result<()> 
     // Child row with a byte-identical reference resolves (deterministic fixture
     // bytes), so the FK is satisfied.
     sqlx::query(&format!(
-        "INSERT INTO v3_child (id, parent_ref) VALUES (1, {p42}::jsonb::eql_v3.int4)"
+        "INSERT INTO v3_child (id, parent_ref) VALUES (1, {p42}::jsonb::eql_v3.integer)"
     ))
     .execute(&pool)
     .await?;
@@ -236,7 +236,7 @@ async fn foreign_key_on_int4_domain_columns(pool: PgPool) -> anyhow::Result<()> 
     // Child row referencing a payload NOT present in the parent (different
     // plaintext → different jsonb) violates the FK (23503).
     let err = sqlx::query(&format!(
-        "INSERT INTO v3_child (id, parent_ref) VALUES (2, {p100}::jsonb::eql_v3.int4)"
+        "INSERT INTO v3_child (id, parent_ref) VALUES (2, {p100}::jsonb::eql_v3.integer)"
     ))
     .execute(&pool)
     .await

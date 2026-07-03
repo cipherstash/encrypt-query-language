@@ -6,8 +6,8 @@
 //!
 //! ```ignore
 //! eql_tests::scalar_types! {
-//!     int4 => i32,
-//!     int2 => i16,
+//!     integer => i32,
+//!     smallint => i16,
 //! }
 //! ```
 //!
@@ -20,9 +20,9 @@
 //! emitters are pure functions of it.
 //!
 //! Each entry is `token => rust_type`: `token` is the Postgres type token
-//! (`int4`, also the fixture/domain suffix), `rust_type` is the Rust plaintext
+//! (`integer`, also the fixture/domain suffix), `rust_type` is the Rust plaintext
 //! type (`i32`). The catalog value const is the upper-cased token plus
-//! `_VALUES` (`int4` -> `eql_domains::INT4_VALUES`).
+//! `_VALUES` (`integer` -> `eql_domains::INTEGER_VALUES`).
 //!
 //! Each emitter is split into a thin `#[proc_macro]` shim and a pure `*_tokens`
 //! core so the core is unit-testable without a consumer crate.
@@ -40,7 +40,7 @@ use syn::{Ident, Token, Type};
 /// [`is_eq_only_token`]. The catalog is the single source of truth; this list
 /// only maps a token to the Rust plaintext type the harness compiles against.
 struct ScalarEntry {
-    /// Postgres type token (`int4`); also the fixture/domain suffix and the
+    /// Postgres type token (`integer`); also the fixture/domain suffix and the
     /// matrix `suite` ident. Must name a row in `eql-domains::CATALOG`.
     token: Ident,
     /// Rust plaintext type (`i32`).
@@ -89,8 +89,8 @@ fn is_temporal_token(token: &str) -> bool {
     fixtures_for_token(token).kind.is_temporal()
 }
 
-/// True when `token`'s catalog kind is a fixed-width integer (`int2`/`int4`/
-/// `int8`). The integer kinds are the only ones whose `impl ScalarType` is
+/// True when `token`'s catalog kind is a fixed-width integer (`smallint`/`integer`/
+/// `bigint`). The integer kinds are the only ones whose `impl ScalarType` is
 /// macro-generated (inherent `MIN`/`MAX` pivots + a `const` `<TOKEN>_VALUES`
 /// slice) and whose fixture module stamps the `int` discriminator. Every
 /// non-integer kind (`date`, `text`) is hand-written in `scalar_domains.rs` and
@@ -123,7 +123,7 @@ fn is_numeric_token(token: &str) -> bool {
 /// True when `token`'s catalog row is an IEEE-754 float kind (`F32`/`F64`).
 /// Like `numeric` it is ordered but non-integer and non-chrono, so it stamps the
 /// `float` fixture discriminator and draws its values from the harness accessor
-/// (`float4_values()` / `float8_values()`).
+/// (`real_values()` / `double_values()`).
 fn is_float_token(token: &str) -> bool {
     matches!(
         fixtures_for_token(token).kind,
@@ -176,7 +176,7 @@ impl Parse for ScalarList {
     }
 }
 
-/// `int4` -> `INT4_VALUES`, the catalog value const in `eql_domains`.
+/// `integer` -> `INTEGER_VALUES`, the catalog value const in `eql_domains`.
 fn values_const_ident(token: &Ident) -> Ident {
     format_ident!("{}_VALUES", token.to_string().to_uppercase())
 }
@@ -449,7 +449,7 @@ mod tests {
     use super::*;
 
     fn sample() -> ScalarList {
-        syn::parse_str::<ScalarList>("int4 => i32, int8 => i64,").unwrap()
+        syn::parse_str::<ScalarList>("integer => i32, bigint => i64,").unwrap()
     }
 
     /// Normalize to the `to_string()` form so whitespace differences don't make
@@ -460,8 +460,8 @@ mod tests {
 
     #[test]
     fn values_const_name_is_uppercased_with_suffix() {
-        let token: Ident = syn::parse_str("int8").unwrap();
-        assert_eq!(values_const_ident(&token).to_string(), "INT8_VALUES");
+        let token: Ident = syn::parse_str("bigint").unwrap();
+        assert_eq!(values_const_ident(&token).to_string(), "BIGINT_VALUES");
     }
 
     #[test]
@@ -470,10 +470,10 @@ mod tests {
         // One impl per entry, with the right PG_TYPE string and catalog const.
         assert!(out.contains("impl ScalarType for i32"));
         assert!(out.contains("impl ScalarType for i64"));
-        assert!(out.contains(r#"const PG_TYPE : & 'static str = "int4""#));
-        assert!(out.contains(r#"const PG_TYPE : & 'static str = "int8""#));
-        assert!(out.contains(":: eql_domains :: INT4_VALUES"));
-        assert!(out.contains(":: eql_domains :: INT8_VALUES"));
+        assert!(out.contains(r#"const PG_TYPE : & 'static str = "integer""#));
+        assert!(out.contains(r#"const PG_TYPE : & 'static str = "bigint""#));
+        assert!(out.contains(":: eql_domains :: INTEGER_VALUES"));
+        assert!(out.contains(":: eql_domains :: BIGINT_VALUES"));
         // const→fn: fixture values is a method now.
         assert!(out.contains("fn fixture_values"));
         // Pivots are now derived trait defaults — the emitter writes an empty
@@ -489,11 +489,11 @@ mod tests {
     #[test]
     fn fixture_modules_emit_named_mods_with_scalar_fixture() {
         let out = norm(&scalar_fixture_modules_tokens(&sample()));
-        assert!(out.contains("pub mod eql_v3_int4"));
-        assert!(out.contains("pub mod eql_v3_int8"));
+        assert!(out.contains("pub mod eql_v3_integer"));
+        assert!(out.contains("pub mod eql_v3_bigint"));
         assert!(out.contains("crate :: scalar_fixture !"));
-        assert!(out.contains(r#""eql_v3_int4""#));
-        assert!(out.contains(":: eql_domains :: INT4_VALUES as VALUES"));
+        assert!(out.contains(r#""eql_v3_integer""#));
+        assert!(out.contains(":: eql_domains :: INTEGER_VALUES as VALUES"));
         // Integer entries stamp the `int` kind discriminator.
         assert!(out.contains("int ,"));
     }
@@ -501,7 +501,7 @@ mod tests {
     #[test]
     fn temporal_entry_skips_impl_and_stamps_temporal_fixture() {
         // No marker: `date`'s temporal shape is read from eql-domains::CATALOG.
-        let list = syn::parse_str::<ScalarList>("int4 => i32, date => chrono::NaiveDate").unwrap();
+        let list = syn::parse_str::<ScalarList>("integer => i32, date => chrono::NaiveDate").unwrap();
         // Impl emitter skips the temporal entry (handed to `temporal_values!`).
         let impls = norm(&scalar_type_impls_tokens(&list));
         assert!(impls.contains("impl ScalarType for i32"));
@@ -521,20 +521,20 @@ mod tests {
 
     #[test]
     fn entry_parses_without_markers() {
-        let list = syn::parse_str::<ScalarList>("int4 => i32, date => chrono::NaiveDate")
+        let list = syn::parse_str::<ScalarList>("integer => i32, date => chrono::NaiveDate")
             .expect("bare token => rust_type must parse");
         assert_eq!(list.entries.len(), 2);
     }
 
     #[test]
     fn temporal_is_read_from_catalog_not_a_marker() {
-        assert!(!is_temporal_token("int4"));
+        assert!(!is_temporal_token("integer"));
         assert!(is_temporal_token("date"));
     }
 
     #[test]
     fn eq_only_is_read_from_catalog_not_a_marker() {
-        assert!(!is_eq_only_token("int4"));
+        assert!(!is_eq_only_token("integer"));
         assert!(!is_eq_only_token("date"));
     }
 
@@ -542,11 +542,11 @@ mod tests {
     fn kind_classification_is_read_from_catalog_not_a_marker() {
         // Integer vs temporal vs text is read from the catalog kind, never from
         // a `[marker]` on the dispatch entry.
-        assert!(is_int_token("int4"));
+        assert!(is_int_token("integer"));
         assert!(!is_int_token("date"));
         assert!(!is_int_token("text"));
         assert!(is_text_token("text"));
-        assert!(!is_text_token("int4"));
+        assert!(!is_text_token("integer"));
         assert!(!is_text_token("date"));
     }
 
@@ -557,14 +557,14 @@ mod tests {
         // declares a combined `_search` domain today; ordered/eq-only scalars
         // do not, so they must route to the non-search arm.
         assert!(has_search_token("text"));
-        assert!(!has_search_token("int4"));
+        assert!(!has_search_token("integer"));
         assert!(!has_search_token("date"));
     }
 
     #[test]
     fn text_entry_skips_impl_and_stamps_text_fixture() {
         // No marker: `text`'s shape is read from eql-domains::CATALOG.
-        let list = syn::parse_str::<ScalarList>("int4 => i32, text => String").unwrap();
+        let list = syn::parse_str::<ScalarList>("integer => i32, text => String").unwrap();
         // Impl emitter skips the text entry (hand-written in scalar_domains.rs).
         let impls = norm(&scalar_type_impls_tokens(&list));
         assert!(impls.contains("impl ScalarType for i32"));
@@ -588,10 +588,10 @@ mod tests {
 
     #[test]
     fn float_entry_skips_impl_and_stamps_float_fixture() {
-        // `float4`/`float8` are ordered, non-integer, non-chrono: the impl emitter
+        // `real`/`double` are ordered, non-integer, non-chrono: the impl emitter
         // skips them (hand-written in scalar_domains.rs), and the fixture module
-        // stamps the `float` discriminator drawing from `float4_values()`.
-        let list = syn::parse_str::<ScalarList>("int4 => i32, float4 => F4").unwrap();
+        // stamps the `float` discriminator drawing from `real_values()`.
+        let list = syn::parse_str::<ScalarList>("integer => i32, real => F4").unwrap();
         let impls = norm(&scalar_type_impls_tokens(&list));
         assert!(impls.contains("impl ScalarType for i32"));
         assert!(
@@ -599,32 +599,32 @@ mod tests {
             "float must skip the generated impl (hand-written instead)"
         );
         let mods = norm(&scalar_fixture_modules_tokens(&list));
-        assert!(mods.contains("pub mod eql_v3_float4"));
+        assert!(mods.contains("pub mod eql_v3_real"));
         assert!(mods.contains("float ,"), "got: {mods}");
-        assert!(mods.contains("float4_values"), "got: {mods}");
+        assert!(mods.contains("real_values"), "got: {mods}");
         let suites = norm(&scalar_matrix_suites_tokens(&list));
-        assert!(suites.contains("pub mod float4"));
+        assert!(suites.contains("pub mod real"));
         assert!(suites.contains("caps = [eq , ord]"));
     }
 
     #[test]
     fn float_classification_is_read_from_catalog() {
-        assert!(is_float_token("float4"));
-        assert!(is_float_token("float8"));
-        assert!(!is_float_token("int4"));
+        assert!(is_float_token("real"));
+        assert!(is_float_token("double"));
+        assert!(!is_float_token("integer"));
         assert!(!is_float_token("numeric"));
     }
 
     #[test]
     fn ordered_entry_emits_scalar_matrix_with_eq_ord_caps() {
-        let token: Ident = syn::parse_str("int4").unwrap();
+        let token: Ident = syn::parse_str("integer").unwrap();
         let rust_type: Type = syn::parse_str("i32").unwrap();
         let out = norm(&matrix_suite_for_entry(
             &token, &rust_type, false, false, false,
         ));
         assert!(out.contains(":: eql_tests :: scalar_matrix !"));
         assert!(out.contains("caps = [eq , ord]"));
-        assert!(out.contains("suite = int4"));
+        assert!(out.contains("suite = integer"));
     }
 
     #[test]
@@ -664,9 +664,9 @@ mod tests {
         // never a marker. Only `bool` is storage-only today; comparison-capable
         // types are not. Note bool is ALSO eq-only (no `_ord`), so the router
         // must check storage-only first.
-        assert!(is_storage_only_token("bool"));
-        assert!(is_eq_only_token("bool"));
-        assert!(!is_storage_only_token("int4"));
+        assert!(is_storage_only_token("boolean"));
+        assert!(is_eq_only_token("boolean"));
+        assert!(!is_storage_only_token("integer"));
         assert!(!is_storage_only_token("text"));
         assert!(!is_storage_only_token("timestamp"));
     }
@@ -677,7 +677,7 @@ mod tests {
         // it is also eq-only — storage-only is checked first, so it never selects
         // the `caps = [eq]` arm (which would emit equality tests for a domain
         // that has no `_eq`).
-        let token: Ident = syn::parse_str("bool").unwrap();
+        let token: Ident = syn::parse_str("boolean").unwrap();
         let rust_type: Type = syn::parse_str("bool").unwrap();
         // (storage_only = true, eq_only = true) — true catalog state for bool.
         let out = norm(&matrix_suite_for_entry(
@@ -687,15 +687,15 @@ mod tests {
         assert!(out.contains("caps = [storage]"));
         assert!(!out.contains("caps = [eq]"));
         assert!(!out.contains("caps = [eq , ord]"));
-        assert!(out.contains("suite = bool"));
+        assert!(out.contains("suite = boolean"));
     }
 
     #[test]
     fn bool_entry_skips_impl_and_stamps_storage_fixture() {
         // `bool` is storage-only: the impl emitter skips it (hand-written in
         // scalar_domains.rs), and the fixture module stamps the `storage`
-        // discriminator drawing from the `bool_values()` accessor.
-        let list = syn::parse_str::<ScalarList>("int4 => i32, bool => bool").unwrap();
+        // discriminator drawing from the `boolean_values()` accessor.
+        let list = syn::parse_str::<ScalarList>("integer => i32, boolean => bool").unwrap();
         let impls = norm(&scalar_type_impls_tokens(&list));
         assert!(impls.contains("impl ScalarType for i32"));
         assert!(
@@ -703,27 +703,27 @@ mod tests {
             "bool must skip the generated impl (hand-written instead)"
         );
         let mods = norm(&scalar_fixture_modules_tokens(&list));
-        assert!(mods.contains("pub mod eql_v3_bool"));
+        assert!(mods.contains("pub mod eql_v3_boolean"));
         assert!(mods.contains("storage ,"), "got: {mods}");
-        assert!(mods.contains("bool_values"), "got: {mods}");
+        assert!(mods.contains("boolean_values"), "got: {mods}");
         let suites = norm(&scalar_matrix_suites_tokens(&list));
-        assert!(suites.contains("pub mod bool"));
+        assert!(suites.contains("pub mod boolean"));
         assert!(suites.contains("caps = [storage]"));
         let dispatch = norm(&fixture_dispatch_tokens(&list));
-        assert!(dispatch.contains(r#""bool" =>"#));
+        assert!(dispatch.contains(r#""boolean" =>"#));
         // Every scalar fixture is generated from its fixed curated catalog
         // values via `run()`.
         assert!(
             dispatch.contains(
-                r#""bool" => :: eql_tests :: fixtures :: eql_v3_bool :: spec () . run () . await"#
+                r#""boolean" => :: eql_tests :: fixtures :: eql_v3_boolean :: spec () . run () . await"#
             ),
             "bool must dispatch to run(), got: {dispatch}"
         );
         assert!(
             dispatch.contains(
-                r#""int4" => :: eql_tests :: fixtures :: eql_v3_int4 :: spec () . run () . await"#
+                r#""integer" => :: eql_tests :: fixtures :: eql_v3_integer :: spec () . run () . await"#
             ),
-            "int4 must dispatch to run(), got: {dispatch}"
+            "integer must dispatch to run(), got: {dispatch}"
         );
     }
 
@@ -740,9 +740,9 @@ mod tests {
     fn fixture_dispatch_emits_one_arm_per_token_and_a_catch_all() {
         let out = norm(&fixture_dispatch_tokens(&sample()));
         assert!(out.contains("async fn generate_for_token"));
-        assert!(out.contains(r#""int4" =>"#));
-        assert!(out.contains(r#""int8" =>"#));
-        assert!(out.contains(":: eql_tests :: fixtures :: eql_v3_int4 :: spec"));
+        assert!(out.contains(r#""integer" =>"#));
+        assert!(out.contains(r#""bigint" =>"#));
+        assert!(out.contains(":: eql_tests :: fixtures :: eql_v3_integer :: spec"));
         // Loud catch-all preserved.
         assert!(out.contains("other =>"));
         assert!(out.contains("no fixture generator wired"));
@@ -751,17 +751,17 @@ mod tests {
     #[test]
     fn matrix_suites_emit_mods_with_unchanged_suite_and_eql_type() {
         let out = norm(&scalar_matrix_suites_tokens(&sample()));
-        assert!(out.contains("pub mod int4"));
-        assert!(out.contains("pub mod int8"));
+        assert!(out.contains("pub mod integer"));
+        assert!(out.contains("pub mod bigint"));
         assert!(out.contains(":: eql_tests :: scalar_matrix !"));
         // suite/scalar/eql_type must match the old per-type files so test names
         // (and the snapshot) are unchanged.
-        assert!(out.contains("suite = int4"));
+        assert!(out.contains("suite = integer"));
         assert!(out.contains("scalar = i32"));
-        assert!(out.contains(r#"eql_type = "eql_v3_int4""#));
-        assert!(out.contains("suite = int8"));
+        assert!(out.contains(r#"eql_type = "eql_v3_integer""#));
+        assert!(out.contains("suite = bigint"));
         assert!(out.contains("scalar = i64"));
-        assert!(out.contains(r#"eql_type = "eql_v3_int8""#));
+        assert!(out.contains(r#"eql_type = "eql_v3_bigint""#));
     }
 
     #[test]
@@ -769,7 +769,7 @@ mod tests {
         // Both base types are ordered, so the emitter routes them through the
         // unified wrapper with the ordered capability marker and never names
         // either of the now-deleted parallel wrappers.
-        let list = syn::parse_str::<ScalarList>("int4 => i32, date => chrono::NaiveDate").unwrap();
+        let list = syn::parse_str::<ScalarList>("integer => i32, date => chrono::NaiveDate").unwrap();
         let out = norm(&scalar_matrix_suites_tokens(&list));
         assert!(out.contains(":: eql_tests :: scalar_matrix !"));
         assert!(out.contains("caps = [eq , ord]"));

@@ -129,21 +129,21 @@ macro_rules! e2e_oracle_suite {
 }
 
 e2e_oracle_suite!(
-    int4,
+    integer,
     i32,
-    "proptest_e2e_int4",
+    "proptest_e2e_integer",
     seeds = [i32::MIN, 0, i32::MAX]
 );
 e2e_oracle_suite!(
-    int2,
+    smallint,
     i16,
-    "proptest_e2e_int2",
+    "proptest_e2e_smallint",
     seeds = [i16::MIN, 0, i16::MAX]
 );
 e2e_oracle_suite!(
-    int8,
+    bigint,
     i64,
-    "proptest_e2e_int8",
+    "proptest_e2e_bigint",
     seeds = [i64::MIN, 0, i64::MAX]
 );
 e2e_oracle_suite!(
@@ -187,9 +187,9 @@ e2e_oracle_suite!(
     seeds = ["aard".to_string(), "frank".to_string(), "zzzz".to_string()]
 );
 e2e_oracle_suite!(
-    float4,
+    real,
     eql_tests::scalar_domains::F4,
-    "proptest_e2e_float4",
+    "proptest_e2e_real",
     seeds = [
         eql_tests::scalar_domains::F4(f32::NEG_INFINITY),
         eql_tests::scalar_domains::F4(0.0),
@@ -197,9 +197,9 @@ e2e_oracle_suite!(
     ]
 );
 e2e_oracle_suite!(
-    float8,
+    double,
     eql_tests::scalar_domains::F8,
-    "proptest_e2e_float8",
+    "proptest_e2e_double",
     seeds = [
         eql_tests::scalar_domains::F8(f64::NEG_INFINITY),
         eql_tests::scalar_domains::F8(0.0),
@@ -224,7 +224,7 @@ e2e_oracle_suite!(
 ///
 /// Creds/e2e-gated like the rest of this file.
 #[test]
-fn float4_and_float8_share_index_terms_for_the_same_value() -> Result<()> {
+fn real_and_double_share_index_terms_for_the_same_value() -> Result<()> {
     use eql_tests::scalar_domains::{F4, F8};
 
     let rt = tokio::runtime::Builder::new_current_thread()
@@ -260,7 +260,7 @@ fn float4_and_float8_share_index_terms_for_the_same_value() -> Result<()> {
     assert_eq!(
         hm(&f4_payloads[0])?,
         hm(&f8_payloads[0])?,
-        "float4 and float8 of the same value must share the hm equality term"
+        "real and double of the same value must share the hm equality term"
     );
 
     // `ob` (probabilistic ORE) is NOT byte-comparable — the only correct check is
@@ -276,15 +276,15 @@ fn float4_and_float8_share_index_terms_for_the_same_value() -> Result<()> {
     };
     let sql = format!(
         "SELECT {} = {}",
-        ord_term(&f4_payloads[0], "eql_v3.float4_ord_ore"),
-        ord_term(&f8_payloads[0], "eql_v3.float8_ord_ore"),
+        ord_term(&f4_payloads[0], "eql_v3.real_ord_ore"),
+        ord_term(&f8_payloads[0], "eql_v3.double_ord_ore"),
     );
     let ore_equal: Option<bool> = rt
         .block_on(sqlx::query_scalar(&sql).fetch_one(&pool))
         .map_err(|e| anyhow::anyhow!("cross-width ORE compare query ({sql}): {e}"))?;
     anyhow::ensure!(
         ore_equal == Some(true),
-        "float4 and float8 of the same value must compare equal under the SQL ORE \
+        "real and double of the same value must compare equal under the SQL ORE \
          operator (eql_v3_internal.ore_block_256 `=`); got {ore_equal:?}"
     );
     Ok(())

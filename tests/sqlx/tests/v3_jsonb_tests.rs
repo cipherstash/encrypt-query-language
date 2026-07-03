@@ -536,7 +536,7 @@ async fn v3_jsonb_raw_helpers_contains_and_contained_by(pool: PgPool) -> anyhow:
 }
 
 /// `eql_v3.has_ore_cllw(jsonb_entry)` is otherwise only exercised incidentally
-/// — `jsonb_entry_int4_fixture_shape` asserts every fixture row's `oc`-bearing
+/// — `jsonb_entry_integer_fixture_shape` asserts every fixture row's `oc`-bearing
 /// entry passes it, but never exercises the false branch (an entry with `hm`
 /// only, no `oc`). Dedicated positive/negative coverage of both branches.
 #[sqlx::test]

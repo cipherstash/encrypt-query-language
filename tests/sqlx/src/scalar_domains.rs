@@ -1,7 +1,7 @@
 //! Type-generic substrate for the encrypted-scalar-domain test matrix.
 //!
-//! Adding a new encrypted scalar type (e.g. `i64` for int8, `f64` for
-//! float8) is one `<T> => <R>` line in the `scalar_types!` list
+//! Adding a new encrypted scalar type (e.g. `i64` for bigint, `f64` for
+//! double) is one `<T> => <R>` line in the `scalar_types!` list
 //! (`scalar_types.rs`) plus an `EqlPlaintext` impl and a catalog row.
 //! The `impl ScalarType` below is generated from that list. Everything
 //! else — the four `eql_v3_<T>{,_eq,_ord,_ord_ore}` domains, per-domain
@@ -33,7 +33,7 @@
 //! - [`ScalarType::PLAINTEXT_SQL_TYPE`] — the **actual Postgres storage type**
 //!   of the cleartext value in the oracle columns. Defaults to `PG_TYPE`.
 //!
-//! For every scalar except `timestamp` the two coincide — `int4`, `date`,
+//! For every scalar except `timestamp` the two coincide — `integer`, `date`,
 //! `numeric`, … are each a valid Postgres type equal to their domain token.
 //! `timestamp` is the sole divergence: its domain token is `timestamp` (chosen
 //! to match the cipherstash cast / `ColumnType::Timestamp` / `Plaintext::Timestamp`
@@ -67,7 +67,7 @@
 //!
 //! Keeping `PLAINTEXT_SQL_TYPE` on `ScalarType` (rather than reading
 //! `EqlPlaintext` directly at each use site) also covers view scalars like
-//! `JsonbEntryInt4`, which are `ScalarType`s but deliberately *not*
+//! `JsonbEntryInteger`, which are `ScalarType`s but deliberately *not*
 //! `EqlPlaintext`s; those inherit the `PG_TYPE` default.
 
 use anyhow::{bail, Context, Result};
@@ -91,7 +91,7 @@ pub trait ScalarType:
 {
     /// The EQL domain token / identifier — the suffix in the SQL domain name
     /// (`eql_v3.<PG_TYPE>_ord`) and the fixture script/table name
-    /// (`fixtures.eql_v3_<PG_TYPE>`). Examples: `"int4"`, `"timestamp"`. This is
+    /// (`fixtures.eql_v3_<PG_TYPE>`). Examples: `"integer"`, `"timestamp"`. This is
     /// an *identifier*, not necessarily a valid plaintext column type — see
     /// [`ScalarType::PLAINTEXT_SQL_TYPE`] and the module docs.
     const PG_TYPE: &'static str;
@@ -104,7 +104,7 @@ pub trait ScalarType:
     /// override it, deriving the value from `EqlPlaintext` (the same
     /// `ScalarKind`-keyed source the fixture generator uses) so it cannot drift.
     /// Kept on `ScalarType`, not read from `EqlPlaintext` directly, because some
-    /// test scalars (`JsonbEntryInt4`) are `ScalarType`s but deliberately NOT
+    /// test scalars (`JsonbEntryInteger`) are `ScalarType`s but deliberately NOT
     /// `EqlPlaintext`s; those inherit the `PG_TYPE` default. See the module docs
     /// for why the oracle stays tz-aware rather than becoming a bare `timestamp`.
     const PLAINTEXT_SQL_TYPE: &'static str = Self::PG_TYPE;
@@ -721,10 +721,10 @@ mod numeric_value_guards {
 // catalog's two `Fixture::Bool` rows.
 
 /// Typed `bool` fixture values, built once from `bool`'s catalog row, in catalog
-/// order (`[false, true]`). Public so the `eql_v3_bool` fixture module (emitted
+/// order (`[false, true]`). Public so the `eql_v3_boolean` fixture module (emitted
 /// by `scalar_types!(fixture_modules)`) can hand the slice to `scalar_fixture!`.
-static BOOL_VALUES_CELL: std::sync::LazyLock<Vec<bool>> = std::sync::LazyLock::new(|| {
-    eql_domains::BOOL_FIXTURES
+static BOOLEAN_VALUES_CELL: std::sync::LazyLock<Vec<bool>> = std::sync::LazyLock::new(|| {
+    eql_domains::BOOLEAN_FIXTURES
         .values
         .iter()
         .map(|f| match f {
@@ -734,17 +734,17 @@ static BOOL_VALUES_CELL: std::sync::LazyLock<Vec<bool>> = std::sync::LazyLock::n
         .collect()
 });
 
-/// The `bool` fixture values, in catalog order. Public so the `eql_v3_bool`
+/// The `bool` fixture values, in catalog order. Public so the `eql_v3_boolean`
 /// fixture module can hand the slice to `scalar_fixture!`.
-pub fn bool_values() -> &'static [bool] {
-    &BOOL_VALUES_CELL
+pub fn boolean_values() -> &'static [bool] {
+    &BOOLEAN_VALUES_CELL
 }
 
 impl ScalarType for bool {
-    const PG_TYPE: &'static str = "bool";
+    const PG_TYPE: &'static str = "boolean";
 
     fn fixture_values() -> &'static [Self] {
-        bool_values()
+        boolean_values()
     }
     // `to_sql_literal` inherits the default (`value.to_string()` => `true`/`false`),
     // which is a valid SQL boolean literal, so no override is needed.
@@ -754,7 +754,7 @@ impl ScalarType for bool {
     // other non-integer scalar.
     fn arbitrary_value() -> proptest::strategy::BoxedStrategy<Self> {
         use proptest::strategy::Strategy;
-        proptest::sample::select(bool_values().to_vec()).boxed()
+        proptest::sample::select(boolean_values().to_vec()).boxed()
     }
 }
 
@@ -768,18 +768,18 @@ impl ScalarType for bool {
 mod bool_value_tests {
     use super::*;
 
-    /// The harness value list matches the catalog `BOOL_FIXTURES.values` and carries
+    /// The harness value list matches the catalog `BOOLEAN_FIXTURES.values` and carries
     /// both boolean values — the oracle cannot drift from the catalog the fixture
     /// generator encrypts.
     #[test]
     fn bool_values_match_catalog_and_cover_both() {
-        assert_eq!(bool_values(), &[false, true]);
-        assert!(bool_values().contains(&false));
-        assert!(bool_values().contains(&true));
-        assert_eq!(<bool as ScalarType>::PG_TYPE, "bool");
+        assert_eq!(boolean_values(), &[false, true]);
+        assert!(boolean_values().contains(&false));
+        assert!(boolean_values().contains(&true));
+        assert_eq!(<bool as ScalarType>::PG_TYPE, "boolean");
         assert_eq!(
             <bool as ScalarType>::fixture_table_name(),
-            "fixtures.eql_v3_bool"
+            "fixtures.eql_v3_boolean"
         );
     }
 }
@@ -863,17 +863,17 @@ mod text_value_tests {
     }
 }
 
-// `float4`/`float8` are hand-written (like `text`/`numeric`): the proc-macro
+// `real`/`double` are hand-written (like `text`/`numeric`): the proc-macro
 // emits `impl ScalarType` only for the integer kinds, and `f32`/`f64` are not
 // `Ord` (which `ScalarType` requires), so the newtypes `F4`/`F8` carry `Ord` via
 // `total_cmp`. Both widths encrypt through the SINGLE f64 crypto path
-// (`Plaintext::Float`), so `float4` vs `float8` is purely a Postgres-surface
+// (`Plaintext::Float`), so `real` vs `double` is purely a Postgres-surface
 // distinction. The newtype + trait impls are necessarily per-width (different
 // inner primitive, `PG_TYPE`, pivots, and `as f64` widening), so they are
 // hand-written, but the value materialiser is the kind-agnostic part and reuses
 // the shared `lazy_values!` macro (as `text`/`numeric` do).
 
-/// Harness newtype over `f32` for the `float4` scalar. `f32` is not `Ord`, which
+/// Harness newtype over `f32` for the `real` scalar. `f32` is not `Ord`, which
 /// `ScalarType` requires, so `Ord` is derived from `total_cmp` — safe because NaN
 /// is never a fixture (guarded in `float_value_guards`). `#[sqlx(transparent)]`
 /// delegates `Type`/`Decode` to the inner `f32` against Postgres `real`.
@@ -916,7 +916,7 @@ impl std::fmt::Display for F4 {
     }
 }
 
-/// Harness newtype over `f64` for the `float8` scalar. Same design as `F4`:
+/// Harness newtype over `f64` for the `double` scalar. Same design as `F4`:
 /// `Ord` via `total_cmp`, `#[sqlx(transparent)]` against Postgres
 /// `double precision`, `Default = F8(0.0)`. Like `F4`, the transparent
 /// `sqlx::Type` derive also supplies `Decode`/`Encode`, so they are not derived
@@ -953,40 +953,40 @@ impl std::fmt::Display for F8 {
     }
 }
 
-// `float4`/`float8` value wiring goes through the shared `lazy_values!`
+// `real`/`double` value wiring goes through the shared `lazy_values!`
 // materialiser (the same macro `text`/`numeric` use), parsing the catalog's
 // `Fixture::Float` strings into the newtype. Rust's `str::parse::<f32>` accepts
 // `"inf"`/`"-inf"`/`"nan"`, so the ±Inf pivots parse natively (NaN is excluded by
-// the catalog guards). `float4_values()`/`float8_values()` are public so the
-// `eql_v3_float4`/`eql_v3_float8` fixture modules (emitted by
+// the catalog guards). `real_values()`/`double_values()` are public so the
+// `eql_v3_real`/`eql_v3_double` fixture modules (emitted by
 // `scalar_types!(fixture_modules)`) can hand the slice to `scalar_fixture!`.
 lazy_values! {
-    cell      = FLOAT4_VALUES_CELL,
-    accessor  = float4_values,
+    cell      = REAL_VALUES_CELL,
+    accessor  = real_values,
     rust_type = F4,
-    spec      = eql_domains::FLOAT4_FIXTURES,
+    spec      = eql_domains::REAL_FIXTURES,
     variant   = Float,
-    pg_type   = "float4",
+    pg_type   = "real",
     parse     = |f| match f {
         eql_domains::Fixture::Float(s) => F4(s
             .parse()
-            .unwrap_or_else(|e| panic!("invalid float4 catalog fixture {s:?}: {e}"))),
-        other => panic!("non-float fixture in float4 catalog row: {other:?}"),
+            .unwrap_or_else(|e| panic!("invalid real catalog fixture {s:?}: {e}"))),
+        other => panic!("non-float fixture in real catalog row: {other:?}"),
     },
 }
 
 lazy_values! {
-    cell      = FLOAT8_VALUES_CELL,
-    accessor  = float8_values,
+    cell      = DOUBLE_VALUES_CELL,
+    accessor  = double_values,
     rust_type = F8,
-    spec      = eql_domains::FLOAT8_FIXTURES,
+    spec      = eql_domains::DOUBLE_FIXTURES,
     variant   = Float,
-    pg_type   = "float8",
+    pg_type   = "double",
     parse     = |f| match f {
         eql_domains::Fixture::Float(s) => F8(s
             .parse()
-            .unwrap_or_else(|e| panic!("invalid float8 catalog fixture {s:?}: {e}"))),
-        other => panic!("non-float fixture in float8 catalog row: {other:?}"),
+            .unwrap_or_else(|e| panic!("invalid double catalog fixture {s:?}: {e}"))),
+        other => panic!("non-float fixture in double catalog row: {other:?}"),
     },
 }
 
@@ -1006,10 +1006,10 @@ fn float_sql_literal(x: f64) -> String {
 }
 
 impl ScalarType for F4 {
-    const PG_TYPE: &'static str = "float4";
+    const PG_TYPE: &'static str = "real";
 
     fn fixture_values() -> &'static [Self] {
-        float4_values()
+        real_values()
     }
 
     fn to_sql_literal(value: &Self) -> String {
@@ -1020,7 +1020,7 @@ impl ScalarType for F4 {
         use proptest::strategy::Strategy;
         // Sample the cast-valid fixture set (no NaN/-0.0/non-finite novelty
         // beyond the fixtures). Every value already round-trips through `real`.
-        proptest::sample::select(float4_values().to_vec()).boxed()
+        proptest::sample::select(real_values().to_vec()).boxed()
     }
 }
 
@@ -1037,10 +1037,10 @@ impl SignedScalar for F4 {
 }
 
 impl ScalarType for F8 {
-    const PG_TYPE: &'static str = "float8";
+    const PG_TYPE: &'static str = "double";
 
     fn fixture_values() -> &'static [Self] {
-        float8_values()
+        double_values()
     }
 
     fn to_sql_literal(value: &Self) -> String {
@@ -1049,7 +1049,7 @@ impl ScalarType for F8 {
 
     fn arbitrary_value() -> proptest::strategy::BoxedStrategy<Self> {
         use proptest::strategy::Strategy;
-        proptest::sample::select(float8_values().to_vec()).boxed()
+        proptest::sample::select(double_values().to_vec()).boxed()
     }
 }
 
@@ -1069,10 +1069,10 @@ mod float_value_guards {
     use super::*;
 
     #[test]
-    fn float4_values_match_catalog_and_are_finite_non_negative_zero() {
-        let vals = float4_values();
+    fn real_values_match_catalog_and_are_finite_non_negative_zero() {
+        let vals = real_values();
         // Parsed from the catalog, in order.
-        let want: Vec<F4> = eql_domains::FLOAT4_FIXTURES
+        let want: Vec<F4> = eql_domains::REAL_FIXTURES
             .values
             .iter()
             .map(|f| match f {
@@ -1090,9 +1090,9 @@ mod float_value_guards {
     }
 
     #[test]
-    fn float8_values_match_catalog_and_are_finite_non_negative_zero() {
-        let vals = float8_values();
-        let want: Vec<F8> = eql_domains::FLOAT8_FIXTURES
+    fn double_values_match_catalog_and_are_finite_non_negative_zero() {
+        let vals = double_values();
+        let want: Vec<F8> = eql_domains::DOUBLE_FIXTURES
             .values
             .iter()
             .map(|f| match f {
@@ -1111,13 +1111,13 @@ mod float_value_guards {
     fn float_pivots_and_origin_are_fixtures() {
         // min/max/origin must be present verbatim (fetch_fixture_payload fetches
         // each pivot's ciphertext at test time).
-        assert!(float4_values().contains(&<F4 as OrderedScalar>::min_pivot()));
-        assert!(float4_values().contains(&<F4 as OrderedScalar>::max_pivot()));
-        assert!(float4_values().contains(&<F4 as SignedScalar>::origin()));
+        assert!(real_values().contains(&<F4 as OrderedScalar>::min_pivot()));
+        assert!(real_values().contains(&<F4 as OrderedScalar>::max_pivot()));
+        assert!(real_values().contains(&<F4 as SignedScalar>::origin()));
         assert_eq!(<F4 as SignedScalar>::origin(), F4(0.0));
-        assert!(float8_values().contains(&<F8 as OrderedScalar>::min_pivot()));
-        assert!(float8_values().contains(&<F8 as OrderedScalar>::max_pivot()));
-        assert!(float8_values().contains(&<F8 as SignedScalar>::origin()));
+        assert!(double_values().contains(&<F8 as OrderedScalar>::min_pivot()));
+        assert!(double_values().contains(&<F8 as OrderedScalar>::max_pivot()));
+        assert!(double_values().contains(&<F8 as SignedScalar>::origin()));
         assert_eq!(<F8 as SignedScalar>::origin(), F8(0.0));
     }
 
@@ -1294,7 +1294,7 @@ impl Variant {
 /// Runtime spec built from `(T, Variant)`. The matrix macro consumes
 /// this; nothing here is `const` because `sql_domain` is derived via
 /// `format!` from `T::PG_TYPE`. The domains live in the `eql_v3` schema,
-/// so `sql_domain` is schema-qualified (e.g. `eql_v3.int4_eq`).
+/// so `sql_domain` is schema-qualified (e.g. `eql_v3.integer_eq`).
 #[derive(Debug, Clone)]
 pub struct ScalarDomainSpec {
     pub sql_domain: String,
@@ -1304,7 +1304,7 @@ pub struct ScalarDomainSpec {
     pub placeholder_payload: &'static str,
     pub eq_extractor: fn(&str) -> String,
     pub ord_extractor: fn(&str) -> String,
-    /// The scalar's catalog token (`T::PG_TYPE`, e.g. `"int4"`, `"text"`).
+    /// The scalar's catalog token (`T::PG_TYPE`, e.g. `"integer"`, `"text"`).
     /// Carried so the delegating capability methods can resolve the variant's
     /// terms from `CATALOG` without the call site re-supplying the token.
     pub token: &'static str,
@@ -1592,13 +1592,13 @@ mod seam_tests {
     /// The access-path / extractor seam defaults must reproduce today's scalar
     /// SQL exactly: bare `payload`, `eql_v3.<pg_type><suffix>`, and
     /// `eql_v3.ord_term(...)` for the ordered extractor. A view type that
-    /// overrides these (e.g. `JsonbEntryInt4`) is what makes entry reuse
+    /// overrides these (e.g. `JsonbEntryInteger`) is what makes entry reuse
     /// possible — but the defaults are the no-regression contract.
     #[test]
     fn scalar_defaults_reproduce_today_sql() {
         let spec = ScalarDomainSpec::new::<i32>(Variant::Ord);
         assert_eq!(spec.column_expr, "payload");
-        assert_eq!(spec.sql_domain, "eql_v3.int4_ord");
+        assert_eq!(spec.sql_domain, "eql_v3.integer_ord");
         assert_eq!(
             spec.extractor_expr("value"),
             Some("eql_v3.ord_term(value)".to_string()),
@@ -1617,14 +1617,14 @@ mod seam_tests {
     #[test]
     fn scalar_eq_and_storage_extractor_routes() {
         let eq = ScalarDomainSpec::new::<i32>(Variant::Eq);
-        assert_eq!(eq.sql_domain, "eql_v3.int4_eq");
+        assert_eq!(eq.sql_domain, "eql_v3.integer_eq");
         assert_eq!(
             eq.extractor_expr("value"),
             Some("eql_v3.eq_term(value)".to_string())
         );
 
         let storage = ScalarDomainSpec::new::<i32>(Variant::Storage);
-        assert_eq!(storage.sql_domain, "eql_v3.int4");
+        assert_eq!(storage.sql_domain, "eql_v3.integer");
         assert_eq!(storage.extractor_expr("value"), None);
     }
 }
@@ -1669,8 +1669,8 @@ mod catalog_resolution_tests {
     // matrix now relies on (no DB needed).
 
     #[test]
-    fn combo_extractor_int4_ord_serves_all_ops_via_ord_term() {
-        // int4 `_ord` = [Ore]: every op (eq + the four ord ops) resolves to the
+    fn combo_extractor_integer_ord_serves_all_ops_via_ord_term() {
+        // integer `_ord` = [Ore]: every op (eq + the four ord ops) resolves to the
         // single ord_term extractor, so the combo is single-extractor.
         let spec = ScalarDomainSpec::new::<i32>(Variant::Ord);
         assert_eq!(
@@ -1700,7 +1700,7 @@ mod catalog_resolution_tests {
 
     #[test]
     fn combo_extractor_errors_on_unsupported_op() {
-        // `@>` is not served by any extractor on int4 `_eq` ([Hm]).
+        // `@>` is not served by any extractor on integer `_eq` ([Hm]).
         let spec = ScalarDomainSpec::new::<i32>(Variant::Eq);
         assert!(combo_extractor(&spec, &["@>"]).is_err());
     }
@@ -1798,19 +1798,19 @@ mod oracle_inventory_tests {
         assert_eq!(
             ordered,
             vec![
-                "int4",
-                "int2",
-                "int8",
+                "integer",
+                "smallint",
+                "bigint",
                 "date",
                 "timestamp",
                 "numeric",
                 "text",
-                "float4",
-                "float8"
+                "real",
+                "double"
             ],
         );
         // bool is storage-only: no ordered domain, so it is excluded.
-        assert!(!ordered.contains(&"bool"));
+        assert!(!ordered.contains(&"boolean"));
     }
 
     /// Drift guard: the ordered-scalar set below is the EXACT list that must
@@ -1834,15 +1834,15 @@ mod oracle_inventory_tests {
         assert_eq!(
             ordered,
             vec![
-                "int4",
-                "int2",
-                "int8",
+                "integer",
+                "smallint",
+                "bigint",
                 "date",
                 "timestamp",
                 "numeric",
                 "text",
-                "float4",
-                "float8"
+                "real",
+                "double"
             ],
             "a new ordered scalar must be wired into BOTH oracle suites \
              (fixture_oracle.rs and e2e_oracle.rs)"
