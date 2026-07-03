@@ -1,6 +1,6 @@
 # Adding a Scalar Encrypted-Domain Type
 
-The one reference for adding a scalar encrypted-domain type (`int4`, `int2`,
+The one reference for adding a scalar encrypted-domain type (`integer`, `smallint`,
 and future ordered numeric scalars). The **top half** (§§1–4) is the path you
 follow to add a type; the **reference half** (§§5–8) is the detail behind it —
 the generated surface, its invariants, and how the generator itself works.
@@ -22,8 +22,8 @@ The whole SQL surface is **generated** from a single Rust source of truth: the
 rendered by the [`eql-codegen`](../../crates/eql-codegen/) crate. There is no
 TOML manifest and no Python — adding a type is adding one `DomainFamily` row,
 validated by the compiler plus catalog `#[test]`s. The reference type is
-`eql_v3.int4`; `eql_v3.text` is the worked non-integer example (ordered +
-equality + a `match` capability via the `Bloom` term); `eql_v3.bool` is the
+`eql_v3.integer`; `eql_v3.text` is the worked non-integer example (ordered +
+equality + a `match` capability via the `Bloom` term); `eql_v3.boolean` is the
 worked **storage-only / encryption-only** example (a single term-less domain, no
 searchable surface — see §8). **`jsonb` remains out of scope** for this
 materializer (see §7).
@@ -32,7 +32,7 @@ materializer (see §7).
 
 ## 1. TL;DR — the one path
 
-To add a scalar type `<T>` (e.g. `int8`), with Rust type `<R>` (e.g. `i64`):
+To add a scalar type `<T>` (e.g. `bigint`), with Rust type `<R>` (e.g. `i64`):
 
 1. **Add a `DomainFamily` row to `eql_domains::CATALOG`** — just `name` +
    `domains` — plus a matching `TypeFixtures` record (carrying the `kind` and the
@@ -43,7 +43,7 @@ To add a scalar type `<T>` (e.g. `int8`), with Rust type `<R>` (e.g. `i64`):
    next to `CATALOG`, pinned by a `values_tests` assertion (§2). This is the
    single source the SQLx matrix reads; there is no generated `<T>_values.rs`.
 3. **Wire the SQLx matrix oracle** — for an integer type, copy the two small
-   registrations from the `int4` reference; a non-integer (string-backed) type
+   registrations from the `integer` reference; a non-integer (string-backed) type
    needs a third (`scalar_domains.rs`), and `date`/`text` are the references
    there (§3).
 4. **Regenerate** — `cargo run -p eql-codegen` (or just `mise run build`, which
@@ -98,7 +98,7 @@ with a `TypeFixtures` record in
 ```rust
 // The structural catalog row — name + domains only:
 const INT4: DomainFamily = DomainFamily {
-    name: "int4",
+    name: "integer",
     domains: ORDERED_INT_DOMAINS, // storage, _eq (hm), _ord_ore (ore), _ord (ore)
 };
 
@@ -120,7 +120,7 @@ block in `record.rs` enforces the 1:1 — every `CATALOG` row has exactly one
 `TypeFixtures` (same order) carrying the right `kind`. All are otherwise enforced
 by the type system and the catalog `#[test]`s rather than a runtime validator:
 
-- **`name`** (on `DomainFamily`) — the type name (`int4`); supplies `<T>`
+- **`name`** (on `DomainFamily`) — the type name (`integer`); supplies `<T>`
   everywhere. Each domain's full name is the family `name` + `_` + the domain
   `name` (`DomainFamily::domain_name`); codegen owns the `_` join
   (`Domain::full_name`), and an empty domain `name` yields the bare family name.
@@ -177,7 +177,7 @@ the catalog by the codegen renderer (the `nonempty_array_keys` field on
 `Term::nonempty_array_key()` — `Some("ob")` only for `Term::Ore`), not
 hand-added — a new ordered scalar gets it for free.
 
-**Twins.** `int4_ord` and `int4_ord_ore` both carry `&[Term::Ore]`. The
+**Twins.** `integer_ord` and `integer_ord_ore` both carry `&[Term::Ore]`. The
 generator emits them as independent domains with byte-identical SQL modulo type
 name (`ordered_files_byte_identical_modulo_typename`). Twins let callers choose
 a name that documents intent ("ordered, regardless of mechanism" vs "ordered via
@@ -196,7 +196,7 @@ for the type's plaintext list, consumed by both the SQLx fixture generator and
 the matrix oracle. A `Fixture` is value-kind tagged: `Min` / `Max` / `Zero` (the
 integer matrix pivots, resolved per-kind), `Int(i128)` (an integer literal), and
 `Numeric` / `Text` / `Jsonb` / `Date` / `Timestamp` / `Float` string variants
-(plus a `Bool` variant for the storage-only `bool` scalar). The
+(plus a `Bool` variant for the storage-only `boolean` scalar). The
 `fixtures!` macro
 range-checks each `Int` literal against the kind at compile time (`N(-40000)`
 for an `i16` kind does not compile):
@@ -307,16 +307,16 @@ three divergences (for the ordered `date`):
 
 The generated SQL is enough to *install* the domains, but the
 `scalar_matrix!` suite only runs once the Rust harness knows about the
-scalar. `<R>` is the scalar's Rust type (`i32` for `int4`, `i16` for `int2`).
+scalar. `<R>` is the scalar's Rust type (`i32` for `integer`, `i16` for `smallint`).
 The registrations depend on whether `<R>` is an **integer** kind. For an
-integer type (the `int4` reference) there are **two**; a **non-integer
+integer type (the `integer` reference) there are **two**; a **non-integer
 (string-backed)** type — `date`, `timestamp`, `text` — needs a **third**
 (`scalar_domains.rs`), because the proc-macro emits `impl ScalarType` only for
 integer kinds:
 
 | File | Add |
 |------|-----|
-| `tests/sqlx/src/scalar_types.rs` | One `<T> => <R>` line in the `scalar_types!` list (e.g. `int8 => i64,`). This single line drives the `impl ScalarType` **(integer kinds only)**, the `eql_v3_<T>` fixture module, the `scalar_matrix!` suite, and the `generate_for_token` arm — all generated by the `eql-tests-macros` proc-macros. |
+| `tests/sqlx/src/scalar_types.rs` | One `<T> => <R>` line in the `scalar_types!` list (e.g. `bigint => i64,`). This single line drives the `impl ScalarType` **(integer kinds only)**, the `eql_v3_<T>` fixture module, the `scalar_matrix!` suite, and the `generate_for_token` arm — all generated by the `eql-tests-macros` proc-macros. |
 | `tests/sqlx/src/fixtures/eql_plaintext.rs` | A sealed `EqlPlaintext` impl for `<R>`: `impl Sealed for <R> {}` and `impl EqlPlaintext for <R>` carrying just `const KIND: ScalarKind` plus the value-typed `to_plaintext` → the right `Plaintext` variant. `CAST` and `PLAINTEXT_SQL_TYPE` are **derived** from `KIND` via the `cast_for_kind` / `plaintext_sql_type_for_kind` `const fn` defaults, so a brand-new kind needs an arm in those two helpers — not a per-type const (see §3.1 for a non-integer kind's full wiring). Keep the three `#[test]`s (cast / sql-type / to_plaintext) mirroring the existing ones. |
 | `tests/sqlx/src/scalar_domains.rs` **(non-integer only)** | The `impl ScalarType` the proc-macro skips for non-integer kinds. For a **chrono-backed** kind (`date`, `timestamp`) this is a `temporal_values!` invocation that materialises the catalog ISO/RFC3339 strings into a `LazyLock<Vec<_>>` and emits `impl ScalarType` + `OrderedScalar` (+ `SignedScalar` for `date` and `timestamp`). For **`text`** it is a hand-written `impl ScalarType` / `OrderedScalar` block (an overridden lexicographic-median `mid_pivot()` — `min`/`max` inherit the fixture-derived defaults — plus a `to_sql_literal` override) — `String` has no numeric origin, so it is deliberately **not** `SignedScalar`. |
 
@@ -354,18 +354,18 @@ surface leaf drivers directly (§8). **You never write `caps`**: the
 (no `_eq`/`_ord`) → `[storage]`, checked first; then `is_eq_only` (no `_ord`) →
 `[eq]`; then `has_search` → `[eq, ord, search]`; else `[eq, ord]`. So the shape
 is a pure function of which domain-suffix slice the catalog row uses —
-`STORAGE_ONLY_DOMAINS` (→ `[storage]`, e.g. `bool`), `EQ_ONLY_DOMAINS` (→ `[eq]`,
+`STORAGE_ONLY_DOMAINS` (→ `[storage]`, e.g. `boolean`), `EQ_ONLY_DOMAINS` (→ `[eq]`,
 no live catalog type today) vs `ORDERED_INT_DOMAINS` (→ `[eq, ord]`). (`EQ_ONLY_DOMAINS`
 is currently unused — `timestamp` was promoted to the ordered shape once the ORE
 comparator generalized to N blocks.) The pivot *sweep* is uniform
 across every ordered type (one canonical snapshot); the signed-only sign-boundary
-test (`SignedScalar`, `int2`/`int4`/`int8`/`date`/`timestamp`/`float4`/`float8`) lives outside `scalars::` in
+test (`SignedScalar`, `smallint`/`integer`/`bigint`/`date`/`timestamp`/`real`/`double`) lives outside `scalars::` in
 `encrypted_domain/signed.rs`, so a `text` instantiation of it is a compile error
 and it never enters the inventory snapshot. The `matrix.rs` module header is the
 canonical,
 current list of the categories the matrix emits (sanity, correctness,
 cross-shape, supported-NULL, blocker raises, index engagement, ORDER BY, ORDER
-BY USING) — read it rather than duplicating a count here. For ordered `int4`,
+BY USING) — read it rather than duplicating a count here. For ordered `integer`,
 keep the assertion that distinct plaintext values produce distinct ORE blocks;
 do not add assertions for term behaviour the catalog does not promise.
 
@@ -449,7 +449,7 @@ ordered `caps = [eq, ord]` shape); alongside it are `matrix_tests_eq_only.txt`
 (the eq-only shape, *derived* from the baseline minus the `_ord`/`order_by`/
 `routes_through_ob` lines), `matrix_tests_text.txt` (the text shape, a *superset*
 of the baseline adding the `_search`/`_eqidx`/`_match` arms), and
-`matrix_tests_storage_only.txt` (the storage-only shape, e.g. `bool` — see §8).
+`matrix_tests_storage_only.txt` (the storage-only shape, e.g. `boolean` — see §8).
 (The per-type `<T>_matrix_tests.txt` files are
 gone: they were byte-identical modulo the token, so the shape snapshots plus a
 per-type normalize-and-compare carry the same signal at a fraction of the
@@ -630,7 +630,7 @@ is always 44.
 
 **Untyped-literal resolver edge.** PostgreSQL's operator resolver still prefers
 the built-in `jsonb` operator for untyped string literals in forms such as
-`payload::eql_v3.int4 ? 'c'`. Use typed parameters or explicit casts
+`payload::eql_v3.integer ? 'c'`. Use typed parameters or explicit casts
 (`? 'c'::text`, bound text parameters) to route those forms to the generated
 blocker. A live-DB structural guard
 (`tests/sqlx/tests/encrypted_domain/family/jsonb_operator_surface.rs`) queries
@@ -678,7 +678,7 @@ lists, headers, or cleans it; it must declare its own `-- REQUIRE:` edges
 (usually to `<T>_types.sql` and whichever generated function or operator file it
 extends). Use it for cross-domain casts, helper functions, or type-specific
 constraints. Unlike the generated siblings, **`<T>_extensions.sql` IS
-committed.** (Neither `int4` nor `int2` ships one today.)
+committed.** (Neither `integer` nor `smallint` ships one today.)
 
 `tasks/pin_search_path_v3.sql` describes the fallback marker for inline-critical
 extension functions that take no domain argument and so escape the structural
@@ -746,7 +746,7 @@ adding a type.
 
 ### Why a generator
 
-A single scalar type emits several hundred SQL declarations. For `int4`: eleven
+A single scalar type emits several hundred SQL declarations. For `integer`: eleven
 files, four domains, three extractors, dozens of wrappers and blockers, 176
 `CREATE OPERATOR` statements (44 per domain), and MIN/MAX aggregates per ordered
 domain. (The per-domain figure is fixed — 44 `CREATE OPERATOR` statements per domain, the `1 + 2D +
@@ -822,7 +822,7 @@ output for every catalog type from scratch.
 ### Generated outputs
 
 For a type with `D` domains of which `A` are ordered, the generator writes `1 +
-2D + A` SQL files into `src/v3/scalars/<token>/`. For `int4` (`D = 4`, `A =
+2D + A` SQL files into `src/v3/scalars/<token>/`. For `integer` (`D = 4`, `A =
 2`): eleven SQL files. The outputs are committed in place under
 `src/v3/scalars/<token>/` and regenerated at the start of every build (commit the
 regenerated SQL diff alongside any catalog change).
@@ -918,13 +918,13 @@ materializer.
 
 ---
 
-## 8. `bool` — the storage-only / encryption-only shape
+## 8. `boolean` — the storage-only / encryption-only shape
 
-`bool` is the worked example of a **storage-only** (encryption-only) scalar: the
+`boolean` is the worked example of a **storage-only** (encryption-only) scalar: the
 value is encrypted at rest and decrypted by the proxy, but is **never searchable
 server-side**. It is the smallest shape — strictly below eq-only — because a
 two-value column has so little cardinality that *any* searchable index (even
-HMAC equality) would trivially leak the plaintext distribution. So `bool`
+HMAC equality) would trivially leak the plaintext distribution. So `boolean`
 deliberately offers no search surface at all.
 
 What makes it storage-only:
@@ -950,12 +950,12 @@ What makes it storage-only:
   `scalar_fixture!(storage, …)` arm stamps this and asserts both values are
   present and no index is declared.
 - **Harness: hand-written `impl ScalarType`, NOT `OrderedScalar`.** The
-  proc-macro emits `impl ScalarType` only for integer kinds, so `bool` is
+  proc-macro emits `impl ScalarType` only for integer kinds, so `boolean` is
   hand-written in `scalar_domains.rs` (`PG_TYPE = "bool"`, `fixture_values()` =
   `[false, true]` from the catalog). It is deliberately **not** `OrderedScalar`,
   `SignedScalar`, or `MatchScalar` — it has no comparison pivots, sign boundary,
   or match capability, so any ordered/signed/match-bounded test instantiated for
-  `bool` is a compile error.
+  `boolean` is a compile error.
 - **Matrix: `caps = [storage]`.** Because there are no comparison/index/order
   categories to run, the `[storage]` arm does **not** expand
   `scalar_domain_matrix!` (whose `+`-arity transcribers reject the empty
