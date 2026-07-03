@@ -409,8 +409,11 @@ pub const JSONB: DomainFamily = DomainFamily {
     domains: JSONB_DOMAINS,
 };
 
-/// The scalar catalog — the single source of truth. Order is significant (it
-/// drives generation order). New types are appended as their SQL surface lands.
+/// The domain-family catalog — the single source of truth. Includes both the
+/// scalar (flat) families and the non-scalar SteVec `jsonb` family; scalar-only
+/// consumers should iterate [`scalar_families`] instead. Order is significant
+/// (it drives inventory/generation order). New types are appended as their SQL
+/// surface lands.
 pub const CATALOG: &[DomainFamily] = &[
     INTEGER, SMALLINT, BIGINT, DATE, TIMESTAMP, NUMERIC, TEXT, BOOLEAN, REAL, DOUBLE, JSONB,
 ];

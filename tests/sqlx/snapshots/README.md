@@ -249,7 +249,7 @@ all three (non-blocking: nightly-only, off the PR critical path).
 Exhaustive snapshot of every object visible in the **public** `eql_v3` schema:
 domains/composites/enums, functions, aggregates, operators, and casts, each
 rendered as a normalized, schema-qualified line and `LC_ALL=C`-sorted. Owned by
-`tests/v3_public_surface_tests.rs::eql_v3_public_surface_matches_golden`, it pins
+`tests/sqlx/tests/v3_public_surface_tests.rs::eql_v3_public_surface_matches_golden`, it pins
 *what the split puts in the public API* — the point of the `eql_v3` /
 `eql_v3_internal` split is to keep index-term-only types out of what a Supabase
 Studio user sees, and nothing else in the suite gates that. Any object
