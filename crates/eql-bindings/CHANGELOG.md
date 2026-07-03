@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-07-03
+
+### Added
+
+- `QueryPayload` — a hand-written enum spanning every v3 QUERY payload shape.
+  Today that is exactly one variant: `SteVec(SteVecQuery)`, the jsonb
+  containment needle. The single-term scalar query variants (an Ore / Ope /
+  Bloom / Hm term value) are deliberately absent until the eql-mapper
+  redesign defines a v3 scalar-query wire shape — fail-closed, no invented
+  shapes. Serialize-only (`#[serde(untagged)]` — the wire form is exactly the
+  inner type's) and constructed only from a known domain
+  (`QueryPayload::parse`), never inferred from bytes. No ts-rs/schemars
+  derives: the enum adds no wire shape of its own, so the exported TS /
+  JSON-Schema artifacts are unchanged.
+- `from_v2_query_typed(&Value, TargetDomain) -> Result<QueryPayload,
+  FromV2Error>` — the typed counterpart to `from_v2_query`, sharing its
+  conversion core and performing the single strict parse as parse-and-keep
+  instead of validate-and-discard. `from_v2_query -> Value` is unchanged, and
+  scalar targets still fail with `UnsupportedQueryTarget` on both entry
+  points.
+
 ## [0.3.0] - 2026-07-03
 
 ### Added
