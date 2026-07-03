@@ -370,9 +370,9 @@ mod tests {
 
     #[test]
     fn functions_render_supported_wrappers_and_unsupported_entries_from_catalog() {
-        let s = spec("int4");
+        let s = spec("integer");
         let d = domain(s, "eq");
-        let sql = render_functions_file("int4", d);
+        let sql = render_functions_file("integer", d);
         // Supported wrapper (`=`) is PUBLIC; unsupported ops (`<`, `->` on an
         // equality-only domain) stay as internal blockers.
         assert!(sql.contains("CREATE FUNCTION eql_v3.eq("));
@@ -386,22 +386,22 @@ mod tests {
     #[test]
     fn generate_type_writes_expected_files() {
         let d = crate::writer::test_support::tempdir();
-        let s = spec("int4");
-        let out = d.path().join("int4");
+        let s = spec("integer");
+        let out = d.path().join("integer");
         let written = generate_type(s, &out).unwrap();
         let names: Vec<String> = written
             .iter()
             .map(|p| p.file_name().unwrap().to_str().unwrap().to_string())
             .collect();
-        assert!(names.contains(&"int4_types.sql".to_string()));
-        for dom in ["int4", "int4_eq", "int4_ord_ore", "int4_ord"] {
+        assert!(names.contains(&"integer_types.sql".to_string()));
+        for dom in ["integer", "integer_eq", "integer_ord_ore", "integer_ord"] {
             assert!(names.contains(&format!("{dom}_functions.sql")));
             assert!(names.contains(&format!("{dom}_operators.sql")));
         }
-        assert!(!names.contains(&"int4_aggregates.sql".to_string()));
-        assert!(!names.contains(&"int4_eq_aggregates.sql".to_string()));
-        assert!(names.contains(&"int4_ord_ore_aggregates.sql".to_string()));
-        assert!(names.contains(&"int4_ord_aggregates.sql".to_string()));
+        assert!(!names.contains(&"integer_aggregates.sql".to_string()));
+        assert!(!names.contains(&"integer_eq_aggregates.sql".to_string()));
+        assert!(names.contains(&"integer_ord_ore_aggregates.sql".to_string()));
+        assert!(names.contains(&"integer_ord_aggregates.sql".to_string()));
         assert_eq!(written.len(), 11);
         for p in &written {
             assert!(fs::read_to_string(p)
@@ -413,13 +413,13 @@ mod tests {
     #[test]
     fn generate_type_prunes_orphaned_generated_files() {
         // A generated file for a domain no longer produced (here: a stale
-        // `int4_gone_functions.sql`) is pruned by the trailing orphan sweep, while
+        // `integer_gone_functions.sql`) is pruned by the trailing orphan sweep, while
         // a hand-written file with no marker survives.
         let d = crate::writer::test_support::tempdir();
-        let out = d.path().join("int4");
+        let out = d.path().join("integer");
         fs::create_dir_all(&out).unwrap();
-        let orphan = out.join("int4_gone_functions.sql");
-        let hand = out.join("int4_extensions.sql");
+        let orphan = out.join("integer_gone_functions.sql");
+        let hand = out.join("integer_extensions.sql");
         fs::write(
             &orphan,
             format!("{}\nSELECT 1;\n", crate::consts::AUTO_GENERATED_MARKER),
@@ -427,11 +427,14 @@ mod tests {
         .unwrap();
         fs::write(&hand, "-- REQUIRE: src/v3/schema.sql\n-- hand-written\n").unwrap();
 
-        generate_type(spec("int4"), &out).unwrap();
+        generate_type(spec("integer"), &out).unwrap();
 
         assert!(!orphan.exists(), "stale generated file must be pruned");
         assert!(hand.exists(), "hand-written file must survive the sweep");
-        assert!(out.join("int4_types.sql").exists(), "current files written");
+        assert!(
+            out.join("integer_types.sql").exists(),
+            "current files written"
+        );
     }
 
     #[cfg(unix)]
@@ -443,11 +446,11 @@ mod tests {
         // survive untouched — the destructive orphan sweep never ran.
         use std::os::unix::fs::PermissionsExt;
         let d = crate::writer::test_support::tempdir();
-        let out = d.path().join("int4");
+        let out = d.path().join("integer");
         fs::create_dir_all(&out).unwrap();
         let marker = crate::consts::AUTO_GENERATED_MARKER;
-        let types = out.join("int4_types.sql");
-        let orphan = out.join("int4_gone_functions.sql");
+        let types = out.join("integer_types.sql");
+        let orphan = out.join("integer_gone_functions.sql");
         let old = format!("{marker}\n-- OLD\n");
         fs::write(&types, &old).unwrap();
         fs::write(&orphan, format!("{marker}\nSELECT 1;\n")).unwrap();
@@ -456,7 +459,7 @@ mod tests {
         perms.set_mode(0o555);
         fs::set_permissions(&out, perms).unwrap();
 
-        let err = generate_type(spec("int4"), &out).unwrap_err();
+        let err = generate_type(spec("integer"), &out).unwrap_err();
 
         let mut perms = fs::metadata(&out).unwrap().permissions();
         perms.set_mode(0o755);
@@ -504,7 +507,7 @@ mod tests {
         );
         assert!(
             root.join(V3_SCALARS_DIR)
-                .join("int4/int4_types.sql")
+                .join("integer/integer_types.sql")
                 .exists(),
             "catalog types are generated"
         );
@@ -528,7 +531,7 @@ mod tests {
         // it could reach it.
         let outside = d.path().join("outside-target");
         fs::create_dir_all(&outside).unwrap();
-        let victim = outside.join("int4_types.sql");
+        let victim = outside.join("integer_types.sql");
         fs::write(
             &victim,
             format!("{}\nSELECT 1;\n", crate::consts::AUTO_GENERATED_MARKER),
@@ -548,9 +551,9 @@ mod tests {
 
     #[test]
     fn types_file_has_all_four_domains() {
-        let sql = render_types_file(spec("int4"));
+        let sql = render_types_file(spec("integer"));
         assert!(sql.contains("-- REQUIRE: src/v3/schema.sql"));
-        for dom in ["int4", "int4_eq", "int4_ord_ore", "int4_ord"] {
+        for dom in ["integer", "integer_eq", "integer_ord_ore", "integer_ord"] {
             assert!(
                 sql.contains(&format!("CREATE DOMAIN eql_v3.{dom} AS jsonb")),
                 "missing {dom}"
@@ -561,20 +564,20 @@ mod tests {
     /// The non-empty-`ob` CHECK (issue #262) is emitted only on ORE-bearing
     /// domains. An empty ORE term (`ob: []`) is what encrypting the empty string
     /// into an ordered column produces; the constraint rejects it at the domain
-    /// boundary. Storage-only (`int4`) and equality-only (`int4_eq`) domains carry
+    /// boundary. Storage-only (`integer`) and equality-only (`integer_eq`) domains carry
     /// no `ob`, so they must NOT gain the clause.
     #[test]
     fn ore_bearing_domains_reject_empty_ob() {
         // Per-domain assertion: a domain's CREATE block carries the clause iff it
         // is ORE-bearing. Slice each domain's CHECK out of the rendered file so a
         // clause on the wrong domain cannot pass via whole-file `contains`.
-        let sql = render_types_file(spec("int4"));
+        let sql = render_types_file(spec("integer"));
         let clause = "jsonb_array_length(VALUE -> 'ob') > 0";
         for (dom, expected) in [
-            ("int4", false),
-            ("int4_eq", false),
-            ("int4_ord", true),
-            ("int4_ord_ore", true),
+            ("integer", false),
+            ("integer_eq", false),
+            ("integer_ord", true),
+            ("integer_ord_ore", true),
         ] {
             let head = format!("CREATE DOMAIN eql_v3.{dom} AS jsonb");
             let start = sql.find(&head).unwrap_or_else(|| panic!("missing {dom}"));
@@ -591,7 +594,7 @@ mod tests {
 
     #[test]
     fn storage_functions_file_is_all_blockers() {
-        let s = spec("int4");
+        let s = spec("integer");
         let sql = render_functions_file(s.name, domain(s, ""));
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 44);
         assert!(!sql.contains("SET search_path"));
@@ -605,10 +608,10 @@ mod tests {
 
     #[test]
     fn eq_functions_file_counts() {
-        let s = spec("int4");
+        let s = spec("integer");
         let sql = render_functions_file(s.name, domain(s, "eq"));
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
-        assert!(sql.contains("CREATE FUNCTION eql_v3.eq_term(a eql_v3.int4_eq)"));
+        assert!(sql.contains("CREATE FUNCTION eql_v3.eq_term(a eql_v3.integer_eq)"));
         assert!(sql.contains("RETURNS eql_v3_internal.hmac_256"));
         assert_eq!(
             sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
@@ -621,10 +624,10 @@ mod tests {
 
     #[test]
     fn ore_functions_file_counts() {
-        let s = spec("int4");
+        let s = spec("integer");
         let sql = render_functions_file(s.name, domain(s, "ord"));
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
-        assert!(sql.contains("CREATE FUNCTION eql_v3.ord_term(a eql_v3.int4_ord)"));
+        assert!(sql.contains("CREATE FUNCTION eql_v3.ord_term(a eql_v3.integer_ord)"));
         assert!(sql.contains("RETURNS eql_v3_internal.ore_block_256"));
         assert_eq!(
             sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
@@ -636,7 +639,7 @@ mod tests {
 
     #[test]
     fn operators_file_has_forty_four() {
-        let s = spec("int4");
+        let s = spec("integer");
         let sql = render_operators_file(s.name, domain(s, "eq"));
         assert_eq!(sql.matches("CREATE OPERATOR").count(), 44);
     }
@@ -647,9 +650,9 @@ mod tests {
         // SUPPORTED operator's backing function is PUBLIC (`eql_v3.<wrapper>`)
         // so it is callable by name without the operator; a BLOCKED operator's
         // backing function stays internal (`eql_v3_internal.<blocker>`).
-        let s = spec("int4");
+        let s = spec("integer");
         let eq_sql = render_operators_file(s.name, domain(s, "eq"));
-        // `=` is supported on int4_eq → public wrapper.
+        // `=` is supported on integer_eq → public wrapper.
         assert!(eq_sql.contains("FUNCTION = eql_v3.eq,"));
         // `<` is unsupported on the equality-only domain → internal blocker.
         assert!(eq_sql.contains("FUNCTION = eql_v3_internal.lt,"));
@@ -674,7 +677,7 @@ mod tests {
 
     #[test]
     fn aggregates_file_only_for_ord_variants() {
-        let s = spec("int4");
+        let s = spec("integer");
         assert!(render_aggregates_file(s.name, domain(s, "")).is_none());
         assert!(render_aggregates_file(s.name, domain(s, "eq")).is_none());
         assert!(render_aggregates_file(s.name, domain(s, "ord")).is_some());
@@ -683,23 +686,26 @@ mod tests {
 
     #[test]
     fn aggregates_file_carries_min_and_max_and_requires() {
-        let s = spec("int4");
+        let s = spec("integer");
         let sql = render_aggregates_file(s.name, domain(s, "ord")).unwrap();
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 2);
         assert_eq!(sql.matches("CREATE AGGREGATE").count(), 2);
         assert!(sql.contains("eql_v3_internal.min_sfunc"));
         assert!(sql.contains("eql_v3_internal.max_sfunc"));
-        assert!(sql.contains("-- REQUIRE: src/v3/scalars/int4/int4_ord_operators.sql"));
-        assert!(sql.contains("-- REQUIRE: src/v3/scalars/int4/int4_ord_functions.sql"));
-        assert!(sql.contains("-- REQUIRE: src/v3/scalars/int4/int4_types.sql"));
+        assert!(sql.contains("-- REQUIRE: src/v3/scalars/integer/integer_ord_operators.sql"));
+        assert!(sql.contains("-- REQUIRE: src/v3/scalars/integer/integer_ord_functions.sql"));
+        assert!(sql.contains("-- REQUIRE: src/v3/scalars/integer/integer_types.sql"));
     }
 
     #[test]
     fn ordered_files_byte_identical_modulo_typename() {
-        let s = spec("int4");
+        let s = spec("integer");
         let ord = domain(s, "ord");
         let ore = domain(s, "ord_ore");
-        let norm = |sql: String| sql.replace("int4_ord_ore", "T").replace("int4_ord", "T");
+        let norm = |sql: String| {
+            sql.replace("integer_ord_ore", "T")
+                .replace("integer_ord", "T")
+        };
         assert_eq!(
             norm(render_functions_file(s.name, ord)),
             norm(render_functions_file(s.name, ore))
@@ -718,9 +724,9 @@ mod tests {
 
     #[test]
     fn blockers_are_never_strict_and_always_plpgsql() {
-        let s = spec("int4");
+        let s = spec("integer");
         // Storage domain functions file is all blockers.
-        let sql = render_functions_file("int4", domain(s, ""));
+        let sql = render_functions_file("integer", domain(s, ""));
         // Every CREATE FUNCTION here is a blocker: none may be STRICT, all plpgsql.
         assert!(!sql.contains("STRICT"), "blocker marked STRICT");
         assert_eq!(
@@ -732,10 +738,10 @@ mod tests {
 
     #[test]
     fn inlinable_functions_have_no_set_search_path() {
-        let s = spec("int4");
+        let s = spec("integer");
         // Extractors and wrappers (eq/ord functions files) are inlinable SQL.
         for name in ["eq", "ord"] {
-            let sql = render_functions_file("int4", domain(s, name));
+            let sql = render_functions_file("integer", domain(s, name));
             // Inlinable rows are the LANGUAGE sql ones; none may pin search_path.
             for block in sql.split("CREATE FUNCTION").skip(1) {
                 if block.contains("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE") {
@@ -750,8 +756,8 @@ mod tests {
 
     #[test]
     fn aggregate_state_functions_are_plpgsql_not_inlinable() {
-        let s = spec("int4");
-        let sql = render_aggregates_file("int4", domain(s, "ord")).unwrap();
+        let s = spec("integer");
+        let sql = render_aggregates_file("integer", domain(s, "ord")).unwrap();
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 2);
         assert_eq!(
             sql.matches("LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE")
@@ -767,9 +773,9 @@ mod tests {
 
     #[test]
     fn generated_function_like_docs_keep_required_tags() {
-        let s = spec("int4");
+        let s = spec("integer");
         for d in s.domains {
-            let sql = render_functions_file("int4", d);
+            let sql = render_functions_file("integer", d);
             let functions = sql.matches("CREATE FUNCTION").count();
             assert_eq!(sql.matches("--! @return").count(), functions);
             assert!(
@@ -782,7 +788,7 @@ mod tests {
             );
         }
 
-        let sql = render_aggregates_file("int4", domain(s, "ord")).unwrap();
+        let sql = render_aggregates_file("integer", domain(s, "ord")).unwrap();
         let function_like =
             sql.matches("CREATE FUNCTION").count() + sql.matches("CREATE AGGREGATE").count();
         assert_eq!(sql.matches("--! @return").count(), function_like);
@@ -827,15 +833,15 @@ mod tests {
         use crate::context::domain_block;
         use eql_domains::{Domain, Shape};
         let block = domain_block(
-            "int4",
+            "integer",
             &Domain {
                 name: "q",
                 terms: &[],
                 shape: Shape::Scalar,
             },
         );
-        assert_eq!(block.typname, "int4_q"); // no quote present → unchanged
-                                             // keys are sql_str-escaped key tokens; none should carry a bare unescaped quote.
+        assert_eq!(block.typname, "integer_q"); // no quote present → unchanged
+                                                // keys are sql_str-escaped key tokens; none should carry a bare unescaped quote.
         assert!(block.keys.iter().all(|k| !k.contains("o'")));
     }
 }

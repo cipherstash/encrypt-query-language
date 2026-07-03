@@ -38,7 +38,8 @@ const EQ_QUERY: &str = "SELECT count(*) FROM fixtures.eql_v3_integer \
 /// NOT work here — a bare domain has no ORE opclass, so it silently falls back to
 /// built-in jsonb ordering and never crosses into `eql_v3_internal`. The `<`
 /// operator is what genuinely exercises the encrypted ordering path.
-const ORD_QUERY: &str = "SELECT count(*) FROM fixtures.eql_v3_integer a, fixtures.eql_v3_integer b \
+const ORD_QUERY: &str =
+    "SELECT count(*) FROM fixtures.eql_v3_integer a, fixtures.eql_v3_integer b \
      WHERE a.payload::eql_v3.integer_ord < b.payload::eql_v3.integer_ord";
 
 /// A real aggregate (`eql_v3.min` on `integer_ord`). The public aggregate dispatches

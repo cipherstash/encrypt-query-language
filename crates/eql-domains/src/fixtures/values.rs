@@ -4,7 +4,9 @@
 //! generator encrypts. No committed generated `.rs` round-trip.
 
 use super::fixture::Fixture;
-use super::record::{TypeFixtures, SMALLINT_FIXTURES, INTEGER_FIXTURES, BIGINT_FIXTURES, TEXT_FIXTURES};
+use super::record::{
+    TypeFixtures, BIGINT_FIXTURES, INTEGER_FIXTURES, SMALLINT_FIXTURES, TEXT_FIXTURES,
+};
 
 /// Materialise an integer record's fixtures into a typed `&'static` slice at
 /// compile time. Integer kinds only: a non-numeric fixture is a const-eval

@@ -1007,6 +1007,12 @@ fn float_sql_literal(x: f64) -> String {
 
 impl ScalarType for F4 {
     const PG_TYPE: &'static str = "real";
+    // `real` happens to be a valid native SQL type, but derive the oracle column
+    // type from `EqlPlaintext` anyway (symmetric with F8) so the mapping is
+    // explicit rather than relying on the domain token coinciding with a native
+    // type name.
+    const PLAINTEXT_SQL_TYPE: &'static str =
+        <F4 as crate::fixtures::EqlPlaintext>::PLAINTEXT_SQL_TYPE.as_str();
 
     fn fixture_values() -> &'static [Self] {
         real_values()
@@ -1038,6 +1044,13 @@ impl SignedScalar for F4 {
 
 impl ScalarType for F8 {
     const PG_TYPE: &'static str = "double";
+    // The domain token `double` is NOT a valid native SQL type name (that is
+    // `double precision`), so the plaintext oracle column cannot default to
+    // `PG_TYPE`. Derive it from `EqlPlaintext` (the `ScalarKind`-keyed source of
+    // truth) so it stays `double precision` and cannot drift from the encrypt
+    // cast — the same PG_TYPE-vs-PLAINTEXT_SQL_TYPE split `timestamp` uses.
+    const PLAINTEXT_SQL_TYPE: &'static str =
+        <F8 as crate::fixtures::EqlPlaintext>::PLAINTEXT_SQL_TYPE.as_str();
 
     fn fixture_values() -> &'static [Self] {
         double_values()

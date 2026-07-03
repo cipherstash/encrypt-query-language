@@ -501,7 +501,8 @@ mod tests {
     #[test]
     fn temporal_entry_skips_impl_and_stamps_temporal_fixture() {
         // No marker: `date`'s temporal shape is read from eql-domains::CATALOG.
-        let list = syn::parse_str::<ScalarList>("integer => i32, date => chrono::NaiveDate").unwrap();
+        let list =
+            syn::parse_str::<ScalarList>("integer => i32, date => chrono::NaiveDate").unwrap();
         // Impl emitter skips the temporal entry (handed to `temporal_values!`).
         let impls = norm(&scalar_type_impls_tokens(&list));
         assert!(impls.contains("impl ScalarType for i32"));
@@ -769,7 +770,8 @@ mod tests {
         // Both base types are ordered, so the emitter routes them through the
         // unified wrapper with the ordered capability marker and never names
         // either of the now-deleted parallel wrappers.
-        let list = syn::parse_str::<ScalarList>("integer => i32, date => chrono::NaiveDate").unwrap();
+        let list =
+            syn::parse_str::<ScalarList>("integer => i32, date => chrono::NaiveDate").unwrap();
         let out = norm(&scalar_matrix_suites_tokens(&list));
         assert!(out.contains(":: eql_tests :: scalar_matrix !"));
         assert!(out.contains("caps = [eq , ord]"));

@@ -107,10 +107,11 @@ async fn every_payload_carries_a_ciphertext(pool: PgPool) -> Result<()> {
 async fn plaintext_oracle_supports_value_filtering(pool: PgPool) -> Result<()> {
     // The in-table `plaintext` oracle: a consuming test can filter on it
     // directly. Exactly one row has plaintext = 42.
-    let ids: Vec<i64> =
-        sqlx::query_scalar("SELECT id FROM fixtures.eql_v3_integer WHERE plaintext = 42 ORDER BY id")
-            .fetch_all(&pool)
-            .await?;
+    let ids: Vec<i64> = sqlx::query_scalar(
+        "SELECT id FROM fixtures.eql_v3_integer WHERE plaintext = 42 ORDER BY id",
+    )
+    .fetch_all(&pool)
+    .await?;
     assert_eq!(
         ids,
         vec![11],

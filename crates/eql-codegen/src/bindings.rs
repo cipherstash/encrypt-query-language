@@ -173,7 +173,7 @@ fn render_struct(family: &DomainFamily, domain: &Domain) -> TokenStream {
     }
 }
 
-/// Render a whole family module (`int4.rs`, `text.rs`, …): the import header
+/// Render a whole family module (`integer.rs`, `text.rs`, …): the import header
 /// (exactly the term newtypes the family uses) followed by every domain's
 /// struct + impl.
 pub fn render_family_bindings(family: &DomainFamily) -> String {
@@ -340,14 +340,14 @@ mod tests {
     }
 
     #[test]
-    fn int4_family_structs_have_pinned_shape() {
-        let out = render_family_bindings(family("int4"));
+    fn integer_family_structs_have_pinned_shape() {
+        let out = render_family_bindings(family("integer"));
         assert!(out.starts_with(crate::consts::RUST_GENERATED_MARKER));
         for s in [
-            "struct Int4 ",
-            "struct Int4Eq ",
-            "struct Int4OrdOre ",
-            "struct Int4Ord ",
+            "struct Integer ",
+            "struct IntegerEq ",
+            "struct IntegerOrdOre ",
+            "struct IntegerOrd ",
         ] {
             assert!(out.contains(s), "missing {s}");
         }
@@ -360,21 +360,21 @@ mod tests {
         );
         assert_eq!(out.matches("#[ts(export, export_to = \"v3/\")]").count(), 4);
         assert_eq!(out.matches("#[serde(deny_unknown_fields)]").count(), 4);
-        assert!(out.contains("`eql_v3.int4_eq` — equality domain."));
-        assert!(out.contains("`eql_v3.int4` — storage-only domain."));
-        assert!(out.contains("`eql_v3.int4_ord` — ordering domain."));
+        assert!(out.contains("`eql_v3.integer_eq` — equality domain."));
+        assert!(out.contains("`eql_v3.integer` — storage-only domain."));
+        assert!(out.contains("`eql_v3.integer_ord` — ordering domain."));
         assert!(!out.contains("Envelope version"));
         assert!(!out.contains("HMAC-SHA-256 equality term"));
-        assert_eq!(field_idents(&out, "Int4"), ["v", "i", "c"]);
-        assert_eq!(field_idents(&out, "Int4Eq"), ["v", "i", "c", "hm"]);
-        assert_eq!(field_idents(&out, "Int4OrdOre"), ["v", "i", "c", "ob"]);
-        assert_eq!(field_idents(&out, "Int4Ord"), ["v", "i", "c", "ob"]);
-        assert!(out.contains("impl DomainType for Int4Eq"));
+        assert_eq!(field_idents(&out, "Integer"), ["v", "i", "c"]);
+        assert_eq!(field_idents(&out, "IntegerEq"), ["v", "i", "c", "hm"]);
+        assert_eq!(field_idents(&out, "IntegerOrdOre"), ["v", "i", "c", "ob"]);
+        assert_eq!(field_idents(&out, "IntegerOrd"), ["v", "i", "c", "ob"]);
+        assert!(out.contains("impl DomainType for IntegerEq"));
         assert!(out.contains("fn sql_domain_static()"));
-        assert!(out.contains("\"eql_v3.int4_eq\""));
+        assert!(out.contains("\"eql_v3.integer_eq\""));
         assert!(out.contains("fn sql_domain(&self)"));
         assert!(out.contains("fn schema(&self) -> Schema"));
-        assert!(out.contains("schema_for!(Int4Eq)"));
+        assert!(out.contains("schema_for!(IntegerEq)"));
         assert!(out.contains("use crate::v3::terms::"));
         assert!(!out.contains("BloomFilter"));
     }
@@ -385,21 +385,21 @@ mod tests {
         // the capability label + the operator union (`Term::operators_for_terms`)
         // + the required-key list (`ENVELOPE_KEYS` ++ `Term::term_json_keys`).
         // No field docs, no new free-form catalog prose.
-        let int4 = render_family_bindings(family("int4"));
+        let integer = render_family_bindings(family("integer"));
 
         // Storage-only: no operators.
-        assert!(int4.contains("`eql_v3.int4` — storage-only domain."));
-        assert!(int4.contains("Operators: none."));
-        assert!(int4.contains("Required keys: `v` `i` `c`."));
+        assert!(integer.contains("`eql_v3.integer` — storage-only domain."));
+        assert!(integer.contains("Operators: none."));
+        assert!(integer.contains("Required keys: `v` `i` `c`."));
 
         // Equality: `=`/`<>` and the `hm` key.
-        assert!(int4.contains("`eql_v3.int4_eq` — equality domain."));
-        assert!(int4.contains("Operators: `=` `<>`."));
-        assert!(int4.contains("Required keys: `v` `i` `c` `hm`."));
+        assert!(integer.contains("`eql_v3.integer_eq` — equality domain."));
+        assert!(integer.contains("Operators: `=` `<>`."));
+        assert!(integer.contains("Required keys: `v` `i` `c` `hm`."));
 
         // Ordering: full comparison operators and the `ob` key.
-        assert!(int4.contains("Operators: `=` `<>` `<` `<=` `>` `>=`."));
-        assert!(int4.contains("Required keys: `v` `i` `c` `ob`."));
+        assert!(integer.contains("Operators: `=` `<>` `<` `<=` `>` `>=`."));
+        assert!(integer.contains("Required keys: `v` `i` `c` `ob`."));
 
         // text_ord carries BOTH `hm` and `ob` — the dual-term distinction that
         // previously lived only in hand-written prose is now derivable in the doc.
@@ -436,10 +436,10 @@ mod tests {
 
     #[test]
     fn bool_storage_only_family_has_one_struct_no_terms() {
-        let out = render_family_bindings(family("bool"));
+        let out = render_family_bindings(family("boolean"));
         assert_eq!(out.matches("pub struct ").count(), 1);
-        assert!(out.contains("`eql_v3.bool` — storage-only domain."));
-        assert_eq!(field_idents(&out, "Bool"), ["v", "i", "c"]);
+        assert!(out.contains("`eql_v3.boolean` — storage-only domain."));
+        assert_eq!(field_idents(&out, "Boolean"), ["v", "i", "c"]);
         assert!(out.contains("use crate::v3::terms::"));
         assert!(!out.contains("Hmac256"));
         assert!(!out.contains("OreBlock256"));
@@ -452,7 +452,7 @@ mod tests {
         let written = generate_bindings(tmp.path()).unwrap();
         let dir = tmp.path().join("crates/eql-bindings/src/v3");
         assert_eq!(written.len(), eql_domains::scalar_families().count() + 1);
-        assert!(dir.join("int4.rs").is_file());
+        assert!(dir.join("integer.rs").is_file());
         assert!(dir.join("text.rs").is_file());
         assert!(dir.join("inventory.rs").is_file());
         assert!(
@@ -478,7 +478,7 @@ mod tests {
         let tmp = crate::writer::test_support::tempdir();
         let dir = tmp.path().join(V3_BINDINGS_DIR);
         std::fs::create_dir_all(&dir).unwrap();
-        let sentinel = dir.join("int4.rs");
+        let sentinel = dir.join("integer.rs");
         std::fs::write(&sentinel, "SENTINEL").unwrap();
 
         let rendered = render_bindings(&dir);
@@ -504,8 +504,8 @@ mod tests {
         assert!(out.starts_with(crate::consts::RUST_GENERATED_MARKER));
         assert!(out.contains("pub fn all() -> Vec<Box<dyn DomainType>>"));
         assert!(!out.contains("pub mod "));
-        let first = out.find("PhantomData::<super::int4::Int4>").unwrap();
-        let last = out.find("PhantomData::<super::float8::Float8Ord>").unwrap();
+        let first = out.find("PhantomData::<super::integer::Integer>").unwrap();
+        let last = out.find("PhantomData::<super::double::DoubleOrd>").unwrap();
         assert!(first < last);
         for ty in [
             "super::text::Text",
@@ -532,8 +532,8 @@ mod tests {
         // together: the leading fields of a generated struct must equal
         // `ENVELOPE_KEYS`, in order, so a change to the catalog's envelope keys
         // can't silently diverge from the emitter.
-        let out = render_family_bindings(family("int4"));
-        let leading: Vec<String> = field_idents(&out, "Int4");
+        let out = render_family_bindings(family("integer"));
+        let leading: Vec<String> = field_idents(&out, "Integer");
         let expected: Vec<String> = eql_domains::ENVELOPE_KEYS
             .iter()
             .map(|k| k.to_string())
