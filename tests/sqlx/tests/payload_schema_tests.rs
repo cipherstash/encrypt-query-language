@@ -562,11 +562,11 @@ fn from_v2_scalar_outputs_validate_against_published_v3_schemas() {
     // schema's signed int16 bounds are exercised on the converted value.
     let v2 = v2_ct_full();
     for domain in [
-        "int4",
+        "integer",
         "text_eq",
-        "int4_ord_ore",
+        "integer_ord_ore",
         "text_search",
-        "int4_ord_ope",
+        "integer_ord_ope",
         "text_ord_ope",
     ] {
         assert_converts_to_valid_v3(&v2, domain);

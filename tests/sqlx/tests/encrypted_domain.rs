@@ -34,14 +34,14 @@ mod text_match;
 #[path = "encrypted_domain/ope/support.rs"]
 mod ope_support;
 
-#[path = "encrypted_domain/ope/int4_ord_ope.rs"]
-mod int4_ord_ope;
+#[path = "encrypted_domain/ope/integer_ord_ope.rs"]
+mod integer_ord_ope;
 
-#[path = "encrypted_domain/ope/int2_ord_ope.rs"]
-mod int2_ord_ope;
+#[path = "encrypted_domain/ope/smallint_ord_ope.rs"]
+mod smallint_ord_ope;
 
-#[path = "encrypted_domain/ope/int8_ord_ope.rs"]
-mod int8_ord_ope;
+#[path = "encrypted_domain/ope/bigint_ord_ope.rs"]
+mod bigint_ord_ope;
 
 #[path = "encrypted_domain/ope/date_ord_ope.rs"]
 mod date_ord_ope;
@@ -55,11 +55,11 @@ mod numeric_ord_ope;
 #[path = "encrypted_domain/ope/text_ord_ope.rs"]
 mod text_ord_ope;
 
-#[path = "encrypted_domain/ope/float4_ord_ope.rs"]
-mod float4_ord_ope;
+#[path = "encrypted_domain/ope/real_ord_ope.rs"]
+mod real_ord_ope;
 
-#[path = "encrypted_domain/ope/float8_ord_ope.rs"]
-mod float8_ord_ope;
+#[path = "encrypted_domain/ope/double_ord_ope.rs"]
+mod double_ord_ope;
 
 // Signed-only sign-boundary suite (`int`, `date`). Like the text suites it
 // lives outside `scalars::` so the matrix-inventory snapshot (which pins the
