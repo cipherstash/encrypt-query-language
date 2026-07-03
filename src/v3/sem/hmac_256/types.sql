@@ -9,4 +9,4 @@
 --! unchanged.
 --!
 --! @note Transient type used only during query execution.
-CREATE DOMAIN eql_v3.hmac_256 AS text;
+CREATE DOMAIN eql_v3_internal.hmac_256 AS text;

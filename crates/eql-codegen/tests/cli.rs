@@ -64,6 +64,27 @@ fn bindings_subcommand_succeeds_and_reports_count() {
     );
 }
 
+/// `list-schemas` exits 0 and prints the owned schemas, public first, one per
+/// line. This is the Rust side of the schema-split parity gate
+/// (`mise run test:schemas:parity`), so the exact stdout is pinned here.
+#[test]
+fn list_schemas_subcommand_prints_owned_schemas() {
+    let out = Command::new(bin())
+        .arg("list-schemas")
+        .output()
+        .expect("run eql-codegen list-schemas");
+    assert!(
+        out.status.success(),
+        "list-schemas should exit 0; stderr: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert_eq!(
+        stdout, "eql_v3\neql_v3_internal\n",
+        "list-schemas must print the public schema first, then the internal schema"
+    );
+}
+
 /// An unrecognised argument prints usage and exits 2 (the `ExitCode::from(2)`
 /// fall-through in `main.rs`).
 #[test]

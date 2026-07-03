@@ -7,7 +7,7 @@
 --! @brief Extract CLLW OPE index term from JSONB payload
 --!
 --! Returns the CLLW OPE ciphertext from the `op` field of an encrypted scalar
---! payload, hex-decoded to the bytea-backed eql_v3.ope_cllw domain.
+--! payload, hex-decoded to the bytea-backed eql_v3_internal.ope_cllw domain.
 --!
 --! Inlinable single-statement SQL — the body is a strict expression of the
 --! argument (`->>` and `decode` are both STRICT), so the planner folds this
@@ -20,14 +20,14 @@
 --! btree's NULL handling filters those rows from range queries.
 --!
 --! @param val jsonb containing encrypted EQL payload
---! @return eql_v3.ope_cllw Hex-decoded CLLW OPE term, or NULL when `op` is
+--! @return eql_v3_internal.ope_cllw Hex-decoded CLLW OPE term, or NULL when `op` is
 --!         absent
-CREATE FUNCTION eql_v3.ope_cllw(val jsonb)
-  RETURNS eql_v3.ope_cllw
+CREATE FUNCTION eql_v3_internal.ope_cllw(val jsonb)
+  RETURNS eql_v3_internal.ope_cllw
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT decode(val ->> 'op', 'hex')::eql_v3.ope_cllw
+  SELECT decode(val ->> 'op', 'hex')::eql_v3_internal.ope_cllw
 $$;
 
-COMMENT ON FUNCTION eql_v3.ope_cllw(jsonb) IS
+COMMENT ON FUNCTION eql_v3_internal.ope_cllw(jsonb) IS
   'eql-inline-critical: raw-jsonb CLLW OPE extractor; must stay inlinable (unpinned search_path)';

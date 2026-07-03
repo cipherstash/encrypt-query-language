@@ -11,7 +11,7 @@
 --! @param state eql_v3.date_ord_ope
 --! @param value eql_v3.date_ord_ope
 --! @return eql_v3.date_ord_ope
-CREATE FUNCTION eql_v3.min_sfunc(state eql_v3.date_ord_ope, value eql_v3.date_ord_ope)
+CREATE FUNCTION eql_v3_internal.min_sfunc(state eql_v3.date_ord_ope, value eql_v3.date_ord_ope)
 RETURNS eql_v3.date_ord_ope
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
@@ -28,9 +28,9 @@ $$;
 --! @param input eql_v3.date_ord_ope
 --! @return eql_v3.date_ord_ope
 CREATE AGGREGATE eql_v3.min(eql_v3.date_ord_ope) (
-  sfunc = eql_v3.min_sfunc,
+  sfunc = eql_v3_internal.min_sfunc,
   stype = eql_v3.date_ord_ope,
-  combinefunc = eql_v3.min_sfunc,
+  combinefunc = eql_v3_internal.min_sfunc,
   parallel = safe
 );
 
@@ -38,7 +38,7 @@ CREATE AGGREGATE eql_v3.min(eql_v3.date_ord_ope) (
 --! @param state eql_v3.date_ord_ope
 --! @param value eql_v3.date_ord_ope
 --! @return eql_v3.date_ord_ope
-CREATE FUNCTION eql_v3.max_sfunc(state eql_v3.date_ord_ope, value eql_v3.date_ord_ope)
+CREATE FUNCTION eql_v3_internal.max_sfunc(state eql_v3.date_ord_ope, value eql_v3.date_ord_ope)
 RETURNS eql_v3.date_ord_ope
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
@@ -55,8 +55,8 @@ $$;
 --! @param input eql_v3.date_ord_ope
 --! @return eql_v3.date_ord_ope
 CREATE AGGREGATE eql_v3.max(eql_v3.date_ord_ope) (
-  sfunc = eql_v3.max_sfunc,
+  sfunc = eql_v3_internal.max_sfunc,
   stype = eql_v3.date_ord_ope,
-  combinefunc = eql_v3.max_sfunc,
+  combinefunc = eql_v3_internal.max_sfunc,
   parallel = safe
 );

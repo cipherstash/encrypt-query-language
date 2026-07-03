@@ -17,7 +17,7 @@
 --! CLLW per-byte protocol.
 --!
 --! @note This is a transient type used only during query execution.
---! @see eql_v3.compare_ore_cllw_term
-CREATE TYPE eql_v3.ore_cllw AS (
+--! @see eql_v3_internal.compare_ore_cllw_term
+CREATE TYPE eql_v3_internal.ore_cllw AS (
   bytes bytea
 );

@@ -1,4 +1,4 @@
-//! Operator class tests for `eql_v3.ore_cllw` (the self-contained v3 SEM fork).
+//! Operator class tests for `eql_v3_internal.ore_cllw` (the self-contained v3 SEM fork).
 //!
 //! Mirrors `ore_cllw_opclass_tests.rs` (which covers `eql_v2.ore_cllw`) for the
 //! hand-written `eql_v3` copy under `src/v3/sem/ore_cllw/`. Because v3 is a fork,
@@ -10,23 +10,23 @@
 //!
 //! Validates that:
 //! - the same-type comparison operators (`=`, `<>`, `<`, `<=`, `>`, `>=`) on
-//!   `eql_v3.ore_cllw` reduce to `compare_ore_cllw_term(a, b) <op> 0` and return
+//!   `eql_v3_internal.ore_cllw` reduce to `compare_ore_cllw_term(a, b) <op> 0` and return
 //!   the correct semantics under the CLLW per-byte protocol;
 //! - the leading domain-tag byte (`0x00` numeric, `0x01` string) produces the
 //!   right cross-domain ordering (numeric < string);
-//! - the btree operator class `eql_v3.ore_cllw_ops` is registered as
-//!   `DEFAULT FOR TYPE`, so functional btree indexes on `eql_v3.ore_cllw(col)`
+//! - the btree operator class `eql_v3_internal.ore_cllw_ops` is registered as
+//!   `DEFAULT FOR TYPE`, so functional btree indexes on `eql_v3_internal.ore_cllw(col)`
 //!   pick it up without an explicit opclass annotation;
 //! - the planner engages the functional index for `ORDER BY ... LIMIT n`
 //!   (Index Scan, not Sort) and for a `WHERE` range qual (Index Cond).
 //!
 //! **v3 surface differences from v2** (confirmed in `src/v3/sem/ore_cllw/`):
-//! - composite is `eql_v3.ore_cllw AS (bytes bytea)`; literals via
-//!   `ROW(decode('<hex>','hex'))::eql_v3.ore_cllw`.
-//! - there is only ONE extractor overload, `eql_v3.ore_cllw(jsonb)` — v3 has no
+//! - composite is `eql_v3_internal.ore_cllw AS (bytes bytea)`; literals via
+//!   `ROW(decode('<hex>','hex'))::eql_v3_internal.ore_cllw`.
+//! - there is only ONE extractor overload, `eql_v3_internal.ore_cllw(jsonb)` — v3 has no
 //!   encrypted-column type, no `jsonb_entry` domain, and no `->` selector. So
 //!   the functional-index tests build on a plain `jsonb` column via
-//!   `eql_v3.ore_cllw(value)`, and the v2 `..._via_arrow_chain` test has no v3
+//!   `eql_v3_internal.ore_cllw(value)`, and the v2 `..._via_arrow_chain` test has no v3
 //!   analogue.
 //!
 //! The test data is hand-crafted byte strings rather than real CLLW ciphertexts;
@@ -36,10 +36,10 @@
 use anyhow::Result;
 use sqlx::PgPool;
 
-// Helper: construct an `eql_v3.ore_cllw` literal from a hex string.
+// Helper: construct an `eql_v3_internal.ore_cllw` literal from a hex string.
 // Format: `[tag_byte][cllw_ciphertext_bytes]`.
 fn ore_cllw(hex: &str) -> String {
-    format!("ROW(decode('{hex}', 'hex'))::eql_v3.ore_cllw")
+    format!("ROW(decode('{hex}', 'hex'))::eql_v3_internal.ore_cllw")
 }
 
 // ===========================================================================
@@ -148,7 +148,7 @@ async fn numeric_sorts_before_string_via_tag_byte(pool: PgPool) -> Result<()> {
 // Different-length terms
 //
 // The equal-length operator tests above never exercise the length-handling
-// branches of `eql_v3.compare_ore_cllw_term` (src/v3/sem/ore_cllw/functions.sql):
+// branches of `eql_v3_internal.compare_ore_cllw_term` (src/v3/sem/ore_cllw/functions.sql):
 // it trims to the shared prefix, breaks an equal-prefix tie by length (shorter
 // sorts first), and short-circuits empty bytes ahead of any per-byte compare.
 // These are distinct code paths from the same-length comparator path.
@@ -231,39 +231,39 @@ async fn differing_prefix_outranks_length(pool: PgPool) -> Result<()> {
 
 #[sqlx::test]
 async fn opclass_is_default_for_type(pool: PgPool) -> Result<()> {
-    // Confirms `eql_v3.ore_cllw_ops` is the default btree opclass for
-    // `eql_v3.ore_cllw`. Without this, functional btree indexes on the type
-    // would need an explicit `USING btree (... eql_v3.ore_cllw_ops)` annotation.
+    // Confirms `eql_v3_internal.ore_cllw_ops` is the default btree opclass for
+    // `eql_v3_internal.ore_cllw`. Without this, functional btree indexes on the type
+    // would need an explicit `USING btree (... eql_v3_internal.ore_cllw_ops)` annotation.
     let is_default: bool = sqlx::query_scalar(
         "SELECT opcdefault
          FROM pg_opclass oc
          JOIN pg_namespace n ON n.oid = oc.opcnamespace
-         WHERE n.nspname = 'eql_v3'
+         WHERE n.nspname = 'eql_v3_internal'
            AND oc.opcname = 'ore_cllw_ops'",
     )
     .fetch_one(&pool)
     .await?;
     assert!(
         is_default,
-        "eql_v3.ore_cllw_ops should be DEFAULT FOR TYPE eql_v3.ore_cllw"
+        "eql_v3_internal.ore_cllw_ops should be DEFAULT FOR TYPE eql_v3_internal.ore_cllw"
     );
     Ok(())
 }
 
 // ===========================================================================
-// Extractor NULL semantics — `eql_v3.ore_cllw(jsonb)` (the single overload)
+// Extractor NULL semantics — `eql_v3_internal.ore_cllw(jsonb)` (the single overload)
 // ===========================================================================
 
 #[sqlx::test]
 async fn ore_cllw_extractor_returns_null_when_oc_absent(pool: PgPool) -> Result<()> {
     let is_null: bool = sqlx::query_scalar(
-        "SELECT eql_v3.ore_cllw('{\"s\":\"x\",\"c\":\"y\",\"hm\":\"abc\"}'::jsonb) IS NULL",
+        "SELECT eql_v3_internal.ore_cllw('{\"s\":\"x\",\"c\":\"y\",\"hm\":\"abc\"}'::jsonb) IS NULL",
     )
     .fetch_one(&pool)
     .await?;
     assert!(
         is_null,
-        "eql_v3.ore_cllw(jsonb) should return SQL NULL when `oc` is absent"
+        "eql_v3_internal.ore_cllw(jsonb) should return SQL NULL when `oc` is absent"
     );
     Ok(())
 }
@@ -271,13 +271,13 @@ async fn ore_cllw_extractor_returns_null_when_oc_absent(pool: PgPool) -> Result<
 #[sqlx::test]
 async fn ore_cllw_extractor_returns_composite_when_oc_present(pool: PgPool) -> Result<()> {
     let is_null: bool = sqlx::query_scalar(
-        "SELECT eql_v3.ore_cllw('{\"s\":\"x\",\"c\":\"y\",\"oc\":\"deadbeef\"}'::jsonb) IS NULL",
+        "SELECT eql_v3_internal.ore_cllw('{\"s\":\"x\",\"c\":\"y\",\"oc\":\"deadbeef\"}'::jsonb) IS NULL",
     )
     .fetch_one(&pool)
     .await?;
     assert!(
         !is_null,
-        "eql_v3.ore_cllw(jsonb) should NOT be NULL when `oc` is present"
+        "eql_v3_internal.ore_cllw(jsonb) should NOT be NULL when `oc` is present"
     );
     Ok(())
 }
@@ -289,9 +289,9 @@ async fn comparator_returns_null_on_null_composite(pool: PgPool) -> Result<()> {
     // filters from range queries. `a::text IS NULL` catches this — a genuine
     // SQL-NULL composite casts to NULL text. This path is shared with eql_v2.
     let cmp: Option<i32> = sqlx::query_scalar(
-        "SELECT eql_v3.compare_ore_cllw_term(\
-           eql_v3.ore_cllw('{\"s\":\"x\",\"c\":\"y\",\"hm\":\"abc\"}'::jsonb), \
-           eql_v3.ore_cllw('{\"s\":\"x\",\"c\":\"y\",\"oc\":\"00ff\"}'::jsonb)\
+        "SELECT eql_v3_internal.compare_ore_cllw_term(\
+           eql_v3_internal.ore_cllw('{\"s\":\"x\",\"c\":\"y\",\"hm\":\"abc\"}'::jsonb), \
+           eql_v3_internal.ore_cllw('{\"s\":\"x\",\"c\":\"y\",\"oc\":\"00ff\"}'::jsonb)\
          )",
     )
     .fetch_one(&pool)
@@ -307,7 +307,7 @@ async fn comparator_returns_null_on_null_composite(pool: PgPool) -> Result<()> {
 async fn comparator_raises_on_row_null_composite(pool: PgPool) -> Result<()> {
     // EXPLICIT, VALIDATED DIVERGENCE FROM eql_v2.
     //
-    // A hand-crafted `ROW(NULL)::eql_v3.ore_cllw` is NOT a SQL-NULL composite —
+    // A hand-crafted `ROW(NULL)::eql_v3_internal.ore_cllw` is NOT a SQL-NULL composite —
     // for a single-field composite, `ROW(NULL) IS NULL` is true (row-IS-NULL
     // fires when every field is NULL), but `(ROW(NULL))::text` is the non-NULL
     // text `()`, so `a::text IS NULL` is FALSE. The value therefore falls
@@ -323,9 +323,9 @@ async fn comparator_raises_on_row_null_composite(pool: PgPool) -> Result<()> {
     // test pins that divergence — neither the SQL-NULL test above nor the v2
     // suite exercises it.
     let err = sqlx::query(
-        "SELECT eql_v3.compare_ore_cllw_term(\
-           ROW(NULL)::eql_v3.ore_cllw, \
-           ROW(decode('00ff', 'hex'))::eql_v3.ore_cllw\
+        "SELECT eql_v3_internal.compare_ore_cllw_term(\
+           ROW(NULL)::eql_v3_internal.ore_cllw, \
+           ROW(decode('00ff', 'hex'))::eql_v3_internal.ore_cllw\
          )",
     )
     .execute(&pool)
@@ -344,7 +344,7 @@ async fn comparator_raises_on_row_null_composite(pool: PgPool) -> Result<()> {
 // Functional-index match: ORDER BY engages Index Scan, not Sort
 //
 // v3 has no encrypted-column type, so the index is built on a plain jsonb
-// column via the single `eql_v3.ore_cllw(jsonb)` extractor overload.
+// column via the single `eql_v3_internal.ore_cllw(jsonb)` extractor overload.
 // ===========================================================================
 
 #[sqlx::test]
@@ -371,10 +371,10 @@ async fn functional_index_engages_for_order_by(pool: PgPool) -> Result<()> {
     }
 
     // Functional btree on the extractor — no opclass annotation needed because
-    // `eql_v3.ore_cllw_ops` is DEFAULT FOR TYPE.
+    // `eql_v3_internal.ore_cllw_ops` is DEFAULT FOR TYPE.
     sqlx::query(
         "CREATE INDEX ore_cllw_v3_test_idx
-         ON ore_cllw_v3_test (eql_v3.ore_cllw(value))",
+         ON ore_cllw_v3_test (eql_v3_internal.ore_cllw(value))",
     )
     .execute(&mut *tx)
     .await?;
@@ -386,7 +386,7 @@ async fn functional_index_engages_for_order_by(pool: PgPool) -> Result<()> {
         .await?;
     let explain_rows = sqlx::query_scalar::<_, String>(
         "EXPLAIN SELECT id FROM ore_cllw_v3_test \
-         ORDER BY eql_v3.ore_cllw(value) LIMIT 5",
+         ORDER BY eql_v3_internal.ore_cllw(value) LIMIT 5",
     )
     .fetch_all(&mut *tx)
     .await?;
@@ -433,7 +433,7 @@ async fn functional_index_engages_for_where_range(pool: PgPool) -> Result<()> {
 
     sqlx::query(
         "CREATE INDEX ore_cllw_v3_where_test_idx
-         ON ore_cllw_v3_where_test (eql_v3.ore_cllw(value))",
+         ON ore_cllw_v3_where_test (eql_v3_internal.ore_cllw(value))",
     )
     .execute(&mut *tx)
     .await?;
@@ -443,8 +443,8 @@ async fn functional_index_engages_for_where_range(pool: PgPool) -> Result<()> {
         .await?;
     let explain_rows = sqlx::query_scalar::<_, String>(
         "EXPLAIN SELECT id FROM ore_cllw_v3_where_test \
-         WHERE eql_v3.ore_cllw(value) \
-             < eql_v3.ore_cllw('{\"oc\":\"00aa\"}'::jsonb)",
+         WHERE eql_v3_internal.ore_cllw(value) \
+             < eql_v3_internal.ore_cllw('{\"oc\":\"00aa\"}'::jsonb)",
     )
     .fetch_all(&mut *tx)
     .await?;

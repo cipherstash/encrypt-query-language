@@ -15,33 +15,33 @@
 --! rows from range queries.
 --!
 --! @param val jsonb An object carrying an `oc` field
---! @return eql_v3.ore_cllw Composite carrying the CLLW ciphertext, or NULL
+--! @return eql_v3_internal.ore_cllw Composite carrying the CLLW ciphertext, or NULL
 --!         when the `oc` field is absent.
---! @see eql_v3.has_ore_cllw
---! @see eql_v3.compare_ore_cllw_term
-CREATE FUNCTION eql_v3.ore_cllw(val jsonb)
-  RETURNS eql_v3.ore_cllw
+--! @see eql_v3_internal.has_ore_cllw
+--! @see eql_v3_internal.compare_ore_cllw_term
+CREATE FUNCTION eql_v3_internal.ore_cllw(val jsonb)
+  RETURNS eql_v3_internal.ore_cllw
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   SELECT CASE WHEN val ->> 'oc' IS NULL THEN NULL
-              ELSE ROW(decode(val ->> 'oc', 'hex'))::eql_v3.ore_cllw
+              ELSE ROW(decode(val ->> 'oc', 'hex'))::eql_v3_internal.ore_cllw
          END
 $$;
 
-COMMENT ON FUNCTION eql_v3.ore_cllw(jsonb) IS
+COMMENT ON FUNCTION eql_v3_internal.ore_cllw(jsonb) IS
   'eql-inline-critical: raw-jsonb CLLW extractor; must stay inlinable (unpinned search_path)';
 
 --! @brief Check if a raw jsonb value contains a CLLW ORE index term
 --! @param val jsonb An object that may carry an `oc` field
 --! @return boolean True if `oc` field is present and non-null
-CREATE FUNCTION eql_v3.has_ore_cllw(val jsonb)
+CREATE FUNCTION eql_v3_internal.has_ore_cllw(val jsonb)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   SELECT val ->> 'oc' IS NOT NULL
 $$;
 
-COMMENT ON FUNCTION eql_v3.has_ore_cllw(jsonb) IS
+COMMENT ON FUNCTION eql_v3_internal.has_ore_cllw(jsonb) IS
   'eql-inline-critical: raw-jsonb CLLW presence helper; must stay inlinable (unpinned search_path)';
 
 --! @brief CLLW per-byte comparison helper
@@ -57,8 +57,8 @@ COMMENT ON FUNCTION eql_v3.has_ore_cllw(jsonb) IS
 --! @param b bytea Second CLLW ciphertext slice
 --! @return integer -1, 0, or 1
 --! @throws Exception if inputs are different lengths
---! @see eql_v3.compare_ore_cllw_term
-CREATE FUNCTION eql_v3.compare_ore_cllw_term_bytes(a bytea, b bytea)
+--! @see eql_v3_internal.compare_ore_cllw_term
+CREATE FUNCTION eql_v3_internal.compare_ore_cllw_term_bytes(a bytea, b bytea)
 RETURNS int
   SET search_path = pg_catalog, extensions, public
 AS $$
@@ -109,12 +109,12 @@ $$ LANGUAGE plpgsql;
 --! — the extractor returns SQL NULL (not ROW(NULL)) on missing `oc`, so raise
 --! loudly rather than silently misorder.
 --!
---! @param a eql_v3.ore_cllw First term
---! @param b eql_v3.ore_cllw Second term
+--! @param a eql_v3_internal.ore_cllw First term
+--! @param b eql_v3_internal.ore_cllw Second term
 --! @return integer -1, 0, or 1; NULL if either composite is NULL
 --! @throws Exception if either composite has a NULL `bytes` field
---! @see eql_v3.compare_ore_cllw_term_bytes
-CREATE FUNCTION eql_v3.compare_ore_cllw_term(a eql_v3.ore_cllw, b eql_v3.ore_cllw)
+--! @see eql_v3_internal.compare_ore_cllw_term_bytes
+CREATE FUNCTION eql_v3_internal.compare_ore_cllw_term(a eql_v3_internal.ore_cllw, b eql_v3_internal.ore_cllw)
 RETURNS int
   SET search_path = pg_catalog, extensions, public
 AS $$
@@ -135,7 +135,7 @@ BEGIN
     END IF;
 
     IF a.bytes IS NULL OR b.bytes IS NULL THEN
-      RAISE EXCEPTION 'eql_v3.compare_ore_cllw_term: composite has NULL bytes field — extractor invariant violated. Check that the index expression uses eql_v3.ore_cllw(...) and not a hand-crafted ROW(NULL).';
+      RAISE EXCEPTION 'eql_v3_internal.compare_ore_cllw_term: composite has NULL bytes field — extractor invariant violated. Check that the index expression uses eql_v3_internal.ore_cllw(...) and not a hand-crafted ROW(NULL).';
     END IF;
 
     len_a := LENGTH(a.bytes);
@@ -155,7 +155,7 @@ BEGIN
         common_len := len_b;
     END IF;
 
-    cmp_result := eql_v3.compare_ore_cllw_term_bytes(
+    cmp_result := eql_v3_internal.compare_ore_cllw_term_bytes(
       SUBSTRING(a.bytes FROM 1 FOR common_len),
       SUBSTRING(b.bytes FROM 1 FOR common_len)
     );

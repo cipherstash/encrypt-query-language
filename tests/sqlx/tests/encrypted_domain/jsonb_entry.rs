@@ -63,7 +63,7 @@ async fn jsonb_entry_int4_fixture_shape(pool: sqlx::PgPool) -> anyhow::Result<()
     // (the ordered term the matrix's ore_cllw paths require).
     let invalid: i64 = sqlx::query_scalar(&format!(
         "SELECT COUNT(*) FROM fixtures.v3_doc_int4 \
-         WHERE NOT eql_v3.is_valid_ste_vec_entry_payload((payload -> '{SELECTOR}'::text)::jsonb) \
+         WHERE NOT eql_v3_internal.is_valid_ste_vec_entry_payload((payload -> '{SELECTOR}'::text)::jsonb) \
             OR NOT eql_v3.has_ore_cllw((payload -> '{SELECTOR}'::text)::eql_v3.jsonb_entry)",
     ))
     .fetch_one(&pool)

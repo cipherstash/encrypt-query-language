@@ -27,18 +27,18 @@
 --! @param a eql_v3.json Left operand (encrypted payload).
 --! @param b text Native RHS operand.
 --! @return boolean Never returns; always raises 'operator not supported'.
-CREATE FUNCTION eql_v3.jsonb_blocked_exists(a eql_v3.json, b text)
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_exists(a eql_v3.json, b text)
 RETURNS boolean
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
-  RETURN eql_v3.encrypted_domain_unsupported_bool('eql_v3.json', '?');
+  RETURN eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.json', '?');
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR ? (
-  FUNCTION = eql_v3.jsonb_blocked_exists,
+  FUNCTION = eql_v3_internal.jsonb_blocked_exists,
   LEFTARG = eql_v3.json,
   RIGHTARG = text
 );
@@ -47,18 +47,18 @@ CREATE OPERATOR ? (
 --! @param a eql_v3.json Left operand (encrypted payload).
 --! @param b text[] Native RHS operand.
 --! @return boolean Never returns; always raises 'operator not supported'.
-CREATE FUNCTION eql_v3.jsonb_blocked_exists_any(a eql_v3.json, b text[])
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_exists_any(a eql_v3.json, b text[])
 RETURNS boolean
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
-  RETURN eql_v3.encrypted_domain_unsupported_bool('eql_v3.json', '?|');
+  RETURN eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.json', '?|');
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR ?| (
-  FUNCTION = eql_v3.jsonb_blocked_exists_any,
+  FUNCTION = eql_v3_internal.jsonb_blocked_exists_any,
   LEFTARG = eql_v3.json,
   RIGHTARG = text[]
 );
@@ -67,18 +67,18 @@ CREATE OPERATOR ?| (
 --! @param a eql_v3.json Left operand (encrypted payload).
 --! @param b text[] Native RHS operand.
 --! @return boolean Never returns; always raises 'operator not supported'.
-CREATE FUNCTION eql_v3.jsonb_blocked_exists_all(a eql_v3.json, b text[])
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_exists_all(a eql_v3.json, b text[])
 RETURNS boolean
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
-  RETURN eql_v3.encrypted_domain_unsupported_bool('eql_v3.json', '?&');
+  RETURN eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.json', '?&');
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR ?& (
-  FUNCTION = eql_v3.jsonb_blocked_exists_all,
+  FUNCTION = eql_v3_internal.jsonb_blocked_exists_all,
   LEFTARG = eql_v3.json,
   RIGHTARG = text[]
 );
@@ -87,18 +87,18 @@ CREATE OPERATOR ?& (
 --! @param a eql_v3.json Left operand (encrypted payload).
 --! @param b jsonpath Native RHS operand.
 --! @return boolean Never returns; always raises 'operator not supported'.
-CREATE FUNCTION eql_v3.jsonb_blocked_jsonpath_exists(a eql_v3.json, b jsonpath)
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_jsonpath_exists(a eql_v3.json, b jsonpath)
 RETURNS boolean
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
-  RETURN eql_v3.encrypted_domain_unsupported_bool('eql_v3.json', '@?');
+  RETURN eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.json', '@?');
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR @? (
-  FUNCTION = eql_v3.jsonb_blocked_jsonpath_exists,
+  FUNCTION = eql_v3_internal.jsonb_blocked_jsonpath_exists,
   LEFTARG = eql_v3.json,
   RIGHTARG = jsonpath
 );
@@ -107,18 +107,18 @@ CREATE OPERATOR @? (
 --! @param a eql_v3.json Left operand (encrypted payload).
 --! @param b jsonpath Native RHS operand.
 --! @return boolean Never returns; always raises 'operator not supported'.
-CREATE FUNCTION eql_v3.jsonb_blocked_jsonpath_match(a eql_v3.json, b jsonpath)
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_jsonpath_match(a eql_v3.json, b jsonpath)
 RETURNS boolean
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
-  RETURN eql_v3.encrypted_domain_unsupported_bool('eql_v3.json', '@@');
+  RETURN eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.json', '@@');
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR @@ (
-  FUNCTION = eql_v3.jsonb_blocked_jsonpath_match,
+  FUNCTION = eql_v3_internal.jsonb_blocked_jsonpath_match,
   LEFTARG = eql_v3.json,
   RIGHTARG = jsonpath
 );
@@ -127,18 +127,18 @@ CREATE OPERATOR @@ (
 --! @param a eql_v3.json Left operand (encrypted payload).
 --! @param b text[] Native RHS operand.
 --! @return jsonb Never returns; always raises 'operator not supported'.
-CREATE FUNCTION eql_v3.jsonb_blocked_path_extract(a eql_v3.json, b text[])
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_path_extract(a eql_v3.json, b text[])
 RETURNS jsonb
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
-  RETURN eql_v3.encrypted_domain_unsupported_jsonb('eql_v3.json', '#>');
+  RETURN eql_v3_internal.encrypted_domain_unsupported_jsonb('eql_v3.json', '#>');
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR #> (
-  FUNCTION = eql_v3.jsonb_blocked_path_extract,
+  FUNCTION = eql_v3_internal.jsonb_blocked_path_extract,
   LEFTARG = eql_v3.json,
   RIGHTARG = text[]
 );
@@ -147,18 +147,18 @@ CREATE OPERATOR #> (
 --! @param a eql_v3.json Left operand (encrypted payload).
 --! @param b text[] Native RHS operand.
 --! @return text Never returns; always raises 'operator not supported'.
-CREATE FUNCTION eql_v3.jsonb_blocked_path_extract_text(a eql_v3.json, b text[])
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_path_extract_text(a eql_v3.json, b text[])
 RETURNS text
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
-  RETURN eql_v3.encrypted_domain_unsupported_text('eql_v3.json', '#>>');
+  RETURN eql_v3_internal.encrypted_domain_unsupported_text('eql_v3.json', '#>>');
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR #>> (
-  FUNCTION = eql_v3.jsonb_blocked_path_extract_text,
+  FUNCTION = eql_v3_internal.jsonb_blocked_path_extract_text,
   LEFTARG = eql_v3.json,
   RIGHTARG = text[]
 );
@@ -167,18 +167,18 @@ CREATE OPERATOR #>> (
 --! @param a eql_v3.json Left operand (encrypted payload).
 --! @param b text Native RHS operand.
 --! @return jsonb Never returns; always raises 'operator not supported'.
-CREATE FUNCTION eql_v3.jsonb_blocked_delete_text(a eql_v3.json, b text)
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_delete_text(a eql_v3.json, b text)
 RETURNS jsonb
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
-  RETURN eql_v3.encrypted_domain_unsupported_jsonb('eql_v3.json', '-');
+  RETURN eql_v3_internal.encrypted_domain_unsupported_jsonb('eql_v3.json', '-');
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR - (
-  FUNCTION = eql_v3.jsonb_blocked_delete_text,
+  FUNCTION = eql_v3_internal.jsonb_blocked_delete_text,
   LEFTARG = eql_v3.json,
   RIGHTARG = text
 );
@@ -187,18 +187,18 @@ CREATE OPERATOR - (
 --! @param a eql_v3.json Left operand (encrypted payload).
 --! @param b integer Native RHS operand.
 --! @return jsonb Never returns; always raises 'operator not supported'.
-CREATE FUNCTION eql_v3.jsonb_blocked_delete_int(a eql_v3.json, b integer)
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_delete_int(a eql_v3.json, b integer)
 RETURNS jsonb
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
-  RETURN eql_v3.encrypted_domain_unsupported_jsonb('eql_v3.json', '-');
+  RETURN eql_v3_internal.encrypted_domain_unsupported_jsonb('eql_v3.json', '-');
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR - (
-  FUNCTION = eql_v3.jsonb_blocked_delete_int,
+  FUNCTION = eql_v3_internal.jsonb_blocked_delete_int,
   LEFTARG = eql_v3.json,
   RIGHTARG = integer
 );
@@ -207,18 +207,18 @@ CREATE OPERATOR - (
 --! @param a eql_v3.json Left operand (encrypted payload).
 --! @param b text[] Native RHS operand.
 --! @return jsonb Never returns; always raises 'operator not supported'.
-CREATE FUNCTION eql_v3.jsonb_blocked_delete_array(a eql_v3.json, b text[])
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_delete_array(a eql_v3.json, b text[])
 RETURNS jsonb
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
-  RETURN eql_v3.encrypted_domain_unsupported_jsonb('eql_v3.json', '-');
+  RETURN eql_v3_internal.encrypted_domain_unsupported_jsonb('eql_v3.json', '-');
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR - (
-  FUNCTION = eql_v3.jsonb_blocked_delete_array,
+  FUNCTION = eql_v3_internal.jsonb_blocked_delete_array,
   LEFTARG = eql_v3.json,
   RIGHTARG = text[]
 );
@@ -227,18 +227,18 @@ CREATE OPERATOR - (
 --! @param a eql_v3.json Left operand (encrypted payload).
 --! @param b text[] Native RHS operand.
 --! @return jsonb Never returns; always raises 'operator not supported'.
-CREATE FUNCTION eql_v3.jsonb_blocked_delete_path(a eql_v3.json, b text[])
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_delete_path(a eql_v3.json, b text[])
 RETURNS jsonb
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
-  RETURN eql_v3.encrypted_domain_unsupported_jsonb('eql_v3.json', '#-');
+  RETURN eql_v3_internal.encrypted_domain_unsupported_jsonb('eql_v3.json', '#-');
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR #- (
-  FUNCTION = eql_v3.jsonb_blocked_delete_path,
+  FUNCTION = eql_v3_internal.jsonb_blocked_delete_path,
   LEFTARG = eql_v3.json,
   RIGHTARG = text[]
 );
@@ -247,18 +247,18 @@ CREATE OPERATOR #- (
 --! @param a eql_v3.json Left operand (encrypted payload).
 --! @param b jsonb Native RHS operand.
 --! @return jsonb Never returns; always raises 'operator not supported'.
-CREATE FUNCTION eql_v3.jsonb_blocked_concat(a eql_v3.json, b jsonb)
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_concat(a eql_v3.json, b jsonb)
 RETURNS jsonb
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
-  RETURN eql_v3.encrypted_domain_unsupported_jsonb('eql_v3.json', '||');
+  RETURN eql_v3_internal.encrypted_domain_unsupported_jsonb('eql_v3.json', '||');
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR || (
-  FUNCTION = eql_v3.jsonb_blocked_concat,
+  FUNCTION = eql_v3_internal.jsonb_blocked_concat,
   LEFTARG = eql_v3.json,
   RIGHTARG = jsonb
 );
@@ -267,18 +267,18 @@ CREATE OPERATOR || (
 --! @param a jsonb Native LHS operand.
 --! @param b eql_v3.json Right operand (encrypted payload).
 --! @return jsonb Never returns; always raises 'operator not supported'.
-CREATE FUNCTION eql_v3.jsonb_blocked_concat_rhs(a jsonb, b eql_v3.json)
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_concat_rhs(a jsonb, b eql_v3.json)
 RETURNS jsonb
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
-  RETURN eql_v3.encrypted_domain_unsupported_jsonb('eql_v3.json', '||');
+  RETURN eql_v3_internal.encrypted_domain_unsupported_jsonb('eql_v3.json', '||');
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR || (
-  FUNCTION = eql_v3.jsonb_blocked_concat_rhs,
+  FUNCTION = eql_v3_internal.jsonb_blocked_concat_rhs,
   LEFTARG = jsonb,
   RIGHTARG = eql_v3.json
 );
@@ -291,13 +291,13 @@ CREATE OPERATOR || (
 --! @param a eql_v3.json Left operand (encrypted payload).
 --! @param b eql_v3.json Right operand (encrypted payload).
 --! @return boolean Never returns; always raises 'operator not supported'.
-CREATE FUNCTION eql_v3.jsonb_blocked_compare_json_json(a eql_v3.json, b eql_v3.json)
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_compare_json_json(a eql_v3.json, b eql_v3.json)
 RETURNS boolean
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
-  RETURN eql_v3.encrypted_domain_unsupported_bool('eql_v3.json', 'comparison');
+  RETURN eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.json', 'comparison');
 END;
 $$ LANGUAGE plpgsql;
 
@@ -305,13 +305,13 @@ $$ LANGUAGE plpgsql;
 --! @param a eql_v3.json Left operand (encrypted payload).
 --! @param b jsonb Native RHS operand.
 --! @return boolean Never returns; always raises 'operator not supported'.
-CREATE FUNCTION eql_v3.jsonb_blocked_compare_json_jsonb(a eql_v3.json, b jsonb)
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_compare_json_jsonb(a eql_v3.json, b jsonb)
 RETURNS boolean
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
-  RETURN eql_v3.encrypted_domain_unsupported_bool('eql_v3.json', 'comparison');
+  RETURN eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.json', 'comparison');
 END;
 $$ LANGUAGE plpgsql;
 
@@ -319,120 +319,120 @@ $$ LANGUAGE plpgsql;
 --! @param a jsonb Native LHS operand.
 --! @param b eql_v3.json Right operand (encrypted payload).
 --! @return boolean Never returns; always raises 'operator not supported'.
-CREATE FUNCTION eql_v3.jsonb_blocked_compare_jsonb_json(a jsonb, b eql_v3.json)
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_compare_jsonb_json(a jsonb, b eql_v3.json)
 RETURNS boolean
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
-  RETURN eql_v3.encrypted_domain_unsupported_bool('eql_v3.json', 'comparison');
+  RETURN eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.json', 'comparison');
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR = (
-  FUNCTION = eql_v3.jsonb_blocked_compare_json_json,
+  FUNCTION = eql_v3_internal.jsonb_blocked_compare_json_json,
   LEFTARG = eql_v3.json,
   RIGHTARG = eql_v3.json
 );
 
 CREATE OPERATOR = (
-  FUNCTION = eql_v3.jsonb_blocked_compare_json_jsonb,
+  FUNCTION = eql_v3_internal.jsonb_blocked_compare_json_jsonb,
   LEFTARG = eql_v3.json,
   RIGHTARG = jsonb
 );
 
 CREATE OPERATOR = (
-  FUNCTION = eql_v3.jsonb_blocked_compare_jsonb_json,
+  FUNCTION = eql_v3_internal.jsonb_blocked_compare_jsonb_json,
   LEFTARG = jsonb,
   RIGHTARG = eql_v3.json
 );
 
 CREATE OPERATOR <> (
-  FUNCTION = eql_v3.jsonb_blocked_compare_json_json,
+  FUNCTION = eql_v3_internal.jsonb_blocked_compare_json_json,
   LEFTARG = eql_v3.json,
   RIGHTARG = eql_v3.json
 );
 
 CREATE OPERATOR <> (
-  FUNCTION = eql_v3.jsonb_blocked_compare_json_jsonb,
+  FUNCTION = eql_v3_internal.jsonb_blocked_compare_json_jsonb,
   LEFTARG = eql_v3.json,
   RIGHTARG = jsonb
 );
 
 CREATE OPERATOR <> (
-  FUNCTION = eql_v3.jsonb_blocked_compare_jsonb_json,
+  FUNCTION = eql_v3_internal.jsonb_blocked_compare_jsonb_json,
   LEFTARG = jsonb,
   RIGHTARG = eql_v3.json
 );
 
 CREATE OPERATOR < (
-  FUNCTION = eql_v3.jsonb_blocked_compare_json_json,
+  FUNCTION = eql_v3_internal.jsonb_blocked_compare_json_json,
   LEFTARG = eql_v3.json,
   RIGHTARG = eql_v3.json
 );
 
 CREATE OPERATOR < (
-  FUNCTION = eql_v3.jsonb_blocked_compare_json_jsonb,
+  FUNCTION = eql_v3_internal.jsonb_blocked_compare_json_jsonb,
   LEFTARG = eql_v3.json,
   RIGHTARG = jsonb
 );
 
 CREATE OPERATOR < (
-  FUNCTION = eql_v3.jsonb_blocked_compare_jsonb_json,
+  FUNCTION = eql_v3_internal.jsonb_blocked_compare_jsonb_json,
   LEFTARG = jsonb,
   RIGHTARG = eql_v3.json
 );
 
 CREATE OPERATOR <= (
-  FUNCTION = eql_v3.jsonb_blocked_compare_json_json,
+  FUNCTION = eql_v3_internal.jsonb_blocked_compare_json_json,
   LEFTARG = eql_v3.json,
   RIGHTARG = eql_v3.json
 );
 
 CREATE OPERATOR <= (
-  FUNCTION = eql_v3.jsonb_blocked_compare_json_jsonb,
+  FUNCTION = eql_v3_internal.jsonb_blocked_compare_json_jsonb,
   LEFTARG = eql_v3.json,
   RIGHTARG = jsonb
 );
 
 CREATE OPERATOR <= (
-  FUNCTION = eql_v3.jsonb_blocked_compare_jsonb_json,
+  FUNCTION = eql_v3_internal.jsonb_blocked_compare_jsonb_json,
   LEFTARG = jsonb,
   RIGHTARG = eql_v3.json
 );
 
 CREATE OPERATOR > (
-  FUNCTION = eql_v3.jsonb_blocked_compare_json_json,
+  FUNCTION = eql_v3_internal.jsonb_blocked_compare_json_json,
   LEFTARG = eql_v3.json,
   RIGHTARG = eql_v3.json
 );
 
 CREATE OPERATOR > (
-  FUNCTION = eql_v3.jsonb_blocked_compare_json_jsonb,
+  FUNCTION = eql_v3_internal.jsonb_blocked_compare_json_jsonb,
   LEFTARG = eql_v3.json,
   RIGHTARG = jsonb
 );
 
 CREATE OPERATOR > (
-  FUNCTION = eql_v3.jsonb_blocked_compare_jsonb_json,
+  FUNCTION = eql_v3_internal.jsonb_blocked_compare_jsonb_json,
   LEFTARG = jsonb,
   RIGHTARG = eql_v3.json
 );
 
 CREATE OPERATOR >= (
-  FUNCTION = eql_v3.jsonb_blocked_compare_json_json,
+  FUNCTION = eql_v3_internal.jsonb_blocked_compare_json_json,
   LEFTARG = eql_v3.json,
   RIGHTARG = eql_v3.json
 );
 
 CREATE OPERATOR >= (
-  FUNCTION = eql_v3.jsonb_blocked_compare_json_jsonb,
+  FUNCTION = eql_v3_internal.jsonb_blocked_compare_json_jsonb,
   LEFTARG = eql_v3.json,
   RIGHTARG = jsonb
 );
 
 CREATE OPERATOR >= (
-  FUNCTION = eql_v3.jsonb_blocked_compare_jsonb_json,
+  FUNCTION = eql_v3_internal.jsonb_blocked_compare_jsonb_json,
   LEFTARG = jsonb,
   RIGHTARG = eql_v3.json
 );
@@ -445,13 +445,13 @@ CREATE OPERATOR >= (
 --! @param a eql_v3.json Left operand (encrypted payload).
 --! @param b jsonb Native RHS operand.
 --! @return boolean Never returns; always raises 'operator not supported'.
-CREATE FUNCTION eql_v3.jsonb_blocked_contains_json_jsonb(a eql_v3.json, b jsonb)
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_contains_json_jsonb(a eql_v3.json, b jsonb)
 RETURNS boolean
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
-  RETURN eql_v3.encrypted_domain_unsupported_bool('eql_v3.json', '@>');
+  RETURN eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.json', '@>');
 END;
 $$ LANGUAGE plpgsql;
 
@@ -459,13 +459,13 @@ $$ LANGUAGE plpgsql;
 --! @param a jsonb Native LHS operand.
 --! @param b eql_v3.json Right operand (encrypted payload).
 --! @return boolean Never returns; always raises 'operator not supported'.
-CREATE FUNCTION eql_v3.jsonb_blocked_contains_jsonb_json(a jsonb, b eql_v3.json)
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_contains_jsonb_json(a jsonb, b eql_v3.json)
 RETURNS boolean
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
-  RETURN eql_v3.encrypted_domain_unsupported_bool('eql_v3.json', '@>');
+  RETURN eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.json', '@>');
 END;
 $$ LANGUAGE plpgsql;
 
@@ -473,13 +473,13 @@ $$ LANGUAGE plpgsql;
 --! @param a eql_v3.json Left operand (encrypted payload).
 --! @param b jsonb Native RHS operand.
 --! @return boolean Never returns; always raises 'operator not supported'.
-CREATE FUNCTION eql_v3.jsonb_blocked_contained_json_jsonb(a eql_v3.json, b jsonb)
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_contained_json_jsonb(a eql_v3.json, b jsonb)
 RETURNS boolean
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
-  RETURN eql_v3.encrypted_domain_unsupported_bool('eql_v3.json', '<@');
+  RETURN eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.json', '<@');
 END;
 $$ LANGUAGE plpgsql;
 
@@ -487,36 +487,36 @@ $$ LANGUAGE plpgsql;
 --! @param a jsonb Native LHS operand.
 --! @param b eql_v3.json Right operand (encrypted payload).
 --! @return boolean Never returns; always raises 'operator not supported'.
-CREATE FUNCTION eql_v3.jsonb_blocked_contained_jsonb_json(a jsonb, b eql_v3.json)
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_contained_jsonb_json(a jsonb, b eql_v3.json)
 RETURNS boolean
 IMMUTABLE PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 BEGIN
-  RETURN eql_v3.encrypted_domain_unsupported_bool('eql_v3.json', '<@');
+  RETURN eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.json', '<@');
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OPERATOR @> (
-  FUNCTION = eql_v3.jsonb_blocked_contains_json_jsonb,
+  FUNCTION = eql_v3_internal.jsonb_blocked_contains_json_jsonb,
   LEFTARG = eql_v3.json,
   RIGHTARG = jsonb
 );
 
 CREATE OPERATOR @> (
-  FUNCTION = eql_v3.jsonb_blocked_contains_jsonb_json,
+  FUNCTION = eql_v3_internal.jsonb_blocked_contains_jsonb_json,
   LEFTARG = jsonb,
   RIGHTARG = eql_v3.json
 );
 
 CREATE OPERATOR <@ (
-  FUNCTION = eql_v3.jsonb_blocked_contained_json_jsonb,
+  FUNCTION = eql_v3_internal.jsonb_blocked_contained_json_jsonb,
   LEFTARG = eql_v3.json,
   RIGHTARG = jsonb
 );
 
 CREATE OPERATOR <@ (
-  FUNCTION = eql_v3.jsonb_blocked_contained_jsonb_json,
+  FUNCTION = eql_v3_internal.jsonb_blocked_contained_jsonb_json,
   LEFTARG = jsonb,
   RIGHTARG = eql_v3.json
 );

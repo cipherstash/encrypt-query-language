@@ -12,12 +12,12 @@
 --! order-preserving under plain byte comparison, so the domain inherits
 --! bytea's native comparison operators and DEFAULT btree operator class
 --! outright — no hand-written operators, comparator, or operator class (the
---! same pattern as eql_v3.hmac_256 over text). That keeps the whole
+--! same pattern as eql_v3_internal.hmac_256 over text). That keeps the whole
 --! comparison chain inlinable, so a functional btree index on
 --! `eql_v3.ord_ope_term(col)` engages structurally for the `_ord_ope`
---! domains' comparison operators. Contrast eql_v3.ore_cllw (`oc`), the SteVec
+--! domains' comparison operators. Contrast eql_v3_internal.ore_cllw (`oc`), the SteVec
 --! CLLW-*ORE* composite compared by a custom per-byte protocol.
 --!
 --! @note Transient type used only during query execution.
---! @see eql_v3.ope_cllw
-CREATE DOMAIN eql_v3.ope_cllw AS bytea;
+--! @see eql_v3_internal.ope_cllw
+CREATE DOMAIN eql_v3_internal.ope_cllw AS bytea;

@@ -2,6 +2,6 @@
 
 /**
  * HMAC-SHA-256 equality term — the `hm` wire key. Backs the `_eq` domains
- * (`=`, `<>`). SQL-side constructor: `eql_v3.hmac_256`.
+ * (`=`, `<>`). SQL-side constructor: `eql_v3_internal.hmac_256`.
  */
 export type Hmac256 = string;

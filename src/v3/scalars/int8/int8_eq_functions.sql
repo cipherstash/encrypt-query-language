@@ -9,11 +9,11 @@
 
 --! @brief Index extractor for eql_v3.int8_eq.
 --! @param a eql_v3.int8_eq
---! @return eql_v3.hmac_256
+--! @return eql_v3_internal.hmac_256
 CREATE FUNCTION eql_v3.eq_term(a eql_v3.int8_eq)
-RETURNS eql_v3.hmac_256
+RETURNS eql_v3_internal.hmac_256
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.hmac_256(a::jsonb) $$;
+AS $$ SELECT eql_v3_internal.hmac_256(a::jsonb) $$;
 
 --! @brief Operator wrapper for eql_v3.int8_eq.
 --! @param a eql_v3.int8_eq
@@ -67,7 +67,7 @@ AS $$ SELECT eql_v3.eq_term(a::eql_v3.int8_eq) <> eql_v3.eq_term(b) $$;
 --! @param a eql_v3.int8_eq
 --! @param b eql_v3.int8_eq
 --! @return boolean
-CREATE FUNCTION eql_v3.lt(a eql_v3.int8_eq, b eql_v3.int8_eq)
+CREATE FUNCTION eql_v3_internal.lt(a eql_v3.int8_eq, b eql_v3.int8_eq)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -76,7 +76,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.lt(a eql_v3.int8_eq, b jsonb)
+CREATE FUNCTION eql_v3_internal.lt(a eql_v3.int8_eq, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -85,7 +85,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v3.int8_eq
 --! @return boolean
-CREATE FUNCTION eql_v3.lt(a jsonb, b eql_v3.int8_eq)
+CREATE FUNCTION eql_v3_internal.lt(a jsonb, b eql_v3.int8_eq)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -94,7 +94,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b eql_v3.int8_eq
 --! @return boolean
-CREATE FUNCTION eql_v3.lte(a eql_v3.int8_eq, b eql_v3.int8_eq)
+CREATE FUNCTION eql_v3_internal.lte(a eql_v3.int8_eq, b eql_v3.int8_eq)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -103,7 +103,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.lte(a eql_v3.int8_eq, b jsonb)
+CREATE FUNCTION eql_v3_internal.lte(a eql_v3.int8_eq, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -112,7 +112,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v3.int8_eq
 --! @return boolean
-CREATE FUNCTION eql_v3.lte(a jsonb, b eql_v3.int8_eq)
+CREATE FUNCTION eql_v3_internal.lte(a jsonb, b eql_v3.int8_eq)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -121,7 +121,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b eql_v3.int8_eq
 --! @return boolean
-CREATE FUNCTION eql_v3.gt(a eql_v3.int8_eq, b eql_v3.int8_eq)
+CREATE FUNCTION eql_v3_internal.gt(a eql_v3.int8_eq, b eql_v3.int8_eq)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -130,7 +130,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.gt(a eql_v3.int8_eq, b jsonb)
+CREATE FUNCTION eql_v3_internal.gt(a eql_v3.int8_eq, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -139,7 +139,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v3.int8_eq
 --! @return boolean
-CREATE FUNCTION eql_v3.gt(a jsonb, b eql_v3.int8_eq)
+CREATE FUNCTION eql_v3_internal.gt(a jsonb, b eql_v3.int8_eq)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -148,7 +148,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b eql_v3.int8_eq
 --! @return boolean
-CREATE FUNCTION eql_v3.gte(a eql_v3.int8_eq, b eql_v3.int8_eq)
+CREATE FUNCTION eql_v3_internal.gte(a eql_v3.int8_eq, b eql_v3.int8_eq)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -157,7 +157,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.gte(a eql_v3.int8_eq, b jsonb)
+CREATE FUNCTION eql_v3_internal.gte(a eql_v3.int8_eq, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -166,7 +166,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v3.int8_eq
 --! @return boolean
-CREATE FUNCTION eql_v3.gte(a jsonb, b eql_v3.int8_eq)
+CREATE FUNCTION eql_v3_internal.gte(a jsonb, b eql_v3.int8_eq)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -175,7 +175,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b eql_v3.int8_eq
 --! @return boolean
-CREATE FUNCTION eql_v3.contains(a eql_v3.int8_eq, b eql_v3.int8_eq)
+CREATE FUNCTION eql_v3_internal.contains(a eql_v3.int8_eq, b eql_v3.int8_eq)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -184,7 +184,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.contains(a eql_v3.int8_eq, b jsonb)
+CREATE FUNCTION eql_v3_internal.contains(a eql_v3.int8_eq, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -193,7 +193,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v3.int8_eq
 --! @return boolean
-CREATE FUNCTION eql_v3.contains(a jsonb, b eql_v3.int8_eq)
+CREATE FUNCTION eql_v3_internal.contains(a jsonb, b eql_v3.int8_eq)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -202,7 +202,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b eql_v3.int8_eq
 --! @return boolean
-CREATE FUNCTION eql_v3.contained_by(a eql_v3.int8_eq, b eql_v3.int8_eq)
+CREATE FUNCTION eql_v3_internal.contained_by(a eql_v3.int8_eq, b eql_v3.int8_eq)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -211,7 +211,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.contained_by(a eql_v3.int8_eq, b jsonb)
+CREATE FUNCTION eql_v3_internal.contained_by(a eql_v3.int8_eq, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -220,7 +220,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v3.int8_eq
 --! @return boolean
-CREATE FUNCTION eql_v3.contained_by(a jsonb, b eql_v3.int8_eq)
+CREATE FUNCTION eql_v3_internal.contained_by(a jsonb, b eql_v3.int8_eq)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -229,7 +229,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param selector text
 --! @return eql_v3.int8_eq
-CREATE FUNCTION eql_v3."->"(a eql_v3.int8_eq, selector text)
+CREATE FUNCTION eql_v3_internal."->"(a eql_v3.int8_eq, selector text)
 RETURNS eql_v3.int8_eq IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -238,7 +238,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param selector integer
 --! @return eql_v3.int8_eq
-CREATE FUNCTION eql_v3."->"(a eql_v3.int8_eq, selector integer)
+CREATE FUNCTION eql_v3_internal."->"(a eql_v3.int8_eq, selector integer)
 RETURNS eql_v3.int8_eq IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -247,7 +247,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param selector eql_v3.int8_eq
 --! @return eql_v3.int8_eq
-CREATE FUNCTION eql_v3."->"(a jsonb, selector eql_v3.int8_eq)
+CREATE FUNCTION eql_v3_internal."->"(a jsonb, selector eql_v3.int8_eq)
 RETURNS eql_v3.int8_eq IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -256,7 +256,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param selector text
 --! @return text
-CREATE FUNCTION eql_v3."->>"(a eql_v3.int8_eq, selector text)
+CREATE FUNCTION eql_v3_internal."->>"(a eql_v3.int8_eq, selector text)
 RETURNS text IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -265,7 +265,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param selector integer
 --! @return text
-CREATE FUNCTION eql_v3."->>"(a eql_v3.int8_eq, selector integer)
+CREATE FUNCTION eql_v3_internal."->>"(a eql_v3.int8_eq, selector integer)
 RETURNS text IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -274,7 +274,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param selector eql_v3.int8_eq
 --! @return text
-CREATE FUNCTION eql_v3."->>"(a jsonb, selector eql_v3.int8_eq)
+CREATE FUNCTION eql_v3_internal."->>"(a jsonb, selector eql_v3.int8_eq)
 RETURNS text IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -283,7 +283,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b text
 --! @return boolean
-CREATE FUNCTION eql_v3."?"(a eql_v3.int8_eq, b text)
+CREATE FUNCTION eql_v3_internal."?"(a eql_v3.int8_eq, b text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -292,7 +292,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b text[]
 --! @return boolean
-CREATE FUNCTION eql_v3."?|"(a eql_v3.int8_eq, b text[])
+CREATE FUNCTION eql_v3_internal."?|"(a eql_v3.int8_eq, b text[])
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?|', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -301,7 +301,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b text[]
 --! @return boolean
-CREATE FUNCTION eql_v3."?&"(a eql_v3.int8_eq, b text[])
+CREATE FUNCTION eql_v3_internal."?&"(a eql_v3.int8_eq, b text[])
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?&', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -310,7 +310,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b jsonpath
 --! @return boolean
-CREATE FUNCTION eql_v3."@?"(a eql_v3.int8_eq, b jsonpath)
+CREATE FUNCTION eql_v3_internal."@?"(a eql_v3.int8_eq, b jsonpath)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@?', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -319,7 +319,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b jsonpath
 --! @return boolean
-CREATE FUNCTION eql_v3."@@"(a eql_v3.int8_eq, b jsonpath)
+CREATE FUNCTION eql_v3_internal."@@"(a eql_v3.int8_eq, b jsonpath)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -328,7 +328,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b text[]
 --! @return jsonb
-CREATE FUNCTION eql_v3."#>"(a eql_v3.int8_eq, b text[])
+CREATE FUNCTION eql_v3_internal."#>"(a eql_v3.int8_eq, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -337,7 +337,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b text[]
 --! @return text
-CREATE FUNCTION eql_v3."#>>"(a eql_v3.int8_eq, b text[])
+CREATE FUNCTION eql_v3_internal."#>>"(a eql_v3.int8_eq, b text[])
 RETURNS text IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>>', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -346,7 +346,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b text
 --! @return jsonb
-CREATE FUNCTION eql_v3."-"(a eql_v3.int8_eq, b text)
+CREATE FUNCTION eql_v3_internal."-"(a eql_v3.int8_eq, b text)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -355,7 +355,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b integer
 --! @return jsonb
-CREATE FUNCTION eql_v3."-"(a eql_v3.int8_eq, b integer)
+CREATE FUNCTION eql_v3_internal."-"(a eql_v3.int8_eq, b integer)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -364,7 +364,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b text[]
 --! @return jsonb
-CREATE FUNCTION eql_v3."-"(a eql_v3.int8_eq, b text[])
+CREATE FUNCTION eql_v3_internal."-"(a eql_v3.int8_eq, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -373,7 +373,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b text[]
 --! @return jsonb
-CREATE FUNCTION eql_v3."#-"(a eql_v3.int8_eq, b text[])
+CREATE FUNCTION eql_v3_internal."#-"(a eql_v3.int8_eq, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#-', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -382,7 +382,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b eql_v3.int8_eq
 --! @return jsonb
-CREATE FUNCTION eql_v3."||"(a eql_v3.int8_eq, b eql_v3.int8_eq)
+CREATE FUNCTION eql_v3_internal."||"(a eql_v3.int8_eq, b eql_v3.int8_eq)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -391,7 +391,7 @@ LANGUAGE plpgsql;
 --! @param a eql_v3.int8_eq
 --! @param b jsonb
 --! @return jsonb
-CREATE FUNCTION eql_v3."||"(a eql_v3.int8_eq, b jsonb)
+CREATE FUNCTION eql_v3_internal."||"(a eql_v3.int8_eq, b jsonb)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;
@@ -400,7 +400,7 @@ LANGUAGE plpgsql;
 --! @param a jsonb
 --! @param b eql_v3.int8_eq
 --! @return jsonb
-CREATE FUNCTION eql_v3."||"(a jsonb, b eql_v3.int8_eq)
+CREATE FUNCTION eql_v3_internal."||"(a jsonb, b eql_v3.int8_eq)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'eql_v3.int8_eq'; END; $$
 LANGUAGE plpgsql;

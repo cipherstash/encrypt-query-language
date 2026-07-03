@@ -373,11 +373,13 @@ mod tests {
         let s = spec("int4");
         let d = domain(s, "eq");
         let sql = render_functions_file("int4", d);
+        // Supported wrapper (`=`) is PUBLIC; unsupported ops (`<`, `->` on an
+        // equality-only domain) stay as internal blockers.
         assert!(sql.contains("CREATE FUNCTION eql_v3.eq("));
         assert!(sql.contains("AS $$ SELECT"));
-        assert!(sql.contains("CREATE FUNCTION eql_v3.lt("));
+        assert!(sql.contains("CREATE FUNCTION eql_v3_internal.lt("));
         assert!(sql.contains("RAISE EXCEPTION 'operator % is not supported for %', '<'"));
-        assert!(sql.contains("CREATE FUNCTION eql_v3.\"->\"("));
+        assert!(sql.contains("CREATE FUNCTION eql_v3_internal.\"->\"("));
         assert!(sql.contains("RAISE EXCEPTION 'operator % is not supported for %', '->'"));
     }
 
@@ -624,7 +626,7 @@ mod tests {
         let sql = render_functions_file(s.name, domain(s, "eq"));
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
         assert!(sql.contains("CREATE FUNCTION eql_v3.eq_term(a eql_v3.int4_eq)"));
-        assert!(sql.contains("RETURNS eql_v3.hmac_256"));
+        assert!(sql.contains("RETURNS eql_v3_internal.hmac_256"));
         assert_eq!(
             sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
                 .count(),
@@ -640,7 +642,7 @@ mod tests {
         let sql = render_functions_file(s.name, domain(s, "ord"));
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
         assert!(sql.contains("CREATE FUNCTION eql_v3.ord_term(a eql_v3.int4_ord)"));
-        assert!(sql.contains("RETURNS eql_v3.ore_block_256"));
+        assert!(sql.contains("RETURNS eql_v3_internal.ore_block_256"));
         assert_eq!(
             sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
                 .count(),
@@ -680,6 +682,37 @@ mod tests {
     }
 
     #[test]
+    fn supported_operators_bind_public_wrapper_blocked_bind_internal() {
+        // The operator-equivalent invariant for operator-free platforms: a
+        // SUPPORTED operator's backing function is PUBLIC (`eql_v3.<wrapper>`)
+        // so it is callable by name without the operator; a BLOCKED operator's
+        // backing function stays internal (`eql_v3_internal.<blocker>`).
+        let s = spec("int4");
+        let eq_sql = render_operators_file(s.name, domain(s, "eq"));
+        // `=` is supported on int4_eq → public wrapper.
+        assert!(eq_sql.contains("FUNCTION = eql_v3.eq,"));
+        // `<` is unsupported on the equality-only domain → internal blocker.
+        assert!(eq_sql.contains("FUNCTION = eql_v3_internal.lt,"));
+        // native-jsonb blocker stays internal too.
+        assert!(eq_sql.contains("FUNCTION = eql_v3_internal.\"||\","));
+
+        // Ordered domain: comparison + range wrappers all public.
+        let ord_sql = render_operators_file(s.name, domain(s, "ord"));
+        for f in ["eq", "neq", "lt", "lte", "gt", "gte"] {
+            assert!(
+                ord_sql.contains(&format!("FUNCTION = eql_v3.{f},")),
+                "ordered operator {f} must bind the public wrapper"
+            );
+        }
+
+        // Bloom text_match: containment wrappers are supported → public.
+        let tm = spec("text");
+        let tm_sql = render_operators_file(tm.name, domain(tm, "match"));
+        assert!(tm_sql.contains("FUNCTION = eql_v3.contains,"));
+        assert!(tm_sql.contains("FUNCTION = eql_v3.contained_by,"));
+    }
+
+    #[test]
     fn aggregates_file_only_for_ord_variants() {
         let s = spec("int4");
         assert!(render_aggregates_file(s.name, domain(s, "")).is_none());
@@ -695,8 +728,8 @@ mod tests {
         let sql = render_aggregates_file(s.name, domain(s, "ord")).unwrap();
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 2);
         assert_eq!(sql.matches("CREATE AGGREGATE").count(), 2);
-        assert!(sql.contains("eql_v3.min_sfunc"));
-        assert!(sql.contains("eql_v3.max_sfunc"));
+        assert!(sql.contains("eql_v3_internal.min_sfunc"));
+        assert!(sql.contains("eql_v3_internal.max_sfunc"));
         assert!(sql.contains("-- REQUIRE: src/v3/scalars/int4/int4_ord_operators.sql"));
         assert!(sql.contains("-- REQUIRE: src/v3/scalars/int4/int4_ord_functions.sql"));
         assert!(sql.contains("-- REQUIRE: src/v3/scalars/int4/int4_types.sql"));

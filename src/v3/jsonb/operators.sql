@@ -59,7 +59,7 @@ CREATE FUNCTION eql_v3."->"(e eql_v3.json, selector integer)
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   SELECT CASE
-    WHEN eql_v3.is_ste_vec_array(e) THEN
+    WHEN eql_v3_internal.is_ste_vec_array(e) THEN
       -- NOTE: `e::jsonb` makes the native-jsonb traversal explicit. `'sv'` is an
       -- unknown-typed literal, so `e -> 'sv'` already flattens `eql_v3.json` to
       -- its base type and binds native `jsonb -> text` (see the @warning above) —
@@ -258,7 +258,6 @@ CREATE OPERATOR <@(
 ------------------------------------------------------------------------------
 
 --! @brief Equality on jsonb_entry via eq_term (hm-or-oc byte equality).
---! @internal
 --! @param a eql_v3.jsonb_entry Left operand
 --! @param b eql_v3.jsonb_entry Right operand
 --! @return boolean True if the entries are equal
@@ -280,7 +279,6 @@ CREATE OPERATOR = (
 );
 
 --! @brief Inequality on jsonb_entry via eq_term.
---! @internal
 --! @param a eql_v3.jsonb_entry Left operand
 --! @param b eql_v3.jsonb_entry Right operand
 --! @return boolean True if the entries are not equal
@@ -302,7 +300,6 @@ CREATE OPERATOR <> (
 );
 
 --! @brief Less-than on jsonb_entry via ore_cllw.
---! @internal
 --! @param a eql_v3.jsonb_entry Left operand
 --! @param b eql_v3.jsonb_entry Right operand
 --! @return boolean True if a is less than b
@@ -324,7 +321,6 @@ CREATE OPERATOR < (
 );
 
 --! @brief Less-than-or-equal on jsonb_entry via ore_cllw.
---! @internal
 --! @param a eql_v3.jsonb_entry Left operand
 --! @param b eql_v3.jsonb_entry Right operand
 --! @return boolean True if a is less than or equal to b
@@ -346,7 +342,6 @@ CREATE OPERATOR <= (
 );
 
 --! @brief Greater-than on jsonb_entry via ore_cllw.
---! @internal
 --! @param a eql_v3.jsonb_entry Left operand
 --! @param b eql_v3.jsonb_entry Right operand
 --! @return boolean True if a is greater than b
@@ -368,7 +363,6 @@ CREATE OPERATOR > (
 );
 
 --! @brief Greater-than-or-equal on jsonb_entry via ore_cllw.
---! @internal
 --! @param a eql_v3.jsonb_entry Left operand
 --! @param b eql_v3.jsonb_entry Right operand
 --! @return boolean True if a is greater than or equal to b

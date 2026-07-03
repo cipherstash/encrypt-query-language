@@ -115,131 +115,131 @@ CREATE OPERATOR >= (
 );
 
 CREATE OPERATOR @> (
-  FUNCTION = eql_v3.contains,
+  FUNCTION = eql_v3_internal.contains,
   LEFTARG = eql_v3.int8_ord_ore, RIGHTARG = eql_v3.int8_ord_ore
 );
 
 CREATE OPERATOR @> (
-  FUNCTION = eql_v3.contains,
+  FUNCTION = eql_v3_internal.contains,
   LEFTARG = eql_v3.int8_ord_ore, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR @> (
-  FUNCTION = eql_v3.contains,
+  FUNCTION = eql_v3_internal.contains,
   LEFTARG = jsonb, RIGHTARG = eql_v3.int8_ord_ore
 );
 
 CREATE OPERATOR <@ (
-  FUNCTION = eql_v3.contained_by,
+  FUNCTION = eql_v3_internal.contained_by,
   LEFTARG = eql_v3.int8_ord_ore, RIGHTARG = eql_v3.int8_ord_ore
 );
 
 CREATE OPERATOR <@ (
-  FUNCTION = eql_v3.contained_by,
+  FUNCTION = eql_v3_internal.contained_by,
   LEFTARG = eql_v3.int8_ord_ore, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR <@ (
-  FUNCTION = eql_v3.contained_by,
+  FUNCTION = eql_v3_internal.contained_by,
   LEFTARG = jsonb, RIGHTARG = eql_v3.int8_ord_ore
 );
 
 CREATE OPERATOR -> (
-  FUNCTION = eql_v3."->",
+  FUNCTION = eql_v3_internal."->",
   LEFTARG = eql_v3.int8_ord_ore, RIGHTARG = text
 );
 
 CREATE OPERATOR -> (
-  FUNCTION = eql_v3."->",
+  FUNCTION = eql_v3_internal."->",
   LEFTARG = eql_v3.int8_ord_ore, RIGHTARG = integer
 );
 
 CREATE OPERATOR -> (
-  FUNCTION = eql_v3."->",
+  FUNCTION = eql_v3_internal."->",
   LEFTARG = jsonb, RIGHTARG = eql_v3.int8_ord_ore
 );
 
 CREATE OPERATOR ->> (
-  FUNCTION = eql_v3."->>",
+  FUNCTION = eql_v3_internal."->>",
   LEFTARG = eql_v3.int8_ord_ore, RIGHTARG = text
 );
 
 CREATE OPERATOR ->> (
-  FUNCTION = eql_v3."->>",
+  FUNCTION = eql_v3_internal."->>",
   LEFTARG = eql_v3.int8_ord_ore, RIGHTARG = integer
 );
 
 CREATE OPERATOR ->> (
-  FUNCTION = eql_v3."->>",
+  FUNCTION = eql_v3_internal."->>",
   LEFTARG = jsonb, RIGHTARG = eql_v3.int8_ord_ore
 );
 
 CREATE OPERATOR ? (
-  FUNCTION = eql_v3."?",
+  FUNCTION = eql_v3_internal."?",
   LEFTARG = eql_v3.int8_ord_ore, RIGHTARG = text
 );
 
 CREATE OPERATOR ?| (
-  FUNCTION = eql_v3."?|",
+  FUNCTION = eql_v3_internal."?|",
   LEFTARG = eql_v3.int8_ord_ore, RIGHTARG = text[]
 );
 
 CREATE OPERATOR ?& (
-  FUNCTION = eql_v3."?&",
+  FUNCTION = eql_v3_internal."?&",
   LEFTARG = eql_v3.int8_ord_ore, RIGHTARG = text[]
 );
 
 CREATE OPERATOR @? (
-  FUNCTION = eql_v3."@?",
+  FUNCTION = eql_v3_internal."@?",
   LEFTARG = eql_v3.int8_ord_ore, RIGHTARG = jsonpath
 );
 
 CREATE OPERATOR @@ (
-  FUNCTION = eql_v3."@@",
+  FUNCTION = eql_v3_internal."@@",
   LEFTARG = eql_v3.int8_ord_ore, RIGHTARG = jsonpath
 );
 
 CREATE OPERATOR #> (
-  FUNCTION = eql_v3."#>",
+  FUNCTION = eql_v3_internal."#>",
   LEFTARG = eql_v3.int8_ord_ore, RIGHTARG = text[]
 );
 
 CREATE OPERATOR #>> (
-  FUNCTION = eql_v3."#>>",
+  FUNCTION = eql_v3_internal."#>>",
   LEFTARG = eql_v3.int8_ord_ore, RIGHTARG = text[]
 );
 
 CREATE OPERATOR - (
-  FUNCTION = eql_v3."-",
+  FUNCTION = eql_v3_internal."-",
   LEFTARG = eql_v3.int8_ord_ore, RIGHTARG = text
 );
 
 CREATE OPERATOR - (
-  FUNCTION = eql_v3."-",
+  FUNCTION = eql_v3_internal."-",
   LEFTARG = eql_v3.int8_ord_ore, RIGHTARG = integer
 );
 
 CREATE OPERATOR - (
-  FUNCTION = eql_v3."-",
+  FUNCTION = eql_v3_internal."-",
   LEFTARG = eql_v3.int8_ord_ore, RIGHTARG = text[]
 );
 
 CREATE OPERATOR #- (
-  FUNCTION = eql_v3."#-",
+  FUNCTION = eql_v3_internal."#-",
   LEFTARG = eql_v3.int8_ord_ore, RIGHTARG = text[]
 );
 
 CREATE OPERATOR || (
-  FUNCTION = eql_v3."||",
+  FUNCTION = eql_v3_internal."||",
   LEFTARG = eql_v3.int8_ord_ore, RIGHTARG = eql_v3.int8_ord_ore
 );
 
 CREATE OPERATOR || (
-  FUNCTION = eql_v3."||",
+  FUNCTION = eql_v3_internal."||",
   LEFTARG = eql_v3.int8_ord_ore, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR || (
-  FUNCTION = eql_v3."||",
+  FUNCTION = eql_v3_internal."||",
   LEFTARG = jsonb, RIGHTARG = eql_v3.int8_ord_ore
 );
