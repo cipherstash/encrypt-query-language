@@ -134,18 +134,32 @@ async fn hmac_equality_terms_are_distinct_for_distinct_values(pool: PgPool) -> R
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_int4")))]
-async fn every_payload_declares_eql_payload_version_v2(pool: PgPool) -> Result<()> {
-    // The EQL `v` payload-format field is checked server-side against `'2'`
-    // when an `eql_v2_encrypted` value is inserted. Asserting equality here
-    // (not just presence) means a future bump to `v=3` fails this test
-    // loudly, forcing the maintainer to regenerate the fixture and audit
-    // consumers for v2→v3 semantic changes.
+async fn every_payload_declares_eql_payload_version_v3(pool: PgPool) -> Result<()> {
+    // Every `eql_v3` domain CHECK pins `VALUE->>'v' = '3'` (the #340
+    // envelope bump), and the generator routes the pinned client's v2
+    // output through `eql_bindings::from_v2` before writing the fixture.
+    // Asserting equality here (not just presence) means a future envelope
+    // bump fails this test loudly, forcing the maintainer to regenerate the
+    // fixture and audit consumers for semantic changes.
     let mismatched: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM fixtures.eql_v3_int4
-         WHERE payload->'v' IS NULL OR payload->>'v' <> '2'",
+         WHERE payload->'v' IS NULL OR payload->>'v' <> '3'",
     )
     .fetch_one(&pool)
     .await?;
-    assert_eq!(mismatched, 0, "every payload must declare v = '2'");
+    assert_eq!(mismatched, 0, "every payload must declare v = '3'");
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_int4")))]
+async fn no_payload_carries_the_v2_form_discriminator(pool: PgPool) -> Result<()> {
+    // The v2 wire's `k: "ct"` discriminator is dropped by the from_v2
+    // conversion — its presence would mean a raw client payload bypassed
+    // the conversion seam.
+    let with_k: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM fixtures.eql_v3_int4 WHERE payload ? 'k'")
+            .fetch_one(&pool)
+            .await?;
+    assert_eq!(with_k, 0, "no converted scalar payload may carry `k`");
     Ok(())
 }

@@ -71,7 +71,7 @@ echo "==> smoke: v3 encrypted JSONB surface"
 "${RUN[@]}" <<'SQL'
 CREATE TABLE v3_json_smoke (id int PRIMARY KEY, e eql_v3.json);
 INSERT INTO v3_json_smoke VALUES
-  (1, '{"i":{"c":"v3_json_smoke","t":"encrypted"},"v":2,"sv":[{"s":"sel","c":"ciphertext","hm":"00"}]}'::eql_v3.json);
+  (1, '{"i":{"c":"v3_json_smoke","t":"encrypted"},"v":3,"sv":[{"s":"sel","c":"ciphertext","hm":"00"}]}'::eql_v3.json);
 
 -- Supported typed accessors and containment.
 SELECT (e -> 'sel'::text)::jsonb ->> 'hm' FROM v3_json_smoke WHERE id = 1;
