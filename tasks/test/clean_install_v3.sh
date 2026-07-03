@@ -34,13 +34,13 @@ echo "==> asserting NO eql_v2 schema exists (proves no v2 dependency)"
 echo "==> smoke: domains, SEM types, extractors, opclass functional index (D4)"
 "${RUN[@]}" <<'SQL'
 -- Domains stay in eql_v3; SEM index-term types now live in eql_v3_internal.
-SELECT 'eql_v3.int4_ord'::regtype;
+SELECT 'eql_v3.integer_ord'::regtype;
 SELECT 'eql_v3_internal.hmac_256'::regtype;
 SELECT 'eql_v3_internal.ore_block_256'::regtype;
 
 -- A real ordered-domain column + the documented functional index. This is the
 -- D4 proof: it fails outright if the ported operator_class is absent.
-CREATE TABLE v3_smoke (c eql_v3.int4_ord);
+CREATE TABLE v3_smoke (c eql_v3.integer_ord);
 CREATE INDEX v3_smoke_ord ON v3_smoke (eql_v3.ord_term(c));
 DROP TABLE v3_smoke;
 SQL
@@ -53,10 +53,10 @@ DECLARE
 BEGIN
   -- The blocker always RAISEs; catch it and assert we got the expected message.
   BEGIN
-    PERFORM eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.int4', '<');
+    PERFORM eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.integer', '<');
   EXCEPTION WHEN OTHERS THEN
     raised := true;
-    IF SQLERRM <> 'operator < is not supported for eql_v3.int4' THEN
+    IF SQLERRM <> 'operator < is not supported for eql_v3.integer' THEN
       RAISE EXCEPTION 'blocker raised an unexpected message: %', SQLERRM;
     END IF;
   END;

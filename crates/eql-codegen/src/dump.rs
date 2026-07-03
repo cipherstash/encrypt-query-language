@@ -16,7 +16,7 @@ pub struct CatalogDump {
 
 #[derive(Serialize)]
 pub struct TypeEntry {
-    /// Catalog token, e.g. `int4`.
+    /// Catalog token, e.g. `integer`.
     pub token: &'static str,
     /// True when the type has no `_ord` domain (storage + `_eq` only).
     pub is_eq_only: bool,
@@ -74,34 +74,34 @@ mod tests {
     use super::*;
 
     #[test]
-    fn int4_exposes_all_ordered_domains_with_operators() {
+    fn integer_exposes_all_ordered_domains_with_operators() {
         let dump = dump_catalog();
-        let int4 = dump
+        let integer = dump
             .types
             .iter()
-            .find(|t| t.token == "int4")
-            .expect("int4 present in catalog");
-        assert!(!int4.is_eq_only, "int4 is an ordered type");
+            .find(|t| t.token == "integer")
+            .expect("integer present in catalog");
+        assert!(!integer.is_eq_only, "integer is an ordered type");
 
-        let segments: Vec<&str> = int4.domains.iter().map(|d| d.segment.as_str()).collect();
+        let segments: Vec<&str> = integer.domains.iter().map(|d| d.segment.as_str()).collect();
         assert_eq!(segments, ["storage", "eq", "ord_ore", "ord", "ord_ope"]);
 
-        let storage = int4
+        let storage = integer
             .domains
             .iter()
             .find(|d| d.segment == "storage")
             .unwrap();
         assert!(storage.supported_ops.is_empty(), "storage has no operators");
 
-        let eq = int4.domains.iter().find(|d| d.segment == "eq").unwrap();
+        let eq = integer.domains.iter().find(|d| d.segment == "eq").unwrap();
         assert_eq!(eq.supported_ops, ["=", "<>"]);
 
-        let ord = int4.domains.iter().find(|d| d.segment == "ord").unwrap();
+        let ord = integer.domains.iter().find(|d| d.segment == "ord").unwrap();
         assert_eq!(ord.supported_ops, ["=", "<>", "<", "<=", ">", ">="]);
 
         // `ord_ope` (CLLW-OPE) advertises the same operator set as the
         // block-ORE ordered domains — only the term/extractor differ.
-        let ord_ope = int4
+        let ord_ope = integer
             .domains
             .iter()
             .find(|d| d.segment == "ord_ope")
@@ -114,15 +114,15 @@ mod tests {
     /// byte-stable after the catalog dropped the leading underscore from its
     /// stored (now bare) domain names.
     #[test]
-    fn int4_suffix_field_is_underscore_prefixed() {
+    fn integer_suffix_field_is_underscore_prefixed() {
         let dump = dump_catalog();
-        let int4 = dump
+        let integer = dump
             .types
             .iter()
-            .find(|t| t.token == "int4")
-            .expect("int4 present in catalog");
+            .find(|t| t.token == "integer")
+            .expect("integer present in catalog");
 
-        let suffixes: Vec<&str> = int4.domains.iter().map(|d| d.suffix.as_str()).collect();
+        let suffixes: Vec<&str> = integer.domains.iter().map(|d| d.suffix.as_str()).collect();
         assert_eq!(suffixes, ["", "_eq", "_ord_ore", "_ord", "_ord_ope"]);
     }
 
@@ -130,7 +130,7 @@ mod tests {
     fn timestamp_is_ordered() {
         // timestamp was promoted to the ordered shape once
         // `compare_ore_block_256_term` generalized to N blocks (see #284 / the
-        // `EQ_ONLY_DOMAINS` note in `eql-domains`). It now mirrors int4's
+        // `EQ_ONLY_DOMAINS` note in `eql-domains`). It now mirrors integer's
         // four-domain ordered surface.
         let dump = dump_catalog();
         let ts = dump
@@ -165,6 +165,6 @@ mod tests {
             dump.types.iter().map(|t| t.token).collect::<Vec<_>>()
         );
         // Sanity: the scalar families are still present (the filter isn't empty).
-        assert!(dump.types.iter().any(|t| t.token == "int4"));
+        assert!(dump.types.iter().any(|t| t.token == "integer"));
     }
 }

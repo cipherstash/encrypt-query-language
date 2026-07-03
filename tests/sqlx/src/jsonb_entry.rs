@@ -162,8 +162,14 @@ mod tests {
 
     #[test]
     fn pivots_delegate_to_integer() {
-        assert_eq!(<JsonbEntryInteger as OrderedScalar>::min_pivot().0, i32::MIN);
-        assert_eq!(<JsonbEntryInteger as OrderedScalar>::max_pivot().0, i32::MAX);
+        assert_eq!(
+            <JsonbEntryInteger as OrderedScalar>::min_pivot().0,
+            i32::MIN
+        );
+        assert_eq!(
+            <JsonbEntryInteger as OrderedScalar>::max_pivot().0,
+            i32::MAX
+        );
         assert_eq!(<JsonbEntryInteger as OrderedScalar>::mid_pivot().0, 0);
     }
 

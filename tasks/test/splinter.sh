@@ -56,14 +56,14 @@ SQL
 # Format: TSV "rule\tschema\tname\ttype\treason" — kept as a heredoc so the
 # justification lives next to the entry it covers. Keys are matched verbatim.
 cat > "$work_dir/allowlist.tsv" <<'ALLOW'
-# Encrypted-domain families live in the eql_v3 schema (the int4 family and
+# Encrypted-domain families live in the eql_v3 schema (the integer family and
 # future scalar domains). Their inlinable extractors and comparison wrappers
 # must stay unpinned for functional-index matching; splinter matches by
 # (schema, name, type), so
 # they need their own rows. The plpgsql blockers are pinned by
 # tasks/pin_search_path_v3.sql and do not surface here.
 function_search_path_mutable	eql_v3	eq_term	function	HMAC equality term extractor for the eql_v3 *_eq domains: returns eql_v3.hmac_256. Must inline so `eql_v3.eq_term(col)` folds into the calling query and matches the functional hash/btree index built on the same expression. SET search_path would disable SQL function inlining (see PostgreSQL inline_function).
-function_search_path_mutable	eql_v3	ord_term	function	ORE-block order term extractor for the eql_v3 ordered domains: returns eql_v3.ore_block_256 (carrying the main DEFAULT btree opclass). Used inside the inlinable comparison wrappers and as the functional-index expression USING btree (eql_v3.ord_term(col)); must inline. Covers both ord_term overloads (eql_v3.int4_ord, eql_v3.int4_ord_ore).
+function_search_path_mutable	eql_v3	ord_term	function	ORE-block order term extractor for the eql_v3 ordered domains: returns eql_v3.ore_block_256 (carrying the main DEFAULT btree opclass). Used inside the inlinable comparison wrappers and as the functional-index expression USING btree (eql_v3.ord_term(col)); must inline. Covers both ord_term overloads (eql_v3.integer_ord, eql_v3.integer_ord_ore).
 function_search_path_mutable	eql_v3	match_term	function	Bloom-filter match term extractor for the eql_v3 *_match domains: returns eql_v3.bloom_filter. Used inside the inlinable @>/<@ containment wrappers and as the functional-index expression USING gin (eql_v3.match_term(col)); must inline so the GIN index engages. SET search_path would disable SQL function inlining.
 function_search_path_mutable	eql_v3	contains	function	Containment (@>) comparison wrapper on the eql_v3 *_match domains — the public function-form equivalent of @> (callable without the operator on Supabase/PostgREST); the CREATE OPERATOR also lives in eql_v3. Inlines to `match_term(a) @> match_term(b)`; must reach the functional GIN index on eql_v3.match_term(col) for bloom-filter match to engage Bitmap Index Scan.
 function_search_path_mutable	eql_v3	contained_by	function	Contained-by (<@) comparison wrapper on the eql_v3 *_match domains — public function-form equivalent of <@. Same rationale as eql_v3.contains.

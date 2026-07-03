@@ -90,7 +90,10 @@ fn integer_eq_rejects_missing_hmac() {
         "c": "mp_base85_ciphertext"
     });
     let result: Result<IntegerEq, _> = serde_json::from_value(no_hm);
-    assert!(result.is_err(), "IntegerEq must reject a payload with no hm");
+    assert!(
+        result.is_err(),
+        "IntegerEq must reject a payload with no hm"
+    );
 }
 
 #[test]
@@ -165,7 +168,10 @@ fn integer_ord_rejects_missing_ore_term() {
         "c": "mp_base85_ciphertext"
     });
     let result: Result<IntegerOrd, _> = serde_json::from_value(no_ob);
-    assert!(result.is_err(), "IntegerOrd must reject a payload with no ob");
+    assert!(
+        result.is_err(),
+        "IntegerOrd must reject a payload with no ob"
+    );
 }
 
 #[test]
@@ -201,7 +207,7 @@ fn non_integer_tokens_round_trip_every_domain() {
     // `catalog_parity.rs` checks domain *names* only, never the wire shape.
     // This sweep roundtrips every non-integer domain and pins its catalog name,
     // failing the instant a token drifts from the shared envelope/term contract.
-    use eql_bindings::v3::{date::*, smallint::*, bigint::*, numeric::*, text::*};
+    use eql_bindings::v3::{bigint::*, date::*, numeric::*, smallint::*, text::*};
 
     // Wire builders for the shapes the ordered tokens share.
     let storage = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct" });

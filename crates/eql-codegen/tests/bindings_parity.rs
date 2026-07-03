@@ -4,7 +4,7 @@
 //! committed `crates/eql-bindings/src/v3/<same>` tree, and that two runs produce
 //! identical bytes. Without this, committed-source freshness rested only on the
 //! CI-only `types:check` regen-diff, so a dev running `cargo test` alone would
-//! miss a stale or hand-edited `int8.rs`/`inventory.rs`.
+//! miss a stale or hand-edited `bigint.rs`/`inventory.rs`.
 
 use std::collections::BTreeSet;
 use std::fs;

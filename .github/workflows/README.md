@@ -22,7 +22,7 @@ actually runs).
 | **release-postgres-eql-image.yml** | `release: published`, `workflow_dispatch` | Build & push the Postgres+EQL Docker image to GHCR | No |
 | **release-plz.yml** | `push: main`, `workflow_dispatch` | Publish the `eql-bindings` crate to crates.io (Trusted Publishing) + open the release PR | No |
 | **bench-eql.yml** | `push: main` (paths), `schedule` 02:00 UTC daily, `workflow_dispatch` | `test:bench` (bench cargo feature). **Never runs on PRs** | No |
-| **macro-expand-eql.yml** | `schedule` 03:00 UTC daily, `workflow_dispatch` | Regenerate the int4 `cargo expand` matrix snapshot; needs pinned nightly | **No — explicitly non-blocking** |
+| **macro-expand-eql.yml** | `schedule` 03:00 UTC daily, `workflow_dispatch` | Regenerate the integer `cargo expand` matrix snapshot; needs pinned nightly | **No — explicitly non-blocking** |
 | **rebuild-docs.yml** | `push: tags` | Fire a docs-site rebuild webhook | N/A |
 
 Only **test-eql.yml** gates merges. Bench regressions and stale `cargo expand`

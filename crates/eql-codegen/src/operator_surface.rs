@@ -386,7 +386,7 @@ mod tests {
         operator(op)
             .signatures
             .iter()
-            .map(|sig| sig.render("eql_v3.int4_ord"))
+            .map(|sig| sig.render("eql_v3.integer_ord"))
             .map(|sig| (sig.left, sig.right, sig.returns))
             .collect()
     }
@@ -398,8 +398,8 @@ mod tests {
             right: TypeSlot::Text,
             returns: TypeSlot::Boolean,
         };
-        let rendered = sig.render("eql_v3.int4_eq");
-        assert_eq!(rendered.left, "eql_v3.int4_eq");
+        let rendered = sig.render("eql_v3.integer_eq");
+        assert_eq!(rendered.left, "eql_v3.integer_eq");
         assert_eq!(rendered.right, "text");
         assert_eq!(rendered.returns, "boolean");
     }
@@ -410,26 +410,26 @@ mod tests {
         let rendered: Vec<_> = arrow
             .signatures
             .iter()
-            .map(|sig| sig.render("eql_v3.int4"))
+            .map(|sig| sig.render("eql_v3.integer"))
             .map(|sig| (sig.left, sig.right, sig.returns))
             .collect();
         assert_eq!(
             rendered,
             vec![
                 (
-                    "eql_v3.int4".to_string(),
+                    "eql_v3.integer".to_string(),
                     "text".to_string(),
-                    "eql_v3.int4".to_string()
+                    "eql_v3.integer".to_string()
                 ),
                 (
-                    "eql_v3.int4".to_string(),
+                    "eql_v3.integer".to_string(),
                     "integer".to_string(),
-                    "eql_v3.int4".to_string()
+                    "eql_v3.integer".to_string()
                 ),
                 (
                     "jsonb".to_string(),
-                    "eql_v3.int4".to_string(),
-                    "eql_v3.int4".to_string()
+                    "eql_v3.integer".to_string(),
+                    "eql_v3.integer".to_string()
                 ),
             ]
         );
@@ -441,12 +441,20 @@ mod tests {
             rendered_signatures("="),
             vec![
                 (
-                    "eql_v3.int4_ord".into(),
-                    "eql_v3.int4_ord".into(),
+                    "eql_v3.integer_ord".into(),
+                    "eql_v3.integer_ord".into(),
                     "boolean".into()
                 ),
-                ("eql_v3.int4_ord".into(), "jsonb".into(), "boolean".into()),
-                ("jsonb".into(), "eql_v3.int4_ord".into(), "boolean".into()),
+                (
+                    "eql_v3.integer_ord".into(),
+                    "jsonb".into(),
+                    "boolean".into()
+                ),
+                (
+                    "jsonb".into(),
+                    "eql_v3.integer_ord".into(),
+                    "boolean".into()
+                ),
             ]
         );
     }
@@ -457,17 +465,21 @@ mod tests {
             rendered_signatures("||"),
             vec![
                 (
-                    "eql_v3.int4_ord".into(),
-                    "eql_v3.int4_ord".into(),
+                    "eql_v3.integer_ord".into(),
+                    "eql_v3.integer_ord".into(),
                     "jsonb".into()
                 ),
-                ("eql_v3.int4_ord".into(), "jsonb".into(), "jsonb".into()),
-                ("jsonb".into(), "eql_v3.int4_ord".into(), "jsonb".into()),
+                ("eql_v3.integer_ord".into(), "jsonb".into(), "jsonb".into()),
+                ("jsonb".into(), "eql_v3.integer_ord".into(), "jsonb".into()),
             ]
         );
         assert_eq!(
             rendered_signatures("?|"),
-            vec![("eql_v3.int4_ord".into(), "text[]".into(), "boolean".into())]
+            vec![(
+                "eql_v3.integer_ord".into(),
+                "text[]".into(),
+                "boolean".into()
+            )]
         );
     }
 
@@ -478,18 +490,18 @@ mod tests {
         assert_eq!(
             rendered_signatures("@?"),
             vec![(
-                "eql_v3.int4_ord".into(),
+                "eql_v3.integer_ord".into(),
                 "jsonpath".into(),
                 "boolean".into()
             )]
         );
         assert_eq!(
             rendered_signatures("#>"),
-            vec![("eql_v3.int4_ord".into(), "text[]".into(), "jsonb".into())]
+            vec![("eql_v3.integer_ord".into(), "text[]".into(), "jsonb".into())]
         );
         assert_eq!(
             rendered_signatures("#>>"),
-            vec![("eql_v3.int4_ord".into(), "text[]".into(), "text".into())]
+            vec![("eql_v3.integer_ord".into(), "text[]".into(), "text".into())]
         );
     }
 
