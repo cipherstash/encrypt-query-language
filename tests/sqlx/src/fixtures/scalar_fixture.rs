@@ -24,14 +24,15 @@
 ///
 /// - `int` — signed-extreme asserts (`<$ty>::MIN`/`MAX`, `contains(&0)`,
 ///   `any(|v| v < 0)`). These typecheck only for integer plaintexts. Indexes
-///   `Unique` + `Ore`.
+///   `Unique` + `Ore` + `Ope`.
 /// - `temporal` — a pivot-presence assert (`min_pivot`/`max_pivot`/zero from the
 ///   `ScalarType` impl all appear in the values). `<$ty>::MIN` / `< 0` don't
 ///   exist for a `chrono::NaiveDate`, so the integer asserts can't be reused.
-///   Indexes `Unique` + `Ore`.
+///   Indexes `Unique` + `Ore` + `Ope`.
 /// - `text` — pivot-presence asserts (same as `temporal`; text has no signed
-///   extremes), plus a third `Match` index so generated payloads carry `bf` for
-///   the `text_match` containment surface. Indexes `Unique` + `Ore` + `Match`.
+///   extremes), plus a `Match` index so generated payloads carry `bf` for
+///   the `text_match` containment surface. Indexes `Unique` + `Ore` + `Match`
+///   + `Ope`.
 ///
 /// - `$name` — the fixture name (`"eql_v3_smallint"`), drives every derived path.
 /// - `$ty` — the Rust plaintext type (`i16` / `chrono::NaiveDate` / `String`).
@@ -39,13 +40,14 @@
 ///   for integers, or the harness accessor (`date_values()` / `text_values()`).
 ///
 /// `Unique` drives `=` / `<>` (HMAC); `Ore` drives `<` `<=` `>` `>=` (ORE block
-/// terms); `Match` drives `@>` / `<@` (bloom filter). The generated payload is
-/// always `jsonb`.
+/// terms); `Ope` drives the CLLW-OPE `op` term for the `_ord_ope` domains
+/// (cipherstash-client 0.38.1+, CIP-3348); `Match` drives `@>` / `<@` (bloom
+/// filter). The generated payload is always `jsonb`.
 #[macro_export]
 macro_rules! scalar_fixture {
     // Integer scalars: signed-extreme property asserts.
     (int, $name:literal, $ty:ty, $values:expr $(,)?) => {
-        $crate::scalar_fixture!(@common $name, $ty, $values, [Unique, Ore]);
+        $crate::scalar_fixture!(@common $name, $ty, $values, [Unique, Ore, Ope]);
 
         #[cfg(test)]
         mod tests {
@@ -84,7 +86,7 @@ macro_rules! scalar_fixture {
 
     // Temporal scalars: pivot-presence property assert (no signed extremes).
     (temporal, $name:literal, $ty:ty, $values:expr $(,)?) => {
-        $crate::scalar_fixture!(@common $name, $ty, $values, [Unique, Ore]);
+        $crate::scalar_fixture!(@common $name, $ty, $values, [Unique, Ore, Ope]);
 
         #[cfg(test)]
         mod tests {
@@ -115,7 +117,7 @@ macro_rules! scalar_fixture {
     // Text scalars: pivot-presence asserts (like temporal) + the `Match` index
     // so generated payloads carry `bf` for the `text_match` containment surface.
     (text, $name:literal, $ty:ty, $values:expr $(,)?) => {
-        $crate::scalar_fixture!(@common $name, $ty, $values, [Unique, Ore, Match]);
+        $crate::scalar_fixture!(@common $name, $ty, $values, [Unique, Ore, Match, Ope]);
 
         #[cfg(test)]
         mod tests {
@@ -144,11 +146,11 @@ macro_rules! scalar_fixture {
     };
 
     // Numeric scalars (`rust_decimal::Decimal`): ordered, non-chrono. Same
-    // shape as `temporal` — `[Unique, Ore]` indexes, pivot-presence asserts via
-    // `OrderedScalar` — but materialised from owned `Decimal` values (no `Match`
-    // index, no chrono).
+    // shape as `temporal` — `[Unique, Ore, Ope]` indexes, pivot-presence asserts
+    // via `OrderedScalar` — but materialised from owned `Decimal` values (no
+    // `Match` index, no chrono).
     (numeric, $name:literal, $ty:ty, $values:expr $(,)?) => {
-        $crate::scalar_fixture!(@common $name, $ty, $values, [Unique, Ore]);
+        $crate::scalar_fixture!(@common $name, $ty, $values, [Unique, Ore, Ope]);
 
         #[cfg(test)]
         mod tests {
@@ -175,10 +177,10 @@ macro_rules! scalar_fixture {
     };
 
     // Float scalars (`F4`/`F8`): ordered, non-chrono. Same shape as `numeric` —
-    // `[Unique, Ore]` indexes, pivot-presence asserts via `OrderedScalar` —
+    // `[Unique, Ore, Ope]` indexes, pivot-presence asserts via `OrderedScalar` —
     // materialised from the harness float newtypes (no `Match`, no chrono).
     (float, $name:literal, $ty:ty, $values:expr $(,)?) => {
-        $crate::scalar_fixture!(@common $name, $ty, $values, [Unique, Ore]);
+        $crate::scalar_fixture!(@common $name, $ty, $values, [Unique, Ore, Ope]);
 
         #[cfg(test)]
         mod tests {
@@ -261,7 +263,8 @@ macro_rules! scalar_fixture {
     (@common $name:literal, $ty:ty, $values:expr, [$($ix:ident),+ $(,)?]) => {
         /// The complete fixture definition. `IndexKind::Unique` drives `=` /
         /// `<>` (HMAC); `IndexKind::Ore` drives `<` `<=` `>` `>=` (ORE block
-        /// terms); `IndexKind::Match` (when present) drives `@>` / `<@` (bloom).
+        /// terms); `IndexKind::Ope` drives the CLLW-OPE `op` term (`_ord_ope`
+        /// domains); `IndexKind::Match` (when present) drives `@>` / `<@` (bloom).
         pub fn spec() -> $crate::fixtures::FixtureSpec<'static, $ty> {
             $crate::fixtures::FixtureSpec::new($name)
                 $(.with_index($crate::fixtures::IndexKind::$ix))+

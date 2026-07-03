@@ -1910,9 +1910,10 @@ macro_rules! __scalar_matrix_fixture_shape {
 
                 // A storage-only / encryption-only scalar (`bool`) is encrypted
                 // with NO search index, so its payload carries only `{v,i,c}` —
-                // no `hm`/`ob`/`bf` term. Every other scalar's proxy fixture
+                // no `hm`/`ob`/`bf`/`op` term. Every other scalar's fixture
                 // carries `hm` + `ob`, plus `bf` for a Bloom-bearing domain
-                // (`text`, via `_match`/`_search`; catalog-derived).
+                // (`text`, via `_match`/`_search`) and `op` for an Ope-bearing
+                // domain (`_ord_ope`; every ordered family). All catalog-derived.
                 if $crate::scalar_domains::token_is_storage_only(<$scalar as ScalarType>::PG_TYPE) {
                     // The ciphertext (`c`) must still be present.
                     let missing_c: i64 = sqlx::query_scalar(&format!(
@@ -1923,7 +1924,7 @@ macro_rules! __scalar_matrix_fixture_shape {
                         "every storage-only payload must carry a `c string` term; missing = {missing_c}");
                     // And NO index term may be present — that is the storage-only
                     // contract (a term would be a searchable leak on a 2-value column).
-                    for term in ["hm", "ob", "bf"] {
+                    for term in ["hm", "ob", "bf", "op"] {
                         let present: i64 = sqlx::query_scalar(&format!(
                             "SELECT COUNT(*) FROM {table} WHERE payload ? '{term}'",
                         )).fetch_one(&pool).await?;
@@ -1941,6 +1942,20 @@ macro_rules! __scalar_matrix_fixture_shape {
                             ("bf array", "payload->'bf' IS NULL OR jsonb_typeof(payload->'bf') <> 'array'"),
                         );
                     }
+                    // Flipped tripwire (CIP-3348): cipherstash-client 0.38.1
+                    // emits the scalar CLLW-OPE term, the fixtures declare the
+                    // `ope` index, and the conversion routes `op` through to
+                    // every `_ord_ope`-capable payload. `op` must now be
+                    // PRESENT (a single hex string — NOT an array like `ob`)
+                    // on exactly the scalars whose catalog family declares an
+                    // Ope domain, and absent otherwise (asserted below).
+                    let has_ope = $crate::scalar_domains::token_has_ope_term(
+                        <$scalar as ScalarType>::PG_TYPE);
+                    if has_ope {
+                        term_checks.push(
+                            ("op string", "payload->'op' IS NULL OR jsonb_typeof(payload->'op') <> 'string'"),
+                        );
+                    }
                     for (label, predicate) in term_checks {
                         let missing: i64 = sqlx::query_scalar(&format!(
                             "SELECT COUNT(*) FROM {table} WHERE {predicate}",
@@ -1954,6 +1969,28 @@ macro_rules! __scalar_matrix_fixture_shape {
                     )).fetch_one(&pool).await?;
                     anyhow::ensure!(distinct_hm == n,
                         "{n} distinct values -> {n} distinct hm terms; got {distinct_hm}");
+
+                    if has_ope {
+                        // CLLW-OPE is deterministic AND order-preserving, so
+                        // n distinct plaintexts must map to n distinct `op`
+                        // terms (an injective encryption; collisions would
+                        // make op-routed `=` return false positives).
+                        let distinct_op: i64 = sqlx::query_scalar(&format!(
+                            "SELECT COUNT(DISTINCT payload->>'op') FROM {table}",
+                        )).fetch_one(&pool).await?;
+                        anyhow::ensure!(distinct_op == n,
+                            "{n} distinct values -> {n} distinct op terms; got {distinct_op}");
+                    } else {
+                        // A non-Ope family's fixture must NOT carry `op` —
+                        // its index set never declares `ope`, so a stray key
+                        // means the conversion targets drifted (CIP-3348).
+                        let with_op: i64 = sqlx::query_scalar(&format!(
+                            "SELECT COUNT(*) FROM {table} WHERE payload ? 'op'",
+                        )).fetch_one(&pool).await?;
+                        anyhow::ensure!(with_op == 0,
+                            "fixture payload carries an `op` term but the catalog family \
+                             declares no Ope domain — conversion targets drifted (CIP-3348)");
+                    }
                 }
 
                 // Every eql_v3 domain CHECK pins v = '3' (the #340 envelope
@@ -1973,21 +2010,6 @@ macro_rules! __scalar_matrix_fixture_shape {
                 )).fetch_one(&pool).await?;
                 anyhow::ensure!(with_k == 0,
                     "no converted scalar payload may carry the v2 `k` discriminator");
-
-                // Tripwire (CIP-3348): the pinned client emits no `op`
-                // (CLLW-OPE) term, so the fixture pipeline skips `_ord_ope`
-                // targets and every ope test runs on hand-built hex. The
-                // first client release that emits `op` must fail HERE, not
-                // silently leave the synthetic-only coverage in place: on
-                // failure, add real-ciphertext ord_ope fixture coverage
-                // (CIP-3348) and route the new term through the conversion
-                // targets.
-                let with_op: i64 = sqlx::query_scalar(&format!(
-                    "SELECT COUNT(*) FROM {table} WHERE payload ? 'op'",
-                )).fetch_one(&pool).await?;
-                anyhow::ensure!(with_op == 0,
-                    "fixture payload carries an `op` term — the client now emits CLLW-OPE; \
-                     pick up CIP-3348 (real-ciphertext ord_ope coverage)");
 
                 // Value-filtering oracle: take the midpoint of FIXTURE_VALUES,
                 // derive its expected id from position, assert exactly one row.

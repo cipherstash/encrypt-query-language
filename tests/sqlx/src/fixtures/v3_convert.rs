@@ -1,7 +1,7 @@
 //! Route generated fixture payloads through `eql_bindings::from_v2` — the
 //! v2 → v3 envelope conversion seam of the fixture pipeline (CIP-3347).
 //!
-//! The pinned cipherstash-client (0.35) emits EQL **v2** storage payloads
+//! The pinned cipherstash-client (0.38.1) emits EQL **v2** storage payloads
 //! (`v: 2`, `k` discriminator). After the envelope bump (#340) every
 //! `eql_v3` domain CHECK pins `VALUE->>'v' = '3'`, so raw client output can
 //! no longer be inserted into (or cast to) any v3 domain. This module
@@ -21,11 +21,11 @@
 //! domain and merges the outputs:
 //!
 //! - a domain is coverable when every term it requires was produced by the
-//!   fixture's indexes (`Unique` → `hm`, `Ore` → `ob`, `Match` → `bf`);
-//! - `_ord_ope` domains are NEVER coverable — the pinned client emits no
-//!   `op` term (CIP-3280), so they are skipped by construction. The ope
-//!   suites keep their hand-built literal payloads
-//!   (`tests/encrypted_domain/ope/`); a fixture cannot silently claim ope
+//!   fixture's indexes (`Unique` → `hm`, `Ore` → `ob`, `Match` → `bf`,
+//!   `Ope` → `op`). Since cipherstash-client 0.38.1 the `ope` index emits
+//!   the scalar CLLW-OPE `op` term (a single hex string, NOT an array like
+//!   `ob`), so `_ord_ope` domains are coverable like any other (CIP-3348);
+//!   a fixture without the `Ope` index still cannot silently claim ope
 //!   coverage because `from_v2` would fail closed with `MissingTerm`;
 //! - every produced term must be consumed by at least one selected domain,
 //!   otherwise the generator errors loudly (a `Match` index on a family
@@ -42,7 +42,7 @@
 
 use anyhow::{anyhow, bail, Context, Result};
 use eql_bindings::from_v2::{from_v2, TargetDomain};
-use eql_domains::{ScalarKind, Term, FIXTURES};
+use eql_domains::{ScalarKind, FIXTURES};
 use serde_json::{Map, Value};
 
 use super::index_kind::IndexKind;
@@ -77,6 +77,7 @@ fn term_key_for(index: IndexKind) -> Option<&'static str> {
     match index {
         IndexKind::Unique => Some("hm"),
         IndexKind::Ore => Some("ob"),
+        IndexKind::Ope => Some("op"),
         IndexKind::Match => Some("bf"),
         IndexKind::SteVec => None,
     }
@@ -103,13 +104,6 @@ fn targets_for(kind: ScalarKind, indexes: &[IndexKind]) -> Result<Vec<TargetDoma
     let mut targets = Vec::new();
     let mut consumed: Vec<&str> = Vec::new();
     for domain in family.domains {
-        // The pinned client emits no `op` term (CIP-3280), so an `_ord_ope`
-        // domain can never be generated from client output — skip it rather
-        // than fail `MissingTerm` on every fixture. The ope suites use
-        // hand-built literal payloads instead.
-        if domain.terms.contains(&Term::Ope) {
-            continue;
-        }
         let required: Vec<&str> = domain.terms.iter().map(|t| t.json_key()).collect();
         if !required.iter().all(|key| provided.contains(key)) {
             continue;
@@ -205,11 +199,61 @@ mod tests {
         assert_eq!(obj.get("hm"), v2_int_payload().get("hm"));
         assert_eq!(obj.get("ob"), v2_int_payload().get("ob"));
 
-        // Nothing else: no `op` (ord_ope is skipped — the client emits no
-        // OPE term), no stray keys.
+        // Nothing else: no `op` (the fixture declared no `ope` index, so
+        // `_ord_ope` is not coverable and its term is not required), no
+        // stray keys.
         let mut keys: Vec<&str> = obj.keys().map(String::as_str).collect();
         keys.sort_unstable();
         assert_eq!(keys, ["c", "hm", "i", "ob", "v"]);
+    }
+
+    #[test]
+    fn ope_indexed_payload_routes_op_through_as_a_single_hex_string() {
+        // CIP-3348: an `ope`-indexed fixture's payload carries the CLLW-OPE
+        // `op` term — a SINGLE hex string, not an array like `ob` — and the
+        // conversion keeps it verbatim for the `_ord_ope` target.
+        let mut payload = v2_int_payload();
+        payload
+            .as_object_mut()
+            .unwrap()
+            .insert("op".into(), json!("00ffab"));
+        let out = to_v3_payloads(
+            vec![payload],
+            ScalarKind::I32,
+            &[IndexKind::Unique, IndexKind::Ore, IndexKind::Ope],
+        )
+        .unwrap();
+        let obj = out[0].as_object().unwrap();
+        assert_eq!(obj.get("v"), Some(&json!(3)));
+        assert_eq!(
+            obj.get("op"),
+            Some(&json!("00ffab")),
+            "`op` must pass through verbatim as a single hex string"
+        );
+        assert!(
+            obj.get("op").unwrap().is_string(),
+            "`op` must be a JSON string, not an array"
+        );
+        let mut keys: Vec<&str> = obj.keys().map(String::as_str).collect();
+        keys.sort_unstable();
+        assert_eq!(keys, ["c", "hm", "i", "ob", "op", "v"]);
+    }
+
+    #[test]
+    fn ope_index_without_op_term_fails_closed() {
+        // An `ope`-indexed fixture whose payload lost `op` must crash the
+        // generator (`from_v2` MissingTerm on the `_ord_ope` target), not
+        // write a fixture the `_ord_ope` domain rejects.
+        let err = to_v3_payloads(
+            vec![v2_int_payload()],
+            ScalarKind::I32,
+            &[IndexKind::Unique, IndexKind::Ore, IndexKind::Ope],
+        )
+        .unwrap_err();
+        assert!(
+            format!("{err:#}").contains("op"),
+            "error should name the missing `op` term: {err:#}"
+        );
     }
 
     #[test]

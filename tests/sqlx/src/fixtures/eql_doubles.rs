@@ -48,8 +48,10 @@ fn doubled<T: Clone>(values: &[T]) -> Vec<T> {
 /// each encrypted twice. Generic over the type: the fixture name, the plaintext
 /// source, and the bloom-index decision are all derived from `T` (and the
 /// catalog), so there are no per-token strings to keep in sync. Indexes mirror
-/// the type's catalog fixture so the payload carries the same terms (`hm` + `ob`,
-/// plus `bf` for `text`) and the doubles cast cleanly to every comparison domain.
+/// the type's catalog fixture so the payload carries the same terms (`hm`,
+/// `ob`, `op`, plus `bf` for `text`) and the doubles cast cleanly to every
+/// comparison domain — including `_ord_ope`, whose CLLW-OPE determinism the
+/// cross-ciphertext suite pins on these rows (CIP-3348).
 async fn generate_doubles_for<T>() -> Result<()>
 where
     T: ScalarType + FixtureValue,
@@ -63,7 +65,8 @@ where
     let sample = doubled(&head);
     let mut spec = super::spec::FixtureSpec::new(&name)
         .with_index(super::index_kind::IndexKind::Unique)
-        .with_index(super::index_kind::IndexKind::Ore);
+        .with_index(super::index_kind::IndexKind::Ore)
+        .with_index(super::index_kind::IndexKind::Ope);
     // text carries the Match (bloom) index too — derived from the catalog, not
     // hardcoded — so its doubles cast to `text_match` / `text_search` as well.
     if crate::scalar_domains::token_has_bloom_term(T::PG_TYPE) {
