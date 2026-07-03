@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The `from_v2_query_typed` rustdoc links only public items, fixing the
   `private_intra_doc_links` lint on docs.rs builds. No API changes.
+- Compiling the crate no longer emits ts-rs's "failed to parse serde
+  attribute" warning for `skip_serializing_if` on `SteVecEntry.a` (the
+  `no-serde-warnings` feature is enabled). The attribute was always ignored
+  by design — TS optionality is declared explicitly with
+  `#[ts(optional = nullable)]` — and the emitted TS/JSON is byte-identical.
 
 ## [0.4.0] - 2026-07-03
 

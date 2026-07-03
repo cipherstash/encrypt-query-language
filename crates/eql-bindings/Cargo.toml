@@ -17,7 +17,12 @@ serde = { version = "1", features = ["derive"] }
 # Direct dependency again at this layer: SchemaVersion's manual JsonSchema
 # impl pins `const: 2` via serde_json::json!.
 serde_json = "1"
-ts-rs = "10"
+# no-serde-warnings: ts-rs's serde-compat vocabulary doesn't include
+# `skip_serializing_if`, so it warns and ignores it on SteVecEntry.a — which is
+# exactly what we want (TS optionality is declared explicitly via
+# `#[ts(optional = nullable)]`). Ignored-attr drift that DID matter would be
+# caught by the `types:check` gate on the committed TS/JSON output.
+ts-rs = { version = "10", features = ["no-serde-warnings"] }
 schemars = "1"
 
 [dev-dependencies]
