@@ -19,13 +19,13 @@ Generated eql_v3 fixtures (gitignored)
   ├── eql_v3_<T>_doubles.sql   (jsonb payload — duplicate-value variant the
   │                             property suites consume)
   ├── v3_numeric_collision.sql (jsonb payload — no EQL dependency)
-  ├── v3_doc_int4.sql          (eql_v3.json payload — depends on eql_v3 surface)
+  ├── v3_doc_integer.sql       (eql_v3.json payload — depends on eql_v3 surface)
   └── v3_ste_vec.sql           (eql_v3.json payload — depends on eql_v3 surface)
 ```
 
 The scalar fixtures (`eql_v3_<T>.sql`) have **no EQL dependency** — `payload` is
 plain `jsonb`, so each script applies standalone. The document fixtures
-(`v3_doc_int4.sql`, `v3_ste_vec.sql`) depend on the `eql_v3` encrypted-JSONB
+(`v3_doc_integer.sql`, `v3_ste_vec.sql`) depend on the `eql_v3` encrypted-JSONB
 surface being installed.
 
 **Regenerated every test run.** `mise run test:sqlx` invokes the generator
@@ -37,11 +37,11 @@ environment (they are not alternatives): `CS_CLIENT_ACCESS_KEY` +
 `CS_CLIENT_KEY` for the client key (EnvKeyProvider). Do not hand-edit a
 generated file; it is overwritten in place on every run.
 
-**Schema (e.g. `eql_v3_int4`):** Tables live in the dedicated `fixtures` SQL
+**Schema (e.g. `eql_v3_integer`):** Tables live in the dedicated `fixtures` SQL
 schema (kept out of the `public`/`eql_v3` type namespaces):
 ```sql
 CREATE SCHEMA IF NOT EXISTS fixtures;
-CREATE TABLE fixtures.eql_v3_int4 (
+CREATE TABLE fixtures.eql_v3_integer (
   id BIGINT PRIMARY KEY,
   plaintext integer NOT NULL,
   payload jsonb NOT NULL
@@ -54,10 +54,10 @@ CREATE TABLE fixtures.eql_v3_int4 (
   pivots) plus small/medium/large magnitudes.
 - `plaintext` is the **in-table oracle**: consuming tests filter
   `WHERE plaintext = N` directly, so no Rust value constant is shared.
-- Each `payload` is a cipherstash-client-encrypted JSONB object carrying
-  `c` (ciphertext), `hm` (HMAC equality term), `ob` (ORE block ordering term),
-  an inert `i` metadata object, and the EQL payload discriminator
-  (`k = "ct"`, `v = 2`).
+- Each `payload` is a cipherstash-client-encrypted JSONB object converted to
+  the v3 envelope via `eql_bindings::from_v2`, carrying `c` (ciphertext),
+  `hm` (HMAC equality term), `ob` (ORE block ordering term), an inert `i`
+  metadata object, and `v = 3` (v3 scalars carry no `k` discriminator).
 
 **Used By:**
 - the `__scalar_matrix_fixture_shape!` arm in `tests/sqlx/src/matrix.rs`
@@ -67,7 +67,7 @@ CREATE TABLE fixtures.eql_v3_int4 (
 
 **Opt-in:** Each consuming test opts in explicitly:
 ```rust
-#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_int4")))]
+#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_integer")))]
 ```
 
 ---
