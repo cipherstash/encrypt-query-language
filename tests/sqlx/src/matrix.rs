@@ -1974,6 +1974,21 @@ macro_rules! __scalar_matrix_fixture_shape {
                 anyhow::ensure!(with_k == 0,
                     "no converted scalar payload may carry the v2 `k` discriminator");
 
+                // Tripwire (CIP-3348): the pinned client emits no `op`
+                // (CLLW-OPE) term, so the fixture pipeline skips `_ord_ope`
+                // targets and every ope test runs on hand-built hex. The
+                // first client release that emits `op` must fail HERE, not
+                // silently leave the synthetic-only coverage in place: on
+                // failure, add real-ciphertext ord_ope fixture coverage
+                // (CIP-3348) and route the new term through the conversion
+                // targets.
+                let with_op: i64 = sqlx::query_scalar(&format!(
+                    "SELECT COUNT(*) FROM {table} WHERE payload ? 'op'",
+                )).fetch_one(&pool).await?;
+                anyhow::ensure!(with_op == 0,
+                    "fixture payload carries an `op` term — the client now emits CLLW-OPE; \
+                     pick up CIP-3348 (real-ciphertext ord_ope coverage)");
+
                 // Value-filtering oracle: take the midpoint of FIXTURE_VALUES,
                 // derive its expected id from position, assert exactly one row.
                 if !expected.is_empty() {

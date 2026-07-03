@@ -368,6 +368,15 @@ mod live_tests {
             !obj.contains_key("k"),
             "a converted scalar payload must not carry `k`; got {payload}"
         );
+        // Tripwire (CIP-3348): the pinned client emits no `op` (CLLW-OPE)
+        // term, so ope coverage runs on hand-built hex. The first client
+        // release that emits `op` fails here loudly — add real-ciphertext
+        // ord_ope fixture coverage (CIP-3348) instead of relaxing this.
+        assert!(
+            !obj.contains_key("op"),
+            "payload carries an `op` term — the client now emits CLLW-OPE; \
+             pick up CIP-3348 (real-ciphertext ord_ope coverage); got {payload}"
+        );
     }
 
     #[tokio::test]
