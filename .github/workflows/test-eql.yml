@@ -433,7 +433,12 @@ jobs:
           shared-key: sqlx-tests
           save-if: false
       - name: Verify the matrix test-name inventory
+        # The workflow-wide `shell: bash {0}` default drops GitHub's implicit
+        # `-eo pipefail`, so without fail-fast this multi-command step only
+        # reports the LAST command's exit code and a failing inventory task is
+        # silently swallowed. Restore fail-fast for this step.
         run: |
+          set -euo pipefail
           mise run test:matrix:inventory
           mise run test:matrix:inventory:jsonb_entry
           mise run test:v3-jsonb:inventory
