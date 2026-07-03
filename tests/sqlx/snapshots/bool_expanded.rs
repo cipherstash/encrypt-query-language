@@ -1877,9 +1877,9 @@ pub mod bool {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3427usize,
+            start_line: 3450usize,
             start_col: 22usize,
-            end_line: 3427usize,
+            end_line: 3450usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -2006,9 +2006,9 @@ pub mod bool {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3461usize,
+            start_line: 3484usize,
             start_col: 22usize,
-            end_line: 3461usize,
+            end_line: 3484usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -2116,9 +2116,9 @@ pub mod bool {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3505usize,
+            start_line: 3528usize,
             start_col: 22usize,
-            end_line: 3505usize,
+            end_line: 3528usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -2254,9 +2254,9 @@ pub mod bool {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3313usize,
+            start_line: 3336usize,
             start_col: 22usize,
-            end_line: 3313usize,
+            end_line: 3336usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -2422,9 +2422,9 @@ pub mod bool {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3313usize,
+            start_line: 3336usize,
             start_col: 22usize,
-            end_line: 3313usize,
+            end_line: 3336usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -2804,7 +2804,7 @@ pub mod bool {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT COUNT(*) FROM {0} WHERE payload->\'v\' IS NULL OR payload->>\'v\' <> \'2\'",
+                                    "SELECT COUNT(*) FROM {0} WHERE payload->\'v\' IS NULL OR payload->>\'v\' <> \'3\'",
                                     table,
                                 ),
                             )
@@ -2815,7 +2815,29 @@ pub mod bool {
                 if ::anyhow::__private::not(mismatched_version == 0) {
                     return ::anyhow::__private::Err({
                         let error = ::anyhow::__private::format_err(
-                            format_args!("every payload must declare v = \'2\'"),
+                            format_args!("every payload must declare v = \'3\'"),
+                        );
+                        error
+                    });
+                }
+                let with_k: i64 = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT COUNT(*) FROM {0} WHERE payload ? \'k\'",
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .fetch_one(&pool)
+                    .await?;
+                if ::anyhow::__private::not(with_k == 0) {
+                    return ::anyhow::__private::Err({
+                        let error = ::anyhow::__private::format_err(
+                            format_args!(
+                                "no converted scalar payload may carry the v2 `k` discriminator",
+                            ),
                         );
                         error
                     });

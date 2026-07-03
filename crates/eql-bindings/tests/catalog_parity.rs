@@ -87,6 +87,80 @@ fn inventory_exactly_covers_catalog_in_order() {
     );
 }
 
+/// The trait-level term-key surface must agree with the catalog: for every
+/// scalar domain, `DomainType::term_json_keys` (threaded through the generated
+/// impls so `from_v2::TargetDomain::parse` can resolve required keys without a
+/// runtime eql-domains dependency) is exactly `Term::term_json_keys` over the
+/// catalog terms; for the SteVec (jsonb) shapes it is `None` — their index
+/// terms live per sv leaf, not as flat payload keys.
+#[test]
+fn term_json_keys_match_catalog_terms() {
+    let entries = v3::all();
+    for spec in CATALOG {
+        for domain in spec.domains {
+            let name = spec.domain_name(domain);
+            let entry = entries
+                .iter()
+                .find(|e| e.domain() == name)
+                .unwrap_or_else(|| panic!("no domain inventory entry for {name}"));
+            if domain.is_scalar() {
+                let expected = Term::term_json_keys(domain.terms);
+                assert_eq!(
+                    entry.term_json_keys().map(<[&str]>::to_vec),
+                    Some(expected),
+                    "{name}: term_json_keys must be the catalog term keys"
+                );
+            } else {
+                assert_eq!(
+                    entry.term_json_keys(),
+                    None,
+                    "{name}: non-scalar (SteVec) shapes carry no flat term keys"
+                );
+            }
+        }
+    }
+}
+
+/// `DomainType::parse_value` must be the strict serde parse of the concrete
+/// payload struct, reachable through the trait object — the mechanism
+/// `from_v2` uses for final validation of converted payloads. One positive
+/// and one negative per capability shape suffices; the per-struct strictness
+/// itself is covered by `v3_conformance.rs`.
+#[test]
+fn parse_value_validates_through_the_inventory() {
+    let entries = v3::all();
+    let entry = |name: &str| {
+        entries
+            .iter()
+            .find(|e| e.domain() == name)
+            .unwrap_or_else(|| panic!("no domain inventory entry for {name}"))
+    };
+
+    let eq_payload = json!({
+        "v": 3,
+        "i": { "t": "users", "c": "age" },
+        "c": "mp_base85_ciphertext",
+        "hm": "deadbeef"
+    });
+    assert!(entry("int4_eq").parse_value(&eq_payload).is_ok());
+    // Missing term key fails.
+    assert!(entry("int4_ord").parse_value(&eq_payload).is_err());
+    // Unknown key fails (deny_unknown_fields is live through the trait).
+    assert!(entry("int4").parse_value(&eq_payload).is_err());
+
+    let doc = json!({
+        "v": 3,
+        "k": "sv",
+        "i": { "t": "users", "c": "profile" },
+        "sv": [ { "s": "sel", "c": "ct", "hm": "deadbeef" } ]
+    });
+    assert!(entry("json").parse_value(&doc).is_ok());
+    assert!(entry("jsonb_query").parse_value(&doc).is_err());
+    assert!(entry("jsonb_query")
+        .parse_value(&json!({ "sv": [ { "s": "sel", "hm": "deadbeef" } ] }))
+        .is_ok());
+}
+
 /// The published `$id` is the schema's identity URL — `tests/export.rs`
 /// injects [`v3::DomainType::schema_id`] into every written file. Pin its
 /// shape with independent literals (NOT the helper, which would only test

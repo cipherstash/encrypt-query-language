@@ -7,6 +7,7 @@
 use std::marker::PhantomData;
 
 use schemars::{schema_for, JsonSchema, Schema};
+use serde::Deserialize;
 
 /// The PostgreSQL schema every domain in this module inhabits.
 pub const SQL_SCHEMA: &str = "eql_v3";
@@ -55,6 +56,38 @@ pub trait DomainType {
         format!("{SCHEMA_ID_BASE}{}.json", self.domain())
     }
 
+    /// Required term JSON keys of this domain beyond the envelope
+    /// (`hm`/`ob`/`bf`/`op`), in catalog (wire) order. `Some(&[])` for a
+    /// storage-only scalar; `None` for the SteVec (jsonb) shapes, whose index
+    /// terms live per `sv` leaf rather than as flat payload keys. The
+    /// generated scalar impls override this from the catalog
+    /// (`eql_domains::Term::term_json_keys`, pinned by
+    /// `tests/catalog_parity.rs`), which is how [`crate::from_v2`] resolves a
+    /// target domain's required keys without a runtime eql-domains dependency.
+    ///
+    /// `where Self: Sized` keeps the trait object-safe; through
+    /// `dyn DomainType`, use [`Self::term_json_keys`].
+    fn term_json_keys_static() -> Option<&'static [&'static str]>
+    where
+        Self: Sized,
+    {
+        None
+    }
+
+    /// Required term JSON keys of this payload value's domain — the
+    /// object-safe form of [`Self::term_json_keys_static`].
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        None
+    }
+
+    /// Strictly parse `value` as this domain's payload: the concrete struct's
+    /// serde `Deserialize` (with `deny_unknown_fields` / `SchemaVersion`
+    /// enforcement where the struct declares them), reachable through the
+    /// trait object. [`crate::from_v2`] uses this for final validation of
+    /// converted payloads; the parsed value is discarded — this is a
+    /// validation check, not a constructor.
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error>;
+
     /// The type's JSON Schema.
     fn schema(&self) -> Schema;
 }
@@ -67,7 +100,7 @@ pub trait DomainType {
 /// [`all`]: super::all
 impl<T> DomainType for PhantomData<T>
 where
-    T: DomainType + JsonSchema,
+    T: DomainType + JsonSchema + for<'de> Deserialize<'de>,
 {
     fn sql_domain_static() -> &'static str {
         T::sql_domain_static()
@@ -75,6 +108,18 @@ where
 
     fn sql_domain(&self) -> &'static str {
         T::sql_domain_static()
+    }
+
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        T::term_json_keys_static()
+    }
+
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        T::term_json_keys_static()
+    }
+
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        T::deserialize(value).map(|_| ())
     }
 
     fn schema(&self) -> Schema {

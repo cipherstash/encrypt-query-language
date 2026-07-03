@@ -208,11 +208,12 @@ where
     }
 
     /// Encrypt every value in `values` via cipherstash-client in **one batched
-    /// call**, then INSERT each ciphertext into the working table as plain JSONB.
-    /// The generated `ColumnConfig` is built once from the spec's indexes + cast
+    /// call**, then INSERT each payload into the working table as plain JSONB.
+    /// `encrypt_store` builds the `ColumnConfig` from the spec's indexes + cast
     /// — the fixture name is fed as the table identifier so the resulting
     /// payload's `i.t` field matches the working table, preserving the shape
-    /// Proxy used to emit.
+    /// Proxy used to emit — and returns payloads already converted to the v3
+    /// envelope via `eql_bindings::from_v2` (see `fixtures::v3_convert`).
     ///
     /// Batching means one ZeroKMS round trip per run regardless of value count;
     /// the INSERT loop is per-row because the working table is local Postgres and
@@ -220,14 +221,15 @@ where
     /// `values` is encrypted independently here, so a repeated plaintext lands as
     /// a distinct ciphertext row sharing that plaintext.
     async fn insert_values(&self, direct: &mut PgConnection, values: &[T]) -> Result<()> {
-        let config = cipherstash::column_config_for(self.indexes(), T::CAST)
-            .context("building ColumnConfig from FixtureSpec indexes")?;
-
         let working = self.working_table();
-        let payloads =
-            cipherstash::encrypt_store(&working, cipherstash::PAYLOAD_COLUMN, values, &config)
-                .await
-                .context("encrypting fixture values")?;
+        let payloads = cipherstash::encrypt_store(
+            &working,
+            cipherstash::PAYLOAD_COLUMN,
+            values,
+            self.indexes(),
+        )
+        .await
+        .context("encrypting fixture values")?;
 
         let insert = format!(
             "INSERT INTO public.{working} (id, plaintext, {col}) VALUES ($1, $2, $3)",
@@ -480,7 +482,9 @@ mod tests {
                         .bind(id)
                         .bind(*value)
                         .bind(
-                            r#"{"v":2,"c":"x","i":{"t":"_fixture_driver_test_a","c":"payload"},"hm":"x","ob":["1"]}"#,
+                            // The v3 shape production stages after the
+                            // from_v2 conversion (v: 3, no k).
+                            r#"{"v":3,"c":"x","i":{"t":"_fixture_driver_test_a","c":"payload"},"hm":"x","ob":["1"]}"#,
                         )
                         .execute(&mut *c)
                         .await?;

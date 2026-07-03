@@ -24,6 +24,15 @@ impl DomainType for Numeric {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&[])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        Numeric::deserialize(value).map(|_| ())
+    }
     fn schema(&self) -> Schema {
         schema_for!(Numeric)
     }
@@ -46,6 +55,15 @@ impl DomainType for NumericEq {
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["hm"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        NumericEq::deserialize(value).map(|_| ())
     }
     fn schema(&self) -> Schema {
         schema_for!(NumericEq)
@@ -70,6 +88,15 @@ impl DomainType for NumericOrdOre {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["ob"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        NumericOrdOre::deserialize(value).map(|_| ())
+    }
     fn schema(&self) -> Schema {
         schema_for!(NumericOrdOre)
     }
@@ -93,6 +120,15 @@ impl DomainType for NumericOrd {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["ob"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        NumericOrd::deserialize(value).map(|_| ())
+    }
     fn schema(&self) -> Schema {
         schema_for!(NumericOrd)
     }
@@ -115,6 +151,15 @@ impl DomainType for NumericOrdOpe {
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["op"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        NumericOrdOpe::deserialize(value).map(|_| ())
     }
     fn schema(&self) -> Schema {
         schema_for!(NumericOrdOpe)

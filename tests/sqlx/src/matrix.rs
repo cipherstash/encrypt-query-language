@@ -1956,12 +1956,23 @@ macro_rules! __scalar_matrix_fixture_shape {
                         "{n} distinct values -> {n} distinct hm terms; got {distinct_hm}");
                 }
 
+                // Every eql_v3 domain CHECK pins v = '3' (the #340 envelope
+                // bump); the generator converts the pinned client's v2
+                // output through eql_bindings::from_v2, which also drops the
+                // v2 `k` form discriminator — a payload carrying `k` (or the
+                // old version) means raw client output bypassed the seam.
                 let mismatched_version: i64 = sqlx::query_scalar(&format!(
                     "SELECT COUNT(*) FROM {table} \
-                     WHERE payload->'v' IS NULL OR payload->>'v' <> '2'",
+                     WHERE payload->'v' IS NULL OR payload->>'v' <> '3'",
                 )).fetch_one(&pool).await?;
                 anyhow::ensure!(mismatched_version == 0,
-                    "every payload must declare v = '2'");
+                    "every payload must declare v = '3'");
+
+                let with_k: i64 = sqlx::query_scalar(&format!(
+                    "SELECT COUNT(*) FROM {table} WHERE payload ? 'k'",
+                )).fetch_one(&pool).await?;
+                anyhow::ensure!(with_k == 0,
+                    "no converted scalar payload may carry the v2 `k` discriminator");
 
                 // Value-filtering oracle: take the midpoint of FIXTURE_VALUES,
                 // derive its expected id from position, assert exactly one row.

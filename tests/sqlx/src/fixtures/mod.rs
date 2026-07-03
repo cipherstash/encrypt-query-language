@@ -26,6 +26,11 @@ pub mod cipherstash;
 
 pub mod driver;
 
+// The v2 → v3 envelope conversion seam: generated client payloads (`v: 2`)
+// are routed through `eql_bindings::from_v2` before staging, so every
+// written fixture satisfies the `v = '3'` domain CHECKs (CIP-3347).
+pub mod v3_convert;
+
 // The v3 jsonb (SteVec document) fixture — a hand-written `FixtureSpec`
 // over `serde_json::Value`, generated through the same pipeline as the
 // scalar `eql_v3_<T>` fixtures. Not a CATALOG scalar, so it is registered

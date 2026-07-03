@@ -24,6 +24,15 @@ impl DomainType for Int2 {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&[])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        Int2::deserialize(value).map(|_| ())
+    }
     fn schema(&self) -> Schema {
         schema_for!(Int2)
     }
@@ -46,6 +55,15 @@ impl DomainType for Int2Eq {
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["hm"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        Int2Eq::deserialize(value).map(|_| ())
     }
     fn schema(&self) -> Schema {
         schema_for!(Int2Eq)
@@ -70,6 +88,15 @@ impl DomainType for Int2OrdOre {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["ob"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        Int2OrdOre::deserialize(value).map(|_| ())
+    }
     fn schema(&self) -> Schema {
         schema_for!(Int2OrdOre)
     }
@@ -93,6 +120,15 @@ impl DomainType for Int2Ord {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["ob"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        Int2Ord::deserialize(value).map(|_| ())
+    }
     fn schema(&self) -> Schema {
         schema_for!(Int2Ord)
     }
@@ -115,6 +151,15 @@ impl DomainType for Int2OrdOpe {
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["op"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        Int2OrdOpe::deserialize(value).map(|_| ())
     }
     fn schema(&self) -> Schema {
         schema_for!(Int2OrdOpe)

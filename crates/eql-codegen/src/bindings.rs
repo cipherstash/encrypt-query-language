@@ -148,6 +148,13 @@ fn render_struct(family: &DomainFamily, domain: &Domain) -> TokenStream {
         fields.extend(quote! { pub #fid: #tid, });
     }
 
+    // The domain's required term keys, threaded through the trait so
+    // `from_v2::TargetDomain::parse` resolves them from the inventory alone —
+    // Some(&[]) for a storage-only scalar (None is reserved for the
+    // hand-written SteVec shapes). Parity with the catalog is pinned by
+    // eql-bindings `tests/catalog_parity.rs`.
+    let term_keys = Term::term_json_keys(domain.terms);
+
     quote! {
         #[doc = #doc_summary]
         #[doc = #doc_blank]
@@ -165,6 +172,15 @@ fn render_struct(family: &DomainFamily, domain: &Domain) -> TokenStream {
             }
             fn sql_domain(&self) -> &'static str {
                 Self::sql_domain_static()
+            }
+            fn term_json_keys_static() -> Option<&'static [&'static str]> {
+                Some(&[#(#term_keys),*])
+            }
+            fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+                Self::term_json_keys_static()
+            }
+            fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+                #ident::deserialize(value).map(|_| ())
             }
             fn schema(&self) -> Schema {
                 schema_for!(#ident)
@@ -539,6 +555,34 @@ mod tests {
         let entries = out.matches("Box::new(PhantomData::<").count();
         let domains: usize = eql_domains::CATALOG.iter().map(|f| f.domains.len()).sum();
         assert_eq!(entries, domains);
+    }
+
+    #[test]
+    fn generated_impls_thread_term_keys_and_parse_value() {
+        // `from_v2` resolves a target domain's required term keys through the
+        // trait object (`DomainType::term_json_keys`) and validates converted
+        // payloads through `DomainType::parse_value` — both must be emitted on
+        // every generated scalar impl, derived from `Term::term_json_keys`.
+        let int4 = render_family_bindings(family("int4"));
+        assert!(int4.contains("fn term_json_keys_static() -> Option<&'static [&'static str]>"));
+        assert!(int4.contains("fn term_json_keys(&self) -> Option<&'static [&'static str]>"));
+        assert!(
+            int4.contains("fn parse_value("),
+            "generated impls must emit parse_value"
+        );
+        // Storage-only domain: an EMPTY key list (Some, not None — None is the
+        // non-scalar SteVec marker).
+        assert!(int4.contains("Some(&[])"));
+        // Single-term equality domain.
+        assert!(int4.contains(r#"&["hm"]"#));
+        // OPE ordering domain.
+        assert!(int4.contains(r#"&["op"]"#));
+
+        // Multi-term domains list keys in catalog (wire) order.
+        let text = render_family_bindings(family("text"));
+        assert!(text.contains(r#"&["hm", "ob", "bf"]"#), "text_search keys");
+        assert!(text.contains(r#"&["hm", "op"]"#), "text_ord_ope keys");
+        assert!(text.contains(r#"&["bf"]"#), "text_match keys");
     }
 
     #[test]

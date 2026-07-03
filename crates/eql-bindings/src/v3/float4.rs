@@ -24,6 +24,15 @@ impl DomainType for Float4 {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&[])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        Float4::deserialize(value).map(|_| ())
+    }
     fn schema(&self) -> Schema {
         schema_for!(Float4)
     }
@@ -46,6 +55,15 @@ impl DomainType for Float4Eq {
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["hm"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        Float4Eq::deserialize(value).map(|_| ())
     }
     fn schema(&self) -> Schema {
         schema_for!(Float4Eq)
@@ -70,6 +88,15 @@ impl DomainType for Float4OrdOre {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["ob"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        Float4OrdOre::deserialize(value).map(|_| ())
+    }
     fn schema(&self) -> Schema {
         schema_for!(Float4OrdOre)
     }
@@ -93,6 +120,15 @@ impl DomainType for Float4Ord {
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
     }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["ob"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        Float4Ord::deserialize(value).map(|_| ())
+    }
     fn schema(&self) -> Schema {
         schema_for!(Float4Ord)
     }
@@ -115,6 +151,15 @@ impl DomainType for Float4OrdOpe {
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["op"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        Float4OrdOpe::deserialize(value).map(|_| ())
     }
     fn schema(&self) -> Schema {
         schema_for!(Float4OrdOpe)
