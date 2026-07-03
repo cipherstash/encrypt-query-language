@@ -30,8 +30,8 @@ impl Domain {
 
     /// The PascalCase Rust/TS struct identifier for this domain under
     /// `family_name`: the [`Self::full_name`] snake_case name mangled to
-    /// PascalCase (`"int4_ord_ore"` -> `"Int4OrdOre"`, storage `""` ->
-    /// `"Int4"`). The SINGLE source of truth for the mangler — the bindings
+    /// PascalCase (`"integer_ord_ore"` -> `"IntegerOrdOre"`, storage `""` ->
+    /// `"Integer"`). The SINGLE source of truth for the mangler — the bindings
     /// emitter (`eql-codegen`) and the TS-property-order guard (`eql-bindings`)
     /// both call this instead of carrying private copies that could drift.
     pub fn struct_ident(&self, family_name: &str) -> String {
@@ -146,9 +146,9 @@ mod tests {
             shape: Shape::Scalar,
         };
         // storage domain => bare family name
-        assert_eq!(storage.struct_ident("int4"), "Int4");
+        assert_eq!(storage.struct_ident("integer"), "Integer");
         // multi-segment bare name joins under the family
-        assert_eq!(ord_ore.struct_ident("int4"), "Int4OrdOre");
+        assert_eq!(ord_ore.struct_ident("integer"), "IntegerOrdOre");
         assert_eq!(ord_ore.struct_ident("timestamp"), "TimestampOrdOre");
         // single-segment bare name
         let eq = Domain {
@@ -156,7 +156,7 @@ mod tests {
             terms: &[Term::Hm],
             shape: Shape::Scalar,
         };
-        assert_eq!(eq.struct_ident("float8"), "Float8Eq");
+        assert_eq!(eq.struct_ident("double"), "DoubleEq");
     }
 
     #[test]
@@ -188,12 +188,12 @@ mod tests {
         // Scalar: derived, same as struct_ident. Non-scalar: the hand-written
         // SteVec struct names — the ONE place these two universes diverge.
         use crate::JSONB;
-        let int4_eq = Domain {
+        let integer_eq = Domain {
             name: "eq",
             terms: &[Term::Hm],
             shape: Shape::Scalar,
         };
-        assert_eq!(int4_eq.rust_struct_name("int4"), "Int4Eq");
+        assert_eq!(integer_eq.rust_struct_name("integer"), "IntegerEq");
         assert_eq!(
             JSONB.domains[0].rust_struct_name(JSONB.name),
             "SteVecDocument"
