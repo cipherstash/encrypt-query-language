@@ -207,7 +207,9 @@ fn non_integer_tokens_round_trip_every_domain() {
     // `catalog_parity.rs` checks domain *names* only, never the wire shape.
     // This sweep roundtrips every non-integer domain and pins its catalog name,
     // failing the instant a token drifts from the shared envelope/term contract.
-    use eql_bindings::v3::{bigint::*, date::*, numeric::*, smallint::*, text::*};
+    use eql_bindings::v3::{
+        bigint::*, boolean::*, date::*, double::*, numeric::*, real::*, smallint::*, text::*,
+    };
 
     // Wire builders for the shapes the ordered tokens share.
     let storage = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct" });
@@ -257,6 +259,21 @@ fn non_integer_tokens_round_trip_every_domain() {
     round_trip!(NumericOrd, ord("a"), "eql_v3.numeric_ord");
     round_trip!(NumericOrdOre, ord("a"), "eql_v3.numeric_ord_ore");
     round_trip!(NumericOrdOpe, ope("a"), "eql_v3.numeric_ord_ope");
+
+    // real/double are the float scalars (renamed from float4/float8); they carry
+    // the same ordered-token wire shape as the int scalars (`hm` eq, `ob` ord).
+    round_trip!(Real, storage("a"), "eql_v3.real");
+    round_trip!(RealEq, eq("a"), "eql_v3.real_eq");
+    round_trip!(RealOrd, ord("a"), "eql_v3.real_ord");
+    round_trip!(RealOrdOre, ord("a"), "eql_v3.real_ord_ore");
+
+    round_trip!(Double, storage("a"), "eql_v3.double");
+    round_trip!(DoubleEq, eq("a"), "eql_v3.double_eq");
+    round_trip!(DoubleOrd, ord("a"), "eql_v3.double_ord");
+    round_trip!(DoubleOrdOre, ord("a"), "eql_v3.double_ord_ore");
+
+    // boolean is storage-only (no eq/ord term) — just the shared envelope.
+    round_trip!(Boolean, storage("a"), "eql_v3.boolean");
 
     // text_match is covered by `text_match_round_trips_signed_bloom_filter`.
     round_trip!(Text, storage("a"), "eql_v3.text");
