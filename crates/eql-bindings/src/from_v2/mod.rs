@@ -49,9 +49,14 @@
 //! [`crate::v3::jsonb::SteVecDocument`] shape.
 //!
 //! Every converted payload is validated by a final strict parse through the
-//! target's binding struct (`deny_unknown_fields` + [`crate::SchemaVersion`]
-//! via [`crate::v3::DomainType::parse_value`]) before it is returned — the
-//! converter never emits a payload the v3 domain CHECK would reject.
+//! target's binding struct (`deny_unknown_fields` + [`crate::SchemaVersion`])
+//! before it is returned — the converter never emits a payload the v3 domain
+//! CHECK would reject. The parse happens exactly once per conversion:
+//! [`from_v2`] validates and discards it
+//! (via [`crate::v3::DomainType::parse_value`]) and returns the wire `Value`;
+//! [`from_v2_typed`] KEEPS it, returning the matching
+//! [`crate::v3::DomainPayload`] variant (whose untagged serialization is
+//! byte-identical to the `Value` [`from_v2`] returns).
 //!
 //! ## Query payloads
 //!
@@ -85,7 +90,7 @@ pub use target::{ScalarTarget, TargetDomain};
 use serde::de::Error as _;
 use serde_json::{json, Map, Value};
 
-use crate::v3::all;
+use crate::v3::{all, DomainPayload};
 
 /// The v2 wire version this converter accepts.
 const V2_WIRE_VERSION: u64 = 2;
@@ -94,8 +99,47 @@ const V2_WIRE_VERSION: u64 = 2;
 ///
 /// See the [module docs](self) for the conversion rules. Fails closed: the
 /// returned value has already passed a strict parse through the target
-/// domain's binding struct.
+/// domain's binding struct. Wire-oriented callers keep the `Value`; callers
+/// that want the payload typed use [`from_v2_typed`] instead (same
+/// conversion, same failures, one strict parse either way).
 pub fn from_v2(v2: &Value, target: TargetDomain) -> Result<Value, FromV2Error> {
+    let out = convert(v2, target)?;
+    validate_as(target.describe(), &out)?;
+    Ok(out)
+}
+
+/// Convert a STORED EQL v2.3 payload into the TYPED v3 payload for `target`:
+/// [`from_v2`] returning the [`DomainPayload`] variant for the target domain
+/// instead of a shape-erased `Value`.
+///
+/// Same conversion rules and same failures as [`from_v2`] — one shared
+/// conversion path, and the final strict parse through the target's binding
+/// struct happens exactly once (here it is KEPT as the enum variant; in
+/// [`from_v2`] it is a validate-and-discard check). Because
+/// [`DomainPayload`]'s serialization is untagged,
+/// `serde_json::to_value(&from_v2_typed(v2, t)?)` equals `from_v2(v2, t)?`
+/// exactly (pinned by `tests/domain_payload.rs`).
+pub fn from_v2_typed(v2: &Value, target: TargetDomain) -> Result<DomainPayload, FromV2Error> {
+    let out = convert(v2, target)?;
+    DomainPayload::parse(target.describe(), &out)
+        .unwrap_or_else(|| {
+            // Every conversion target (all scalar domains + "json") has a
+            // generated DomainPayload variant; TargetDomain::parse resolved
+            // `target` against the same catalog.
+            unreachable!(
+                "conversion target {} must have a DomainPayload variant",
+                target.describe()
+            )
+        })
+        .map_err(FromV2Error::Invalid)
+}
+
+/// The shared conversion path behind [`from_v2`] / [`from_v2_typed`]:
+/// dispatch on the v2 `k` form against the target shape and build the v3
+/// payload `Value`. Does NOT run the final strict parse — each public entry
+/// point does that exactly once (validate-and-discard in [`from_v2`],
+/// parse-and-keep in [`from_v2_typed`]).
+fn convert(v2: &Value, target: TargetDomain) -> Result<Value, FromV2Error> {
     let obj = require_v2_envelope(v2)?;
     let kind = obj.get("k").and_then(Value::as_str);
     match (kind, target) {
@@ -195,9 +239,9 @@ fn convert_scalar(obj: &Map<String, Value>, target: ScalarTarget) -> Result<Valu
         if let Some(v) = obj.get(key) {
             out.insert(key.into(), v.clone());
         }
-        // A missing envelope key fails the final validation below (e.g. a v2
-        // QUERY payload, which omits `c`, is rejected here — from_v2 converts
-        // stored payloads only).
+        // A missing envelope key fails the entry point's final strict parse
+        // (e.g. a v2 QUERY payload, which omits `c`, is rejected there —
+        // from_v2 converts stored payloads only).
     }
     for &key in target.term_json_keys() {
         let v = obj.get(key).ok_or_else(|| FromV2Error::MissingTerm {
@@ -214,9 +258,7 @@ fn convert_scalar(obj: &Map<String, Value>, target: ScalarTarget) -> Result<Valu
         };
         out.insert(key.into(), converted);
     }
-    let out = Value::Object(out);
-    validate_as(target.domain(), &out)?;
-    Ok(out)
+    Ok(Value::Object(out))
 }
 
 /// Reinterpret a v2 `bf` array into the signed `smallint[]` representation:
@@ -257,7 +299,7 @@ fn convert_ste_vec(obj: &Map<String, Value>) -> Result<Value, FromV2Error> {
     out.insert("k".into(), json!("sv"));
     if let Some(i) = obj.get("i") {
         out.insert("i".into(), i.clone());
-        // Absent `i` fails the final validation below.
+        // Absent `i` fails the entry point's final strict parse.
     }
     let sv = obj
         .get("sv")
@@ -269,9 +311,7 @@ fn convert_ste_vec(obj: &Map<String, Value>) -> Result<Value, FromV2Error> {
         .map(|(idx, entry)| convert_entry(idx, entry, EntryShape::Document))
         .collect::<Result<Vec<_>, _>>()?;
     out.insert("sv".into(), Value::Array(entries));
-    let out = Value::Object(out);
-    validate_as("json", &out)?;
-    Ok(out)
+    Ok(Value::Object(out))
 }
 
 /// v2 query needle `{sv: [{s, hm|oc, …}]}` → v3 `SteVecQuery` shape.
