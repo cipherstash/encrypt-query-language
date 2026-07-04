@@ -96,23 +96,17 @@ async fn no_encrypted_domain_inline_critical_function_is_pinned(pool: PgPool) ->
 /// regresses to Seq Scan — this test fails instead.
 ///
 /// `jsonb_array_to_bytea_array(jsonb)` and
-/// `jsonb_array_to_ore_block_256(jsonb)` are included here: both take a
-/// bare `jsonb` arg (not a jsonb-backed encrypted DOMAIN), so the structural
-/// skip in tasks/pin_search_path_v3.sql does not recognise them — they are kept
-/// unpinned by the `eql-inline-critical` COMMENT marker instead. This test
-/// asserts the unpinned + inlinable-SQL state directly; the companion
-/// `eql_v3_sem_inline_critical_functions_carry_marker` test below asserts the
-/// marker itself, so an edit that drops the marker (or a pin_search_path_v3.sql
-/// refactor that stops honouring it) fails CI even though both checks live in
-/// separate tests.
+/// `jsonb_array_to_ore_block_256(jsonb)` are NOT in this test's inlinable-SQL
+/// set: their only caller chain (`ore_block_256(val)`, plpgsql, feeding the
+/// btree operator class) can never inline a SQL function, so they are plpgsql
+/// by design (issue #353) and guarded by the dedicated
+/// `eql_v3_ore_block_256_opclass_helpers_are_plpgsql_and_unpinned` test below.
 #[sqlx::test]
 async fn eql_v3_sem_inline_critical_functions_are_unpinned(pool: PgPool) -> Result<()> {
     let rows: Vec<(String,)> = sqlx::query_as(
         r#"
         WITH expected(proname, pronargs, arg0, arg1) AS (
           VALUES
-            ('jsonb_array_to_bytea_array', 1, 'jsonb'::regtype, 0::oid),
-            ('jsonb_array_to_ore_block_256', 1, 'jsonb'::regtype, 0::oid),
             ('ore_cllw', 1, 'jsonb'::regtype, 0::oid),
             ('has_ore_cllw', 1, 'jsonb'::regtype, 0::oid),
             ('meta_data', 1, 'jsonb'::regtype, 0::oid),
@@ -145,9 +139,7 @@ async fn eql_v3_sem_inline_critical_functions_are_unpinned(pool: PgPool) -> Resu
               'hmac_256',
               'bloom_filter',
               'ore_cllw',
-              'has_ore_cllw',
-              'jsonb_array_to_bytea_array',
-              'jsonb_array_to_ore_block_256')
+              'has_ore_cllw')
                 AND p.proargtypes[0] = 'jsonb'::regtype)
             OR e.proname IS NOT NULL
           )
@@ -171,17 +163,17 @@ async fn eql_v3_sem_inline_critical_functions_are_unpinned(pool: PgPool) -> Resu
     Ok(())
 }
 
-/// Companion guard for the two bare-`jsonb` per-encrypted-value helpers
-/// (`jsonb_array_to_bytea_array`, `jsonb_array_to_ore_block_256`). The
-/// unpinned state asserted above is only DURABLE because each helper carries an
-/// `eql-inline-critical` COMMENT marker that `tasks/pin_search_path_v3.sql` honours
-/// (it skips pinning functions whose `pg_description` matches
-/// `'eql-inline-critical%'`). Neither helper is caught by the structural
-/// jsonb-domain skip, so the marker is the ONLY thing keeping them unpinned —
-/// an edit that removes the marker, or a pin_search_path_v3.sql refactor that drops
-/// the marker handling, would silently re-pin them and break inlining. This test
-/// asserts the marker is present (and the helpers are SQL/IMMUTABLE) so that
-/// failure surfaces here.
+/// Companion guard: the unpinned state asserted above is only DURABLE for
+/// bare-`jsonb` helpers because each carries an `eql-inline-critical` COMMENT
+/// marker that `tasks/pin_search_path_v3.sql` honours (it skips pinning
+/// functions whose `pg_description` matches `'eql-inline-critical%'`). These
+/// helpers are not caught by the structural jsonb-domain skip, so the marker
+/// is the ONLY thing keeping them unpinned — an edit that removes the marker,
+/// or a pin_search_path_v3.sql refactor that drops the marker handling, would
+/// silently re-pin them and break inlining. This test asserts the marker is
+/// present (and the helpers are SQL/IMMUTABLE). The two plpgsql
+/// `jsonb_array_to_*` opclass-path helpers are guarded separately below
+/// (issue #353).
 #[sqlx::test]
 async fn eql_v3_sem_inline_critical_helpers_carry_marker(pool: PgPool) -> Result<()> {
     // Each expected helper must appear with a present inline-critical marker
@@ -191,8 +183,6 @@ async fn eql_v3_sem_inline_critical_helpers_carry_marker(pool: PgPool) -> Result
         r#"
         WITH expected(proname, pronargs, arg0, arg1) AS (
           VALUES
-            ('jsonb_array_to_bytea_array', 1, 'jsonb'::regtype, 0::oid),
-            ('jsonb_array_to_ore_block_256', 1, 'jsonb'::regtype, 0::oid),
             ('ore_cllw', 1, 'jsonb'::regtype, 0::oid),
             ('has_ore_cllw', 1, 'jsonb'::regtype, 0::oid),
             ('meta_data', 1, 'jsonb'::regtype, 0::oid),
@@ -234,6 +224,73 @@ async fn eql_v3_sem_inline_critical_helpers_carry_marker(pool: PgPool) -> Result
          marker and be inlinable SQL/IMMUTABLE — the marker is what keeps \
          pin_search_path_v3.sql from pinning them. Offenders \
          (proname, marker, prolang, provolatile): {offenders:#?}"
+    );
+    Ok(())
+}
+
+/// Dedicated guard for the two `ore_block_256` opclass-path helpers
+/// (`jsonb_array_to_bytea_array`, `jsonb_array_to_ore_block_256`) — issue #353.
+///
+/// Their only caller chain is `ore_block_256(val)` (plpgsql) feeding the btree
+/// operator class: neither plpgsql callers nor opclass support contexts can
+/// EVER inline a SQL function, so as `LANGUAGE sql` these paid the per-call
+/// SQL-function executor on every compared value (measured 3.5x the plpgsql
+/// per-call cost; +43% end-to-end on ORE ordered index scans — see
+/// cipherstash/benches#23). They are therefore plpgsql BY DESIGN, and must
+/// stay: (a) plpgsql — a revert to LANGUAGE sql reintroduces the regression;
+/// (b) IMMUTABLE; (c) UNPINNED, via the `eql-inline-critical` marker — a
+/// `SET search_path` clause on plpgsql forces per-call configuration
+/// switching in the same hot path.
+#[sqlx::test]
+async fn eql_v3_ore_block_256_opclass_helpers_are_plpgsql_and_unpinned(pool: PgPool) -> Result<()> {
+    let offenders: Vec<(
+        String,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        Option<bool>,
+    )> = sqlx::query_as(
+        r#"
+        WITH expected(proname) AS (
+          VALUES ('jsonb_array_to_bytea_array'), ('jsonb_array_to_ore_block_256')
+        )
+        SELECT e.proname,
+               l.lanname::text,
+               p.provolatile::text,
+               d.description,
+               EXISTS (
+                 SELECT 1 FROM unnest(coalesce(p.proconfig, '{}'::text[])) c
+                 WHERE c LIKE 'search_path=%'
+               ) AS pinned
+        FROM expected e
+        LEFT JOIN pg_catalog.pg_proc p
+          ON p.proname = e.proname
+         AND p.pronamespace = 'eql_v3_internal'::regnamespace
+         AND p.pronargs = 1
+         AND p.proargtypes[0] = 'jsonb'::regtype
+        LEFT JOIN pg_catalog.pg_language l ON l.oid = p.prolang
+        LEFT JOIN pg_catalog.pg_description d
+          ON d.objoid = p.oid AND d.classoid = 'pg_proc'::regclass
+        WHERE p.oid IS NULL
+           OR l.lanname IS DISTINCT FROM 'plpgsql'
+           OR p.provolatile IS DISTINCT FROM 'i'
+           OR d.description IS NULL
+           OR d.description NOT LIKE 'eql-inline-critical%'
+           OR EXISTS (
+                 SELECT 1 FROM unnest(coalesce(p.proconfig, '{}'::text[])) c
+                 WHERE c LIKE 'search_path=%'
+              )
+        ORDER BY e.proname
+        "#,
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    assert!(
+        offenders.is_empty(),
+        "ore_block_256 opclass-path helpers must be plpgsql + IMMUTABLE + \
+         marker-unpinned (issue #353) — offenders (proname, lang, volatility, \
+         marker, pinned): {offenders:#?}"
     );
     Ok(())
 }

@@ -17,14 +17,15 @@
 --! @internal
 --! @param val jsonb Array of hex-encoded ORE block terms
 --! @return eql_v3_internal.ore_block_256 ORE block composite, or NULL if input is null
---! @note Inlinable `LANGUAGE sql` IMMUTABLE form (no `SET search_path`) so the
---!   planner can fold this per-encrypted-value helper into the calling query.
---!   This deliberately diverges from the v2 plpgsql equivalent (intentionally
---!   left unchanged): the `CASE WHEN jsonb_typeof(val) = 'array'` guard only
---!   evaluates the array path for an array, so a non-array JSON scalar returns
---!   NULL here instead of raising. The sole caller (`ore_block_256`) only reaches
---!   this when `has_ore_block_256(val)` is true, which now requires `val->'ob'`
---!   to be a JSON array, so the non-array branch is unreachable in practice.
+--! @note plpgsql, not `LANGUAGE sql` (issue #353). The sole caller
+--!   (`ore_block_256`) is itself plpgsql, so this function is NEVER reached
+--!   from an inlinable context — as `LANGUAGE sql` it paid the per-call
+--!   SQL-function executor on every compared value in the opclass hot path
+--!   (measured: +43% on ORE ordered scans vs the plpgsql form). The
+--!   non-array guard preserves the v3 behaviour (returns NULL for a
+--!   non-array scalar; the v2 plpgsql original raised); the caller only
+--!   reaches this when `has_ore_block_256(val)` is true, which requires
+--!   `val->'ob'` to be a JSON array, so that branch stays unreachable.
 --!   An empty array (`ob: []`, what encrypting the empty string `""` produces)
 --!   yields a non-NULL composite with an EMPTY `terms` array — NOT NULL terms.
 --!   The `COALESCE` is load-bearing: `array_agg` over zero rows returns NULL, and
@@ -36,25 +37,33 @@ CREATE FUNCTION eql_v3_internal.jsonb_array_to_ore_block_256(val jsonb)
 RETURNS eql_v3_internal.ore_block_256
   IMMUTABLE
 AS $$
-  SELECT CASE WHEN jsonb_typeof(val) = 'array'
-    THEN ROW(COALESCE(
-      (
-        SELECT array_agg(ROW(b)::eql_v3_internal.ore_block_256_term)
-        FROM unnest(eql_v3_internal.jsonb_array_to_bytea_array(val)) AS b
-      ),
-      ARRAY[]::eql_v3_internal.ore_block_256_term[]
-    ))::eql_v3_internal.ore_block_256
-    ELSE NULL
-  END;
-$$ LANGUAGE sql;
+DECLARE
+  terms eql_v3_internal.ore_block_256_term[];
+BEGIN
+  IF val IS NULL OR jsonb_typeof(val) != 'array' THEN
+    RETURN NULL;
+  END IF;
+  SELECT array_agg(ROW(b)::eql_v3_internal.ore_block_256_term)
+    INTO terms
+  FROM unnest(eql_v3_internal.jsonb_array_to_bytea_array(val)) AS b;
+  -- plpgsql pitfall: `SELECT <composite> INTO <composite-var>` assigns the
+  -- select-list columns FIELD-WISE into the variable — return the row
+  -- constructor directly instead. The COALESCE stays load-bearing for the
+  -- empty-`ob` case (issue #262): array_agg over zero rows yields NULL, and
+  -- the comparator needs an EMPTY terms array, not NULL terms.
+  RETURN ROW(COALESCE(terms, ARRAY[]::eql_v3_internal.ore_block_256_term[]))::eql_v3_internal.ore_block_256;
+END;
+$$ LANGUAGE plpgsql;
 
---! @internal Mark this hand-written helper inline-critical so the post-install
---! pin_search_path pass leaves it unpinned (no `SET search_path`), preserving
---! SQL-function inlining. It takes a bare `jsonb` arg (not a jsonb-backed
---! encrypted DOMAIN), so the structural skip in tasks/pin_search_path_v3.sql does
---! not recognise it; this marker is the documented manual opt-in.
+--! @internal Keep the inline-critical marker so the post-install
+--! pin_search_path pass leaves this unpinned: a `SET search_path` clause on a
+--! plpgsql function forces per-call configuration switching — measurable on a
+--! helper invoked per compared value in the ore_block_256 opclass hot path.
+--! It takes a bare `jsonb` arg (not a jsonb-backed encrypted DOMAIN), so the
+--! structural skip in tasks/pin_search_path_v3.sql does not recognise it;
+--! this marker is the documented manual opt-in.
 COMMENT ON FUNCTION eql_v3_internal.jsonb_array_to_ore_block_256(jsonb) IS
-  'eql-inline-critical: per-encrypted-value ORE helper; must stay inlinable (unpinned search_path)';
+  'eql-inline-critical: per-encrypted-value ORE opclass-path helper; must stay unpinned (SET search_path adds per-call overhead)';
 
 
 --! @brief Extract ORE block index term from JSONB payload
