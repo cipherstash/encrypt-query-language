@@ -7,7 +7,7 @@ EQL ships its searchable-encryption surface as PostgreSQL **domains in the `eql_
 - **per-scalar encrypted-domain types** — `eql_v3.integer`, `eql_v3.text`, `eql_v3.timestamp`, … — one family of domain *variants* per scalar; and
 - **an encrypted-JSON document type** — `eql_v3.json` — for structured-encryption (ste_vec) JSONB.
 
-The capability of a column is fixed by the **domain variant you type it as**. There is no database-side `add_search_config` / `add_column` step: which index terms travel in a value's payload is decided by the encryption client ([CipherStash Proxy](https://github.com/cipherstash/proxy) / [Protect.js](https://github.com/cipherstash/protectjs)), and the column's domain variant is what makes the matching operators resolve. Unsupported operators are not silent no-ops — they route to blocker functions that `RAISE` an "operator not supported" exception (a `NULL` operand still raises; the blockers are deliberately not `STRICT`).
+The capability of a column is fixed by the **domain variant you type it as**. There is no database-side `add_search_config` / `add_column` step: which index terms travel in a value's payload is decided by the encryption client ([CipherStash Proxy](https://github.com/cipherstash/proxy) / [CipherStash Stack](https://github.com/cipherstash/stack)), and the column's domain variant is what makes the matching operators resolve. Unsupported operators are not silent no-ops — they route to blocker functions that `RAISE` an "operator not supported" exception (a `NULL` operand still raises; the blockers are deliberately not `STRICT`).
 
 ---
 
@@ -160,7 +160,7 @@ See [EQL with JSON and JSONB](./json-support.md) for worked examples.
 - [EQL Functions Reference](./eql-functions.md) — full list of functions and operators.
 - [Database Indexes for Encrypted Columns](./database-indexes.md) — functional-index and GIN recipes, plus performance guidance.
 - [EQL with JSON and JSONB](./json-support.md) — end-to-end `eql_v3.json` examples.
-- Client-side searchable-encryption configuration — [Protect.js schema reference](https://github.com/cipherstash/protectjs/blob/main/docs/reference/schema.md) and [CipherStash Proxy](https://github.com/cipherstash/proxy).
+- Client-side searchable-encryption configuration — [CipherStash Stack schema reference](https://cipherstash.com/docs/stack/cipherstash/encryption/schema) and [CipherStash Proxy](https://github.com/cipherstash/proxy).
 
 ---
 

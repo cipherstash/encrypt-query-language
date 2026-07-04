@@ -58,7 +58,7 @@ for the full recipes, GIN containment, and large-table build guidance.
 gone. The searchable surface of a column is fixed by the **domain variant you
 type it as**, and which index terms travel in a value's payload is decided by
 the encryption client — [CipherStash Proxy](https://github.com/cipherstash/proxy)
-or [Protect.js](https://github.com/cipherstash/protectjs):
+or [CipherStash Stack](https://github.com/cipherstash/stack):
 
 - `eql_v3.<T>_eq` carries an `hm` term — supports `=` / `<>`, `GROUP BY`, `DISTINCT`.
 - `eql_v3.<T>_ord` (and the `_ord_ore` twin) carries an `ob` term — adds `<` `<=` `>` `>=`, `ORDER BY`, `MIN` / `MAX`.
@@ -68,7 +68,7 @@ or [Protect.js](https://github.com/cipherstash/protectjs):
 Configuring those columns is a client-side concern. See:
 
 - [CipherStash Proxy configuration tutorial](./docs/tutorials/proxy-configuration.md)
-- [Protect.js schema reference](https://github.com/cipherstash/protectjs/blob/main/docs/reference/schema.md)
+- [CipherStash Stack schema reference](https://cipherstash.com/docs/stack/cipherstash/encryption/schema)
 
 ## Operators on Supabase
 

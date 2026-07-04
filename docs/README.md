@@ -15,7 +15,7 @@ This directory contains the documentation for the Encrypt Query Language (EQL).
 - [Adding a Scalar Encrypted-Domain Type](reference/adding-a-scalar-encrypted-domain-type.md) - How the `eql_v3.<T>` domain families are generated
 - [EQL with JSON and JSONB](reference/json-support.md)
 - [EQL payload / wire format](../crates/eql-bindings/README.md) - Canonical wire types for the encrypted payload (envelope `v`/`i`/`c` and the `hm`/`ob`/`bf` index terms)
-- [Client-side index configuration](https://github.com/cipherstash/protectjs/blob/main/docs/reference/schema.md) - Configuring searchable encryption in Protect.js / CipherStash Proxy
+- [Client-side index configuration](https://cipherstash.com/docs/stack/cipherstash/encryption/schema) - Configuring searchable encryption in CipherStash Stack / CipherStash Proxy
 
 ## Tutorials
 

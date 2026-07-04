@@ -17,7 +17,7 @@ EQL encrypts, decrypts, and searches JSON / JSONB documents using structured enc
 
 ## Storing encrypted JSON
 
-Type the column as `eql_v3.json`. There is no database-side `add_search_config` step — which terms a document carries is decided by the encryption client ([CipherStash Proxy](https://github.com/cipherstash/proxy) / [Protect.js](https://github.com/cipherstash/protectjs)); typing the column as `eql_v3.json` is what makes the encrypted operators and functions resolve.
+Type the column as `eql_v3.json`. There is no database-side `add_search_config` step — which terms a document carries is decided by the encryption client ([CipherStash Proxy](https://github.com/cipherstash/proxy) / [CipherStash Stack](https://github.com/cipherstash/stack)); typing the column as `eql_v3.json` is what makes the encrypted operators and functions resolve.
 
 ```sql
 CREATE TABLE users (
@@ -26,7 +26,7 @@ CREATE TABLE users (
 );
 ```
 
-Insert and read through CipherStash Proxy or Protect.js, which encrypt the document into the ste_vec payload on write and decrypt it on read:
+Insert and read through CipherStash Proxy or CipherStash Stack, which encrypt the document into the ste_vec payload on write and decrypt it on read:
 
 ```sql
 SELECT encrypted_json FROM users;   -- decrypted by the client on the way out
@@ -79,7 +79,7 @@ See [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-js
 
 ### Field extraction (`jsonb_path_query`)
 
-Extract fields by **selector hash** — a deterministic identifier the crypto layer emits for a JSON path (not a path string like `$.field`). Selectors are generated during encryption by CipherStash Proxy / Protect.js.
+Extract fields by **selector hash** — a deterministic identifier the crypto layer emits for a JSON path (not a path string like `$.field`). Selectors are generated during encryption by CipherStash Proxy / CipherStash Stack.
 
 ```sql
 -- All entries matching a selector
@@ -200,7 +200,7 @@ Structured Encryption (ste_vec) makes a JSONB document searchable by:
 WHERE encrypted_data @> $1::eql_v3.jsonb_query;
 ```
 
-Encryption and selector generation are handled by CipherStash Proxy or Protect.js, not by EQL directly.
+Encryption and selector generation are handled by CipherStash Proxy or CipherStash Stack, not by EQL directly.
 
 ---
 

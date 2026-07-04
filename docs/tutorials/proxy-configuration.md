@@ -10,7 +10,7 @@ EQL (the `eql_v3` schema) and the encryption client split responsibilities:
 | --- | --- |
 | Encrypted-column **types** and **operators** (`eql_v3.text_eq`, `eql_v3.json`, `=`, `@>`, …) | **EQL** (this repo) |
 | PostgreSQL **functional indexes** on the term extractors | **EQL** / you |
-| **Which columns are encrypted** and **which index terms** each carries | The **encryption client** — [CipherStash Proxy](https://github.com/cipherstash/proxy) / [Protect.js](https://github.com/cipherstash/protectjs) |
+| **Which columns are encrypted** and **which index terms** each carries | The **encryption client** — [CipherStash Proxy](https://github.com/cipherstash/proxy) / [CipherStash Stack](https://github.com/cipherstash/stack) |
 | Performing **encryption / decryption** on the wire | The encryption client |
 
 > **There is no database-side configuration API in `eql_v3`.** Earlier versions configured searchable encryption with database functions (`add_column`, `add_search_config`). That surface has been removed — configuration now lives entirely in the client. The database's only job is to *store* the encrypted columns (typed as `eql_v3` domains) and *resolve* the encrypted operators.
@@ -18,7 +18,7 @@ EQL (the `eql_v3` schema) and the encryption client split responsibilities:
 ## Prerequisites
 
 - EQL installed into your database (the `eql_v3` surface). See the [README](../../README.md#installation).
-- A running CipherStash Proxy (or a Protect.js client) configured for your workspace.
+- A running CipherStash Proxy (or a CipherStash Stack client) configured for your workspace.
 
 ## 1. Define encrypted columns
 
@@ -44,7 +44,7 @@ The variant fixes the column's searchable surface: `_eq` for `=`, `_ord` for ord
 
 Tell the encryption client which columns to encrypt and which index terms to emit. This is **client-side configuration**, not SQL:
 
-- **Protect.js** — define the columns and indexes in the schema. See the [Protect.js schema reference](https://github.com/cipherstash/protectjs/blob/main/docs/reference/schema.md).
+- **CipherStash Stack** — define the columns and indexes in the schema. See the [CipherStash Stack schema reference](https://cipherstash.com/docs/stack/cipherstash/encryption/schema).
 - **CipherStash Proxy** — configure the encrypted columns in the Proxy's mapping config. See [CipherStash Proxy](https://github.com/cipherstash/proxy).
 
 The terms the client emits (`hm` for equality, `ob` for ordering, `bf` for match, ste_vec for JSON) must match the column's domain variant from step 1 — e.g. configure an equality index for a column typed `eql_v3.text_eq`.
@@ -108,9 +108,9 @@ SELECT encrypted_profile -> 'email_selector'::text FROM users;
 
 ## Frequently asked questions
 
-**Can I use EQL without an encryption client?** No — encryption and decryption are performed by CipherStash Proxy or Protect.js. EQL provides the database-side types, operators, and indexes; the client provides the crypto and the configuration.
+**Can I use EQL without an encryption client?** No — encryption and decryption are performed by CipherStash Proxy or CipherStash Stack. EQL provides the database-side types, operators, and indexes; the client provides the crypto and the configuration.
 
-**How do I choose which columns are searchable, and how?** In the client configuration (Protect.js schema / Proxy mapping), matched to the column's `eql_v3` domain variant. There are no database-side `add_column` / `add_search_config` calls.
+**How do I choose which columns are searchable, and how?** In the client configuration (CipherStash Stack schema / Proxy mapping), matched to the column's `eql_v3` domain variant. There are no database-side `add_column` / `add_search_config` calls.
 
 **Which operators are available on which column?** See the [SQL support matrix](../reference/sql-support.md).
 

@@ -50,7 +50,7 @@ database with nothing else present.
 > composite encrypted column type, database-side configuration management, and
 > operator-class-on-column indexing. That surface was **removed in 3.0.0**; the
 > repo now builds and ships only `eql_v3`, and the encryption client
-> (CipherStash Proxy / Protect.js) owns the configuration model the database-side
+> (CipherStash Proxy / CipherStash Stack) owns the configuration model the database-side
 > `eql_v2` functions previously provided. You will still see `eql_v2` named in
 > fork-provenance comments under `src/v3/` (the v3 SEM types were forked from the
 > old v2 originals) and in historical records (`CHANGELOG.md`, the v2.x upgrade
