@@ -128,17 +128,19 @@ CREATE DOMAIN eql_v3.json AS jsonb
 --!
 --! @see src/v3/jsonb/operators.sql
 --!
---! @note The CHECK is an INLINE expression, not a call to
---!   `eql_v3_internal.is_valid_ste_vec_entry_payload` (issue #354): domain
---!   constraints cannot inline SQL functions, so the function-call form paid
---!   the per-call SQL-function executor (~18 µs) on EVERY cast — the needle
---!   cast in every field_eq query (+19% end-to-end vs v2, the entire measured
---!   regression on that scenario; see cipherstash/benches#23). The expression
---!   mirrors the validator body; the leading `VALUE IS NULL OR` preserves the
---!   validator's STRICT NULL-passes semantics (a bare COALESCE(..., false)
---!   would reject NULL, which `->` returns for a missing selector). Keep the
---!   two in sync — `jsonb_entry_check_matches_validator` in
---!   tests/sqlx pins the equivalence.
+--! @internal
+--! Implementation note (issue #354): the CHECK is an INLINE expression, not a
+--! call to `eql_v3_internal.is_valid_ste_vec_entry_payload` — domain
+--! constraints cannot inline SQL functions, so the function-call form paid
+--! the per-call SQL-function executor (~18 µs) on EVERY cast: the needle
+--! cast in every field_eq query (+19% end-to-end vs v2, the entire measured
+--! regression on that scenario; see cipherstash/benches#23). The expression
+--! mirrors the validator body; the leading `VALUE IS NULL OR` preserves the
+--! validator's STRICT NULL-passes semantics (a bare COALESCE(..., false)
+--! would reject NULL, which `->` returns for a missing selector). Keep the
+--! two in sync — `jsonb_entry_check_matches_validator` in tests/sqlx pins
+--! the equivalence.
+--! @endinternal
 CREATE DOMAIN eql_v3.jsonb_entry AS jsonb
   CHECK (
     VALUE IS NULL
@@ -167,14 +169,16 @@ CREATE DOMAIN eql_v3.jsonb_entry AS jsonb
 --!       `'{"sv":[{"s":"<sel>","hm":"<hm>"}]}'::eql_v3.jsonb_query`.
 --! @see eql_v3.to_ste_vec_query
 --!
---! @note This CHECK CANNOT be inlined like eql_v3.jsonb_entry's (issue #354):
---!   validating the sv elements requires a subquery
---!   (`NOT EXISTS (SELECT ... FROM jsonb_array_elements(...))`), and CHECK
---!   constraints forbid subqueries. The validator is plpgsql instead (cached
---!   plan; substantially cheaper per call than a non-inlined LANGUAGE sql
---!   function — the same finding as issue #353), since this cast sits on the
---!   per-query hot path of every containment scenario
---!   (`$1::jsonb::eql_v3.jsonb_query`).
+--! @internal
+--! Implementation note (issue #354): this CHECK CANNOT be inlined like
+--! eql_v3.jsonb_entry's — validating the sv elements requires a subquery
+--! (`NOT EXISTS (SELECT ... FROM jsonb_array_elements(...))`), and CHECK
+--! constraints forbid subqueries. The validator is plpgsql instead (cached
+--! plan; substantially cheaper per call than a non-inlined LANGUAGE sql
+--! function — the same finding as issue #353), since this cast sits on the
+--! per-query hot path of every containment scenario
+--! (`$1::jsonb::eql_v3.jsonb_query`).
+--! @endinternal
 CREATE DOMAIN eql_v3.jsonb_query AS jsonb
   CHECK (
     eql_v3_internal.is_valid_ste_vec_query_payload(VALUE)
