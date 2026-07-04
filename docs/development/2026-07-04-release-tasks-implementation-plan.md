@@ -15,12 +15,13 @@ These are the spec's **verified, load-bearing facts**. Every task's requirements
 - **SQL and docs must build in-run.** A coordinator running under the automatic `GITHUB_TOKEN` **cannot** rely on any `on: release`/`on: push` fan-out — `GITHUB_TOKEN`-created Releases and pushes do **not** trigger new workflow runs. The SQL build+attach *and* the docs build+attach therefore happen inside the coordinator's own run via reusable `workflow_call`s, never by firing `release-eql.yml`.
 - **The crate must publish from `release-plz.yml` as its own dispatched entry point.** crates.io Trusted Publishing matches on `workflow_ref` = the entry-point workflow filename (verified opposite to PyPI). Publishing via a reusable `workflow_call` from `release-alpha.yml` would make the identity `release-alpha.yml` and fail the OIDC token exchange. **Do not move the crate publish into a reusable workflow.** The coordinator triggers the publish with `gh workflow run release-plz.yml --ref <ref>` (the `workflow_dispatch` exception means `GITHUB_TOKEN` *can* do this).
 - **`target=all` same-commit `S` is achieved by dispatching the crate publish against the immutable SQL tag.** The crate version is pinned+committed at `S`, the SQL release targets `S`, docs are built at `S`, and the crate publish is dispatched against the *tag* `eql-<identity>` that points at `S` — so both tags land on `S` with no SHA guard and no race.
+- **`target=bindings` is same-source, +1 metadata commit.** The crate is published from the **same code** as the referenced `eql-<identity>` SQL release. The coordinator requires branch HEAD to currently equal the SQL tag's commit, adds a metadata-only pin commit **on top of it**, and publishes from there — so the crate never ships later code than the SQL release it corresponds to.
 - **Ordering is SQL → docs → crate.** SQL and docs are reversible (a GitHub prerelease can be deleted); a crates.io publish is irreversible. The crate publish must be dispatched only **after** a *complete* release (SQL **and** docs) has been built and attached in-run.
 - **Identity `<version>-<channel>.<N>` with `N = 1 + max(N across BOTH tag namespaces)`** — SQL `eql-<v>-<ch>.N` and crate `eql-bindings-v<v>-<ch>.N` — computed from freshly-fetched tags (`fetch-depth: 0`). Deriving across both namespaces for every target prevents version divergence.
-- **`release-eql.yml` builds with the `eql-`-stripped identity** (`mise run build --version "${TAG#eql-}"`) so `eql_v3.version()` reports bare semver. Empty tag → bare `mise run build` DEV default. This behaviour is preserved by the reusable.
+- **`release-eql.yml` builds with the `eql-`-stripped identity** (`mise run build --version "${TAG#eql-}"`) so `eql_v3.version()` reports bare semver. Empty tag → bare `mise run build` DEV default (`build.sh` uses `RELEASE_VERSION=${usage_version:-DEV}`, so **empty *or* unset → `DEV`**; PR runs of `release-eql.yml` rely on this). This behaviour is preserved by the reusable.
 - **Blockers/prereleases only.** The coordinator cuts prereleases only. No final-release automation, no `verify-changelog` promotion, no `CHANGELOG.md` edits — alpha entries stay under `[Unreleased]`.
 - **`release-plz` config is unchanged.** No TP / OIDC / GPG changes. `release-plz set-version eql-bindings@<identity>` is the only pin mechanism (no absolute-version config field exists).
-- **Branch = dispatched ref.** Alphas are cut from `eql_v3` today; the workflow runs on the `--ref` of the dispatch. `main`-channel branch protection is out of scope (future).
+- **Branch = dispatched ref.** Alphas are cut from `eql_v3` today; the workflow runs on the `--ref` of the dispatch. For `all`/`bindings` the ref **must be a branch** (the pin pushes to it). `main`-channel branch protection is out of scope (future).
 - **mise tasks are auto-discovered** from the `tasks/` directory (verified: `release:preview` has no `[tasks]` entry in `mise.toml`). A new executable `tasks/release/<name>.sh` with `#MISE`/`#USAGE` headers auto-registers as `release:<name>`; deleting `tasks/release/preview.sh` removes `release:preview`.
 
 ---
@@ -29,14 +30,16 @@ These are the spec's **verified, load-bearing facts**. Every task's requirements
 
 | File | Responsibility | Action |
 |------|----------------|--------|
-| `.github/workflows/_build-sql.yml` | Reusable (`workflow_call`) SQL build + upload-artifact + attach/create-release + Multitudes notify. Single SQL-build code path. | Create (Task 1) |
-| `.github/workflows/_build-docs.yml` | Reusable (`workflow_call`) docs generate + package + upload-artifact + attach `eql-docs-*` to an existing release. Single docs-build code path. | Create (Task 2) |
+| `.github/workflows/_build-sql.yml` | Reusable (`workflow_call`) SQL build + upload-artifact + attach/create-release + Multitudes notify. | Create (Task 1) |
+| `.github/workflows/_build-docs.yml` | Reusable (`workflow_call`) docs generate + package + upload-artifact + attach `eql-docs-*` to an existing release. | Create (Task 2) |
 | `.github/workflows/release-eql.yml` | Finals path: `verify-changelog`, delegate SQL build to `_build-sql.yml`, delegate docs to `_build-docs.yml`. | Modify (Task 3) |
 | `.github/workflows/release-plz.yml` | Crate publish entry point (unchanged) + `release-pr` job gated to `main`. | Modify (Task 4) |
-| `.github/workflows/release-alpha.yml` | The coordinator: resolve → pin → build-sql → build-docs → crate-publish → summary. | Create (Task 5) |
-| `tasks/release/all.sh`, `tasks/release/eql.sh`, `tasks/release/bindings.sh` | Thin mise triggers: dispatch coordinator + watch by `run-name`. | Create (Task 6) |
-| `tasks/release/preview.sh` | Retired. | Delete (Task 6) |
-| `docs/development/releasing-an-alpha.md`, `CLAUDE.md` | Runbook + reference updated to the task/dispatch flow. | Modify (Task 7) |
+| `.github/scripts/derive-identity.sh` + `.github/scripts/derive-identity.test.sh` | Unit-testable identity-derivation function (git seams overridable) + a dependency-free bash test. | Create (Task 5) |
+| `.github/workflows/release-alpha.yml` | The coordinator: resolve → pin → build-sql → build-docs → crate-publish → summary. | Create (Task 6) |
+| `tasks/release/all.sh`, `tasks/release/eql.sh`, `tasks/release/bindings.sh` | Thin mise triggers: dispatch coordinator + watch by unique `dispatch_id`. | Create (Task 7) |
+| `tasks/release/preview.sh` | Retired. | Delete (Task 7) |
+| `.github/workflows/lint-release.yml` | Persistent PR gate: `actionlint` on the release workflows + `shellcheck` on `tasks/release/*.sh` + the identity-derivation unit test. | Create (Task 8) |
+| `docs/development/releasing-an-alpha.md`, `CLAUDE.md` | Runbook + reference updated to the task/dispatch flow. | Modify (Task 9) |
 
 ---
 
@@ -125,7 +128,8 @@ jobs:
 
       - name: Build EQL release
         # Strip the `eql-` tag prefix so eql_v3.version() reports bare semver
-        # (e.g. "3.0.0-alpha.2"). Empty TAG -> ${TAG#eql-} is "" -> DEV default.
+        # (e.g. "3.0.0-alpha.2"). Empty TAG -> ${TAG#eql-} is "" -> build.sh's
+        # ${usage_version:-DEV} yields DEV (empty OR unset both map to DEV).
         env:
           TAG: ${{ inputs.tag }}
         run: |
@@ -184,7 +188,7 @@ jobs:
 
 Run: `actionlint .github/workflows/_build-sql.yml`
 (If `actionlint` is not installed: `go install github.com/rhysd/actionlint/cmd/actionlint@latest`, or `brew install actionlint`, or download the release binary.)
-Expected: no output (exit 0). A reusable workflow with only `on: workflow_call` passes.
+Expected: no output (exit 0).
 
 - [ ] **Step 3: Sanity-check the YAML parses**
 
@@ -205,12 +209,12 @@ git commit -m "ci(release): add reusable _build-sql.yml (workflow_call SQL build
 **Files:**
 - Create: `.github/workflows/_build-docs.yml`
 
-**Context (from the real `release-eql.yml` `publish-docs` job, lines ~105–156):** it checks out, runs mise-action, installs doxygen (`sudo apt-get update && sudo apt-get install -y doxygen`), runs `mise run docs:generate` then `mise run docs:generate:markdown -- <tag>` (with `set -euo pipefail` so a generate failure fails fast), `mise run docs:package <tag>`, uploads `eql-docs-*.{zip,tar.gz}`, then attaches those files to the release. **The Multitudes-notify step lives in `build-and-publish`, NOT `publish-docs`** — so this reusable has no Multitudes step. The original attach step was gated `if: startsWith(github.ref, 'refs/tags/')`; that gate is **dropped** here because the coordinator's `github.ref` is a branch (not a tag), so gating on it would suppress the alpha docs attach. Attachment is instead gated on the passed `tag` being non-empty (matching the finals-on-PR "build but don't attach" behaviour, where `tag` is empty).
+**Context (from the real `release-eql.yml` `publish-docs` job, lines ~105–156):** it checks out, runs mise-action, installs doxygen (`sudo apt-get update && sudo apt-get install -y doxygen`), runs `mise run docs:generate` then `mise run docs:generate:markdown -- <tag>` (with `set -euo pipefail` so a generate failure fails fast), `mise run docs:package <tag>`, uploads `eql-docs-*.{zip,tar.gz}`, then attaches those files to the release. **The Multitudes-notify step lives in `build-and-publish`, NOT `publish-docs`** — so this reusable has no Multitudes step. The original attach step was gated `if: startsWith(github.ref, 'refs/tags/')`; that gate is **dropped** here because the coordinator's `github.ref` is a branch (not a tag), so gating on it would suppress the alpha docs attach. Attachment is instead gated on the passed `tag` being non-empty.
 
 **Interfaces:**
-- Produces (the reusable's `workflow_call` inputs — Tasks 3 and 5 call with exactly these):
+- Produces (the reusable's `workflow_call` inputs — Tasks 3 and 6 call with exactly these):
   - `ref` (string, default `''`) — git ref/SHA to build docs from; empty → default `github.sha`.
-  - `tag` (string, default `''`) — full release tag, e.g. `eql-3.0.0-alpha.2`. Passed to `docs:generate:markdown`/`docs:package` and names the release to attach to. Empty → build docs, do **not** attach (PR/dispatch parity with the original).
+  - `tag` (string, default `''`) — full release tag. Passed to `docs:generate:markdown`/`docs:package` and names the release to attach to. Empty → build docs, do **not** attach (PR/dispatch parity with the original).
 
 - [ ] **Step 1: Write the full reusable workflow file**
 
@@ -333,28 +337,22 @@ git commit -m "ci(release): add reusable _build-docs.yml (workflow_call docs bui
 ### Task 3: Refactor `release-eql.yml` to call the reusables
 
 **Files:**
-- Modify: `.github/workflows/release-eql.yml` (replace the `build-and-publish` job's `steps` with a `uses:` call to `_build-sql.yml`; replace the `publish-docs` job's `steps` with a `uses:` call to `_build-docs.yml`; leave `verify-changelog` unchanged)
+- Modify: `.github/workflows/release-eql.yml` (`build-and-publish` → `uses: _build-sql.yml`; `publish-docs` → `uses: _build-docs.yml`; leave `verify-changelog` unchanged)
 
 **Interfaces:**
-- Consumes: `_build-sql.yml` inputs (Task 1: `ref`, `tag`, `attach`, `target_commitish`, `prerelease`) and `_build-docs.yml` inputs (Task 2: `ref`, `tag`).
+- Consumes: `_build-sql.yml` inputs (Task 1) and `_build-docs.yml` inputs (Task 2).
 
 - [ ] **Step 1: Replace the `build-and-publish` job body**
-
-Replace the entire `build-and-publish:` job (currently a `runs-on`/`steps` job) with a reusable call. **Keep the exact `if:` guard.**
 
 ```yaml
   build-and-publish:
     name: Build EQL
-    # `!startsWith(...'eql-bindings')` excludes the eql-bindings crate tags
-    # (eql-bindings-v*) cut by release-plz, which are not SQL-surface releases.
     if: ${{ github.event_name != 'release' || (contains(github.event.release.tag_name, 'eql') && !startsWith(github.event.release.tag_name, 'eql-bindings')) }}
     permissions:
       contents: write
     secrets: inherit
     uses: ./.github/workflows/_build-sql.yml
     with:
-      # Finals: build the checked-out release commit (default), attach to the
-      # existing human-created release, never re-create it.
       ref: ""
       tag: ${{ github.event_name == 'release' && github.event.release.tag_name || '' }}
       attach: ${{ github.event_name == 'release' && startsWith(github.ref, 'refs/tags/') }}
@@ -364,38 +362,29 @@ Replace the entire `build-and-publish:` job (currently a `runs-on`/`steps` job) 
 
 - [ ] **Step 2: Replace the `publish-docs` job body**
 
-Replace the entire `publish-docs:` job (currently a `runs-on`/`steps` job) with a reusable call. **Keep the exact `if:` guard.**
-
 ```yaml
   publish-docs:
     name: Build and Publish Documentation
-    # `!startsWith(...'eql-bindings')` excludes the eql-bindings crate tags
-    # (eql-bindings-v*) cut by release-plz, which are not SQL-surface releases.
     if: ${{ github.event_name != 'release' || (contains(github.event.release.tag_name, 'eql') && !startsWith(github.event.release.tag_name, 'eql-bindings')) }}
     permissions:
       contents: write
     uses: ./.github/workflows/_build-docs.yml
     with:
-      # Finals: build docs at the release commit (default checkout), attach to
-      # the existing human-created release. Empty tag on PR -> build, no attach.
       ref: ""
       tag: ${{ github.event_name == 'release' && github.event.release.tag_name || '' }}
 ```
 
-Keep the `verify-changelog` job exactly as-is. **Keep the top-level `on`, `env`, `defaults`, and `permissions` unchanged** (the reusable jobs still run under them).
+Keep `verify-changelog` and the top-level `on`, `env`, `defaults`, `permissions` unchanged.
 
 - [ ] **Step 3: Confirm no behaviour change for finals (read-through)**
 
-Verify by inspection:
-- A `release: published` event with an `eql-…` (non-`eql-bindings`) tag →
-  - `build-and-publish` calls `_build-sql.yml` with `tag = tag_name`, `attach = true`, `target_commitish = ""` → **"Attach artefacts to existing release"** step → same two `.sql` files on the same release, prerelease flag untouched, Multitudes fires. Identical.
-  - `publish-docs` calls `_build-docs.yml` with `ref = ""` (checkout the release commit = `github.sha`), `tag = tag_name` → builds docs at the release commit and attaches `eql-docs-*` to the existing release. Identical to the old job (which attached because `github.ref` was `refs/tags/…`).
-- A `pull_request` run (workflow file changed) → both jobs run with `tag = ''` → build only, no attach (docs build, `if: inputs.tag != ''` false). Identical to before.
+- `release: published` (eql, non-bindings) → `build-and-publish` attaches the two `.sql` to the existing release (Multitudes fires); `publish-docs` builds docs at the release commit and attaches `eql-docs-*`. Identical to before.
+- `pull_request` → both run with `tag = ''` → build only, no attach. Identical.
 
 - [ ] **Step 4: Validate**
 
 Run: `actionlint .github/workflows/release-eql.yml && python3 -c "import yaml; yaml.safe_load(open('.github/workflows/release-eql.yml'))" && echo OK`
-Expected: `OK`, no actionlint errors. (actionlint resolves both local `uses:` calls and checks `with:` inputs against Tasks 1 and 2 — a typo'd input name fails here.)
+Expected: `OK`.
 
 - [ ] **Step 5: Commit**
 
@@ -412,11 +401,9 @@ git commit -m "ci(release): route release-eql.yml SQL + docs builds through reus
 - Modify: `.github/workflows/release-plz.yml` (add one `if:` to the `release-pr` job)
 
 **Interfaces:**
-- Produces: a `release-plz.yml` whose `release` job still publishes on any ref (branch-agnostic), but whose `release-pr` job runs **only** on `refs/heads/main`. The coordinator dispatches this workflow against a **tag**, so `release-pr` is skipped → no stray release PR.
+- Produces: a `release-plz.yml` whose `release` job still publishes on any ref, but whose `release-pr` runs **only** on `refs/heads/main`. A dispatch against a tag skips `release-pr` → no stray release PR.
 
 - [ ] **Step 1: Add the `if:` guard to `release-pr`**
-
-In the `release-pr:` job, add an `if:` as the first key after `name:`:
 
 ```yaml
   release-pr:
@@ -431,13 +418,11 @@ In the `release-pr:` job, add an `if:` as the first key after `name:`:
       # ... unchanged ...
 ```
 
-Leave the `release:` job, `concurrency`, `permissions`, `on`, and everything else unchanged.
+Leave `release:`, `concurrency`, `permissions`, `on` unchanged.
 
 - [ ] **Step 2: Verify the gate logic (read-through)**
 
-- Push to `main` → `github.ref == 'refs/heads/main'` → `release-pr` runs (unchanged).
-- Coordinator `gh workflow run release-plz.yml --ref eql-3.0.0-alpha.2` → ref is `refs/tags/…` → `release-pr` **skipped**; `release` still runs, checks out the tag, publishes.
-- Manual `workflow_dispatch` on `main` → ref is `refs/heads/main` → `release-pr` runs.
+- Push to `main` → runs. Coordinator `--ref eql-3.0.0-alpha.2` (tag) → `release-pr` **skipped**, `release` runs. Manual dispatch on `main` → runs.
 
 - [ ] **Step 3: Validate**
 
@@ -453,14 +438,173 @@ git commit -m "ci(release): gate release-plz release-pr job to refs/heads/main"
 
 ---
 
-### Task 5: The coordinator — `.github/workflows/release-alpha.yml`
+### Task 5: Identity-derivation helper + unit test — `.github/scripts/`
+
+**Files:**
+- Create: `.github/scripts/derive-identity.sh`
+- Create: `.github/scripts/derive-identity.test.sh`
+
+**Interfaces:**
+- Produces: a `derive_identity <target> <version> <channel> <pre>` bash function that prints the resolved `<version>-<channel>.<N>` identity to stdout, computing `N = 1 + max(SQL N, crate N)` for `all`/`eql` and the latest SQL alpha lacking a crate counterpart for `bindings`. Two git seams — `list_tags <glob>` and `tag_exists <tag>` — are overridable so the test can run against a synthetic tag set with **no git repo and no dependencies**. The coordinator (Task 6) sources this file and calls `derive_identity`; the repo-state guards (existence, branch-HEAD==tag-commit, branch ref) stay in the coordinator.
+
+- [ ] **Step 1: Write `.github/scripts/derive-identity.sh`**
+
+```bash
+#!/usr/bin/env bash
+# Identity derivation for release-alpha.yml, factored out so it is unit-testable
+# with a synthetic tag set (see derive-identity.test.sh). The two git seams
+# (list_tags / tag_exists) are overridable by the test harness.
+set -euo pipefail
+
+# Seam: print tag names matching a shell glob. Override in tests.
+list_tags() { git tag --list "$1"; }
+
+# Seam: succeed iff a tag exists. Override in tests.
+tag_exists() { git rev-parse -q --verify "refs/tags/$1" >/dev/null; }
+
+# highest_n <prefix> -> highest integer N among tags "<prefix>N", or empty.
+highest_n() {
+  local prefix="$1" esc
+  esc="${prefix//./\\.}"
+  list_tags "${prefix}*" \
+    | sed -n "s/^${esc}\([0-9]\{1,\}\)$/\1/p" \
+    | sort -n | tail -1
+}
+
+# derive_identity <target> <version> <channel> <pre>
+# Prints the resolved identity (e.g. 3.0.0-alpha.6). Does NOT run repo-state
+# guards (existence / branch-HEAD) — those stay in the resolve job.
+derive_identity() {
+  local target="$1" version="$2" channel="$3" pre="$4"
+  local sql_prefix="eql-${version}-${channel}."
+  local crate_prefix="eql-bindings-v${version}-${channel}."
+
+  if [[ -n "$pre" ]]; then
+    printf '%s\n' "$pre"; return 0
+  fi
+
+  case "$target" in
+    all|eql)
+      local sql_n crate_n n
+      sql_n=$(highest_n "$sql_prefix");     sql_n=${sql_n:-0}
+      crate_n=$(highest_n "$crate_prefix"); crate_n=${crate_n:-0}
+      if (( sql_n >= crate_n )); then n=$(( sql_n + 1 )); else n=$(( crate_n + 1 )); fi
+      printf '%s\n' "${version}-${channel}.${n}"
+      ;;
+    bindings)
+      local esc found n
+      esc="${sql_prefix//./\\.}"
+      found=""
+      for n in $(list_tags "${sql_prefix}*" | sed -n "s/^${esc}\([0-9]\{1,\}\)$/\1/p" | sort -rn); do
+        if ! tag_exists "${crate_prefix}${n}"; then found="$n"; break; fi
+      done
+      if [[ -z "$found" ]]; then
+        echo "error: no ${sql_prefix}N SQL release is awaiting a crate publish" >&2
+        return 1
+      fi
+      printf '%s\n' "${version}-${channel}.${found}"
+      ;;
+    *)
+      echo "error: unknown target '$target'" >&2; return 1
+      ;;
+  esac
+}
+
+# Run derive_identity with CLI args when executed directly (not sourced).
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  derive_identity "$@"
+fi
+```
+
+- [ ] **Step 2: Write `.github/scripts/derive-identity.test.sh`**
+
+```bash
+#!/usr/bin/env bash
+# Dependency-free unit test for derive_identity: overrides the git seams with a
+# synthetic tag set. No git repo, no bats. Exit 0 = all pass.
+set -uo pipefail
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "${here}/derive-identity.sh"
+
+FAKE_TAGS=()
+list_tags() {
+  local glob="$1" t
+  (( ${#FAKE_TAGS[@]} )) || return 0
+  for t in "${FAKE_TAGS[@]}"; do
+    # shellcheck disable=SC2254
+    case "$t" in $glob) printf '%s\n' "$t" ;; esac
+  done
+}
+tag_exists() {
+  local want="$1" t
+  (( ${#FAKE_TAGS[@]} )) || return 1
+  for t in "${FAKE_TAGS[@]}"; do [[ "$t" == "$want" ]] && return 0; done
+  return 1
+}
+
+fail=0
+check() { # <desc> <got> <expected>
+  if [[ "$2" == "$3" ]]; then echo "ok: $1"; else echo "FAIL: $1 — got '$2' want '$3'"; fail=1; fi
+}
+
+FAKE_TAGS=()
+check "all: empty -> .1" "$(derive_identity all 3.0.0 alpha '')" "3.0.0-alpha.1"
+
+FAKE_TAGS=(eql-3.0.0-alpha.5)
+check "all: sql .5 -> .6" "$(derive_identity all 3.0.0 alpha '')" "3.0.0-alpha.6"
+
+FAKE_TAGS=(eql-3.0.0-alpha.2 eql-bindings-v3.0.0-alpha.4)
+check "all: crate .4 wins (cross-namespace) -> .5" "$(derive_identity all 3.0.0 alpha '')" "3.0.0-alpha.5"
+
+FAKE_TAGS=(eql-3.0.0-alpha.5 eql-bindings-v3.0.0-alpha.4)
+check "bindings: latest sql lacking crate -> .5" "$(derive_identity bindings 3.0.0 alpha '')" "3.0.0-alpha.5"
+
+FAKE_TAGS=(eql-3.0.0-alpha.5 eql-bindings-v3.0.0-alpha.5)
+if derive_identity bindings 3.0.0 alpha '' >/dev/null 2>&1; then
+  echo "FAIL: bindings should error when none awaiting"; fail=1
+else
+  echo "ok: bindings errors when none awaiting a crate"
+fi
+
+check "pre passthrough" "$(derive_identity all 3.0.0 alpha 3.0.0-alpha.9)" "3.0.0-alpha.9"
+
+# channel isolation: a beta tag must not bump the alpha counter.
+FAKE_TAGS=(eql-3.0.0-beta.7)
+check "all: beta.7 does not affect alpha -> .1" "$(derive_identity all 3.0.0 alpha '')" "3.0.0-alpha.1"
+
+exit "$fail"
+```
+
+- [ ] **Step 3: Run the unit test**
+
+Run: `bash .github/scripts/derive-identity.test.sh`
+Expected: every line prefixed `ok:`, exit 0. (This is the same test the CI gate in Task 8 runs.)
+
+- [ ] **Step 4: ShellCheck the scripts**
+
+Run: `shellcheck .github/scripts/derive-identity.sh .github/scripts/derive-identity.test.sh`
+Expected: no errors.
+
+- [ ] **Step 5: Commit**
+
+```bash
+chmod +x .github/scripts/derive-identity.sh .github/scripts/derive-identity.test.sh
+git add .github/scripts/derive-identity.sh .github/scripts/derive-identity.test.sh
+git commit -m "ci(release): add unit-testable identity-derivation helper + test"
+```
+
+---
+
+### Task 6: The coordinator — `.github/workflows/release-alpha.yml`
 
 **Files:**
 - Create: `.github/workflows/release-alpha.yml`
 
 **Interfaces:**
-- Consumes: `_build-sql.yml` (Task 1) and `_build-docs.yml` (Task 2) via `workflow_call`; `release-plz.yml` (Task 4) via `gh workflow run` (the crate publish entry point).
-- Produces (relied on by Task 6's mise tasks): `workflow_dispatch` inputs `target` / `version` / `channel` / `pre` / `dry_run`; a `run-name` that embeds `<target>` and the resolved-or-partial identity so the mise task can find the exact run; `concurrency: { group: release-alpha }`.
+- Consumes: `_build-sql.yml` (Task 1) and `_build-docs.yml` (Task 2) via `workflow_call`; `.github/scripts/derive-identity.sh` (Task 5) sourced in `resolve`; `release-plz.yml` (Task 4) via `gh workflow run`.
+- Produces (relied on by Task 7's mise tasks): `workflow_dispatch` inputs `target` / `version` / `channel` / `pre` / `dry_run` / `dispatch_id`; a `run-name` that embeds `<target>`, the resolved-or-partial identity, and the unique `[<dispatch_id>]` so the mise task can find the exact run; `concurrency: { group: release-alpha }`.
 
 **Job graph:**
 
@@ -470,12 +614,12 @@ resolve ──> pin ──> build-sql ──> build-docs ──> crate-publish �
    └─────────┴──────────┴─────────────┴──────────────┘  (each gated by target + dry_run)
 ```
 
-- `resolve` — always. Derive identity across both namespaces (or accept `pre`); target-specific existence/invariant guards; run drift gates `types:check` + `codegen:parity`. On `dry_run`, print the plan and stop.
-- `pin` — `all`/`bindings` only, non-dry: `release-plz set-version`, GPG-signed commit staging crate files, push → commit `S`.
+- `resolve` — always. Validate `channel`/`version`/`pre`; guard a pushable **branch** ref for `all`/`bindings`; derive identity (via the Task 5 helper); target-specific existence guards; for `bindings` also guard **branch HEAD == the SQL tag's commit** (same-source); run drift gates `types:check` + `codegen:parity`. On `dry_run`, print the plan and stop.
+- `pin` — `all`/`bindings` only, non-dry: `release-plz set-version`; **no-op tolerant** (skip commit/push when set-version changed nothing); GPG-signed commit staging crate files; push → commit `S`.
 - `build-sql` — `all`/`eql` only, non-dry: reusable call. For `all`, checks out `S` and creates the prerelease at `S`; for `eql`, at branch `github.sha`.
-- `build-docs` — `all`/`eql` only, non-dry, **after** `build-sql` (the release must exist to attach docs): reusable call at the same commit `build-sql` used, attaching `eql-docs-*` to the SQL release.
-- `crate-publish` — `all`/`bindings` only, non-dry, **after** `build-sql` **and** `build-docs` for `all`: `gh workflow run release-plz.yml --ref <tag|branch>`. A docs failure aborts before the crate ships.
-- `summary` — always: link the coordinator run and the dispatched `release-plz.yml` run.
+- `build-docs` — `all`/`eql` only, non-dry, **after** `build-sql`: reusable call at the same commit, attaching `eql-docs-*` to the SQL release.
+- `crate-publish` — `all`/`bindings` only, non-dry, **after** `build-sql` **and** `build-docs`: `gh workflow run release-plz.yml --ref <tag|branch>`.
+- `summary` — always.
 
 - [ ] **Step 1: Write the coordinator header, inputs, permissions, concurrency, run-name**
 
@@ -484,7 +628,8 @@ name: "Release alpha (coordinator)"
 
 # CI-native prerelease coordinator for the two EQL artefacts (SQL surface +
 # eql-bindings crate). Alphas ship the same assets as finals: two .sql files
-# AND the packaged docs bundle. Runs on the DISPATCHED REF. See
+# AND the packaged docs bundle. Runs on the DISPATCHED REF (a BRANCH for
+# all/bindings, since the crate pin is pushed to it). See
 # docs/development/2026-07-04-release-tasks-design.md for the full rationale.
 
 on:
@@ -517,21 +662,23 @@ on:
         required: false
         type: boolean
         default: false
+      dispatch_id:
+        description: "Client-generated correlation id (the mise wrapper sets this to find its exact run). Leave blank for manual dispatch."
+        required: false
+        type: string
+        default: ""
 
-# The mise task finds THIS run by the identity + target in run-name (never -L1).
-# When `pre` is given the identity is exact; otherwise N is derived server-side,
-# so run-name carries version-channel (+ target), and the watcher disambiguates
-# by createdAt recency.
+# The mise task finds THIS run by the UNIQUE dispatch_id echoed here (never -L1,
+# never a createdAt guess). Identity is exact when `pre` is given; otherwise N is
+# derived server-side and run-name carries version-channel for readability.
 run-name: >-
-  release-alpha ${{ inputs.target }} ${{ inputs.pre != '' && inputs.pre || format('{0}-{1}', inputs.version, inputs.channel) }}${{ inputs.dry_run && ' [dry-run]' || '' }}
+  release-alpha ${{ inputs.target }} ${{ inputs.pre != '' && inputs.pre || format('{0}-{1}', inputs.version, inputs.channel) }}${{ inputs.dry_run && ' [dry-run]' || '' }} [${{ inputs.dispatch_id }}]
 
 permissions:
   contents: write   # pin push + prerelease creation + docs/sql attach
   actions: write    # gh workflow run release-plz.yml (dispatch)
 
 concurrency:
-  # Serialise coordinator runs. The crate publish is separately serialised by
-  # release-plz.yml's own `release-plz` group. Never cancel a release mid-flight.
   group: release-alpha
   cancel-in-progress: false
 
@@ -568,10 +715,29 @@ jobs:
         env:
           CHANNEL: ${{ inputs.channel }}
           TARGET: ${{ inputs.target }}
+          VERSION: ${{ inputs.version }}
+          PRE: ${{ inputs.pre }}
         run: |
           set -euo pipefail
           case "$CHANNEL" in alpha|beta|rc) ;; *) echo "::error::invalid channel '$CHANNEL'"; exit 1 ;; esac
           case "$TARGET" in all|eql|bindings) ;; *) echo "::error::invalid target '$TARGET'"; exit 1 ;; esac
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::invalid version '$VERSION' (expected X.Y.Z)"; exit 1; }
+          if [[ -n "$PRE" ]]; then
+            [[ "$PRE" =~ ^[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)\.[0-9]+$ ]] || { echo "::error::invalid pre '$PRE' (expected X.Y.Z-(alpha|beta|rc).N)"; exit 1; }
+          fi
+
+      - name: Guard pushable branch (all/bindings)
+        if: ${{ inputs.target == 'all' || inputs.target == 'bindings' }}
+        env:
+          TARGET: ${{ inputs.target }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [[ "$REF_TYPE" != "branch" ]]; then
+            echo "::error::target=${TARGET} pins+pushes the crate version and requires a BRANCH ref; got ${REF_TYPE} '${REF_NAME}'. Dispatch with --ref <branch>."
+            exit 1
+          fi
 
       - name: Derive identity + guards
         id: derive
@@ -583,50 +749,13 @@ jobs:
         run: |
           set -euo pipefail
 
-          sql_prefix="eql-${VERSION}-${CHANNEL}."
-          crate_prefix="eql-bindings-v${VERSION}-${CHANNEL}."
-
-          # Highest N under a tag prefix, or empty. `.` in the prefix is escaped
-          # so it can't match arbitrary characters in the sed pattern.
-          highest() {
-            local prefix="$1" esc
-            esc="${prefix//./\\.}"
-            git tag --list "${prefix}*" \
-              | sed -n "s/^${esc}\([0-9]\{1,\}\)$/\1/p" \
-              | sort -n | tail -1
-          }
-
-          if [[ -n "$PRE" ]]; then
-            identity="$PRE"
-          else
-            case "$TARGET" in
-              all|eql)
-                sql_n=$(highest "$sql_prefix");   sql_n=${sql_n:-0}
-                crate_n=$(highest "$crate_prefix"); crate_n=${crate_n:-0}
-                if (( sql_n >= crate_n )); then n=$(( sql_n + 1 )); else n=$(( crate_n + 1 )); fi
-                identity="${VERSION}-${CHANNEL}.${n}"
-                ;;
-              bindings)
-                # Default: the latest SQL alpha lacking a crate counterpart.
-                esc="${sql_prefix//./\\.}"
-                found=""
-                for n in $(git tag --list "${sql_prefix}*" | sed -n "s/^${esc}\([0-9]\{1,\}\)$/\1/p" | sort -rn); do
-                  if ! git rev-parse -q --verify "refs/tags/${crate_prefix}${n}" >/dev/null; then
-                    found="$n"; break
-                  fi
-                done
-                if [[ -z "$found" ]]; then
-                  echo "::error::no ${sql_prefix}N SQL release is awaiting a crate publish (nothing to do for target=bindings)"; exit 1
-                fi
-                identity="${VERSION}-${CHANNEL}.${found}"
-                ;;
-            esac
-          fi
+          # Pure derivation is unit-tested in .github/scripts/derive-identity.test.sh.
+          source .github/scripts/derive-identity.sh
+          identity="$(derive_identity "$TARGET" "$VERSION" "$CHANNEL" "$PRE")"
 
           sql_tag="eql-${identity}"
           crate_tag="eql-bindings-v${identity}"
 
-          # Target-specific guards.
           case "$TARGET" in
             all)
               if git rev-parse -q --verify "refs/tags/${sql_tag}"   >/dev/null; then echo "::error::${sql_tag} already exists";   exit 1; fi
@@ -642,6 +771,14 @@ jobs:
                 echo "::error::${sql_tag} SQL release must exist before publishing the crate (lockstep invariant)"; exit 1
               fi
               if git rev-parse -q --verify "refs/tags/${crate_tag}" >/dev/null; then echo "::error::${crate_tag} already exists"; exit 1; fi
+              # Same-source invariant: the crate must publish from the SAME code as
+              # the SQL release. The pin adds a metadata-only commit ON TOP of the
+              # SQL tag's commit, so branch HEAD must currently equal that commit.
+              head_sha="$(git rev-parse HEAD)"
+              tag_sha="$(git rev-parse "refs/tags/${sql_tag}^{commit}")"
+              if [[ "$head_sha" != "$tag_sha" ]]; then
+                echo "::error::branch HEAD (${head_sha}) has advanced past ${sql_tag} (${tag_sha}); use target=all for a fresh identity"; exit 1
+              fi
               ;;
           esac
 
@@ -656,9 +793,7 @@ jobs:
           cache: true
 
       - name: Verify drift gates (types:check + codegen:parity)
-        # Both are DB-free: they regenerate the committed bindings / SQL surface
-        # and `git diff` against the checkout. A drift here means the shipped
-        # src/v3 would not match the catalog — abort before any mutation.
+        # DB-free: regenerate the committed bindings / SQL surface and git diff.
         run: |
           set -euo pipefail
           mise run types:check
@@ -686,7 +821,7 @@ jobs:
 
 Notes on `set -e` safety: every guard uses `if <cmd>; then …; fi` (not `<cmd> && { fail; }`), so a `git rev-parse` returning non-zero does not abort the script.
 
-- [ ] **Step 3: Write the `pin` job**
+- [ ] **Step 3: Write the `pin` job (no-op tolerant)**
 
 ```yaml
   pin:
@@ -717,7 +852,6 @@ Notes on `set -e` safety: every guard uses `if <cmd>; then …; fi` (not `<cmd> 
           cache: true
 
       - name: Install release-plz CLI
-        # cargo-binstall is a mise tool (fast prebuilt fetch, no source build).
         run: cargo binstall --no-confirm release-plz
 
       - name: Pin + commit + push (commit S)
@@ -728,9 +862,18 @@ Notes on `set -e` safety: every guard uses `if <cmd>; then …; fi` (not `<cmd> 
         run: |
           set -euo pipefail
           release-plz set-version "eql-bindings@${IDENTITY}"
-          git add crates/eql-bindings/Cargo.toml crates/eql-bindings/CHANGELOG.md Cargo.lock
-          git commit -S -m "chore(release): pin eql-bindings to ${IDENTITY}"
-          git push origin "HEAD:${BRANCH}"
+
+          # Idempotent recovery: on a rerun where the crate is already pinned to
+          # IDENTITY (e.g. SQL+docs shipped but the crate publish failed before
+          # tagging), set-version is a no-op. Skip commit/push and reuse HEAD as S
+          # rather than failing on "nothing to commit".
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "set-version produced no changes (already pinned to ${IDENTITY}); skipping commit/push"
+          else
+            git add crates/eql-bindings/Cargo.toml crates/eql-bindings/CHANGELOG.md Cargo.lock
+            git commit -S -m "chore(release): pin eql-bindings to ${IDENTITY}"
+            git push origin "HEAD:${BRANCH}"
+          fi
           echo "commit_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 ```
 
@@ -740,8 +883,6 @@ Notes on `set -e` safety: every guard uses `if <cmd>; then …; fi` (not `<cmd> 
   build-sql:
     name: Build + release SQL (in-run)
     needs: [resolve, pin]
-    # all/eql only, non-dry. For `all`, pin must have succeeded; for `eql`, pin
-    # is skipped (SQL without a crate is allowed).
     if: >-
       ${{ !cancelled() && !inputs.dry_run
           && (inputs.target == 'all' || inputs.target == 'eql')
@@ -752,7 +893,6 @@ Notes on `set -e` safety: every guard uses `if <cmd>; then …; fi` (not `<cmd> 
     secrets: inherit
     uses: ./.github/workflows/_build-sql.yml
     with:
-      # all: build + release AT commit S (the pin commit). eql: at branch HEAD.
       ref:              ${{ inputs.target == 'all' && needs.pin.outputs.commit_sha || '' }}
       tag:              ${{ needs.resolve.outputs.sql_tag }}
       attach:           true
@@ -766,9 +906,6 @@ Notes on `set -e` safety: every guard uses `if <cmd>; then …; fi` (not `<cmd> 
   build-docs:
     name: Build + attach docs (in-run)
     needs: [resolve, pin, build-sql]
-    # all/eql only, non-dry. build-sql must have SUCCEEDED first: the docs attach
-    # to the SQL release, which build-sql creates. A docs failure here blocks the
-    # (irreversible) crate publish downstream.
     if: >-
       ${{ !cancelled() && !inputs.dry_run
           && (inputs.target == 'all' || inputs.target == 'eql')
@@ -777,7 +914,6 @@ Notes on `set -e` safety: every guard uses `if <cmd>; then …; fi` (not `<cmd> 
       contents: write
     uses: ./.github/workflows/_build-docs.yml
     with:
-      # Same commit build-sql used: pin commit S for `all`, branch HEAD for `eql`.
       ref: ${{ inputs.target == 'all' && needs.pin.outputs.commit_sha || github.sha }}
       tag: ${{ needs.resolve.outputs.sql_tag }}
 ```
@@ -789,10 +925,10 @@ Notes on `set -e` safety: every guard uses `if <cmd>; then …; fi` (not `<cmd> 
     name: Dispatch crate publish (release-plz.yml)
     runs-on: blacksmith-16vcpu-ubuntu-2204
     needs: [resolve, pin, build-sql, build-docs]
-    # all/bindings only, non-dry. For `all`, a COMPLETE release (SQL + docs) must
-    # exist first — build-sql AND build-docs must have succeeded — before the
-    # irreversible crate publish. For `bindings`, build-sql/build-docs are skipped
-    # (the SQL release + its docs already exist from an earlier target=eql/all run).
+    # A COMPLETE release (SQL + docs) must exist first — for `all`, build-sql AND
+    # build-docs must have succeeded — before the irreversible crate publish. For
+    # `bindings`, build-sql/build-docs are skipped (the SQL release + its docs
+    # already exist; the crate publishes same-source from the pin commit).
     if: >-
       ${{ !cancelled() && !inputs.dry_run
           && (inputs.target == 'all' || inputs.target == 'bindings')
@@ -804,9 +940,10 @@ Notes on `set -e` safety: every guard uses `if <cmd>; then …; fi` (not `<cmd> 
       - name: Dispatch release-plz.yml against the pinned commit
         # crates.io Trusted Publishing matches workflow_ref = release-plz.yml, so
         # the crate MUST publish from release-plz.yml as its own entry point.
-        # `workflow_dispatch` is the GITHUB_TOKEN suppression exception, so this
-        # actually starts a run. For `all` we dispatch against the immutable SQL
-        # tag (== commit S); for `bindings` against the branch (head == pin S).
+        # `workflow_dispatch` is the GITHUB_TOKEN suppression exception. For `all`
+        # we dispatch against the immutable SQL tag (== commit S); for `bindings`
+        # against the branch, whose head is the +1 metadata pin commit on top of
+        # the SQL release commit (same source).
         env:
           GH_TOKEN: ${{ github.token }}
           SQL_TAG: ${{ needs.resolve.outputs.sql_tag }}
@@ -861,28 +998,28 @@ Notes on `set -e` safety: every guard uses `if <cmd>; then …; fi` (not `<cmd> 
 - [ ] **Step 8: Validate the coordinator**
 
 Run: `actionlint .github/workflows/release-alpha.yml && python3 -c "import yaml; yaml.safe_load(open('.github/workflows/release-alpha.yml'))" && echo OK`
-Expected: `OK`. actionlint checks: the `uses: ./.github/workflows/_build-sql.yml` and `_build-docs.yml` inputs match Tasks 1 & 2; `needs` references exist; expression syntax valid.
+Expected: `OK`.
 
 - [ ] **Step 9: Commit**
 
 ```bash
 git add .github/workflows/release-alpha.yml
-git commit -m "ci(release): add release-alpha.yml coordinator (SQL + docs in-run, then crate)"
+git commit -m "ci(release): add release-alpha.yml coordinator (branch/same-source guards, no-op-tolerant pin, dispatch_id)"
 ```
 
 ---
 
-### Task 6: Thin mise triggers + retire `preview.sh`
+### Task 7: Thin mise triggers + retire `preview.sh`
 
 **Files:**
-- Create: `tasks/release/all.sh`, `tasks/release/eql.sh`, `tasks/release/bindings.sh` (auto-register as `release:all` / `release:eql` / `release:bindings`)
-- Delete: `tasks/release/preview.sh` (retires `release:preview`)
+- Create: `tasks/release/all.sh`, `tasks/release/eql.sh`, `tasks/release/bindings.sh`
+- Delete: `tasks/release/preview.sh`
 
 **Interfaces:**
-- Consumes: `release-alpha.yml` inputs (Task 5): `target`, `version`, `channel`, `pre`, `dry_run`; and the `run-name` shape `release-alpha <target> <pre|version-channel> …`.
-- Each task forwards `--version`/`--channel`/`--pre`/`--dry-run` and watches the run it started by matching the `run-name` (never `gh run list -L1`).
+- Consumes: `release-alpha.yml` inputs (Task 6): `target`, `version`, `channel`, `pre`, `dry_run`, `dispatch_id`; and the `run-name` which embeds `[<dispatch_id>]`.
+- Each task validates inputs, builds the dispatch as a **Bash args array** (ShellCheck-clean), generates a unique `dispatch_id`, dispatches, then watches the run whose `displayTitle` **contains that `dispatch_id`** (unambiguous — no `-L1`, no createdAt tiebreak).
 
-Design note — the three scripts are intentionally near-identical (only `target=` differs), so the dispatch+watch logic is inlined in each rather than sourced from a shared helper. mise auto-discovers **every** file under `tasks/`, so a sourced `tasks/release/_lib.sh` would register as a phantom `release:_lib` task; inlining ~30 thin lines avoids that. This matches the existing self-contained `preview.sh` pattern.
+Design note — the three scripts are intentionally near-identical (only `target=` and a couple of messages differ), so the logic is inlined in each. mise auto-discovers **every** file under `tasks/`, so a sourced helper would register as a phantom task; inlining ~40 thin lines avoids that.
 
 - [ ] **Step 1: Write `tasks/release/all.sh`**
 
@@ -892,14 +1029,14 @@ Design note — the three scripts are intentionally near-identical (only `target
 #USAGE flag "--version <version>" help="Base SemVer, e.g. 3.0.0" default="3.0.0"
 #USAGE flag "--channel <channel>" help="Preview channel: alpha | beta | rc" default="alpha"
 #USAGE flag "--pre <pre>" help="Exact identity (e.g. 3.0.0-alpha.2), bypassing N derivation" default=""
-#USAGE flag "--ref <ref>" help="Git ref to dispatch against" default=""
+#USAGE flag "--ref <ref>" help="Git branch to dispatch against (the crate pin is pushed here)" default=""
 #USAGE flag "--dry-run" help="Resolve + verify + print plan; mutate nothing"
 
 set -euo pipefail
 
-# Thin trigger: this does NOTHING release-relevant locally. It dispatches the
-# CI-native coordinator (.github/workflows/release-alpha.yml) with target=all
-# and watches THAT run. Same-commit lockstep + all safety live in CI.
+# Thin trigger: nothing release-relevant runs locally. It dispatches the
+# CI-native coordinator (.github/workflows/release-alpha.yml) with target=all and
+# watches THAT run. Same-commit lockstep + all safety live in CI.
 
 target="all"
 version="${usage_version:-3.0.0}"
@@ -910,46 +1047,52 @@ dry_run="${usage_dry_run:-false}"
 
 err() { echo "error: $*" >&2; exit 1; }
 
+# --- Validate (mirrors the coordinator's resolve guards) ---------------------
 case "$channel" in alpha|beta|rc) ;; *) err "invalid --channel '$channel' (expected: alpha | beta | rc)" ;; esac
+[[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || err "invalid --version '$version' (expected X.Y.Z)"
+if [[ -n "$pre" ]]; then
+  [[ "$pre" =~ ^[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)\.[0-9]+$ ]] || err "invalid --pre '$pre' (expected X.Y.Z-(alpha|beta|rc).N)"
+fi
+
 command -v gh >/dev/null 2>&1 || err "gh CLI not found (https://cli.github.com)"
 gh auth status >/dev/null 2>&1 || err "gh is not authenticated; run 'gh auth login'"
 
-[[ -n "$ref" ]] || ref="$(git rev-parse --abbrev-ref HEAD)"
+# target=all pins+pushes the crate version, so it needs a real BRANCH.
+if [[ -z "$ref" ]]; then
+  ref="$(git rev-parse --abbrev-ref HEAD)"
+  [[ "$ref" != "HEAD" ]] || err "detached HEAD; pass --ref <branch> (target=all pushes the crate pin to a branch)"
+fi
 
-# Correlation string that MUST appear in the coordinator's run-name (see
-# release-alpha.yml). When --pre is given the identity is exact; otherwise the
-# coordinator derives N server-side, so we correlate on version-channel + target
-# and pick the newest matching run created after dispatch.
-correlation="${pre:-${version}-${channel}}"
+# Unique correlation id echoed into the coordinator's run-name so we watch the
+# EXACT run we started.
+dispatch_id="$(uuidgen 2>/dev/null || echo "$$-$RANDOM-$(date +%s)")"
 
-dispatched_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-echo "==> Dispatching release-alpha.yml (target=${target}) on ref ${ref}"
-gh workflow run release-alpha.yml --ref "$ref" \
-  -f target="$target" \
-  -f version="$version" \
-  -f channel="$channel" \
-  ${pre:+-f pre="$pre"} \
-  $([[ "$dry_run" == "true" ]] && printf -- '-f dry_run=true')
+args=(--ref "$ref" -f target="$target" -f version="$version" -f channel="$channel" -f dispatch_id="$dispatch_id")
+[[ -n "$pre" ]] && args+=(-f pre="$pre")
+[[ "$dry_run" == "true" ]] && args+=(-f dry_run=true)
 
-echo "==> Locating the dispatched run (by run-name '${target} ${correlation}', not -L1)"
+echo "==> Dispatching release-alpha.yml (target=${target}, dispatch_id=${dispatch_id}) on ref ${ref}"
+gh workflow run release-alpha.yml "${args[@]}"
+
+echo "==> Locating the dispatched run by dispatch_id (unambiguous)"
 run_id=""
 for _ in $(seq 1 30); do
   run_id=$(gh run list --workflow release-alpha.yml --event workflow_dispatch \
-    --json databaseId,displayTitle,createdAt \
-    --jq "[.[] | select(.createdAt >= \"${dispatched_at}\") | select(.displayTitle | contains(\"${target} ${correlation}\"))] | sort_by(.createdAt) | last | .databaseId")
+    --json databaseId,displayTitle \
+    --jq "[.[] | select(.displayTitle | contains(\"${dispatch_id}\"))] | first | .databaseId")
   [[ -n "$run_id" && "$run_id" != "null" ]] && break
   sleep 2
 done
-[[ -n "$run_id" && "$run_id" != "null" ]] || err "could not find the dispatched release-alpha run"
+[[ -n "$run_id" && "$run_id" != "null" ]] || err "could not find the dispatched run (dispatch_id=${dispatch_id})"
 
 echo "==> Watching run ${run_id}"
 gh run watch "$run_id" --exit-status
-echo "==> Coordinator run finished. For target=all, the crate publish runs as a SEPARATE release-plz.yml run — watch it in the Actions tab."
+echo "==> Coordinator finished. For target=all, the crate publish runs as a SEPARATE release-plz.yml run — watch it in the Actions tab."
 ```
 
 - [ ] **Step 2: Write `tasks/release/eql.sh`**
 
-Identical to `all.sh` except the `#MISE description`, `target`, and the trailing note. Full file:
+Identical to `all.sh` except `#MISE description`, `target`, the ref guard (eql needs no push, so **any** ref is allowed — only the unusable `HEAD` default is rejected), and the trailing note. Full file:
 
 ```bash
 #!/usr/bin/env bash
@@ -957,7 +1100,7 @@ Identical to `all.sh` except the `#MISE description`, `target`, and the trailing
 #USAGE flag "--version <version>" help="Base SemVer, e.g. 3.0.0" default="3.0.0"
 #USAGE flag "--channel <channel>" help="Preview channel: alpha | beta | rc" default="alpha"
 #USAGE flag "--pre <pre>" help="Exact identity (e.g. 3.0.0-alpha.2), bypassing N derivation" default=""
-#USAGE flag "--ref <ref>" help="Git ref to dispatch against" default=""
+#USAGE flag "--ref <ref>" help="Git ref (branch or tag) to dispatch against" default=""
 #USAGE flag "--dry-run" help="Resolve + verify + print plan; mutate nothing"
 
 set -euo pipefail
@@ -972,31 +1115,40 @@ dry_run="${usage_dry_run:-false}"
 err() { echo "error: $*" >&2; exit 1; }
 
 case "$channel" in alpha|beta|rc) ;; *) err "invalid --channel '$channel' (expected: alpha | beta | rc)" ;; esac
+[[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || err "invalid --version '$version' (expected X.Y.Z)"
+if [[ -n "$pre" ]]; then
+  [[ "$pre" =~ ^[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)\.[0-9]+$ ]] || err "invalid --pre '$pre' (expected X.Y.Z-(alpha|beta|rc).N)"
+fi
+
 command -v gh >/dev/null 2>&1 || err "gh CLI not found (https://cli.github.com)"
 gh auth status >/dev/null 2>&1 || err "gh is not authenticated; run 'gh auth login'"
 
-[[ -n "$ref" ]] || ref="$(git rev-parse --abbrev-ref HEAD)"
-correlation="${pre:-${version}-${channel}}"
+# target=eql does not push, so any ref works; only reject the unusable "HEAD"
+# default from a detached checkout.
+if [[ -z "$ref" ]]; then
+  ref="$(git rev-parse --abbrev-ref HEAD)"
+  [[ "$ref" != "HEAD" ]] || err "detached HEAD; pass --ref <branch or tag>"
+fi
 
-dispatched_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-echo "==> Dispatching release-alpha.yml (target=${target}) on ref ${ref}"
-gh workflow run release-alpha.yml --ref "$ref" \
-  -f target="$target" \
-  -f version="$version" \
-  -f channel="$channel" \
-  ${pre:+-f pre="$pre"} \
-  $([[ "$dry_run" == "true" ]] && printf -- '-f dry_run=true')
+dispatch_id="$(uuidgen 2>/dev/null || echo "$$-$RANDOM-$(date +%s)")"
 
-echo "==> Locating the dispatched run (by run-name '${target} ${correlation}', not -L1)"
+args=(--ref "$ref" -f target="$target" -f version="$version" -f channel="$channel" -f dispatch_id="$dispatch_id")
+[[ -n "$pre" ]] && args+=(-f pre="$pre")
+[[ "$dry_run" == "true" ]] && args+=(-f dry_run=true)
+
+echo "==> Dispatching release-alpha.yml (target=${target}, dispatch_id=${dispatch_id}) on ref ${ref}"
+gh workflow run release-alpha.yml "${args[@]}"
+
+echo "==> Locating the dispatched run by dispatch_id (unambiguous)"
 run_id=""
 for _ in $(seq 1 30); do
   run_id=$(gh run list --workflow release-alpha.yml --event workflow_dispatch \
-    --json databaseId,displayTitle,createdAt \
-    --jq "[.[] | select(.createdAt >= \"${dispatched_at}\") | select(.displayTitle | contains(\"${target} ${correlation}\"))] | sort_by(.createdAt) | last | .databaseId")
+    --json databaseId,displayTitle \
+    --jq "[.[] | select(.displayTitle | contains(\"${dispatch_id}\"))] | first | .databaseId")
   [[ -n "$run_id" && "$run_id" != "null" ]] && break
   sleep 2
 done
-[[ -n "$run_id" && "$run_id" != "null" ]] || err "could not find the dispatched release-alpha run"
+[[ -n "$run_id" && "$run_id" != "null" ]] || err "could not find the dispatched run (dispatch_id=${dispatch_id})"
 
 echo "==> Watching run ${run_id}"
 gh run watch "$run_id" --exit-status
@@ -1005,22 +1157,23 @@ echo "==> Done. SQL prerelease + docs cut; no crate published (target=eql)."
 
 - [ ] **Step 3: Write `tasks/release/bindings.sh`**
 
-Identical to `eql.sh` except `#MISE description`, `target="bindings"`, and the trailing note. Full file:
+Identical to `all.sh` except `#MISE description`, `target="bindings"`, the branch-required note, and the trailing note. Full file:
 
 ```bash
 #!/usr/bin/env bash
-#MISE description="Publish the eql-bindings crate for an EXISTING SQL alpha: dispatch release-alpha.yml (target=bindings) and watch the run"
+#MISE description="Publish the eql-bindings crate for an EXISTING SQL alpha (same-source, +1 metadata commit): dispatch release-alpha.yml (target=bindings) and watch"
 #USAGE flag "--version <version>" help="Base SemVer, e.g. 3.0.0" default="3.0.0"
 #USAGE flag "--channel <channel>" help="Preview channel: alpha | beta | rc" default="alpha"
 #USAGE flag "--pre <pre>" help="Exact identity (e.g. 3.0.0-alpha.2), bypassing N derivation" default=""
-#USAGE flag "--ref <ref>" help="Git ref to dispatch against" default=""
+#USAGE flag "--ref <ref>" help="Git branch to dispatch against (must currently be AT the eql-<identity> commit)" default=""
 #USAGE flag "--dry-run" help="Resolve + verify + print plan; mutate nothing"
 
 set -euo pipefail
 
-# target=bindings requires a matching eql-<identity> SQL release (which already
-# carries its docs) to already exist — the lockstep invariant, enforced
-# server-side in release-alpha.yml.
+# target=bindings publishes the crate SAME-SOURCE from an existing eql-<identity>
+# SQL release: the branch must currently be AT that release's commit (the
+# coordinator guards branch-HEAD == SQL-tag-commit), and the pin adds a
+# metadata-only commit on top. Requires a BRANCH (the pin is pushed).
 
 target="bindings"
 version="${usage_version:-3.0.0}"
@@ -1032,31 +1185,38 @@ dry_run="${usage_dry_run:-false}"
 err() { echo "error: $*" >&2; exit 1; }
 
 case "$channel" in alpha|beta|rc) ;; *) err "invalid --channel '$channel' (expected: alpha | beta | rc)" ;; esac
+[[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || err "invalid --version '$version' (expected X.Y.Z)"
+if [[ -n "$pre" ]]; then
+  [[ "$pre" =~ ^[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)\.[0-9]+$ ]] || err "invalid --pre '$pre' (expected X.Y.Z-(alpha|beta|rc).N)"
+fi
+
 command -v gh >/dev/null 2>&1 || err "gh CLI not found (https://cli.github.com)"
 gh auth status >/dev/null 2>&1 || err "gh is not authenticated; run 'gh auth login'"
 
-[[ -n "$ref" ]] || ref="$(git rev-parse --abbrev-ref HEAD)"
-correlation="${pre:-${version}-${channel}}"
+if [[ -z "$ref" ]]; then
+  ref="$(git rev-parse --abbrev-ref HEAD)"
+  [[ "$ref" != "HEAD" ]] || err "detached HEAD; pass --ref <branch> (target=bindings pushes the crate pin to a branch)"
+fi
 
-dispatched_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-echo "==> Dispatching release-alpha.yml (target=${target}) on ref ${ref}"
-gh workflow run release-alpha.yml --ref "$ref" \
-  -f target="$target" \
-  -f version="$version" \
-  -f channel="$channel" \
-  ${pre:+-f pre="$pre"} \
-  $([[ "$dry_run" == "true" ]] && printf -- '-f dry_run=true')
+dispatch_id="$(uuidgen 2>/dev/null || echo "$$-$RANDOM-$(date +%s)")"
 
-echo "==> Locating the dispatched run (by run-name '${target} ${correlation}', not -L1)"
+args=(--ref "$ref" -f target="$target" -f version="$version" -f channel="$channel" -f dispatch_id="$dispatch_id")
+[[ -n "$pre" ]] && args+=(-f pre="$pre")
+[[ "$dry_run" == "true" ]] && args+=(-f dry_run=true)
+
+echo "==> Dispatching release-alpha.yml (target=${target}, dispatch_id=${dispatch_id}) on ref ${ref}"
+gh workflow run release-alpha.yml "${args[@]}"
+
+echo "==> Locating the dispatched run by dispatch_id (unambiguous)"
 run_id=""
 for _ in $(seq 1 30); do
   run_id=$(gh run list --workflow release-alpha.yml --event workflow_dispatch \
-    --json databaseId,displayTitle,createdAt \
-    --jq "[.[] | select(.createdAt >= \"${dispatched_at}\") | select(.displayTitle | contains(\"${target} ${correlation}\"))] | sort_by(.createdAt) | last | .databaseId")
+    --json databaseId,displayTitle \
+    --jq "[.[] | select(.displayTitle | contains(\"${dispatch_id}\"))] | first | .databaseId")
   [[ -n "$run_id" && "$run_id" != "null" ]] && break
   sleep 2
 done
-[[ -n "$run_id" && "$run_id" != "null" ]] || err "could not find the dispatched release-alpha run"
+[[ -n "$run_id" && "$run_id" != "null" ]] || err "could not find the dispatched run (dispatch_id=${dispatch_id})"
 
 echo "==> Watching run ${run_id}"
 gh run watch "$run_id" --exit-status
@@ -1075,64 +1235,171 @@ git rm tasks/release/preview.sh
 Run: `mise tasks ls | grep -E '^release:'`
 Expected: `release:all`, `release:bindings`, `release:eql` present; `release:preview` **absent**.
 
-- [ ] **Step 6: Lint the scripts**
+- [ ] **Step 6: ShellCheck the wrappers**
 
 Run: `shellcheck tasks/release/all.sh tasks/release/eql.sh tasks/release/bindings.sh`
-Expected: no errors. (If `shellcheck` is unavailable, `bash -n tasks/release/*.sh` at minimum — expected: no syntax errors.)
+Expected: **no errors** (the args-array construction and quoted expansions clear SC2046/SC2086).
 
 - [ ] **Step 7: Commit**
 
 ```bash
 git add tasks/release/all.sh tasks/release/eql.sh tasks/release/bindings.sh
-git commit -m "ci(release): add thin release:{all,eql,bindings} mise triggers; retire release:preview"
+git commit -m "ci(release): add thin release:{all,eql,bindings} mise triggers (dispatch_id watch); retire release:preview"
 ```
 
 ---
 
-### Task 7: Documentation updates
+### Task 8: Persistent CI gate — `.github/workflows/lint-release.yml`
 
 **Files:**
-- Modify: `docs/development/releasing-an-alpha.md` (replace the manual/`release:preview` runbook with the task/dispatch flow)
-- Modify: `CLAUDE.md` (swap `release:preview` → the three new tasks; note they trigger `release-alpha.yml`)
+- Create: `.github/workflows/lint-release.yml`
+
+**Interfaces:**
+- Produces: a PR-triggered job that runs `actionlint` on the release workflows, `shellcheck` on `tasks/release/*.sh` and the `.github/scripts` helpers, and the identity-derivation unit test — turning the previously manual/observational checks into a durable gate.
+
+- [ ] **Step 1: Write the gate workflow**
+
+```yaml
+name: "Lint release tooling"
+
+# Durable gate for the CI-native release machinery. Runs on any PR that touches
+# the release workflows, wrappers, or helper scripts (and manually), so a broken
+# workflow expression, a ShellCheck regression, or a broken identity derivation
+# is caught in review — not on a real alpha.
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/_build-sql.yml
+      - .github/workflows/_build-docs.yml
+      - .github/workflows/release-eql.yml
+      - .github/workflows/release-plz.yml
+      - .github/workflows/release-alpha.yml
+      - .github/workflows/lint-release.yml
+      - .github/scripts/derive-identity.sh
+      - .github/scripts/derive-identity.test.sh
+      - tasks/release/*.sh
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  lint:
+    name: actionlint + shellcheck + unit test
+    runs-on: blacksmith-16vcpu-ubuntu-2204
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install actionlint
+        run: |
+          set -euo pipefail
+          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          echo "$PWD" >> "$GITHUB_PATH"
+
+      - name: actionlint (release workflows)
+        run: |
+          set -euo pipefail
+          actionlint \
+            .github/workflows/_build-sql.yml \
+            .github/workflows/_build-docs.yml \
+            .github/workflows/release-eql.yml \
+            .github/workflows/release-plz.yml \
+            .github/workflows/release-alpha.yml \
+            .github/workflows/lint-release.yml
+
+      - name: shellcheck (wrappers + helpers)
+        # shellcheck is preinstalled on ubuntu runners.
+        run: |
+          set -euo pipefail
+          shellcheck \
+            tasks/release/all.sh \
+            tasks/release/eql.sh \
+            tasks/release/bindings.sh \
+            .github/scripts/derive-identity.sh \
+            .github/scripts/derive-identity.test.sh
+
+      - name: identity-derivation unit test
+        run: bash .github/scripts/derive-identity.test.sh
+```
+
+- [ ] **Step 2: Validate the gate workflow itself**
+
+Run: `actionlint .github/workflows/lint-release.yml && python3 -c "import yaml; yaml.safe_load(open('.github/workflows/lint-release.yml'))" && echo OK`
+Expected: `OK`.
+
+- [ ] **Step 3: Dry-run the gate's commands locally**
+
+Run:
+```bash
+shellcheck tasks/release/*.sh .github/scripts/derive-identity.sh .github/scripts/derive-identity.test.sh
+bash .github/scripts/derive-identity.test.sh
+```
+Expected: shellcheck clean; the unit test prints all `ok:` and exits 0.
+
+- [ ] **Step 4: Document the docs-failure fault-injection check (scratch-branch only)**
+
+This proves the SQL→docs→crate ordering guarantee — it cannot run on a real publish, so record it as a **scratch-branch-only** manual procedure (add it under a "Verification" note in `docs/development/releasing-an-alpha.md` in Task 9, and reference it here):
+
+1. On a throwaway branch, temporarily edit `_build-docs.yml`'s "Generate documentation" step to `run: exit 1` (force a docs failure). Commit to the scratch branch only.
+2. `mise run release:eql --ref <scratch-branch>` (or `release:all`).
+3. Observe: `build-docs` is **red**, and `crate-publish` (for `all`) is **skipped** — never started — because its `if` requires `needs.build-docs.result == 'success'`. Delete any prerelease/tag the run created and discard the scratch branch.
+4. **Never** run this on a branch you will dispatch a real publish from.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add .github/workflows/lint-release.yml
+git commit -m "ci(release): add lint-release gate (actionlint + shellcheck + identity unit test)"
+```
+
+---
+
+### Task 9: Documentation updates
+
+**Files:**
+- Modify: `docs/development/releasing-an-alpha.md`
+- Modify: `CLAUDE.md`
 - Grep-and-fix any remaining stray `release:preview` references
 
 - [ ] **Step 1: Rewrite `docs/development/releasing-an-alpha.md`**
 
-Replace the "Scripted path (recommended)", "Steps (manual equivalent)", and "Releasing `eql-bindings` in lockstep" sections with the CI-native flow. Key content to include (keep the "What ships", "Why a prerelease is different", "Smoke-test", and "Promoting to a final release" sections, updated where they mention `release:preview`):
+Replace the "Scripted path", "Steps (manual equivalent)", and "Releasing `eql-bindings` in lockstep" sections with the CI-native flow. Include:
 
-- **What ships (unchanged for alphas):** the two `.sql` files **and** the packaged docs bundle (`eql-docs-*.zip`/`.tar.gz`) — the coordinator builds both in-run, so a coordinator-cut alpha carries the same assets as a final release.
-- **The three tasks** and what each dispatches:
-  - `mise run release:all` → coordinator `target=all`: pins the crate to `<identity>`, commits+pushes (commit `S`), builds+attaches the SQL prerelease at `S`, builds+attaches docs at `S`, then dispatches `release-plz.yml` against the `eql-<identity>` tag to publish the crate at `S`. Both tags land on `S`.
-  - `mise run release:eql` → `target=eql`: SQL prerelease + docs only (no crate). SQL-without-crate is allowed.
-  - `mise run release:bindings` → `target=bindings`: publishes the crate for an **already-existing** `eql-<identity>` SQL release (which already carries its docs); fails if none exists.
-- **Flags**: `--version` (default `3.0.0`), `--channel` (`alpha`|`beta`|`rc`), `--pre` (exact identity, bypass `N`), `--ref` (default current branch), `--dry-run` (resolve+verify+print plan, mutate nothing).
-- **Always `--dry-run` first.** Example:
+- **What ships (unchanged for alphas):** the two `.sql` files **and** the docs bundle (`eql-docs-*`), both built in-run — same assets as a final release.
+- **The three tasks:**
+  - `mise run release:all` → `target=all`: pins the crate to `<identity>`, commits+pushes (commit `S`), builds+attaches SQL + docs at `S`, then dispatches `release-plz.yml` against the `eql-<identity>` tag to publish the crate at `S`. Both tags on `S`. **Requires `--ref <branch>`** (the pin is pushed).
+  - `mise run release:eql` → `target=eql`: SQL prerelease + docs only (no crate). Any ref works (no push).
+  - `mise run release:bindings` → `target=bindings`: publishes the crate for an **existing** `eql-<identity>` SQL release, **same-source** — the branch must currently be **at that release's commit** (the coordinator guards branch-HEAD == SQL-tag-commit) and the pin adds a metadata-only commit on top. Fails fast if no matching SQL release exists, or if the branch has advanced past it (use `release:all` for a fresh identity). **Requires `--ref <branch>`**.
+- **Flags:** `--version` (default `3.0.0`, validated `X.Y.Z`), `--channel` (`alpha`|`beta`|`rc`), `--pre` (exact identity, validated `X.Y.Z-(alpha|beta|rc).N`), `--ref`, `--dry-run`.
+- **Always `--dry-run` first.** Examples:
   ```bash
   mise run release:all --dry-run
   mise run release:all                    # -> eql-3.0.0-alpha.N (+ docs) + eql-bindings-v3.0.0-alpha.N on one commit
-  mise run release:eql --channel beta     # -> eql-3.0.0-beta.N (SQL + docs only)
-  mise run release:bindings --pre 3.0.0-alpha.2   # publish the crate for an existing eql-3.0.0-alpha.2
+  mise run release:eql --channel beta     # -> eql-3.0.0-beta.N (SQL + docs)
+  mise run release:bindings --pre 3.0.0-alpha.2   # publish the crate for an existing eql-3.0.0-alpha.2 (same source)
   ```
-- **Identity derivation** happens **server-side** across both tag namespaces (`N = 1 + max(SQL N, crate N)`), from freshly-fetched tags — no stale local tags.
-- **Two runs to watch for `target=all`/`target=bindings`**: the mise task watches the coordinator run; the crate publish is a **separate** `release-plz.yml` run (fire-and-forget) — watch it in the Actions tab. The failure direction (crate fails after SQL+docs shipped) is the safe one (SQL-without-crate).
-- **Ordering guarantee:** SQL → docs → crate. A docs-build failure aborts before the irreversible crate publish, so a crate never ships against an incomplete release.
-- **The prerequisite for the crate**: crates.io Trusted Publishing is configured for `Workflow: release-plz.yml`; the coordinator dispatches that workflow so the OIDC identity still matches. Do not move the crate publish into the coordinator.
-- Remove all `mise run release:preview`, `--tag`, and `--target <sha>` references; the manual `gh release create` steps; and the entire hand-coordinated lockstep procedure (it is now the coordinator's job). Keep the "Smoke-test the alpha" and "Promoting to a final release later" sections, updating the tag examples to `eql-3.0.0-alpha.N`.
+- **Identity derivation** is server-side across both namespaces (`N = 1 + max(SQL N, crate N)`).
+- **Two runs to watch** for `all`/`bindings`: the mise task watches the coordinator run (found via the unique `dispatch_id`); the crate publish is a **separate** `release-plz.yml` run.
+- **Ordering guarantee:** SQL → docs → crate. A docs-build failure aborts before the crate publish.
+- **TP prerequisite:** crates.io Trusted Publishing is configured for `Workflow: release-plz.yml`; the coordinator dispatches that workflow so the identity matches. Do not move the crate publish into the coordinator.
+- Add a **Verification** subsection pointing to the durable gate (`lint-release.yml`: actionlint + shellcheck + `derive-identity.test.sh`) and the **scratch-branch-only** docs-failure fault-injection procedure from Task 8 Step 4.
+- Remove all `mise run release:preview`, `--tag`, `--target <sha>`, manual `gh release create`, and hand-coordinated-lockstep content. Keep "Smoke-test the alpha" and "Promoting to a final release later", updating tag examples to `eql-3.0.0-alpha.N`.
 
 - [ ] **Step 2: Update `CLAUDE.md`**
 
-In the "Release & changelog discipline" section (around line 243), replace the **Prerelease** bullet:
+Replace the **Prerelease** bullet (around line 243):
 
-Old:
 ```
-- **Prerelease (alpha / beta / rc):** run `mise run release:preview` (`tasks/release/preview.sh`). ...
-```
-New (match the surrounding tone/density):
-```
-- **Prerelease (alpha / beta / rc):** run `mise run release:all` (both artefacts in lockstep), `mise run release:eql` (SQL surface + docs only), or `mise run release:bindings` (crate for an existing SQL alpha). Each is a thin trigger that dispatches the CI-native coordinator `.github/workflows/release-alpha.yml` (`workflow_dispatch`) and watches the run — nothing release-relevant runs locally. The coordinator derives the `<version>-<channel>.<N>` identity server-side across both tag namespaces, verifies the drift gates, and (for `all`) pins+commits the crate, builds+attaches the SQL prerelease and the docs bundle in-run, then dispatches the crate publish so both land on one commit. Always `--dry-run` first; `--pre` sets an exact identity; `--ref`/`--channel`/`--version` tune the dispatch. It does **not** touch `CHANGELOG.md` (previews stay under `[Unreleased]`). Full runbook: **`docs/development/releasing-an-alpha.md`**.
+- **Prerelease (alpha / beta / rc):** run `mise run release:all` (both artefacts in lockstep, same commit), `mise run release:eql` (SQL surface + docs only), or `mise run release:bindings` (crate for an existing SQL alpha, same-source). Each is a thin trigger that dispatches the CI-native coordinator `.github/workflows/release-alpha.yml` (`workflow_dispatch`) and watches the run via a unique `dispatch_id` — nothing release-relevant runs locally. The coordinator derives the `<version>-<channel>.<N>` identity server-side across both tag namespaces, verifies the drift gates, and (for `all`) pins+commits the crate, builds+attaches the SQL prerelease and the docs bundle in-run, then dispatches the crate publish so both land on one commit; `all`/`bindings` require `--ref <branch>` (the pin is pushed). Always `--dry-run` first. It does **not** touch `CHANGELOG.md` (previews stay under `[Unreleased]`). Full runbook: **`docs/development/releasing-an-alpha.md`**.
 ```
 
-Also update the lockstep paragraph immediately below it: replace "This is a manual coordination procedure" with a note that lockstep is now automated by `mise run release:all` / the `release-alpha.yml` coordinator (same-commit `eql-bindings-v<identity>` ↔ `eql-<identity>`), and update the line-291-area pointer ("For an alpha/beta/rc, use `mise run release:preview` instead") to name the three new tasks.
+Also update the lockstep paragraph below it (lockstep is now automated by `mise run release:all` / the coordinator, same-commit) and the line-291-area pointer to name the three new tasks.
 
 - [ ] **Step 3: Grep for stray references**
 
@@ -1140,7 +1407,7 @@ Run:
 ```bash
 grep -rn "release:preview\|tasks/release/preview" --include="*.md" --include="*.toml" --include="*.sh" . | grep -v node_modules
 ```
-Expected: **no matches** (all migrated). Fix any that remain.
+Expected: **no matches**. Fix any that remain.
 
 - [ ] **Step 4: Commit**
 
@@ -1151,107 +1418,94 @@ git commit -m "docs(release): document CI-native release:{all,eql,bindings} flow
 
 ---
 
-### Task 8: End-to-end validation (staged rollout)
+### Task 10: End-to-end validation (staged rollout)
 
-**Files:** none (execution + observation only). This task cannot be fully dry-run: a crates.io publish is irreversible, so a **real alpha is the only true end-to-end test**. Validate in increasing order of irreversibility.
+**Files:** none (execution + observation only). A crates.io publish is irreversible, so a **real alpha is the only true end-to-end test**. Validate in increasing order of irreversibility. **Precondition:** the branch must be **pushed** (`gh workflow run` reads the workflow file from the dispatched ref).
 
-**Precondition:** the branch (`feat/release-tasks`, or wherever this lands) must be **pushed** — `gh workflow run` reads the workflow file from the dispatched ref, so `release-alpha.yml` must exist on that ref.
+- [ ] **Step 1: Static validation (mirrors the durable gate)**
 
-- [ ] **Step 1: Static validation of all workflows**
-
-Run: `actionlint .github/workflows/_build-sql.yml .github/workflows/_build-docs.yml .github/workflows/release-eql.yml .github/workflows/release-plz.yml .github/workflows/release-alpha.yml`
-Expected: no output (exit 0).
+Run:
+```bash
+actionlint .github/workflows/_build-sql.yml .github/workflows/_build-docs.yml .github/workflows/release-eql.yml .github/workflows/release-plz.yml .github/workflows/release-alpha.yml .github/workflows/lint-release.yml
+shellcheck tasks/release/*.sh .github/scripts/derive-identity.sh .github/scripts/derive-identity.test.sh
+bash .github/scripts/derive-identity.test.sh
+```
+Expected: all clean; unit test all `ok:`.
 
 - [ ] **Step 2: `dry_run` each target (mutates nothing)**
 
 ```bash
 mise run release:eql --dry-run
 mise run release:all --dry-run
-mise run release:bindings --dry-run   # expect a fast failure if no SQL alpha awaits a crate
+mise run release:bindings --dry-run   # fast failure if no SQL alpha awaits a crate, or branch advanced past it
 ```
-Expected: each dispatches a coordinator run that resolves an identity, prints the plan to the run summary, and **creates no tags/releases/commits**. Confirm via the run's "Release plan" summary. `release:bindings --dry-run` with no eligible SQL release should fail in `resolve` with the lockstep-invariant error — that is correct.
+Expected: each resolves an identity, prints the plan, creates nothing. Confirm via the run's "Release plan" summary. The wrapper finds its own run via `dispatch_id`.
 
-- [ ] **Step 3: Cross-namespace `N` check (read the resolved plan)**
+- [ ] **Step 3: Cross-namespace `N` + guard checks (read the resolved plan / errors)**
 
-With an `eql-3.0.0-alpha.5` tag present and no crate alpha tag:
-- `mise run release:bindings --pre 3.0.0-alpha.5 --dry-run` → resolves (matching SQL exists).
-- `mise run release:all --dry-run` → plan shows identity `3.0.0-alpha.6` (`N = 1 + max(5, 0)`).
-- `mise run release:bindings --version 3.0.0 --channel alpha --dry-run` (no `--pre`) → resolves to the latest SQL alpha lacking a crate (`alpha.5`).
+- With `eql-3.0.0-alpha.5` present, no crate alpha: `release:all --dry-run` → identity `3.0.0-alpha.6`.
+- `release:bindings --pre 3.0.0-alpha.5 --dry-run` → resolves only if the branch is **at** the `eql-3.0.0-alpha.5` commit; otherwise fails with "branch has advanced past …".
+- `release:all` dispatched against a **tag** ref → `resolve` fails the pushable-branch guard.
+- Invalid inputs: `release:all --version 3.0 --dry-run` and `release:all --pre 3.0.0alpha1 --dry-run` fail fast in the wrapper (and would also fail in `resolve`).
 
 - [ ] **Step 4: Throwaway `target=eql` smoke release (SQL + docs)**
 
 ```bash
 mise run release:eql
 ```
-Expected: coordinator run succeeds; a prerelease `eql-3.0.0-alpha.N` is created on the branch HEAD with `cipherstash-encrypt.sql`, `cipherstash-encrypt-uninstall.sql`, **and** the `eql-docs-*.zip`/`.tar.gz` bundle attached; **no crate published**; **no `release-pr`** anywhere. Verify:
-```bash
-gh release view eql-3.0.0-alpha.N          # two .sql assets + eql-docs-*, marked prerelease
-gh run list --workflow release-plz.yml -L 3   # confirm NO new release-plz run fired
-```
-Then delete the throwaway release + tag if it was only a smoke test:
-```bash
-gh release delete eql-3.0.0-alpha.N --cleanup-tag --yes
-```
+Expected: prerelease `eql-3.0.0-alpha.N` on branch HEAD with both `.sql` files **and** `eql-docs-*`; **no crate**, **no `release-pr`**. Verify with `gh release view` and `gh run list --workflow release-plz.yml -L 3`. Delete the throwaway: `gh release delete eql-3.0.0-alpha.N --cleanup-tag --yes`.
 
-- [ ] **Step 5: Docs-failure aborts the crate (fault-injection, optional)**
+- [ ] **Step 5: Docs-failure aborts the crate (scratch-branch, optional)**
 
-Confirm the ordering guarantee by observation: in any `target=all` run where `build-docs` fails, `crate-publish` must be **skipped** (its `if` requires `needs.build-docs.result == 'success'`). Read a run's job graph to confirm `crate-publish` did not start when `build-docs` was red. (Do not deliberately break docs on a real publish; verify from run history or a scratch branch.)
+Run the fault-injection procedure documented in Task 8 Step 4: force `_build-docs.yml` to fail on a scratch branch and confirm `crate-publish` is **skipped**. Never on a real-publish branch.
 
-- [ ] **Step 6: Real `target=all` end-to-end**
+- [ ] **Step 6: Recovery idempotence (optional)**
+
+After a `target=all` where the crate publish failed but SQL+docs shipped, re-running `mise run release:all --pre <same-identity>` must **not** fail on the pin: `set-version` is a no-op → `pin` skips the commit/push and reuses HEAD as `S`; the run re-dispatches the crate publish. (release-plz itself is idempotent and won't republish an existing version.)
+
+- [ ] **Step 7: Real `target=all` end-to-end**
 
 ```bash
 mise run release:all
 ```
-Expected and to verify:
-- Both tags land on the **same commit `S`**:
-  ```bash
-  git fetch --tags
-  git rev-list -n1 eql-3.0.0-alpha.N
-  git rev-list -n1 eql-bindings-v3.0.0-alpha.N   # equal to the above
-  ```
-- The SQL prerelease + docs bundle were built+attached **in-run** (`build-sql` and `build-docs` jobs green) **before** the crate dispatch.
-- The crate publish ran as a **separate `release-plz.yml` run** (workflow_dispatch), its `release` job green, `release-pr` **skipped** (ref is a tag), and the crates.io **TP token exchange succeeded** (publish ran under `workflow_ref = release-plz.yml`). Confirm:
-  ```bash
-  gh run list --workflow release-plz.yml -L 3      # the dispatched run present
-  gh run view <that-run-id>                         # release: success, release-pr: skipped
-  ```
-- `gh release view eql-3.0.0-alpha.N` lists the two `.sql` files + `eql-docs-*`.
-- The `eql-bindings@3.0.0-alpha.N` version is live on crates.io.
+Verify: both tags on the **same commit `S`** (`git rev-list -n1 eql-3.0.0-alpha.N` == `git rev-list -n1 eql-bindings-v3.0.0-alpha.N`); SQL + docs built+attached in-run before the crate dispatch; the crate publish ran as a **separate `release-plz.yml` run** with `release` green, `release-pr` **skipped**, **TP token exchange succeeded**; the release lists two `.sql` + `eql-docs-*`; `eql-bindings@3.0.0-alpha.N` live on crates.io.
 
-- [ ] **Step 7: Watch-correctness under overlap (optional)**
+- [ ] **Step 8: Watch-correctness under overlap (optional)**
 
-Dispatch two distinguishable runs close together (e.g. `mise run release:eql --dry-run` and `mise run release:all --dry-run`) and confirm each mise invocation watches **its own** run (matched by `<target> <correlation>` in `run-name`), not whichever finished last via `-L1`.
+Dispatch two runs close together (even with identical inputs) and confirm each mise invocation watches **its own** run via its unique `dispatch_id` in the run-name.
 
 ---
 
 ## Self-Review
 
-**Spec coverage** (Companion changes + docs-required decision + Verification):
-1. `_build-sql.yml` reusable → Task 1. ✅
-2. `_build-docs.yml` reusable (docs on alphas, per user decision) → Task 2. ✅
-3. `release-eql.yml` refactor (both `build-and-publish` → `_build-sql.yml` and `publish-docs` → `_build-docs.yml`, finals parity) → Task 3. ✅
+**Spec coverage** (companion changes + docs decision + review findings + verification):
+1. `_build-sql.yml` → Task 1. ✅
+2. `_build-docs.yml` (docs on alphas) → Task 2. ✅
+3. `release-eql.yml` refactor (both reusables, finals parity) → Task 3. ✅
 4. `release-plz.yml` `release-pr` gated to `main` → Task 4. ✅
-5. `release-alpha.yml` coordinator (inputs, concurrency, run-name, both-namespace identity, all/eql/bindings flows, **in-run docs via `build-docs`**, crate publish via `gh workflow run release-plz.yml --ref <tag>`, SQL→docs→crate ordering, bindings "matching SQL must exist" guard) → Task 5. ✅
-6. Three thin `tasks/release/*.sh` + mise wiring, watch-by-run-name, retire `preview.sh` → Task 6. ✅
-7. Doc updates (`releasing-an-alpha.md`, `CLAUDE.md`, stray-ref grep) → Task 7. ✅
-8. Verification (dry_run per target, cross-namespace N, bindings invariant, target=all same-commit + docs + TP + no stray release-pr, target=eql with docs, docs-failure aborts crate, watch correctness) → Task 8. ✅
+5. Unit-testable identity derivation + test (review finding 7) → Task 5. ✅
+6. Coordinator with: cross-namespace identity, all/eql/bindings flows, in-run docs, SQL→docs→crate ordering; **branch-HEAD==SQL-commit same-source guard for bindings** (finding 1); **no-op-tolerant pin** (finding 2); **pushable-branch guard** (finding 3a); **version/pre validation** (finding 4); **`dispatch_id`** in inputs + run-name (finding 6) → Task 6. ✅
+7. Thin wrappers: **args-array/ShellCheck-clean** (finding 5), **detached-HEAD rejection** (finding 3b), **version/pre validation** (finding 4), **`dispatch_id` generation + unambiguous watch** (finding 6); retire `preview.sh` → Task 7. ✅
+8. **Persistent actionlint + shellcheck + unit-test CI gate** + documented docs-failure fault-injection (finding 7) → Task 8. ✅
+9. Docs updates → Task 9. ✅
+10. Verification (dry_run, cross-namespace N, guard failures, invalid-input rejection, target=eql with docs, docs-failure aborts crate, recovery idempotence, same-commit + TP + no stray release-pr, dispatch_id watch) → Task 10. ✅
 
-**Global-constraint fidelity:** SQL and docs build in-run (reusables called inline, never event fan-out); crate publishes from `release-plz.yml` as its own dispatched entry point (TP untouched); same-commit `S` via dispatch against the immutable SQL tag; SQL→docs→crate ordering enforced by `crate-publish` needing both `build-sql` **and** `build-docs` success; identity across both namespaces; prereleases only. ✅
+**Type/name consistency:** reusable inputs are defined once (Tasks 1, 2) and reused in Tasks 3, 6. `derive_identity` (Task 5) is called by the coordinator (Task 6) and the CI gate (Task 8). Coordinator inputs (`target`/`version`/`channel`/`pre`/`dry_run`/`dispatch_id`) match the wrappers (Task 7) and the `run-name` `[<dispatch_id>]` that the watcher greps. `pin.outputs.commit_sha` (`S`) feeds `build-sql`/`build-docs` `ref`/`target_commitish`; `crate-publish` gates on both build jobs.
 
-**Type/name consistency:** `_build-sql.yml` inputs (`ref`/`tag`/`attach`/`target_commitish`/`prerelease`) and `_build-docs.yml` inputs (`ref`/`tag`) are each defined once (Tasks 1, 2) and used identically in Tasks 3 and 5. Coordinator outputs (`identity`/`sql_tag`/`crate_tag`, `pin.commit_sha`) and the `build-docs`/`build-sql` `needs` chain are produced and consumed consistently. The `run-name` correlation (`<target> <pre|version-channel>`) matches the mise watcher's `contains("${target} ${correlation}")` filter in Task 6.
+**Rejected finding (per the review):** "empty tag → DEV default" is **kept as-is** — `build.sh` uses `${usage_version:-DEV}` (colon-dash), so empty *or* unset → `DEV`, and `release-eql.yml`'s PR runs rely on it. Only a one-line clarifying comment was added in `_build-sql.yml` and the Global Constraints.
 
 ---
 
 ## Risks and open questions
 
-1. **Docs bundle preserved in-run (resolved).** Per the user's decision, alpha releases carry the docs bundle. The coordinator's `build-docs` job (Task 5) calls the reusable `_build-docs.yml` (Task 2) after `build-sql` succeeds, building docs at the same commit and attaching `eql-docs-*` to the SQL release; `crate-publish` gates on `build-docs` success, so the crate never ships against a docs-less release. **Cost:** each alpha coordinator run adds a doxygen install (`sudo apt-get install -y doxygen`) plus `docs:generate` / `docs:generate:markdown` / `docs:package` (the `publish-docs` timeout is 10 min). No database is required for docs generation. This is the same work finals already do.
+1. **Docs bundle preserved in-run (resolved).** `build-docs` (Task 6) attaches `eql-docs-*` after `build-sql`; `crate-publish` gates on `build-docs` success. **Cost:** each alpha run adds a doxygen install + `docs:generate`/`generate:markdown`/`package` (10-min job, no DB).
 
-2. **Watch ambiguity for identical concurrent dispatches.** `run-name` is fixed at dispatch time and cannot embed a server-derived `N`, so two simultaneous dispatches with **identical** inputs and no `--pre` share a correlation string; the watcher then relies on `createdAt` recency and could attach to the sibling run. The spec's "watch correctness" test uses **distinguishable** inputs (different target/pre), which works. Realistic single-operator use is fine. **Mitigation if it ever bites:** add a hidden `dispatch_id` input echoed into `run-name` — but that adds an input beyond the spec's locked list, so it is deliberately not in this plan.
+2. **Watch ambiguity (resolved via `dispatch_id`).** The wrapper generates a unique `dispatch_id` (`uuidgen`, or a PID/RANDOM/epoch fallback), passes it as an input, the coordinator echoes it into `run-name`, and the wrapper finds its run by `displayTitle | contains(dispatch_id)` — no `-L1`, no createdAt tiebreak. Even identical concurrent dispatches are disambiguated. The `lint-release.yml` gate keeps the wrappers ShellCheck-clean so this logic can't silently rot.
 
-3. **`release-plz set-version` availability.** The pin job installs `release-plz` via `cargo binstall --no-confirm release-plz` (cargo-binstall is already a mise tool). If binstall has no prebuilt for the runner, it falls back to a source build (slow) or fails. **Alternative if flaky:** pin `"cargo:release-plz" = "<version>"` in `mise.toml [tools]`. Flagged, not chosen, to avoid touching the toolchain manifest unless needed.
+3. **`release-plz set-version` availability.** Installed via `cargo binstall --no-confirm release-plz` (cargo-binstall is a mise tool). If no prebuilt exists for the runner it falls back to a slow source build. **Alternative if flaky:** pin `"cargo:release-plz"` in `mise.toml [tools]`.
 
-4. **`pin` pushes to the branch with `GITHUB_TOKEN`.** This works on the unprotected `eql_v3` branch (correct per spec). On a protected `main` (future) the push is blocked — explicitly out of scope ("Future: the `main` channel").
+4. **Pin pushes to the branch with `GITHUB_TOKEN`.** Works on the unprotected `eql_v3` branch; the pushable-branch guard (Task 6) fails fast on a tag/detached ref. Protected `main` is future/out-of-scope.
 
-5. **Cannot fully rehearse the crates.io publish.** `--dry-run` and a throwaway `target=eql` cover everything reversible (now including docs), but the OIDC/TP token exchange and the irreversible publish are only exercised by a real `target=all`/`target=bindings`. The staged rollout in Task 8 (dry-run → throwaway `eql` → real `all`) is the safest available path; the first real `all` should use a low, disposable `N`.
+5. **Cannot fully rehearse the crates.io publish.** Everything reversible (dry-run, throwaway `eql`, recovery idempotence, docs-failure fault-injection) is covered; the OIDC/TP exchange and the irreversible publish are exercised only by a real `all`/`bindings`. First real `all` should use a low, disposable `N`.
 
-6. **`softprops/action-gh-release` prerelease semantics on the finals path.** The plan keeps the finals SQL attach step free of a `prerelease` input (preserving today's behaviour of not altering the existing release's prerelease flag); the docs reusable likewise only attaches. This was verified against the current file's steps. If a future action-v2 default ever starts clobbering an unset `prerelease`, the finals path would need an explicit passthrough — noted as a watch-item, not a current change.
+6. **`softprops/action-gh-release` prerelease semantics on the finals path.** The finals SQL attach step sets no `prerelease` input (preserving the existing release's flag); the docs reusable only attaches. Verified against the current file. A future action default change would need an explicit passthrough — watch-item, not a current change.

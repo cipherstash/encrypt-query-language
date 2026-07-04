@@ -83,8 +83,9 @@ Resolve → verify → build SQL in-run → create `eql-<identity>` prerelease o
 Per the lockstep decision, a crate version never ships without a corresponding SQL release of the **same version** (same identity, not necessarily same commit — pinning the crate version is itself a commit, so same-*commit* is only guaranteed by `target=all`).
 
 1. **Resolve** — `identity` must correspond to an **existing `eql-<identity>` tag** (default: the latest `eql-<v>-<ch>.N` lacking a crate counterpart; or an explicit `--pre`). **Fail if no matching SQL release exists** — this is the invariant.
-2. **Verify** drift gates on the current HEAD (so the published `src/v3` matches the catalog; if the catalog is unchanged since the SQL release, it also matches the shipped SQL).
-3. **Pin + publish** — `set-version`, commit, push, then dispatch `release-plz.yml --ref <that commit's branch head>` (or the crate is tagged on the new pin commit). The crate ships at version `<identity>`, matching the existing SQL release.
+2. **Same-source guard** — require the dispatched branch **HEAD to equal the `eql-<identity>` tag's commit**. This makes the follow-up crate *same-source*, not merely same-version: the published bindings provably match the code the SQL release shipped. If the branch has advanced past the SQL commit, **abort** and direct the operator to `target=all` for a fresh coherent identity. (This tightens the "same version, possibly different commit" latitude into "same source, +1 metadata commit"; it stays feasible because the pin below only touches `Cargo.toml`/`CHANGELOG`, never `src/v3`.)
+3. **Verify** drift gates on HEAD (`src/v3` matches the catalog).
+4. **Pin + publish** — `set-version`, commit (metadata only) on top of the SQL commit, push the branch (advances by one), then dispatch `release-plz.yml --ref <branch>` (HEAD == pin commit, whose `src/v3` == the SQL release's). The crate ships at `<identity>`, same-source with the existing SQL release.
 
 ### The reusable build workflows — `_build-sql.yml` and `_build-docs.yml`
 
@@ -140,5 +141,6 @@ When alphas move to `main`: (a) a workflow pushing the set-version commit to a *
 ## Locked decisions
 
 - CI-native coordinator; thin mise triggers; identity across both namespaces; prereleases only; branch = dispatched ref.
-- **Lockstep scope:** `target=all` guarantees same commit + identity; `target=eql` is free (SQL without crate allowed); `target=bindings` requires a matching `eql-<identity>` release to already exist (no orphan crate version; same version, possibly different commit).
+- **Lockstep scope:** `target=all` guarantees same commit + identity; `target=eql` is free (SQL without crate allowed); `target=bindings` requires a matching `eql-<identity>` release to already exist **and the branch HEAD to still be at that SQL commit** — so the follow-up crate is *same-source* (no orphan crate version, and the published bindings provably match the shipped SQL). If the branch advanced, `bindings` refuses and points to `target=all`.
+- **Input hardening:** `--version` / `--pre` are strictly regex-validated (`X.Y.Z`, `X.Y.Z-(alpha|beta|rc).N`) in both wrappers and the coordinator before flowing into tags/versions/`jq`/`run-name`; the pin path requires a `refs/heads/*` ref (wrappers reject detached HEAD); a client-generated hidden `dispatch_id` input is echoed into `run-name` so the wrapper watches its **own** run unambiguously; the pin step is no-op-tolerant (idempotent retries after a partial `target=all`). A persistent CI job lints the release workflows/tasks (actionlint + shellcheck).
 - SQL **and docs** built **in-run** via reusable `workflow_call`s (`_build-sql.yml` + `_build-docs.yml`, not event fan-out) — alphas keep their `eql-docs-*` bundle; crate published by **dispatching `release-plz.yml`** against the SQL tag (TP unchanged); crate publish gated on both build jobs; `release-pr` gated to `main`.
