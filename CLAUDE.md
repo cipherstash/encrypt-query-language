@@ -238,6 +238,11 @@ Prefer `LANGUAGE SQL` over `LANGUAGE plpgsql` unless you need procedural feature
 
 EQL maintains a [Keep-a-Changelog](https://keepachangelog.com/en/1.1.0/)-style `CHANGELOG.md` and per-version upgrade guides under `docs/upgrading/`. The conventions are documented at the top of `CHANGELOG.md`; what follows is what to do when working in this repo.
 
+**Cutting a release is scripted — don't hand-roll `gh release create`.** There are two paths:
+
+- **Prerelease (alpha / beta / rc):** run `mise run release:preview` (`tasks/release/preview.sh`). It derives the next `eql-<version>-<channel>.<N>` tag, does a clean build-verify of the v3 installer/uninstaller, and cuts the GitHub prerelease that triggers the release workflow. Use `--dry-run` first; `--target` defaults to the current branch. It deliberately does **not** touch `CHANGELOG.md` (previews keep entries under `[Unreleased]`). Full runbook: **`docs/development/releasing-an-alpha.md`**.
+- **Final (non-prerelease) release:** follow **"Cutting a release"** below — this one *does* promote `[Unreleased]` → `[<version>]`, which the workflow's `verify-changelog` job enforces.
+
 ### When you make a user-facing change
 
 If your PR adds, changes, removes, deprecates, or fixes anything observable to a caller — new function, new operator, behaviour change, error message change, performance characteristic that callers might notice (e.g. an index now engages), changed default — **add an entry under `## [Unreleased]` in `CHANGELOG.md` as part of the same PR.**
@@ -280,6 +285,8 @@ The `eql_v3` PostgreSQL schema name is part of the public API and is **independe
 - **Major (`3.0.0`)** — only for changes that break the public API. Do not reach for a major bump just because a behaviour change has wide blast radius — that's what upgrade notes are for.
 
 ### Cutting a release
+
+This section is for **final (non-prerelease) releases**. For an alpha/beta/rc, use `mise run release:preview` instead — see the pointer at the top of this section and `docs/development/releasing-an-alpha.md`.
 
 When a release is being prepared:
 
