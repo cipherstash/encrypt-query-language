@@ -11,120 +11,132 @@ EQL ships two artefacts generated from the same `eql-domains::CATALOG`:
 1. The **SQL surface** — `release/cipherstash-encrypt.sql` (+ uninstaller), attached to a GitHub Release tagged `eql-<semver>`, built by `.github/workflows/release-eql.yml`.
 2. The **`eql-bindings` crate** — published to crates.io by release-plz (`.github/workflows/release-plz.yml`), tagged `eql-bindings-v<semver>`.
 
-We want to cut alpha (prerelease) versions of **the SQL surface alone**, **the crate alone**, and **both in version lockstep**, with a consistent interface.
-
-We release in lockstep so a published `eql-bindings-v3.0.0-alpha.N` always corresponds to the SQL surface tagged `eql-3.0.0-alpha.N` at the **same commit** — both are regenerated from the same catalog, so their versions must not diverge.
+We want to cut alpha (prerelease) versions of **the SQL surface alone**, **the crate alone**, and **both in version lockstep**, with a consistent interface. Because both come from the same catalog, their versions must not diverge.
 
 ### Decision: CI-native, not laptop-orchestrated
 
-The orchestration runs **in GitHub Actions**, triggered by `workflow_dispatch`. The `mise run release:*` tasks do nothing but call `gh workflow run … && gh run watch`.
-
-The rejected alternative was a laptop-driven bash orchestrator (`mise` task pins the version, commits, pushes, cuts the SQL release, dispatches the crate publish). It required a stack of defensive safeguards — remote-tag derivation, clean-worktree checks, a branch-head SHA guard, "build with the exact string CI uses" — **all of which exist only because a laptop is an unreliable conductor.** CI removes the root cause:
+Orchestration runs **in GitHub Actions** (`workflow_dispatch`); `mise run release:*` only calls `gh workflow run … && gh run watch`. The rejected laptop-orchestrator needed a stack of safeguards (remote-tag derivation, clean-worktree checks, a branch-head SHA guard, "build with the exact string CI uses") — **all of which exist only because a laptop is an unreliable conductor.** CI removes the root cause:
 
 | Laptop hazard | Safeguard it needed | CI-native outcome |
 |---|---|---|
-| Local tags go stale | derive `N` from remote tags | checkout fetches remote tags fresh — no staleness |
-| Dirty/leftover worktree | clean-worktree check + constrained staging | runner checkout is always clean |
-| Concurrent push races the release | `ls-remote` SHA guard before dispatch | single actor; a concurrency group serialises runs |
-| Local build ≠ CI build | build with the `eql-`-stripped identity to match | the build **is** the CI build |
-
-So CI-native is not "the same work plus a workflow" — it's *less* work, because the safeguards become unnecessary.
+| Local tags go stale | derive `N` from remote tags | checkout fetches remote tags fresh |
+| Dirty/leftover worktree | clean-worktree check | runner checkout is always clean |
+| Concurrent push races the release | `ls-remote` SHA guard | dispatch pins an immutable tag; concurrency group serialises |
+| Local build ≠ CI build | build with the `eql-`-stripped identity | the build **is** the CI build |
 
 ### Hard constraint: alphas are cut from the `eql_v3` branch
 
-The v3 code is not yet on `main`. Alphas are cut from **`eql_v3`**; once v3 merges, `main` becomes the channel. The workflow **runs on the dispatched ref**, so the branch is just the `--ref` of the dispatch — `eql_v3` now, `main` later. (Main-channel branch protection is a future constraint; see [Future: the `main` channel](#future-the-main-channel).)
+The v3 code is not yet on `main`. Alphas are cut from **`eql_v3`**; once v3 merges, `main` becomes the channel. The workflow **runs on the dispatched ref**, so the branch is just the `--ref` of the dispatch. (Main-channel branch protection is a future constraint; see [Future](#future-the-main-channel).)
 
 ## Verified mechanism facts (load-bearing)
 
-Verified against release-plz source, the workflows in this repo, and `gh` against the live repo:
+Verified against release-plz source, crates.io server source, GitHub Actions docs, and this repo's workflows:
 
-1. **`release-plz release` is branch-agnostic.** It publishes purely on `(version not on crates.io) && (git tag absent)` — no default-branch gate (`release_always` defaults `true`). It tags the **current HEAD** via the GitHub API and cuts a GitHub Release, auto-marked pre-release for a `-alpha.N` version (default `git_release_type = auto`). **No release-plz config change is required** to publish an alpha from `eql_v3`.
-2. **The crate publish must happen in CI.** crates.io auth is OIDC Trusted Publishing (no `CARGO_REGISTRY_TOKEN`), so `cargo publish` cannot run off-CI — reinforcing the CI-native decision.
-3. **release-plz publishes the committed `Cargo.toml` version verbatim** and has **no config field that sets an absolute version**. Pinning is `release-plz set-version eql-bindings@<version>`. From a prerelease base its default next bump is `-alpha.(N+1)`; jumping to stable `3.0.0` needs an explicit `set-version`.
-4. **The SQL release trigger is a published GitHub Release.** `release-eql.yml` reacts on `release: published`, builds, and attaches the two `.sql` artefacts. It builds with the `eql-`-stripped identity (`mise run build --version "${TAG#eql-}"`), so `eql_v3.version()` reports bare semver. Its `verify-changelog` job is gated to `prerelease == false`, so alphas keep their entries under `[Unreleased]`.
-5. **`workflow_dispatch --ref <branch>` runs the workflow on that branch** (`--ref` is a branch/tag name, not a raw SHA). A checkout with `fetch-depth: 0` gives the workflow full history + all remote tags.
+1. **`release-plz release` is branch-agnostic** and publishes on `(version not on crates.io) && (git tag absent)` — no default-branch gate. It tags the **checked-out HEAD** via the GitHub API and cuts a GitHub Release, auto-marked pre-release for a `-alpha.N` version (default `git_release_type = auto`). **No release-plz config change is required.**
+2. **The crate publish must happen in CI** — crates.io auth is OIDC Trusted Publishing (no `CARGO_REGISTRY_TOKEN`).
+3. **release-plz publishes the committed `Cargo.toml` version verbatim**; pinning is `release-plz set-version eql-bindings@<version>`. No config sets an absolute version. From a prerelease base its default next bump is `-alpha.(N+1)`.
+4. **`release-eql.yml` builds with the `eql-`-stripped identity** (`--version "${TAG#eql-}"`) so `eql_v3.version()` reports bare semver; its `verify-changelog` job is gated to `prerelease == false`, so alphas stay under `[Unreleased]`.
+5. **GITHUB_TOKEN event suppression + its exceptions.** Events created with the automatic `GITHUB_TOKEN` do **not** trigger new workflow runs — **except `workflow_dispatch` and `repository_dispatch`, which always run.** Therefore:
+   - Creating a Release or pushing a commit with `GITHUB_TOKEN` will **not** fire `release-eql.yml`'s `on: release` or any `on: push` — so a coordinator must **build SQL in its own run**, not rely on event fan-out.
+   - A coordinator **can `workflow_dispatch` `release-plz.yml` with `GITHUB_TOKEN`** (no PAT/App token needed).
+6. **crates.io Trusted Publishing matches on `workflow_ref` = the entry-point workflow filename, not `job_workflow_ref`** (verified in `crates_io_trustpub` source; opposite of PyPI; undocumented — flagged). So the crate must publish from **`release-plz.yml` as its own dispatched entry point** to keep the existing TP config (`workflow: release-plz.yml`) matching. Publishing via a reusable `workflow_call` from `release-alpha.yml` would make the identity `release-alpha.yml` and **fail** the token exchange unless TP is reconfigured.
+7. **`gh workflow run --ref <tag>` dispatches against a tag** (immutable commit), reading the workflow file from that tag's tree.
 
 ## Architecture
 
-Two layers: a **coordinator workflow** (does everything, server-side) and **thin mise triggers**.
+A **coordinator workflow** does everything server-side; **thin mise triggers** only fire and watch it.
 
-### The coordinator workflow — `.github/workflows/release-alpha.yml`
+### The coordinator — `.github/workflows/release-alpha.yml`
 
-`on: workflow_dispatch`, running on the dispatched ref. Inputs:
+`on: workflow_dispatch`, runs on the dispatched ref. `concurrency: { group: release-alpha, cancel-in-progress: false }` (serialises coordinator runs; the crate publish is separately serialised by `release-plz.yml`'s existing `release-plz` group). `run-name` includes the resolved identity + target so the exact run is findable. Inputs:
 
 | Input | Meaning | Default |
 |-------|---------|---------|
-| `target` | `eql` \| `bindings` \| `all` — which artefact(s) to release | `all` |
+| `target` | `all` \| `eql` \| `bindings` | `all` |
 | `version` | base SemVer | `3.0.0` |
 | `channel` | `alpha` \| `beta` \| `rc` | `alpha` |
-| `pre` | exact prerelease identity (e.g. `3.0.0-alpha.2`), bypassing `N` derivation | (derived) |
-| `dry_run` | resolve + verify + print the plan; mutate nothing | `false` |
+| `pre` | exact identity (e.g. `3.0.0-alpha.2`), bypassing `N` derivation | (derived) |
+| `dry_run` | resolve + verify + print plan; mutate nothing | `false` |
 
-`concurrency: { group: release, cancel-in-progress: false }` — serialises all release runs (and must share a group with `release-plz.yml`'s crate-publish path so the two never race a tag/publish).
+**Identity** `<version>-<channel>.<N>`, with `N = 1 + max(N across BOTH tag namespaces — SQL `eql-<v>-<ch>.N` and crate `eql-bindings-v<v>-<ch>.N`)`, computed from the freshly-fetched tags (`fetch-depth: 0`). Deriving across both namespaces for every target prevents divergence. It yields SQL tag `eql-<identity>`, crate version/tag `<identity>` / `eql-bindings-v<identity>`.
 
-**Sequence** (a step is skipped when `target` excludes its artefact):
+### `target=all` (lockstep — the normal path)
 
-1. **Resolve identity.** Checkout (`fetch-depth: 0`) → tags are fresh. `identity = pre` if given, else `<version>-<channel>.<N>` where `N = 1 + max(N across BOTH tag namespaces: SQL `eql-<v>-<ch>.N` and crate `eql-bindings-v<v>-<ch>.N`)`. Deriving across **both** namespaces (even for a single-artefact release) is what keeps them from diverging — a bindings-only release can never pick an `N` that trails or collides with the SQL namespace. Fail fast if the target tag(s) already exist.
-2. **Verify.** Drift gates `types:check` + `codegen:parity` (guarantee the crate `src/v3` matches the shipped SQL); the SQL build itself is the release-eql build (step 4), so no separate "does it build" check is needed. Abort before any mutation on failure.
-3. **Pin crate version** *(bindings/all)*. `release-plz set-version eql-bindings@<identity>`, commit (GPG-signed, reusing the release-plz signing key), staging **only** the crate files release-plz touched. `git push` to the branch. This is the release commit **S = HEAD**.
-4. **SQL release** *(eql/all)*. Create the `eql-<identity>` prerelease on **S**; `release-eql.yml` builds + attaches the artefacts. For `all`, **wait for that run to finish green** before step 5.
-5. **Crate publish** *(bindings/all)*. Publish + tag `eql-bindings-v<identity>` on **S**. Irreversible; runs last.
-6. **Summary.** Emit both tags / release URLs to the run summary.
+1. **Resolve** identity; fail if `eql-<identity>` or `eql-bindings-v<identity>` already exists.
+2. **Verify** drift gates `types:check` + `codegen:parity` (crate `src/v3` matches the shipped SQL). Abort before any mutation on failure.
+3. **Pin** — `release-plz set-version eql-bindings@<identity>`, commit (GPG-signed) staging only the crate files, `git push` the branch. This is commit **S**. (Push via `GITHUB_TOKEN` fires nothing — intended.)
+4. **SQL release, in this run** — build via a reusable `workflow_call` (below), create the `eql-<identity>` prerelease **targeting S**, attach the two `.sql` artefacts. If the build fails, the run fails here — before anything irreversible.
+5. **Crate publish** — `gh workflow run release-plz.yml --ref eql-<identity>` (dispatch against the immutable SQL tag = commit **S**; `GITHUB_TOKEN` works — `workflow_dispatch` exception). `release-plz.yml` runs **as its own entry point** (TP matches), checks out **S**, publishes the crate, tags `eql-bindings-v<identity>` on **S**. Its `release-pr` job is skipped because the ref is a tag, not `refs/heads/main` (gate below).
+6. **Summary** — link the coordinator run and the dispatched `release-plz.yml` run.
 
-**Same commit, for free.** Because one runner executes steps 3–5 sequentially and is the only actor, **S** is HEAD throughout: the crate is pinned at S, the SQL release targets S, the crate tag lands on S. No SHA guard, no interleaving push to defend against. Lockstep ordering ("reversible SQL confirmed green before irreversible crate publish") is just step order.
+**Same commit `S`, for free:** the crate is pinned+committed at S, the SQL release targets S, and the crate publish is dispatched against the *tag* that points at S — so both tags land on S with no SHA guard and no race. **Ordering is safe:** the SQL build+release happens in-run and must succeed before step 5 dispatches the (irreversible) crate publish; SQL is reversible, the crate is not.
 
-**The canonical identity** `<version>-<channel>.<N>` yields the SQL tag `eql-<identity>`, the crate `Cargo.toml` version `<identity>`, and the crate tag `eql-bindings-v<identity>`. Same `N` ⇒ lockstep. This preserves the `eql-<version>-<channel>.<N>` scheme `preview.sh` produces today.
+*Decoupling caveat:* the crate publish is a **separate run** (fire-and-forget). The coordinator confirms SQL success before dispatching, but cannot report the publish result in its own summary — the operator watches two runs. Acceptable: the failure direction (crate publish fails after SQL shipped) leaves SQL-without-crate, which is the safe direction.
+
+### `target=eql` (SQL only — allowed, no crate)
+
+Resolve → verify → build SQL in-run → create `eql-<identity>` prerelease on the current branch HEAD. No `set-version`, no commit, no crate. SQL without a crate counterpart is permitted.
+
+### `target=bindings` (crate only — requires a matching SQL release)
+
+Per the lockstep decision, a crate version never ships without a corresponding SQL release of the **same version** (same identity, not necessarily same commit — pinning the crate version is itself a commit, so same-*commit* is only guaranteed by `target=all`).
+
+1. **Resolve** — `identity` must correspond to an **existing `eql-<identity>` tag** (default: the latest `eql-<v>-<ch>.N` lacking a crate counterpart; or an explicit `--pre`). **Fail if no matching SQL release exists** — this is the invariant.
+2. **Verify** drift gates on the current HEAD (so the published `src/v3` matches the catalog; if the catalog is unchanged since the SQL release, it also matches the shipped SQL).
+3. **Pin + publish** — `set-version`, commit, push, then dispatch `release-plz.yml --ref <that commit's branch head>` (or the crate is tagged on the new pin commit). The crate ships at version `<identity>`, matching the existing SQL release.
+
+### The reusable SQL build — `.github/workflows/_build-sql.yml`
+
+Extract `release-eql.yml`'s build-and-attach into a `workflow_call` reusable workflow (inputs: tag/identity, target release). Called **inline** by the coordinator (so no reliance on the suppressed `release:published` event) **and** by `release-eql.yml` for final (human-created) releases (whose `release:published` event *does* fire, being human-authored). One SQL-build code path, no double build.
 
 ### The thin mise triggers
 
-`tasks/release/{eql,bindings,all}.sh` — each is a few lines: preflight `gh`, then dispatch the coordinator with the matching `target` and forward `--version` / `--channel` / `--pre` / `--dry-run`, then watch.
+`tasks/release/{all,eql,bindings}.sh` — each preflights `gh`, dispatches the coordinator with the matching `target`, forwards `--version`/`--channel`/`--pre`/`--dry-run`, then watches by the unique `run-name`:
 
 ```bash
-# release:all  (release:eql and release:bindings differ only in target=)
 gh workflow run release-alpha.yml --ref "$ref" \
   -f target=all -f version="$version" -f channel="$channel" ${pre:+-f pre="$pre"} ${dry:+-f dry_run=true}
-gh run watch "$(gh run list --workflow=release-alpha.yml --branch "$ref" -L1 --json databaseId -q '.[0].databaseId')"
+# find THIS run by the identity in run-name, not `-L1` (which races a concurrent dispatch)
 ```
 
-`--ref` defaults to the current branch. No identity resolution, no tag reads, no build happen locally — the task is a remote-control button. This is the "consistent API and approach": all three tasks are the same wrapper with a different `target`.
+`--ref` defaults to the current branch. Nothing release-relevant runs locally.
 
-### Two implementation decisions to settle in the plan
+## Companion changes (in scope)
 
-1. **How the coordinator produces SQL artefacts vs `release-eql.yml`.** Creating the prerelease (step 4) fires `release-eql.yml` (`on: release: published`), which is the single SQL-build authority — good (DRY), but the coordinator must then **wait cross-workflow** for that run for the `all` ordering. *Recommended:* extract `release-eql.yml`'s build into a **reusable `workflow_call` workflow** that both `release-eql.yml` (final releases) and the coordinator call inline — no double-build, no cross-workflow polling. *Pragmatic fallback:* keep `release-eql.yml` as-is; the coordinator creates the release and `gh run watch`es the resulting `release-eql.yml` run.
-2. **How the coordinator publishes the crate.** *Recommended:* **inline** the `release-plz/action` `command: release` step (single self-contained run, one log, no nested dispatch), reusing the OIDC + GPG setup. Because the coordinator pushes the set-version commit to `eql_v3` (not `main`), `release-plz.yml`'s `push: main` trigger does **not** fire, so no stray `release-pr` is opened — which means the previously-planned `release-pr` gate (`if: github.ref == 'refs/heads/main'`) is **only needed if** we instead dispatch `release-plz.yml`. Settle 1 and 2 together.
+1. **New `.github/workflows/_build-sql.yml`** (reusable), and `release-eql.yml` refactored to call it.
+2. **New `.github/workflows/release-alpha.yml`** (the coordinator).
+3. **Gate `release-plz.yml`'s `release-pr` job** with `if: github.ref == 'refs/heads/main'` — so a dispatch against a tag (or feature branch) publishes without opening a stray PR. (No change to `release-plz.yml`'s `concurrency` group; the coordinator uses its own.)
+4. **Three thin `tasks/release/*.sh`** + mise task wiring; retire `preview.sh` / `release:preview`.
 
 ## Future: the `main` channel
 
-Once v3 merges, alphas (and eventually finals) come from `main`. Two things change:
-
-- **Branch protection.** A workflow pushing the set-version commit directly to a protected `main` will be blocked. Options: allow the release bot to push to `main`, or route the crate version bump through the standard release-plz PR flow for the `main` channel. To be decided when v3 merges — out of scope now.
-- **`release-plz.yml` on `push: main`.** A set-version commit landing on `main` triggers `release-plz.yml`. release-plz is idempotent (skips an already-published version), but the interaction with the coordinator's inline publish must be reconciled then.
+When alphas move to `main`: (a) a workflow pushing the set-version commit to a **protected `main`** is blocked — allow the release identity to push, or route the crate bump through release-plz's PR flow for `main`; (b) that push also interacts with `release-plz.yml`'s `push: main` trigger (release-plz is idempotent, but reconcile then). Out of scope now.
 
 ## Non-goals
 
-- **No final-release automation.** The coordinator cuts **prereleases** only. Promoting `[Unreleased]` → `[<version>]` and cutting a non-prerelease stays the manual `CLAUDE.md` "Cutting a release" flow.
-- **No change to the crate's Trusted Publishing / OIDC / GPG setup.**
-- **No solution for the protected-`main` push** (documented as a future constraint above).
+- **No final-release automation** — the coordinator cuts **prereleases** only.
+- **No change to crates.io Trusted Publishing / OIDC / GPG** — preserved *because* the crate still publishes from `release-plz.yml` as its own entry point (fact 6). This constrains the design: the crate publish must **not** move into a reusable `workflow_call`.
+- **No solution for the protected-`main` push** (future constraint above).
 - **No `jsonb` domain surface work.**
-
-## Documentation updates (in scope for the implementation)
-
-- **`docs/development/releasing-an-alpha.md`** — replace the manual `set-version`/dispatch runbook with "dispatch `release-alpha.yml` (or run `mise run release:*`)". Keep the release-plz caveats that remain true (no absolute-version config; prerelease auto-increments to `-alpha.(N+1)`; pin via `set-version`; idempotent re-runs). The `git_release_type` note is already corrected (default `auto` marks `-alpha` as pre-release).
-- **`CLAUDE.md`** — replace the `release:preview` reference with `release:eql` / `release:bindings` / `release:all`, and note that they trigger the `release-alpha.yml` coordinator.
-- **Retire/rename `tasks/release/preview.sh`** → the three thin triggers; grep for `release:preview`.
 
 ## Verification
 
-- **`dry_run`** each target: confirm the resolved identity, ref, and planned actions appear in the run summary with nothing mutated (no tag, release, commit, push, or publish).
-- **Cross-namespace `N`:** with `eql-…-alpha.5` present and no crate alpha tag, confirm `target=bindings` resolves `alpha.6` (not `alpha.1`).
-- **Tag-exists guard:** dispatching an already-released identity fails fast.
-- **`target=eql`** on `eql_v3`: prerelease appears with both `.sql` artefacts attached; no crate commit/tag.
-- **`target=bindings`** on `eql_v3`: crate publishes to crates.io, tag `eql-bindings-v<identity>` on the pushed commit; **no stray `release-pr`** opened.
-- **`target=all`**: both tags land on the **same** commit `S`; the SQL run is awaited green before the crate publish; the crate publish is the last (irreversible) action.
-- **Concurrency:** two overlapping dispatches serialise (shared group with `release-plz.yml`), never racing a publish.
-- **mise triggers:** each dispatches the coordinator with the correct `target` and forwards flags; nothing release-relevant runs locally.
+- **`dry_run`** each target: resolved identity, ref, and plan appear in the summary; nothing mutated.
+- **Cross-namespace `N`:** with `eql-…-alpha.5` present and no crate alpha tag, `target=bindings` refuses (no matching SQL) and `target=all` resolves `alpha.6`.
+- **`target=bindings` invariant:** dispatching for an identity with no `eql-<identity>` tag fails fast; with one present, the crate ships at that version.
+- **`target=all`:** both tags land on the **same** commit `S`; SQL build succeeds in-run before the crate dispatch; TP token exchange succeeds (publish ran as `release-plz.yml`); **no stray `release-pr`**.
+- **`target=eql`:** prerelease with both `.sql` artefacts; no crate.
+- **GITHUB_TOKEN paths:** confirm the coordinator's `workflow_dispatch` of `release-plz.yml` actually starts a run (exception holds), and that it does **not** rely on any suppressed `release:published`/`push` fan-out.
+- **Watch correctness:** two overlapping dispatches — each mise task watches its own run via the identity in `run-name`, not `-L1`.
 
-## Open decisions
+## Alternatives considered
 
-- **Coordinator SQL-build factoring** (reusable `workflow_call` vs create-and-wait) and **crate-publish invocation** (inline `release-plz` step vs dispatch `release-plz.yml`) — settle together in the plan; recommendations above.
-- **Locked:** CI-native coordinator; thin mise triggers; one identity across both namespaces; prereleases-only; branch as the dispatched ref.
+- **Laptop bash orchestrator** (rejected) — needs the safeguard stack CI eliminates.
+- **Crate publish via reusable `workflow_call`** (rejected) — cleaner single synchronous run, but crates.io TP matches `workflow_ref` = `release-alpha.yml`, so it would **require adding `release-alpha.yml` to the TP config**. Deferred to keep TP untouched; revisit if a single-run publish is later wanted.
+- **GitHub App token to fan out a real `release:published`** (rejected) — unnecessary given the `workflow_dispatch` exception and the reusable inline build.
+
+## Locked decisions
+
+- CI-native coordinator; thin mise triggers; identity across both namespaces; prereleases only; branch = dispatched ref.
+- **Lockstep scope:** `target=all` guarantees same commit + identity; `target=eql` is free (SQL without crate allowed); `target=bindings` requires a matching `eql-<identity>` release to already exist (no orphan crate version; same version, possibly different commit).
+- SQL built **in-run** via reusable `workflow_call` (not event fan-out); crate published by **dispatching `release-plz.yml`** against the SQL tag (TP unchanged); `release-pr` gated to `main`.
