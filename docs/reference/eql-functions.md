@@ -2,7 +2,7 @@
 
 A reference for the functions and operators EQL exposes for querying encrypted data in PostgreSQL. The surface lives in the **`eql_v3`** schema and is organised around the per-scalar encrypted-domain types (`eql_v3.<T>` and variants) and the encrypted-JSON document type (`eql_v3.json`).
 
-> **There is no database-side configuration API.** Which index terms a value carries is chosen by the encryption client ([CipherStash Proxy](https://github.com/cipherstash/proxy) / [Protect.js](https://github.com/cipherstash/protectjs)); a column's capability is fixed by the **domain variant** you type it as. See [SQL support matrix](./sql-support.md) for the variant/operator table.
+> **There is no database-side configuration API.** Which index terms a value carries is chosen by the encryption client ([CipherStash Proxy](https://github.com/cipherstash/proxy) / [CipherStash Stack](https://github.com/cipherstash/stack)); a column's capability is fixed by the **domain variant** you type it as. See [SQL support matrix](./sql-support.md) for the variant/operator table.
 
 ## Table of Contents
 
@@ -158,7 +158,7 @@ SELECT eql_v3.min(price_jsonb::eql_v3.integer_ord) FROM products;
 - [JSON/JSONB Support](./json-support.md) — `eql_v3.json` worked examples.
 - [SQL support matrix](./sql-support.md) — operators by domain variant.
 - [Payload / wire format](../../crates/eql-bindings/README.md) — canonical encrypted-payload wire types (envelope + index terms).
-- Client-side index configuration — [Protect.js schema reference](https://github.com/cipherstash/protectjs/blob/main/docs/reference/schema.md).
+- Client-side index configuration — [CipherStash Stack schema reference](https://cipherstash.com/docs/stack/cipherstash/encryption/schema).
 
 ---
 

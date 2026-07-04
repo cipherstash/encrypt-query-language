@@ -17,10 +17,9 @@ This project uses `mise` for task management. Common commands:
 - `mise run docs:generate` - Generate API documentation (requires doxygen)
   - Outputs XML (primary) and HTML (preview) formats
   - XML suitable for downstream processing/website integration
-  - See `docs/api/README.md` for XML format details
+  - Output is written to `docs/api/` (generated, gitignored)
 - `mise run docs:generate:markdown` - Convert XML to Markdown API reference
-  - Generates single-file API reference: `docs/api/markdown/API.md`
-  - Includes 84 documented functions with parameters, return values, and source links
+  - Generates single-file API reference: `docs/api/markdown/API.md` (all documented functions with parameters, return values, and source links)
 - `mise run docs:validate` - Validate documentation coverage and tags
 - `mise run docs:package` - Package XML docs for distribution (~230KB archive)
 
@@ -46,16 +45,10 @@ This is the **Encrypt Query Language (EQL)** - a PostgreSQL extension for search
 
 ### Core Structure
 - **Schema**: EQL ships two PostgreSQL schemas. `eql_v3` is the public API: the encrypted-domain type families (`integer`, `smallint`, `bigint`, `date`, `timestamp`, `numeric`, `text`, `boolean`, `real`, `double`), query operators, index extractors (`eq_term`/`ord_term`/`match_term`), `min`/`max` aggregates, `version()`, `lints()`, **and the operator-backing comparison wrappers** (`eq`/`neq`/`lt`/`lte`/`gt`/`gte`/`contains`/`contained_by`, plus the jsonb containment helpers `jsonb_contains`/`jsonb_contained_by`/`jsonb_array`/`ste_vec_contains`). The wrappers are public because they are the function-form equivalent of every supported operator — platforms without operator support (Supabase/PostgREST invoke functions, not operators) call them by name (gated by `tests/sqlx/tests/v3_operator_equivalents_tests.rs`). `eql_v3_internal` holds INTERNAL objects only: the searchable-encrypted-metadata (SEM) index-term **types** (`eql_v3_internal.hmac_256`, `eql_v3_internal.ore_block_256`, `eql_v3_internal.bloom_filter`, `eql_v3_internal.ore_cllw`, hand-written under `src/v3/sem/`) and their support/constructor/comparator functions, the generated **blockers** (which only raise on unsupported ops), the **aggregate state functions**, and the SteVec CHECK validators. Splitting the index-term TYPES into `eql_v3_internal` keeps the Supabase Studio Table Builder type picker (which lists every type in every non-hidden schema) free of index-term-only types. **Design decision: EQL never grants permissions automatically — the installer issues no `GRANT`/`REVOKE`; access to either schema is strictly opt-in (see `docs/reference/permissions.md`).** Together the two schemas are **self-contained** and install into a database with no other EQL schema present. The earlier `eql_v2` schema (composite `eql_v2_encrypted` column type, database-side configuration management, operator-class-on-column indexing) was **removed in 3.0.0** — see the `[Unreleased]`/3.0.0 entry in `CHANGELOG.md`. `eql_v2` is no longer built or shipped; it survives only in fork-provenance comments under `src/v3/` (the v3 SEM types were forked from the old v2 originals) and in historical records (`CHANGELOG.md`, the v2.x upgrade guides).
-- **Main Type**: `eql_v2_encrypted` - composite type for encrypted columns (stored as JSONB)
-- **Configuration**: `eql_v2_configuration` table tracks encryption configs
-- **Index Types**: Various encrypted index types (blake3, hmac_256, bloom_filter, ore variants)
 
 ### Directory Structure
-- `src/` - Modular SQL components with dependency management
-- `src/encrypted/` - Core encrypted column type implementation
-- `src/operators/` - SQL operators for encrypted data comparisons
-- `src/config/` - Configuration management functions
-- `src/blake3/`, `src/hmac_256/`, `src/bloom_filter/`, `src/ore_*` - Index implementations
+- `src/` - contains only the self-contained `v3` surface (the modular `eql_v2` component directories were removed in 3.0.0)
+- `crates/` - Rust workspace: `eql-domains` (the catalog), `eql-codegen` (SQL/bindings generator), `eql-bindings` (payload bindings), `eql-tests-macros`
 - `src/v3/` - Self-contained `eql_v3` / `eql_v3_internal` surface: `src/v3/schema.sql` (creates both schemas), forked `src/v3/crypto.sql` / `src/v3/common.sql`, hand-written SEM index-term types under `src/v3/sem/` (`hmac_256`, `ore_block_256`) — now created in `eql_v3_internal` — the generated scalar encrypted-domain families under `src/v3/scalars/<T>/` (public domains/extractors **and the supported comparison wrappers** in `eql_v3`; only the blockers and aggregate state functions in `eql_v3_internal`; plus the shared blocker `src/v3/scalars/functions.sql`), and the hand-written encrypted-JSONB (SteVec) surface under `src/v3/jsonb/` (`types.sql`, `functions.sql`, `operators.sql`, `aggregates.sql`, `blockers.sql` — the `eql_v3.json` / `eql_v3.jsonb_entry` / `eql_v3.jsonb_query` domains, their typed operators, the `jsonb_entry` comparison wrappers, the containment engine (`ste_vec_contains`), and the raw-jsonb GIN helpers (`jsonb_array` / `jsonb_contains` / `jsonb_contained_by`) are all public in `eql_v3`; only the SteVec CHECK validators, the `is_ste_vec_array` helper, and the aggregate state functions live in `eql_v3_internal`)
 - `tasks/` - mise task scripts
 - `tests/sqlx/` - Rust/SQLx test framework (PostgreSQL 14-17 support)
@@ -64,9 +57,9 @@ This is the **Encrypt Query Language (EQL)** - a PostgreSQL extension for search
 ### Key Concepts
 - **Dependency System**: SQL files declare dependencies via `-- REQUIRE:` comments
 - **Encrypted Data**: Stored as JSONB payloads with metadata
-- **Index Terms**: Transient types for search operations (blake3, hmac_256, etc.)
+- **Index Terms**: SEM index-term types in `eql_v3_internal` (`hmac_256`, `ore_block_256`, `bloom_filter`, `ore_cllw`)
 - **Operators**: Support comparisons between encrypted and plain JSONB data
-- **CipherStash Proxy**: Required for encryption/decryption operations
+- **Encryption client**: CipherStash Stack or CipherStash Proxy is required for encryption/decryption operations
 
 ### Encrypted-Domain Types
 
@@ -94,7 +87,6 @@ Footguns the spec exists to prevent:
 - Tests run against PostgreSQL 14, 15, 16, 17 using Docker containers
 - Use `mise run test --postgres 14|15|16|17` to test against a specific version
 - Container configuration in `tests/docker-compose.yml`
-- SQL test fixtures and helpers in `tests/test_helpers.sql`
 - Database connection: `localhost:7432` (cipherstash/password)
 
 #### Tests run against real encrypted data (hard requirement)
@@ -113,15 +105,6 @@ cipherstash-client: `mise run test:sqlx:prep` runs `fixture:generate:all` (the
   fixture exceptions: the jsonb SteVec document fixture `tests/sqlx/fixtures/v3_ste_vec.sql` is
   now generated through the same `FixtureSpec` machinery (`tests/sqlx/src/fixtures/v3_ste_vec.rs`)
   and gitignored/regenerated like every scalar fixture — it is not a committed blob to copy.
-
-## Project Learning & Retrospectives
-
-Valuable lessons and insights from completed work:
-
-- **SQLx Test Migration (2025-10-24)**: See `docs/retrospectives/2025-10-24-sqlx-migration-retrospective.md`
-  - Migrated 40 SQL assertions to Rust/SQLx (100% coverage)
-  - Key insights: Blake3 vs HMAC differences, batch-review pattern effectiveness, coverage metric definitions
-  - Lessons: TDD catches setup issues, infrastructure investment pays off, code review after each batch prevents compound errors
 
 ## Documentation Standards
 
@@ -146,31 +129,20 @@ All SQL functions and types must be documented using Doxygen-style comments:
 ### Documentation Example
 
 ```sql
---! @brief Create encrypted index configuration
+--! @brief Convert JSONB hex array to bytea array
+--! @internal
 --!
---! Initializes a new encrypted index configuration for a table column.
---! The configuration tracks encryption settings and index types.
+--! Converts a JSONB array of hex-encoded strings into a PostgreSQL bytea array.
+--! Used for deserializing binary data (like ORE terms) from JSONB storage.
 --!
---! @param p_table_name text Table name (schema-qualified)
---! @param p_column_name text Column name to encrypt
---! @param p_index_type text Type of encrypted index (blake3, hmac_256, etc.)
+--! @param val jsonb JSONB array of hex-encoded strings
+--! @return bytea[] Array of decoded binary values
 --!
---! @return uuid Configuration ID for the created index
---!
---! @throws unique_violation If configuration already exists for this column
---!
---! @note This function executes DDL and modifies database schema
---! @see eql_v2.activate_encrypted_index
---!
---! @example
---! -- Create blake3 index configuration
---! SELECT eql_v2.create_encrypted_index(
---!   'public.users',
---!   'email',
---!   'blake3'
---! );
-CREATE FUNCTION eql_v2.create_encrypted_index(...)
+--! @note Returns NULL if input is JSON null
+CREATE FUNCTION ...
 ```
+
+(Adapted from a real block in `src/v3/common.sql` — use existing `src/v3` files as the reference for style.)
 
 ### Validation Tools
 
@@ -197,8 +169,8 @@ The documentation is generated in **XML format** as the primary output:
 - **Location**: `docs/api/xml/`
 - **Format**: Doxygen XML (v1.15.0) with XSD schemas
 - **Usage**: Machine-readable, suitable for downstream processing
-- **Publishing**: Package with `mise run docs:package` → creates `eql-docs-xml-2.x.tar.gz`
-- **Integration**: See `docs/api/README.md` for XML structure and transformation examples
+- **Publishing**: Package with `mise run docs:package` → creates `eql-docs-xml-<version>.tar.gz`
+- **Integration**: XML output ships with XSD schemas for downstream transformation
 
 HTML output is also generated in `docs/api/html/` for local preview only.
 
@@ -223,7 +195,7 @@ Prefer `LANGUAGE SQL` over `LANGUAGE plpgsql` unless you need procedural feature
 **Why SQL wins for simple functions:**
 
 1. **Inlining** - PostgreSQL can inline simple SQL functions into the calling query, eliminating function call overhead entirely. PL/pgSQL functions are never inlined.
-2. **Index context** - Functions used in index expressions (e.g., `CREATE INDEX ... USING GIN (eql_v2.jsonb_array(col))`) are called on every row insertion/update. Inlining matters.
+2. **Index context** - Functions used in index expressions (e.g., `CREATE INDEX ... USING GIN (eql_v3.jsonb_array(col))`) are called on every row insertion/update. Inlining matters.
 3. **Simple logic** - A CASE expression is a single statement. PL/pgSQL's procedural features aren't needed.
 
 **When PL/pgSQL is appropriate:**

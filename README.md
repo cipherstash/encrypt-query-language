@@ -7,7 +7,7 @@ Encrypt Query Language (EQL) is a set of abstractions for transmitting, storing,
 
 > [!TIP]
 > **New to EQL?**
-> EQL is the basis for searchable encryption functionality when using [Protect.js](https://github.com/cipherstash/protectjs) and/or [CipherStash Proxy](https://github.com/cipherstash/proxy).
+> EQL is the basis for searchable encryption functionality when using [CipherStash Stack](https://github.com/cipherstash/stack) and/or [CipherStash Proxy](https://github.com/cipherstash/proxy).
 
 Store encrypted data alongside your existing data:
 
@@ -45,7 +45,7 @@ docker run --rm -p 5432:5432 -e POSTGRES_PASSWORD=postgres \
   ghcr.io/cipherstash/postgres-eql:17
 ```
 
-EQL is installed automatically on first boot. Pin a specific version with `:17-2.1.8`. Other PostgreSQL majors are available as `:14`, `:15`, `:16`. See [`docker/README.md`](./docker/README.md) for the full tag scheme and details.
+EQL is installed automatically on first boot. Pin a specific version with `:17-<eql-version>` (see [releases](https://github.com/cipherstash/encrypt-query-language/releases) for available versions). Other PostgreSQL majors are available as `:14`, `:15`, `:16`. See [`docker/README.md`](./docker/README.md) for the full tag scheme and details.
 
 ### Install into an existing database
 
@@ -80,7 +80,7 @@ EQL installs the following components into the `eql_v3` schema:
 
 The `eql_v3` schema holds the encrypted-domain types, their operators and term extractors, and the `MIN` / `MAX` aggregates.
 
-Encrypted columns are typed as `eql_v3` domains (e.g. `eql_v3.text_eq`, `eql_v3.json`), and the searchable surface available on a column is fixed by its domain **variant** — there is no database-side configuration state. Which index terms a value carries is decided by the encryption client (Protect.js / CipherStash Proxy).
+Encrypted columns are typed as `eql_v3` domains (e.g. `eql_v3.text_eq`, `eql_v3.json`), and the searchable surface available on a column is fixed by its domain **variant** — there is no database-side configuration state. Which index terms a value carries is decided by the encryption client (CipherStash Stack / CipherStash Proxy).
 
 Because the domain types live in the `eql_v3` schema, columns depend on them; `DROP SCHEMA eql_v3 CASCADE` removes the surface (and would drop columns typed as those domains). Re-running the install script is idempotent.
 
@@ -183,14 +183,14 @@ CREATE INDEX users_email_eq ON users USING hash (eql_v3.eq_term(encrypted_email)
 See the [SQL support matrix](docs/reference/sql-support.md) for every variant and [Database Indexes](docs/reference/database-indexes.md) for the index recipes.
 
 > [!NOTE]
-> You must use [CipherStash Proxy](https://github.com/cipherstash/proxy) or [Protect.js](https://github.com/cipherstash/protectjs) to encrypt and decrypt data. EQL provides the database functions and types, while these tools handle the actual cryptographic operations.
+> You must use [CipherStash Proxy](https://github.com/cipherstash/proxy) or [CipherStash Stack](https://github.com/cipherstash/stack) to encrypt and decrypt data. EQL provides the database functions and types, while these tools handle the actual cryptographic operations.
 
 ## Encrypt configuration
 
 In order to enable searchable encryption, you will need to configure your CipherStash integration appropriately.
 
 - If you are using [CipherStash Proxy](https://github.com/cipherstash/proxy), see [this guide](docs/tutorials/proxy-configuration.md).
-- If you are using [Protect.js](https://github.com/cipherstash/protectjs), use the [Protect.js schema](https://github.com/cipherstash/protectjs/blob/main/docs/reference/schema.md).
+- If you are using [CipherStash Stack](https://github.com/cipherstash/stack), use the [CipherStash Stack schema](https://cipherstash.com/docs/stack/cipherstash/encryption/schema).
 
 ## Performance
 
@@ -251,7 +251,7 @@ All SQL functions, types, and operators include:
 - **@throws** - Exception conditions
 - **@note** - Important notes and caveats
 
-For contribution guidelines, see [CLAUDE.md](./CLAUDE.md).
+For contribution guidelines, see the [development guide](./DEVELOPMENT.md).
 
 ### Validation Tools
 
@@ -275,7 +275,7 @@ These frameworks use EQL to enable searchable encryption functionality in Postgr
 
 | Framework   | Repo                                       |
 | ----------- | ------------------------------------------ |
-| Protect.js  | [Protect.js](https://github.com/cipherstash/protectjs) |
+| CipherStash Stack  | [CipherStash Stack](https://github.com/cipherstash/stack) |
 | Protect.php | [Protect.php](https://github.com/cipherstash/protectphp) |
 | CipherStash Proxy | [CipherStash Proxy](https://github.com/cipherstash/proxy) |
 
