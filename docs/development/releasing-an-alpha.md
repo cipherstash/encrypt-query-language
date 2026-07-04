@@ -112,6 +112,92 @@ psql "$DATABASE_URL" -c "\dn eql_v3"            # eql_v3 schema present
 psql "$DATABASE_URL" -c "SELECT eql_v3.version();"  # reports the released semver
 ```
 
+## Releasing `eql-bindings` in lockstep
+
+The `eql-bindings` crate (`crates/eql-bindings`, published to crates.io) and the SQL surface
+ship from the **same generated source**: the crate's `src/v3` payload bindings and the
+`cipherstash-encrypt.sql` installer are both regenerated from `eql-domains::CATALOG`. We release
+them **in version lockstep** so a published `eql-bindings-v3.0.0-alpha.N` always corresponds to
+the SQL surface tagged `eql-3.0.0-alpha.N` at the **same commit**.
+
+This is not automatic — the two release paths are deliberately decoupled (different triggers, tag
+namespaces, and automation; see `release-plz.toml` and the guards in `release-eql.yml`). Lockstep
+is a **manual coordination procedure** you follow per alpha.
+
+### How the crate is published
+
+`eql-bindings` is released by **release-plz** (`.github/workflows/release-plz.yml`), triggered by
+**push to `main`** — *not* by any GitHub Release. release-plz opens/updates a "release PR"; merging
+that PR publishes to crates.io (OIDC trusted publishing), creates the `eql-bindings-v<semver>` tag,
+and cuts a GitHub Release. Two facts drive the lockstep procedure:
+
+- **`release-plz release` publishes the committed `Cargo.toml` version verbatim** — it does not bump
+  at release time. So the version you *commit* is the version that ships.
+- **release-plz owns the version in the release PR.** It computes the next bump from conventional
+  commits (via the `next_version` crate). From a prerelease base it increments the prerelease
+  counter by default (`3.0.0-alpha.1` → `3.0.0-alpha.2`); it will **not** strip to `3.0.0` on its
+  own. There is **no config field that sets an absolute version** — you pin with `release-plz set-version`.
+
+### One-time config
+
+None required. The default `git_release_type = auto` already marks a `-alpha.N` version as a
+GitHub *pre-release* (verified in release-plz source), and `publish` / `git_tag_enable` /
+`git_release_enable` all default `true`. Note `release_always` also defaults `true`: the `release`
+job publishes any committed `Cargo.toml` version not yet on crates.io on every push to `main` — the
+release PR is release-plz's ergonomic path for *proposing* the bump, not a hard publish gate.
+
+### The lockstep procedure
+
+The SQL alpha number **N is the driver** (the SQL surface is the primary artefact). The crate
+follows it. crates.io publishes are **irreversible** (a burned version can be yanked but never
+reused), so we verify both sides, cut the reversible GitHub prerelease first, and merge the
+irreversible crate publish last.
+
+1. **Decide N** — the next SQL alpha, e.g. tag `eql-3.0.0-alpha.2`.
+
+2. **Pin the crate version on the release commit** (crate is currently `0.1.0`; lockstep jumps it
+   to the matching semver):
+   ```bash
+   release-plz set-version eql-bindings@3.0.0-alpha.2   # edits Cargo.toml + crate CHANGELOG
+   ```
+   Commit and push to `main`. **Verify the release PR shows `3.0.0-alpha.2`, not a recomputed
+   value** — if a later push regenerated it (e.g. to `-alpha.3`), re-run `set-version` on `main` to
+   reconverge. Do **not** rely on hand-editing the PR branch; a subsequent push can overwrite it.
+
+3. **Confirm the generated surface is in sync on that commit** — this is what guarantees the
+   published crate's `src/v3` matches the shipped `cipherstash-encrypt.sql`:
+   ```bash
+   mise run types:check        # regenerate + git diff of crates/eql-bindings/src/v3, bindings/, schema/
+   mise run codegen:parity     # regenerate + git diff of the committed SQL scalar surface
+   ```
+   Both must be clean. (They run in CI too, but check here before publishing anything irreversible.)
+
+4. **Cut the SQL prerelease** at that commit (reversible — a GitHub prerelease can be deleted).
+   Use an explicit `--tag` so the number matches the crate exactly:
+   ```bash
+   mise run release:preview --tag eql-3.0.0-alpha.2 --target <release-sha>
+   ```
+   This clean-builds and verifies the v3 installer/uninstaller before creating the prerelease.
+
+5. **Merge the release-plz PR** (irreversible — publishes `eql-bindings-v3.0.0-alpha.2` to
+   crates.io, tags it, cuts its prerelease GitHub Release).
+
+Both tags — `eql-3.0.0-alpha.2` and `eql-bindings-v3.0.0-alpha.2` — now sit on one commit with
+matching semver.
+
+### Caveats
+
+- **No absolute-version config knob.** Pinning is only via `release-plz set-version` / the committed
+  `Cargo.toml`. `release-plz.toml` has increment-*influencing* fields but nothing that sets a version.
+- **No prerelease-increment strategy config.** The default from `-alpha.N` is `-alpha.(N+1)`. To jump
+  to stable `3.0.0`, run `set-version eql-bindings@3.0.0` explicitly — don't rely on the default.
+- **The release PR keeps regenerating** on every `main` push. Pin on `main` (step 2), don't hand-edit
+  the PR branch — whether a PR-branch edit survives a regeneration is undocumented.
+- **release-plz is idempotent** — re-running won't republish an already-published version, so a
+  failed later step won't double-publish an `-alpha.N` that already went out.
+- There is **no upstream precedent** for alpha-pinning in cipherstash-suite's `RELEASING.md`; this
+  procedure extends its standard conventional-commit flow.
+
 ## Promoting to a final release later
 
 When the alpha graduates to a real release, follow `CLAUDE.md` → **"Cutting a release"**:
