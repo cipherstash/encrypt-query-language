@@ -34,7 +34,7 @@ These are verified against the actual tooling (release-plz source, the workflows
 
 3. **`release-plz release` is branch-agnostic.** Its `should_release()` / per-package logic publishes purely on `(version not on crates.io) && (git tag absent)`; there is no default-branch gate in the release path (`release_always` defaults `true`). It tags the **current HEAD** commit via the GitHub API and creates a GitHub Release, auto-marked as a pre-release for a `-alpha.N` version (default `git_release_type = auto`). **No release-plz config change is required.**
 
-4. **`workflow_dispatch --ref eql_v3` operates on `eql_v3`.** The `release-plz/action` is a composite action that does no internal re-checkout; it runs against whatever `actions/checkout` fetched, which under a dispatched ref is that ref. `fetch-depth: 0` (already set) is required for changelog/tag generation.
+4. **`workflow_dispatch --ref eql_v3` operates on `eql_v3`.** The `release-plz/action` is a composite action that does no internal re-checkout; it runs against whatever `actions/checkout` fetched, which under a dispatched ref is that ref. `fetch-depth: 0` (already set) is required for changelog/tag generation. **`--ref` is a branch/tag name, not a raw SHA** — so the task dispatches by branch and guards the branch-head SHA separately (see Release-safety invariants). It tags whatever commit the branch head points at, hence the guard.
 
 5. **`main` is not branch-protected**, but we deliberately do not rely on direct-push-to-main; the ref-parameterised dispatch model is what generalises across branches.
 
@@ -88,19 +88,29 @@ A sourced `tasks/release/_lib.sh` holds the logic common to all three tasks, so 
 - `channel` validation against the `alpha|beta|rc` allowlist.
 - `gh` presence + `gh auth status` preflight.
 - `--ref` defaulting to the current branch.
-- **Identity derivation:** given `--version`/`--channel` (or an explicit `--pre`), compute the next `N`. For a single-artefact task, `N` is `1 + max(existing N for that artefact's tag namespace)`. For `release:all`, `N` is `1 + max(N across BOTH namespaces)` so the two never collide and stay aligned.
+- **Identity derivation from REMOTE tags, across BOTH namespaces, for every task.** Release tags are created remotely (`gh release create` for SQL; the GitHub API via release-plz for the crate), so local tags are unreliable/stale. The lib first refreshes remote tag state (`git ls-remote --tags origin`, or `git fetch --tags --prune`), then computes `N = 1 + max(N across the SQL `eql-<v>-<ch>.N` namespace AND the crate `eql-bindings-v<v>-<ch>.N` namespace)`. **All tasks derive across both namespaces** — including single-artefact ones — so a bindings-only release can never pick an `N` that collides with or trails the SQL namespace (or vice versa). This directly upholds the lockstep invariant; the previous "derive from your own namespace" rule is rejected because it permits divergence (`eql-bindings-v…-alpha.2` published while `eql-…-alpha.5` exists). An explicit `--pre` bypasses derivation entirely.
+- **Tag-exists guards query remote too**, not just local tags, for the same staleness reason.
 - Dry-run echo helpers.
 
-`preview.sh` already contains ~half of this inline; the refactor extracts it.
+`preview.sh` currently derives `N` from **local** `git tag --list` (line 46) — a latent staleness bug the refactor fixes by moving to remote derivation.
+
+### Release-safety invariants (apply to all tasks)
+
+These cross-cutting rules live in `_lib.sh` and are non-negotiable — the review that shaped this spec flagged each as a real hole:
+
+1. **Remote-derived versions & guards** (above): never trust local tags for `N` or existence checks.
+2. **Local build verification matches CI's version string exactly.** CI builds with the `eql-`-stripped identity (`mise run build --version "${TAG#eql-}"`, `release-eql.yml`), so the local verify must also build with the **bare** `<identity>` (e.g. `3.0.0-alpha.2`), NOT `eql-<identity>`. `preview.sh` currently build-verifies the prefixed tag (line 67) — a mismatch that would miss version-string regressions; the refactor corrects it.
+3. **Clean worktree + constrained staging before any commit.** The bindings prepare step must fail if the worktree has uncommitted/untracked changes to release-relevant paths, and must stage **only** `crates/eql-bindings/Cargo.toml`, `crates/eql-bindings/CHANGELOG.md`, and `Cargo.lock` (if `set-version` touched it) — never a blanket `git add -A` that could sweep unrelated work into a release commit.
+4. **Dispatch by branch ref with a remote-head SHA guard.** `gh workflow run --ref` takes a **branch or tag name, not a raw SHA** (verified). So crate publish dispatches on the **branch** (`--ref <branch>`), but immediately before dispatching, assert `git ls-remote origin refs/heads/<branch>` still equals the intended release SHA. If another push moved the branch head, abort rather than publish an unintended commit. (The SQL side has no such constraint: `gh release create --target` *does* accept a full SHA, so the SQL tag pins the exact release commit directly.)
 
 ### Task 1 — `release:eql` (SQL surface)
 
 **File:** `tasks/release/eql.sh` (this is today's `preview.sh`, renamed).
 
-1. Resolve identity, validate channel, preflight `gh`.
-2. Verify the build: `mise run clean && mise run build --version eql-<identity>`; assert `release/cipherstash-encrypt.sql` and `-uninstall.sql` are non-empty.
-3. Refuse if the `eql-<identity>` tag already exists.
-4. `gh release create eql-<identity> --target <ref> --prerelease --title eql-<identity> --notes "<preview notes>"`.
+1. Resolve identity (remote-derived N), validate channel, preflight `gh`.
+2. Verify the build with the **bare** identity to match CI: `mise run clean && mise run build --version <identity>` (e.g. `3.0.0-alpha.2`, NOT `eql-3.0.0-alpha.2`); assert `release/cipherstash-encrypt.sql` and `-uninstall.sql` are non-empty.
+3. Refuse if the `eql-<identity>` tag already exists **on the remote**.
+4. `gh release create eql-<identity> --target <ref-or-sha> --prerelease --title eql-<identity> --notes "<preview notes>"`. (`--target` accepts a full SHA, used by `release:all` to pin the exact release commit.)
 5. Print `gh run watch` / `gh release view` hints.
 
 Reversible (a GitHub prerelease can be deleted). Does **not** touch `CHANGELOG.md`.
@@ -110,15 +120,17 @@ Reversible (a GitHub prerelease can be deleted). Does **not** touch `CHANGELOG.m
 **File:** `tasks/release/bindings.sh`. Two internal phases so `release:all` can interleave the SQL step between them:
 
 **prepare:**
-1. Resolve identity, validate, preflight `gh`.
-2. Verify the generated surface is in sync on this ref — `mise run types:check` and `mise run codegen:parity` must be clean (guarantees the published crate `src/v3` matches the shipped SQL surface).
-3. Refuse if the `eql-bindings-v<identity>` tag already exists (release-plz is idempotent, but fail early with a clear message).
-4. `release-plz set-version eql-bindings@<identity>` (edits `Cargo.toml` + crate `CHANGELOG.md`).
-5. Commit (`release: eql-bindings <identity>`) and `git push origin <ref>` — the commit must be on the remote before dispatch.
+1. Resolve identity (remote-derived N), validate, preflight `gh`.
+2. **Require a clean worktree** for release-relevant paths (fail on uncommitted/untracked changes under `crates/eql-bindings/` or the lockfile) so nothing unrelated is swept into the release commit.
+3. Verify the generated surface is in sync on this ref — `mise run types:check` and `mise run codegen:parity` must be clean (guarantees the published crate `src/v3` matches the shipped SQL surface).
+4. Refuse if the `eql-bindings-v<identity>` tag already exists **on the remote** (release-plz is idempotent, but fail early with a clear message).
+5. `release-plz set-version eql-bindings@<identity>` (edits `Cargo.toml` + crate `CHANGELOG.md`).
+6. **Stage only** `crates/eql-bindings/Cargo.toml`, `crates/eql-bindings/CHANGELOG.md`, and `Cargo.lock` (if `set-version` changed it) — never `git add -A`. Commit (`release: eql-bindings <identity>`) and `git push origin <ref>`; the commit must be on the remote before dispatch. Record the pushed SHA.
 
 **publish:**
-6. `gh workflow run release-plz.yml --ref <ref>` → CI's `release` job publishes to crates.io, tags `eql-bindings-v<identity>` on the pushed HEAD, and cuts a pre-release GitHub Release.
-7. Print `gh run watch` hint.
+7. **SHA guard:** assert `git ls-remote origin refs/heads/<branch>` still equals the SHA recorded in step 6; abort if the branch head moved.
+8. Dispatch **by branch** (`--ref` takes a branch/tag, not a SHA): `gh workflow run release-plz.yml --ref <branch>` → CI's `release` job publishes to crates.io, tags `eql-bindings-v<identity>` on that commit, and cuts a pre-release GitHub Release.
+9. Print `gh run watch` hint.
 
 Standalone `release:bindings` runs prepare then publish back-to-back. Publish is **irreversible** (a crates.io version is burned even if yanked).
 
@@ -128,14 +140,15 @@ Standalone `release:bindings` runs prepare then publish back-to-back. Publish is
 
 **File:** `tasks/release/all.sh`. Resolves **one** shared `N`, verifies once, then composes the individual tasks in an order that gives both tags the **same commit** with the irreversible step **last**:
 
-1. Resolve shared identity `<version>-<channel>.<N>` (max-N across both namespaces).
-2. Verify once: drift gates (`types:check`, `codegen:parity`) + SQL clean build. Abort on any failure before mutating anything.
-3. **`bindings.prepare`** — `set-version` + commit + push `<ref>`. The set-version commit is now HEAD (the release commit).
-4. **`release:eql --ref <HEAD sha> --pre <identity>`** — SQL prerelease on the release commit (reversible).
-5. **`bindings.publish --ref <HEAD sha>`** — dispatch release-plz (irreversible), tagging the same commit.
-6. Print watch hints for both CI runs.
+1. Resolve shared identity `<version>-<channel>.<N>` (remote-derived, max-N across both namespaces).
+2. Verify once: drift gates (`types:check`, `codegen:parity`) + SQL clean build with the **bare** identity. Abort on any failure before mutating anything.
+3. **`bindings.prepare`** — clean-worktree check → `set-version` → stage only the crate files → commit → push `<branch>`. **Record the pushed SHA** `S`; this is the release commit.
+4. **`release:eql --target S --pre <identity>`** — SQL prerelease pinned to `S` by full SHA (reversible; `gh release create --target` accepts a SHA).
+5. **Wait for the `release-eql.yml` run to succeed** — `gh run watch` the triggered run until it completes green, confirming the SQL artefacts actually built and attached. **Do not proceed on failure.** (Creating the GitHub prerelease only *triggers* the build; the irreversible crate publish must wait for confirmed SQL success, not merely a created release.)
+6. **`bindings.publish --ref <branch>`** — SHA guard (`ls-remote` head == `S`) → dispatch release-plz by branch (irreversible), tagging the same commit `S`.
+7. Print watch hints for both CI runs.
 
-Both `eql-<identity>` and `eql-bindings-v<identity>` end up on the one set-version commit. Rationale for ordering: the only tree delta between "before" and "after" the set-version commit is `Cargo.toml` + the crate changelog — neither affects the SQL surface — so tagging both on the release commit is exact. Doing the reversible SQL prerelease before the irreversible crate publish means a late failure never leaves a published crate without its SQL counterpart.
+Both `eql-<identity>` and `eql-bindings-v<identity>` end up on the one set-version commit `S`. Rationale for ordering: the only tree delta introduced by the set-version commit is `Cargo.toml` + the crate changelog (+ maybe the lockfile) — none of which affect the SQL surface — so pinning the SQL tag to `S` and letting release-plz tag `S` is exact. The reversible SQL prerelease goes first **and is confirmed green** before the irreversible crate publish, so no failure path leaves a published crate without a working SQL counterpart.
 
 `--dry-run` threads through to both children (no commit, tag, push, or dispatch).
 
@@ -155,10 +168,19 @@ Both `eql-<identity>` and `eql-bindings-v<identity>` end up on the one set-versi
 ## Verification
 
 - **Dry-run each task** (`--dry-run`) and confirm the derived identity, resolved ref, and the exact commands it would run — with nothing mutated.
+- **Remote-derivation:** create a remote-only tag the local clone doesn't have, then confirm `N` derivation and the tag-exists guard both see it (i.e. local staleness can't cause a collision).
+- **Cross-namespace N:** with `eql-…-alpha.5` present but no crate alpha tag, confirm `release:bindings` derives `alpha.6` (not `alpha.1`).
+- **Version-string parity:** confirm the local verify build uses the bare `<identity>` and that `eql_v3.version()` in the built artefact matches what CI would produce.
+- **Clean-worktree guard:** with a stray edit under `crates/eql-bindings/`, confirm `release:bindings` prepare aborts and stages nothing.
+- **SHA guard:** simulate a branch-head move between prepare and publish; confirm dispatch aborts.
 - **`release:eql`** end-to-end on `eql_v3`: confirm the GitHub prerelease appears with both `.sql` artefacts attached (existing behaviour, must survive the rename).
 - **`release:bindings`** end-to-end on `eql_v3`: confirm the workflow dispatch runs the `release` job only (not `release-pr`), publishes to crates.io, and tags `eql-bindings-v<identity>` on the pushed commit.
-- **`release:all`**: confirm both tags land on the **same** commit and the crate publish is the last irreversible action.
-- **Idempotency:** re-running a task for an already-released identity fails fast (tag-exists guard) rather than double-publishing.
+- **`release:all`**: confirm both tags land on the **same** commit `S`, that the SQL CI run is awaited green before the crate dispatch, and that the crate publish is the last irreversible action.
+- **Idempotency:** re-running a task for an already-released identity fails fast (remote tag-exists guard) rather than double-publishing.
+
+## Alternatives considered
+
+**A single `workflow_dispatch` "alpha release" GitHub Actions workflow** with inputs (version, channel), doing the whole sequence — version pin, commit, SQL release, crate publish — inside CI. This is **more auditable and insensitive to laptop state** (no dependence on the operator's local tags, worktree cleanliness, or branch head), which addresses the root concern behind every safeguard above rather than patching each locally. It is deferred because it is a **larger change** (a new workflow that mutates the repo and orchestrates two publish paths, with its own secrets/permissions surface) and because the mise-task entrypoints are wanted as the operator-facing interface regardless. The safeguards in this spec make the local-orchestration form solid in the interim; **the CI-native workflow is the recommended evolution** once the task API has settled, and the mise tasks could then become thin wrappers that trigger it.
 
 ## Open questions
 
@@ -167,3 +189,5 @@ None blocking. Decisions locked during design:
 - **Rename `release:preview` → `release:eql`** for API symmetry (accept the doc churn).
 - **Individual tasks are first-class**, not just internal helpers — SQL-only and bindings-only alphas are supported; `release:all` composes them.
 - **`release-pr` job gated to `main`** as the one required workflow change.
+
+A design review hardened the orchestration against local-state hazards: remote-tag derivation, cross-namespace `N`, clean-worktree + constrained staging, branch-dispatch with a SHA guard, CI-success wait before the irreversible crate publish, and CI-matching build version. These are captured as **Release-safety invariants** and folded into each task above; several also fix latent bugs in today's `preview.sh` (local-tag `N`, prefixed build version). The **CI-native single-workflow** form (see Alternatives) remains the recommended longer-term evolution.
