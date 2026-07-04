@@ -38,11 +38,18 @@ $$;
 --! @return boolean True when `val` is `{"sv":[...]}` and every element carries
 --!         string `s`, no ciphertext, and exactly one string term (`hm` XOR
 --!         `oc`).
+--! @note plpgsql, not LANGUAGE sql (issues #353/#354): the only caller is the
+--!   eql_v3.jsonb_query domain CHECK, where a SQL function can never be
+--!   inlined (and the CHECK itself cannot absorb this body — it needs a
+--!   subquery over the sv elements, which CHECK constraints forbid). plpgsql
+--!   caches its plan across calls instead of paying the per-call SQL-function
+--!   executor on every needle cast.
 CREATE FUNCTION eql_v3_internal.is_valid_ste_vec_query_payload(val jsonb)
   RETURNS boolean
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+  LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT COALESCE(
+BEGIN
+  RETURN COALESCE(
     jsonb_typeof(val) = 'object'
      AND jsonb_typeof(val -> 'sv') = 'array'
      AND NOT EXISTS (
@@ -62,7 +69,8 @@ AS $$
        ), false)
      ),
     false
-  )
+  );
+END;
 $$;
 
 --! @brief Validate a root SteVec document payload.
@@ -119,9 +127,34 @@ CREATE DOMAIN eql_v3.json AS jsonb
 --! `i`/`v` merged in by `->`) are allowed.
 --!
 --! @see src/v3/jsonb/operators.sql
+--!
+--! @internal
+--! Implementation note (issue #354): the CHECK is an INLINE expression, not a
+--! call to `eql_v3_internal.is_valid_ste_vec_entry_payload` — domain
+--! constraints cannot inline SQL functions, so the function-call form paid
+--! the per-call SQL-function executor (~18 µs) on EVERY cast: the needle
+--! cast in every field_eq query (+19% end-to-end vs v2, the entire measured
+--! regression on that scenario; see cipherstash/benches#23). The expression
+--! mirrors the validator body; the leading `VALUE IS NULL OR` preserves the
+--! validator's STRICT NULL-passes semantics (a bare COALESCE(..., false)
+--! would reject NULL, which `->` returns for a missing selector). Keep the
+--! two in sync — `jsonb_entry_check_matches_validator` in tests/sqlx pins
+--! the equivalence.
+--! @endinternal
 CREATE DOMAIN eql_v3.jsonb_entry AS jsonb
   CHECK (
-    eql_v3_internal.is_valid_ste_vec_entry_payload(VALUE)
+    VALUE IS NULL
+    OR COALESCE(
+      jsonb_typeof(VALUE) = 'object'
+       AND jsonb_typeof(VALUE -> 's') = 'string'
+       AND jsonb_typeof(VALUE -> 'c') = 'string'
+       AND (
+         (jsonb_typeof(VALUE -> 'hm') = 'string' AND NOT (VALUE ? 'oc'))
+         OR
+         (jsonb_typeof(VALUE -> 'oc') = 'string' AND NOT (VALUE ? 'hm'))
+       ),
+      false
+    )
   );
 
 --! @brief Domain type for an STE-vec containment needle.
@@ -135,6 +168,17 @@ CREATE DOMAIN eql_v3.jsonb_entry AS jsonb
 --! @note Construct from inline JSON via the DOMAIN cast:
 --!       `'{"sv":[{"s":"<sel>","hm":"<hm>"}]}'::eql_v3.jsonb_query`.
 --! @see eql_v3.to_ste_vec_query
+--!
+--! @internal
+--! Implementation note (issue #354): this CHECK CANNOT be inlined like
+--! eql_v3.jsonb_entry's — validating the sv elements requires a subquery
+--! (`NOT EXISTS (SELECT ... FROM jsonb_array_elements(...))`), and CHECK
+--! constraints forbid subqueries. The validator is plpgsql instead (cached
+--! plan; substantially cheaper per call than a non-inlined LANGUAGE sql
+--! function — the same finding as issue #353), since this cast sits on the
+--! per-query hot path of every containment scenario
+--! (`$1::jsonb::eql_v3.jsonb_query`).
+--! @endinternal
 CREATE DOMAIN eql_v3.jsonb_query AS jsonb
   CHECK (
     eql_v3_internal.is_valid_ste_vec_query_payload(VALUE)
