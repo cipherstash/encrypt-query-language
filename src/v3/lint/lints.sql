@@ -83,9 +83,29 @@ RETURNS TABLE (
 LANGUAGE sql STABLE
 AS $$
   WITH
-  -- All operators where at least one operand is an `eql_v3` type. Limits
-  -- the scope of the lint to the operator surface customers actually hit
-  -- via SQL (`col = val`, `col @> '...'` and friends).
+  -- User-column encrypted domains now live in public so application tables
+  -- survive EQL uninstall. Keep this separate from owned_schemas(): public is
+  -- not installer-owned, but its EQL jsonb-backed domains are still the domain
+  -- types whose blockers/operator surfaces the lint must understand.
+  encrypted_domain_types AS (
+    SELECT
+      dt.oid AS typid
+    FROM pg_catalog.pg_type dt
+    JOIN pg_catalog.pg_namespace dn ON dn.oid = dt.typnamespace
+    JOIN pg_catalog.pg_type bt ON bt.oid = dt.typbasetype
+    JOIN pg_catalog.pg_namespace bn ON bn.oid = bt.typnamespace
+    WHERE dt.typtype = 'd'
+      AND bt.typname = 'jsonb'
+      AND bn.nspname = 'pg_catalog'
+      AND (
+           dn.nspname = 'public'
+        OR dn.nspname = ANY(eql_v3_internal.owned_schemas())
+      )
+  ),
+
+  -- All operators where at least one operand is an EQL-owned type or a public
+  -- encrypted domain. Limits the scope of the lint to the operator surface
+  -- customers actually hit via SQL (`col = val`, `col @> '...'` and friends).
   eql_operators AS (
     SELECT
       op.oid              AS oprid,
@@ -98,7 +118,10 @@ AS $$
     WHERE EXISTS (
         SELECT 1 FROM pg_type t
          WHERE t.oid IN (op.oprleft, op.oprright)
-           AND t.typnamespace IN (SELECT oid FROM pg_namespace WHERE nspname = ANY(eql_v3_internal.owned_schemas()))
+           AND (
+                t.typnamespace IN (SELECT oid FROM pg_namespace WHERE nspname = ANY(eql_v3_internal.owned_schemas()))
+             OR t.oid IN (SELECT typid FROM encrypted_domain_types)
+           )
       )
   ),
 
@@ -126,7 +149,7 @@ AS $$
   -- `encrypted_domain_unsupported_*` helper calls — `_bool` for boolean
   -- blockers, `_jsonb` for the native-jsonb-operator blockers; plus the
   -- literal `is not supported for` for older path-operator blockers) AND
-  -- that take at least one `eql_v3` domain over jsonb argument. The argument
+  -- that take at least one encrypted domain over jsonb argument. The argument
   -- filter excludes the shared `encrypted_domain_unsupported_*(text, text)`
   -- helpers themselves, which contain the marker in their body but are not
   -- blockers (they take text arguments, not a domain).
@@ -145,12 +168,7 @@ AS $$
       AND EXISTS (
         SELECT 1
         FROM pg_catalog.unnest(p.proargtypes::oid[]) AS arg(typ)
-        JOIN pg_catalog.pg_type dt ON dt.oid = arg.typ
-        JOIN pg_catalog.pg_namespace dn ON dn.oid = dt.typnamespace
-        JOIN pg_catalog.pg_type bt ON bt.oid = dt.typbasetype
-        WHERE dt.typtype = 'd'
-          AND bt.typname = 'jsonb'
-          AND dn.nspname = ANY(eql_v3_internal.owned_schemas())
+        JOIN encrypted_domain_types edt ON edt.typid = arg.typ
       )
   )
 
@@ -328,7 +346,7 @@ AS $$
   WHERE dt.typtype = 'd'
     AND dn.nspname = ANY(eql_v3_internal.owned_schemas())
     AND bt.typtype = 'd'
-    AND bn.nspname = ANY(eql_v3_internal.owned_schemas())
+    AND bt.oid IN (SELECT typid FROM encrypted_domain_types)
 
   -- ┌─────────────────────────────────────────────────────────────────┐
   -- │ Domain opclass: an operator class declared FOR TYPE on an       │
@@ -349,8 +367,7 @@ AS $$
   JOIN pg_catalog.pg_type t ON t.oid = oc.opcintype
   JOIN pg_catalog.pg_namespace tn ON tn.oid = t.typnamespace
   JOIN pg_catalog.pg_namespace cn ON cn.oid = oc.opcnamespace
-  WHERE t.typtype = 'd'
-    AND tn.nspname = ANY(eql_v3_internal.owned_schemas())
+  WHERE t.oid IN (SELECT typid FROM encrypted_domain_types)
 
   -- ┌─────────────────────────────────────────────────────────────────┐
   -- │ Schema placement: the public `eql_v3` schema must hold only the  │
