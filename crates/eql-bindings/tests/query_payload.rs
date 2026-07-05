@@ -67,11 +67,11 @@ fn typed_needle_yields_the_ste_vec_variant() {
     });
     let typed = assert_serialization_pin(&v2);
     assert_eq!(typed.domain(), "jsonb_query");
-    assert_eq!(typed.sql_domain(), "eql_v3.jsonb_query");
+    assert_eq!(typed.sql_domain(), "public.jsonb_query");
     match &typed {
         QueryPayload::SteVec(q) => {
             assert_eq!(q.sv.len(), 2, "entry order/count preserved");
-            assert_eq!(q.sql_domain(), "eql_v3.jsonb_query");
+            assert_eq!(q.sql_domain(), "public.jsonb_query");
         }
     }
 }
@@ -196,7 +196,7 @@ fn parse_returns_none_for_non_query_domains() {
         "json",
         "jsonb_entry",
         "integer_eq",
-        "eql_v3.jsonb_query",
+        "public.jsonb_query",
         "",
     ] {
         assert!(

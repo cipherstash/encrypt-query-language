@@ -6,7 +6,7 @@ use crate::{Identifier, SchemaVersion};
 use schemars::{schema_for, JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
-/// `eql_v3.boolean` — storage-only domain.
+/// `public.boolean` — storage-only domain.
 ///
 /// Operators: none. Required keys: `v` `i` `c`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -19,7 +19,7 @@ pub struct Boolean {
 }
 impl DomainType for Boolean {
     fn sql_domain_static() -> &'static str {
-        "eql_v3.boolean"
+        "public.boolean"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()

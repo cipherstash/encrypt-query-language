@@ -5,7 +5,7 @@ import type { Identifier } from "./Identifier";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `eql_v3.double_eq` — equality domain.
+ * `public.double_eq` — equality domain.
  *
  * Operators: `=` `<>`. Required keys: `v` `i` `c` `hm`.
  */

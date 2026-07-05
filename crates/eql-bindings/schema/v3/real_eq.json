@@ -36,7 +36,7 @@
   "$id": "https://schemas.cipherstash.com/eql/v3/real_eq.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "`eql_v3.real_eq` — equality domain.\n\nOperators: `=` `<>`. Required keys: `v` `i` `c` `hm`.",
+  "description": "`public.real_eq` — equality domain.\n\nOperators: `=` `<>`. Required keys: `v` `i` `c` `hm`.",
   "properties": {
     "c": {
       "$ref": "#/$defs/Ciphertext"

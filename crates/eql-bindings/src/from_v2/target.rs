@@ -16,7 +16,7 @@ pub enum TargetDomain {
     /// A flat scalar domain (`integer`, `text_eq`, `integer_ord_ope`, …): the v2
     /// payload must be the `k: "ct"` form.
     Scalar(ScalarTarget),
-    /// The SteVec document domain `eql_v3.json`: the v2 payload must be the
+    /// The SteVec document domain `public.json`: the v2 payload must be the
     /// `k: "sv"` form.
     Json,
 }

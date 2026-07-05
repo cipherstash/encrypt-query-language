@@ -2,6 +2,6 @@
 
 /**
  * A SteVec selector — the `s` wire key. Addresses a JSON path leaf within an
- * encrypted document (`eql_v3.json`); present on every entry and query element.
+ * encrypted document (`public.json`); present on every entry and query element.
  */
 export type Selector = string;

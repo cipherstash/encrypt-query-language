@@ -90,10 +90,10 @@ fn assert_serialization_pin(v2: &Value, t: TargetDomain) -> DomainPayload {
 fn typed_scalar_single_term_yields_the_matching_variant() {
     let typed = assert_serialization_pin(&v2_ct_full(), target("integer_eq"));
     assert_eq!(typed.domain(), "integer_eq");
-    assert_eq!(typed.sql_domain(), "eql_v3.integer_eq");
+    assert_eq!(typed.sql_domain(), "public.integer_eq");
     match &typed {
         DomainPayload::IntegerEq(p) => {
-            assert_eq!(p.sql_domain(), "eql_v3.integer_eq");
+            assert_eq!(p.sql_domain(), "public.integer_eq");
         }
         other => panic!("expected IntegerEq, got {other:?}"),
     }
@@ -126,7 +126,7 @@ fn typed_scalar_multi_term_yields_text_search() {
 fn typed_ste_vec_document_yields_ste_vec_document() {
     let typed = assert_serialization_pin(&v2_sv(), TargetDomain::Json);
     assert_eq!(typed.domain(), "json");
-    assert_eq!(typed.sql_domain(), "eql_v3.json");
+    assert_eq!(typed.sql_domain(), "public.json");
     match &typed {
         DomainPayload::SteVecDocument(doc) => {
             assert_eq!(doc.sv.len(), 2, "entry order/count preserved");
@@ -230,7 +230,7 @@ fn parse_constructs_every_stored_payload_domain() {
 fn parse_returns_none_for_unknown_domains() {
     for name in [
         "int5",
-        "eql_v3.integer_eq",
+        "public.integer_eq",
         "",
         "jsonb",
         "jsonb_entry",
@@ -269,6 +269,6 @@ fn parse_is_strict_exactly_like_the_binding_struct() {
 fn as_domain_type_exposes_the_inner_trait_object() {
     let typed = from_v2_typed(&v2_ct_full(), target("bigint_ord_ope")).unwrap();
     let dt: &dyn DomainType = typed.as_domain_type();
-    assert_eq!(dt.sql_domain(), "eql_v3.bigint_ord_ope");
+    assert_eq!(dt.sql_domain(), "public.bigint_ord_ope");
     assert_eq!(dt.domain(), "bigint_ord_ope");
 }

@@ -4,7 +4,7 @@ use super::domain_type::DomainType;
 use serde::{Deserialize, Serialize};
 /// Every stored-payload v3 domain in one type: one variant per flat
 /// scalar domain in `eql-domains::CATALOG` plus the SteVec document
-/// (`eql_v3.json`). Generated from the catalog, so it cannot drift
+/// (`public.json`). Generated from the catalog, so it cannot drift
 /// when the catalog grows.
 ///
 /// Serialization is exactly the inner struct's (`#[serde(untagged)]`
@@ -17,103 +17,103 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum DomainPayload {
-    /// The `eql_v3.integer` payload.
+    /// The `public.integer` payload.
     Integer(super::integer::Integer),
-    /// The `eql_v3.integer_eq` payload.
+    /// The `public.integer_eq` payload.
     IntegerEq(super::integer::IntegerEq),
-    /// The `eql_v3.integer_ord_ore` payload.
+    /// The `public.integer_ord_ore` payload.
     IntegerOrdOre(super::integer::IntegerOrdOre),
-    /// The `eql_v3.integer_ord` payload.
+    /// The `public.integer_ord` payload.
     IntegerOrd(super::integer::IntegerOrd),
-    /// The `eql_v3.integer_ord_ope` payload.
+    /// The `public.integer_ord_ope` payload.
     IntegerOrdOpe(super::integer::IntegerOrdOpe),
-    /// The `eql_v3.smallint` payload.
+    /// The `public.smallint` payload.
     Smallint(super::smallint::Smallint),
-    /// The `eql_v3.smallint_eq` payload.
+    /// The `public.smallint_eq` payload.
     SmallintEq(super::smallint::SmallintEq),
-    /// The `eql_v3.smallint_ord_ore` payload.
+    /// The `public.smallint_ord_ore` payload.
     SmallintOrdOre(super::smallint::SmallintOrdOre),
-    /// The `eql_v3.smallint_ord` payload.
+    /// The `public.smallint_ord` payload.
     SmallintOrd(super::smallint::SmallintOrd),
-    /// The `eql_v3.smallint_ord_ope` payload.
+    /// The `public.smallint_ord_ope` payload.
     SmallintOrdOpe(super::smallint::SmallintOrdOpe),
-    /// The `eql_v3.bigint` payload.
+    /// The `public.bigint` payload.
     Bigint(super::bigint::Bigint),
-    /// The `eql_v3.bigint_eq` payload.
+    /// The `public.bigint_eq` payload.
     BigintEq(super::bigint::BigintEq),
-    /// The `eql_v3.bigint_ord_ore` payload.
+    /// The `public.bigint_ord_ore` payload.
     BigintOrdOre(super::bigint::BigintOrdOre),
-    /// The `eql_v3.bigint_ord` payload.
+    /// The `public.bigint_ord` payload.
     BigintOrd(super::bigint::BigintOrd),
-    /// The `eql_v3.bigint_ord_ope` payload.
+    /// The `public.bigint_ord_ope` payload.
     BigintOrdOpe(super::bigint::BigintOrdOpe),
-    /// The `eql_v3.date` payload.
+    /// The `public.date` payload.
     Date(super::date::Date),
-    /// The `eql_v3.date_eq` payload.
+    /// The `public.date_eq` payload.
     DateEq(super::date::DateEq),
-    /// The `eql_v3.date_ord_ore` payload.
+    /// The `public.date_ord_ore` payload.
     DateOrdOre(super::date::DateOrdOre),
-    /// The `eql_v3.date_ord` payload.
+    /// The `public.date_ord` payload.
     DateOrd(super::date::DateOrd),
-    /// The `eql_v3.date_ord_ope` payload.
+    /// The `public.date_ord_ope` payload.
     DateOrdOpe(super::date::DateOrdOpe),
-    /// The `eql_v3.timestamp` payload.
+    /// The `public.timestamp` payload.
     Timestamp(super::timestamp::Timestamp),
-    /// The `eql_v3.timestamp_eq` payload.
+    /// The `public.timestamp_eq` payload.
     TimestampEq(super::timestamp::TimestampEq),
-    /// The `eql_v3.timestamp_ord_ore` payload.
+    /// The `public.timestamp_ord_ore` payload.
     TimestampOrdOre(super::timestamp::TimestampOrdOre),
-    /// The `eql_v3.timestamp_ord` payload.
+    /// The `public.timestamp_ord` payload.
     TimestampOrd(super::timestamp::TimestampOrd),
-    /// The `eql_v3.timestamp_ord_ope` payload.
+    /// The `public.timestamp_ord_ope` payload.
     TimestampOrdOpe(super::timestamp::TimestampOrdOpe),
-    /// The `eql_v3.numeric` payload.
+    /// The `public.numeric` payload.
     Numeric(super::numeric::Numeric),
-    /// The `eql_v3.numeric_eq` payload.
+    /// The `public.numeric_eq` payload.
     NumericEq(super::numeric::NumericEq),
-    /// The `eql_v3.numeric_ord_ore` payload.
+    /// The `public.numeric_ord_ore` payload.
     NumericOrdOre(super::numeric::NumericOrdOre),
-    /// The `eql_v3.numeric_ord` payload.
+    /// The `public.numeric_ord` payload.
     NumericOrd(super::numeric::NumericOrd),
-    /// The `eql_v3.numeric_ord_ope` payload.
+    /// The `public.numeric_ord_ope` payload.
     NumericOrdOpe(super::numeric::NumericOrdOpe),
-    /// The `eql_v3.text` payload.
+    /// The `public.text` payload.
     Text(super::text::Text),
-    /// The `eql_v3.text_eq` payload.
+    /// The `public.text_eq` payload.
     TextEq(super::text::TextEq),
-    /// The `eql_v3.text_match` payload.
+    /// The `public.text_match` payload.
     TextMatch(super::text::TextMatch),
-    /// The `eql_v3.text_ord_ore` payload.
+    /// The `public.text_ord_ore` payload.
     TextOrdOre(super::text::TextOrdOre),
-    /// The `eql_v3.text_ord` payload.
+    /// The `public.text_ord` payload.
     TextOrd(super::text::TextOrd),
-    /// The `eql_v3.text_ord_ope` payload.
+    /// The `public.text_ord_ope` payload.
     TextOrdOpe(super::text::TextOrdOpe),
-    /// The `eql_v3.text_search` payload.
+    /// The `public.text_search` payload.
     TextSearch(super::text::TextSearch),
-    /// The `eql_v3.boolean` payload.
+    /// The `public.boolean` payload.
     Boolean(super::boolean::Boolean),
-    /// The `eql_v3.real` payload.
+    /// The `public.real` payload.
     Real(super::real::Real),
-    /// The `eql_v3.real_eq` payload.
+    /// The `public.real_eq` payload.
     RealEq(super::real::RealEq),
-    /// The `eql_v3.real_ord_ore` payload.
+    /// The `public.real_ord_ore` payload.
     RealOrdOre(super::real::RealOrdOre),
-    /// The `eql_v3.real_ord` payload.
+    /// The `public.real_ord` payload.
     RealOrd(super::real::RealOrd),
-    /// The `eql_v3.real_ord_ope` payload.
+    /// The `public.real_ord_ope` payload.
     RealOrdOpe(super::real::RealOrdOpe),
-    /// The `eql_v3.double` payload.
+    /// The `public.double` payload.
     Double(super::double::Double),
-    /// The `eql_v3.double_eq` payload.
+    /// The `public.double_eq` payload.
     DoubleEq(super::double::DoubleEq),
-    /// The `eql_v3.double_ord_ore` payload.
+    /// The `public.double_ord_ore` payload.
     DoubleOrdOre(super::double::DoubleOrdOre),
-    /// The `eql_v3.double_ord` payload.
+    /// The `public.double_ord` payload.
     DoubleOrd(super::double::DoubleOrd),
-    /// The `eql_v3.double_ord_ope` payload.
+    /// The `public.double_ord_ope` payload.
     DoubleOrdOpe(super::double::DoubleOrdOpe),
-    /// The `eql_v3.json` payload.
+    /// The `public.json` payload.
     SteVecDocument(super::jsonb::SteVecDocument),
 }
 impl DomainPayload {
@@ -294,7 +294,7 @@ impl DomainPayload {
             Self::SteVecDocument(payload) => payload,
         }
     }
-    /// Fully-qualified SQL domain name, e.g. `"eql_v3.integer_eq"`.
+    /// Fully-qualified SQL domain name, e.g. `"public.integer_eq"`.
     pub fn sql_domain(&self) -> &'static str {
         self.as_domain_type().sql_domain()
     }
