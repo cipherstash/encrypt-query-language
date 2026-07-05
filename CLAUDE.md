@@ -240,10 +240,10 @@ EQL maintains a [Keep-a-Changelog](https://keepachangelog.com/en/1.1.0/)-style `
 
 **Cutting a release is scripted — don't hand-roll `gh release create`.** There are two paths:
 
-- **Prerelease (alpha / beta / rc):** run `mise run release:preview` (`tasks/release/preview.sh`). It derives the next `eql-<version>-<channel>.<N>` tag, does a clean build-verify of the v3 installer/uninstaller, and cuts the GitHub prerelease that triggers the release workflow. Use `--dry-run` first; `--target` defaults to the current branch. It deliberately does **not** touch `CHANGELOG.md` (previews keep entries under `[Unreleased]`). Full runbook: **`docs/development/releasing-an-alpha.md`**.
+- **Prerelease (alpha / beta / rc):** run `mise run release:all` (SQL + docs and `eql-bindings` in lockstep), `mise run release:eql` (SQL + docs only), or `mise run release:bindings` (crate for an existing SQL alpha, same source). Each task dispatches the CI-native coordinator `.github/workflows/release-alpha.yml` and watches the run via a unique `dispatch_id`; release-relevant work happens in CI. The coordinator derives the `<version>-<channel>.<N>` identity across both tag namespaces, verifies drift gates, and builds/attaches the alpha assets in-run. For `release:all`, it also pins the crate, builds SQL + docs, then dispatches `release-plz.yml` so both tags land on one commit. `release:all` and `release:bindings` require `--ref <branch>` because the pin is pushed. Always use `--dry-run` first. It deliberately does **not** touch `CHANGELOG.md` (prerelease entries stay under `[Unreleased]`). Full runbook: **`docs/development/releasing-an-alpha.md`**.
 - **Final (non-prerelease) release:** follow **"Cutting a release"** below — this one *does* promote `[Unreleased]` → `[<version>]`, which the workflow's `verify-changelog` job enforces.
 
-The **`eql-bindings` crate** (published to crates.io by **release-plz** on merge to `main`, tagged `eql-bindings-v<semver>`) is generated from the same `eql-domains::CATALOG` as the SQL surface, so we release it in **version lockstep** with each `eql_v3` alpha (`eql-bindings-v3.0.0-alpha.N` ↔ `eql-3.0.0-alpha.N` on the same commit). This is a manual coordination procedure — the two release paths are otherwise decoupled. See the **"Releasing `eql-bindings` in lockstep"** section of `docs/development/releasing-an-alpha.md`. Note: release-plz publishes the *committed* `Cargo.toml` version verbatim and has no absolute-version config — pin with `release-plz set-version eql-bindings@<version>`, never hand-edit the release PR.
+The **`eql-bindings` crate** (published to crates.io by **release-plz**, tagged `eql-bindings-v<semver>`) is generated from the same `eql-domains::CATALOG` as the SQL surface, so `release:all` releases it in **version lockstep** with each `eql_v3` alpha (`eql-bindings-v3.0.0-alpha.N` ↔ `eql-3.0.0-alpha.N` on the same commit). Use `release:bindings` only to publish the crate for an existing SQL alpha; the coordinator enforces that the branch is still at the SQL tag commit before adding the metadata-only pin commit. release-plz publishes the committed `Cargo.toml` version verbatim and has no absolute-version config, so the coordinator pins with `release-plz set-version eql-bindings@<version>`.
 
 ### When you make a user-facing change
 
@@ -288,7 +288,7 @@ The `eql_v3` PostgreSQL schema name is part of the public API and is **independe
 
 ### Cutting a release
 
-This section is for **final (non-prerelease) releases**. For an alpha/beta/rc, use `mise run release:preview` instead — see the pointer at the top of this section and `docs/development/releasing-an-alpha.md`.
+This section is for **final (non-prerelease) releases**. For an alpha/beta/rc, use `mise run release:all`, `mise run release:eql`, or `mise run release:bindings` instead — see the pointer at the top of this section and `docs/development/releasing-an-alpha.md`.
 
 When a release is being prepared:
 
