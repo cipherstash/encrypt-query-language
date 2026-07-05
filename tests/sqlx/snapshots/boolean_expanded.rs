@@ -1893,9 +1893,9 @@ pub mod boolean {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3465usize,
+            start_line: 3487usize,
             start_col: 22usize,
-            end_line: 3465usize,
+            end_line: 3487usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -2022,9 +2022,9 @@ pub mod boolean {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3499usize,
+            start_line: 3521usize,
             start_col: 22usize,
-            end_line: 3499usize,
+            end_line: 3521usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -2132,9 +2132,9 @@ pub mod boolean {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3543usize,
+            start_line: 3565usize,
             start_col: 22usize,
-            end_line: 3543usize,
+            end_line: 3565usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -2272,9 +2272,9 @@ pub mod boolean {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3351usize,
+            start_line: 3373usize,
             start_col: 22usize,
-            end_line: 3351usize,
+            end_line: 3373usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -2440,9 +2440,9 @@ pub mod boolean {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3351usize,
+            start_line: 3373usize,
             start_col: 22usize,
-            end_line: 3351usize,
+            end_line: 3373usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -2710,7 +2710,7 @@ pub mod boolean {
                             error
                         });
                     }
-                    for term in ["hm", "ob", "bf"] {
+                    for term in ["hm", "ob", "bf", "op"] {
                         let present: i64 = sqlx::query_scalar(
                                 &::alloc::__export::must_use({
                                     ::alloc::fmt::format(
@@ -2766,6 +2766,16 @@ pub mod boolean {
                                 "payload->'bf' IS NULL OR jsonb_typeof(payload->'bf') <> 'array'",
                             ));
                     }
+                    let has_ope = ::eql_tests::scalar_domains::token_has_ope_term(
+                        <bool as ScalarType>::PG_TYPE,
+                    );
+                    if has_ope {
+                        term_checks
+                            .push((
+                                "op string",
+                                "payload->'op' IS NULL OR jsonb_typeof(payload->'op') <> 'string'",
+                            ));
+                    }
                     for (label, predicate) in term_checks {
                         let missing: i64 = sqlx::query_scalar(
                                 &::alloc::__export::must_use({
@@ -2817,6 +2827,55 @@ pub mod boolean {
                             error
                         });
                     }
+                    if has_ope {
+                        let distinct_op: i64 = sqlx::query_scalar(
+                                &::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "SELECT COUNT(DISTINCT payload->>\'op\') FROM {0}",
+                                            table,
+                                        ),
+                                    )
+                                }),
+                            )
+                            .fetch_one(&pool)
+                            .await?;
+                        if ::anyhow::__private::not(distinct_op == n) {
+                            return ::anyhow::__private::Err({
+                                let error = ::anyhow::__private::format_err(
+                                    format_args!(
+                                        "{0} distinct values -> {0} distinct op terms; got {1}",
+                                        n,
+                                        distinct_op,
+                                    ),
+                                );
+                                error
+                            });
+                        }
+                    } else {
+                        let with_op: i64 = sqlx::query_scalar(
+                                &::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "SELECT COUNT(*) FROM {0} WHERE payload ? \'op\'",
+                                            table,
+                                        ),
+                                    )
+                                }),
+                            )
+                            .fetch_one(&pool)
+                            .await?;
+                        if ::anyhow::__private::not(with_op == 0) {
+                            return ::anyhow::__private::Err({
+                                let error = ::anyhow::__private::format_err(
+                                    format_args!(
+                                        "fixture payload carries an `op` term but the catalog family declares no Ope domain — conversion targets drifted (CIP-3348)",
+                                    ),
+                                );
+                                error
+                            });
+                        }
+                    }
                 }
                 let mismatched_version: i64 = sqlx::query_scalar(
                         &::alloc::__export::must_use({
@@ -2855,28 +2914,6 @@ pub mod boolean {
                         let error = ::anyhow::__private::format_err(
                             format_args!(
                                 "no converted scalar payload may carry the v2 `k` discriminator",
-                            ),
-                        );
-                        error
-                    });
-                }
-                let with_op: i64 = sqlx::query_scalar(
-                        &::alloc::__export::must_use({
-                            ::alloc::fmt::format(
-                                format_args!(
-                                    "SELECT COUNT(*) FROM {0} WHERE payload ? \'op\'",
-                                    table,
-                                ),
-                            )
-                        }),
-                    )
-                    .fetch_one(&pool)
-                    .await?;
-                if ::anyhow::__private::not(with_op == 0) {
-                    return ::anyhow::__private::Err({
-                        let error = ::anyhow::__private::format_err(
-                            format_args!(
-                                "fixture payload carries an `op` term — the client now emits CLLW-OPE; pick up CIP-3348 (real-ciphertext ord_ope coverage)",
                             ),
                         );
                         error

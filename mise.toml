@@ -549,6 +549,42 @@ fi
 echo "JSONB-entry matrix inventory OK."
 """
 
+[tasks."test:matrix:inventory:ope"]
+description = "Verify the CLLW-OPE (<t>_ord_ope) test-name set against snapshots/ope_tests.txt (no database required)"
+dir = "{{config_root}}/tests/sqlx"
+run = """
+#!/usr/bin/env bash
+# The nine `<t>_ord_ope::` suites are SIBLINGS of the scalar matrix inventory,
+# NOT folded into it: they live as top-level modules (outside `scalars::`, so
+# the type-discovery step does not mis-read them as scalar types) and their
+# per-type name sets are not uniform (the integer reference module goes deeper;
+# text pins its hm-routed equality), so no single <T>-normalized baseline fits.
+# This pins the FULL name list instead — every individual ope test — so a
+# deleted/renamed/cfg-hidden ope test shows up as a removed line (the same
+# silent-shrinkage gap the scalar snapshot closes; deferred minor from #340,
+# picked up with CIP-3348). No database needed.
+set -euo pipefail
+test -f snapshots/ope_tests.txt || { echo "snapshots/ope_tests.txt missing — regenerate (see snapshots/README.md)." >&2; exit 1; }
+# Stub the generated fixtures on a bare / no-creds worktree (see
+# test:matrix:inventory), then compile + list. Harmless when real fixtures exist.
+EQL_ROOT="{{config_root}}"
+source "${EQL_ROOT}/tasks/test/stub-fixtures.sh"
+tmp=$(mktemp)
+cargo test --no-default-features --test encrypted_domain -- --list \\
+  | sed -n 's/: test$//p' \\
+  | grep -E '^[a-z0-9_]+_ord_ope::' \\
+  | LC_ALL=C sort > "$tmp"
+[ -s "$tmp" ] || { echo "No <t>_ord_ope:: tests found in the encrypted_domain binary." >&2; rm -f "$tmp"; exit 1; }
+if ! cmp -s "$tmp" snapshots/ope_tests.txt; then
+  echo "OPE test-name set differs from snapshots/ope_tests.txt." >&2
+  diff snapshots/ope_tests.txt "$tmp" >&2 || true
+  rm -f "$tmp"
+  exit 1
+fi
+rm -f "$tmp"
+echo "OPE inventory OK ($(wc -l < snapshots/ope_tests.txt | tr -d ' ') pinned tests)."
+"""
+
 [tasks."test:v3-jsonb:inventory"]
 description = "Verify the v3 jsonb SQLx test-name inventory snapshot (no database required)"
 dir = "{{config_root}}/tests/sqlx"

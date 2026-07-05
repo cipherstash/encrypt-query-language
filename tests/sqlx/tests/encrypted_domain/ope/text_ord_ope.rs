@@ -7,6 +7,10 @@ use crate::ope_support::ope_cast;
 
 crate::ope_ord_smoke!("text_ord_ope");
 
+// Real-ciphertext coverage (CIP-3348): the generated fixture's client-emitted
+// `op` terms must order and compare like the plaintext oracle.
+crate::ope_ord_fixture_smoke!("text_ord_ope", String, "eql_v3_text");
+
 #[sqlx::test]
 async fn equality_routes_through_hm_not_op(pool: PgPool) -> anyhow::Result<()> {
     // Same hm, different op => equal (hm routing). An op-routed `=` would say

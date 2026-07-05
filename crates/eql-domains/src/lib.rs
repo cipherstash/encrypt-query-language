@@ -53,9 +53,11 @@ pub const ENVELOPE_KEYS: &[&str] = &["v", "i", "c"];
 /// protocol). `Ope`'s `=`/`<>` claim on the integer families rests on OPE
 /// being deterministic — an order-preserving encryption maps equal
 /// plaintexts to equal ciphertexts (a randomized term would make `op`-routed
-/// equality silently return false negatives); re-verify against real
-/// ciphertexts once cipherstash-client emits `op` and the fixture pipeline
-/// covers the `_ord_ope` domains. The `json_key`/`extractor`/`ctor` values
+/// equality silently return false negatives). Verified against real
+/// ciphertexts (CIP-3348, cipherstash-client 0.38.1+): the fixture pipeline
+/// covers the `_ord_ope` domains and `property::cross_ciphertext` pins
+/// byte-identical `op` terms across independent encryptions of one
+/// plaintext. The `json_key`/`extractor`/`ctor` values
 /// are the cross-schema SQL contract — changing one is a generated-SQL
 /// behaviour change, not a refactor. (The per-term accessors and
 /// `*_for_terms` helpers are impl'd in `term`.)
@@ -299,11 +301,12 @@ pub const NUMERIC: DomainFamily = DomainFamily {
 /// **`_search` deliberately excludes `Ope`.** The combined domain stays
 /// `[Hm, Ore, Bloom]`: its operator surface would not grow (OPE's six
 /// operators are already covered via `Ore`, and range extraction would still
-/// route through `ord_term` — first-ordering-term-wins), while its CHECK would
-/// start requiring an `op` key the pinned client does not emit (CIP-3280),
-/// breaking every `_search` fixture for no new capability. Revisit when a
-/// client release ships `op` emission (CIP-3348) — a search-shaped column that
-/// wants OPE ordering today uses a separate `_ord_ope` column instead.
+/// route through `ord_term` — first-ordering-term-wins), so adding `Ope`
+/// would only widen its CHECK to require an `op` key for no new capability.
+/// The client now ships `op` emission (0.38.1, CIP-3348); keeping `_search`
+/// at `[Hm, Ore, Bloom]` is a deliberate design decision to revisit
+/// separately — a search-shaped column that wants OPE ordering today uses a
+/// separate `_ord_ope` column instead.
 const TEXT_DOMAINS: &[Domain] = &[
     Domain {
         name: "",

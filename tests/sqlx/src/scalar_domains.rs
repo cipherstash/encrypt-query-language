@@ -1430,6 +1430,21 @@ pub fn token_has_bloom_term(token: &str) -> bool {
         .unwrap_or(false)
 }
 
+/// True when scalar `token` declares any domain carrying the `Ope` term —
+/// i.e. its generated fixture is encrypted with the `ope` index and its
+/// payload includes an `op` (CLLW-OPE) key: a single hex string, natively
+/// bytea-sortable after hex-decode (CIP-3348, cipherstash-client 0.38.1+).
+/// Catalog-derived: every ordered family declares an `_ord_ope` domain, so
+/// every non-storage-only scalar's fixture carries `op`; a storage-only
+/// scalar (`boolean`) does not.
+pub fn token_has_ope_term(token: &str) -> bool {
+    CATALOG
+        .iter()
+        .find(|s| s.name == token)
+        .map(|s| s.domains.iter().any(|d| d.terms.contains(&Term::Ope)))
+        .unwrap_or(false)
+}
+
 /// True when scalar `token` is **storage-only / encryption-only** (a single
 /// term-less domain, no `_eq`/`_ord`/`_match`) — e.g. `bool`. Catalog-derived
 /// via `DomainFamily::is_storage_only`. Such a type's fixture is encrypted with no

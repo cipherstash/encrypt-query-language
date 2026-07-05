@@ -8,19 +8,19 @@
 //! be stated directly on hand-built hex strings — deterministic, no
 //! encryption/fixtures needed.
 //!
-//! **Follow-up (real ciphertexts).** The pinned cipherstash-client does not
-//! emit `op` yet, so there is no generated fixture to lean on and these
-//! suites use synthetic hex — a deliberate, temporary exception to the
-//! "tests run against real encrypted data" rule in CLAUDE.md. Once the
-//! client emits `op` for ordered scalars (CIP-3280 landed on client main),
-//! the fixture pipeline picks the term up and the matrix/property suites
-//! must gain real-ciphertext `ord_ope` coverage — in particular verifying
-//! against real crypto that the ciphertext order matches plaintext order and
-//! that CLLW-OPE is deterministic (equal plaintexts produce equal `op`
-//! terms; the integer families' `=`/`<>` route through `op`, so a randomized
-//! term would silently produce false negatives). These literal-payload
-//! suites verify the SQL surface (routing, inlining, index engagement, CHECK
-//! discipline), not the cryptography.
+//! **Real ciphertexts (CIP-3348).** cipherstash-client 0.38.1 emits `op`
+//! for `ope`-indexed scalar columns, the generated `eql_v3_<T>` fixtures
+//! declare the `ope` index, and the conversion routes the term through — so
+//! next to the literal-payload smoke tests (which verify the SQL surface:
+//! routing, inlining, index engagement, CHECK discipline) every per-type
+//! module also stamps [`ope_ord_fixture_smoke!`]: real-ciphertext assertions
+//! that the CLLW-OPE ciphertext order matches plaintext order (ORDER BY +
+//! range predicates against the in-table plaintext oracle). CLLW-OPE
+//! determinism (equal plaintexts produce byte-identical `op` terms; the
+//! integer families' `=`/`<>` route through `op`, so a randomized term would
+//! silently produce false negatives) is pinned on the doubles fixtures by
+//! `property::cross_ciphertext` and, live, by
+//! `fixtures::cipherstash::live_tests`.
 
 /// Literal cast expression for an `eql_v3.<domain>` payload carrying BOTH the
 /// exact-equality term `hm` and the CLLW-OPE hex term `op`. Domain CHECKs
@@ -122,6 +122,170 @@ macro_rules! ope_ord_smoke {
                 "{}: missing op must violate the domain CHECK, got: {err}",
                 $domain
             );
+            Ok(())
+        }
+    };
+}
+
+/// Stamp the real-ciphertext `_ord_ope` fixture tests for one scalar
+/// (CIP-3348). The generated `fixtures.eql_v3_<T>` table carries
+/// client-encrypted payloads whose `op` term came out of cipherstash-client's
+/// `ope` index (0.38.1+), so these assertions exercise the actual CLLW-OPE
+/// cryptography against the in-table `plaintext` oracle — the coverage the
+/// hand-built literal suites above deliberately do not claim.
+///
+/// - `$domain`  — the ope domain name (`"integer_ord_ope"`).
+/// - `$scalar`  — the Rust plaintext type (`i32`), which must be `ScalarType`.
+/// - `$script`  — the fixture script name (`"eql_v3_integer"`).
+///
+/// The fixtures path is relative to the per-type module files in
+/// `tests/encrypted_domain/ope/` (all nine invokers live in this directory),
+/// mirroring the matrix's `script_path` convention.
+#[macro_export]
+macro_rules! ope_ord_fixture_smoke {
+    ($domain:literal, $scalar:ty, $script:literal) => {
+        #[sqlx::test(fixtures(path = "../../../fixtures", scripts($script)))]
+        async fn ord_ope_fixture_payloads_cast_and_carry_op(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            use eql_tests::scalar_domains::ScalarType;
+            let table = <$scalar as ScalarType>::fixture_table_name();
+            let n = <$scalar as ScalarType>::fixture_values().len() as i64;
+
+            // Every generated payload carries a string `op` (CLLW-OPE) term…
+            let with_op: i64 = sqlx::query_scalar(&format!(
+                "SELECT COUNT(*) FROM {table} \
+                 WHERE payload ? 'op' AND jsonb_typeof(payload->'op') = 'string'",
+            ))
+            .fetch_one(&pool)
+            .await?;
+            assert_eq!(
+                with_op, n,
+                "{}: every fixture payload must carry a string `op` term \
+                 (regenerate fixtures on cipherstash-client 0.38.1+)",
+                $domain
+            );
+
+            // …and every payload casts into the ope domain (the CHECK accepts
+            // a real client ciphertext; a cast failure errors the query).
+            let cast_ok: i64 = sqlx::query_scalar(&format!(
+                "SELECT COUNT((payload)::eql_v3.{}) FROM {table}",
+                $domain
+            ))
+            .fetch_one(&pool)
+            .await?;
+            assert_eq!(
+                cast_ok, n,
+                "{}: every fixture payload must cast into the domain",
+                $domain
+            );
+            Ok(())
+        }
+
+        #[sqlx::test(fixtures(path = "../../../fixtures", scripts($script)))]
+        async fn ord_ope_fixture_order_matches_plaintext_order(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            use eql_tests::scalar_domains::ScalarType;
+            let table = <$scalar as ScalarType>::fixture_table_name();
+
+            // The headline crypto property: CLLW-OPE ciphertext order (native
+            // bytea comparison over the decoded `op` hex, via the extractor)
+            // must equal plaintext order. Same Rust-sort oracle as the
+            // matrix's ORDER BY arms.
+            let mut expected: Vec<$scalar> = <$scalar as ScalarType>::fixture_values().to_vec();
+            expected.sort();
+
+            let asc: Vec<$scalar> = sqlx::query_scalar(&format!(
+                "SELECT plaintext FROM {table} \
+                 ORDER BY eql_v3.ord_ope_term((payload)::eql_v3.{})",
+                $domain
+            ))
+            .fetch_all(&pool)
+            .await?;
+            assert_eq!(
+                asc, expected,
+                "{}: ORDER BY ord_ope_term over real ciphertexts must sort in \
+                 plaintext order",
+                $domain
+            );
+
+            let desc: Vec<$scalar> = sqlx::query_scalar(&format!(
+                "SELECT plaintext FROM {table} \
+                 ORDER BY eql_v3.ord_ope_term((payload)::eql_v3.{}) DESC",
+                $domain
+            ))
+            .fetch_all(&pool)
+            .await?;
+            let mut expected_desc = expected.clone();
+            expected_desc.reverse();
+            assert_eq!(
+                desc, expected_desc,
+                "{}: ORDER BY ord_ope_term DESC over real ciphertexts must \
+                 sort in reverse plaintext order",
+                $domain
+            );
+            Ok(())
+        }
+
+        #[sqlx::test(fixtures(path = "../../../fixtures", scripts($script)))]
+        async fn ord_ope_fixture_range_and_equality_match_plaintext_oracle(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            use eql_tests::scalar_domains::{OrderedScalar, ScalarType};
+            let table = <$scalar as ScalarType>::fixture_table_name();
+
+            // Pivot on the interior (mid) fixture value: fetch ITS real
+            // payload from the table and compare every ordering/equality
+            // operator's row set against the plaintext oracle. For the
+            // integer families `=`/`<>` route through `op` itself, so this is
+            // the real-crypto proof that op-routed equality returns exactly
+            // the equal-plaintext rows (sound because CLLW-OPE is
+            // deterministic); for text they route through `hm` per catalog
+            // ordering.
+            let mid: $scalar = <$scalar as OrderedScalar>::mid_pivot();
+            let mid_lit = <$scalar as ScalarType>::to_sql_literal(&mid);
+            let pivot_json: String = sqlx::query_scalar(&format!(
+                "SELECT payload::text FROM {table} WHERE plaintext = {mid_lit}",
+            ))
+            .fetch_one(&pool)
+            .await?;
+            let pivot_cast = format!(
+                "'{}'::jsonb::eql_v3.{}",
+                pivot_json.replace('\'', "''"),
+                $domain
+            );
+
+            let values: Vec<$scalar> = <$scalar as ScalarType>::fixture_values().to_vec();
+            for op in ["<", "<=", ">", ">=", "=", "<>"] {
+                let mut expected: Vec<$scalar> = values
+                    .iter()
+                    .filter(|v| match op {
+                        "<" => **v < mid,
+                        "<=" => **v <= mid,
+                        ">" => **v > mid,
+                        ">=" => **v >= mid,
+                        "=" => **v == mid,
+                        "<>" => **v != mid,
+                        other => unreachable!("unexpected operator {other}"),
+                    })
+                    .cloned()
+                    .collect();
+                expected.sort();
+                let sql = format!(
+                    "SELECT plaintext FROM {table} \
+                     WHERE (payload)::eql_v3.{domain} {op} ({pivot_cast})",
+                    domain = $domain,
+                );
+                let mut actual: Vec<$scalar> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
+                actual.sort();
+                assert_eq!(
+                    actual, expected,
+                    "{}: `{op}` against the real mid-pivot ciphertext must \
+                     match the plaintext oracle (SQL: {sql})",
+                    $domain
+                );
+            }
             Ok(())
         }
     };

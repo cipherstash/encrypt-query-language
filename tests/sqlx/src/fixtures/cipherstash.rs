@@ -7,7 +7,8 @@
 //! plaintexts through a Proxy-mediated Postgres connection. That whole loop
 //! existed only because the Proxy was the encryption oracle.
 //!
-//! `cipherstash-client` 0.35 exposes the same surface natively. This module
+//! `cipherstash-client` (0.38.1, the first release that emits the scalar
+//! CLLW-OPE `op` term — CIP-3348) exposes the same surface natively. This module
 //! owns the bootstrap — `build_cipher()` builds a `ScopedCipher<AutoStrategy>` —
 //! and the batched helper `encrypt_store()` that wraps `eql::encrypt_eql` and
 //! returns the resulting EQL payloads as `serde_json::Value`s ready to bind
@@ -127,6 +128,7 @@ fn index_type_for(kind: IndexKind) -> IndexType {
     match kind {
         IndexKind::Unique => Index::new_unique().index_type,
         IndexKind::Ore => IndexType::Ore,
+        IndexKind::Ope => Index::new_ope().index_type,
         IndexKind::Match => Index::new_match().index_type,
         // No `Index::new_ste_vec()` constructor exists — SteVec is a struct
         // variant. `mode: SteVecMode::Standard` (the default) yields the
@@ -274,6 +276,9 @@ mod tests {
         let ore = Index::new(index_type_for(IndexKind::Ore));
         assert!(ore.is_ore(), "Ore must map to the ORE index");
 
+        let ope = Index::new(index_type_for(IndexKind::Ope));
+        assert!(ope.is_ope(), "Ope must map to the OPE (CLLW-OPE) index");
+
         let m = Index::new(index_type_for(IndexKind::Match));
         assert!(m.is_match(), "Match must map to the match (bloom) index");
     }
@@ -337,17 +342,28 @@ mod live_tests {
     use super::*;
     use serde_json::Value;
 
-    /// The index set used by every live test — `Unique` drives the `hm`
+    /// The index set used by most live tests — `Unique` drives the `hm`
     /// term, `Ore` drives the `ob` term, so the returned payloads carry
     /// both.
     const INT_INDEXES: &[IndexKind] = &[IndexKind::Unique, IndexKind::Ore];
+
+    /// The full ordered-integer index set including `Ope`, which drives the
+    /// scalar CLLW-OPE `op` term (cipherstash-client 0.38.1+, CIP-3348).
+    const INT_INDEXES_WITH_OPE: &[IndexKind] = &[IndexKind::Unique, IndexKind::Ore, IndexKind::Ope];
 
     /// Assert the well-formed v3 Store shape: the payload is a JSON object
     /// with non-null `v`, `c`, `hm`, `ob`, and `i` fields, `v = 3`, and no
     /// `k` discriminator (dropped by the from_v2 conversion). Mirrors the
     /// per-key assertions in the generated `scalars::integer` matrix suite
     /// (emitted from the `scalar_types!` list in `scalar_types.rs`).
-    fn assert_store_shape(payload: &Value) {
+    ///
+    /// The `op` (CLLW-OPE) key is pinned in BOTH directions against the
+    /// index set that produced the payload (CIP-3348): an `ope`-indexed
+    /// column MUST carry a hex-string `op` term, and a column without the
+    /// `ope` index MUST NOT — a stray `op` on a non-ope column means the
+    /// client started emitting the term unconditionally and the fixture
+    /// conversion targets need re-auditing.
+    fn assert_store_shape(payload: &Value, indexes: &[IndexKind]) {
         let obj = payload.as_object().expect("payload must be a JSON object");
         for key in ["v", "c", "hm", "ob", "i"] {
             assert!(
@@ -368,15 +384,27 @@ mod live_tests {
             !obj.contains_key("k"),
             "a converted scalar payload must not carry `k`; got {payload}"
         );
-        // Tripwire (CIP-3348): the pinned client emits no `op` (CLLW-OPE)
-        // term, so ope coverage runs on hand-built hex. The first client
-        // release that emits `op` fails here loudly — add real-ciphertext
-        // ord_ope fixture coverage (CIP-3348) instead of relaxing this.
-        assert!(
-            !obj.contains_key("op"),
-            "payload carries an `op` term — the client now emits CLLW-OPE; \
-             pick up CIP-3348 (real-ciphertext ord_ope coverage); got {payload}"
-        );
+        if indexes.contains(&IndexKind::Ope) {
+            let op = obj.get("op").and_then(Value::as_str).unwrap_or_else(|| {
+                panic!(
+                    "an ope-indexed payload must carry a string `op` (CLLW-OPE) \
+                     term (CIP-3348); got {payload}"
+                )
+            });
+            assert!(
+                !op.is_empty()
+                    && op.len().is_multiple_of(2)
+                    && op.bytes().all(|b| b.is_ascii_hexdigit()),
+                "`op` must be a non-empty even-length hex string; got {op:?}"
+            );
+        } else {
+            assert!(
+                !obj.contains_key("op"),
+                "a payload without the ope index must NOT carry an `op` term — \
+                 the client emits CLLW-OPE only for ope-indexed columns \
+                 (CIP-3348); got {payload}"
+            );
+        }
     }
 
     #[tokio::test]
@@ -386,7 +414,69 @@ mod live_tests {
             .await
             .expect("encrypt_store should succeed against live ZeroKMS");
         assert_eq!(out.len(), 1, "single input should produce single output");
-        assert_store_shape(&out[0]);
+        assert_store_shape(&out[0], INT_INDEXES);
+    }
+
+    #[tokio::test]
+    #[ignore = "live ZeroKMS — run via `cargo test --features fixture-gen -- --ignored`"]
+    async fn encrypt_store_with_ope_index_emits_the_op_term() {
+        // CIP-3348: cipherstash-client 0.38.1 emits the scalar CLLW-OPE
+        // term for `ope`-indexed columns; from_v2 routes it through to the
+        // `_ord_ope`-capable v3 payload as a single hex string (NOT an
+        // array like `ob`).
+        let out = encrypt_store(
+            "live_ope",
+            "payload",
+            &[-1_i32, 0, 42],
+            INT_INDEXES_WITH_OPE,
+        )
+        .await
+        .expect("encrypt_store should succeed against live ZeroKMS");
+        assert_eq!(out.len(), 3);
+        for payload in &out {
+            assert_store_shape(payload, INT_INDEXES_WITH_OPE);
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "live ZeroKMS — run via `cargo test --features fixture-gen -- --ignored`"]
+    async fn encrypt_store_ope_term_is_deterministic_for_equal_plaintexts() {
+        // CLLW-OPE determinism is load-bearing (CIP-3348): the integer
+        // families route `=`/`<>` through `op`, so two independent
+        // encryptions of one plaintext MUST yield byte-identical `op` hex
+        // strings — a randomized term would make op-routed equality
+        // silently return false negatives. Two separate encrypt_store
+        // calls = two independent cipher bootstraps, so this pins
+        // determinism across encryption sessions, not just within a batch.
+        let first = encrypt_store("live_ope_det", "payload", &[42_i32], INT_INDEXES_WITH_OPE)
+            .await
+            .expect("first encryption should succeed against live ZeroKMS");
+        let second = encrypt_store("live_ope_det", "payload", &[42_i32], INT_INDEXES_WITH_OPE)
+            .await
+            .expect("second encryption should succeed against live ZeroKMS");
+        let op_of = |payloads: &[Value]| -> String {
+            payloads[0]
+                .get("op")
+                .and_then(Value::as_str)
+                .expect("ope-indexed payload must carry a string `op` term")
+                .to_string()
+        };
+        let (a, b) = (op_of(&first), op_of(&second));
+        assert_eq!(
+            a, b,
+            "CLLW-OPE must be deterministic: equal plaintexts must produce \
+             byte-identical `op` terms (the integer families' `=`/`<>` route \
+             through `op`); got {a:?} vs {b:?}"
+        );
+        // And a control: a different plaintext must NOT collide.
+        let other = encrypt_store("live_ope_det", "payload", &[43_i32], INT_INDEXES_WITH_OPE)
+            .await
+            .expect("control encryption should succeed against live ZeroKMS");
+        assert_ne!(
+            a,
+            op_of(&other),
+            "distinct plaintexts must yield distinct `op` terms"
+        );
     }
 
     #[tokio::test]
@@ -402,7 +492,7 @@ mod live_tests {
             "batch length must equal input length"
         );
         for (i, payload) in out.iter().enumerate() {
-            assert_store_shape(payload);
+            assert_store_shape(payload, INT_INDEXES);
             // Each payload's `i.t` should match the table identifier we
             // supplied — that's the field consuming code uses to bind a
             // payload to its source column.
