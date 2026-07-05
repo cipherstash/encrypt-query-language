@@ -129,7 +129,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref_name }}
+          # Pin from the dispatch SHA that resolve validated. Pushing HEAD back
+          # to the branch will fail if the branch advanced meanwhile.
+          ref: ${{ github.sha }}
           fetch-depth: 0
 
       - name: Import GPG key
