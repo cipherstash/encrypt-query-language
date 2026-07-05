@@ -6,12 +6,12 @@
 
 DO $$
 BEGIN
-  --! @brief Encrypted domain eql_v3.text.
+  --! @brief Encrypted domain public.text.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'text' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'text' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.text AS jsonb
+    CREATE DOMAIN public.text AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -21,12 +21,12 @@ BEGIN
       );
   END IF;
 
-  --! @brief Encrypted domain eql_v3.text_eq.
+  --! @brief Encrypted domain public.text_eq.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'text_eq' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'text_eq' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.text_eq AS jsonb
+    CREATE DOMAIN public.text_eq AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -37,12 +37,12 @@ BEGIN
       );
   END IF;
 
-  --! @brief Encrypted domain eql_v3.text_match.
+  --! @brief Encrypted domain public.text_match.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'text_match' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'text_match' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.text_match AS jsonb
+    CREATE DOMAIN public.text_match AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -53,12 +53,12 @@ BEGIN
       );
   END IF;
 
-  --! @brief Encrypted domain eql_v3.text_ord_ore.
+  --! @brief Encrypted domain public.text_ord_ore.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'text_ord_ore' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'text_ord_ore' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.text_ord_ore AS jsonb
+    CREATE DOMAIN public.text_ord_ore AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -72,12 +72,12 @@ BEGIN
       );
   END IF;
 
-  --! @brief Encrypted domain eql_v3.text_ord.
+  --! @brief Encrypted domain public.text_ord.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'text_ord' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'text_ord' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.text_ord AS jsonb
+    CREATE DOMAIN public.text_ord AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -91,12 +91,12 @@ BEGIN
       );
   END IF;
 
-  --! @brief Encrypted domain eql_v3.text_ord_ope.
+  --! @brief Encrypted domain public.text_ord_ope.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'text_ord_ope' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'text_ord_ope' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.text_ord_ope AS jsonb
+    CREATE DOMAIN public.text_ord_ope AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -108,12 +108,12 @@ BEGIN
       );
   END IF;
 
-  --! @brief Encrypted domain eql_v3.text_search.
+  --! @brief Encrypted domain public.text_search.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'text_search' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'text_search' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.text_search AS jsonb
+    CREATE DOMAIN public.text_search AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'

@@ -5,14 +5,14 @@
 -- REQUIRE: src/v3/scalars/numeric/numeric_ord_operators.sql
 
 --! @file encrypted_domain/numeric/numeric_ord_aggregates.sql
---! @brief Aggregates for eql_v3.numeric_ord.
+--! @brief Aggregates for public.numeric_ord.
 
---! @brief State function for min on eql_v3.numeric_ord.
---! @param state eql_v3.numeric_ord
---! @param value eql_v3.numeric_ord
---! @return eql_v3.numeric_ord
-CREATE FUNCTION eql_v3_internal.min_sfunc(state eql_v3.numeric_ord, value eql_v3.numeric_ord)
-RETURNS eql_v3.numeric_ord
+--! @brief State function for min on public.numeric_ord.
+--! @param state public.numeric_ord
+--! @param value public.numeric_ord
+--! @return public.numeric_ord
+CREATE FUNCTION eql_v3_internal.min_sfunc(state public.numeric_ord, value public.numeric_ord)
+RETURNS public.numeric_ord
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
@@ -24,22 +24,22 @@ BEGIN
 END;
 $$;
 
---! @brief min aggregate for eql_v3.numeric_ord.
---! @param input eql_v3.numeric_ord
---! @return eql_v3.numeric_ord
-CREATE AGGREGATE eql_v3.min(eql_v3.numeric_ord) (
+--! @brief min aggregate for public.numeric_ord.
+--! @param input public.numeric_ord
+--! @return public.numeric_ord
+CREATE AGGREGATE eql_v3.min(public.numeric_ord) (
   sfunc = eql_v3_internal.min_sfunc,
-  stype = eql_v3.numeric_ord,
+  stype = public.numeric_ord,
   combinefunc = eql_v3_internal.min_sfunc,
   parallel = safe
 );
 
---! @brief State function for max on eql_v3.numeric_ord.
---! @param state eql_v3.numeric_ord
---! @param value eql_v3.numeric_ord
---! @return eql_v3.numeric_ord
-CREATE FUNCTION eql_v3_internal.max_sfunc(state eql_v3.numeric_ord, value eql_v3.numeric_ord)
-RETURNS eql_v3.numeric_ord
+--! @brief State function for max on public.numeric_ord.
+--! @param state public.numeric_ord
+--! @param value public.numeric_ord
+--! @return public.numeric_ord
+CREATE FUNCTION eql_v3_internal.max_sfunc(state public.numeric_ord, value public.numeric_ord)
+RETURNS public.numeric_ord
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
@@ -51,12 +51,12 @@ BEGIN
 END;
 $$;
 
---! @brief max aggregate for eql_v3.numeric_ord.
---! @param input eql_v3.numeric_ord
---! @return eql_v3.numeric_ord
-CREATE AGGREGATE eql_v3.max(eql_v3.numeric_ord) (
+--! @brief max aggregate for public.numeric_ord.
+--! @param input public.numeric_ord
+--! @return public.numeric_ord
+CREATE AGGREGATE eql_v3.max(public.numeric_ord) (
   sfunc = eql_v3_internal.max_sfunc,
-  stype = eql_v3.numeric_ord,
+  stype = public.numeric_ord,
   combinefunc = eql_v3_internal.max_sfunc,
   parallel = safe
 );

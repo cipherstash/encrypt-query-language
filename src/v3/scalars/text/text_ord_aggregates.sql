@@ -5,14 +5,14 @@
 -- REQUIRE: src/v3/scalars/text/text_ord_operators.sql
 
 --! @file encrypted_domain/text/text_ord_aggregates.sql
---! @brief Aggregates for eql_v3.text_ord.
+--! @brief Aggregates for public.text_ord.
 
---! @brief State function for min on eql_v3.text_ord.
---! @param state eql_v3.text_ord
---! @param value eql_v3.text_ord
---! @return eql_v3.text_ord
-CREATE FUNCTION eql_v3_internal.min_sfunc(state eql_v3.text_ord, value eql_v3.text_ord)
-RETURNS eql_v3.text_ord
+--! @brief State function for min on public.text_ord.
+--! @param state public.text_ord
+--! @param value public.text_ord
+--! @return public.text_ord
+CREATE FUNCTION eql_v3_internal.min_sfunc(state public.text_ord, value public.text_ord)
+RETURNS public.text_ord
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
@@ -24,22 +24,22 @@ BEGIN
 END;
 $$;
 
---! @brief min aggregate for eql_v3.text_ord.
---! @param input eql_v3.text_ord
---! @return eql_v3.text_ord
-CREATE AGGREGATE eql_v3.min(eql_v3.text_ord) (
+--! @brief min aggregate for public.text_ord.
+--! @param input public.text_ord
+--! @return public.text_ord
+CREATE AGGREGATE eql_v3.min(public.text_ord) (
   sfunc = eql_v3_internal.min_sfunc,
-  stype = eql_v3.text_ord,
+  stype = public.text_ord,
   combinefunc = eql_v3_internal.min_sfunc,
   parallel = safe
 );
 
---! @brief State function for max on eql_v3.text_ord.
---! @param state eql_v3.text_ord
---! @param value eql_v3.text_ord
---! @return eql_v3.text_ord
-CREATE FUNCTION eql_v3_internal.max_sfunc(state eql_v3.text_ord, value eql_v3.text_ord)
-RETURNS eql_v3.text_ord
+--! @brief State function for max on public.text_ord.
+--! @param state public.text_ord
+--! @param value public.text_ord
+--! @return public.text_ord
+CREATE FUNCTION eql_v3_internal.max_sfunc(state public.text_ord, value public.text_ord)
+RETURNS public.text_ord
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
@@ -51,12 +51,12 @@ BEGIN
 END;
 $$;
 
---! @brief max aggregate for eql_v3.text_ord.
---! @param input eql_v3.text_ord
---! @return eql_v3.text_ord
-CREATE AGGREGATE eql_v3.max(eql_v3.text_ord) (
+--! @brief max aggregate for public.text_ord.
+--! @param input public.text_ord
+--! @return public.text_ord
+CREATE AGGREGATE eql_v3.max(public.text_ord) (
   sfunc = eql_v3_internal.max_sfunc,
-  stype = eql_v3.text_ord,
+  stype = public.text_ord,
   combinefunc = eql_v3_internal.max_sfunc,
   parallel = safe
 );

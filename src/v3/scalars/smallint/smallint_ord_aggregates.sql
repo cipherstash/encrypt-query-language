@@ -5,14 +5,14 @@
 -- REQUIRE: src/v3/scalars/smallint/smallint_ord_operators.sql
 
 --! @file encrypted_domain/smallint/smallint_ord_aggregates.sql
---! @brief Aggregates for eql_v3.smallint_ord.
+--! @brief Aggregates for public.smallint_ord.
 
---! @brief State function for min on eql_v3.smallint_ord.
---! @param state eql_v3.smallint_ord
---! @param value eql_v3.smallint_ord
---! @return eql_v3.smallint_ord
-CREATE FUNCTION eql_v3_internal.min_sfunc(state eql_v3.smallint_ord, value eql_v3.smallint_ord)
-RETURNS eql_v3.smallint_ord
+--! @brief State function for min on public.smallint_ord.
+--! @param state public.smallint_ord
+--! @param value public.smallint_ord
+--! @return public.smallint_ord
+CREATE FUNCTION eql_v3_internal.min_sfunc(state public.smallint_ord, value public.smallint_ord)
+RETURNS public.smallint_ord
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
@@ -24,22 +24,22 @@ BEGIN
 END;
 $$;
 
---! @brief min aggregate for eql_v3.smallint_ord.
---! @param input eql_v3.smallint_ord
---! @return eql_v3.smallint_ord
-CREATE AGGREGATE eql_v3.min(eql_v3.smallint_ord) (
+--! @brief min aggregate for public.smallint_ord.
+--! @param input public.smallint_ord
+--! @return public.smallint_ord
+CREATE AGGREGATE eql_v3.min(public.smallint_ord) (
   sfunc = eql_v3_internal.min_sfunc,
-  stype = eql_v3.smallint_ord,
+  stype = public.smallint_ord,
   combinefunc = eql_v3_internal.min_sfunc,
   parallel = safe
 );
 
---! @brief State function for max on eql_v3.smallint_ord.
---! @param state eql_v3.smallint_ord
---! @param value eql_v3.smallint_ord
---! @return eql_v3.smallint_ord
-CREATE FUNCTION eql_v3_internal.max_sfunc(state eql_v3.smallint_ord, value eql_v3.smallint_ord)
-RETURNS eql_v3.smallint_ord
+--! @brief State function for max on public.smallint_ord.
+--! @param state public.smallint_ord
+--! @param value public.smallint_ord
+--! @return public.smallint_ord
+CREATE FUNCTION eql_v3_internal.max_sfunc(state public.smallint_ord, value public.smallint_ord)
+RETURNS public.smallint_ord
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
@@ -51,12 +51,12 @@ BEGIN
 END;
 $$;
 
---! @brief max aggregate for eql_v3.smallint_ord.
---! @param input eql_v3.smallint_ord
---! @return eql_v3.smallint_ord
-CREATE AGGREGATE eql_v3.max(eql_v3.smallint_ord) (
+--! @brief max aggregate for public.smallint_ord.
+--! @param input public.smallint_ord
+--! @return public.smallint_ord
+CREATE AGGREGATE eql_v3.max(public.smallint_ord) (
   sfunc = eql_v3_internal.max_sfunc,
-  stype = eql_v3.smallint_ord,
+  stype = public.smallint_ord,
   combinefunc = eql_v3_internal.max_sfunc,
   parallel = safe
 );

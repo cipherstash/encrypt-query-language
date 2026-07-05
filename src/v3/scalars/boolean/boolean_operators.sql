@@ -4,224 +4,224 @@
 -- REQUIRE: src/v3/scalars/boolean/boolean_functions.sql
 
 --! @file encrypted_domain/boolean/boolean_operators.sql
---! @brief Operators for eql_v3.boolean.
+--! @brief Operators for public.boolean.
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3_internal.eq,
-  LEFTARG = eql_v3.boolean, RIGHTARG = eql_v3.boolean
-);
-
-CREATE OPERATOR = (
-  FUNCTION = eql_v3_internal.eq,
-  LEFTARG = eql_v3.boolean, RIGHTARG = jsonb
+  LEFTARG = public.boolean, RIGHTARG = public.boolean
 );
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3_internal.eq,
-  LEFTARG = jsonb, RIGHTARG = eql_v3.boolean
+  LEFTARG = public.boolean, RIGHTARG = jsonb
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = jsonb, RIGHTARG = public.boolean
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3_internal.neq,
-  LEFTARG = eql_v3.boolean, RIGHTARG = eql_v3.boolean
+  LEFTARG = public.boolean, RIGHTARG = public.boolean
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3_internal.neq,
-  LEFTARG = eql_v3.boolean, RIGHTARG = jsonb
+  LEFTARG = public.boolean, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3_internal.neq,
-  LEFTARG = jsonb, RIGHTARG = eql_v3.boolean
+  LEFTARG = jsonb, RIGHTARG = public.boolean
 );
 
 CREATE OPERATOR < (
   FUNCTION = eql_v3_internal.lt,
-  LEFTARG = eql_v3.boolean, RIGHTARG = eql_v3.boolean
+  LEFTARG = public.boolean, RIGHTARG = public.boolean
 );
 
 CREATE OPERATOR < (
   FUNCTION = eql_v3_internal.lt,
-  LEFTARG = eql_v3.boolean, RIGHTARG = jsonb
+  LEFTARG = public.boolean, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR < (
   FUNCTION = eql_v3_internal.lt,
-  LEFTARG = jsonb, RIGHTARG = eql_v3.boolean
+  LEFTARG = jsonb, RIGHTARG = public.boolean
 );
 
 CREATE OPERATOR <= (
   FUNCTION = eql_v3_internal.lte,
-  LEFTARG = eql_v3.boolean, RIGHTARG = eql_v3.boolean
+  LEFTARG = public.boolean, RIGHTARG = public.boolean
 );
 
 CREATE OPERATOR <= (
   FUNCTION = eql_v3_internal.lte,
-  LEFTARG = eql_v3.boolean, RIGHTARG = jsonb
+  LEFTARG = public.boolean, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR <= (
   FUNCTION = eql_v3_internal.lte,
-  LEFTARG = jsonb, RIGHTARG = eql_v3.boolean
+  LEFTARG = jsonb, RIGHTARG = public.boolean
 );
 
 CREATE OPERATOR > (
   FUNCTION = eql_v3_internal.gt,
-  LEFTARG = eql_v3.boolean, RIGHTARG = eql_v3.boolean
+  LEFTARG = public.boolean, RIGHTARG = public.boolean
 );
 
 CREATE OPERATOR > (
   FUNCTION = eql_v3_internal.gt,
-  LEFTARG = eql_v3.boolean, RIGHTARG = jsonb
+  LEFTARG = public.boolean, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR > (
   FUNCTION = eql_v3_internal.gt,
-  LEFTARG = jsonb, RIGHTARG = eql_v3.boolean
+  LEFTARG = jsonb, RIGHTARG = public.boolean
 );
 
 CREATE OPERATOR >= (
   FUNCTION = eql_v3_internal.gte,
-  LEFTARG = eql_v3.boolean, RIGHTARG = eql_v3.boolean
+  LEFTARG = public.boolean, RIGHTARG = public.boolean
 );
 
 CREATE OPERATOR >= (
   FUNCTION = eql_v3_internal.gte,
-  LEFTARG = eql_v3.boolean, RIGHTARG = jsonb
+  LEFTARG = public.boolean, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR >= (
   FUNCTION = eql_v3_internal.gte,
-  LEFTARG = jsonb, RIGHTARG = eql_v3.boolean
+  LEFTARG = jsonb, RIGHTARG = public.boolean
 );
 
 CREATE OPERATOR @> (
   FUNCTION = eql_v3_internal.contains,
-  LEFTARG = eql_v3.boolean, RIGHTARG = eql_v3.boolean
+  LEFTARG = public.boolean, RIGHTARG = public.boolean
 );
 
 CREATE OPERATOR @> (
   FUNCTION = eql_v3_internal.contains,
-  LEFTARG = eql_v3.boolean, RIGHTARG = jsonb
+  LEFTARG = public.boolean, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR @> (
   FUNCTION = eql_v3_internal.contains,
-  LEFTARG = jsonb, RIGHTARG = eql_v3.boolean
+  LEFTARG = jsonb, RIGHTARG = public.boolean
 );
 
 CREATE OPERATOR <@ (
   FUNCTION = eql_v3_internal.contained_by,
-  LEFTARG = eql_v3.boolean, RIGHTARG = eql_v3.boolean
+  LEFTARG = public.boolean, RIGHTARG = public.boolean
 );
 
 CREATE OPERATOR <@ (
   FUNCTION = eql_v3_internal.contained_by,
-  LEFTARG = eql_v3.boolean, RIGHTARG = jsonb
+  LEFTARG = public.boolean, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR <@ (
   FUNCTION = eql_v3_internal.contained_by,
-  LEFTARG = jsonb, RIGHTARG = eql_v3.boolean
+  LEFTARG = jsonb, RIGHTARG = public.boolean
 );
 
 CREATE OPERATOR -> (
   FUNCTION = eql_v3_internal."->",
-  LEFTARG = eql_v3.boolean, RIGHTARG = text
+  LEFTARG = public.boolean, RIGHTARG = text
 );
 
 CREATE OPERATOR -> (
   FUNCTION = eql_v3_internal."->",
-  LEFTARG = eql_v3.boolean, RIGHTARG = integer
+  LEFTARG = public.boolean, RIGHTARG = integer
 );
 
 CREATE OPERATOR -> (
   FUNCTION = eql_v3_internal."->",
-  LEFTARG = jsonb, RIGHTARG = eql_v3.boolean
+  LEFTARG = jsonb, RIGHTARG = public.boolean
 );
 
 CREATE OPERATOR ->> (
   FUNCTION = eql_v3_internal."->>",
-  LEFTARG = eql_v3.boolean, RIGHTARG = text
+  LEFTARG = public.boolean, RIGHTARG = text
 );
 
 CREATE OPERATOR ->> (
   FUNCTION = eql_v3_internal."->>",
-  LEFTARG = eql_v3.boolean, RIGHTARG = integer
+  LEFTARG = public.boolean, RIGHTARG = integer
 );
 
 CREATE OPERATOR ->> (
   FUNCTION = eql_v3_internal."->>",
-  LEFTARG = jsonb, RIGHTARG = eql_v3.boolean
+  LEFTARG = jsonb, RIGHTARG = public.boolean
 );
 
 CREATE OPERATOR ? (
   FUNCTION = eql_v3_internal."?",
-  LEFTARG = eql_v3.boolean, RIGHTARG = text
+  LEFTARG = public.boolean, RIGHTARG = text
 );
 
 CREATE OPERATOR ?| (
   FUNCTION = eql_v3_internal."?|",
-  LEFTARG = eql_v3.boolean, RIGHTARG = text[]
+  LEFTARG = public.boolean, RIGHTARG = text[]
 );
 
 CREATE OPERATOR ?& (
   FUNCTION = eql_v3_internal."?&",
-  LEFTARG = eql_v3.boolean, RIGHTARG = text[]
+  LEFTARG = public.boolean, RIGHTARG = text[]
 );
 
 CREATE OPERATOR @? (
   FUNCTION = eql_v3_internal."@?",
-  LEFTARG = eql_v3.boolean, RIGHTARG = jsonpath
+  LEFTARG = public.boolean, RIGHTARG = jsonpath
 );
 
 CREATE OPERATOR @@ (
   FUNCTION = eql_v3_internal."@@",
-  LEFTARG = eql_v3.boolean, RIGHTARG = jsonpath
+  LEFTARG = public.boolean, RIGHTARG = jsonpath
 );
 
 CREATE OPERATOR #> (
   FUNCTION = eql_v3_internal."#>",
-  LEFTARG = eql_v3.boolean, RIGHTARG = text[]
+  LEFTARG = public.boolean, RIGHTARG = text[]
 );
 
 CREATE OPERATOR #>> (
   FUNCTION = eql_v3_internal."#>>",
-  LEFTARG = eql_v3.boolean, RIGHTARG = text[]
+  LEFTARG = public.boolean, RIGHTARG = text[]
 );
 
 CREATE OPERATOR - (
   FUNCTION = eql_v3_internal."-",
-  LEFTARG = eql_v3.boolean, RIGHTARG = text
+  LEFTARG = public.boolean, RIGHTARG = text
 );
 
 CREATE OPERATOR - (
   FUNCTION = eql_v3_internal."-",
-  LEFTARG = eql_v3.boolean, RIGHTARG = integer
+  LEFTARG = public.boolean, RIGHTARG = integer
 );
 
 CREATE OPERATOR - (
   FUNCTION = eql_v3_internal."-",
-  LEFTARG = eql_v3.boolean, RIGHTARG = text[]
+  LEFTARG = public.boolean, RIGHTARG = text[]
 );
 
 CREATE OPERATOR #- (
   FUNCTION = eql_v3_internal."#-",
-  LEFTARG = eql_v3.boolean, RIGHTARG = text[]
+  LEFTARG = public.boolean, RIGHTARG = text[]
 );
 
 CREATE OPERATOR || (
   FUNCTION = eql_v3_internal."||",
-  LEFTARG = eql_v3.boolean, RIGHTARG = eql_v3.boolean
+  LEFTARG = public.boolean, RIGHTARG = public.boolean
 );
 
 CREATE OPERATOR || (
   FUNCTION = eql_v3_internal."||",
-  LEFTARG = eql_v3.boolean, RIGHTARG = jsonb
+  LEFTARG = public.boolean, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR || (
   FUNCTION = eql_v3_internal."||",
-  LEFTARG = jsonb, RIGHTARG = eql_v3.boolean
+  LEFTARG = jsonb, RIGHTARG = public.boolean
 );
