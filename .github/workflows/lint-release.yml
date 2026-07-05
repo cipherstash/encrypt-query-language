@@ -37,7 +37,7 @@ jobs:
       - name: Install actionlint
         run: |
           set -euo pipefail
-          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) v1.7.7
+          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) 1.7.7
           echo "$PWD" >> "$GITHUB_PATH"
 
       - name: actionlint (release workflows)
