@@ -21,6 +21,7 @@ use sqlx::PgPool;
 /// `tasks/build.sh` produces it by appending `tasks/uninstall-v3.sql` verbatim,
 /// so this file IS the shipped teardown.
 const UNINSTALLER: &str = "../../release/cipherstash-encrypt-uninstall.sql";
+const INSTALLER: &str = "../../release/cipherstash-encrypt.sql";
 
 async fn schema_count(pool: &PgPool) -> Result<i64> {
     let n: i64 = sqlx::query_scalar(
@@ -43,6 +44,18 @@ async fn run_shipped_uninstaller(pool: &PgPool) -> Result<()> {
     Ok(())
 }
 
+async fn run_shipped_installer(pool: &PgPool) -> Result<()> {
+    let install_sql = std::fs::read_to_string(INSTALLER).unwrap_or_else(|e| {
+        panic!(
+            "failed to read shipped installer {INSTALLER}: {e} — run `mise run build` \
+             (or, in CI, ensure the nextest-archive artifact shipped release/*.sql)"
+        )
+    });
+
+    sqlx::raw_sql(&install_sql).execute(pool).await?;
+    Ok(())
+}
+
 async fn table_exists(pool: &PgPool, table: &str) -> Result<bool> {
     let exists: bool = sqlx::query_scalar(
         r#"
@@ -60,6 +73,10 @@ async fn table_exists(pool: &PgPool, table: &str) -> Result<bool> {
     .fetch_one(pool)
     .await?;
     Ok(exists)
+}
+
+fn normalize_regtype_name(name: String) -> String {
+    name.replace("public.\"json\"", "public.json")
 }
 
 #[sqlx::test]
@@ -98,6 +115,52 @@ async fn uninstaller_drops_both_schemas(pool: PgPool) -> Result<()> {
     assert_eq!(
         leftover_objects, 0,
         "no eql_v3 / eql_v3_internal objects should survive uninstall"
+    );
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn shipped_installer_can_run_over_existing_public_domains(pool: PgPool) -> Result<()> {
+    assert_eq!(
+        schema_count(&pool).await?,
+        2,
+        "expected both eql_v3 schemas installed by the migration before repeat install"
+    );
+
+    run_shipped_installer(&pool).await?;
+
+    assert_eq!(
+        schema_count(&pool).await?,
+        2,
+        "repeat install must recreate both EQL-owned schemas"
+    );
+
+    let mut public_domains: Vec<String> = sqlx::query_scalar(
+        r#"
+        SELECT format('%I.%I', n.nspname, t.typname)
+        FROM pg_catalog.pg_type t
+        JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+        WHERE n.nspname = 'public'
+          AND t.typname IN ('integer_eq', 'json', 'jsonb_entry', 'jsonb_query')
+        ORDER BY 1
+        "#,
+    )
+    .fetch_all(&pool)
+    .await?
+    .into_iter()
+    .map(normalize_regtype_name)
+    .collect();
+    public_domains.sort();
+    assert_eq!(
+        public_domains,
+        vec![
+            "public.integer_eq",
+            "public.json",
+            "public.jsonb_entry",
+            "public.jsonb_query",
+        ],
+        "repeat install must keep public user-column domains available"
     );
 
     Ok(())
@@ -187,7 +250,10 @@ async fn uninstaller_preserves_application_tables_with_public_domain_columns(
         "#,
     )
     .fetch_all(&pool)
-    .await?;
+    .await?
+    .into_iter()
+    .map(normalize_regtype_name)
+    .collect();
     assert_eq!(
         column_types,
         vec![

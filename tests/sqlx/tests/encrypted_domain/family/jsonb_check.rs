@@ -1,8 +1,8 @@
 //! Equivalence guards for the inline SteVec domain CHECK expressions
 //! (issue #354).
 //!
-//! `eql_v3.jsonb_entry` carries an INLINE CHECK expression rather than
-//! calling `eql_v3_internal.is_valid_ste_vec_entry_payload`: domain
+//! `public.jsonb_entry` carries an INLINE CHECK expression rather than
+//! calling `public.eql_v3_is_valid_ste_vec_entry_payload`: domain
 //! constraints cannot inline SQL functions, so the function-call form paid
 //! the per-call SQL-function executor on every cast — the needle cast in
 //! every field_eq query, the ENTIRE measured +19% v2→v3 regression on that
@@ -12,7 +12,7 @@
 //! divergence is SQL NULL, which both forms accept (the validator via
 //! STRICT, the inline expression via a leading `VALUE IS NULL OR`).
 //!
-//! `eql_v3.jsonb_query`'s CHECK CANNOT be inlined — validating sv elements
+//! `public.jsonb_query`'s CHECK CANNOT be inlined — validating sv elements
 //! needs a subquery, which CHECK constraints forbid — so its validator is
 //! plpgsql instead (cached plan vs the per-call SQL-function executor; the
 //! issue #353 finding). `jsonb_query_check_behaviour` characterises the
@@ -44,7 +44,7 @@ async fn validator_accepts(pool: &PgPool, validator: &str, payload: Option<&str>
     if payload.is_none() {
         return Ok(true);
     }
-    let sql = format!("SELECT eql_v3_internal.{validator}($1::jsonb)");
+    let sql = format!("SELECT public.{validator}($1::jsonb)");
     Ok(sqlx::query_scalar::<_, bool>(&sql)
         .bind(payload)
         .fetch_one(pool)
@@ -94,8 +94,8 @@ async fn jsonb_entry_check_matches_validator(pool: PgPool) -> Result<()> {
     ];
     assert_equivalent(
         &pool,
-        "eql_v3.jsonb_entry",
-        "is_valid_ste_vec_entry_payload",
+        "public.jsonb_entry",
+        "eql_v3_is_valid_ste_vec_entry_payload",
         candidates,
     )
     .await
@@ -128,10 +128,10 @@ async fn jsonb_query_check_behaviour(pool: PgPool) -> Result<()> {
         (Some("[]"), false),
     ];
     for (payload, expected) in candidates {
-        let cast = cast_accepts(&pool, "eql_v3.jsonb_query", *payload).await?;
+        let cast = cast_accepts(&pool, "public.jsonb_query", *payload).await?;
         anyhow::ensure!(
             cast == *expected,
-            "eql_v3.jsonb_query cast verdict changed for {payload:?}: \
+            "public.jsonb_query cast verdict changed for {payload:?}: \
              accepted = {cast}, expected = {expected}"
         );
     }
@@ -147,14 +147,14 @@ async fn jsonb_query_validator_is_plpgsql(pool: PgPool) -> Result<()> {
     let lang: String = sqlx::query_scalar(
         "SELECT l.lanname FROM pg_proc p \
          JOIN pg_language l ON l.oid = p.prolang \
-         WHERE p.proname = 'is_valid_ste_vec_query_payload' \
-           AND p.pronamespace = 'eql_v3_internal'::regnamespace",
+         WHERE p.proname = 'eql_v3_is_valid_ste_vec_query_payload' \
+           AND p.pronamespace = 'public'::regnamespace",
     )
     .fetch_one(&pool)
     .await?;
     anyhow::ensure!(
         lang == "plpgsql",
-        "is_valid_ste_vec_query_payload must be plpgsql (got {lang})"
+        "eql_v3_is_valid_ste_vec_query_payload must be plpgsql (got {lang})"
     );
     Ok(())
 }

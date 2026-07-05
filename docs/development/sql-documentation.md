@@ -34,14 +34,14 @@ prefix (not plain `--`). Coverage and required tags are checked by `mise run doc
 --! hash index. Inlinable, so a functional index on this extractor engages
 --! bare-form queries.
 --!
---! @param a eql_v3.integer_eq Encrypted value carrying an `hm` term
+--! @param a public.integer_eq Encrypted value carrying an `hm` term
 --! @return eql_v3.hmac_256 The equality index term
 --!
 --! @example
 --! CREATE INDEX ON users USING hash (eql_v3.eq_term(salary_eq));
 --!
 --! @see eql_v3.ord_term
-CREATE FUNCTION eql_v3.eq_term(a eql_v3.integer_eq)
+CREATE FUNCTION eql_v3.eq_term(a public.integer_eq)
   RETURNS eql_v3.hmac_256
 AS $$ ... $$;
 ```
@@ -64,8 +64,8 @@ AS $$ ... $$;
 --! Implements the `=` operator for an `eql_v3` domain variant. Reduces to a
 --! comparison on the extracted equality term — no decryption.
 --!
---! @param a eql_v3.integer_eq Left operand
---! @param b eql_v3.integer_eq Right operand
+--! @param a public.integer_eq Left operand
+--! @param b public.integer_eq Right operand
 --! @return Boolean True if the equality terms match
 --!
 --! @example
@@ -73,14 +73,14 @@ AS $$ ... $$;
 --! SELECT * FROM users WHERE encrypted_email = $1;
 --!
 --! @see eql_v3.eq_term
-CREATE FUNCTION eql_v3.eq(a eql_v3.integer_eq, b eql_v3.integer_eq)
+CREATE FUNCTION eql_v3.eq(a public.integer_eq, b public.integer_eq)
   RETURNS boolean
 AS $$ ... $$;
 
 CREATE OPERATOR = (
   FUNCTION=eql_v3.eq,
-  LEFTARG=eql_v3.integer_eq,
-  RIGHTARG=eql_v3.integer_eq
+  LEFTARG=public.integer_eq,
+  RIGHTARG=public.integer_eq
 );
 ```
 
@@ -93,7 +93,7 @@ CREATE OPERATOR = (
 --! payload version (`VALUE->>'v' = '2'`).
 --!
 --! @see eql_v3.eq_term
-CREATE DOMAIN eql_v3.integer_eq AS jsonb
+CREATE DOMAIN public.integer_eq AS jsonb
   CHECK ( ... );
 ```
 
@@ -101,11 +101,11 @@ CREATE DOMAIN eql_v3.integer_eq AS jsonb
 ```sql
 --! @brief State transition function for the MIN aggregate
 --! @internal
---! @param $1 eql_v3.integer_ord Accumulated state
---! @param $2 eql_v3.integer_ord New value
---! @return eql_v3.integer_ord Updated state
-CREATE FUNCTION eql_v3.min_sfunc(eql_v3.integer_ord, eql_v3.integer_ord)
-  RETURNS eql_v3.integer_ord
+--! @param $1 public.integer_ord Accumulated state
+--! @param $2 public.integer_ord New value
+--! @return public.integer_ord Updated state
+CREATE FUNCTION eql_v3.min_sfunc(public.integer_ord, public.integer_ord)
+  RETURNS public.integer_ord
 AS $$ ... $$;
 
 --! @brief Minimum encrypted value in a group
@@ -113,16 +113,16 @@ AS $$ ... $$;
 --! Aggregate over an ordered encrypted-domain column. Comparison routes
 --! through the variant's `<` operator (the ORE block term) — no decryption.
 --!
---! @param input eql_v3.integer_ord Encrypted values to aggregate
---! @return eql_v3.integer_ord The minimum value
+--! @param input public.integer_ord Encrypted values to aggregate
+--! @return public.integer_ord The minimum value
 --!
 --! @example
 --! SELECT eql_v3.min(price_encrypted) FROM products;
 --!
 --! @see eql_v3.min_sfunc
-CREATE AGGREGATE eql_v3.min(eql_v3.integer_ord) (
+CREATE AGGREGATE eql_v3.min(public.integer_ord) (
   SFUNC = eql_v3.min_sfunc,
-  STYPE = eql_v3.integer_ord
+  STYPE = public.integer_ord
 );
 ```
 

@@ -15,7 +15,7 @@
 --! @param val jsonb Candidate entry payload.
 --! @return boolean True when `val` is an sv entry with string `s`, string `c`,
 --!         and exactly one string deterministic term (`hm` XOR `oc`).
-CREATE FUNCTION public.eql_v3_is_valid_ste_vec_entry_payload(val jsonb)
+CREATE OR REPLACE FUNCTION public.eql_v3_is_valid_ste_vec_entry_payload(val jsonb)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -44,7 +44,7 @@ $$;
 --!   subquery over the sv elements, which CHECK constraints forbid). plpgsql
 --!   caches its plan across calls instead of paying the per-call SQL-function
 --!   executor on every needle cast.
-CREATE FUNCTION public.eql_v3_is_valid_ste_vec_query_payload(val jsonb)
+CREATE OR REPLACE FUNCTION public.eql_v3_is_valid_ste_vec_query_payload(val jsonb)
   RETURNS boolean
   LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -78,7 +78,7 @@ $$;
 --! @param val jsonb Candidate document payload.
 --! @return boolean True when `val` is an encrypted document envelope with
 --!         `v = 3`, `i`, an `sv` array, and valid sv entry elements.
-CREATE FUNCTION public.eql_v3_is_valid_ste_vec_document_payload(val jsonb)
+CREATE OR REPLACE FUNCTION public.eql_v3_is_valid_ste_vec_document_payload(val jsonb)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -112,10 +112,19 @@ $$;
 --!
 --! @note Constructing from inline JSON uses the standard DOMAIN cast:
 --!       `'{"i":{},"v":3,"sv":[...]}'::public.json`.
-CREATE DOMAIN public.json AS jsonb
-  CHECK (
-    public.eql_v3_is_valid_ste_vec_document_payload(VALUE)
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = 'json' AND typnamespace = 'public'::regnamespace
+  ) THEN
+    CREATE DOMAIN public.json AS jsonb
+      CHECK (
+        public.eql_v3_is_valid_ste_vec_document_payload(VALUE)
+      );
+  END IF;
+END
+$$;
 
 --! @brief Domain type for an individual sv element.
 --!
@@ -141,21 +150,30 @@ CREATE DOMAIN public.json AS jsonb
 --! two in sync — `jsonb_entry_check_matches_validator` in tests/sqlx pins
 --! the equivalence.
 --! @endinternal
-CREATE DOMAIN public.jsonb_entry AS jsonb
-  CHECK (
-    VALUE IS NULL
-    OR COALESCE(
-      jsonb_typeof(VALUE) = 'object'
-       AND jsonb_typeof(VALUE -> 's') = 'string'
-       AND jsonb_typeof(VALUE -> 'c') = 'string'
-       AND (
-         (jsonb_typeof(VALUE -> 'hm') = 'string' AND NOT (VALUE ? 'oc'))
-         OR
-         (jsonb_typeof(VALUE -> 'oc') = 'string' AND NOT (VALUE ? 'hm'))
-       ),
-      false
-    )
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = 'jsonb_entry' AND typnamespace = 'public'::regnamespace
+  ) THEN
+    CREATE DOMAIN public.jsonb_entry AS jsonb
+      CHECK (
+        VALUE IS NULL
+        OR COALESCE(
+          jsonb_typeof(VALUE) = 'object'
+           AND jsonb_typeof(VALUE -> 's') = 'string'
+           AND jsonb_typeof(VALUE -> 'c') = 'string'
+           AND (
+             (jsonb_typeof(VALUE -> 'hm') = 'string' AND NOT (VALUE ? 'oc'))
+             OR
+             (jsonb_typeof(VALUE -> 'oc') = 'string' AND NOT (VALUE ? 'hm'))
+           ),
+          false
+        )
+      );
+  END IF;
+END
+$$;
 
 --! @brief Domain type for an STE-vec containment needle.
 --!
@@ -179,10 +197,19 @@ CREATE DOMAIN public.jsonb_entry AS jsonb
 --! per-query hot path of every containment scenario
 --! (`$1::jsonb::public.jsonb_query`).
 --! @endinternal
-CREATE DOMAIN public.jsonb_query AS jsonb
-  CHECK (
-    public.eql_v3_is_valid_ste_vec_query_payload(VALUE)
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = 'jsonb_query' AND typnamespace = 'public'::regnamespace
+  ) THEN
+    CREATE DOMAIN public.jsonb_query AS jsonb
+      CHECK (
+        public.eql_v3_is_valid_ste_vec_query_payload(VALUE)
+      );
+  END IF;
+END
+$$;
 
 --! @brief Convert a public.json to a jsonb_query needle.
 --!

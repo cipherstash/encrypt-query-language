@@ -1,4 +1,4 @@
-//! `eql_v3.text_ord_ope` smoke suite: the shared `_ord_ope` tests plus the
+//! `public.text_ord_ope` smoke suite: the shared `_ord_ope` tests plus the
 //! text-specific routing contract — `=` / `<>` resolve through `hm` (exact
 //! HMAC), never the OPE term, because OPE over text is not equality-lossless
 //! (the same rule as `text_ord`'s `[Hm, Ore]`).

@@ -5,7 +5,7 @@
 //! A `serde_json::Value` is a first-class `EqlPlaintext` (see
 //! `eql_plaintext.rs`), so the document fixture is just a
 //! `FixtureSpec<serde_json::Value>` with the `IndexKind::SteVec` index and an
-//! `eql_v3.json` generated `payload` column. `FixtureSpec::run` encrypts each
+//! `public.json` generated `payload` column. `FixtureSpec::run` encrypts each
 //! document through cipherstash-client into a SteVec payload, stages it, and
 //! writes `tests/sqlx/fixtures/v3_ste_vec.sql` (gitignored — regenerated on
 //! every `mise run test:sqlx`) with the identical
@@ -25,9 +25,9 @@ use super::spec::FixtureSpec;
 /// `v3_ste_vec.sql`, SQLx ref `scripts("v3_ste_vec")`.
 const NAME: &str = "v3_ste_vec";
 
-/// The canonical `payload` column type — the `eql_v3.json` DOMAIN, so the
+/// The canonical `payload` column type — the `public.json` DOMAIN, so the
 /// domain CHECK runs when the fixture loads.
-const PAYLOAD_TYPE: &str = "eql_v3.json";
+const PAYLOAD_TYPE: &str = "public.json";
 
 /// Number of fixture rows. Ten matches the historical fixture and gives the
 /// harness's containment / index tests a non-trivial set.
@@ -98,7 +98,7 @@ mod tests {
             .with_column_type(PAYLOAD_TYPE)
             .with_values(&docs);
         assert_eq!(spec.fixture_table(), "fixtures.v3_ste_vec");
-        assert_eq!(spec.column_type().as_str(), "eql_v3.json");
+        assert_eq!(spec.column_type().as_str(), "public.json");
         assert_eq!(spec.indexes(), &[IndexKind::SteVec]);
         assert!(spec.check_complete().is_ok());
     }

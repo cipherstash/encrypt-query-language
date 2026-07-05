@@ -221,7 +221,7 @@ impl EqlPlaintext for String {
 ///
 /// `serde_json::Value` is the document analogue of the scalar plaintexts:
 /// `to_plaintext` lifts it into `Plaintext::Json`, which cipherstash-client
-/// encrypts into a SteVec `eql_v3.json` payload under a JSON-indexed
+/// encrypts into a SteVec `public.json` payload under a JSON-indexed
 /// `ColumnConfig` (`IndexKind::SteVec`). The `cast_for_kind` /
 /// `plaintext_sql_type_for_kind` derivations panic on `ScalarKind::Jsonb`
 /// (the scalar matrix never wires jsonb), so this impl OVERRIDES `CAST` and

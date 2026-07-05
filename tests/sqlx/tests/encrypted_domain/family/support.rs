@@ -13,7 +13,7 @@ fn variant_derives_consistent_sql_domain_and_capabilities() {
     // ordered domains are `[Ore]`-only — ORE is lossless for integers, so `=`
     // routes through `ord_term`, unlike text where `=` routes through `eq_term`.
     let storage = ScalarDomainSpec::new::<i32>(Variant::Storage);
-    assert_eq!(storage.sql_domain, "eql_v3.integer");
+    assert_eq!(storage.sql_domain, "public.integer");
     assert!(!storage.supports_eq());
     assert!(!storage.supports_ord());
     assert_eq!(storage.primary_extractor(), None);
@@ -23,7 +23,7 @@ fn variant_derives_consistent_sql_domain_and_capabilities() {
     );
 
     let eq = ScalarDomainSpec::new::<i32>(Variant::Eq);
-    assert_eq!(eq.sql_domain, "eql_v3.integer_eq");
+    assert_eq!(eq.sql_domain, "public.integer_eq");
     assert!(eq.supports_eq());
     assert!(!eq.supports_ord());
     assert_eq!(eq.primary_extractor().as_deref(), Some("eql_v3.eq_term"));
@@ -34,7 +34,7 @@ fn variant_derives_consistent_sql_domain_and_capabilities() {
     );
 
     let ord = ScalarDomainSpec::new::<i32>(Variant::Ord);
-    assert_eq!(ord.sql_domain, "eql_v3.integer_ord");
+    assert_eq!(ord.sql_domain, "public.integer_ord");
     assert!(ord.supports_ord());
     assert_eq!(ord.primary_extractor().as_deref(), Some("eql_v3.ord_term"));
     // integer_ord is `[Ore]`-only: equality routes through ORE (lossless for ints).
@@ -52,7 +52,7 @@ fn variant_derives_consistent_sql_domain_and_capabilities() {
     );
 
     let ord_ore = ScalarDomainSpec::new::<i32>(Variant::OrdOre);
-    assert_eq!(ord_ore.sql_domain, "eql_v3.integer_ord_ore");
+    assert_eq!(ord_ore.sql_domain, "public.integer_ord_ore");
     assert!(ord_ore.supports_ord());
     assert_eq!(
         ord_ore.primary_extractor().as_deref(),
@@ -139,7 +139,7 @@ async fn placeholder_payload_casts_to_every_declared_domain(pool: PgPool) -> Res
 #[sqlx::test]
 async fn no_cross_variant_operator_is_declared(pool: PgPool) -> Result<()> {
     // The SCALAR family deliberately does NOT define ANY operator that mixes
-    // two different capability variants — e.g. `eql_v3.integer_eq = eql_v3.integer_ord`
+    // two different capability variants — e.g. `public.integer_eq = public.integer_ord`
     // would resolve against jsonb (the ultimate base type) and silently
     // bypass the per-variant blockers. The query below has no `oprname`
     // filter, so it catches a cross-variant operator of any kind, not just

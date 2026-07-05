@@ -4,12 +4,12 @@
 //! This binary reads `pg_operator`, not the fixture. It verifies BOTH sides of
 //! the surface:
 //!   1. Every native jsonb operator symbol is either a supported root symbol OR
-//!      has an `eql_v3.json`-bound blocker (so a column can never silently route
+//!      has an `public.json`-bound blocker (so a column can never silently route
 //!      to plaintext-jsonb semantics).
 //!   2. Every supported symbol is bound with EXACTLY the intended safe operand
 //!      signatures, and unsupported root-document comparison signatures
-//!      (`eql_v3.json = eql_v3.json`, etc.) are blocked.
-//!   3. Every blocker is bound to `eql_v3.json` with PostgreSQL's real native
+//!      (`public.json = public.json`, etc.) are blocked.
+//!   3. Every blocker is bound to `public.json` with PostgreSQL's real native
 //!      RHS type for that operator.
 //!
 //! Design source of truth:
@@ -18,11 +18,11 @@
 use sqlx::PgPool;
 use std::collections::BTreeSet;
 
-/// Root-document operator symbols the surface SUPPORTS (an `eql_v3.json`-bound
+/// Root-document operator symbols the surface SUPPORTS (an `public.json`-bound
 /// operator, not a blocker).
 const SUPPORTED_ROOT_SYMBOLS: &[&str] = &["@>", "<@", "->", "->>"];
 
-/// Entry comparison symbols on `eql_v3.jsonb_entry`.
+/// Entry comparison symbols on `public.jsonb_entry`.
 const SUPPORTED_ENTRY_SYMBOLS: &[&str] = &["=", "<>", "<", "<=", ">", ">="];
 
 /// Native jsonb operators the surface BLOCKS (each raises "is not supported").
@@ -36,9 +36,9 @@ async fn v3_jsonb_operators(pool: &PgPool) -> anyhow::Result<Vec<(String, String
     let rows: Vec<(String, String, String)> = sqlx::query_as(
         r#"
         WITH d AS (
-          SELECT 'eql_v3.json'::regtype          AS j,
-                 'eql_v3.jsonb_entry'::regtype  AS e,
-                 'eql_v3.jsonb_query'::regtype  AS q
+          SELECT 'public.json'::regtype          AS j,
+                 'public.jsonb_entry'::regtype  AS e,
+                 'public.jsonb_query'::regtype  AS q
         )
         SELECT o.oprname,
                pg_catalog.format_type(o.oprleft, NULL)  AS lhs,
@@ -53,10 +53,15 @@ async fn v3_jsonb_operators(pool: &PgPool) -> anyhow::Result<Vec<(String, String
     Ok(rows)
 }
 
-/// `format_type` renders the reserved word `json` quoted (`eql_v3."json"`).
+/// `format_type` renders the reserved word `json` quoted (`public."json"`).
 /// Normalise so comparisons read naturally.
 fn norm(ty: &str) -> String {
-    ty.replace("eql_v3.\"json\"", "eql_v3.json")
+    match ty {
+        "\"json\"" => "public.json".to_string(),
+        "jsonb_entry" => "public.jsonb_entry".to_string(),
+        "jsonb_query" => "public.jsonb_query".to_string(),
+        _ => ty.replace("public.\"json\"", "public.json"),
+    }
 }
 
 // ============================================================================
@@ -81,11 +86,11 @@ async fn v3_jsonb_surface_supported_or_blocked(pool: PgPool) -> anyhow::Result<(
         "expected pg_operator to expose jsonb operators"
     );
 
-    // The blocked symbols MUST each have an eql_v3.json-bound operator.
+    // The blocked symbols MUST each have an public.json-bound operator.
     let bound: Vec<(String, String, String)> = v3_jsonb_operators(&pool).await?;
     let json_bound_symbols: BTreeSet<String> = bound
         .iter()
-        .filter(|(_, l, r)| norm(l) == "eql_v3.json" || norm(r) == "eql_v3.json")
+        .filter(|(_, l, r)| norm(l) == "public.json" || norm(r) == "public.json")
         .map(|(n, _, _)| n.clone())
         .collect();
 
@@ -104,9 +109,9 @@ async fn v3_jsonb_surface_supported_or_blocked(pool: PgPool) -> anyhow::Result<(
     assert!(
         unaccounted.is_empty(),
         "native jsonb operator(s) neither supported, blocked, nor an intentionally-native \
-         comparison on eql_v3.json: {unaccounted:#?}. Each would route an encrypted column \
+         comparison on public.json: {unaccounted:#?}. Each would route an encrypted column \
          to native plaintext-jsonb semantics (e.g. key/path extraction). Add a supported \
-         wrapper or an eql_v3.json-bound blocker."
+         wrapper or an public.json-bound blocker."
     );
 
     // And every blocked symbol must actually be bound (no missing blocker).
@@ -118,7 +123,7 @@ async fn v3_jsonb_surface_supported_or_blocked(pool: PgPool) -> anyhow::Result<(
     }
     assert!(
         missing_blockers.is_empty(),
-        "blocked symbol(s) have no eql_v3.json-bound operator: {missing_blockers:?}"
+        "blocked symbol(s) have no public.json-bound operator: {missing_blockers:?}"
     );
     Ok(())
 }
@@ -138,23 +143,23 @@ async fn v3_jsonb_surface_supported_signatures(pool: PgPool) -> anyhow::Result<(
     // Exact supported operand signatures (verified against operators.sql).
     let expected_supported: &[(&str, &str, &str)] = &[
         // containment
-        ("@>", "eql_v3.json", "eql_v3.json"),
-        ("@>", "eql_v3.json", "eql_v3.jsonb_query"),
-        ("@>", "eql_v3.json", "eql_v3.jsonb_entry"),
-        ("<@", "eql_v3.json", "eql_v3.json"),
-        ("<@", "eql_v3.jsonb_query", "eql_v3.json"),
-        ("<@", "eql_v3.jsonb_entry", "eql_v3.json"),
+        ("@>", "public.json", "public.json"),
+        ("@>", "public.json", "public.jsonb_query"),
+        ("@>", "public.json", "public.jsonb_entry"),
+        ("<@", "public.json", "public.json"),
+        ("<@", "public.jsonb_query", "public.json"),
+        ("<@", "public.jsonb_entry", "public.json"),
         // path access
-        ("->", "eql_v3.json", "text"),
-        ("->", "eql_v3.json", "integer"),
-        ("->>", "eql_v3.json", "text"),
+        ("->", "public.json", "text"),
+        ("->", "public.json", "integer"),
+        ("->>", "public.json", "text"),
         // entry comparisons
-        ("=", "eql_v3.jsonb_entry", "eql_v3.jsonb_entry"),
-        ("<>", "eql_v3.jsonb_entry", "eql_v3.jsonb_entry"),
-        ("<", "eql_v3.jsonb_entry", "eql_v3.jsonb_entry"),
-        ("<=", "eql_v3.jsonb_entry", "eql_v3.jsonb_entry"),
-        (">", "eql_v3.jsonb_entry", "eql_v3.jsonb_entry"),
-        (">=", "eql_v3.jsonb_entry", "eql_v3.jsonb_entry"),
+        ("=", "public.jsonb_entry", "public.jsonb_entry"),
+        ("<>", "public.jsonb_entry", "public.jsonb_entry"),
+        ("<", "public.jsonb_entry", "public.jsonb_entry"),
+        ("<=", "public.jsonb_entry", "public.jsonb_entry"),
+        (">", "public.jsonb_entry", "public.jsonb_entry"),
+        (">=", "public.jsonb_entry", "public.jsonb_entry"),
     ];
 
     let mut missing: Vec<(&str, &str, &str)> = Vec::new();
@@ -183,7 +188,7 @@ async fn v3_jsonb_surface_root_comparisons_blocked(pool: PgPool) -> anyhow::Resu
                pg_catalog.format_type(o.oprright, NULL)
         FROM pg_operator o
         WHERE o.oprname IN ('=', '<>', '<', '<=', '>', '>=')
-          AND ('eql_v3.json'::regtype IN (o.oprleft, o.oprright))
+          AND ('public.json'::regtype IN (o.oprleft, o.oprright))
         ORDER BY 1, 2, 3
         "#,
     )
@@ -195,9 +200,9 @@ async fn v3_jsonb_surface_root_comparisons_blocked(pool: PgPool) -> anyhow::Resu
         .collect();
     for op in ["=", "<>", "<", "<=", ">", ">="] {
         for (l, r) in [
-            ("eql_v3.json", "eql_v3.json"),
-            ("eql_v3.json", "jsonb"),
-            ("jsonb", "eql_v3.json"),
+            ("public.json", "public.json"),
+            ("public.json", "jsonb"),
+            ("jsonb", "public.json"),
         ] {
             assert!(
                 have.contains(&(op.to_string(), l.to_string(), r.to_string())),
@@ -226,9 +231,9 @@ async fn v3_jsonb_surface_entry_mixed_shapes_absent(pool: PgPool) -> anyhow::Res
                pg_catalog.format_type(o.oprright, NULL)
         FROM pg_operator o
         WHERE o.oprname IN ('=', '<>', '<', '<=', '>', '>=')
-          AND ('eql_v3.jsonb_entry'::regtype IN (o.oprleft, o.oprright))
-          AND NOT (o.oprleft = 'eql_v3.jsonb_entry'::regtype
-                   AND o.oprright = 'eql_v3.jsonb_entry'::regtype)
+          AND ('public.jsonb_entry'::regtype IN (o.oprleft, o.oprright))
+          AND NOT (o.oprleft = 'public.jsonb_entry'::regtype
+                   AND o.oprright = 'public.jsonb_entry'::regtype)
         "#,
     )
     .fetch_all(&pool)
@@ -244,8 +249,8 @@ async fn v3_jsonb_surface_entry_mixed_shapes_absent(pool: PgPool) -> anyhow::Res
         r#"
         SELECT o.oprname
         FROM pg_operator o
-        WHERE o.oprleft = 'eql_v3.jsonb_entry'::regtype
-          AND o.oprright = 'eql_v3.jsonb_entry'::regtype
+        WHERE o.oprleft = 'public.jsonb_entry'::regtype
+          AND o.oprright = 'public.jsonb_entry'::regtype
         "#,
     )
     .fetch_all(&pool)
@@ -262,7 +267,7 @@ async fn v3_jsonb_surface_entry_mixed_shapes_absent(pool: PgPool) -> anyhow::Res
 }
 
 // ============================================================================
-// (3) Each blocker is bound to eql_v3.json with PostgreSQL's real native RHS
+// (3) Each blocker is bound to public.json with PostgreSQL's real native RHS
 //     type for that operator.
 // ============================================================================
 
@@ -277,45 +282,45 @@ async fn v3_jsonb_surface_blocker_signatures(pool: PgPool) -> anyhow::Result<()>
     // Exact blocker operand signatures with PostgreSQL's real native RHS types
     // (verified against blockers.sql and the live catalog).
     let expected_blockers: &[(&str, &str, &str)] = &[
-        ("?", "eql_v3.json", "text"),
-        ("?|", "eql_v3.json", "text[]"),
-        ("?&", "eql_v3.json", "text[]"),
-        ("@?", "eql_v3.json", "jsonpath"),
-        ("@@", "eql_v3.json", "jsonpath"),
-        ("#>", "eql_v3.json", "text[]"),
-        ("#>>", "eql_v3.json", "text[]"),
-        ("-", "eql_v3.json", "text"),
-        ("-", "eql_v3.json", "integer"),
-        ("-", "eql_v3.json", "text[]"),
-        ("#-", "eql_v3.json", "text[]"),
-        ("||", "eql_v3.json", "jsonb"),
+        ("?", "public.json", "text"),
+        ("?|", "public.json", "text[]"),
+        ("?&", "public.json", "text[]"),
+        ("@?", "public.json", "jsonpath"),
+        ("@@", "public.json", "jsonpath"),
+        ("#>", "public.json", "text[]"),
+        ("#>>", "public.json", "text[]"),
+        ("-", "public.json", "text"),
+        ("-", "public.json", "integer"),
+        ("-", "public.json", "text[]"),
+        ("#-", "public.json", "text[]"),
+        ("||", "public.json", "jsonb"),
         // concat is also blocked with the domain on the RIGHT.
-        ("||", "jsonb", "eql_v3.json"),
+        ("||", "jsonb", "public.json"),
         // root comparisons are blocked for every typed domain/jsonb shape.
-        ("=", "eql_v3.json", "eql_v3.json"),
-        ("=", "eql_v3.json", "jsonb"),
-        ("=", "jsonb", "eql_v3.json"),
-        ("<>", "eql_v3.json", "eql_v3.json"),
-        ("<>", "eql_v3.json", "jsonb"),
-        ("<>", "jsonb", "eql_v3.json"),
-        ("<", "eql_v3.json", "eql_v3.json"),
-        ("<", "eql_v3.json", "jsonb"),
-        ("<", "jsonb", "eql_v3.json"),
-        ("<=", "eql_v3.json", "eql_v3.json"),
-        ("<=", "eql_v3.json", "jsonb"),
-        ("<=", "jsonb", "eql_v3.json"),
-        (">", "eql_v3.json", "eql_v3.json"),
-        (">", "eql_v3.json", "jsonb"),
-        (">", "jsonb", "eql_v3.json"),
-        (">=", "eql_v3.json", "eql_v3.json"),
-        (">=", "eql_v3.json", "jsonb"),
-        (">=", "jsonb", "eql_v3.json"),
+        ("=", "public.json", "public.json"),
+        ("=", "public.json", "jsonb"),
+        ("=", "jsonb", "public.json"),
+        ("<>", "public.json", "public.json"),
+        ("<>", "public.json", "jsonb"),
+        ("<>", "jsonb", "public.json"),
+        ("<", "public.json", "public.json"),
+        ("<", "public.json", "jsonb"),
+        ("<", "jsonb", "public.json"),
+        ("<=", "public.json", "public.json"),
+        ("<=", "public.json", "jsonb"),
+        ("<=", "jsonb", "public.json"),
+        (">", "public.json", "public.json"),
+        (">", "public.json", "jsonb"),
+        (">", "jsonb", "public.json"),
+        (">=", "public.json", "public.json"),
+        (">=", "public.json", "jsonb"),
+        (">=", "jsonb", "public.json"),
         // mixed jsonb containment shapes are blocked; safe forms use json,
         // jsonb_query, or jsonb_entry.
-        ("@>", "eql_v3.json", "jsonb"),
-        ("@>", "jsonb", "eql_v3.json"),
-        ("<@", "eql_v3.json", "jsonb"),
-        ("<@", "jsonb", "eql_v3.json"),
+        ("@>", "public.json", "jsonb"),
+        ("@>", "jsonb", "public.json"),
+        ("<@", "public.json", "jsonb"),
+        ("<@", "jsonb", "public.json"),
     ];
 
     let mut missing: Vec<(&str, &str, &str)> = Vec::new();
@@ -329,7 +334,7 @@ async fn v3_jsonb_surface_blocker_signatures(pool: PgPool) -> anyhow::Result<()>
         "expected blocker signature(s) are absent: {missing:#?}"
     );
 
-    // Every blocked symbol's eql_v3.json-bound operator backs a non-STRICT
+    // Every blocked symbol's public.json-bound operator backs a non-STRICT
     // plpgsql blocker function (proisstrict = false), so a NULL domain operand
     // still raises rather than short-circuiting to NULL.
     let strict_offenders: Vec<(String, String)> = sqlx::query_as(
@@ -337,7 +342,7 @@ async fn v3_jsonb_surface_blocker_signatures(pool: PgPool) -> anyhow::Result<()>
         SELECT o.oprname, p.proname
         FROM pg_operator o
         JOIN pg_proc p ON p.oid = o.oprcode
-        WHERE ('eql_v3.json'::regtype IN (o.oprleft, o.oprright))
+        WHERE ('public.json'::regtype IN (o.oprleft, o.oprright))
           AND o.oprname IN ('?', '?|', '?&', '@?', '@@', '#>', '#>>', '-', '#-', '||',
                             '=', '<>', '<', '<=', '>', '>=', '@>', '<@')
           AND p.proname LIKE 'jsonb_blocked%'
@@ -448,8 +453,8 @@ async fn assert_composed_blocked(pool: &PgPool, sql: &str) -> anyhow::Result<()>
 
 #[sqlx::test]
 async fn v3_jsonb_blocked_composed_expression_raises(pool: PgPool) -> anyhow::Result<()> {
-    // A valid eql_v3.json document literal (empty sv array satisfies the CHECK).
-    let j = r#"'{"i":{},"v":3,"sv":[]}'::eql_v3.json"#;
+    // A valid public.json document literal (empty sv array satisfies the CHECK).
+    let j = r#"'{"i":{},"v":3,"sv":[]}'::public.json"#;
 
     // Each case wraps a blocked operator (whose return type was boolean before
     // the fix) in a surrounding operator that only resolves against the NATIVE

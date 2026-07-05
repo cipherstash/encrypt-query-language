@@ -12,8 +12,8 @@
 --! @note A SET clause disables SQL-function inlining. The inline-critical SEM
 --!       helpers (ore_block_256_*, ore_cllw_*, ore_cllw/has_ore_cllw,
 --!       ope_cllw, hmac_256, bloom_filter over jsonb) and the
---!       encrypted-domain family (recognised structurally) are deliberately
---!       left unpinned.
+--!       encrypted-domain family (recognised structurally, including public
+--!       user-column domains) are deliberately left unpinned.
 --! @see tasks/test/splinter.sh
 --! @see tasks/build.sh
 
@@ -77,7 +77,9 @@ BEGIN
       )
       AND NOT (p.oid = ANY (coalesce(inline_critical_oids, '{}'::oid[])))
       -- Encrypted-domain family — structural skip: LANGUAGE sql, IMMUTABLE,
-      -- taking >=1 argument typed as a jsonb-backed DOMAIN in eql_v3.
+      -- taking >=1 argument typed as a jsonb-backed DOMAIN. User-column
+      -- domains live in public; implementation-only domains live in EQL-owned
+      -- schemas.
       AND NOT (
         p.prolang = (SELECT l.oid FROM pg_catalog.pg_language l
                      WHERE l.lanname = 'sql')
@@ -89,7 +91,10 @@ BEGIN
           JOIN pg_catalog.pg_namespace dn ON dn.oid = dt.typnamespace
           WHERE dt.typtype = 'd'
             AND dt.typbasetype = jsonb_oid
-            AND dn.nspname = ANY(eql_v3_internal.owned_schemas())
+            AND (
+              dn.nspname = 'public'
+              OR dn.nspname = ANY(eql_v3_internal.owned_schemas())
+            )
         )
       )
       -- Comment-marker fallback for hand-written inline-critical extension

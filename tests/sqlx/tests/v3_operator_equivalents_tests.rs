@@ -120,8 +120,8 @@ async fn core_public_function_equivalents_exist_in_eql_v3(pool: PgPool) -> Resul
 
 /// #3 — Guard the split's other half: the pieces that MUST stay internal remain
 /// in `eql_v3_internal` (never leak into the public surface). Blockers, aggregate
-/// state functions, index-term type constructors, and CHECK validators are
-/// implementation detail, not caller entrypoints.
+/// state functions, and index-term type constructors are implementation detail,
+/// not caller entrypoints.
 #[sqlx::test]
 async fn internal_only_helpers_stay_out_of_eql_v3(pool: PgPool) -> Result<()> {
     // Names that must NOT appear as functions in the public schema.
@@ -130,7 +130,6 @@ async fn internal_only_helpers_stay_out_of_eql_v3(pool: PgPool) -> Result<()> {
         "max_sfunc",
         "jsonb_entry_min_sfunc",
         "jsonb_entry_max_sfunc",
-        "is_valid_ste_vec_entry_payload",
         "is_ste_vec_array",
         "compare_ore_cllw_term",
         "ore_block_256_eq",

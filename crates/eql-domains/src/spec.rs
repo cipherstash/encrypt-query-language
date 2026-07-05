@@ -12,7 +12,7 @@ impl Domain {
     /// "domain name starts with the family name" rule is structural.
     ///
     /// One documented exception: the `jsonb` family's document domain
-    /// (`eql_v3.json`, `Domain.name == "json"`) predates the catalog and
+    /// (`public.json`, `Domain.name == "json"`) predates the catalog and
     /// doesn't follow the family+suffix convention (`family_name` is
     /// `"jsonb"`, not `"json"`), so its `name` is returned verbatim instead of
     /// being joined. Every other domain — scalar or the other two SteVec
@@ -176,7 +176,7 @@ mod tests {
         // family. The document is the one documented exception — its
         // established name `json` doesn't match the family name `jsonb`, so
         // `full_name` returns it verbatim rather than concatenating. Real SQL
-        // names: eql_v3.json, eql_v3.jsonb_entry, eql_v3.jsonb_query.
+        // names: public.json, public.jsonb_entry, public.jsonb_query.
         use crate::JSONB;
         assert_eq!(JSONB.domain_name(&JSONB.domains[0]), "json");
         assert_eq!(JSONB.domain_name(&JSONB.domains[1]), "jsonb_entry");

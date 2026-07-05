@@ -251,6 +251,66 @@ async fn user_column_domains_absent_from_eql_owned_schemas(pool: PgPool) -> Resu
     Ok(())
 }
 
+/// #2 — Dependency invariant: public user-column domain CHECK constraints do not
+/// depend on objects in droppable EQL-owned schemas. Otherwise an EQL uninstall
+/// can still cascade into application table columns even when the domain type
+/// itself lives in `public`.
+#[sqlx::test]
+async fn public_user_domain_constraints_do_not_depend_on_eql_owned_schemas(
+    pool: PgPool,
+) -> Result<()> {
+    let textual_refs: Vec<String> = sqlx::query_scalar(
+        r#"
+        SELECT format('%I.%I.%I: %s', tn.nspname, t.typname, c.conname,
+                      pg_catalog.pg_get_constraintdef(c.oid))
+        FROM pg_catalog.pg_constraint c
+        JOIN pg_catalog.pg_type t ON t.oid = c.contypid
+        JOIN pg_catalog.pg_namespace tn ON tn.oid = t.typnamespace
+        WHERE tn.nspname = 'public'
+          AND t.typtype = 'd'
+          AND t.typname = ANY($1)
+          AND pg_catalog.pg_get_constraintdef(c.oid) ~ '\m(eql_v3|eql_v3_internal)\.'
+        ORDER BY 1
+        "#,
+    )
+    .bind(user_domain_names())
+    .fetch_all(&pool)
+    .await?;
+    assert!(
+        textual_refs.is_empty(),
+        "public user-domain CHECK constraint(s) reference EQL-owned schemas: {textual_refs:?}"
+    );
+
+    let dependency_refs: Vec<String> = sqlx::query_scalar(
+        r#"
+        SELECT format('%I.%I.%I depends on function %I.%I(%s)',
+                      tn.nspname, t.typname, c.conname,
+                      pn.nspname, p.proname,
+                      pg_catalog.pg_get_function_identity_arguments(p.oid))
+        FROM pg_catalog.pg_constraint c
+        JOIN pg_catalog.pg_type t ON t.oid = c.contypid
+        JOIN pg_catalog.pg_namespace tn ON tn.oid = t.typnamespace
+        JOIN pg_catalog.pg_depend d ON d.classid = 'pg_constraint'::regclass
+                                   AND d.objid = c.oid
+        JOIN pg_catalog.pg_proc p ON p.oid = d.refobjid
+        JOIN pg_catalog.pg_namespace pn ON pn.oid = p.pronamespace
+        WHERE tn.nspname = 'public'
+          AND t.typtype = 'd'
+          AND t.typname = ANY($1)
+          AND pn.nspname IN ('eql_v3', 'eql_v3_internal')
+        ORDER BY 1
+        "#,
+    )
+    .bind(user_domain_names())
+    .fetch_all(&pool)
+    .await?;
+    assert!(
+        dependency_refs.is_empty(),
+        "public user-domain CHECK constraint(s) depend on EQL-owned functions: {dependency_refs:?}"
+    );
+    Ok(())
+}
+
 /// #2 — Placement invariant: SEM index-term types remain internal. These are
 /// transient implementation types used by extractors, indexes, and comparator
 /// functions; exposing them as user-column domains would leak implementation

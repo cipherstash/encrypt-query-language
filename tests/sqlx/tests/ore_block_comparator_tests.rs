@@ -353,7 +353,7 @@ async fn timestamp_term_is_12_blocks(pool: PgPool) -> Result<()> {
     let width: i32 = sqlx::query_scalar(
         "SELECT octet_length((((eql_v3.ord_term( \
             (SELECT payload FROM fixtures.eql_v3_timestamp WHERE plaintext = '1970-01-01T00:00:00Z'::timestamptz) \
-            ::eql_v3.timestamp_ord)).terms)[1]).bytes)",
+            ::public.timestamp_ord)).terms)[1]).bytes)",
     )
     .fetch_one(&pool)
     .await?;

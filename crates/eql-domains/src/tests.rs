@@ -1237,7 +1237,7 @@ mod invariant_tests {
     fn every_domain_name_starts_with_its_family_name() {
         for s in CATALOG {
             for d in s.domains {
-                // The one documented exception: `eql_v3.json` (the jsonb
+                // The one documented exception: `public.json` (the jsonb
                 // family's document domain) predates the catalog and keeps
                 // its established name rather than following the
                 // family+suffix convention — see `Domain::full_name`.
