@@ -122,7 +122,7 @@ async fn placeholder_payload_casts_to_every_declared_domain(pool: PgPool) -> Res
     // (Was i32-only with a TODO to generalize; the TODO is now done.)
     for spec in eql_domains::scalar_families() {
         for domain in spec.domains {
-            let sql_domain = format!("eql_v3.{}", spec.domain_name(domain));
+            let sql_domain = format!("public.{}", spec.domain_name(domain));
             let sql = format!("SELECT $1::jsonb::{sql_domain}");
             sqlx::query(&sql)
                 .bind(PLACEHOLDER_PAYLOAD)

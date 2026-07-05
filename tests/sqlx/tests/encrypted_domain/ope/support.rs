@@ -22,14 +22,14 @@
 //! `property::cross_ciphertext` and, live, by
 //! `fixtures::cipherstash::live_tests`.
 
-/// Literal cast expression for an `eql_v3.<domain>` payload carrying BOTH the
+/// Literal cast expression for a `public.<domain>` payload carrying BOTH the
 /// exact-equality term `hm` and the CLLW-OPE hex term `op`. Domain CHECKs
 /// assert key *presence*, not absence of extras, so one builder serves both
 /// the `[Ope]` integer-family domains (which ignore `hm`) and text's
 /// `[Hm, Ope]` (which requires it).
 pub fn ope_cast(domain: &str, hm: &str, op_hex: &str) -> String {
     format!(
-        "'{{\"v\":3,\"i\":{{}},\"c\":\"x\",\"hm\":\"{hm}\",\"op\":\"{op_hex}\"}}'::jsonb::eql_v3.{domain}"
+        "'{{\"v\":3,\"i\":{{}},\"c\":\"x\",\"hm\":\"{hm}\",\"op\":\"{op_hex}\"}}'::jsonb::public.{domain}"
     )
 }
 
@@ -111,7 +111,7 @@ macro_rules! ope_ord_smoke {
             // envelope + hm fails at the cast boundary (hm is present, so for
             // text the sole missing key is `op` too).
             let err = sqlx::query(&format!(
-                "SELECT '{{\"v\":3,\"i\":{{}},\"c\":\"x\",\"hm\":\"aa\"}}'::jsonb::eql_v3.{}",
+                "SELECT '{{\"v\":3,\"i\":{{}},\"c\":\"x\",\"hm\":\"aa\"}}'::jsonb::public.{}",
                 $domain
             ))
             .execute(&pool)
@@ -169,7 +169,7 @@ macro_rules! ope_ord_fixture_smoke {
             // …and every payload casts into the ope domain (the CHECK accepts
             // a real client ciphertext; a cast failure errors the query).
             let cast_ok: i64 = sqlx::query_scalar(&format!(
-                "SELECT COUNT((payload)::eql_v3.{}) FROM {table}",
+                "SELECT COUNT((payload)::public.{}) FROM {table}",
                 $domain
             ))
             .fetch_one(&pool)
@@ -198,7 +198,7 @@ macro_rules! ope_ord_fixture_smoke {
 
             let asc: Vec<$scalar> = sqlx::query_scalar(&format!(
                 "SELECT plaintext FROM {table} \
-                 ORDER BY eql_v3.ord_ope_term((payload)::eql_v3.{})",
+                 ORDER BY eql_v3.ord_ope_term((payload)::public.{})",
                 $domain
             ))
             .fetch_all(&pool)
@@ -212,7 +212,7 @@ macro_rules! ope_ord_fixture_smoke {
 
             let desc: Vec<$scalar> = sqlx::query_scalar(&format!(
                 "SELECT plaintext FROM {table} \
-                 ORDER BY eql_v3.ord_ope_term((payload)::eql_v3.{}) DESC",
+                 ORDER BY eql_v3.ord_ope_term((payload)::public.{}) DESC",
                 $domain
             ))
             .fetch_all(&pool)
@@ -251,7 +251,7 @@ macro_rules! ope_ord_fixture_smoke {
             .fetch_one(&pool)
             .await?;
             let pivot_cast = format!(
-                "'{}'::jsonb::eql_v3.{}",
+                "'{}'::jsonb::public.{}",
                 pivot_json.replace('\'', "''"),
                 $domain
             );
@@ -274,7 +274,7 @@ macro_rules! ope_ord_fixture_smoke {
                 expected.sort();
                 let sql = format!(
                     "SELECT plaintext FROM {table} \
-                     WHERE (payload)::eql_v3.{domain} {op} ({pivot_cast})",
+                     WHERE (payload)::public.{domain} {op} ({pivot_cast})",
                     domain = $domain,
                 );
                 let mut actual: Vec<$scalar> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;

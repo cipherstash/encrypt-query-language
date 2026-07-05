@@ -4,14 +4,14 @@
 //! double) is one `<T> => <R>` line in the `scalar_types!` list
 //! (`scalar_types.rs`) plus an `EqlPlaintext` impl and a catalog row.
 //! The `impl ScalarType` below is generated from that list. Everything
-//! else — the four `eql_v3_<T>{,_eq,_ord,_ord_ore}` domains, per-domain
+//! else — the four `public.<T>{,_eq,_ord,_ord_ore}` domains, per-domain
 //! payload shapes, supported operators, index extractor expressions,
 //! ground-truth result sets — is derived from `T::PG_TYPE`,
 //! `T::fixture_values()`, and the `Variant` enum.
 //!
 //! # Plaintext oracle columns: `PG_TYPE` vs `PLAINTEXT_SQL_TYPE`
 //!
-//! EQL stores encrypted values as **jsonb**: every `eql_v3.<T>*` domain is
+//! EQL stores encrypted values as **jsonb**: every `public.<T>*` domain is
 //! `CREATE DOMAIN … AS jsonb`, and the ciphertext + index terms live inside the
 //! JSON payload. No concrete Postgres scalar type appears in the product at all.
 //!
@@ -27,7 +27,7 @@
 //! play:
 //!
 //! - [`ScalarType::PG_TYPE`] — the **EQL domain token / identifier**: the suffix
-//!   in the SQL domain name (`eql_v3.<PG_TYPE>_ord`) and the fixture table name
+//!   in the SQL domain name (`public.<PG_TYPE>_ord`) and the fixture table name
 //!   (`fixtures.eql_v3_<PG_TYPE>`), plus capability lookups. Never a plaintext
 //!   column type.
 //! - [`ScalarType::PLAINTEXT_SQL_TYPE`] — the **actual Postgres storage type**
@@ -90,7 +90,7 @@ pub trait ScalarType:
     + sqlx::Type<sqlx::Postgres>
 {
     /// The EQL domain token / identifier — the suffix in the SQL domain name
-    /// (`eql_v3.<PG_TYPE>_ord`) and the fixture script/table name
+    /// (`public.<PG_TYPE>_ord`) and the fixture script/table name
     /// (`fixtures.eql_v3_<PG_TYPE>`). Examples: `"integer"`, `"timestamp"`. This is
     /// an *identifier*, not necessarily a valid plaintext column type — see
     /// [`ScalarType::PLAINTEXT_SQL_TYPE`] and the module docs.
@@ -136,11 +136,11 @@ pub trait ScalarType:
     }
 
     /// SQL domain the comparable value is cast to. Default: the generated
-    /// scalar domain `eql_v3.<pg_type><variant_suffix>`. A non-scalar surface
+    /// scalar domain `public.<pg_type><variant_suffix>`. A non-scalar surface
     /// (e.g. a SteVec entry, whose single domain `public.jsonb_entry` is
     /// variant-independent) overrides this to ignore the suffix.
     fn sql_domain(variant: Variant) -> String {
-        format!("eql_v3.{}{}", Self::PG_TYPE, variant.suffix())
+        format!("public.{}{}", Self::PG_TYPE, variant.suffix())
     }
 
     /// SQL expression that yields the comparable value from a fixture row.
@@ -1306,7 +1306,7 @@ impl Variant {
 
 /// Runtime spec built from `(T, Variant)`. The matrix macro consumes
 /// this; nothing here is `const` because `sql_domain` is derived via
-/// `format!` from `T::PG_TYPE`. The domains live in the `eql_v3` schema,
+/// `format!` from `T::PG_TYPE`. The domains live in the `public` schema,
 /// so `sql_domain` is schema-qualified (e.g. `public.integer_eq`).
 #[derive(Debug, Clone)]
 pub struct ScalarDomainSpec {
