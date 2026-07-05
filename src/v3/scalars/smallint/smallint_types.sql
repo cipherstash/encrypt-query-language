@@ -6,12 +6,12 @@
 
 DO $$
 BEGIN
-  --! @brief Encrypted domain eql_v3.smallint.
+  --! @brief Encrypted domain public.smallint.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'smallint' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'smallint' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.smallint AS jsonb
+    CREATE DOMAIN public.smallint AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -21,12 +21,12 @@ BEGIN
       );
   END IF;
 
-  --! @brief Encrypted domain eql_v3.smallint_eq.
+  --! @brief Encrypted domain public.smallint_eq.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'smallint_eq' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'smallint_eq' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.smallint_eq AS jsonb
+    CREATE DOMAIN public.smallint_eq AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -37,12 +37,12 @@ BEGIN
       );
   END IF;
 
-  --! @brief Encrypted domain eql_v3.smallint_ord_ore.
+  --! @brief Encrypted domain public.smallint_ord_ore.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'smallint_ord_ore' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'smallint_ord_ore' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.smallint_ord_ore AS jsonb
+    CREATE DOMAIN public.smallint_ord_ore AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -55,12 +55,12 @@ BEGIN
       );
   END IF;
 
-  --! @brief Encrypted domain eql_v3.smallint_ord.
+  --! @brief Encrypted domain public.smallint_ord.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'smallint_ord' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'smallint_ord' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.smallint_ord AS jsonb
+    CREATE DOMAIN public.smallint_ord AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -73,12 +73,12 @@ BEGIN
       );
   END IF;
 
-  --! @brief Encrypted domain eql_v3.smallint_ord_ope.
+  --! @brief Encrypted domain public.smallint_ord_ope.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'smallint_ord_ope' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'smallint_ord_ope' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.smallint_ord_ope AS jsonb
+    CREATE DOMAIN public.smallint_ord_ope AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'

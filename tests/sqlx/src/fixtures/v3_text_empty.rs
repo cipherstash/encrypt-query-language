@@ -11,8 +11,8 @@
 //! order cleanly. See `tests/v3_text_empty_constraint_tests.rs`.
 //!
 //! The generated `payload` column is plain `jsonb`, so all three rows load; the
-//! rejection happens when a test casts the `id = 1` row to `eql_v3.text_ord` /
-//! `eql_v3.text_ord_ore`, not at fixture load.
+//! rejection happens when a test casts the `id = 1` row to `public.text_ord` /
+//! `public.text_ord_ore`, not at fixture load.
 //!
 //! Rows are addressed by `id` (1-based insertion ordinal): `"" → 1`,
 //! `"frank" → 2`, `"zebra" → 3`. The two non-empty controls are strictly

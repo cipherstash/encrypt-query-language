@@ -72,7 +72,7 @@ EQL installs the following components into the `eql_v3` schema:
 | --------------------------------------------------- | ------------- | ------------------------------------------------------------------- |
 | `eql_v3`                                            | Schema        | Holds all EQL types, operators, functions, and aggregates           |
 | `eql_v3.<T>`, `eql_v3.<T>_eq`, `eql_v3.<T>_ord`     | Domain types  | Per-scalar encrypted columns (one family per scalar: `integer`, `text`, `timestamp`, …) |
-| `eql_v3.json`                                       | Domain type   | Encrypted JSON (structured-encryption) documents                    |
+| `public.json`                                       | Domain type   | Encrypted JSON (structured-encryption) documents                    |
 | `eql_v3.eq_term` / `ord_term` / `match_term`        | Functions     | Index-term extractors for functional indexes                        |
 
 
@@ -80,7 +80,7 @@ EQL installs the following components into the `eql_v3` schema:
 
 The `eql_v3` schema holds the encrypted-domain types, their operators and term extractors, and the `MIN` / `MAX` aggregates.
 
-Encrypted columns are typed as `eql_v3` domains (e.g. `eql_v3.text_eq`, `eql_v3.json`), and the searchable surface available on a column is fixed by its domain **variant** — there is no database-side configuration state. Which index terms a value carries is decided by the encryption client (CipherStash Stack / CipherStash Proxy).
+Encrypted columns are typed as `eql_v3` domains (e.g. `public.text_eq`, `public.json`), and the searchable surface available on a column is fixed by its domain **variant** — there is no database-side configuration state. Which index terms a value carries is decided by the encryption client (CipherStash Stack / CipherStash Proxy).
 
 Because the domain types live in the `eql_v3` schema, columns depend on them; `DROP SCHEMA eql_v3 CASCADE` removes the surface (and would drop columns typed as those domains). Re-running the install script is idempotent.
 
@@ -110,7 +110,7 @@ GRANT ALTER ON ALL TABLES IN SCHEMA public TO your_eql_user;
 **Why these permissions are needed:**
 
 - **CREATE ON DATABASE**: Required to create the `eql_v3` schema, domain types, and functions during installation
-- **CREATE ON SCHEMA public**: Required to add encrypted columns (typed as `eql_v3` domains) to tables in the public schema
+- **CREATE ON SCHEMA public**: Required to add encrypted columns (typed as `public` domains) to tables in the public schema
 - **ALTER on user tables**: encrypted-domain `CHECK` constraints are validated on the user tables
 
 ### Splitting Read and Write Access
@@ -165,7 +165,7 @@ Once EQL is installed in your PostgreSQL database, you can start using encrypted
 
 ### Enable encrypted columns
 
-Define encrypted columns using an `eql_v3` domain type. Type the column as the **variant** for the capability you need — `eql_v3.text_eq` for equality, `eql_v3.<T>_ord` for range/ordering, `eql_v3.text_match` for full-text, `eql_v3.json` for encrypted JSON. Each is stored as `jsonb` with a `CHECK` constraint that validates the encrypted payload.
+Define encrypted columns using an `eql_v3` domain type. Type the column as the **variant** for the capability you need — `public.text_eq` for equality, `eql_v3.<T>_ord` for range/ordering, `public.text_match` for full-text, `public.json` for encrypted JSON. Each is stored as `jsonb` with a `CHECK` constraint that validates the encrypted payload.
 
 **Example:**
 
@@ -173,7 +173,7 @@ Define encrypted columns using an `eql_v3` domain type. Type the column as the *
 -- Step 1: Create a table with an equality-searchable encrypted column
 CREATE TABLE users (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    encrypted_email eql_v3.text_eq
+    encrypted_email public.text_eq
 );
 
 -- Step 2: Add a functional index on the term extractor (engages bare-form queries)
@@ -318,7 +318,7 @@ Follow the instructions in the [dbdev documentation](https://database.dev/cipher
 
 **A query returns no rows / silently runs native `jsonb` semantics**
 - **Cause**: the query operand was an untyped literal, so PostgreSQL flattened the `eql_v3` domain to its `jsonb` base type and resolved the native operator
-- **Solution**: type the operand — `WHERE col = $1::eql_v3.text_eq` (CipherStash Proxy supplies typed parameters automatically)
+- **Solution**: type the operand — `WHERE col = $1::public.text_eq` (CipherStash Proxy supplies typed parameters automatically)
 
 **Error: "operator not supported" (raised)**
 - **Cause**: the operator is blocked for the column's domain variant (e.g. `<` on an `_eq` column, or `LIKE` on any encrypted column)

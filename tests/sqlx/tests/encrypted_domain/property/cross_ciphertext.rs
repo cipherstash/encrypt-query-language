@@ -144,7 +144,7 @@ async fn assert_pair_eq_on_ord_ope<T: ScalarType>(
     a: &Row<T>,
     b: &Row<T>,
 ) -> Result<()> {
-    let domain = format!("eql_v3.{}_ord_ope", T::PG_TYPE);
+    let domain = format!("public.{}_ord_ope", T::PG_TYPE);
     let a_cast = format!("'{}'::jsonb::{domain}", a.payload_json.replace('\'', "''"));
     let b_cast = format!("'{}'::jsonb::{domain}", b.payload_json.replace('\'', "''"));
     let sql = format!("SELECT ({a_cast}) = ({b_cast}), ({a_cast}) <> ({b_cast})");

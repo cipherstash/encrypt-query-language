@@ -6,12 +6,12 @@
 
 DO $$
 BEGIN
-  --! @brief Encrypted domain eql_v3.boolean.
+  --! @brief Encrypted domain public.boolean.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'boolean' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'boolean' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.boolean AS jsonb
+    CREATE DOMAIN public.boolean AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'

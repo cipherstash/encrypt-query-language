@@ -39,7 +39,7 @@
   "$id": "https://schemas.cipherstash.com/eql/v3/date_ord_ore.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "`eql_v3.date_ord_ore` — ordering domain.\n\nOperators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.",
+  "description": "`public.date_ord_ore` — ordering domain.\n\nOperators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.",
   "properties": {
     "c": {
       "$ref": "#/$defs/Ciphertext"

@@ -8,7 +8,7 @@ EQL (the `eql_v3` schema) and the encryption client split responsibilities:
 
 | Responsibility | Owner |
 | --- | --- |
-| Encrypted-column **types** and **operators** (`eql_v3.text_eq`, `eql_v3.json`, `=`, `@>`, …) | **EQL** (this repo) |
+| Encrypted-column **types** and **operators** (`public.text_eq`, `public.json`, `=`, `@>`, …) | **EQL** (this repo) |
 | PostgreSQL **functional indexes** on the term extractors | **EQL** / you |
 | **Which columns are encrypted** and **which index terms** each carries | The **encryption client** — [CipherStash Proxy](https://github.com/cipherstash/proxy) / [CipherStash Stack](https://github.com/cipherstash/stack) |
 | Performing **encryption / decryption** on the wire | The encryption client |
@@ -26,19 +26,19 @@ Type each column as the `eql_v3` domain **variant** for the capability you need 
 
 ```sql
 -- equality-searchable encrypted text
-ALTER TABLE users  ADD COLUMN encrypted_email eql_v3.text_eq;
+ALTER TABLE users  ADD COLUMN encrypted_email public.text_eq;
 
 -- range/ordering-searchable encrypted timestamp
-ALTER TABLE events ADD COLUMN encrypted_at    eql_v3.timestamp_ord;
+ALTER TABLE events ADD COLUMN encrypted_at    public.timestamp_ord;
 
 -- full-text (bloom) searchable encrypted text
-ALTER TABLE users  ADD COLUMN encrypted_name  eql_v3.text_match;
+ALTER TABLE users  ADD COLUMN encrypted_name  public.text_match;
 
 -- searchable encrypted JSON document
-ALTER TABLE users  ADD COLUMN encrypted_profile eql_v3.json;
+ALTER TABLE users  ADD COLUMN encrypted_profile public.json;
 ```
 
-The variant fixes the column's searchable surface: `_eq` for `=`, `_ord` for ordering/range, `text_match` for `@>` token containment, `eql_v3.json` for encrypted JSON. The bare `eql_v3.<T>` variant is storage/decryption only.
+The variant fixes the column's searchable surface: `_eq` for `=`, `_ord` for ordering/range, `text_match` for `@>` token containment, `public.json` for encrypted JSON. The bare `eql_v3.<T>` variant is storage/decryption only.
 
 ## 2. Configure searchable encryption in the client
 
@@ -47,7 +47,7 @@ Tell the encryption client which columns to encrypt and which index terms to emi
 - **CipherStash Stack** — define the columns and indexes in the schema. See the [CipherStash Stack schema reference](https://cipherstash.com/docs/stack/cipherstash/encryption/schema).
 - **CipherStash Proxy** — configure the encrypted columns in the Proxy's mapping config. See [CipherStash Proxy](https://github.com/cipherstash/proxy).
 
-The terms the client emits (`hm` for equality, `ob` for ordering, `bf` for match, ste_vec for JSON) must match the column's domain variant from step 1 — e.g. configure an equality index for a column typed `eql_v3.text_eq`.
+The terms the client emits (`hm` for equality, `ob` for ordering, `bf` for match, ste_vec for JSON) must match the column's domain variant from step 1 — e.g. configure an equality index for a column typed `public.text_eq`.
 
 ## 3. Create functional indexes
 
@@ -79,30 +79,30 @@ SELECT encrypted_email FROM users;
 
 Type the query operand (the Proxy supplies typed parameters automatically; in hand-written SQL, cast). For the full operator surface see the [SQL support matrix](../reference/sql-support.md) and [EQL Functions Reference](../reference/eql-functions.md).
 
-**Equality** (`eql_v3.text_eq`):
+**Equality** (`public.text_eq`):
 
 ```sql
 SELECT * FROM users WHERE encrypted_email = $1;
 -- operator-free form (e.g. Supabase):
-SELECT * FROM users WHERE eql_v3.eq(encrypted_email, $1::eql_v3.text_eq);
+SELECT * FROM users WHERE eql_v3.eq(encrypted_email, $1::public.text_eq);
 ```
 
-**Range / ordering** (`eql_v3.timestamp_ord`):
+**Range / ordering** (`public.timestamp_ord`):
 
 ```sql
 SELECT * FROM events WHERE encrypted_at < $1 ORDER BY eql_v3.ord_term(encrypted_at) DESC;
 ```
 
-**Full-text match** (`eql_v3.text_match`) — bloom-filter token containment, not `LIKE`:
+**Full-text match** (`public.text_match`) — bloom-filter token containment, not `LIKE`:
 
 ```sql
-SELECT * FROM users WHERE encrypted_name @> $1::eql_v3.text_match;
+SELECT * FROM users WHERE encrypted_name @> $1::public.text_match;
 ```
 
-**Encrypted JSON** (`eql_v3.json`) — containment and field access; see [EQL with JSON and JSONB](../reference/json-support.md):
+**Encrypted JSON** (`public.json`) — containment and field access; see [EQL with JSON and JSONB](../reference/json-support.md):
 
 ```sql
-SELECT * FROM users WHERE encrypted_profile @> $1::eql_v3.jsonb_query;
+SELECT * FROM users WHERE encrypted_profile @> $1::public.jsonb_query;
 SELECT encrypted_profile -> 'email_selector'::text FROM users;
 ```
 
@@ -114,11 +114,11 @@ SELECT encrypted_profile -> 'email_selector'::text FROM users;
 
 **Which operators are available on which column?** See the [SQL support matrix](../reference/sql-support.md).
 
-**Where is the data format documented?** See the [payload / wire format](../../crates/eql-bindings/README.md) for the scalar envelope and index terms, and [EQL with JSON and JSONB](../reference/json-support.md) for the `eql_v3.json` document format.
+**Where is the data format documented?** See the [payload / wire format](../../crates/eql-bindings/README.md) for the scalar envelope and index terms, and [EQL with JSON and JSONB](../reference/json-support.md) for the `public.json` document format.
 
 ## Troubleshooting
 
-**Operator resolves to native `jsonb` / returns `NULL` instead of searching.** The query operand was an untyped literal, so PostgreSQL flattened the `eql_v3` domain to `jsonb`. Type the operand (`$1::eql_v3.text_eq`, `$1::eql_v3.jsonb_query`) — the Proxy does this automatically.
+**Operator resolves to native `jsonb` / returns `NULL` instead of searching.** The query operand was an untyped literal, so PostgreSQL flattened the `eql_v3` domain to `jsonb`. Type the operand (`$1::public.text_eq`, `$1::public.jsonb_query`) — the Proxy does this automatically.
 
 **`=` returns no rows.** The column's values do not carry an `hm` equality term. Confirm the client is configured to emit the right term for the column's variant (step 2), and that data was written through the Proxy after configuring it.
 

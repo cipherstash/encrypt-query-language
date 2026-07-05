@@ -21,7 +21,7 @@ use sqlx::PgPool;
 /// `min_pivot() < origin() < max_pivot()` holds through the encrypted `_ord`
 /// domain's `<` operator (ORE block comparison), spanning the sign boundary.
 async fn sign_boundary_is_monotonic<T: SignedScalar>(pool: &PgPool) -> anyhow::Result<()> {
-    let d = format!("eql_v3.{}_ord", T::PG_TYPE);
+    let d = format!("public.{}_ord", T::PG_TYPE);
 
     // Fixtures straddling the origin: min is below it, max above it.
     let below = sql_string_literal(&fetch_fixture_payload::<T>(pool, T::min_pivot()).await?);

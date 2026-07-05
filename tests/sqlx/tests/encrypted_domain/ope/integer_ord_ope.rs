@@ -1,4 +1,4 @@
-//! `eql_v3.integer_ord_ope` smoke suite: the shared `_ord_ope` tests plus the
+//! `public.integer_ord_ope` smoke suite: the shared `_ord_ope` tests plus the
 //! deeper single-type behaviour (bytea prefix order, blockers, ORDER BY forms,
 //! MIN/MAX aggregates) exercised once on the integer reference — the ope surface
 //! is byte-identical across the ordered families modulo the domain name, so
@@ -24,7 +24,7 @@ async fn ord_ope_functional_index_engages_for_range_and_equality(
     // opclass — the same mechanism as `hm` equality. `enable_seqscan = off`
     // proves usability only (the matrix's scale tests own preference).
     let mut tx = pool.begin().await?;
-    sqlx::query("CREATE TABLE ope_idx (id int, payload eql_v3.integer_ord_ope)")
+    sqlx::query("CREATE TABLE ope_idx (id int, payload public.integer_ord_ope)")
         .execute(&mut *tx)
         .await?;
     for (id, op) in [(1, "00"), (2, "0a"), (3, "7f"), (4, "ff"), (5, "ffff")] {
@@ -97,7 +97,7 @@ async fn ord_ope_order_by_sorts_by_decoded_bytes(pool: PgPool) -> anyhow::Result
     // opclass). `ORDER BY col USING <` must REJECT: the design forbids
     // opclasses on the domains themselves (see the matrix's order_by_using
     // rejection category).
-    sqlx::query("CREATE TABLE ope_smoke (id int, payload eql_v3.integer_ord_ope)")
+    sqlx::query("CREATE TABLE ope_smoke (id int, payload public.integer_ord_ope)")
         .execute(&pool)
         .await?;
     // Insert out of byte order: 0xff (3rd), 0x00ff (1st), 0x0100 (2nd).
@@ -133,7 +133,7 @@ async fn ord_ope_order_by_sorts_by_decoded_bytes(pool: PgPool) -> anyhow::Result
 
 #[sqlx::test]
 async fn ord_ope_min_max_aggregates(pool: PgPool) -> anyhow::Result<()> {
-    sqlx::query("CREATE TABLE ope_agg (payload eql_v3.integer_ord_ope)")
+    sqlx::query("CREATE TABLE ope_agg (payload public.integer_ord_ope)")
         .execute(&pool)
         .await?;
     for op in ["0a", "00", "ff"] {

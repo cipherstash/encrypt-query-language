@@ -4,400 +4,400 @@
 -- REQUIRE: src/v3/scalars/functions.sql
 
 --! @file encrypted_domain/date/date_functions.sql
---! @brief Functions for eql_v3.date.
+--! @brief Functions for public.date.
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
---! @param b eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
+--! @param b public.date
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.eq(a eql_v3.date, b eql_v3.date)
+CREATE FUNCTION eql_v3_internal.eq(a public.date, b public.date)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.eq(a eql_v3.date, b jsonb)
+CREATE FUNCTION eql_v3_internal.eq(a public.date, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
+--! @brief Unsupported operator blocker for public.date.
 --! @param a jsonb
---! @param b eql_v3.date
+--! @param b public.date
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.eq(a jsonb, b eql_v3.date)
+CREATE FUNCTION eql_v3_internal.eq(a jsonb, b public.date)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
---! @param b eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
+--! @param b public.date
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.neq(a eql_v3.date, b eql_v3.date)
+CREATE FUNCTION eql_v3_internal.neq(a public.date, b public.date)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.neq(a eql_v3.date, b jsonb)
+CREATE FUNCTION eql_v3_internal.neq(a public.date, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
+--! @brief Unsupported operator blocker for public.date.
 --! @param a jsonb
---! @param b eql_v3.date
+--! @param b public.date
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.neq(a jsonb, b eql_v3.date)
+CREATE FUNCTION eql_v3_internal.neq(a jsonb, b public.date)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
---! @param b eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
+--! @param b public.date
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.lt(a eql_v3.date, b eql_v3.date)
+CREATE FUNCTION eql_v3_internal.lt(a public.date, b public.date)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.lt(a eql_v3.date, b jsonb)
+CREATE FUNCTION eql_v3_internal.lt(a public.date, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
+--! @brief Unsupported operator blocker for public.date.
 --! @param a jsonb
---! @param b eql_v3.date
+--! @param b public.date
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.lt(a jsonb, b eql_v3.date)
+CREATE FUNCTION eql_v3_internal.lt(a jsonb, b public.date)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
---! @param b eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
+--! @param b public.date
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.lte(a eql_v3.date, b eql_v3.date)
+CREATE FUNCTION eql_v3_internal.lte(a public.date, b public.date)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.lte(a eql_v3.date, b jsonb)
+CREATE FUNCTION eql_v3_internal.lte(a public.date, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
+--! @brief Unsupported operator blocker for public.date.
 --! @param a jsonb
---! @param b eql_v3.date
+--! @param b public.date
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.lte(a jsonb, b eql_v3.date)
+CREATE FUNCTION eql_v3_internal.lte(a jsonb, b public.date)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
---! @param b eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
+--! @param b public.date
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.gt(a eql_v3.date, b eql_v3.date)
+CREATE FUNCTION eql_v3_internal.gt(a public.date, b public.date)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.gt(a eql_v3.date, b jsonb)
+CREATE FUNCTION eql_v3_internal.gt(a public.date, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
+--! @brief Unsupported operator blocker for public.date.
 --! @param a jsonb
---! @param b eql_v3.date
+--! @param b public.date
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.gt(a jsonb, b eql_v3.date)
+CREATE FUNCTION eql_v3_internal.gt(a jsonb, b public.date)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
---! @param b eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
+--! @param b public.date
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.gte(a eql_v3.date, b eql_v3.date)
+CREATE FUNCTION eql_v3_internal.gte(a public.date, b public.date)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.gte(a eql_v3.date, b jsonb)
+CREATE FUNCTION eql_v3_internal.gte(a public.date, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
+--! @brief Unsupported operator blocker for public.date.
 --! @param a jsonb
---! @param b eql_v3.date
+--! @param b public.date
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.gte(a jsonb, b eql_v3.date)
+CREATE FUNCTION eql_v3_internal.gte(a jsonb, b public.date)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
---! @param b eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
+--! @param b public.date
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contains(a eql_v3.date, b eql_v3.date)
+CREATE FUNCTION eql_v3_internal.contains(a public.date, b public.date)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contains(a eql_v3.date, b jsonb)
+CREATE FUNCTION eql_v3_internal.contains(a public.date, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
+--! @brief Unsupported operator blocker for public.date.
 --! @param a jsonb
---! @param b eql_v3.date
+--! @param b public.date
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contains(a jsonb, b eql_v3.date)
+CREATE FUNCTION eql_v3_internal.contains(a jsonb, b public.date)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
---! @param b eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
+--! @param b public.date
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contained_by(a eql_v3.date, b eql_v3.date)
+CREATE FUNCTION eql_v3_internal.contained_by(a public.date, b public.date)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contained_by(a eql_v3.date, b jsonb)
+CREATE FUNCTION eql_v3_internal.contained_by(a public.date, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
+--! @brief Unsupported operator blocker for public.date.
 --! @param a jsonb
---! @param b eql_v3.date
+--! @param b public.date
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contained_by(a jsonb, b eql_v3.date)
+CREATE FUNCTION eql_v3_internal.contained_by(a jsonb, b public.date)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param selector text
---! @return eql_v3.date
-CREATE FUNCTION eql_v3_internal."->"(a eql_v3.date, selector text)
-RETURNS eql_v3.date IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v3.date'; END; $$
+--! @return public.date
+CREATE FUNCTION eql_v3_internal."->"(a public.date, selector text)
+RETURNS public.date IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param selector integer
---! @return eql_v3.date
-CREATE FUNCTION eql_v3_internal."->"(a eql_v3.date, selector integer)
-RETURNS eql_v3.date IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v3.date'; END; $$
+--! @return public.date
+CREATE FUNCTION eql_v3_internal."->"(a public.date, selector integer)
+RETURNS public.date IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
+--! @brief Unsupported operator blocker for public.date.
 --! @param a jsonb
---! @param selector eql_v3.date
---! @return eql_v3.date
-CREATE FUNCTION eql_v3_internal."->"(a jsonb, selector eql_v3.date)
-RETURNS eql_v3.date IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v3.date'; END; $$
+--! @param selector public.date
+--! @return public.date
+CREATE FUNCTION eql_v3_internal."->"(a jsonb, selector public.date)
+RETURNS public.date IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param selector text
 --! @return text
-CREATE FUNCTION eql_v3_internal."->>"(a eql_v3.date, selector text)
+CREATE FUNCTION eql_v3_internal."->>"(a public.date, selector text)
 RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param selector integer
 --! @return text
-CREATE FUNCTION eql_v3_internal."->>"(a eql_v3.date, selector integer)
+CREATE FUNCTION eql_v3_internal."->>"(a public.date, selector integer)
 RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
+--! @brief Unsupported operator blocker for public.date.
 --! @param a jsonb
---! @param selector eql_v3.date
+--! @param selector public.date
 --! @return text
-CREATE FUNCTION eql_v3_internal."->>"(a jsonb, selector eql_v3.date)
+CREATE FUNCTION eql_v3_internal."->>"(a jsonb, selector public.date)
 RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param b text
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."?"(a eql_v3.date, b text)
+CREATE FUNCTION eql_v3_internal."?"(a public.date, b text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param b text[]
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."?|"(a eql_v3.date, b text[])
+CREATE FUNCTION eql_v3_internal."?|"(a public.date, b text[])
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?|', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?|', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param b text[]
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."?&"(a eql_v3.date, b text[])
+CREATE FUNCTION eql_v3_internal."?&"(a public.date, b text[])
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?&', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?&', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param b jsonpath
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."@?"(a eql_v3.date, b jsonpath)
+CREATE FUNCTION eql_v3_internal."@?"(a public.date, b jsonpath)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@?', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@?', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param b jsonpath
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."@@"(a eql_v3.date, b jsonpath)
+CREATE FUNCTION eql_v3_internal."@@"(a public.date, b jsonpath)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param b text[]
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."#>"(a eql_v3.date, b text[])
+CREATE FUNCTION eql_v3_internal."#>"(a public.date, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param b text[]
 --! @return text
-CREATE FUNCTION eql_v3_internal."#>>"(a eql_v3.date, b text[])
+CREATE FUNCTION eql_v3_internal."#>>"(a public.date, b text[])
 RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>>', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>>', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param b text
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."-"(a eql_v3.date, b text)
+CREATE FUNCTION eql_v3_internal."-"(a public.date, b text)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param b integer
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."-"(a eql_v3.date, b integer)
+CREATE FUNCTION eql_v3_internal."-"(a public.date, b integer)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param b text[]
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."-"(a eql_v3.date, b text[])
+CREATE FUNCTION eql_v3_internal."-"(a public.date, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param b text[]
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."#-"(a eql_v3.date, b text[])
+CREATE FUNCTION eql_v3_internal."#-"(a public.date, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#-', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#-', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
---! @param b eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
+--! @param b public.date
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."||"(a eql_v3.date, b eql_v3.date)
+CREATE FUNCTION eql_v3_internal."||"(a public.date, b public.date)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
---! @param a eql_v3.date
+--! @brief Unsupported operator blocker for public.date.
+--! @param a public.date
 --! @param b jsonb
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."||"(a eql_v3.date, b jsonb)
+CREATE FUNCTION eql_v3_internal."||"(a public.date, b jsonb)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.date'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.date.
+--! @brief Unsupported operator blocker for public.date.
 --! @param a jsonb
---! @param b eql_v3.date
+--! @param b public.date
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."||"(a jsonb, b eql_v3.date)
+CREATE FUNCTION eql_v3_internal."||"(a jsonb, b public.date)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'eql_v3.date'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.date'; END; $$
 LANGUAGE plpgsql;

@@ -8,400 +8,400 @@
 -- REQUIRE: src/v3/sem/bloom_filter/functions.sql
 
 --! @file encrypted_domain/text/text_search_functions.sql
---! @brief Functions for eql_v3.text_search.
+--! @brief Functions for public.text_search.
 
---! @brief Index extractor for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Index extractor for public.text_search.
+--! @param a public.text_search
 --! @return eql_v3_internal.hmac_256
-CREATE FUNCTION eql_v3.eq_term(a eql_v3.text_search)
+CREATE FUNCTION eql_v3.eq_term(a public.text_search)
 RETURNS eql_v3_internal.hmac_256
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3_internal.hmac_256(a::jsonb) $$;
 
---! @brief Index extractor for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Index extractor for public.text_search.
+--! @param a public.text_search
 --! @return eql_v3_internal.ore_block_256
-CREATE FUNCTION eql_v3.ord_term(a eql_v3.text_search)
+CREATE FUNCTION eql_v3.ord_term(a public.text_search)
 RETURNS eql_v3_internal.ore_block_256
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3_internal.ore_block_256(a::jsonb) $$;
 
---! @brief Index extractor for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Index extractor for public.text_search.
+--! @param a public.text_search
 --! @return eql_v3_internal.bloom_filter
-CREATE FUNCTION eql_v3.match_term(a eql_v3.text_search)
+CREATE FUNCTION eql_v3.match_term(a public.text_search)
 RETURNS eql_v3_internal.bloom_filter
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3_internal.bloom_filter(a::jsonb) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
---! @param a eql_v3.text_search
---! @param b eql_v3.text_search
+--! @brief Operator wrapper for public.text_search.
+--! @param a public.text_search
+--! @param b public.text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.eq(a eql_v3.text_search, b eql_v3.text_search)
+CREATE FUNCTION eql_v3.eq(a public.text_search, b public.text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Operator wrapper for public.text_search.
+--! @param a public.text_search
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.eq(a eql_v3.text_search, b jsonb)
+CREATE FUNCTION eql_v3.eq(a public.text_search, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b::eql_v3.text_search) $$;
+AS $$ SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b::public.text_search) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
+--! @brief Operator wrapper for public.text_search.
 --! @param a jsonb
---! @param b eql_v3.text_search
+--! @param b public.text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.eq(a jsonb, b eql_v3.text_search)
+CREATE FUNCTION eql_v3.eq(a jsonb, b public.text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.eq_term(a::eql_v3.text_search) = eql_v3.eq_term(b) $$;
+AS $$ SELECT eql_v3.eq_term(a::public.text_search) = eql_v3.eq_term(b) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
---! @param a eql_v3.text_search
---! @param b eql_v3.text_search
+--! @brief Operator wrapper for public.text_search.
+--! @param a public.text_search
+--! @param b public.text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.neq(a eql_v3.text_search, b eql_v3.text_search)
+CREATE FUNCTION eql_v3.neq(a public.text_search, b public.text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Operator wrapper for public.text_search.
+--! @param a public.text_search
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.neq(a eql_v3.text_search, b jsonb)
+CREATE FUNCTION eql_v3.neq(a public.text_search, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b::eql_v3.text_search) $$;
+AS $$ SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b::public.text_search) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
+--! @brief Operator wrapper for public.text_search.
 --! @param a jsonb
---! @param b eql_v3.text_search
+--! @param b public.text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.neq(a jsonb, b eql_v3.text_search)
+CREATE FUNCTION eql_v3.neq(a jsonb, b public.text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.eq_term(a::eql_v3.text_search) <> eql_v3.eq_term(b) $$;
+AS $$ SELECT eql_v3.eq_term(a::public.text_search) <> eql_v3.eq_term(b) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
---! @param a eql_v3.text_search
---! @param b eql_v3.text_search
+--! @brief Operator wrapper for public.text_search.
+--! @param a public.text_search
+--! @param b public.text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.lt(a eql_v3.text_search, b eql_v3.text_search)
+CREATE FUNCTION eql_v3.lt(a public.text_search, b public.text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Operator wrapper for public.text_search.
+--! @param a public.text_search
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.lt(a eql_v3.text_search, b jsonb)
+CREATE FUNCTION eql_v3.lt(a public.text_search, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b::eql_v3.text_search) $$;
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b::public.text_search) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
+--! @brief Operator wrapper for public.text_search.
 --! @param a jsonb
---! @param b eql_v3.text_search
+--! @param b public.text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.lt(a jsonb, b eql_v3.text_search)
+CREATE FUNCTION eql_v3.lt(a jsonb, b public.text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a::eql_v3.text_search) < eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_term(a::public.text_search) < eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
---! @param a eql_v3.text_search
---! @param b eql_v3.text_search
+--! @brief Operator wrapper for public.text_search.
+--! @param a public.text_search
+--! @param b public.text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.lte(a eql_v3.text_search, b eql_v3.text_search)
+CREATE FUNCTION eql_v3.lte(a public.text_search, b public.text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Operator wrapper for public.text_search.
+--! @param a public.text_search
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.lte(a eql_v3.text_search, b jsonb)
+CREATE FUNCTION eql_v3.lte(a public.text_search, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b::eql_v3.text_search) $$;
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b::public.text_search) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
+--! @brief Operator wrapper for public.text_search.
 --! @param a jsonb
---! @param b eql_v3.text_search
+--! @param b public.text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.lte(a jsonb, b eql_v3.text_search)
+CREATE FUNCTION eql_v3.lte(a jsonb, b public.text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a::eql_v3.text_search) <= eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_term(a::public.text_search) <= eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
---! @param a eql_v3.text_search
---! @param b eql_v3.text_search
+--! @brief Operator wrapper for public.text_search.
+--! @param a public.text_search
+--! @param b public.text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.gt(a eql_v3.text_search, b eql_v3.text_search)
+CREATE FUNCTION eql_v3.gt(a public.text_search, b public.text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Operator wrapper for public.text_search.
+--! @param a public.text_search
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.gt(a eql_v3.text_search, b jsonb)
+CREATE FUNCTION eql_v3.gt(a public.text_search, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b::eql_v3.text_search) $$;
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b::public.text_search) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
+--! @brief Operator wrapper for public.text_search.
 --! @param a jsonb
---! @param b eql_v3.text_search
+--! @param b public.text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.gt(a jsonb, b eql_v3.text_search)
+CREATE FUNCTION eql_v3.gt(a jsonb, b public.text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a::eql_v3.text_search) > eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_term(a::public.text_search) > eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
---! @param a eql_v3.text_search
---! @param b eql_v3.text_search
+--! @brief Operator wrapper for public.text_search.
+--! @param a public.text_search
+--! @param b public.text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.gte(a eql_v3.text_search, b eql_v3.text_search)
+CREATE FUNCTION eql_v3.gte(a public.text_search, b public.text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Operator wrapper for public.text_search.
+--! @param a public.text_search
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.gte(a eql_v3.text_search, b jsonb)
+CREATE FUNCTION eql_v3.gte(a public.text_search, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b::eql_v3.text_search) $$;
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b::public.text_search) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
+--! @brief Operator wrapper for public.text_search.
 --! @param a jsonb
---! @param b eql_v3.text_search
+--! @param b public.text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.gte(a jsonb, b eql_v3.text_search)
+CREATE FUNCTION eql_v3.gte(a jsonb, b public.text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a::eql_v3.text_search) >= eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_term(a::public.text_search) >= eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
---! @param a eql_v3.text_search
---! @param b eql_v3.text_search
+--! @brief Operator wrapper for public.text_search.
+--! @param a public.text_search
+--! @param b public.text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.contains(a eql_v3.text_search, b eql_v3.text_search)
+CREATE FUNCTION eql_v3.contains(a public.text_search, b public.text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Operator wrapper for public.text_search.
+--! @param a public.text_search
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.contains(a eql_v3.text_search, b jsonb)
+CREATE FUNCTION eql_v3.contains(a public.text_search, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b::eql_v3.text_search) $$;
+AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b::public.text_search) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
+--! @brief Operator wrapper for public.text_search.
 --! @param a jsonb
---! @param b eql_v3.text_search
+--! @param b public.text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.contains(a jsonb, b eql_v3.text_search)
+CREATE FUNCTION eql_v3.contains(a jsonb, b public.text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.match_term(a::eql_v3.text_search) @> eql_v3.match_term(b) $$;
+AS $$ SELECT eql_v3.match_term(a::public.text_search) @> eql_v3.match_term(b) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
---! @param a eql_v3.text_search
---! @param b eql_v3.text_search
+--! @brief Operator wrapper for public.text_search.
+--! @param a public.text_search
+--! @param b public.text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.contained_by(a eql_v3.text_search, b eql_v3.text_search)
+CREATE FUNCTION eql_v3.contained_by(a public.text_search, b public.text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.match_term(a) <@ eql_v3.match_term(b) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Operator wrapper for public.text_search.
+--! @param a public.text_search
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.contained_by(a eql_v3.text_search, b jsonb)
+CREATE FUNCTION eql_v3.contained_by(a public.text_search, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.match_term(a) <@ eql_v3.match_term(b::eql_v3.text_search) $$;
+AS $$ SELECT eql_v3.match_term(a) <@ eql_v3.match_term(b::public.text_search) $$;
 
---! @brief Operator wrapper for eql_v3.text_search.
+--! @brief Operator wrapper for public.text_search.
 --! @param a jsonb
---! @param b eql_v3.text_search
+--! @param b public.text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.contained_by(a jsonb, b eql_v3.text_search)
+CREATE FUNCTION eql_v3.contained_by(a jsonb, b public.text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.match_term(a::eql_v3.text_search) <@ eql_v3.match_term(b) $$;
+AS $$ SELECT eql_v3.match_term(a::public.text_search) <@ eql_v3.match_term(b) $$;
 
---! @brief Unsupported operator blocker for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Unsupported operator blocker for public.text_search.
+--! @param a public.text_search
 --! @param selector text
---! @return eql_v3.text_search
-CREATE FUNCTION eql_v3_internal."->"(a eql_v3.text_search, selector text)
-RETURNS eql_v3.text_search IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v3.text_search'; END; $$
+--! @return public.text_search
+CREATE FUNCTION eql_v3_internal."->"(a public.text_search, selector text)
+RETURNS public.text_search IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.text_search'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Unsupported operator blocker for public.text_search.
+--! @param a public.text_search
 --! @param selector integer
---! @return eql_v3.text_search
-CREATE FUNCTION eql_v3_internal."->"(a eql_v3.text_search, selector integer)
-RETURNS eql_v3.text_search IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v3.text_search'; END; $$
+--! @return public.text_search
+CREATE FUNCTION eql_v3_internal."->"(a public.text_search, selector integer)
+RETURNS public.text_search IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.text_search'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.text_search.
+--! @brief Unsupported operator blocker for public.text_search.
 --! @param a jsonb
---! @param selector eql_v3.text_search
---! @return eql_v3.text_search
-CREATE FUNCTION eql_v3_internal."->"(a jsonb, selector eql_v3.text_search)
-RETURNS eql_v3.text_search IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v3.text_search'; END; $$
+--! @param selector public.text_search
+--! @return public.text_search
+CREATE FUNCTION eql_v3_internal."->"(a jsonb, selector public.text_search)
+RETURNS public.text_search IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.text_search'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Unsupported operator blocker for public.text_search.
+--! @param a public.text_search
 --! @param selector text
 --! @return text
-CREATE FUNCTION eql_v3_internal."->>"(a eql_v3.text_search, selector text)
+CREATE FUNCTION eql_v3_internal."->>"(a public.text_search, selector text)
 RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v3.text_search'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.text_search'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Unsupported operator blocker for public.text_search.
+--! @param a public.text_search
 --! @param selector integer
 --! @return text
-CREATE FUNCTION eql_v3_internal."->>"(a eql_v3.text_search, selector integer)
+CREATE FUNCTION eql_v3_internal."->>"(a public.text_search, selector integer)
 RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v3.text_search'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.text_search'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.text_search.
+--! @brief Unsupported operator blocker for public.text_search.
 --! @param a jsonb
---! @param selector eql_v3.text_search
+--! @param selector public.text_search
 --! @return text
-CREATE FUNCTION eql_v3_internal."->>"(a jsonb, selector eql_v3.text_search)
+CREATE FUNCTION eql_v3_internal."->>"(a jsonb, selector public.text_search)
 RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v3.text_search'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.text_search'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Unsupported operator blocker for public.text_search.
+--! @param a public.text_search
 --! @param b text
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."?"(a eql_v3.text_search, b text)
+CREATE FUNCTION eql_v3_internal."?"(a public.text_search, b text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?', 'eql_v3.text_search'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?', 'public.text_search'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Unsupported operator blocker for public.text_search.
+--! @param a public.text_search
 --! @param b text[]
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."?|"(a eql_v3.text_search, b text[])
+CREATE FUNCTION eql_v3_internal."?|"(a public.text_search, b text[])
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?|', 'eql_v3.text_search'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?|', 'public.text_search'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Unsupported operator blocker for public.text_search.
+--! @param a public.text_search
 --! @param b text[]
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."?&"(a eql_v3.text_search, b text[])
+CREATE FUNCTION eql_v3_internal."?&"(a public.text_search, b text[])
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?&', 'eql_v3.text_search'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?&', 'public.text_search'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Unsupported operator blocker for public.text_search.
+--! @param a public.text_search
 --! @param b jsonpath
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."@?"(a eql_v3.text_search, b jsonpath)
+CREATE FUNCTION eql_v3_internal."@?"(a public.text_search, b jsonpath)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@?', 'eql_v3.text_search'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@?', 'public.text_search'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Unsupported operator blocker for public.text_search.
+--! @param a public.text_search
 --! @param b jsonpath
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."@@"(a eql_v3.text_search, b jsonpath)
+CREATE FUNCTION eql_v3_internal."@@"(a public.text_search, b jsonpath)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'eql_v3.text_search'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'public.text_search'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Unsupported operator blocker for public.text_search.
+--! @param a public.text_search
 --! @param b text[]
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."#>"(a eql_v3.text_search, b text[])
+CREATE FUNCTION eql_v3_internal."#>"(a public.text_search, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>', 'eql_v3.text_search'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>', 'public.text_search'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Unsupported operator blocker for public.text_search.
+--! @param a public.text_search
 --! @param b text[]
 --! @return text
-CREATE FUNCTION eql_v3_internal."#>>"(a eql_v3.text_search, b text[])
+CREATE FUNCTION eql_v3_internal."#>>"(a public.text_search, b text[])
 RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>>', 'eql_v3.text_search'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>>', 'public.text_search'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Unsupported operator blocker for public.text_search.
+--! @param a public.text_search
 --! @param b text
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."-"(a eql_v3.text_search, b text)
+CREATE FUNCTION eql_v3_internal."-"(a public.text_search, b text)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'eql_v3.text_search'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.text_search'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Unsupported operator blocker for public.text_search.
+--! @param a public.text_search
 --! @param b integer
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."-"(a eql_v3.text_search, b integer)
+CREATE FUNCTION eql_v3_internal."-"(a public.text_search, b integer)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'eql_v3.text_search'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.text_search'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Unsupported operator blocker for public.text_search.
+--! @param a public.text_search
 --! @param b text[]
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."-"(a eql_v3.text_search, b text[])
+CREATE FUNCTION eql_v3_internal."-"(a public.text_search, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'eql_v3.text_search'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.text_search'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Unsupported operator blocker for public.text_search.
+--! @param a public.text_search
 --! @param b text[]
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."#-"(a eql_v3.text_search, b text[])
+CREATE FUNCTION eql_v3_internal."#-"(a public.text_search, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#-', 'eql_v3.text_search'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#-', 'public.text_search'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.text_search.
---! @param a eql_v3.text_search
---! @param b eql_v3.text_search
+--! @brief Unsupported operator blocker for public.text_search.
+--! @param a public.text_search
+--! @param b public.text_search
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."||"(a eql_v3.text_search, b eql_v3.text_search)
+CREATE FUNCTION eql_v3_internal."||"(a public.text_search, b public.text_search)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'eql_v3.text_search'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.text_search'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.text_search.
---! @param a eql_v3.text_search
+--! @brief Unsupported operator blocker for public.text_search.
+--! @param a public.text_search
 --! @param b jsonb
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."||"(a eql_v3.text_search, b jsonb)
+CREATE FUNCTION eql_v3_internal."||"(a public.text_search, b jsonb)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'eql_v3.text_search'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.text_search'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.text_search.
+--! @brief Unsupported operator blocker for public.text_search.
 --! @param a jsonb
---! @param b eql_v3.text_search
+--! @param b public.text_search
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."||"(a jsonb, b eql_v3.text_search)
+CREATE FUNCTION eql_v3_internal."||"(a jsonb, b public.text_search)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'eql_v3.text_search'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.text_search'; END; $$
 LANGUAGE plpgsql;

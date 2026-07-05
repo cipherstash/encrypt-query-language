@@ -7,12 +7,12 @@
 DO $$
 BEGIN
 {%- for d in domains %}
-  --! @brief Encrypted domain {{ schema }}.{{ d.name }}.
+  --! @brief Encrypted domain public.{{ d.name }}.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = '{{ d.typname }}' AND typnamespace = '{{ schema }}'::regnamespace
+    WHERE typname = '{{ d.typname }}' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN {{ schema }}.{{ d.name }} AS jsonb
+    CREATE DOMAIN public.{{ d.name }} AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         {%- for k in d.keys %}

@@ -38,14 +38,14 @@ async fn integer_payload_literal(pool: &PgPool, plaintext: i32) -> anyhow::Resul
 }
 
 // ===========================================================================
-// NOT NULL — on the storage-only `eql_v3.integer` domain column.
+// NOT NULL — on the storage-only `public.integer` domain column.
 // ===========================================================================
 
-/// A `NOT NULL` column attribute on an `eql_v3.integer` (storage) column rejects a
+/// A `NOT NULL` column attribute on an `public.integer` (storage) column rejects a
 /// NULL insert (SQLSTATE 23502) and accepts a real encrypted value.
 #[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_integer")))]
 async fn not_null_on_integer_storage_column(pool: PgPool) -> anyhow::Result<()> {
-    sqlx::query("CREATE TABLE v3_not_null (id bigint PRIMARY KEY, val eql_v3.integer NOT NULL)")
+    sqlx::query("CREATE TABLE v3_not_null (id bigint PRIMARY KEY, val public.integer NOT NULL)")
         .execute(&pool)
         .await?;
 
@@ -55,7 +55,7 @@ async fn not_null_on_integer_storage_column(pool: PgPool) -> anyhow::Result<()> 
     let err = sqlx::query("INSERT INTO v3_not_null (id, val) VALUES (1, NULL)")
         .execute(&pool)
         .await
-        .expect_err("NOT NULL must reject a NULL eql_v3.integer value");
+        .expect_err("NOT NULL must reject a NULL public.integer value");
     assert_db_error(&err, "23502", None);
 
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM v3_not_null")
@@ -66,7 +66,7 @@ async fn not_null_on_integer_storage_column(pool: PgPool) -> anyhow::Result<()> 
     // A real encrypted value is accepted.
     let lit = integer_payload_literal(&pool, 42).await?;
     sqlx::query(&format!(
-        "INSERT INTO v3_not_null (id, val) VALUES (2, {lit}::jsonb::eql_v3.integer)"
+        "INSERT INTO v3_not_null (id, val) VALUES (2, {lit}::jsonb::public.integer)"
     ))
     .execute(&pool)
     .await?;
@@ -80,7 +80,7 @@ async fn not_null_on_integer_storage_column(pool: PgPool) -> anyhow::Result<()> 
 }
 
 // ===========================================================================
-// UNIQUE — on the equality `eql_v3.integer_eq` domain column.
+// UNIQUE — on the equality `public.integer_eq` domain column.
 //
 // `_eq` is the interesting variant: equality routes through `eq_term` (hmac).
 // But a bare UNIQUE constraint on the domain column does NOT use `eq_term` — it
@@ -88,7 +88,7 @@ async fn not_null_on_integer_storage_column(pool: PgPool) -> anyhow::Result<()> 
 // documents this: identical payload bytes collide; distinct payloads do not.
 // ===========================================================================
 
-/// A `UNIQUE` constraint on an `eql_v3.integer_eq` column rejects a second row
+/// A `UNIQUE` constraint on an `public.integer_eq` column rejects a second row
 /// carrying the byte-identical fixture payload (23505) and accepts a different
 /// plaintext's payload.
 ///
@@ -105,7 +105,7 @@ async fn not_null_on_integer_storage_column(pool: PgPool) -> anyhow::Result<()> 
 #[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_integer")))]
 async fn unique_on_integer_eq_column_constrains_raw_payload(pool: PgPool) -> anyhow::Result<()> {
     sqlx::query(
-        "CREATE TABLE v3_unique (id bigint PRIMARY KEY, val eql_v3.integer_eq UNIQUE NOT NULL)",
+        "CREATE TABLE v3_unique (id bigint PRIMARY KEY, val public.integer_eq UNIQUE NOT NULL)",
     )
     .execute(&pool)
     .await?;
@@ -115,7 +115,7 @@ async fn unique_on_integer_eq_column_constrains_raw_payload(pool: PgPool) -> any
 
     // First insert of the 42-payload succeeds.
     sqlx::query(&format!(
-        "INSERT INTO v3_unique (id, val) VALUES (1, {p42}::jsonb::eql_v3.integer_eq)"
+        "INSERT INTO v3_unique (id, val) VALUES (1, {p42}::jsonb::public.integer_eq)"
     ))
     .execute(&pool)
     .await?;
@@ -128,7 +128,7 @@ async fn unique_on_integer_eq_column_constrains_raw_payload(pool: PgPool) -> any
     // A DIFFERENT plaintext's payload (distinct jsonb) is accepted — UNIQUE does
     // not reject distinct payloads.
     sqlx::query(&format!(
-        "INSERT INTO v3_unique (id, val) VALUES (2, {p100}::jsonb::eql_v3.integer_eq)"
+        "INSERT INTO v3_unique (id, val) VALUES (2, {p100}::jsonb::public.integer_eq)"
     ))
     .execute(&pool)
     .await?;
@@ -141,7 +141,7 @@ async fn unique_on_integer_eq_column_constrains_raw_payload(pool: PgPool) -> any
     // Re-inserting the BYTE-IDENTICAL 42-payload violates UNIQUE (23505). The
     // constraint name is `<table>_<column>_key` per PostgreSQL's auto-naming.
     let err = sqlx::query(&format!(
-        "INSERT INTO v3_unique (id, val) VALUES (3, {p42}::jsonb::eql_v3.integer_eq)"
+        "INSERT INTO v3_unique (id, val) VALUES (3, {p42}::jsonb::public.integer_eq)"
     ))
     .execute(&pool)
     .await
@@ -157,7 +157,7 @@ async fn unique_on_integer_eq_column_constrains_raw_payload(pool: PgPool) -> any
 }
 
 // ===========================================================================
-// FOREIGN KEY — child referencing a parent `eql_v3.integer` PRIMARY KEY column.
+// FOREIGN KEY — child referencing a parent `public.integer` PRIMARY KEY column.
 //
 // FK on a jsonb-backed domain IS feasible: a PRIMARY KEY / UNIQUE on the parent
 // column resolves against the base type (`jsonb`) btree opclass (jsonb has a
@@ -167,7 +167,7 @@ async fn unique_on_integer_eq_column_constrains_raw_payload(pool: PgPool) -> any
 // PK/UNIQUE uses the inherited jsonb btree opclass and works.
 // ===========================================================================
 
-/// A FOREIGN KEY from a child `eql_v3.integer` column to a parent `eql_v3.integer`
+/// A FOREIGN KEY from a child `public.integer` column to a parent `public.integer`
 /// PRIMARY KEY column: a matching (byte-identical) reference is accepted, a
 /// dangling reference is rejected (23503).
 ///
@@ -184,8 +184,8 @@ async fn unique_on_integer_eq_column_constrains_raw_payload(pool: PgPool) -> any
 /// integrity.
 #[sqlx::test(fixtures(path = "../../fixtures", scripts("eql_v3_integer")))]
 async fn foreign_key_on_integer_domain_columns(pool: PgPool) -> anyhow::Result<()> {
-    // Parent with a PRIMARY KEY on an eql_v3.integer (jsonb-backed domain) column.
-    sqlx::query("CREATE TABLE v3_parent (ref eql_v3.integer PRIMARY KEY)")
+    // Parent with a PRIMARY KEY on an public.integer (jsonb-backed domain) column.
+    sqlx::query("CREATE TABLE v3_parent (ref public.integer PRIMARY KEY)")
         .execute(&pool)
         .await?;
 
@@ -193,7 +193,7 @@ async fn foreign_key_on_integer_domain_columns(pool: PgPool) -> anyhow::Result<(
     sqlx::query(
         "CREATE TABLE v3_child (
              id bigint PRIMARY KEY,
-             parent_ref eql_v3.integer REFERENCES v3_parent(ref)
+             parent_ref public.integer REFERENCES v3_parent(ref)
          )",
     )
     .execute(&pool)
@@ -215,7 +215,7 @@ async fn foreign_key_on_integer_domain_columns(pool: PgPool) -> anyhow::Result<(
 
     // Seed the parent with the 42-payload.
     sqlx::query(&format!(
-        "INSERT INTO v3_parent (ref) VALUES ({p42}::jsonb::eql_v3.integer)"
+        "INSERT INTO v3_parent (ref) VALUES ({p42}::jsonb::public.integer)"
     ))
     .execute(&pool)
     .await?;
@@ -223,7 +223,7 @@ async fn foreign_key_on_integer_domain_columns(pool: PgPool) -> anyhow::Result<(
     // Child row with a byte-identical reference resolves (deterministic fixture
     // bytes), so the FK is satisfied.
     sqlx::query(&format!(
-        "INSERT INTO v3_child (id, parent_ref) VALUES (1, {p42}::jsonb::eql_v3.integer)"
+        "INSERT INTO v3_child (id, parent_ref) VALUES (1, {p42}::jsonb::public.integer)"
     ))
     .execute(&pool)
     .await?;
@@ -236,7 +236,7 @@ async fn foreign_key_on_integer_domain_columns(pool: PgPool) -> anyhow::Result<(
     // Child row referencing a payload NOT present in the parent (different
     // plaintext → different jsonb) violates the FK (23503).
     let err = sqlx::query(&format!(
-        "INSERT INTO v3_child (id, parent_ref) VALUES (2, {p100}::jsonb::eql_v3.integer)"
+        "INSERT INTO v3_child (id, parent_ref) VALUES (2, {p100}::jsonb::public.integer)"
     ))
     .execute(&pool)
     .await

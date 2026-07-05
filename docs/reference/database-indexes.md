@@ -31,7 +31,7 @@ CREATE INDEX users_email_eq
 CREATE INDEX events_at_ord
   ON events USING btree (eql_v3.ord_term(encrypted_at));
 
--- Text match (bloom-filter containment — GIN on the match_term extractor) — eql_v3.text_match / text_search
+-- Text match (bloom-filter containment — GIN on the match_term extractor) — public.text_match / text_search
 CREATE INDEX users_name_match
   ON users USING gin (eql_v3.match_term(encrypted_name));
 
@@ -72,9 +72,9 @@ For PostgreSQL to use a functional index on an encrypted column, **all** of thes
 
 Capability travels in the payload, chosen by the encryption client and reflected in the column's domain variant:
 
-- **Equality** needs an `hm` (hmac_256) term — `eql_v3.<T>_eq`, `eql_v3.<T>_ord`, or `eql_v3.text_search`.
-- **Range / ordering** needs an `ob` (ore_block_256) term — `eql_v3.<T>_ord` / `_ord_ore` or `eql_v3.text_search`.
-- **Text containment** needs a `bf` (bloom_filter) term — `eql_v3.text_match` or `eql_v3.text_search`.
+- **Equality** needs an `hm` (hmac_256) term — `eql_v3.<T>_eq`, `eql_v3.<T>_ord`, or `public.text_search`.
+- **Range / ordering** needs an `ob` (ore_block_256) term — `eql_v3.<T>_ord` / `_ord_ore` or `public.text_search`.
+- **Text containment** needs a `bf` (bloom_filter) term — `public.text_match` or `public.text_search`.
 
 A value with only a bloom term will not drive an equality index, and vice versa.
 
@@ -89,7 +89,7 @@ The comparison value must resolve to the encrypted operator, not the native `jso
 ```sql
 -- ✓ resolves the encrypted operator → uses the index
 WHERE encrypted_email = $1;
-WHERE encrypted_email = $1::eql_v3.text_eq;
+WHERE encrypted_email = $1::public.text_eq;
 
 -- ✗ a bare jsonb literal falls through to native jsonb semantics
 WHERE encrypted_email = '{"hm":"abc"}'::jsonb;
@@ -154,7 +154,7 @@ Why the raw column does not scale: `GROUP BY col` uses the entire encrypted payl
 
 ### Field-level equality index (ste_vec elements)
 
-For `GROUP BY` / `DISTINCT` / equality on a value extracted from an `eql_v3.json` document — e.g. `doc -> 'email'` — index the extractor applied to the selector. The extracted entry is an `eql_v3.jsonb_entry`, and `=` on it inlines to `eql_v3.eq_term(a) = eql_v3.eq_term(b)`:
+For `GROUP BY` / `DISTINCT` / equality on a value extracted from an `public.json` document — e.g. `doc -> 'email'` — index the extractor applied to the selector. The extracted entry is an `public.jsonb_entry`, and `=` on it inlines to `eql_v3.eq_term(a) = eql_v3.eq_term(b)`:
 
 ```sql
 CREATE INDEX users_data_email_eq
@@ -165,7 +165,7 @@ SELECT count(*) FROM users
   GROUP BY eql_v3.eq_term(data_encrypted -> '<selector-for-email>'::text);
 
 SELECT * FROM users
-  WHERE data_encrypted -> '<selector-for-email>'::text = $1::eql_v3.jsonb_entry;
+  WHERE data_encrypted -> '<selector-for-email>'::text = $1::public.jsonb_entry;
 ```
 
 For ordered field-level access, index `eql_v3.ore_cllw(doc -> '<selector>'::text)` (a btree) and write `ORDER BY eql_v3.ore_cllw(doc -> '<selector>'::text)` — the same sort-key rule as above. The `<selector>` value is the deterministic selector hash the crypto layer emits in each `sv` element's `s` field, not a plaintext JSONPath. The operand on `->` must be typed (`-> '<sel>'::text`); a bare untyped literal falls through to native `jsonb ->`.
@@ -174,18 +174,18 @@ For ordered field-level access, index `eql_v3.ore_cllw(doc -> '<selector>'::text
 
 ## GIN Indexes for JSONB Containment
 
-For document-level containment (`@>` / `<@`) on `eql_v3.json` columns, use a GIN index over the ste_vec query shape. The typed `@>` overload inlines to a native `jsonb @>` over `eql_v3.to_ste_vec_query(col)::jsonb`, so a GIN index on the same expression engages:
+For document-level containment (`@>` / `<@`) on `public.json` columns, use a GIN index over the ste_vec query shape. The typed `@>` overload inlines to a native `jsonb @>` over `eql_v3.to_ste_vec_query(col)::jsonb`, so a GIN index on the same expression engages:
 
 ```sql
 CREATE INDEX orders_data_gin
   ON orders USING gin (eql_v3.to_ste_vec_query(data_encrypted)::jsonb jsonb_path_ops);
 ANALYZE orders;
 
-SELECT * FROM orders WHERE data_encrypted @> $1::eql_v3.jsonb_query;
+SELECT * FROM orders WHERE data_encrypted @> $1::public.jsonb_query;
 -- Bitmap Index Scan on orders_data_gin
 ```
 
-The needle must be typed — `$1::eql_v3.jsonb_query`, another `eql_v3.json`, or an `eql_v3.jsonb_entry`. A bare untyped literal falls through to native `jsonb @>`.
+The needle must be typed — `$1::public.jsonb_query`, another `public.json`, or an `public.jsonb_entry`. A bare untyped literal falls through to native `jsonb @>`.
 
 ### GIN vs B-tree / hash
 
@@ -245,7 +245,7 @@ A `hash` functional index on a 10M-row encrypted-JSONB column has been observed 
 
 ### The de-TOAST floor
 
-A functional index over a large encrypted column [de-TOASTs](https://www.postgresql.org/docs/current/storage-toast.html) the whole stored value once per row to evaluate the extractor — and an `eql_v3.json` document is large. This cost is unavoidable and identical across access methods; it sets the build's *floor* rate. (There is no partial de-TOAST — `doc -> 'selector'::text` materialises the entire document.)
+A functional index over a large encrypted column [de-TOASTs](https://www.postgresql.org/docs/current/storage-toast.html) the whole stored value once per row to evaluate the extractor — and an `public.json` document is large. This cost is unavoidable and identical across access methods; it sets the build's *floor* rate. (There is no partial de-TOAST — `doc -> 'selector'::text` materialises the entire document.)
 
 ### Storage matters more than it does for queries
 
@@ -291,7 +291,7 @@ Once a plan looks right, repeat with `EXPLAIN ANALYZE` to measure actual timings
           encrypted_email::jsonb ? 'bf' AS has_bloom
    FROM users LIMIT 1;
    ```
-2. **Verify the operand is typed** (`$1::eql_v3.text_eq`, not `$1::jsonb`).
+2. **Verify the operand is typed** (`$1::public.text_eq`, not `$1::jsonb`).
 3. **Recreate the index** if the column's terms changed after the index was built.
 4. **Run `ANALYZE`** — very small tables may still choose a sequential scan, which is correct.
 
@@ -303,7 +303,7 @@ Once a plan looks right, repeat with `EXPLAIN ANALYZE` to measure actual timings
 
 - [SQL support matrix](./sql-support.md) — which operators work against which domain variant.
 - [EQL Functions Reference](./eql-functions.md) — complete function API.
-- [EQL with JSON and JSONB](./json-support.md) — `eql_v3.json` worked examples.
+- [EQL with JSON and JSONB](./json-support.md) — `public.json` worked examples.
 - [Configuration Tutorial](../tutorials/proxy-configuration.md) — setting up encrypted columns end to end.
 
 ---

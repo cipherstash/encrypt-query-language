@@ -1,7 +1,7 @@
 //! SteVec **entry** view type for the behaviour matrix. A `JsonbEntryInteger`
 //! reuses the `i32` plaintext oracle (`expected_forward`, pivots,
 //! `fixture_values`) but reaches its comparable value by extracting the entry
-//! at `v3_doc_integer::SELECTOR` and casting to `eql_v3.jsonb_entry`, so the
+//! at `v3_doc_integer::SELECTOR` and casting to `public.jsonb_entry`, so the
 //! matrix's correctness/ordering/null/order-by/count/index generators run
 //! against jsonb-entry comparisons instead of whole-column scalar casts.
 //!
@@ -64,13 +64,13 @@ impl ScalarType for JsonbEntryInteger {
 
     /// Single entry domain, variant-independent.
     fn sql_domain(_variant: Variant) -> String {
-        "eql_v3.jsonb_entry".to_string()
+        "public.jsonb_entry".to_string()
     }
 
     /// Extract the entry at the pinned selector. `->` already yields
-    /// `eql_v3.jsonb_entry`; the call sites' `::eql_v3.jsonb_entry` cast is
+    /// `public.jsonb_entry`; the call sites' `::public.jsonb_entry` cast is
     /// a no-op. The selector literal is explicitly typed as text so Postgres
-    /// resolves the `eql_v3.json -> text` operator instead of native jsonb path
+    /// resolves the `public.json -> text` operator instead of native jsonb path
     /// lookup. Parenthesised by the call sites (`({col})::{d}`).
     fn column_expr() -> String {
         format!("payload -> '{}'::text", v3_doc_integer::SELECTOR)
@@ -80,7 +80,7 @@ impl ScalarType for JsonbEntryInteger {
         value.0.to_string()
     }
 
-    /// Valid `eql_v3.jsonb_entry` literal for tests that only need a non-NULL
+    /// Valid `public.jsonb_entry` literal for tests that only need a non-NULL
     /// operand shape (NULL propagation). Must satisfy the domain CHECK: string
     /// `s`, string `c`, exactly one of `hm`/`oc`.
     fn placeholder_payload() -> &'static str {
@@ -139,7 +139,7 @@ mod tests {
         );
         assert_eq!(
             <JsonbEntryInteger as ScalarType>::sql_domain(Variant::Ord),
-            "eql_v3.jsonb_entry",
+            "public.jsonb_entry",
         );
         assert_eq!(
             <JsonbEntryInteger as ScalarType>::ord_extractor_expr("value"),
@@ -173,7 +173,7 @@ mod tests {
         assert_eq!(<JsonbEntryInteger as OrderedScalar>::mid_pivot().0, 0);
     }
 
-    /// The placeholder must satisfy the `eql_v3.jsonb_entry` CHECK shape:
+    /// The placeholder must satisfy the `public.jsonb_entry` CHECK shape:
     /// string `s`, string `c`, exactly one of `hm`/`oc`. (SQL-level validity is
     /// asserted in the integration `jsonb_entry` suite against the live domain.)
     #[test]

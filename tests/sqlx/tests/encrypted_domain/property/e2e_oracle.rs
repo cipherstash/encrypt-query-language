@@ -278,8 +278,8 @@ fn real_and_double_share_index_terms_for_the_same_value() -> Result<()> {
     };
     let sql = format!(
         "SELECT {} = {}",
-        ord_term(&f4_payloads[0], "eql_v3.real_ord_ore"),
-        ord_term(&f8_payloads[0], "eql_v3.double_ord_ore"),
+        ord_term(&f4_payloads[0], "public.real_ord_ore"),
+        ord_term(&f8_payloads[0], "public.double_ord_ore"),
     );
     let ore_equal: Option<bool> = rt
         .block_on(sqlx::query_scalar(&sql).fetch_one(&pool))

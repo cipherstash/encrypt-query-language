@@ -1,10 +1,11 @@
 --! @file v3/schema.sql
 --! @brief EQL v3 schema creation
 --!
---! Creates the eql_v3 and eql_v3_internal schemas. eql_v3 is the public API:
---! the self-contained encrypted-domain type families (eql_v3.integer, eql_v3.bigint,
---! and future scalar domains) — their jsonb-backed domains, index-term
---! extractors, aggregates, AND the operator-backing comparison wrappers
+--! Creates the eql_v3 and eql_v3_internal schemas. User-column encrypted
+--! domains (public.integer, public.bigint, and future scalar domains) live in
+--! public so application tables survive EQL schema uninstall. eql_v3 is the
+--! public API for index-term extractors, aggregates, AND the operator-backing
+--! comparison wrappers
 --! (eq/neq/lt/lte/gt/gte/contains/contained_by, plus the jsonb containment
 --! helpers). The wrappers are public because they are the function-form
 --! equivalent of every supported operator: platforms without operator support

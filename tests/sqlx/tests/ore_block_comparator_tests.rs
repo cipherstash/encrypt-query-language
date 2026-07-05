@@ -33,8 +33,8 @@ async fn compare_fixture_pair(
 ) -> Result<i32> {
     let sql = format!(
         "SELECT eql_v3_internal.compare_ore_block_256_terms( \
-            eql_v3.ord_term((SELECT payload FROM fixtures.{table} WHERE plaintext = {lo})::eql_v3.{ord_domain}), \
-            eql_v3.ord_term((SELECT payload FROM fixtures.{table} WHERE plaintext = {hi})::eql_v3.{ord_domain}))"
+            eql_v3.ord_term((SELECT payload FROM fixtures.{table} WHERE plaintext = {lo})::public.{ord_domain}), \
+            eql_v3.ord_term((SELECT payload FROM fixtures.{table} WHERE plaintext = {hi})::public.{ord_domain}))"
     );
     Ok(sqlx::query_scalar::<_, i32>(&sql).fetch_one(pool).await?)
 }
@@ -93,8 +93,8 @@ async fn assert_orders_like_oracle(
     let order_violations: i64 = sqlx::query_scalar(&format!(
         "SELECT count(*) FROM ore_sample a JOIN ore_sample b ON a.rank < b.rank \
          WHERE eql_v3_internal.compare_ore_block_256_terms( \
-             eql_v3.ord_term(a.payload::eql_v3.{ord_domain}), \
-             eql_v3.ord_term(b.payload::eql_v3.{ord_domain})) <> -1"
+             eql_v3.ord_term(a.payload::public.{ord_domain}), \
+             eql_v3.ord_term(b.payload::public.{ord_domain})) <> -1"
     ))
     .fetch_one(&mut *conn)
     .await?;
@@ -107,11 +107,11 @@ async fn assert_orders_like_oracle(
     let antisymmetry_violations: i64 = sqlx::query_scalar(&format!(
         "SELECT count(*) FROM ore_sample a JOIN ore_sample b ON a.rank <> b.rank \
          WHERE eql_v3_internal.compare_ore_block_256_terms( \
-                 eql_v3.ord_term(a.payload::eql_v3.{ord_domain}), \
-                 eql_v3.ord_term(b.payload::eql_v3.{ord_domain})) \
+                 eql_v3.ord_term(a.payload::public.{ord_domain}), \
+                 eql_v3.ord_term(b.payload::public.{ord_domain})) \
              <> - eql_v3_internal.compare_ore_block_256_terms( \
-                 eql_v3.ord_term(b.payload::eql_v3.{ord_domain}), \
-                 eql_v3.ord_term(a.payload::eql_v3.{ord_domain}))"
+                 eql_v3.ord_term(b.payload::public.{ord_domain}), \
+                 eql_v3.ord_term(a.payload::public.{ord_domain}))"
     ))
     .fetch_one(&mut *conn)
     .await?;
@@ -306,7 +306,7 @@ async fn numeric_term_is_14_blocks(pool: PgPool) -> Result<()> {
     let width: i32 = sqlx::query_scalar(
         "SELECT octet_length((((eql_v3.ord_term( \
             (SELECT payload FROM fixtures.eql_v3_numeric WHERE plaintext = (-1000000)::numeric) \
-            ::eql_v3.numeric_ord)).terms)[1]).bytes)",
+            ::public.numeric_ord)).terms)[1]).bytes)",
     )
     .fetch_one(&pool)
     .await?;
@@ -353,7 +353,7 @@ async fn timestamp_term_is_12_blocks(pool: PgPool) -> Result<()> {
     let width: i32 = sqlx::query_scalar(
         "SELECT octet_length((((eql_v3.ord_term( \
             (SELECT payload FROM fixtures.eql_v3_timestamp WHERE plaintext = '1970-01-01T00:00:00Z'::timestamptz) \
-            ::eql_v3.timestamp_ord)).terms)[1]).bytes)",
+            ::public.timestamp_ord)).terms)[1]).bytes)",
     )
     .fetch_one(&pool)
     .await?;
@@ -430,8 +430,8 @@ async fn wide_block_term_compares_equal_to_itself(pool: PgPool) -> Result<()> {
 async fn compare_collision_ids(pool: &PgPool, a: i64, b: i64) -> Result<i32> {
     let sql = format!(
         "SELECT eql_v3_internal.compare_ore_block_256_terms( \
-            eql_v3.ord_term((SELECT payload FROM fixtures.v3_numeric_collision WHERE id = {a})::eql_v3.numeric_ord), \
-            eql_v3.ord_term((SELECT payload FROM fixtures.v3_numeric_collision WHERE id = {b})::eql_v3.numeric_ord))"
+            eql_v3.ord_term((SELECT payload FROM fixtures.v3_numeric_collision WHERE id = {a})::public.numeric_ord), \
+            eql_v3.ord_term((SELECT payload FROM fixtures.v3_numeric_collision WHERE id = {b})::public.numeric_ord))"
     );
     Ok(sqlx::query_scalar::<_, i32>(&sql).fetch_one(pool).await?)
 }

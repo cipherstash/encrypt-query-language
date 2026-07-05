@@ -9,7 +9,7 @@
       "type": "string"
     },
     "Selector": {
-      "description": "A SteVec selector — the `s` wire key. Addresses a JSON path leaf within an\nencrypted document (`eql_v3.json`); present on every entry and query element.",
+      "description": "A SteVec selector — the `s` wire key. Addresses a JSON path leaf within an\nencrypted document (`public.json`); present on every entry and query element.",
       "type": "string"
     },
     "SteVecQueryEntry": {
@@ -52,7 +52,7 @@
   "$id": "https://schemas.cipherstash.com/eql/v3/jsonb_query.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "`eql_v3.jsonb_query` — a containment needle (`{sv:[query-entry]}`). Strict.",
+  "description": "`public.jsonb_query` — a containment needle (`{sv:[query-entry]}`). Strict.",
   "properties": {
     "sv": {
       "items": {

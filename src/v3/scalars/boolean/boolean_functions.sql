@@ -4,400 +4,400 @@
 -- REQUIRE: src/v3/scalars/functions.sql
 
 --! @file encrypted_domain/boolean/boolean_functions.sql
---! @brief Functions for eql_v3.boolean.
+--! @brief Functions for public.boolean.
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
---! @param b eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
+--! @param b public.boolean
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.eq(a eql_v3.boolean, b eql_v3.boolean)
+CREATE FUNCTION eql_v3_internal.eq(a public.boolean, b public.boolean)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.eq(a eql_v3.boolean, b jsonb)
+CREATE FUNCTION eql_v3_internal.eq(a public.boolean, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
+--! @brief Unsupported operator blocker for public.boolean.
 --! @param a jsonb
---! @param b eql_v3.boolean
+--! @param b public.boolean
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.eq(a jsonb, b eql_v3.boolean)
+CREATE FUNCTION eql_v3_internal.eq(a jsonb, b public.boolean)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
---! @param b eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
+--! @param b public.boolean
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.neq(a eql_v3.boolean, b eql_v3.boolean)
+CREATE FUNCTION eql_v3_internal.neq(a public.boolean, b public.boolean)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.neq(a eql_v3.boolean, b jsonb)
+CREATE FUNCTION eql_v3_internal.neq(a public.boolean, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
+--! @brief Unsupported operator blocker for public.boolean.
 --! @param a jsonb
---! @param b eql_v3.boolean
+--! @param b public.boolean
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.neq(a jsonb, b eql_v3.boolean)
+CREATE FUNCTION eql_v3_internal.neq(a jsonb, b public.boolean)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
---! @param b eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
+--! @param b public.boolean
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.lt(a eql_v3.boolean, b eql_v3.boolean)
+CREATE FUNCTION eql_v3_internal.lt(a public.boolean, b public.boolean)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.lt(a eql_v3.boolean, b jsonb)
+CREATE FUNCTION eql_v3_internal.lt(a public.boolean, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
+--! @brief Unsupported operator blocker for public.boolean.
 --! @param a jsonb
---! @param b eql_v3.boolean
+--! @param b public.boolean
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.lt(a jsonb, b eql_v3.boolean)
+CREATE FUNCTION eql_v3_internal.lt(a jsonb, b public.boolean)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
---! @param b eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
+--! @param b public.boolean
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.lte(a eql_v3.boolean, b eql_v3.boolean)
+CREATE FUNCTION eql_v3_internal.lte(a public.boolean, b public.boolean)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.lte(a eql_v3.boolean, b jsonb)
+CREATE FUNCTION eql_v3_internal.lte(a public.boolean, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
+--! @brief Unsupported operator blocker for public.boolean.
 --! @param a jsonb
---! @param b eql_v3.boolean
+--! @param b public.boolean
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.lte(a jsonb, b eql_v3.boolean)
+CREATE FUNCTION eql_v3_internal.lte(a jsonb, b public.boolean)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
---! @param b eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
+--! @param b public.boolean
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.gt(a eql_v3.boolean, b eql_v3.boolean)
+CREATE FUNCTION eql_v3_internal.gt(a public.boolean, b public.boolean)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.gt(a eql_v3.boolean, b jsonb)
+CREATE FUNCTION eql_v3_internal.gt(a public.boolean, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
+--! @brief Unsupported operator blocker for public.boolean.
 --! @param a jsonb
---! @param b eql_v3.boolean
+--! @param b public.boolean
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.gt(a jsonb, b eql_v3.boolean)
+CREATE FUNCTION eql_v3_internal.gt(a jsonb, b public.boolean)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
---! @param b eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
+--! @param b public.boolean
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.gte(a eql_v3.boolean, b eql_v3.boolean)
+CREATE FUNCTION eql_v3_internal.gte(a public.boolean, b public.boolean)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.gte(a eql_v3.boolean, b jsonb)
+CREATE FUNCTION eql_v3_internal.gte(a public.boolean, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
+--! @brief Unsupported operator blocker for public.boolean.
 --! @param a jsonb
---! @param b eql_v3.boolean
+--! @param b public.boolean
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.gte(a jsonb, b eql_v3.boolean)
+CREATE FUNCTION eql_v3_internal.gte(a jsonb, b public.boolean)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
---! @param b eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
+--! @param b public.boolean
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contains(a eql_v3.boolean, b eql_v3.boolean)
+CREATE FUNCTION eql_v3_internal.contains(a public.boolean, b public.boolean)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contains(a eql_v3.boolean, b jsonb)
+CREATE FUNCTION eql_v3_internal.contains(a public.boolean, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
+--! @brief Unsupported operator blocker for public.boolean.
 --! @param a jsonb
---! @param b eql_v3.boolean
+--! @param b public.boolean
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contains(a jsonb, b eql_v3.boolean)
+CREATE FUNCTION eql_v3_internal.contains(a jsonb, b public.boolean)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
---! @param b eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
+--! @param b public.boolean
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contained_by(a eql_v3.boolean, b eql_v3.boolean)
+CREATE FUNCTION eql_v3_internal.contained_by(a public.boolean, b public.boolean)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contained_by(a eql_v3.boolean, b jsonb)
+CREATE FUNCTION eql_v3_internal.contained_by(a public.boolean, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
+--! @brief Unsupported operator blocker for public.boolean.
 --! @param a jsonb
---! @param b eql_v3.boolean
+--! @param b public.boolean
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contained_by(a jsonb, b eql_v3.boolean)
+CREATE FUNCTION eql_v3_internal.contained_by(a jsonb, b public.boolean)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param selector text
---! @return eql_v3.boolean
-CREATE FUNCTION eql_v3_internal."->"(a eql_v3.boolean, selector text)
-RETURNS eql_v3.boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v3.boolean'; END; $$
+--! @return public.boolean
+CREATE FUNCTION eql_v3_internal."->"(a public.boolean, selector text)
+RETURNS public.boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param selector integer
---! @return eql_v3.boolean
-CREATE FUNCTION eql_v3_internal."->"(a eql_v3.boolean, selector integer)
-RETURNS eql_v3.boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v3.boolean'; END; $$
+--! @return public.boolean
+CREATE FUNCTION eql_v3_internal."->"(a public.boolean, selector integer)
+RETURNS public.boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
+--! @brief Unsupported operator blocker for public.boolean.
 --! @param a jsonb
---! @param selector eql_v3.boolean
---! @return eql_v3.boolean
-CREATE FUNCTION eql_v3_internal."->"(a jsonb, selector eql_v3.boolean)
-RETURNS eql_v3.boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'eql_v3.boolean'; END; $$
+--! @param selector public.boolean
+--! @return public.boolean
+CREATE FUNCTION eql_v3_internal."->"(a jsonb, selector public.boolean)
+RETURNS public.boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param selector text
 --! @return text
-CREATE FUNCTION eql_v3_internal."->>"(a eql_v3.boolean, selector text)
+CREATE FUNCTION eql_v3_internal."->>"(a public.boolean, selector text)
 RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param selector integer
 --! @return text
-CREATE FUNCTION eql_v3_internal."->>"(a eql_v3.boolean, selector integer)
+CREATE FUNCTION eql_v3_internal."->>"(a public.boolean, selector integer)
 RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
+--! @brief Unsupported operator blocker for public.boolean.
 --! @param a jsonb
---! @param selector eql_v3.boolean
+--! @param selector public.boolean
 --! @return text
-CREATE FUNCTION eql_v3_internal."->>"(a jsonb, selector eql_v3.boolean)
+CREATE FUNCTION eql_v3_internal."->>"(a jsonb, selector public.boolean)
 RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param b text
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."?"(a eql_v3.boolean, b text)
+CREATE FUNCTION eql_v3_internal."?"(a public.boolean, b text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param b text[]
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."?|"(a eql_v3.boolean, b text[])
+CREATE FUNCTION eql_v3_internal."?|"(a public.boolean, b text[])
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?|', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?|', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param b text[]
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."?&"(a eql_v3.boolean, b text[])
+CREATE FUNCTION eql_v3_internal."?&"(a public.boolean, b text[])
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?&', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?&', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param b jsonpath
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."@?"(a eql_v3.boolean, b jsonpath)
+CREATE FUNCTION eql_v3_internal."@?"(a public.boolean, b jsonpath)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@?', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@?', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param b jsonpath
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."@@"(a eql_v3.boolean, b jsonpath)
+CREATE FUNCTION eql_v3_internal."@@"(a public.boolean, b jsonpath)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param b text[]
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."#>"(a eql_v3.boolean, b text[])
+CREATE FUNCTION eql_v3_internal."#>"(a public.boolean, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param b text[]
 --! @return text
-CREATE FUNCTION eql_v3_internal."#>>"(a eql_v3.boolean, b text[])
+CREATE FUNCTION eql_v3_internal."#>>"(a public.boolean, b text[])
 RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>>', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>>', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param b text
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."-"(a eql_v3.boolean, b text)
+CREATE FUNCTION eql_v3_internal."-"(a public.boolean, b text)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param b integer
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."-"(a eql_v3.boolean, b integer)
+CREATE FUNCTION eql_v3_internal."-"(a public.boolean, b integer)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param b text[]
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."-"(a eql_v3.boolean, b text[])
+CREATE FUNCTION eql_v3_internal."-"(a public.boolean, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param b text[]
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."#-"(a eql_v3.boolean, b text[])
+CREATE FUNCTION eql_v3_internal."#-"(a public.boolean, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#-', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#-', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
---! @param b eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
+--! @param b public.boolean
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."||"(a eql_v3.boolean, b eql_v3.boolean)
+CREATE FUNCTION eql_v3_internal."||"(a public.boolean, b public.boolean)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
---! @param a eql_v3.boolean
+--! @brief Unsupported operator blocker for public.boolean.
+--! @param a public.boolean
 --! @param b jsonb
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."||"(a eql_v3.boolean, b jsonb)
+CREATE FUNCTION eql_v3_internal."||"(a public.boolean, b jsonb)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.boolean'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for eql_v3.boolean.
+--! @brief Unsupported operator blocker for public.boolean.
 --! @param a jsonb
---! @param b eql_v3.boolean
+--! @param b public.boolean
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."||"(a jsonb, b eql_v3.boolean)
+CREATE FUNCTION eql_v3_internal."||"(a jsonb, b public.boolean)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'eql_v3.boolean'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.boolean'; END; $$
 LANGUAGE plpgsql;

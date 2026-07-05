@@ -34,13 +34,13 @@ echo "==> asserting NO eql_v2 schema exists (proves no v2 dependency)"
 echo "==> smoke: domains, SEM types, extractors, opclass functional index (D4)"
 "${RUN[@]}" <<'SQL'
 -- Domains stay in eql_v3; SEM index-term types now live in eql_v3_internal.
-SELECT 'eql_v3.integer_ord'::regtype;
+SELECT 'public.integer_ord'::regtype;
 SELECT 'eql_v3_internal.hmac_256'::regtype;
 SELECT 'eql_v3_internal.ore_block_256'::regtype;
 
 -- A real ordered-domain column + the documented functional index. This is the
 -- D4 proof: it fails outright if the ported operator_class is absent.
-CREATE TABLE v3_smoke (c eql_v3.integer_ord);
+CREATE TABLE v3_smoke (c public.integer_ord);
 CREATE INDEX v3_smoke_ord ON v3_smoke (eql_v3.ord_term(c));
 DROP TABLE v3_smoke;
 SQL
@@ -53,10 +53,10 @@ DECLARE
 BEGIN
   -- The blocker always RAISEs; catch it and assert we got the expected message.
   BEGIN
-    PERFORM eql_v3_internal.encrypted_domain_unsupported_bool('eql_v3.integer', '<');
+    PERFORM eql_v3_internal.encrypted_domain_unsupported_bool('public.integer', '<');
   EXCEPTION WHEN OTHERS THEN
     raised := true;
-    IF SQLERRM <> 'operator < is not supported for eql_v3.integer' THEN
+    IF SQLERRM <> 'operator < is not supported for public.integer' THEN
       RAISE EXCEPTION 'blocker raised an unexpected message: %', SQLERRM;
     END IF;
   END;
@@ -69,17 +69,17 @@ SQL
 
 echo "==> smoke: v3 encrypted JSONB surface"
 "${RUN[@]}" <<'SQL'
-CREATE TABLE v3_json_smoke (id int PRIMARY KEY, e eql_v3.json);
+CREATE TABLE v3_json_smoke (id int PRIMARY KEY, e public.json);
 INSERT INTO v3_json_smoke VALUES
-  (1, '{"i":{"c":"v3_json_smoke","t":"encrypted"},"v":3,"sv":[{"s":"sel","c":"ciphertext","hm":"00"}]}'::eql_v3.json);
+  (1, '{"i":{"c":"v3_json_smoke","t":"encrypted"},"v":3,"sv":[{"s":"sel","c":"ciphertext","hm":"00"}]}'::public.json);
 
 -- Supported typed accessors and containment.
 SELECT (e -> 'sel'::text)::jsonb ->> 'hm' FROM v3_json_smoke WHERE id = 1;
 SELECT e ->> 'sel'::text FROM v3_json_smoke WHERE id = 1;
 SELECT count(*) FROM v3_json_smoke
-WHERE e @> '{"sv":[{"s":"sel","hm":"00"}]}'::eql_v3.jsonb_query;
+WHERE e @> '{"sv":[{"s":"sel","hm":"00"}]}'::public.jsonb_query;
 SELECT count(*) FROM v3_json_smoke
-WHERE '{"sv":[{"s":"sel","hm":"00"}]}'::eql_v3.jsonb_query <@ e;
+WHERE '{"sv":[{"s":"sel","hm":"00"}]}'::public.jsonb_query <@ e;
 
 -- Documented GIN expression installs cleanly in a v3-only database.
 CREATE INDEX v3_json_smoke_gin
@@ -93,7 +93,7 @@ BEGIN
     PERFORM e ? 'sel'::text FROM v3_json_smoke WHERE id = 1;
   EXCEPTION WHEN OTHERS THEN
     raised := true;
-    IF SQLERRM <> 'operator ? is not supported for eql_v3.json' THEN
+    IF SQLERRM <> 'operator ? is not supported for public.json' THEN
       RAISE EXCEPTION 'json blocker raised an unexpected message: %', SQLERRM;
     END IF;
   END;

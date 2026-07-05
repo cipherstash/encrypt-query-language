@@ -6,12 +6,12 @@
 
 DO $$
 BEGIN
-  --! @brief Encrypted domain eql_v3.bigint.
+  --! @brief Encrypted domain public.bigint.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'bigint' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'bigint' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.bigint AS jsonb
+    CREATE DOMAIN public.bigint AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -21,12 +21,12 @@ BEGIN
       );
   END IF;
 
-  --! @brief Encrypted domain eql_v3.bigint_eq.
+  --! @brief Encrypted domain public.bigint_eq.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'bigint_eq' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'bigint_eq' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.bigint_eq AS jsonb
+    CREATE DOMAIN public.bigint_eq AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -37,12 +37,12 @@ BEGIN
       );
   END IF;
 
-  --! @brief Encrypted domain eql_v3.bigint_ord_ore.
+  --! @brief Encrypted domain public.bigint_ord_ore.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'bigint_ord_ore' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'bigint_ord_ore' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.bigint_ord_ore AS jsonb
+    CREATE DOMAIN public.bigint_ord_ore AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -55,12 +55,12 @@ BEGIN
       );
   END IF;
 
-  --! @brief Encrypted domain eql_v3.bigint_ord.
+  --! @brief Encrypted domain public.bigint_ord.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'bigint_ord' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'bigint_ord' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.bigint_ord AS jsonb
+    CREATE DOMAIN public.bigint_ord AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -73,12 +73,12 @@ BEGIN
       );
   END IF;
 
-  --! @brief Encrypted domain eql_v3.bigint_ord_ope.
+  --! @brief Encrypted domain public.bigint_ord_ope.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'bigint_ord_ope' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'bigint_ord_ope' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.bigint_ord_ope AS jsonb
+    CREATE DOMAIN public.bigint_ord_ope AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'

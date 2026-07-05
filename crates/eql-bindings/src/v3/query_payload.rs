@@ -26,7 +26,7 @@ use super::domain_type::DomainType;
 use super::jsonb::SteVecQuery;
 
 /// Every v3 query payload shape in one type. Today that is exactly one:
-/// the SteVec containment needle ([`SteVecQuery`], `eql_v3.jsonb_query`).
+/// the SteVec containment needle ([`SteVecQuery`], `public.jsonb_query`).
 ///
 /// Serialization is exactly the inner type's (`#[serde(untagged)]` adds no
 /// tagging), so typing a query payload never changes the wire. Deliberately
@@ -51,7 +51,7 @@ use super::jsonb::SteVecQuery;
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum QueryPayload {
-    /// The `eql_v3.jsonb_query` containment needle (`{sv: [{s, hm|oc}]}`).
+    /// The `public.jsonb_query` containment needle (`{sv: [{s, hm|oc}]}`).
     SteVec(SteVecQuery),
 }
 
@@ -81,7 +81,7 @@ impl QueryPayload {
         }
     }
 
-    /// Fully-qualified SQL domain name, e.g. `"eql_v3.jsonb_query"`.
+    /// Fully-qualified SQL domain name, e.g. `"public.jsonb_query"`.
     pub fn sql_domain(&self) -> &'static str {
         self.as_domain_type().sql_domain()
     }

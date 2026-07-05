@@ -405,7 +405,7 @@ pub async fn assert_extractor_oracle<T: ScalarType>(
 /// n-gram relationships (`haystack` ⊇ `needle`, `disjoint` shares none). Asserts
 /// `eql_v3.contains` / `contained_by` respect **left-contains-right** `@>` and
 /// that `match_term` yields a non-empty `bf` array. Operands are the payload
-/// JSON literals cast to `domain` (`eql_v3.text_match`).
+/// JSON literals cast to `domain` (`public.text_match`).
 pub async fn assert_match_smoke(
     pool: &PgPool,
     domain: &str,

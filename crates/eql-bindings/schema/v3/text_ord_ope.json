@@ -40,7 +40,7 @@
   "$id": "https://schemas.cipherstash.com/eql/v3/text_ord_ope.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "`eql_v3.text_ord_ope` — ordering domain.\n\nOperators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `hm` `op`.",
+  "description": "`public.text_ord_ope` — ordering domain.\n\nOperators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `hm` `op`.",
   "properties": {
     "c": {
       "$ref": "#/$defs/Ciphertext"

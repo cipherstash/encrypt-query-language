@@ -569,10 +569,19 @@ mod tests {
             "integer_ord_ope",
         ] {
             assert!(
-                sql.contains(&format!("CREATE DOMAIN eql_v3.{dom} AS jsonb")),
+                sql.contains(&format!("CREATE DOMAIN public.{dom} AS jsonb")),
                 "missing {dom}"
             );
         }
+    }
+
+    #[test]
+    fn generated_scalar_domains_are_created_only_in_public() {
+        let sql = render_types_file(spec("integer"));
+        assert!(sql.contains("CREATE DOMAIN public.integer AS jsonb"));
+        assert!(sql.contains("CREATE DOMAIN public.integer_eq AS jsonb"));
+        assert!(!sql.contains("CREATE DOMAIN eql_v3."));
+        assert!(!sql.contains("CREATE DOMAIN eql_v3_internal."));
     }
 
     /// The non-empty-`ob` CHECK (issue #262) is emitted only on ORE-bearing
@@ -596,7 +605,7 @@ mod tests {
             // non-empty-array CHECK on the OPE-bearing domain.
             ("integer_ord_ope", false),
         ] {
-            let head = format!("CREATE DOMAIN eql_v3.{dom} AS jsonb");
+            let head = format!("CREATE DOMAIN public.{dom} AS jsonb");
             let start = sql.find(&head).unwrap_or_else(|| panic!("missing {dom}"));
             // The CHECK ends at the closing `);` of this CREATE DOMAIN block.
             let end = start + sql[start..].find(");").expect("unterminated CHECK");
@@ -628,7 +637,7 @@ mod tests {
         let s = spec("integer");
         let sql = render_functions_file(s.name, domain(s, "eq"));
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
-        assert!(sql.contains("CREATE FUNCTION eql_v3.eq_term(a eql_v3.integer_eq)"));
+        assert!(sql.contains("CREATE FUNCTION eql_v3.eq_term(a public.integer_eq)"));
         assert!(sql.contains("RETURNS eql_v3_internal.hmac_256"));
         assert_eq!(
             sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
@@ -644,7 +653,7 @@ mod tests {
         let s = spec("integer");
         let sql = render_functions_file(s.name, domain(s, "ord"));
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
-        assert!(sql.contains("CREATE FUNCTION eql_v3.ord_term(a eql_v3.integer_ord)"));
+        assert!(sql.contains("CREATE FUNCTION eql_v3.ord_term(a public.integer_ord)"));
         assert!(sql.contains("RETURNS eql_v3_internal.ore_block_256"));
         assert_eq!(
             sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
@@ -665,7 +674,7 @@ mod tests {
         let s = spec("integer");
         let sql = render_functions_file(s.name, domain(s, "ord_ope"));
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
-        assert!(sql.contains("CREATE FUNCTION eql_v3.ord_ope_term(a eql_v3.integer_ord_ope)"));
+        assert!(sql.contains("CREATE FUNCTION eql_v3.ord_ope_term(a public.integer_ord_ope)"));
         assert!(sql.contains("RETURNS eql_v3_internal.ope_cllw"));
         assert!(sql.contains("-- REQUIRE: src/v3/sem/ope_cllw/functions.sql"));
         assert!(!sql.contains("-- REQUIRE: src/v3/sem/ope_cllw/operators.sql"));
@@ -682,6 +691,17 @@ mod tests {
         let s = spec("integer");
         let sql = render_operators_file(s.name, domain(s, "eq"));
         assert_eq!(sql.matches("CREATE OPERATOR").count(), 44);
+    }
+
+    #[test]
+    fn generated_functions_reference_public_domain_arguments() {
+        let s = spec("integer");
+        let sql = render_functions_file(s.name, domain(s, "eq"));
+        assert!(sql.contains("CREATE FUNCTION eql_v3.eq_term(a public.integer_eq)"));
+        assert!(sql.contains("CREATE FUNCTION eql_v3.eq(a public.integer_eq, b public.integer_eq)"));
+        assert!(sql.contains("CREATE FUNCTION eql_v3.eq(a public.integer_eq, b jsonb)"));
+        assert!(sql.contains("CREATE FUNCTION eql_v3.eq(a jsonb, b public.integer_eq)"));
+        assert!(!sql.contains("a eql_v3.integer_eq"));
     }
 
     #[test]

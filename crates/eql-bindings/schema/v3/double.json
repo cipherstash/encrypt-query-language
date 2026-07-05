@@ -32,7 +32,7 @@
   "$id": "https://schemas.cipherstash.com/eql/v3/double.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "`eql_v3.double` — storage-only domain.\n\nOperators: none. Required keys: `v` `i` `c`.",
+  "description": "`public.double` — storage-only domain.\n\nOperators: none. Required keys: `v` `i` `c`.",
   "properties": {
     "c": {
       "$ref": "#/$defs/Ciphertext"

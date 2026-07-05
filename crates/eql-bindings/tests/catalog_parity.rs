@@ -72,7 +72,7 @@ fn schema_required_keys_match_catalog_terms() {
 #[test]
 fn inventory_exactly_covers_catalog_in_order() {
     // `domain_name` is correct for every shape (including the jsonb family's
-    // one documented exception, the `eql_v3.json` document domain — see
+    // one documented exception, the `public.json` document domain — see
     // `Domain::full_name`), so no per-shape branch is needed here.
     let expected: Vec<String> = CATALOG
         .iter()
@@ -259,12 +259,12 @@ fn schemas_are_strict() {
 ///
 /// KEEP IN SYNC with the canonical `SteVecPayload`
 /// (`eql-payload-v2.3.schema.json`) and `is_valid_ste_vec_{document,entry,query}_payload`:
-/// - `eql_v3.json`      requires `v` `k` `i` `sv`           (document; `k` = "sv"
+/// - `public.json`      requires `v` `k` `i` `sv`           (document; `k` = "sv"
 ///   form discriminator, required by the canonical SteVecPayload and carried on
 ///   every real payload — the SQL CHECK is laxer and only mandates `v`/`i`/`sv`,
 ///   but the binding models the real wire, which always carries `k`)
-/// - `eql_v3.jsonb_entry` requires `s` `c` + exactly one of `hm` XOR `oc`
-/// - `eql_v3.jsonb_query`  requires `sv`; each element `s` + `hm` XOR `oc`, no `c`
+/// - `public.jsonb_entry` requires `s` `c` + exactly one of `hm` XOR `oc`
+/// - `public.jsonb_query`  requires `sv`; each element `s` + `hm` XOR `oc`, no `c`
 #[test]
 fn jsonb_schema_required_keys_match_the_sql_check_contract() {
     let entries = v3::all();
@@ -293,7 +293,7 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
     assert_eq!(
         required(&doc, "/required", "json"),
         set(&["v", "k", "i", "sv"]),
-        "eql_v3.json required keys must match the SteVec document wire contract"
+        "public.json required keys must match the SteVec document wire contract"
     );
 
     // Entry: {s, c} + hm XOR oc. The XOR is expressed as an untagged `anyOf`
@@ -304,7 +304,7 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
     assert_eq!(
         required(&entry, "/required", "jsonb_entry"),
         set(&["s", "c"]),
-        "eql_v3.jsonb_entry base required keys must be s + c"
+        "public.jsonb_entry base required keys must be s + c"
     );
     let entry_alts = entry
         .pointer("/anyOf")
@@ -320,7 +320,7 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
         entry_alt_required.len() == 2
             && entry_alt_required.contains(&set(&["hm"]))
             && entry_alt_required.contains(&set(&["oc"])),
-        "eql_v3.jsonb_entry anyOf must offer exactly the hm-only and oc-only term \
+        "public.jsonb_entry anyOf must offer exactly the hm-only and oc-only term \
          alternatives (each arm a singleton), got {entry_alt_required:?}"
     );
 
@@ -330,7 +330,7 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
     assert_eq!(
         required(&query, "/required", "jsonb_query"),
         set(&["sv"]),
-        "eql_v3.jsonb_query required keys must be sv"
+        "public.jsonb_query required keys must be sv"
     );
     let elem_required = required(
         &query,
@@ -360,7 +360,7 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
         query_alt_required.len() == 2
             && query_alt_required.contains(&set(&["hm"]))
             && query_alt_required.contains(&set(&["oc"])),
-        "eql_v3.jsonb_query element anyOf must offer exactly the hm-only and \
+        "public.jsonb_query element anyOf must offer exactly the hm-only and \
          oc-only term alternatives (each arm a singleton), got {query_alt_required:?}"
     );
 }

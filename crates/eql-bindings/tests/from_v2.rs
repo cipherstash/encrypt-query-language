@@ -93,7 +93,7 @@ fn parse_resolves_every_catalog_scalar_domain_and_json() {
 
 #[test]
 fn parse_rejects_unknown_domain_names() {
-    for name in ["int5", "text_like", "eql_v3.integer_eq", "", "jsonb"] {
+    for name in ["int5", "text_like", "public.integer_eq", "", "jsonb"] {
         let parsed = TargetDomain::parse(name);
         assert!(
             matches!(parsed, Err(FromV2Error::UnknownDomain { .. })),

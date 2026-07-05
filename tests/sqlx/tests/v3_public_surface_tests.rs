@@ -8,13 +8,13 @@
 //! would ship unnoticed. These tests close that gap two ways:
 //!
 //!   * `eql_v3_public_surface_matches_golden` — an exhaustive committed snapshot
-//!     of every object visible in `eql_v3` (types, functions, aggregates,
-//!     operators, casts). Any addition/removal/rename forces a conscious
+//!     of every EQL-owned function, aggregate, operator, and cast. Any
+//!     addition/removal/rename forces a conscious
 //!     snapshot update, mirroring the `snapshots/matrix_tests.txt` gate.
 //!   * The placement invariants — structural rules (no naked composite/enum
-//!     types in the public schema; every public type is a jsonb-backed domain;
-//!     every catalog-generated domain landed in `eql_v3`) that are cheaper to
-//!     reason about than the golden and independent of a frozen text file.
+//!     types in the public schema; every user-column type is a public
+//!     jsonb-backed domain; SEM index-term types stay internal) that are cheaper
+//!     to reason about than the golden and independent of a frozen text file.
 //!
 //! The golden is regenerated in place with `EQL_UPDATE_SNAPSHOTS=1` (see
 //! `mise run test:surface:snapshot:regen`); the file lives next to the matrix
@@ -38,19 +38,13 @@ const GOLDEN_PATH: &str = concat!(
     "/snapshots/eql_v3_public_surface.txt"
 );
 
-/// Enumerates every object owned by the `eql_v3` public schema as normalized,
-/// schema-qualified text lines. Run on a connection with
+/// Enumerates every EQL-owned public function, aggregate, operator, and cast as
+/// normalized, schema-qualified text lines. Run on a connection with
 /// `search_path = pg_catalog` so `regtype`/identity-argument rendering
-/// fully-qualifies non-catalog schemas (`eql_v3.*`) and leaves built-ins
-/// (`jsonb`) bare — deterministic across environments and PG versions.
+/// fully-qualifies non-catalog schemas (`eql_v3.*`, `public.*`) and leaves
+/// built-ins (`jsonb`) bare — deterministic across environments and PG
+/// versions.
 const SURFACE_SQL: &str = r#"
-    SELECT format('type %s.%s %s', n.nspname, t.typname, t.typtype)
-    FROM pg_catalog.pg_type t
-    JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
-    WHERE n.nspname = 'eql_v3' AND t.typtype IN ('d','c','e')
-
-    UNION ALL
-
     SELECT format('%s %s.%s(%s)',
       CASE p.prokind
         WHEN 'a' THEN 'aggregate'
@@ -76,14 +70,9 @@ const SURFACE_SQL: &str = r#"
 
     SELECT format('cast %s -> %s', c.castsource::regtype, c.casttarget::regtype)
     FROM pg_catalog.pg_cast c
-    WHERE EXISTS (
-        SELECT 1 FROM pg_catalog.pg_type st
-        JOIN pg_catalog.pg_namespace sn ON sn.oid = st.typnamespace
-        WHERE st.oid = c.castsource AND sn.nspname = 'eql_v3')
-      OR EXISTS (
-        SELECT 1 FROM pg_catalog.pg_type tt
-        JOIN pg_catalog.pg_namespace tn ON tn.oid = tt.typnamespace
-        WHERE tt.oid = c.casttarget AND tn.nspname = 'eql_v3')
+    JOIN pg_catalog.pg_proc p ON p.oid = c.castfunc
+    JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'eql_v3'
 "#;
 
 /// Fetch the sorted public-surface entry list.
@@ -101,17 +90,12 @@ async fn public_surface(pool: &PgPool) -> Result<Vec<String>> {
     Ok(entries)
 }
 
-/// The catalog-generated domain names, as they appear in SQL: `<family>` for the
-/// storage domain (empty term-name), `<family>_<term>` otherwise. These MUST
-/// live in `eql_v3` (never `eql_v3_internal`), and are a subset of the installed
-/// `eql_v3` domains (the hand-written jsonb-family domains — `json`,
-/// `jsonb_query`, `jsonb_entry` — are the remainder).
-fn catalog_domain_names() -> Vec<String> {
+/// User-column domain names, as they appear in SQL: scalar-family domains plus
+/// the hand-written JSON/JSONB domains. These MUST live in `public` (never
+/// `eql_v3` or `eql_v3_internal`) so application tables using them survive EQL
+/// schema uninstall.
+fn user_domain_names() -> Vec<String> {
     let mut names = Vec::new();
-    // Scalar families only — the jsonb (SteVec) family's domains (`json`,
-    // `jsonb_entry`, `jsonb_query`) use bespoke names, not `<family>_<domain>`,
-    // and are the hand-written "remainder" noted above. Iterating the full
-    // CATALOG would fabricate non-existent names like `jsonb_json`.
     for family in eql_domains::scalar_families() {
         for domain in family.domains {
             if domain.name.is_empty() {
@@ -121,6 +105,11 @@ fn catalog_domain_names() -> Vec<String> {
             }
         }
     }
+    names.extend(
+        ["json", "jsonb_entry", "jsonb_query"]
+            .into_iter()
+            .map(String::from),
+    );
     names.sort();
     names
 }
@@ -194,59 +183,186 @@ async fn eql_v3_has_no_naked_composite_or_enum_types(pool: PgPool) -> Result<()>
     Ok(())
 }
 
-/// #2 — Placement invariant: every type in `eql_v3` is a jsonb-backed domain.
-/// The public surface is exclusively jsonb domains (the scalar families plus the
-/// hand-written jsonb-document domains); anything else is misplaced.
+/// #2 — Placement invariant: every user-column domain is public and jsonb-backed.
+/// These are application-column types, so they live in `public` instead of an
+/// EQL-owned schema and are domains directly over `pg_catalog.jsonb`.
 #[sqlx::test]
-async fn every_eql_v3_type_is_a_jsonb_domain(pool: PgPool) -> Result<()> {
-    let offenders: Vec<String> = sqlx::query_scalar(
+async fn user_column_domains_are_public_jsonb_domains(pool: PgPool) -> Result<()> {
+    let installed: Vec<(String, String)> = sqlx::query_as(
         r#"
-        SELECT format('%I (typtype=%s, base=%s)',
-                      t.typname, t.typtype, COALESCE(bt.typname, '<none>'))
+        SELECT t.typname::text, bt.typname::text
         FROM pg_catalog.pg_type t
         JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
-        LEFT JOIN pg_catalog.pg_type bt ON bt.oid = t.typbasetype
-        WHERE n.nspname = 'eql_v3'
-          AND t.typtype IN ('d', 'c', 'e')
-          AND NOT (t.typtype = 'd' AND bt.typname = 'jsonb')
-        ORDER BY 1
+        JOIN pg_catalog.pg_type bt ON bt.oid = t.typbasetype
+        WHERE n.nspname = 'public'
+          AND t.typtype = 'd'
+          AND t.typname = ANY($1)
+        ORDER BY t.typname
         "#,
     )
+    .bind(user_domain_names())
     .fetch_all(&pool)
     .await?;
+
+    let installed: std::collections::BTreeMap<String, String> = installed.into_iter().collect();
+    let missing: Vec<String> = user_domain_names()
+        .into_iter()
+        .filter(|name| !installed.contains_key(name))
+        .collect();
     assert!(
-        offenders.is_empty(),
-        "every eql_v3 type must be a jsonb-backed domain; found non-jsonb-domain type(s): {offenders:?}"
+        missing.is_empty(),
+        "user-column domain(s) missing from public: {missing:?}"
+    );
+
+    let non_jsonb: Vec<(String, String)> = installed
+        .into_iter()
+        .filter(|(_, base)| base != "jsonb")
+        .collect();
+    assert!(
+        non_jsonb.is_empty(),
+        "public user-column domains must be jsonb-backed domains: {non_jsonb:?}"
     );
     Ok(())
 }
 
-/// #2 — Placement invariant: every catalog-generated domain landed in `eql_v3`.
-/// Ties the public surface back to `eql_domains::CATALOG` (the source of truth)
-/// independent of the golden text file: a generated domain created in the wrong
-/// schema (or missing) fails here without a manual snapshot update.
+/// #2 — Placement invariant: user-column domains are absent from EQL-owned
+/// schemas. `eql_v3` / `eql_v3_internal` can be uninstalled independently; a
+/// user table column type must not depend on either schema.
 #[sqlx::test]
-async fn every_catalog_domain_is_present_in_eql_v3(pool: PgPool) -> Result<()> {
-    let installed: Vec<String> = sqlx::query_scalar(
+async fn user_column_domains_absent_from_eql_owned_schemas(pool: PgPool) -> Result<()> {
+    let offenders: Vec<String> = sqlx::query_scalar(
+        r#"
+        SELECT format('%I.%I', n.nspname, t.typname)
+        FROM pg_catalog.pg_type t
+        JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+        WHERE n.nspname IN ('eql_v3', 'eql_v3_internal')
+          AND t.typtype = 'd'
+          AND t.typname = ANY($1)
+        ORDER BY 1
+        "#,
+    )
+    .bind(user_domain_names())
+    .fetch_all(&pool)
+    .await?;
+    assert!(
+        offenders.is_empty(),
+        "user-column domains must not exist in droppable EQL-owned schemas: {offenders:?}"
+    );
+    Ok(())
+}
+
+/// #2 — Dependency invariant: public user-column domain CHECK constraints do not
+/// depend on objects in droppable EQL-owned schemas. Otherwise an EQL uninstall
+/// can still cascade into application table columns even when the domain type
+/// itself lives in `public`.
+#[sqlx::test]
+async fn public_user_domain_constraints_do_not_depend_on_eql_owned_schemas(
+    pool: PgPool,
+) -> Result<()> {
+    let textual_refs: Vec<String> = sqlx::query_scalar(
+        r#"
+        SELECT format('%I.%I.%I: %s', tn.nspname, t.typname, c.conname,
+                      pg_catalog.pg_get_constraintdef(c.oid))
+        FROM pg_catalog.pg_constraint c
+        JOIN pg_catalog.pg_type t ON t.oid = c.contypid
+        JOIN pg_catalog.pg_namespace tn ON tn.oid = t.typnamespace
+        WHERE tn.nspname = 'public'
+          AND t.typtype = 'd'
+          AND t.typname = ANY($1)
+          AND pg_catalog.pg_get_constraintdef(c.oid) ~ '\m(eql_v3|eql_v3_internal)\.'
+        ORDER BY 1
+        "#,
+    )
+    .bind(user_domain_names())
+    .fetch_all(&pool)
+    .await?;
+    assert!(
+        textual_refs.is_empty(),
+        "public user-domain CHECK constraint(s) reference EQL-owned schemas: {textual_refs:?}"
+    );
+
+    let dependency_refs: Vec<String> = sqlx::query_scalar(
+        r#"
+        SELECT format('%I.%I.%I depends on function %I.%I(%s)',
+                      tn.nspname, t.typname, c.conname,
+                      pn.nspname, p.proname,
+                      pg_catalog.pg_get_function_identity_arguments(p.oid))
+        FROM pg_catalog.pg_constraint c
+        JOIN pg_catalog.pg_type t ON t.oid = c.contypid
+        JOIN pg_catalog.pg_namespace tn ON tn.oid = t.typnamespace
+        JOIN pg_catalog.pg_depend d ON d.classid = 'pg_constraint'::regclass
+                                   AND d.objid = c.oid
+        JOIN pg_catalog.pg_proc p ON p.oid = d.refobjid
+        JOIN pg_catalog.pg_namespace pn ON pn.oid = p.pronamespace
+        WHERE tn.nspname = 'public'
+          AND t.typtype = 'd'
+          AND t.typname = ANY($1)
+          AND pn.nspname IN ('eql_v3', 'eql_v3_internal')
+        ORDER BY 1
+        "#,
+    )
+    .bind(user_domain_names())
+    .fetch_all(&pool)
+    .await?;
+    assert!(
+        dependency_refs.is_empty(),
+        "public user-domain CHECK constraint(s) depend on EQL-owned functions: {dependency_refs:?}"
+    );
+    Ok(())
+}
+
+/// #2 — Placement invariant: SEM index-term types remain internal. These are
+/// transient implementation types used by extractors, indexes, and comparator
+/// functions; exposing them as user-column domains would leak implementation
+/// detail into type pickers.
+#[sqlx::test]
+async fn sem_index_term_types_remain_internal(pool: PgPool) -> Result<()> {
+    let expected = [
+        "bloom_filter",
+        "hmac_256",
+        "ope_cllw",
+        "ore_block_256",
+        "ore_cllw",
+    ];
+    let present: Vec<String> = sqlx::query_scalar(
         r#"
         SELECT t.typname::text
         FROM pg_catalog.pg_type t
         JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
-        WHERE n.nspname = 'eql_v3' AND t.typtype = 'd'
+        WHERE n.nspname = 'eql_v3_internal'
+          AND t.typname = ANY($1)
+        ORDER BY 1
         "#,
     )
+    .bind(expected)
     .fetch_all(&pool)
     .await?;
-    let installed: std::collections::BTreeSet<String> = installed.into_iter().collect();
-
-    let missing: Vec<String> = catalog_domain_names()
+    let present: std::collections::BTreeSet<String> = present.into_iter().collect();
+    let missing: Vec<&str> = expected
         .into_iter()
-        .filter(|name| !installed.contains(name))
+        .filter(|name| !present.contains(*name))
         .collect();
     assert!(
         missing.is_empty(),
-        "catalog-generated domain(s) not found as jsonb domains in eql_v3 \
-         (created in the wrong schema, or not created?): {missing:?}"
+        "SEM/index-term type(s) missing from eql_v3_internal: {missing:?}"
+    );
+
+    let misplaced: Vec<String> = sqlx::query_scalar(
+        r#"
+        SELECT format('%I.%I', n.nspname, t.typname)
+        FROM pg_catalog.pg_type t
+        JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+        WHERE t.typname = ANY($1)
+          AND n.nspname <> 'eql_v3_internal'
+        ORDER BY 1
+        "#,
+    )
+    .bind(expected)
+    .fetch_all(&pool)
+    .await?;
+    assert!(
+        misplaced.is_empty(),
+        "SEM/index-term types must stay internal: {misplaced:?}"
     );
     Ok(())
 }

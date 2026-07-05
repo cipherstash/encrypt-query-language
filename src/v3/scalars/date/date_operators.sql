@@ -4,224 +4,224 @@
 -- REQUIRE: src/v3/scalars/date/date_functions.sql
 
 --! @file encrypted_domain/date/date_operators.sql
---! @brief Operators for eql_v3.date.
+--! @brief Operators for public.date.
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3_internal.eq,
-  LEFTARG = eql_v3.date, RIGHTARG = eql_v3.date
-);
-
-CREATE OPERATOR = (
-  FUNCTION = eql_v3_internal.eq,
-  LEFTARG = eql_v3.date, RIGHTARG = jsonb
+  LEFTARG = public.date, RIGHTARG = public.date
 );
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3_internal.eq,
-  LEFTARG = jsonb, RIGHTARG = eql_v3.date
+  LEFTARG = public.date, RIGHTARG = jsonb
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = jsonb, RIGHTARG = public.date
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3_internal.neq,
-  LEFTARG = eql_v3.date, RIGHTARG = eql_v3.date
+  LEFTARG = public.date, RIGHTARG = public.date
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3_internal.neq,
-  LEFTARG = eql_v3.date, RIGHTARG = jsonb
+  LEFTARG = public.date, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3_internal.neq,
-  LEFTARG = jsonb, RIGHTARG = eql_v3.date
+  LEFTARG = jsonb, RIGHTARG = public.date
 );
 
 CREATE OPERATOR < (
   FUNCTION = eql_v3_internal.lt,
-  LEFTARG = eql_v3.date, RIGHTARG = eql_v3.date
+  LEFTARG = public.date, RIGHTARG = public.date
 );
 
 CREATE OPERATOR < (
   FUNCTION = eql_v3_internal.lt,
-  LEFTARG = eql_v3.date, RIGHTARG = jsonb
+  LEFTARG = public.date, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR < (
   FUNCTION = eql_v3_internal.lt,
-  LEFTARG = jsonb, RIGHTARG = eql_v3.date
+  LEFTARG = jsonb, RIGHTARG = public.date
 );
 
 CREATE OPERATOR <= (
   FUNCTION = eql_v3_internal.lte,
-  LEFTARG = eql_v3.date, RIGHTARG = eql_v3.date
+  LEFTARG = public.date, RIGHTARG = public.date
 );
 
 CREATE OPERATOR <= (
   FUNCTION = eql_v3_internal.lte,
-  LEFTARG = eql_v3.date, RIGHTARG = jsonb
+  LEFTARG = public.date, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR <= (
   FUNCTION = eql_v3_internal.lte,
-  LEFTARG = jsonb, RIGHTARG = eql_v3.date
+  LEFTARG = jsonb, RIGHTARG = public.date
 );
 
 CREATE OPERATOR > (
   FUNCTION = eql_v3_internal.gt,
-  LEFTARG = eql_v3.date, RIGHTARG = eql_v3.date
+  LEFTARG = public.date, RIGHTARG = public.date
 );
 
 CREATE OPERATOR > (
   FUNCTION = eql_v3_internal.gt,
-  LEFTARG = eql_v3.date, RIGHTARG = jsonb
+  LEFTARG = public.date, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR > (
   FUNCTION = eql_v3_internal.gt,
-  LEFTARG = jsonb, RIGHTARG = eql_v3.date
+  LEFTARG = jsonb, RIGHTARG = public.date
 );
 
 CREATE OPERATOR >= (
   FUNCTION = eql_v3_internal.gte,
-  LEFTARG = eql_v3.date, RIGHTARG = eql_v3.date
+  LEFTARG = public.date, RIGHTARG = public.date
 );
 
 CREATE OPERATOR >= (
   FUNCTION = eql_v3_internal.gte,
-  LEFTARG = eql_v3.date, RIGHTARG = jsonb
+  LEFTARG = public.date, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR >= (
   FUNCTION = eql_v3_internal.gte,
-  LEFTARG = jsonb, RIGHTARG = eql_v3.date
+  LEFTARG = jsonb, RIGHTARG = public.date
 );
 
 CREATE OPERATOR @> (
   FUNCTION = eql_v3_internal.contains,
-  LEFTARG = eql_v3.date, RIGHTARG = eql_v3.date
+  LEFTARG = public.date, RIGHTARG = public.date
 );
 
 CREATE OPERATOR @> (
   FUNCTION = eql_v3_internal.contains,
-  LEFTARG = eql_v3.date, RIGHTARG = jsonb
+  LEFTARG = public.date, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR @> (
   FUNCTION = eql_v3_internal.contains,
-  LEFTARG = jsonb, RIGHTARG = eql_v3.date
+  LEFTARG = jsonb, RIGHTARG = public.date
 );
 
 CREATE OPERATOR <@ (
   FUNCTION = eql_v3_internal.contained_by,
-  LEFTARG = eql_v3.date, RIGHTARG = eql_v3.date
+  LEFTARG = public.date, RIGHTARG = public.date
 );
 
 CREATE OPERATOR <@ (
   FUNCTION = eql_v3_internal.contained_by,
-  LEFTARG = eql_v3.date, RIGHTARG = jsonb
+  LEFTARG = public.date, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR <@ (
   FUNCTION = eql_v3_internal.contained_by,
-  LEFTARG = jsonb, RIGHTARG = eql_v3.date
+  LEFTARG = jsonb, RIGHTARG = public.date
 );
 
 CREATE OPERATOR -> (
   FUNCTION = eql_v3_internal."->",
-  LEFTARG = eql_v3.date, RIGHTARG = text
+  LEFTARG = public.date, RIGHTARG = text
 );
 
 CREATE OPERATOR -> (
   FUNCTION = eql_v3_internal."->",
-  LEFTARG = eql_v3.date, RIGHTARG = integer
+  LEFTARG = public.date, RIGHTARG = integer
 );
 
 CREATE OPERATOR -> (
   FUNCTION = eql_v3_internal."->",
-  LEFTARG = jsonb, RIGHTARG = eql_v3.date
+  LEFTARG = jsonb, RIGHTARG = public.date
 );
 
 CREATE OPERATOR ->> (
   FUNCTION = eql_v3_internal."->>",
-  LEFTARG = eql_v3.date, RIGHTARG = text
+  LEFTARG = public.date, RIGHTARG = text
 );
 
 CREATE OPERATOR ->> (
   FUNCTION = eql_v3_internal."->>",
-  LEFTARG = eql_v3.date, RIGHTARG = integer
+  LEFTARG = public.date, RIGHTARG = integer
 );
 
 CREATE OPERATOR ->> (
   FUNCTION = eql_v3_internal."->>",
-  LEFTARG = jsonb, RIGHTARG = eql_v3.date
+  LEFTARG = jsonb, RIGHTARG = public.date
 );
 
 CREATE OPERATOR ? (
   FUNCTION = eql_v3_internal."?",
-  LEFTARG = eql_v3.date, RIGHTARG = text
+  LEFTARG = public.date, RIGHTARG = text
 );
 
 CREATE OPERATOR ?| (
   FUNCTION = eql_v3_internal."?|",
-  LEFTARG = eql_v3.date, RIGHTARG = text[]
+  LEFTARG = public.date, RIGHTARG = text[]
 );
 
 CREATE OPERATOR ?& (
   FUNCTION = eql_v3_internal."?&",
-  LEFTARG = eql_v3.date, RIGHTARG = text[]
+  LEFTARG = public.date, RIGHTARG = text[]
 );
 
 CREATE OPERATOR @? (
   FUNCTION = eql_v3_internal."@?",
-  LEFTARG = eql_v3.date, RIGHTARG = jsonpath
+  LEFTARG = public.date, RIGHTARG = jsonpath
 );
 
 CREATE OPERATOR @@ (
   FUNCTION = eql_v3_internal."@@",
-  LEFTARG = eql_v3.date, RIGHTARG = jsonpath
+  LEFTARG = public.date, RIGHTARG = jsonpath
 );
 
 CREATE OPERATOR #> (
   FUNCTION = eql_v3_internal."#>",
-  LEFTARG = eql_v3.date, RIGHTARG = text[]
+  LEFTARG = public.date, RIGHTARG = text[]
 );
 
 CREATE OPERATOR #>> (
   FUNCTION = eql_v3_internal."#>>",
-  LEFTARG = eql_v3.date, RIGHTARG = text[]
+  LEFTARG = public.date, RIGHTARG = text[]
 );
 
 CREATE OPERATOR - (
   FUNCTION = eql_v3_internal."-",
-  LEFTARG = eql_v3.date, RIGHTARG = text
+  LEFTARG = public.date, RIGHTARG = text
 );
 
 CREATE OPERATOR - (
   FUNCTION = eql_v3_internal."-",
-  LEFTARG = eql_v3.date, RIGHTARG = integer
+  LEFTARG = public.date, RIGHTARG = integer
 );
 
 CREATE OPERATOR - (
   FUNCTION = eql_v3_internal."-",
-  LEFTARG = eql_v3.date, RIGHTARG = text[]
+  LEFTARG = public.date, RIGHTARG = text[]
 );
 
 CREATE OPERATOR #- (
   FUNCTION = eql_v3_internal."#-",
-  LEFTARG = eql_v3.date, RIGHTARG = text[]
+  LEFTARG = public.date, RIGHTARG = text[]
 );
 
 CREATE OPERATOR || (
   FUNCTION = eql_v3_internal."||",
-  LEFTARG = eql_v3.date, RIGHTARG = eql_v3.date
+  LEFTARG = public.date, RIGHTARG = public.date
 );
 
 CREATE OPERATOR || (
   FUNCTION = eql_v3_internal."||",
-  LEFTARG = eql_v3.date, RIGHTARG = jsonb
+  LEFTARG = public.date, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR || (
   FUNCTION = eql_v3_internal."||",
-  LEFTARG = jsonb, RIGHTARG = eql_v3.date
+  LEFTARG = jsonb, RIGHTARG = public.date
 );

@@ -5,14 +5,14 @@
 -- REQUIRE: src/v3/scalars/double/double_ord_operators.sql
 
 --! @file encrypted_domain/double/double_ord_aggregates.sql
---! @brief Aggregates for eql_v3.double_ord.
+--! @brief Aggregates for public.double_ord.
 
---! @brief State function for min on eql_v3.double_ord.
---! @param state eql_v3.double_ord
---! @param value eql_v3.double_ord
---! @return eql_v3.double_ord
-CREATE FUNCTION eql_v3_internal.min_sfunc(state eql_v3.double_ord, value eql_v3.double_ord)
-RETURNS eql_v3.double_ord
+--! @brief State function for min on public.double_ord.
+--! @param state public.double_ord
+--! @param value public.double_ord
+--! @return public.double_ord
+CREATE FUNCTION eql_v3_internal.min_sfunc(state public.double_ord, value public.double_ord)
+RETURNS public.double_ord
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
@@ -24,22 +24,22 @@ BEGIN
 END;
 $$;
 
---! @brief min aggregate for eql_v3.double_ord.
---! @param input eql_v3.double_ord
---! @return eql_v3.double_ord
-CREATE AGGREGATE eql_v3.min(eql_v3.double_ord) (
+--! @brief min aggregate for public.double_ord.
+--! @param input public.double_ord
+--! @return public.double_ord
+CREATE AGGREGATE eql_v3.min(public.double_ord) (
   sfunc = eql_v3_internal.min_sfunc,
-  stype = eql_v3.double_ord,
+  stype = public.double_ord,
   combinefunc = eql_v3_internal.min_sfunc,
   parallel = safe
 );
 
---! @brief State function for max on eql_v3.double_ord.
---! @param state eql_v3.double_ord
---! @param value eql_v3.double_ord
---! @return eql_v3.double_ord
-CREATE FUNCTION eql_v3_internal.max_sfunc(state eql_v3.double_ord, value eql_v3.double_ord)
-RETURNS eql_v3.double_ord
+--! @brief State function for max on public.double_ord.
+--! @param state public.double_ord
+--! @param value public.double_ord
+--! @return public.double_ord
+CREATE FUNCTION eql_v3_internal.max_sfunc(state public.double_ord, value public.double_ord)
+RETURNS public.double_ord
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
@@ -51,12 +51,12 @@ BEGIN
 END;
 $$;
 
---! @brief max aggregate for eql_v3.double_ord.
---! @param input eql_v3.double_ord
---! @return eql_v3.double_ord
-CREATE AGGREGATE eql_v3.max(eql_v3.double_ord) (
+--! @brief max aggregate for public.double_ord.
+--! @param input public.double_ord
+--! @return public.double_ord
+CREATE AGGREGATE eql_v3.max(public.double_ord) (
   sfunc = eql_v3_internal.max_sfunc,
-  stype = eql_v3.double_ord,
+  stype = public.double_ord,
   combinefunc = eql_v3_internal.max_sfunc,
   parallel = safe
 );

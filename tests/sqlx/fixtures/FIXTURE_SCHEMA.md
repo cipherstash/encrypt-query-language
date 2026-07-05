@@ -19,8 +19,8 @@ Generated eql_v3 fixtures (gitignored)
   ├── eql_v3_<T>_doubles.sql   (jsonb payload — duplicate-value variant the
   │                             property suites consume)
   ├── v3_numeric_collision.sql (jsonb payload — no EQL dependency)
-  ├── v3_doc_integer.sql       (eql_v3.json payload — depends on eql_v3 surface)
-  └── v3_ste_vec.sql           (eql_v3.json payload — depends on eql_v3 surface)
+  ├── v3_doc_integer.sql       (public.json payload — depends on eql_v3 surface)
+  └── v3_ste_vec.sql           (public.json payload — depends on eql_v3 surface)
 ```
 
 The scalar fixtures (`eql_v3_<T>.sql`) have **no EQL dependency** — `payload` is

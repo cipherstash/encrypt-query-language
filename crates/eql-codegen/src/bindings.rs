@@ -84,7 +84,7 @@ fn capability_label(domain_name: &str) -> &'static str {
 }
 
 /// Render the catalog-derived struct doc lines for a domain: a summary line
-/// (`` `eql_v3.<name>` — <label>. ``) and a detail line listing the supported
+/// (`` `public.<name>` — <label>. ``) and a detail line listing the supported
 /// SQL operators and the required payload keys. Every part is derived from data
 /// the catalog already carries — the capability label, the operator union
 /// (`Term::operators_for_terms`), and the key list (`ENVELOPE_KEYS` ++
@@ -96,7 +96,7 @@ fn struct_doc_lines(full: &str, domain: &Domain) -> [String; 3] {
     // rustfmt renders it as `/// …` and ts-rs as ` * …`. Without it the emitted
     // JSDoc/`///` lose the space after the prefix (`*`text`). schemars strips the
     // single leading space, so JSON Schema `description` is unaffected.
-    let summary = format!(" `eql_v3.{full}` — {}.", capability_label(domain.name));
+    let summary = format!(" `public.{full}` — {}.", capability_label(domain.name));
 
     let ops = Term::operators_for_terms(domain.terms);
     let ops_str = if ops.is_empty() {
@@ -130,7 +130,7 @@ fn struct_doc_lines(full: &str, domain: &Domain) -> [String; 3] {
 fn render_struct(family: &DomainFamily, domain: &Domain) -> TokenStream {
     let full = domain.full_name(family.name);
     let ident = format_ident!("{}", domain.struct_ident(family.name));
-    let sql_domain = format!("eql_v3.{full}");
+    let sql_domain = format!("public.{full}");
     let [doc_summary, doc_blank, doc_detail] = struct_doc_lines(&full, domain);
 
     // The envelope triple is hardcoded (not looped over `ENVELOPE_KEYS`) because
@@ -276,7 +276,7 @@ pub fn render_inventory_rs() -> String {
 }
 
 /// The stored-payload domains of the catalog, in CATALOG order: every flat
-/// scalar domain plus the SteVec document (`eql_v3.json`). The SteVec
+/// scalar domain plus the SteVec document (`public.json`). The SteVec
 /// entry/query shapes are inventory members but not stored column payloads,
 /// so they are excluded — exactly the set `eql_bindings::from_v2` accepts as
 /// conversion targets ([`render_payload_rs`]'s `DomainPayload` variants).
@@ -309,7 +309,7 @@ pub fn render_payload_rs() -> String {
         let module = format_ident!("{}", f.name);
         let strukt = format_ident!("{}", d.rust_struct_name(f.name));
         let full = d.full_name(f.name);
-        let doc = format!(" The `eql_v3.{full}` payload.");
+        let doc = format!(" The `public.{full}` payload.");
         variants.extend(quote! {
             #[doc = #doc]
             #strukt(super::#module::#strukt),
@@ -336,7 +336,7 @@ pub fn render_payload_rs() -> String {
 
         /// Every stored-payload v3 domain in one type: one variant per flat
         /// scalar domain in `eql-domains::CATALOG` plus the SteVec document
-        /// (`eql_v3.json`). Generated from the catalog, so it cannot drift
+        /// (`public.json`). Generated from the catalog, so it cannot drift
         /// when the catalog grows.
         ///
         /// Serialization is exactly the inner struct's (`#[serde(untagged)]`
@@ -378,7 +378,7 @@ pub fn render_payload_rs() -> String {
                 }
             }
 
-            /// Fully-qualified SQL domain name, e.g. `"eql_v3.integer_eq"`.
+            /// Fully-qualified SQL domain name, e.g. `"public.integer_eq"`.
             pub fn sql_domain(&self) -> &'static str {
                 self.as_domain_type().sql_domain()
             }
@@ -498,10 +498,10 @@ mod tests {
         );
         assert_eq!(out.matches("#[ts(export, export_to = \"v3/\")]").count(), 5);
         assert_eq!(out.matches("#[serde(deny_unknown_fields)]").count(), 5);
-        assert!(out.contains("`eql_v3.integer_eq` — equality domain."));
-        assert!(out.contains("`eql_v3.integer` — storage-only domain."));
-        assert!(out.contains("`eql_v3.integer_ord` — ordering domain."));
-        assert!(out.contains("`eql_v3.integer_ord_ope` — ordering domain."));
+        assert!(out.contains("`public.integer_eq` — equality domain."));
+        assert!(out.contains("`public.integer` — storage-only domain."));
+        assert!(out.contains("`public.integer_ord` — ordering domain."));
+        assert!(out.contains("`public.integer_ord_ope` — ordering domain."));
         assert!(!out.contains("Envelope version"));
         assert!(!out.contains("HMAC-SHA-256 equality term"));
         assert_eq!(field_idents(&out, "Integer"), ["v", "i", "c"]);
@@ -511,7 +511,7 @@ mod tests {
         assert_eq!(field_idents(&out, "IntegerOrdOpe"), ["v", "i", "c", "op"]);
         assert!(out.contains("impl DomainType for IntegerEq"));
         assert!(out.contains("fn sql_domain_static()"));
-        assert!(out.contains("\"eql_v3.integer_eq\""));
+        assert!(out.contains("\"public.integer_eq\""));
         assert!(out.contains("fn sql_domain(&self)"));
         assert!(out.contains("fn schema(&self) -> Schema"));
         assert!(out.contains("schema_for!(IntegerEq)"));
@@ -528,12 +528,12 @@ mod tests {
         let integer = render_family_bindings(family("integer"));
 
         // Storage-only: no operators.
-        assert!(integer.contains("`eql_v3.integer` — storage-only domain."));
+        assert!(integer.contains("`public.integer` — storage-only domain."));
         assert!(integer.contains("Operators: none."));
         assert!(integer.contains("Required keys: `v` `i` `c`."));
 
         // Equality: `=`/`<>` and the `hm` key.
-        assert!(integer.contains("`eql_v3.integer_eq` — equality domain."));
+        assert!(integer.contains("`public.integer_eq` — equality domain."));
         assert!(integer.contains("Operators: `=` `<>`."));
         assert!(integer.contains("Required keys: `v` `i` `c` `hm`."));
 
@@ -542,14 +542,14 @@ mod tests {
         assert!(integer.contains("Required keys: `v` `i` `c` `ob`."));
 
         // OPE ordering: same operator set, `op` key instead of `ob`.
-        assert!(integer.contains("`eql_v3.integer_ord_ope` — ordering domain."));
+        assert!(integer.contains("`public.integer_ord_ope` — ordering domain."));
         assert!(integer.contains("Required keys: `v` `i` `c` `op`."));
 
         // text_ord carries BOTH `hm` and `ob` — the dual-term distinction that
         // previously lived only in hand-written prose is now derivable in the doc.
         let text = render_family_bindings(family("text"));
         assert!(text.contains("Required keys: `v` `i` `c` `hm` `ob`."));
-        assert!(text.contains("`eql_v3.text_match` — match domain."));
+        assert!(text.contains("`public.text_match` — match domain."));
         assert!(text.contains("Operators: `@>` `<@`."));
         assert!(text.contains("Required keys: `v` `i` `c` `bf`."));
     }
@@ -568,8 +568,8 @@ mod tests {
         ] {
             assert!(out.contains(s), "missing {s}");
         }
-        assert!(out.contains("`eql_v3.text_match` — match domain."));
-        assert!(out.contains("`eql_v3.text_search` — search domain."));
+        assert!(out.contains("`public.text_match` — match domain."));
+        assert!(out.contains("`public.text_search` — search domain."));
         assert!(out.contains("bf: BloomFilter"));
         assert_eq!(field_idents(&out, "TextOrd"), ["v", "i", "c", "hm", "ob"]);
         // text_ord_ope is dual-term like text_ord: equality stays exact via hm.
@@ -588,7 +588,7 @@ mod tests {
     fn bool_storage_only_family_has_one_struct_no_terms() {
         let out = render_family_bindings(family("boolean"));
         assert_eq!(out.matches("pub struct ").count(), 1);
-        assert!(out.contains("`eql_v3.boolean` — storage-only domain."));
+        assert!(out.contains("`public.boolean` — storage-only domain."));
         assert_eq!(field_idents(&out, "Boolean"), ["v", "i", "c"]);
         assert!(out.contains("use crate::v3::terms::"));
         assert!(!out.contains("Hmac256"));

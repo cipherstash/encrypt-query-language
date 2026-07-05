@@ -6,12 +6,12 @@
 
 DO $$
 BEGIN
-  --! @brief Encrypted domain eql_v3.timestamp.
+  --! @brief Encrypted domain public.timestamp.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'timestamp' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'timestamp' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.timestamp AS jsonb
+    CREATE DOMAIN public.timestamp AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -21,12 +21,12 @@ BEGIN
       );
   END IF;
 
-  --! @brief Encrypted domain eql_v3.timestamp_eq.
+  --! @brief Encrypted domain public.timestamp_eq.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'timestamp_eq' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'timestamp_eq' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.timestamp_eq AS jsonb
+    CREATE DOMAIN public.timestamp_eq AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -37,12 +37,12 @@ BEGIN
       );
   END IF;
 
-  --! @brief Encrypted domain eql_v3.timestamp_ord_ore.
+  --! @brief Encrypted domain public.timestamp_ord_ore.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'timestamp_ord_ore' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'timestamp_ord_ore' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.timestamp_ord_ore AS jsonb
+    CREATE DOMAIN public.timestamp_ord_ore AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -55,12 +55,12 @@ BEGIN
       );
   END IF;
 
-  --! @brief Encrypted domain eql_v3.timestamp_ord.
+  --! @brief Encrypted domain public.timestamp_ord.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'timestamp_ord' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'timestamp_ord' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.timestamp_ord AS jsonb
+    CREATE DOMAIN public.timestamp_ord AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -73,12 +73,12 @@ BEGIN
       );
   END IF;
 
-  --! @brief Encrypted domain eql_v3.timestamp_ord_ope.
+  --! @brief Encrypted domain public.timestamp_ord_ope.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'timestamp_ord_ope' AND typnamespace = 'eql_v3'::regnamespace
+    WHERE typname = 'timestamp_ord_ope' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN eql_v3.timestamp_ord_ope AS jsonb
+    CREATE DOMAIN public.timestamp_ord_ope AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'

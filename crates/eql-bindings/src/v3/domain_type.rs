@@ -9,8 +9,8 @@ use std::marker::PhantomData;
 use schemars::{schema_for, JsonSchema, Schema};
 use serde::Deserialize;
 
-/// The PostgreSQL schema every domain in this module inhabits.
-pub const SQL_SCHEMA: &str = "eql_v3";
+/// The PostgreSQL schema every user-column domain in this module inhabits.
+pub const SQL_SCHEMA: &str = "public";
 
 /// Base URL for the canonical `$id` of every published v3 JSON Schema.
 /// The per-domain `$id` is `{SCHEMA_ID_BASE}{domain}.json` (see
@@ -26,7 +26,7 @@ pub const SCHEMA_ID_BASE: &str = "https://schemas.cipherstash.com/eql/v3/";
 /// published JSON Schema wire contract is pinned by `tests/catalog_parity.rs`.
 /// Public so FFI consumers can enumerate the protocol surface too.
 pub trait DomainType {
-    /// Fully-qualified SQL domain name, e.g. `"eql_v3.integer_eq"` — the
+    /// Fully-qualified SQL domain name, e.g. `"public.integer_eq"` — the
     /// per-type fact everything else derives from, defined once in each
     /// type's impl.
     ///
@@ -45,8 +45,8 @@ pub trait DomainType {
     /// `DomainFamily::domain_name`.
     fn domain(&self) -> &'static str {
         self.sql_domain()
-            .strip_prefix("eql_v3.")
-            .expect("sql_domain must be qualified with the eql_v3 schema")
+            .strip_prefix("public.")
+            .expect("sql_domain must be qualified with the public schema")
     }
 
     /// Canonical `$id` for this domain's published JSON Schema —

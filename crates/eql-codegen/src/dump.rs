@@ -153,7 +153,7 @@ mod tests {
         // `list-types` / `dump-catalog` output the scalar-matrix tooling consumes)
         // must NOT surface the SteVec `jsonb` family: it has no `scalars::jsonb::*`
         // matrix and no generated SQL surface, even though two of its three
-        // domain names (`eql_v3.jsonb_entry` / `eql_v3.jsonb_query`) now follow
+        // domain names (`public.jsonb_entry` / `public.jsonb_query`) now follow
         // the family+suffix string convention — the payload shape is still not
         // flat. This pins the exclusion directly at the codegen surface rather
         // than relying only on the transitive `scalar_families()` guard in

@@ -5,7 +5,7 @@ import type { Identifier } from "./Identifier";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `eql_v3.text_match` — match domain.
+ * `public.text_match` — match domain.
  *
  * Operators: `@>` `<@`. Required keys: `v` `i` `c` `bf`.
  */

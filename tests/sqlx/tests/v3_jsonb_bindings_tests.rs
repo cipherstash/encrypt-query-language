@@ -2,7 +2,7 @@
 //! the one test that ties eql-bindings to real cipherstash crypto AND to the
 //! hand-written src/v3/jsonb/types.sql domain CHECK simultaneously.
 //!
-//! The fixture (`fixtures.v3_ste_vec`, column `payload eql_v3.json`) is GENERATED
+//! The fixture (`fixtures.v3_ste_vec`, column `payload public.json`) is GENERATED
 //! by encrypting JSON documents through cipherstash-client's SteVec pipeline
 //! (`mise run fixture:generate:all`), so this exercises the bindings against the
 //! same wire shape the domain CHECK (`is_valid_ste_vec_document_payload`)
@@ -65,7 +65,7 @@ async fn real_ste_vec_row_parses_into_document_and_entries(pool: PgPool) -> anyh
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
 async fn real_ste_vec_query_parses_into_bindings(pool: PgPool) -> anyhow::Result<()> {
     // `eql_v3.to_ste_vec_query` turns an encrypted document into a containment
-    // needle (`eql_v3.jsonb_query`), the shape a caller builds a `@>` / `<@`
+    // needle (`public.jsonb_query`), the shape a caller builds a `@>` / `<@`
     // query from. Parse a REAL one into `SteVecQuery` (and, transitively, its
     // `SteVecQueryEntry` elements), tying those two bindings to real crypto and
     // the hand-written `is_valid_ste_vec_query_payload` CHECK — the document/entry
