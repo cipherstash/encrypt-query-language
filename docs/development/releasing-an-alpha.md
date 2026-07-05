@@ -60,7 +60,7 @@ Common flags:
 | `--version` | Base SemVer (`X.Y.Z`) | `3.0.0` |
 | `--channel` | Prerelease channel: `alpha` \| `beta` \| `rc` | `alpha` |
 | `--pre` | Exact identity (`X.Y.Z-(alpha\|beta\|rc).N`), bypassing derivation | derived |
-| `--ref` | GitHub ref for `workflow_dispatch` | current branch |
+| `--ref` | GitHub ref for `workflow_dispatch` | current branch for `release:all` and `release:eql`; required explicitly for `release:bindings` |
 | `--dry-run` | Resolve, verify, and print the plan without mutating anything | off |
 
 Examples:

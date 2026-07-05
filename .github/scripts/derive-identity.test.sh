@@ -46,6 +46,9 @@ check "all: sql .5 -> .6" "$(derive_identity all 3.0.0 alpha '')" "3.0.0-alpha.6
 FAKE_TAGS=(eql-3.0.0-alpha.2 eql-bindings-v3.0.0-alpha.4)
 check "all: crate .4 wins (cross-namespace) -> .5" "$(derive_identity all 3.0.0 alpha '')" "3.0.0-alpha.5"
 
+FAKE_TAGS=(eql-3.0.0-alpha.08)
+check "all: leading-zero sql suffix is base-10 -> .9" "$(derive_identity all 3.0.0 alpha '')" "3.0.0-alpha.9"
+
 FAKE_TAGS=(eql-3.0.0-alpha.5 eql-bindings-v3.0.0-alpha.4)
 check "bindings: latest sql lacking crate -> .5" "$(derive_identity bindings 3.0.0 alpha '')" "3.0.0-alpha.5"
 

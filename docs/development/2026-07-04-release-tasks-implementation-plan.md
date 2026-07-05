@@ -621,7 +621,15 @@ resolve ──> pin ──> build-sql ──> build-docs ──> crate-publish �
 - `crate-publish` — `all`/`bindings` only, non-dry, **after** `build-sql` **and** `build-docs`: `gh workflow run release-plz.yml --ref <tag|branch>`.
 - `summary` — always.
 
-- [ ] **Step 1: Write the coordinator header, inputs, permissions, concurrency, run-name**
+Current implementation note: `release-alpha.yml` now keeps the target-specific
+resolution and pinning logic in script entrypoints. Future changes should start
+from `.github/scripts/release-alpha-resolve.sh` for the `resolve` job contract
+and `.github/scripts/release-alpha-pin-bindings.sh` for the `pin` job contract,
+with their adjacent shell tests as the source of truth. The inline shell blocks
+below are retained as historical context from the original implementation plan,
+not as the active workflow shape.
+
+- [ ] **Step 1: Historical coordinator header, inputs, permissions, concurrency, run-name**
 
 ```yaml
 name: "Release alpha (coordinator)"
@@ -691,7 +699,13 @@ defaults:
     shell: bash {0}
 ```
 
-- [ ] **Step 2: Write the `resolve` job**
+- [ ] **Step 2: Historical `resolve` job sketch**
+
+Current flow: the `resolve` job checks out with full tag history, fetches tags,
+then runs `.github/scripts/release-alpha-resolve.sh` with `TARGET`, `VERSION`,
+`CHANNEL`, `PRE`, `REF_TYPE`, and `REF_NAME`. That script validates the inputs,
+derives or accepts the identity, applies target-specific tag/source guards, and
+emits `identity`, `sql_tag`, and `crate_tag` through `GITHUB_OUTPUT`.
 
 ```yaml
 jobs:
@@ -821,7 +835,14 @@ jobs:
 
 Notes on `set -e` safety: every guard uses `if <cmd>; then …; fi` (not `<cmd> && { fail; }`), so a `git rev-parse` returning non-zero does not abort the script.
 
-- [ ] **Step 3: Write the `pin` job (no-op tolerant)**
+- [ ] **Step 3: Historical `pin` job sketch**
+
+Current flow: the `pin` job checks out the dispatch SHA, imports the signing key,
+installs `release-plz`, then runs
+`.github/scripts/release-alpha-pin-bindings.sh` with `IDENTITY` and `BRANCH`.
+That script performs the no-op-tolerant `release-plz set-version`, creates the
+signed metadata commit only when files changed, pushes it to the selected branch,
+and emits `commit_sha`.
 
 ```yaml
   pin:

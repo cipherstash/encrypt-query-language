@@ -84,8 +84,23 @@ check_fail "rejects invalid version" "invalid version '3.0'" \
 check_fail "rejects invalid pre" "invalid pre '3.0.0-alpha'" \
   release_alpha_resolve all 3.0.0 alpha 3.0.0-alpha branch eql_v3
 
+check_fail "rejects pre with mismatched version" "does not match version '3.0.0' and channel 'alpha'" \
+  release_alpha_resolve all 3.0.0 alpha 3.1.0-alpha.1 branch eql_v3
+
+check_fail "rejects pre with mismatched channel" "does not match version '3.0.0' and channel 'alpha'" \
+  release_alpha_resolve all 3.0.0 alpha 3.0.0-beta.1 branch eql_v3
+
 check_fail "all requires branch ref" "requires a branch ref" \
   release_alpha_resolve all 3.0.0 alpha "" tag v3.0.0
+
+FAKE_TAGS=(eql-3.0.0-alpha.1)
+check_fail "eql rejects existing sql tag" "eql-3.0.0-alpha.1 already exists" \
+  release_alpha_resolve eql 3.0.0 alpha 3.0.0-alpha.1 tag eql-3.0.0-alpha.1
+
+FAKE_TAGS=()
+check_ok "eql accepts tag ref without branch" \
+  $'identity=3.0.0-alpha.1\nsql_tag=eql-3.0.0-alpha.1\ncrate_tag=eql-bindings-v3.0.0-alpha.1' \
+  release_alpha_resolve eql 3.0.0 alpha "" tag eql-3.0.0-alpha.1
 
 FAKE_TAGS=(eql-3.0.0-alpha.2)
 check_fail "all rejects existing sql tag with explicit pre" "eql-3.0.0-alpha.2 already exists" \

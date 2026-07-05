@@ -47,6 +47,11 @@ release_alpha_resolve() {
     return 1
   fi
 
+  if [[ -n "$pre" && "$pre" != "${version}-${channel}."* ]]; then
+    release_alpha_error "pre '$pre' does not match version '${version}' and channel '${channel}'"
+    return 1
+  fi
+
   if [[ "$target" == "all" || "$target" == "bindings" ]]; then
     if [[ "$ref_type" != "branch" ]]; then
       release_alpha_error "target=${target} pins+pushes the crate version and requires a branch ref; got ${ref_type} '${ref_name}'. Dispatch with --ref <branch>."

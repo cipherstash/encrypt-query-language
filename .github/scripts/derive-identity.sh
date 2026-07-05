@@ -7,11 +7,16 @@ list_tags() { git tag --list "$1"; }
 
 tag_exists() { git rev-parse -q --verify "refs/tags/$1" >/dev/null; }
 
-highest_n() {
+matching_suffixes() {
   local prefix="$1" esc
   esc="${prefix//./\\.}"
   list_tags "${prefix}*" \
-    | sed -n "s/^${esc}\([0-9]\{1,\}\)$/\1/p" \
+    | sed -n "s/^${esc}\([0-9]\{1,\}\)$/\1/p"
+}
+
+highest_n() {
+  local prefix="$1"
+  matching_suffixes "$prefix" \
     | sort -n \
     | tail -1
 }
@@ -28,23 +33,24 @@ derive_identity() {
 
   case "$target" in
     all|eql)
-      local sql_n crate_n n
+      local sql_n crate_n sql_n_dec crate_n_dec n
       sql_n=$(highest_n "$sql_prefix")
       sql_n=${sql_n:-0}
       crate_n=$(highest_n "$crate_prefix")
       crate_n=${crate_n:-0}
-      if (( sql_n >= crate_n )); then
-        n=$((sql_n + 1))
+      sql_n_dec=$((10#$sql_n))
+      crate_n_dec=$((10#$crate_n))
+      if (( sql_n_dec >= crate_n_dec )); then
+        n=$((sql_n_dec + 1))
       else
-        n=$((crate_n + 1))
+        n=$((crate_n_dec + 1))
       fi
       printf '%s\n' "${version}-${channel}.${n}"
       ;;
     bindings)
-      local esc found n
-      esc="${sql_prefix//./\\.}"
+      local found n
       found=""
-      for n in $(list_tags "${sql_prefix}*" | sed -n "s/^${esc}\([0-9]\{1,\}\)$/\1/p" | sort -rn); do
+      for n in $(matching_suffixes "$sql_prefix" | sort -rn); do
         if ! tag_exists "${crate_prefix}${n}"; then
           found="$n"
           break

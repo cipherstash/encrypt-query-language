@@ -44,8 +44,7 @@ run-name: >-
   release-alpha ${{ inputs.target }} ${{ inputs.pre != '' && inputs.pre || format('{0}-{1}', inputs.version, inputs.channel) }}${{ inputs.dry_run && ' [dry-run]' || '' }} [${{ inputs.dispatch_id }}]
 
 permissions:
-  contents: write
-  actions: write
+  contents: read
 
 concurrency:
   group: release-alpha
@@ -71,6 +70,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Fetch all tags
@@ -103,6 +103,11 @@ jobs:
         env:
           TARGET: ${{ inputs.target }}
           DRY: ${{ inputs.dry_run }}
+          IDENTITY: ${{ steps.derive.outputs.identity }}
+          SQL_TAG: ${{ steps.derive.outputs.sql_tag }}
+          CRATE_TAG: ${{ steps.derive.outputs.crate_tag }}
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           {
@@ -111,10 +116,10 @@ jobs:
             echo "| field | value |"
             echo "|---|---|"
             echo "| target | ${TARGET} |"
-            echo "| identity | ${{ steps.derive.outputs.identity }} |"
-            echo "| sql_tag | ${{ steps.derive.outputs.sql_tag }} |"
-            echo "| crate_tag | ${{ steps.derive.outputs.crate_tag }} |"
-            echo "| ref | ${{ github.ref_name }} @ ${{ github.sha }} |"
+            echo "| identity | ${IDENTITY} |"
+            echo "| sql_tag | ${SQL_TAG} |"
+            echo "| crate_tag | ${CRATE_TAG} |"
+            echo "| ref | ${REF_NAME} @ ${SHA} |"
             echo "| dry_run | ${DRY} |"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -123,12 +128,15 @@ jobs:
     runs-on: blacksmith-16vcpu-ubuntu-2204
     needs: resolve
     if: ${{ !inputs.dry_run && (inputs.target == 'all' || inputs.target == 'bindings') }}
+    permissions:
+      contents: write
     timeout-minutes: 15
     outputs:
       commit_sha: ${{ steps.commit.outputs.commit_sha }}
     steps:
       - uses: actions/checkout@v4
         with:
+          persist-credentials: false
           # Pin from the dispatch SHA that resolve validated. Pushing HEAD back
           # to the branch will fail if the branch advanced meanwhile.
           ref: ${{ github.sha }}
@@ -155,6 +163,7 @@ jobs:
         env:
           IDENTITY: ${{ needs.resolve.outputs.identity }}
           BRANCH: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
         run: .github/scripts/release-alpha-pin-bindings.sh
 
   build-sql:
@@ -167,7 +176,8 @@ jobs:
           && (needs.pin.result == 'success' || needs.pin.result == 'skipped') }}
     permissions:
       contents: write
-    secrets: inherit
+    secrets:
+      MULTITUDES_ACCESS_TOKEN: ${{ secrets.MULTITUDES_ACCESS_TOKEN }}
     uses: ./.github/workflows/_build-sql.yml
     with:
       ref: ${{ inputs.target == 'all' && needs.pin.outputs.commit_sha || '' }}
@@ -201,6 +211,8 @@ jobs:
           && (needs.build-sql.result == 'success' || needs.build-sql.result == 'skipped')
           && (needs.build-docs.result == 'success' || needs.build-docs.result == 'skipped') }}
     timeout-minutes: 10
+    permissions:
+      actions: write
     steps:
       - name: Dispatch release-plz.yml against the pinned commit
         env:
@@ -234,17 +246,28 @@ jobs:
         env:
           TARGET: ${{ inputs.target }}
           DRY: ${{ inputs.dry_run }}
+          IDENTITY: ${{ needs.resolve.outputs.identity }}
+          SQL_TAG: ${{ needs.resolve.outputs.sql_tag }}
+          CRATE_TAG: ${{ needs.resolve.outputs.crate_tag }}
+          RESOLVE_RESULT: ${{ needs.resolve.result }}
+          PIN_RESULT: ${{ needs.pin.result }}
+          BUILD_SQL_RESULT: ${{ needs.build-sql.result }}
+          BUILD_DOCS_RESULT: ${{ needs.build-docs.result }}
+          CRATE_PUBLISH_RESULT: ${{ needs.crate-publish.result }}
+          SERVER_URL: ${{ github.server_url }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
           {
             echo "## release-alpha result"
             echo ""
             echo "- target: \`${TARGET}\` (dry_run=${DRY})"
-            echo "- identity: \`${{ needs.resolve.outputs.identity }}\`"
-            echo "- sql_tag: \`${{ needs.resolve.outputs.sql_tag }}\`"
-            echo "- crate_tag: \`${{ needs.resolve.outputs.crate_tag }}\`"
-            echo "- resolve: ${{ needs.resolve.result }} | pin: ${{ needs.pin.result }} | build-sql: ${{ needs.build-sql.result }} | build-docs: ${{ needs.build-docs.result }} | crate-publish: ${{ needs.crate-publish.result }}"
+            echo "- identity: \`${IDENTITY}\`"
+            echo "- sql_tag: \`${SQL_TAG}\`"
+            echo "- crate_tag: \`${CRATE_TAG}\`"
+            echo "- resolve: ${RESOLVE_RESULT} | pin: ${PIN_RESULT} | build-sql: ${BUILD_SQL_RESULT} | build-docs: ${BUILD_DOCS_RESULT} | crate-publish: ${CRATE_PUBLISH_RESULT}"
             echo ""
-            echo "Coordinator run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "Coordinator run: ${SERVER_URL}/${REPOSITORY}/actions/runs/${RUN_ID}"
             echo "The crate publish, if dispatched, runs as a separate release-plz.yml run."
           } >> "$GITHUB_STEP_SUMMARY"
