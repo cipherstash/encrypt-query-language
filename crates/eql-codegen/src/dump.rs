@@ -8,10 +8,15 @@
 use eql_domains::Term;
 use serde::Serialize;
 
-/// The catalog surface: every scalar type and its domains.
+/// The catalog surface: every scalar type and its domains, plus the non-scalar
+/// SteVec (`jsonb`) family.
 #[derive(Serialize)]
 pub struct CatalogDump {
     pub types: Vec<TypeEntry>,
+    /// The `jsonb` (SteVec) family — `eql_v3.json` / `jsonb_entry` / `jsonb_query`.
+    /// Their SQL is hand-written under `src/v3/jsonb/`; the catalog owns only
+    /// their inventory (scalar-only consumers ignore this field).
+    pub stevec: Vec<SteVecEntry>,
 }
 
 #[derive(Serialize)]
@@ -36,6 +41,44 @@ pub struct DomainEntry {
     /// SQL operators the domain's terms support, in catalog order. Empty for
     /// the storage domain (no terms).
     pub supported_ops: Vec<&'static str>,
+    /// The index terms this domain carries, with their extractor + SEM ctor.
+    pub terms: Vec<TermInfo>,
+}
+
+/// A domain's index term: payload key + generated extractor + SEM constructor
+/// (from `eql_domains::Term`) — links a domain to its extractor functions.
+#[derive(Serialize)]
+pub struct TermInfo {
+    /// Payload key: `hm` / `ob` / `bf` / `op`.
+    pub key: &'static str,
+    /// Generated extractor function (unqualified): `eq_term` / `ord_term` /
+    /// `match_term` / `ord_ope_term`.
+    pub extractor: &'static str,
+    /// SEM index-term constructor (unqualified): `hmac_256` / `ore_block_256` /
+    /// `bloom_filter` / `ope_cllw`.
+    pub ctor: &'static str,
+}
+
+/// One `jsonb` (SteVec) domain: catalog inventory only — its SQL surface
+/// (CHECK, operators) is hand-written and not derivable from the catalog.
+#[derive(Serialize)]
+pub struct SteVecEntry {
+    /// The `eql_v3`-relative domain name: `json` / `jsonb_entry` / `jsonb_query`.
+    pub full_name: String,
+    /// The catalog domain name: `json` / `entry` / `query`.
+    pub name: &'static str,
+    pub terms: Vec<TermInfo>,
+}
+
+fn term_infos(terms: &[Term]) -> Vec<TermInfo> {
+    terms
+        .iter()
+        .map(|t| TermInfo {
+            key: t.json_key(),
+            extractor: t.extractor(),
+            ctor: t.ctor(),
+        })
+        .collect()
 }
 
 /// Build the catalog surface description from `eql_domains::CATALOG`.
@@ -57,6 +100,7 @@ pub fn dump_catalog() -> CatalogDump {
                         format!("_{}", d.name)
                     },
                     supported_ops: Term::operators_for_terms(d.terms),
+                    terms: term_infos(d.terms),
                 })
                 .collect();
             TypeEntry {
@@ -66,7 +110,21 @@ pub fn dump_catalog() -> CatalogDump {
             }
         })
         .collect();
-    CatalogDump { types }
+
+    // The hand-written SteVec (jsonb) family — catalog inventory only. Kept out
+    // of `types` so scalar-only consumers (the fixture-coverage task) are
+    // unaffected; the docs manifest reads both `types` and `stevec`.
+    let stevec = eql_domains::JSONB
+        .domains
+        .iter()
+        .map(|d| SteVecEntry {
+            full_name: d.full_name(eql_domains::JSONB.name),
+            name: d.name,
+            terms: term_infos(d.terms),
+        })
+        .collect();
+
+    CatalogDump { types, stevec }
 }
 
 #[cfg(test)]
@@ -107,6 +165,24 @@ mod tests {
             .find(|d| d.segment == "ord_ope")
             .unwrap();
         assert_eq!(ord_ope.supported_ops, ["=", "<>", "<", "<=", ">", ">="]);
+    }
+
+    #[test]
+    fn ordered_domain_exposes_its_extractor_and_ctor() {
+        let dump = dump_catalog();
+        let integer = dump.types.iter().find(|t| t.token == "integer").unwrap();
+        let ord = integer.domains.iter().find(|d| d.segment == "ord").unwrap();
+        assert_eq!(ord.terms.len(), 1);
+        assert_eq!(ord.terms[0].key, "ob");
+        assert_eq!(ord.terms[0].extractor, "ord_term");
+        assert_eq!(ord.terms[0].ctor, "ore_block_256");
+    }
+
+    #[test]
+    fn stevec_jsonb_family_is_dumped() {
+        let dump = dump_catalog();
+        let names: Vec<&str> = dump.stevec.iter().map(|e| e.full_name.as_str()).collect();
+        assert_eq!(names, ["json", "jsonb_entry", "jsonb_query"]);
     }
 
     /// Pins the hand-re-derived `suffix` wire field — the one channel with no

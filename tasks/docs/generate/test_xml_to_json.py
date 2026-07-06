@@ -24,11 +24,20 @@ load_domains = _mod.load_domains
 CATALOG_JSON = """{
   "types": [
     { "token": "text", "is_eq_only": false, "domains": [
-      { "segment": "storage", "suffix": "", "supported_ops": [] },
-      { "segment": "eq", "suffix": "_eq", "supported_ops": ["=", "<>"] },
+      { "segment": "storage", "suffix": "", "supported_ops": [], "terms": [] },
+      { "segment": "eq", "suffix": "_eq", "supported_ops": ["=", "<>"],
+        "terms": [{"key": "hm", "extractor": "eq_term", "ctor": "hmac_256"}] },
       { "segment": "search", "suffix": "_search",
-        "supported_ops": ["=", "<>", "<", "<=", ">", ">=", "@>", "<@"] }
+        "supported_ops": ["=", "<>", "<", "<=", ">", ">=", "@>", "<@"],
+        "terms": [
+          {"key": "hm", "extractor": "eq_term", "ctor": "hmac_256"},
+          {"key": "bf", "extractor": "match_term", "ctor": "bloom_filter"}
+        ] }
     ]}
+  ],
+  "stevec": [
+    { "full_name": "json", "name": "json", "terms": [] },
+    { "full_name": "jsonb_entry", "name": "entry", "terms": [] }
   ]
 }"""
 
@@ -100,13 +109,19 @@ def test_load_domains():
         domains = load_domains(cat)
 
     by_name = {x["name"]: x for x in domains}
+    # v3 user domains live in `public`; the extractor functions are `eql_v3`.
     assert by_name["public.text"]["capabilities"] == ["storage"]
     assert by_name["public.text_eq"]["type"] == "text"
     assert by_name["public.text_eq"]["variant"] == "eq"
     assert by_name["public.text_eq"]["capabilities"] == ["equality"]
     assert by_name["public.text_eq"]["supportedOperators"] == ["=", "<>"]
+    assert by_name["public.text_eq"]["termFunctions"] == ["eql_v3.eq_term"]
     # text_search carries all three capabilities, derived from its operators.
     assert by_name["public.text_search"]["capabilities"] == ["equality", "order", "match"]
+    # SteVec (jsonb) domains come from the `stevec` section.
+    assert "public.json" in by_name
+    assert by_name["public.jsonb_entry"]["capabilities"] == ["json"]
+    assert by_name["public.jsonb_entry"]["shape"] == "stevec"
 
 
 if __name__ == "__main__":
