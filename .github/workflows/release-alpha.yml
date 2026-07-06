@@ -166,6 +166,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: .github/scripts/release-alpha-pin-bindings.sh
 
+      - name: Verify pin commit signature
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT_SHA: ${{ steps.commit.outputs.commit_sha }}
+        run: .github/scripts/release-alpha-verify-commit-signature.sh "$COMMIT_SHA"
+
   build-sql:
     name: Build + release SQL (in-run)
     needs: [resolve, pin]

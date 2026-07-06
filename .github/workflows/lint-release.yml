@@ -65,7 +65,9 @@ jobs:
             .github/scripts/release-alpha-resolve.sh \
             .github/scripts/release-alpha-resolve.test.sh \
             .github/scripts/release-alpha-pin-bindings.sh \
-            .github/scripts/release-alpha-pin-bindings.test.sh
+            .github/scripts/release-alpha-pin-bindings.test.sh \
+            .github/scripts/release-alpha-verify-commit-signature.sh \
+            .github/scripts/release-alpha-verify-commit-signature.test.sh
 
       - name: identity-derivation unit test
         run: bash .github/scripts/derive-identity.test.sh
@@ -75,3 +77,6 @@ jobs:
 
       - name: release-alpha pin helper test
         run: bash .github/scripts/release-alpha-pin-bindings.test.sh
+
+      - name: release-alpha signature verification helper test
+        run: bash .github/scripts/release-alpha-verify-commit-signature.test.sh
