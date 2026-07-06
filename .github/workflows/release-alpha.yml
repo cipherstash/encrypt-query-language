@@ -1,0 +1,279 @@
+name: "Release alpha (coordinator)"
+
+# CI-native prerelease coordinator for the EQL SQL surface and eql-bindings
+# crate. SQL and docs build in this run; crate publishing is dispatched to
+# release-plz.yml so crates.io Trusted Publishing sees the expected workflow.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "all | eql | bindings"
+        required: true
+        type: choice
+        options: [all, eql, bindings]
+        default: all
+      version:
+        description: "Base SemVer, e.g. 3.0.0"
+        required: false
+        type: string
+        default: "3.0.0"
+      channel:
+        description: "alpha | beta | rc"
+        required: false
+        type: choice
+        options: [alpha, beta, rc]
+        default: alpha
+      pre:
+        description: "Exact identity (e.g. 3.0.0-alpha.2), bypassing N derivation"
+        required: false
+        type: string
+        default: ""
+      dry_run:
+        description: "Resolve + verify + print plan; mutate nothing"
+        required: false
+        type: boolean
+        default: false
+      dispatch_id:
+        description: "Client-generated correlation id. Leave blank for manual dispatch."
+        required: false
+        type: string
+        default: ""
+
+run-name: >-
+  release-alpha ${{ inputs.target }} ${{ inputs.pre != '' && inputs.pre || format('{0}-{1}', inputs.version, inputs.channel) }}${{ inputs.dry_run && ' [dry-run]' || '' }} [${{ inputs.dispatch_id }}]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-alpha
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  MISE_VERBOSE: "1"
+
+defaults:
+  run:
+    shell: bash {0}
+
+jobs:
+  resolve:
+    name: Resolve identity + verify
+    runs-on: blacksmith-16vcpu-ubuntu-2204
+    timeout-minutes: 15
+    outputs:
+      identity: ${{ steps.derive.outputs.identity }}
+      sql_tag: ${{ steps.derive.outputs.sql_tag }}
+      crate_tag: ${{ steps.derive.outputs.crate_tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Fetch all tags
+        run: git fetch --tags --force
+
+      - name: Resolve identity + guards
+        id: derive
+        env:
+          TARGET: ${{ inputs.target }}
+          VERSION: ${{ inputs.version }}
+          CHANNEL: ${{ inputs.channel }}
+          PRE: ${{ inputs.pre }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: .github/scripts/release-alpha-resolve.sh
+
+      - uses: jdx/mise-action@v3
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+
+      - name: Verify drift gates (types:check + codegen:parity)
+        run: |
+          set -euo pipefail
+          mise run types:check
+          mise run codegen:parity
+
+      - name: Print plan
+        env:
+          TARGET: ${{ inputs.target }}
+          DRY: ${{ inputs.dry_run }}
+          IDENTITY: ${{ steps.derive.outputs.identity }}
+          SQL_TAG: ${{ steps.derive.outputs.sql_tag }}
+          CRATE_TAG: ${{ steps.derive.outputs.crate_tag }}
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## Release plan"
+            echo ""
+            echo "| field | value |"
+            echo "|---|---|"
+            echo "| target | ${TARGET} |"
+            echo "| identity | ${IDENTITY} |"
+            echo "| sql_tag | ${SQL_TAG} |"
+            echo "| crate_tag | ${CRATE_TAG} |"
+            echo "| ref | ${REF_NAME} @ ${SHA} |"
+            echo "| dry_run | ${DRY} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  pin:
+    name: Pin crate version (commit S)
+    runs-on: blacksmith-16vcpu-ubuntu-2204
+    needs: resolve
+    if: ${{ !inputs.dry_run && (inputs.target == 'all' || inputs.target == 'bindings') }}
+    permissions:
+      contents: write
+    timeout-minutes: 15
+    outputs:
+      commit_sha: ${{ steps.commit.outputs.commit_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          # Pin from the dispatch SHA that resolve validated. Pushing HEAD back
+          # to the branch will fail if the branch advanced meanwhile.
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v7
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+
+      - uses: jdx/mise-action@v3
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+
+      - name: Install release-plz CLI
+        run: cargo binstall --no-confirm release-plz
+
+      - name: Pin + commit + push (commit S)
+        id: commit
+        env:
+          IDENTITY: ${{ needs.resolve.outputs.identity }}
+          BRANCH: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: .github/scripts/release-alpha-pin-bindings.sh
+
+      - name: Verify pin commit signature
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT_SHA: ${{ steps.commit.outputs.commit_sha }}
+        run: .github/scripts/release-alpha-verify-commit-signature.sh "$COMMIT_SHA"
+
+  build-sql:
+    name: Build + release SQL (in-run)
+    needs: [resolve, pin]
+    if: >-
+      ${{ !cancelled() && !inputs.dry_run
+          && (inputs.target == 'all' || inputs.target == 'eql')
+          && needs.resolve.result == 'success'
+          && (needs.pin.result == 'success' || needs.pin.result == 'skipped') }}
+    permissions:
+      contents: write
+    secrets:
+      MULTITUDES_ACCESS_TOKEN: ${{ secrets.MULTITUDES_ACCESS_TOKEN }}
+    uses: ./.github/workflows/_build-sql.yml
+    with:
+      ref: ${{ inputs.target == 'all' && needs.pin.outputs.commit_sha || '' }}
+      tag: ${{ needs.resolve.outputs.sql_tag }}
+      attach: true
+      target_commitish: ${{ inputs.target == 'all' && needs.pin.outputs.commit_sha || github.sha }}
+      prerelease: true
+
+  build-docs:
+    name: Build + attach docs (in-run)
+    needs: [resolve, pin, build-sql]
+    if: >-
+      ${{ !cancelled() && !inputs.dry_run
+          && (inputs.target == 'all' || inputs.target == 'eql')
+          && needs.build-sql.result == 'success' }}
+    permissions:
+      contents: write
+    uses: ./.github/workflows/_build-docs.yml
+    with:
+      ref: ${{ inputs.target == 'all' && needs.pin.outputs.commit_sha || github.sha }}
+      tag: ${{ needs.resolve.outputs.sql_tag }}
+
+  crate-publish:
+    name: Dispatch crate publish (release-plz.yml)
+    runs-on: blacksmith-16vcpu-ubuntu-2204
+    needs: [resolve, pin, build-sql, build-docs]
+    if: >-
+      ${{ !cancelled() && !inputs.dry_run
+          && (inputs.target == 'all' || inputs.target == 'bindings')
+          && needs.pin.result == 'success'
+          && (needs.build-sql.result == 'success' || needs.build-sql.result == 'skipped')
+          && (needs.build-docs.result == 'success' || needs.build-docs.result == 'skipped') }}
+    timeout-minutes: 10
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch release-plz.yml against the pinned commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SQL_TAG: ${{ needs.resolve.outputs.sql_tag }}
+          BRANCH: ${{ github.ref_name }}
+          TARGET: ${{ inputs.target }}
+        run: |
+          set -euo pipefail
+          if [[ "$TARGET" == "all" ]]; then
+            ref="$SQL_TAG"
+          else
+            ref="$BRANCH"
+          fi
+          echo "Dispatching release-plz.yml --ref ${ref}"
+          gh workflow run release-plz.yml --ref "$ref"
+          {
+            echo "## Crate publish dispatch accepted"
+            echo ""
+            echo "Crate publish DISPATCHED against \`${ref}\`."
+            echo "Verify the separate \`release-plz.yml\` run reaches a terminal success state before treating the crate as published."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  summary:
+    name: Summary
+    runs-on: blacksmith-16vcpu-ubuntu-2204
+    needs: [resolve, pin, build-sql, build-docs, crate-publish]
+    if: always()
+    steps:
+      - name: Emit run summary
+        env:
+          TARGET: ${{ inputs.target }}
+          DRY: ${{ inputs.dry_run }}
+          IDENTITY: ${{ needs.resolve.outputs.identity }}
+          SQL_TAG: ${{ needs.resolve.outputs.sql_tag }}
+          CRATE_TAG: ${{ needs.resolve.outputs.crate_tag }}
+          RESOLVE_RESULT: ${{ needs.resolve.result }}
+          PIN_RESULT: ${{ needs.pin.result }}
+          BUILD_SQL_RESULT: ${{ needs.build-sql.result }}
+          BUILD_DOCS_RESULT: ${{ needs.build-docs.result }}
+          CRATE_PUBLISH_RESULT: ${{ needs.crate-publish.result }}
+          SERVER_URL: ${{ github.server_url }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## release-alpha result"
+            echo ""
+            echo "- target: \`${TARGET}\` (dry_run=${DRY})"
+            echo "- identity: \`${IDENTITY}\`"
+            echo "- sql_tag: \`${SQL_TAG}\`"
+            echo "- crate_tag: \`${CRATE_TAG}\`"
+            echo "- resolve: ${RESOLVE_RESULT} | pin: ${PIN_RESULT} | build-sql: ${BUILD_SQL_RESULT} | build-docs: ${BUILD_DOCS_RESULT} | crate-publish-dispatch: ${CRATE_PUBLISH_RESULT}"
+            echo ""
+            echo "Coordinator run: ${SERVER_URL}/${REPOSITORY}/actions/runs/${RUN_ID}"
+            echo "Crate publish is only DISPATCHED by this coordinator. Verify the separate release-plz.yml run before treating the crate publish as successful."
+          } >> "$GITHUB_STEP_SUMMARY"
