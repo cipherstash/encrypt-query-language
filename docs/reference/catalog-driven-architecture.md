@@ -16,9 +16,9 @@ gates guarantee the derived artifacts never drift from it.
 ```mermaid
 flowchart TD
     subgraph SOT["① SOURCE OF TRUTH — crates/eql-domains"]
-        CAT["CATALOG: &[DomainFamily]<br/>(10 scalar families)"]
+        CAT["CATALOG: &[DomainFamily]<br/>(11 families: 10 scalar + jsonb)"]
         FIX["FIXTURES: &[TypeFixtures]<br/>(plaintext value lists)"]
-        TERM["Term enum impls<br/>(Hm / Ore / Bloom capabilities)"]
+        TERM["Term enum impls<br/>(Hm / Ore / Bloom / Ope capabilities)"]
         CAT -.compile-time parity guard.- FIX
     end
 
@@ -70,12 +70,13 @@ Everything starts in `crates/eql-domains/src/lib.rs`:
 
 ```rust
 pub const CATALOG: &[DomainFamily] = &[
-    INT4, INT2, INT8, DATE, TIMESTAMP,
-    NUMERIC, TEXT, BOOL, FLOAT4, FLOAT8,
+    INTEGER, SMALLINT, BIGINT, DATE, TIMESTAMP, NUMERIC, TEXT, BOOLEAN, REAL, DOUBLE, JSONB,
 ];
 ```
 
 Order is **load-bearing** — it drives generation order, inventory order, and snapshot order.
+Ten of the eleven rows are `Shape::Scalar` families; the eleventh, `JSONB`, is the hand-written
+SteVec family (see §2.3). Scalar-only consumers iterate `scalar_families()`, which filters `JSONB` out.
 
 ### 2.1 The data model
 
@@ -86,7 +87,7 @@ classDiagram
         +domains: &[Domain]
     }
     class Domain {
-        +name: &str        // "", "eq", "ord", "ord_ore", "match", "search"
+        +name: &str        // "", "eq", "ord", "ord_ore", "ord_ope", "match", "search"
         +terms: &[Term]
     }
     class Term {
@@ -94,6 +95,7 @@ classDiagram
         Hm
         Ore
         Bloom
+        Ope
     }
     class Role {
         <<enum>>
@@ -121,8 +123,8 @@ classDiagram
 
 - **`DomainFamily`** = one scalar type (`name` + the public domains it carries).
 - **`Domain`** = one operator/index capability surface (a bare suffix + fixed terms). The empty
-  name `""` is the storage-only domain (`public.integer`); `eq`, `ord`, `ord_ore`, `match`,
-  `search` are the searchable ones.
+  name `""` is the storage-only domain (`public.integer`); `eq`, `ord`, `ord_ore`, `ord_ope`,
+  `match`, `search` are the searchable ones.
 - **`Term`** = an index-term type. *This is where capability lives.*
 
 ### 2.2 The `Term` enum is the capability engine
@@ -130,15 +132,21 @@ classDiagram
 A `Term` answers every question the generators need, via exhaustive `impl` methods
 (`crates/eql-domains/src/term.rs`). This table *is* the contract:
 
-| Method | `Hm` | `Ore` | `Bloom` |
-|--------|------|-------|---------|
-| `json_key()` | `"hm"` | `"ob"` | `"bf"` |
-| `extractor()` | `eq_term` | `ord_term` | `match_term` |
-| `ctor()` | `hmac_256` | `ore_block_256` | `bloom_filter` |
-| `binding_newtype()` | `Hmac256` | `OreBlock256` | `BloomFilter` |
-| `role()` | `Eq` | `Ord` | `Match` |
-| `operators()` | `= <>` | `= <> < <= > >=` | `@> <@` |
-| `provides_ordering()` | `false` | `true` | `false` |
+| Method | `Hm` | `Ore` | `Bloom` | `Ope` |
+|--------|------|-------|---------|-------|
+| `json_key()` | `"hm"` | `"ob"` | `"bf"` | `"op"` |
+| `extractor()` | `eq_term` | `ord_term` | `match_term` | `ord_ope_term` |
+| `ctor()` | `hmac_256` | `ore_block_256` | `bloom_filter` | `ope_cllw` |
+| `binding_newtype()` | `Hmac256` | `OreBlock256` | `BloomFilter` | `OpeCllw` |
+| `role()` | `Eq` | `Ord` | `Match` | `Ord` |
+| `operators()` | `= <>` | `= <> < <= > >=` | `@> <@` | `= <> < <= > >=` |
+| `provides_ordering()` | `false` | `true` | `false` | `true` |
+
+`Ope` is the CLLW-OPE term: a hex-encoded ciphertext that is natively `bytea`-sortable after
+hex-decode (no custom comparison protocol), so — like `Hm` — its extractor is the whole SEM
+surface and it deliberately does *not* reuse `ord_term`'s extractor name (a shared name would
+collapse a mixed `[Ore, Ope]` domain under `dedupe_terms_by(Term::extractor)`).
+`provides_ordering()` is `true` for **both** `Ore` and `Ope`.
 
 Cross-term helpers compose these into the per-domain answers the renderers consume:
 `operators_for_terms`, `term_json_keys`, `payload_terms`, `nonempty_array_keys`,
@@ -161,11 +169,11 @@ fail loudly if they drift into an unreviewed shape. The eleventh `CATALOG` famil
 flowchart LR
     subgraph ordered["ordered (8 families)"]
         direction TB
-        o1["storage []"] --> o2["_eq [Hm]"] --> o3["_ord_ore [Ore]"] --> o4["_ord [Ore]"]
+        o1["storage []"] --> o2["_eq [Hm]"] --> o3["_ord_ore [Ore]"] --> o4["_ord [Ore]"] --> o5["_ord_ope [Ope]"]
     end
     subgraph text["text-search (text)"]
         direction TB
-        t1["storage []"] --> t2["_eq [Hm]"] --> t3["_match [Bloom]"] --> t4["_ord_ore [Hm,Ore]"] --> t5["_ord [Hm,Ore]"] --> t6["_search [Hm,Ore,Bloom]"]
+        t1["storage []"] --> t2["_eq [Hm]"] --> t3["_match [Bloom]"] --> t4["_ord_ore [Hm,Ore]"] --> t5["_ord [Hm,Ore]"] --> t6["_ord_ope [Hm,Ope]"] --> t7["_search [Hm,Ore,Bloom]"]
     end
     subgraph storage["storage-only (bool)"]
         s1["storage []"]
@@ -205,8 +213,8 @@ hand-written in `crates/eql-bindings/src/v3/jsonb.rs` — only inventory members
 that names/kinds align by index — a mismatch is a *build error*, not a runtime surprise.
 
 ```rust
-pub const INT4_FIXTURES: TypeFixtures = TypeFixtures {
-    family: &crate::INT4,
+pub const INTEGER_FIXTURES: TypeFixtures = TypeFixtures {
+    family: &crate::INTEGER,
     kind: ScalarKind::I32,
     values: fixtures!(int i32;
         Min, N(-100), N(-1), Zero, N(1), /* ... */ N(9999), Max),
@@ -214,7 +222,7 @@ pub const INT4_FIXTURES: TypeFixtures = TypeFixtures {
 ```
 
 The `int_values!` / `text_values!` macros materialize these to typed const slices
-(`INT4_VALUES: &[i32]`, `TEXT_VALUES: &[&str]`) at compile time — resolving `Min`/`Max`/`Zero`
+(`INTEGER_VALUES: &[i32]`, `TEXT_VALUES: &[&str]`) at compile time — resolving `Min`/`Max`/`Zero`
 sentinels to kind bounds and **panicking the build on an out-of-range integer literal**. No
 generated `.rs` round-trip; the source of truth is the catalog row itself.
 
@@ -222,16 +230,20 @@ generated `.rs` round-trip; the source of truth is the catalog row itself.
 
 ## 3. Layer ② — The Generator (`eql-codegen`)
 
-The CLI (`crates/eql-codegen/src/main.rs`) has five modes:
+The CLI (`crates/eql-codegen/src/main.rs`) has six modes:
 
 ```mermaid
 flowchart LR
     CLI["eql-codegen"] --> A["(no args)<br/>generate_all → SQL surface"]
     CLI --> B["bindings<br/>generate_bindings → Rust bindings"]
     CLI --> E["clean<br/>clean_all → remove generated SQL"]
-    CLI --> C["list-types<br/>catalog tokens, one per line"]
+    CLI --> C["list-types<br/>scalar_families() tokens, one per line"]
+    CLI --> F["list-schemas<br/>owned schemas (eql_v3 first)"]
     CLI --> D["dump-catalog<br/>JSON of types→domains→ops"]
 ```
+
+`list-schemas` prints the schemas the `eql_v3` surface owns (`eql_v3`, then `eql_v3_internal`),
+consumed by `test:schemas:parity` to keep the Rust consts and the SQL `owned_schemas()` array in lockstep.
 
 Both generators follow the same crash-safe **render-all → preflight → write-all →
 delete-orphans** model, so a render panic or write error can never leave the tree
@@ -278,9 +290,9 @@ Each `*_functions.sql` mixes three entry kinds, selected per operator:
 
 | Kind | Template | Language | Purpose |
 |------|----------|----------|---------|
-| **Extractor** | `extractor.sql.j2` | `LANGUAGE sql` (inlinable) | `eq_term(integer_eq) → hmac_256` |
-| **Wrapper** | `wrapper.sql.j2` | `LANGUAGE sql` (inlinable) | `eq(a,b) → eq_term(a)=eq_term(b)` |
-| **Blocker** | `unsupported.sql.j2` | **`LANGUAGE plpgsql`** | `RAISE EXCEPTION 'operator % not supported'` |
+| **Extractor** | `functions/extractor.sql.j2` | `LANGUAGE sql` (inlinable) | `eq_term(integer_eq) → hmac_256` |
+| **Wrapper** | `functions/wrapper.sql.j2` | `LANGUAGE sql` (inlinable) | `eq(a,b) → eq_term(a)=eq_term(b)` |
+| **Blocker** | `functions/unsupported.sql.j2` | **`LANGUAGE plpgsql`** | `RAISE EXCEPTION 'operator % not supported'` |
 
 > **Two footguns the renderers enforce structurally (with tests):**
 > - **Blockers are never `STRICT`** — a `STRICT` blocker returns `NULL` on `NULL` args,
@@ -337,16 +349,22 @@ distinctions become visible — e.g. `text_ord` lists `v i c hm ob` (dual-term) 
 ```text
 src/v3/scalars/
 ├── functions.sql          ← hand-written shared blocker helper (COMMITTED)
-├── integer/
-│   ├── integer_types.sql            (generated, committed)
-│   ├── integer_functions.sql        (storage-only blockers)
-│   ├── integer_eq_functions.sql     (eq_term extractor + eq/neq wrappers)
-│   ├── integer_eq_operators.sql     (CREATE OPERATOR)
+├── integer/               (14 generated files)
+│   ├── integer_types.sql              (generated, committed)
+│   ├── integer_functions.sql          (storage-only blockers)
+│   ├── integer_operators.sql          (storage-only operator blockers)
+│   ├── integer_eq_functions.sql       (eq_term extractor + eq/neq wrappers)
+│   ├── integer_eq_operators.sql       (CREATE OPERATOR)
+│   ├── integer_ord_ore_functions.sql
+│   ├── integer_ord_ore_operators.sql
+│   ├── integer_ord_ore_aggregates.sql (min/max)
 │   ├── integer_ord_functions.sql
 │   ├── integer_ord_operators.sql
-│   ├── integer_ord_aggregates.sql   (min/max)
-│   ├── integer_ord_ore_*.sql
-│   └── integer_extensions.sql       ← hand-written, COMMITTED (if present)
+│   ├── integer_ord_aggregates.sql     (min/max)
+│   ├── integer_ord_ope_functions.sql
+│   ├── integer_ord_ope_operators.sql
+│   └── integer_ord_ope_aggregates.sql (min/max)
+│   (integer_extensions.sql ← hand-written, COMMITTED, only if present)
 └── ...
 ```
 
@@ -386,17 +404,17 @@ A generated struct (`integer.rs`):
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
-pub struct Int4Eq {
+pub struct IntegerEq {
     pub v: SchemaVersion,
     pub i: Identifier,
     pub c: Ciphertext,
     pub hm: Hmac256,
 }
 
-impl DomainType for Int4Eq {
+impl DomainType for IntegerEq {
     fn sql_domain_static() -> &'static str { "public.integer_eq" }
     fn sql_domain(&self) -> &'static str { Self::sql_domain_static() }
-    fn schema(&self) -> Schema { schema_for!(Int4Eq) }
+    fn schema(&self) -> Schema { schema_for!(IntegerEq) }
 }
 ```
 
@@ -416,8 +434,8 @@ operator blocked).
 
 ```mermaid
 flowchart LR
-    RS["Rust structs<br/>#[derive(TS, JsonSchema)]"] -->|ts-rs export<br/>via cargo test -p eql-bindings| TS["crates/eql-bindings/bindings/v3/Int4Eq.ts<br/>(45 files)"]
-    RS -->|schemars via tests/export.rs<br/>injects $id| JS["crates/eql-bindings/schema/v3/integer_eq.json<br/>(39 files)"]
+    RS["Rust structs<br/>#[derive(TS, JsonSchema)]"] -->|ts-rs export<br/>via cargo test -p eql-bindings| TS["crates/eql-bindings/bindings/v3/IntegerEq.ts<br/>(63 files)"]
+    RS -->|schemars via tests/export.rs<br/>injects $id| JS["crates/eql-bindings/schema/v3/integer_eq.json<br/>(51 files)"]
 ```
 
 - **TypeScript:** one `.ts` per domain, importing co-located term types; newtypes become
@@ -443,14 +461,14 @@ plaintext values through cipherstash-client.
 
 ```mermaid
 flowchart TD
-    CV["eql_domains::INT4_VALUES<br/>(catalog plaintexts)"] --> SPEC["FixtureSpec::new(&quot;eql_v3_int4&quot;)<br/>.with_index(Unique).with_index(Ore)<br/>.with_values(INT4_VALUES)"]
+    CV["eql_domains::INTEGER_VALUES<br/>(catalog plaintexts)"] --> SPEC["FixtureSpec::new(&quot;eql_v3_integer&quot;)<br/>.with_index(Unique).with_index(Ore).with_index(Ope)<br/>.with_values(INTEGER_VALUES)"]
     SPEC --> RUN["spec().run()"]
     RUN --> ENC["cipherstash::encrypt_store()<br/>→ ZeroKMS (one batch round-trip)"]
     ENC --> INS["INSERT encrypted payloads into working table"]
-    INS --> SQL["tests/sqlx/fixtures/eql_v3_int4.sql<br/>(gitignored; {v,i,c,hm,ob} payloads)"]
+    INS --> SQL["tests/sqlx/fixtures/eql_v3_integer.sql<br/>(gitignored; {v,i,c,hm,ob,op} payloads)"]
 
     DISP["generate_all_fixtures.rs<br/>for spec in CATALOG"] --> RUN
-    DISP -.also.-> EXTRA["non-catalog fixtures<br/>(v3_ste_vec, v3_doc_int4,<br/>v3_numeric_collision, v3_text_empty,<br/>eql_v3_&lt;T&gt;_doubles)"]
+    DISP -.also.-> EXTRA["non-catalog fixtures<br/>(v3_ste_vec, v3_doc_integer,<br/>v3_numeric_collision, v3_text_empty,<br/>eql_v3_&lt;T&gt;_doubles)"]
 ```
 
 - The entry point (`generate_all_fixtures.rs`) **iterates `CATALOG` directly**, dispatching
@@ -458,7 +476,7 @@ flowchart TD
   with no fixture wiring fails, so silently-missing fixtures are impossible.
 - Gated behind `--features fixture-gen`; requires CipherStash creds (ZeroKMS + client key).
   **CI has them.** This is by design — there are *no* committed/static fixture exceptions.
-- Non-catalog fixtures (`v3_ste_vec`, `v3_doc_int4`, `v3_numeric_collision`,
+- Non-catalog fixtures (`v3_ste_vec`, `v3_doc_integer`, `v3_numeric_collision`,
   `v3_text_empty`, and per-type `eql_v3_<T>_doubles`) ride the same generation
   pipeline, so they are generated and gitignored too — not committed blobs.
 
@@ -521,6 +539,14 @@ A silently dropped, renamed, or `#[cfg]`-gated test fails the diff; a catalog ty
 its matrix wiring fails the `list-types` cross-check. When you change which matrix tests the
 macro emits, regenerate (`test:matrix:snapshots:regen`) and commit the baseline in the same
 change.
+
+Two **sibling** matrices sit beside these four scalar baselines, each with its own no-DB
+inventory gate:
+
+- `tests/sqlx/snapshots/ope_tests.txt` pins the CLLW-OPE (`<T>_ord_ope`) test-name set,
+  gated by `mise run test:matrix:inventory:ope`.
+- `tests/sqlx/snapshots/matrix_jsonb_entry_tests.txt` pins the `jsonb_entry::…` behaviour
+  matrix, gated by `mise run test:matrix:inventory:jsonb_entry`.
 
 ### 6.3 Determinism & drift gates
 
@@ -592,7 +618,7 @@ tests. Everything else is one row, the compiler, and the generators.
 | Fixture plaintexts | `crates/eql-domains/src/fixtures/record.rs`, `crates/eql-domains/src/fixtures/values.rs` |
 | Catalog invariant tests | `crates/eql-domains/src/tests.rs`, `crates/eql-domains/src/proptest_invariants.rs` |
 | CLI | `crates/eql-codegen/src/main.rs` |
-| SQL renderers | `crates/eql-codegen/src/generate.rs`, `crates/eql-codegen/src/context.rs`, `crates/eql-codegen/templates/*.j2` |
+| SQL renderers | `crates/eql-codegen/src/generate.rs`, `crates/eql-codegen/src/context.rs`, `crates/eql-codegen/templates/*.j2` (extractor/wrapper/unsupported templates under `crates/eql-codegen/templates/functions/*.j2`) |
 | Operator catalog | `crates/eql-codegen/src/operator_surface.rs` |
 | Bindings renderer | `crates/eql-codegen/src/bindings.rs` |
 | File-ownership guards | `crates/eql-codegen/src/writer.rs` |

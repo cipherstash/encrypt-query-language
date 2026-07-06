@@ -85,7 +85,7 @@ These are the important files and directories in the repo:
 │   │   ├── sem/               <-- hand-written SEM index-term types (hmac_256, ore_block_256, …)
 │   │   ├── scalars/           <-- generated scalar domain families, one dir per type
 │   │   │   ├── functions.sql  <-- shared blocker for native jsonb operators
-│   │   │   └── <T>/           <-- e.g. integer/, text/, bool/ (generated, committed in place)
+│   │   │   └── <T>/           <-- e.g. integer/, text/, boolean/ (generated, committed in place)
 │   │   ├── jsonb/             <-- jsonb SteVec support
 │   │   └── lint/              <-- structural lints
 │   ├── deps-v3.txt            <-- REQUIRE edges for the v3 surface

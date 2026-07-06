@@ -2,7 +2,7 @@
 
 This page summarises which SQL operators and language features work against EQL-encrypted columns, and which encrypted-domain **type** each one requires.
 
-EQL ships its searchable-encryption surface as PostgreSQL **domains in the `eql_v3` schema**:
+EQL ships its searchable-encryption surface as PostgreSQL **domains in the `public` schema**:
 
 - **per-scalar encrypted-domain types** — `public.integer`, `public.text`, `public.timestamp`, … — one family of domain *variants* per scalar; and
 - **an encrypted-JSON document type** — `public.json` — for structured-encryption (ste_vec) JSONB.
@@ -11,22 +11,22 @@ The capability of a column is fixed by the **domain variant you type it as**. Th
 
 ---
 
-## Encrypted-domain scalar types (`eql_v3.<T>`)
+## Encrypted-domain scalar types (`public.<T>`)
 
-Each scalar type `<T>` is a family of `jsonb`-backed domains in `eql_v3`. The catalog scalar tokens that ship today are:
+Each scalar type `<T>` is a family of `jsonb`-backed domains in `public`. The catalog scalar tokens that ship today are:
 
 `smallint`, `integer`, `bigint`, `numeric`, `real`, `double`, `date`, `timestamp`, `text`, `boolean`.
 
-(See [Adding a Scalar Encrypted-Domain Type](./adding-a-scalar-encrypted-domain-type.md) for how the family is generated.) The domains live in the `eql_v3` schema — `DROP SCHEMA eql_v3 CASCADE` removes them — and their extracted index-term types are the self-contained `eql_v3` SEM types (`eql_v3.hmac_256`, `eql_v3.ore_block_256`, `eql_v3.bloom_filter`).
+(See [Adding a Scalar Encrypted-Domain Type](./adding-a-scalar-encrypted-domain-type.md) for how the family is generated.) The domains live in the `public` schema, so they survive `DROP SCHEMA eql_v3 CASCADE` — dropping `eql_v3` removes the operators, extractors, and aggregates but leaves the `public`-typed columns and their data intact. Their extracted index-term types are the self-contained `eql_v3_internal` SEM types (`eql_v3_internal.hmac_256`, `eql_v3_internal.ore_block_256`, `eql_v3_internal.bloom_filter`).
 
 Every scalar generates a storage-only variant plus the query variants its capabilities allow:
 
 | Domain variant                | Index term carried        | Extractor (for indexing) | `=` `<>` | `<` `<=` `>` `>=` | `MIN` / `MAX` | `@>` `<@` |
 | ----------------------------- | ------------------------- | ------------------------ | :------: | :---------------: | :-----------: | :-------: |
-| `eql_v3.<T>`                  | none (storage only)       | —                        |    ❌    |        ❌         |      ❌       |    ❌     |
-| `eql_v3.<T>_eq`               | `hm` (hmac_256)           | `eql_v3.eq_term(col)`    |    ✅    |        ❌         |      ❌       |    ❌     |
-| `eql_v3.<T>_ord` / `_ord_ore` | `ob` (ore_block_256)      | `eql_v3.ord_term(col)`   |    ✅    |        ✅         |      ✅       |    ❌     |
-| `eql_v3.<T>_ord_ope`          | `op` (ope_cllw)           | `eql_v3.ord_ope_term(col)` |  ✅    |        ✅         |      ✅       |    ❌     |
+| `public.<T>`                  | none (storage only)       | —                        |    ❌    |        ❌         |      ❌       |    ❌     |
+| `public.<T>_eq`               | `hm` (hmac_256)           | `eql_v3.eq_term(col)`    |    ✅    |        ❌         |      ❌       |    ❌     |
+| `public.<T>_ord` / `_ord_ore` | `ob` (ore_block_256)      | `eql_v3.ord_term(col)`   |    ✅    |        ✅         |      ✅       |    ❌     |
+| `public.<T>_ord_ope`          | `op` (ope_cllw)           | `eql_v3.ord_ope_term(col)` |  ✅    |        ✅         |      ✅       |    ❌     |
 | `public.text_match`           | `bf` (bloom_filter)       | `eql_v3.match_term(col)` |    ❌    |        ❌         |      ❌       |    ✅\*   |
 | `public.text_search`          | `hm` + `ob` + `bf`        | all three extractors     |    ✅    |        ✅         |      ✅       |    ✅\*   |
 
@@ -34,13 +34,13 @@ Every scalar generates a storage-only variant plus the query variants its capabi
 
 Notes:
 
-- The bare `eql_v3.<T>` variant carries no index term and **blocks every comparison operator** — it is storage / decryption only. Type the column as `_eq` or `_ord` (or cast at the call site, e.g. `col::public.integer_ord`) when you need to query.
+- The bare `public.<T>` variant carries no index term and **blocks every comparison operator** — it is storage / decryption only. Type the column as `_eq` or `_ord` (or cast at the call site, e.g. `col::public.integer_ord`) when you need to query.
 - `_ord` and `_ord_ore` are **twins**: byte-identical surfaces backed by the ORE block term. Pick the name that documents intent ("ordered" vs "ordered via ORE block"); both support the full ordered surface and the `MIN` / `MAX` aggregates.
 - `_ord_ope` exposes the **same ordered surface** backed by the CLLW-OPE term instead: `op` is a hex-encoded, order-preserving ciphertext compared by native bytea ordering after hex-decode (no custom comparison protocol). On `text_ord_ope`, `=` / `<>` route through `hm` (exact HMAC), like `text_ord` — OPE over text is not equality-lossless.
 - `=` / `<>` is the only searchable surface for `_eq`. On `_ord` variants the equality operators are available too (alongside the ordered ones).
 - `boolean` is **storage-only** by design — a two-value column has too little cardinality for any searchable index to be safe, so it ships only `public.boolean` (no `_eq` / `_ord`).
 - `LIKE` / `ILIKE` (`~~` / `~~*`) and the native JSONB operators are **blocked on every scalar domain variant** — they are meaningless on a scalar payload. Text matching is the bloom-filter `@>` on `text_match`, not `LIKE`.
-- `MIN` / `MAX` are exposed only on the ordered variants, as `eql_v3.min(eql_v3.<T>_ord)` / `eql_v3.max(...)` (and the `_ord_ore` twin) — see [EQL Functions Reference](./eql-functions.md#eql_v3min--eql_v3max-per-domain).
+- `MIN` / `MAX` are exposed only on the ordered variants, as `eql_v3.min(public.<T>_ord)` / `eql_v3.max(...)` (and the `_ord_ore` twin) — see [EQL Functions Reference](./eql-functions.md#eql_v3min--eql_v3max-per-domain).
 
 ---
 
@@ -48,7 +48,7 @@ Notes:
 
 A ✅ means the operator resolves on a column typed as that domain variant. A ❌ means the operator is blocked (it raises) for that variant.
 
-| SQL operator              | Meaning                        | `eql_v3.<T>` | `_eq` | `_ord` / `_ord_ore` / `_ord_ope` | `text_match` | `text_search` |
+| SQL operator              | Meaning                        | `public.<T>` | `_eq` | `_ord` / `_ord_ore` / `_ord_ope` | `text_match` | `text_search` |
 | ------------------------- | ------------------------------ | :----------: | :---: | :-----------------: | :----------: | :-----------: |
 | `=`                       | Equality                       |      ❌      |  ✅   |         ✅          |      ❌      |      ✅       |
 | `<>` / `!=`               | Inequality                     |      ❌      |  ✅   |         ✅          |      ❌      |      ✅       |
@@ -77,7 +77,7 @@ This matrix covers higher-level SQL constructs. As above, ✅ requires the colum
 | `WHERE col IN (…)`                   | desugars to `=`                                                                         | `_eq`, `_ord`, `text_search` |
 | `ORDER BY col`                       | meaningful only with an ORE term                                                        | `_ord`, `text_search` |
 | `GROUP BY col` / `DISTINCT`          | needs an equality term                                                                  | `_eq`, `_ord`, `text_search` |
-| `MIN(col)` / `MAX(col)`              | `eql_v3.min(eql_v3.<T>_ord)` / `max` — type the column as `_ord` or cast at the call site (`eql_v3.min(col::public.integer_ord)`) | `_ord` |
+| `MIN(col)` / `MAX(col)`              | `eql_v3.min(public.<T>_ord)` / `max` — type the column as `_ord` or cast at the call site (`eql_v3.min(col::public.integer_ord)`) | `_ord` |
 | `COUNT(col)` / `COUNT(DISTINCT col)` | plain `COUNT(col)` needs no term; `DISTINCT` needs an equality term                     | any / `_eq` for `DISTINCT` |
 | `JOIN … ON lhs.col = rhs.col`        | both sides must share the same keyset and a matching variant                            | `_eq`, `_ord`, `text_search` |
 

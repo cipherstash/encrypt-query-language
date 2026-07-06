@@ -17,7 +17,7 @@ and Supabase [does not support custom operators](https://github.com/supabase/sup
 so that recipe needed a cut-down build.
 
 `eql_v3` removes the dependency entirely. Every encrypted column is typed as
-a `jsonb`-backed **domain** in the `eql_v3` schema (for example
+a `jsonb`-backed **domain** in the `public` schema (for example
 `public.text_eq`, `public.integer_ord`, `public.json`), and search is driven by
 **functional indexes over small term-extractor functions** rather than an
 operator class on the column:
@@ -60,8 +60,8 @@ type it as**, and which index terms travel in a value's payload is decided by
 the encryption client — [CipherStash Proxy](https://github.com/cipherstash/proxy)
 or [CipherStash Stack](https://github.com/cipherstash/stack):
 
-- `eql_v3.<T>_eq` carries an `hm` term — supports `=` / `<>`, `GROUP BY`, `DISTINCT`.
-- `eql_v3.<T>_ord` (and the `_ord_ore` twin) carries an `ob` term — adds `<` `<=` `>` `>=`, `ORDER BY`, `MIN` / `MAX`.
+- `public.<T>_eq` carries an `hm` term — supports `=` / `<>`, `GROUP BY`, `DISTINCT`.
+- `public.<T>_ord` (and the `_ord_ore` twin) carries an `ob` term — adds `<` `<=` `>` `>=`, `ORDER BY`, `MIN` / `MAX`.
 - `public.text_match` carries a `bf` term — supports bloom-filter token containment (`@>` / `<@`).
 - `public.text_search` carries all three terms — equality, ordering, and containment on `text`.
 
@@ -142,7 +142,7 @@ for the full explanation.
 ### Aggregates `MIN` / `MAX`
 
 `MIN` / `MAX` are exposed on the ordered variants as
-`eql_v3.min(eql_v3.<T>_ord)` / `eql_v3.max(eql_v3.<T>_ord)` (and the
+`eql_v3.min(public.<T>_ord)` / `eql_v3.max(public.<T>_ord)` (and the
 `_ord_ore` twin). Type the column as `_ord`, or cast at the call site:
 
 ```sql

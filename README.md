@@ -70,19 +70,19 @@ EQL installs the following components into the `eql_v3` schema:
 
 | Name                                                | Entity Type   | Purpose                                                              |
 | --------------------------------------------------- | ------------- | ------------------------------------------------------------------- |
-| `eql_v3`                                            | Schema        | Holds all EQL types, operators, functions, and aggregates           |
-| `eql_v3.<T>`, `eql_v3.<T>_eq`, `eql_v3.<T>_ord`     | Domain types  | Per-scalar encrypted columns (one family per scalar: `integer`, `text`, `timestamp`, …) |
+| `eql_v3`                                            | Schema        | Holds EQL operators, term extractors, comparison wrappers, and aggregates |
+| `public.<T>`, `public.<T>_eq`, `public.<T>_ord`     | Domain types  | Per-scalar encrypted columns (one family per scalar: `integer`, `text`, `timestamp`, …) |
 | `public.json`                                       | Domain type   | Encrypted JSON (structured-encryption) documents                    |
 | `eql_v3.eq_term` / `ord_term` / `match_term`        | Functions     | Index-term extractors for functional indexes                        |
 
 
 ### `eql_v3` Schema
 
-The `eql_v3` schema holds the encrypted-domain types, their operators and term extractors, and the `MIN` / `MAX` aggregates.
+The `eql_v3` schema holds the operators, term extractors, comparison wrappers, and `MIN` / `MAX` aggregates for the encrypted-domain types. The encrypted-domain types themselves live in `public` (see below), and the internal SEM index-term types live in `eql_v3_internal`.
 
-Encrypted columns are typed as `eql_v3` domains (e.g. `public.text_eq`, `public.json`), and the searchable surface available on a column is fixed by its domain **variant** — there is no database-side configuration state. Which index terms a value carries is decided by the encryption client (CipherStash Stack / CipherStash Proxy).
+Encrypted columns are typed as `public` domains (e.g. `public.text_eq`, `public.json`), and the searchable surface available on a column is fixed by its domain **variant** — there is no database-side configuration state. Which index terms a value carries is decided by the encryption client (CipherStash Stack / CipherStash Proxy).
 
-Because the domain types live in the `eql_v3` schema, columns depend on them; `DROP SCHEMA eql_v3 CASCADE` removes the surface (and would drop columns typed as those domains). Re-running the install script is idempotent.
+The domain types deliberately live in `public`, not `eql_v3`, so application tables survive an EQL uninstall: `DROP SCHEMA eql_v3 CASCADE` removes the operators, extractors, and aggregates but leaves the `public`-typed columns (and their data) intact. Re-running the install script is idempotent.
 
 
 ## Database Permissions
@@ -165,7 +165,7 @@ Once EQL is installed in your PostgreSQL database, you can start using encrypted
 
 ### Enable encrypted columns
 
-Define encrypted columns using an `eql_v3` domain type. Type the column as the **variant** for the capability you need — `public.text_eq` for equality, `eql_v3.<T>_ord` for range/ordering, `public.text_match` for full-text, `public.json` for encrypted JSON. Each is stored as `jsonb` with a `CHECK` constraint that validates the encrypted payload.
+Define encrypted columns using a `public` encrypted-domain type. Type the column as the **variant** for the capability you need — `public.text_eq` for equality, `public.<T>_ord` for range/ordering, `public.text_match` for full-text, `public.json` for encrypted JSON. Each is stored as `jsonb` with a `CHECK` constraint that validates the encrypted payload.
 
 **Example:**
 
@@ -262,9 +262,9 @@ Verify documentation quality using these scripts:
 mise run docs:validate
 
 # Or run individual checks
-./tasks/check-doc-coverage.sh      # Check 100% coverage
-./tasks/validate-required-tags.sh  # Validate @brief, @param, @return
-./tasks/validate-documented-sql.sh # Validate SQL syntax
+./tasks/docs/validate/coverage.sh       # Check 100% coverage
+./tasks/docs/validate/required-tags.sh  # Validate @brief, @param, @return
+./tasks/docs/validate/documented-sql.sh # Validate SQL syntax
 ```
 
 Documentation validation runs automatically in CI for all pull requests.
