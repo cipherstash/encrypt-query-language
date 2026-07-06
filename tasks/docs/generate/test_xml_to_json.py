@@ -24,11 +24,24 @@ load_domains = _mod.load_domains
 CATALOG_JSON = """{
   "types": [
     { "token": "text", "is_eq_only": false, "domains": [
-      { "segment": "storage", "suffix": "", "supported_ops": [] },
-      { "segment": "eq", "suffix": "_eq", "supported_ops": ["=", "<>"] },
+      { "segment": "storage", "suffix": "", "supported_ops": [], "terms": [] },
+      { "segment": "eq", "suffix": "_eq", "supported_ops": ["=", "<>"],
+        "terms": [{"key": "hm", "extractor": "eq_term", "ctor": "hmac_256"}] },
       { "segment": "search", "suffix": "_search",
-        "supported_ops": ["=", "<>", "<", "<=", ">", ">=", "@>", "<@"] }
+        "supported_ops": ["=", "<>", "<", "<=", ">", ">=", "@>", "<@"],
+        "terms": [
+          {"key": "hm", "extractor": "eq_term", "ctor": "hmac_256"},
+          {"key": "bf", "extractor": "match_term", "ctor": "bloom_filter"}
+        ] }
     ]}
+  ],
+  "stevec": [
+    { "full_name": "json", "name": "json", "terms": [] },
+    { "full_name": "jsonb_entry", "name": "entry", "terms": [
+      {"key": "hm", "extractor": "eq_term", "ctor": "hmac_256"},
+      {"key": "oc", "extractor": "ore_cllw", "ctor": "ore_cllw"}
+    ] },
+    { "full_name": "jsonb_query", "name": "query", "terms": [] }
   ]
 }"""
 
@@ -100,13 +113,23 @@ def test_load_domains():
         domains = load_domains(cat)
 
     by_name = {x["name"]: x for x in domains}
+    # v3 user domains live in `public`; the extractor functions are `eql_v3`.
     assert by_name["public.text"]["capabilities"] == ["storage"]
     assert by_name["public.text_eq"]["type"] == "text"
     assert by_name["public.text_eq"]["variant"] == "eq"
     assert by_name["public.text_eq"]["capabilities"] == ["equality"]
     assert by_name["public.text_eq"]["supportedOperators"] == ["=", "<>"]
+    assert by_name["public.text_eq"]["termFunctions"] == ["eql_v3.eq_term"]
     # text_search carries all three capabilities, derived from its operators.
     assert by_name["public.text_search"]["capabilities"] == ["equality", "order", "match"]
+    # SteVec (jsonb) domains come from the `stevec` section. Term extractors are
+    # hardcoded on `jsonb_entry` (the sv element type) ONLY — hm -> eq_term,
+    # oc -> ore_cllw; the `json` container and `jsonb_query` carry none.
+    assert by_name["public.json"]["termFunctions"] == []
+    assert by_name["public.jsonb_query"]["termFunctions"] == []
+    assert by_name["public.jsonb_entry"]["capabilities"] == ["json"]
+    assert by_name["public.jsonb_entry"]["shape"] == "stevec"
+    assert by_name["public.jsonb_entry"]["termFunctions"] == ["eql_v3.eq_term", "eql_v3.ore_cllw"]
 
 
 if __name__ == "__main__":

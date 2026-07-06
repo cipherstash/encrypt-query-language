@@ -83,6 +83,11 @@ def _capabilities_from_ops(ops):
     return caps or ["storage"]
 
 
+def _term_functions(terms):
+    """Qualified extractor functions for a domain's terms (e.g. eql_v3.ord_term)."""
+    return [f"eql_v3.{t['extractor']}" for t in terms]
+
+
 def load_domains(catalog_path: Path) -> list:
     """Map `eql-codegen dump-catalog` JSON into manifest domain entries."""
     if not catalog_path.exists():
@@ -91,6 +96,8 @@ def load_domains(catalog_path: Path) -> list:
 
     catalog = json.loads(catalog_path.read_text())
     domains = []
+
+    # Scalar families: capability + operators + extractor functions.
     for type_entry in catalog.get("types", []):
         token = type_entry["token"]
         for dom in type_entry["domains"]:
@@ -105,7 +112,23 @@ def load_domains(catalog_path: Path) -> list:
                 "base": "jsonb",
                 "capabilities": _capabilities_from_ops(ops),
                 "supportedOperators": ops,
+                "termFunctions": _term_functions(dom.get("terms", [])),
             })
+
+    # SteVec (jsonb) family: hand-written SQL, catalog inventory only. Like the
+    # scalar domains these live in `public`; the extractor functions are eql_v3.
+    for entry in catalog.get("stevec", []):
+        domains.append({
+            "name": f"public.{entry['full_name']}",
+            "type": "jsonb",
+            "variant": "",
+            "base": "jsonb",
+            "shape": "stevec",
+            "capabilities": ["json"],
+            "supportedOperators": [],
+            "termFunctions": _term_functions(entry.get("terms", [])),
+        })
+
     domains.sort(key=lambda d: (d["type"], d["name"]))
     return domains
 
