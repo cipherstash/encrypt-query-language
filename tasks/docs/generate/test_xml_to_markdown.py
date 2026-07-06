@@ -199,6 +199,49 @@ def test_internal_schema_is_private():
 
     print("✓ Internal-schema private detection test passed")
 
+def test_schema_name_misparse_is_skipped():
+    """Name-dropped CREATE FUNCTION mis-parses are skipped, operators are kept.
+
+    Doxygen drops the real name of `CREATE FUNCTION <schema>.<name>(... a
+    <schema>.<domain> ...)`, leaving the schema as <name>. These internal
+    "Unsupported operator blocker" helpers carry the word "operator" in their
+    brief, so the skip must key on <definition> (CREATE FUNCTION), not the
+    brief — otherwise they'd be mis-remapped to a junk operator name and
+    mislabeled public. A genuine CREATE OPERATOR is still recovered.
+    """
+    from xml.etree import ElementTree as ET
+
+    process_function = _load_process_function()
+
+    # Mis-parsed CREATE FUNCTION (schema as name, "operator" in the brief).
+    misfn = ET.fromstring('''
+    <memberdef kind="function">
+        <name>eql_v3_internal</name>
+        <definition>CREATE FUNCTION eql_v3_internal</definition>
+        <type>CREATE FUNCTION</type>
+        <argsstring>(a jsonb, b public.text_ord) RETURNS jsonb</argsstring>
+        <briefdescription><para>Unsupported operator blocker for public.text_ord.</para></briefdescription>
+        <detaileddescription></detaileddescription>
+    </memberdef>
+    ''')
+    assert process_function(misfn) is None, "name-dropped CREATE FUNCTION must be skipped"
+
+    # Genuine CREATE OPERATOR — recover the symbol from the brief, keep it.
+    op = ET.fromstring('''
+    <memberdef kind="function">
+        <name>public</name>
+        <definition>CREATE OPERATOR public.-&gt;&gt;</definition>
+        <type>CREATE OPERATOR</type>
+        <argsstring>(public.json, text)</argsstring>
+        <briefdescription><para>-&gt;&gt; operator with text selector.</para></briefdescription>
+        <detaileddescription></detaileddescription>
+    </memberdef>
+    ''')
+    res = process_function(op)
+    assert res is not None and res["name"] == "->>", "CREATE OPERATOR symbol must be recovered"
+
+    print("✓ Schema-name mis-parse skip test passed")
+
 if __name__ == '__main__':
     print("Running xml-to-markdown tests...\n")
 
@@ -208,6 +251,7 @@ if __name__ == '__main__':
         test_param_name_type_swap()
         test_schema_qualified_type()
         test_internal_schema_is_private()
+        test_schema_name_misparse_is_skipped()
 
         print("\n✅ All tests passed!")
         sys.exit(0)
