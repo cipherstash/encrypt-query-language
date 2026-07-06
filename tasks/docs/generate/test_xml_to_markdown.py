@@ -155,6 +155,50 @@ def test_schema_qualified_type():
 
     print("✓ Schema-qualified type test passed")
 
+def _load_process_function():
+    """Load process_function from the hyphenated module by path."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "eql_xml_to_markdown", Path(__file__).parent / "xml-to-markdown.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.process_function
+
+def test_internal_schema_is_private():
+    """Functions in the eql_v3_internal schema are flagged private via <type>.
+
+    Doxygen puts the schema in the memberdef <type> ("CREATE FUNCTION
+    eql_v3_internal"), not the <name>, so visibility is a schema check. Guards
+    against regressing to the old leading-underscore-name heuristic, which
+    flagged none of the internal surface (reporting everything public).
+    """
+    from xml.etree import ElementTree as ET
+
+    process_function = _load_process_function()
+
+    def memberdef(schema, fn):
+        return ET.fromstring(f'''
+        <memberdef kind="function">
+            <name>{fn}</name>
+            <type>CREATE FUNCTION {schema}</type>
+            <argsstring>(val jsonb) RETURNS bytea</argsstring>
+            <briefdescription><para>Extract a term.</para></briefdescription>
+            <detaileddescription></detaileddescription>
+        </memberdef>
+        ''')
+
+    internal = process_function(memberdef("eql_v3_internal", "eq_term"))
+    assert internal is not None, "internal function should be extracted"
+    assert internal["is_private"] is True, "eql_v3_internal.* must be private"
+
+    public = process_function(memberdef("eql_v3", "jsonb_path_query"))
+    assert public is not None, "public function should be extracted"
+    assert public["is_private"] is False, "eql_v3.* must be public"
+
+    print("✓ Internal-schema private detection test passed")
+
 if __name__ == '__main__':
     print("Running xml-to-markdown tests...\n")
 
@@ -163,6 +207,7 @@ if __name__ == '__main__':
         test_variants_no_self_reference()
         test_param_name_type_swap()
         test_schema_qualified_type()
+        test_internal_schema_is_private()
 
         print("\n✅ All tests passed!")
         sys.exit(0)

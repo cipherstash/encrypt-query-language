@@ -1,5 +1,14 @@
 #!/usr/bin/env bash
 #MISE description="Doxygen input filter for SQL files"
+set -euo pipefail
+
+# Doxygen always calls an INPUT_FILTER with exactly one filename. Guard it so a
+# stray invocation fails fast instead of `awk` blocking on stdin and hanging the
+# docs job.
+if [ "$#" -ne 1 ]; then
+  echo "usage: $(basename "$0") <file.sql>" >&2
+  exit 2
+fi
 
 # Prepares SQL for Doxygen's C++ parser. Two transforms:
 #
