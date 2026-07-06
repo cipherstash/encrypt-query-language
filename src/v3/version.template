@@ -21,10 +21,8 @@ DROP FUNCTION IF EXISTS eql_v3.version();
 --!
 --! @note Auto-generated during build from src/v3/version.template
 --!
---! @example
---! -- Check installed EQL version
---! SELECT eql_v3.version();
---! -- Returns: '3.0.0'
+--! Example: `SELECT eql_v3.version()` returns the installed version string,
+--! e.g. `'3.0.0'` (or `'DEV'` for development builds).
 CREATE FUNCTION eql_v3.version()
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE

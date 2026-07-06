@@ -203,8 +203,15 @@ def process_function(memberdef):
             if op_match:
                 func_name = op_match.group(1)  # Use operator as function name
 
-    # Check if this is a private/internal function
-    is_private = func_name.startswith('_')
+    # Check if this is a private/internal function.
+    # Internal functions live in the `eql_v3_internal` schema. Doxygen puts the
+    # schema in the memberdef <type> (e.g. "CREATE FUNCTION eql_v3_internal"),
+    # not the <name>, so a schema check is required — the older bare
+    # leading-underscore convention alone flags none of them (which left the
+    # whole surface reported as public). Keep the underscore check too.
+    type_elem = memberdef.find('type')
+    type_text = extract_para_text(type_elem) if type_elem is not None else ''
+    is_private = func_name.startswith('_') or 'eql_v3_internal' in type_text
 
     # Extract descriptions
     brief = extract_description(memberdef.find('briefdescription'))
