@@ -13,9 +13,9 @@ use serde::Serialize;
 #[derive(Serialize)]
 pub struct CatalogDump {
     pub types: Vec<TypeEntry>,
-    /// The `jsonb` (SteVec) family — `eql_v3.json` / `jsonb_entry` / `jsonb_query`.
-    /// Their SQL is hand-written under `src/v3/jsonb/`; the catalog owns only
-    /// their inventory (scalar-only consumers ignore this field).
+    /// The `jsonb` (SteVec) family — `public.json` / `public.jsonb_entry` /
+    /// `public.jsonb_query`. Their SQL is hand-written under `src/v3/jsonb/`; the
+    /// catalog owns only their inventory (scalar-only consumers ignore this field).
     pub stevec: Vec<SteVecEntry>,
 }
 
@@ -63,7 +63,8 @@ pub struct TermInfo {
 /// (CHECK, operators) is hand-written and not derivable from the catalog.
 #[derive(Serialize)]
 pub struct SteVecEntry {
-    /// The `eql_v3`-relative domain name: `json` / `jsonb_entry` / `jsonb_query`.
+    /// The bare domain name (resolved under the `public` schema, like a scalar's
+    /// `integer_eq`): `json` / `jsonb_entry` / `jsonb_query`.
     pub full_name: String,
     /// The catalog domain name: `json` / `entry` / `query`.
     pub name: &'static str,
@@ -79,6 +80,22 @@ fn term_infos(terms: &[Term]) -> Vec<TermInfo> {
             ctor: t.ctor(),
         })
         .collect()
+}
+
+/// Index terms for the `jsonb` (SteVec) family, hardcoded for now.
+///
+/// The catalog does not model per-SteVec-entry terms — `JSONB_DOMAINS` declare
+/// `terms: &[]` and the `shape_and_terms_are_consistent` invariant fails CI if a
+/// non-`Scalar` domain ever gains one — so `term_infos(d.terms)` is provably
+/// empty here, which would render the searchable SteVec family inert in the
+/// manifest. Until the catalog carries them, source the real hand-written
+/// extractors (`src/v3/jsonb/operators.sql`): every sv entry carries `hm`
+/// (hash-equality, `eql_v3.eq_term`) or `oc` (CLLW-ORE ordering, `eql_v3.ore_cllw`).
+fn stevec_terms() -> Vec<TermInfo> {
+    vec![
+        TermInfo { key: "hm", extractor: "eq_term", ctor: "hmac_256" },
+        TermInfo { key: "oc", extractor: "ore_cllw", ctor: "ore_cllw" },
+    ]
 }
 
 /// Build the catalog surface description from `eql_domains::CATALOG`.
@@ -120,7 +137,8 @@ pub fn dump_catalog() -> CatalogDump {
         .map(|d| SteVecEntry {
             full_name: d.full_name(eql_domains::JSONB.name),
             name: d.name,
-            terms: term_infos(d.terms),
+            // Catalog terms are empty for SteVec (see stevec_terms); hardcode.
+            terms: stevec_terms(),
         })
         .collect();
 
@@ -183,6 +201,11 @@ mod tests {
         let dump = dump_catalog();
         let names: Vec<&str> = dump.stevec.iter().map(|e| e.full_name.as_str()).collect();
         assert_eq!(names, ["json", "jsonb_entry", "jsonb_query"]);
+
+        // The (hardcoded) SteVec extractors are surfaced, not left empty.
+        let entry = &dump.stevec[0];
+        let extractors: Vec<&str> = entry.terms.iter().map(|t| t.extractor).collect();
+        assert_eq!(extractors, ["eq_term", "ore_cllw"]);
     }
 
     /// Pins the hand-re-derived `suffix` wire field — the one channel with no
