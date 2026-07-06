@@ -230,10 +230,10 @@ jobs:
           echo "Dispatching release-plz.yml --ref ${ref}"
           gh workflow run release-plz.yml --ref "$ref"
           {
-            echo "## Crate publish dispatched"
+            echo "## Crate publish dispatch accepted"
             echo ""
-            echo "Dispatched \`release-plz.yml\` against \`${ref}\`."
-            echo "Watch it separately: it runs as its own entry point."
+            echo "Crate publish DISPATCHED against \`${ref}\`."
+            echo "Verify the separate \`release-plz.yml\` run reaches a terminal success state before treating the crate as published."
           } >> "$GITHUB_STEP_SUMMARY"
 
   summary:
@@ -266,8 +266,8 @@ jobs:
             echo "- identity: \`${IDENTITY}\`"
             echo "- sql_tag: \`${SQL_TAG}\`"
             echo "- crate_tag: \`${CRATE_TAG}\`"
-            echo "- resolve: ${RESOLVE_RESULT} | pin: ${PIN_RESULT} | build-sql: ${BUILD_SQL_RESULT} | build-docs: ${BUILD_DOCS_RESULT} | crate-publish: ${CRATE_PUBLISH_RESULT}"
+            echo "- resolve: ${RESOLVE_RESULT} | pin: ${PIN_RESULT} | build-sql: ${BUILD_SQL_RESULT} | build-docs: ${BUILD_DOCS_RESULT} | crate-publish-dispatch: ${CRATE_PUBLISH_RESULT}"
             echo ""
             echo "Coordinator run: ${SERVER_URL}/${REPOSITORY}/actions/runs/${RUN_ID}"
-            echo "The crate publish, if dispatched, runs as a separate release-plz.yml run."
+            echo "Crate publish is only DISPATCHED by this coordinator. Verify the separate release-plz.yml run before treating the crate publish as successful."
           } >> "$GITHUB_STEP_SUMMARY"

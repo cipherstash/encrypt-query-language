@@ -82,7 +82,22 @@ check_commit() {
   rm -rf "$tmp"
 }
 
+check_push_target_keeps_token_out_of_url() {
+  local output
+  output="$(
+    GH_TOKEN=super-secret-token GITHUB_REPOSITORY=cipherstash/encrypt-query-language \
+      release_alpha_pin_push_target
+  )"
+  if [[ "$output" == "https://github.com/cipherstash/encrypt-query-language.git" && "$output" != *"super-secret-token"* ]]; then
+    echo "ok: authenticated push target keeps token out of URL"
+  else
+    echo "FAIL: push target exposed token or used unexpected URL: '$output'"
+    fail=1
+  fi
+}
+
 check_noop
 check_commit
+check_push_target_keeps_token_out_of_url
 
 exit "$fail"

@@ -10,15 +10,25 @@ release_alpha_pin_emit_commit_sha() {
 
 release_alpha_pin_push_target() {
   if [[ -n "${GH_TOKEN:-}" && -n "${GITHUB_REPOSITORY:-}" ]]; then
-    printf 'https://x-access-token:%s@github.com/%s.git\n' "$GH_TOKEN" "$GITHUB_REPOSITORY"
+    printf 'https://github.com/%s.git\n' "$GITHUB_REPOSITORY"
   else
     printf 'origin\n'
   fi
 }
 
+release_alpha_pin_push() {
+  local branch="$1" push_target
+  push_target="$(release_alpha_pin_push_target)"
+  if [[ -n "${GH_TOKEN:-}" && -n "${GITHUB_REPOSITORY:-}" ]]; then
+    git -c "http.https://github.com/.extraheader=AUTHORIZATION: bearer ${GH_TOKEN}" push "$push_target" "HEAD:${branch}"
+  else
+    git push "$push_target" "HEAD:${branch}"
+  fi
+}
+
 release_alpha_pin_bindings() {
   local identity="$1" branch="$2"
-  local commit_sha push_target
+  local commit_sha
   local commit_args=()
 
   release-plz set-version "eql-bindings@${identity}"
@@ -33,8 +43,7 @@ release_alpha_pin_bindings() {
       commit_args=(-S)
     fi
     git commit "${commit_args[@]}" -m "chore(release): pin eql-bindings to ${identity}"
-    push_target="$(release_alpha_pin_push_target)"
-    git push "$push_target" "HEAD:${branch}"
+    release_alpha_pin_push "$branch"
   fi
 
   commit_sha="$(git rev-parse HEAD)"
