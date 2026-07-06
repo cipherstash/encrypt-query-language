@@ -238,7 +238,7 @@ flowchart LR
     CLI --> B["bindings<br/>generate_bindings → Rust bindings"]
     CLI --> E["clean<br/>clean_all → remove generated SQL"]
     CLI --> C["list-types<br/>scalar_families() tokens, one per line"]
-    CLI --> F["list-schemas<br/>owned schemas (public first)"]
+    CLI --> F["list-schemas<br/>owned schemas (eql_v3 first)"]
     CLI --> D["dump-catalog<br/>JSON of types→domains→ops"]
 ```
 

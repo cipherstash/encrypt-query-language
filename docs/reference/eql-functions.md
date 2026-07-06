@@ -104,7 +104,7 @@ CREATE INDEX ON users USING btree (eql_v3.ord_term(salary_ord));
 CREATE INDEX ON users USING gin   (eql_v3.match_term(name_match));
 ```
 
-> The full per-domain operator / wrapper / blocker surface (and the `public.<T>` / `_eq` / `_ord` / `_ord_ore` domain types themselves) is documented in [SQL support](./sql-support.md#encrypted-domain-scalar-types-eql_v3t) and the [scalar encrypted-domain type reference](./adding-a-scalar-encrypted-domain-type.md).
+> The full per-domain operator / wrapper / blocker surface (and the `public.<T>` / `_eq` / `_ord` / `_ord_ore` domain types themselves) is documented in [SQL support](./sql-support.md#encrypted-domain-scalar-types-publict) and the [scalar encrypted-domain type reference](./adding-a-scalar-encrypted-domain-type.md).
 
 The `public.json` document type extracts entry-level terms with `eql_v3.eq_term(public.jsonb_entry)` and `eql_v3.ore_cllw(public.jsonb_entry)` — see [json-support.md](./json-support.md).
 

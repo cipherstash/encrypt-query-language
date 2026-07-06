@@ -800,7 +800,7 @@ runs as `cargo run -p eql-codegen` (no subcommand), which calls
 `src/v3/scalars/<token>/`. Five subcommands round out the surface:
 `list-types` prints the catalog tokens one per line (consumed by the fixture
 and matrix-inventory enumeration); `list-schemas` prints the schemas the
-`eql_v3` surface owns, public first (consumed by `mise run test:schemas:parity`);
+`eql_v3` surface owns (`eql_v3`, then `eql_v3_internal`; consumed by `mise run test:schemas:parity`);
 `dump-catalog` prints the catalog surface
 (types → domains → supported operators) as JSON (consumed by the
 catalog-coverage / log-verification gates); `bindings` regenerates the
