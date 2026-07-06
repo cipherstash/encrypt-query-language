@@ -59,6 +59,7 @@ jobs:
           set -euo pipefail
           mise run docs:generate
           mise run docs:generate:markdown -- "${TAG}"
+          mise run docs:generate:json -- "${TAG}"
 
       - name: Package documentation
         env:

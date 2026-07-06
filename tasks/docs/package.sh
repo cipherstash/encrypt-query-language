@@ -28,6 +28,12 @@ if [ ! -d "${DOCS_DIR}/xml" ] || [ -z "$(ls -A ${DOCS_DIR}/xml/*.xml 2>/dev/null
   exit 1
 fi
 
+if [ ! -f "${DOCS_DIR}/json/eql-manifest.json" ]; then
+  echo "Error: ${DOCS_DIR}/json/eql-manifest.json not found"
+  echo "Run 'mise run docs:generate:json' first to generate the JSON manifest"
+  exit 1
+fi
+
 
 
 # Create output directory
@@ -38,11 +44,11 @@ echo "Creating archives..."
 cd "${DOCS_DIR}"
 
 # Create ZIP archive with all documentation formats
-zip -r -q "../../${OUTPUT_DIR}/eql-docs-${VERSION}.zip" markdown/API.md xml/*.xml html/
+zip -r -q "../../${OUTPUT_DIR}/eql-docs-${VERSION}.zip" markdown/API.md json/eql-manifest.json xml/*.xml html/
 echo "Created ${OUTPUT_DIR}/eql-docs-${VERSION}.zip"
 
 # Create tarball with all documentation formats
-tar czf "../../${OUTPUT_DIR}/eql-docs-${VERSION}.tar.gz" markdown/API.md xml/ html/
+tar czf "../../${OUTPUT_DIR}/eql-docs-${VERSION}.tar.gz" markdown/API.md json/ xml/ html/
 echo "Created ${OUTPUT_DIR}/eql-docs-${VERSION}.tar.gz"
 
 cd ../..
