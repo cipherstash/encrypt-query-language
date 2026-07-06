@@ -8,10 +8,12 @@ Read top-down to ship a type; drop into the reference half when something
 breaks or you need the *why*.
 
 A scalar encrypted-domain type is a family of concrete `jsonb` domains in the
-**`eql_v3`** schema (`eql_v3.<token>`, `eql_v3.<token>_eq`,
-`eql_v3.<token>_ord`, …), dropped by `DROP SCHEMA eql_v3 CASCADE`. Their
+**`public`** schema (`public.<token>`, `public.<token>_eq`,
+`public.<token>_ord`, …). The domains deliberately live in `public`, **not**
+`eql_v3`, so that application columns typed as an encrypted domain survive an
+uninstall: `DROP SCHEMA eql_v3 CASCADE` does **not** drop them. Their
 extractors, comparison wrappers, and MIN/MAX
-aggregates also live in `eql_v3`; the searchable-encrypted-metadata (SEM)
+aggregates — the callable surface — do live in `eql_v3`; the searchable-encrypted-metadata (SEM)
 index-term types they return (`eql_v3_internal.hmac_256`,
 `eql_v3_internal.ore_block_256`, `eql_v3_internal.ope_cllw`) live in the
 **`eql_v3_internal`** schema — hand-written under
@@ -40,7 +42,7 @@ To add a scalar type `<T>` (e.g. `bigint`), with Rust type `<R>` (e.g. `i64`):
    plaintext fixture `values`) in the `fixtures` module (§2). If the type needs a
    new scalar width, add a `ScalarKind` variant first; if it needs new term
    behaviour, that goes in the `Term` enum's `impl`, never in catalog data.
-2. **Materialise the value list** — `int_values!(<T_UPPER>_VALUES, <R>, <T_UPPER>);`
+2. **Materialise the value list** — `int_values!(<T_UPPER>_VALUES, <R>, <T_UPPER>_FIXTURES);`
    next to `CATALOG`, pinned by a `values_tests` assertion (§2). This is the
    single source the SQLx matrix reads; there is no generated `<T>_values.rs`.
 3. **Wire the SQLx matrix oracle** — for an integer type, copy the two small
@@ -98,15 +100,15 @@ with a `TypeFixtures` record in
 
 ```rust
 // The structural catalog row — name + domains only:
-const INT4: DomainFamily = DomainFamily {
+const INTEGER: DomainFamily = DomainFamily {
     name: "integer",
     domains: ORDERED_INT_DOMAINS, // storage, _eq (hm), _ord_ore (ore), _ord (ore), _ord_ope (ope)
 };
 
 // The fixture-layer record — kind + plaintext values — joined back to the
 // catalog row by `family.name`:
-pub const INT4_FIXTURES: TypeFixtures = TypeFixtures {
-    family: &crate::INT4,
+pub const INTEGER_FIXTURES: TypeFixtures = TypeFixtures {
+    family: &crate::INTEGER,
     kind: ScalarKind::I32,
     values: fixtures!(int i32;
         Min, N(-100), N(-1), Zero, N(1), N(2), N(5), N(10), N(17), N(25),
@@ -212,7 +214,7 @@ range-checks each `Int` literal against the kind at compile time (`N(-40000)`
 for an `i16` kind does not compile):
 
 ```rust
-// the `values:` expression of INT4_FIXTURES (a `TypeFixtures`):
+// the `values:` expression of INTEGER_FIXTURES (a `TypeFixtures`):
 values: fixtures!(int i32;
     Min, N(-100), N(-1), Zero, N(1), N(2), N(5), N(10), N(17), N(25),
     N(42), N(50), N(100), N(250), N(1000), N(9999), Max),
@@ -237,10 +239,10 @@ result counts, include useful boundaries, and cover omitted-term negative cases.
 
 The plaintext list is **not** rendered to a generated file. The `int_values!`
 macro (in `crates/eql-domains/src/fixtures/values.rs`) materialises a `Fixture` list into a typed `pub const
-<T_UPPER>_VALUES: &[<rust_type>]` at compile time (`INT4_VALUES`, `INT2_VALUES`):
+<T_UPPER>_VALUES: &[<rust_type>]` at compile time (`INTEGER_VALUES`, `SMALLINT_VALUES`):
 
 ```rust
-int_values!(INT4_VALUES, i32, INT4_FIXTURES);
+int_values!(INTEGER_VALUES, i32, INTEGER_FIXTURES);
 ```
 
 Both consumers reference that single symbol — the fixture generator
@@ -538,7 +540,7 @@ This is the contract the generated SQL satisfies. You normally never read it to
 
 The generator emits `src/v3/scalars/<T>/<T>_types.sql` (committed in place;
 regenerated on every build) with one idempotent `DO $$ ... $$` block. Every
-domain is a concrete domain over `jsonb` in the `eql_v3` schema — **never**
+domain is a concrete domain over `jsonb` in the `public` schema — **never**
 `CREATE DOMAIN a AS b` over another generated domain (PostgreSQL resolves
 operators against the underlying base type, bypassing the fixed surface). Each
 domain's `CHECK` requires:
@@ -737,7 +739,7 @@ unreachable. Invariants encoded in the renderers / templates and guarded by
 - **SQL-literal injection is structurally prevented** — every interpolated
   single-quoted literal passes through `sql_str`
   (`crates/eql-codegen/src/consts.rs`), which doubles embedded single quotes.
-- **No domain-over-domain** — every domain is `CREATE DOMAIN eql_v3.<name> AS
+- **No domain-over-domain** — every domain is `CREATE DOMAIN public.<name> AS
   jsonb` (`types_file_has_all_five_domains`).
 - **No operator class on a domain** — the generator emits operators, not
   operator classes.
@@ -795,19 +797,25 @@ ninety hand-written declarations that must agree with each other and with
 runs as `cargo run -p eql-codegen` (no subcommand), which calls
 `generate::generate_all` (`crates/eql-codegen/src/generate.rs`) over every row of
 `eql_domains::CATALOG`, writing each type's SQL into
-`src/v3/scalars/<token>/`. Three subcommands round out the surface:
-`-- list-types` prints the catalog tokens one per line (consumed by the fixture
-and matrix-inventory enumeration); `-- dump-catalog` prints the catalog surface
+`src/v3/scalars/<token>/`. Five subcommands round out the surface:
+`list-types` prints the catalog tokens one per line (consumed by the fixture
+and matrix-inventory enumeration); `list-schemas` prints the schemas the
+`eql_v3` surface owns, public first (consumed by `mise run test:schemas:parity`);
+`dump-catalog` prints the catalog surface
 (types → domains → supported operators) as JSON (consumed by the
-catalog-coverage / log-verification gates); and `-- bindings` regenerates the
+catalog-coverage / log-verification gates); `bindings` regenerates the
 committed `eql-bindings` Rust payload types (the first step of `mise run
-types:generate`). `main` (`crates/eql-codegen/src/main.rs`) recognises exactly
-these four forms (no-arg generate-all, `list-types`, `dump-catalog`,
-`bindings`); any other argument is a usage error.
+types:generate`); and `clean` removes the generated SQL surface (marker-aware).
+`main` (`crates/eql-codegen/src/main.rs`) recognises exactly
+these six forms (no-arg generate-all, `list-types`, `list-schemas`,
+`dump-catalog`, `bindings`, `clean`); any other argument is a usage error.
 
-The generator targets two schemas: `SCHEMA = "eql_v3"`
-(`crates/eql-codegen/src/consts.rs`) qualifies the domain families and the
-public callable surface, while `INTERNAL_SCHEMA = "eql_v3_internal"` qualifies
+The generator targets three schemas. The **domain families themselves are
+created in `public`** (`CREATE DOMAIN public.<name> AS jsonb`) so application
+columns survive an `eql_v3` uninstall. `SCHEMA = "eql_v3"`
+(`crates/eql-codegen/src/consts.rs`) qualifies only the **callable surface** —
+the extractors, comparison wrappers, and aggregates — while
+`INTERNAL_SCHEMA = "eql_v3_internal"` qualifies
 the SEM index-term types the extractors return (`eql_v3_internal.hmac_256`,
 `eql_v3_internal.ore_block_256`, `eql_v3_internal.ope_cllw`) and the aggregate
 state functions, so the generated SQL is entirely self-contained within the two
@@ -969,8 +977,8 @@ What makes it storage-only:
   term-less storage domain); it is *also* `is_eq_only()` (no `_ord`), so the
   harness checks storage-only **first**.
 - **Generator: no changes needed.** The SQL generator already handles a
-  zero-term, single-domain type — it emits exactly three files (`bool_types.sql`,
-  `bool_functions.sql`, `bool_operators.sql`; no `_aggregates.sql`, since no
+  zero-term, single-domain type — it emits exactly three files (`boolean_types.sql`,
+  `boolean_functions.sql`, `boolean_operators.sql`; no `_aggregates.sql`, since no
   ordered domain). All 44 functions are `plpgsql` blockers, all 44 `CREATE OPERATOR` statements back
   onto them: every comparison/containment/path operator reachable through domain
   fallback raises. The domain `CHECK` still pins `{v,i,c}` + `VALUE->>'v' = '3'`.
@@ -1005,6 +1013,6 @@ What makes it storage-only:
   (`shape="storage_only"`).
 
 Everything else is the standard path: one catalog row, regenerate, commit the
-generated `src/v3/scalars/bool/` SQL (3 files), no edits to
+generated `src/v3/scalars/boolean/` SQL (3 files), no edits to
 `pin_search_path_v3.sql` or `splinter.sh` (a storage-only type emits only blockers
 — no extractors/wrappers/aggregates, so no new inline-critical names).

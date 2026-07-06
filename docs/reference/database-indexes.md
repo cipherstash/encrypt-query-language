@@ -23,11 +23,11 @@ The model is simple and uniform across every encrypted-domain type: **index a fu
 Each capability has one canonical functional-index recipe. Type the column as the domain variant that carries the term (see [SQL support matrix](./sql-support.md)), then index the matching extractor:
 
 ```sql
--- Equality (hash index on the eq_term extractor) — eql_v3.<T>_eq / _ord / text_search
+-- Equality (hash index on the eq_term extractor) — public.<T>_eq / _ord / text_search
 CREATE INDEX users_email_eq
   ON users USING hash (eql_v3.eq_term(encrypted_email));
 
--- Ordering / range (btree index on the ord_term extractor) — eql_v3.<T>_ord / _ord_ore
+-- Ordering / range (btree index on the ord_term extractor) — public.<T>_ord / _ord_ore
 CREATE INDEX events_at_ord
   ON events USING btree (eql_v3.ord_term(encrypted_at));
 
@@ -72,8 +72,8 @@ For PostgreSQL to use a functional index on an encrypted column, **all** of thes
 
 Capability travels in the payload, chosen by the encryption client and reflected in the column's domain variant:
 
-- **Equality** needs an `hm` (hmac_256) term — `eql_v3.<T>_eq`, `eql_v3.<T>_ord`, or `public.text_search`.
-- **Range / ordering** needs an `ob` (ore_block_256) term — `eql_v3.<T>_ord` / `_ord_ore` or `public.text_search`.
+- **Equality** needs an `hm` (hmac_256) term — `public.<T>_eq`, `public.<T>_ord`, or `public.text_search`.
+- **Range / ordering** needs an `ob` (ore_block_256) term — `public.<T>_ord` / `_ord_ore` or `public.text_search`.
 - **Text containment** needs a `bf` (bloom_filter) term — `public.text_match` or `public.text_search`.
 
 A value with only a bloom term will not drive an equality index, and vice versa.
@@ -101,7 +101,7 @@ WHERE encrypted_email = '{"hm":"abc"}'::jsonb;
 
 ### Equality Queries
 
-A column typed `eql_v3.<T>_eq` (or `_ord`, or `text_search`) with a hash index on `eql_v3.eq_term(col)`:
+A column typed `public.<T>_eq` (or `_ord`, or `text_search`) with a hash index on `eql_v3.eq_term(col)`:
 
 ```sql
 CREATE INDEX users_email_eq ON users USING hash (eql_v3.eq_term(encrypted_email));

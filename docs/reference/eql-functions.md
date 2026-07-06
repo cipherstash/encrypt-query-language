@@ -1,6 +1,6 @@
 # EQL Functions Reference
 
-A reference for the functions and operators EQL exposes for querying encrypted data in PostgreSQL. The surface lives in the **`eql_v3`** schema and is organised around the per-scalar encrypted-domain types (`eql_v3.<T>` and variants) and the encrypted-JSON document type (`public.json`).
+A reference for the functions and operators EQL exposes for querying encrypted data in PostgreSQL. The surface lives in the **`eql_v3`** schema and is organised around the per-scalar encrypted-domain types (`public.<T>` and variants) and the encrypted-JSON document type (`public.json`).
 
 > **There is no database-side configuration API.** Which index terms a value carries is chosen by the encryption client ([CipherStash Proxy](https://github.com/cipherstash/proxy) / [CipherStash Stack](https://github.com/cipherstash/stack)); a column's capability is fixed by the **domain variant** you type it as. See [SQL support matrix](./sql-support.md) for the variant/operator table.
 
@@ -20,7 +20,7 @@ EQL overloads standard PostgreSQL operators on the encrypted-domain types. Type 
 
 ### Equality — `=` `<>`
 
-On `eql_v3.<T>_eq`, `eql_v3.<T>_ord` / `_ord_ore`, and `public.text_search` (carry an `hm` term):
+On `public.<T>_eq`, `public.<T>_ord` / `_ord_ore`, and `public.text_search` (carry an `hm` term):
 
 ```sql
 SELECT * FROM users WHERE encrypted_email = $1;
@@ -30,7 +30,7 @@ SELECT * FROM users WHERE encrypted_email <> $1;
 
 ### Range — `<` `<=` `>` `>=`
 
-On `eql_v3.<T>_ord` / `_ord_ore` and `public.text_search` (carry an `ob` ORE term):
+On `public.<T>_ord` / `_ord_ore` and `public.text_search` (carry an `ob` ORE term):
 
 ```sql
 SELECT * FROM events WHERE encrypted_at <  $1::public.timestamp_ord;
@@ -84,16 +84,16 @@ There are no `like` / `ilike` function forms — text matching is `eql_v3.contai
 
 ## Index Term Extraction
 
-These extract the index term from an encrypted-domain value. They are generated per eq/ord/match-capable variant of every scalar type, are inlinable (so a functional index on the extractor engages), and return the self-contained `eql_v3` SEM index-term types. See [Adding a Scalar Encrypted-Domain Type](./adding-a-scalar-encrypted-domain-type.md).
+These extract the index term from an encrypted-domain value. They are generated per eq/ord/match-capable variant of every scalar type, are inlinable (so a functional index on the extractor engages), and return the self-contained `eql_v3_internal` SEM index-term types. See [Adding a Scalar Encrypted-Domain Type](./adding-a-scalar-encrypted-domain-type.md).
 
 ```sql
 -- Equality term (hm)
-eql_v3.eq_term(a public.integer_eq)        RETURNS eql_v3.hmac_256
+eql_v3.eq_term(a public.integer_eq)        RETURNS eql_v3_internal.hmac_256
 -- Ordering term (ob)
-eql_v3.ord_term(a public.integer_ord)      RETURNS eql_v3.ore_block_256
-eql_v3.ord_term(a public.integer_ord_ore)  RETURNS eql_v3.ore_block_256
+eql_v3.ord_term(a public.integer_ord)      RETURNS eql_v3_internal.ore_block_256
+eql_v3.ord_term(a public.integer_ord_ore)  RETURNS eql_v3_internal.ore_block_256
 -- Text-match term (bf)
-eql_v3.match_term(a public.text_match)  RETURNS eql_v3.bloom_filter
+eql_v3.match_term(a public.text_match)  RETURNS eql_v3_internal.bloom_filter
 ```
 
 **Example — functional indexes on the extracted terms** (see [Database Indexes](./database-indexes.md)):
@@ -104,7 +104,7 @@ CREATE INDEX ON users USING btree (eql_v3.ord_term(salary_ord));
 CREATE INDEX ON users USING gin   (eql_v3.match_term(name_match));
 ```
 
-> The full per-domain operator / wrapper / blocker surface (and the `eql_v3.<T>` / `_eq` / `_ord` / `_ord_ore` domain types themselves) is documented in [SQL support](./sql-support.md#encrypted-domain-scalar-types-eql_v3t) and the [scalar encrypted-domain type reference](./adding-a-scalar-encrypted-domain-type.md).
+> The full per-domain operator / wrapper / blocker surface (and the `public.<T>` / `_eq` / `_ord` / `_ord_ore` domain types themselves) is documented in [SQL support](./sql-support.md#encrypted-domain-scalar-types-eql_v3t) and the [scalar encrypted-domain type reference](./adding-a-scalar-encrypted-domain-type.md).
 
 The `public.json` document type extracts entry-level terms with `eql_v3.eq_term(public.jsonb_entry)` and `eql_v3.ore_cllw(public.jsonb_entry)` — see [json-support.md](./json-support.md).
 
@@ -120,7 +120,7 @@ The full encrypted-JSONB function surface — containment, `->` / `->>`, `eql_v3
 
 ### `eql_v3.min()` / `eql_v3.max()` (per-domain)
 
-Returns the minimum or maximum encrypted value on an ordered encrypted-domain column. Defined per ord-capable variant of every scalar type (`eql_v3.<T>_ord`, `eql_v3.<T>_ord_ore`); the input type selects the aggregate via PostgreSQL's overload resolution.
+Returns the minimum or maximum encrypted value on an ordered encrypted-domain column. Defined per ord-capable variant of every scalar type (`public.<T>_ord`, `public.<T>_ord_ore`); the input type selects the aggregate via PostgreSQL's overload resolution.
 
 ```sql
 -- integer — generated for every ordered variant of every scalar type.
