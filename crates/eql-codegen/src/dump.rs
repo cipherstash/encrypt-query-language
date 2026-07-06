@@ -93,8 +93,16 @@ fn term_infos(terms: &[Term]) -> Vec<TermInfo> {
 /// (hash-equality, `eql_v3.eq_term`) or `oc` (CLLW-ORE ordering, `eql_v3.ore_cllw`).
 fn stevec_terms() -> Vec<TermInfo> {
     vec![
-        TermInfo { key: "hm", extractor: "eq_term", ctor: "hmac_256" },
-        TermInfo { key: "oc", extractor: "ore_cllw", ctor: "ore_cllw" },
+        TermInfo {
+            key: "hm",
+            extractor: "eq_term",
+            ctor: "hmac_256",
+        },
+        TermInfo {
+            key: "oc",
+            extractor: "ore_cllw",
+            ctor: "ore_cllw",
+        },
     ]
 }
 
