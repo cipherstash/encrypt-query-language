@@ -12,16 +12,15 @@ hand-written reference.
 Reuses the extraction in xml-to-markdown.py so the manifest and the Markdown
 reference can never diverge in how they read the XML.
 
-Doxygen does not extract CREATE DOMAIN, so the manifest also parses the
-generated domain SQL to emit the encrypted domain/variant matrix (the core of
-the EQL v3 surface) — each domain's capability derived from its CHECK keys.
+Doxygen does not extract CREATE DOMAIN, so the manifest reads the encrypted
+domain/variant matrix (the core of the EQL v3 surface) straight from the Rust
+catalog via `eql-codegen dump-catalog` — authoritative type names + operators.
 
-Usage: xml-to-json.py <xml_dir> [output_dir] [version] [sql_src_dir]
+Usage: xml-to-json.py <xml_dir> [output_dir] [version] [catalog_json]
 """
 
 import importlib.util
 import json
-import re
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -68,96 +67,50 @@ def _to_entry(func):
     }
 
 
-# ── Encrypted domains ────────────────────────────────────────────────────────
-# Doxygen does not extract CREATE DOMAIN, but the domain/variant matrix is the
-# core of the EQL v3 surface. The generated `*_types.sql` (source of truth: the
-# Rust catalog in crates/eql-domains) encodes each domain's capability
-# STRUCTURALLY as the required CHECK keys, so we derive it directly:
-#   hm = HMAC equality · ob = ORE order · op = OPE order · bf = bloom match ·
-#   sv = STE-vec (JSON). v/i/c are the envelope, not index terms.
-_ENVELOPE_KEYS = {"v", "i", "c", "k"}
-_TERM_CAPABILITY = {
-    "hm": "equality",
-    "ob": "order",
-    "op": "order",
-    "bf": "match",
-    "sv": "json",
-}
-# Term -> extractor function (from crates/eql-domains/src/term.rs).
-_TERM_FUNCTION = {
-    "hm": "eql_v3.hmac_256",
-    "ob": "eql_v3.ore_block_256",
-    "bf": "eql_v3.bloom_filter",
-}
-# Longest-first so `_ord_ore` wins over `_ord`.
-_VARIANT_SUFFIXES = ("_ord_ore", "_ord_ope", "_ord", "_eq", "_match", "_search")
-
-_DOMAIN_RE = re.compile(r"CREATE DOMAIN eql_v3\.([a-z0-9_]+)\s+AS\s+([a-z_]+)", re.I)
-_KEY_RE = re.compile(r"VALUE \? '([a-z0-9]+)'")
-_BRIEF_RE = re.compile(r"--!\s*@brief\s+(.*)")
+# ── Encrypted domains (from the Rust catalog) ────────────────────────────────
+# The domain/variant matrix is the core of the EQL v3 surface. Rather than parse
+# the generated SQL (one step removed, format-fragile), read it straight from the
+# source of truth: `eql-codegen dump-catalog` serializes eql_domains::CATALOG —
+# authoritative type tokens plus the exact SQL operators each domain supports.
+def _capabilities_from_ops(ops):
+    caps = []
+    if any(o in ops for o in ("=", "<>")):
+        caps.append("equality")
+    if any(o in ops for o in ("<", "<=", ">", ">=")):
+        caps.append("order")
+    if any(o in ops for o in ("@>", "<@")):
+        caps.append("match")
+    return caps or ["storage"]
 
 
-def _build_domain(name, base, brief, terms, source_file, line):
-    scalar_type, variant = name, ""
-    for suffix in _VARIANT_SUFFIXES:
-        if name.endswith(suffix):
-            scalar_type, variant = name[: -len(suffix)], suffix[1:]
-            break
-
-    capabilities = []
-    for term in terms:
-        cap = _TERM_CAPABILITY.get(term)
-        if cap and cap not in capabilities:
-            capabilities.append(cap)
-    if not capabilities:
-        capabilities = ["storage"]
-
-    return {
-        "name": f"eql_v3.{name}",
-        "type": scalar_type,
-        "variant": variant,
-        "base": base,
-        "brief": brief,
-        "terms": terms,
-        "capabilities": capabilities,
-        "termFunctions": [_TERM_FUNCTION[t] for t in terms if t in _TERM_FUNCTION],
-        "source": {"file": str(source_file), "line": line},
-    }
-
-
-def parse_domains(src_dir: Path) -> list:
-    """Extract eql_v3 CREATE DOMAIN definitions + their capability from the SQL."""
-    if not src_dir.exists():
-        print(f"Warning: SQL source dir not found: {src_dir}; skipping domains", file=sys.stderr)
+def load_domains(catalog_path: Path) -> list:
+    """Map `eql-codegen dump-catalog` JSON into manifest domain entries."""
+    if not catalog_path.exists():
+        print(f"Warning: catalog dump not found: {catalog_path}; skipping domains", file=sys.stderr)
         return []
 
+    catalog = json.loads(catalog_path.read_text())
     domains = []
-    for sql_file in sorted(src_dir.rglob("*.sql")):
-        lines = sql_file.read_text().splitlines()
-        last_brief = ""
-        for i, line in enumerate(lines):
-            brief_match = _BRIEF_RE.search(line)
-            if brief_match:
-                last_brief = brief_match.group(1).strip()
-            domain_match = _DOMAIN_RE.search(line)
-            if not domain_match:
-                continue
-            name, base = domain_match.group(1), domain_match.group(2)
-            # Collect CHECK keys until the block closes or the next domain begins.
-            keys = []
-            for follow in lines[i + 1:]:
-                if _DOMAIN_RE.search(follow) or re.match(r"\s*\);", follow):
-                    break
-                keys.extend(_KEY_RE.findall(follow))
-            terms = [k for k in dict.fromkeys(keys) if k not in _ENVELOPE_KEYS]
-            domains.append(_build_domain(name, base, last_brief, terms, sql_file, i + 1))
-            last_brief = ""
-
+    for type_entry in catalog.get("types", []):
+        token = type_entry["token"]
+        for dom in type_entry["domains"]:
+            suffix = dom.get("suffix", "")
+            ops = dom.get("supported_ops", [])
+            domains.append({
+                # v3 user domains live in the `public` schema (public-domain
+                # migration on eql_v3); the catalog dump emits the bare token.
+                "name": f"public.{token}{suffix}",
+                "type": token,
+                "variant": suffix.lstrip("_"),
+                "base": "jsonb",
+                "capabilities": _capabilities_from_ops(ops),
+                "supportedOperators": ops,
+            })
     domains.sort(key=lambda d: (d["type"], d["name"]))
     return domains
 
 
-def build_manifest(xml_dir: Path, version: str, src_dir: Path = Path("src/v3")) -> dict:
+def build_manifest(xml_dir: Path, version: str, catalog_path: Path = Path("docs/api/json/eql-catalog.json")) -> dict:
     functions = []
     for xml_file in sorted(xml_dir.glob("*.xml")):
         if xml_file.name in ("index.xml", "Doxyfile.xml"):
@@ -173,13 +126,13 @@ def build_manifest(xml_dir: Path, version: str, src_dir: Path = Path("src/v3")) 
                 functions.append(func)
 
     functions.sort(key=lambda f: (f["is_private"], f["name"], f["signature"]))
-    domains = parse_domains(src_dir)
+    domains = load_domains(catalog_path)
 
     return {
         "$schema": "https://schemas.cipherstash.com/eql/manifest/v1.json",
         "name": "eql",
         "version": version,
-        "generatedFrom": "doxygen-xml + sql-domains",
+        "generatedFrom": "doxygen-xml + catalog",
         "counts": {
             "functions": len(functions),
             "public": sum(1 for f in functions if not f["is_private"]),
@@ -193,19 +146,21 @@ def build_manifest(xml_dir: Path, version: str, src_dir: Path = Path("src/v3")) 
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: xml-to-json.py <xml_dir> [output_dir] [version] [sql_src_dir]")
+        print("Usage: xml-to-json.py <xml_dir> [output_dir] [version] [catalog_json]")
         sys.exit(1)
 
     xml_dir = Path(sys.argv[1])
     output_dir = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("docs/api/json")
     version = sys.argv[3] if len(sys.argv) > 3 else "DEV"
-    src_dir = Path(sys.argv[4]) if len(sys.argv) > 4 else Path("src/v3")
+    catalog_path = (
+        Path(sys.argv[4]) if len(sys.argv) > 4 else Path("docs/api/json/eql-catalog.json")
+    )
 
     if not xml_dir.exists():
         print(f"Error: XML directory not found: {xml_dir}")
         sys.exit(1)
 
-    manifest = build_manifest(xml_dir, version, src_dir)
+    manifest = build_manifest(xml_dir, version, catalog_path)
     output_dir.mkdir(parents=True, exist_ok=True)
     output_file = output_dir / "eql-manifest.json"
     output_file.write_text(json.dumps(manifest, indent=2) + "\n")

@@ -18,23 +18,19 @@ _spec = importlib.util.spec_from_file_location(
 _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)
 build_manifest = _mod.build_manifest
-parse_domains = _mod.parse_domains
+load_domains = _mod.load_domains
 
-DOMAIN_SQL = """DO $$
-BEGIN
-  --! @brief Encrypted domain eql_v3.text_eq.
-  IF NOT EXISTS (SELECT 1) THEN
-    CREATE DOMAIN eql_v3.text_eq AS jsonb
-      CHECK (
-        jsonb_typeof(VALUE) = 'object'
-        AND VALUE ? 'v'
-        AND VALUE ? 'i'
-        AND VALUE ? 'c'
-        AND VALUE ? 'hm'
-        AND VALUE->>'v' = '3'
-      );
-  END IF;
-END $$;"""
+# Shape of `eql-codegen dump-catalog` output.
+CATALOG_JSON = """{
+  "types": [
+    { "token": "text", "is_eq_only": false, "domains": [
+      { "segment": "storage", "suffix": "", "supported_ops": [] },
+      { "segment": "eq", "suffix": "_eq", "supported_ops": ["=", "<>"] },
+      { "segment": "search", "suffix": "_search",
+        "supported_ops": ["=", "<>", "<", "<=", ">", ">=", "@>", "<@"] }
+    ]}
+  ]
+}"""
 
 SAMPLE_XML = """<?xml version="1.0"?>
 <doxygen>
@@ -67,7 +63,10 @@ SAMPLE_XML = """<?xml version="1.0"?>
 def test_build_manifest_shape():
     with tempfile.TemporaryDirectory() as d:
         (Path(d) / "hmac.xml").write_text(SAMPLE_XML)
-        manifest = build_manifest(Path(d), "1.2.3", src_dir=Path(d))
+        (Path(d) / "empty-catalog.json").write_text('{"types": []}')
+        manifest = build_manifest(
+            Path(d), "1.2.3", catalog_path=Path(d) / "empty-catalog.json"
+        )
 
     assert manifest["name"] == "eql"
     assert manifest["version"] == "1.2.3"
@@ -94,24 +93,24 @@ def test_skips_index_and_doxyfile():
     assert manifest["counts"]["functions"] == 0
 
 
-def test_parse_domains():
+def test_load_domains():
     with tempfile.TemporaryDirectory() as d:
-        (Path(d) / "text_types.sql").write_text(DOMAIN_SQL)
-        domains = parse_domains(Path(d))
+        cat = Path(d) / "eql-catalog.json"
+        cat.write_text(CATALOG_JSON)
+        domains = load_domains(cat)
 
-    assert len(domains) == 1
-    dm = domains[0]
-    assert dm["name"] == "eql_v3.text_eq"
-    assert dm["type"] == "text"
-    assert dm["variant"] == "eq"
-    assert dm["terms"] == ["hm"]  # envelope keys (v/i/c) excluded
-    assert dm["capabilities"] == ["equality"]
-    assert dm["termFunctions"] == ["eql_v3.hmac_256"]
-    assert dm["brief"] == "Encrypted domain eql_v3.text_eq."
+    by_name = {x["name"]: x for x in domains}
+    assert by_name["public.text"]["capabilities"] == ["storage"]
+    assert by_name["public.text_eq"]["type"] == "text"
+    assert by_name["public.text_eq"]["variant"] == "eq"
+    assert by_name["public.text_eq"]["capabilities"] == ["equality"]
+    assert by_name["public.text_eq"]["supportedOperators"] == ["=", "<>"]
+    # text_search carries all three capabilities, derived from its operators.
+    assert by_name["public.text_search"]["capabilities"] == ["equality", "order", "match"]
 
 
 if __name__ == "__main__":
     test_build_manifest_shape()
     test_skips_index_and_doxyfile()
-    test_parse_domains()
+    test_load_domains()
     print("✓ all tests passed")
