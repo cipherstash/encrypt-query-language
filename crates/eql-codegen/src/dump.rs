@@ -68,6 +68,9 @@ pub struct SteVecEntry {
     pub full_name: String,
     /// The catalog domain name: `json` / `entry` / `query`.
     pub name: &'static str,
+    /// Index terms for this SteVec domain. Non-empty only for `jsonb_entry`
+    /// (the sv element type); the `json` container and `jsonb_query` domains
+    /// carry no term extractors — see `stevec_terms`.
     pub terms: Vec<TermInfo>,
 }
 
@@ -82,16 +85,24 @@ fn term_infos(terms: &[Term]) -> Vec<TermInfo> {
         .collect()
 }
 
-/// Index terms for the `jsonb` (SteVec) family, hardcoded for now.
+/// Index terms for one `jsonb` (SteVec) domain, hardcoded for now.
 ///
 /// The catalog does not model per-SteVec-entry terms — `JSONB_DOMAINS` declare
 /// `terms: &[]` and the `shape_and_terms_are_consistent` invariant fails CI if a
 /// non-`Scalar` domain ever gains one — so `term_infos(d.terms)` is provably
-/// empty here, which would render the searchable SteVec family inert in the
-/// manifest. Until the catalog carries them, source the real hand-written
-/// extractors (`src/v3/jsonb/operators.sql`): every sv entry carries `hm`
-/// (hash-equality, `eql_v3.eq_term`) or `oc` (CLLW-ORE ordering, `eql_v3.ore_cllw`).
-fn stevec_terms() -> Vec<TermInfo> {
+/// empty here. Until the catalog carries them, source the real hand-written
+/// extractors from `src/v3/jsonb/{functions,operators}.sql`.
+///
+/// Terms live on `jsonb_entry` — the sv *element* type — ONLY: `eql_v3.eq_term`
+/// reads `coalesce(hm, oc)` for `=`/`<>`, and `eql_v3.ore_cllw` reads `oc` for
+/// `<`/`<=`/`>`/`>=`. The `json` container and `jsonb_query` domains carry no
+/// term extractors (their surface is containment `@>`/`<@` and path navigation),
+/// so they return no terms. Keyed on the catalog domain name (`json`/`entry`/
+/// `query`).
+fn stevec_terms(name: &str) -> Vec<TermInfo> {
+    if name != "entry" {
+        return Vec::new();
+    }
     vec![
         TermInfo {
             key: "hm",
@@ -145,8 +156,9 @@ pub fn dump_catalog() -> CatalogDump {
         .map(|d| SteVecEntry {
             full_name: d.full_name(eql_domains::JSONB.name),
             name: d.name,
-            // Catalog terms are empty for SteVec (see stevec_terms); hardcode.
-            terms: stevec_terms(),
+            // Catalog terms are empty for SteVec; hardcode per-domain — only
+            // `jsonb_entry` carries extractors (see stevec_terms).
+            terms: stevec_terms(d.name),
         })
         .collect();
 
@@ -210,10 +222,26 @@ mod tests {
         let names: Vec<&str> = dump.stevec.iter().map(|e| e.full_name.as_str()).collect();
         assert_eq!(names, ["json", "jsonb_entry", "jsonb_query"]);
 
-        // The (hardcoded) SteVec extractors are surfaced, not left empty.
-        let entry = &dump.stevec[0];
-        let extractors: Vec<&str> = entry.terms.iter().map(|t| t.extractor).collect();
-        assert_eq!(extractors, ["eq_term", "ore_cllw"]);
+        let by_name = |n: &str| {
+            dump.stevec
+                .iter()
+                .find(|e| e.full_name == n)
+                .unwrap_or_else(|| panic!("{n} present"))
+        };
+
+        // Term extractors live on `jsonb_entry` (the sv element type) ONLY:
+        // `eq_term` (hm/oc equality) + `ore_cllw` (oc ordering).
+        let entry_extractors: Vec<&str> = by_name("jsonb_entry")
+            .terms
+            .iter()
+            .map(|t| t.extractor)
+            .collect();
+        assert_eq!(entry_extractors, ["eq_term", "ore_cllw"]);
+
+        // The `json` container and `jsonb_query` domains carry no term
+        // extractors — their surface is containment (@>, <@) and path nav.
+        assert!(by_name("json").terms.is_empty());
+        assert!(by_name("jsonb_query").terms.is_empty());
     }
 
     /// Pins the hand-re-derived `suffix` wire field — the one channel with no
