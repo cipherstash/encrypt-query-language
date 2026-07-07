@@ -15,8 +15,8 @@ while [[ $# -gt 0 ]]; do
     *) shift ;;
   esac
 done
-if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)\.[0-9]+$ ]]; then
-  echo "error: --version must be an exact prerelease identity (X.Y.Z-(alpha|beta|rc).N)" >&2
+if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?$ ]]; then
+  echo "error: --version must be an exact release identity (X.Y.Z or X.Y.Z-(alpha|beta|rc).N)" >&2
   exit 1
 fi
 

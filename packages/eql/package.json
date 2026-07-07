@@ -1,8 +1,14 @@
 {
   "name": "@cipherstash/eql",
-  "version": "0.0.0",
+  "version": "3.0.0-alpha.2",
   "description": "Canonical EQL v3 wire types, JSON schemas, and SQL bundle.",
-  "keywords": ["eql", "cipherstash", "encryption", "postgres", "typescript"],
+  "keywords": [
+    "eql",
+    "cipherstash",
+    "encryption",
+    "postgres",
+    "typescript"
+  ],
   "bugs": {
     "url": "https://github.com/cipherstash/encrypt-query-language/issues"
   },
@@ -34,7 +40,10 @@
     "./sql/*": "./dist/sql/*",
     "./package.json": "./package.json"
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "sync:generated": "node scripts/sync-generated.mjs",
     "check:generated": "node scripts/sync-generated.mjs --check",
