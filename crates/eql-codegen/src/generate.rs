@@ -56,6 +56,28 @@ pub fn render_types_file(spec: &DomainFamily) -> String {
         .expect("render types.sql")
 }
 
+/// Body for <T>_query_types.sql: a `public.<name>_query` operand domain per
+/// TERM-BEARING domain — the index-terms-only twin (no `c`) whose operators
+/// consume a query operand (CIP-3432). Storage-only domains have no operators,
+/// so no query twin.
+pub fn render_query_types_file(spec: &DomainFamily) -> String {
+    use crate::context::{environment, query_domain_block, TypesContext};
+    let ctx = TypesContext {
+        family_name: spec.name.to_string(),
+        domains: spec
+            .domains
+            .iter()
+            .filter(|d| !d.terms.is_empty())
+            .map(|d| query_domain_block(spec.name, d))
+            .collect(),
+    };
+    environment()
+        .get_template("query_types.sql")
+        .unwrap()
+        .render(&ctx)
+        .expect("render query_types.sql")
+}
+
 /// REQUIRE edges for a domain's _functions.sql. Port of `_functions_requires`.
 fn functions_requires(family_name: &str, terms: &[Term]) -> Vec<String> {
     let mut reqs = vec![
@@ -215,6 +237,14 @@ pub fn render_type(spec: &DomainFamily, out_dir: &Path) -> Vec<(PathBuf, String)
         out_dir.join(format!("{family_name}_types.sql")),
         render_types_file(spec),
     )];
+    // Query-operand twin domains (term-only, no `c`) — only for families with at
+    // least one term-bearing domain (storage-only families have no query surface).
+    if spec.domains.iter().any(|d| !d.terms.is_empty()) {
+        rendered.push((
+            out_dir.join(format!("{family_name}_query_types.sql")),
+            render_query_types_file(spec),
+        ));
+    }
     for d in spec.domains {
         let name = d.full_name(family_name);
         rendered.push((
@@ -394,6 +424,8 @@ mod tests {
             .map(|p| p.file_name().unwrap().to_str().unwrap().to_string())
             .collect();
         assert!(names.contains(&"integer_types.sql".to_string()));
+        // Query-operand twin domains (term-only, no `c`) for the family.
+        assert!(names.contains(&"integer_query_types.sql".to_string()));
         for dom in [
             "integer",
             "integer_eq",
@@ -409,8 +441,8 @@ mod tests {
         assert!(names.contains(&"integer_ord_ore_aggregates.sql".to_string()));
         assert!(names.contains(&"integer_ord_aggregates.sql".to_string()));
         assert!(names.contains(&"integer_ord_ope_aggregates.sql".to_string()));
-        // 1 types + 2 per domain (5 domains) + 3 ord-capable aggregates.
-        assert_eq!(written.len(), 14);
+        // 1 types + 1 query_types + 2 per domain (5 domains) + 3 ord-capable aggregates.
+        assert_eq!(written.len(), 15);
         for p in &written {
             assert!(fs::read_to_string(p)
                 .unwrap()
