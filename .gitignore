@@ -257,3 +257,4 @@ nextest.tar.zst
 # Working notes retained on disk but intentionally not committed
 docs/decisions/2026-06-10-eql-v3-json-type-kind.md
 docs/handoff/2026-06-10-v3-jsonb-fixture-alignment.md
+.claude/
