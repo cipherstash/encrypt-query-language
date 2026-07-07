@@ -3,6 +3,10 @@
 
 --! @file v3/scalars/date/date_query_types.sql
 --! @brief Query-operand domains for date (index-terms-only, no ciphertext).
+--! @note Cast a query operand explicitly to its `_query` domain in a predicate
+--!       (e.g. `WHERE col = $1::public.date_eq_query`). A bare,
+--!       uncast literal RHS is ambiguous between the `_query` and `jsonb`
+--!       operator overloads and will not resolve.
 
 DO $$
 BEGIN

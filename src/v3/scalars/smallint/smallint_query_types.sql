@@ -3,6 +3,10 @@
 
 --! @file v3/scalars/smallint/smallint_query_types.sql
 --! @brief Query-operand domains for smallint (index-terms-only, no ciphertext).
+--! @note Cast a query operand explicitly to its `_query` domain in a predicate
+--!       (e.g. `WHERE col = $1::public.smallint_eq_query`). A bare,
+--!       uncast literal RHS is ambiguous between the `_query` and `jsonb`
+--!       operator overloads and will not resolve.
 
 DO $$
 BEGIN

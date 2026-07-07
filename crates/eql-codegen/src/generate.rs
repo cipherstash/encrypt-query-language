@@ -221,6 +221,15 @@ pub fn render_query_functions_file(family_name: &str, domain: &Domain) -> String
     // Comparison wrappers: (storage, query) and its (query, storage) commutator,
     // for supported operators only (a query operand is never sent for a blocked
     // operator). `is_supported(op) ⟹ extractor_for_operator is Some`.
+    //
+    // Query twins deliberately emit NO blockers (unlike the storage surface). A
+    // query operand only ever appears as the RHS of `col <op> operand`, and for
+    // an unsupported `<op>` that predicate resolves against the STORAGE domain's
+    // `(<storage>, jsonb)` blocker (the query operand degrades to its `jsonb`
+    // base), which raises — so the realistic path is already protected. The only
+    // unblocked cases are nonsensical `operand <op> operand` / `operand <op>
+    // jsonb`, which no caller writes; blocking them would mean emitting the full
+    // blocker matrix against every query twin for zero real-world coverage.
     for op in OPERATORS {
         if !supported.contains(&op.symbol) {
             continue;

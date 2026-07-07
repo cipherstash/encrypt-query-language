@@ -3,6 +3,10 @@
 
 --! @file v3/scalars/numeric/numeric_query_types.sql
 --! @brief Query-operand domains for numeric (index-terms-only, no ciphertext).
+--! @note Cast a query operand explicitly to its `_query` domain in a predicate
+--!       (e.g. `WHERE col = $1::public.numeric_eq_query`). A bare,
+--!       uncast literal RHS is ambiguous between the `_query` and `jsonb`
+--!       operator overloads and will not resolve.
 
 DO $$
 BEGIN
