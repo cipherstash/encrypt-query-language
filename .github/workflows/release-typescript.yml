@@ -29,6 +29,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # Do not leave the git token in .git/config across pnpm install /
+          # npm publish / build (a compromised lifecycle script could read it).
+          # The final tag push re-authenticates explicitly via extraheader.
+          persist-credentials: false
 
       - uses: pnpm/action-setup@v6.0.8
         name: Install pnpm
@@ -53,16 +57,20 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Verify package version matches dispatch identity
+        env:
+          IDENTITY: ${{ inputs.identity }}
         run: |
           set -euo pipefail
           actual="$(node -p "require('./packages/eql/package.json').version")"
-          test "$actual" = "${{ inputs.identity }}" || {
-            echo "package version ${actual} does not match identity ${{ inputs.identity }}" >&2
+          test "$actual" = "$IDENTITY" || {
+            echo "package version ${actual} does not match identity ${IDENTITY}" >&2
             exit 1
           }
 
       - name: Prepare exact SQL assets
-        run: mise run release:prepare_bindings_assets --version "${{ inputs.identity }}"
+        env:
+          IDENTITY: ${{ inputs.identity }}
+        run: mise run release:prepare_bindings_assets --version "$IDENTITY"
 
       - name: Verify generated TypeScript package surface
         run: mise run typescript:check
@@ -94,13 +102,38 @@ jobs:
 
       - name: Publish package
         working-directory: packages/eql
-        run: npm publish --access public --provenance
-
-      - name: Tag TypeScript release
+        env:
+          IDENTITY: ${{ inputs.identity }}
         run: |
           set -euo pipefail
-          tag="eql-typescript-v${{ inputs.identity }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag "$tag"
-          git push origin "refs/tags/${tag}"
+          # Idempotent: a rerun after a partial failure (e.g. the tag push
+          # below failed) must not die on republishing an existing version.
+          if [ -n "$(npm view "@cipherstash/eql@${IDENTITY}" version 2>/dev/null)" ]; then
+            echo "@cipherstash/eql@${IDENTITY} is already published; skipping publish"
+          else
+            npm publish --access public --provenance
+          fi
+
+      - name: Tag TypeScript release
+        env:
+          IDENTITY: ${{ inputs.identity }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag="eql-typescript-v${IDENTITY}"
+          repo_url="https://github.com/${REPO}.git"
+          # persist-credentials: false leaves no cached token, so authenticate
+          # this push explicitly (same extraheader pattern as
+          # release-alpha-pin-bindings.sh) rather than relying on `origin`.
+          auth=(-c "http.https://github.com/.extraheader=AUTHORIZATION: bearer ${GH_TOKEN}")
+          # Idempotent: if the tag already exists on the remote (e.g. from a
+          # prior partial run), skip — do not force-overwrite a different commit.
+          if git "${auth[@]}" ls-remote --exit-code --tags "$repo_url" "refs/tags/${tag}" >/dev/null 2>&1; then
+            echo "tag ${tag} already exists on the remote; skipping"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag "$tag"
+            git "${auth[@]}" push "$repo_url" "refs/tags/${tag}"
+          fi

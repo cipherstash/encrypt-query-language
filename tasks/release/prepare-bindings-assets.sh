@@ -44,6 +44,7 @@ for dir in crates/eql-bindings/sql packages/eql/sql; do
 JSON
 done
 
+mkdir -p packages/eql/src/generated
 cat > packages/eql/src/generated/release-manifest.ts <<TS
 export const releaseManifest = {
   eqlVersion: '$version',
