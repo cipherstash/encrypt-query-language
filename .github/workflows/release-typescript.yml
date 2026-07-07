@@ -1,0 +1,106 @@
+name: "Release TypeScript bindings (npm)"
+
+permissions:
+  contents: write
+  id-token: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      identity:
+        description: "Exact prerelease identity, e.g. 3.0.0-alpha.7"
+        required: true
+        type: string
+
+concurrency:
+  group: release-typescript
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash {0}
+
+jobs:
+  publish:
+    name: Publish @cipherstash/eql
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v6.0.8
+        name: Install pnpm
+        with:
+          run_install: false
+          cache: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Upgrade npm for OIDC trusted publishing
+        run: npm install -g npm@^11.5.1
+
+      - uses: jdx/mise-action@v3
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify package version matches dispatch identity
+        run: |
+          set -euo pipefail
+          actual="$(node -p "require('./packages/eql/package.json').version")"
+          test "$actual" = "${{ inputs.identity }}" || {
+            echo "package version ${actual} does not match identity ${{ inputs.identity }}" >&2
+            exit 1
+          }
+
+      - name: Prepare exact SQL assets
+        run: mise run release:prepare_bindings_assets --version "${{ inputs.identity }}"
+
+      - name: Verify generated TypeScript package surface
+        run: mise run typescript:check
+
+      - name: Verify release manifest matches SQL assets
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const { createHash } = require('node:crypto')
+          const { readFileSync } = require('node:fs')
+          const manifest = require('./packages/eql/sql/release-manifest.json')
+          const identity = process.env.IDENTITY
+          const sha256 = (path) => createHash('sha256').update(readFileSync(path)).digest('hex')
+          if (manifest.eqlVersion !== identity) {
+            throw new Error(`manifest eqlVersion ${manifest.eqlVersion} does not match ${identity}`)
+          }
+          if (manifest.installSqlSha256 !== sha256('./packages/eql/sql/cipherstash-encrypt.sql')) {
+            throw new Error('install SQL hash mismatch')
+          }
+          if (manifest.uninstallSqlSha256 !== sha256('./packages/eql/sql/cipherstash-encrypt-uninstall.sql')) {
+            throw new Error('uninstall SQL hash mismatch')
+          }
+          NODE
+        env:
+          IDENTITY: ${{ inputs.identity }}
+
+      - name: Build package
+        run: pnpm --filter @cipherstash/eql build
+
+      - name: Publish package
+        working-directory: packages/eql
+        run: npm publish --access public --provenance
+
+      - name: Tag TypeScript release
+        run: |
+          set -euo pipefail
+          tag="eql-typescript-v${{ inputs.identity }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$tag"
+          git push origin "refs/tags/${tag}"
