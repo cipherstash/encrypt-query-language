@@ -20,5 +20,7 @@ BEGIN
         AND VALUE->>'v' = '3'
       );
   END IF;
+
+  COMMENT ON DOMAIN public.boolean IS 'EQL v3 encrypted boolean column (storage only, not searchable). jsonb-backed CipherStash searchable-encryption domain.';
 END
 $$;

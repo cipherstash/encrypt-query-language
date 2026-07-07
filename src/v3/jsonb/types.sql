@@ -123,6 +123,8 @@ BEGIN
         public.eql_v3_is_valid_ste_vec_document_payload(VALUE)
       );
   END IF;
+
+  COMMENT ON DOMAIN public.json IS 'EQL v3 encrypted JSONB document (SteVec). Searchable without decryption via containment (@>, <@), field/array access, and per-leaf equality/order. jsonb-backed CipherStash searchable-encryption domain.';
 END
 $$;
 
@@ -172,6 +174,8 @@ BEGIN
         )
       );
   END IF;
+
+  COMMENT ON DOMAIN public.jsonb_entry IS 'EQL v3 encrypted JSONB leaf entry (single sv element). Returned by ->; accepted by eql_v3.eq_term / eql_v3.ore_cllw for per-leaf equality and ordered search. jsonb-backed CipherStash searchable-encryption domain.';
 END
 $$;
 
@@ -208,6 +212,8 @@ BEGIN
         public.eql_v3_is_valid_ste_vec_query_payload(VALUE)
       );
   END IF;
+
+  COMMENT ON DOMAIN public.jsonb_query IS 'EQL v3 encrypted JSONB containment needle (query operand). Index terms only; carries no ciphertext (c). Right-hand side of @> / <@ containment. jsonb-backed CipherStash searchable-encryption domain.';
 END
 $$;
 

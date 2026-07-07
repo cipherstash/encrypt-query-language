@@ -26,6 +26,8 @@ BEGIN
       );
   END IF;
 
+  COMMENT ON DOMAIN public.text_eq_query IS 'EQL v3 query operand for encrypted text (searchable via = <>). Index terms only; carries no ciphertext (c).';
+
   --! @brief Query-operand domain public.text_match_query (term-only; no `c`).
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -41,6 +43,8 @@ BEGIN
         AND VALUE->>'v' = '3'
       );
   END IF;
+
+  COMMENT ON DOMAIN public.text_match_query IS 'EQL v3 query operand for encrypted text (searchable via @> <@). Index terms only; carries no ciphertext (c).';
 
   --! @brief Query-operand domain public.text_ord_ore_query (term-only; no `c`).
   IF NOT EXISTS (
@@ -61,6 +65,8 @@ BEGIN
       );
   END IF;
 
+  COMMENT ON DOMAIN public.text_ord_ore_query IS 'EQL v3 query operand for encrypted text (searchable via = <> < <= > >=). Index terms only; carries no ciphertext (c).';
+
   --! @brief Query-operand domain public.text_ord_query (term-only; no `c`).
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -80,6 +86,8 @@ BEGIN
       );
   END IF;
 
+  COMMENT ON DOMAIN public.text_ord_query IS 'EQL v3 query operand for encrypted text (searchable via = <> < <= > >=). Index terms only; carries no ciphertext (c).';
+
   --! @brief Query-operand domain public.text_ord_ope_query (term-only; no `c`).
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -96,6 +104,8 @@ BEGIN
         AND VALUE->>'v' = '3'
       );
   END IF;
+
+  COMMENT ON DOMAIN public.text_ord_ope_query IS 'EQL v3 query operand for encrypted text (searchable via = <> < <= > >=). Index terms only; carries no ciphertext (c).';
 
   --! @brief Query-operand domain public.text_search_query (term-only; no `c`).
   IF NOT EXISTS (
@@ -116,5 +126,7 @@ BEGIN
         AND VALUE->>'v' = '3'
       );
   END IF;
+
+  COMMENT ON DOMAIN public.text_search_query IS 'EQL v3 query operand for encrypted text (searchable via = <> < <= > >= @> <@). Index terms only; carries no ciphertext (c).';
 END
 $$;

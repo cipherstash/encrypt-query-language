@@ -21,6 +21,8 @@ BEGIN
       );
   END IF;
 
+  COMMENT ON DOMAIN public.real IS 'EQL v3 encrypted real column (storage only, not searchable). jsonb-backed CipherStash searchable-encryption domain.';
+
   --! @brief Encrypted domain public.real_eq.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -36,6 +38,8 @@ BEGIN
         AND VALUE->>'v' = '3'
       );
   END IF;
+
+  COMMENT ON DOMAIN public.real_eq IS 'EQL v3 encrypted real column (searchable via = <>). jsonb-backed CipherStash searchable-encryption domain.';
 
   --! @brief Encrypted domain public.real_ord_ore.
   IF NOT EXISTS (
@@ -55,6 +59,8 @@ BEGIN
       );
   END IF;
 
+  COMMENT ON DOMAIN public.real_ord_ore IS 'EQL v3 encrypted real column (searchable via = <> < <= > >=). jsonb-backed CipherStash searchable-encryption domain.';
+
   --! @brief Encrypted domain public.real_ord.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -73,6 +79,8 @@ BEGIN
       );
   END IF;
 
+  COMMENT ON DOMAIN public.real_ord IS 'EQL v3 encrypted real column (searchable via = <> < <= > >=). jsonb-backed CipherStash searchable-encryption domain.';
+
   --! @brief Encrypted domain public.real_ord_ope.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -88,5 +96,7 @@ BEGIN
         AND VALUE->>'v' = '3'
       );
   END IF;
+
+  COMMENT ON DOMAIN public.real_ord_ope IS 'EQL v3 encrypted real column (searchable via = <> < <= > >=). jsonb-backed CipherStash searchable-encryption domain.';
 END
 $$;

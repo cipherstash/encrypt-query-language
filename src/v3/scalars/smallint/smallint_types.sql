@@ -21,6 +21,8 @@ BEGIN
       );
   END IF;
 
+  COMMENT ON DOMAIN public.smallint IS 'EQL v3 encrypted smallint column (storage only, not searchable). jsonb-backed CipherStash searchable-encryption domain.';
+
   --! @brief Encrypted domain public.smallint_eq.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -36,6 +38,8 @@ BEGIN
         AND VALUE->>'v' = '3'
       );
   END IF;
+
+  COMMENT ON DOMAIN public.smallint_eq IS 'EQL v3 encrypted smallint column (searchable via = <>). jsonb-backed CipherStash searchable-encryption domain.';
 
   --! @brief Encrypted domain public.smallint_ord_ore.
   IF NOT EXISTS (
@@ -55,6 +59,8 @@ BEGIN
       );
   END IF;
 
+  COMMENT ON DOMAIN public.smallint_ord_ore IS 'EQL v3 encrypted smallint column (searchable via = <> < <= > >=). jsonb-backed CipherStash searchable-encryption domain.';
+
   --! @brief Encrypted domain public.smallint_ord.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -73,6 +79,8 @@ BEGIN
       );
   END IF;
 
+  COMMENT ON DOMAIN public.smallint_ord IS 'EQL v3 encrypted smallint column (searchable via = <> < <= > >=). jsonb-backed CipherStash searchable-encryption domain.';
+
   --! @brief Encrypted domain public.smallint_ord_ope.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -88,5 +96,7 @@ BEGIN
         AND VALUE->>'v' = '3'
       );
   END IF;
+
+  COMMENT ON DOMAIN public.smallint_ord_ope IS 'EQL v3 encrypted smallint column (searchable via = <> < <= > >=). jsonb-backed CipherStash searchable-encryption domain.';
 END
 $$;

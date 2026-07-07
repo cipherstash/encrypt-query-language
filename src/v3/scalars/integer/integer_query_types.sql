@@ -26,6 +26,8 @@ BEGIN
       );
   END IF;
 
+  COMMENT ON DOMAIN public.integer_eq_query IS 'EQL v3 query operand for encrypted integer (searchable via = <>). Index terms only; carries no ciphertext (c).';
+
   --! @brief Query-operand domain public.integer_ord_ore_query (term-only; no `c`).
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -43,6 +45,8 @@ BEGIN
         AND VALUE->>'v' = '3'
       );
   END IF;
+
+  COMMENT ON DOMAIN public.integer_ord_ore_query IS 'EQL v3 query operand for encrypted integer (searchable via = <> < <= > >=). Index terms only; carries no ciphertext (c).';
 
   --! @brief Query-operand domain public.integer_ord_query (term-only; no `c`).
   IF NOT EXISTS (
@@ -62,6 +66,8 @@ BEGIN
       );
   END IF;
 
+  COMMENT ON DOMAIN public.integer_ord_query IS 'EQL v3 query operand for encrypted integer (searchable via = <> < <= > >=). Index terms only; carries no ciphertext (c).';
+
   --! @brief Query-operand domain public.integer_ord_ope_query (term-only; no `c`).
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -77,5 +83,7 @@ BEGIN
         AND VALUE->>'v' = '3'
       );
   END IF;
+
+  COMMENT ON DOMAIN public.integer_ord_ope_query IS 'EQL v3 query operand for encrypted integer (searchable via = <> < <= > >=). Index terms only; carries no ciphertext (c).';
 END
 $$;

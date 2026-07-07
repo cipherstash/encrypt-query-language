@@ -75,6 +75,37 @@ pub struct DomainBlock {
     // query operand is index-terms-only — CIP-3432). The template renders a
     // `NOT (VALUE ? k)` clause per key.
     pub forbidden_keys: Vec<String>,
+    // sql_str-escaped one-line human description rendered as `COMMENT ON DOMAIN`.
+    // Capability text is derived from the domain's terms (via
+    // `Term::operators_for_terms`), so it can't drift from the generated CHECK /
+    // operators. Surfaced by `\dD`, `obj_description`, and tooling that reads
+    // pg_type comments (e.g. Supabase's `types` introspection).
+    pub comment: String,
+}
+
+/// One-line description baked into `COMMENT ON DOMAIN` for a stored/searchable
+/// encrypted domain. Capability is derived from the terms (term-agnostic via
+/// `operators_for_terms`) so it tracks the generated surface automatically.
+fn scalar_domain_comment(family_name: &str, domain: &Domain) -> String {
+    let ops = Term::operators_for_terms(domain.terms);
+    let capability = if ops.is_empty() {
+        "storage only, not searchable".to_string()
+    } else {
+        format!("searchable via {}", ops.join(" "))
+    };
+    sql_str(&format!(
+        "EQL v3 encrypted {family_name} column ({capability}). jsonb-backed CipherStash searchable-encryption domain."
+    ))
+}
+
+/// `COMMENT ON DOMAIN` text for a `_query` operand twin: index-terms-only, no
+/// ciphertext.
+fn query_domain_comment(family_name: &str, domain: &Domain) -> String {
+    let ops = Term::operators_for_terms(domain.terms);
+    sql_str(&format!(
+        "EQL v3 query operand for encrypted {family_name} (searchable via {}). Index terms only; carries no ciphertext (c).",
+        ops.join(" ")
+    ))
 }
 
 #[derive(serde::Serialize)]
@@ -107,6 +138,7 @@ pub fn domain_block(family_name: &str, domain: &Domain) -> DomainBlock {
             .collect(),
         // Storage domains forbid nothing; the query twin forbids `c`.
         forbidden_keys: vec![],
+        comment: scalar_domain_comment(family_name, domain),
     }
 }
 
@@ -136,6 +168,7 @@ pub fn query_domain_block(family_name: &str, domain: &Domain) -> DomainBlock {
             .map(sql_str)
             .collect(),
         forbidden_keys: vec![sql_str("c")],
+        comment: query_domain_comment(family_name, domain),
     }
 }
 
