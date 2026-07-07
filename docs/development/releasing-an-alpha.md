@@ -1,7 +1,8 @@
 # Releasing an `eql_v3` alpha
 
 A concise runbook for cutting a **prerelease** (alpha/beta/rc) of the EQL SQL
-surface, the `eql-bindings` crate, or both in lockstep. For a final
+surface, its language binding packages (the `eql-bindings` crate and the
+`@cipherstash/eql` npm package), or all of them in lockstep. For a final
 (non-prerelease) release, follow the **"Cutting a release"** section of
 `CLAUDE.md` instead.
 
@@ -78,7 +79,7 @@ Common flags:
 | `--version` | Base SemVer (`X.Y.Z`) | `3.0.0` |
 | `--channel` | Prerelease channel: `alpha` \| `beta` \| `rc` | `alpha` |
 | `--pre` | Exact identity (`X.Y.Z-(alpha\|beta\|rc).N`), bypassing derivation | derived |
-| `--ref` | GitHub ref for `workflow_dispatch` | required explicitly for `release:all` and `release:bindings`; current branch for `release:eql` |
+| `--ref` | GitHub ref for `workflow_dispatch` | required explicitly for `release:all`, `release:bindings`, `release:rust`, and `release:typescript`; current branch for `release:eql` |
 | `--dry-run` | Resolve, verify, and print the plan without mutating anything | off |
 
 Examples:
@@ -87,40 +88,51 @@ Examples:
 # Always start here: derive identity and run drift gates without publishing.
 mise run release:all --ref eql_v3 --dry-run
 
-# Ship SQL + docs and the crate in lockstep.
+# Ship SQL + docs and all language packages in lockstep.
 mise run release:all --ref eql_v3
 
 # Ship only the SQL surface + docs.
 mise run release:eql --channel beta
 
-# Publish the crate for an already-existing SQL alpha, same source.
+# Publish all language packages for an already-existing SQL alpha, same source.
 mise run release:bindings --pre 3.0.0-alpha.2 --ref eql_v3
+
+# Publish only one language package (crate-only / npm-only) for an existing SQL alpha.
+mise run release:rust --pre 3.0.0-alpha.2 --ref eql_v3
+mise run release:typescript --pre 3.0.0-alpha.2 --ref eql_v3
 ```
 
 ## Identity and lockstep
 
 The release identity is `<version>-<channel>.<N>`, for example
 `3.0.0-alpha.2`. The coordinator derives `N` server-side from freshly fetched
-tags across both namespaces:
+tags across all three namespaces:
 
 - SQL tags: `eql-<identity>`
-- Crate tags: `eql-bindings-v<identity>`
+- Rust tags: `eql-bindings-v<identity>`
+- TypeScript tags: `eql-typescript-v<identity>`
 
 For `release:all` and `release:eql`, `N` is one greater than the maximum matching
-counter found in either namespace. For `release:bindings`, the coordinator finds
-an existing SQL alpha that does not yet have a matching crate tag.
+counter found in **any** of the three namespaces. For `release:bindings`, the
+coordinator finds the newest SQL alpha still missing a Rust **or** TypeScript
+binding tag. For `release:rust` / `release:typescript`, it finds the newest SQL
+alpha still missing that specific language's tag.
 
-`release:all` is the normal lockstep path. The coordinator pins the crate,
-commits that metadata change as commit `S`, builds SQL + docs at `S`, creates
-`eql-<identity>` at `S`, and dispatches `release-plz.yml` against that immutable
-SQL tag. The resulting `eql-<identity>` and `eql-bindings-v<identity>` tags land
-on the same commit.
+`release:all` is the normal lockstep path. The coordinator pins the requested
+package version(s) — the crate (`release-plz set-version`) and/or the npm package
+(`package.json` + lockfile) — commits that metadata change as commit `S`, builds
+SQL + docs at `S`, creates `eql-<identity>` at `S`, and dispatches
+`release-plz.yml` and `release-typescript.yml` against that immutable SQL tag.
+The resulting `eql-<identity>`, `eql-bindings-v<identity>`, and
+`eql-typescript-v<identity>` tags all land on the same commit.
 
-`release:bindings` is for catching up the crate after an existing SQL alpha. The
+`release:bindings` catches up the language packages after an existing SQL alpha;
+`release:rust` and `release:typescript` are the single-language equivalents. The
 branch must currently point at the SQL tag commit. The coordinator verifies that
-`HEAD == eql-<identity>`, adds the metadata-only crate pin commit on top, then
-dispatches `release-plz.yml`. This guarantees the crate ships the same generated
-source as the SQL release, not later product code.
+`HEAD == eql-<identity>`, adds the metadata-only package pin commit on top, then
+dispatches the language-specific publish workflow(s). This guarantees the
+packages ship the same generated source as the SQL release, not later product
+code.
 
 ## Coordinator checks
 
@@ -132,13 +144,18 @@ mise run types:check
 mise run codegen:parity
 ```
 
-For `release:all` and `release:bindings`, it also rejects non-branch refs because
-the crate pin must be pushed. For `release:bindings`, it rejects a branch that has
-advanced past the SQL tag.
+For `release:all`, `release:bindings`, `release:rust`, and `release:typescript`,
+it also rejects non-branch refs because the package-version pin must be pushed.
+For `release:bindings`, `release:rust`, and `release:typescript`, it rejects a
+branch that has advanced past the SQL tag. For any binding target, it also fails
+fast if every requested language tag already exists for that identity (nothing
+left to publish).
 
-The crate publish remains a separate `release-plz.yml` run because crates.io
-Trusted Publishing validates the entry-point workflow identity. The coordinator
-dispatches that workflow only after SQL and docs have been built and attached.
+The Rust crate publish remains a separate `release-plz.yml` run because crates.io
+Trusted Publishing validates the entry-point workflow identity; the TypeScript
+publish is likewise a separate `release-typescript.yml` run (npm trusted
+publishing requires OIDC on a GitHub-hosted runner). The coordinator dispatches
+each workflow only after SQL and docs have been built and attached.
 
 ## Verification note
 
@@ -146,12 +163,13 @@ The durable PR gate is `.github/workflows/lint-release.yml`. It runs actionlint
 over the release workflows, ShellCheck over the release wrappers and identity
 helper, and `.github/scripts/derive-identity.test.sh`.
 
-The SQL to docs to crate ordering can be exercised safely only on a scratch
-branch, because a real crate publish is irreversible. For a scratch validation,
-temporarily force the docs reusable to fail, run `mise run release:eql --ref
-<scratch-branch>` or `mise run release:all --ref <scratch-branch>`, and confirm
-that no crate publish is dispatched when docs attachment fails. Revert the
-scratch change before any real alpha.
+The SQL to docs to package ordering can be exercised safely only on a scratch
+branch, because a real package publish (Rust or TypeScript) is irreversible. For
+a scratch validation, temporarily force the docs reusable to fail, run `mise run
+release:eql --ref <scratch-branch>` or `mise run release:all --ref
+<scratch-branch>`, and confirm that no package publish (Rust or TypeScript) is
+dispatched when docs attachment fails. Revert the scratch change before any real
+alpha.
 
 ## Smoke-test the alpha
 
@@ -165,12 +183,13 @@ psql "$DATABASE_URL" -c "\dn eql_v3"                 # eql_v3 schema present
 psql "$DATABASE_URL" -c "SELECT eql_v3.version();"   # released semver
 ```
 
-For a lockstep release, also confirm both tags point at the same commit:
+For a lockstep release, also confirm all tags point at the same commit:
 
 ```bash
 git fetch --tags
 git rev-list -n1 eql-3.0.0-alpha.N
 git rev-list -n1 eql-bindings-v3.0.0-alpha.N
+git rev-list -n1 eql-typescript-v3.0.0-alpha.N
 ```
 
 ## Promoting to a final release later

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Resolve and validate release-alpha.yml identity/tag guards locally"
-#USAGE flag "--target <target>" help="Release target: all | eql | bindings" default="all"
+#USAGE flag "--target <target>" help="Release target: all | eql | bindings | rust | typescript" default="all"
 #USAGE flag "--version <version>" help="Base SemVer, e.g. 3.0.0" default="3.0.0"
 #USAGE flag "--channel <channel>" help="Preview channel: alpha | beta | rc" default="alpha"
 #USAGE flag "--pre <pre>" help="Exact identity (e.g. 3.0.0-alpha.2), bypassing N derivation" default=""
