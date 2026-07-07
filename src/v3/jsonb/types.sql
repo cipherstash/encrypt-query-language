@@ -123,6 +123,8 @@ BEGIN
         public.eql_v3_is_valid_ste_vec_document_payload(VALUE)
       );
   END IF;
+
+  COMMENT ON DOMAIN public.json IS 'EQL encrypted JSONB document (containment, equality, ordering)';
 END
 $$;
 
@@ -172,6 +174,8 @@ BEGIN
         )
       );
   END IF;
+
+  COMMENT ON DOMAIN public.jsonb_entry IS 'EQL encrypted JSONB leaf entry (equality, ordering)';
 END
 $$;
 
@@ -208,6 +212,8 @@ BEGIN
         public.eql_v3_is_valid_ste_vec_query_payload(VALUE)
       );
   END IF;
+
+  COMMENT ON DOMAIN public.jsonb_query IS 'EQL JSONB query operand (containment)';
 END
 $$;
 

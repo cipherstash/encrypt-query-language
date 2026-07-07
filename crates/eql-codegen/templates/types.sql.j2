@@ -25,6 +25,8 @@ BEGIN
         AND VALUE->>'v' = '3'
       );
   END IF;
+
+  COMMENT ON DOMAIN public.{{ d.name }} IS '{{ d.comment }}';
 {% endfor -%}
 END
 $$;

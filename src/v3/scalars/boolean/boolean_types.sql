@@ -20,5 +20,7 @@ BEGIN
         AND VALUE->>'v' = '3'
       );
   END IF;
+
+  COMMENT ON DOMAIN public.boolean IS 'EQL encrypted boolean (storage only)';
 END
 $$;

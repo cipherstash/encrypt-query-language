@@ -21,6 +21,8 @@ BEGIN
       );
   END IF;
 
+  COMMENT ON DOMAIN public.real IS 'EQL encrypted real (storage only)';
+
   --! @brief Encrypted domain public.real_eq.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -36,6 +38,8 @@ BEGIN
         AND VALUE->>'v' = '3'
       );
   END IF;
+
+  COMMENT ON DOMAIN public.real_eq IS 'EQL encrypted real (equality)';
 
   --! @brief Encrypted domain public.real_ord_ore.
   IF NOT EXISTS (
@@ -55,6 +59,8 @@ BEGIN
       );
   END IF;
 
+  COMMENT ON DOMAIN public.real_ord_ore IS 'EQL encrypted real (equality, ordering)';
+
   --! @brief Encrypted domain public.real_ord.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -73,6 +79,8 @@ BEGIN
       );
   END IF;
 
+  COMMENT ON DOMAIN public.real_ord IS 'EQL encrypted real (equality, ordering)';
+
   --! @brief Encrypted domain public.real_ord_ope.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -88,5 +96,7 @@ BEGIN
         AND VALUE->>'v' = '3'
       );
   END IF;
+
+  COMMENT ON DOMAIN public.real_ord_ope IS 'EQL encrypted real (equality, ordering)';
 END
 $$;

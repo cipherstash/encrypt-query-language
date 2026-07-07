@@ -21,6 +21,8 @@ BEGIN
       );
   END IF;
 
+  COMMENT ON DOMAIN public.bigint IS 'EQL encrypted bigint (storage only)';
+
   --! @brief Encrypted domain public.bigint_eq.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -36,6 +38,8 @@ BEGIN
         AND VALUE->>'v' = '3'
       );
   END IF;
+
+  COMMENT ON DOMAIN public.bigint_eq IS 'EQL encrypted bigint (equality)';
 
   --! @brief Encrypted domain public.bigint_ord_ore.
   IF NOT EXISTS (
@@ -55,6 +59,8 @@ BEGIN
       );
   END IF;
 
+  COMMENT ON DOMAIN public.bigint_ord_ore IS 'EQL encrypted bigint (equality, ordering)';
+
   --! @brief Encrypted domain public.bigint_ord.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -73,6 +79,8 @@ BEGIN
       );
   END IF;
 
+  COMMENT ON DOMAIN public.bigint_ord IS 'EQL encrypted bigint (equality, ordering)';
+
   --! @brief Encrypted domain public.bigint_ord_ope.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -88,5 +96,7 @@ BEGIN
         AND VALUE->>'v' = '3'
       );
   END IF;
+
+  COMMENT ON DOMAIN public.bigint_ord_ope IS 'EQL encrypted bigint (equality, ordering)';
 END
 $$;

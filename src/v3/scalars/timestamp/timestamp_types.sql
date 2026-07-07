@@ -21,6 +21,8 @@ BEGIN
       );
   END IF;
 
+  COMMENT ON DOMAIN public.timestamp IS 'EQL encrypted timestamp (storage only)';
+
   --! @brief Encrypted domain public.timestamp_eq.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -36,6 +38,8 @@ BEGIN
         AND VALUE->>'v' = '3'
       );
   END IF;
+
+  COMMENT ON DOMAIN public.timestamp_eq IS 'EQL encrypted timestamp (equality)';
 
   --! @brief Encrypted domain public.timestamp_ord_ore.
   IF NOT EXISTS (
@@ -55,6 +59,8 @@ BEGIN
       );
   END IF;
 
+  COMMENT ON DOMAIN public.timestamp_ord_ore IS 'EQL encrypted timestamp (equality, ordering)';
+
   --! @brief Encrypted domain public.timestamp_ord.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -73,6 +79,8 @@ BEGIN
       );
   END IF;
 
+  COMMENT ON DOMAIN public.timestamp_ord IS 'EQL encrypted timestamp (equality, ordering)';
+
   --! @brief Encrypted domain public.timestamp_ord_ope.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -88,5 +96,7 @@ BEGIN
         AND VALUE->>'v' = '3'
       );
   END IF;
+
+  COMMENT ON DOMAIN public.timestamp_ord_ope IS 'EQL encrypted timestamp (equality, ordering)';
 END
 $$;
