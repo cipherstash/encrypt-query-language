@@ -21,7 +21,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.smallint IS 'EQL v3 encrypted smallint column (storage only, not searchable). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.smallint IS 'EQL encrypted smallint (storage only)';
 
   --! @brief Encrypted domain public.smallint_eq.
   IF NOT EXISTS (
@@ -39,7 +39,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.smallint_eq IS 'EQL v3 encrypted smallint column (searchable via = <>). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.smallint_eq IS 'EQL encrypted smallint (equality)';
 
   --! @brief Encrypted domain public.smallint_ord_ore.
   IF NOT EXISTS (
@@ -59,7 +59,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.smallint_ord_ore IS 'EQL v3 encrypted smallint column (searchable via = <> < <= > >=). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.smallint_ord_ore IS 'EQL encrypted smallint (equality, ordering)';
 
   --! @brief Encrypted domain public.smallint_ord.
   IF NOT EXISTS (
@@ -79,7 +79,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.smallint_ord IS 'EQL v3 encrypted smallint column (searchable via = <> < <= > >=). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.smallint_ord IS 'EQL encrypted smallint (equality, ordering)';
 
   --! @brief Encrypted domain public.smallint_ord_ope.
   IF NOT EXISTS (
@@ -97,6 +97,6 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.smallint_ord_ope IS 'EQL v3 encrypted smallint column (searchable via = <> < <= > >=). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.smallint_ord_ope IS 'EQL encrypted smallint (equality, ordering)';
 END
 $$;

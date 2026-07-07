@@ -21,6 +21,6 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.boolean IS 'EQL v3 encrypted boolean column (storage only, not searchable). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.boolean IS 'EQL encrypted boolean (storage only)';
 END
 $$;

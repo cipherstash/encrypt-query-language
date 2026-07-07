@@ -26,7 +26,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.text_eq_query IS 'EQL v3 query operand for encrypted text (searchable via = <>). Index terms only; carries no ciphertext (c).';
+  COMMENT ON DOMAIN public.text_eq_query IS 'EQL text query operand (equality)';
 
   --! @brief Query-operand domain public.text_match_query (term-only; no `c`).
   IF NOT EXISTS (
@@ -44,7 +44,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.text_match_query IS 'EQL v3 query operand for encrypted text (searchable via @> <@). Index terms only; carries no ciphertext (c).';
+  COMMENT ON DOMAIN public.text_match_query IS 'EQL text query operand (containment)';
 
   --! @brief Query-operand domain public.text_ord_ore_query (term-only; no `c`).
   IF NOT EXISTS (
@@ -65,7 +65,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.text_ord_ore_query IS 'EQL v3 query operand for encrypted text (searchable via = <> < <= > >=). Index terms only; carries no ciphertext (c).';
+  COMMENT ON DOMAIN public.text_ord_ore_query IS 'EQL text query operand (equality, ordering)';
 
   --! @brief Query-operand domain public.text_ord_query (term-only; no `c`).
   IF NOT EXISTS (
@@ -86,7 +86,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.text_ord_query IS 'EQL v3 query operand for encrypted text (searchable via = <> < <= > >=). Index terms only; carries no ciphertext (c).';
+  COMMENT ON DOMAIN public.text_ord_query IS 'EQL text query operand (equality, ordering)';
 
   --! @brief Query-operand domain public.text_ord_ope_query (term-only; no `c`).
   IF NOT EXISTS (
@@ -105,7 +105,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.text_ord_ope_query IS 'EQL v3 query operand for encrypted text (searchable via = <> < <= > >=). Index terms only; carries no ciphertext (c).';
+  COMMENT ON DOMAIN public.text_ord_ope_query IS 'EQL text query operand (equality, ordering)';
 
   --! @brief Query-operand domain public.text_search_query (term-only; no `c`).
   IF NOT EXISTS (
@@ -127,6 +127,6 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.text_search_query IS 'EQL v3 query operand for encrypted text (searchable via = <> < <= > >= @> <@). Index terms only; carries no ciphertext (c).';
+  COMMENT ON DOMAIN public.text_search_query IS 'EQL text query operand (equality, ordering, containment)';
 END
 $$;

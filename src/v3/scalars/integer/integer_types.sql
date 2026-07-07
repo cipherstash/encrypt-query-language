@@ -21,7 +21,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.integer IS 'EQL v3 encrypted integer column (storage only, not searchable). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.integer IS 'EQL encrypted integer (storage only)';
 
   --! @brief Encrypted domain public.integer_eq.
   IF NOT EXISTS (
@@ -39,7 +39,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.integer_eq IS 'EQL v3 encrypted integer column (searchable via = <>). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.integer_eq IS 'EQL encrypted integer (equality)';
 
   --! @brief Encrypted domain public.integer_ord_ore.
   IF NOT EXISTS (
@@ -59,7 +59,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.integer_ord_ore IS 'EQL v3 encrypted integer column (searchable via = <> < <= > >=). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.integer_ord_ore IS 'EQL encrypted integer (equality, ordering)';
 
   --! @brief Encrypted domain public.integer_ord.
   IF NOT EXISTS (
@@ -79,7 +79,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.integer_ord IS 'EQL v3 encrypted integer column (searchable via = <> < <= > >=). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.integer_ord IS 'EQL encrypted integer (equality, ordering)';
 
   --! @brief Encrypted domain public.integer_ord_ope.
   IF NOT EXISTS (
@@ -97,6 +97,6 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.integer_ord_ope IS 'EQL v3 encrypted integer column (searchable via = <> < <= > >=). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.integer_ord_ope IS 'EQL encrypted integer (equality, ordering)';
 END
 $$;

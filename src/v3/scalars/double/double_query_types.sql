@@ -26,7 +26,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.double_eq_query IS 'EQL v3 query operand for encrypted double (searchable via = <>). Index terms only; carries no ciphertext (c).';
+  COMMENT ON DOMAIN public.double_eq_query IS 'EQL double query operand (equality)';
 
   --! @brief Query-operand domain public.double_ord_ore_query (term-only; no `c`).
   IF NOT EXISTS (
@@ -46,7 +46,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.double_ord_ore_query IS 'EQL v3 query operand for encrypted double (searchable via = <> < <= > >=). Index terms only; carries no ciphertext (c).';
+  COMMENT ON DOMAIN public.double_ord_ore_query IS 'EQL double query operand (equality, ordering)';
 
   --! @brief Query-operand domain public.double_ord_query (term-only; no `c`).
   IF NOT EXISTS (
@@ -66,7 +66,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.double_ord_query IS 'EQL v3 query operand for encrypted double (searchable via = <> < <= > >=). Index terms only; carries no ciphertext (c).';
+  COMMENT ON DOMAIN public.double_ord_query IS 'EQL double query operand (equality, ordering)';
 
   --! @brief Query-operand domain public.double_ord_ope_query (term-only; no `c`).
   IF NOT EXISTS (
@@ -84,6 +84,6 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.double_ord_ope_query IS 'EQL v3 query operand for encrypted double (searchable via = <> < <= > >=). Index terms only; carries no ciphertext (c).';
+  COMMENT ON DOMAIN public.double_ord_ope_query IS 'EQL double query operand (equality, ordering)';
 END
 $$;

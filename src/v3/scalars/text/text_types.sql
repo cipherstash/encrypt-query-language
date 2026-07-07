@@ -21,7 +21,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.text IS 'EQL v3 encrypted text column (storage only, not searchable). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.text IS 'EQL encrypted text (storage only)';
 
   --! @brief Encrypted domain public.text_eq.
   IF NOT EXISTS (
@@ -39,7 +39,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.text_eq IS 'EQL v3 encrypted text column (searchable via = <>). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.text_eq IS 'EQL encrypted text (equality)';
 
   --! @brief Encrypted domain public.text_match.
   IF NOT EXISTS (
@@ -57,7 +57,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.text_match IS 'EQL v3 encrypted text column (searchable via @> <@). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.text_match IS 'EQL encrypted text (containment)';
 
   --! @brief Encrypted domain public.text_ord_ore.
   IF NOT EXISTS (
@@ -78,7 +78,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.text_ord_ore IS 'EQL v3 encrypted text column (searchable via = <> < <= > >=). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.text_ord_ore IS 'EQL encrypted text (equality, ordering)';
 
   --! @brief Encrypted domain public.text_ord.
   IF NOT EXISTS (
@@ -99,7 +99,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.text_ord IS 'EQL v3 encrypted text column (searchable via = <> < <= > >=). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.text_ord IS 'EQL encrypted text (equality, ordering)';
 
   --! @brief Encrypted domain public.text_ord_ope.
   IF NOT EXISTS (
@@ -118,7 +118,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.text_ord_ope IS 'EQL v3 encrypted text column (searchable via = <> < <= > >=). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.text_ord_ope IS 'EQL encrypted text (equality, ordering)';
 
   --! @brief Encrypted domain public.text_search.
   IF NOT EXISTS (
@@ -140,6 +140,6 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.text_search IS 'EQL v3 encrypted text column (searchable via = <> < <= > >= @> <@). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.text_search IS 'EQL encrypted text (equality, ordering, containment)';
 END
 $$;

@@ -21,7 +21,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.date IS 'EQL v3 encrypted date column (storage only, not searchable). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.date IS 'EQL encrypted date (storage only)';
 
   --! @brief Encrypted domain public.date_eq.
   IF NOT EXISTS (
@@ -39,7 +39,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.date_eq IS 'EQL v3 encrypted date column (searchable via = <>). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.date_eq IS 'EQL encrypted date (equality)';
 
   --! @brief Encrypted domain public.date_ord_ore.
   IF NOT EXISTS (
@@ -59,7 +59,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.date_ord_ore IS 'EQL v3 encrypted date column (searchable via = <> < <= > >=). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.date_ord_ore IS 'EQL encrypted date (equality, ordering)';
 
   --! @brief Encrypted domain public.date_ord.
   IF NOT EXISTS (
@@ -79,7 +79,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.date_ord IS 'EQL v3 encrypted date column (searchable via = <> < <= > >=). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.date_ord IS 'EQL encrypted date (equality, ordering)';
 
   --! @brief Encrypted domain public.date_ord_ope.
   IF NOT EXISTS (
@@ -97,6 +97,6 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.date_ord_ope IS 'EQL v3 encrypted date column (searchable via = <> < <= > >=). jsonb-backed CipherStash searchable-encryption domain.';
+  COMMENT ON DOMAIN public.date_ord_ope IS 'EQL encrypted date (equality, ordering)';
 END
 $$;

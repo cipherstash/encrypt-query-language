@@ -83,28 +83,43 @@ pub struct DomainBlock {
     pub comment: String,
 }
 
-/// One-line description baked into `COMMENT ON DOMAIN` for a stored/searchable
-/// encrypted domain. Capability is derived from the terms (term-agnostic via
-/// `operators_for_terms`) so it tracks the generated surface automatically.
-fn scalar_domain_comment(family_name: &str, domain: &Domain) -> String {
+/// Concise capability phrase from a domain's operator set — `equality`,
+/// `ordering`, `containment` (joined), or `storage only` when term-less. Derived
+/// from `operators_for_terms` so it tracks the generated surface; kept short so
+/// the `COMMENT ON DOMAIN` fits one line in type pickers (e.g. Supabase Studio).
+fn capability_phrase(domain: &Domain) -> String {
     let ops = Term::operators_for_terms(domain.terms);
-    let capability = if ops.is_empty() {
-        "storage only, not searchable".to_string()
+    let mut caps = Vec::new();
+    if ops.contains(&"=") {
+        caps.push("equality");
+    }
+    if ops.contains(&"<") {
+        caps.push("ordering");
+    }
+    if ops.contains(&"@>") {
+        caps.push("containment");
+    }
+    if caps.is_empty() {
+        "storage only".to_string()
     } else {
-        format!("searchable via {}", ops.join(" "))
-    };
+        caps.join(", ")
+    }
+}
+
+/// Terse one-line `COMMENT ON DOMAIN` for a stored/searchable encrypted domain,
+/// e.g. `EQL encrypted numeric (equality, ordering)`.
+fn scalar_domain_comment(family_name: &str, domain: &Domain) -> String {
     sql_str(&format!(
-        "EQL v3 encrypted {family_name} column ({capability}). jsonb-backed CipherStash searchable-encryption domain."
+        "EQL encrypted {family_name} ({})",
+        capability_phrase(domain)
     ))
 }
 
-/// `COMMENT ON DOMAIN` text for a `_query` operand twin: index-terms-only, no
-/// ciphertext.
+/// Terse `COMMENT ON DOMAIN` for a `_query` operand twin (index-terms-only).
 fn query_domain_comment(family_name: &str, domain: &Domain) -> String {
-    let ops = Term::operators_for_terms(domain.terms);
     sql_str(&format!(
-        "EQL v3 query operand for encrypted {family_name} (searchable via {}). Index terms only; carries no ciphertext (c).",
-        ops.join(" ")
+        "EQL {family_name} query operand ({})",
+        capability_phrase(domain)
     ))
 }
 
