@@ -68,8 +68,8 @@ check_fail() {
 }
 
 FAKE_TAGS=()
-check_ok "all emits derived identity and tags" \
-  $'identity=3.0.0-alpha.1\nsql_tag=eql-3.0.0-alpha.1\ncrate_tag=eql-bindings-v3.0.0-alpha.1' \
+check_ok "all emits identity, all tags, publish true/true" \
+  $'identity=3.0.0-alpha.1\nsql_tag=eql-3.0.0-alpha.1\nrust_tag=eql-bindings-v3.0.0-alpha.1\ntypescript_tag=eql-typescript-v3.0.0-alpha.1\npublish_rust=true\npublish_typescript=true' \
   release_alpha_resolve all 3.0.0 alpha "" branch eql_v3
 
 check_fail "rejects invalid target" "invalid target 'bad'" \
@@ -98,8 +98,8 @@ check_fail "eql rejects existing sql tag" "eql-3.0.0-alpha.1 already exists" \
   release_alpha_resolve eql 3.0.0 alpha 3.0.0-alpha.1 tag eql-3.0.0-alpha.1
 
 FAKE_TAGS=()
-check_ok "eql accepts tag ref without branch" \
-  $'identity=3.0.0-alpha.1\nsql_tag=eql-3.0.0-alpha.1\ncrate_tag=eql-bindings-v3.0.0-alpha.1' \
+check_ok "eql accepts tag ref without branch, publish false/false" \
+  $'identity=3.0.0-alpha.1\nsql_tag=eql-3.0.0-alpha.1\nrust_tag=eql-bindings-v3.0.0-alpha.1\ntypescript_tag=eql-typescript-v3.0.0-alpha.1\npublish_rust=false\npublish_typescript=false' \
   release_alpha_resolve eql 3.0.0 alpha "" tag eql-3.0.0-alpha.1
 
 FAKE_TAGS=(eql-3.0.0-alpha.2)
@@ -107,15 +107,34 @@ check_fail "all rejects existing sql tag with explicit pre" "eql-3.0.0-alpha.2 a
   release_alpha_resolve all 3.0.0 alpha 3.0.0-alpha.2 branch eql_v3
 
 FAKE_TAGS=(eql-bindings-v3.0.0-alpha.2)
-check_fail "all rejects existing crate tag with explicit pre" "eql-bindings-v3.0.0-alpha.2 already exists" \
+check_fail "all rejects existing rust tag with explicit pre" "eql-bindings-v3.0.0-alpha.2 already exists" \
+  release_alpha_resolve all 3.0.0 alpha 3.0.0-alpha.2 branch eql_v3
+
+FAKE_TAGS=(eql-typescript-v3.0.0-alpha.2)
+check_fail "all rejects existing typescript tag with explicit pre" "eql-typescript-v3.0.0-alpha.2 already exists" \
   release_alpha_resolve all 3.0.0 alpha 3.0.0-alpha.2 branch eql_v3
 
 FAKE_TAGS=()
-check_fail "bindings rejects missing sql tag" "SQL release must exist before publishing the crate" \
+check_fail "bindings rejects missing sql tag" "SQL release must exist before publishing language bindings" \
   release_alpha_resolve bindings 3.0.0 alpha 3.0.0-alpha.2 branch eql_v3
 
+FAKE_TAGS=()
+check_fail "rust rejects missing sql tag" "SQL release must exist before publishing language bindings" \
+  release_alpha_resolve rust 3.0.0 alpha 3.0.0-alpha.2 branch eql_v3
+
+FAKE_TAGS=()
+check_fail "typescript rejects missing sql tag" "SQL release must exist before publishing language bindings" \
+  release_alpha_resolve typescript 3.0.0 alpha 3.0.0-alpha.2 branch eql_v3
+
+FAKE_HEAD_SHA="head"
+FAKE_TAG_SHA="head"
 FAKE_TAGS=(eql-3.0.0-alpha.2 eql-bindings-v3.0.0-alpha.2)
-check_fail "bindings rejects existing crate tag" "eql-bindings-v3.0.0-alpha.2 already exists" \
+check_ok "bindings publishes only TypeScript when Rust tag exists" \
+  $'identity=3.0.0-alpha.2\nsql_tag=eql-3.0.0-alpha.2\nrust_tag=eql-bindings-v3.0.0-alpha.2\ntypescript_tag=eql-typescript-v3.0.0-alpha.2\npublish_rust=false\npublish_typescript=true' \
+  release_alpha_resolve bindings 3.0.0 alpha 3.0.0-alpha.2 branch eql_v3
+
+FAKE_TAGS=(eql-3.0.0-alpha.2 eql-bindings-v3.0.0-alpha.2 eql-typescript-v3.0.0-alpha.2)
+check_fail "bindings rejects when both language tags exist" "all requested language binding tags already exist" \
   release_alpha_resolve bindings 3.0.0 alpha 3.0.0-alpha.2 branch eql_v3
 
 FAKE_TAGS=(eql-3.0.0-alpha.2)
@@ -126,8 +145,8 @@ check_fail "bindings rejects advanced branch" "branch HEAD (newer) has advanced 
 
 FAKE_HEAD_SHA="released"
 FAKE_TAG_SHA="released"
-check_ok "bindings accepts same-source sql tag" \
-  $'identity=3.0.0-alpha.2\nsql_tag=eql-3.0.0-alpha.2\ncrate_tag=eql-bindings-v3.0.0-alpha.2' \
+check_ok "bindings accepts same-source sql tag, publish true/true" \
+  $'identity=3.0.0-alpha.2\nsql_tag=eql-3.0.0-alpha.2\nrust_tag=eql-bindings-v3.0.0-alpha.2\ntypescript_tag=eql-typescript-v3.0.0-alpha.2\npublish_rust=true\npublish_typescript=true' \
   release_alpha_resolve bindings 3.0.0 alpha 3.0.0-alpha.2 branch eql_v3
 
 exit "$fail"
