@@ -112,7 +112,10 @@ async fn ord_term_only_operand_orders_via_the_ore_operator(pool: PgPool) -> Resu
     .bind(operand.to_string())
     .fetch_one(&pool)
     .await?;
-    assert_eq!(above, 2, "`25 > val` resolves the commutator and matches 10, 20");
+    assert_eq!(
+        above, 2,
+        "`25 > val` resolves the commutator and matches 10, 20"
+    );
     Ok(())
 }
 
