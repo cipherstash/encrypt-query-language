@@ -250,14 +250,41 @@ depends = ["types:generate"]
 run = """
 #!/usr/bin/env bash
 set -euo pipefail
-git diff --exit-code -- crates/eql-bindings/src/v3 crates/eql-bindings/bindings crates/eql-bindings/schema || {
-  echo "eql-bindings generated Rust/TS/JSON are stale — run 'mise run types:generate' and commit the result" >&2
+pnpm --filter @cipherstash/eql sync:generated
+git diff --exit-code -- crates/eql-bindings/src/v3 crates/eql-bindings/bindings crates/eql-bindings/schema packages/eql/src/generated || {
+  echo "eql-bindings generated Rust/TS/JSON or @cipherstash/eql package output is stale — run 'mise run types:generate' and 'mise run typescript:generate' and commit the result" >&2
   exit 1
 }
 # git diff is blind to brand-new files; untracked output is stale too.
-untracked=$(git ls-files --others --exclude-standard -- crates/eql-bindings/src/v3 crates/eql-bindings/bindings crates/eql-bindings/schema)
+untracked=$(git ls-files --others --exclude-standard -- crates/eql-bindings/src/v3 crates/eql-bindings/bindings crates/eql-bindings/schema packages/eql/src/generated)
 if [ -n "$untracked" ]; then
   echo "eql-bindings has uncommitted generated files:" >&2
+  echo "$untracked" >&2
+  exit 1
+fi
+"""
+
+[tasks."typescript:generate"]
+description = "Regenerate @cipherstash/eql TypeScript package source from eql-bindings outputs"
+dir = "{{config_root}}"
+depends = ["types:generate"]
+run = "pnpm --filter @cipherstash/eql sync:generated"
+
+[tasks."typescript:check"]
+description = "Verify @cipherstash/eql generated package source is fresh"
+dir = "{{config_root}}"
+depends = ["types:generate"]
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+pnpm --filter @cipherstash/eql sync:generated
+git diff --exit-code -- packages/eql/src/generated || {
+  echo "@cipherstash/eql generated files are stale — run 'mise run typescript:generate' and commit the result" >&2
+  exit 1
+}
+untracked=$(git ls-files --others --exclude-standard -- packages/eql/src/generated)
+if [ -n "$untracked" ]; then
+  echo "@cipherstash/eql has uncommitted generated files:" >&2
   echo "$untracked" >&2
   exit 1
 fi
