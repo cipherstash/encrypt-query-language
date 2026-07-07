@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Cut an alpha of BOTH artefacts in lockstep: dispatch release-alpha.yml (target=all) and watch the run"
+#MISE description="Cut an alpha of SQL + docs + ALL language binding packages in lockstep: dispatch release-alpha.yml (target=all) and watch"
 #USAGE flag "--version <version>" help="Base SemVer, e.g. 3.0.0" default="3.0.0"
 #USAGE flag "--channel <channel>" help="Preview channel: alpha | beta | rc" default="alpha"
 #USAGE flag "--pre <pre>" help="Exact identity (e.g. 3.0.0-alpha.2), bypassing N derivation" default=""
@@ -31,9 +31,9 @@ fi
 command -v gh >/dev/null 2>&1 || err "gh CLI not found (https://cli.github.com)"
 gh auth status >/dev/null 2>&1 || err "gh is not authenticated; run 'gh auth login'"
 
-# target=all pins+pushes the crate version, so require an explicit branch.
+# target=all pins+pushes language package versions, so require an explicit branch.
 if [[ -z "$ref" ]]; then
-  err "missing --ref <branch> (target=all pushes the crate pin to that branch)"
+  err "missing --ref <branch> (target=all pushes language package pins to that branch)"
 fi
 
 # Unique correlation id echoed into the coordinator's run-name so we watch the
@@ -60,4 +60,4 @@ done
 
 echo "==> Watching run ${run_id}"
 gh run watch "$run_id" --exit-status
-echo "==> Coordinator finished. For target=all, the crate publish runs as a SEPARATE release-plz.yml run - watch it in the Actions tab."
+echo "==> Coordinator finished. Rust and TypeScript package publishes run as SEPARATE release workflows - watch them in the Actions tab."

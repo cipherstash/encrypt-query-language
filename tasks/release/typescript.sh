@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Publish ALL language EQL bindings for an EXISTING SQL alpha: dispatch release-alpha.yml (target=bindings) and watch"
+#MISE description="Publish the TypeScript EQL bindings for an EXISTING SQL alpha: dispatch release-alpha.yml (target=typescript) and watch"
 #USAGE flag "--version <version>" help="Base SemVer, e.g. 3.0.0" default="3.0.0"
 #USAGE flag "--channel <channel>" help="Preview channel: alpha | beta | rc" default="alpha"
 #USAGE flag "--pre <pre>" help="Exact identity (e.g. 3.0.0-alpha.2), bypassing N derivation" default=""
@@ -8,12 +8,13 @@
 
 set -euo pipefail
 
-# target=bindings publishes missing language binding packages SAME-SOURCE from
-# an existing eql-<identity> SQL release. The branch must currently be AT that
-# release's commit; the coordinator pins package metadata on top and dispatches
-# the language-specific publish workflows.
+# target=typescript publishes the TypeScript @cipherstash/eql package SAME-SOURCE
+# from an existing eql-<identity> SQL release: the branch must currently be AT
+# that release's commit (the coordinator guards branch-HEAD == SQL-tag-commit),
+# and the pin adds a metadata-only commit on top. Requires a BRANCH (the pin is
+# pushed).
 
-target="bindings"
+target="typescript"
 version="${usage_version:-3.0.0}"
 channel="${usage_channel:-alpha}"
 pre="${usage_pre:-}"
@@ -32,7 +33,7 @@ command -v gh >/dev/null 2>&1 || err "gh CLI not found (https://cli.github.com)"
 gh auth status >/dev/null 2>&1 || err "gh is not authenticated; run 'gh auth login'"
 
 if [[ -z "$ref" ]]; then
-  err "missing --ref <branch> (target=bindings pushes language package pins to that branch)"
+  err "missing --ref <branch> (target=typescript pushes the TypeScript package pin to that branch)"
 fi
 
 dispatch_id="$(uuidgen 2>/dev/null || echo "$$-$RANDOM-$(date +%s)")"
@@ -57,4 +58,4 @@ done
 
 echo "==> Watching run ${run_id}"
 gh run watch "$run_id" --exit-status
-echo "==> Coordinator finished. Language package publishes run as SEPARATE release workflows - watch them in the Actions tab."
+echo "==> Coordinator finished. The TypeScript npm publish runs as a SEPARATE release-typescript.yml run - watch it in the Actions tab."

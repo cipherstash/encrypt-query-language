@@ -60,6 +60,9 @@ jobs:
             tasks/release/all.sh \
             tasks/release/eql.sh \
             tasks/release/bindings.sh \
+            tasks/release/rust.sh \
+            tasks/release/typescript.sh \
+            tasks/release/prepare-bindings-assets.sh \
             tasks/release/resolve-alpha.sh \
             tasks/release/pin-bindings.sh \
             .github/scripts/derive-identity.sh \
