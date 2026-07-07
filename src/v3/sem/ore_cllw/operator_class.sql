@@ -12,18 +12,38 @@
 --! CLLW protocol needs iteration) and is called once per index-entry pair
 --! during build / search, not per-row in the outer query.
 --!
---! @note Excluded from the Supabase build variant by the build glob
---!       `**/*operator_class.sql`.
+--! @note Creating an operator family/class requires superuser: Postgres forbids
+--!       CREATE OPERATOR FAMILY / CLASS to non-superusers to protect index
+--!       integrity. Managed platforms (Supabase, and most hosted Postgres) run
+--!       the installer as a non-superuser role, so the DO block below ATTEMPTS
+--!       the creation and skips it on insufficient_privilege (SQLSTATE 42501),
+--!       letting the single installer run everywhere. When the class is absent,
+--!       ORE ordered scans over eql_v3_internal.ore_cllw are unavailable, but
+--!       the order-preserving (OPE) ordering domains — whose extractor return
+--!       types carry a native btree opclass — still index without it. On
+--!       superuser installs (self-managed Postgres, the SQLx test matrix) the
+--!       class is created normally. Any non-privilege error still propagates.
 --! @see eql_v3_internal.compare_ore_cllw_term
 
-CREATE OPERATOR FAMILY eql_v3_internal.ore_cllw_ops USING btree;
+DO $do$
+BEGIN
+  EXECUTE 'CREATE OPERATOR FAMILY eql_v3_internal.ore_cllw_ops USING btree';
 
-CREATE OPERATOR CLASS eql_v3_internal.ore_cllw_ops
-  DEFAULT FOR TYPE eql_v3_internal.ore_cllw
-  USING btree FAMILY eql_v3_internal.ore_cllw_ops AS
-    OPERATOR 1 public.<  (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
-    OPERATOR 2 public.<= (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
-    OPERATOR 3 public.=  (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
-    OPERATOR 4 public.>= (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
-    OPERATOR 5 public.>  (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
-    FUNCTION 1 eql_v3_internal.compare_ore_cllw_term(eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw);
+  EXECUTE $ddl$
+    CREATE OPERATOR CLASS eql_v3_internal.ore_cllw_ops
+      DEFAULT FOR TYPE eql_v3_internal.ore_cllw
+      USING btree FAMILY eql_v3_internal.ore_cllw_ops AS
+        OPERATOR 1 public.<  (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
+        OPERATOR 2 public.<= (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
+        OPERATOR 3 public.=  (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
+        OPERATOR 4 public.>= (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
+        OPERATOR 5 public.>  (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
+        FUNCTION 1 eql_v3_internal.compare_ore_cllw_term(eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw)
+  $ddl$;
+
+  RAISE NOTICE 'EQL: created btree operator class eql_v3_internal.ore_cllw_ops';
+EXCEPTION
+  WHEN insufficient_privilege THEN
+    RAISE NOTICE 'EQL: skipped operator class eql_v3_internal.ore_cllw_ops (requires superuser); ORE ordered indexes on ore_cllw unavailable, OPE ordering domains unaffected';
+END;
+$do$;
