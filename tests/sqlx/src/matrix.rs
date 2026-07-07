@@ -1505,10 +1505,15 @@ macro_rules! __scalar_matrix_planner_metadata_case {
                 let rows: Vec<(String, String, String, bool, bool, bool, bool)> =
                     sqlx::query_as(&sql).fetch_all(&pool).await?;
 
-                let expected = ops.len() * 3;
+                // 5 arg shapes per operator: the 3 storage shapes — (d,d),
+                // (d,jsonb), (jsonb,d) — plus the 2 CIP-3432 query-operand shapes
+                // — (d, d_query), (d_query, d). Every term-bearing domain the
+                // planner-metadata suite runs on has a `<name>_query` twin, so
+                // the count is uniformly ops x 5.
+                let expected = ops.len() * 5;
                 anyhow::ensure!(
                     rows.len() == expected,
-                    "expected {expected} rows ({n_ops} ops x 3 arg shapes) on {d}, got {got}",
+                    "expected {expected} rows ({n_ops} ops x 5 arg shapes: 3 storage + 2 query) on {d}, got {got}",
                     n_ops = ops.len(),
                     got = rows.len(),
                 );
