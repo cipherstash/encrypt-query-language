@@ -11,6 +11,15 @@ homepage = "https://github.com/cipherstash/encrypt-query-language"
 readme = "README.md"
 keywords = ["encryption", "postgres", "eql", "cipherstash", "searchable"]
 categories = ["cryptography", "database"]
+include = [
+  "Cargo.toml",
+  "README.md",
+  "CHANGELOG.md",
+  "src/**",
+  "bindings/**",
+  "schema/**",
+  "sql/**",
+]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }

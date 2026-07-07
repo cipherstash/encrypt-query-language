@@ -53,6 +53,11 @@ run = """
   rm -f release/cipherstash-encrypt.sql
 """
 
+[tasks."release:prepare_bindings_assets"]
+description = "Prepare exact-version SQL assets for Rust and TypeScript binding packages"
+dir = "{{config_root}}"
+run = "tasks/release/prepare-bindings-assets.sh"
+
 [tasks."test:sqlx:prep"]
 description = "Prepare the SQLx test DB: cp built EQL into migrations, migrate, regenerate fixtures"
 # `build` produces release/cipherstash-encrypt.sql (the self-contained eql_v3
