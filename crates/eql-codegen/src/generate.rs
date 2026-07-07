@@ -227,8 +227,20 @@ pub fn render_query_functions_file(family_name: &str, domain: &Domain) -> String
         }
         let extractor = Term::extractor_for_operator(domain.terms, op.symbol)
             .expect("a supported operator resolves an extractor");
-        entries.push(wrapper_entry(&query_dom, op, &storage_dom, &query_dom, extractor));
-        entries.push(wrapper_entry(&query_dom, op, &query_dom, &storage_dom, extractor));
+        entries.push(wrapper_entry(
+            &query_dom,
+            op,
+            &storage_dom,
+            &query_dom,
+            extractor,
+        ));
+        entries.push(wrapper_entry(
+            &query_dom,
+            op,
+            &query_dom,
+            &storage_dom,
+            extractor,
+        ));
     }
 
     let ctx = FunctionsContext {
@@ -551,7 +563,12 @@ mod tests {
         }
         // Query-operand functions/operators for the term-bearing domains only
         // (not the storage-only bare `integer`).
-        for dom in ["integer_eq", "integer_ord_ore", "integer_ord", "integer_ord_ope"] {
+        for dom in [
+            "integer_eq",
+            "integer_ord_ore",
+            "integer_ord",
+            "integer_ord_ope",
+        ] {
             assert!(names.contains(&format!("{dom}_query_functions.sql")));
             assert!(names.contains(&format!("{dom}_query_operators.sql")));
         }
