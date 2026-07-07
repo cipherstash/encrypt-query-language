@@ -1,0 +1,18 @@
+{
+  "name": "@cipherstash/eql-workspace",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.2",
+  "scripts": {
+    "build": "pnpm --filter @cipherstash/eql build",
+    "test": "pnpm --filter @cipherstash/eql test",
+    "types:generate": "pnpm --filter @cipherstash/eql sync:generated",
+    "types:check": "pnpm --filter @cipherstash/eql check:generated"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.14",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}
