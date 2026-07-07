@@ -17,6 +17,11 @@ pub fn environment() -> minijinja::Environment<'static> {
     env.add_template("types.sql", include_str!("../templates/types.sql.j2"))
         .expect("types.sql template");
     env.add_template(
+        "query_types.sql",
+        include_str!("../templates/query_types.sql.j2"),
+    )
+    .expect("query_types.sql template");
+    env.add_template(
         "functions.sql",
         include_str!("../templates/functions.sql.j2"),
     )
@@ -65,6 +70,11 @@ pub struct DomainBlock {
     // stays term-agnostic — it renders a non-empty-array CHECK per key without
     // hardcoding `ob`. Empty for non-ORE domains. See issue #262.
     pub nonempty_array_keys: Vec<String>,
+    // sql_str-escaped keys the payload must NOT carry. Empty for storage domains;
+    // `['c']` for a query-operand twin, whose CHECK forbids the ciphertext (a
+    // query operand is index-terms-only — CIP-3432). The template renders a
+    // `NOT (VALUE ? k)` clause per key.
+    pub forbidden_keys: Vec<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -95,6 +105,37 @@ pub fn domain_block(family_name: &str, domain: &Domain) -> DomainBlock {
             .into_iter()
             .map(sql_str)
             .collect(),
+        // Storage domains forbid nothing; the query twin forbids `c`.
+        forbidden_keys: vec![],
+    }
+}
+
+/// The query-operand twin block for a term-bearing domain: `public.<name>_query`,
+/// keys = envelope-minus-`c` (`v`/`i`) + the domain's terms, with `c` FORBIDDEN
+/// (a query operand carries no ciphertext — CIP-3432). Same non-empty-array term
+/// rule as the storage block.
+pub fn query_domain_block(family_name: &str, domain: &Domain) -> DomainBlock {
+    let name = format!("{}_query", domain.full_name(family_name));
+
+    // Envelope minus the ciphertext `c`, then the domain's terms.
+    let mut keys: Vec<String> = ENVELOPE_KEYS
+        .iter()
+        .filter(|&&k| k != "c")
+        .map(|k| sql_str(k))
+        .collect();
+    for k in Term::term_json_keys(domain.terms) {
+        keys.push(sql_str(k));
+    }
+
+    DomainBlock {
+        typname: sql_str(&name),
+        name,
+        keys,
+        nonempty_array_keys: Term::nonempty_array_keys(domain.terms)
+            .into_iter()
+            .map(sql_str)
+            .collect(),
+        forbidden_keys: vec![sql_str("c")],
     }
 }
 

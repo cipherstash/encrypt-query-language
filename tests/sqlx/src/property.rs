@@ -57,8 +57,14 @@ pub struct Row<T> {
     pub payload_json: String,
 }
 
-/// One ordering-oracle result row: `(lt, lte, gt, gte, ord_term_lt)` for a pair.
+/// One ordering-oracle result row for a pair: the storage operators
+/// `(lt, lte, gt, gte, ord_term_lt)` followed by the CIP-3432 query-operand
+/// operators `(lt_q, lte_q, gt_q, gte_q)`.
 type OrdRow = (
+    Option<bool>,
+    Option<bool>,
+    Option<bool>,
+    Option<bool>,
     Option<bool>,
     Option<bool>,
     Option<bool>,
@@ -78,6 +84,23 @@ fn jsonb(payload_json: &str) -> String {
     format!("'{}'::jsonb", payload_json.replace('\'', "''"))
 }
 
+/// Cast a JSON text literal into a QUERY-operand value: strip the ciphertext
+/// `c` (a query operand carries index terms only) and cast to `<domain>_query`.
+/// This is exactly what a client sends — the stored envelope minus `c` — and
+/// the RHS the `(storage, <name>_query)` query operators consume (CIP-3432).
+fn query_cast(payload_json: &str, domain: &str) -> String {
+    let mut v: serde_json::Value =
+        serde_json::from_str(payload_json).expect("payload_json is valid JSON");
+    if let Some(obj) = v.as_object_mut() {
+        obj.remove("c");
+    }
+    format!(
+        "'{}'::jsonb::{}_query",
+        v.to_string().replace('\'', "''"),
+        domain
+    )
+}
+
 /// Equality oracle: for every ordered pair `(a, b)` in `rows`,
 /// `a = b` (SQL, on the `_eq` domain) ⇔ `a.plaintext == b.plaintext`, and
 /// `a <> b` is its negation.
@@ -86,12 +109,25 @@ pub async fn assert_eq_oracle<T: ScalarType>(pool: &PgPool, rows: &[Row<T>]) -> 
     for a in rows {
         for b in rows {
             let want = a.plaintext == b.plaintext;
+            let a_dom = cast(&a.payload_json, &domain);
+            let b_dom = cast(&b.payload_json, &domain);
+            // CIP-3432: the SAME pair also exercises the term-only query operand
+            // (the stored payload minus its ciphertext `c`) through the
+            // `(storage, <name>_query)` operators, in both directions — folded
+            // into this one round trip so query coverage adds no DB load.
+            let a_qry = query_cast(&a.payload_json, &domain);
+            let b_qry = query_cast(&b.payload_json, &domain);
             let sql = format!(
-                "SELECT ({a_cast}) = ({b_cast}), ({a_cast}) <> ({b_cast})",
-                a_cast = cast(&a.payload_json, &domain),
-                b_cast = cast(&b.payload_json, &domain),
+                "SELECT ({a_dom}) = ({b_dom}), ({a_dom}) <> ({b_dom}), \
+                        ({a_dom}) = ({b_qry}), ({a_dom}) <> ({b_qry}), ({a_qry}) = ({b_dom})"
             );
-            let (eq, neq): (Option<bool>, Option<bool>) = sqlx::query_as(&sql)
+            let (eq, neq, eq_q, neq_q, eq_qc): (
+                Option<bool>,
+                Option<bool>,
+                Option<bool>,
+                Option<bool>,
+                Option<bool>,
+            ) = sqlx::query_as(&sql)
                 .fetch_one(pool)
                 .await
                 .with_context(|| format!("eq-oracle pair query: {sql}"))?;
@@ -107,6 +143,24 @@ pub async fn assert_eq_oracle<T: ScalarType>(pool: &PgPool, rows: &[Row<T>]) -> 
                 a.plaintext,
                 b.plaintext,
                 !want
+            );
+            anyhow::ensure!(
+                eq_q == Some(want),
+                "query `=` mismatch on {domain}_query: {:?} vs {:?} want {want}, got {eq_q:?}",
+                a.plaintext,
+                b.plaintext
+            );
+            anyhow::ensure!(
+                neq_q == Some(!want),
+                "query `<>` mismatch on {domain}_query: {:?} vs {:?}",
+                a.plaintext,
+                b.plaintext
+            );
+            anyhow::ensure!(
+                eq_qc == Some(want),
+                "commutator query `=` mismatch on {domain}_query: {:?} vs {:?}",
+                a.plaintext,
+                b.plaintext
             );
         }
     }
@@ -131,16 +185,23 @@ pub async fn assert_ord_oracle<T: ScalarType>(
         for b in rows {
             let a_cast = cast(&a.payload_json, &domain);
             let b_cast = cast(&b.payload_json, &domain);
+            // CIP-3432: the term-only query operand for `b` (payload minus `c`),
+            // exercised through `(storage, <name>_query)` ordering in the SAME
+            // round trip (no added DB load).
+            let b_qry = query_cast(&b.payload_json, &domain);
             let sql = format!(
                 "SELECT ({a}) < ({b}), ({a}) <= ({b}), ({a}) > ({b}), ({a}) >= ({b}), \
-                        eql_v3.ord_term({a}) < eql_v3.ord_term({b})",
+                        eql_v3.ord_term({a}) < eql_v3.ord_term({b}), \
+                        ({a}) < ({bq}), ({a}) <= ({bq}), ({a}) > ({bq}), ({a}) >= ({bq})",
                 a = a_cast,
                 b = b_cast,
+                bq = b_qry,
             );
-            let (lt, lte, gt, gte, term_lt): OrdRow = sqlx::query_as(&sql)
-                .fetch_one(pool)
-                .await
-                .with_context(|| format!("ord-oracle pair query: {sql}"))?;
+            let (lt, lte, gt, gte, term_lt, lt_q, lte_q, gt_q, gte_q): OrdRow =
+                sqlx::query_as(&sql)
+                    .fetch_one(pool)
+                    .await
+                    .with_context(|| format!("ord-oracle pair query: {sql}"))?;
 
             let pa = &a.plaintext;
             let pb = &b.plaintext;
@@ -158,6 +219,22 @@ pub async fn assert_ord_oracle<T: ScalarType>(
                 term_lt == Some(pa < pb),
                 "ord_term ordering mismatch on {domain}: {pa:?}<{pb:?}"
             );
+            anyhow::ensure!(
+                lt_q == Some(pa < pb),
+                "query `<` mismatch on {domain}_query: {pa:?}<{pb:?}"
+            );
+            anyhow::ensure!(
+                lte_q == Some(pa <= pb),
+                "query `<=` mismatch on {domain}_query: {pa:?}<={pb:?}"
+            );
+            anyhow::ensure!(
+                gt_q == Some(pa > pb),
+                "query `>` mismatch on {domain}_query: {pa:?}>{pb:?}"
+            );
+            anyhow::ensure!(
+                gte_q == Some(pa >= pb),
+                "query `>=` mismatch on {domain}_query: {pa:?}>={pb:?}"
+            );
         }
     }
     Ok(())
@@ -173,23 +250,31 @@ pub enum Overload {
     DomainDomain,
     DomainJsonb,
     JsonbDomain,
+    /// CIP-3432: the RHS is the term-only query operand (`<domain>_query`, the
+    /// payload minus `c`) — the `(storage, <name>_query)` function overload. The
+    /// facet that reaches `text_search_query`, which the operator oracle (which
+    /// runs text via `_eq`/`_ord`/`_ord_ore`, not `_search`) never touches.
+    DomainQuery,
 }
 
 impl Overload {
-    /// All three overloads, for the per-pair fan-out.
-    pub const ALL: [Overload; 3] = [
+    /// All overloads, for the per-pair fan-out.
+    pub const ALL: [Overload; 4] = [
         Overload::DomainDomain,
         Overload::DomainJsonb,
         Overload::JsonbDomain,
+        Overload::DomainQuery,
     ];
 
     /// The `(left, right)` operand SQL expressions for JSON literals `la`/`lb`,
-    /// casting the domain side via [`cast`] and leaving the jsonb side bare.
+    /// casting the domain side via [`cast`] and leaving the jsonb side bare (or,
+    /// for `DomainQuery`, casting the RHS to the term-only query domain).
     fn operands(self, la: &str, lb: &str, domain: &str) -> (String, String) {
         match self {
             Overload::DomainDomain => (cast(la, domain), cast(lb, domain)),
             Overload::DomainJsonb => (cast(la, domain), jsonb(lb)),
             Overload::JsonbDomain => (jsonb(la), cast(lb, domain)),
+            Overload::DomainQuery => (cast(la, domain), query_cast(lb, domain)),
         }
     }
 }
@@ -416,10 +501,15 @@ pub async fn assert_match_smoke(
     let haystack = cast(haystack_json, domain);
     let needle = cast(needle_json, domain);
     let disjoint = cast(disjoint_json, domain);
+    // CIP-3432: the term-only query operands (bloom `bf`, no ciphertext `c`),
+    // consumed by the `(text_match, text_match_query)` containment operators.
+    let needle_q = query_cast(needle_json, domain);
+    let disjoint_q = query_cast(disjoint_json, domain);
 
     // `contains(a, b)` = `match_term(a) @> match_term(b)` (a's bits ⊇ b's);
-    // `contained_by` is its mirror. Each row: (label, sql, expected).
-    let cases: [(&str, String, bool); 6] = [
+    // `contained_by` is its mirror. Each row: (label, sql, expected). The last
+    // four rows drive the same containment through a term-only query operand.
+    let cases: [(&str, String, bool); 10] = [
         (
             "contains(haystack, needle)",
             format!("eql_v3.contains({haystack}, {needle})"),
@@ -448,6 +538,26 @@ pub async fn assert_match_smoke(
         (
             "contained_by(disjoint, haystack)",
             format!("eql_v3.contained_by({disjoint}, {haystack})"),
+            false,
+        ),
+        (
+            "contains(haystack, needle_query) [CIP-3432]",
+            format!("eql_v3.contains({haystack}, {needle_q})"),
+            true,
+        ),
+        (
+            "contains(haystack, disjoint_query) [CIP-3432]",
+            format!("eql_v3.contains({haystack}, {disjoint_q})"),
+            false,
+        ),
+        (
+            "contained_by(needle_query, haystack) [CIP-3432]",
+            format!("eql_v3.contained_by({needle_q}, {haystack})"),
+            true,
+        ),
+        (
+            "contained_by(disjoint_query, haystack) [CIP-3432]",
+            format!("eql_v3.contained_by({disjoint_q}, {haystack})"),
             false,
         ),
     ];

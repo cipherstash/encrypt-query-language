@@ -431,15 +431,23 @@ fn ste_vec_query_entry_term_errors_match_document_rules() {
 }
 
 #[test]
-fn scalar_query_targets_are_unsupported() {
-    // No v3 scalar query wire shape exists (every scalar domain CHECK
-    // requires `c`); inventing one here would guess ahead of the mapper
-    // redesign, so the converter refuses.
-    let query = json!({ "v": 2, "k": "ct", "i": ident(), "hm": HEX });
-    let err = from_v2_query(&query, target("text_eq")).unwrap_err();
+fn scalar_query_hoists_terms_and_storage_only_is_unsupported() {
+    // CIP-3432: a term-bearing scalar target hoists its terms into the
+    // enveloped term-only `<name>_query` operand — `{v:3, i, <terms>}`, dropping
+    // the stored `c`/`k`. A storage-only target has no operators, so it stays
+    // UnsupportedQueryTarget.
+    let query = json!({ "v": 2, "k": "ct", "i": ident(), "c": CIPHERTEXT, "hm": HEX });
+    let out = from_v2_query(&query, target("text_eq")).expect("text_eq query hoist succeeds");
+    assert_eq!(
+        out,
+        json!({ "v": 3, "i": ident(), "hm": HEX }),
+        "hoist keeps v/i + the hm term, drops c/k"
+    );
+
+    let err = from_v2_query(&query, target("boolean")).unwrap_err();
     match err {
-        FromV2Error::UnsupportedQueryTarget { domain } => assert_eq!(domain, "text_eq"),
-        other => panic!("expected UnsupportedQueryTarget, got {other:?}"),
+        FromV2Error::UnsupportedQueryTarget { domain } => assert_eq!(domain, "boolean"),
+        other => panic!("expected UnsupportedQueryTarget for storage-only, got {other:?}"),
     }
 }
 

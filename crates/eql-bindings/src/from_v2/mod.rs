@@ -60,15 +60,16 @@
 //!
 //! ## Query payloads
 //!
-//! [`from_v2_query`] covers the jsonb containment needle
-//! (`{sv: [{s, hm|oc}]}` → the [`crate::v3::jsonb::SteVecQuery`] shape),
-//! normalizing entries down to `s` + one term exactly as the SQL cast
+//! [`from_v2_query`] covers both query shapes. The jsonb containment needle
+//! (`{sv: [{s, hm|oc}]}` → [`crate::v3::jsonb::SteVecQuery`]) normalizes
+//! entries down to `s` + one term exactly as the SQL cast
 //! `eql_v3.to_ste_vec_query` does (stray `a` markers and `c` ciphertexts are
-//! stripped). Scalar query targets return
-//! [`FromV2Error::UnsupportedQueryTarget`]: no v3 scalar query wire shape
-//! exists (every scalar domain CHECK requires the ciphertext `c` a query
-//! payload omits), and this crate will not invent one ahead of the mapper
-//! redesign.
+//! stripped). A term-bearing scalar target hoists the target's required terms
+//! into the enveloped term-only operand `{v: 3, i, <terms>}` for its
+//! `<name>_query` domain — the query counterpart of the stored conversion,
+//! dropping `c`/`k` (CIP-3432). A STORAGE-ONLY scalar target (no terms, no
+//! operators) has no query operand and returns
+//! [`FromV2Error::UnsupportedQueryTarget`].
 //!
 //! Query conversion has the same entry-point split as the stored-payload
 //! side: [`from_v2_query`] validates the converted needle and returns the
@@ -162,26 +163,28 @@ fn convert(v2: &Value, target: TargetDomain) -> Result<Value, FromV2Error> {
     }
 }
 
-/// Convert an EQL v2.3 QUERY payload into the v3 query payload for `target`.
+/// Convert an EQL v2.3 QUERY payload into the v3 query operand for `target`.
 ///
-/// Only [`TargetDomain::Json`] is supported: the v2 containment needle
-/// (`{sv: [{s, hm|oc}]}`, per the v2.3 schema's `SteVecQueryPayload`)
-/// converts to the [`crate::v3::jsonb::SteVecQuery`] shape, entries
-/// normalized to `s` + exactly one term (mirroring `eql_v3.to_ste_vec_query`
-/// — stray `a`/`c` keys are stripped, so a stored document payload can also
-/// be normalized into a needle). A `v`/`k` envelope, if present, must be
-/// v2/`sv`; `i` is dropped.
+/// [`TargetDomain::Json`]: the v2 containment needle (`{sv: [{s, hm|oc}]}`, the
+/// v2.3 `SteVecQueryPayload`) converts to the [`crate::v3::jsonb::SteVecQuery`]
+/// shape — entries normalized to `s` + exactly one term (mirroring
+/// `eql_v3.to_ste_vec_query`; stray `a`/`c` keys are stripped, so a stored
+/// document payload can also be normalized into a needle), `i` dropped.
 ///
-/// Scalar targets return [`FromV2Error::UnsupportedQueryTarget`]: v2 scalar
-/// query payloads omit `c`, no v3 scalar domain admits a `c`-less payload,
-/// and this crate will not invent a wire shape ahead of the mapper redesign.
+/// A term-bearing [`TargetDomain::Scalar`]: the target's required terms are
+/// hoisted into the enveloped term-only operand `{v: 3, i, <terms>}` for its
+/// `<name>_query` domain, dropping `c`/`k` (`bf` reinterpreted to signed
+/// `smallint[]`). A storage-only scalar target has no operators and returns
+/// [`FromV2Error::UnsupportedQueryTarget`].
 ///
-/// Wire-oriented callers keep the `Value`; callers that want the needle
-/// typed use [`from_v2_query_typed`] instead (same conversion, same
-/// failures, one strict parse either way).
+/// Wire-oriented callers keep the `Value`; callers that want it typed use
+/// [`from_v2_query_typed`] instead (same conversion, same failures, one strict
+/// parse either way).
 pub fn from_v2_query(v2: &Value, target: TargetDomain) -> Result<Value, FromV2Error> {
     let out = convert_query(v2, target)?;
-    validate_as(QUERY_DOMAIN, &out)?;
+    // Validate through the generated QueryPayload strict parser (the query-side
+    // counterpart of validate_as), keyed on the target's `<name>_query` domain.
+    parse_query(&query_domain_name(target), &out)?;
     Ok(out)
 }
 
@@ -197,27 +200,35 @@ pub fn from_v2_query(v2: &Value, target: TargetDomain) -> Result<Value, FromV2Er
 /// `serde_json::to_value(&from_v2_query_typed(v2, t)?)` equals
 /// `from_v2_query(v2, t)?` exactly (pinned by `tests/query_payload.rs`).
 ///
-/// Scalar targets fail with [`FromV2Error::UnsupportedQueryTarget`] exactly
-/// like [`from_v2_query`]: [`QueryPayload`]'s future single-term scalar
-/// variants are deliberately absent until the mapper redesign defines a v3
-/// scalar-query wire shape (see the enum docs).
+/// Storage-only scalar targets fail with
+/// [`FromV2Error::UnsupportedQueryTarget`] exactly like [`from_v2_query`];
+/// term-bearing scalars yield the matching `<name>_query` [`QueryPayload`]
+/// variant.
 pub fn from_v2_query_typed(v2: &Value, target: TargetDomain) -> Result<QueryPayload, FromV2Error> {
     let out = convert_query(v2, target)?;
-    QueryPayload::parse(QUERY_DOMAIN, &out)
-        .unwrap_or_else(|| {
-            // QUERY_DOMAIN is the literal "jsonb_query", which QueryPayload
-            // resolves to its SteVec variant.
-            unreachable!("query domain {QUERY_DOMAIN} must have a QueryPayload variant")
-        })
-        .map_err(FromV2Error::Invalid)
+    parse_query(&query_domain_name(target), &out)
 }
 
-/// The (unqualified) SQL domain of every convertible query payload. A single
-/// constant is honest today: [`convert_query`] only converts the jsonb
-/// containment needle, so both entry points validate/parse as `jsonb_query`.
-/// When the mapper redesign ships scalar query shapes, the domain becomes a
-/// function of the target and this constant dissolves.
-const QUERY_DOMAIN: &str = "jsonb_query";
+/// The unqualified query-operand domain a target converts into: the scalar
+/// twin `<name>_query`, or `jsonb_query` for the SteVec needle. (Replaces the
+/// old single `QUERY_DOMAIN` constant now that scalar query shapes exist.)
+fn query_domain_name(target: TargetDomain) -> String {
+    match target {
+        TargetDomain::Json => "jsonb_query".to_string(),
+        TargetDomain::Scalar(t) => format!("{}_query", t.domain()),
+    }
+}
+
+/// Validate `out` through the generated [`QueryPayload`] strict parser, keeping
+/// the parsed variant. Every domain [`query_domain_name`] produces is a
+/// QueryPayload variant (the scalar twins + the SteVec needle), so a `None`
+/// return is unreachable — but `convert_query` guards storage-only scalar
+/// targets first, so this is only ever called for a real query domain.
+fn parse_query(domain: &str, out: &Value) -> Result<QueryPayload, FromV2Error> {
+    QueryPayload::parse(domain, out)
+        .unwrap_or_else(|| unreachable!("query domain {domain} must have a QueryPayload variant"))
+        .map_err(FromV2Error::Invalid)
+}
 
 /// The shared conversion path behind [`from_v2_query`] /
 /// [`from_v2_query_typed`]: dispatch on the target and build the v3 query
@@ -225,13 +236,56 @@ const QUERY_DOMAIN: &str = "jsonb_query";
 /// point does that exactly once (validate-and-discard in [`from_v2_query`],
 /// parse-and-keep in [`from_v2_query_typed`]).
 fn convert_query(v2: &Value, target: TargetDomain) -> Result<Value, FromV2Error> {
-    let scalar = match target {
-        TargetDomain::Json => return convert_ste_vec_query(v2),
-        TargetDomain::Scalar(t) => t,
-    };
-    Err(FromV2Error::UnsupportedQueryTarget {
-        domain: scalar.domain().into(),
-    })
+    match target {
+        TargetDomain::Json => convert_ste_vec_query(v2),
+        TargetDomain::Scalar(t) => convert_scalar_query(v2, t),
+    }
+}
+
+/// v2 scalar query payload → v3 enveloped term-only operand `{v: 3, i,
+/// <terms>}` for `target`'s `<name>_query` domain. Hoists exactly the target's
+/// required terms out of the v2 payload (a query operand may omit the v2
+/// envelope), dropping `c`/`k` — the query counterpart of [`convert_scalar`]
+/// (which keeps `c`). A STORAGE-ONLY target (no terms, no operators) has no
+/// query operand and returns [`FromV2Error::UnsupportedQueryTarget`].
+fn convert_scalar_query(v2: &Value, target: ScalarTarget) -> Result<Value, FromV2Error> {
+    if target.term_json_keys().is_empty() {
+        return Err(FromV2Error::UnsupportedQueryTarget {
+            domain: target.domain().into(),
+        });
+    }
+    let obj = v2
+        .as_object()
+        .ok_or_else(|| invalid("a query payload must be a JSON object"))?;
+    // A versioned input must be v2; a query operand may omit the envelope.
+    if let Some(v) = obj.get("v") {
+        if v.as_u64() != Some(V2_WIRE_VERSION) {
+            return Err(FromV2Error::UnsupportedVersion { found: v.as_u64() });
+        }
+    }
+    let mut out = Map::new();
+    out.insert("v".into(), json!(crate::EQL_SCHEMA_VERSION));
+    if let Some(i) = obj.get("i") {
+        out.insert("i".into(), i.clone());
+        // Absent `i` fails the entry point's final strict parse (the query
+        // domain requires `{v, i, <terms>}`).
+    }
+    for &key in target.term_json_keys() {
+        let val = obj.get(key).ok_or_else(|| FromV2Error::MissingTerm {
+            domain: target.domain().into(),
+            key: key.into(),
+            entry: None,
+        })?;
+        // `hm`/`ob`/`op` are representation-identical in v2 and v3; `bf` is
+        // reinterpreted from v2 unsigned bit positions to signed smallint[].
+        let converted = if key == "bf" {
+            convert_bloom(val)?
+        } else {
+            val.clone()
+        };
+        out.insert(key.into(), converted);
+    }
+    Ok(Value::Object(out))
 }
 
 /// Lenient v3 envelope probe for format sniffing (protect-ffi / proxy): true

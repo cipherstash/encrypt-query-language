@@ -234,3 +234,194 @@ impl DomainType for TextSearch {
         schema_for!(TextSearch)
     }
 }
+/// `public.text_eq_query` — equality domain query operand.
+///
+/// Operators: `=` `<>`. Required keys: `v` `i` `hm`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
+pub struct TextEqQuery {
+    pub v: SchemaVersion,
+    pub i: Identifier,
+    pub hm: Hmac256,
+}
+impl DomainType for TextEqQuery {
+    fn sql_domain_static() -> &'static str {
+        "public.text_eq_query"
+    }
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["hm"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        TextEqQuery::deserialize(value).map(|_| ())
+    }
+    fn schema(&self) -> Schema {
+        schema_for!(TextEqQuery)
+    }
+}
+/// `public.text_match_query` — match domain query operand.
+///
+/// Operators: `@>` `<@`. Required keys: `v` `i` `bf`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
+pub struct TextMatchQuery {
+    pub v: SchemaVersion,
+    pub i: Identifier,
+    pub bf: BloomFilter,
+}
+impl DomainType for TextMatchQuery {
+    fn sql_domain_static() -> &'static str {
+        "public.text_match_query"
+    }
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["bf"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        TextMatchQuery::deserialize(value).map(|_| ())
+    }
+    fn schema(&self) -> Schema {
+        schema_for!(TextMatchQuery)
+    }
+}
+/// `public.text_ord_ore_query` — ordering domain query operand.
+///
+/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `hm` `ob`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
+pub struct TextOrdOreQuery {
+    pub v: SchemaVersion,
+    pub i: Identifier,
+    pub hm: Hmac256,
+    pub ob: OreBlock256,
+}
+impl DomainType for TextOrdOreQuery {
+    fn sql_domain_static() -> &'static str {
+        "public.text_ord_ore_query"
+    }
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["hm", "ob"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        TextOrdOreQuery::deserialize(value).map(|_| ())
+    }
+    fn schema(&self) -> Schema {
+        schema_for!(TextOrdOreQuery)
+    }
+}
+/// `public.text_ord_query` — ordering domain query operand.
+///
+/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `hm` `ob`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
+pub struct TextOrdQuery {
+    pub v: SchemaVersion,
+    pub i: Identifier,
+    pub hm: Hmac256,
+    pub ob: OreBlock256,
+}
+impl DomainType for TextOrdQuery {
+    fn sql_domain_static() -> &'static str {
+        "public.text_ord_query"
+    }
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["hm", "ob"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        TextOrdQuery::deserialize(value).map(|_| ())
+    }
+    fn schema(&self) -> Schema {
+        schema_for!(TextOrdQuery)
+    }
+}
+/// `public.text_ord_ope_query` — ordering domain query operand.
+///
+/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `hm` `op`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
+pub struct TextOrdOpeQuery {
+    pub v: SchemaVersion,
+    pub i: Identifier,
+    pub hm: Hmac256,
+    pub op: OpeCllw,
+}
+impl DomainType for TextOrdOpeQuery {
+    fn sql_domain_static() -> &'static str {
+        "public.text_ord_ope_query"
+    }
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["hm", "op"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        TextOrdOpeQuery::deserialize(value).map(|_| ())
+    }
+    fn schema(&self) -> Schema {
+        schema_for!(TextOrdOpeQuery)
+    }
+}
+/// `public.text_search_query` — search domain query operand.
+///
+/// Operators: `=` `<>` `<` `<=` `>` `>=` `@>` `<@`. Required keys: `v` `i` `hm` `ob` `bf`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
+pub struct TextSearchQuery {
+    pub v: SchemaVersion,
+    pub i: Identifier,
+    pub hm: Hmac256,
+    pub ob: OreBlock256,
+    pub bf: BloomFilter,
+}
+impl DomainType for TextSearchQuery {
+    fn sql_domain_static() -> &'static str {
+        "public.text_search_query"
+    }
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["hm", "ob", "bf"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        TextSearchQuery::deserialize(value).map(|_| ())
+    }
+    fn schema(&self) -> Schema {
+        schema_for!(TextSearchQuery)
+    }
+}

@@ -256,6 +256,23 @@ macro_rules! ope_ord_fixture_smoke {
                 $domain
             );
 
+            // CIP-3432: the term-only query operand — the pivot payload minus
+            // its ciphertext `c`, cast to `<domain>_query`. Every predicate must
+            // match the SAME oracle through the `(storage, <domain>_query)`
+            // operators as through the full-envelope operand.
+            let pivot_query_cast = {
+                let mut v: serde_json::Value =
+                    serde_json::from_str(&pivot_json).expect("pivot payload is valid JSON");
+                if let Some(o) = v.as_object_mut() {
+                    o.remove("c");
+                }
+                format!(
+                    "'{}'::jsonb::public.{}_query",
+                    v.to_string().replace('\'', "''"),
+                    $domain
+                )
+            };
+
             let values: Vec<$scalar> = <$scalar as ScalarType>::fixture_values().to_vec();
             for op in ["<", "<=", ">", ">=", "=", "<>"] {
                 let mut expected: Vec<$scalar> = values
@@ -272,19 +289,22 @@ macro_rules! ope_ord_fixture_smoke {
                     .cloned()
                     .collect();
                 expected.sort();
-                let sql = format!(
-                    "SELECT plaintext FROM {table} \
-                     WHERE (payload)::public.{domain} {op} ({pivot_cast})",
-                    domain = $domain,
-                );
-                let mut actual: Vec<$scalar> = sqlx::query_scalar(&sql).fetch_all(&pool).await?;
-                actual.sort();
-                assert_eq!(
-                    actual, expected,
-                    "{}: `{op}` against the real mid-pivot ciphertext must \
-                     match the plaintext oracle (SQL: {sql})",
-                    $domain
-                );
+                for (label, rhs) in [("storage", &pivot_cast), ("query", &pivot_query_cast)] {
+                    let sql = format!(
+                        "SELECT plaintext FROM {table} \
+                         WHERE (payload)::public.{domain} {op} ({rhs})",
+                        domain = $domain,
+                    );
+                    let mut actual: Vec<$scalar> =
+                        sqlx::query_scalar(&sql).fetch_all(&pool).await?;
+                    actual.sort();
+                    assert_eq!(
+                        actual, expected,
+                        "{}: `{op}` against the real mid-pivot ciphertext ({label} operand) \
+                         must match the plaintext oracle (SQL: {sql})",
+                        $domain
+                    );
+                }
             }
             Ok(())
         }

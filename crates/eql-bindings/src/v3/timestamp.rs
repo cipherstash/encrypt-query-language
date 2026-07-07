@@ -165,3 +165,127 @@ impl DomainType for TimestampOrdOpe {
         schema_for!(TimestampOrdOpe)
     }
 }
+/// `public.timestamp_eq_query` — equality domain query operand.
+///
+/// Operators: `=` `<>`. Required keys: `v` `i` `hm`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
+pub struct TimestampEqQuery {
+    pub v: SchemaVersion,
+    pub i: Identifier,
+    pub hm: Hmac256,
+}
+impl DomainType for TimestampEqQuery {
+    fn sql_domain_static() -> &'static str {
+        "public.timestamp_eq_query"
+    }
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["hm"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        TimestampEqQuery::deserialize(value).map(|_| ())
+    }
+    fn schema(&self) -> Schema {
+        schema_for!(TimestampEqQuery)
+    }
+}
+/// `public.timestamp_ord_ore_query` — ordering domain query operand.
+///
+/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
+pub struct TimestampOrdOreQuery {
+    pub v: SchemaVersion,
+    pub i: Identifier,
+    pub ob: OreBlock256,
+}
+impl DomainType for TimestampOrdOreQuery {
+    fn sql_domain_static() -> &'static str {
+        "public.timestamp_ord_ore_query"
+    }
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["ob"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        TimestampOrdOreQuery::deserialize(value).map(|_| ())
+    }
+    fn schema(&self) -> Schema {
+        schema_for!(TimestampOrdOreQuery)
+    }
+}
+/// `public.timestamp_ord_query` — ordering domain query operand.
+///
+/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
+pub struct TimestampOrdQuery {
+    pub v: SchemaVersion,
+    pub i: Identifier,
+    pub ob: OreBlock256,
+}
+impl DomainType for TimestampOrdQuery {
+    fn sql_domain_static() -> &'static str {
+        "public.timestamp_ord_query"
+    }
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["ob"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        TimestampOrdQuery::deserialize(value).map(|_| ())
+    }
+    fn schema(&self) -> Schema {
+        schema_for!(TimestampOrdQuery)
+    }
+}
+/// `public.timestamp_ord_ope_query` — ordering domain query operand.
+///
+/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `op`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
+pub struct TimestampOrdOpeQuery {
+    pub v: SchemaVersion,
+    pub i: Identifier,
+    pub op: OpeCllw,
+}
+impl DomainType for TimestampOrdOpeQuery {
+    fn sql_domain_static() -> &'static str {
+        "public.timestamp_ord_ope_query"
+    }
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["op"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        TimestampOrdOpeQuery::deserialize(value).map(|_| ())
+    }
+    fn schema(&self) -> Schema {
+        schema_for!(TimestampOrdOpeQuery)
+    }
+}

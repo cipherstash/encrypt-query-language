@@ -1,0 +1,37 @@
+-- AUTOMATICALLY GENERATED FILE.
+-- REQUIRE: src/v3/schema.sql
+
+--! @file v3/scalars/{{ family_name }}/{{ family_name }}_query_types.sql
+--! @brief Query-operand domains for {{ family_name }} (index-terms-only, no ciphertext).
+--! @note Cast a query operand explicitly to its `_query` domain in a predicate
+--!       (e.g. `WHERE col = $1::public.{{ family_name }}_eq_query`). A bare,
+--!       uncast literal RHS is ambiguous between the `_query` and `jsonb`
+--!       operator overloads and will not resolve.
+
+DO $$
+BEGIN
+{%- for d in domains %}
+  --! @brief Query-operand domain public.{{ d.name }} (term-only; no `c`).
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = '{{ d.typname }}' AND typnamespace = 'public'::regnamespace
+  ) THEN
+    CREATE DOMAIN public.{{ d.name }} AS jsonb
+      CHECK (
+        jsonb_typeof(VALUE) = 'object'
+        {%- for k in d.keys %}
+        AND VALUE ? '{{ k }}'
+        {%- endfor %}
+        {%- for k in d.forbidden_keys %}
+        AND NOT (VALUE ? '{{ k }}')
+        {%- endfor %}
+        {%- for k in d.nonempty_array_keys %}
+        AND jsonb_typeof(VALUE -> '{{ k }}') = 'array'
+        AND jsonb_array_length(VALUE -> '{{ k }}') > 0
+        {%- endfor %}
+        AND VALUE->>'v' = '3'
+      );
+  END IF;
+{% endfor -%}
+END
+$$;
