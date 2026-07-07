@@ -27,22 +27,38 @@ release_alpha_pin_push() {
 }
 
 release_alpha_pin_bindings() {
-  local identity="$1" branch="$2"
+  local identity="$1" branch="$2" publish_rust="$3" publish_typescript="$4"
   local commit_sha
   local commit_args=()
 
-  release-plz set-version "eql-bindings@${identity}"
+  if [[ "$publish_rust" == "true" ]]; then
+    release-plz set-version "eql-bindings@${identity}"
+  fi
+
+  if [[ "$publish_typescript" == "true" ]]; then
+    node -e "const fs=require('fs'); const p='packages/eql/package.json'; const j=JSON.parse(fs.readFileSync(p,'utf8')); j.version=process.argv[1]; fs.writeFileSync(p, JSON.stringify(j,null,2)+'\n')" "$identity"
+    pnpm install --lockfile-only
+  fi
+
+  if [[ "$publish_rust" == "true" || "$publish_typescript" == "true" ]]; then
+    mise run release:prepare_bindings_assets --version "$identity"
+  fi
 
   if git diff --quiet && git diff --cached --quiet; then
-    echo "set-version produced no changes (already pinned to ${identity}); skipping commit/push"
+    echo "package versions already pinned to ${identity}; skipping commit/push"
   else
     git config user.name "github-actions[bot]"
     git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-    git add crates/eql-bindings/Cargo.toml crates/eql-bindings/CHANGELOG.md Cargo.lock
+    if [[ "$publish_rust" == "true" ]]; then
+      git add crates/eql-bindings/Cargo.toml crates/eql-bindings/CHANGELOG.md Cargo.lock crates/eql-bindings/sql
+    fi
+    if [[ "$publish_typescript" == "true" ]]; then
+      git add packages/eql/package.json pnpm-lock.yaml packages/eql/sql packages/eql/src/generated/release-manifest.ts
+    fi
     if [[ "${RELEASE_ALPHA_COMMIT_SIGN:-true}" == "true" ]]; then
       commit_args=(-S)
     fi
-    git commit "${commit_args[@]}" -m "chore(release): pin eql-bindings to ${identity}"
+    git commit "${commit_args[@]}" -m "chore(release): pin language bindings to ${identity}"
     release_alpha_pin_push "$branch"
   fi
 
@@ -51,5 +67,5 @@ release_alpha_pin_bindings() {
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-  release_alpha_pin_bindings "${IDENTITY:?}" "${BRANCH:?}"
+  release_alpha_pin_bindings "${IDENTITY:?}" "${BRANCH:?}" "${PUBLISH_RUST:?}" "${PUBLISH_TYPESCRIPT:?}"
 fi
