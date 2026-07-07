@@ -1,19 +1,16 @@
 name: "Release eql-bindings (crates.io)"
 
-# Publishes the `eql-bindings` crate to crates.io via release-plz. Mirrors the
-# canonical cipherstash-suite release-plz setup (crates.io Trusted Publishing
-# via OIDC — no long-lived token; GPG-signed release commits/tags; `release`
-# before `release-pr`) and keeps EQL's own infra conventions (blacksmith runner,
-# mise toolchain).
+# Publishes the `eql-bindings` crate to crates.io via release-plz (crates.io
+# Trusted Publishing via OIDC — no long-lived token; GPG-signed release
+# commits/tags; blacksmith runner + mise toolchain).
 #
-# Flow (see also cipherstash-suite RELEASING.md):
-#   1. Push to main -> `release-pr` opens/updates a release PR (version bump +
-#      crates/eql-bindings/CHANGELOG.md from conventional commits).
-#   2. Merge that PR -> `release` publishes to crates.io, tags, and cuts a
-#      GitHub Release.
-# `release-pr` runs AFTER `release` (needs: release): if it ran first it would
-# see the just-merged `chore: release` commit as unreleased and open a recursive
-# release PR. (cipherstash-suite commit 02a989405.)
+# Publish-only: crate versioning is owned by CHANGESETS, not release-plz. The
+# changesets "Version Packages" PR bumps crates/eql-bindings/Cargo.toml to the
+# lockstep version V (scripts/sync-lockstep-versions.mjs) alongside the npm
+# package. On push to main, `release` publishes the committed Cargo.toml version
+# V to crates.io (no-op when V is already published) and tags eql-bindings-vV.
+# There is deliberately NO release-plz `release-pr` job — changesets opens the
+# version PR, so a release-plz PR would fight it.
 #
 # One-time crates.io setup (Trusted Publishing): on the eql-bindings crate's
 # Settings -> Trusted Publishing, add a GitHub publisher with
@@ -79,38 +76,5 @@ jobs:
         uses: release-plz/action@v0.5
         with:
           command: release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  release-pr:
-    name: "Release PR"
-    # A coordinator dispatch against a tag or feature branch must publish
-    # without opening a recursive release PR.
-    if: github.ref == 'refs/heads/main'
-    runs-on: blacksmith-16vcpu-ubuntu-2204
-    needs: release
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Import GPG key
-        uses: crazy-max/ghaction-import-gpg@v7
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          git_user_signingkey: true
-          git_commit_gpgsign: true
-          git_tag_gpgsign: true
-
-      - uses: jdx/mise-action@v3
-        with:
-          version: 2026.4.0
-          install: true
-          cache: true
-
-      - name: Run release-plz release-pr
-        uses: release-plz/action@v0.5
-        with:
-          command: release-pr
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,135 @@
+name: "Release (changesets)"
+
+# Single release entry point for the EQL lockstep artifacts, driven by
+# changesets. On push to main:
+#   - if changesets are pending -> changesets/action opens/updates the
+#     "Version Packages" PR. Its `version:` command bumps @cipherstash/eql AND
+#     derives the crate version + bundled SQL to the same V
+#     (scripts/sync-lockstep-versions.mjs), so the merged commit is a complete,
+#     consistent lockstep bump.
+#   - if none are pending (the Version PR just merged) -> it publishes the npm
+#     package (@cipherstash/eql@V) via OIDC trusted publishing, and this
+#     workflow then builds+attaches the SQL GitHub release (eql-V) and docs.
+#
+# The Rust crate publishes independently from release-plz.yml (its own
+# push-to-main trigger publishes the committed Cargo.toml version V; crates.io
+# Trusted Publishing requires that workflow as the entry point). npm auth is
+# OIDC only (no NPM_TOKEN).
+#
+# One-time npm setup (Trusted Publishing): on the @cipherstash/eql package's
+# Settings -> Trusted Publisher, add a GitHub publisher with
+#   Organization: cipherstash   Repository: encrypt-query-language
+#   Workflow: release.yml
+# For the brand-new package, bootstrap the first publish out-of-band, then all
+# subsequent publishes are OIDC.
+
+permissions:
+  id-token: write # npm OIDC trusted publishing
+  contents: write # changesets commits the Version PR / tags; SQL release attach
+  pull-requests: write # changesets opens the Version PR
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash {0}
+
+jobs:
+  release:
+    name: Version or publish (changesets)
+    # GitHub-hosted (not Blacksmith): npm provenance from OIDC trusted
+    # publishing is only accepted from github-hosted runners (self-hosted -> E422).
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      published: ${{ steps.changesets.outputs.published }}
+      version: ${{ steps.ver.outputs.version }}
+      prerelease: ${{ steps.ver.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v6.0.8
+        name: Install pnpm
+        with:
+          run_install: false
+          cache: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Upgrade npm for OIDC trusted publishing
+        run: npm install -g npm@^11.5.1
+
+      - uses: jdx/mise-action@v3
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # `version:` runs `changeset version && sync-lockstep-versions.mjs` (bumps
+      # package.json + Cargo.toml + builds/bundles SQL to V) for the Version PR;
+      # `publish:` runs `pnpm run build && changeset publish` to publish npm.
+      - name: Version or publish
+        id: changesets
+        uses: changesets/action@v1.8.0
+        with:
+          version: pnpm run version
+          publish: pnpm run release
+          commitMode: "github-api"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve published version
+        id: ver
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          PUBLISHED: ${{ steps.changesets.outputs.publishedPackages }}
+        run: |
+          set -euo pipefail
+          version="$(node -e "const p=JSON.parse(process.env.PUBLISHED);const e=p.find(x=>x.name==='@cipherstash/eql');if(!e){process.exit(1)}console.log(e.version)")"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          if [[ "$version" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-sql:
+    name: Build + attach SQL release
+    needs: release
+    if: ${{ needs.release.outputs.published == 'true' }}
+    permissions:
+      contents: write
+    secrets:
+      MULTITUDES_ACCESS_TOKEN: ${{ secrets.MULTITUDES_ACCESS_TOKEN }}
+    uses: ./.github/workflows/_build-sql.yml
+    with:
+      ref: ${{ github.sha }}
+      tag: eql-${{ needs.release.outputs.version }}
+      attach: true
+      target_commitish: ${{ github.sha }}
+      prerelease: ${{ needs.release.outputs.prerelease == 'true' }}
+
+  build-docs:
+    name: Build + attach docs
+    needs: [release, build-sql]
+    if: ${{ needs.release.outputs.published == 'true' }}
+    permissions:
+      contents: write
+    uses: ./.github/workflows/_build-docs.yml
+    with:
+      ref: ${{ github.sha }}
+      tag: eql-${{ needs.release.outputs.version }}
