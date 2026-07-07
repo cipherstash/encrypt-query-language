@@ -85,6 +85,14 @@ Encrypted columns are typed as `public` domains (e.g. `public.text_eq`, `public.
 The domain types deliberately live in `public`, not `eql_v3`, so application tables survive an EQL uninstall: `DROP SCHEMA eql_v3 CASCADE` removes the operators, extractors, and aggregates but leaves the `public`-typed columns (and their data) intact. Re-running the install script is idempotent.
 
 
+### Release artifacts
+
+EQL v3 prereleases can ship three artifacts under one identity: the SQL + docs
+GitHub release, the Rust `eql-bindings` crate, and the TypeScript
+`@cipherstash/eql` npm package. The language packages bundle the exact SQL
+installer they were generated against.
+
+
 ## Database Permissions
 
 EQL requires specific database privileges to install and operate correctly. The permissions needed depend on your deployment pattern.

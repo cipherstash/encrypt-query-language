@@ -75,6 +75,10 @@ working tree dirty if the checked-in copies were stale. Only `types:generate`
 isolates the writes (it exports into a temp dir and swaps them in after the
 build succeeds).
 
+Published `eql-bindings` crates also include `eql_bindings::sql`, which exposes
+the exact self-contained SQL installer and uninstaller built for the same EQL
+release identity as the Rust wire types.
+
 ## Future direction: self-describing payloads
 
 On the wire, a v3 payload is discriminated only by *which key is present*

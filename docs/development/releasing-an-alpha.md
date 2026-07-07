@@ -45,13 +45,31 @@ not locally.
 
 | Task | Coordinator target | Result |
 |------|--------------------|--------|
-| `mise run release:all` | `all` | Pins `eql-bindings` to the resolved identity, commits and pushes the pin, builds and attaches SQL + docs, then dispatches `release-plz.yml` so the crate publishes from the same commit. |
-| `mise run release:eql` | `eql` | Builds and attaches the SQL prerelease + docs only. No crate publish and no pin commit. |
-| `mise run release:bindings` | `bindings` | Publishes `eql-bindings` for an existing `eql-<identity>` SQL release from the same source, with a metadata-only pin commit on top. |
+| `mise run release:all` | `all` | Pins Rust + TypeScript package versions, builds and releases SQL + docs, then dispatches Rust and TypeScript package publishes from the same release identity. |
+| `mise run release:eql` | `eql` | Builds and releases SQL + docs only. No language package publish. |
+| `mise run release:bindings` | `bindings` | Publishes all missing language binding packages for an existing same-source SQL prerelease. |
+| `mise run release:rust` | `rust` | Publishes only the Rust `eql-bindings` crate for an existing same-source SQL prerelease. |
+| `mise run release:typescript` | `typescript` | Publishes only the TypeScript `@cipherstash/eql` npm package for an existing same-source SQL prerelease. |
 
-`release:all` and `release:bindings` require `--ref <branch>` because the
-coordinator pushes the crate-version pin. `release:eql` can run against any ref
-because it does not push.
+`release:all`, `release:bindings`, `release:rust`, and `release:typescript`
+require `--ref <branch>` because the coordinator pushes the package-version pin.
+`release:eql` can run against any ref because it does not push.
+
+Language binding package tags:
+
+- Rust: `eql-bindings-v<identity>`
+- TypeScript: `eql-typescript-v<identity>`
+
+`target=bindings` means all language bindings, not only the Rust crate. Specific
+language targets use language names (`rust`, `typescript`) rather than
+package-manager names (`crate`, `npm`) so the operator interface remains stable
+if packaging changes later.
+
+The TypeScript publish workflow uses npm trusted publishing and must run on
+GitHub-hosted `ubuntu-latest`. Do not move `release-typescript.yml` to a
+Blacksmith/self-hosted runner: npm provenance rejects self-hosted runners. The
+workflow intentionally has `id-token: write`, upgrades npm to `^11.5.1`, and
+does not use `NPM_TOKEN`.
 
 Common flags:
 
