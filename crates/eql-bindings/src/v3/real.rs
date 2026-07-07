@@ -165,3 +165,127 @@ impl DomainType for RealOrdOpe {
         schema_for!(RealOrdOpe)
     }
 }
+/// `public.real_eq_query` — equality domain query operand.
+///
+/// Operators: `=` `<>`. Required keys: `v` `i` `hm`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
+pub struct RealEqQuery {
+    pub v: SchemaVersion,
+    pub i: Identifier,
+    pub hm: Hmac256,
+}
+impl DomainType for RealEqQuery {
+    fn sql_domain_static() -> &'static str {
+        "public.real_eq_query"
+    }
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["hm"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        RealEqQuery::deserialize(value).map(|_| ())
+    }
+    fn schema(&self) -> Schema {
+        schema_for!(RealEqQuery)
+    }
+}
+/// `public.real_ord_ore_query` — ordering domain query operand.
+///
+/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
+pub struct RealOrdOreQuery {
+    pub v: SchemaVersion,
+    pub i: Identifier,
+    pub ob: OreBlock256,
+}
+impl DomainType for RealOrdOreQuery {
+    fn sql_domain_static() -> &'static str {
+        "public.real_ord_ore_query"
+    }
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["ob"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        RealOrdOreQuery::deserialize(value).map(|_| ())
+    }
+    fn schema(&self) -> Schema {
+        schema_for!(RealOrdOreQuery)
+    }
+}
+/// `public.real_ord_query` — ordering domain query operand.
+///
+/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
+pub struct RealOrdQuery {
+    pub v: SchemaVersion,
+    pub i: Identifier,
+    pub ob: OreBlock256,
+}
+impl DomainType for RealOrdQuery {
+    fn sql_domain_static() -> &'static str {
+        "public.real_ord_query"
+    }
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["ob"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        RealOrdQuery::deserialize(value).map(|_| ())
+    }
+    fn schema(&self) -> Schema {
+        schema_for!(RealOrdQuery)
+    }
+}
+/// `public.real_ord_ope_query` — ordering domain query operand.
+///
+/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `op`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
+pub struct RealOrdOpeQuery {
+    pub v: SchemaVersion,
+    pub i: Identifier,
+    pub op: OpeCllw,
+}
+impl DomainType for RealOrdOpeQuery {
+    fn sql_domain_static() -> &'static str {
+        "public.real_ord_ope_query"
+    }
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["op"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        RealOrdOpeQuery::deserialize(value).map(|_| ())
+    }
+    fn schema(&self) -> Schema {
+        schema_for!(RealOrdOpeQuery)
+    }
+}

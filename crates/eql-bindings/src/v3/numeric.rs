@@ -165,3 +165,127 @@ impl DomainType for NumericOrdOpe {
         schema_for!(NumericOrdOpe)
     }
 }
+/// `public.numeric_eq_query` — equality domain query operand.
+///
+/// Operators: `=` `<>`. Required keys: `v` `i` `hm`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
+pub struct NumericEqQuery {
+    pub v: SchemaVersion,
+    pub i: Identifier,
+    pub hm: Hmac256,
+}
+impl DomainType for NumericEqQuery {
+    fn sql_domain_static() -> &'static str {
+        "public.numeric_eq_query"
+    }
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["hm"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        NumericEqQuery::deserialize(value).map(|_| ())
+    }
+    fn schema(&self) -> Schema {
+        schema_for!(NumericEqQuery)
+    }
+}
+/// `public.numeric_ord_ore_query` — ordering domain query operand.
+///
+/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
+pub struct NumericOrdOreQuery {
+    pub v: SchemaVersion,
+    pub i: Identifier,
+    pub ob: OreBlock256,
+}
+impl DomainType for NumericOrdOreQuery {
+    fn sql_domain_static() -> &'static str {
+        "public.numeric_ord_ore_query"
+    }
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["ob"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        NumericOrdOreQuery::deserialize(value).map(|_| ())
+    }
+    fn schema(&self) -> Schema {
+        schema_for!(NumericOrdOreQuery)
+    }
+}
+/// `public.numeric_ord_query` — ordering domain query operand.
+///
+/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
+pub struct NumericOrdQuery {
+    pub v: SchemaVersion,
+    pub i: Identifier,
+    pub ob: OreBlock256,
+}
+impl DomainType for NumericOrdQuery {
+    fn sql_domain_static() -> &'static str {
+        "public.numeric_ord_query"
+    }
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["ob"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        NumericOrdQuery::deserialize(value).map(|_| ())
+    }
+    fn schema(&self) -> Schema {
+        schema_for!(NumericOrdQuery)
+    }
+}
+/// `public.numeric_ord_ope_query` — ordering domain query operand.
+///
+/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `op`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
+pub struct NumericOrdOpeQuery {
+    pub v: SchemaVersion,
+    pub i: Identifier,
+    pub op: OpeCllw,
+}
+impl DomainType for NumericOrdOpeQuery {
+    fn sql_domain_static() -> &'static str {
+        "public.numeric_ord_ope_query"
+    }
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
+    }
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&["op"])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        NumericOrdOpeQuery::deserialize(value).map(|_| ())
+    }
+    fn schema(&self) -> Schema {
+        schema_for!(NumericOrdOpeQuery)
+    }
+}

@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Scalar query-operand bindings (CIP-3432).** Every term-bearing scalar
+  domain now has a generated query twin — `IntegerEqQuery`, `IntegerOrdOpeQuery`,
+  `TextSearchQuery`, … — the **enveloped term-only** operand `{v, i, <terms>}`
+  (envelope minus the ciphertext `c`) for its `public.<name>_query` query
+  domain, with matching TypeScript bindings (`bindings/v3/*Query.ts`) and JSON
+  Schemas (`schema/v3/*_query.json`). Storage-only domains (no operators) get no
+  twin. `QueryPayload` is now catalog-generated — a variant per query twin plus
+  the SteVec containment needle — superseding the hand-written single-variant
+  enum. A new `all_query()` inventory exposes the query twins separately from
+  `all()` (which stays the stored + SteVec conversion-target inventory).
+
+### Changed
+
+- **`from_v2_query` / `from_v2_query_typed` now convert scalar query targets.**
+  A term-bearing scalar target hoists the v2 payload's required terms into the
+  `{v: 3, i, <terms>}` operand for its `<name>_query` domain (dropping the
+  stored `c`/`k`; `bf` reinterpreted to signed `smallint[]`), validated through
+  the generated `QueryPayload`. Storage-only scalar targets still return
+  `UnsupportedQueryTarget`. Previously every scalar query target failed closed.
+
 ## [0.4.2] - 2026-07-03
 
 ### Fixed

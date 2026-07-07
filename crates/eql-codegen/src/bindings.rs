@@ -189,9 +189,87 @@ fn render_struct(family: &DomainFamily, domain: &Domain) -> TokenStream {
     }
 }
 
+/// One query-operand payload struct + its `DomainType` impl for a capability
+/// domain: the storage struct MINUS the `c` ciphertext. A query operand carries
+/// only index terms (no stored ciphertext), so its `public.<name>_query` domain
+/// admits exactly `{v, i, <terms>}` — `deny_unknown_fields` makes a stray `c`
+/// (or any storage key) a parse error, mirroring the SQL `<name>_query` domain
+/// CHECK (CIP-3432). Emitted only for term-bearing domains: a storage-only
+/// domain has no operators, so no query operand.
+fn render_query_struct(family: &DomainFamily, domain: &Domain) -> TokenStream {
+    let full = domain.full_name(family.name);
+    let ident = format_ident!("{}Query", domain.struct_ident(family.name));
+    let sql_domain = format!("public.{full}_query");
+
+    // Query doc: same capability label + operator union as storage, but the
+    // required-key list drops `c` (query operands omit the ciphertext).
+    let summary = format!(
+        " `public.{full}_query` — {} query operand.",
+        capability_label(domain.name)
+    );
+    let ops = Term::operators_for_terms(domain.terms);
+    let ops_str = ops
+        .iter()
+        .map(|o| format!("`{o}`"))
+        .collect::<Vec<_>>()
+        .join(" ");
+    let keys_str = ["v", "i"]
+        .into_iter()
+        .chain(Term::term_json_keys(domain.terms))
+        .map(|k| format!("`{k}`"))
+        .collect::<Vec<_>>()
+        .join(" ");
+    let detail = format!(" Operators: {ops_str}. Required keys: {keys_str}.");
+
+    // Envelope minus `c`: `v`/`i` only. Kept in lockstep with the storage
+    // struct's envelope triple (see `envelope_fields_match_catalog_keys`).
+    let mut fields = TokenStream::new();
+    fields.extend(quote! { pub v: SchemaVersion, });
+    fields.extend(quote! { pub i: Identifier, });
+    for term in Term::payload_terms(domain.terms) {
+        let fid = format_ident!("{}", term.json_key());
+        let tid = format_ident!("{}", term.binding_newtype());
+        fields.extend(quote! { pub #fid: #tid, });
+    }
+    let term_keys = Term::term_json_keys(domain.terms);
+
+    quote! {
+        #[doc = #summary]
+        #[doc = ""]
+        #[doc = #detail]
+        #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+        #[ts(export, export_to = "v3/")]
+        #[serde(deny_unknown_fields)]
+        pub struct #ident {
+            #fields
+        }
+
+        impl DomainType for #ident {
+            fn sql_domain_static() -> &'static str {
+                #sql_domain
+            }
+            fn sql_domain(&self) -> &'static str {
+                Self::sql_domain_static()
+            }
+            fn term_json_keys_static() -> Option<&'static [&'static str]> {
+                Some(&[#(#term_keys),*])
+            }
+            fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+                Self::term_json_keys_static()
+            }
+            fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+                #ident::deserialize(value).map(|_| ())
+            }
+            fn schema(&self) -> Schema {
+                schema_for!(#ident)
+            }
+        }
+    }
+}
+
 /// Render a whole family module (`integer.rs`, `text.rs`, …): the import header
 /// (exactly the term newtypes the family uses) followed by every domain's
-/// struct + impl.
+/// storage struct + impl, then a query twin for each term-bearing domain.
 pub fn render_family_bindings(family: &DomainFamily) -> String {
     let mut used: Vec<&'static str> = vec!["Ciphertext"];
     for d in family.domains {
@@ -204,10 +282,19 @@ pub fn render_family_bindings(family: &DomainFamily) -> String {
     }
     let used_idents: Vec<_> = used.iter().map(|t| format_ident!("{t}")).collect();
 
+    // Storage structs for every domain, then a query twin for each term-bearing
+    // domain (storage-only domains have no operators, so no query operand).
     let structs: TokenStream = family
         .domains
         .iter()
         .map(|d| render_struct(family, d))
+        .chain(
+            family
+                .domains
+                .iter()
+                .filter(|d| !d.terms.is_empty())
+                .map(|d| render_query_struct(family, d)),
+        )
         .collect();
 
     let mod_doc = format!(
@@ -252,10 +339,31 @@ pub fn render_inventory_rs() -> String {
         })
         .collect();
 
-    let mod_doc = " The `all()` inventory — every v3 domain payload type in \
-                   eql-domains::CATALOG order. Generated from the catalog; the \
-                   DomainType trait, the shared newtypes, and the architectural \
-                   module doc stay hand-written (domain_type.rs / terms.rs / mod.rs).";
+    // The QUERY-operand inventory: one twin per term-bearing scalar domain,
+    // in CATALOG order. Kept SEPARATE from `all()` — `all()` is the stored +
+    // SteVec inventory that `from_v2::TargetDomain` and `catalog_parity`
+    // resolve against, and query twins must not appear there as conversion
+    // targets. `all_query()` gives the schema export (and query validation) a
+    // handle on the twins without polluting `all()`.
+    let query_entries: TokenStream = eql_domains::scalar_families()
+        .flat_map(|f| {
+            let m = format_ident!("{}", f.name);
+            f.domains
+                .iter()
+                .filter(|d| !d.terms.is_empty())
+                .map(move |d| {
+                    let s = format_ident!("{}Query", d.struct_ident(f.name));
+                    quote! { Box::new(PhantomData::<super::#m::#s>), }
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect();
+
+    let mod_doc = " The `all()` / `all_query()` inventories — every v3 stored and \
+                   query-operand payload type in eql-domains::CATALOG order. \
+                   Generated from the catalog; the DomainType trait, the shared \
+                   newtypes, and the architectural module doc stay hand-written \
+                   (domain_type.rs / terms.rs / mod.rs).";
 
     let file = quote! {
         #![doc = #mod_doc]
@@ -264,10 +372,24 @@ pub fn render_inventory_rs() -> String {
 
         use super::domain_type::DomainType;
 
-        /// Every v3 domain type, in `eql-domains::CATALOG` order — generated.
+        /// Every v3 stored-payload + SteVec domain type, in
+        /// `eql-domains::CATALOG` order — generated. This is the inventory
+        /// `from_v2::TargetDomain` resolves conversion targets against; query
+        /// twins are NOT here (see [`all_query`]).
         pub fn all() -> Vec<Box<dyn DomainType>> {
             vec![
                 #all_entries
+            ]
+        }
+
+        /// Every v3 QUERY-operand twin (`public.<name>_query`, the enveloped
+        /// term-only operand), in `eql-domains::CATALOG` order — generated.
+        /// Separate from [`all`] so query domains never resolve as stored
+        /// conversion targets; used by the JSON Schema export and query
+        /// validation.
+        pub fn all_query() -> Vec<Box<dyn DomainType>> {
+            vec![
+                #query_entries
             ]
         }
     };
@@ -394,6 +516,142 @@ pub fn render_payload_rs() -> String {
     format_rs(file)
 }
 
+/// The catalog's QUERY-operand domains, in a stable order: a query twin for
+/// every term-bearing scalar domain (`public.<name>_query`), then the SteVec
+/// containment needle (`public.jsonb_query`). Exactly the shapes the generated
+/// `QueryPayload` spans and `from_v2_query` can target. Returned as
+/// `(module, variant ident, struct ident, unqualified query-domain name)`; the
+/// SteVec needle keeps the `SteVec` variant name the `from_v2` query path
+/// already uses (its struct is the hand-written `SteVecQuery`).
+fn query_payload_domains() -> Vec<(String, String, String, String)> {
+    let mut out: Vec<(String, String, String, String)> = eql_domains::scalar_families()
+        .flat_map(|f| {
+            f.domains
+                .iter()
+                .filter(|d| !d.terms.is_empty())
+                .map(move |d| {
+                    let q = format!("{}Query", d.struct_ident(f.name));
+                    (
+                        f.name.to_string(),
+                        q.clone(),
+                        q,
+                        format!("{}_query", d.full_name(f.name)),
+                    )
+                })
+        })
+        .collect();
+    out.push((
+        "jsonb".into(),
+        "SteVec".into(),
+        "SteVecQuery".into(),
+        "jsonb_query".into(),
+    ));
+    out
+}
+
+/// Render the generated `crates/eql-bindings/src/v3/query_payload.rs`: the
+/// `QueryPayload` enum spanning every QUERY-operand domain — a variant per
+/// term-bearing scalar query twin (`public.<name>_query`) plus the SteVec
+/// containment needle (`public.jsonb_query`) — with its
+/// construct-from-known-domain `parse` constructor.
+///
+/// Generated for the same reason as [`render_payload_rs`]'s `DomainPayload`:
+/// enveloped, per-capability query payloads (CIP-3432) are catalog-per-domain
+/// (one twin per capability domain), so the variant set IS the catalog and must
+/// reshape with it. Serialize-only + `#[serde(untagged)]` + no ts-rs/schemars,
+/// exactly like `DomainPayload`: the enum adds no wire shape (each variant
+/// serializes as its inner struct) and must not churn the exported TS/JSON.
+pub fn render_query_payload_rs() -> String {
+    let mut variants = TokenStream::new();
+    let mut parse_arms = TokenStream::new();
+    let mut inner_arms = TokenStream::new();
+    for (module, variant, strukt, key) in query_payload_domains() {
+        let m = format_ident!("{module}");
+        let v = format_ident!("{variant}");
+        let s = format_ident!("{strukt}");
+        let doc = format!(" The `public.{key}` query operand.");
+        variants.extend(quote! {
+            #[doc = #doc]
+            #v(super::#m::#s),
+        });
+        parse_arms.extend(quote! {
+            #key => Some(super::#m::#s::deserialize(value).map(Self::#v)),
+        });
+        inner_arms.extend(quote! {
+            Self::#v(payload) => payload,
+        });
+    }
+
+    let mod_doc = " The generated `QueryPayload` enum — every v3 QUERY-operand \
+                   domain in one Rust type. Generated from the catalog; the \
+                   DomainType trait, the shared newtypes, and the architectural \
+                   module doc stay hand-written (domain_type.rs / terms.rs / mod.rs).";
+
+    let file = quote! {
+        #![doc = #mod_doc]
+
+        use serde::{Deserialize, Serialize};
+
+        use super::domain_type::DomainType;
+
+        /// Every v3 QUERY-operand shape in one type: one variant per term-bearing
+        /// scalar query twin (`public.<name>_query`, the enveloped term-only
+        /// operand — `{v, i, <terms>}`, no `c`) plus the SteVec containment
+        /// needle (`public.jsonb_query`). Generated from the catalog, so it
+        /// cannot drift when the catalog grows.
+        ///
+        /// Serialization is exactly the inner struct's (`#[serde(untagged)]`
+        /// adds no tagging), so typing a query operand never changes the wire.
+        /// Deliberately NO `Deserialize`: cross-token operands are byte-identical
+        /// on the wire, so a variant is only constructible from a KNOWN domain
+        /// — [`QueryPayload::parse`] or [`crate::from_v2::from_v2_query_typed`] —
+        /// never inferred from bytes. No ts-rs/schemars: it adds no wire shape.
+        #[derive(Clone, Debug, PartialEq, Serialize)]
+        #[serde(untagged)]
+        pub enum QueryPayload {
+            #variants
+        }
+
+        impl QueryPayload {
+            /// Strictly parse `value` as `domain`'s query payload, KEEPING the
+            /// parsed value — the query-side counterpart of
+            /// [`super::DomainPayload::parse`]. `domain` is the unqualified name
+            /// (`"integer_eq_query"`, `"jsonb_query"`, …). `None` when `domain`
+            /// is not a query-operand domain; `Some(Err)` when the strict parse
+            /// fails (`deny_unknown_fields` rejects a stray `c`).
+            pub fn parse(
+                domain: &str,
+                value: &serde_json::Value,
+            ) -> Option<Result<Self, serde_json::Error>> {
+                match domain {
+                    #parse_arms
+                    _ => None,
+                }
+            }
+
+            /// The inner payload as a [`DomainType`] trait object.
+            pub fn as_domain_type(&self) -> &dyn DomainType {
+                match self {
+                    #inner_arms
+                }
+            }
+
+            /// Fully-qualified SQL domain name, e.g. `"public.integer_eq_query"`.
+            pub fn sql_domain(&self) -> &'static str {
+                self.as_domain_type().sql_domain()
+            }
+
+            /// Unqualified SQL domain name, e.g. `"integer_eq_query"` — the name
+            /// [`QueryPayload::parse`] accepts.
+            pub fn domain(&self) -> &'static str {
+                self.as_domain_type().domain()
+            }
+        }
+    };
+
+    format_rs(file)
+}
+
 /// Relative path (from repo root) of the generated v3 bindings directory.
 const V3_BINDINGS_DIR: &str = "crates/eql-bindings/src/v3";
 
@@ -414,6 +672,7 @@ fn render_bindings(dir: &Path) -> Vec<(PathBuf, String)> {
         })
         .collect();
     rendered.push((dir.join("payload.rs"), render_payload_rs()));
+    rendered.push((dir.join("query_payload.rs"), render_query_payload_rs()));
     rendered.push((dir.join("inventory.rs"), render_inventory_rs()));
     rendered
 }
@@ -489,15 +748,16 @@ mod tests {
         ] {
             assert!(out.contains(s), "missing {s}");
         }
+        // 5 storage structs + 4 query twins (every term-bearing domain).
         assert_eq!(
             out.matches(
                 "#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]"
             )
             .count(),
-            5
+            9
         );
-        assert_eq!(out.matches("#[ts(export, export_to = \"v3/\")]").count(), 5);
-        assert_eq!(out.matches("#[serde(deny_unknown_fields)]").count(), 5);
+        assert_eq!(out.matches("#[ts(export, export_to = \"v3/\")]").count(), 9);
+        assert_eq!(out.matches("#[serde(deny_unknown_fields)]").count(), 9);
         assert!(out.contains("`public.integer_eq` — equality domain."));
         assert!(out.contains("`public.integer` — storage-only domain."));
         assert!(out.contains("`public.integer_ord` — ordering domain."));
@@ -517,6 +777,45 @@ mod tests {
         assert!(out.contains("schema_for!(IntegerEq)"));
         assert!(out.contains("use crate::v3::terms::"));
         assert!(!out.contains("BloomFilter"));
+    }
+
+    #[test]
+    fn query_twins_drop_c_and_name_query_domains() {
+        // CIP-3432: every term-bearing capability domain gets a `<Name>Query`
+        // twin = the storage struct minus `c`, on the `public.<name>_query`
+        // domain. Storage-only domains (no operators) get no twin.
+        let out = render_family_bindings(family("integer"));
+        for s in [
+            "struct IntegerEqQuery ",
+            "struct IntegerOrdOreQuery ",
+            "struct IntegerOrdQuery ",
+            "struct IntegerOrdOpeQuery ",
+        ] {
+            assert!(out.contains(s), "missing {s}");
+        }
+        assert!(
+            !out.contains("struct IntegerQuery "),
+            "storage-only `integer` has no operators, so no query twin"
+        );
+        // Query operand = envelope minus `c`, then the term(s).
+        assert_eq!(field_idents(&out, "IntegerEqQuery"), ["v", "i", "hm"]);
+        assert_eq!(field_idents(&out, "IntegerOrdQuery"), ["v", "i", "ob"]);
+        assert_eq!(field_idents(&out, "IntegerOrdOpeQuery"), ["v", "i", "op"]);
+        assert!(out.contains("\"public.integer_eq_query\""));
+        assert!(out.contains("impl DomainType for IntegerEqQuery"));
+        assert!(out.contains("schema_for!(IntegerEqQuery)"));
+        assert!(out.contains("`public.integer_eq_query` — equality domain query operand."));
+        // Query twin term keys mirror the storage domain's.
+        assert!(out.contains(r#"&["op"]"#));
+
+        // Dual-term text domains keep BOTH terms in the query twin, still no `c`.
+        let text = render_family_bindings(family("text"));
+        assert_eq!(field_idents(&text, "TextOrdQuery"), ["v", "i", "hm", "ob"]);
+        assert_eq!(
+            field_idents(&text, "TextSearchQuery"),
+            ["v", "i", "hm", "ob", "bf"]
+        );
+        assert!(text.contains("`public.text_match_query` — match domain query operand."));
     }
 
     #[test]
@@ -601,7 +900,7 @@ mod tests {
         let tmp = crate::writer::test_support::tempdir();
         let written = generate_bindings(tmp.path()).unwrap();
         let dir = tmp.path().join("crates/eql-bindings/src/v3");
-        assert_eq!(written.len(), eql_domains::scalar_families().count() + 2);
+        assert_eq!(written.len(), eql_domains::scalar_families().count() + 3);
         assert!(dir.join("integer.rs").is_file());
         assert!(dir.join("text.rs").is_file());
         assert!(dir.join("payload.rs").is_file());
@@ -634,7 +933,7 @@ mod tests {
 
         let rendered = render_bindings(&dir);
 
-        assert_eq!(rendered.len(), eql_domains::scalar_families().count() + 2);
+        assert_eq!(rendered.len(), eql_domains::scalar_families().count() + 3);
         assert_eq!(
             std::fs::read_to_string(&sentinel).unwrap(),
             "SENTINEL",
@@ -700,6 +999,51 @@ mod tests {
     }
 
     #[test]
+    fn query_payload_enum_spans_query_twins_and_stevec_needle() {
+        // CIP-3432: QueryPayload is now generated — one variant per term-bearing
+        // scalar query twin (`<name>_query`) plus the SteVec needle
+        // (`jsonb_query`), in query_payload_domains() order (scalars, then
+        // SteVec). Serialize-only + untagged + no export derives, like
+        // DomainPayload.
+        let out = render_query_payload_rs();
+        assert!(out.starts_with(crate::consts::RUST_GENERATED_MARKER));
+
+        let variants = variant_idents(&out, "QueryPayload");
+        // First variant is a scalar twin; last is the SteVec needle.
+        assert!(variants.contains(&"IntegerEqQuery".to_string()));
+        assert!(variants.contains(&"TextSearchQuery".to_string()));
+        assert_eq!(variants.last().unwrap(), "SteVec");
+        // No storage-only domain twin (they have no operators).
+        assert!(!variants.contains(&"IntegerQuery".to_string()));
+        assert!(!variants.contains(&"BooleanQuery".to_string()));
+        // One scalar variant per term-bearing scalar domain, + 1 for SteVec.
+        let term_bearing: usize = eql_domains::scalar_families()
+            .flat_map(|f| f.domains.iter())
+            .filter(|d| !d.terms.is_empty())
+            .count();
+        assert_eq!(variants.len(), term_bearing + 1);
+
+        // parse arms keyed on the unqualified query-domain names.
+        assert!(out.contains(r#""integer_eq_query" =>"#));
+        assert!(out.contains("IntegerEqQuery::deserialize(value).map(Self::IntegerEqQuery)"));
+        assert!(out.contains(r#""jsonb_query" =>"#));
+        assert!(out.contains("SteVecQuery::deserialize(value).map(Self::SteVec)"));
+        assert!(out.contains("_ => None,"));
+
+        // Serialize-only, untagged, no export derives (mirrors DomainPayload).
+        assert!(out.contains("#[derive(Clone, Debug, PartialEq, Serialize)]"));
+        assert!(out.contains("#[serde(untagged)]"));
+        assert!(
+            !out.contains("#[derive(Clone, Debug, PartialEq, Serialize, Deserialize"),
+            "QueryPayload must not derive Deserialize"
+        );
+        assert!(!out.contains("#[ts("), "no ts-rs export on QueryPayload");
+        assert!(!out.contains("JsonSchema"), "no schemars on QueryPayload");
+        assert!(out.contains("pub fn parse("));
+        assert!(out.contains("pub fn as_domain_type(&self) -> &dyn DomainType"));
+    }
+
+    #[test]
     fn payload_enum_is_untagged_serialize_only_with_no_export_derives() {
         // The wire form must be exactly the inner struct's, and DomainPayload
         // is a Rust-side ergonomics type: no Deserialize (inference from
@@ -744,9 +1088,18 @@ mod tests {
                 "missing {ty}"
             );
         }
+        // Both inventories: all() (every CATALOG domain) + all_query() (a twin
+        // per term-bearing scalar domain).
+        assert!(out.contains("pub fn all() -> Vec<Box<dyn DomainType>>"));
+        assert!(out.contains("pub fn all_query() -> Vec<Box<dyn DomainType>>"));
         let entries = out.matches("Box::new(PhantomData::<").count();
         let domains: usize = eql_domains::CATALOG.iter().map(|f| f.domains.len()).sum();
-        assert_eq!(entries, domains);
+        let query_twins: usize = eql_domains::scalar_families()
+            .flat_map(|f| f.domains.iter())
+            .filter(|d| !d.terms.is_empty())
+            .count();
+        assert_eq!(entries, domains + query_twins);
+        assert!(out.contains("PhantomData::<super::integer::IntegerEqQuery>"));
     }
 
     #[test]
@@ -833,7 +1186,7 @@ mod tests {
             "jsonb.rs is hand-written; the generator must not emit it"
         );
         // One file per scalar family + payload + inventory.
-        assert_eq!(rendered.len(), eql_domains::scalar_families().count() + 2);
+        assert_eq!(rendered.len(), eql_domains::scalar_families().count() + 3);
     }
 
     #[test]

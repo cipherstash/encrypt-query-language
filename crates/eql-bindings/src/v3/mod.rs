@@ -151,6 +151,6 @@ pub mod text;
 pub mod timestamp;
 
 pub use domain_type::{DomainType, SCHEMA_ID_BASE, SQL_SCHEMA};
-pub use inventory::all;
+pub use inventory::{all, all_query};
 pub use payload::DomainPayload;
 pub use query_payload::QueryPayload;

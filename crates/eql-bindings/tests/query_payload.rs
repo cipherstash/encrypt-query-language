@@ -1,4 +1,4 @@
-//! Tests for the hand-written [`QueryPayload`] enum and the typed query
+//! Tests for the generated [`QueryPayload`] enum and the typed query
 //! conversion path [`from_v2_query_typed`].
 //!
 //! The load-bearing contract mirrors `tests/domain_payload.rs`: the
@@ -7,7 +7,8 @@
 //! is `#[serde(untagged)]`, so typing a query payload can never change the
 //! wire) — plus failure parity: both entry points reject the same inputs with
 //! the same errors, including [`FromV2Error::UnsupportedQueryTarget`] for
-//! EVERY scalar target (no v3 scalar-query wire shape exists yet).
+//! STORAGE-ONLY scalar targets (term-bearing scalars now hoist to their
+//! `<name>_query` operand — CIP-3432).
 
 use eql_bindings::from_v2::{from_v2_query, from_v2_query_typed, FromV2Error, TargetDomain};
 use eql_bindings::v3::{DomainType, QueryPayload};
@@ -73,6 +74,7 @@ fn typed_needle_yields_the_ste_vec_variant() {
             assert_eq!(q.sv.len(), 2, "entry order/count preserved");
             assert_eq!(q.sql_domain(), "public.jsonb_query");
         }
+        other => panic!("a jsonb target must yield the SteVec needle, got {other:?}"),
     }
 }
 
@@ -98,26 +100,78 @@ fn typed_needle_normalizes_exactly_like_from_v2_query() {
 // from_v2_query_typed — failure parity with from_v2_query
 // ---------------------------------------------------------------------------
 
+/// A v2 `k:"ct"` scalar payload carrying representative values for `term_keys`
+/// PLUS a stray `c` (which a query hoist must drop). Empty `term_keys` → just
+/// the `{v,k,i,c}` envelope.
+fn v2_scalar_query(term_keys: &[&str]) -> Value {
+    let mut obj = json!({ "v": 2, "k": "ct", "i": ident(), "c": CIPHERTEXT });
+    let map = obj.as_object_mut().unwrap();
+    for &k in term_keys {
+        let term = match k {
+            "hm" | "op" => json!(HEX),
+            "ob" => json!([HEX, HEX]),
+            "bf" => json!([1, 2, 3]),
+            other => panic!("unhandled term key {other}"),
+        };
+        map.insert(k.into(), term);
+    }
+    obj
+}
+
 #[test]
-fn every_scalar_target_is_unsupported_on_both_entry_points() {
-    // No v3 scalar-query wire shape exists (every scalar domain CHECK
-    // requires the ciphertext `c` a query payload omits); QueryPayload fails
-    // closed rather than inventing one ahead of the mapper redesign —
-    // exhaustively, for every scalar domain in the catalog, on BOTH entry
-    // points.
-    let query = json!({ "v": 2, "k": "ct", "i": ident(), "hm": HEX });
+fn scalar_query_hoist_and_storage_only_unsupported() {
+    // CIP-3432: a term-bearing scalar target hoists the v2 payload's required
+    // terms into the enveloped term-only operand `{v:3, i, <terms>}` for its
+    // `<name>_query` domain (dropping `c`/`k`); a storage-only scalar target
+    // (no operators) still fails closed with UnsupportedQueryTarget. Exhaustive
+    // over the catalog, both entry points, with the typed==untyped pin.
     for family in eql_domains::scalar_families() {
         for domain in family.domains {
             let name = family.domain_name(domain);
             let t = target(&name);
-            match from_v2_query_typed(&query, t).unwrap_err() {
-                FromV2Error::UnsupportedQueryTarget { domain } => assert_eq!(domain, name),
-                other => panic!("expected UnsupportedQueryTarget for {name}, got {other:?}"),
+            let term_keys: Vec<&str> = eql_domains::Term::term_json_keys(domain.terms);
+            let v2 = v2_scalar_query(&term_keys);
+
+            if term_keys.is_empty() {
+                for err in [
+                    from_v2_query_typed(&v2, t).unwrap_err(),
+                    from_v2_query(&v2, t).unwrap_err(),
+                ] {
+                    match err {
+                        FromV2Error::UnsupportedQueryTarget { domain } => assert_eq!(domain, name),
+                        other => {
+                            panic!("expected UnsupportedQueryTarget for {name}, got {other:?}")
+                        }
+                    }
+                }
+                continue;
             }
-            match from_v2_query(&query, t).unwrap_err() {
-                FromV2Error::UnsupportedQueryTarget { domain } => assert_eq!(domain, name),
-                other => panic!("expected UnsupportedQueryTarget for {name}, got {other:?}"),
+
+            let out =
+                from_v2_query(&v2, t).unwrap_or_else(|e| panic!("{name} hoist failed: {e:?}"));
+            let obj = out.as_object().unwrap();
+            assert_eq!(obj.get("v").and_then(Value::as_u64), Some(3), "{name} v:3");
+            assert!(obj.contains_key("i"), "{name} keeps i");
+            assert!(!obj.contains_key("c"), "{name} query drops c");
+            assert!(!obj.contains_key("k"), "{name} query drops k");
+            for k in &term_keys {
+                assert!(obj.contains_key(*k), "{name} keeps term {k}");
             }
+            assert_eq!(
+                obj.len(),
+                2 + term_keys.len(),
+                "{name} is exactly v+i+terms"
+            );
+
+            let typed =
+                from_v2_query_typed(&v2, t).unwrap_or_else(|e| panic!("{name} typed hoist: {e:?}"));
+            assert_eq!(typed.domain(), format!("{name}_query"), "{name} domain");
+            assert_eq!(typed.sql_domain(), format!("public.{name}_query"));
+            assert_eq!(
+                serde_json::to_value(&typed).unwrap(),
+                out,
+                "{name}: typed to_value must equal from_v2_query"
+            );
         }
     }
 }

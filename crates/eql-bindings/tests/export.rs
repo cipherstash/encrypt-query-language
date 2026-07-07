@@ -22,7 +22,10 @@ fn dump_v3_json_schemas() {
         std::fs::remove_dir_all(&dir).unwrap();
     }
     std::fs::create_dir_all(&dir).unwrap();
-    for entry in v3::all() {
+    // Both the stored/SteVec inventory and the query-operand twins: query
+    // domains are a wire shape consumers validate, so they get JSON Schema too
+    // (parity with the ts-rs export, which picks them up via `#[ts(export)]`).
+    for entry in v3::all().into_iter().chain(v3::all_query()) {
         let mut schema = serde_json::to_value(entry.schema()).unwrap();
         // schemars 0.8 emits no $id; inject the canonical one (the URL format
         // lives on DomainType::schema_id, pinned by tests/catalog_parity.rs).
